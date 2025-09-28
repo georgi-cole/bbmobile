@@ -5,29 +5,89 @@
 <title>BB Tengaged — Modular Enhanced Build</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link rel="stylesheet" href="styles.css"/>
-<link rel="stylesheet" href="mobile.css"/>
-<link rel="manifest" href="site.webmanifest">
-<meta name="theme-color" content="#0f1320">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="BB Tengaged">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png">
-<meta name="format-detection" content="telephone=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+
+<!-- Minimal styles so the Debug dropdown works even if styles.css lacks them -->
+<style>
+  .debug-details{ display:inline-block; position:relative; margin-left:6px; }
+  .debug-details>summary{ list-style:none; display:inline-block; }
+  .debug-details>summary::-webkit-details-marker{ display:none; }
+  .debug-btn{ display:inline-flex; align-items:center; gap:8px; } /* inherits .btn */
+  .debug-panel{
+    position:absolute; top:calc(100% + 8px); left:0;
+    background:rgba(5,12,20,.96);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:10px; padding:10px; min-width:520px;
+    box-shadow:0 12px 28px rgba(0,0,0,.45); z-index:2000;
+  }
+  .debug-section{ display:grid; gap:8px; margin:8px 0; }
+  .debug-title{ font-size:12px; letter-spacing:.3px; color:#b7c6d1; text-transform:uppercase; opacity:.8; margin-bottom:2px; }
+  .debug-shelf{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .debug-shelf>*{ margin:0 !important; }
+  .dbg-sep{ height:1px; border:none; background:rgba(255,255,255,.08); margin:6px 0; }
+</style>
 </head>
 <body>
 <!-- Top Controls -->
 <div class="topbar">
   <button class="btn" id="btnOpenSettings">⚙️ Settings</button>
   <button class="btn" id="btnStartQuick">▶ Start</button>
+
+  <!-- Debug dropdown -->
+  <details class="debug-details" id="debugDropdown">
+    <summary class="btn debug-btn">🐞 Debug</summary>
+    <div class="debug-panel">
+      <div class="debug-section">
+        <div class="debug-title">Music / Audio</div>
+        <div class="debug-shelf" id="dbgMusicShelf">
+          <select id="musicTrack">
+            <option value="none">No track</option>
+            <option value="theme_opening">Opening Theme</option>
+            <option value="hoh_comp">HOH Comp</option>
+            <option value="veto_comp">Veto Comp</option>
+            <option value="nominations">Nominations</option>
+            <option value="live_vote">Live Vote</option>
+            <option value="eviction">Eviction</option>
+            <option value="victory">Victory Theme</option>
+          </select>
+          <button class="btn small" id="btnPlayMusic">Play</button>
+          <button class="btn small" id="btnStopMusic">Stop</button>
+          <label class="tiny">Volume <input type="range" id="musicVol" min="0" max="1" step="0.01" value=".4"/></label>
+          <label class="inline tiny"><input type="checkbox" id="autoMusic" checked/> Auto music</label>
+        </div>
+      </div>
+      <hr class="dbg-sep" />
+      <div class="debug-section">
+        <div class="debug-title">Quick Actions</div>
+        <div class="debug-shelf" id="dbgActionShelf">
+          <button class="btn small" id="btnNextWeek">Force Week ▶</button>
+          <button class="btn small" id="btnClearLog">Clear Log</button>
+          <button class="btn small" id="btnExport">Export Save</button>
+          <button class="btn small" id="btnImport">Import</button>
+          <input id="importFile" type="file" accept="application/json" style="display:none"/>
+        </div>
+      </div>
+      <hr class="dbg-sep" />
+      <div class="debug-section">
+        <div class="debug-title">Advanced</div>
+        <div class="debug-shelf" id="dbgAdvancedShelf">
+          <button class="btn small" id="btnDumpSocial">Dump Social</button>
+          <button class="btn small" id="btnForceReturnTwist">Force Return Twist</button>
+          <button class="btn small" id="btnSkipPhaseDbg">Skip Phase</button>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Optional buttons controlled by the app -->
   <button class="btn" id="btnAdvancePhase" style="display:none;">➡ Advance</button>
   <button class="btn" id="btnMusicToggle" style="display:none">🎵 Music</button>
 </div>
 
 <div class="wrap">
-  <!-- Dashboard -->
+  <!-- Dashboard (left) — Cast completely removed -->
   <div class="card" id="dashboardCard">
     <h1>Dashboard</h1>
     <div class="row tiny wrapline">
@@ -45,53 +105,19 @@
       <div id="openingBadge" class="badge" style="display:none;">OPENING</div>
     </div>
     <div class="sep"></div>
-    <!-- Locked Timer Heading -->
     <h2 id="timerHeading" data-fixed="timer">Timer</h2>
     <div class="row baseline">
       <span class="tiny muted">Remaining</span>
       <span id="countdown" class="timeReading">00:00</span>
+      <!-- Only one Skip will be kept here by the script below -->
     </div>
     <div class="progressbar"><div id="tvProgressFill" class="progressbar-fill"></div></div>
-    <div class="sep"></div>
-    <div class="row between">
-      <h2>Cast</h2>
-      <span id="castHint" class="tiny muted"></span>
-    </div>
-
-    <!-- Cast table (with colgroup) -->
-    <div class="list">
-      <table id="castTbl">
-        <colgroup>
-          <col class="col-player">
-          <col class="col-state">
-          <col class="col-evictweek">
-          <col class="col-allies">
-          <col class="col-enemies">
-          <col class="col-avg">
-          <col class="col-actions">
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Player</th>
-            <th>State</th>
-            <th class="tiny">Evict Wk</th>
-            <th>Allies</th>
-            <th>Enemies</th>
-            <th>Avg Aff</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="sep"></div>
-    <div class="tiny muted">Edit cast in Lobby via Settings → Manage → Edit Cast.</div>
+    <!-- Cast header, table, and note intentionally removed -->
   </div>
 
   <!-- Show / Center -->
   <div class="card" id="actionCard">
     <h1>Show</h1>
-    <!-- No inline background image to avoid missing-file errors; set via Settings or Visual tab -->
     <div class="tv" id="tv">
       <div class="tvHead">
         <div class="tvTitle">House Network Live</div>
@@ -103,8 +129,11 @@
     </div>
     <div class="sep"></div>
     <div id="panel"></div>
-    <div class="sep"></div>
-    <h2>Log</h2>
+  </div>
+
+  <!-- Right: Logs (with Jury) + Jury House -->
+  <div class="card" id="sideCard">
+    <h1>Logs</h1>
     <div id="logTabs" class="tabBar">
       <button class="tab-btn active" data-logtab="all">All</button>
       <button class="tab-btn" data-logtab="game">Game</button>
@@ -119,48 +148,9 @@
       <div id="logVote" class="log log-pane" data-pane="vote"></div>
       <div id="logJury" class="log log-pane" data-pane="jury"></div>
     </div>
-  </div>
 
-  <!-- Side Panel -->
-  <div class="card" id="sideCard">
-    <div class="tabBar">
-      <button class="tab-btn active" data-tab="infoPanel">Info & Music</button>
-      <button class="tab-btn" data-tab="juryHousePanel" id="juryHouseTabBtn" style="display:none;">Jury House</button>
-      <button class="tab-btn" data-tab="debugPanel">Debug</button>
-    </div>
-    <div id="infoPanel">
-      <h1>Info & Music</h1>
-      <div class="tiny muted">Auto music switches with phases unless disabled.</div>
-      <div class="sep"></div>
-      <h2>Music</h2>
-      <div class="col tiny">
-        <div class="row baseline">
-          <select id="musicTrack">
-            <option value="none">No track</option>
-            <option value="theme_opening">Opening Theme</option>
-            <option value="hoh_comp">HOH Comp</option>
-            <option value="veto_comp">Veto Comp</option>
-            <option value="nominations">Nominations</option>
-            <option value="live_vote">Live Vote</option>
-            <option value="eviction">Eviction</option>
-            <option value="victory">Victory Theme</option>
-          </select>
-          <button class="btn small" id="btnPlayMusic">Play</button>
-          <button class="btn small" id="btnStopMusic">Stop</button>
-        </div>
-        <label class="tiny">Volume <input type="range" id="musicVol" min="0" max="1" step="0.01" value=".4"/></label>
-        <label class="inline tiny"><input type="checkbox" id="autoMusic" checked/> Auto music</label>
-      </div>
-      <div class="sep"></div>
-      <h2>Quick Actions</h2>
-      <div class="row">
-        <button class="btn small" id="btnNextWeek">Force Week ▶</button>
-        <button class="btn small" id="btnClearLog">Clear Log</button>
-        <button class="btn small" id="btnExport">Export Save</button>
-        <button class="btn small" id="btnImport">Import</button>
-      </div>
-      <input id="importFile" type="file" accept="application/json" style="display:none"/>
-    </div>
+    <div class="sep"></div>
+
     <div id="juryHousePanel" style="display:none;">
       <h1>Jury House</h1>
       <div class="tiny muted" id="juryHouseStatus">Inactive.</div>
@@ -170,16 +160,6 @@
       <div class="sep"></div>
       <h2>Jury Log</h2>
       <div id="juryLog" class="jury-log"></div>
-    </div>
-    <div id="debugPanel" style="display:none;">
-      <h1>Debug</h1>
-      <div class="row tiny">
-        <button class="btn small" id="btnDumpSocial">Dump Social</button>
-        <button class="btn small" id="btnForceReturnTwist">Force Return Twist</button>
-        <button class="btn small" id="btnSkipPhaseDbg">Skip Phase</button>
-      </div>
-      <div class="sep"></div>
-      <div class="tiny muted">Use with caution; may affect pacing.</div>
     </div>
   </div>
 </div>
@@ -283,45 +263,104 @@
 <audio id="bgm" preload="auto" loop></audio>
 
 <!-- SCRIPT LOAD ORDER -->
-<script src="state.js"></script>
-<script src="audio.js"></script>
+<script src="js/state.js"></script>
+<script src="js/audio.js"></script>
 
 <!-- Settings & UI -->
-<script defer src="ui.config-and-settings.js"></script>
-
+<script defer src="js/ui.config-and-settings.js"></script>
 
 <!-- NEW: TV screen upload (image/video) -->
-<script defer src="ui.tv-media.js"></script>
-<script defer src="settings.js"></script>
-<script defer src="players-total.js?v=5"></script>
-<script defer src="ui.overlay-and-logs.js"></script>
-<script defer src="ui.hud-and-router.js"></script>
+<script defer src="js/ui.tv-media.js"></script>
+<script defer src="js/settings.js"></script>
+<script defer src="js/players-total.js?v=5"></script>
+<script defer src="js/ui.overlay-and-logs.js"></script>
+<script defer src="js/ui.hud-and-router.js"></script>
 
 <!-- Game flows -->
-<script src="social.js"></script>
-<script src="minigames.js"></script>
-<script src="competitions.js"></script>
-<script src="nominations.js"></script>
-<script src="veto.js"></script>
-<script src="eviction.js"></script>
-<script src="jury.js"></script>
-<script defer src="jury-viz.js?v=2"></script>
+<script src="js/social.js"></script>
+<script src="js/minigames.js"></script>
+<script src="js/competitions.js"></script>
+<script src="js/nominations.js"></script>
+<script src="js/veto.js"></script>
+<script src="js/eviction.js"></script>
+<script src="js/jury.js"></script>
+<script defer src="js/jury-viz.js?v=2"></script>
 
-<!-- Juror return (America vote) — make sure it's loaded before twists -->
-<script src="jury_return_vote.js"></script>
+<!-- Juror return (America vote) -->
+<script src="js/jury_return_vote.js"></script>
 
-<script src="twists.js"></script>
-<script src="persistence.js"></script>
-<script src="bootstrap.js"></script>
-<script src="integrity.js"></script>
-<script src="finale.js"></script>
+<script src="js/twists.js"></script>
+<script src="js/persistence.js"></script>
+<script src="js/bootstrap.js"></script>
+<script src="js/integrity.js"></script>
+<script src="js/finale.js"></script>
 
 <!-- YouTube IFrame API for end-credits music -->
 <script defer src="https://www.youtube.com/iframe_api"></script>
 <!-- End credits sequence -->
-<script defer src="end-credits.js?v=2"></script>
-<script defer src="pwa.js"></script>
+<script defer src="js/end-credits.js?v=2"></script>
 
+<!-- Single Skip + roster placement hover (no external deps) -->
+<script>
+(function(){
+  // Hide any Skip inside the TV; keep at most one Skip in the timer row
+  function keepSingleSkip(){
+    document.querySelectorAll('#tv button, #tv .btn').forEach(el=>{
+      if (/^\\s*skip\\s*$/i.test(el.textContent||'')) el.style.display = 'none';
+    });
+    const base = document.querySelector('#dashboardCard .row.baseline');
+    if (!base) return;
+    const skips = Array.from(base.querySelectorAll('button, .btn'))
+      .filter(el => /^\\s*skip\\s*$/i.test(el.textContent||''));
+    if (skips.length > 1) skips.slice(1).forEach(el => el.remove());
+  }
+
+  // Hover: Winner/Runner-up/12th... on top roster tiles
+  function placementsHover(){
+    const ord = n => { n=+n; const s=["th","st","nd","rd"], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
+    const getEvictWeek = p => p?.evictWeek ?? p?.evictedWeek ?? p?.weekEvicted ?? p?.evictionWeek ?? p?.evict_wk ?? null;
+    const isWinner   = p => !!(p.winner||p.isWinner||p.finalPlace===1||p.place===1||p.rank===1);
+    const isRunnerUp = p => !!(p.runnerUp||p.isRunnerUp||p.finalPlace===2||p.place===2||p.rank===2);
+    const nameOf = p => (p?.name||p?.Name||p?.displayName||'').trim().toLowerCase();
+
+    function computePlacements(){
+      const players = (window.game?.players || window.players || []).slice();
+      if (!players.length) return new Map();
+      const total = players.length;
+      const ev = players
+        .filter(p => !!(p.evicted || p.state==='evicted' || getEvictWeek(p)!=null))
+        .sort((a,b)=>{ const aw=getEvictWeek(a), bw=getEvictWeek(b);
+          if (aw!=null&&bw!=null) return aw-bw; if (aw!=null) return -1; if (bw!=null) return 1; return 0; });
+      const m = new Map();
+      ev.forEach((p,i)=> m.set(nameOf(p), ord(total - i)));
+      players.forEach(p=>{ const nm=nameOf(p); if (!nm) return;
+        if (isWinner(p)) m.set(nm,'Winner'); else if (isRunnerUp(p)) m.set(nm,'Runner-up'); });
+      return m;
+    }
+
+    function apply(){
+      const map = computePlacements();
+      document.querySelectorAll('.top-roster-tile').forEach(tile=>{
+        const nm = (tile.querySelector('.top-tile-name')?.textContent||'').trim().toLowerCase();
+        const label = map.get(nm);
+        if (label){ tile.title = label; tile.dataset.placeLabel = label; }
+      });
+    }
+
+    const host = document.querySelector('.top-roster-row') || document.getElementById('panel') || document.getElementById('actionCard');
+    if (!host){ setTimeout(placementsHover, 400); return; }
+    apply();
+    const mo = new MutationObserver(apply);
+    mo.observe(host, { childList:true, subtree:true, characterData:true });
+    window.addEventListener('bb:eviction', apply, { passive:true });
+    window.addEventListener('bb:winner', apply, { passive:true });
+  }
+
+  function init(){ keepSingleSkip(); placementsHover(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true });
+  else init();
+})();
+</script>
 
 </body>
 </html>
