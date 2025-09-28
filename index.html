@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>BB Tengaged — Modular Enhanced Build</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="styles.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<!-- Top Controls -->
+<div class="topbar">
+  <button class="btn" id="btnOpenSettings">⚙️ Settings</button>
+  <button class="btn" id="btnStartQuick">▶ Start</button>
+  <button class="btn" id="btnAdvancePhase" style="display:none;">➡ Advance</button>
+  <button class="btn" id="btnMusicToggle" style="display:none">🎵 Music</button>
+</div>
+
+<div class="wrap">
+  <!-- Dashboard -->
+  <div class="card" id="dashboardCard">
+    <h1>Dashboard</h1>
+    <div class="row tiny wrapline">
+      <div>Phase: <span id="phase" class="pill">lobby</span></div>
+      <div>Week: <span id="week" class="badge">1</span></div>
+      <div>HOH: <span id="hoh" class="badge warn">none</span></div>
+      <div>Noms: <span id="noms" class="badge">–</span></div>
+      <div>Veto: <span id="veto" class="badge">–</span></div>
+      <div>Alive: <span id="alive" class="badge ok">0</span></div>
+      <div><span id="statusBadge" class="badge">lobby</span></div>
+      <div id="doubleBadge" class="badge bad" style="display:none;">DOUBLE</div>
+      <div id="tripleBadge" class="badge bad" style="display:none;">TRIPLE</div>
+      <div id="manualBadge" class="badge acc" style="display:none;">MANUAL</div>
+      <div id="juryHouseBadge" class="badge" style="display:none;">JURY</div>
+      <div id="openingBadge" class="badge" style="display:none;">OPENING</div>
+    </div>
+    <div class="sep"></div>
+    <!-- Locked Timer Heading -->
+    <h2 id="timerHeading" data-fixed="timer">Timer</h2>
+    <div class="row baseline">
+      <span class="tiny muted">Remaining</span>
+      <span id="countdown" class="timeReading">00:00</span>
+    </div>
+    <div class="progressbar"><div id="tvProgressFill" class="progressbar-fill"></div></div>
+    <div class="sep"></div>
+    <div class="row between">
+      <h2>Cast</h2>
+      <span id="castHint" class="tiny muted"></span>
+    </div>
+
+    <!-- Cast table (with colgroup) -->
+    <div class="list">
+      <table id="castTbl">
+        <colgroup>
+          <col class="col-player">
+          <col class="col-state">
+          <col class="col-evictweek">
+          <col class="col-allies">
+          <col class="col-enemies">
+          <col class="col-avg">
+          <col class="col-actions">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>State</th>
+            <th class="tiny">Evict Wk</th>
+            <th>Allies</th>
+            <th>Enemies</th>
+            <th>Avg Aff</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="sep"></div>
+    <div class="tiny muted">Edit cast in Lobby via Settings → Manage → Edit Cast.</div>
+  </div>
+
+  <!-- Show / Center -->
+  <div class="card" id="actionCard">
+    <h1>Show</h1>
+    <!-- No inline background image to avoid missing-file errors; set via Settings or Visual tab -->
+    <div class="tv" id="tv">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+        <div class="tvTimer" id="tvTimer">00:00</div>
+      </div>
+      <div id="tvNow" class="tvNow">Welcome to the season.</div>
+      <div id="tvOverlay" class="tvOverlay"></div>
+      <canvas id="confetti"></canvas>
+    </div>
+    <div class="sep"></div>
+    <div id="panel"></div>
+    <div class="sep"></div>
+    <h2>Log</h2>
+    <div id="logTabs" class="tabBar">
+      <button class="tab-btn active" data-logtab="all">All</button>
+      <button class="tab-btn" data-logtab="game">Game</button>
+      <button class="tab-btn" data-logtab="social">Social</button>
+      <button class="tab-btn" data-logtab="vote">Vote</button>
+      <button class="tab-btn" data-logtab="jury">Jury</button>
+    </div>
+    <div id="logPanes">
+      <div id="log" class="log log-pane active" data-pane="all"></div>
+      <div id="logGame" class="log log-pane" data-pane="game"></div>
+      <div id="logSocial" class="log log-pane" data-pane="social"></div>
+      <div id="logVote" class="log log-pane" data-pane="vote"></div>
+      <div id="logJury" class="log log-pane" data-pane="jury"></div>
+    </div>
+  </div>
+
+  <!-- Side Panel -->
+  <div class="card" id="sideCard">
+    <div class="tabBar">
+      <button class="tab-btn active" data-tab="infoPanel">Info & Music</button>
+      <button class="tab-btn" data-tab="juryHousePanel" id="juryHouseTabBtn" style="display:none;">Jury House</button>
+      <button class="tab-btn" data-tab="debugPanel">Debug</button>
+    </div>
+    <div id="infoPanel">
+      <h1>Info & Music</h1>
+      <div class="tiny muted">Auto music switches with phases unless disabled.</div>
+      <div class="sep"></div>
+      <h2>Music</h2>
+      <div class="col tiny">
+        <div class="row baseline">
+          <select id="musicTrack">
+            <option value="none">No track</option>
+            <option value="theme_opening">Opening Theme</option>
+            <option value="hoh_comp">HOH Comp</option>
+            <option value="veto_comp">Veto Comp</option>
+            <option value="nominations">Nominations</option>
+            <option value="live_vote">Live Vote</option>
+            <option value="eviction">Eviction</option>
+            <option value="victory">Victory Theme</option>
+          </select>
+          <button class="btn small" id="btnPlayMusic">Play</button>
+          <button class="btn small" id="btnStopMusic">Stop</button>
+        </div>
+        <label class="tiny">Volume <input type="range" id="musicVol" min="0" max="1" step="0.01" value=".4"/></label>
+        <label class="inline tiny"><input type="checkbox" id="autoMusic" checked/> Auto music</label>
+      </div>
+      <div class="sep"></div>
+      <h2>Quick Actions</h2>
+      <div class="row">
+        <button class="btn small" id="btnNextWeek">Force Week ▶</button>
+        <button class="btn small" id="btnClearLog">Clear Log</button>
+        <button class="btn small" id="btnExport">Export Save</button>
+        <button class="btn small" id="btnImport">Import</button>
+      </div>
+      <input id="importFile" type="file" accept="application/json" style="display:none"/>
+    </div>
+    <div id="juryHousePanel" style="display:none;">
+      <h1>Jury House</h1>
+      <div class="tiny muted" id="juryHouseStatus">Inactive.</div>
+      <div class="sep"></div>
+      <h2>Jurors</h2>
+      <div id="juryRoster" class="tiny muted">None yet.</div>
+      <div class="sep"></div>
+      <h2>Jury Log</h2>
+      <div id="juryLog" class="jury-log"></div>
+    </div>
+    <div id="debugPanel" style="display:none;">
+      <h1>Debug</h1>
+      <div class="row tiny">
+        <button class="btn small" id="btnDumpSocial">Dump Social</button>
+        <button class="btn small" id="btnForceReturnTwist">Force Return Twist</button>
+        <button class="btn small" id="btnSkipPhaseDbg">Skip Phase</button>
+      </div>
+      <div class="sep"></div>
+      <div class="tiny muted">Use with caution; may affect pacing.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal-backdrop" aria-modal="true" role="dialog">
+  <div class="modal">
+    <button class="closeX" id="btnCloseSettings">✕</button>
+    <h2>Settings</h2>
+    <div class="modalTabs">
+      <button class="tab-btn active" data-tab="tabTimers">Room & Timers</button>
+      <button class="tab-btn" data-tab="tabFeatures">Features</button>
+      <button class="tab-btn" data-tab="tabTwists">Twists</button>
+      <button class="tab-btn" data-tab="tabManage">Manage</button>
+    </div>
+    <div class="settingsTabPane active" id="tabTimers">
+      <h3>Room & Timers</h3>
+      <div class="settingsGrid">
+        <label>Human name<input id="humanName" value="You"/></label>
+        <label>Players total<input id="numPlayers" type="number" min="6" max="22" value="12"/></label>
+        <label>TV Background Image URL<input id="tvBgUrl" type="url" placeholder="https://...image.jpg"/></label>
+        <label>HOH seconds<input id="tHOH" type="number" min="10" value="35"/></label>
+        <label>Noms seconds<input id="tNoms" type="number" min="10" value="25"/></label>
+        <label>Veto seconds<input id="tVeto" type="number" min="10" value="30"/></label>
+        <label>Veto decision<input id="tVetoDec" type="number" min="10" value="20"/></label>
+        <label>Comms seconds<input id="tComms" type="number" min="10" value="30"/></label>
+        <label>Live vote seconds<input id="tVote" type="number" min="10" value="25"/></label>
+        <label>Jury seconds<input id="tJury" type="number" min="10" value="42"/></label>
+        <label>Juror return vote seconds<input id="tJuryReturnVote" type="number" min="8" value="12"/></label>
+      </div>
+    </div>
+    <div class="settingsTabPane" id="tabFeatures">
+      <h3>Features</h3>
+      <div class="toggleRow">
+        <label class="inline"><input id="fxCards" type="checkbox" checked/> Reveal cards</label>
+        <label class="inline"><input id="fxSound" type="checkbox" checked/> Sound FX</label>
+        <label class="inline"><input id="fxAnim" type="checkbox" checked/> Extra animations</label>
+        <label class="inline"><input id="manualMode" type="checkbox"/> Manual mode</label>
+        <label class="inline"><input id="enableJuryHouse" type="checkbox" checked/> Jury house</label>
+        <label class="inline"><input id="autoMusicSetting" type="checkbox" checked/> Auto music</label>
+        <label class="inline">Card style:
+          <select id="fxStyle">
+            <option value="fade">Fade</option>
+            <option value="slide">Slide</option>
+            <option value="flip">Flip</option>
+            <option value="zoom">Zoom</option>
+          </select>
+        </label>
+        <label class="inline">Minigames:
+          <select id="miniMode">
+            <option value="random">Random</option>
+            <option value="clicker">Clicker only</option>
+            <option value="cycle">Cycle</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="settingsTabPane" id="tabTwists">
+      <h3>Twists</h3>
+      <div class="toggleRow">
+        <label class="inline">Double eviction % <input id="doubleChance" type="number" min="0" max="100" value="10" style="max-width:80px"/></label>
+        <label class="inline">Triple eviction % <input id="tripleChance" type="number" min="0" max="100" value="3" style="max-width:80px"/></label>
+        <label class="inline">Return twist % <input id="returnChance" type="number" min="1" max="100" value="50" style="max-width:80px"/></label>
+        <label class="inline">Auto-eviction % <input id="selfEvictChance" type="number" min="0" max="2" step="0.1" value="0" style="max-width:80px"/></label>
+      </div>
+      <div class="tiny muted">Juror return can trigger before HOH when enough jurors are in the Jury House.</div>
+    </div>
+    <div class="settingsTabPane" id="tabManage">
+      <h3>Cast Edit (Lobby Only)</h3>
+      <div class="row">
+        <button id="btnEditCast" class="btn small">Toggle Edit Mode</button>
+        <button id="btnRebuildGame" class="btn small">Rebuild Game</button>
+      </div>
+      <div class="sep"></div>
+      <h3>Game Control</h3>
+      <div class="row">
+        <button id="btnStart" class="btn primary small">Restart Season</button>
+        <button id="btnReset" class="btn danger small">Reset to default</button>
+      </div>
+      <div class="sep"></div>
+      <h3>Data</h3>
+      <div class="row">
+        <button id="btnExport2" class="btn small">Export Save</button>
+        <button id="btnImport2" class="btn small">Import Save</button>
+      </div>
+      <div class="tiny muted" style="margin-top:6px">Esc or ✕ closes and auto‑saves.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Finale Overlay -->
+<div id="finaleDim">
+  <div class="winnerBanner" id="finalWinnerBanner">WINNER</div>
+  <div class="winnerName" id="finalWinnerName">Name</div>
+  <div class="actions" id="finaleActions">
+    <button class="btn small" id="btnFinalReset">Hard Reset</button>
+    <button class="btn small" id="btnFinalReplay">Replay Cast</button>
+  </div>
+</div>
+
+<audio id="bgm" preload="auto" loop></audio>
+
+<!-- SCRIPT LOAD ORDER -->
+<script src="js/state.js"></script>
+<script src="js/audio.js"></script>
+
+<!-- Settings & UI -->
+<script defer src="js/ui.config-and-settings.js"></script>
+
+
+<!-- NEW: TV screen upload (image/video) -->
+<script defer src="js/ui.tv-media.js"></script>
+<script defer src="js/settings.js"></script>
+<script defer src="js/players-total.js?v=5"></script>
+<script defer src="js/ui.overlay-and-logs.js"></script>
+<script defer src="js/ui.hud-and-router.js"></script>
+
+<!-- Game flows -->
+<script src="js/social.js"></script>
+<script src="js/minigames.js"></script>
+<script src="js/competitions.js"></script>
+<script src="js/nominations.js"></script>
+<script src="js/veto.js"></script>
+<script src="js/eviction.js"></script>
+<script src="js/jury.js"></script>
+<script defer src="js/jury-viz.js?v=2"></script>
+
+<!-- Juror return (America vote) — make sure it's loaded before twists -->
+<script src="js/jury_return_vote.js"></script>
+
+<script src="js/twists.js"></script>
+<script src="js/persistence.js"></script>
+<script src="js/bootstrap.js"></script>
+<script src="js/integrity.js"></script>
+<script src="js/finale.js"></script>
+
+<!-- YouTube IFrame API for end-credits music -->
+<script defer src="https://www.youtube.com/iframe_api"></script>
+<!-- End credits sequence -->
+<script defer src="js/end-credits.js?v=2"></script>
+
+
+
+</body>
+</html>

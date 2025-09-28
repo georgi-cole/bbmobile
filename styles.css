@@ -1,0 +1,1956 @@
+/* ============================================================================
+   BIG BROTHER GAME — REFACTORED STYLES
+   Compact stylesheet with tokens, consistent spacing, and no duplicate blocks.
+   Sections
+   01. Design Tokens / Reset
+   02. Layout Grid & Cards
+   03. Typography & Text Utilities
+   04. Buttons
+   05. Badges / Tags
+   06. Topbar
+   07. TV / Show Panel (with safe areas)
+   08. Reveal Cards (+ Big Announcement + Avatar rail)
+   09. Logs & Tabs
+   10. Roster (Dashboard & Top Roster)
+   11. Live Vote / Eviction UI
+   12. Settings Modal & Forms
+   13. Jury House & Finale
+   14. America’s Vote — Return Twist
+   15. Tooltips / Profile Popover
+   16. Minigame / Competition stubs
+   17. Confetti
+   18. Utilities
+   19. Media Queries
+   20. Animations
+   ============================================================================ */
+
+/* 01. DESIGN TOKENS / RESET ------------------------------------------------ */
+:root{
+  --bg:#0d151f;
+  --card:#132132;
+  --card-2:#162435;
+  --ink:#e3ecf5;
+  --muted:#95a9c0;
+  --muted-2:#b6c9dc;
+
+  --line:#24364b;
+  --line-2:#1f3248;
+
+  --accent:#83bfff;
+  --accent-2:#66b8ff;
+  --good:#77d58d;
+  --warn:#f2ce7b;
+  --bad:#ff6d6d;
+
+  --primary-1:#1f344d;
+  --primary-2:#284866;
+  --primary-3:#3563a7;
+
+  --radius-s:6px;
+  --radius:10px;
+  --radius-lg:16px;
+  --radius-xl:20px;
+
+  --pad:14px;
+  --pad-lg:18px;
+
+  /* TV safe areas */
+  --tv-safe-top:44px;
+  --tv-safe-bottom:42px;
+  --tv-safe-x:16px;
+}
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:focus-visible{ outline:2px solid var(--accent-2); outline-offset:2px; }
+html,body{ margin:0; padding:0; height:100%; background:var(--bg); color:var(--ink);
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif;
+  line-height:1.4; -webkit-font-smoothing:antialiased; }
+img{ max-width:100%; display:block; }
+a{ color:#7fbaff; text-decoration:none; transition:color .18s; }
+a:hover{ color:#a8d3ff; } a:active{ color:#d3ecff; }
+
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:#0f1f31; }
+::-webkit-scrollbar-thumb{ background:#26435d; border-radius:6px; }
+::-webkit-scrollbar-thumb:hover{ background:#31587a; }
+
+/* 02. LAYOUT GRID & CARDS -------------------------------------------------- */
+.wrap{
+  display:grid; gap:14px; padding:14px;
+  grid-template-columns:300px minmax(520px,1fr) 300px;
+  align-items:flex-start;
+}
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  padding:14px 16px 18px;
+  border-radius:14px;
+  position:relative;
+  box-shadow:0 8px 22px -14px rgba(0,0,0,.6);
+  overflow:hidden;
+}
+.sep{ height:12px; }
+hr.divider{ border:none; border-top:1px solid var(--line-2); margin:14px 0; }
+
+/* 03. TYPOGRAPHY & TEXT UTILITIES ------------------------------------------ */
+h1{ margin:0 0 .6em; font-size:1.55rem; font-weight:600; letter-spacing:.6px; }
+h2{ margin:0 0 .55em; font-size:1.15rem; font-weight:600; letter-spacing:.6px; }
+h3{ margin:0 0 .5em; font-size:1rem; font-weight:600; letter-spacing:.5px; }
+.big{ font-size:1.2rem; font-weight:600; }
+.small{ font-size:.75rem; }
+.tiny{ font-size:.70rem; line-height:1.3; }
+.micro{ font-size:.6rem; line-height:1.15; letter-spacing:.5px; }
+.muted{ color:var(--muted); } .muted-light{ color:var(--muted-2); }
+.warn{ color:var(--warn); } .ok{ color:var(--good); } .danger{ color:var(--bad); }
+.accent{ color:var(--accent); }
+
+/* 04. BUTTONS --------------------------------------------------------------- */
+button{ font:inherit; cursor:pointer; }
+.btn{
+  background:var(--primary-1); color:#d8e6f5;
+  padding:6px 14px 7px; border:none; border-radius:8px;
+  font-size:.72rem; letter-spacing:.6px; font-weight:600; text-transform:uppercase;
+  display:inline-flex; gap:6px; align-items:center; line-height:1.1;
+  transition:background .22s, box-shadow .22s, transform .18s;
+}
+.btn:hover{ background:var(--primary-2); box-shadow:0 4px 10px -6px rgba(0,0,0,.6); }
+.btn:active{ transform:translateY(1px); }
+.btn:disabled,.btn.disabled{ opacity:.55; cursor:not-allowed; filter:grayscale(.35); }
+.btn.primary{ background:var(--primary-3); } .btn.primary:hover{ background:#3e70bb; }
+.btn.danger{ background:#993636; } .btn.danger:hover{ background:#b04848; }
+.btn.ok{ background:#2d7a47; } .btn.ok:hover{ background:#338a51; }
+.btn.outline{ background:var(--card); border:2px solid #2d4764; padding:4px 12px 5px; }
+.btn.outline:hover{ background:#1a2c40; }
+.btn.small{ padding:4px 10px 5px; font-size:.62rem; }
+.btn.ghost{ background:transparent; color:#b8d6f1; } .btn.ghost:hover{ background:#1b2e44; }
+.btn.iconOnly{ padding:5px 8px 6px; }
+button:focus-visible,.btn:focus-visible{ outline:2px solid var(--accent-2); outline-offset:2px; }
+
+/* 05. BADGES / TAGS --------------------------------------------------------- */
+.badge,.pill{
+  display:inline-block; background:#203347; padding:4px 9px 5px; border-radius:999px;
+  font-size:.62rem; font-weight:700; letter-spacing:.6px; text-transform:uppercase; line-height:1;
+}
+.badge.warn{ background:#3a2c07; color:#f7d585; }
+.badge.bad{ background:#442025; color:#ffb2b2; }
+.badge.ok{ background:#2b4e30; color:#88e6a0; }
+.badge.acc{ background:#26415c; color:#96cfff; }
+.badge.outline{ background:var(--card); border:1px solid #2d4764; }
+
+.tag{
+  background:#2a3d52; display:inline-flex; align-items:center; justify-content:center;
+  padding:3px 7px 4px; border-radius:4px; font-size:.55rem; font-weight:600; letter-spacing:.4px;
+  text-transform:uppercase; color:#c7d8e8; margin:1px 3px 1px 0; line-height:1;
+}
+.tag.hoh{ background:#2f4a6a; color:#ffd775; }
+.tag.veto{ background:#205a36; color:#7eed9d; }
+.tag.nom{ background:#6a2e2e; color:#ff9e9e; }
+.tag.jury{ background:#3e3b63; color:#d2c8ff; }
+.tag.evicted{ background:#2e2e2e; color:#bbb; }
+.tag.winner{ background:#275339; color:#9fe5b0; }
+.tag.runner{ background:#374261; color:#c9d7f7; }
+
+/* 06. TOPBAR ---------------------------------------------------------------- */
+.topbar{
+  background:#121d2a; border-bottom:1px solid #1f2e40; padding:6px 12px;
+  display:flex; gap:8px; justify-content:flex-start; align-items:center;
+  position:sticky; top:0; z-index:40; box-shadow:0 8px 24px -16px rgba(0,0,0,.6);
+}
+
+/* 07. TV / SHOW PANEL (safe areas) ----------------------------------------- */
+.tv{
+  position:relative; height:260px;
+  background:radial-gradient(circle at 32% 30%, #23364d, #0e1730 65%);
+  border:2px solid #213349; border-radius:18px; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
+  box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
+}
+.tvHead{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
+  padding:10px 14px 8px; border-bottom:1px solid rgba(120,210,255,.07);
+  background:linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+}
+.tvTitle{ font-weight:600; letter-spacing:.6px; font-size:.75rem; color:#c7d7eb; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tvTimer{ font-size:.95rem; font-weight:600; color:#e2edf8; white-space:nowrap; }
+
+#tvOverlay{
+  position:absolute; z-index:12;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  pointer-events:none; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
+}
+#confetti{
+  position:absolute; z-index:11;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  pointer-events:none; mix-blend-mode:screen; opacity:.95;
+}
+.tvNow{
+  position:absolute; z-index:13;
+  left:var(--tv-safe-x); right:var(--tv-safe-x); bottom:8px;
+  min-height:28px; padding:6px 10px; border-radius:8px; font-size:.82rem;
+  background:linear-gradient(180deg, rgba(9,24,40,.85), rgba(6,14,24,.85)),
+             linear-gradient(90deg, rgba(111,211,255,.18), rgba(103,255,168,.12));
+  border:1px solid rgba(120,210,255,.22); box-shadow:0 4px 18px -12px rgba(0,0,0,.8);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
+/* Timer progress (outside TV) */
+.progressbar{ height:10px; background:#112030; border:1px solid #203347; border-radius:8px; overflow:hidden; margin:8px 0 2px; position:relative; }
+.progressbar-fill{ height:100%; width:0%; background:linear-gradient(90deg,#4695ff,#71bfff); box-shadow:0 0 8px -2px #4695ff; transition:width .22s linear; }
+.timeReading{ font-size:1.8rem; font-weight:600; letter-spacing:1px; color:#dde9f6; }
+
+/* 08. REVEAL CARDS + BIG ANNOUNCEMENT -------------------------------------- */
+.revealCard{
+  background:linear-gradient(135deg, rgba(28,43,62,.92), rgba(12,22,36,.88));
+  backdrop-filter:blur(10px) saturate(1.25);
+  -webkit-backdrop-filter:blur(10px) saturate(1.25);
+  border:1px solid rgba(110,160,220,.18);
+  position:relative; overflow:hidden; text-align:center;
+  font-size:.78rem; line-height:1.45;
+  padding:18px 20px 20px; border-radius:20px;
+  box-shadow:0 8px 24px -12px rgba(0,0,0,.65), 0 0 0 1px rgba(120,180,255,.08), 0 0 22px -6px rgba(90,150,255,.35) inset;
+  animation:cardFloatIn .65s cubic-bezier(.25,.9,.25,1) forwards;
+  max-width:min(780px, 92vw);
+}
+.revealCard h3{
+  font-size:1.05rem; letter-spacing:.8px; margin:0 0 .55em; font-weight:600;
+  background:linear-gradient(90deg,#ddecff,#8fc3ff); -webkit-background-clip:text; color:transparent;
+  text-shadow:0 0 18px rgba(140,200,255,.35);
+}
+.revealCard:not(.no-breathe){ animation:cardFloatIn .65s cubic-bezier(.25,.9,.25,1), cardBreathe 6s ease-in-out .7s infinite; }
+.revealCard::after{
+  content:''; position:absolute; inset:0; pointer-events:none; opacity:.55; mix-blend-mode:overlay;
+  background:radial-gradient(circle at 18% 12%,rgba(255,255,255,.18),transparent 60%), linear-gradient(120deg,rgba(255,255,255,.08),rgba(255,255,255,0) 40%);
+}
+.revealCard.return{ border-color:rgba(120,210,255,.35); box-shadow:0 8px 24px -12px rgba(0,0,0,.65), 0 0 0 1px rgba(120,210,255,.25), 0 0 28px -10px rgba(120,210,255,.5) inset; }
+
+/* Big announcement variation */
+.revealCard.bigAnnounce{
+  max-width: clamp(340px, 64vw, 820px);
+  background:linear-gradient(135deg,#1a3147,#0e1a29 60%);
+  border:1px solid rgba(120,210,255,.25);
+  box-shadow:0 16px 48px -20px rgba(0,0,0,.85), 0 0 0 1px rgba(120,210,255,.18), 0 0 52px -14px rgba(120,210,255,.55) inset;
+  font-size:.82rem; padding:26px 32px 30px; border-radius:26px; text-align:center;
+}
+.revealCard.bigAnnounce h3{
+  font-size:1.25rem; margin:0 0 .6em; letter-spacing:1px;
+  background:linear-gradient(90deg,#dff3ff,#8fd9ff 45%,#dff3ff);
+  -webkit-background-clip:text; color:transparent; text-shadow:0 0 28px rgba(140,220,255,.45);
+}
+
+/* Avatar rail support */
+.revealCard.has-avatars{ display:flex; align-items:stretch; text-align:left; gap:18px; }
+.rc-avatar-rail{ flex:0 0 86px; display:flex; flex-direction:column; gap:10px; padding-top:2px; }
+.rc-avatar-rail .rc-av{
+  width:80px; height:80px; border-radius:20px; object-fit:cover; background:#101c28; border:2px solid #356089;
+  box-shadow:0 6px 18px -10px rgba(0,0,0,.65); animation:cardAvatarIn .6s ease;
+}
+.revealCard.has-avatars .rc-body{ flex:1 1 auto; min-width:0; }
+
+/* 09. LOGS & TABS ----------------------------------------------------------- */
+#logTabs{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+#logTabs .tab-btn{
+  background:#1c2e43; border:none; padding:5px 11px 6px; font-size:.62rem; border-radius:8px;
+  text-transform:uppercase; letter-spacing:.5px; cursor:pointer; color:#c8d5e6; font-weight:600; transition:background .22s;
+}
+#logTabs .tab-btn.active,#logTabs .tab-btn:hover{ background:#284061; }
+.log{
+  height:220px; overflow:auto; background:#0f1f2d; border:1px solid #1d3042; border-radius:10px;
+  padding:7px 10px 8px; font-size:.67rem; line-height:1.35; position:relative;
+}
+.log-pane{ display:none; } .log-pane.active{ display:block; }
+.log .ok{ color:#7fd996; } .log .danger{ color:#ff7c7c; } .log .warn{ color:#e6c473; }
+
+/* 10. ROSTER ---------------------------------------------------------------- */
+.roster-list{ display:flex; flex-direction:column; gap:5px; }
+.roster-row{
+  display:grid; grid-template-columns:210px 1fr 42px; gap:8px; align-items:center;
+  background:#16283b; border:1px solid #253a51; padding:6px 8px; border-radius:10px; font-size:.68rem; position:relative;
+}
+.roster-row.header{
+  background:#1a2f45; font-size:.6rem; letter-spacing:.5px; font-weight:600; text-transform:uppercase; color:#b2c5d8;
+}
+.roster-row.evicted{ opacity:.55; }
+.roster-row .avatar{ width:42px; height:42px; border-radius:11px; object-fit:cover; border:2px solid #2e4a67; box-shadow:0 4px 10px -6px rgba(0,0,0,.6); }
+.roster-row .avatar.grayed{ filter:grayscale(.85) brightness(.65); }
+.roster-row .cell.player .chip{ display:flex; gap:10px; align-items:center; }
+
+.top-roster-row{ display:flex; gap:10px; align-items:flex-start; justify-content:flex-start; margin-bottom:8px; flex-wrap:wrap; padding:4px 0 2px; }
+.top-roster-tile{
+  width:var(--topTile,80px); flex:0 0 auto; position:relative; isolation:isolate;
+  background:linear-gradient(145deg,#182636,#101a28); border:1px solid #2d4258; border-radius:14px;
+  padding:6px 6px 8px; text-align:center; font-size:.6rem; display:flex; flex-direction:column; gap:4px;
+  transition:transform .25s, box-shadow .25s, border-color .2s;
+}
+.top-roster-tile:hover{ transform:translateY(-4px); box-shadow:0 10px 22px -12px rgba(0,0,0,.7); border-color:#305074; }
+.top-roster-tile.evicted{ opacity:.5; }
+.top-tile-avatar-wrap{
+  position:relative; width:100%; aspect-ratio:1/1; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center;
+  background:#121d2b; box-shadow:0 2px 4px -2px rgba(0,0,0,.75) inset;
+}
+.top-tile-avatar{ width:100%; height:100%; object-fit:cover; transition:filter .25s; }
+.top-tile-avatar.grayed{ filter:grayscale(.8) brightness(.65); }
+.top-tile-name{
+  font-size:.56rem; letter-spacing:.5px; font-weight:600; color:#cedbeb; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.15; width:100%; text-align:center;
+}
+
+/* Small badges on tiles */
+.badge-crown,.badge-veto,.badge-nom,.ribbon-evicted{ z-index:2; position:absolute; }
+.badge-crown{ top:4px; left:4px; width:22px; height:22px; background:radial-gradient(circle at 50% 40%, #ffd96b, #b6800c 70%); border-radius:50%; box-shadow:0 0 0 2px #142234,0 0 8px -2px rgba(255,220,120,.7); }
+.badge-crown::after{ content:'👑'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:.75rem; }
+.badge-veto{ top:4px; right:4px; width:22px; height:22px; background:radial-gradient(circle at 50% 50%, #7cffad, #1c6b3a 70%); border-radius:50%; box-shadow:0 0 0 2px #142234,0 0 8px -2px rgba(130,250,180,.8); }
+.badge-veto::after{ content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:.85rem; font-weight:600; color:#123422; }
+.badge-nom{ bottom:4px; left:50%; transform:translateX(-50%); background:#8d3232; padding:2px 7px 3px; border-radius:6px; font-size:.55rem; font-weight:700; letter-spacing:.5px; color:#ffe8e8; text-shadow:0 1px 2px rgba(0,0,0,.5); box-shadow:0 2px 6px -3px rgba(0,0,0,.65),0 0 8px -3px #ff8181; }
+.badge-nom::after{ content:'NOM'; }
+.ribbon-evicted{ top:50%; left:50%; transform:translate(-50%,-50%) rotate(-14deg); background:#222; padding:4px 10px; border:2px solid #333; font-size:.55rem; letter-spacing:.5px; font-weight:700; color:#bbb; border-radius:4px; opacity:.85; box-shadow:0 4px 14px -8px rgba(0,0,0,.8); }
+
+.return-flash{ animation:returnFlash 1.8s ease-in-out 2; }
+@keyframes returnFlash{
+  0%{ box-shadow:0 0 0 0 rgba(140,210,255,0); }
+  30%{ box-shadow:0 0 14px 0 rgba(140,210,255,.9),0 0 40px -10px rgba(140,210,255,.85); transform:scale(1.04); }
+  70%{ box-shadow:0 0 10px 0 rgba(140,210,255,.4); }
+  100%{ box-shadow:0 0 0 0 rgba(140,210,255,0); transform:scale(1); }
+}
+
+/* 11. LIVE VOTE / EVICTION UI ---------------------------------------------- */
+.lvCol{ flex:1; }
+.lvBarWrap{ height:14px; background:#1d2740; border:1px solid #2a3b5a; border-radius:8px; overflow:hidden; box-shadow:0 4px 10px -6px rgba(0,0,0,.7) inset; }
+.lvBar{ height:100%; width:0%; background:#6fd3ff; box-shadow:0 0 8px -2px #6fd3ff; transition:width .25s; }
+.lvBar.alt{ background:#74e48b; box-shadow:0 0 8px -2px #74e48b; }
+
+/* 12. SETTINGS MODAL & FORMS ----------------------------------------------- */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(4,10,18,.72);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  display:none; align-items:flex-start; justify-content:center; padding:40px 20px 60px; z-index:120;
+}
+.modal-backdrop.open{ display:flex; animation:fadeIn .35s ease; }
+.modal{
+  width:100%; max-width:960px; background:var(--card-2); border:1px solid #284058; border-radius:18px;
+  padding:22px 26px 30px; position:relative; box-shadow:0 18px 48px -20px rgba(0,0,0,.75),0 6px 22px -8px rgba(0,0,0,.55);
+  animation:popIn .45s ease; font-size:.75rem; line-height:1.35;
+}
+.modal h2{ margin-top:0; font-size:1.15rem; }
+.closeX{
+  position:absolute; top:10px; right:10px; background:#243a50; width:32px; height:32px; border:none; border-radius:10px;
+  color:#d7e5f4; font-size:1rem; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 10px -6px rgba(0,0,0,.65);
+}
+.closeX:hover{ background:#2c4c69; }
+
+.modalTabs{ display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 14px; }
+.modalTabs .tab-btn{
+  background:#203449; color:#c4d9ec; border:none; padding:6px 14px 7px; border-radius:8px;
+  font-size:.63rem; font-weight:600; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; transition:background .2s;
+}
+.modalTabs .tab-btn.active,.modalTabs .tab-btn:hover{ background:#2d4b6a; }
+
+.settingsTabPane{ display:none; animation:fadeIn .35s ease; } .settingsTabPane.active{ display:block; }
+.settingsGrid{ display:grid; gap:14px 16px; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); margin-top:12px; }
+.settingsGrid label{ display:flex; flex-direction:column; gap:4px; font-size:.63rem; letter-spacing:.4px; color:#b2c2d5; font-weight:600; text-transform:uppercase; }
+.settingsGrid input[type="number"],.settingsGrid input[type="text"],.settingsGrid select{
+  background:#1b2e42; border:1px solid #2c4763; color:#e3edf7; padding:6px 8px; font-size:.72rem; border-radius:6px; font-family:inherit; transition:background .2s, border-color .2s;
+}
+.settingsGrid input:focus,.settingsGrid select:focus{ outline:none; background:#223b53; border-color:#3f6385; }
+.toggleRow{ display:flex; flex-wrap:wrap; gap:14px 24px; margin:10px 0 6px; }
+.toggleRow .inline{ display:flex; gap:6px; align-items:center; font-size:.65rem; letter-spacing:.4px; color:#c2d3e3; }
+input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:pointer; }
+
+/* 13. JURY HOUSE & FINALE --------------------------------------------------- */
+#juryHousePanel{ font-size:.68rem; }
+.jury-log{ height:150px; overflow:auto; background:#101c2a; border:1px solid #203347; padding:6px 8px; border-radius:8px; font-size:.63rem; }
+
+#finaleDim{
+  position:fixed; inset:0; background:rgba(8,14,20,.88);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  display:none; flex-direction:column; align-items:center; justify-content:center; z-index:300; gap:18px; animation:fadeIn .55s ease;
+}
+#finaleDim.show{ display:flex; }
+.winnerBanner{ font-size:1.4rem; letter-spacing:1px; font-weight:700; color:#ffdc8b; text-shadow:0 0 22px rgba(255,220,140,.6); }
+.winnerName{ font-size:2.1rem; font-weight:700; letter-spacing:1.2px; color:#e8f4ff; text-shadow:0 0 16px rgba(140,200,255,.8); }
+#finaleActions{ display:flex; gap:14px; }
+
+/* 14. AMERICA’S VOTE — RETURN TWIST ---------------------------------------- */
+.returnTwistHost{
+  background:#182a3b; border:1px solid #26405b; padding:14px 16px 18px; border-radius:16px;
+  box-shadow:0 8px 20px -14px rgba(0,0,0,.65); position:relative; animation:fadeIn .6s ease;
+  font-size:.7rem; line-height:1.3;
+}
+.rtHeader{ margin:0 0 6px; font-size:.95rem; font-weight:600; letter-spacing:.6px; }
+.rtGrid{ display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); margin:12px 0 10px; }
+.rtCard{
+  --rtScale:1; position:relative; background:linear-gradient(145deg,#1d3044,#132132);
+  border:1px solid #2c4b68; border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:7px; align-items:center; justify-content:flex-start; text-align:center;
+  font-size:.62rem; transform:scale(var(--rtScale)); transition:transform .35s ease, box-shadow .35s ease, border-color .35s ease;
+  box-shadow:0 10px 22px -14px rgba(0,0,0,.65),0 0 0 1px rgba(90,150,220,.15);
+}
+.rtCard.leader{ border-color:#ffd166; box-shadow:0 0 0 1px rgba(255,209,102,.4),0 14px 28px -16px rgba(0,0,0,.9); animation:pulseLeader 1.9s ease-in-out infinite; }
+@keyframes pulseLeader{ 0%,100%{ box-shadow:0 0 0 1px rgba(255,209,102,.25),0 10px 20px -14px rgba(0,0,0,.85);} 50%{ box-shadow:0 0 18px -2px rgba(255,209,102,.65),0 10px 22px -12px rgba(0,0,0,.8);} }
+.rtCard.flash{ animation:flashCard .9s ease; }
+@keyframes flashCard{ 0%{ box-shadow:0 0 0 0 rgba(255,255,255,0); transform:scale(1.02);} 40%{ box-shadow:0 0 18px 0 rgba(255,255,255,.35); transform:scale(1.06);} 100%{ box-shadow:0 0 0 0 rgba(255,255,255,0); transform:scale(1.02);} }
+.rtAvatarWrap{ position:relative; width:72px; height:72px; border-radius:16px; overflow:hidden; background:#122331; box-shadow:0 5px 14px -10px rgba(0,0,0,.8), 0 0 0 1px #2b4e6f; }
+.rtAvatar{ width:100%; height:100%; object-fit:cover; filter:saturate(.9); transition:filter .4s; }
+.rtCard.leader .rtAvatar{ filter:saturate(1.15) brightness(1.05); }
+.rtAvatarRing{ position:absolute; inset:0; border:2px solid rgba(255,255,255,.08); border-radius:inherit; pointer-events:none; box-shadow:inset 0 0 12px -4px rgba(255,255,255,.25); transition:border-color .4s, box-shadow .4s; }
+.rtCard.leader .rtAvatarRing{ border-color:#ffd166; box-shadow:inset 0 0 16px -4px rgba(255,209,102,.55),0 0 6px -2px rgba(255,209,102,.55); }
+.rtName{ font-weight:600; letter-spacing:.4px; color:#d6e6f7; font-size:.6rem; line-height:1.15; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rtCard.leader .rtName{ color:#ffe199; text-shadow:0 0 4px rgba(255,220,120,.6); }
+.rtBarOuter{ width:100%; height:12px; background:#142335; border:1px solid #20384f; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px -3px rgba(0,0,0,.7) inset; }
+.rtBarFill{ position:relative; height:100%; width:0%; background:linear-gradient(90deg,#4d8dff,#79d7ff); box-shadow:0 0 6px -2px #66aefe; transition:width .25s; overflow:hidden; }
+.rtBarFill::after{ content:''; position:absolute; inset:0; background:linear-gradient(120deg, transparent 0%, rgba(255,255,255,.35) 50%, transparent 100%); animation:barSheen 2.2s linear infinite; mix-blend-mode:overlay; opacity:.55; }
+@keyframes barSheen{ 0%{ transform:translateX(-100%);} 100%{ transform:translateX(100%);} }
+.rtPct{ font-size:.56rem; font-weight:700; letter-spacing:.6px; color:#b9cbde; }
+.rtCard.leader .rtPct{ color:#ffe199; }
+.rtNote{ margin-top:2px; opacity:.75; font-size:.58rem; letter-spacing:.4px; }
+#rtCountdown{ font-size:.62rem; font-weight:600; letter-spacing:.5px; color:#c8d9eb; }
+
+/* 15. TOOLTIP / PROFILE POPOVER -------------------------------------------- */
+.profile-tip{
+  position:fixed; z-index:160; background:#182738; border:1px solid #2c4662; border-radius:14px;
+  box-shadow:0 12px 30px -16px rgba(0,0,0,.75); padding:10px 14px 14px; width:270px; pointer-events:none; font-size:.68rem; animation:fadeIn .25s ease;
+}
+.profile-tip .pt-head{ display:flex; gap:12px; }
+.profile-tip .pt-ava-wrap{ width:56px; height:56px; border-radius:12px; overflow:hidden; background:#102030; box-shadow:0 2px 6px -2px #000 inset; }
+.profile-tip .pt-ava{ width:100%; height:100%; object-fit:cover; }
+.profile-tip .pt-name{ font-weight:600; font-size:.78rem; letter-spacing:.5px; margin-bottom:2px; }
+.profile-tip .pt-row{ display:flex; gap:8px; margin-top:4px; }
+.profile-tip .pt-label{ width:54px; color:#a9bccd; }
+.profile-tip .pt-motto{ margin:4px 0 2px; font-style:italic; }
+
+/* 16. MINIGAME / COMPETITION STUBS ----------------------------------------- */
+.minigame-host{
+  background:#182a3b; border:1px solid #26405b; padding:12px 14px 14px; border-radius:14px;
+  box-shadow:0 6px 16px -10px rgba(0,0,0,0.6); font-size:.7rem; line-height:1.3; position:relative;
+}
+.minigame-host h3{ margin:0 0 6px; font-size:.9rem; font-weight:600; }
+.minigame-grid-placeholder{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(60px,1fr)); margin-top:8px; }
+.minigame-cell{
+  background:#21364b; aspect-ratio:1/1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:.6rem; color:#b9cfe2;
+}
+.compScoreboard{ margin-top:10px; border:1px solid #2a4561; background:#132435; border-radius:10px; padding:8px 10px; font-size:.62rem; }
+.compScoreboard ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+.compScoreboard li{
+  display:flex; justify-content:space-between; align-items:center; background:#1b2f42; padding:4px 8px 5px; border-radius:6px; letter-spacing:.3px; font-weight:600; color:#d5e4f2;
+}
+
+/* 17. CONFETTI -------------------------------------------------------------- */
+#confetti{ pointer-events:none; mix-blend-mode:screen; }
+
+/* 18. UTILITIES ------------------------------------------------------------- */
+.hidden{ display:none!important; }
+.flex{ display:flex; } .flex-col{ display:flex; flex-direction:column; } .flex-center{ display:flex; align-items:center; justify-content:center; }
+.space-between{ justify-content:space-between; } .wrapline{ flex-wrap:wrap; }
+.gap4{ gap:4px; } .gap6{ gap:6px; } .gap8{ gap:8px; } .gap12{ gap:12px; }
+.m0{ margin:0!important; } .mt4{ margin-top:4px!important; } .mt6{ margin-top:6px!important; } .mt8{ margin-top:8px!important; } .mt12{ margin-top:12px!important; }
+.mb4{ margin-bottom:4px!important; } .mb6{ margin-bottom:6px!important; } .mb8{ margin-bottom:8px!important; } .mb12{ margin-bottom:12px!important; }
+.p4{ padding:4px!important; } .p8{ padding:8px!important; }
+.text-center{ text-align:center; } .text-right{ text-align:right; }
+.upper{ text-transform:uppercase; } .bold{ font-weight:700; }
+.rounded{ border-radius:8px; } .border{ border:1px solid #2d4764; }
+.overlay-blur{ backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+.truncate{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Cast table (single, deduped block) */
+#castTbl{ table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0 6px; }
+#castTbl col.col-player{ width:185px; }
+#castTbl col.col-state{ width:70px; }
+#castTbl col.col-evictweek{ width:68px; }
+#castTbl col.col-allies{ width:150px; }
+#castTbl col.col-enemies{ width:150px; }
+#castTbl col.col-avg{ width:68px; }
+#castTbl col.col-actions{ width:40px; }
+#castTbl thead th{
+  font-size:.58rem; letter-spacing:.55px; text-transform:uppercase; font-weight:700;
+  padding:4px 6px 6px; color:#afc3d6; background:#172433; text-align:left;
+}
+#castTbl tbody tr{ background:#152434; border:1px solid #24394e; transition:background .18s; }
+#castTbl tbody tr:hover{ background:#1d3145; }
+#castTbl td{
+  font-size:.64rem; padding:6px 8px 7px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+#castTbl th:nth-child(2),#castTbl td:nth-child(2),
+#castTbl th:nth-child(3),#castTbl td:nth-child(3),
+#castTbl th:nth-child(6),#castTbl td:nth-child(6),
+#castTbl th:nth-child(7),#castTbl td:nth-child(7){ text-align:center; }
+#castTbl td:nth-child(4),#castTbl td:nth-child(5){
+  white-space:normal; line-height:1.1; font-size:.55rem; overflow:hidden; max-height:2.4em;
+}
+#castTbl td.state-col span{ display:inline-block; min-width:42px; text-align:center; }
+#dashboardCard h2.week-duplicate-heading{ display:none!important; }
+
+/* 19. MEDIA QUERIES --------------------------------------------------------- */
+@media (max-width:1250px){
+  .wrap{ grid-template-columns:280px minmax(420px,1fr) 260px; }
+}
+@media (max-width:1100px){
+  .wrap{ grid-template-columns:280px 1fr; }
+  #sideCard{ order:3; }
+}
+@media (max-width:860px){
+  .wrap{ grid-template-columns:1fr; }
+  .tv{ height:260px; }
+}
+@media (max-width:540px){
+  .modal{ padding:18px 16px 24px; border-radius:16px; }
+  .settingsGrid{ grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
+  .rtGrid{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }
+  .top-roster-row{ justify-content:center; }
+}
+
+/* 20. ANIMATIONS ------------------------------------------------------------ */
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:translateY(0);} }
+@keyframes popIn{ 0%{ opacity:0; transform:scale(.85);} 60%{ opacity:1; transform:scale(1.03);} 100%{ opacity:1; transform:scale(1);} }
+@keyframes cardFloatIn{ 0%{ opacity:0; transform:translateY(24px) scale(.92) rotateX(10deg);} 55%{ opacity:1; transform:translateY(-4px) scale(1.01) rotateX(0deg);} 100%{ opacity:1; transform:translateY(0) scale(1);} }
+@keyframes cardBreathe{ 0%,100%{ transform:translateY(0) scale(1);} 50%{ transform:translateY(-3px) scale(1.012);} }
+@keyframes cardAvatarIn{ 0%{ opacity:0; transform:translateY(14px) scale(.92);} 70%{ opacity:1; transform:translateY(-3px) scale(1.02);} 100%{ opacity:1; transform:translateY(0) scale(1);} }
+
+/* ============================================================================
+   BIG BROTHER GAME — REFACTORED STYLES (compact)
+   Only the sections touched for this request are shown below.
+   ============================================================================ */
+
+/* 01. TOKENS (only TV-related variables shown) */
+:root{
+  --tv-safe-top: 56px;     /* room for header */
+  --tv-safe-bottom: 66px;  /* room for ticker */
+  --tv-safe-x: 18px;       /* side padding */
+}
+
+/* 07. TV / SHOW PANEL (safe areas and responsive height) */
+.tv{
+  position:relative;
+  height: clamp(280px, 42vh, 520px);
+  background:radial-gradient(circle at 32% 30%, #23364d, #0e1730 65%);
+  border:2px solid #213349; border-radius:18px; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
+  box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
+}
+.tv.tvTall{
+  height: clamp(340px, 52vh, 600px);
+}
+
+.tvHead{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
+  padding:10px 14px 8px; border-bottom:1px solid rgba(120,210,255,.07);
+  background:linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+}
+.tvTitle{ font-weight:600; letter-spacing:.6px; font-size:.75rem; color:#c7d7eb; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tvTimer{ font-size:.95rem; font-weight:600; color:#e2edf8; white-space:nowrap; }
+
+#tvOverlay{
+  position:absolute; z-index:12;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  pointer-events:auto;  /* allow interactive cards */
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
+}
+
+#confetti{
+  position:absolute; z-index:11;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  pointer-events:none; mix-blend-mode:screen; opacity:.95;
+}
+
+.tvNow{
+  position:absolute; z-index:13;
+  left:var(--tv-safe-x); right:var(--tv-safe-x); bottom:8px;
+  min-height:28px; padding:6px 10px; border-radius:8px; font-size:.82rem;
+  background:linear-gradient(180deg, rgba(9,24,40,.85), rgba(6,14,24,.85)),
+             linear-gradient(90deg, rgba(111,211,255,.18), rgba(103,255,168,.12));
+  border:1px solid rgba(120,210,255,.22); box-shadow:0 4px 18px -12px rgba(0,0,0,.8);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  pointer-events:none; /* ticker never intercepts clicks */
+}
+
+/* 08. Reveal Cards (fit inside the screen and scroll if tall) */
+.revealCard{
+  background:linear-gradient(135deg, rgba(28,43,62,.92), rgba(12,22,36,.88));
+  border:1px solid rgba(110,160,220,.18);
+  position:relative; overflow:auto;  /* was hidden; now scrolls if needed */
+  text-align:center; font-size:.78rem; line-height:1.45;
+  padding:18px 20px 20px; border-radius:20px;
+  box-shadow:0 8px 24px -12px rgba(0,0,0,.65), 0 0 0 1px rgba(120,180,255,.08), 0 0 22px -6px rgba(90,150,255,.35) inset;
+  animation:cardFloatIn .65s cubic-bezier(.25,.9,.25,1) forwards;
+  max-width:min(780px, 92vw);
+  max-height: calc(100% - 12px);  /* keep within safe area */
+  overscroll-behavior:contain;
+  overflow-wrap:anywhere; word-break:break-word;
+}
+.revealCard h3{
+  font-size:1.05rem; letter-spacing:.8px; margin:0 0 .55em; font-weight:600;
+  background:linear-gradient(90deg,#ddecff,#8fc3ff); -webkit-background-clip:text; color:transparent;
+  text-shadow:0 0 18px rgba(140,200,255,.35);
+}
+
+/* Avatar rail stays compact; no overflow */
+.revealCard.has-avatars{ display:flex; align-items:stretch; text-align:left; gap:16px; }
+.rc-avatar-rail{ flex:0 0 74px; display:flex; flex-direction:column; gap:8px; padding-top:2px; }
+.rc-avatar-rail .rc-av{
+  width:70px; height:70px; border-radius:16px; object-fit:cover; background:#101c28; border:2px solid #356089;
+  box-shadow:0 6px 18px -10px rgba(0,0,0,.65);
+}
+.revealCard.has-avatars .rc-body{ flex:1 1 auto; min-width:0; }
+
+/* 14. America’s Vote (unchanged visually from prior refactor) */
+/* ... keep your existing AV styles ... */
+
+/* 20. Animations */
+@keyframes cardFloatIn{
+  0%{ opacity:0; transform:translateY(24px) scale(.92) rotateX(10deg); }
+  55%{ opacity:1; transform:translateY(-4px) scale(1.01) rotateX(0deg); }
+  100%{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* ============================================================================
+   BIG BROTHER GAME — REFACTORED STYLES (compact)
+   Only sections touched in this update are included or adjusted.
+   If you previously adopted the refactor, this is a drop-in replacement.
+   ============================================================================ */
+
+/* 01. TOKENS (TV-safe tuned a bit larger) */
+:root{
+  --bg:#0d151f;
+  --card:#132132;
+  --ink:#e3ecf5;
+  --muted:#95a9c0;
+
+  --tv-safe-top: 56px;     /* header strip space */
+  --tv-safe-bottom: 66px;  /* ticker space */
+  --tv-safe-x: 18px;       /* side space */
+}
+
+/* Basic reset kept concise */
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; padding:0; height:100%; background:var(--bg); color:var(--ink);
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif;
+  line-height:1.4; -webkit-font-smoothing:antialiased; }
+img{ max-width:100%; display:block; }
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:#0f1f31; }
+::-webkit-scrollbar-thumb{ background:#26435d; border-radius:6px; }
+::-webkit-scrollbar-thumb:hover{ background:#31587a; }
+
+/* 07. TV / SHOW PANEL — safe areas + adaptive height */
+.tv{
+  position:relative;
+  height: clamp(280px, 42vh, 520px);
+  background:radial-gradient(circle at 32% 30%, #23364d, #0e1730 65%);
+  border:2px solid #213349; border-radius:18px; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
+  box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
+}
+.tv.tvTall{ height: clamp(340px, 52vh, 600px); }
+
+.tvHead{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
+  padding:10px 14px 8px; border-bottom:1px solid rgba(120,210,255,.07);
+  background:linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+}
+.tvTitle{ font-weight:600; letter-spacing:.6px; font-size:.75rem; color:#c7d7eb; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tvTimer{ font-size:.95rem; font-weight:600; color:#e2edf8; white-space:nowrap; }
+
+#tvOverlay{
+  position:absolute; z-index:12;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  pointer-events:auto; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
+}
+#confetti{
+  position:absolute; z-index:11;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  pointer-events:none; mix-blend-mode:screen; opacity:.95;
+}
+.tvNow{
+  position:absolute; z-index:13;
+  left:var(--tv-safe-x); right:var(--tv-safe-x); bottom:8px;
+  min-height:28px; padding:6px 10px; border-radius:8px; font-size:.82rem;
+  background:linear-gradient(180deg, rgba(9,24,40,.85), rgba(6,14,24,.85)),
+             linear-gradient(90deg, rgba(111,211,255,.18), rgba(103,255,168,.12));
+  border:1px solid rgba(120,210,255,.22); box-shadow:0 4px 18px -12px rgba(0,0,0,.8);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  pointer-events:none; /* ticker never intercepts clicks */
+}
+
+/* 08. Reveal Cards — fit within screen and scroll if tall; supports avatar rows */
+.revealCard{
+  background:linear-gradient(135deg, rgba(28,43,62,.92), rgba(12,22,36,.88));
+  border:1px solid rgba(110,160,220,.18);
+  position:relative; overflow:auto; /* allow internal scroll if needed */
+  text-align:center; font-size:.78rem; line-height:1.45;
+  padding:18px 20px 20px; border-radius:20px;
+  box-shadow:0 8px 24px -12px rgba(0,0,0,.65), 0 0 0 1px rgba(120,180,255,.08), 0 0 22px -6px rgba(90,150,255,.35) inset;
+  animation:cardFloatIn .65s cubic-bezier(.25,.9,.25,1) forwards;
+  max-width:min(780px, 92vw); max-height: calc(100% - 12px);
+  overscroll-behavior:contain; overflow-wrap:anywhere; word-break:break-word;
+}
+.revealCard h3{
+  font-size:1.05rem; letter-spacing:.8px; margin:0 0 .55em; font-weight:600;
+  background:linear-gradient(90deg,#ddecff,#8fc3ff); -webkit-background-clip:text; color:transparent;
+  text-shadow:0 0 18px rgba(140,200,255,.35);
+}
+.revealCard.bigAnnounce{
+  max-width: clamp(340px, 64vw, 820px);
+  background:linear-gradient(135deg,#1a3147,#0e1a29 60%);
+  border:1px solid rgba(120,210,255,.25);
+  box-shadow:0 16px 48px -20px rgba(0,0,0,.85), 0 0 0 1px rgba(120,210,255,.18), 0 0 52px -14px rgba(120,210,255,.55) inset;
+  font-size:.82rem; padding:26px 32px 30px; border-radius:26px; text-align:center;
+}
+
+/* Face row avatars (1–4) shown below card text */
+.rc-face-row{
+  display:flex; align-items:center; justify-content:center;
+  gap:14px; margin-top:12px; flex-wrap:nowrap;
+}
+.rc-face{
+  width:62px; height:62px; border-radius:14px; object-fit:cover;
+  background:#101c28; border:2px solid #356089; box-shadow:0 6px 18px -10px rgba(0,0,0,.65);
+}
+.rc-face.small{ width:54px; height:54px; border-radius:12px; }
+.rc-face.xs{ width:48px; height:48px; border-radius:10px; }
+.rc-arrow{
+  width:28px; height:28px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#cfe9ff,#7fd0ff);
+  color:#0d1b2a; font-weight:800; box-shadow:0 2px 10px -4px rgba(0,0,0,.5);
+  user-select:none;
+}
+
+/* 10. Cast table — Evict Wk column never spills */
+#castTbl{ table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0 6px; }
+#castTbl col.col-evictweek{ width:60px; } /* was 68 — tightened */
+#castTbl thead th{
+  font-size:.58rem; letter-spacing:.55px; text-transform:uppercase; font-weight:700;
+  padding:4px 6px 6px; color:#afc3d6; background:#172433; text-align:left;
+}
+#castTbl tbody tr{ background:#152434; border:1px solid #24394e; transition:background .18s; }
+#castTbl tbody tr:hover{ background:#1d3145; }
+#castTbl td{
+  font-size:.64rem; padding:6px 8px 7px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+/* center numeric-like columns (state, evict wk, avg, actions) */
+#castTbl th:nth-child(2),#castTbl td:nth-child(2),
+#castTbl th:nth-child(3),#castTbl td:nth-child(3),
+#castTbl th:nth-child(6),#castTbl td:nth-child(6),
+#castTbl th:nth-child(7),#castTbl td:nth-child(7){ text-align:center; }
+/* allies / enemies allow two lines */
+#castTbl td:nth-child(4),#castTbl td:nth-child(5){ white-space:normal; line-height:1.1; font-size:.55rem; overflow:hidden; max-height:2.4em; }
+/* Evict week cell hard clamp */
+#castTbl td:nth-child(3){ max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* 20. Animations */
+@keyframes cardFloatIn{
+  0%{ opacity:0; transform:translateY(24px) scale(.92) rotateX(10deg); }
+  55%{ opacity:1; transform:translateY(-4px) scale(1.01) rotateX(0); }
+  100%{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* === TV fit + reveal card cleanup ======================================= */
+/* Safe areas for on-screen content (slightly larger so no clipping) */
+:root{
+  --tv-safe-top: 60px;     /* header strip space */
+  --tv-safe-bottom: 80px;  /* ticker space */
+  --tv-safe-x: 20px;       /* side space */
+}
+
+/* TV dimensions scale with content */
+.tv{
+  position:relative;
+  height: clamp(300px, 44vh, 560px);
+  background:radial-gradient(circle at 32% 30%, #23364d, #0e1730 65%);
+  border:2px solid #213349; border-radius:18px; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:flex-start; padding:0;
+  font-size:.72rem; box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
+}
+.tv.tvTall{ height: clamp(360px, 56vh, 640px); }
+
+.tvHead{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
+  padding:10px 14px 8px; border-bottom:1px solid rgba(120,210,255,.07);
+  background:linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+}
+.tvTitle{ font-weight:600; letter-spacing:.6px; font-size:.75rem; color:#c7d7eb; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tvTimer{ font-size:.95rem; font-weight:600; color:#e2edf8; white-space:nowrap; }
+
+/* Overlay and ticker respect safe area */
+#tvOverlay{
+  position:absolute; z-index:12;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
+  pointer-events:auto;
+}
+#confetti{
+  position:absolute; z-index:11;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  pointer-events:none; mix-blend-mode:screen; opacity:.95;
+}
+.tvNow{
+  position:absolute; z-index:13;
+  left:var(--tv-safe-x); right:var(--tv-safe-x); bottom:10px;
+  min-height:28px; padding:6px 10px; border-radius:8px; font-size:.82rem;
+  background:linear-gradient(180deg, rgba(9,24,40,.85), rgba(6,14,24,.85)),
+             linear-gradient(90deg, rgba(111,211,255,.18), rgba(103,255,168,.12));
+  border:1px solid rgba(120,210,255,.22); box-shadow:0 4px 18px -12px rgba(0,0,0,.8);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  pointer-events:none;
+}
+
+/* Reveal card fits within screen; no scrollbar unless needed */
+.revealCard{
+  background:linear-gradient(135deg, rgba(28,43,62,.92), rgba(12,22,36,.88));
+  border:1px solid rgba(110,160,220,.18);
+  position:relative;
+  text-align:center; font-size:.78rem; line-height:1.45;
+  padding:18px 20px 20px; border-radius:20px;
+  box-shadow:0 8px 24px -12px rgba(0,0,0,.65), 0 0 0 1px rgba(120,180,255,.08), 0 0 22px -6px rgba(90,150,255,.35) inset;
+  animation:cardFloatIn .65s cubic-bezier(.25,.9,.25,1) forwards;
+  max-width:min(780px, 92vw);
+  max-height: calc(100% - 14px);
+  overflow: hidden;             /* hide by default */
+}
+.revealCard:hover{ overflow:auto; } /* only show scroll if user intends */
+.revealCard::-webkit-scrollbar{ width:8px; }
+.revealCard::-webkit-scrollbar-thumb{ background:#2b4460; border-radius:8px; }
+.revealCard h3{
+  font-size:1.05rem; letter-spacing:.8px; margin:0 0 .55em; font-weight:600;
+  background:linear-gradient(90deg,#ddecff,#8fc3ff); -webkit-background-clip:text; color:transparent;
+  text-shadow:0 0 18px rgba(140,200,255,.35);
+}
+
+/* Face-row avatars (below text) with arrow between for 2-face scenarios */
+.rc-face-row{
+  display:flex; align-items:center; justify-content:center;
+  gap:14px; margin-top:12px; flex-wrap:nowrap;
+}
+.rc-face{
+  width:62px; height:62px; border-radius:14px; object-fit:cover;
+  background:#101c28; border:2px solid #356089; box-shadow:0 6px 18px -10px rgba(0,0,0,.65);
+}
+.rc-face.small{ width:54px; height:54px; border-radius:12px; }
+.rc-face.xs{ width:48px; height:48px; border-radius:10px; }
+.rc-arrow{
+  width:28px; height:28px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#cfe9ff,#7fd0ff);
+  color:#0d1b2a; font-weight:800; box-shadow:0 2px 10px -4px rgba(0,0,0,.5);
+  user-select:none;
+}
+
+/* === Jury Ballots Panel (finale) ========================================= */
+.juryPanelHost{
+  background:#182a3b;
+  border:1px solid #26405b;
+  padding:14px 16px 16px;
+  border-radius:16px;
+  box-shadow:0 8px 20px -14px rgba(0,0,0,.65);
+  font-size:.7rem; line-height:1.3;
+}
+.juryPanelHost h3{ margin:0 0 8px; font-size:.95rem; font-weight:600; }
+.juryGrid{
+  display:grid; gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+}
+.jpTile{
+  background:#1b2f42;
+  border:1px solid #2a4561;
+  border-radius:12px;
+  padding:10px 12px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.jpHead{ display:flex; align-items:center; gap:10px; }
+.jpHead .jpJuror{
+  width:38px; height:38px; border-radius:10px; object-fit:cover;
+  background:#0f1b2a; border:2px solid #315677;
+}
+.jpHead .jpName{ font-weight:700; letter-spacing:.4px; }
+
+.jpRow{
+  display:flex; align-items:center; justify-content:center; gap:10px;
+}
+.jpFace{
+  width:54px; height:54px; border-radius:12px; object-fit:cover;
+  background:#0f1b2a; border:2px solid #315677; box-shadow:0 6px 14px -10px rgba(0,0,0,.65);
+  opacity:.8;
+}
+.jpFace.finalist{ opacity:1; }
+.jpArrow{
+  width:26px; height:26px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#cfe9ff,#7fd0ff);
+  color:#0d1b2a; font-weight:800;
+}
+.jpPick .jpFace.finalist{ border-color:#7fd0ff; box-shadow:0 0 0 1px rgba(127,208,255,.4); }
+.jpPick .jpFace.finalist.picked{ border-color:#9ff6a8; box-shadow:0 0 0 1px rgba(159,246,168,.35), 0 0 18px -8px rgba(110,240,160,.6); }
+
+.jpMeta{
+  display:flex; justify-content:space-between; align-items:center; color:#b9cbde;
+  font-size:.6rem; letter-spacing:.35px;
+}
+
+/* Cast table “Evict Wk” clamps and centers (prevents cut-off) */
+#castTbl{ table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0 6px; }
+#castTbl col.col-evictweek{ width:60px; }
+#castTbl td:nth-child(3){ max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
+
+/* Animation for card entrance (kept minimal) */
+@keyframes cardFloatIn{
+  0%{ opacity:0; transform:translateY(24px) scale(.92) rotateX(10deg); }
+  55%{ opacity:1; transform:translateY(-4px) scale(1.01) rotateX(0); }
+  100%{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* === Faux TV background image inside the safe screen ====================== */
+:root{
+  --tv-safe-top: 60px;
+  --tv-safe-bottom: 80px;
+  --tv-safe-x: 20px;
+}
+
+/* TV container with adaptive height */
+.tv{
+  position:relative;
+  height: clamp(300px, 44vh, 560px);
+  background:radial-gradient(circle at 32% 30%, #23364d, #0e1730 65%);
+  border:2px solid #213349; border-radius:18px; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:flex-start; padding:0;
+  font-size:.72rem; box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
+}
+.tv.tvTall{ height: clamp(360px, 56vh, 640px); }
+
+/* Background image layer constrained to the screen safe area */
+.tv::before{
+  content:'';
+  position:absolute;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  background-image: var(--tv-bg, none);
+  background-size: cover;
+  background-position: center;
+  border-radius: 12px;
+  opacity:.34;                    /* base opacity */
+  filter: saturate(1.05) contrast(1.02) brightness(.98);
+  pointer-events:none;
+  z-index: 1;                     /* behind overlay (z 12) and ticker (z 13) */
+}
+.tv.hasTvBg::before{ opacity:.5; } /* a touch brighter when an image is set */
+
+/* Header, overlay, ticker — safe areas */
+.tvHead{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
+  padding:10px 14px 8px; border-bottom:1px solid rgba(120,210,255,.07);
+  background:linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+  z-index: 14;
+}
+.tvTitle{ font-weight:600; letter-spacing:.6px; font-size:.75rem; color:#c7d7eb; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tvTimer{ font-size:.95rem; font-weight:600; color:#e2edf8; white-space:nowrap; }
+
+#tvOverlay{
+  position:absolute; z-index:12;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
+  pointer-events:auto;
+}
+#confetti{
+  position:absolute; z-index:11;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  pointer-events:none; mix-blend-mode:screen; opacity:.95;
+}
+.tvNow{
+  position:absolute; z-index:13;
+  left:var(--tv-safe-x); right:var(--tv-safe-x); bottom:10px;
+  min-height:28px; padding:6px 10px; border-radius:8px; font-size:.82rem;
+  background:linear-gradient(180deg, rgba(9,24,40,.85), rgba(6,14,24,.85)),
+             linear-gradient(90deg, rgba(111,211,255,.18), rgba(103,255,168,.12));
+  border:1px solid rgba(120,210,255,.22); box-shadow:0 4px 18px -12px rgba(0,0,0,.8);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  pointer-events:none;
+}
+
+/* === Reveal Cards — center, no clipping, scroll on hover only ============ */
+.revealCard{
+  background:linear-gradient(135deg, rgba(28,43,62,.92), rgba(12,22,36,.88));
+  border:1px solid rgba(110,160,220,.18);
+  position:relative;
+  text-align:center; font-size:.78rem; line-height:1.45;
+  padding:18px 20px 20px; border-radius:20px;
+  box-shadow:0 8px 24px -12px rgba(0,0,0,.65), 0 0 0 1px rgba(120,180,255,.08), 0 0 22px -6px rgba(90,150,255,.35) inset;
+  animation:cardFloatIn .65s cubic-bezier(.25,.9,.25,1) forwards;
+  box-sizing:border-box;
+  width:min(780px, 100%);
+  max-width:min(780px, 92vw);
+  max-height: calc(100% - 14px);
+  margin:0 auto;                 /* keep centered horizontally */
+  overflow:hidden;               /* no scrollbar unless hover */
+}
+.revealCard:hover{ overflow:auto; }
+.revealCard::-webkit-scrollbar{ width:8px; }
+.revealCard::-webkit-scrollbar-thumb{ background:#2b4460; border-radius:8px; }
+.revealCard h3{
+  font-size:1.05rem; letter-spacing:.8px; margin:0 0 .55em; font-weight:600;
+  background:linear-gradient(90deg,#ddecff,#8fc3ff); -webkit-background-clip:text; color:transparent;
+  text-shadow:0 0 18px rgba(140,200,255,.35);
+}
+
+/* === Face-row avatars under text (kept) =================================== */
+.rc-face-row{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:12px; }
+.rc-face{ width:62px; height:62px; border-radius:14px; object-fit:cover; background:#101c28; border:2px solid #356089; box-shadow:0 6px 18px -10px rgba(0,0,0,.65); }
+.rc-face.small{ width:54px; height:54px; border-radius:12px; }
+.rc-face.xs{ width:48px; height:48px; border-radius:10px; }
+.rc-arrow{ width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#cfe9ff,#7fd0ff); color:#0d1b2a; font-weight:800; box-shadow:0 2px 10px -4px rgba(0,0,0,.5); user-select:none; }
+
+/* === Settings: force timers into columns; ensure Players total visible ==== */
+.settingsGrid{ display:grid; gap:14px 16px; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); }
+#castTbl col.col-evictweek{ width:60px; }
+#castTbl td:nth-child(3){ max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
+
+/* Animation reuse */
+@keyframes cardFloatIn{
+  0%{ opacity:0; transform:translateY(24px) scale(.92) rotateX(10deg); }
+  55%{ opacity:1; transform:translateY(-4px) scale(1.01) rotateX(0); }
+  100%{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+.return-flash { animation: returnFlash 1.8s ease-in-out 2; }
+@keyframes returnFlash {
+  0% { box-shadow:0 0 0 0 rgba(140,210,255,0); }
+  30% { box-shadow:0 0 14px 0 rgba(140,210,255,.9),0 0 40px -10px rgba(140,210,255,.85); transform:scale(1.04); }
+  70% { box-shadow:0 0 10px 0 rgba(140,210,255,.4); }
+  100% { box-shadow:0 0 0 0 rgba(140,210,255,0); transform:scale(1); }
+}
+
+/* Full screen flash overlay for dramatic interruptions */
+.flash-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.9);
+  z-index: 9999;
+  animation: flashFade .7s cubic-bezier(.55,.02,.88,.61);
+  pointer-events: none;
+}
+@keyframes flashFade {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Cast table: clamp and center the "Evict Wk" column */
+#castTbl col.col-evictweek { width: 68px; }
+#castTbl td:nth-child(3) {
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* ...existing CSS... */
+
+/* === Cast table visibility fix =========================================== */
+/* Allow horizontal scroll for the cast list inside the card */
+.card .list{ overflow-x:auto; }
+
+/* Prevent column collapse; keep all columns visible even on narrow screens */
+#castTbl{ min-width:760px; }
+
+/* Ensure 'Evict Wk' column remains visible and centered consistently */
+#castTbl col.col-evictweek{ width:72px !important; }
+#castTbl td:nth-child(3){
+  max-width:72px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  text-align:center;
+}
+
+/* Cast roster — make Evict Wk visible */
+.roster-row{
+  /* before: grid-template-columns:210px 1fr 42px; */
+  grid-template-columns: 1fr auto 56px;  /* player flexes, state auto, evict fixed */
+}
+
+/* Keep the evict column readable and centered */
+.roster-row .cell.evict{ text-align:center; }
+
+/* Let the header label wrap (Evict Wk -> 2 lines if needed) */
+.roster-row.header .cell.evict{
+  white-space: normal;
+  line-height: 1.05;
+  font-size: .58rem;
+  text-align: center;
+}
+
+/* Prevent the player name from forcing the grid too wide */
+.roster-row .cell.player .meta .name{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width: 100%;
+}
+#tvBgVideo{
+  position:absolute;
+  z-index:1;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:12px;
+  pointer-events:none;
+  display:none;
+  opacity:.5; /* similar to image overlay */
+}
+/* Show video only when enabled */
+.tv.hasTvVideo #tvBgVideo{ display:block; }
+/* Hide image overlay when video is present */
+.tv.hasTvVideo::before{ display:none; }
+
+.juryGraphBars{
+  display:grid; gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  margin-top:8px;
+}
+.jgCol{ display:flex; flex-direction:column; gap:6px; }
+.jgName{ font-weight:700; letter-spacing:.4px; color:#d6e6f7; font-size:.8rem; }
+.jgBarWrap{ height:18px; background:#12253a; border:1px solid #28405a; border-radius:10px; overflow:hidden;
+  box-shadow:inset 0 6px 20px -12px rgba(0,0,0,.8);
+}
+.jgBar{ height:100%; width:0%; background:linear-gradient(90deg,#64b7ff,#9ad4ff);
+  box-shadow:0 0 10px -3px #6ec2ff; transition:width .45s cubic-bezier(.25,.9,.25,1);
+}
+.jgBar.alt{ background:linear-gradient(90deg,#7ef1a3,#b9ffd0); box-shadow:0 0 10px -3px #92ffbc; }
+.jgBar.lead{ filter:saturate(1.2) brightness(1.05); }
+.jgCount{ font-size:.72rem; color:#b7c9dc; }
+
+/* Subtle pulse of the leading bar */
+@keyframes jgPulse{
+  0%,100%{ box-shadow:0 0 10px -3px rgba(120,200,255,.55); }
+  50%{ box-shadow:0 0 14px -2px rgba(120,200,255,.95); }
+}
+.jgBar.lead{ animation:jgPulse 1.8s ease-in-out infinite; }
+.jgBar.alt.lead{ animation:jgPulse 1.8s ease-in-out infinite; }
+
+/* === Finale End Credits =================================================== */
+.creditsRoot{
+  position:fixed; inset:0; z-index:350;
+  background:rgba(3,10,18,.86);
+  backdrop-filter:blur(6px) saturate(1.05);
+  -webkit-backdrop-filter:blur(6px) saturate(1.05);
+  animation:fadeIn .35s ease;
+}
+.creditsRoot.hide{ animation:fadeOut .3s ease forwards; }
+@keyframes fadeOut{ to{ opacity:0; } }
+
+.creditsScreen{ position:absolute; inset:24px; display:flex; }
+.creditsSplit{
+  display:grid; gap:16px;
+  grid-template-columns:minmax(280px, 42%) 1fr;
+  width:100%; height:100%;
+}
+@media (max-width:900px){
+  .creditsSplit{ grid-template-columns:1fr; grid-auto-rows:auto 1fr; }
+}
+
+.creditsLeft{
+  background:linear-gradient(135deg,#142334,#0f1a29 65%);
+  border:1px solid #2a4561; border-radius:16px; padding:16px; position:relative;
+  box-shadow:0 14px 38px -18px rgba(0,0,0,.8), 0 0 0 1px rgba(130,180,230,.12);
+  display:flex; align-items:center; justify-content:center;
+}
+.winnerCard{
+  display:flex; flex-direction:column; gap:10px; align-items:center; text-align:center;
+}
+.winnerFace{
+  width:120px; height:120px; border-radius:24px; object-fit:cover;
+  border:2px solid #3d628a; background:#0e1726; box-shadow:0 8px 22px -12px rgba(0,0,0,.8);
+}
+.winnerBanner{ font-size:1.1rem; letter-spacing:1px; font-weight:800; color:#ffd166; text-shadow:0 0 18px rgba(255,210,100,.55); }
+.winnerName{ font-size:1.8rem; font-weight:800; letter-spacing:1.1px; color:#e9f3ff; text-shadow:0 0 16px rgba(140,200,255,.6); }
+
+.creditsRight{
+  position:relative; overflow:hidden;
+  background:radial-gradient(120% 80% at 40% 40%, #18293b, #0e1826 65%);
+  border:1px solid #2a4561; border-radius:16px; padding:16px;
+  box-shadow:0 14px 38px -18px rgba(0,0,0,.8), 0 0 0 1px rgba(130,180,230,.12);
+  display:flex; flex-direction:column; gap:10px;
+}
+
+/* TV effect layers */
+.scanlines{
+  pointer-events:none; position:absolute; inset:0; opacity:.14; mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.03) 0 2px, rgba(0,0,0,.05) 2px 4px);
+}
+.tvNoise{
+  position:absolute; inset:0; pointer-events:none; opacity:.06; mix-blend-mode:screen;
+  background-image: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 3px 3px;
+  animation:noiseFlicker 2.2s steps(2) infinite;
+}
+@keyframes noiseFlicker{
+  50%{ opacity:.09; transform:translate3d(.2px,-.2px,0); }
+}
+
+.creditsMask{
+  position:relative; flex:1 1 auto; overflow:hidden; border-radius:10px;
+  border:1px solid rgba(130,180,230,.12);
+  background:linear-gradient(180deg, rgba(12,22,36,.66), rgba(10,18,30,.66));
+  box-shadow:inset 0 10px 28px -18px rgba(0,0,0,.85);
+}
+.creditsMask::before, .creditsMask::after{
+  content:''; position:absolute; left:0; right:0; height:40px; z-index:2; pointer-events:none;
+}
+.creditsMask::before{
+  top:0; background:linear-gradient(180deg, rgba(10,18,30,1), rgba(10,18,30,0));
+}
+.creditsMask::after{
+  bottom:0; background:linear-gradient(0deg, rgba(10,18,30,1), rgba(10,18,30,0));
+}
+
+.creditsRoll{
+  position:absolute; left:0; right:0; bottom:-10%;
+  display:flex; flex-direction:column; gap:10px; padding:20px 16px 30px;
+  font-size:.92rem; color:#dbe9ff; text-align:center;
+  transform:translateY(100%); will-change:transform;
+}
+.creditsRoll.run{ animation:creditsRoll var(--roll-duration, 45s) linear forwards; }
+@keyframes creditsRoll{
+  from{ transform:translateY(100%); }
+  to{ transform:translateY(-105%); }
+}
+.cr{ text-shadow:0 0 14px rgba(120,180,255,.3); }
+.cr-h{ font-size:1.1rem; font-weight:800; letter-spacing:1px; color:#bfe0ff; margin:10px 0 2px; text-transform:uppercase; }
+.cr-b{ font-size:1rem; font-weight:800; letter-spacing:.6px; color:#f2f7ff; }
+.cr-t{ font-size:.86rem; font-weight:700; letter-spacing:.6px; color:#cfe2ff; text-transform:uppercase; margin-top:10px; }
+.cr-p{ font-size:.86rem; font-weight:600; letter-spacing:.2px; color:#d6e6fb; }
+
+.creditsBtns{
+  display:flex; gap:8px; justify-content:flex-end; margin-top:10px;
+}
+#creditsMusicBtn{ background:#256246; }
+#creditsMusicBtn:hover{ background:#2b6f50; }
+
+/* Utility keyframes used above (already in your sheet but safe to include) */
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:translateY(0);} }
+
+/* === Jury overlay + Credits — visuals ==================================== */
+/* Jury graph in TV overlay */
+.juryGraphOverlay{
+  width:100%; max-width:780px; margin:0 auto;
+  background:#172a3d; border:1px solid #2a4561; border-radius:14px;
+  box-shadow:0 10px 26px -16px rgba(0,0,0,.75);
+  padding:12px 14px 14px;
+}
+.jgTitle{ font-weight:700; letter-spacing:.5px; font-size:.95rem; }
+.jgSub{ color:#a9bfd5; margin-top:2px; }
+
+/* Bars reused from your previous styles (kept here to ensure present) */
+.juryGraphBars{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); margin-top:8px; }
+.jgCol{ display:flex; flex-direction:column; gap:6px; }
+.jgName{ font-weight:700; letter-spacing:.4px; color:#d6e6f7; font-size:.8rem; }
+.jgBarWrap{ height:18px; background:#12253a; border:1px solid #28405a; border-radius:10px; overflow:hidden;
+  box-shadow:inset 0 6px 20px -12px rgba(0,0,0,.8); }
+.jgBar{ height:100%; width:0%; background:linear-gradient(90deg,#64b7ff,#9ad4ff);
+  box-shadow:0 0 10px -3px #6ec2ff; transition:width .45s cubic-bezier(.25,.9,.25,1); }
+.jgBar.alt{ background:linear-gradient(90deg,#7ef1a3,#b9ffd0); box-shadow:0 0 10px -3px #92ffbc; }
+.jgBar.lead{ filter:saturate(1.2) brightness(1.06); animation:jgPulse 1.8s ease-in-out infinite; }
+@keyframes jgPulse{ 0%,100%{ box-shadow:0 0 10px -3px rgba(120,200,255,.55); } 50%{ box-shadow:0 0 14px -2px rgba(120,200,255,.95); } }
+
+/* Human jury vote card in overlay */
+.humanJuryVoteBox{ margin-top:10px; display:flex; justify-content:center; }
+.hjvCard{
+  background:#162b40; border:1px solid #274765; border-radius:12px; padding:10px 12px;
+  box-shadow:0 8px 20px -14px rgba(0,0,0,.7); text-align:center;
+}
+.hjvTitle{ font-weight:700; }
+
+/* End Credits overlay (z-index very high to beat any other overlays) */
+.creditsRoot{
+  position:fixed; inset:0; z-index:99990;
+  background:rgba(3,10,18,.86);
+  backdrop-filter:blur(6px) saturate(1.05);
+  -webkit-backdrop-filter:blur(6px) saturate(1.05);
+  animation:fadeIn .35s ease;
+}
+.creditsRoot.hide{ animation:fadeOut .3s ease forwards; }
+@keyframes fadeOut{ to{ opacity:0; } }
+
+.creditsScreen{ position:absolute; inset:24px; display:flex; }
+.creditsSplit{
+  display:grid; gap:16px;
+  grid-template-columns:minmax(280px, 42%) 1fr;
+  width:100%; height:100%;
+}
+@media (max-width:900px){
+  .creditsSplit{ grid-template-columns:1fr; grid-auto-rows:auto 1fr; }
+}
+.creditsLeft{
+  background:linear-gradient(135deg,#142334,#0f1a29 65%);
+  border:1px solid #2a4561; border-radius:16px; padding:16px; position:relative;
+  box-shadow:0 14px 38px -18px rgba(0,0,0,.8), 0 0 0 1px rgba(130,180,230,.12);
+  display:flex; align-items:center; justify-content:center;
+}
+.winnerCard{ display:flex; flex-direction:column; gap:10px; align-items:center; text-align:center; }
+.winnerBanner{ font-size:1.1rem; letter-spacing:1px; font-weight:800; color:#ffd166; text-shadow:0 0 18px rgba(255,210,100,.55); }
+.winnerName{ font-size:1.8rem; font-weight:800; letter-spacing:1.1px; color:#e9f3ff; text-shadow:0 0 16px rgba(140,200,255,.6); }
+
+.creditsRight{
+  position:relative; overflow:hidden;
+  background:radial-gradient(120% 80% at 40% 40%, #18293b, #0e1826 65%);
+  border:1px solid #2a4561; border-radius:16px; padding:16px;
+  box-shadow:0 14px 38px -18px rgba(0,0,0,.8), 0 0 0 1px rgba(130,180,230,.12);
+  display:flex; flex-direction:column; gap:10px;
+}
+.scanlines{
+  pointer-events:none; position:absolute; inset:0; opacity:.14; mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.03) 0 2px, rgba(0,0,0,.05) 2px 4px);
+}
+.tvNoise{
+  position:absolute; inset:0; pointer-events:none; opacity:.06; mix-blend-mode:screen;
+  background-image: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 3px 3px;
+  animation:noiseFlicker 2.2s steps(2) infinite;
+}
+@keyframes noiseFlicker{ 50%{ opacity:.09; transform:translate3d(.2px,-.2px,0); } }
+
+.creditsMask{
+  position:relative; flex:1 1 auto; overflow:hidden; border-radius:10px;
+  border:1px solid rgba(130,180,230,.12);
+  background:linear-gradient(180deg, rgba(12,22,36,.66), rgba(10,18,30,.66));
+  box-shadow:inset 0 10px 28px -18px rgba(0,0,0,.85);
+}
+.creditsMask::before, .creditsMask::after{
+  content:''; position:absolute; left:0; right:0; height:40px; z-index:2; pointer-events:none;
+}
+.creditsMask::before{ top:0; background:linear-gradient(180deg, rgba(10,18,30,1), rgba(10,18,30,0)); }
+.creditsMask::after{ bottom:0; background:linear-gradient(0deg, rgba(10,18,30,1), rgba(10,18,30,0)); }
+
+.creditsRoll{
+  position:absolute; left:0; right:0; bottom:-10%;
+  display:flex; flex-direction:column; gap:10px; padding:20px 16px 30px;
+  font-size:.92rem; color:#dbe9ff; text-align:center;
+  transform:translateY(100%); will-change:transform;
+}
+.creditsRoll.run{ animation:creditsRoll var(--roll-duration, 45s) linear forwards; }
+@keyframes creditsRoll{ from{ transform:translateY(100%);} to{ transform:translateY(-105%);} }
+.cr{ text-shadow:0 0 14px rgba(120,180,255,.3); }
+.cr-h{ font-size:1.1rem; font-weight:800; letter-spacing:1px; color:#bfe0ff; margin:10px 0 2px; text-transform:uppercase; }
+.cr-b{ font-size:1rem; font-weight:800; letter-spacing:.6px; color:#f2f7ff; }
+.cr-t{ font-size:.86rem; font-weight:700; letter-spacing:.6px; color:#cfe2ff; text-transform:uppercase; margin-top:10px; }
+.cr-p{ font-size:.86rem; font-weight:600; letter-spacing:.2px; color:#d6e6fb; }
+
+.creditsBtns{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+
+/* Basic fades (safe to reuse) */
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:translateY(0);} }
+
+/* === Jury Viz host and ballot tiles ====================================== */
+.juryVizHost{ display:flex; flex-direction:column; gap:10px; margin:8px 0 10px; }
+.juryBallotTiles{ display:flex; flex-direction:column; gap:8px; }
+
+.ballotTile{
+  background:#162b40; border:1px solid #274765; border-radius:12px; padding:10px 12px;
+  box-shadow:0 8px 20px -14px rgba(0,0,0,.7);
+  opacity:0; transform:translateY(8px) scale(.98); transition:opacity .22s ease, transform .22s ease;
+}
+.ballotTile.show{ opacity:1; transform:translateY(0) scale(1); }
+.ballotTile.hide{ opacity:0; transform:translateY(-6px) scale(.98); }
+.bt-head{ font-weight:800; letter-spacing:.5px; margin-bottom:6px; }
+.bt-row{ display:flex; align-items:center; justify-content:center; gap:12px; }
+.bt-side{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+.bt-face{
+  width:54px; height:54px; border-radius:12px; object-fit:cover;
+  background:#0f1b2a; border:2px solid #315677; box-shadow:0 6px 14px -10px rgba(0,0,0,.65);
+}
+.bt-cap{ font-size:.65rem; color:#b7cbe2; font-weight:700; letter-spacing:.3px; }
+.bt-arrow{
+  width:28px; height:28px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#cfe9ff,#7fd0ff); color:#0d1b2a; font-weight:800;
+}
+.bt-line{ margin-top:6px; }
+
+/* Bars already defined earlier; ensure pulse animation exists */
+@keyframes jgPulse{ 0%,100%{ box-shadow:0 0 10px -3px rgba(120,200,255,.55);} 50%{ box-shadow:0 0 14px -2px rgba(120,200,255,.95);} }
+
+/* === End Credits: stage slides (in/out TV effect) ========================= */
+.creditsStage{
+  position:relative; flex:1 1 auto; overflow:hidden; border-radius:10px;
+  border:1px solid rgba(130,180,230,.12);
+  background:linear-gradient(180deg, rgba(12,22,36,.66), rgba(10,18,30,.66));
+  box-shadow:inset 0 10px 28px -18px rgba(0,0,0,.85);
+  display:flex; align-items:center; justify-content:center;
+}
+.creditSlide{
+  position:absolute; inset:0; display:flex; flex-direction:column; gap:10px;
+  align-items:center; justify-content:center; padding:22px 16px; text-align:center;
+  opacity:0; transform:scale(.98); filter:contrast(.9) saturate(.95);
+  transition:opacity .22s ease, transform .22s ease, filter .22s ease;
+}
+.creditSlide.show{
+  opacity:1; transform:scale(1); filter:contrast(1) saturate(1.02);
+  animation:scanFlicker .55s steps(2) 1;
+}
+.creditSlide.hide{ opacity:0; transform:scale(1.02); filter:contrast(1.1) saturate(1.05); }
+@keyframes scanFlicker{
+  30%{ opacity:.85; } 60%{ opacity:.95; } 100%{ opacity:1; }
+}
+.cr{ text-shadow:0 0 14px rgba(120,180,255,.3); }
+.cr-h{ font-size:1.15rem; font-weight:800; letter-spacing:1px; color:#bfe0ff; margin:4px 0 6px; text-transform:uppercase; }
+.cr-b{ font-size:1.02rem; font-weight:800; letter-spacing:.6px; color:#f2f7ff; }
+.cr-t{ font-size:.9rem; font-weight:700; letter-spacing:.6px; color:#cfe2ff; text-transform:uppercase; }
+.cr-p{ font-size:.9rem; font-weight:600; letter-spacing:.2px; color:#d6e6fb; }
+
+/* === TV-docked jury visuals ============================================== */
+/* Dock area inside the TV safe region (top). It does not block clicks by default. */
+.juryVizDock{
+  position:absolute;
+  top: calc(var(--tv-safe-top) + 6px);
+  left: var(--tv-safe-x);
+  right: var(--tv-safe-x);
+  z-index: 12;         /* under ticker (13), same layer as overlay */
+  pointer-events: none;/* let cards receive clicks */
+  display:flex; flex-direction:column; gap:8px; align-items:center;
+}
+
+/* Graph container reused (kept compact for TV) */
+.juryGraphOverlay{
+  width:min(680px, 92%);
+  background:#172a3d; border:1px solid #2a4561; border-radius:12px;
+  box-shadow:0 10px 26px -16px rgba(0,0,0,.75);
+  padding:10px 12px 12px;
+}
+.jgTitle{ font-weight:800; letter-spacing:.5px; font-size:.9rem; }
+.jgSub{ color:#a9bfd5; margin-top:2px; }
+.juryGraphBars{ display:grid; gap:10px; grid-template-columns:1fr 1fr; margin-top:8px; }
+.jgCol{ display:flex; flex-direction:column; gap:6px; }
+.jgName{ font-weight:700; letter-spacing:.4px; color:#d6e6f7; font-size:.78rem; }
+.jgBarWrap{ height:16px; background:#12253a; border:1px solid #28405a; border-radius:10px; overflow:hidden; box-shadow:inset 0 6px 20px -12px rgba(0,0,0,.8); }
+.jgBar{ height:100%; width:0%; background:linear-gradient(90deg,#64b7ff,#9ad4ff); box-shadow:0 0 10px -3px #6ec2ff; transition:width .45s cubic-bezier(.25,.9,.25,1); }
+.jgBar.alt{ background:linear-gradient(90deg,#7ef1a3,#b9ffd0); box-shadow:0 0 10px -3px #92ffbc; }
+.jgBar.lead{ filter:saturate(1.2) brightness(1.06); animation:jgPulse 1.8s ease-in-out infinite; }
+@keyframes jgPulse{ 0%,100%{ box-shadow:0 0 10px -3px rgba(120,200,255,.55);} 50%{ box-shadow:0 0 14px -2px rgba(120,200,255,.95);} }
+
+/* Cinematic ballot tile; keep small so it doesn’t collide with cards */
+.juryBallotTiles{ width:min(640px, 92%); display:flex; flex-direction:column; gap:8px; }
+.ballotTile{
+  background:#162b40; border:1px solid #274765; border-radius:10px; padding:8px 10px;
+  box-shadow:0 8px 18px -14px rgba(0,0,0,.7);
+  opacity:0; transform:translateY(8px) scale(.985); transition:opacity .2s ease, transform .2s ease;
+}
+.ballotTile.show{ opacity:1; transform:translateY(0) scale(1); }
+.ballotTile.hide{ opacity:0; transform:translateY(-6px) scale(.985); }
+.bt-head{ font-weight:800; letter-spacing:.45px; margin-bottom:4px; font-size:.8rem; }
+.bt-row{ display:flex; align-items:center; justify-content:center; gap:10px; }
+.bt-side{ display:flex; flex-direction:column; align-items:center; gap:5px; }
+.bt-face{
+  width:48px; height:48px; border-radius:10px; object-fit:cover;
+  background:#0f1b2a; border:2px solid #315677; box-shadow:0 6px 14px -10px rgba(0,0,0,.65);
+}
+.bt-cap{ font-size:.6rem; color:#b7cbe2; font-weight:700; letter-spacing:.3px; }
+.bt-arrow{
+  width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#cfe9ff,#7fd0ff); color:#0d1b2a; font-weight:800;
+}
+.bt-line{ margin-top:4px; }
+
+/* Human vote box must accept clicks */
+.humanJuryVoteBox{ pointer-events:auto; }
+.hjvCard{
+  background:#162b40; border:1px solid #274765; border-radius:10px; padding:8px 10px;
+  box-shadow:0 8px 18px -14px rgba(0,0,0,.7); text-align:center;
+}
+
+/* === Credits — upgraded slide styling ==================================== */
+/* Optional: if you add Google Fonts, set a stronger type stack here */
+:root{
+  --credits-head: "Oswald", "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --credits-body: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+.creditsWinnerCard .winnerBanner{ font-family:var(--credits-head); }
+.creditsWinnerCard .winnerName{ font-family:var(--credits-head); letter-spacing:1.1px; }
+
+/* Stage centers one slide at a time; slides animate in/out */
+.creditsStage{
+  position:relative; flex:1 1 auto; overflow:hidden; border-radius:12px;
+  border:1px solid rgba(130,180,230,.16);
+  background:linear-gradient(180deg, rgba(12,22,36,.7), rgba(8,16,28,.7));
+  box-shadow:inset 0 10px 28px -18px rgba(0,0,0,.85);
+  display:flex; align-items:center; justify-content:center;
+}
+.creditSlide{
+  position:absolute; inset:0; display:grid; place-items:center;
+  padding:16px; opacity:0; transform:translateY(12px) scale(.98) skewY(.2deg);
+  filter:saturate(.96) contrast(.98);
+  transition:opacity .22s ease, transform .22s ease, filter .22s ease;
+}
+.creditSlide.show{
+  opacity:1; transform:translateY(0) scale(1) skewY(0);
+  filter:saturate(1.05) contrast(1.02);
+  animation:tvFlicker .45s steps(2) 1;
+}
+.creditSlide.hide{ opacity:0; transform:translateY(-10px) scale(.985); filter:saturate(1.08) contrast(1.05); }
+.creditSlideInner{
+  width:min(720px, 92%); text-align:center;
+  display:flex; flex-direction:column; gap:8px;
+}
+
+/* Typographic system for credits */
+.cr{ text-shadow:0 0 14px rgba(120,180,255,.28); font-family:var(--credits-body); }
+.cr-h{ font-family:var(--credits-head); font-size:1.15rem; font-weight:800; letter-spacing:1px; color:#cfe7ff; text-transform:uppercase; margin:4px 0 2px; }
+.cr-b{ font-size:1.02rem; font-weight:800; letter-spacing:.6px; color:#f2f7ff; }
+.cr-t{ font-size:.9rem; font-weight:800; letter-spacing:.6px; color:#d7e7ff; text-transform:uppercase; }
+.cr-p{ font-size:.88rem; font-weight:600; letter-spacing:.2px; color:#d6e6fb; }
+
+/* TV flicker */
+@keyframes tvFlicker{
+  0%{ opacity:.85; filter:brightness(.98); }
+  40%{ opacity:1; }
+  60%{ opacity:.96; }
+  100%{ opacity:1; }
+}
+
+/* === TV-docked jury visuals (override/ensure no cut-offs) ================ */
+.juryVizDock{
+  position:absolute;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  z-index: 12;                /* below ticker (13) */
+  pointer-events: none;       /* cards remain interactive */
+  display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:flex-start;
+}
+.juryGraphOverlay{
+  width:min(680px, 92%);
+  background:#172a3d; border:1px solid #2a4561; border-radius:12px;
+  box-shadow:0 10px 26px -16px rgba(0,0,0,.75);
+  padding:10px 12px 12px;
+}
+.juryBallotTiles{ width:min(640px, 92%); display:flex; flex-direction:column; gap:8px; }
+.ballotTile{
+  background:#162b40; border:1px solid #274765; border-radius:10px; padding:8px 10px;
+  box-shadow:0 8px 18px -14px rgba(0,0,0,.7);
+  opacity:0; transform:translateY(8px) scale(.985); transition:opacity .2s ease, transform .2s ease;
+}
+.ballotTile.show{ opacity:1; transform:translateY(0) scale(1); }
+.ballotTile.hide{ opacity:0; transform:translateY(-6px) scale(.985); }
+.bt-head{ font-weight:800; letter-spacing:.45px; margin-bottom:4px; font-size:.8rem; }
+.bt-row{ display:flex; align-items:center; justify-content:center; gap:10px; }
+.bt-side{ display:flex; flex-direction:column; align-items:center; gap:5px; }
+.bt-face{
+  width:48px; height:48px; border-radius:10px; object-fit:cover;
+  background:#0f1b2a; border:2px solid #315677; box-shadow:0 6px 14px -10px rgba(0,0,0,.65);
+}
+.bt-cap{ font-size:.6rem; color:#b7cbe2; font-weight:700; letter-spacing:.3px; }
+.bt-arrow{
+  width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#cfe9ff,#7fd0ff); color:#0d1b2a; font-weight:800;
+}
+.bt-line{ margin-top:4px; }
+.humanJuryVoteBox{ pointer-events:auto; }
+.hjvCard{
+  background:#162b40; border:1px solid #274765; border-radius:10px; padding:8px 10px;
+  box-shadow:0 8px 18px -14px rgba(0,0,0,.7); text-align:center;
+}
+
+/* America Vote tiebreak (mini poll inside TV) */
+.amerVoteBox{
+  width:min(640px, 92%); background:#172a3d; border:1px solid #2a4561; border-radius:12px;
+  box-shadow:0 10px 26px -16px rgba(0,0,0,.75); padding:10px 12px; margin-top:4px;
+}
+.avTitle{ font-weight:800; letter-spacing:.5px; margin-bottom:6px; }
+.avBars{ display:flex; flex-direction:column; gap:8px; }
+.avRow{ display:grid; grid-template-columns: 110px 1fr 60px; gap:8px; align-items:center; }
+.avName{ font-weight:700; color:#d7e8fa; font-size:.8rem; }
+.avBarWrap{ height:14px; background:#12253a; border:1px solid #28405a; border-radius:10px; overflow:hidden; }
+.avBar{ height:100%; width:0%; background:linear-gradient(90deg,#64b7ff,#9ad4ff); box-shadow:0 0 10px -3px #6ec2ff; transition:width .55s cubic-bezier(.25,.9,.25,1); }
+.avBar.alt{ background:linear-gradient(90deg,#7ef1a3,#b9ffd0); box-shadow:0 0 10px -3px #92ffbc; }
+.avPct{ text-align:right; color:#c5d7ec; font-weight:700; font-size:.78rem; }
+
+/* === Credits — compact cinematic card (centered), slide-by-slide ========= */
+:root{
+  --credits-head: "Oswald", "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --credits-body: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+.creditsRoot{ position:fixed; inset:0; z-index:99990; display:grid; place-items:center; background:transparent; }
+.creditsRoot.hide{ animation:fadeOut .24s ease forwards; }
+.creditsMini{ pointer-events:none; } /* block clicks only on the small card area */
+.creditsMiniCard{
+  pointer-events:auto;
+  width:min(600px, 92vw);
+  background:linear-gradient(135deg,#132235,#0e1a29);
+  border:1px solid rgba(120,180,240,.28);
+  border-radius:16px;
+  box-shadow:0 18px 36px -18px rgba(0,0,0,.85), 0 0 0 1px rgba(120,180,240,.16);
+  padding:16px 16px 14px;
+  animation:fadeIn .24s ease;
+}
+.creditsMiniHeader{ display:flex; flex-direction:column; gap:2px; align-items:center; margin-bottom:8px; }
+.winnerBadge{
+  font-family:var(--credits-head); font-weight:800; letter-spacing:.9px; text-transform:uppercase;
+  color:#ffd166; font-size:.8rem;
+}
+.winnerMiniName{
+  font-family:var(--credits-head); font-weight:800; font-size:1.3rem; letter-spacing:1px; color:#eaf4ff;
+  text-shadow:0 0 16px rgba(140,200,255,.6);
+}
+
+/* Stage shows one slide at a time; tighter spacing, elegant fade */
+.creditsStage{
+  position:relative; overflow:hidden; border-radius:12px;
+  border:1px solid rgba(130,180,230,.14);
+  background:linear-gradient(180deg, rgba(12,22,36,.66), rgba(8,16,28,.66));
+  box-shadow:inset 0 10px 28px -18px rgba(0,0,0,.85);
+  min-height: 170px;
+}
+.creditSlide{
+  position:absolute; inset:0; display:grid; place-items:center;
+  padding:14px; opacity:0; transform:translateY(12px) scale(.98);
+  filter:saturate(.96) contrast(.98);
+  transition:opacity .22s ease, transform .22s ease, filter .22s ease;
+}
+.creditSlide.show{
+  opacity:1; transform:translateY(0) scale(1);
+  filter:saturate(1.05) contrast(1.02);
+  animation:tvFlicker .45s steps(2) 1;
+}
+.creditSlide.hide{ opacity:0; transform:translateY(-10px) scale(.985); filter:saturate(1.08) contrast(1.05); }
+.creditSlideInner{
+  width:min(560px, 90%); text-align:center; display:flex; flex-direction:column; gap:6px;
+}
+
+.cr{ text-shadow:0 0 12px rgba(120,180,255,.26); font-family:var(--credits-body); }
+.cr-h{ font-family:var(--credits-head); font-size:1.05rem; font-weight:800; letter-spacing:.9px; color:#cfe7ff; text-transform:uppercase; }
+.cr-b{ font-size:.98rem; font-weight:800; letter-spacing:.6px; color:#f2f7ff; }
+.cr-t{ font-size:.86rem; font-weight:800; letter-spacing:.6px; color:#d7e7ff; text-transform:uppercase; }
+.cr-p{ font-size:.86rem; font-weight:600; letter-spacing:.2px; color:#d6e6fb; }
+
+.creditsMiniControls{ display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
+#creditsPlayBtn{ background:#256246; }
+#creditsPlayBtn:hover{ background:#2b6f50; }
+
+@keyframes tvFlicker{
+  0%{ opacity:.85; filter:brightness(.98); }
+  40%{ opacity:1; }
+  60%{ opacity:.96; }
+  100%{ opacity:1; }
+}
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:translateY(0);} }
+@keyframes fadeOut{ to{ opacity:0; } }
+
+/* === TV-docked jury visuals — ensure no cut-offs and no ticker overlap ==== */
+.juryVizDock{
+  position:absolute;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  z-index: 12;
+  pointer-events: none;
+  display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:flex-start;
+}
+.juryGraphOverlay{
+  width:min(680px, 94%);
+  background:#172a3d; border:1px solid #2a4561; border-radius:12px;
+  box-shadow:0 10px 26px -16px rgba(0,0,0,.75);
+  padding:10px 12px 12px;
+}
+.juryBallotTiles{ width:min(640px, 94%); display:flex; flex-direction:column; gap:8px; }
+.ballotTile{
+  background:#162b40; border:1px solid #274765; border-radius:10px; padding:8px 10px;
+  box-shadow:0 8px 18px -14px rgba(0,0,0,.7);
+  opacity:0; transform:translateY(8px) scale(.985); transition:opacity .2s ease, transform .2s ease;
+}
+.ballotTile.show{ opacity:1; transform:translateY(0) scale(1); }
+.ballotTile.hide{ opacity:0; transform:translateY(-6px) scale(.985); }
+.bt-head{ font-weight:800; letter-spacing:.45px; margin-bottom:4px; font-size:.8rem; }
+.bt-row{ display:flex; align-items:center; justify-content:center; gap:10px; }
+.bt-side{ display:flex; flex-direction:column; align-items:center; gap:5px; }
+.bt-face{
+  width:48px; height:48px; border-radius:10px; object-fit:cover;
+  background:#0f1b2a; border:2px solid #315677; box-shadow:0 6px 14px -10px rgba(0,0,0,.65);
+}
+.bt-cap{ font-size:.6rem; color:#b7cbe2; font-weight:700; letter-spacing:.3px; }
+.bt-arrow{
+  width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg,#cfe9ff,#7fd0ff); color:#0d1b2a; font-weight:800;
+}
+.bt-line{ margin-top:4px; }
+.humanJuryVoteBox{ pointer-events:auto; }
+.hjvCard{
+  background:#162b40; border:1px solid #274765; border-radius:10px; padding:8px 10px;
+  box-shadow:0 8px 18px -14px rgba(0,0,0,.7); text-align:center;
+}
+
+/* America Vote tiebreak mini poll */
+.amerVoteBox{
+  width:min(640px, 94%); background:#172a3d; border:1px solid #2a4561; border-radius:12px;
+  box-shadow:0 10px 26px -16px rgba(0,0,0,.75); padding:10px 12px; margin-top:4px;
+}
+.avTitle{ font-weight:800; letter-spacing:.5px; margin-bottom:6px; }
+.avBars{ display:flex; flex-direction:column; gap:8px; }
+.avRow{ display:grid; grid-template-columns: 110px 1fr 60px; gap:8px; align-items:center; }
+.avName{ font-weight:700; color:#d7e8fa; font-size:.8rem; }
+.avBarWrap{ height:14px; background:#12253a; border:1px solid #28405a; border-radius:10px; overflow:hidden; }
+.avBar{ height:100%; width:0%; background:linear-gradient(90deg,#64b7ff,#9ad4ff); box-shadow:0 0 10px -3px #6ec2ff; transition:width .55s cubic-bezier(.25,.9,.25,1); }
+.avBar.alt{ background:linear-gradient(90deg,#7ef1a3,#b9ffd0); box-shadow:0 0 10px -3px #92ffbc; }
+.avPct{ text-align:right; color:#c5d7ec; font-weight:700; font-size:.78rem; }
+
+/* === Credits — compact cinematic card with "CREDITS" header ============== */
+.creditsRoot{ position:fixed; inset:0; z-index:99990; display:grid; place-items:center; background:transparent; }
+.creditsRoot.hide{ animation:fadeOut .2s ease forwards; }
+.creditsMiniCard{
+  width:min(720px, 95vw);
+  background:linear-gradient(135deg,#132235,#0e1a29);
+  border:1px solid rgba(120,180,240,.28);
+  border-radius:16px;
+  box-shadow:0 18px 36px -18px rgba(0,0,0,.85), 0 0 0 1px rgba(120,180,240,.16);
+  padding:16px 16px 14px;
+  animation:fadeIn .2s ease;
+}
+.creditsMiniHeader{ display:flex; align-items:center; justify-content:center; margin-bottom:8px; }
+.creditsHeaderTitle{
+  font-family: "Oswald", "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:800; letter-spacing:.9px; color:#ffd166; text-transform:uppercase; font-size:1rem;
+}
+
+/* Stage and slide presentation */
+.creditsStage{ position:relative; overflow:hidden; border-radius:12px; border:1px solid rgba(130,180,230,.14);
+  background:linear-gradient(180deg, rgba(12,22,36,.66), rgba(8,16,28,.66)); min-height: 160px; }
+.creditSlide{
+  position:absolute; inset:0; display:grid; place-items:center; padding:14px; opacity:0; transform:translateY(10px) scale(.985);
+  transition:opacity .2s ease, transform .2s ease;
+}
+.creditSlide.show{ opacity:1; transform:translateY(0) scale(1); }
+.creditSlide.hide{ opacity:0; transform:translateY(-10px) scale(.985); }
+.creditSlideInner{ width:min(640px, 92%); text-align:center; display:flex; flex-direction:column; gap:6px; }
+
+.cr-h{
+  font-family: "Oswald","Montserrat",system-ui,-apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size:1.05rem; font-weight:800; letter-spacing:.9px; color:#cfe7ff; text-transform:uppercase;
+}
+.cr-b{
+  font-family: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size:.98rem; font-weight:800; letter-spacing:.6px; color:#f2f7ff;
+}
+
+/* Basic fades */
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:translateY(0);} }
+@keyframes fadeOut{ to{ opacity:0; } }
+
+/* === Jury tiles min dwell already handled by JS; keep visual styles from prior === */
+
+/* === Credits: cinema mode (full-screen dim, centered two-row slides) ====== */
+.creditsCinema{
+  position:fixed; inset:0; z-index:99990;
+  background:rgba(0,0,0,.92);   /* near-black dim */
+  display:grid; place-items:center;
+  animation:fadeIn .18s ease;
+}
+.creditsCinema.hide{ animation:fadeOut .18s ease forwards; }
+
+.creditsCinemaStage{
+  max-width: clamp(520px, 70vw, 980px);
+  min-height: 160px;
+  display:grid; place-items:center;
+  text-align:center;
+  padding: 12px;
+}
+
+.cslide{
+  position:relative; opacity:0; transform:translateY(10px) scale(.985);
+  transition:opacity .2s ease, transform .2s ease;
+  width:100%;
+}
+.cslide.show{ opacity:1; transform:translateY(0) scale(1); }
+.cslide.hide{ opacity:0; transform:translateY(-10px) scale(.985); }
+
+.cslideInner{
+  display:flex; flex-direction:column; gap:8px;
+  align-items:center; justify-content:center;
+}
+
+.cTitle{
+  font-family:"Oswald","Montserrat",system-ui,-apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:800; letter-spacing:1px; text-transform:uppercase;
+  color:#f0f5ff; font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+  line-height:1.15;
+  white-space:nowrap;   /* keep titles like “SPECIAL THANKS TO” on one line */
+}
+.cBody{
+  font-family:"Montserrat",system-ui,-apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight:800; letter-spacing:.6px; color:#eaf2ff;
+  font-size: clamp(.98rem, 2vw, 1.35rem);
+  line-height:1.18; white-space:pre-wrap; /* allow intended line breaks only */
+  text-shadow:0 0 12px rgba(140,200,255,.22);
+}
+
+.creditsCinemaControls{
+  position:fixed; bottom:24px; left:0; right:0;
+  display:flex; justify-content:center;
+}
+/* === Centering tweaks for jury visuals (append) =========================== */
+.juryGraphOverlay,
+.juryBallotTiles,
+#amerVoteBox,
+#humanJuryVoteBox {
+  margin-left:auto;
+  margin-right:auto;
+}
+
+/* === Credits FX layer (append) =========================================== */
+.creditsFX{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:99991; /* above slides, below controls */
+}
+
+/* Electric arc: a thin glowing line that zaps in/out */
+.fxArc{
+  position:absolute;
+  height:2px;
+  background:linear-gradient(90deg, rgba(150,220,255,.0), rgba(150,220,255,.9), rgba(150,220,255,.0));
+  box-shadow:0 0 14px rgba(150,220,255,.85), 0 0 28px rgba(100,180,255,.45);
+  border-radius:3px;
+  animation:arcZap .9s cubic-bezier(.25,.9,.25,1) 1;
+  opacity:.85;
+  filter:saturate(1.2);
+}
+@keyframes arcZap{
+  0%{ opacity:0; transform:translate(-50%,-50%) scaleX(.6); }
+  15%{ opacity:1; transform:translate(-50%,-50%) scaleX(1.08); }
+  60%{ opacity:.85; }
+  100%{ opacity:0; transform:translate(-50%,-50%) scaleX(1.4); }
+}
+
+/* BB Eye: two glowing ellipses that blink */
+.fxEye{
+  position:absolute;
+  width:120px; height:44px;
+  display:flex; align-items:center; justify-content:space-between;
+  filter:saturate(1.1);
+  animation:eyeBlink 1.3s ease-in-out 1;
+}
+.fxEye::before, .fxEye::after{
+  content:'';
+  width:48px; height:34px; border-radius:20px/14px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.95) 0 6px, rgba(255,255,255,.0) 7px),
+    radial-gradient(circle at 50% 50%, rgba(255,200,60,.9) 0 10px, rgba(255,200,60,.2) 11px, rgba(0,0,0,0) 12px);
+  box-shadow:0 0 12px rgba(255,210,110,.55), 0 0 28px rgba(110,210,255,.25) inset;
+}
+@keyframes eyeBlink{
+  0%{ transform:translate(-50%,-50%) scaleY(0.1); opacity:0; }
+  18%{ transform:translate(-50%,-50%) scaleY(1); opacity:1; }
+  80%{ transform:translate(-50%,-50%) scaleY(1); opacity:1; }
+  100%{ transform:translate(-50%,-50%) scaleY(0.1); opacity:0; }
+}
+
+/* === Center fixes and layout compaction ================================ */
+.juryVizDock{
+  position:absolute;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  z-index:12;
+  pointer-events:none;
+  display:flex;
+  flex-direction:column;
+  align-items:center;         /* hard-center */
+  justify-content:flex-start;
+  gap:10px;
+  width:100%;
+}
+.juryGraphOverlay,
+.juryBallotTiles,
+#amerVoteBox,
+#humanJuryVoteBox{
+  margin-left:auto;
+  margin-right:auto;
+}
+
+/* Hide the ticker strip completely (removes “Final 3 Decision” style bar) */
+.tvNow{ display:none !important; }
+
+/* Compact layout: drop right column, expand TV/Show */
+body.layout-no-right .wrap{
+  grid-template-columns: 300px minmax(620px, 1fr) !important;
+}
+body.layout-no-right #sideCard,
+body.layout-no-right .rightColumn,
+body.layout-no-right .infoMusicCard{ display:none !important; }
+
+/* Topbar: keep buttons on one line and allow added Debug/Jury buttons */
+.topbar{ flex-wrap:wrap; }
+.topbar .btn{ white-space:nowrap; }
+
+/* Credits cinema mode (centered slides; per-letter animations rely on these) */
+.creditsCinema{
+  position:fixed; inset:0; z-index:99990;
+  background:rgba(0,0,0,.92);
+  display:grid; place-items:center;
+  animation:fadeIn .18s ease;
+}
+.creditsCinema.hide{ animation:fadeOut .18s ease forwards; }
+
+.creditsCinemaStage{
+  max-width: clamp(560px, 70vw, 1080px);
+  min-height: 180px;
+  display:grid; place-items:center;
+  text-align:center;
+  padding: 12px;
+}
+
+.cslide{
+  position:relative; opacity:0; transform:translateY(10px) scale(.985);
+  transition:opacity .22s ease, transform .22s ease;
+  width:100%;
+}
+.cslide.show{ opacity:1; transform:translateY(0) scale(1); }
+.cslide.hide{ opacity:0; transform:translateY(-10px) scale(.985); }
+
+.cslideInner{
+  display:flex; flex-direction:column; gap:10px;
+  align-items:center; justify-content:center;
+}
+
+.cTitle{
+  font-family:var(--credits-head);
+  font-weight:800; letter-spacing:1px; text-transform:uppercase;
+  color:#f0f5ff; font-size: clamp(1.1rem, 2.6vw, 1.7rem);
+  line-height:1.15; white-space:nowrap;
+}
+.cBody{
+  font-family:var(--credits-body);
+  font-weight:800; letter-spacing:.6px; color:#eaf2ff;
+  font-size: clamp(1rem, 2.2vw, 1.45rem);
+  line-height:1.18; white-space:pre-wrap;
+  text-shadow:0 0 12px rgba(140,200,255,.22);
+}
+
+/* Per-letter animation primitives */
+.cTextRow{ display:inline-block; }
+.cTextRow .ch{
+  display:inline-block;
+  transform-origin:50% 80%;
+  filter:brightness(.92) contrast(1.02);
+  opacity:0;
+  animation:letterIn .6s cubic-bezier(.25,.9,.25,1) forwards;
+}
+.cslide.hide .cTextRow .ch{
+  animation:letterOut .42s cubic-bezier(.4,.0,.6,1) forwards;
+}
+
+@keyframes letterIn{
+  0%{ transform:translateY(16px) scale(.9) rotate(.6deg); opacity:0; filter:blur(2px); }
+  60%{ opacity:1; filter:blur(0); }
+  100%{ transform:translateY(0) scale(1) rotate(0); opacity:1; }
+}
+@keyframes letterOut{
+  0%{ transform:translateY(0) scale(1); opacity:1; }
+  100%{ transform:translateY(-14px) scale(.96) rotate(-.6deg); opacity:0; filter:blur(2px); }
+}
+
+/* Optional subtle spark for a few letters (CSS-only; no random lines layer) */
+.ch.spark{
+  text-shadow:
+    0 0 10px rgba(120,210,255,.35),
+    0 0 18px rgba(120,210,255,.25);
+}
+
+/* Small helper for the moved Debug/Jury buttons alignment */
+.topbar .btn + .btn{ margin-left:6px; }
+
+/* Keep common animations available */
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:translateY(0);} }
+@keyframes fadeOut{ to{ opacity:0; } }
+
