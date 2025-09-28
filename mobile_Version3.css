@@ -1,0 +1,25 @@
+:root {
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
+  --safe-right: env(safe-area-inset-right);
+}
+html, body { height: 100%; background: #0f1320; }
+body {
+  padding: calc(var(--safe-top,0) + 6px) calc(var(--safe-right,0) + 6px) calc(var(--safe-bottom,0) + 6px) calc(var(--safe-left,0) + 6px);
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation;
+}
+.topbar { flex-wrap: wrap; gap: 6px; }
+.topbar .btn { min-height: 36px; min-width: 44px; }
+.wrap { display: flex; flex-direction: column; gap: 10px; }
+.card { border-radius: 12px; }
+#tv { aspect-ratio: 16/9; width: 100%; max-height: 56vh; position: relative; }
+#panel { max-height: 42vh; overflow: auto; -webkit-overflow-scrolling: touch; }
+#sideCard .tabBar { position: sticky; top: 0; }
+@media (min-width: 900px) {
+  .wrap { flex-direction: row; align-items: flex-start; }
+  #actionCard { flex: 1 1 60%; }
+  #dashboardCard, #sideCard { flex: 1 1 40%; }
+}
+button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
+@media (max-width: 480px) { #debugPanel { display: none !important; } }
