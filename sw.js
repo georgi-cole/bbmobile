@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bb-pwa-v1';
+const CACHE_NAME = 'bb-pwa-v-intro-outro-1';
 const CORE = ['./','./index.html','./styles.css','./mobile.css','./site.webmanifest'];
 
 self.addEventListener('install', (e) => {
