@@ -7,6 +7,7 @@
   const INTRO_URL = 'assets/videos/intro.mp4';
   const OUTRO_URL = 'assets/videos/outro.mp4';
   const INTRO_FLAG_KEY = 'bb.introPlayed';
+
   let outroPlayed = false;
 
   function isIntroPlayed(){
@@ -145,38 +146,36 @@
     };
   })();
 
-  // Replace credits entirely by catching the finale cinematic hook.
-  // End-credits sets a wrapper on showFinaleCinematic that calls its internal startCredits().
-  // We can’t override that internal function directly, so we stop their credits and play our video.
-  (function hookFinaleOutro(){
+  // Wrap showFinaleCinematic so we can replace credits entirely with our video.
+  function wrapFinale(){
     const prevShow = g.showFinaleCinematic;
-    if (typeof prevShow !== 'function'){
-      console.warn('[intro-outro] showFinaleCinematic not found — outro hook will attach later if available');
-      return;
-    }
-    g.showFinaleCinematic = function wrappedFinale(){
+    if (typeof prevShow !== 'function' || prevShow.__ioWrapped) return;
+    const wrapped = function(){
       try { prevShow.apply(this, arguments); } catch (e){ console.warn('[intro-outro] finale orig error', e); }
-      // If our outro exists, stop built-in credits shortly after they start and play ours
       (async ()=>{
         if (outroPlayed) return;
         let hasVideo = true;
         try { const r = await fetch(OUTRO_URL, { method:'HEAD', cache:'no-store' }); hasVideo = !!r.ok; } catch {}
         if (!hasVideo) return;
+        // Stop built-in credits just before or after they start, then play our outro
         setTimeout(()=>{
           try { g.stopCreditsSequence?.(); } catch {}
           if (outroPlayed) return;
           outroPlayed = true;
           playVideo(OUTRO_URL, { onEnd: ()=>{}, onSkip: ()=>{}, onFail: ()=>{} });
-        }, 1600); // their hook starts ~1500ms after; we stop shortly after to avoid flicker
+        }, 1200);
       })();
     };
-  })();
+    wrapped.__ioWrapped = true;
+    g.showFinaleCinematic = wrapped;
+    console.info('[intro-outro] showFinaleCinematic wrapped');
+  }
 
-  // Keep legacy wrapper as a fallback in case someone calls startCreditsSequence directly.
-  (function hookCreditsFallback() {
+  // Fallback: wrap startCreditsSequence in case it’s invoked directly.
+  function wrapCredits(){
     const prevStartCredits = g.startCreditsSequence;
-    const prevStopCredits = g.stopCreditsSequence;
-    g.startCreditsSequence = async function wrappedCredits() {
+    if (prevStartCredits && prevStartCredits.__ioWrapped) return;
+    const wrapped = async function(){
       console.info('[intro-outro] startCreditsSequence intercepted');
       if (outroPlayed) return;
       let hasVideo = true;
@@ -186,16 +185,41 @@
         playVideo(OUTRO_URL, {
           onEnd: () => {},
           onSkip: () => {},
-          onFail: () => { if (typeof prevStartCredits === 'function') prevStartCredits(); }
+          onFail: () => { try { prevStartCredits?.(); } catch {} }
         });
         return;
       }
-      if (typeof prevStartCredits === 'function') return prevStartCredits();
+      try { return prevStartCredits?.(); } catch {}
     };
-    g.stopCreditsSequence = function stopWrappedCredits() {
+    wrapped.__ioWrapped = true;
+    g.startCreditsSequence = wrapped;
+    // Also ensure stop proxy cleans overlay
+    const prevStop = g.stopCreditsSequence;
+    g.stopCreditsSequence = function(){
       cleanup();
-      if (typeof prevStopCredits === 'function') prevStopCredits();
+      try { prevStop?.(); } catch {}
     };
-  })();
+    console.info('[intro-outro] startCreditsSequence wrapped');
+  }
+
+  function installOutroHooks(){
+    wrapFinale();
+    wrapCredits();
+  }
+
+  // Install now, then re-apply for a short window after DOM ready (end-credits installs then).
+  installOutroHooks();
+  function scheduleRehook(){
+    let ticks=0;
+    const iv=setInterval(()=>{
+      installOutroHooks();
+      if(++ticks>30) clearInterval(iv); // ~9s total if 300ms interval
+    }, 300);
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', scheduleRehook, { once:true });
+  } else {
+    scheduleRehook();
+  }
 
 })(window);
