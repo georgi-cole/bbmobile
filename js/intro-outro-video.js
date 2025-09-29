@@ -2,9 +2,19 @@
 // Expected files (case-sensitive): assets/videos/intro.mp4 and assets/videos/outro.mp4
 (function (g) {
   'use strict';
+  console.info('[intro-outro] hook loaded');
 
   const INTRO_URL = 'assets/videos/intro.mp4';
   const OUTRO_URL = 'assets/videos/outro.mp4';
+  const INTRO_FLAG_KEY = 'bb.introPlayed';
+
+  function isIntroPlayed(){
+    try{ return sessionStorage.getItem(INTRO_FLAG_KEY) === '1' || g.__bbIntroPlayed === true; }catch{ return !!g.__bbIntroPlayed; }
+  }
+  function markIntroPlayed(){
+    g.__bbIntroPlayed = true;
+    try{ sessionStorage.setItem(INTRO_FLAG_KEY, '1'); }catch{}
+  }
 
   function buildOverlay() {
     const old = document.getElementById('videoCinema');
@@ -50,6 +60,7 @@
   }
 
   function playVideo(url, { onEnd, onSkip, onFail } = {}) {
+    console.info('[intro-outro] playVideo:', url);
     const { vid, skip, tap } = buildOverlay();
     let finished = false;
 
@@ -58,6 +69,7 @@
       finished = true;
       try { vid.pause(); } catch {}
       cleanup();
+      console.info('[intro-outro] finished:', kind);
       if (kind === 'skip') onSkip && onSkip();
       else if (kind === 'end') onEnd && onEnd();
       else onFail && onFail();
@@ -88,22 +100,51 @@
     };
   }
 
-  // ---------- INTRO HOOK ----------
+  // Play intro once on first page load (before starting season)
+  function maybePlayIntroOnLoad(){
+    if (isIntroPlayed()) return;
+    // Try to detect existence quickly; if fetch fails we still attempt playback
+    let ok = true;
+    fetch(INTRO_URL, { method: 'HEAD', cache: 'no-store' }).then(r=>{
+      ok = !!r.ok;
+    }).catch(()=>{}).finally(()=>{
+      if (ok){
+        playVideo(INTRO_URL, {
+          onEnd: () => { markIntroPlayed(); },
+          onSkip: () => { markIntroPlayed(); },
+          onFail: () => {}
+        });
+      }
+    });
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', maybePlayIntroOnLoad, { once:true });
+  } else {
+    setTimeout(maybePlayIntroOnLoad, 0);
+  }
+
+  // ---------- INTRO HOOK (before opening sequence) ----------
   (function hookIntro() {
     const origStart = g.startOpeningSequence;
-    if (typeof origStart !== 'function') return;
+    if (typeof origStart !== 'function') {
+      console.warn('[intro-outro] startOpeningSequence not found at load — intro hook inactive');
+      return;
+    }
 
     g.startOpeningSequence = async function wrappedOpening() {
+      console.info('[intro-outro] startOpeningSequence intercepted');
+      if (isIntroPlayed()){
+        return origStart.call(g);
+      }
       let hasVideo = true;
       try {
         const res = await fetch(INTRO_URL, { method: 'HEAD', cache: 'no-store' });
         hasVideo = !!res.ok;
       } catch {}
-
       if (hasVideo) {
         playVideo(INTRO_URL, {
-          onEnd: () => { try { origStart.call(g); } catch { origStart(); } },
-          onSkip: () => { try { origStart.call(g); } catch { origStart(); } },
+          onEnd: () => { markIntroPlayed(); try { origStart.call(g); } catch { origStart(); } },
+          onSkip: () => { markIntroPlayed(); try { origStart.call(g); } catch { origStart(); } },
           onFail: () => { try { origStart.call(g); } catch { origStart(); } }
         });
         return;
@@ -116,14 +157,17 @@
   (function hookOutro() {
     const prevStartCredits = g.startCreditsSequence;
     const prevStopCredits = g.stopCreditsSequence;
+    if (typeof prevStartCredits !== 'function'){
+      console.warn('[intro-outro] startCreditsSequence not found at load — outro hook will still attach wrapper');
+    }
 
     g.startCreditsSequence = async function wrappedCredits() {
+      console.info('[intro-outro] startCreditsSequence intercepted');
       let hasVideo = true;
       try {
         const res = await fetch(OUTRO_URL, { method: 'HEAD', cache: 'no-store' });
         hasVideo = !!res.ok;
       } catch {}
-
       if (hasVideo) {
         playVideo(OUTRO_URL, {
           onEnd: () => {},
