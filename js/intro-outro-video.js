@@ -1,5 +1,5 @@
-// Intro + Outro video with Skip. Replaces opening sequence and end credits when videos exist.
-// Expected files (case-sensitive): assets/videos/intro.mp4 and assets/videos/outro.mp4
+// Intro + Outro video with Skip. Plays intro on load/start; replaces end credits with outro video.
+// Files must exist exactly (case-sensitive): assets/videos/intro.mp4 and assets/videos/outro.mp4
 (function (g) {
   'use strict';
   console.info('[intro-outro] hook loaded');
@@ -7,6 +7,7 @@
   const INTRO_URL = 'assets/videos/intro.mp4';
   const OUTRO_URL = 'assets/videos/outro.mp4';
   const INTRO_FLAG_KEY = 'bb.introPlayed';
+  let outroPlayed = false;
 
   function isIntroPlayed(){
     try{ return sessionStorage.getItem(INTRO_FLAG_KEY) === '1' || g.__bbIntroPlayed === true; }catch{ return !!g.__bbIntroPlayed; }
@@ -100,22 +101,17 @@
     };
   }
 
-  // Play intro once on first page load (before starting season)
+  // Show intro once when the page/app opens
   function maybePlayIntroOnLoad(){
     if (isIntroPlayed()) return;
-    // Try to detect existence quickly; if fetch fails we still attempt playback
-    let ok = true;
     fetch(INTRO_URL, { method: 'HEAD', cache: 'no-store' }).then(r=>{
-      ok = !!r.ok;
-    }).catch(()=>{}).finally(()=>{
-      if (ok){
-        playVideo(INTRO_URL, {
-          onEnd: () => { markIntroPlayed(); },
-          onSkip: () => { markIntroPlayed(); },
-          onFail: () => {}
-        });
-      }
-    });
+      if (!r.ok) return;
+      playVideo(INTRO_URL, {
+        onEnd: markIntroPlayed,
+        onSkip: markIntroPlayed,
+        onFail: ()=>{}
+      });
+    }).catch(()=>{});
   }
   if (document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', maybePlayIntroOnLoad, { once:true });
@@ -123,24 +119,20 @@
     setTimeout(maybePlayIntroOnLoad, 0);
   }
 
-  // ---------- INTRO HOOK (before opening sequence) ----------
+  // Also play intro right before the opening sequence (if it hasn’t played yet)
   (function hookIntro() {
     const origStart = g.startOpeningSequence;
     if (typeof origStart !== 'function') {
       console.warn('[intro-outro] startOpeningSequence not found at load — intro hook inactive');
       return;
     }
-
     g.startOpeningSequence = async function wrappedOpening() {
       console.info('[intro-outro] startOpeningSequence intercepted');
       if (isIntroPlayed()){
         return origStart.call(g);
       }
       let hasVideo = true;
-      try {
-        const res = await fetch(INTRO_URL, { method: 'HEAD', cache: 'no-store' });
-        hasVideo = !!res.ok;
-      } catch {}
+      try { const res = await fetch(INTRO_URL, { method: 'HEAD', cache: 'no-store' }); hasVideo = !!res.ok; } catch {}
       if (hasVideo) {
         playVideo(INTRO_URL, {
           onEnd: () => { markIntroPlayed(); try { origStart.call(g); } catch { origStart(); } },
@@ -153,22 +145,44 @@
     };
   })();
 
-  // ---------- OUTRO (CREDITS) HOOK ----------
-  (function hookOutro() {
+  // Replace credits entirely by catching the finale cinematic hook.
+  // End-credits sets a wrapper on showFinaleCinematic that calls its internal startCredits().
+  // We can’t override that internal function directly, so we stop their credits and play our video.
+  (function hookFinaleOutro(){
+    const prevShow = g.showFinaleCinematic;
+    if (typeof prevShow !== 'function'){
+      console.warn('[intro-outro] showFinaleCinematic not found — outro hook will attach later if available');
+      return;
+    }
+    g.showFinaleCinematic = function wrappedFinale(){
+      try { prevShow.apply(this, arguments); } catch (e){ console.warn('[intro-outro] finale orig error', e); }
+      // If our outro exists, stop built-in credits shortly after they start and play ours
+      (async ()=>{
+        if (outroPlayed) return;
+        let hasVideo = true;
+        try { const r = await fetch(OUTRO_URL, { method:'HEAD', cache:'no-store' }); hasVideo = !!r.ok; } catch {}
+        if (!hasVideo) return;
+        setTimeout(()=>{
+          try { g.stopCreditsSequence?.(); } catch {}
+          if (outroPlayed) return;
+          outroPlayed = true;
+          playVideo(OUTRO_URL, { onEnd: ()=>{}, onSkip: ()=>{}, onFail: ()=>{} });
+        }, 1600); // their hook starts ~1500ms after; we stop shortly after to avoid flicker
+      })();
+    };
+  })();
+
+  // Keep legacy wrapper as a fallback in case someone calls startCreditsSequence directly.
+  (function hookCreditsFallback() {
     const prevStartCredits = g.startCreditsSequence;
     const prevStopCredits = g.stopCreditsSequence;
-    if (typeof prevStartCredits !== 'function'){
-      console.warn('[intro-outro] startCreditsSequence not found at load — outro hook will still attach wrapper');
-    }
-
     g.startCreditsSequence = async function wrappedCredits() {
       console.info('[intro-outro] startCreditsSequence intercepted');
+      if (outroPlayed) return;
       let hasVideo = true;
-      try {
-        const res = await fetch(OUTRO_URL, { method: 'HEAD', cache: 'no-store' });
-        hasVideo = !!res.ok;
-      } catch {}
+      try { const res = await fetch(OUTRO_URL, { method: 'HEAD', cache: 'no-store' }); hasVideo = !!res.ok; } catch {}
       if (hasVideo) {
+        outroPlayed = true;
         playVideo(OUTRO_URL, {
           onEnd: () => {},
           onSkip: () => {},
@@ -178,7 +192,6 @@
       }
       if (typeof prevStartCredits === 'function') return prevStartCredits();
     };
-
     g.stopCreditsSequence = function stopWrappedCredits() {
       cleanup();
       if (typeof prevStopCredits === 'function') prevStopCredits();
