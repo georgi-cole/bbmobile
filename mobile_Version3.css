@@ -34,14 +34,67 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
     padding: 12px !important;
   }
 
-  /* Settings modal - constrain to viewport and allow inner scrolling */
+  /* Settings modal - full-screen sheet with inner scroll */
+  #settingsBackdrop {
+    align-items: flex-start !important;
+    padding: 0 !important;
+  }
+
   #settingsBackdrop .modal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
     max-width: 100vw !important;
-    max-height: 100dvh !important;
-    width: calc(100vw - 20px) !important;
+    height: 100svh !important;
+    max-height: 100svh !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Modal body becomes scrollable container */
+  #settingsBackdrop .modal #settingsPanes {
+    flex: 1 !important;
+    min-height: 0 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    padding: 10px !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(var(--safe-bottom, 0px) + 80px) !important;
+  }
+
+  /* Keep header and tabs sticky */
+  #settingsBackdrop .modal h2,
+  #settingsBackdrop .modal #settingsTabs {
+    flex-shrink: 0 !important;
+  }
+
+  /* Action buttons at bottom */
+  #settingsBackdrop .modal .row.between {
+    flex-shrink: 0 !important;
+    padding-bottom: calc(var(--safe-bottom, 0px) + 4px) !important;
+  }
+
+  /* Settings modal: scope button/input/pill compaction ONLY to settings modal */
+  #settingsBackdrop button.btn,
+  #settingsBackdrop .tab-btn {
+    padding: 6px 10px !important;
+    font-size: 0.85rem !important;
+    min-height: 36px !important;
+  }
+
+  #settingsBackdrop .pill {
+    padding: 4px 7px !important;
+    font-size: 0.65rem !important;
+  }
+
+  #settingsBackdrop input,
+  #settingsBackdrop select,
+  #settingsBackdrop textarea {
+    font-size: 0.9rem !important;
+    padding: 6px 8px !important;
   }
 
   /* Settings grid - reduce padding for cards */
@@ -54,64 +107,71 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
     margin-bottom: 4px !important;
   }
 
-  /* Cast editor - stack as single column with preview above form */
-  .cast-editor {
+  /* Cast pane specific - compact everything */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-editor {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
   }
 
-  .cast-preview {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-preview {
     align-items: center !important;
   }
 
-  .cast-preview img {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-preview img {
     width: 100px !important;
     height: 100px !important;
   }
 
   /* Cast form - ensure inputs fit and stack properly */
-  .cast-form {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form {
     grid-template-columns: 1fr !important;
     gap: 6px !important;
   }
 
-  .cast-form label {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form label {
     font-size: 0.75rem !important;
   }
 
-  .cast-form input,
-  .cast-form select {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form input,
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form select {
     width: 100% !important;
     box-sizing: border-box !important;
-    font-size: 0.85rem !important;
+    font-size: 14px !important;
     padding: 6px 8px !important;
+    min-width: 0 !important;
   }
 
   /* Cast strip - horizontal scroll for roster */
-  .cast-strip {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-strip {
     overflow-x: auto !important;
     overflow-y: hidden !important;
     padding: 6px !important;
     -webkit-overflow-scrolling: touch;
   }
 
-  .cast-chip {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-chip {
     min-width: 52px !important;
   }
 
-  .chip-ava {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .chip-ava {
     width: 44px !important;
     height: 44px !important;
   }
 
-  /* Cast filters - reduce pill size */
-  .pill {
-    padding: 4px 7px !important;
-    font-size: 0.65rem !important;
+  /* Cast navigation buttons - ensure wrapping, no horizontal overflow */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-nav {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: space-between !important;
   }
 
-  /* Cast navigation buttons */
-  .cast-nav .btn {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-nav .row {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-nav .btn {
     min-width: 70px !important;
     padding: 6px 10px !important;
     font-size: 0.8rem !important;
@@ -145,29 +205,10 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
     padding: 8px !important;
   }
 
-  /* Reduce button and tile sizes */
-  button.btn, .tab-btn {
-    padding: 6px 10px !important;
-    font-size: 0.85rem !important;
-    min-height: 36px !important;
-  }
-
-  .topbar .btn {
-    padding: 6px 8px !important;
-    font-size: 0.8rem !important;
-    min-height: 32px !important;
-  }
-
   /* Smaller paddings for tiles and cards */
   .tile, .player-tile, .cast-tile {
     padding: 8px !important;
     margin: 4px !important;
-  }
-
-  /* Input fields */
-  input, select, textarea {
-    font-size: 0.9rem !important;
-    padding: 6px 8px !important;
   }
 
   /* Settings modal specific */

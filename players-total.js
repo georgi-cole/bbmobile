@@ -131,8 +131,6 @@
       </label>
       <div class="row" style="margin-top:8px;gap:8px;align-items:center">
         <button class="btn small" id="btnApplyPlayersCast">Apply</button>
-        <button class="btn small outline" id="btnCleanupPlayersCast" title="Remove duplicate controls if you see more than one">Clean up duplicates</button>
-        <span class="tiny muted">6–22. Lobby applies now; mid‑season reloads.</span>
       </div>
     `;
 
@@ -162,11 +160,6 @@
 
     wrap.querySelector('#btnApplyPlayersCast').addEventListener('click', ()=>{
       applyPlayers(+input.value || cur);
-    });
-
-    wrap.querySelector('#btnCleanupPlayersCast').addEventListener('click', ()=>{
-      const removed = cleanupDuplicates(modalRoot);
-      log('cleanup removed', removed, 'duplicates');
     });
 
     // Mark injected for this modal instance
