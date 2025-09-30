@@ -79,6 +79,37 @@
     return filtered;
   }
 
+  // B) Jury house entry logging
+  function juryOnEviction(evictedId){
+    const gg = g.game || {};
+    if (!gg.juryHouse || !gg.juryHouse.includes(evictedId)) return;
+    
+    const position = gg.juryHouse.indexOf(evictedId) + 1;
+    const ordinals = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
+    const ordinal = ordinals[position - 1] || `${position}th`;
+    const hohName = safeName(gg.hohId) || 'Unknown';
+    
+    g.addJuryLog?.(`${safeName(evictedId)} is the ${ordinal} juror. They were sent to the jury house by the HOH reign of ${hohName}.`);
+  }
+
+  // C) Jury banter templates
+  const juryBanterTemplates = [
+    "I will vote for the person who never betrayed me.",
+    "I respect the strongest strategist.",
+    "I value loyalty over anything.",
+    "My vote goes to whoever played the best social game.",
+    "I'm voting for the competition beast.",
+    "I'll vote for who was most honest with me.",
+    "I'm choosing the player who made the biggest moves.",
+    "My decision is based on who controlled the house.",
+    "I vote for who deserves it most.",
+    "I'm rewarding the player who outwitted everyone."
+  ];
+
+  function getJuryBanter(){
+    return juryBanterTemplates[Math.floor(rng() * juryBanterTemplates.length)];
+  }
+
   // America's Vote tiebreaker (random for now; can be enhanced later)
   function americasVoteWinner(A, B){
     const winner = rng()<0.5 ? A : B;
@@ -449,7 +480,29 @@
     let jurors = getJurors();
 
     // Ensure odd number of jurors to prevent ties
+    const beforeOdd = jurors.slice();
     jurors = ensureOddJurors(jurors);
+
+    // A) Normalize canonical juror list
+    // Deduplicate and set as the official jury
+    const finalJurors = [...new Set(jurors)];
+    gg.juryHouse = finalJurors;
+    
+    // Update all player juror flags
+    const players = gg.players || g.players || [];
+    players.forEach(p => {
+      if (!p) return;
+      p.juror = finalJurors.includes(p.id);
+    });
+    
+    // Log excluded jurors
+    const excluded = beforeOdd.filter(id => !finalJurors.includes(id));
+    excluded.forEach(id => {
+      g.addJuryLog?.(`${safeName(id)} did not make the final jury (odd-size rule).`, 'muted');
+    });
+    
+    // Update HUD to reflect accurate juror badges
+    g.updateHud?.();
 
     setTvNow('Voting the Winner');
 
@@ -484,6 +537,10 @@
 
     order.forEach((jid,i)=>{
       setTimeout(()=>{
+        // C) Add banter before vote
+        const banter = getJuryBanter();
+        g.addJuryLog?.(`${safeName(jid)}: ${banter}`, 'muted');
+        
         const pick = (jid===gg.humanId && humanPick!=null) ? humanPick : ballotPick(jid, A, B);
         votes.set(pick,(votes.get(pick)||0)+1);
 
@@ -493,6 +550,9 @@
         updateFinaleGraph(a,b);
 
         addFaceoffVoteCard(safeName(jid), safeName(pick));
+        
+        // C) Add reveal log
+        g.addJuryLog?.(`${safeName(jid)} voted for ${safeName(pick)} to win the Big Brother game.`);
       }, t + Math.floor(rng()*500));
       t += step;
     });
@@ -553,5 +613,6 @@
 
   // Export
   g.startJuryVote = startJuryVote;
+  g.juryOnEviction = juryOnEviction;
 
 })(window);

@@ -148,6 +148,9 @@
   }
 
   function showFinaleCinematic(winnerId){
+    // D) Persist winner ID for outro replay
+    g.__lastWinnerId = winnerId;
+    
     const dim=ensureOverlay();
     const name = g.safeName?.(winnerId) || (g.getP?.(winnerId)?.name ?? 'Winner');
     dim.querySelector('#cinWinName').textContent = name;
