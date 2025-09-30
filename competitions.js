@@ -271,6 +271,7 @@
     global.addLog(`Final 3 eviction: <b>${ev.name}</b>.`,'danger');
     safeShowCard('Evicted',[ev.name],'evict',3600,true);
     if(global.alivePlayers().length<=9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target)) g.juryHouse.push(target);
+    try{ global.juryOnEviction?.(target); }catch{}
     setTimeout(()=>global.startJuryVote?.(), 700);
   }
   global.finalizeFinal3Decision=finalizeFinal3Decision;

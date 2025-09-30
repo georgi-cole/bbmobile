@@ -262,7 +262,20 @@
       }
       return;
     }
-    playVideo(url, { onEnd: ()=>{}, onSkip: ()=>{}, onFail: ()=>{} });
+    // D) Return to winner panel after outro
+    playVideo(url, { 
+      onEnd: ()=>{ 
+        if(g.__lastWinnerId != null) {
+          setTimeout(()=>g.showFinaleCinematic?.(g.__lastWinnerId), 100);
+        }
+      }, 
+      onSkip: ()=>{
+        if(g.__lastWinnerId != null) {
+          setTimeout(()=>g.showFinaleCinematic?.(g.__lastWinnerId), 100);
+        }
+      }, 
+      onFail: ()=>{} 
+    });
   };
 
 })(window);
