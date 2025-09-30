@@ -6,6 +6,8 @@
 
   const INTRO_URL = 'assets/videos/intro.mp4';
   const OUTRO_URL = 'assets/videos/outro.mp4';
+  const INTRO_URL_MOBILE = 'assets/videos/intro-mobile.mp4';
+  const OUTRO_URL_MOBILE = 'assets/videos/outro-mobile.mp4';
   const INTRO_FLAG_KEY = 'bb.introPlayed';
 
   let outroPlayed = false;
@@ -16,6 +18,27 @@
   function markIntroPlayed(){
     g.__bbIntroPlayed = true;
     try{ sessionStorage.setItem(INTRO_FLAG_KEY, '1'); }catch{}
+  }
+
+  // Check if device is a phone in portrait mode
+  function isPhonePortrait(){
+    const w = window.innerWidth || 0;
+    const h = window.innerHeight || 0;
+    // Portrait: height > width, and width suggests mobile (< 768px)
+    return h > w && w < 768;
+  }
+
+  // Pick video URL: mobile variant on portrait phones if it exists, else desktop
+  async function pickVideoUrl(primaryUrl, mobileUrl){
+    if(!isPhonePortrait()) return primaryUrl;
+    
+    // Check if mobile variant exists
+    try{
+      const r = await fetch(mobileUrl, { method:'HEAD', cache:'no-store' });
+      if(r.ok) return mobileUrl;
+    }catch{}
+    
+    return primaryUrl;
   }
 
   function buildOverlay() {
@@ -103,11 +126,12 @@
   }
 
   // Show intro once when the page/app opens
-  function maybePlayIntroOnLoad(){
+  async function maybePlayIntroOnLoad(){
     if (isIntroPlayed()) return;
-    fetch(INTRO_URL, { method: 'HEAD', cache: 'no-store' }).then(r=>{
+    const url = await pickVideoUrl(INTRO_URL, INTRO_URL_MOBILE);
+    fetch(url, { method: 'HEAD', cache: 'no-store' }).then(r=>{
       if (!r.ok) return;
-      playVideo(INTRO_URL, {
+      playVideo(url, {
         onEnd: markIntroPlayed,
         onSkip: markIntroPlayed,
         onFail: ()=>{}
@@ -132,10 +156,11 @@
       if (isIntroPlayed()){
         return origStart.call(g);
       }
+      const url = await pickVideoUrl(INTRO_URL, INTRO_URL_MOBILE);
       let hasVideo = true;
-      try { const res = await fetch(INTRO_URL, { method: 'HEAD', cache: 'no-store' }); hasVideo = !!res.ok; } catch {}
+      try { const res = await fetch(url, { method: 'HEAD', cache: 'no-store' }); hasVideo = !!res.ok; } catch {}
       if (hasVideo) {
-        playVideo(INTRO_URL, {
+        playVideo(url, {
           onEnd: () => { markIntroPlayed(); try { origStart.call(g); } catch { origStart(); } },
           onSkip: () => { markIntroPlayed(); try { origStart.call(g); } catch { origStart(); } },
           onFail: () => { try { origStart.call(g); } catch { origStart(); } }
@@ -154,15 +179,16 @@
       try { prevShow.apply(this, arguments); } catch (e){ console.warn('[intro-outro] finale orig error', e); }
       (async ()=>{
         if (outroPlayed) return;
+        const url = await pickVideoUrl(OUTRO_URL, OUTRO_URL_MOBILE);
         let hasVideo = true;
-        try { const r = await fetch(OUTRO_URL, { method:'HEAD', cache:'no-store' }); hasVideo = !!r.ok; } catch {}
+        try { const r = await fetch(url, { method:'HEAD', cache:'no-store' }); hasVideo = !!r.ok; } catch {}
         if (!hasVideo) return;
         // Stop built-in credits just before or after they start, then play our outro
         setTimeout(()=>{
           try { g.stopCreditsSequence?.(); } catch {}
           if (outroPlayed) return;
           outroPlayed = true;
-          playVideo(OUTRO_URL, { onEnd: ()=>{}, onSkip: ()=>{}, onFail: ()=>{} });
+          playVideo(url, { onEnd: ()=>{}, onSkip: ()=>{}, onFail: ()=>{} });
         }, 1200);
       })();
     };
@@ -178,11 +204,12 @@
     const wrapped = async function(){
       console.info('[intro-outro] startCreditsSequence intercepted');
       if (outroPlayed) return;
+      const url = await pickVideoUrl(OUTRO_URL, OUTRO_URL_MOBILE);
       let hasVideo = true;
-      try { const res = await fetch(OUTRO_URL, { method: 'HEAD', cache: 'no-store' }); hasVideo = !!res.ok; } catch {}
+      try { const res = await fetch(url, { method: 'HEAD', cache: 'no-store' }); hasVideo = !!res.ok; } catch {}
       if (hasVideo) {
         outroPlayed = true;
-        playVideo(OUTRO_URL, {
+        playVideo(url, {
           onEnd: () => {},
           onSkip: () => {},
           onFail: () => { try { prevStartCredits?.(); } catch {} }
@@ -221,5 +248,21 @@
   } else {
     scheduleRehook();
   }
+
+  // Export function to replay outro video manually
+  g.playOutroVideo = async function(){
+    const url = await pickVideoUrl(OUTRO_URL, OUTRO_URL_MOBILE);
+    let hasVideo = true;
+    try { const res = await fetch(url, { method: 'HEAD', cache: 'no-store' }); hasVideo = !!res.ok; } catch {}
+    if (!hasVideo) {
+      console.warn('[intro-outro] playOutroVideo: outro video not found');
+      // Fallback to credits if available
+      if(typeof g.startCreditsSequence === 'function'){
+        try { g.startCreditsSequence(); } catch {}
+      }
+      return;
+    }
+    playVideo(url, { onEnd: ()=>{}, onSkip: ()=>{}, onFail: ()=>{} });
+  };
 
 })(window);

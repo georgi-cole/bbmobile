@@ -4,7 +4,10 @@
 <meta charset="utf-8"/>
 <title>BB Tengaged — Modular Enhanced Build</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="icon" type="image/png" href="icons/icon-192.png"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <link rel="stylesheet" href="styles.css"/>
+<link rel="stylesheet" href="mobile_Version3.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
@@ -356,7 +359,51 @@
     window.addEventListener('bb:winner', apply, { passive:true });
   }
 
-  function init(){ keepSingleSkip(); placementsHover(); }
+  // Add Rules button between Settings and Start
+  function ensureRulesButton(){
+    const topbar = document.querySelector('.topbar');
+    if(!topbar) return;
+    
+    // Check if Rules button already exists
+    if(document.getElementById('btnRules')) return;
+    
+    const settingsBtn = document.getElementById('btnOpenSettings');
+    const startBtn = document.getElementById('btnStartQuick');
+    if(!settingsBtn || !startBtn) return;
+    
+    const rulesBtn = document.createElement('button');
+    rulesBtn.id = 'btnRules';
+    rulesBtn.className = 'btn';
+    rulesBtn.textContent = '📋 Rules';
+    
+    rulesBtn.onclick = ()=>{
+      const rulesHtml = `
+        <h3>Game Rules</h3>
+        <div style="text-align:left;line-height:1.6;max-width:600px;margin:0 auto;">
+          <p><strong>Objective:</strong> Be the last player standing to win Big Brother.</p>
+          <p><strong>HOH (Head of Household):</strong> Wins power to nominate 2 players for eviction.</p>
+          <p><strong>Nominations:</strong> The HOH chooses two players to put on the block.</p>
+          <p><strong>Veto Competition:</strong> Six players compete for the Power of Veto to save a nominee.</p>
+          <p><strong>Eviction:</strong> Houseguests vote to evict one of the final nominees. Majority rules.</p>
+          <p><strong>Jury Phase:</strong> Evicted players become jurors who vote for the winner in the finale.</p>
+          <p><strong>Finale:</strong> Final 2 face the jury. The jury votes, and the winner is crowned!</p>
+        </div>
+      `;
+      
+      if(typeof window.showBigCard === 'function'){
+        window.showBigCard('Rules', rulesHtml);
+      } else if(typeof window.showCard === 'function'){
+        window.showCard('Rules', [rulesHtml], 'info', 8000, true);
+      } else {
+        alert('GAME RULES\n\nObjective: Be the last player standing.\nHOH: Nominates 2 players.\nVeto: Can save a nominee.\nEviction: Houseguests vote.\nJury: Evicted players vote for the winner.\nFinale: Jury crowns the winner!');
+      }
+    };
+    
+    // Insert after Settings button
+    settingsBtn.parentNode.insertBefore(rulesBtn, startBtn);
+  }
+
+  function init(){ keepSingleSkip(); placementsHover(); ensureRulesButton(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true });
   else init();
 })();
