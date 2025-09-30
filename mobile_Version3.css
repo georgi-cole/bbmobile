@@ -34,6 +34,89 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
     padding: 12px !important;
   }
 
+  /* Settings modal - constrain to viewport and allow inner scrolling */
+  #settingsBackdrop .modal {
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+    width: calc(100vw - 20px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 10px !important;
+  }
+
+  /* Settings grid - reduce padding for cards */
+  .settingsGrid .card {
+    padding: 8px !important;
+  }
+
+  .settingsGrid h3 {
+    font-size: 0.85rem !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* Cast editor - stack as single column with preview above form */
+  .cast-editor {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .cast-preview {
+    align-items: center !important;
+  }
+
+  .cast-preview img {
+    width: 100px !important;
+    height: 100px !important;
+  }
+
+  /* Cast form - ensure inputs fit and stack properly */
+  .cast-form {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .cast-form label {
+    font-size: 0.75rem !important;
+  }
+
+  .cast-form input,
+  .cast-form select {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 0.85rem !important;
+    padding: 6px 8px !important;
+  }
+
+  /* Cast strip - horizontal scroll for roster */
+  .cast-strip {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 6px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cast-chip {
+    min-width: 52px !important;
+  }
+
+  .chip-ava {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* Cast filters - reduce pill size */
+  .pill {
+    padding: 4px 7px !important;
+    font-size: 0.65rem !important;
+  }
+
+  /* Cast navigation buttons */
+  .cast-nav .btn {
+    min-width: 70px !important;
+    padding: 6px 10px !important;
+    font-size: 0.8rem !important;
+  }
+
   /* Settings and Cast table improvements */
   .cast-table, .settings-table {
     font-size: 0.85rem;

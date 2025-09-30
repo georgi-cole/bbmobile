@@ -29,6 +29,21 @@
     .cinFieldRow label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;color:#cfe0f5}
     .cinFieldRow input{background:#122233;color:#eaf4ff;border:1px solid #2b4767;border-radius:8px;padding:8px 10px;font-size:.86rem;}
     .cinProfile{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #284058;}
+    @media (max-width: 540px) {
+      .cinPanel{width:94vw;padding:16px 12px;border-radius:14px;}
+      .cinTitle{font-size:.95rem;margin-bottom:8px;}
+      .cinName{font-size:2rem;letter-spacing:1px;}
+      .cinCup{width:72px;height:72px;}
+      .cinCup::after{font-size:1.8rem;}
+      .cinBtns{gap:8px;}
+      .cinBtns .btn{padding:6px 12px;font-size:.82rem;letter-spacing:.5px;}
+      .cinStats{padding:10px;font-size:.74rem;}
+      .cinFieldRow{grid-template-columns:1fr;gap:8px;}
+      .cinFieldRow label{font-size:.7rem;}
+      .cinFieldRow input{width:100%;box-sizing:border-box;padding:7px 9px;font-size:.84rem;}
+      .cinProfile{padding-top:8px;}
+      #cinProfileStart{display:block;margin:10px auto 0;width:auto;}
+    }
     `;
     const tag=document.createElement('style'); tag.id='cinStyles'; tag.textContent=css; document.head.appendChild(tag);
   }
