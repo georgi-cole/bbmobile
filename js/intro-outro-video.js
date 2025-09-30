@@ -45,16 +45,19 @@
     const old = document.getElementById('videoCinema');
     if (old) try { old.remove(); } catch {}
 
+    // Lock body scroll
+    document.body.style.overflow = 'hidden';
+
     const root = document.createElement('div');
     root.id = 'videoCinema';
-    root.style.cssText = 'position:fixed;inset:0;background:#000;z-index:500;display:flex;align-items:center;justify-content:center;';
+    root.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100dvh;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center;';
 
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#000;';
+    wrap.style.cssText = 'position:relative;width:100%;height:100dvh;display:flex;align-items:center;justify-content:center;background:#000;';
 
     const vid = document.createElement('video');
     vid.id = 'videoCinemaEl';
-    vid.style.cssText = 'width:min(100vw, 100vh * 16/9);height:auto;max-height:100vh;display:block;background:#000;';
+    vid.style.cssText = 'width:100%;height:100%;max-width:100vw;max-height:100dvh;object-fit:contain;display:block;background:#000;';
     vid.playsInline = true;
     vid.setAttribute('playsinline', '');
     vid.setAttribute('webkit-playsinline', '');
@@ -64,7 +67,7 @@
 
     const skip = document.createElement('button');
     skip.textContent = 'Skip';
-    skip.style.cssText = 'position:absolute;top:12px;right:14px;z-index:2;background:#1f344d;color:#d8e6f5;border:1px solid #2b4767;border-radius:10px;padding:8px 14px;font-weight:700;letter-spacing:.6px;cursor:pointer;';
+    skip.style.cssText = 'position:absolute;top:calc(env(safe-area-inset-top, 0px) + 12px);right:calc(env(safe-area-inset-right, 0px) + 14px);z-index:2;background:#1f344d;color:#d8e6f5;border:1px solid #2b4767;border-radius:10px;padding:8px 14px;font-weight:700;letter-spacing:.6px;cursor:pointer;';
 
     const tap = document.createElement('button');
     tap.textContent = 'Tap to Play';
@@ -82,6 +85,8 @@
   function cleanup() {
     const el = document.getElementById('videoCinema');
     if (el) try { el.remove(); } catch {}
+    // Restore body scroll
+    document.body.style.overflow = '';
   }
 
   function playVideo(url, { onEnd, onSkip, onFail } = {}) {
