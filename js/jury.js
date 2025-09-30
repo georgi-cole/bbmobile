@@ -50,6 +50,53 @@
     return thA>thB ? B : A;
   }
 
+  // Resolve eviction week from various field names
+  function evictWeekOf(player){
+    if(!player) return null;
+    return player.weekEvicted ?? player.evictedWeek ?? player.evictionWeek ?? player.evictWeek ?? player.evict_wk ?? null;
+  }
+
+  // Ensure odd number of jurors by dropping the earliest-evicted if even
+  function ensureOddJurors(list){
+    if(!list || !Array.isArray(list) || list.length===0) return list;
+    if(list.length % 2 === 1) return list; // already odd
+
+    // Find earliest-evicted juror
+    let earliestIdx = 0;
+    let earliestWeek = Infinity;
+    list.forEach((id, idx)=>{
+      const p = gp(id);
+      const wk = evictWeekOf(p);
+      if(wk != null && wk < earliestWeek){
+        earliestWeek = wk;
+        earliestIdx = idx;
+      }
+    });
+
+    const dropped = list[earliestIdx];
+    const filtered = list.filter((_, i) => i !== earliestIdx);
+    console.warn('[jury] Even juror count detected. Dropping earliest-evicted:', safeName(dropped), 'evicted week', earliestWeek);
+    return filtered;
+  }
+
+  // America's Vote tiebreaker (random for now; can be enhanced later)
+  function americasVoteWinner(A, B){
+    const winner = rng()<0.5 ? A : B;
+    console.info('[jury] America\'s Vote tiebreaker:', safeName(winner));
+    
+    // Show brief "America's Vote" card
+    const card = document.createElement('div');
+    card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;background:linear-gradient(145deg,#1a2942,#0f1a2f);border:2px solid #3e6ba8;border-radius:16px;padding:24px 32px;text-align:center;color:#eaf4ff;box-shadow:0 12px 36px rgba(0,0,0,.6);animation:popIn 0.3s ease;';
+    card.innerHTML = `
+      <div style="font-size:1.1rem;font-weight:700;letter-spacing:0.8px;margin-bottom:8px;color:#ffdc8b;">🇺🇸 AMERICA'S VOTE 🇺🇸</div>
+      <div style="font-size:0.9rem;color:#cfe0f5;">Breaking the tie...</div>
+    `;
+    document.body.appendChild(card);
+    setTimeout(()=>{ try{card.remove();}catch{} }, 2400);
+
+    return winner;
+  }
+
   // ===== Optional panel tiles (kept) =====
   function renderJuryBallotsPanel(jurors, A, B){
     const panel = document.getElementById('panel'); if(!panel) return;
@@ -399,7 +446,10 @@
   // ===== Main flow =====
   async function startJuryVote(){
     const gg=g.game||{};
-    const jurors = getJurors();
+    let jurors = getJurors();
+
+    // Ensure odd number of jurors to prevent ties
+    jurors = ensureOddJurors(jurors);
 
     setTvNow('Voting the Winner');
 
@@ -448,13 +498,26 @@
     });
 
     setTimeout(async ()=>{
-      const a=votes.get(A)||0, b=votes.get(B)||0;
+      let a=votes.get(A)||0, b=votes.get(B)||0;
 
       try{ await g.cardQueueWaitIdle?.(); }catch{}
 
       showFinalTallyBanner();
 
-      const winner = (a===b) ? (rng()<0.5?A:B) : (a>b?A:B);
+      // Handle tie with America's Vote
+      let winner;
+      if(a===b){
+        winner = americasVoteWinner(A, B);
+        // Increment the winner's vote count and update graph
+        votes.set(winner, (votes.get(winner)||0)+1);
+        a=votes.get(A)||0;
+        b=votes.get(B)||0;
+        await sleep(2400); // wait for America's Vote card to show
+        updateFinaleGraph(a,b);
+        await sleep(800);
+      } else {
+        winner = a>b ? A : B;
+      }
 
       showPlacementLabels(winner);
 

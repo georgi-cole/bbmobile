@@ -1,5 +1,5 @@
-const CACHE_NAME = 'bb-pwa-v-intro-outro-4';
-const CORE = ['./','./index.html','./styles.css','./mobile.css','./site.webmanifest'];
+const CACHE_NAME = 'bb-pwa-v-finale-mobile-rules-5';
+const CORE = ['./','./index.html','./styles.css','./mobile_Version3.css','./site.webmanifest'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {

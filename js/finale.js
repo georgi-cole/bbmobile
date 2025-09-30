@@ -75,6 +75,7 @@
       <div class="cinBtns">
         <button class="btn primary" id="cinNewSeason">New Season</button>
         <button class="btn" id="cinStatsBtn">Stats</button>
+        <button class="btn" id="cinCredits">Credits</button>
         <button class="btn danger" id="cinExit">Exit</button>
       </div>
       <div class="cinStats" id="cinStats">${statsHtml()}</div>
@@ -100,6 +101,14 @@
     panel.querySelector('#cinExit').onclick=()=>{ dim.remove(); };
     panel.querySelector('#cinStatsBtn').onclick=()=>{
       const s=panel.querySelector('#cinStats'); s.style.display = (s.style.display==='none'||!s.style.display) ? 'block' : 'none';
+    };
+    panel.querySelector('#cinCredits').onclick=()=>{
+      dim.remove();
+      if(typeof g.playOutroVideo === 'function'){
+        try { g.playOutroVideo(); } catch(e){ console.warn('[finale] playOutroVideo error', e); }
+      } else if(typeof g.startCreditsSequence === 'function'){
+        try { g.startCreditsSequence(); } catch(e){ console.warn('[finale] startCreditsSequence error', e); }
+      }
     };
     panel.querySelector('#cinNewSeason').onclick=()=>{
       const prof=panel.querySelector('#cinProfile'); prof.style.display='block';
