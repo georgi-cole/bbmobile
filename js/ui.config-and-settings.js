@@ -356,11 +356,10 @@
                 <button class="btn" id="castNext">Next</button>
               </div>
               <div class="row">
-                <button class="btn" id="castSave">Save</button>
                 <button class="btn primary" id="castSaveNext">Save & Next</button>
               </div>
             </div>
-            <div class="tiny muted">Shortcuts: ←/→ navigate • Enter: Save & Next • Ctrl/Cmd+S: Save</div>
+            <div class="tiny muted">Shortcuts: ←/→ navigate • Enter: Save & Next</div>
           </div>
         </div>
       </div>`;
@@ -522,7 +521,6 @@
     }
     const prev = modal.querySelector('#castPrev');
     const next = modal.querySelector('#castNext');
-    const save = modal.querySelector('#castSave');
     const saveNext = modal.querySelector('#castSaveNext');
 
     prev.addEventListener('click', ()=>{
@@ -539,7 +537,6 @@
       st.pendingAvatarDataUrl = null; st.dirty=false;
       renderCastStrip(modal); fillCastForm(modal);
     });
-    save.addEventListener('click', ()=>{ saveCurrentCastForm(modal); });
     saveNext.addEventListener('click', ()=>{
       if(saveCurrentCastForm(modal)){
         const st=castState(modal);
@@ -550,8 +547,7 @@
     modal.addEventListener('keydown', (e)=>{
       const mac = navigator.platform.toUpperCase().includes('MAC');
       const modKey = mac ? e.metaKey : e.ctrlKey;
-      if(modKey && (e.key==='s' || e.key==='S')){ e.preventDefault(); saveCurrentCastForm(modal); }
-      else if(e.key==='Enter'){ e.preventDefault(); if(saveCurrentCastForm(modal)){ const st=castState(modal); st.idx=Math.min(st.order.length-1, st.idx+1); renderCastStrip(modal); fillCastForm(modal);} }
+      if(e.key==='Enter'){ e.preventDefault(); if(saveCurrentCastForm(modal)){ const st=castState(modal); st.idx=Math.min(st.order.length-1, st.idx+1); renderCastStrip(modal); fillCastForm(modal);} }
       else if(e.key==='ArrowLeft'){ e.preventDefault(); const st=castState(modal); if(!maybeConfirmDiscard(modal)) return; st.idx=Math.max(0, st.idx-1); st.dirty=false; st.pendingAvatarDataUrl=null; renderCastStrip(modal); fillCastForm(modal); }
       else if(e.key==='ArrowRight'){ e.preventDefault(); const st=castState(modal); if(!maybeConfirmDiscard(modal)) return; st.idx=Math.min(st.order.length-1, st.idx+1); st.dirty=false; st.pendingAvatarDataUrl=null; renderCastStrip(modal); fillCastForm(modal); }
     }, {capture:true});
