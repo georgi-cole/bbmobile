@@ -354,6 +354,14 @@ button:focus-visible,.btn:focus-visible{ outline:2px solid var(--accent-2); outl
 }
 .modalTabs .tab-btn.active,.modalTabs .tab-btn:hover{ background:#2d4b6a; }
 
+/* tabBar alias for modal tabs */
+.tabBar{ display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 14px; }
+.tabBar .tab-btn{
+  background:#203449; color:#c4d9ec; border:none; padding:6px 14px 7px; border-radius:8px;
+  font-size:.63rem; font-weight:600; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; transition:background .2s;
+}
+.tabBar .tab-btn.active,.tabBar .tab-btn:hover{ background:#2d4b6a; }
+
 .settingsTabPane{ display:none; animation:fadeIn .35s ease; } .settingsTabPane.active{ display:block; }
 .settingsGrid{ display:grid; gap:14px 16px; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); margin-top:12px; }
 .settingsGrid label{ display:flex; flex-direction:column; gap:4px; font-size:.63rem; letter-spacing:.4px; color:#b2c2d5; font-weight:600; text-transform:uppercase; }
