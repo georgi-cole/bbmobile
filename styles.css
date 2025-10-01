@@ -493,10 +493,11 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
 }
 @media (max-width:900px){
   /* Mobile stacking: single column */
-  .wrap{ grid-template-columns:1fr; }
-  #dashboardCard{ grid-column:1; grid-row:auto; }
-  #sideCard{ grid-column:1; grid-row:auto; }
-  #actionCard{ grid-column:1; grid-row:auto; }
+  .wrap{ grid-template-columns:1fr; align-items:stretch; justify-items:stretch; }
+  #dashboardCard{ grid-column:1; grid-row:auto; width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
+  #sideCard{ grid-column:1; grid-row:auto; width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
+  #actionCard{ grid-column:1; grid-row:auto; width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
+  .wrap > .card{ width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
   .tv{ height:260px; }
 }
 @media (max-width:540px){
