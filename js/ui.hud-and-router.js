@@ -88,19 +88,11 @@
       `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
   }
   function ensureDashboardRosterHost(){
-    let host=document.getElementById('castRoster');
-    if(host) return host;
-    const card=document.getElementById('dashboardCard');
-    if(!card) return null;
-    const list=card.querySelector('.list');
-    host=document.createElement('div');
-    host.id='castRoster';
-    host.className='cast-roster';
-    host.style.display='';
-    // Keep the original table visible; insert roster above it
-    if(list) list.parentElement.insertBefore(host, list);
-    else card.appendChild(host);
-    return host;
+    // Remove any existing dashboard roster element
+    const existingHost=document.getElementById('castRoster');
+    if(existingHost) existingHost.remove();
+    // Return null to disable dashboard roster rendering
+    return null;
   }
   function ensureTopRosterHost(){
     let host=document.getElementById('topRoster');
