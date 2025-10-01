@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bb-pwa-v-finale-mobile-rules-7';
+const CACHE_NAME = 'bb-pwa-v-bb-toproster-1';
 const CORE = ['./','./index.html','./styles.css','./mobile_Version3.css','./site.webmanifest'];
 
 self.addEventListener('install', (e) => {
