@@ -312,7 +312,7 @@
     `;
     
     if(typeof g.showBigCard === 'function'){
-      g.showBigCard('Game Rules', rulesHtml);
+     g.showBigCard('Game Rules', [rulesHtml]);
     } else if(typeof g.showCard === 'function'){
       g.showCard('Game Rules', [rulesHtml], 'info', 10000, true);
     }
