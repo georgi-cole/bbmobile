@@ -2,12 +2,12 @@
 // Safe integrity/diagnostics (no crashing). Also ensures the right-sidebar Jury tab button is visible.
 
 (function(){
-  function escapeRegex(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+  function escapeRegex(s){ return String(s).replace(/[.*+?^${}()|[\\]\]/g,'\\$&'); }
   if(!window.escapeRegex) window.escapeRegex = escapeRegex;
 
   // Ensure reveal API exists even if ui.js hasn't finished wiring yet.
   function ensureRevealAPI(){
-    if(typeof window.showCard !== 'function'){
+    if(typeof window.showCard !== 'function'){ 
       console.warn('[BB Modular] showCard missing — installing safe stub. Cards will render as simple text until UI initializes.');
       window.showCard = function(title, lines, tone, dur, uniform){
         try{
@@ -21,7 +21,7 @@
         }catch(e){}
       };
     }
-    if(typeof window.cardQueueWaitIdle !== 'function'){
+    if(typeof window.cardQueueWaitIdle !== 'function'){ 
       // Provide a no-op wait so callers using await don't crash
       window.cardQueueWaitIdle = function(){ return Promise.resolve(); };
     }
@@ -55,11 +55,13 @@
     bar.dataset.wired = '1';
     bar.addEventListener('click', (e)=>{
       const btn = e.target.closest('.tab-btn'); if(!btn) return;
-      const targetId = btn.dataset.tab;
-      ['infoPanel','juryHousePanel','debugPanel'].forEach(id=>{
-        const el = document.getElementById(id);
-        if(el) el.style.display = (id===targetId)?'block':'none';
-      });
+      const targetId = btn.dataset.tab; if(!targetId) return;
+
+      const host = document.getElementById('sideCard') || document;
+      // Consider any pane-like element; add classes/ids as needed for your layout
+      const panes = host.querySelectorAll('[id$="Panel"], .sidePane, .settingsTabPane, [role="tabpanel"]');
+      panes.forEach(p => { p.style.display = (p.id === targetId) ? 'block' : 'none'; });
+
       bar.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b===btn));
     });
   }
@@ -72,7 +74,7 @@
     }catch(e){ console.warn('[BB Modular] Integrity init warn:', e); }
   }
 
-  if(document.readyState==='loading'){
+  if(document.readyState==='loading'){ 
     document.addEventListener('DOMContentLoaded', init, {once:true});
   } else {
     init();
