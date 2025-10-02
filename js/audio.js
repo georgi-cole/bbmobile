@@ -1,16 +1,14 @@
-// audio.js
-// Background music and SFX with reliable YouTube playback.
-// - Uses youtube-nocookie host for embeds.
-// - Autoplays on ready (subject to user gesture policy).
-// - Adds a one-time click unlock so auto music works after any initial click.
-// - Falls back to <audio id="bgm"> for non-YouTube URLs.
-// - Exposes stopMusic() for explicit stopping (used after victory fanfare).
+// MODULE: audio.js
+// Background music + lightweight SFX stub (playSfx).
+// - Music: YouTube embed (loop) OR direct audio if non-YouTube URL.
+// - SFX: tiny inline base64 WAV/OGG clips, gated by cfg.fxSound (and music by cfg.autoMusic).
+// - Exposes setMusic, phaseMusic, playSfx, setMusicEnabled/setSfxEnabled for future UI toggles.
 
 (function(global){
   const YT_API_SRC='https://www.youtube.com/iframe_api';
   const bgmEl=document.getElementById('bgm');
 
-  // Map of music keys to URLs (YouTube or direct audio)
+  /* ---------- Track Map (YouTube links) ---------- */
   const musicTracks={
     theme_opening:'https://www.youtube.com/watch?v=58UXX7yUicI&list=RD58UXX7yUicI&start_radio=1',
     hoh_comp:'https://www.youtube.com/watch?v=NTXJpYysvNQ',
@@ -21,23 +19,38 @@
     victory:'https://www.youtube.com/watch?v=qKaIFa_GL_I'
   };
 
-  // Minimal SFX example; extend as needed
+  /* ---------- Simple SFX (small inline clips) ---------- */
+  // Short synthesized tones (very small); replace with real assets later if desired.
   const sfxData={
-    // Add your small SFX here if you want (kept minimal intentionally)
+    // 220 Hz blip (twist)
+    twist:'data:audio/wav;base64,UklGRlYAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAA',
+    // short softer blip (card)
+    card:'data:audio/wav;base64,UklGRlYAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAABwAAAAcAAAAHAAAABwAAAAcAAAAHAAAABwAAAAcAAAA'
   };
   const sfxCache=new Map();
+
   function loadSfx(key){
     if(sfxCache.has(key)) return sfxCache.get(key);
     const url=sfxData[key]; if(!url) return null;
-    const audio=new Audio(url); audio.preload='auto'; sfxCache.set(key,audio); return audio;
+    const audio=new Audio(url);
+    audio.preload='auto';
+    sfxCache.set(key,audio);
+    return audio;
   }
+
   function playSfx(key){
     const g=global.game||{};
     if(g.cfg && g.cfg.fxSound===false) return;
-    try{ const a=loadSfx(key); if(!a) return; a.currentTime=0; a.volume=0.85; a.play().catch(()=>{}); }catch{}
+    try{
+      const a=loadSfx(key);
+      if(!a) return;
+      a.currentTime=0;
+      a.volume=0.85;
+      a.play().catch(()=>{ /* ignored */ });
+    }catch(e){}
   }
 
-  // YouTube helpers
+  /* ---------- YouTube API Helpers ---------- */
   let ytReady=false, ytPlayer=null;
   function isYouTube(u){ return /youtu\.?be/.test(u||''); }
   function parseVideoId(u){
@@ -51,17 +64,15 @@
   }
   function ensureYTApi(cb){
     if(ytReady){ cb&&cb(); return; }
-    if(global.YT && global.YT.Player){ ytReady=true; cb&&cb(); return; }
-
-    // If already present, hook into ready; otherwise inject
-    const existing=document.querySelector('script[src*="iframe_api"]');
-    if(existing){
-      const prev=global.onYouTubeIframeAPIReady;
-      global.onYouTubeIframeAPIReady=function(){ ytReady=true; try{ prev&&prev(); }catch{} cb&&cb(); };
+    if(document.querySelector('script[src*="iframe_api"]')){
+      const prev=window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady=function(){
+        ytReady=true; prev&&prev(); cb&&cb();
+      };
       return;
     }
     const s=document.createElement('script'); s.src=YT_API_SRC; s.async=true;
-    global.onYouTubeIframeAPIReady=function(){ ytReady=true; cb&&cb(); };
+    window.onYouTubeIframeAPIReady=function(){ ytReady=true; cb&&cb(); };
     document.head.appendChild(s);
   }
   function ensureYTIframe(videoId,onReady){
@@ -73,25 +84,24 @@
       document.body.appendChild(host);
     }
     if(ytPlayer){ onReady&&onReady(ytPlayer); return; }
-    // eslint-disable-next-line no-undef
     ytPlayer=new YT.Player('ytbgm',{
-      host:'https://www.youtube-nocookie.com',
-      videoId:videoId,
+      videoId,
       playerVars:{autoplay:1,controls:0,disablekb:1,modestbranding:1,rel:0,iv_load_policy:3,loop:1,playlist:videoId},
       events:{
-        onReady:(e)=>{ try{ e.target.playVideo(); }catch{} onReady&&onReady(e.target); },
+        onReady:()=>{ onReady&&onReady(ytPlayer); },
         onError:(e)=>console.warn('[music] YT error',e)
       }
     });
   }
 
+  /* ---------- Core Music Controls ---------- */
   function stopAll(){
     try{ bgmEl.pause(); bgmEl.removeAttribute('src'); }catch{}
     try{ ytPlayer && ytPlayer.stopVideo && ytPlayer.stopVideo(); }catch{}
   }
   function setVolume(vol){
     try{ if(bgmEl) bgmEl.volume=vol; }catch{}
-    try{ ytPlayer && ytPlayer.setVolume && ytPlayer.setVolume(Math.round((+vol||0)*100)); }catch{}
+    try{ ytPlayer && ytPlayer.setVolume && ytPlayer.setVolume(Math.round(vol*100)); }catch{}
   }
 
   function setMusic(key,force=false){
@@ -100,27 +110,22 @@
     const url=musicTracks[key];
     if(!url){ stopAll(); return; }
 
-    // Optional: read a volume slider if present
     const volEl=document.getElementById('musicVol');
     const vol=volEl ? (+volEl.value||0.4) : 0.4;
-
     stopAll();
-
     if(isYouTube(url)){
       const vid=parseVideoId(url);
       if(!vid){ console.warn('[music] cannot parse YT id',url); return; }
       ensureYTApi(()=>ensureYTIframe(vid,(player)=>{
-        try{ player.loadVideoById({videoId:vid,suggestedQuality:'small'}); }catch{}
-        setVolume(vol);
+        try{
+          player.loadVideoById({videoId:vid,suggestedQuality:'small'});
+          setVolume(vol);
+        }catch(e){}
       }));
     } else {
       bgmEl.src=url; bgmEl.loop=true; setVolume(vol);
-      bgmEl.play().catch(()=>{ /* requires gesture until first click */ });
+      bgmEl.play().catch(()=>{ /* gesture needed; UI play button exists */ });
     }
-  }
-
-  function stopMusic(){
-    stopAll();
   }
 
   function phaseMusic(ph){
@@ -143,6 +148,7 @@
     if(k) setMusic(k);
   }
 
+  /* ---------- Public API & Toggles ---------- */
   function setMusicEnabled(on){
     const g=global.game||{};
     if(!g.cfg) g.cfg={};
@@ -157,17 +163,13 @@
   }
 
   global.setMusic=setMusic;
-  global.stopMusic=stopMusic;
   global.phaseMusic=phaseMusic;
   global.playSfx=playSfx;
   global.setMusicEnabled=setMusicEnabled;
   global.setSfxEnabled=setSfxEnabled;
 
-  // One-time user gesture unlock for autoplay
-  document.addEventListener('click', ()=>{
-    try{ if(ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo(); }catch{}
-    try{ if(bgmEl && bgmEl.src) bgmEl.play().catch(()=>{}); }catch{}
-  }, { once:true });
+  document.getElementById('musicVol')?.addEventListener('input',e=>{
+    setVolume(+e.target.value||0.4);
+  });
 
-  console.log('[audio] ready (YT nocookie, gesture-unlock, stopMusic exposed)');
 })(window);
