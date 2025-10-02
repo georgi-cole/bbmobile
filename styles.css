@@ -1974,6 +1974,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 @keyframes fadeIn{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:translateY(0);} }
 @keyframes fadeOut{ to{ opacity:0; } }
 
+
 /* ========== Rules modal ========== */
 .rulesDim{
   position:fixed; inset:0; z-index:420;
@@ -2019,7 +2020,6 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   color: var(--text-2);
 }
 
-/* readable bullets */
 .rulesBody .rulesList{
   margin: 4px 2px 0;
   padding-left: 18px;
@@ -2029,7 +2029,6 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   line-height: 1.45;
 }
 
-/* actions */
 .rulesBtns{
   display:flex; align-items:center; justify-content:flex-end; gap:8px;
   padding-top:8px; margin-top:4px;
