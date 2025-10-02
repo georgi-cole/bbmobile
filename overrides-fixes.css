@@ -1,0 +1,28 @@
+/* Rules card body: scroll inside the card, not dismiss */
+.revealCard .rules-body{
+  text-align: left;
+  line-height: 1.6;
+  max-width: 720px;
+  margin: 0 auto;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 10px 2px 2px;
+}
+
+/* Social / reveal cards: center and constrain without modifying #panel */
+.revealCard{
+  width: min(680px, 92vw);
+  margin: 6px auto 10px;
+}
+.revealCard .actions,
+.revealCard .btn-row,
+.revealCard .choice-row{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Finale overlays */
+.finalFaceoff .fo-tally{ display: none !important; }
+.finalFaceoff .fo-winner{ top: 12% !important; bottom: auto !important; }
