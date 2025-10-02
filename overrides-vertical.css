@@ -1,0 +1,76 @@
+/* ============================================================================
+   VERTICAL LAYOUT OVERRIDES — FORCE UNIFORM CARD WIDTHS
+   Loaded last to win over previously loaded CSS rules.
+   Ensures all cards (Dashboard, Show, Logs) have identical width and
+   align perfectly in a single vertical column on mobile AND desktop.
+   ============================================================================ */
+
+/* Force uniform column layout with stretched items */
+body .wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+  /* Neutralize any grid leftovers */
+  grid-template-columns: unset !important;
+  grid-template-rows: unset !important;
+}
+
+/* Enforce 100% width for all top-level cards */
+body .wrap > .card,
+body #dashboardCard,
+body #actionCard,
+body #sideCard {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  flex: 0 0 auto !important;
+  /* Reset any explicit grid positioning */
+  grid-column: unset !important;
+  grid-row: unset !important;
+}
+
+/* TV should fill card width */
+body #actionCard .tv {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* Defensive: maintain column layout even on wider screens */
+@media (min-width: 900px) {
+  body .wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  
+  body .wrap > .card,
+  body #dashboardCard,
+  body #actionCard,
+  body #sideCard {
+    width: 100% !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+  }
+}
+
+/* Hide dashboard roster/table - keep only top roster above TV */
+body #dashboardCard .cast-roster {
+  display: none !important;
+}
+
+body #dashboardCard .list {
+  display: none !important;
+}
+
+body #dashboardCard [class*="roster"] {
+  display: none !important;
+}
+
+body #dashboardCard table,
+body #dashboardCard .cast-table,
+body #dashboardCard .roster-list,
+body #dashboardCard .roster-row {
+  display: none !important;
+}
