@@ -613,6 +613,48 @@
     ].join('');
   }
 
+  // Debug pane
+  function buildDebugPaneHTML(){
+    return [
+      '<div class="settingsGrid">',
+        group('Music / Audio', [
+          '<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px">',
+            '<select id="musicTrack" style="flex:1;min-width:180px">',
+              '<option value="none">No track</option>',
+              '<option value="theme_opening">Opening Theme</option>',
+              '<option value="hoh_comp">HOH Comp</option>',
+              '<option value="veto_comp">Veto Comp</option>',
+              '<option value="nominations">Nominations</option>',
+              '<option value="live_vote">Live Vote</option>',
+              '<option value="eviction">Eviction</option>',
+              '<option value="victory">Victory Theme</option>',
+            '</select>',
+            '<button class="btn small" id="btnPlayMusic">Play</button>',
+            '<button class="btn small" id="btnStopMusic">Stop</button>',
+          '</div>',
+          '<label class="toggleRow"><span>Volume</span><input type="range" id="musicVol" min="0" max="1" step="0.01" value="0.4" style="flex:1"/></label>',
+          '<label class="toggleRow"><input type="checkbox" id="autoMusic" checked/><span>Auto music</span></label>',
+        ].join('')),
+        group('Quick Actions', [
+          '<div class="row" style="gap:8px;flex-wrap:wrap">',
+            '<button class="btn small" id="btnNextWeek">Force Week ▶</button>',
+            '<button class="btn small" id="btnClearLog">Clear Log</button>',
+            '<button class="btn small" id="btnDebugExport">Export Save</button>',
+            '<button class="btn small" id="btnDebugImport">Import</button>',
+          '</div>',
+          '<input id="debugImportFile" type="file" accept="application/json" style="display:none"/>',
+        ].join('')),
+        group('Advanced Debug', [
+          '<div class="row" style="gap:8px;flex-wrap:wrap">',
+            '<button class="btn small" id="btnDumpSocial">Dump Social</button>',
+            '<button class="btn small" id="btnForceReturnTwist">Force Return Twist</button>',
+            '<button class="btn small" id="btnSkipPhaseDbg">Skip Phase</button>',
+          '</div>',
+        ].join('')),
+      '</div>'
+    ].join('');
+  }
+
   // Settings modal lifecycle
   function ensureSettingsModal(){
     let dim = document.getElementById('settingsBackdrop');
@@ -644,7 +686,8 @@
       '<button class="tab-btn" data-tab="timing">Timing</button>',
       '<button class="tab-btn" data-tab="visual">Visual</button>',
       '<button class="tab-btn" data-tab="audio">Audio</button>',
-      '<button class="tab-btn" data-tab="advanced">Advanced</button>'
+      '<button class="tab-btn" data-tab="advanced">Advanced</button>',
+      '<button class="tab-btn" data-tab="debug">Debug</button>'
     ].join('');
 
     const panes = document.createElement('div');
@@ -656,6 +699,7 @@
     panes.appendChild(buildPane('visual', buildVisualPaneHTML()));
     panes.appendChild(buildPane('audio', buildAudioPaneHTML()));
     panes.appendChild(buildPane('advanced', buildAdvancedPaneHTML()));
+    panes.appendChild(buildPane('debug', buildDebugPaneHTML()));
 
     const actions = document.createElement('div');
     actions.className = 'row between';
@@ -778,6 +822,98 @@
         closeSettingsModal();
       }
     });
+
+    // Debug controls
+    modal.addEventListener('click', (e)=>{
+      const btn = e.target;
+      if(btn.id === 'btnPlayMusic'){
+        const track = modal.querySelector('#musicTrack')?.value;
+        if(!track || track === 'none'){ notify('Select a track first', 'warn'); return; }
+        const vol = parseFloat(modal.querySelector('#musicVol')?.value || 0.4);
+        try{
+          if(typeof g.playMusic === 'function') g.playMusic(track, vol);
+          else if(typeof g.phaseMusic === 'function') g.phaseMusic(track);
+          else notify('Music system not available', 'warn');
+        }catch(err){ notify('Play failed: '+err, 'warn'); }
+      } else if(btn.id === 'btnStopMusic'){
+        try{
+          if(typeof g.stopMusic === 'function') g.stopMusic();
+          else if(g.bgm) g.bgm.pause();
+          else {
+            const bgm = document.getElementById('bgm');
+            if(bgm) bgm.pause();
+          }
+        }catch(e){}
+      } else if(btn.id === 'btnNextWeek'){
+        try{
+          const game = g.game;
+          if(!game){ notify('Game not started', 'warn'); return; }
+          game.week = (game.week || 1) + 1;
+          notify('Week advanced to '+ game.week, 'ok');
+        }catch(err){ notify('Failed: '+err, 'warn'); }
+      } else if(btn.id === 'btnClearLog'){
+        try{
+          const log = document.getElementById('log');
+          if(log) log.innerHTML = '';
+          notify('Log cleared', 'ok');
+        }catch(e){}
+      } else if(btn.id === 'btnDebugExport'){
+        try{
+          const data = JSON.stringify(g.game || {}, null, 2);
+          const blob = new Blob([data], {type:'application/json'});
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'bb-save.json';
+          a.click();
+          URL.revokeObjectURL(a.href);
+          notify('Save exported', 'ok');
+        }catch(err){ notify('Export failed: '+err, 'warn'); }
+      } else if(btn.id === 'btnDebugImport'){
+        modal.querySelector('#debugImportFile')?.click();
+      } else if(btn.id === 'btnDumpSocial'){
+        try{
+          if(typeof g.dumpSocialState === 'function') g.dumpSocialState();
+          else {
+            console.log('Social state:', g.game?.social || 'N/A');
+            notify('Social dumped to console', 'ok');
+          }
+        }catch(err){ notify('Failed: '+err, 'warn'); }
+      } else if(btn.id === 'btnForceReturnTwist'){
+        try{
+          if(typeof g.startReturnTwist === 'function'){
+            g.startReturnTwist();
+            notify('Return twist triggered', 'ok');
+          } else notify('Return twist system not available', 'warn');
+        }catch(err){ notify('Failed: '+err, 'warn'); }
+      } else if(btn.id === 'btnSkipPhaseDbg'){
+        try{
+          if(typeof g.skipPhase === 'function'){
+            g.skipPhase();
+            notify('Phase skipped', 'ok');
+          } else notify('Skip phase not available', 'warn');
+        }catch(err){ notify('Failed: '+err, 'warn'); }
+      }
+    });
+
+    // Debug import file handler
+    const debugImportFile = modal.querySelector('#debugImportFile');
+    if(debugImportFile){
+      debugImportFile.addEventListener('change', ()=>{
+        const file = debugImportFile.files && debugImportFile.files[0];
+        if(!file) return;
+        const fr = new FileReader();
+        fr.onload = ()=>{
+          try{
+            const obj = JSON.parse(fr.result);
+            g.game = obj;
+            notify('Save imported', 'ok');
+            if(typeof g.updateHud === 'function') g.updateHud();
+          }catch(err){ notify('Import failed: '+err, 'warn'); }
+        };
+        fr.readAsText(file);
+      });
+    }
+
 
     return dim;
   }

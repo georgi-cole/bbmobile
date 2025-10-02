@@ -38,6 +38,34 @@
   }
   global.pickMinigameType=pickMinigameType;
 
+  // Calculate AI difficulty adjustment based on recent human win rate
+  function getAIDifficultyMultiplier(){
+    const g=global.game;
+    if(!g || !g.players) return 1.0;
+    const humanId = g.humanId;
+    if(!humanId) return 1.0;
+    
+    const human = global.getP?.(humanId);
+    if(!human) return 1.0;
+    
+    // Count recent human comp wins (HOH + Veto)
+    const humanHohWins = human?.stats?.hohWins || 0;
+    const humanVetoWins = human?.stats?.vetoWins || 0;
+    const totalHumanWins = humanHohWins + humanVetoWins;
+    
+    // If human is winning too much, boost AI slightly
+    // If human is losing, reduce AI difficulty slightly
+    const week = g.week || 1;
+    const expectedWinRate = 0.15; // ~15% win rate is fair for 1 human vs multiple AI
+    const actualWinRate = week > 1 ? totalHumanWins / (week * 2) : 0;
+    
+    // Adjust AI multiplier: if human wins more than expected, boost AI
+    // Range: 0.85 to 1.15 (max 15% adjustment)
+    const adjustment = (actualWinRate - expectedWinRate) * 0.5;
+    return Math.max(0.85, Math.min(1.15, 1.0 + adjustment));
+  }
+
+
   function isHumanEligible(phase){
     const g=global.game; const you=global.getP?.(g.humanId);
     if(!you||you.evicted) return false;
@@ -107,13 +135,20 @@
     const g=global.game;
     g.lastCompScores=new Map(); g.hohOrder=[];
     g.__hohResolved = false;
+    g.__compRunning = true; // Mark competition as running
+    global.markCompPlayed?.('hoh'); // Mark HOH as played
     global.tv.say('HOH Competition'); global.phaseMusic?.('hoh');
     global.setPhase('hoh', g.cfg.tHOH, finishCompPhase);
     const alive=global.alivePlayers(); const blocked=(alive.length!==4 && g.week>1)?g.lastHOHId:null;
+    const diffMult = getAIDifficultyMultiplier();
     for(const p of alive){
       if(p.id===blocked || p.human) continue;
       setTimeout(()=>{ if(g.phase!=='hoh') return;
-        submitScore(p.id, (8+(global.rng?.()||Math.random())*20), (0.8+p.skill*0.6), 'HOH/AI'); maybeFinishComp();
+        // Use compBeast property for fairer AI scoring
+        const baseScore = 8+(global.rng?.()||Math.random())*20;
+        const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.6) * diffMult;
+        submitScore(p.id, baseScore, aiMultiplier, 'HOH/AI'); 
+        maybeFinishComp();
       }, 300+(global.rng?.()||Math.random())*(g.cfg.tHOH*620));
     }
   }
@@ -123,6 +158,7 @@
     const g=global.game; if(g.phase!=='hoh') return;
     if(g.__hohResolved) return;
     g.__hohResolved = true;
+    g.__compRunning = false; // Clear competition running flag
 
     const alive=global.alivePlayers(); let elig=alive.map(p=>p.id);
     if(alive.length!==4 && g.week>1 && g.lastHOHId) elig=elig.filter(id=>id!==g.lastHOHId);
@@ -178,10 +214,13 @@
     const g=global.game; g.lastCompScores=new Map();
     global.tv.say('Final 3 — Part 1'); global.phaseMusic?.('hoh');
     global.setPhase('final3_comp1', Math.max(18, Math.floor(g.cfg.tHOH*0.7)), finishF3P1);
+    const diffMult = getAIDifficultyMultiplier();
     for(const p of global.alivePlayers()){
       if(p.human) continue;
       setTimeout(()=>{ if(g.phase!=='final3_comp1') return;
-        submitScore(p.id, (10+(global.rng?.()||Math.random())*25), (0.8+p.skill*0.65), 'F3-P1/AI');
+        const baseScore = 10+(global.rng?.()||Math.random())*25;
+        const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.65) * diffMult;
+        submitScore(p.id, baseScore, aiMultiplier, 'F3-P1/AI');
       }, 300+(global.rng?.()||Math.random())*(g.cfg.tHOH*520));
     }
   }
@@ -207,6 +246,7 @@
     const g=global.game; g.__f3_duo=duo.slice(); g.lastCompScores=new Map();
     global.tv.say('Final 3 — Part 2'); global.phaseMusic?.('hoh');
     global.setPhase('final3_comp2', Math.max(18, Math.floor(g.cfg.tHOH*0.7)), finishF3P2);
+    const diffMult = getAIDifficultyMultiplier();
     for(const id of duo){
       const p=global.getP(id);
       if(p.human){
@@ -218,7 +258,9 @@
         }
       } else {
         setTimeout(()=>{ if(g.phase!=='final3_comp2') return;
-          submitScore(p.id, (10+(global.rng?.()||Math.random())*25), (0.8+p.skill*0.65), 'F3-P2/AI');
+          const baseScore = 10+(global.rng?.()||Math.random())*25;
+          const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.65) * diffMult;
+          submitScore(p.id, baseScore, aiMultiplier, 'F3-P2/AI');
         }, 300+(global.rng?.()||Math.random())*(g.cfg.tHOH*520));
       }
     }

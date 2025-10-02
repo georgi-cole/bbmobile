@@ -6,84 +6,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link rel="icon" type="image/png" href="icons/icon-192.png"/>
 <link rel="apple-touch-icon" href="icons/icon-192.png"/>
-<link rel="stylesheet" href="styles.css?v=align-1"/>
-<link rel="stylesheet" href="mobile_Version3.css?v=align-1"/>
-<link rel="stylesheet" href="overrides-vertical.css?v=align-1"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
 
-<!-- Minimal styles so the Debug dropdown works even if styles.css lacks them -->
-<style>
-  .debug-details{ display:inline-block; position:relative; margin-left:6px; }
-  .debug-details>summary{ list-style:none; display:inline-block; }
-  .debug-details>summary::-webkit-details-marker{ display:none; }
-  .debug-btn{ display:inline-flex; align-items:center; gap:8px; } /* inherits .btn */
-  .debug-panel{
-    position:absolute; top:calc(100% + 8px); left:0;
-    background:rgba(5,12,20,.96);
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:10px; padding:10px; min-width:520px;
-    box-shadow:0 12px 28px rgba(0,0,0,.45); z-index:2000;
-  }
-  .debug-section{ display:grid; gap:8px; margin:8px 0; }
-  .debug-title{ font-size:12px; letter-spacing:.3px; color:#b7c6d1; text-transform:uppercase; opacity:.8; margin-bottom:2px; }
-  .debug-shelf{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  .debug-shelf>*{ margin:0 !important; }
-  .dbg-sep{ height:1px; border:none; background:rgba(255,255,255,.08); margin:6px 0; }
-</style>
 </head>
 <body>
 <!-- Top Controls -->
 <div class="topbar">
   <button class="btn" id="btnOpenSettings">⚙️ Settings</button>
   <button class="btn" id="btnStartQuick">▶ Start</button>
-
-  <!-- Debug dropdown -->
-  <details class="debug-details" id="debugDropdown">
-    <summary class="btn debug-btn">🐞 Debug</summary>
-    <div class="debug-panel">
-      <div class="debug-section">
-        <div class="debug-title">Music / Audio</div>
-        <div class="debug-shelf" id="dbgMusicShelf">
-          <select id="musicTrack">
-            <option value="none">No track</option>
-            <option value="theme_opening">Opening Theme</option>
-            <option value="hoh_comp">HOH Comp</option>
-            <option value="veto_comp">Veto Comp</option>
-            <option value="nominations">Nominations</option>
-            <option value="live_vote">Live Vote</option>
-            <option value="eviction">Eviction</option>
-            <option value="victory">Victory Theme</option>
-          </select>
-          <button class="btn small" id="btnPlayMusic">Play</button>
-          <button class="btn small" id="btnStopMusic">Stop</button>
-          <label class="tiny">Volume <input type="range" id="musicVol" min="0" max="1" step="0.01" value=".4"/></label>
-          <label class="inline tiny"><input type="checkbox" id="autoMusic" checked/> Auto music</label>
-        </div>
-      </div>
-      <hr class="dbg-sep" />
-      <div class="debug-section">
-        <div class="debug-title">Quick Actions</div>
-        <div class="debug-shelf" id="dbgActionShelf">
-          <button class="btn small" id="btnNextWeek">Force Week ▶</button>
-          <button class="btn small" id="btnClearLog">Clear Log</button>
-          <button class="btn small" id="btnExport">Export Save</button>
-          <button class="btn small" id="btnImport">Import</button>
-          <input id="importFile" type="file" accept="application/json" style="display:none"/>
-        </div>
-      </div>
-      <hr class="dbg-sep" />
-      <div class="debug-section">
-        <div class="debug-title">Advanced</div>
-        <div class="debug-shelf" id="dbgAdvancedShelf">
-          <button class="btn small" id="btnDumpSocial">Dump Social</button>
-          <button class="btn small" id="btnForceReturnTwist">Force Return Twist</button>
-          <button class="btn small" id="btnSkipPhaseDbg">Skip Phase</button>
-        </div>
-      </div>
-    </div>
-  </details>
 
   <!-- Optional buttons controlled by the app -->
   <button class="btn" id="btnAdvancePhase" style="display:none;">➡ Advance</button>
@@ -378,25 +310,31 @@
     rulesBtn.textContent = '📋 Rules';
     
     rulesBtn.onclick = ()=>{
-      const rulesHtml = `
-        <h3>Game Rules</h3>
-        <div style="text-align:left;line-height:1.6;max-width:600px;margin:0 auto;">
-          <p><strong>Objective:</strong> Be the last player standing to win Big Brother.</p>
-          <p><strong>HOH (Head of Household):</strong> Wins power to nominate 2 players for eviction.</p>
-          <p><strong>Nominations:</strong> The HOH chooses two players to put on the block.</p>
-          <p><strong>Veto Competition:</strong> Six players compete for the Power of Veto to save a nominee.</p>
-          <p><strong>Eviction:</strong> Houseguests vote to evict one of the final nominees. Majority rules.</p>
-          <p><strong>Jury Phase:</strong> Evicted players become jurors who vote for the winner in the finale.</p>
-          <p><strong>Finale:</strong> Final 2 face the jury. The jury votes, and the winner is crowned!</p>
-        </div>
-      `;
-      
-      if(typeof window.showBigCard === 'function'){
-        window.showBigCard('Rules', rulesHtml);
-      } else if(typeof window.showCard === 'function'){
-        window.showCard('Rules', [rulesHtml], 'info', 8000, true);
+      // Use the shared showRulesCard function if available
+      if(typeof window.showRulesCard === 'function'){
+        window.showRulesCard();
       } else {
-        alert('GAME RULES\n\nObjective: Be the last player standing.\nHOH: Nominates 2 players.\nVeto: Can save a nominee.\nEviction: Houseguests vote.\nJury: Evicted players vote for the winner.\nFinale: Jury crowns the winner!');
+        // Fallback inline implementation
+        const rulesHtml = `
+          <h3>Game Rules</h3>
+          <div style="text-align:left;line-height:1.6;max-width:600px;margin:0 auto;">
+            <p><strong>Objective:</strong> Be the last player standing to win Big Brother.</p>
+            <p><strong>HOH (Head of Household):</strong> Wins power to nominate 2 players for eviction.</p>
+            <p><strong>Nominations:</strong> The HOH chooses two players to put on the block.</p>
+            <p><strong>Veto Competition:</strong> Six players compete for the Power of Veto to save a nominee.</p>
+            <p><strong>Eviction:</strong> Houseguests vote to evict one of the final nominees. Majority rules.</p>
+            <p><strong>Jury Phase:</strong> Evicted players become jurors who vote for the winner in the finale.</p>
+            <p><strong>Finale:</strong> Final 2 face the jury. The jury votes, and the winner is crowned!</p>
+          </div>
+        `;
+        
+        if(typeof window.showBigCard === 'function'){
+          window.showBigCard('Rules', rulesHtml);
+        } else if(typeof window.showCard === 'function'){
+          window.showCard('Rules', [rulesHtml], 'info', 8000, true);
+        } else {
+          alert('GAME RULES\n\nObjective: Be the last player standing.\nHOH: Nominates 2 players.\nVeto: Can save a nominee.\nEviction: Houseguests vote.\nJury: Evicted players vote for the winner.\nFinale: Jury crowns the winner!');
+        }
       }
     };
     

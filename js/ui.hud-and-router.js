@@ -379,10 +379,12 @@ header.innerHTML = `
   function enablePhaseCompButtons() {
     const game = g.game || {};
     const flags = ensureWeeklyCompFlags();
-    if (game.phase === 'hoh') setButtonDisabled(COMP_SELS.hoh.start, !!flags.hohPlayed);
+    // Disable buttons if competition is running
+    const compRunning = !!game.__compRunning;
+    if (game.phase === 'hoh') setButtonDisabled(COMP_SELS.hoh.start, compRunning || !!flags.hohPlayed);
     if (game.phase === 'veto_comp' || game.phase === 'veto') {
-      setButtonDisabled(COMP_SELS.veto.start, !!flags.vetoPlayed);
-      if (!flags.vetoPlayed) document.querySelectorAll(COMP_SELS.veto.start).forEach(normalizeButton);
+      setButtonDisabled(COMP_SELS.veto.start, compRunning || !!flags.vetoPlayed);
+      if (!flags.vetoPlayed && !compRunning) document.querySelectorAll(COMP_SELS.veto.start).forEach(normalizeButton);
     }
   }
   function wireCompSubmitDelegationOnce() {

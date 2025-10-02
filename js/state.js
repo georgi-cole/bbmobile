@@ -81,6 +81,7 @@
   function pushPlayer({name,human=false}){
     const id=(game.players.length?Math.max(...game.players.map(p=>p.id))+1:1);
     const skill=human?0.55:0.35+rng()*0.5;
+    const compBeast=human?0.5:0.3+rng()*0.6; // Per-AI competition strength (hidden)
     const persona={ aggr:0.25+rng()*0.7, loyalty:0.25+rng()*0.7, chaos:0.1+rng()*0.5 };
     const avatar=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
     const meta={
@@ -95,7 +96,7 @@
     };
     const wins={hoh:0,veto:0};
     const p={ id,name,human,evicted:false,nominated:false,hoh:false,
-      persona,skill,affinity:{},stats:{hohWins:0,vetoWins:0},wins,
+      persona,skill,compBeast,affinity:{},stats:{hohWins:0,vetoWins:0},wins,
       threat:THREAT_BASE,weekEvicted:null,winner:false,runnerUp:false,
       avatar,meta
     };

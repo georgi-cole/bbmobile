@@ -117,7 +117,8 @@
       '<button class="tab-btn" data-tab="timing">Timing</button>',
       '<button class="tab-btn" data-tab="visual">Visual</button>',
       '<button class="tab-btn" data-tab="audio">Audio</button>',
-      '<button class="tab-btn" data-tab="advanced">Advanced</button>'
+      '<button class="tab-btn" data-tab="advanced">Advanced</button>',
+      '<button class="tab-btn" data-tab="debug">Debug</button>'
     ].join('');
 
     // Panes
@@ -130,6 +131,7 @@
     panes.appendChild(buildPane('visual', buildVisualPaneHTML()));
     panes.appendChild(buildPane('audio', buildAudioPaneHTML()));
     panes.appendChild(buildPane('advanced', buildAdvancedPaneHTML()));
+    panes.appendChild(buildPane('debug', buildDebugPaneHTML()));
 
     // Actions row
     var actions = document.createElement('div');
@@ -277,6 +279,47 @@
     ].join('');
   }
 
+  function buildDebugPaneHTML(){
+    return [
+      '<div class="settingsGrid">',
+        group('Music / Audio', [
+          '<div class="row">',
+            '<select id="musicTrack" style="flex:1">',
+              '<option value="none">No track</option>',
+              '<option value="theme_opening">Opening Theme</option>',
+              '<option value="hoh_comp">HOH Comp</option>',
+              '<option value="veto_comp">Veto Comp</option>',
+              '<option value="nominations">Nominations</option>',
+              '<option value="live_vote">Live Vote</option>',
+              '<option value="eviction">Eviction</option>',
+              '<option value="victory">Victory Theme</option>',
+            '</select>',
+            '<button class="btn small" id="btnPlayMusic">Play</button>',
+            '<button class="btn small" id="btnStopMusic">Stop</button>',
+          '</div>',
+          '<label class="toggleRow">Volume <input type="range" id="musicVol" min="0" max="1" step="0.01" value="0.4" style="flex:1;margin-left:8px"/></label>',
+          checkbox('autoMusic','Auto music'),
+        ].join('')),
+        group('Quick Actions', [
+          '<div class="row" style="flex-wrap:wrap;gap:8px">',
+            '<button class="btn small" id="btnNextWeek">Force Week ▶</button>',
+            '<button class="btn small" id="btnClearLog">Clear Log</button>',
+            '<button class="btn small" id="btnExport">Export Save</button>',
+            '<button class="btn small" id="btnImport">Import</button>',
+          '</div>',
+          '<input id="importFile" type="file" accept="application/json" style="display:none"/>',
+        ].join('')),
+        group('Advanced Debug', [
+          '<div class="row" style="flex-wrap:wrap;gap:8px">',
+            '<button class="btn small" id="btnDumpSocial">Dump Social</button>',
+            '<button class="btn small" id="btnForceReturnTwist">Force Return Twist</button>',
+            '<button class="btn small" id="btnSkipPhaseDbg">Skip Phase</button>',
+          '</div>',
+        ].join('')),
+      '</div>'
+    ].join('');
+  }
+
   // Small helpers to render fields
 
   function group(title, bodyHTML){
@@ -332,6 +375,7 @@
 
     // Wire advanced actions each open (in case modal reused)
     modal.__advancedWired || wireAdvanced(modal);
+    modal.__debugWired || wireDebug(modal);
   }
 
   function closeSettingsModal(){
@@ -437,6 +481,151 @@
   function notify(msg, cls){
     try{ global.addLog?.(msg, cls || ''); }catch(e){}
   }
+
+  function wireDebug(modal){
+    var root = modal;
+    root.__debugWired = true;
+
+    // Music controls
+    var btnPlayMusic = root.querySelector('#btnPlayMusic');
+    var btnStopMusic = root.querySelector('#btnStopMusic');
+    var musicTrack = root.querySelector('#musicTrack');
+    var musicVol = root.querySelector('#musicVol');
+
+    if(btnPlayMusic){
+      btnPlayMusic.addEventListener('click', function(){
+        var track = musicTrack?.value;
+        if(!track || track === 'none'){ notify('Select a track first', 'warn'); return; }
+        var vol = parseFloat(musicVol?.value || 0.4);
+        try{
+          if(typeof global.playMusic === 'function'){
+            global.playMusic(track, vol);
+          }else if(typeof global.phaseMusic === 'function'){
+            global.phaseMusic(track);
+          }else{
+            notify('Music system not available', 'warn');
+          }
+        }catch(e){ notify('Play failed: '+e, 'warn'); }
+      });
+    }
+
+    if(btnStopMusic){
+      btnStopMusic.addEventListener('click', function(){
+        try{
+          if(typeof global.stopMusic === 'function') global.stopMusic();
+          else if(global.bgm) global.bgm.pause();
+          else {
+            var bgm = document.getElementById('bgm');
+            if(bgm) bgm.pause();
+          }
+        }catch(e){}
+      });
+    }
+
+    // Quick actions
+    var btnNextWeek = root.querySelector('#btnNextWeek');
+    if(btnNextWeek){
+      btnNextWeek.addEventListener('click', function(){
+        try{
+          var g = global.game;
+          if(!g){ notify('Game not started', 'warn'); return; }
+          g.week = (g.week || 1) + 1;
+          notify('Week advanced to '+ g.week, 'ok');
+        }catch(e){ notify('Failed: '+e, 'warn'); }
+      });
+    }
+
+    var btnClearLog = root.querySelector('#btnClearLog');
+    if(btnClearLog){
+      btnClearLog.addEventListener('click', function(){
+        try{
+          var log = document.getElementById('log');
+          if(log) log.innerHTML = '';
+          notify('Log cleared', 'ok');
+        }catch(e){}
+      });
+    }
+
+    var btnExport = root.querySelector('#btnExport');
+    if(btnExport){
+      btnExport.addEventListener('click', function(){
+        try{
+          var data = JSON.stringify(global.game || {}, null, 2);
+          var blob = new Blob([data], {type:'application/json'});
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'bb-save.json';
+          a.click();
+          URL.revokeObjectURL(a.href);
+          notify('Save exported', 'ok');
+        }catch(err){ notify('Export failed: '+err, 'warn'); }
+      });
+    }
+
+    var btnImport = root.querySelector('#btnImport');
+    var importFile = root.querySelector('#importFile');
+    if(btnImport && importFile){
+      btnImport.addEventListener('click', function(){ importFile.click(); });
+      importFile.addEventListener('change', function(){
+        var file = importFile.files && importFile.files[0];
+        if(!file) return;
+        var fr = new FileReader();
+        fr.onload = function(){
+          try{
+            var obj = JSON.parse(fr.result);
+            global.game = obj;
+            notify('Save imported', 'ok');
+            if(typeof global.updateHud === 'function') global.updateHud();
+          }catch(err){ notify('Import failed: '+err, 'warn'); }
+        };
+        fr.readAsText(file);
+      });
+    }
+
+    // Advanced debug
+    var btnDumpSocial = root.querySelector('#btnDumpSocial');
+    if(btnDumpSocial){
+      btnDumpSocial.addEventListener('click', function(){
+        try{
+          if(typeof global.dumpSocialState === 'function'){
+            global.dumpSocialState();
+          }else{
+            console.log('Social state:', global.game?.social || 'N/A');
+            notify('Social dumped to console', 'ok');
+          }
+        }catch(e){ notify('Failed: '+e, 'warn'); }
+      });
+    }
+
+    var btnForceReturnTwist = root.querySelector('#btnForceReturnTwist');
+    if(btnForceReturnTwist){
+      btnForceReturnTwist.addEventListener('click', function(){
+        try{
+          if(typeof global.startReturnTwist === 'function'){
+            global.startReturnTwist();
+            notify('Return twist triggered', 'ok');
+          }else{
+            notify('Return twist system not available', 'warn');
+          }
+        }catch(e){ notify('Failed: '+e, 'warn'); }
+      });
+    }
+
+    var btnSkipPhaseDbg = root.querySelector('#btnSkipPhaseDbg');
+    if(btnSkipPhaseDbg){
+      btnSkipPhaseDbg.addEventListener('click', function(){
+        try{
+          if(typeof global.skipPhase === 'function'){
+            global.skipPhase();
+            notify('Phase skipped', 'ok');
+          }else{
+            notify('Skip phase not available', 'warn');
+          }
+        }catch(e){ notify('Failed: '+e, 'warn'); }
+      });
+    }
+  }
+
 
   // Integrations: make key settings take effect across UI without reload
   // - Top roster visibility toggle
