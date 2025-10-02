@@ -224,13 +224,16 @@
     }
   }
 
+  // Ensure decision deck exists and is centered in TV safe area
   function ensureDecisionDeck(){
     let deck=document.getElementById('decisionDeck');
     if(deck) return deck;
-    const tv=document.getElementById('tv');
+    const tv=document.getElementById('tv') || document.querySelector('.tv') || document.body;
     deck=document.createElement('div');
     deck.id = 'decisionDeck';
-    tv?.appendChild(deck);
+    // Safe-area centering; decision deck itself is non-interactive, card is interactive
+    deck.style.cssText = 'position:absolute;inset:var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);display:grid;place-items:center;gap:8px;z-index:12;pointer-events:none;';
+    tv.appendChild(deck);
     return deck;
   }
   function clearDecisionDeck(){ const d=document.getElementById('decisionDeck'); if(d) d.remove(); }
@@ -287,7 +290,10 @@
     });
     card.appendChild(bar);
 
+    // Allow card to be interactive
+    card.style.pointerEvents = 'auto';
     deck.appendChild(card);
+
     card.style.animation='popIn .45s ease forwards';
   }
 

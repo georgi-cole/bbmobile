@@ -2,7 +2,7 @@
 // Safe integrity/diagnostics (no crashing). Also ensures the right-sidebar Jury tab button is visible.
 
 (function(){
-  function escapeRegex(s){ return String(s).replace(/[.*+?^${}()|[\\]\]/g,'\\$&'); }
+  function escapeRegex(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
   if(!window.escapeRegex) window.escapeRegex = escapeRegex;
 
   // Ensure reveal API exists even if ui.js hasn't finished wiring yet.
@@ -49,26 +49,75 @@
     btn.style.display = enabled ? '' : 'none';
   }
 
+  // Safer side tabs: pane-switching when panes exist, otherwise emit a filter event (logs stay visible)
   function wireSideTabs(){
     const bar = document.querySelector('#sideCard .tabBar');
     if(!bar || bar.dataset.wired) return;
     bar.dataset.wired = '1';
+
+    // Optional: data-scope selector to limit pane switching to a container
+    const scopeSel = bar.getAttribute('data-scope');
+    const contentScope = scopeSel ? document.querySelector(scopeSel) : bar.closest('.card');
+
     bar.addEventListener('click', (e)=>{
       const btn = e.target.closest('.tab-btn'); if(!btn) return;
-      const targetId = btn.dataset.tab; if(!targetId) return;
 
-      const host = document.getElementById('sideCard') || document;
-      // Consider any pane-like element; add classes/ids as needed for your layout
-      const panes = host.querySelectorAll('[id$="Panel"], .sidePane, .settingsTabPane, [role="tabpanel"]');
-      panes.forEach(p => { p.style.display = (p.id === targetId) ? 'block' : 'none'; });
+      const rawText = (btn.textContent||'').trim().toLowerCase();
+      const targetId  = btn.dataset.tab || '';
+      const filterKey = (btn.dataset.filter || rawText).replace(/[^a-z]/g,''); // 'all','game','social','vote','jury'
 
-      bar.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b===btn));
+      // Pane mode: only if panes exist and match
+      let didPaneSwitch = false;
+      if (contentScope && targetId) {
+        const panes = contentScope.querySelectorAll('[data-tab-pane], .sidePane, [role="tabpanel"], [id$="Panel"]');
+        const anyMatch = Array.from(panes).some(p => p.id === targetId || p.getAttribute('data-tab-pane') === targetId);
+        if (panes.length && anyMatch) {
+          panes.forEach(p=>{
+            const pid = p.id || p.getAttribute('data-tab-pane') || '';
+            p.style.display = (pid === targetId) ? 'block' : 'none';
+          });
+          didPaneSwitch = true;
+        }
+      }
+
+      // Filter mode for Logs: never hide the host, just filter items
+      if (!didPaneSwitch && filterKey) {
+        try { window.dispatchEvent(new CustomEvent('bb:logs:filter', { detail: { kind: filterKey } })); } catch {}
+      }
+
+      bar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
     });
   }
 
+  // Default filter listener (safe no-op if app already implements its own)
+  (function ensureLogFilterListener(){
+    if (window.__bbLogsFilterWired) return;
+    window.__bbLogsFilterWired = true;
+
+    window.addEventListener('bb:logs:filter', (ev)=>{
+      const kind = (ev.detail?.kind || 'all').toLowerCase();
+      const host = document.getElementById('log') || document.getElementById('logAll') || document.getElementById('logList');
+      if (!host) return;
+
+      const items = host.querySelectorAll('.logItem, li, div');
+      items.forEach(el=>{
+        const k = (el.getAttribute('data-k') || '').toLowerCase();
+        const txt = (el.textContent || '').toLowerCase();
+        const belongs =
+          kind === 'all' ||
+          k === kind ||
+          (kind === 'game'   && txt.includes('game')) ||
+          (kind === 'social' && txt.includes('social')) ||
+          (kind === 'vote'   && txt.includes('vote')) ||
+          (kind === 'jury'   && txt.includes('jury'));
+        el.style.display = belongs ? '' : 'none';
+      });
+    });
+  })();
+
   function init(){
     try{
-      ensureRevealAPI();        // <- new: prevent "showCard is not a function" crashes
+      ensureRevealAPI();
       wireSideTabs();
       syncJuryTabButton();
     }catch(e){ console.warn('[BB Modular] Integrity init warn:', e); }

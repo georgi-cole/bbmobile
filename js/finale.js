@@ -48,6 +48,7 @@
     const tag=document.createElement('style'); tag.id='cinStyles'; tag.textContent=css; document.head.appendChild(tag);
   }
 
+  // UPDATED: Stats come from p.stats.hohWins, p.stats.vetoWins, and p.nominatedCount
   function computeStats(){
     const gme=g.game||{}; const players=(gme.players||[]).slice();
     const stats={
@@ -57,7 +58,10 @@
       compBeast:null, compMax:-1
     };
     players.forEach(p=>{
-      const hoh=+p.hohWins||0, veto=+p.vetoWins||0, noms=+p.nominations||0, comps=hoh+veto;
+      const hoh  = +(p.stats?.hohWins || 0);
+      const veto = +(p.stats?.vetoWins || 0);
+      const noms = +(p.nominatedCount || 0);
+      const comps = hoh + veto;
       if(hoh>stats.hohMax){ stats.hohMax=hoh; stats.mostHOH=p; }
       if(veto>stats.vetoMax){ stats.vetoMax=veto; stats.mostVeto=p; }
       if(noms>stats.nomMax){ stats.nomMax=noms; stats.mostNoms=p; }
