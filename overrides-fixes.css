@@ -9,10 +9,33 @@
   padding: 10px 2px 2px;
 }
 
+/* Center overlays and prevent cutoffs */
+#tv{ position: relative; overflow: visible; }
+
+/* Reveal cards overlay (showCard) */
+#tvOverlay{
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  padding: 12px;
+  pointer-events: none; /* allow underlying clicks unless a card is present */
+  z-index: 10;
+}
+#tvOverlay .revealCard{ pointer-events: auto; }
+
+/* Social decisions deck (social.js) */
+#decisionDeck{
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  padding: 12px;
+  z-index: 11;
+  pointer-events: none;
+}
+#decisionDeck .revealCard{ pointer-events: auto; }
+
 /* Social / reveal cards: center and constrain without modifying #panel */
 .revealCard{
   width: min(680px, 92vw);
-  margin: 6px auto 10px;
+  margin: 0 auto;
 }
 .revealCard .actions,
 .revealCard .btn-row,
