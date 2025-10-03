@@ -1,26 +1,27 @@
 // Audio: local MP3s only, auto-switch on phase changes and on special events.
-// Files expected in /audio/ (or window.MUSIC_BASE to override).
+// Now supports raw filenames (e.g., "intro.mp3") and fixes first-click debug play.
 // Exposes:
-//  - window.playMusicForPhase(phaseOrEvent)
+//  - window.playMusicForPhase(nameOrFilename)
 //  - window.stopMusic()
 //  - window.musicCue(eventName)  // 'eviction' | 'twist' | 'final_jury_vote' | 'winner'
 //  - window.setMusicVolume(v)    // 0..1
+//  - window.phaseMusic(phase)    // compat alias
+//  - window.playMusic(nameOrFilename) // compat alias
 //
 // Behavior:
-//  - Wraps setPhase so every phase change stops current audio and plays mapped track.
-//  - Works when phases are skipped (because setPhase is still invoked).
-//  - Detects common reveal cards and cues event music (eviction, winner, twists, final jury).
-//  - First playback is unlocked on user gesture (click/key).
+//  - Wraps setPhase so every phase change stops current audio and plays mapped track (covers skips).
+//  - Detects eviction/twist/final jury/winner via CustomEvents or reveal card titles.
+//  - First playback is unlocked by the browser on user gesture; we now try to play immediately and only defer if blocked.
+
 (function(g){
   'use strict';
 
   const BASE = ((g.MUSIC_BASE || 'audio/').replace(/^\/*/,'').replace(/\/*$/,'')) + '/';
 
-  // Phase mapping (stop music when null)
-  // opening -> intro.mp3
+  // Phase mapping
   const PHASE_TO_TRACK = {
     opening: 'intro.mp3',
-    intermission: null,           // no music during brief intermission
+    intermission: null,
     hoh: 'competition.mp3',
     hoh_comp: 'competition.mp3',
     competition: 'competition.mp3',
@@ -30,19 +31,18 @@
     veto: 'veto.mp3',
     livevote: 'live vote.mp3',
     'live vote': 'live vote.mp3',
-    jury: null,                   // handled by final_jury_vote event when applicable
-    finale: null                  // handled by 'winner' event
+    jury: null,
+    finale: null
   };
 
-  // Event mapping (explicit cues outside of phase)
+  // Event mapping
   const EVENT_TO_TRACK = {
     eviction: 'eviction.mp3',
-    twist: 'twist.mp3',                 // also used for double/triple/jury return
+    twist: 'twist.mp3',
     final_jury_vote: 'final jury vote.mp3',
     winner: 'victory.mp3'
   };
 
-  // Fuzzy matching helper
   function mapPhase(phase){
     const k = String(phase||'').toLowerCase();
     if (k in PHASE_TO_TRACK) return PHASE_TO_TRACK[k];
@@ -54,9 +54,22 @@
     return null;
   }
 
-  // Audio element and unlock gate
-  let el = null, unlocked = false, pending = null, currentSrc = '';
+  // Support raw filenames as well as phase/event names
+  function resolveToFile(nameOrFilename){
+    if (!nameOrFilename) return null;
+    const s = String(nameOrFilename).trim();
+    // Raw filename support
+    if (/\.mp3(\?.*)?$/i.test(s)) return s;
+    // Try phase mapping
+    const p = mapPhase(s);
+    if (p) return p;
+    // Try event mapping
+    const ev = EVENT_TO_TRACK[s.toLowerCase().replace(/\s+/g,'_')];
+    if (ev) return ev;
+    return null;
+  }
 
+  let el = null, currentSrc = '';
   function ensureEl(){
     if (el) return el;
     el = document.createElement('audio');
@@ -66,14 +79,6 @@
     el.loop = true;
     document.body.appendChild(el);
     return el;
-  }
-
-  function unlock(){
-    if (unlocked) return;
-    unlocked = true;
-    document.removeEventListener('pointerdown', unlock);
-    document.removeEventListener('keydown', unlock);
-    if (pending){ const p = pending; pending = null; playMusicForPhase(p); }
   }
 
   function setMusicVolume(v){
@@ -90,39 +95,44 @@
 
   function srcFor(file){ return BASE + file.split('/').map(encodeURIComponent).join('/'); }
 
-  // attempt to play, fallback from veto.mp3 -> competition.mp3 if missing
+  // Try to play immediately; if NotAllowedError, attach one-time unlock to retry
   async function playFile(file){
     if (!file) { stopMusic(); return; }
 
     const audio = ensureEl();
     const full = srcFor(file);
 
-    // If already playing same, do nothing
     if (currentSrc === full && !audio.paused) return;
 
-    // If still locked by browser policies, wait for user gesture
-    if (!unlocked){
-      pending = file; // store filename (or fuzzy key)
-      document.addEventListener('pointerdown', unlock, { once:true, passive:true });
-      document.addEventListener('keydown', unlock, { once:true });
-      return;
-    }
-
-    // Replace source cleanly
+    // Always stop before switching
     stopMusic();
     currentSrc = full;
     audio.src = full;
     audio.loop = true;
+    audio.currentTime = 0;
+
     try {
       await audio.play();
     } catch (e) {
-      // Fallback: if veto.mp3 fails, try competition.mp3 (common setup)
+      if (e && String(e.name).toLowerCase() === 'notallowederror') {
+        // Browser blocked autoplay: retry on next gesture
+        const retry = async () => {
+          document.removeEventListener('pointerdown', retry);
+          document.removeEventListener('keydown', retry);
+          try { await audio.play(); }
+          catch (err) { console.warn('[audio] play retry failed:', err); }
+        };
+        document.addEventListener('pointerdown', retry, { once:true, passive:true });
+        document.addEventListener('keydown', retry, { once:true });
+        return;
+      }
+      // Fallback if veto.mp3 missing: try competition.mp3
       if (/veto\.mp3$/i.test(file)) {
         try {
           currentSrc = srcFor('competition.mp3');
           audio.src = currentSrc;
           await audio.play();
-          console.warn('[audio] veto.mp3 not found; fell back to competition.mp3');
+          console.warn('[audio] veto.mp3 failed; fell back to competition.mp3');
           return;
         } catch {}
       }
@@ -130,26 +140,19 @@
     }
   }
 
-  function playMusicForPhase(phaseOrEvent){
-    // Phase first
-    const phaseTrack = mapPhase(phaseOrEvent);
-    if (phaseTrack !== null) { playFile(phaseTrack); return; }
-    // Event
-    const k = String(phaseOrEvent||'').toLowerCase().replace(/\s+/g,'_');
-    const evFile = EVENT_TO_TRACK[k];
-    if (evFile) { playFile(evFile); return; }
-    // Unknown: stop
-    stopMusic();
+  function playMusicForPhase(nameOrFilename){
+    const file = resolveToFile(nameOrFilename);
+    if (file === null) { stopMusic(); return; }
+    playFile(file);
   }
 
   function musicCue(eventName){ playMusicForPhase(String(eventName||'').toLowerCase()); }
 
-  // Wrap setPhase so any phase change swaps music (covers skipping)
+  // Wrap setPhase so any change swaps tracks (covers skips)
   (function wrapSetPhase(){
     const sp = g.setPhase;
     if (typeof sp !== 'function' || sp.__musicWrapped) return;
     function wrapped(phase, seconds, onTimeout){
-      // call original first to keep timing accurate
       const r = sp.apply(this, arguments);
       try { playMusicForPhase(phase); } catch(e){ console.warn('[audio] phase hook error', e); }
       return r;
@@ -158,7 +161,7 @@
     g.setPhase = wrapped;
   })();
 
-  // Start button -> intro during cast presentation (in addition to opening phase hook)
+  // Start button -> intro during cast presentation
   (function wireStartButton(){
     function bind(){
       const btn = document.getElementById('btnStartQuick') || document.getElementById('btnStart');
@@ -171,14 +174,14 @@
     else bind();
   })();
 
-  // Cue events via CustomEvents if the app dispatches them
+  // Custom events (optional)
   window.addEventListener('bb:eviction:announced', ()=>musicCue('eviction'));
   window.addEventListener('bb:twist', ()=>musicCue('twist'));
   window.addEventListener('bb:jury:return', ()=>musicCue('twist'));
   window.addEventListener('bb:finale:final_jury_vote', ()=>musicCue('final_jury_vote'));
   window.addEventListener('bb:finale:winner', ()=>musicCue('winner'));
 
-  // Fallback: detect from reveal cards (title keywords)
+  // Fallback: detect from reveal card titles
   function tryCardCue(title){
     const t = String(title||'').toLowerCase();
     if (!t) return;
@@ -187,8 +190,6 @@
     if (t.includes('double') || t.includes('triple') || t.includes('jury return')) return musicCue('twist');
     if (t.includes('evicted') || t.includes('eviction')) return musicCue('eviction');
   }
-
-  // Wrap global/UI showCard to sniff titles (non-breaking)
   (function wrapCards(){
     const tryWrap = (host, key)=>{
       const fn = host && host[key];
@@ -200,19 +201,20 @@
         host[key].__musicWrapped = true;
       }
     };
-    // Now and on DOM ready (UI may attach later)
     tryWrap(g, 'showCard');
     tryWrap(g.UI||g, 'showCard');
-    const id = setInterval(()=>{ tryWrap(g, 'showCard'); tryWrap(g.UI||g, 'showCard'); }, 1000);
+    const id = setInterval(()=>{ tryWrap(g, 'showCard'); tryWrap(g.UI||g, 'showCard'); }, 800);
     setTimeout(()=>clearInterval(id), 8000);
   })();
 
-  // Public API
+  // Compat aliases and public API
   g.playMusicForPhase = playMusicForPhase;
   g.stopMusic = stopMusic;
   g.musicCue = musicCue;
   g.setMusicVolume = setMusicVolume;
+  g.phaseMusic = playMusicForPhase;  // compat
+  g.playMusic = playMusicForPhase;   // accept filename or phase
 
-  console.info('[audio] ready (phase-wrapped, events+cues, local mp3s)');
+  console.info('[audio] ready (phase-wrapped, filename+phase inputs, immediate-play with gesture fallback)');
 
 })(window);
