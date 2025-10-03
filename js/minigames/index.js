@@ -174,12 +174,53 @@
   }
 
   // Get random minigame (prefer new implemented, avoid retired)
-  function getRandom(){
+  // Optional historyArray parameter for recent-history weighting
+  function getRandom(historyArray){
     const implemented = getImplemented();
     
     // Filter out retired games if possible
     const nonRetired = implemented.filter(key => !REGISTRY[key].retired);
     
+    let pool = nonRetired.length > 0 ? nonRetired : (implemented.length > 0 ? implemented : Object.keys(REGISTRY));
+    
+    // Apply history weighting if provided
+    if(historyArray && Array.isArray(historyArray) && historyArray.length > 0){
+      const recentGames = historyArray.slice(-3);
+      const lastGame = historyArray[historyArray.length - 1];
+      
+      // Build weighted pool (penalize recently used)
+      const weighted = [];
+      for(const game of pool){
+        const recentCount = recentGames.filter(g => g === game).length;
+        const weight = Math.max(1, 5 - recentCount * 2);
+        for(let i = 0; i < weight; i++){
+          weighted.push(game);
+        }
+      }
+      
+      // Pick from weighted pool
+      let chosen = weighted[Math.floor(Math.random() * weighted.length)];
+      
+      // Avoid immediate repeat if pool has >1 game
+      if(chosen === lastGame && pool.length > 1){
+        const alternatives = pool.filter(g => g !== lastGame);
+        if(alternatives.length > 0){
+          const altWeighted = [];
+          for(const game of alternatives){
+            const recentCount = recentGames.filter(g => g === game).length;
+            const weight = Math.max(1, 5 - recentCount * 2);
+            for(let i = 0; i < weight; i++){
+              altWeighted.push(game);
+            }
+          }
+          chosen = altWeighted[Math.floor(Math.random() * altWeighted.length)];
+        }
+      }
+      
+      return chosen;
+    }
+    
+    // No history provided, use original logic
     if(nonRetired.length > 0){
       // Prefer new Phase 1 games (80% chance)
       const phase1Games = ['countHouse', 'reactionRoyale', 'triviaPulse'];
