@@ -24,7 +24,7 @@
     tripleChance: 7,    // %
     returnChance: 10,   // % chance a juror returns (mid-season)
     selfEvictChance: 1, // % tiny chance of auto self-eviction
-    enablePublicFav: true, // Public's Favourite Player feature at finale
+    enablePublicFav: false, // Public's Favourite Player feature at finale (default OFF)
     // Timing (seconds)
     tVote: 30,
     tVeto: 40,
