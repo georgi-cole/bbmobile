@@ -99,11 +99,16 @@
     // Reuse host if already connected
     if(host && host.isConnected) return host;
 
-    // Choose container with priority
-    let container = document.querySelector('.tvViewport .fitCanvas')
+    // Priority 1: Use #rosterBar if it exists (above TV)
+    let container = document.getElementById('rosterBar');
+    
+    // Fallback: old behavior (inside TV viewport)
+    if(!container){
+      container = document.querySelector('.tvViewport .fitCanvas')
                  || document.querySelector('.tvViewport')
                  || document.getElementById('tv')
                  || document.getElementById('actionCard');
+    }
     if(!container) return null;
 
     // Create host if missing
@@ -113,17 +118,20 @@
       host.className='top-roster';
     }
 
-    // Select a safe anchor (priority: .rosterAnchor → .sep → heading)
-    let anchor = container.querySelector('.rosterAnchor')
-              || container.querySelector('.sep')
-              || container.querySelector('h1, h2, h3');
-
-    // Only use insertBefore if anchor is actually a child of container
-    if(anchor && anchor.parentNode === container){
-      container.insertBefore(host, anchor);
-    } else {
-      // Otherwise append to container
+    // If using rosterBar, append directly
+    if(container.id === 'rosterBar'){
       container.appendChild(host);
+    } else {
+      // Old behavior for fallback container
+      let anchor = container.querySelector('.rosterAnchor')
+                || container.querySelector('.sep')
+                || container.querySelector('h1, h2, h3');
+
+      if(anchor && anchor.parentNode === container){
+        container.insertBefore(host, anchor);
+      } else {
+        container.appendChild(host);
+      }
     }
 
     return host;

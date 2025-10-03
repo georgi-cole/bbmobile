@@ -1,5 +1,6 @@
 // MODULE: tv.js
 // Dynamic content resizing inside TV viewport using ResizeObserver
+// Added: fitInViewport helper for social/event cards with debounced resize
 
 (function(g){
   'use strict';
@@ -8,6 +9,7 @@
 
   let resizeObserver = null;
   let liveBadgeVisible = false;
+  let resizeDebounceTimer = null;
 
   // Initialize fit/scale engine for TV viewport
   function initFit(rootEl){
@@ -65,6 +67,29 @@
     });
   }
 
+  // Fit card in viewport helper (for social/event cards)
+  function fitInViewport(el, viewportSel){
+    if(!el) return;
+    
+    const viewport = viewportSel 
+      ? document.querySelector(viewportSel)
+      : document.querySelector('.tvViewport');
+    
+    if(!viewport) return;
+    
+    const viewportRect = viewport.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    
+    const scaleX = viewportRect.width / elRect.width;
+    const scaleY = viewportRect.height / elRect.height;
+    const scale = Math.min(scaleX, scaleY, 1, 0.82); // Min scale 0.82
+    
+    if(scale < 0.98){
+      el.style.transformOrigin = 'center center';
+      el.style.transform = `scale(${scale})`;
+    }
+  }
+
   // Manually trigger resize check
   function resize(){
     const viewport = document.querySelector('.tvViewport');
@@ -73,7 +98,7 @@
     }
   }
 
-  // Set LIVE badge visibility
+  // Set LIVE badge visibility (only show during livevote phase)
   function setLiveBadge(visible){
     liveBadgeVisible = visible;
     const badge = document.getElementById('liveBadge');
@@ -82,11 +107,29 @@
     }
   }
 
+  // Debounced resize handler for orientation changes
+  function setupResizeHandler(){
+    const debouncedResize = () => {
+      if(resizeDebounceTimer) clearTimeout(resizeDebounceTimer);
+      resizeDebounceTimer = setTimeout(() => {
+        resize();
+        // Re-fit any visible cards
+        document.querySelectorAll('.revealCard, .decisionCard').forEach(el => {
+          if(el.offsetParent !== null) fitInViewport(el);
+        });
+      }, 150);
+    };
+    
+    window.addEventListener('resize', debouncedResize);
+    window.addEventListener('orientationchange', debouncedResize);
+  }
+
   // Initialize on DOM ready
   function init(){
     const tv = document.getElementById('tv');
     if(tv){
       initFit(tv);
+      setupResizeHandler();
     }
   }
 
@@ -101,6 +144,8 @@
   TV.initFit = initFit;
   TV.resize = resize;
   TV.setLiveBadge = setLiveBadge;
+  TV.fitInViewport = fitInViewport;
+  TV.fitCard = fitInViewport; // Alias
   g.TV = TV;
 
 })(window);
