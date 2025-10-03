@@ -2085,3 +2085,46 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   .rulesPanel{ padding:12px 12px 10px; border-radius:14px; }
   .rulesTitle{ font-size:1.02rem; }
 }
+
+/* === TV Viewport-Safe Roster Rendering ====================================== */
+/* Ensure roster renders properly inside .tvViewport without overflow */
+.tvViewport #topRoster,
+.tvViewport .top-roster{
+  width: 100%;
+  max-width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.tvViewport .top-roster-row{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+.tvViewport .top-roster-tile{
+  flex: 0 0 auto;
+  max-width: 96px;
+  min-width: 48px;
+}
+
+/* Ensure roster items wrap and stay visible on mobile */
+@media (max-width: 768px){
+  .tvViewport #topRoster,
+  .tvViewport .top-roster{
+    padding: 6px;
+  }
+  
+  .tvViewport .top-roster-row{
+    gap: 6px;
+  }
+  
+  .tvViewport .top-roster-tile{
+    max-width: 84px;
+    min-width: 44px;
+  }
+}

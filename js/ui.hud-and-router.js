@@ -96,13 +96,36 @@
   }
   function ensureTopRosterHost(){
     let host=document.getElementById('topRoster');
-    if(host) return host;
-    const action=document.getElementById('actionCard'); if(!action) return null;
-    const tv=document.getElementById('tv'); if(!tv) return null;
-    host=document.createElement('div');
-    host.id='topRoster';
-    host.className='top-roster';
-    action.insertBefore(host, tv);
+    // Reuse host if already connected
+    if(host && host.isConnected) return host;
+
+    // Choose container with priority
+    let container = document.querySelector('.tvViewport .fitCanvas')
+                 || document.querySelector('.tvViewport')
+                 || document.getElementById('tv')
+                 || document.getElementById('actionCard');
+    if(!container) return null;
+
+    // Create host if missing
+    if(!host){
+      host=document.createElement('div');
+      host.id='topRoster';
+      host.className='top-roster';
+    }
+
+    // Select a safe anchor (priority: .rosterAnchor → .sep → heading)
+    let anchor = container.querySelector('.rosterAnchor')
+              || container.querySelector('.sep')
+              || container.querySelector('h1, h2, h3');
+
+    // Only use insertBefore if anchor is actually a child of container
+    if(anchor && anchor.parentNode === container){
+      container.insertBefore(host, anchor);
+    } else {
+      // Otherwise append to container
+      container.appendChild(host);
+    }
+
     return host;
   }
   function computeTopTileSize(host, count){
@@ -244,23 +267,24 @@ header.innerHTML = `
 
   // ------------ Top Roster ------------
   function renderTopRoster(){
-    const game=g.game; if(!game) return;
-    const cfg = ensureCfg();
+    try{
+      const game=g.game; if(!game) return;
+      const cfg = ensureCfg();
 
-    const host=ensureTopRosterHost(); if(!host) return;
-    const show = cfg.showTopRoster !== false;
-    host.style.display = show ? '' : 'none';
-    if(!show){ host.innerHTML=''; return; }
+      const host=ensureTopRosterHost(); if(!host) return;
+      const show = cfg.showTopRoster !== false;
+      host.style.display = show ? '' : 'none';
+      if(!show){ host.innerHTML=''; return; }
 
-    host.innerHTML='';
-    const n=(game.players||[]).length;
-    const tileSize=computeTopTileSize(host, n);
-    host.style.setProperty('--topTile', tileSize+'px');
+      host.innerHTML='';
+      const n=(game.players||[]).length;
+      const tileSize=computeTopTileSize(host, n);
+      host.style.setProperty('--topTile', tileSize+'px');
 
-    const row=document.createElement('div'); row.className='top-roster-row';
-    host.appendChild(row);
+      const row=document.createElement('div'); row.className='top-roster-row';
+      host.appendChild(row);
 
-    (game.players||[]).forEach(p=>{
+      (game.players||[]).forEach(p=>{
       const tile=document.createElement('div'); tile.className='top-roster-tile';
       if(p.evicted) tile.classList.add('evicted');
       if(game.__returnFlashId === p.id) tile.classList.add('return-flash');
@@ -296,13 +320,16 @@ header.innerHTML = `
       row.appendChild(tile);
     });
 
-    if(!renderTopRoster.__wiredResize){
-      renderTopRoster.__wiredResize=true;
-      let rafId=null;
-      window.addEventListener('resize', ()=>{
-        if(rafId) cancelAnimationFrame(rafId);
-        rafId=requestAnimationFrame(()=>{ try{ renderTopRoster(); }catch{} });
-      });
+      if(!renderTopRoster.__wiredResize){
+        renderTopRoster.__wiredResize=true;
+        let rafId=null;
+        window.addEventListener('resize', ()=>{
+          if(rafId) cancelAnimationFrame(rafId);
+          rafId=requestAnimationFrame(()=>{ try{ renderTopRoster(); }catch{} });
+        });
+      }
+    }catch(err){
+      console.error('renderTopRoster error:', err);
     }
   }
   g.renderTopRoster = renderTopRoster;
