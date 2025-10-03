@@ -73,6 +73,7 @@
     tripleChance: 7,
     returnChance: 10,
     selfEvictChance: 1,
+    enablePublicFav: false,
     tOpening: 90,
     tIntermission: 4,
     tHOH: 40,
