@@ -163,7 +163,27 @@ button:focus-visible,.btn:focus-visible{ outline:2px solid var(--accent-2); outl
   position:sticky; top:0; z-index:40; box-shadow:0 8px 24px -16px rgba(0,0,0,.6);
 }
 
+/* Roster Bar (above TV) */
+#rosterBar{
+  background:linear-gradient(180deg, rgba(18,29,42,.88), rgba(13,22,35,.92));
+  border:1px solid #1f3248; border-radius:12px 12px 0 0;
+  padding:10px 12px 8px; margin-bottom:-2px; position:relative; z-index:2;
+  box-shadow:0 2px 12px -6px rgba(0,0,0,.6) inset;
+}
+#rosterBar .top-roster-row{
+  display:flex; gap:8px; align-items:flex-start; justify-content:flex-start;
+  flex-wrap:wrap; padding:0;
+}
+@media (max-width: 640px){
+  #rosterBar .top-roster-row{
+    flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  #rosterBar .top-roster-row::-webkit-scrollbar{ display:none; }
+}
+
 /* 07. TV / SHOW PANEL (safe areas) ----------------------------------------- */
+.tvFrame{ position:relative; }
 .tv{
   position:relative; height:260px;
   background:radial-gradient(circle at 32% 30%, #23364d, #0e1730 65%);
@@ -178,6 +198,31 @@ button:focus-visible,.btn:focus-visible{ outline:2px solid var(--accent-2); outl
 }
 .tvTitle{ font-weight:600; letter-spacing:.6px; font-size:.75rem; color:#c7d7eb; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tvTimer{ font-size:.95rem; font-weight:600; color:#e2edf8; white-space:nowrap; }
+
+.tvViewport{
+  position:relative; flex:1 1 auto; overflow:hidden;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+
+/* LIVE Badge (inside TV viewport, bottom-right) */
+.liveBadge{
+  position:absolute; bottom:12px; right:12px; z-index:15;
+  padding:6px 16px 7px; border-radius:8px; font-size:.72rem; font-weight:700;
+  letter-spacing:1.2px; text-transform:uppercase; color:#fff;
+  background:linear-gradient(135deg, #ff3838 0%, #ff6b6b 50%, #ff3838 100%);
+  box-shadow:0 0 0 2px rgba(255,56,56,.3), 0 4px 12px -4px rgba(255,56,56,.8), 
+             inset 0 1px 2px rgba(255,255,255,.35), inset 0 -1px 2px rgba(0,0,0,.25);
+  animation:livePulse 2.4s ease-in-out infinite;
+  text-shadow:0 1px 2px rgba(0,0,0,.4);
+  pointer-events:none;
+}
+@keyframes livePulse{
+  0%, 100%{ box-shadow:0 0 0 2px rgba(255,56,56,.3), 0 4px 12px -4px rgba(255,56,56,.8), 
+                       inset 0 1px 2px rgba(255,255,255,.35), inset 0 -1px 2px rgba(0,0,0,.25); }
+  50%{ box-shadow:0 0 0 2px rgba(255,56,56,.5), 0 4px 18px -2px rgba(255,56,56,1), 
+                   0 0 24px -6px rgba(255,56,56,.9),
+                   inset 0 1px 2px rgba(255,255,255,.45), inset 0 -1px 2px rgba(0,0,0,.25); }
+}
 
 #tvOverlay{
   position:absolute; z-index:12;
@@ -515,12 +560,52 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   .top-roster-row{ justify-content:center; }
 }
 
+/* Mobile card constraints */
+@media (max-width:640px){
+  .revealCard{
+    max-width:calc(100vw - 24px);
+    max-height:calc(100vh - 160px);
+    padding:14px 16px 16px;
+    font-size:.72rem;
+  }
+  .revealCard h3{ font-size:.95rem; }
+  
+  /* Decision cards in social phase */
+  .decisionCard{
+    max-width:calc(100vw - 32px) !important;
+    padding:12px 14px 14px !important;
+  }
+}
+
 /* 20. ANIMATIONS ------------------------------------------------------------ */
 @keyframes fadeIn{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:translateY(0);} }
 @keyframes popIn{ 0%{ opacity:0; transform:scale(.85);} 60%{ opacity:1; transform:scale(1.03);} 100%{ opacity:1; transform:scale(1);} }
 @keyframes cardFloatIn{ 0%{ opacity:0; transform:translateY(24px) scale(.92) rotateX(10deg);} 55%{ opacity:1; transform:translateY(-4px) scale(1.01) rotateX(0deg);} 100%{ opacity:1; transform:translateY(0) scale(1);} }
 @keyframes cardBreathe{ 0%,100%{ transform:translateY(0) scale(1);} 50%{ transform:translateY(-3px) scale(1.012);} }
 @keyframes cardAvatarIn{ 0%{ opacity:0; transform:translateY(14px) scale(.92);} 70%{ opacity:1; transform:translateY(-3px) scale(1.02);} 100%{ opacity:1; transform:translateY(0) scale(1);} }
+
+/* Crown pulse animation for competition winners */
+.crownPulse{
+  animation:crownPulse 1.6s ease-in-out infinite;
+}
+@keyframes crownPulse{
+  0%, 100%{ transform:scale(1); filter:drop-shadow(0 0 4px rgba(255,220,120,.6)); }
+  50%{ transform:scale(1.15); filter:drop-shadow(0 0 12px rgba(255,220,120,1)); }
+}
+
+/* Intro card slide animations */
+@keyframes slideIn{
+  0%{ opacity:0; transform:translateY(40px) scale(.9); }
+  100%{ opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes slideOut{
+  0%{ opacity:1; transform:translateY(0) scale(1); }
+  100%{ opacity:0; transform:translateY(-40px) scale(.9); }
+}
+
+/* Social event color classes */
+.soc-pos, .log .soc-pos{ color:#6ff5a4 !important; }
+.soc-neg, .log .soc-neg{ color:#ff9f5c !important; }
 
 /* ============================================================================
    BIG BROTHER GAME — REFACTORED STYLES (compact)

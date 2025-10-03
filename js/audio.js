@@ -22,6 +22,8 @@
   const PHASE_TO_TRACK = {
     opening: 'intro.mp3',
     intermission: null,
+    social: 'social.mp3',
+    social_intermission: 'social.mp3',
     hoh: 'competition.mp3',
     hoh_comp: 'competition.mp3',
     competition: 'competition.mp3',
@@ -47,6 +49,7 @@
     const k = String(phase||'').toLowerCase();
     if (k in PHASE_TO_TRACK) return PHASE_TO_TRACK[k];
     if (k.includes('open')) return 'intro.mp3';
+    if (k.includes('social')) return 'social.mp3';
     if (k.includes('hoh') || k.includes('comp')) return 'competition.mp3';
     if (k.includes('nom')) return 'nominations.mp3';
     if (k.includes('veto')) return 'veto.mp3';
@@ -110,6 +113,21 @@
     audio.src = full;
     audio.loop = true;
     audio.currentTime = 0;
+
+    // Special handling for social.mp3: seek to 13s
+    if (/social\.mp3$/i.test(file)) {
+      const seekToThirteen = () => {
+        try {
+          if (audio.duration >= 13) {
+            audio.currentTime = 13;
+          }
+        } catch (e) {
+          console.warn('[audio] seek to 13s failed:', e);
+        }
+        audio.removeEventListener('loadedmetadata', seekToThirteen);
+      };
+      audio.addEventListener('loadedmetadata', seekToThirteen, { once: true });
+    }
 
     try {
       await audio.play();

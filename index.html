@@ -57,6 +57,8 @@
   <!-- Show / Center -->
   <div class="card" id="actionCard">
     <h1>Houseguests</h1>
+    <!-- Roster Bar (above TV) -->
+    <div id="rosterBar"></div>
     <div class="tvFrame">
       <div class="tvBezel">
         <div class="tv" id="tv">
@@ -68,11 +70,11 @@
             <div id="tvNow" class="tvNow">Welcome to the season.</div>
             <div id="tvOverlay" class="tvOverlay"></div>
             <canvas id="confetti"></canvas>
+            <!-- Live badge for voting phases (INSIDE viewport) -->
+            <div class="liveBadge" id="liveBadge" aria-live="polite" aria-label="Live voting in progress" style="display:none;">LIVE</div>
           </div>
         </div>
       </div>
-      <!-- Live badge for voting phases -->
-      <div class="liveBadge" id="liveBadge" aria-live="polite" style="display:none;">LIVE</div>
     </div>
     <div class="sep"></div>
     <div id="panel"></div>
@@ -272,6 +274,9 @@
 
 <!-- Custom intro/outro video hooks (must load after end-credits) -->
 <script defer src="js/intro-outro-video.js?v=4"></script>
+
+<!-- Debug tools for competition fairness testing -->
+<script defer src="js/debug-tools.js"></script>
 
 <!-- Single Skip + roster placement hover (no external deps) -->
 <script>

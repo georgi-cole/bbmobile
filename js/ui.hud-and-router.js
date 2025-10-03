@@ -99,11 +99,16 @@
     // Reuse host if already connected
     if(host && host.isConnected) return host;
 
-    // Choose container with priority
-    let container = document.querySelector('.tvViewport .fitCanvas')
+    // Priority 1: Use #rosterBar if it exists (above TV)
+    let container = document.getElementById('rosterBar');
+    
+    // Fallback: old behavior (inside TV viewport)
+    if(!container){
+      container = document.querySelector('.tvViewport .fitCanvas')
                  || document.querySelector('.tvViewport')
                  || document.getElementById('tv')
                  || document.getElementById('actionCard');
+    }
     if(!container) return null;
 
     // Create host if missing
@@ -113,17 +118,20 @@
       host.className='top-roster';
     }
 
-    // Select a safe anchor (priority: .rosterAnchor → .sep → heading)
-    let anchor = container.querySelector('.rosterAnchor')
-              || container.querySelector('.sep')
-              || container.querySelector('h1, h2, h3');
-
-    // Only use insertBefore if anchor is actually a child of container
-    if(anchor && anchor.parentNode === container){
-      container.insertBefore(host, anchor);
-    } else {
-      // Otherwise append to container
+    // If using rosterBar, append directly
+    if(container.id === 'rosterBar'){
       container.appendChild(host);
+    } else {
+      // Old behavior for fallback container
+      let anchor = container.querySelector('.rosterAnchor')
+                || container.querySelector('.sep')
+                || container.querySelector('h1, h2, h3');
+
+      if(anchor && anchor.parentNode === container){
+        container.insertBefore(host, anchor);
+      } else {
+        container.appendChild(host);
+      }
     }
 
     return host;
@@ -531,6 +539,8 @@ header.innerHTML = `
     return card;
   }
   function showDualProfileCards(p1,p2,durMs){
+    const isMobile = window.innerWidth <= 640;
+    
     const deck=(function(){
       let d=document.getElementById('introDeck');
       if(d) return d;
@@ -541,6 +551,42 @@ header.innerHTML = `
       return d;
     })();
     if(!deck) return null;
+    
+    // Mobile: sequential single cards
+    if(isMobile){
+      const perCard = Math.floor(durMs / 2); // Split duration for 2 cards
+      const cards = [p1, p2].filter(p => p);
+      const timeouts = [];
+      
+      cards.forEach((p, idx) => {
+        const id = setTimeout(() => {
+          if(!deck) return;
+          deck.innerHTML = '';
+          const card = buildProfileCard(p);
+          deck.appendChild(card);
+          
+          // Apply fitInViewport if available
+          setTimeout(() => {
+            if(typeof g.TV?.fitInViewport === 'function'){
+              g.TV.fitInViewport(card);
+            }
+          }, 100);
+          
+          const holdDelay = Math.max(0, (perCard/1000) - 0.65);
+          card.style.animation = 'slideIn .55s ease forwards, slideOut .6s ease-in forwards ' + holdDelay + 's';
+        }, idx * perCard);
+        timeouts.push(id);
+      });
+      
+      // Clear deck after all cards
+      const clearId = setTimeout(() => { if(deck) deck.innerHTML = ''; }, durMs);
+      timeouts.push(clearId);
+      
+      // Return first timeout for skip compatibility
+      return timeouts[0];
+    }
+    
+    // Desktop: dual cards (original behavior)
     deck.innerHTML='';
     const c1=p1?buildProfileCard(p1):null;
     const c2=p2?buildProfileCard(p2):null;

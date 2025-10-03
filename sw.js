@@ -1,6 +1,6 @@
 // Service Worker with audio pre-cache (no YouTube)
 // NOTE: bump CACHE_NAME when core assets list changes.
-const CACHE_NAME = 'bb-pwa-v-audio-files-2';
+const CACHE_NAME = 'bb-pwa-v-mobile-ux-overhaul-3';
 
 // Make sure these filenames match your repository structure.
 // Default audio folder is /audio as in your screenshot.
@@ -14,8 +14,10 @@ const CORE = [
   './audio/intro.mp3',
   './audio/competition.mp3',
   './audio/nominations.mp3',
+  './audio/social.mp3',
   './audio/twist.mp3',
   './audio/eviction.mp3',
+  './audio/veto.mp3',
   './audio/live%20vote.mp3',
   './audio/final%20jury%20vote.mp3',
   './audio/victory.mp3'
