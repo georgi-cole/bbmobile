@@ -126,7 +126,47 @@
   }
   global.socialApplyInteraction = applyInteraction;
 
-  // Expanded quick actions
+  // Relationship state mapping (numeric affinity to labels)
+  function getRelationshipState(affinity){
+    const a = affinity ?? 0;
+    if(a >= 0.65) return 'Romance/Bromance';
+    if(a >= 0.48) return 'Ride or Die';
+    if(a >= 0.28) return 'Allies';
+    if(a >= 0.12) return 'Friendly';
+    if(a >= -0.12) return 'Neutral';
+    if(a >= -0.28) return 'Strained';
+    if(a >= -0.48) return 'Enemies';
+    return 'Arch Enemies';
+  }
+
+  // Track relationship state transitions
+  function checkStateTransition(actor, target){
+    if(!actor || !target) return;
+    const g = global.game; if(!g) return;
+    
+    const key = `${actor.id}-${target.id}`;
+    if(!g.__relationshipStates) g.__relationshipStates = new Map();
+    
+    const affinity = actor.affinity?.[target.id] ?? 0;
+    const newState = getRelationshipState(affinity);
+    const oldState = g.__relationshipStates.get(key);
+    
+    if(oldState !== newState){
+      g.__relationshipStates.set(key, newState);
+      
+      // Log significant state transitions once
+      if((newState === 'Allies' && oldState !== 'Allies') ||
+         (newState === 'Ride or Die') ||
+         (newState === 'Romance/Bromance') ||
+         (newState === 'Enemies' && oldState !== 'Enemies') ||
+         (newState === 'Arch Enemies')){
+        const style = (newState.includes('Enemies') || newState === 'Strained') ? 'soc-neg' : 'soc-pos';
+        global.addLog?.(`<span class="${style}">${actor.name} → ${target.name}: ${newState}</span>`, style);
+      }
+    }
+  }
+
+  // Expanded quick actions with new types
   function applyAction(actorId, targetId, action){
     ensureSocialState();
     const g=global.game; if(!g) return;
@@ -135,10 +175,13 @@
 
     const ALLY_T = ensure(global.ALLY_T, 0.28);
 
-    // Repetition tracking for Gift backfire
+    // Repetition tracking
     const aKey = actionKey(actorId, targetId, action);
     const used = g.__actionCounts.get(aKey) || 0;
     g.__actionCounts.set(aKey, used+1);
+
+    // Repetition penalty: >2 consecutive same action
+    const repPenalty = used >= 2 && Math.random() < 0.51;
 
     if(action==='alliance'){
       const bumpA = 0.14 + Math.random()*0.08;
@@ -147,29 +190,86 @@
       target.affinity[actor.id] = (target.affinity?.[actor.id]??0) + bumpB;
       if(actor.affinity[target.id] < ALLY_T) actor.affinity[target.id] = ALLY_T + 0.02*Math.random();
       if(target.affinity[actor.id] < ALLY_T-0.05) target.affinity[actor.id] = (ALLY_T-0.05) + 0.02*Math.random();
-      global.addLog?.(`You and ${target.name} discussed an alliance.`, 'ok');
+      global.addLog?.(`<span class="soc-pos">You and ${target.name} discussed an alliance.</span>`, 'ok');
     } else if(action==='apologize'){
       const base = (actor.affinity?.[target.id]??0) < 0 ? 0.14 : 0.08;
       const bump = base + Math.random()*0.06;
       actor.affinity[target.id] = (actor.affinity?.[target.id]??0) + bump*0.9;
       target.affinity[actor.id] = (target.affinity?.[actor.id]??0) + bump;
-      global.addLog?.(`You apologized to ${target.name}.`, 'ok');
+      global.addLog?.(`<span class="soc-pos">You apologized to ${target.name}.</span>`, 'ok');
     } else if(action==='gift'){
-      const backfire = used >= 2 && Math.random()<0.55;
-      if(backfire){
+      if(repPenalty){
         applyInteraction(actorId, targetId, 'negative');
-        logHuman('negative', actor.name, target.name, `${actor.name} overdid it — ${target.name} felt the gesture was insincere.`);
+        global.addLog?.(`<span class="soc-neg">${actor.name} overdid it — ${target.name} felt the gesture was insincere.</span>`, 'danger');
       } else {
         applyInteraction(actorId, targetId, 'positive');
-        global.addLog?.(`You gave a small gift to ${target.name}.`, 'ok');
+        global.addLog?.(`<span class="soc-pos">You gave a small gift to ${target.name}.</span>`, 'ok');
       }
+    } else if(action==='flirt'){
+      // Flirt action: positive boost, check for romance jealousy
+      const bump = 0.12 + Math.random()*0.08;
+      actor.affinity[target.id] = (actor.affinity?.[target.id]??0) + bump;
+      target.affinity[actor.id] = (target.affinity?.[actor.id]??0) + bump*0.8;
+      global.addLog?.(`<span class="soc-pos">You flirted with ${target.name}.</span>`, 'ok');
+      
+      // Jealousy mechanic: if actor has high affinity with someone else
+      const alive = global.alivePlayers?.() || [];
+      for(const other of alive){
+        if(other.id === target.id || other.id === actor.id) continue;
+        const otherAff = actor.affinity?.[other.id] ?? 0;
+        if(otherAff >= 0.55 && Math.random() < 0.4){
+          // Jealousy penalty
+          actor.affinity[other.id] = otherAff - (0.08 + Math.random()*0.06);
+          global.addLog?.(`<span class="soc-neg">${other.name} seems jealous of your attention to ${target.name}.</span>`, 'warn');
+        }
+      }
+    } else if(action==='prank'){
+      if(repPenalty){
+        applyInteraction(actorId, targetId, 'negative');
+        global.addLog?.(`<span class="soc-neg">Your prank on ${target.name} went too far.</span>`, 'danger');
+      } else {
+        const light = Math.random() < 0.6;
+        if(light){
+          const bump = 0.06 + Math.random()*0.04;
+          actor.affinity[target.id] = (actor.affinity?.[target.id]??0) + bump;
+          target.affinity[actor.id] = (target.affinity?.[actor.id]??0) + bump*0.7;
+          global.addLog?.(`<span class="soc-pos">You pulled a lighthearted prank on ${target.name}.</span>`, 'ok');
+        } else {
+          applyInteraction(actorId, targetId, 'negative');
+          global.addLog?.(`<span class="soc-neg">Your prank on ${target.name} backfired.</span>`, 'danger');
+        }
+      }
+    } else if(action==='strategychat'){
+      const bump = 0.10 + Math.random()*0.06;
+      actor.affinity[target.id] = (actor.affinity?.[target.id]??0) + bump;
+      target.affinity[actor.id] = (target.affinity?.[actor.id]??0) + bump*0.85;
+      global.addLog?.(`<span class="soc-pos">You had a strategy chat with ${target.name}.</span>`, 'ok');
+    } else if(action==='workout'){
+      const bump = 0.08 + Math.random()*0.05;
+      actor.affinity[target.id] = (actor.affinity?.[target.id]??0) + bump;
+      target.affinity[actor.id] = (target.affinity?.[actor.id]??0) + bump;
+      global.addLog?.(`<span class="soc-pos">You worked out with ${target.name}.</span>`, 'ok');
+    } else if(action==='cook'){
+      const bump = 0.09 + Math.random()*0.06;
+      actor.affinity[target.id] = (actor.affinity?.[target.id]??0) + bump;
+      target.affinity[actor.id] = (target.affinity?.[actor.id]??0) + bump*0.9;
+      global.addLog?.(`<span class="soc-pos">You cooked a meal with ${target.name}.</span>`, 'ok');
+    } else if(action==='latenighttalk'){
+      const bump = 0.11 + Math.random()*0.07;
+      actor.affinity[target.id] = (actor.affinity?.[target.id]??0) + bump;
+      target.affinity[actor.id] = (target.affinity?.[actor.id]??0) + bump*0.85;
+      global.addLog?.(`<span class="soc-pos">You had a late night talk with ${target.name}.</span>`, 'ok');
     } else if(action==='taunt'){
       applyInteraction(actorId, targetId, 'negative');
-      global.addLog?.(`You taunted ${target.name}.`, 'danger');
+      global.addLog?.(`<span class="soc-neg">You taunted ${target.name}.</span>`, 'danger');
     } else if(action==='confront'){
       applyInteraction(actorId, targetId, 'negative');
-      global.addLog?.(`You confronted ${target.name}.`, 'danger');
+      global.addLog?.(`<span class="soc-neg">You confronted ${target.name}.</span>`, 'danger');
     }
+
+    // Check for state transitions
+    checkStateTransition(actor, target);
+    checkStateTransition(target, actor);
 
     global.updateHud?.();
   }
@@ -414,10 +514,23 @@
         const opt=document.createElement('option'); opt.value=p.id; opt.textContent=p.name; sel.appendChild(opt);
       });
 
-      // Action selector (all actions in dropdown)
+      // Action selector with expanded interactions
       const act=document.createElement('select');
-      ['alliance','apologize','gift','taunt','confront'].forEach(k=>{
-        const o=document.createElement('option'); o.value=k; o.textContent=k[0].toUpperCase()+k.slice(1); act.appendChild(o);
+      const actions = [
+        {val:'alliance', label:'Alliance'},
+        {val:'apologize', label:'Apologize'},
+        {val:'gift', label:'Gift'},
+        {val:'flirt', label:'Flirt'},
+        {val:'prank', label:'Prank'},
+        {val:'strategychat', label:'Strategy Chat'},
+        {val:'workout', label:'Workout Together'},
+        {val:'cook', label:'Cook Meal'},
+        {val:'latenighttalk', label:'Late Night Talk'},
+        {val:'taunt', label:'Taunt'},
+        {val:'confront', label:'Confront'}
+      ];
+      actions.forEach(({val, label})=>{
+        const o=document.createElement('option'); o.value=val; o.textContent=label; act.appendChild(o);
       });
 
       const bDo=document.createElement('button'); bDo.className='btn small'; bDo.textContent='Do Action';
@@ -455,6 +568,76 @@
     };
   }
 
+  // Generate end-of-social summary card
+  function generateSocialSummary(){
+    const g=global.game; if(!g) return;
+    const alive = global.alivePlayers?.() || [];
+    if(alive.length < 2) return;
+
+    const summary = [];
+    
+    // Check for new major alliances (high affinity pairs)
+    const alliancePairs = [];
+    for(let i=0; i<alive.length; i++){
+      for(let j=i+1; j<alive.length; j++){
+        const p1 = alive[i], p2 = alive[j];
+        const aff1 = p1.affinity?.[p2.id] ?? 0;
+        const aff2 = p2.affinity?.[p1.id] ?? 0;
+        const avg = (aff1 + aff2) / 2;
+        if(avg >= 0.35){
+          alliancePairs.push({p1, p2, strength: avg});
+        }
+      }
+    }
+    if(alliancePairs.length > 0){
+      alliancePairs.sort((a,b) => b.strength - a.strength);
+      const top = alliancePairs[0];
+      summary.push(`Strong alliance: ${top.p1.name} & ${top.p2.name}`);
+    }
+
+    // Check for rivalries (low affinity)
+    const rivalries = [];
+    for(let i=0; i<alive.length; i++){
+      for(let j=i+1; j<alive.length; j++){
+        const p1 = alive[i], p2 = alive[j];
+        const aff1 = p1.affinity?.[p2.id] ?? 0;
+        const aff2 = p2.affinity?.[p1.id] ?? 0;
+        const avg = (aff1 + aff2) / 2;
+        if(avg <= -0.30){
+          rivalries.push({p1, p2, intensity: -avg});
+        }
+      }
+    }
+    if(rivalries.length > 0){
+      rivalries.sort((a,b) => b.intensity - a.intensity);
+      const top = rivalries[0];
+      summary.push(`Rivalry emerged: ${top.p1.name} vs ${top.p2.name}`);
+    }
+
+    // Check for romance (very high affinity)
+    const romances = [];
+    for(let i=0; i<alive.length; i++){
+      for(let j=i+1; j<alive.length; j++){
+        const p1 = alive[i], p2 = alive[j];
+        const aff1 = p1.affinity?.[p2.id] ?? 0;
+        const aff2 = p2.affinity?.[p1.id] ?? 0;
+        const avg = (aff1 + aff2) / 2;
+        if(avg >= 0.60){
+          romances.push({p1, p2});
+        }
+      }
+    }
+    if(romances.length > 0){
+      const r = romances[0];
+      summary.push(`Romance/Bromance: ${r.p1.name} & ${r.p2.name}`);
+    }
+
+    // Show summary card if we have content
+    if(summary.length > 0 && typeof global.showCard === 'function'){
+      global.showCard('Social Update', summary, 'social', 4500, true);
+    }
+  }
+
   function endSocialPhaseCleanup(){
     const g=global.game; if(!g) return;
     g.__decisionQueue = [];
@@ -472,12 +655,22 @@
     g.__socialLogBudget = 6;    // reset ambient budget
 
     global.tv?.say?.('Social Intermission');
+    
+    // Trigger social music
+    try{ global.phaseMusic?.('social'); }catch{}
 
     // Ensure prior reveal cards have finished before starting prompts
     try{ await global.cardQueueWaitIdle?.(); }catch{}
 
-    const onDone = ()=>{
-      try{ endSocialPhaseCleanup(); }catch(e){ console.error(e); }
+    const onDone = async ()=>{
+      try{ 
+        // Generate summary before cleanup
+        await global.cardQueueWaitIdle?.();
+        generateSocialSummary();
+        await global.cardQueueWaitIdle?.();
+        endSocialPhaseCleanup(); 
+      }catch(e){ console.error(e); }
+      
       if(typeof callback === 'function'){
         try{ callback(); }catch(e){ console.error(e); }
       } else {
