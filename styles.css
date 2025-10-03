@@ -678,9 +678,8 @@ img{ max-width:100%; display:block; }
   position:relative;
   flex:1;
   overflow:hidden;
-  padding:var(--tv-safe-x);
-  padding-top:calc(var(--tv-safe-top) - 56px);
-  padding-bottom:var(--tv-safe-bottom);
+  display:flex;
+  flex-direction:column;
 }
 
 .tvHead{
@@ -693,12 +692,12 @@ img{ max-width:100%; display:block; }
 
 #tvOverlay{
   position:absolute; z-index:12;
-  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  inset:0;
   pointer-events:auto; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
 }
 #confetti{
   position:absolute; z-index:11;
-  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  inset:0;
   pointer-events:none; mix-blend-mode:screen; opacity:.95;
 }
 .tvNow{
