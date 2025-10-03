@@ -6,27 +6,94 @@
 
   // Registry of all available minigames
   const REGISTRY = {
-    // Fully implemented
+    // Phase 1: Fully Implemented Mobile-First Games
+    countHouse: {
+      name: 'Count House',
+      description: 'Count objects quickly and accurately',
+      implemented: true,
+      module: 'count-house.js'
+    },
+    reactionRoyale: {
+      name: 'Reaction Royale',
+      description: 'Multi-round reaction challenge',
+      implemented: true,
+      module: 'reaction-royale.js'
+    },
+    triviaPulse: {
+      name: 'Trivia Pulse',
+      description: 'Time-pressured Big Brother trivia',
+      implemented: true,
+      module: 'trivia-pulse.js'
+    },
+    
+    // Legacy: Still available but not preferred
     quickTap: {
       name: 'Quick Tap Race',
       description: 'Tap as many times as possible',
       implemented: true,
+      retired: false,
       module: 'quick-tap.js'
     },
     reactionTimer: {
       name: 'Reaction Timer',
       description: 'React as fast as you can',
       implemented: true,
+      retired: false,
       module: 'reaction-timer.js'
     },
     triviaQuiz: {
       name: 'Trivia Quiz',
       description: 'Answer Big Brother trivia',
       implemented: true,
+      retired: false,
       module: 'trivia-quiz.js'
     },
     
-    // Scaffolds (coming soon)
+    // Phase 1: Scaffolds (coming soon)
+    oteviator: {
+      name: 'Oteviator',
+      description: 'Elevator timing challenge',
+      implemented: false,
+      module: 'oteviator.js'
+    },
+    comixSpot: {
+      name: 'Comix Spot',
+      description: 'Spot differences in comic panels',
+      implemented: false,
+      module: 'comix-spot.js'
+    },
+    holdWall: {
+      name: 'Hold Wall',
+      description: 'Endurance wall hold',
+      implemented: false,
+      module: 'hold-wall.js'
+    },
+    slipperyShuttle: {
+      name: 'Slippery Shuttle',
+      description: 'Navigate slippery platforms',
+      implemented: false,
+      module: 'slippery-shuttle.js'
+    },
+    memoryZipline: {
+      name: 'Memory Zipline',
+      description: 'Remember zipline path sequence',
+      implemented: false,
+      module: 'memory-zipline.js'
+    },
+    socialStrings: {
+      name: 'Social Strings',
+      description: 'Connect relationship puzzle',
+      implemented: false,
+      module: 'social-strings.js'
+    },
+    swipeMaze: {
+      name: 'Swipe Maze',
+      description: 'Navigate maze with swipes',
+      implemented: false,
+      module: 'swipe-maze.js'
+    },
+    
+    // Other existing scaffolds
     memoryMatch: {
       name: 'Memory Match',
       description: 'Match pairs of cards',
@@ -106,13 +173,31 @@
     return Object.keys(REGISTRY).filter(key => REGISTRY[key].implemented);
   }
 
-  // Get random minigame (prefer implemented)
+  // Get random minigame (prefer new implemented, avoid retired)
   function getRandom(){
     const implemented = getImplemented();
+    
+    // Filter out retired games if possible
+    const nonRetired = implemented.filter(key => !REGISTRY[key].retired);
+    
+    if(nonRetired.length > 0){
+      // Prefer new Phase 1 games (80% chance)
+      const phase1Games = ['countHouse', 'reactionRoyale', 'triviaPulse'];
+      const availablePhase1 = phase1Games.filter(key => nonRetired.includes(key));
+      
+      if(availablePhase1.length > 0 && Math.random() < 0.8){
+        return availablePhase1[Math.floor(Math.random() * availablePhase1.length)];
+      }
+      
+      return nonRetired[Math.floor(Math.random() * nonRetired.length)];
+    }
+    
+    // Fall back to any implemented (including retired if necessary)
     if(implemented.length > 0){
       return implemented[Math.floor(Math.random() * implemented.length)];
     }
-    // Fall back to any
+    
+    // Last resort: any game
     const all = Object.keys(REGISTRY);
     return all[Math.floor(Math.random() * all.length)];
   }
