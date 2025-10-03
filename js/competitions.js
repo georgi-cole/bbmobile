@@ -82,7 +82,8 @@
     const g=global.game; g.lastCompScores=g.lastCompScores||new Map();
     if(g.lastCompScores.has(id)) return false;
     const final=base*(mult); g.lastCompScores.set(id,final);
-    global.addLog(`${global.safeName(id)} submitted (${label}) ${final.toFixed(2)}.`,'tiny');
+    // Hidden scoring: only log that player completed, not the score
+    global.addLog(`${global.safeName(id)} completed the ${g.phase === 'hoh' ? 'HOH' : 'competition'}.`,'tiny');
     return true;
   }
 
@@ -95,9 +96,41 @@
   }
 
   function logScoreboard(title, scoresMap, ids){
-    const arr=[...scoresMap.entries()].filter(([id])=>ids.includes(id)).map(([id,sc])=>({id,sc})).sort((a,b)=>b.sc-a.sc);
-    global.addLog(`<b>${title} — Scores</b>:`,'ok');
-    arr.forEach((x,i)=>global.addLog(`${i+1}. ${global.safeName(x.id)} — ${x.sc.toFixed(2)}`,'tiny'));
+    // Hidden: don't log full scoreboard anymore
+    // Full results are shown in reveal card
+  }
+  
+  // New: Show top-3 reveal card with crown animation
+  async function showCompetitionReveal(title, scoresMap, ids){
+    const arr=[...scoresMap.entries()]
+      .filter(([id])=>ids.includes(id))
+      .map(([id,sc])=>({id,sc,name:global.safeName(id)}))
+      .sort((a,b)=>b.sc-a.sc);
+    
+    if(arr.length === 0) return;
+    
+    const top3 = arr.slice(0, 3);
+    const lines = top3.map((x,i)=>{
+      const rank = i+1;
+      const crown = rank === 1 ? ' 👑' : '';
+      return `${rank}. ${x.name}${crown} — ${x.sc.toFixed(1)}`;
+    });
+    
+    if(typeof global.showCard === 'function'){
+      await global.showCard(`${title} Results`, lines, 'ok', 5500, true);
+    }
+    
+    // Add crown animation to winner
+    setTimeout(()=>{
+      const winnerName = top3[0].name;
+      document.querySelectorAll('.top-roster-tile').forEach(tile=>{
+        const name = tile.querySelector('.top-tile-name')?.textContent;
+        if(name === winnerName){
+          const crown = tile.querySelector('.badge-crown');
+          if(crown) crown.classList.add('crownPulse');
+        }
+      });
+    }, 500);
   }
 
   function renderCompPanel(panel){
@@ -164,14 +197,31 @@
 
     const alive=global.alivePlayers(); let elig=alive.map(p=>p.id);
     if(alive.length!==4 && g.week>1 && g.lastHOHId) elig=elig.filter(id=>id!==g.lastHOHId);
-    for(const id of elig) if(!g.lastCompScores.has(id)) g.lastCompScores.set(id,5+(global.rng?.()||Math.random())*5);
-    logScoreboard('HOH', g.lastCompScores, elig);
+    
+    // Apply dampening for consecutive winners
+    for(const id of elig){
+      if(!g.lastCompScores.has(id)){
+        let baseScore = 5 + (global.rng?.()||Math.random())*20;
+        const p = global.getP(id);
+        if(p){
+          // Soft dampening if player won last 2+ comps
+          const recentWins = (p.stats?.hohWins || 0) + (p.stats?.vetoWins || 0);
+          if(recentWins >= 2){
+            baseScore *= (0.85 + Math.random() * 0.15); // Slight reduction
+          }
+        }
+        g.lastCompScores.set(id, baseScore);
+      }
+    }
+    
+    // Show top-3 reveal card
+    await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
+    await waitCardsIdle();
 
     const winner=[...g.lastCompScores.entries()].filter(([id])=>elig.includes(id)).sort((a,b)=>b[1]-a[1])[0][0];
     for(const p of g.players) p.hoh=false; g.hohId=winner; g.lastHOHId=winner; const W=global.getP(winner); W.hoh=true; W.stats=W.stats||{}; W.wins=W.wins||{}; W.stats.hohWins=(W.stats.hohWins||0)+1; W.wins.hoh=(W.wins.hoh||0)+1;
 
     global.addLog(`HOH: <span class="accent">${global.safeName(winner)}</span>.`);
-    safeShowCard('HOH Winner',[global.safeName(winner)],'hoh', 5200);
 
     await waitCardsIdle();
 

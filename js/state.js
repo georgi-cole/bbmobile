@@ -81,8 +81,11 @@
   function pushPlayer({name,human=false}){
     const id=(game.players.length?Math.max(...game.players.map(p=>p.id))+1:1);
     const skill=human?0.55:0.35+rng()*0.5;
-    const compBeast=human?0.5:0.3+rng()*0.6; // Per-AI competition strength (hidden)
+    
+    // Enhanced compBeast with archetype adjustments
+    let compBeast = 0.35 + rng()*0.30; // Base range 0.35-0.65
     const persona={ aggr:0.25+rng()*0.7, loyalty:0.25+rng()*0.7, chaos:0.1+rng()*0.5 };
+    
     const avatar=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
     const meta={
       age:21+Math.floor(rng()*29),
@@ -94,6 +97,20 @@
       ethnicity:ETHNICITIES[Math.floor(rng()*ETHNICITIES.length)],
       motto:MOTTOS[Math.floor(rng()*MOTTOS.length)]
     };
+    
+    // Archetype-based compBeast adjustments
+    const trait = meta.trait?.toLowerCase() || '';
+    if(trait.includes('athlete') || trait.includes('physical')) compBeast += 0.15;
+    else if(trait.includes('strategist') || trait.includes('mastermind')) compBeast += 0.05;
+    else if(trait.includes('wildcard') || trait.includes('unpredictable')) compBeast += (rng() - 0.5) * 0.2;
+    else if(trait.includes('slacker') || trait.includes('lazy')) compBeast -= 0.05;
+    
+    // Clamp to 0.2-0.9 range
+    compBeast = Math.max(0.2, Math.min(0.9, compBeast));
+    
+    // For human, use balanced starting value
+    if(human) compBeast = 0.5;
+    
     const wins={hoh:0,veto:0};
     const p={ id,name,human,evicted:false,nominated:false,hoh:false,
       persona,skill,compBeast,affinity:{},stats:{hohWins:0,vetoWins:0},wins,
