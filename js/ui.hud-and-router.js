@@ -539,6 +539,8 @@ header.innerHTML = `
     return card;
   }
   function showDualProfileCards(p1,p2,durMs){
+    const isMobile = window.innerWidth <= 640;
+    
     const deck=(function(){
       let d=document.getElementById('introDeck');
       if(d) return d;
@@ -549,6 +551,42 @@ header.innerHTML = `
       return d;
     })();
     if(!deck) return null;
+    
+    // Mobile: sequential single cards
+    if(isMobile){
+      const perCard = Math.floor(durMs / 2); // Split duration for 2 cards
+      const cards = [p1, p2].filter(p => p);
+      const timeouts = [];
+      
+      cards.forEach((p, idx) => {
+        const id = setTimeout(() => {
+          if(!deck) return;
+          deck.innerHTML = '';
+          const card = buildProfileCard(p);
+          deck.appendChild(card);
+          
+          // Apply fitInViewport if available
+          setTimeout(() => {
+            if(typeof g.TV?.fitInViewport === 'function'){
+              g.TV.fitInViewport(card);
+            }
+          }, 100);
+          
+          const holdDelay = Math.max(0, (perCard/1000) - 0.65);
+          card.style.animation = 'slideIn .55s ease forwards, slideOut .6s ease-in forwards ' + holdDelay + 's';
+        }, idx * perCard);
+        timeouts.push(id);
+      });
+      
+      // Clear deck after all cards
+      const clearId = setTimeout(() => { if(deck) deck.innerHTML = ''; }, durMs);
+      timeouts.push(clearId);
+      
+      // Return first timeout for skip compatibility
+      return timeouts[0];
+    }
+    
+    // Desktop: dual cards (original behavior)
     deck.innerHTML='';
     const c1=p1?buildProfileCard(p1):null;
     const c2=p2?buildProfileCard(p2):null;

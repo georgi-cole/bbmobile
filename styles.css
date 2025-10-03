@@ -593,6 +593,16 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   50%{ transform:scale(1.15); filter:drop-shadow(0 0 12px rgba(255,220,120,1)); }
 }
 
+/* Intro card slide animations */
+@keyframes slideIn{
+  0%{ opacity:0; transform:translateY(40px) scale(.9); }
+  100%{ opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes slideOut{
+  0%{ opacity:1; transform:translateY(0) scale(1); }
+  100%{ opacity:0; transform:translateY(-40px) scale(.9); }
+}
+
 /* Social event color classes */
 .soc-pos, .log .soc-pos{ color:#6ff5a4 !important; }
 .soc-neg, .log .soc-neg{ color:#ff9f5c !important; }
