@@ -417,13 +417,8 @@
     const name = g.safeName?.(winnerId) || (g.getP?.(winnerId)?.name ?? 'Winner');
     dim.querySelector('#cinWinName').textContent = name;
     
-    // Inject Public's Favourite after winner cinematic, before credits
-    // Use the single-run guard inside showPublicFavourite
-    setTimeout(() => {
-      showPublicFavourite(winnerId).catch(e => {
-        console.warn('[finale] showPublicFavourite error:', e);
-      });
-    }, 1500);
+    // Public's Favourite is now called via startEndCreditsSequence wrapper (see end-credits.js)
+    // Removed from here to ensure it runs after cinematic and before credits
   }
 
   // expose
@@ -450,6 +445,36 @@
     }
     showPublicFavourite(winnerId);
   };
+
+  // Enhanced debug hook (development helper) - as specified in problem statement
+  if(!window.__debugRunPublicFavOnce){
+    window.__debugRunPublicFavOnce = function(){
+      try {
+        const g = window.game || window;
+        if(!g) return console.warn('No game');
+        const w = (g.players||[]).find(p=>p.winner)?.id;
+        if(!w) return console.warn('Winner not set');
+        g.cfg = g.cfg || {};
+        g.cfg.enablePublicFav = true;
+        try {
+          localStorage.setItem('bb_config', JSON.stringify(g.cfg));
+        } catch(e) {
+          console.warn('[publicFav] localStorage save failed', e);
+        }
+        if(typeof window.showPublicFavourite === 'function'){
+          console.info('[publicFav] debug manual trigger');
+          // Reset guard to allow re-run
+          if(window.game) window.game.__publicFavouriteCompleted = false;
+          if(g) g.__publicFavouriteCompleted = false;
+          window.showPublicFavourite(w);
+        } else {
+          console.warn('showPublicFavourite missing');
+        }
+      } catch(e){ 
+        console.error('[publicFav] debug error', e);
+      }
+    };
+  }
 
   // apply preseed profile (after reload/new season)
   document.addEventListener('DOMContentLoaded',()=>{ applyPreseedProfile(); }, {once:true});

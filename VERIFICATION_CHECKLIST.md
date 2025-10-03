@@ -320,10 +320,59 @@ Run through full sequence and verify these console messages appear:
 
 ### Confetti + Public Favourite Sequence
 - [ ] Winner announcement appears
-- [ ] Confetti spawns (180 particles, 5000ms)
+- [ ] Confetti spawns (260 particles, 6000ms)
+- [ ] Console shows: `[finale] winner confetti spawn`
 - [ ] Victory music plays
 - [ ] Winner cinematic shows (~8000ms)
-- [ ] Public Favourite starts (if enabled, after 1.5s delay)
+- [ ] Credits button clicked OR startEndCreditsSequence called
+- [ ] Public Favourite runs BEFORE credits (if enabled)
 - [ ] Both features complete independently
 - [ ] Credits roll
 - [ ] No race conditions or timing issues
+
+### PR #39 Integration Fix - Acceptance Tests
+
+#### Toggle OFF (Skip Path)
+- [ ] Settings → Gameplay → "Public's Favourite Player at finale" is UNCHECKED
+- [ ] Play through to finale
+- [ ] Console shows: `[publicFav] skipped` (once)
+- [ ] No Public Favourite panel appears
+- [ ] Winner confetti still appears with log: `[finale] winner confetti spawn`
+- [ ] Credits proceed normally
+
+#### Toggle ON (Run Path)
+- [ ] Settings → Gameplay → Check "Public's Favourite Player at finale"
+- [ ] Save & Close settings
+- [ ] Play through to finale
+- [ ] Winner confetti appears first with log: `[finale] winner confetti spawn`
+- [ ] Console shows: `[publicFav] start`
+- [ ] Public Favourite panel appears before credits
+- [ ] Vote bars animate smoothly
+- [ ] Percentages sum to 100%
+- [ ] Sequential reveals work (3rd → 2nd → Fan Favourite)
+- [ ] Console shows: `[publicFav] done`
+- [ ] Credits proceed after completion
+- [ ] No duplicate runs (guard flag works)
+
+#### Confetti Presence
+- [ ] Winner confetti appears exactly once
+- [ ] Confetti still appears even when Public Favourite is enabled
+- [ ] Console log confirms: `[finale] winner confetti spawn`
+- [ ] Confetti respects FX settings (fxAnim/fxCards)
+- [ ] If both fxAnim and fxCards are false, confetti is skipped
+
+#### Console Markers
+- [ ] With toggle OFF: `[publicFav] skipped` appears once
+- [ ] With toggle ON: `[publicFav] start` followed by `[publicFav] done`
+- [ ] Confetti spawn: `[finale] winner confetti spawn`
+- [ ] No unexpected errors in console
+- [ ] All markers appear in correct sequence
+
+#### Manual Debug Command
+- [ ] After finale completes, open browser console
+- [ ] Run: `window.__debugRunPublicFavOnce()`
+- [ ] Console shows: `[publicFav] debug manual trigger`
+- [ ] Public Favourite segment re-runs (even if toggle was OFF)
+- [ ] Console shows: `[publicFav] start` and `[publicFav] done`
+- [ ] No errors thrown
+- [ ] Can be called multiple times (guard is reset each call)
