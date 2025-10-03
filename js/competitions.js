@@ -7,7 +7,17 @@
 
 (function(global){
   const $=global.$;
-  const MG_LIST=['clicker','memory','math','bar','typing','reaction','numseq','pattern','slider','anagram','path','target','pairs','simon','estimate'];
+  // Legacy games (retired in Phase 1, kept for compatibility)
+  const LEGACY_MG_LIST=['clicker','memory','math','bar','typing','reaction','numseq','pattern','slider','anagram','path','target','pairs','simon','estimate'];
+  
+  // Retired legacy games that should not be used
+  const RETIRED_GAMES = ['typing', 'reaction', 'slider', 'path', 'simon'];
+  
+  // Active legacy games (non-retired subset)
+  const ACTIVE_LEGACY = LEGACY_MG_LIST.filter(g => !RETIRED_GAMES.includes(g));
+  
+  // Use active legacy list for now (will be replaced with new games)
+  const MG_LIST = ACTIVE_LEGACY;
 
   function safeShowCard(title, lines=[], tone='neutral', dur=4200, uniform=false){
     try{
@@ -32,8 +42,24 @@
 
   function pickMinigameType(){
     const g=global.game;
+    
+    // Legacy mode overrides
     if(g?.cfg?.miniMode==='clicker') return 'clicker';
-    if(g?.cfg?.miniMode==='cycle'){ const t=MG_LIST[g.miniIndex%MG_LIST.length]; g.miniIndex++; return t; }
+    if(g?.cfg?.miniMode==='cycle'){ 
+      const t=MG_LIST[g.miniIndex%MG_LIST.length]; 
+      g.miniIndex++; 
+      return t; 
+    }
+    
+    // Use new registry if available (80% of the time)
+    if(global.MiniGamesRegistry && Math.random() < 0.8){
+      const newGame = global.MiniGamesRegistry.getRandom();
+      if(newGame){
+        return newGame;
+      }
+    }
+    
+    // Fall back to legacy games
     return MG_LIST[Math.floor((global.rng?.()||Math.random())*MG_LIST.length)];
   }
   global.pickMinigameType=pickMinigameType;
@@ -81,7 +107,18 @@
   function submitScore(id, base, mult, label){
     const g=global.game; g.lastCompScores=g.lastCompScores||new Map();
     if(g.lastCompScores.has(id)) return false;
-    const final=base*(mult); g.lastCompScores.set(id,final);
+    
+    // Normalize base score to 0-100 if needed (new games already do this)
+    let normalizedBase = base;
+    if(base > 100){
+      // Legacy games might return higher scores, normalize them
+      normalizedBase = Math.min(100, (base / 120) * 100);
+    }
+    
+    // Apply compBeast multiplier and clamp to reasonable range
+    const final = Math.max(0, Math.min(150, normalizedBase * mult));
+    
+    g.lastCompScores.set(id, final);
     // Hidden scoring: only log that player completed, not the score
     global.addLog(`${global.safeName(id)} completed the ${g.phase === 'hoh' ? 'HOH' : 'competition'}.`,'tiny');
     return true;
