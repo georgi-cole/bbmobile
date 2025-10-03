@@ -169,17 +169,25 @@
   // Public's Favourite Player feature
   async function showPublicFavourite(winnerId){
     const cfg = g.game?.cfg || {};
-    if(!cfg.enablePublicFav) return; // Skip if disabled
+    if(!cfg.enablePublicFav){
+      console.info('[publicFav] skipped (toggle false)');
+      return; // Skip if disabled
+    }
     
     // Single-run guard: ensure runs only once per season
-    if(g.__publicFavouriteCompleted) return;
+    if(g.__publicFavouriteCompleted){
+      console.info('[publicFav] skipped (already completed)');
+      return;
+    }
     g.__publicFavouriteCompleted = true;
 
+    console.info('[publicFav] start');
+    
     function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
     
     // Hard timeout fallback: continue after 10s max
     const timeoutId = setTimeout(() => {
-      console.warn('[finale] Public Favourite segment timed out after 10s');
+      console.warn('[publicFav] timed out after 10s');
     }, 10000);
     
     try{
@@ -392,8 +400,10 @@
         }
       }catch(e){ console.warn('[finale] showCard error:', e); }
       
+      console.info('[publicFav] done');
+      
     } catch(e){
-      console.warn('[finale] Public Favourite feature error:', e);
+      console.warn('[publicFav] error:', e.message || e);
     } finally {
       clearTimeout(timeoutId);
     }

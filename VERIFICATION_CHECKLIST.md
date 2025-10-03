@@ -224,3 +224,106 @@ window.playCheerSfx();
 - [ ] Verify settings persist after page reload
 - [ ] Test with cheer.mp3 present and absent
 - [ ] Verify no console errors through full playthrough
+
+## Integration Fix Testing (Post-PR35)
+
+### Confetti Testing
+- [ ] Play through full season to finale
+- [ ] Verify confetti appears after winner announcement
+- [ ] Confetti should spawn before Public Favourite segment
+- [ ] Check console - no confetti errors
+- [ ] Verify confetti canvas renders particles
+- [ ] Test with FX disabled (both fxAnim and fxCards false) - should skip
+
+### Public Favourite Integration Testing
+
+#### Toggle OFF (Default)
+- [ ] Open Settings → Gameplay
+- [ ] Verify "Public's Favourite Player at finale" checkbox exists
+- [ ] Verify checkbox is UNCHECKED by default
+- [ ] Play to finale
+- [ ] Console should show: `[publicFav] skipped (toggle false)`
+- [ ] Public Favourite panel should NOT appear
+- [ ] Winner confetti should still appear
+- [ ] Credits should proceed normally
+
+#### Toggle ON
+- [ ] Open Settings → Gameplay
+- [ ] Check "Public's Favourite Player at finale"
+- [ ] Click "Save & Close"
+- [ ] Reload page
+- [ ] Open Settings - verify checkbox still checked (persistence test)
+- [ ] Play to finale
+- [ ] Console should show: `[publicFav] start`
+- [ ] Winner confetti appears first
+- [ ] After ~1.5s delay, Public Favourite panel appears
+- [ ] Verify voting panel displays with 3 candidates
+- [ ] Vote bars should animate smoothly
+- [ ] Percentages should sum to exactly 100%
+- [ ] Sequential reveals: 3rd place → 2nd place → Fan Favourite
+- [ ] Cheer SFX plays (if audio file present)
+- [ ] Congratulations card appears
+- [ ] Console should show: `[publicFav] done`
+- [ ] Credits proceed after completion
+- [ ] No uncaught exceptions in console
+
+#### Debug Hook Testing
+- [ ] After finale completes, open browser console
+- [ ] Run: `window.__debugRunPublicFavOnce()`
+- [ ] Verify Public Favourite segment re-runs
+- [ ] Console should show new `[publicFav] start` marker
+- [ ] If toggle is OFF, should show warning message
+
+#### Error Handling
+- [ ] Verify 10s hard timeout works (manually delay by adding breakpoint)
+- [ ] Console should show: `[publicFav] timed out after 10s`
+- [ ] Credits should still proceed after timeout
+- [ ] Test with missing confetti canvas - should gracefully skip
+- [ ] Test with missing showCard function - should log warnings
+
+### Console Markers Verification
+Run through full sequence and verify these console messages appear:
+
+**When Toggle OFF:**
+```
+[publicFav] skipped (toggle false)
+```
+
+**When Toggle ON:**
+```
+[publicFav] start
+[publicFav] done
+```
+
+**If Already Run:**
+```
+[publicFav] skipped (already completed)
+```
+
+**On Error:**
+```
+[publicFav] error: <error message>
+```
+
+**On Timeout (edge case):**
+```
+[publicFav] timed out after 10s
+```
+
+### Accessibility Testing
+- [ ] Public Favourite panel has `role="dialog"`
+- [ ] Panel has `aria-label` attribute
+- [ ] Live region exists with `role="status"` and `aria-live="polite"`
+- [ ] Vote bars have `role="progressbar"` with aria-valuemin/max/now
+- [ ] Live region announces voting updates
+- [ ] Screen reader can navigate panel content
+
+### Confetti + Public Favourite Sequence
+- [ ] Winner announcement appears
+- [ ] Confetti spawns (180 particles, 5000ms)
+- [ ] Victory music plays
+- [ ] Winner cinematic shows (~8000ms)
+- [ ] Public Favourite starts (if enabled, after 1.5s delay)
+- [ ] Both features complete independently
+- [ ] Credits roll
+- [ ] No race conditions or timing issues

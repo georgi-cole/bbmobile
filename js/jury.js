@@ -582,6 +582,15 @@
       showPlacementLabels(winner);
 
       showWinnerMessageBanner(winner);
+      
+      // Spawn confetti for winner (respect fxAnim/fxCards settings)
+      try{
+        const cfg = gg.cfg || {};
+        if(cfg.fxAnim !== false || cfg.fxCards !== false){
+          g.UI?.spawnConfetti?.(5000, 180);
+        }
+      }catch(e){ console.warn('[jury] confetti error', e); }
+      
       try{ g.setMusic?.('victory', true); }catch(e){}
       await sleep(5000);
       try{
