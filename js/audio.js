@@ -225,6 +225,20 @@
     setTimeout(()=>clearInterval(id), 8000);
   })();
 
+  // Cheer SFX helper (placeholder for cheer.mp3)
+  function playCheerSfx(){
+    try {
+      const sfx = new Audio(BASE + 'cheer.mp3');
+      sfx.volume = 0.7;
+      sfx.play().catch(e => {
+        // Gracefully ignore if cheer.mp3 is missing or blocked
+        console.info('[audio] cheer.mp3 not available or play blocked:', e.message || e);
+      });
+    } catch(e) {
+      console.info('[audio] playCheerSfx error:', e.message || e);
+    }
+  }
+
   // Compat aliases and public API
   g.playMusicForPhase = playMusicForPhase;
   g.stopMusic = stopMusic;
@@ -232,6 +246,7 @@
   g.setMusicVolume = setMusicVolume;
   g.phaseMusic = playMusicForPhase;  // compat
   g.playMusic = playMusicForPhase;   // accept filename or phase
+  g.playCheerSfx = playCheerSfx;     // public cheer helper
 
   console.info('[audio] ready (phase-wrapped, filename+phase inputs, immediate-play with gesture fallback)');
 

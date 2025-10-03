@@ -116,15 +116,42 @@
     });
   }
 
-  function hohSpeech(hoh){
-    const lines = [
-      'This is strictly strategic — nothing personal.',
-      'I have to think long‑term about my game.',
-      'These nominations reflect the dynamics I’m seeing.',
-      'I respect everyone, but I have to make a move.',
-      'Keys are getting harder to hand out each week — I had to choose.'
-    ];
-    return `${(hoh&&hoh.name) || 'HOH'}: "${lines[Math.floor((global.rng?.()||Math.random())*lines.length)]}"`;
+  // Nomination speech templates
+  const NOMINATION_OPENERS = [
+    'This is strictly strategic — nothing personal.',
+    'I have to think long-term about my game.',
+    'These nominations reflect the dynamics I am seeing.',
+    'I respect everyone, but I have to make a move.',
+    'Keys are getting harder to hand out each week — I had to choose.',
+    'I am making the decision I think is best for my game.',
+    'This was not easy, but I have to protect my position.',
+    'I am staying true to my strategy this week.',
+    'Everyone is playing their own game — this is mine.'
+  ];
+
+  const NOMINATION_REASONS = [
+    'You are a strong competitor and I see you as a threat.',
+    'We have not connected as much as I would like.',
+    'Your game has been impressive, which makes you dangerous.',
+    'I feel like our paths are diverging strategically.',
+    'You have been floating under the radar, and I need clarity.',
+    'I think you are in a better position than you let on.',
+    'You are well-connected, which worries me.'
+  ];
+
+  function hohSpeech(hoh, nominees){
+    const opener = NOMINATION_OPENERS[Math.floor((global.rng?.()||Math.random())*NOMINATION_OPENERS.length)];
+    const hohName = (hoh&&hoh.name) || 'HOH';
+    
+    // If we have nominees, optionally add a specific reason
+    if(Array.isArray(nominees) && nominees.length > 0 && Math.random() > 0.3){
+      const nomId = nominees[Math.floor(Math.random()*nominees.length)];
+      const reason = NOMINATION_REASONS[Math.floor((global.rng?.()||Math.random())*NOMINATION_REASONS.length)];
+      const nomName = global.safeName ? global.safeName(nomId) : String(nomId);
+      return `${hohName}: "${opener} ${nomName}, ${reason}"`;
+    }
+    
+    return `${hohName}: "${opener}"`;
   }
 
   async function finalizeNoms(){
@@ -144,7 +171,7 @@
       // fixed variable name (was "hоh" with a non-ASCII o)
       global.showCard('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
-      try{ global.addLog?.(hohSpeech(hoh), 'tiny'); }catch{}
+      try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch{}
 
       const ids=(g.nominees||[]).slice();
       for(let i=0;i<ids.length;i++){

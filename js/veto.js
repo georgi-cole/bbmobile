@@ -16,6 +16,29 @@
     catch(e){ return Math.random(); }
   }
 
+  // Veto decision phrase pools
+  const VETO_USE_PHRASES = [
+    'I have decided to use the Power of Veto on...',
+    'I am using the Veto to save...',
+    'I have chosen to use the Power of Veto.',
+    'The Power of Veto will be used this week.',
+    'I am pulling someone off the block.',
+    'I have made my decision — I am using the Veto.'
+  ];
+
+  const VETO_NOT_USE_PHRASES = [
+    'I have decided not to use the Power of Veto.',
+    'I am keeping the nominations the same.',
+    'The Power of Veto will not be used this week.',
+    'I have chosen to leave the nominations as they are.',
+    'I am not using the Veto.',
+    'The nominations will stay the same.'
+  ];
+
+  function pickPhrase(arr){
+    return arr[Math.floor(rng()*arr.length)];
+  }
+
   function sample(arr, k){
     var a = arr.slice();
     for(var i=a.length-1;i>0;i--){
@@ -77,7 +100,8 @@
 
     try{
       if(global.addLog){
-        global.addLog(safeName(id)+' submitted ('+label+') '+finalScore.toFixed(2)+'.', 'tiny');
+        // Hide raw scores during veto competition - only log completion
+        global.addLog(safeName(id)+' completed the Veto competition.', 'tiny');
       }
     }catch(e){}
 
@@ -186,6 +210,56 @@
     return !!(g.lastCompScores && g.lastCompScores.has(you.id));
   }
 
+  // Veto suspense reveal sequence
+  async function showVetoRevealSequence(top3){
+    function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+    
+    try{
+      // Show 3 '?' cards first
+      if(typeof global.showCard==='function'){
+        global.showCard('Veto Results', ['Revealing top 3...'], 'veto', 2000);
+      }
+      if(typeof global.cardQueueWaitIdle==='function'){
+        await global.cardQueueWaitIdle();
+      }
+      await sleep(400);
+      
+      // Reveal 3rd place
+      if(top3[2]){
+        if(typeof global.showCard==='function'){
+          global.showCard('3rd Place', [safeName(top3[2][0])], 'neutral', 2000);
+        }
+        if(typeof global.cardQueueWaitIdle==='function'){
+          await global.cardQueueWaitIdle();
+        }
+        await sleep(1200);
+      }
+      
+      // Reveal 2nd place
+      if(top3[1]){
+        if(typeof global.showCard==='function'){
+          global.showCard('2nd Place', [safeName(top3[1][0])], 'neutral', 2000);
+        }
+        if(typeof global.cardQueueWaitIdle==='function'){
+          await global.cardQueueWaitIdle();
+        }
+        await sleep(1200);
+      }
+      
+      // Reveal winner with veto badge
+      if(top3[0]){
+        if(typeof global.showCard==='function'){
+          global.showCard('Veto Winner 🛡️', [safeName(top3[0][0])], 'veto', 3200);
+        }
+        if(typeof global.cardQueueWaitIdle==='function'){
+          await global.cardQueueWaitIdle();
+        }
+      }
+    }catch(e){
+      console.warn('[veto] reveal sequence error', e);
+    }
+  }
+
   function finishVetoComp(){
     var g = global.game;
     if(!g || g.phase!=='veto_comp') return;
@@ -205,6 +279,7 @@
       ? g.__vetoPlayers.slice()
       : alivePlayers().map(function(p){ return p.id; });
 
+    // Synthesize AI or absent scores before reveal (fallback assignment)
     for(var i=0;i<eligible.length;i++){
       var id = eligible[i];
       if(!g.lastCompScores.has(id)){
@@ -218,15 +293,6 @@
     });
     arr.sort(function(a,b){ return b[1]-a[1]; });
 
-    try{
-      if(global.addLog){
-        global.addLog('<b>Veto — Scores</b>:', 'ok');
-        for(i=0;i<arr.length;i++){
-          global.addLog((i+1)+'. '+safeName(arr[i][0])+' — '+arr[i][1].toFixed(2), 'tiny');
-        }
-      }
-    }catch(e){}
-
     global.game.vetoHolder = arr[0][0];
     var W = getP(global.game.vetoHolder);
     if(W){
@@ -236,11 +302,16 @@
       W.wins.veto = (W.wins.veto||0)+1;
     }
 
-    try{ if(global.addLog){ global.addLog('Veto winner: '+safeName(global.game.vetoHolder)+'.', 'ok'); } }catch(e){}
     try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
-    try{ if(typeof global.showCard==='function') global.showCard('Veto Winner', [safeName(global.game.vetoHolder)], 'veto', 3200); }catch(e){}
 
-    setTimeout(function(){ startVetoCeremony(); }, 500);
+    // Build top-3 reveal sequence
+    var top3 = arr.slice(0, Math.min(3, arr.length));
+    showVetoRevealSequence(top3).then(function(){
+      setTimeout(function(){ startVetoCeremony(); }, 500);
+    }).catch(function(e){
+      console.warn('[veto] reveal error, proceeding', e);
+      setTimeout(function(){ startVetoCeremony(); }, 500);
+    });
   }
 
   function startVetoCeremony(){
@@ -420,7 +491,7 @@
       if(savedP){ savedP.nominated = false; try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){} }
 
       if(!g.__vetoNarrativeShown){
-        try{ if(typeof global.showCard==='function') global.showCard('Veto Decision', ['We have decided to use the Power of Veto on...'], 'veto', 3200, true); }catch(e){}
+        try{ if(typeof global.showCard==='function') global.showCard('Veto Decision', [pickPhrase(VETO_USE_PHRASES)], 'veto', 3200, true); }catch(e){}
         if(typeof global.cardQueueWaitIdle==='function'){ try{ global.cardQueueWaitIdle().then(function(){ thenSaved(); }); return; }catch(e){} }
         thenSaved();
         function thenSaved(){
@@ -477,7 +548,7 @@
       }
     } else {
       try{ if(global.addLog) global.addLog('Veto not used.','muted'); }catch(e){}
-      try{ if(typeof global.showCard==='function') global.showCard('Veto Not Used',[safeName(g.vetoHolder)],'veto',3600,true); }catch(e){}
+      try{ if(typeof global.showCard==='function') global.showCard('Veto Not Used',[pickPhrase(VETO_NOT_USE_PHRASES)],'veto',3600,true); }catch(e){}
       if(typeof global.cardQueueWaitIdle==='function'){
         try{ global.cardQueueWaitIdle().then(function(){ finishNoUse(); }); return; }catch(e){}
       }

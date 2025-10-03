@@ -10,6 +10,21 @@
 
   function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
+  // Eviction result phrase variants
+  const EVICTION_PHRASES = [
+    'you have been evicted.',
+    'you are evicted from the Big Brother house.',
+    'your time in the house has come to an end.',
+    'you must leave the Big Brother house.',
+    'you have been eliminated.',
+    'your journey ends here.',
+    'you are leaving the house tonight.'
+  ];
+
+  function pickEvictionPhrase(){
+    return EVICTION_PHRASES[Math.floor(Math.random()*EVICTION_PHRASES.length)];
+  }
+
   function startLiveVote(){
     const g=global.game;
     g.eviction={
@@ -377,7 +392,7 @@
       } else evId = (ca>cb? a : b);
 
       const evName=global.safeName(evId);
-      global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, you have been evicted.`],'evict',3800,true);
+      global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
       global.addLog?.(`Evicted: ${evName} (${finalA}–${finalB}).`,'danger');
       g.eviction.revealed=true; g.eviction.revealing=false; g.eviction.evicted=evId;
@@ -423,7 +438,7 @@
           }
         } else evId=topIds[0];
         const parts=noms.map(id=>`${global.safeName(id)} ${counts.get(id)||0}`).join(' — ');
-        global.showCard('Eviction Result',[`Votes: ${parts}`,`${global.safeName(evId)}, you have been evicted.`],'evict',3800,true);
+        global.showCard('Eviction Result',[`Votes: ${parts}`,`${global.safeName(evId)}, ${pickEvictionPhrase()}`],'evict',3800,true);
         try{ await global.cardQueueWaitIdle?.(); }catch{}
         global.addLog?.(`Evicted: ${global.safeName(evId)}. Votes — ${parts}`,'danger');
         g.eviction.revealed=true; g.eviction.revealing=false; g.eviction.evicted=evId;

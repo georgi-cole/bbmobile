@@ -40,8 +40,31 @@
     }catch(e){}
   }
 
+  // Fisher-Yates shuffle for legacy pool (one-time per season)
+  function shuffleLegacyPool(){
+    const g=global.game;
+    if(!g.__legacyPoolShuffled){
+      const pool = MG_LIST.slice();
+      for(let i=pool.length-1; i>0; i--){
+        const j = Math.floor((global.rng?.()||Math.random())*(i+1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      g.__shuffledLegacyPool = pool;
+      g.__legacyPoolShuffled = true;
+      g.__legacyPoolIndex = 0;
+    }
+    return g.__shuffledLegacyPool || MG_LIST;
+  }
+
   function pickMinigameType(){
     const g=global.game;
+    
+    // Purge stale 'clicker' miniMode when user switches to random
+    if(g?.cfg?.miniMode==='random' && g.__lastMiniMode==='clicker'){
+      delete g.__lastMiniMode;
+    } else if(g?.cfg?.miniMode){
+      g.__lastMiniMode = g.cfg.miniMode;
+    }
     
     // Legacy mode overrides
     if(g?.cfg?.miniMode==='clicker') return 'clicker';
@@ -52,15 +75,28 @@
     }
     
     // Use new registry if available (80% of the time)
-    if(global.MiniGamesRegistry && Math.random() < 0.8){
+    // Lazy retry if registry not yet loaded
+    if(global.MiniGamesRegistry){
       const newGame = global.MiniGamesRegistry.getRandom();
-      if(newGame){
+      if(newGame && Math.random() < 0.8){
         return newGame;
       }
+    } else if(typeof queueMicrotask === 'function'){
+      // Registry might load soon; give it a microtask to settle
+      let retryGame = null;
+      queueMicrotask(()=>{
+        if(global.MiniGamesRegistry){
+          retryGame = global.MiniGamesRegistry.getRandom();
+        }
+      });
+      if(retryGame) return retryGame;
     }
     
-    // Fall back to legacy games
-    return MG_LIST[Math.floor((global.rng?.()||Math.random())*MG_LIST.length)];
+    // Fall back to shuffled legacy games
+    const pool = shuffleLegacyPool();
+    const idx = g.__legacyPoolIndex || 0;
+    g.__legacyPoolIndex = (idx + 1) % pool.length;
+    return pool[idx];
   }
   global.pickMinigameType=pickMinigameType;
 
