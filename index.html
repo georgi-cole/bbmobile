@@ -319,31 +319,9 @@
     rulesBtn.textContent = '📋 Rules';
     
     rulesBtn.onclick = ()=>{
-      // Use the shared showRulesCard function if available
-      if(typeof window.showRulesCard === 'function'){
-        window.showRulesCard();
-      } else {
-        // Fallback inline implementation
-        const rulesHtml = `
-          <h3>Game Rules</h3>
-          <div style="text-align:left;line-height:1.6;max-width:600px;margin:0 auto;">
-            <p><strong>Objective:</strong> Be the last player standing to win Big Brother.</p>
-            <p><strong>HOH (Head of Household):</strong> Wins power to nominate 2 players for eviction.</p>
-            <p><strong>Nominations:</strong> The HOH chooses two players to put on the block.</p>
-            <p><strong>Veto Competition:</strong> Six players compete for the Power of Veto to save a nominee.</p>
-            <p><strong>Eviction:</strong> Houseguests vote to evict one of the final nominees. Majority rules.</p>
-            <p><strong>Jury Phase:</strong> Evicted players become jurors who vote for the winner in the finale.</p>
-            <p><strong>Finale:</strong> Final 2 face the jury. The jury votes, and the winner is crowned!</p>
-          </div>
-        `;
-        
-        if(typeof window.showBigCard === 'function'){
-          window.showBigCard('Rules', rulesHtml);
-        } else if(typeof window.showCard === 'function'){
-          window.showCard('Rules', [rulesHtml], 'info', 8000, true);
-        } else {
-          alert('GAME RULES\n\nObjective: Be the last player standing.\nHOH: Nominates 2 players.\nVeto: Can save a nominee.\nEviction: Houseguests vote.\nJury: Evicted players vote for the winner.\nFinale: Jury crowns the winner!');
-        }
+      // Use the showRulesModal function from ui.rules.js
+      if(typeof window.showRulesModal === 'function'){
+        window.showRulesModal();
       }
     };
     

@@ -12,6 +12,22 @@
 
   let outroPlayed = false;
 
+  // Dispatch custom event to notify that intro has finished
+  function notifyIntroFinished() {
+    console.info('[intro-outro] Dispatching bb:intro:finished event');
+    try {
+      document.dispatchEvent(new CustomEvent('bb:intro:finished'));
+    } catch (e) {
+      console.warn('[intro-outro] Failed to dispatch event:', e);
+    }
+    // Also try to call showRulesModal directly as fallback
+    setTimeout(() => {
+      if (typeof g.showRulesModal === 'function') {
+        g.showRulesModal();
+      }
+    }, 100);
+  }
+
   function isIntroPlayed(){
     try{ return sessionStorage.getItem(INTRO_FLAG_KEY) === '1' || g.__bbIntroPlayed === true; }catch{ return !!g.__bbIntroPlayed; }
   }
@@ -139,11 +155,11 @@
       playVideo(url, {
         onEnd: function(){
           markIntroPlayed();
-          showRulesCard();
+          notifyIntroFinished();
         },
         onSkip: function(){
           markIntroPlayed();
-          showRulesCard();
+          notifyIntroFinished();
         },
         onFail: ()=>{}
       });
@@ -174,12 +190,12 @@
         playVideo(url, {
           onEnd: () => { 
             markIntroPlayed(); 
-            showRulesCard();
+            notifyIntroFinished();
             try { origStart.call(g); } catch { origStart(); } 
           },
           onSkip: () => { 
             markIntroPlayed(); 
-            showRulesCard();
+            notifyIntroFinished();
             try { origStart.call(g); } catch { origStart(); } 
           },
           onFail: () => { try { origStart.call(g); } catch { origStart(); } }
@@ -296,29 +312,5 @@
       onFail: ()=>{} 
     });
   };
-
-  // Show Rules card automatically (used after intro)
-  function showRulesCard(){
-    const rulesHtml = `
-      <div style="text-align:left;line-height:1.6;max-width:600px;margin:0 auto;max-height:70vh;overflow-y:auto;padding:10px;">
-        <p><strong>Objective:</strong> Be the last player standing to win Big Brother.</p>
-        <p><strong>HOH (Head of Household):</strong> Wins power to nominate 2 players for eviction.</p>
-        <p><strong>Nominations:</strong> The HOH chooses two players to put on the block.</p>
-        <p><strong>Veto Competition:</strong> Six players compete for the Power of Veto to save a nominee.</p>
-        <p><strong>Eviction:</strong> Houseguests vote to evict one of the final nominees. Majority rules.</p>
-        <p><strong>Jury Phase:</strong> Evicted players become jurors who vote for the winner in the finale.</p>
-        <p><strong>Finale:</strong> Final 2 face the jury. The jury votes, and the winner is crowned!</p>
-      </div>
-    `;
-    
-    if(typeof g.showBigCard === 'function'){
-     g.showBigCard('Game Rules', [rulesHtml]);
-    } else if(typeof g.showCard === 'function'){
-      g.showCard('Game Rules', [rulesHtml], 'info', 10000, true);
-    }
-  }
-
-  // Export showRulesCard so the Rules button can use it
-  g.showRulesCard = showRulesCard;
 
 })(window);
