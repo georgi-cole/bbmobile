@@ -1,175 +1,186 @@
-// MODULE: audio.js
-// Background music + lightweight SFX stub (playSfx).
-// - Music: YouTube embed (loop) OR direct audio if non-YouTube URL.
-// - SFX: tiny inline base64 WAV/OGG clips, gated by cfg.fxSound (and music by cfg.autoMusic).
-// - Exposes setMusic, phaseMusic, playSfx, setMusicEnabled/setSfxEnabled for future UI toggles.
+// Audio phase-to-track mapping, local MP3 only, no YouTube.
+// Place audio files in /audio as shown in your repo.
+// Expose: window.playMusicForPhase(phaseOrEvent), window.stopMusic(), window.unlockMusicForAutoplay()
 
-(function(global){
-  const YT_API_SRC='https://www.youtube.com/iframe_api';
-  const bgmEl=document.getElementById('bgm');
+(function (g) {
+  'use strict';
 
-  /* ---------- Track Map (YouTube links) ---------- */
-  const musicTracks={
-    theme_opening:'https://www.youtube.com/watch?v=58UXX7yUicI&list=RD58UXX7yUicI&start_radio=1',
-    hoh_comp:'https://www.youtube.com/watch?v=NTXJpYysvNQ',
-    veto_comp:'https://www.youtube.com/watch?v=u7Mzm_JExw8&start_radio=1',
-    nominations:'https://www.youtube.com/watch?v=fa1FTbzgRlA&start_radio=1',
-    live_vote:'https://www.youtube.com/watch?v=pRyJL8AIHFg',
-    eviction:'https://www.youtube.com/watch?v=1uIe1PpaUdA',
-    victory:'https://www.youtube.com/watch?v=qKaIFa_GL_I'
+  // Folder and filenames (case-sensitive on many hosts)
+  const BASE = 'audio/';
+  const TRACKS = {
+    intro: 'intro.mp3',
+    hoh: 'competition.mp3',
+    'hoh comp': 'competition.mp3',
+    competition: 'competition.mp3',
+    nominations: 'nominations.mp3',
+    nomination: 'nominations.mp3',
+    veto: 'veto.mp3',
+    'veto comp': 'veto.mp3',
+    'veto competition': 'veto.mp3',
+    'live vote': 'live vote.mp3',
+    eviction: 'eviction.mp3',
+    twist: 'twist.mp3',
+    double: 'twist.mp3',
+    triple: 'twist.mp3',
+    'jury return': 'twist.mp3',
+    'final jury vote': 'final jury vote.mp3',
+    finale: 'victory.mp3',
+    victory: 'victory.mp3',
+    winner: 'victory.mp3'
   };
 
-  /* ---------- Simple SFX (small inline clips) ---------- */
-  // Short synthesized tones (very small); replace with real assets later if desired.
-  const sfxData={
-    // 220 Hz blip (twist)
-    twist:'data:audio/wav;base64,UklGRlYAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAADwAAAA8AAAAPAAAA',
-    // short softer blip (card)
-    card:'data:audio/wav;base64,UklGRlYAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAABwAAAAcAAAAHAAAABwAAAAcAAAAHAAAABwAAAAcAAAA'
-  };
-  const sfxCache=new Map();
+  // Fuzzy mapping for events
+  function matchTrack(phase) {
+    const k = String(phase||'').toLowerCase().trim();
+    // Direct match
+    if (TRACKS[k]) return TRACKS[k];
 
-  function loadSfx(key){
-    if(sfxCache.has(key)) return sfxCache.get(key);
-    const url=sfxData[key]; if(!url) return null;
-    const audio=new Audio(url);
-    audio.preload='auto';
-    sfxCache.set(key,audio);
-    return audio;
-  }
+    // Fuzzy
+    if (k.includes('intro') || k.includes('opening') || k.includes('start')) return TRACKS.intro;
+    if (k.includes('hoh')) return TRACKS.hoh;
+    if (k.includes('comp')) return TRACKS.competition;
+    if (k.includes('veto')) return TRACKS.veto;
+    if (k.includes('nom')) return TRACKS.nominations;
+    if (k.includes('live')) return TRACKS['live vote'];
+    if (k.includes('evict')) return TRACKS.eviction;
+    if (k.includes('twist') || k.includes('double') || k.includes('triple') || k.includes('jury return')) return TRACKS.twist;
+    if (k.includes('final') && k.includes('jury')) return TRACKS['final jury vote'];
+    if (k.includes('victory') || k.includes('winner') || k.includes('finale')) return TRACKS.victory;
 
-  function playSfx(key){
-    const g=global.game||{};
-    if(g.cfg && g.cfg.fxSound===false) return;
-    try{
-      const a=loadSfx(key);
-      if(!a) return;
-      a.currentTime=0;
-      a.volume=0.85;
-      a.play().catch(()=>{ /* ignored */ });
-    }catch(e){}
-  }
-
-  /* ---------- YouTube API Helpers ---------- */
-  let ytReady=false, ytPlayer=null;
-  function isYouTube(u){ return /youtu\.?be/.test(u||''); }
-  function parseVideoId(u){
-    try{
-      const url=new URL(u);
-      if(url.hostname.includes('youtu.be')) return url.pathname.replace('/','').split('?')[0];
-      if(url.searchParams.get('v')) return url.searchParams.get('v');
-      const m=url.pathname.match(/\/embed\/([^\/\?]+)/); if(m) return m[1];
-    }catch{}
     return null;
   }
-  function ensureYTApi(cb){
-    if(ytReady){ cb&&cb(); return; }
-    if(document.querySelector('script[src*="iframe_api"]')){
-      const prev=window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady=function(){
-        ytReady=true; prev&&prev(); cb&&cb();
-      };
+
+  // Internal: single audio element, unlock on gesture
+  let audioEl = null, unlocked = false, pendingTrack = null;
+
+  function ensureAudioEl() {
+    if (audioEl) return audioEl;
+    audioEl = document.createElement('audio');
+    audioEl.id = 'gameMusicAudio';
+    audioEl.style.display = 'none';
+    audioEl.preload = 'auto';
+    audioEl.autoplay = false;
+    audioEl.loop = true;
+    document.body.appendChild(audioEl);
+    return audioEl;
+  }
+
+  function unlockMusicForAutoplay() {
+    if (unlocked) return;
+    unlocked = true;
+    document.removeEventListener('pointerdown', unlockMusicForAutoplay);
+    document.removeEventListener('keydown', unlockMusicForAutoplay);
+    if (pendingTrack) {
+      playMusicForPhase(pendingTrack);
+      pendingTrack = null;
+    }
+  }
+
+  function playMusicForPhase(phase) {
+    const track = matchTrack(phase);
+    if (!track) { stopMusic(); return; }
+    const el = ensureAudioEl();
+    const src = BASE + encodeURIComponent(track);
+    if (el.src.endsWith(src) && !el.paused) return; // already playing
+
+    if (!unlocked) {
+      pendingTrack = phase;
+      document.addEventListener('pointerdown', unlockMusicForAutoplay, { once: true, passive: true });
+      document.addEventListener('keydown', unlockMusicForAutoplay, { once: true });
       return;
     }
-    const s=document.createElement('script'); s.src=YT_API_SRC; s.async=true;
-    window.onYouTubeIframeAPIReady=function(){ ytReady=true; cb&&cb(); };
-    document.head.appendChild(s);
+
+    el.pause(); el.removeAttribute('src'); el.load();
+    el.src = src;
+    el.loop = true;
+    el.currentTime = 0;
+    el.volume = 1.0;
+    el.play().catch(()=>{});
   }
-  function ensureYTIframe(videoId,onReady){
-    let host=document.getElementById('ytbgm');
-    if(!host){
-      host=document.createElement('div');
-      host.id='ytbgm';
-      host.style.cssText='position:fixed;left:-9999px;bottom:-9999px;width:0;height:0;overflow:hidden;';
-      document.body.appendChild(host);
+
+  function stopMusic() {
+    if (audioEl) { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); }
+  }
+
+  // Optional: Callbacks for your code
+  g.playMusicForPhase = playMusicForPhase;
+  g.stopMusic = stopMusic;
+  g.unlockMusicForAutoplay = unlockMusicForAutoplay;
+
+  // --- WIRING: Patch your game events below as needed ---
+
+  // 1. Play intro.mp3 when Start is clicked and cast is presented
+  // (Assume #btnStartQuick is the start button)
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const btn=document.getElementById('btnStartQuick');
+    if(btn && !btn.__musicWired){
+      btn.__musicWired=true;
+      btn.addEventListener('click', ()=>playMusicForPhase('intro'));
     }
-    if(ytPlayer){ onReady&&onReady(ytPlayer); return; }
-    ytPlayer=new YT.Player('ytbgm',{
-      videoId,
-      playerVars:{autoplay:1,controls:0,disablekb:1,modestbranding:1,rel:0,iv_load_policy:3,loop:1,playlist:videoId},
-      events:{
-        onReady:()=>{ onReady&&onReady(ytPlayer); },
-        onError:(e)=>console.warn('[music] YT error',e)
-      }
-    });
-  }
-
-  /* ---------- Core Music Controls ---------- */
-  function stopAll(){
-    try{ bgmEl.pause(); bgmEl.removeAttribute('src'); }catch{}
-    try{ ytPlayer && ytPlayer.stopVideo && ytPlayer.stopVideo(); }catch{}
-  }
-  function setVolume(vol){
-    try{ if(bgmEl) bgmEl.volume=vol; }catch{}
-    try{ ytPlayer && ytPlayer.setVolume && ytPlayer.setVolume(Math.round(vol*100)); }catch{}
-  }
-
-  function setMusic(key,force=false){
-    const g=global.game||{};
-    if(!force && g.cfg && g.cfg.autoMusic===false) return;
-    const url=musicTracks[key];
-    if(!url){ stopAll(); return; }
-
-    const volEl=document.getElementById('musicVol');
-    const vol=volEl ? (+volEl.value||0.4) : 0.4;
-    stopAll();
-    if(isYouTube(url)){
-      const vid=parseVideoId(url);
-      if(!vid){ console.warn('[music] cannot parse YT id',url); return; }
-      ensureYTApi(()=>ensureYTIframe(vid,(player)=>{
-        try{
-          player.loadVideoById({videoId:vid,suggestedQuality:'small'});
-          setVolume(vol);
-        }catch(e){}
-      }));
-    } else {
-      bgmEl.src=url; bgmEl.loop=true; setVolume(vol);
-      bgmEl.play().catch(()=>{ /* gesture needed; UI play button exists */ });
-    }
-  }
-
-  function phaseMusic(ph){
-    const map={
-      opening:'theme_opening',
-      hoh:'hoh_comp',
-      final3_comp1:'hoh_comp',
-      final3_comp2:'hoh_comp',
-      veto_comp:'veto_comp',
-      nominations:'nominations',
-      replace_nom:'nominations',
-      livevote:'live_vote',
-      tiebreak:'live_vote',
-      jury:'live_vote',
-      return_twist:'live_vote',
-      finale:'victory',
-      intermission:'nominations'
-    };
-    const k=map[ph];
-    if(k) setMusic(k);
-  }
-
-  /* ---------- Public API & Toggles ---------- */
-  function setMusicEnabled(on){
-    const g=global.game||{};
-    if(!g.cfg) g.cfg={};
-    g.cfg.autoMusic=!!on;
-    if(!on) stopAll();
-    else phaseMusic(g.game?.phase);
-  }
-  function setSfxEnabled(on){
-    const g=global.game||{};
-    if(!g.cfg) g.cfg={};
-    g.cfg.fxSound=!!on;
-  }
-
-  global.setMusic=setMusic;
-  global.phaseMusic=phaseMusic;
-  global.playSfx=playSfx;
-  global.setMusicEnabled=setMusicEnabled;
-  global.setSfxEnabled=setSfxEnabled;
-
-  document.getElementById('musicVol')?.addEventListener('input',e=>{
-    setVolume(+e.target.value||0.4);
   });
+
+  // 2. HOH competition: play competition.mp3
+  if (!g.__musicHOHPatched && g.startHOH) {
+    const origHOH = g.startHOH;
+    g.startHOH = function() {
+      playMusicForPhase('hoh');
+      return origHOH.apply(this, arguments);
+    };
+    g.__musicHOHPatched = true;
+  }
+
+  // 3. Nominations: play nominations.mp3
+  if (!g.__musicNomPatched && g.startNominations) {
+    const origNom = g.startNominations;
+    g.startNominations = function() {
+      playMusicForPhase('nominations');
+      return origNom.apply(this, arguments);
+    };
+    g.__musicNomPatched = true;
+  }
+
+  // 4. Veto comp: play veto.mp3
+  if (!g.__musicVetoPatched && g.startVetoComp) {
+    const origVeto = g.startVetoComp;
+    g.startVetoComp = function() {
+      playMusicForPhase('veto');
+      return origVeto.apply(this, arguments);
+    };
+    g.__musicVetoPatched = true;
+  }
+
+  // 5. Live vote: play live vote.mp3
+  if (!g.__musicLiveVotePatched && g.startLiveVote) {
+    const origLiveVote = g.startLiveVote;
+    g.startLiveVote = function() {
+      playMusicForPhase('live vote');
+      return origLiveVote.apply(this, arguments);
+    };
+    g.__musicLiveVotePatched = true;
+  }
+
+  // 6. Eviction: play eviction.mp3 (call when evictee is announced)
+  // If you have a function like announceEvictee or similar, patch here.
+  // Example:
+  // if (!g.__musicEvictPatched && g.announceEvictee) {
+  //   const origEvict = g.announceEvictee;
+  //   g.announceEvictee = function() {
+  //     playMusicForPhase('eviction');
+  //     return origEvict.apply(this, arguments);
+  //   };
+  //   g.__musicEvictPatched = true;
+  // }
+
+  // 7. Twists: listen for double/triple/jury-return events, or call playMusicForPhase('twist') when fired.
+
+  // 8. Final jury vote: play final jury vote.mp3
+  // Patch your function for final jury vote phase if needed.
+
+  // 9. Winner announcement: play victory.mp3
+  // Patch your winner-reveal code to call playMusicForPhase('victory')
+
+  // --- END PATCHING ---
+
+  console.info('[audio] ready (local mp3, phase-mapped)');
 
 })(window);
