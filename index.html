@@ -29,7 +29,7 @@
 <div class="wrap">
   <!-- Dashboard (left) — Cast completely removed -->
   <div class="card" id="dashboardCard">
-    <h1>Dashboard</h1>
+    <h1>House</h1>
     <div class="row tiny wrapline">
       <div>Phase: <span id="phase" class="pill">lobby</span></div>
       <div>Week: <span id="week" class="badge">1</span></div>
@@ -57,15 +57,23 @@
 
   <!-- Show / Center -->
   <div class="card" id="actionCard">
-    <h1>Show</h1>
-    <div class="tv" id="tv">
-      <div class="tvHead">
-        <div class="tvTitle">House Network Live</div>
-        <div class="tvTimer" id="tvTimer">00:00</div>
+    <h1>Houseguests</h1>
+    <div class="tvFrame">
+      <div class="tvBezel">
+        <div class="tv" id="tv">
+          <div class="tvHead">
+            <div class="tvTitle">House Network Live</div>
+            <div class="tvTimer" id="tvTimer">00:00</div>
+          </div>
+          <div class="tvViewport">
+            <div id="tvNow" class="tvNow">Welcome to the season.</div>
+            <div id="tvOverlay" class="tvOverlay"></div>
+            <canvas id="confetti"></canvas>
+          </div>
+        </div>
       </div>
-      <div id="tvNow" class="tvNow">Welcome to the season.</div>
-      <div id="tvOverlay" class="tvOverlay"></div>
-      <canvas id="confetti"></canvas>
+      <!-- Live badge for voting phases -->
+      <div class="liveBadge" id="liveBadge" aria-live="polite" style="display:none;">LIVE</div>
     </div>
     <div class="sep"></div>
     <div id="panel"></div>
@@ -73,7 +81,7 @@
 
   <!-- Right: Logs (with Jury) + Jury House -->
   <div class="card" id="sideCard">
-    <h1>Logs</h1>
+    <h1>Diary Room</h1>
     <div id="logTabs" class="tabBar">
       <button class="tab-btn active" data-logtab="all">All</button>
       <button class="tab-btn" data-logtab="game">Game</button>
@@ -211,9 +219,11 @@
 
 <!-- NEW: TV screen upload (image/video) -->
 <script defer src="js/ui.tv-media.js"></script>
+<script defer src="js/tv.js"></script>
 <script defer src="js/settings.js"></script>
 <script defer src="js/players-total.js?v=5"></script>
 <script defer src="js/ui.overlay-and-logs.js"></script>
+<script defer src="js/cards-queue.js"></script>
 <script defer src="js/ui.hud-and-router.js"></script>
 
 <script defer src="js/ui.rules.js?v=fixes-5"></script>
@@ -222,6 +232,23 @@
 <!-- Game flows -->
 <script src="js/social.js"></script>
 <script src="js/minigames.js"></script>
+<!-- New mobile-friendly minigames -->
+<script defer src="js/minigames/quick-tap.js"></script>
+<script defer src="js/minigames/reaction-timer.js"></script>
+<script defer src="js/minigames/trivia-quiz.js"></script>
+<script defer src="js/minigames/memory-match.js"></script>
+<script defer src="js/minigames/slider-puzzle.js"></script>
+<script defer src="js/minigames/sequence-memory.js"></script>
+<script defer src="js/minigames/color-match.js"></script>
+<script defer src="js/minigames/tower-stack.js"></script>
+<script defer src="js/minigames/math-blitz.js"></script>
+<script defer src="js/minigames/guess-number.js"></script>
+<script defer src="js/minigames/mini-maze.js"></script>
+<script defer src="js/minigames/spot-difference.js"></script>
+<script defer src="js/minigames/word-builder.js"></script>
+<script defer src="js/minigames/hidden-object.js"></script>
+<script defer src="js/minigames/balance-game.js"></script>
+<script defer src="js/minigames/index.js"></script>
 <script src="js/competitions.js"></script>
 <script src="js/nominations.js"></script>
 <script src="js/veto.js"></script>
@@ -241,6 +268,7 @@
 <script defer src="js/intro-outro-video.js?v=fixes-5"></script>
 
 <script defer src="js/logs-helper.js?v=fixes-5"></script>
+<script defer src="js/logs.js"></script>
 <script defer src="https://www.youtube.com/iframe_api"></script>
 
 <!-- Custom intro/outro video hooks (must load after end-credits) -->

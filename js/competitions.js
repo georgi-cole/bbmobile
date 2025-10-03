@@ -118,7 +118,9 @@
       if(you.id!==blocked && !g.lastCompScores?.has(you.id)){
         const mg=pickMinigameType();
         global.renderMinigame?.(mg,host,(base)=>{
-          if(submitScore(you.id, base, (0.8+(you?.skill||0.5)*0.6), `HOH/${mg}`)){
+          // Use compBeast for human too (no guaranteed wins)
+          const humanMultiplier = (0.75 + (you?.compBeast||0.5) * 0.6);
+          if(submitScore(you.id, base, humanMultiplier, `HOH/${mg}`)){
             host.innerHTML='<div class="tiny muted">Submission received. Waiting for others…</div>'; maybeFinishComp();
           }
         });

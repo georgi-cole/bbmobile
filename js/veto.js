@@ -134,7 +134,9 @@
         var playWrap = document.createElement('div');
         playWrap.className = 'col';
         global.renderMinigame(mg, playWrap, function(base){
-          submitGuarded(you.id, base, (0.8 + (you && you.skill ? you.skill : 0.5)*0.6), 'Veto/'+mg);
+          // Use compBeast for human too (no guaranteed wins)
+          var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
+          submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
         });
         hostNode.appendChild(playWrap);
       }
@@ -160,7 +162,10 @@
         if(!p || p.human) return;
         setTimeout(function(){
           if(!global.game || global.game.phase!=='veto_comp') return;
-          submitGuarded(id, (8 + rng()*20), (0.8 + (p.skill||0.5)*0.6), 'Veto/AI');
+          // Use compBeast for fairer AI scoring
+          var baseScore = 8 + rng()*20;
+          var aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.6);
+          submitGuarded(id, baseScore, aiMultiplier, 'Veto/AI');
         }, 300 + rng()*((g.cfg && g.cfg.tVeto || 40)*620));
       })(aiList[i]);
     }

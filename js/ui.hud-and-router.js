@@ -571,6 +571,21 @@ header.innerHTML = `
     const game=g.game; if(!game) return;
     sanitizeJuryConsistency(true);
 
+    // Cancel any pending cards from previous phase
+    if(typeof g.CardQueue?.cancelAll === 'function'){
+      g.CardQueue.cancelAll();
+    }
+    // Attach queue to new phase
+    if(typeof g.CardQueue?.attachToPhase === 'function'){
+      g.CardQueue.attachToPhase(phase);
+    }
+
+    // Show/hide LIVE badge for voting phases
+    if(typeof g.TV?.setLiveBadge === 'function'){
+      const isVotePhase = (phase === 'livevote' || phase === 'tiebreak');
+      g.TV.setLiveBadge(isVotePhase);
+    }
+
     game.phase=phase;
     ensureCfg();
     g.phaseMusic?.(phase);
