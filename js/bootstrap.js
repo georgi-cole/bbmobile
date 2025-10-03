@@ -29,7 +29,7 @@
       numPlayers:12,tHOH:35,tNoms:25,tVeto:30,tVetoDec:20,tComms:30,tVote:25,tJury:42,
       fxCards:true,fxSound:true,fxAnim:true,fxStyle:'fade',miniMode:'random',
       manualMode:false,doubleChance:10,tripleChance:3,enableJuryHouse:true,autoMusic:true,
-      returnChance:50,selfEvictChance:0
+      returnChance:50,selfEvictChance:0,enablePublicFav:false
     };
   }
 
@@ -39,7 +39,8 @@
       tComms:'tComms', tVote:'tVote', tJury:'tJury',
       fxCards:'fxCards', fxSound:'fxSound', fxAnim:'fxAnim', fxStyle:'fxStyle', miniMode:'miniMode',
       manualMode:'manualMode', enableJuryHouse:'enableJuryHouse', autoMusic:'autoMusicSetting',
-      doubleChance:'doubleChance', tripleChance:'tripleChance', returnChance:'returnChance', selfEvictChance:'selfEvictChance'
+      doubleChance:'doubleChance', tripleChance:'tripleChance', returnChance:'returnChance', selfEvictChance:'selfEvictChance',
+      enablePublicFav:'enablePublicFav'
     };
     Object.entries(map).forEach(([k,id])=>{
       const el=document.getElementById(id); if(!el) return;
@@ -82,6 +83,7 @@
     g.cfg.autoMusic=on('autoMusicSetting',true);
     g.cfg.returnChance=clampNum(val('returnChance',50),1,1,100);
     g.cfg.selfEvictChance=clampNum(val('selfEvictChance',0),0,0,2);
+    g.cfg.enablePublicFav=on('enablePublicFav',false);
 
     const autoMusicBox=document.getElementById('autoMusic');
     if(autoMusicBox) autoMusicBox.checked=g.cfg.autoMusic;
@@ -131,6 +133,8 @@
     global.initAffinities();
     global.initRelationships();
     resetRoundState();
+    // Reset public favourite flag for new season
+    global.__publicFavouriteCompleted = false;
     global.addLog?.('Game created. Waiting to start…','muted');
     global.tv?.say?.('Game created. Waiting to start…');
     global.updateHud?.();
@@ -152,6 +156,8 @@
       global.initAffinities();
       global.initRelationships();
       resetRoundState();
+      // Reset public favourite flag for new season
+      global.__publicFavouriteCompleted = false;
     } else {
       buildCast();
     }

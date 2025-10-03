@@ -2213,3 +2213,45 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
     min-width: 44px;
   }
 }
+
+/* === Public's Favourite Player Feature ====================================== */
+/* Minimal CSS for public favourite voting panel */
+.pfBarOuter{
+  background: #1a2838;
+  border-radius: 8px;
+  height: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.pfBarFill{
+  height: 100%;
+  background: linear-gradient(90deg, #3563a7, #5580d0);
+  transition: width 5s ease;
+}
+
+/* Fallback solid color for WCAG contrast (4.5:1 against dark bg) */
+@supports not (background: linear-gradient(90deg, #3563a7, #5580d0)) {
+  .pfBarFill{
+    background: #4070c0;
+  }
+}
+
+/* Skip flashing animation if user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .pfBarFill{
+    transition: width 2s ease;
+  }
+  .pfFinalFlash{
+    animation: none !important;
+  }
+}
+
+/* Screen reader only class for accessibility */
+.sr-only{
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
