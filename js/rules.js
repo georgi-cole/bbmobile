@@ -170,6 +170,28 @@
     p4c.textContent = 'Even if you\'re out, your influence on the game continues.';
     container.appendChild(p4c);
 
+    // Section 4b: Final Week
+    const h4b = document.createElement('h3');
+    h4b.textContent = '4b. Final Week & Two-Part Final Competition';
+    h4b.style.cssText = 'margin-top:16px;margin-bottom:6px;color:#ffdc8b;font-weight:700;';
+    container.appendChild(h4b);
+
+    const p4d = document.createElement('p');
+    p4d.textContent = 'When only three houseguests remain, the endgame unfolds with a special two-part competition.';
+    container.appendChild(p4d);
+
+    const p4e = document.createElement('p');
+    p4e.innerHTML = '<strong>Part 1:</strong> All three compete. The houseguest with the lowest score is automatically nominated for eviction.';
+    container.appendChild(p4e);
+
+    const p4f = document.createElement('p');
+    p4f.innerHTML = '<strong>Part 2:</strong> The remaining two houseguests face off head-to-head. The winner becomes the final HOH and chooses which of the other two sits beside them in the Final 2, while the third is sent to the Jury.';
+    container.appendChild(p4f);
+
+    const p4g = document.createElement('p');
+    p4g.textContent = 'This format ensures that competition performance matters right up until the very end.';
+    container.appendChild(p4g);
+
     // Section 5
     const h5 = document.createElement('h3');
     h5.textContent = '5. Twists & Surprises';

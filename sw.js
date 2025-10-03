@@ -1,6 +1,6 @@
 // Service Worker with audio pre-cache (no YouTube)
 // NOTE: bump CACHE_NAME when core assets list changes.
-const CACHE_NAME = 'bb-pwa-v-mobile-ux-overhaul-3';
+const CACHE_NAME = 'bb-pwa-v-post-pr35-enhancements';
 
 // Make sure these filenames match your repository structure.
 // Default audio folder is /audio as in your screenshot.
@@ -20,7 +20,8 @@ const CORE = [
   './audio/veto.mp3',
   './audio/live%20vote.mp3',
   './audio/final%20jury%20vote.mp3',
-  './audio/victory.mp3'
+  './audio/victory.mp3',
+  './audio/cheer.mp3'
 ];
 
 self.addEventListener('install', (e) => {

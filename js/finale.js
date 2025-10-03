@@ -166,6 +166,148 @@
     }catch{}
   }
 
+  // Public's Favourite Player feature
+  async function showPublicFavourite(winnerId){
+    const cfg = g.game?.cfg || {};
+    if(!cfg.enablePublicFav) return; // Skip if disabled
+
+    function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+    
+    // Get alive + evicted players (exclude winner if possible)
+    const allPlayers = (g.game?.players || []).filter(p => p.id !== winnerId);
+    if(allPlayers.length < 3){
+      // Not enough candidates, use everyone
+      allPlayers.push(...(g.game?.players || []).filter(p => p.id === winnerId));
+    }
+    
+    // Pick 3 random candidates
+    const shuffled = allPlayers.slice().sort(() => Math.random() - 0.5);
+    const candidates = shuffled.slice(0, 3);
+    if(candidates.length < 3) return; // Not enough players
+    
+    // Generate random vote percentages (normalized to 100%)
+    const raw = candidates.map(() => Math.random() * 100);
+    const sum = raw.reduce((a,b) => a+b, 0);
+    const percentages = raw.map(v => Math.round((v/sum)*100));
+    // Adjust to ensure sum is exactly 100
+    const diff = 100 - percentages.reduce((a,b)=>a+b,0);
+    if(diff !== 0) percentages[0] += diff;
+    
+    // Sort by percentage (ascending for reveal order)
+    const sorted = candidates.map((c,i) => ({player:c, pct:percentages[i]}))
+      .sort((a,b) => a.pct - b.pct);
+    
+    try{
+      // Announce audience segment
+      if(typeof g.showCard === 'function'){
+        g.showCard('Special Segment', ['Now for a word from our audience...'], 'neutral', 2500, true);
+      }
+      if(typeof g.cardQueueWaitIdle === 'function'){
+        await g.cardQueueWaitIdle();
+      }
+      await sleep(300);
+      
+      // Build and show voting panel
+      const panel = document.createElement('div');
+      panel.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;background:linear-gradient(145deg,#0e1622,#0a131f);border:2px solid rgba(110,160,220,.25);border-radius:16px;padding:20px;width:min(500px,90vw);box-shadow:0 10px 40px rgba(0,0,0,.8);';
+      panel.innerHTML = `
+        <h3 style="text-align:center;color:#ffdc8b;margin:0 0 16px;">Public's Favourite Player</h3>
+        <div id="pubFavCandidates"></div>
+      `;
+      document.body.appendChild(panel);
+      
+      const candidatesDiv = panel.querySelector('#pubFavCandidates');
+      sorted.forEach(({player, pct}) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'margin:10px 0;';
+        row.innerHTML = `
+          <div style="color:#eaf4ff;margin-bottom:4px;font-weight:600;">${g.safeName?.(player.id) || player.name}</div>
+          <div style="background:#1a2838;border-radius:8px;height:24px;position:relative;overflow:hidden;">
+            <div class="pubFavBar" data-pct="${pct}" style="width:0%;height:100%;background:linear-gradient(90deg,#3563a7,#5580d0);transition:width 5s ease;"></div>
+            <div class="pubFavPct" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8);">0%</div>
+          </div>
+        `;
+        candidatesDiv.appendChild(row);
+      });
+      
+      // Animate bars
+      await sleep(100);
+      panel.querySelectorAll('.pubFavBar').forEach(bar => {
+        const pct = bar.dataset.pct;
+        bar.style.width = pct + '%';
+      });
+      
+      // Animate percentages counting up
+      const duration = 5000;
+      const start = Date.now();
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - start;
+        const progress = Math.min(elapsed / duration, 1);
+        panel.querySelectorAll('.pubFavBar').forEach((bar, idx) => {
+          const target = parseInt(bar.dataset.pct);
+          const current = Math.floor(target * progress);
+          const pctSpan = bar.parentElement.querySelector('.pubFavPct');
+          if(pctSpan) pctSpan.textContent = current + '%';
+        });
+        if(progress >= 1) clearInterval(interval);
+      }, 50);
+      
+      await sleep(5500);
+      panel.remove();
+      
+      // "Let's reveal the votes"
+      if(typeof g.showCard === 'function'){
+        g.showCard('Results', ['Let\'s reveal the votes...'], 'neutral', 2000, true);
+      }
+      if(typeof g.cardQueueWaitIdle === 'function'){
+        await g.cardQueueWaitIdle();
+      }
+      await sleep(400);
+      
+      // Reveal 3rd place
+      if(typeof g.showCard === 'function'){
+        g.showCard('3rd Place', [`${g.safeName?.(sorted[0].player.id) || sorted[0].player.name} — ${sorted[0].pct}%`], 'neutral', 2000);
+      }
+      if(typeof g.cardQueueWaitIdle === 'function'){
+        await g.cardQueueWaitIdle();
+      }
+      await sleep(1200);
+      
+      // Reveal 2nd place
+      if(typeof g.showCard === 'function'){
+        g.showCard('2nd Place', [`${g.safeName?.(sorted[1].player.id) || sorted[1].player.name} — ${sorted[1].pct}%`], 'neutral', 2000);
+      }
+      if(typeof g.cardQueueWaitIdle === 'function'){
+        await g.cardQueueWaitIdle();
+      }
+      await sleep(1200);
+      
+      // Reveal Fan Favourite with cheer
+      const fanFav = sorted[2];
+      if(typeof g.showCard === 'function'){
+        g.showCard('Fan Favourite! 🌟', [`${g.safeName?.(fanFav.player.id) || fanFav.player.name} — ${fanFav.pct}%`], 'ok', 3500);
+      }
+      if(typeof g.playCheerSfx === 'function'){
+        g.playCheerSfx();
+      }
+      if(typeof g.cardQueueWaitIdle === 'function'){
+        await g.cardQueueWaitIdle();
+      }
+      await sleep(400);
+      
+      // Congratulations
+      if(typeof g.showCard === 'function'){
+        g.showCard('Congratulations!', [`${g.safeName?.(fanFav.player.id) || fanFav.player.name}, you are the Public's Favourite!`], 'ok', 3000);
+      }
+      if(typeof g.cardQueueWaitIdle === 'function'){
+        await g.cardQueueWaitIdle();
+      }
+      
+    } catch(e){
+      console.warn('[finale] Public Favourite feature error:', e);
+    }
+  }
+
   function showFinaleCinematic(winnerId){
     // D) Persist winner ID for outro replay
     g.__lastWinnerId = winnerId;
@@ -173,10 +315,21 @@
     const dim=ensureOverlay();
     const name = g.safeName?.(winnerId) || (g.getP?.(winnerId)?.name ?? 'Winner');
     dim.querySelector('#cinWinName').textContent = name;
+    
+    // Inject Public's Favourite after winner cinematic, before credits
+    if(!g.__publicFavShown){
+      g.__publicFavShown = true;
+      setTimeout(() => {
+        showPublicFavourite(winnerId).catch(e => {
+          console.warn('[finale] showPublicFavourite error:', e);
+        });
+      }, 1500);
+    }
   }
 
   // expose
   g.showFinaleCinematic = showFinaleCinematic;
+  g.showPublicFavourite = showPublicFavourite;
 
   // apply preseed profile (after reload/new season)
   document.addEventListener('DOMContentLoaded',()=>{ applyPreseedProfile(); }, {once:true});

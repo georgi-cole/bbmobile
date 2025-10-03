@@ -24,6 +24,7 @@
     tripleChance: 7,    // %
     returnChance: 10,   // % chance a juror returns (mid-season)
     selfEvictChance: 1, // % tiny chance of auto self-eviction
+    enablePublicFav: true, // Public's Favourite Player feature at finale
     // Timing (seconds)
     tVote: 30,
     tVeto: 40,
@@ -32,7 +33,9 @@
     musicOn: true,
     sfxOn: true,
     // Reserved for future toggles
-    useRibbon: true
+    useRibbon: true,
+    // Minigame mode
+    miniMode: 'random'  // 'random' | 'clicker' | 'cycle'
   };
 
   // Load/save helpers
@@ -216,11 +219,25 @@
   function buildGameplayPaneHTML(){
     return [
       '<div class="settingsGrid">',
+        group('Features', [
+          checkbox('enablePublicFav','Public\'s Favourite Player at finale')
+        ].join('')),
         group('Week twists', [
           number('doubleChance','Double eviction chance (%)',0,100,1),
           number('tripleChance','Triple eviction chance (%)',0,100,1),
           number('returnChance','Juror return chance (%)',0,100,1),
           number('selfEvictChance','Self-eviction chance (%)',0,100,0.5)
+        ].join('')),
+        group('Minigame settings', [
+          '<div class="toggleRow">',
+            '<label>Minigame mode</label>',
+            '<select name="miniMode">',
+              '<option value="random">Random</option>',
+              '<option value="clicker">Clicker only</option>',
+              '<option value="cycle">Cycle through all</option>',
+            '</select>',
+            '<div class="tiny muted">Choose how minigames are selected during competitions.</div>',
+          '</div>'
         ].join('')),
       '</div>'
     ].join('');
