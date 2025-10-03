@@ -647,16 +647,40 @@ img{ max-width:100%; display:block; }
 ::-webkit-scrollbar-thumb{ background:#26435d; border-radius:6px; }
 ::-webkit-scrollbar-thumb:hover{ background:#31587a; }
 
-/* 07. TV / SHOW PANEL — safe areas + adaptive height */
+/* 07. TV / SHOW PANEL — TV Frame with Bezel and Viewport */
+.tvFrame{
+  position:relative;
+  padding:12px;
+  background:linear-gradient(145deg, #1a2939, #0f1b28);
+  border-radius:24px;
+  box-shadow:0 20px 50px -20px rgba(0,0,0,.85), 
+             inset 0 2px 4px rgba(255,255,255,.05),
+             inset 0 -2px 4px rgba(0,0,0,.25);
+}
+.tvBezel{
+  position:relative;
+  padding:8px;
+  background:linear-gradient(135deg, #141f2d, #0a1419);
+  border-radius:18px;
+  border:1px solid #24364b;
+  box-shadow:inset 0 0 24px rgba(0,0,0,.5);
+}
 .tv{
   position:relative;
   height: clamp(280px, 42vh, 520px);
   background:radial-gradient(circle at 32% 30%, #23364d, #0e1730 65%);
-  border:2px solid #213349; border-radius:18px; overflow:hidden;
+  border:2px solid #213349; border-radius:16px; overflow:hidden;
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
   box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
 }
 .tv.tvTall{ height: clamp(340px, 52vh, 600px); }
+.tvViewport{
+  position:relative;
+  flex:1;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
 
 .tvHead{
   display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
@@ -668,12 +692,12 @@ img{ max-width:100%; display:block; }
 
 #tvOverlay{
   position:absolute; z-index:12;
-  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  inset:0;
   pointer-events:auto; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
 }
 #confetti{
   position:absolute; z-index:11;
-  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  inset:0;
   pointer-events:none; mix-blend-mode:screen; opacity:.95;
 }
 .tvNow{
@@ -685,6 +709,28 @@ img{ max-width:100%; display:block; }
   border:1px solid rgba(120,210,255,.22); box-shadow:0 4px 18px -12px rgba(0,0,0,.8);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   pointer-events:none; /* ticker never intercepts clicks */
+}
+
+/* LIVE badge for voting phases */
+.liveBadge{
+  position:absolute;
+  bottom:16px;
+  right:16px;
+  z-index:20;
+  padding:6px 14px;
+  background:#ff3333;
+  color:#fff;
+  font-weight:700;
+  font-size:.75rem;
+  letter-spacing:1px;
+  border-radius:6px;
+  box-shadow:0 4px 12px rgba(255,51,51,.5);
+  animation:liveBlink 1.5s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes liveBlink{
+  0%, 100%{ opacity:1; }
+  50%{ opacity:.5; }
 }
 
 /* 08. Reveal Cards — fit within screen and scroll if tall; supports avatar rows */
