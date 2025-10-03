@@ -142,6 +142,77 @@
     });
   };
 
+  // Confetti spawner (visual celebration effect)
+  UI.spawnConfetti = function(durationMs, particleCount){
+    try{
+      const cfg = g.game?.cfg || {};
+      // Respect FX settings: skip if both fxAnim and fxCards are explicitly disabled
+      if(cfg.fxAnim === false && cfg.fxCards === false) return;
+      
+      const canvas = document.getElementById('confetti');
+      if(!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      
+      // Set canvas size to match viewport
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      
+      const particles = [];
+      const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a8dadc', '#f1c40f', '#e74c3c', '#3498db', '#9b59b6'];
+      const pCount = Math.min(particleCount || 120, 300);
+      
+      for(let i=0; i<pCount; i++){
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: -20 - Math.random() * 100,
+          vx: (Math.random() - 0.5) * 3,
+          vy: Math.random() * 3 + 2,
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 10,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          gravity: 0.15
+        });
+      }
+      
+      const startTime = Date.now();
+      const duration = durationMs || 3000;
+      
+      function animate(){
+        const elapsed = Date.now() - startTime;
+        if(elapsed > duration){
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          return;
+        }
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        particles.forEach(p => {
+          p.vy += p.gravity;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rotation += p.rotationSpeed;
+          
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation * Math.PI / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+          ctx.restore();
+        });
+        
+        requestAnimationFrame(animate);
+      }
+      
+      animate();
+    }catch(e){
+      console.warn('[UI] spawnConfetti error:', e);
+    }
+  };
+
   // Settings button helpers
   function findCandidateSettingsButtons(){
     const uniq = new Set();

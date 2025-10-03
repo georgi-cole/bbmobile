@@ -187,9 +187,127 @@ All modified files passed Node.js syntax checks:
 ✅ Service worker updated with new cache version
 ✅ Cheer play attempt does not throw if asset absent
 
+## Integration Fix: Public Favourite Invocation + Confetti Reliability
+
+### Changes Made (Post-PR35 Integration)
+**Files modified:** js/ui.config-and-settings.js, js/finale.js, js/jury.js
+
+#### js/ui.config-and-settings.js
+- **Added `UI.spawnConfetti()` function** (70 lines):
+  - Creates visual confetti celebration effect on canvas
+  - Parameters: `durationMs` (default 3000), `particleCount` (default 120, max 300)
+  - Respects FX settings: skips if both `fxAnim` and `fxCards` are explicitly false
+  - Uses requestAnimationFrame for smooth animation
+  - Random colors, sizes, velocities, and rotation for each particle
+  - Gracefully handles missing canvas element or context
+  - Try/catch wrapper prevents crashes
+
+#### js/finale.js
+- **Enhanced `showPublicFavourite()` with explicit console markers**:
+  - `[publicFav] start` - when feature begins execution
+  - `[publicFav] done` - on successful completion
+  - `[publicFav] skipped (toggle false)` - when disabled in settings
+  - `[publicFav] skipped (already completed)` - when guard prevents re-run
+  - `[publicFav] error: <message>` - on caught exceptions
+  - Hard timeout warning: `[publicFav] timed out after 10s`
+- **No changes to invocation flow**: `showFinaleCinematic()` already calls `showPublicFavourite()` after 1.5s delay
+- **Debug hook**: `window.__debugRunPublicFavOnce()` already exists for QA testing
+
+#### js/jury.js
+- **Added winner confetti spawn** after `showWinnerMessageBanner()`:
+  - Spawns 180 particles for 5000ms duration
+  - Respects FX flags (skips only if both `fxAnim` and `fxCards` are false)
+  - Try/catch wrapper with console warning on error
+  - Positioned before victory music starts
+  - Independent of Public Favourite confetti (winner confetti always fires if enabled)
+
+### Acceptance Criteria Verification
+
+✅ **Toggle Persistence**: Settings modal loads/saves `enablePublicFav` via localStorage  
+✅ **Toggle Default**: Set to `false` by default as specified  
+✅ **Toggle OFF Behavior**: `showPublicFavourite()` logs `[publicFav] skipped (toggle false)` and returns immediately  
+✅ **Toggle ON Behavior**: Executes full sequence with `[publicFav] start` and `[publicFav] done` markers  
+✅ **Single Execution**: `g.__publicFavouriteCompleted` guard prevents duplicate runs  
+✅ **Winner Confetti**: Spawns after winner announcement, before medal/cinematic  
+✅ **FX Respect**: Both confetti calls check FX flags before spawning  
+✅ **Hard Timeout**: 10s timeout ensures credits progression even on errors  
+✅ **No Blocking**: All async operations properly wrapped with try/catch  
+✅ **Debug Hook**: `window.__debugRunPublicFavOnce()` available for testing  
+✅ **Console Markers**: All required log statements present  
+
+### Integration Flow
+
+**Winner Announcement → Confetti → Public Favourite (if enabled) → Credits**
+
+```
+1. Jury votes tallied
+2. showPlacementLabels(winner)
+3. showWinnerMessageBanner(winner)
+4. ⭐ UI.spawnConfetti(5000, 180)  ← NEW
+5. Victory music starts
+6. Sleep 5000ms
+7. Stop music
+8. Medal animation (8000ms) OR
+9.   → showFinaleCinematic(winner)
+10.      → (1500ms delay)
+11.      → showPublicFavourite(winner) if enabled  ← Already existed
+12.           → Audience segment card
+13.           → Voting panel with bars
+14.           → Sequential reveals (3rd, 2nd, Fan Favourite)
+15.           → Cheer SFX
+16.           → Congratulations card
+17. Credits sequence
+```
+
+### Testing Steps
+
+1. **Confetti Verification**:
+   - Play through to finale
+   - Verify confetti appears after winner banner
+   - Check console for no errors
+   - Test with `fxAnim: false` and `fxCards: false` to verify skip
+
+2. **Public Favourite Toggle OFF**:
+   - Settings → Gameplay → Uncheck "Public's Favourite Player"
+   - Play to finale
+   - Console should show `[publicFav] skipped (toggle false)`
+   - Confetti should still appear for winner
+   - No Public Favourite panel should display
+
+3. **Public Favourite Toggle ON**:
+   - Settings → Gameplay → Check "Public's Favourite Player"
+   - Play to finale
+   - Console should show `[publicFav] start` and `[publicFav] done`
+   - Winner confetti spawns first
+   - Public Favourite panel appears ~1.5s after winner cinematic
+   - Vote bars animate
+   - Percentages sum to 100%
+   - Sequential reveals work
+   - Credits follow after completion
+
+4. **Debug Hook**:
+   - After finale, open console
+   - Run `window.__debugRunPublicFavOnce()`
+   - Should re-trigger Public Favourite segment
+   - Check all markers appear in console
+
+5. **Persistence**:
+   - Toggle "Public's Favourite Player" ON
+   - Save settings
+   - Reload page
+   - Open settings - checkbox should still be checked
+
+### Known Behavior
+
+- **No confetti during Public Favourite panel**: Confetti is intentionally only for main winner
+- **1.5s delay**: Public Favourite starts 1.5s after winner cinematic appears
+- **10s hard timeout**: Ensures credits always progress even if errors occur
+- **Guard flag**: `g.__publicFavouriteCompleted` prevents duplicate runs per season
+
 ## Notes
 - No test infrastructure exists in repo, so manual testing recommended
 - All changes are minimal and surgical as requested
 - Backward compatible - features degrade gracefully if APIs unavailable
 - Public's Favourite can be disabled via settings toggle
 - Cheer.mp3 audio file should be added to audio/ folder for full functionality
+- Confetti function now exists and is called by existing return twist features
