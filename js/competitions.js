@@ -59,44 +59,96 @@
   function pickMinigameType(){
     const g=global.game;
     
+    // Initialize miniHistory if needed
+    if(!g.miniHistory) g.miniHistory = [];
+    
     // Purge stale 'clicker' miniMode when user switches to random
     if(g?.cfg?.miniMode==='random' && g.__lastMiniMode==='clicker'){
       delete g.__lastMiniMode;
+      console.info('[Minigame] Cleared stale clicker mode');
     } else if(g?.cfg?.miniMode){
       g.__lastMiniMode = g.cfg.miniMode;
     }
     
     // Legacy mode overrides
-    if(g?.cfg?.miniMode==='clicker') return 'clicker';
+    if(g?.cfg?.miniMode==='clicker'){
+      g.miniHistory.push('clicker');
+      return 'clicker';
+    }
     if(g?.cfg?.miniMode==='cycle'){ 
       const t=MG_LIST[g.miniIndex%MG_LIST.length]; 
-      g.miniIndex++; 
+      g.miniIndex++;
+      g.miniHistory.push(t);
       return t; 
     }
     
-    // Use new registry if available (80% of the time)
-    // Lazy retry if registry not yet loaded
+    // Try new registry if available (with lazy retry)
+    let registryGame = null;
     if(global.MiniGamesRegistry){
-      const newGame = global.MiniGamesRegistry.getRandom();
-      if(newGame && Math.random() < 0.8){
-        return newGame;
+      registryGame = global.MiniGamesRegistry.getRandom(g.miniHistory);
+    } else {
+      // Lazy retry: give registry a short timeout to initialize
+      const startTime = Date.now();
+      const maxWait = 50; // 50ms timeout
+      while(!global.MiniGamesRegistry && (Date.now() - startTime) < maxWait){
+        // Busy wait for a short time
       }
-    } else if(typeof queueMicrotask === 'function'){
-      // Registry might load soon; give it a microtask to settle
-      let retryGame = null;
-      queueMicrotask(()=>{
-        if(global.MiniGamesRegistry){
-          retryGame = global.MiniGamesRegistry.getRandom();
-        }
-      });
-      if(retryGame) return retryGame;
+      if(global.MiniGamesRegistry){
+        registryGame = global.MiniGamesRegistry.getRandom(g.miniHistory);
+        console.info('[Minigame] Registry loaded after short delay');
+      } else {
+        console.info('[Minigame] Registry not available, using legacy fallback');
+      }
     }
     
-    // Fall back to shuffled legacy games
+    // Use registry game 80% of the time if available
+    if(registryGame && Math.random() < 0.8){
+      g.miniHistory.push(registryGame);
+      return registryGame;
+    }
+    
+    // Fall back to shuffled legacy games with history weighting
     const pool = shuffleLegacyPool();
-    const idx = g.__legacyPoolIndex || 0;
-    g.__legacyPoolIndex = (idx + 1) % pool.length;
-    return pool[idx];
+    const recentGames = g.miniHistory.slice(-3);
+    const lastGame = g.miniHistory[g.miniHistory.length - 1];
+    
+    // Build weighted candidate list (penalize recently used games)
+    const candidates = [];
+    for(const game of pool){
+      const recentCount = recentGames.filter(g => g === game).length;
+      const weight = Math.max(1, 5 - recentCount * 2); // Weight: 5 (new) to 1 (used 2+ times recently)
+      for(let i = 0; i < weight; i++){
+        candidates.push(game);
+      }
+    }
+    
+    // Pick from weighted candidates
+    let chosen = candidates[Math.floor((global.rng?.()||Math.random()) * candidates.length)];
+    
+    // Avoid immediate repeat if pool has >1 game
+    if(chosen === lastGame && pool.length > 1){
+      const alternatives = pool.filter(g => g !== lastGame);
+      if(alternatives.length > 0){
+        // Build weighted alternatives (excluding last game)
+        const altCandidates = [];
+        for(const game of alternatives){
+          const recentCount = recentGames.filter(g => g === game).length;
+          const weight = Math.max(1, 5 - recentCount * 2);
+          for(let i = 0; i < weight; i++){
+            altCandidates.push(game);
+          }
+        }
+        chosen = altCandidates[Math.floor((global.rng?.()||Math.random()) * altCandidates.length)];
+        console.info('[Minigame] Avoided immediate repeat:', lastGame, '→', chosen);
+      }
+    }
+    
+    g.miniHistory.push(chosen);
+    
+    // Update legacy pool index for cycle mode compatibility
+    g.__legacyPoolIndex = (pool.indexOf(chosen) + 1) % pool.length;
+    
+    return chosen;
   }
   global.pickMinigameType=pickMinigameType;
 
