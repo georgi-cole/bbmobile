@@ -1,6 +1,6 @@
 // Service Worker with audio pre-cache (no YouTube)
 // NOTE: bump CACHE_NAME when core assets list changes.
-const CACHE_NAME = 'bb-pwa-v-audio-files-1';
+const CACHE_NAME = 'bb-pwa-v-audio-files-2';
 
 // Make sure these filenames match your repository structure.
 // Default audio folder is /audio as in your screenshot.
