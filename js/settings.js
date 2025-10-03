@@ -231,7 +231,7 @@
         group('Minigame settings', [
           '<div class="toggleRow">',
             '<label>Minigame mode</label>',
-            '<select name="miniMode">',
+            '<select data-key="miniMode">',
               '<option value="random">Random</option>',
               '<option value="clicker">Clicker only</option>',
               '<option value="cycle">Cycle through all</option>',
@@ -384,6 +384,9 @@
       var k = inp.getAttribute('data-key');
       if(inp.type === 'checkbox'){
         inp.checked = !!cfg[k];
+      }else if(inp.tagName.toLowerCase() === 'select'){
+        var v = (cfg[k] != null ? cfg[k] : 'random');
+        inp.value = v;
       }else{
         var v = (cfg[k] != null ? cfg[k] : '');
         inp.value = v;
@@ -419,9 +422,11 @@
       var k = inp.getAttribute('data-key');
       if(inp.type === 'checkbox'){
         cfg[k] = !!inp.checked;
+      }else if(inp.tagName.toLowerCase() === 'select'){
+        cfg[k] = inp.value;
       }else{
         var n = parseFloat(inp.value);
-        cfg[k] = isNaN(n) ? cfg[k] : n;
+        cfg[k] = isNaN(n) ? inp.value : n;
       }
     });
 
