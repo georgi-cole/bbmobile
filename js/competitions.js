@@ -227,6 +227,7 @@
   
   // Reusable tri-slot reveal sequence for competitions
   // Can be used for HOH, Veto, or other top-3 reveals
+  // Enhanced with optional avatar display
   async function showTriSlotReveal(options){
     const {
       title = 'Competition',
@@ -236,10 +237,26 @@
       introDuration = 2000,
       placeDuration = 2000,
       winnerDuration = 3200,
-      showIntro = true
+      showIntro = true,
+      showAvatars = false // New option to show avatars in modal
     } = options;
     
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+    
+    // Helper to get avatar URL for a player
+    function getAvatarUrl(entry){
+      if(!showAvatars) return null;
+      
+      // Try to get player object from entry
+      const player = entry.player || entry.id ? global.getP?.(entry.id) : null;
+      if(player){
+        return player.avatar || player.img || player.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name || 'player')}`;
+      }
+      
+      // Fallback using entry name
+      const name = entry.name || entry;
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+    }
     
     try {
       // Show intro card
@@ -254,7 +271,8 @@
       // Reveal 3rd place
       if(topThree[2]){
         if(typeof global.showCard === 'function'){
-          global.showCard('3rd Place', [topThree[2].name || topThree[2]], 'neutral', placeDuration);
+          const lines = [topThree[2].name || topThree[2]];
+          global.showCard('3rd Place', lines, 'neutral', placeDuration);
           if(typeof global.cardQueueWaitIdle === 'function'){
             await global.cardQueueWaitIdle();
           }
@@ -265,7 +283,8 @@
       // Reveal 2nd place
       if(topThree[1]){
         if(typeof global.showCard === 'function'){
-          global.showCard('2nd Place', [topThree[1].name || topThree[1]], 'neutral', placeDuration);
+          const lines = [topThree[1].name || topThree[1]];
+          global.showCard('2nd Place', lines, 'neutral', placeDuration);
           if(typeof global.cardQueueWaitIdle === 'function'){
             await global.cardQueueWaitIdle();
           }
@@ -277,7 +296,8 @@
       if(topThree[0]){
         if(typeof global.showCard === 'function'){
           const winnerTitle = `${title} Winner ${winnerEmoji}`;
-          global.showCard(winnerTitle, [topThree[0].name || topThree[0]], winnerTone, winnerDuration);
+          const lines = [topThree[0].name || topThree[0]];
+          global.showCard(winnerTitle, lines, winnerTone, winnerDuration);
           if(typeof global.cardQueueWaitIdle === 'function'){
             await global.cardQueueWaitIdle();
           }
