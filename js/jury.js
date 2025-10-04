@@ -223,6 +223,9 @@
     .fo-ribbon{ position:absolute; top:-10px; left:12px; background:rgba(0,0,0,.7); border:1px solid rgba(255,255,255,.18); color:#e9fcff; font-weight:800; font-size:11px; padding:6px 8px; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,.35); z-index:3 }
     .fo-ribbon.right{ left:auto; right:12px }
 
+    /* Fade out animation for tally removal */
+    .fadeOutFast{ opacity:0; transition:opacity .45s ease; }
+
     @media (max-width: 1120px){ .finalFaceoff{ grid-template-columns:1fr; gap:14px } }
     `;
     const style=document.createElement('style'); style.id='faceoff-css'; style.textContent=css; document.head.appendChild(style);
@@ -431,6 +434,27 @@
     st.els.root.appendChild(o);
     setTimeout(()=>o.remove(), durationMs);
     st._fitSchedule && st._fitSchedule();
+  }
+
+  // Helper to hide and remove the faceoff graph with fade animation
+  async function hideFaceoffGraph(){
+    console.info('[publicFav] waitForTallyHide');
+    const box = document.getElementById('juryGraphBox');
+    if(!box) {
+      console.info('[publicFav] tallyHidden (not found)');
+      return;
+    }
+    
+    // Apply fade out class
+    box.classList.add('fadeOutFast');
+    
+    // Wait for transition to complete (.45s)
+    await sleep(450);
+    
+    // Remove from DOM
+    try { box.remove(); } catch(e){}
+    
+    console.info('[publicFav] tallyHidden');
   }
 
   function celebrateMajority(name){
@@ -832,50 +856,28 @@
     // NO CONFETTI per spec
     
     try{ g.setMusic?.('victory', true); }catch(e){}
-    await sleep(5000);
-    try{
-      if (typeof g.stopMusic === 'function') g.stopMusic();
-      else if (typeof g.setMusicEnabled === 'function') g.setMusicEnabled(false);
-      else document.getElementById('bgm')?.pause?.();
-    }catch(e){}
-    await sleep(1000);
     
-    // NEW: Run Public Favourite AFTER winner announcement, BEFORE medal overlay
+    // Wait 5 seconds for winner display
+    await sleep(5000);
+    
+    // Fade out and remove the tally/faceoff graph
+    await hideFaceoffGraph();
+    
+    // Run Public Favourite AFTER tally hidden, BEFORE cinematic overlay
     try{
       await runPublicFavouritePostWinner(winner);
     }catch(e){
       console.warn('[publicFav] error:', e);
     }
     
-    const MEDAL_MS = 8000;
-    let usedExternalMedal=false;
-    try{
-      if(typeof g.playMedalAnimation==='function'){ usedExternalMedal=true; await g.playMedalAnimation({duration:MEDAL_MS, winner}); }
-      else if(typeof g.startWinnerMedalAnimation==='function'){ usedExternalMedal=true; await g.startWinnerMedalAnimation(MEDAL_MS, winner); }
-      else if(typeof g.showWinnerMedal==='function'){ usedExternalMedal=true; await g.showWinnerMedal(winner, MEDAL_MS); }
-      // REMOVED: showFinaleCinematic call (legacy overlay) - now using outro video directly
-    }catch(e){ console.warn('[jury] medal animation error', e); }
-    
-    if(!usedExternalMedal){
-      showMedalOverlayFallback(MEDAL_MS);
-      await sleep(MEDAL_MS);
-    }
-    
-    // Play outro video instead of credits sequence (outro includes credits)
-    console.info('[jury] finale complete, triggering outro video');
-    if(typeof g.playOutroVideo === 'function'){
-      try { 
-        await g.playOutroVideo(); 
-      } catch(e){ 
-        console.warn('[jury] playOutroVideo error, falling back to credits', e);
-        const imgs = (g.game?.players || g.players || []).map(p=>p?.avatar || p?.img || p?.photo).filter(Boolean);
-        startCreditsPreferred(imgs);
+    // Show classic cinematic overlay (restored)
+    console.info('[jury] showing finale cinematic');
+    if(typeof g.showFinaleCinematic === 'function'){
+      try{
+        g.showFinaleCinematic(winner);
+      }catch(e){
+        console.warn('[jury] showFinaleCinematic error', e);
       }
-    } else {
-      // Fallback to credits if outro not available
-      console.info('[jury] playOutroVideo not available, using credits sequence');
-      const imgs = (g.game?.players || g.players || []).map(p=>p?.avatar || p?.img || p?.photo).filter(Boolean);
-      startCreditsPreferred(imgs);
     }
   }
 

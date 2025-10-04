@@ -92,6 +92,11 @@
       const s=panel.querySelector('#cinStats'); s.style.display = (s.style.display==='none'||!s.style.display) ? 'block' : 'none';
     };
     panel.querySelector('#cinCredits').onclick=()=>{
+      if(g.__outroStarted){
+        console.info('[finale] outro already started');
+        return;
+      }
+      g.__outroStarted = true;
       if(typeof g.playOutroVideo === 'function'){
         try { g.playOutroVideo(); } catch(e){ console.warn('[finale] playOutroVideo error', e); }
       } else if(typeof g.startEndCreditsSequence === 'function'){
@@ -120,10 +125,27 @@
   }
 
   function showFinaleCinematic(winnerId){
+    console.info('[finale] showingCinematic');
     g.__lastWinnerId = winnerId;
     const dim=ensureOverlay();
     const name = g.safeName?.(winnerId) || (g.getP?.(winnerId)?.name ?? 'Winner');
     const nameEl=dim.querySelector('#cinWinName'); if(nameEl) nameEl.textContent=name;
+    
+    // Autoplay outro video after 8 seconds unless already started via CREDITS button
+    if(!g.__outroStarted){
+      setTimeout(()=>{
+        if(!g.__outroStarted && typeof g.playOutroVideo === 'function'){
+          console.info('[finale] autoplaying outro video');
+          g.__outroStarted = true;
+          try{
+            g.playOutroVideo();
+          }catch(e){
+            console.warn('[finale] autoplay outro error', e);
+          }
+        }
+      }, 8000);
+    }
+    
     return dim;
   }
 
