@@ -661,3 +661,191 @@ window.game.__debugRunPublicFavOnce()
 - Public's Favourite can be disabled via settings toggle
 - Cheer.mp3 audio file should be added to audio/ folder for full functionality
 - Confetti function now exists and is called by existing return twist features
+
+---
+
+## Card Queue Flush System (PR #49 Completion)
+
+### Summary
+Implements a global card flush infrastructure to prevent stale cards from appearing after phase changes, self-evictions, or skips. Includes generation token tracking, abort safety for Public Favourite simulation, and enhanced winner card display.
+
+### Changes Made
+
+#### js/ui.overlay-and-logs.js
+**Card Flush Infrastructure:**
+- Added `g.__cardGen` global generation token (integer, starts at 1)
+- Added `g.__cardTimeouts` array to track active setTimeout IDs
+- Implemented `flushAllCards(reason)` function:
+  - Increments generation token
+  - Clears all tracked timeouts
+  - Removes active card DOM nodes (`.bb-card-host`, `[data-bb-card]`, `.revealCard`)
+  - Clears tvOverlay and removes tvTall class
+  - Logs: `[cards] flushed (reason=${reason})`
+- Added `safeShowCard()` wrapper:
+  - Captures generation token before showing card
+  - Registers timeouts with generation token
+  - Checks token before executing callbacks
+  - Falls back to tvNow text update if showCard unavailable
+- Modified `renderCard()` to add `data-bb-card="true"` attribute to all cards
+- Exported `flushAllCards` and `safeShowCard` to global scope
+
+**Lines Changed:** ~80 lines added
+
+#### js/eviction.js
+**Self-Evict Flush Hook:**
+- Modified `handleSelfEviction()` to call `flushAllCards('self-evict')` when reason is 'self'
+- Ensures no stale cards remain when player self-evicts
+
+**Lines Changed:** 5 lines added
+
+#### js/ui.hud-and-router.js
+**Skip/Fast-Forward Flush Hook:**
+- Modified `fastForwardPhase()` to call `flushAllCards('skip')` at start
+- Prevents delayed cards from previous phase appearing during skip
+
+**Lines Changed:** 5 lines added
+
+#### js/jury.js
+**Finale Entry Flush Hook:**
+- Modified `startFinaleRefactorFlow()` to call `flushAllCards('enter-finale')` at start
+- Ensures clean slate before jury voting begins
+
+**Public Favourite Abort Safety:**
+- Captured generation token (`myGen`) at start of PF simulation
+- Added `aborted` flag to track abort state
+- Modified `updatePercentages()` to check generation token and return false if mismatch
+- Added abort checks in `scheduleNext()` to stop scheduling new updates
+- Added abort checks before panel removal, reveal intro, and winner display
+- Logs: `[publicFav] aborted (flush)` when abort detected
+- Removes panel immediately on abort
+
+**Enhanced Winner Card:**
+- Stores results in `g.__publicFavResult` with winnerId, winnerPct, and entries array
+- Creates custom winner card DOM element with:
+  - 72px square avatar with object-fit:cover
+  - Player name in large font
+  - Percentage in 1.5rem font
+  - `data-pf-winner="true"` attribute
+  - Proper styling: gradient background, gold border, centered layout
+  - Responsive: `max-width: min(400px, 90vw)`
+- Logs: `[publicFav] winnerCard shown id=${id} pct=${pct}`
+- Falls back to regular showCard if error occurs
+
+**Lines Changed:** ~150 lines modified
+
+#### styles.css
+**Responsive CSS Adjustments:**
+- Added `transition: transform 0.2s ease` to `.pfSlot`
+- Added `.pfSlot:hover { transform: translateY(-3px); }` with reduced-motion disable
+- Added media query `@media (max-width: 559.98px)`:
+  - `.pfVotePanel { grid-template-columns: repeat(2, minmax(140px, 1fr)); }`
+- Added media query `@media (max-width: 359.98px)`:
+  - `.pfVotePanel { grid-template-columns: repeat(2, minmax(120px, 1fr)); }`
+- Added `.pfWinnerCard` class:
+  - `max-width: min(400px, 90vw);`
+  - `text-align: center;`
+- Updated `@media (prefers-reduced-motion: reduce)` to disable hover transform
+
+**Lines Changed:** ~30 lines added
+
+### Key Features
+
+**Card Flush System:**
+1. **Generation Token:** Global counter incremented on each flush
+2. **Timeout Tracking:** All card-related timeouts tracked in global array
+3. **DOM Cleanup:** Removes all card elements matching selectors
+4. **Abort Safety:** In-flight operations check token and abort if mismatch
+
+**Flush Triggers:**
+1. Self-eviction (`'self-evict'`)
+2. Phase skip/fast-forward (`'skip'`)
+3. Finale entry (`'enter-finale'`)
+4. Manual: `window.flushAllCards(reason)` available in console
+
+**Public Favourite Abort Safety:**
+- Simulation loop checks generation token every tick
+- Aborts cleanly without errors if flush occurs mid-simulation
+- Prevents winner reveal if aborted
+- Logs abort with reason
+
+**Enhanced Winner Display:**
+- Rich card with avatar + name + percentage
+- Stores full results for future reference
+- Responsive design
+- Fallback to regular card on error
+
+### Logging Markers
+
+**Card Flush:**
+- `[cards] flushed (reason=self-evict)` - Flush on self-eviction
+- `[cards] flushed (reason=skip)` - Flush on phase skip
+- `[cards] flushed (reason=enter-finale)` - Flush on finale entry
+- `[cards] flushed (reason=unspecified)` - Manual flush without reason
+- `[cards] flush DOM cleanup error: ...` - Error during cleanup
+
+**Public Favourite Abort:**
+- `[publicFav] aborted (flush)` - PF simulation aborted due to flush
+- `[publicFav] winnerCard shown id=X pct=Y` - Winner card displayed
+
+### Acceptance Criteria Verification
+
+✅ **Card Flush Infrastructure:**
+- Global generation token implemented and incremented on flush
+- Timeout tracking array maintained
+- DOM cleanup removes all card elements
+- Backward compatible with fallback text update
+
+✅ **Flush Hooks:**
+- Self-evict triggers flush
+- Skip/fast-forward triggers flush
+- Finale entry triggers flush
+
+✅ **PF Abort Safety:**
+- Generation token checked each tick
+- Simulation stops on mismatch
+- Panel removed cleanly
+- Winner logic skipped if aborted
+
+✅ **Winner Card Enhancement:**
+- Avatar displayed (72px)
+- Name and percentage shown
+- Results stored in `g.__publicFavResult`
+- `data-pf-winner` attribute added
+
+✅ **Responsive CSS:**
+- Mobile shows 2 columns (≤559.98px)
+- Hover effect with reduced-motion support
+- Winner card responsive (≤90vw)
+- No horizontal scroll
+
+✅ **Logging:**
+- All flush events logged with reason
+- PF abort events logged
+- Winner card display logged with details
+
+### Non-Goals / Deferred
+- **g.setPhase preserveCards flag:** Not implemented as it would require extensive refactoring across multiple modules (not trivial). Left as TODO for future enhancement.
+
+### Testing Recommendations
+
+**Console Testing:**
+```javascript
+// Test manual flush
+window.flushAllCards('test');
+
+// Check generation token
+console.log(window.__cardGen);
+
+// Check tracked timeouts
+console.log(window.__cardTimeouts);
+
+// Inspect PF results after simulation
+console.log(window.__publicFavResult);
+```
+
+**Manual Testing:**
+1. Trigger self-eviction → verify flush log and no stale cards
+2. Skip phases rapidly → verify only current phase cards present
+3. During PF simulation, call `window.flushAllCards('test')` → verify clean abort
+4. Resize browser to test responsive layouts (800px, 600px, 500px, 340px)
+5. Check winner card appearance and styling

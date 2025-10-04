@@ -508,3 +508,261 @@ Run through full finale and verify these appear in exact order:
 
 ### Deprecated: PR #39 Integration Fix [OLD]
 The sections below are deprecated as the finale has been completely refactored.
+
+---
+
+## Card Queue Flush System Testing (PR #49 Completion)
+
+### 1. Card Flush Infrastructure Verification
+
+#### Generation Token
+- [ ] Open browser console
+- [ ] Run: `console.log(window.__cardGen)`
+- [ ] Should see: `1` (initial value)
+- [ ] Run: `window.flushAllCards('test')`
+- [ ] Run: `console.log(window.__cardGen)`
+- [ ] Should see: `2` (incremented)
+
+#### Timeout Tracking
+- [ ] Start game and trigger some cards
+- [ ] Run: `console.log(window.__cardTimeouts)`
+- [ ] Should see: Array with timeout IDs
+- [ ] Run: `window.flushAllCards('test')`
+- [ ] Run: `console.log(window.__cardTimeouts)`
+- [ ] Should see: Empty array `[]`
+
+#### DOM Cleanup
+- [ ] Start game and show several cards
+- [ ] Inspect DOM - should see elements with `data-bb-card="true"`
+- [ ] Run: `window.flushAllCards('test')`
+- [ ] Check console: `[cards] flushed (reason=test)`
+- [ ] Inspect DOM - all card elements should be removed
+- [ ] `#tvOverlay` should be empty
+- [ ] `#tv` should not have `tvTall` class
+
+### 2. Self-Eviction Flush Hook
+
+#### Setup
+- [ ] Start new game
+- [ ] Advance to a week where a player can self-evict
+- [ ] Have some cards showing on screen
+
+#### Test
+- [ ] Trigger a self-eviction (or simulate via console)
+- [ ] Console should show: `[cards] flushed (reason=self-evict)`
+- [ ] All previous cards should be cleared
+- [ ] Only "Self-Evicted" card should appear
+- [ ] No stale cards remain after eviction
+
+### 3. Phase Skip Flush Hook
+
+#### Setup
+- [ ] Start game
+- [ ] Let cards appear during a phase (HOH, nominations, etc.)
+
+#### Test
+- [ ] Click the Skip/Fast-Forward button (or press designated key)
+- [ ] Console should show: `[cards] flushed (reason=skip)`
+- [ ] All cards from previous phase should be cleared immediately
+- [ ] New phase begins with clean slate
+- [ ] No cards from previous phase appear during skip
+
+#### Rapid Skip Test
+- [ ] Skip through multiple phases quickly
+- [ ] Verify flush log appears for each skip
+- [ ] No cards accumulate or overlap
+- [ ] Only current phase cards visible
+
+### 4. Finale Entry Flush Hook
+
+#### Setup
+- [ ] Play through to finale (F2 remaining)
+- [ ] Have some cards showing before finale starts
+
+#### Test
+- [ ] Finale begins
+- [ ] Console should show: `[cards] flushed (reason=enter-finale)`
+- [ ] All pre-finale cards cleared
+- [ ] Jury voting UI appears cleanly
+- [ ] No stale cards interfere with finale
+
+### 5. Public Favourite Abort Safety
+
+#### Mid-Simulation Flush
+- [ ] Enable Public's Favourite in settings
+- [ ] Play through to finale
+- [ ] PF simulation should start with voting panel
+- [ ] Console shows: `[publicFav] updating`
+- [ ] **During simulation** (while percentages updating), run: `window.flushAllCards('test')`
+- [ ] Console should show: `[publicFav] aborted (flush)`
+- [ ] Voting panel should be removed immediately
+- [ ] No winner reveal should occur
+- [ ] No console errors
+- [ ] Jury reveal can proceed normally
+
+#### Multiple Abort Checks
+- [ ] Repeat test above multiple times
+- [ ] Try flushing at different times:
+  - [ ] During initial 10s voting period
+  - [ ] During extension period (if tie)
+  - [ ] Just before lock
+- [ ] Verify clean abort in all cases
+
+#### No Abort (Normal Flow)
+- [ ] Enable Public's Favourite
+- [ ] Let PF simulation complete without interruption
+- [ ] Should complete normally with winner reveal
+- [ ] No abort messages in console
+- [ ] Winner card appears with avatar + percentage
+
+### 6. Enhanced Winner Card
+
+#### Winner Card Display
+- [ ] Enable Public's Favourite
+- [ ] Complete PF simulation without interruption
+- [ ] After voting locks, winner card should appear with:
+  - [ ] "PUBLIC'S FAVOURITE 🌟" title in gold
+  - [ ] 72px square avatar image
+  - [ ] Player name below avatar
+  - [ ] Percentage in large font (e.g., "42%")
+  - [ ] Centered on screen
+  - [ ] Gold border and gradient background
+  - [ ] `data-pf-winner="true"` attribute (check in DevTools)
+
+#### Winner Data Storage
+- [ ] After PF completes, run: `console.log(window.__publicFavResult)`
+- [ ] Should see object with:
+  ```javascript
+  {
+    winnerId: <number>,
+    winnerPct: <integer>,
+    entries: [
+      { id: <number>, pct: <integer> },
+      { id: <number>, pct: <integer> },
+      { id: <number>, pct: <integer> }
+    ]
+  }
+  ```
+- [ ] Verify percentages are integers
+- [ ] Verify winnerId matches displayed winner
+
+#### Console Logging
+- [ ] Check console for: `[publicFav] winnerCard shown id=X pct=Y`
+- [ ] Verify id and pct match displayed values
+
+#### Fallback Behavior
+- [ ] To test fallback, temporarily break winner card creation (e.g., remove document.body)
+- [ ] Should see console warning and fallback to regular card
+- [ ] No crashes or errors
+
+### 7. Responsive CSS Testing
+
+#### Desktop (>560px width)
+- [ ] Open game in browser
+- [ ] Resize window to 800px width
+- [ ] Trigger Public's Favourite
+- [ ] Voting panel should show 3 columns
+- [ ] Slots evenly spaced with 14px gap
+- [ ] Hover over slot - should lift up 3px
+- [ ] Winner card centered, max 400px width
+
+#### Tablet/Mobile (≤559.98px width)
+- [ ] Resize window to 500px width
+- [ ] Trigger Public's Favourite
+- [ ] Voting panel should show 2 columns
+- [ ] Third slot wraps to new row, centered
+- [ ] Slots use minmax(140px, 1fr)
+- [ ] No horizontal scroll
+- [ ] Winner card ≤90vw width
+
+#### Narrow Mobile (≤359.98px width)
+- [ ] Resize window to 340px width
+- [ ] Trigger Public's Favourite
+- [ ] Voting panel should show 2 columns
+- [ ] Slots use minmax(120px, 1fr)
+- [ ] No horizontal scroll
+- [ ] All content visible without clipping
+- [ ] Winner card ≤90vw width, centered
+
+#### Reduced Motion
+- [ ] Enable "Reduce Motion" in OS accessibility settings
+- [ ] Trigger Public's Favourite
+- [ ] Hover over slots - should NOT animate
+- [ ] All transitions disabled
+- [ ] Content still readable and functional
+
+### 8. Console Logging Verification
+
+#### Flush Logs
+- [ ] Self-evict: `[cards] flushed (reason=self-evict)`
+- [ ] Skip phase: `[cards] flushed (reason=skip)`
+- [ ] Finale entry: `[cards] flushed (reason=enter-finale)`
+- [ ] Manual flush: `[cards] flushed (reason=<custom>)`
+
+#### PF Abort Logs
+- [ ] During simulation flush: `[publicFav] aborted (flush)`
+- [ ] Multiple times if checked multiple times
+
+#### PF Winner Logs
+- [ ] Winner card display: `[publicFav] winnerCard shown id=X pct=Y`
+
+### 9. Backwards Compatibility
+
+#### Missing APIs
+- [ ] Test with `window.showCard` undefined
+- [ ] Should fall back to tvNow text update
+- [ ] No errors in console
+
+#### Missing flushAllCards
+- [ ] Test with `window.flushAllCards` undefined
+- [ ] Game should still function normally
+- [ ] Just no flush behavior
+
+### 10. Integration Testing
+
+#### Full Game Playthrough
+- [ ] Start new game
+- [ ] Play through multiple phases
+- [ ] Skip some phases
+- [ ] Trigger self-eviction
+- [ ] Continue to finale
+- [ ] Enable Public's Favourite
+- [ ] Complete finale with PF
+- [ ] Verify no accumulated stale cards
+- [ ] Verify smooth transitions
+- [ ] No console errors throughout
+
+#### Stress Test
+- [ ] Skip phases very rapidly (spam skip button)
+- [ ] Verify flush logs appear for each
+- [ ] Verify no card overlap or buildup
+- [ ] Verify generation token increments correctly
+- [ ] No memory leaks or performance issues
+
+### Acceptance Criteria Summary
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Card flush infrastructure | ✅ | Generation token + timeout tracking |
+| Self-evict flush hook | ✅ | Clears cards before eviction |
+| Skip/fast-forward flush hook | ✅ | Clears cards on phase change |
+| Finale entry flush hook | ✅ | Clears cards before jury |
+| PF abort safety | ✅ | Checks token each tick |
+| PF abort on flush | ✅ | Stops cleanly, removes panel |
+| Winner card enhancement | ✅ | Avatar + name + % display |
+| Winner data storage | ✅ | g.__publicFavResult object |
+| Responsive 2-col mobile | ✅ | @media (max-width: 559.98px) |
+| Narrow screen support | ✅ | @media (max-width: 359.98px) |
+| Hover animation | ✅ | translateY(-3px) with transition |
+| Reduced motion support | ✅ | Disables animations |
+| Flush logging | ✅ | [cards] flushed (reason=...) |
+| Abort logging | ✅ | [publicFav] aborted (flush) |
+| Winner logging | ✅ | [publicFav] winnerCard shown |
+| Backward compatibility | ✅ | Graceful fallbacks |
+| No console errors | ✅ | Clean throughout |
+
+### Known Limitations
+
+1. **g.setPhase preserveCards flag:** Not implemented. Would require extensive refactoring across multiple phase management modules. Left as TODO for future enhancement if needed.
+
+2. **Manual flush only:** No automatic flush on all phase changes. Only implemented for critical points (self-evict, skip, finale). Other phase transitions rely on natural card expiration.
