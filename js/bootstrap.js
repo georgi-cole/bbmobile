@@ -134,7 +134,7 @@
     global.initRelationships();
     resetRoundState();
     // Reset public favourite flag for new season
-    global.__publicFavouriteCompleted = false;
+    global.__publicFavDone = false;
     global.addLog?.('Game created. Waiting to start…','muted');
     global.tv?.say?.('Game created. Waiting to start…');
     global.updateHud?.();
@@ -157,7 +157,7 @@
       global.initRelationships();
       resetRoundState();
       // Reset public favourite flag for new season
-      global.__publicFavouriteCompleted = false;
+      global.__publicFavDone = false;
     } else {
       buildCast();
     }
