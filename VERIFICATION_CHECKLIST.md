@@ -330,49 +330,102 @@ Run through full sequence and verify these console messages appear:
 - [ ] Credits roll
 - [ ] No race conditions or timing issues
 
-### PR #39 Integration Fix - Acceptance Tests
+### Finale Refactor - New Two-Phase Jury Flow
 
-#### Toggle OFF (Skip Path)
-- [ ] Settings → Gameplay → "Public's Favourite Player at finale" is UNCHECKED
+#### Phase 1: Anonymous Jury Casting
 - [ ] Play through to finale
-- [ ] Console shows: `[publicFav] skipped` (once)
-- [ ] No Public Favourite panel appears
-- [ ] Winner confetti still appears with log: `[finale] winner confetti spawn`
-- [ ] Credits proceed normally
+- [ ] Jury casting begins with "Final Jury Vote" message
+- [ ] Console shows: `[juryCast] start`
+- [ ] Juror banter appears (no finalist names mentioned during casting)
+- [ ] Console shows: `[juryCast] vote juror=X stored` for each juror
+- [ ] Console shows: `[juryCast] complete` after all votes cast
+- [ ] No vote tallies shown during casting phase
+- [ ] Finalist names NOT shown during this phase
 
-#### Toggle ON (Run Path)
-- [ ] Settings → Gameplay → Check "Public's Favourite Player at finale"
-- [ ] Save & Close settings
-- [ ] Play through to finale
-- [ ] Winner confetti appears first with log: `[finale] winner confetti spawn`
-- [ ] Console shows: `[publicFav] start`
-- [ ] Public Favourite panel appears before credits
-- [ ] Vote bars animate smoothly
-- [ ] Percentages sum to 100%
-- [ ] Sequential reveals work (3rd → 2nd → Fan Favourite)
-- [ ] Console shows: `[publicFav] done`
-- [ ] Credits proceed after completion
-- [ ] No duplicate runs (guard flag works)
+#### Phase 2: Public Favourite Segment (>=3 Candidates)
+- [ ] If >=3 evicted players exist, segment runs automatically
+- [ ] Console shows: `[publicFav] start N=X` where X is total evicted count
+- [ ] Public Favourite panel appears with 3-5 candidates
+- [ ] Vote bars start at 0% and animate up
+- [ ] Percentages sum to exactly 100%
+- [ ] Every 3 seconds, lowest candidate is eliminated
+- [ ] Console shows: `[publicFav] eliminate player=X remaining=Y`
+- [ ] Eliminated candidates fade out (opacity 0, scale 0.85)
+- [ ] Final winner highlighted with outline and glow
+- [ ] Console shows: `[publicFav] final winner=X pct=YY`
+- [ ] Winner card shown with percentage
+- [ ] Panel closes after ~4 seconds
 
-#### Confetti Presence
-- [ ] Winner confetti appears exactly once
-- [ ] Confetti still appears even when Public Favourite is enabled
-- [ ] Console log confirms: `[finale] winner confetti spawn`
-- [ ] Confetti respects FX settings (fxAnim/fxCards)
-- [ ] If both fxAnim and fxCards are false, confetti is skipped
+#### Phase 2: Public Favourite Skip (<3 Candidates)
+- [ ] If <3 evicted players, segment is skipped
+- [ ] Console shows: `[publicFav] skipped reason=insufficient_candidates`
+- [ ] Flow proceeds directly to Phase 3
 
-#### Console Markers
-- [ ] With toggle OFF: `[publicFav] skipped` appears once
-- [ ] With toggle ON: `[publicFav] start` followed by `[publicFav] done`
-- [ ] Confetti spawn: `[finale] winner confetti spawn`
-- [ ] No unexpected errors in console
-- [ ] All markers appear in correct sequence
+#### Phase 3: Jury Reveal
+- [ ] Console shows: `[juryReveal] start`
+- [ ] For each juror (shuffled order):
+- [ ] Locked-in phrase shown (from JURY_LOCKED_LINES)
+- [ ] Vote revealed: "X votes for Y"
+- [ ] Console shows: `[juryReveal] show juror=X vote=Y`
+- [ ] Tally updates on screen
+- [ ] Graph/bars update after each vote
+- [ ] After all votes revealed:
+- [ ] Console shows: `[juryReveal] winner=X votes=A-B`
+- [ ] Winner banner appears
+- [ ] NO confetti spawns
+- [ ] Winner card shown
+- [ ] Victory music plays
+- [ ] Medal animation or cinematic
+- [ ] Credits roll
 
-#### Manual Debug Command
-- [ ] After finale completes, open browser console
-- [ ] Run: `window.__debugRunPublicFavOnce()`
-- [ ] Console shows: `[publicFav] debug manual trigger`
-- [ ] Public Favourite segment re-runs (even if toggle was OFF)
-- [ ] Console shows: `[publicFav] start` and `[publicFav] done`
-- [ ] No errors thrown
-- [ ] Can be called multiple times (guard is reset each call)
+#### Confetti Removal Verification
+- [ ] NO confetti appears during finale
+- [ ] NO confetti appears at winner announcement
+- [ ] NO confetti appears during public favourite
+- [ ] NO confetti appears during jury reveal
+- [ ] NO confetti appears during return twist
+- [ ] NO confetti appears during jury return vote
+- [ ] NO confetti appears anywhere in application
+- [ ] `UI.spawnConfetti()` is a no-op function
+
+#### Console Markers - Full Flow
+Play through and verify these appear in order:
+```
+[juryCast] start
+[juryCast] vote juror=X stored (multiple)
+[juryCast] complete
+[publicFav] start N=X (or skipped if <3)
+[publicFav] eliminate player=X remaining=Y (multiple)
+[publicFav] final winner=X pct=YY
+[juryReveal] start
+[juryReveal] show juror=X vote=Y (multiple)
+[juryReveal] winner=X votes=A-B
+```
+
+#### Edge Cases
+- [ ] Tie elimination: random among lowest works
+- [ ] <3 candidates: public favourite skipped cleanly
+- [ ] No jurors: default winner declared
+- [ ] Jury vote tie: America's Vote tiebreaker works
+- [ ] Odd juror count maintained (even juror dropped)
+- [ ] All flags prevent duplicate runs
+
+#### Accessibility
+- [ ] Public Favourite panel has `role="dialog"`
+- [ ] Panel has `aria-label` attribute
+- [ ] Live region with `role="status"` and `aria-live="polite"`
+- [ ] Progress bars have `aria-valuemin/max/now`
+- [ ] Live region announces eliminations
+- [ ] Screen readers can navigate content
+
+#### Visual Verification
+- [ ] Anonymous casting hides finalist names ✓
+- [ ] Public favourite bars animate smoothly
+- [ ] Eliminated candidates fade cleanly
+- [ ] Winner outline/glow visible
+- [ ] Jury reveal shows correct names
+- [ ] Tallies update correctly
+- [ ] No visual confetti anywhere
+
+### Deprecated: PR #39 Integration Fix [OLD]
+The sections below are deprecated as the finale has been completely refactored.

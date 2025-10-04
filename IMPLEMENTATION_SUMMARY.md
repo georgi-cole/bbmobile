@@ -304,10 +304,85 @@ All modified files passed Node.js syntax checks:
 - **10s hard timeout**: Ensures credits always progress even if errors occur
 - **Guard flag**: `g.__publicFavouriteCompleted` prevents duplicate runs per season
 
-## Integration Fix (Public Favourite + Confetti) - PR #39
+## Finale Refactor: Two-Phase Jury + Public Favourite Intermission (No Confetti)
 
 ### Summary
-Applied integration fixes to ensure Public Favourite segment reliably runs (only when enabled) after winner confetti and before end credits. Enhanced winner confetti reliability with better logging and debug helpers.
+Complete refactor of finale flow implementing a two-phase jury vote system with anonymous casting followed by public favourite elimination segment and final reveal. All confetti has been removed globally per spec.
+
+### Key Changes
+
+**Phase 1: Anonymous Jury Casting**
+- Jurors cast votes blind (no finalist names shown during casting)
+- Votes stored in `game.finale.juryVotesRaw[]`
+- Only juror banter shown (from existing templates)
+- Console logging: `[juryCast] start`, `[juryCast] vote juror=X stored`, `[juryCast] complete`
+
+**Phase 2: Public Favourite Intermission**
+- Runs automatically if >=3 eligible candidates (evicted players)
+- Max 5 candidates randomly selected
+- Vote percentages normalized to 100%
+- Elimination every 3 seconds (lowest percentage eliminated)
+- Bar update frequency: ~170ms (via CSS transition)
+- Ties resolved randomly
+- Console logging: `[publicFav] start N=X`, `[publicFav] eliminate player=X remaining=Y`, `[publicFav] final winner=X pct=XX%`
+- Skips if <3 candidates: `[publicFav] skipped reason=insufficient_candidates`
+
+**Phase 3: Jury Reveal**
+- Shows each juror's vote with locked-in phrase (JURY_LOCKED_LINES)
+- Updates tally and scoreboard live
+- Declares winner after all votes (or majority reached)
+- Sets `player.winner = true`
+- Shows winner card - NO CONFETTI
+- Console logging: `[juryReveal] start`, `[juryReveal] show juror=X vote=Y`, `[juryReveal] winner=X votes=A-B`
+
+**Confetti Removal**
+- `UI.spawnConfetti()` converted to no-op
+- Removed all calls in: js/jury.js, js/jury_return_vote.js, js/jury_return.js, js/twists.js
+- No confetti spawns anywhere in the application
+
+**State Additions**
+- `game.finale.juryVotesRaw` - Array of {jurorId, pick} objects
+- `game.finale.castingDone` - Boolean flag for phase 1 completion
+- `game.finale.publicFavDone` - Boolean flag for phase 2 completion  
+- `game.finale.revealStarted` - Boolean flag for phase 3 start
+
+**CSS Additions (styles.css)**
+- `.pfv-container` - Flexbox container for candidate tiles
+- `.pfv-item` - Individual candidate tile (120px width)
+- `.pfv-barOuter` - Progress bar container (10px height)
+- `.pfv-barFill` - Animated fill (linear-gradient, 180ms transition)
+- `.pfv-elim` - Eliminated candidate style (opacity 0, scale 0.85)
+- `.pfv-winner` - Winner highlight (outline, box-shadow)
+- Reduced motion support via media query
+
+**Helper Functions**
+- `ensureFinaleState()` - Initialize game.finale if not present
+- `startJuryCastingPhase(jurors, A, B)` - Phase 1 implementation
+- `castSingleJurorVote(jurorId)` - (implicit in casting phase)
+- `runPublicFavouriteSegment()` - Phase 2 implementation
+- `startJuryRevealPhase(jurors, A, B)` - Phase 3 implementation
+- `startFinaleRefactorFlow()` - Main orchestrator
+- `getLockedJuryPhrase()` - Returns random locked phrase
+
+**Phrase Pools**
+- JURY_LOCKED_LINES (6 phrases for reveal phase)
+
+**Safety & Edge Cases**
+- <3 candidates: skip public favourite
+- Tie eliminations: resolved randomly among lowest
+- Hard safety timeout: none needed (sequential execution)
+- Guard functions: castingDone, publicFavDone, revealStarted flags
+
+**Accessibility**
+- Live region with `role="status"` and `aria-live="polite"`
+- Progress bars with `aria-valuemin/max/now`
+- Dialog with `role="dialog"` and `aria-label`
+- Screen reader class `.sr-only`
+
+## Integration Fix (Public Favourite + Confetti) - PR #39 [DEPRECATED]
+
+### Summary
+This section is deprecated. The finale flow has been completely refactored to remove all confetti and implement the new two-phase jury system.
 
 ### Changes Made
 
