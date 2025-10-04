@@ -16,6 +16,32 @@
     }catch{}
   }
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  
+  // Helper to get avatar with ./avatars/ folder fallback
+  function getAvatar(playerId) {
+    const player = gp(playerId);
+    if (!player) {
+      console.warn(`[jury] avatar: player not found id=${playerId}`);
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(String(playerId))}`;
+    }
+    
+    const name = player.name || String(playerId);
+    
+    // Priority: player.avatar > avatars folder > dicebear fallback
+    if (player.avatar) {
+      return player.avatar;
+    }
+    
+    // Try avatars folder
+    const avatarPath = `./avatars/${playerId}.jpg`;
+    // We'll use the path and let onerror handle fallback
+    return avatarPath;
+  }
+  
+  // Standard onerror handler for avatars
+  function getAvatarFallback(name) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name || 'player')}`;
+  }
 
   function finalists(){
     if(Array.isArray(g.game?.finalTwo) && g.game.finalTwo.length>=2) return g.game.finalTwo.slice(0,2);
@@ -149,15 +175,18 @@
     jurors.forEach(id=>{
       const tile=document.createElement('div'); tile.className='jpTile'; tile.dataset.jid=String(id);
       const j=gp(id);
+      const jurorAvatar = getAvatar(id);
+      const aAvatar = getAvatar(A);
+      const bAvatar = getAvatar(B);
       tile.innerHTML = `
         <div class="jpHead">
-          <img class="jpJuror" src="${j?.avatar||j?.img||j?.photo||''}" alt="${safeName(id)}" onerror="this.onerror=null;this.src='https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName(id))}'">
+          <img class="jpJuror" src="${jurorAvatar}" alt="${safeName(id)}" onerror="console.warn('[jury] avatar fallback for ${safeName(id)}');this.onerror=null;this.src='${getAvatarFallback(safeName(id))}'">
           <div class="jpName">${safeName(id)}</div>
         </div>
         <div class="jpRow">
-          <img class="jpFace finalist" data-fid="${A}" src="${gp(A)?.avatar||''}" alt="${safeName(A)}" onerror="this.onerror=null;this.src='https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName(A))}'">
+          <img class="jpFace finalist" data-fid="${A}" src="${aAvatar}" alt="${safeName(A)}" onerror="console.warn('[jury] avatar fallback for ${safeName(A)}');this.onerror=null;this.src='${getAvatarFallback(safeName(A))}'">
           <div class="jpArrow">→</div>
-          <img class="jpFace finalist" data-fid="${B}" src="${gp(B)?.avatar||''}" alt="${safeName(B)}" onerror="this.onerror=null;this.src='https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName(B))}'">
+          <img class="jpFace finalist" data-fid="${B}" src="${bAvatar}" alt="${safeName(B)}" onerror="console.warn('[jury] avatar fallback for ${safeName(B)}');this.onerror=null;this.src='${getAvatarFallback(safeName(B))}'">
         </div>
         <div class="jpMeta"><span class="tiny muted">Waiting…</span></div>
       `;
@@ -298,8 +327,8 @@
 
     const need = Math.floor(totalJurors/2)+1;
 
-    const Aimg = gp(A)?.avatar || gp(A)?.img || gp(A)?.photo || '';
-    const Bimg = gp(B)?.avatar || gp(B)?.img || gp(B)?.photo || '';
+    const Aimg = getAvatar(A);
+    const Bimg = getAvatar(B);
 
     box.innerHTML = `
       <h3>Voting the Winner — Live Tally</h3>
@@ -310,13 +339,13 @@
           <div class="finalFaceoff" id="finalFaceoff">
             <div class="fo-slot left" id="foLeft">
               <img class="fo-avatar" id="foLeftImg" src="${Aimg}" alt="${safeName(A)}"
-                onerror="this.onerror=null;this.src='https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName(A))}'">
+                onerror="console.warn('[jury] avatar fallback for ${safeName(A)}');this.onerror=null;this.src='${getAvatarFallback(safeName(A))}'">
               <div class="fo-name" id="foLeftName">${safeName(A)}</div>
               <div class="fo-votes"><span id="foLeftCount">0</span></div>
             </div>
             <div class="fo-slot right" id="foRight">
               <img class="fo-avatar" id="foRightImg" src="${Bimg}" alt="${safeName(B)}"
-                onerror="this.onerror=null;this.src='https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(safeName(B))}'">
+                onerror="console.warn('[jury] avatar fallback for ${safeName(B)}');this.onerror=null;this.src='${getAvatarFallback(safeName(B))}'">
               <div class="fo-name" id="foRightName">${safeName(B)}</div>
               <div class="fo-votes"><span id="foRightCount">0</span></div>
             </div>
@@ -536,9 +565,41 @@
     
     console.info('[juryCast] start');
     
+    const humanId = gg.humanId;
+    const humanIsJuror = humanId && jurors.includes(humanId);
+    
     // Cast votes anonymously
     for(const jid of jurors){
-      const pick = ballotPick(jid, A, B);
+      let pick;
+      
+      // Check if this is the human player
+      if (humanIsJuror && jid === humanId) {
+        console.info('[juryCast] waiting for human vote juror=' + jid);
+        
+        // Show human voting UI with 30-second timeout
+        const votePromise = waitForHumanJuryVote(A, B);
+        const timeoutPromise = new Promise(resolve => {
+          setTimeout(() => {
+            console.warn('[juryCast] human vote timeout, using affinity fallback');
+            resolve(null);
+          }, 30000); // 30 seconds
+        });
+        
+        // Race between vote and timeout
+        pick = await Promise.race([votePromise, timeoutPromise]);
+        
+        // If timeout (pick is null), use affinity-based fallback
+        if (pick === null) {
+          pick = ballotPick(jid, A, B);
+          console.info(`[juryCast] human vote fallback juror=${jid} pick=${pick}`);
+        } else {
+          console.info(`[juryCast] human vote submitted juror=${jid} pick=${pick}`);
+        }
+      } else {
+        // AI juror
+        pick = ballotPick(jid, A, B);
+      }
+      
       finale.juryVotesRaw.push({ jurorId: jid, pick });
       console.info(`[juryCast] vote juror=${jid} stored`);
       
@@ -695,12 +756,13 @@
       // Real player avatar (with fallback to dicebear)
       const avatar = document.createElement('img');
       avatar.className = 'pfAvatar';
-      const avatarSrc = player?.avatar || player?.img || player?.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player?.name || 'player')}`;
+      const avatarSrc = getAvatar(player.id);
       avatar.src = avatarSrc;
       avatar.alt = player?.name || 'Player';
       avatar.onerror = function() {
+        console.warn('[publicFav] avatar fallback for ' + (player?.name || 'player'));
         this.onerror = null;
-        this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player?.name || 'player')}`;
+        this.src = getAvatarFallback(player?.name || 'player');
       };
       slot.appendChild(avatar);
       
@@ -964,9 +1026,12 @@
     
     const winnerAvatar = document.createElement('img');
     winnerAvatar.className = 'pfWinnerAvatar';
-    winnerAvatar.src = fanFavPlayer.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(fanFavName)}`;
+    winnerAvatar.src = getAvatar(fanFavPlayer.id);
     winnerAvatar.alt = fanFavName + ' wins with ' + winnerPct + '%';
-    winnerAvatar.onerror = function(){ this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(fanFavName)}`; };
+    winnerAvatar.onerror = function(){
+      console.warn('[publicFav] winner avatar fallback for ' + fanFavName);
+      this.src = getAvatarFallback(fanFavName);
+    };
     
     const winnerName = document.createElement('div');
     winnerName.className = 'pfWinnerName';
@@ -1002,9 +1067,12 @@
       
       const runnerAvatar = document.createElement('img');
       runnerAvatar.className = 'pfRunnerAvatar';
-      runnerAvatar.src = ru.player.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(ru.player.name)}`;
+      runnerAvatar.src = getAvatar(ru.player.id);
       runnerAvatar.alt = ru.player.name + ' - ' + ru.pct + '%';
-      runnerAvatar.onerror = function(){ this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(ru.player.name)}`; };
+      runnerAvatar.onerror = function(){
+        console.warn('[publicFav] runner avatar fallback for ' + ru.player.name);
+        this.src = getAvatarFallback(ru.player.name);
+      };
       
       const runnerName = document.createElement('span');
       runnerName.className = 'pfRunnerName';
@@ -1040,6 +1108,79 @@
     console.info('[publicFav] done');
   }
 
+  // Helper: Create fast-forward button for jury reveals
+  function createFastForwardButton(onActivate) {
+    const tv = document.getElementById('tv');
+    if (!tv) return null;
+    
+    const btn = document.createElement('button');
+    btn.id = 'btnFastForwardJury';
+    btn.className = 'btn small';
+    btn.innerHTML = '⏩ Fast Forward';
+    btn.title = 'Skip to final result';
+    btn.style.cssText = 'position:absolute;top:10px;right:12px;z-index:15;pointer-events:auto;';
+    
+    btn.onclick = () => {
+      onActivate();
+      btn.disabled = true;
+      btn.textContent = '⏩ Accelerating...';
+    };
+    
+    tv.appendChild(btn);
+    return btn;
+  }
+  
+  // Helper: Show juror phrase overlay (non-blocking)
+  function showJurorPhraseOverlay(jurorName, phrase, durationMs) {
+    const tv = document.getElementById('tv');
+    if (!tv) return;
+    
+    // Remove any existing phrase overlay
+    const existing = document.getElementById('jurorPhraseOverlay');
+    if (existing) existing.remove();
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'jurorPhraseOverlay';
+    overlay.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.85);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 16px 24px;
+      color: #fff;
+      font-size: 16px;
+      font-style: italic;
+      text-align: center;
+      max-width: 80%;
+      z-index: 14;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    `;
+    overlay.innerHTML = `<div style="font-weight: 700; margin-bottom: 8px;">${jurorName}</div><div>"${phrase}"</div>`;
+    
+    tv.appendChild(overlay);
+    
+    // Fade in
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
+    });
+    
+    // Fade out before duration ends
+    const fadeOutAt = Math.max(300, durationMs - 300);
+    setTimeout(() => {
+      overlay.style.opacity = '0';
+    }, fadeOutAt);
+    
+    // Remove after duration
+    setTimeout(() => {
+      if (overlay.parentNode) overlay.remove();
+    }, durationMs);
+  }
+
   // Phase 3: Jury Reveal with vote tallies
   async function startJuryRevealPhase(jurors, A, B){
     const gg = g.game || {};
@@ -1058,8 +1199,82 @@
     // Shuffle reveal order
     const order = jurors.slice().sort(()=>rng()-.5);
     
-    for(const jid of order){
-      await sleep(1800);
+    // Calculate pacing with tripled durations
+    const numJurors = order.length;
+    const maxTotalMs = 180000; // 180s cap (was 45s)
+    const minSlotMs = 1200; // Minimum slot duration when compressed
+    
+    // Tripled baseline durations (for 9 jurors):
+    // Intro cards handled elsewhere
+    // Early jurors (1-3): 5.4s each (was 1.8s)
+    // Mid jurors (4-6): 7.2s each (was 2.4s)
+    // Late jurors (7-8): 9.0s each (was 3.0s)
+    // Final juror (9): 12.0s (was 4.0s)
+    
+    function getBaselineDuration(index, total) {
+      const position = index + 1;
+      if (position <= 3) return 5400; // Early
+      if (position <= 6) return 7200; // Mid
+      if (position < total) return 9000; // Late
+      return 12000; // Final juror
+    }
+    
+    // Calculate baseline total
+    let baselineMs = 0;
+    for (let i = 0; i < numJurors; i++) {
+      baselineMs += getBaselineDuration(i, numJurors);
+    }
+    
+    console.info(`[jury] pacing plan baselineMs=${baselineMs} jurors=${numJurors}`);
+    
+    // Determine if compression needed
+    let durations = [];
+    let compressionApplied = false;
+    
+    if (baselineMs > maxTotalMs) {
+      // Apply compression: evenly distribute maxTotalMs across all reveals
+      const slotDur = Math.max(minSlotMs, maxTotalMs / numJurors);
+      durations = new Array(numJurors).fill(slotDur);
+      compressionApplied = true;
+      console.info(`[jury] pacing compressed newCap=180s remaining=${numJurors} slotDur=${slotDur.toFixed(1)}ms`);
+    } else {
+      // No compression needed, use baseline durations with jitter
+      for (let i = 0; i < numJurors; i++) {
+        const base = getBaselineDuration(i, numJurors);
+        // Add jitter ±0.4s (±400ms)
+        const jitter = (rng() * 2 - 1) * 400;
+        durations.push(Math.max(minSlotMs, base + jitter));
+      }
+    }
+    
+    // Track if fast-forward has been triggered
+    finale.fastForwardActive = false;
+    
+    // Create fast-forward button
+    const ffBtn = createFastForwardButton(() => {
+      if (!finale.fastForwardActive) {
+        finale.fastForwardActive = true;
+        console.info('[jury] revealFastForward');
+      }
+    });
+    
+    // Reveal each juror's vote
+    const need = Math.floor(numJurors / 2) + 1;
+    let majorityReached = false;
+    
+    for (let i = 0; i < order.length; i++) {
+      const jid = order[i];
+      
+      // Determine delay for this reveal
+      let delay = durations[i];
+      
+      // If fast-forward is active, reduce to 0.5s
+      if (finale.fastForwardActive) {
+        delay = 500;
+      }
+      
+      // Wait before revealing
+      await sleep(delay);
       
       // Find this juror's vote
       const voteRecord = finale.juryVotesRaw.find(v => v.jurorId === jid);
@@ -1067,8 +1282,11 @@
       
       votes.set(pick, (votes.get(pick)||0)+1);
       
-      // Show locked phrase with finalist name
+      // Show locked phrase with finalist name (visible ~60-70% of slot duration)
       const phrase = getLockedJuryPhrase();
+      const phraseDuration = Math.floor(delay * 0.65); // 65% of slot
+      showJurorPhraseOverlay(safeName(jid), phrase, phraseDuration);
+      
       g.addJuryLog?.(`${safeName(jid)}: ${phrase}`, 'muted');
       g.addJuryLog?.(`${safeName(jid)} votes for ${safeName(pick)}`, 'jury');
       console.info(`[juryReveal] show juror=${jid} vote=${pick}`);
@@ -1078,7 +1296,21 @@
       const a=votes.get(A)||0, b=votes.get(B)||0;
       updateFinaleGraph(a,b);
       addFaceoffVoteCard(safeName(jid), safeName(pick));
+      
+      // Check for majority clinch (but don't fast-track unless would exceed cap)
+      if (!majorityReached && (a >= need || b >= need)) {
+        majorityReached = true;
+        console.info(`[juryReveal] majority clinched votes=${a}-${b}`);
+        // Keep dramatic pacing when under cap (no fast-tracking)
+      }
     }
+    
+    // Remove fast-forward button
+    if (ffBtn) ffBtn.remove();
+    
+    // Winner suspense delay: 9.0s (was 3.0s)
+    const suspenseDelay = finale.fastForwardActive ? 500 : 9000;
+    await sleep(suspenseDelay);
     
     // Determine winner
     const a=votes.get(A)||0, b=votes.get(B)||0;
@@ -1088,9 +1320,9 @@
       // Tiebreaker: America's Vote
       winner = americasVoteWinner(A, B);
       votes.set(winner, (votes.get(winner)||0)+1);
-      await sleep(2400);
+      await sleep(finale.fastForwardActive ? 500 : 2400);
       updateFinaleGraph(votes.get(A)||0, votes.get(B)||0);
-      await sleep(800);
+      await sleep(finale.fastForwardActive ? 200 : 800);
     } else {
       winner = a>b ? A : B;
     }
