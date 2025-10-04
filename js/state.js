@@ -52,7 +52,6 @@
     finale:{
       juryVotesRaw:[],
       castingDone:false,
-      publicFavDone:false,
       revealStarted:false
     }
   };

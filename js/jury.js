@@ -494,7 +494,6 @@
       gg.finale = {
         juryVotesRaw: [],
         castingDone: false,
-        publicFavDone: false,
         revealStarted: false
       };
     }
@@ -543,11 +542,11 @@
     }
     
     // Single-run guard
-    if(g.__publicFavouriteCompleted){
+    if(g.__publicFavDone){
       console.info('[publicFav] skipped (already completed)');
       return;
     }
-    g.__publicFavouriteCompleted = true;
+    g.__publicFavDone = true;
     
     // Get all players for selection
     const allPlayers = (gg.players || []).slice();
@@ -626,6 +625,7 @@
     const startTime = Date.now();
     const updateDuration = 5000;
     let updateInterval = null;
+    let isFirstUpdate = true;
     
     function updatePercentages(){
       if(Date.now() - startTime >= updateDuration){
@@ -635,14 +635,21 @@
         return;
       }
       
-      // Generate 3 random values that sum to 100
-      const raw = [Math.random() * 100, Math.random() * 100, Math.random() * 100];
-      const sum = raw.reduce((a,b) => a+b, 0);
-      let pcts = raw.map(v => Math.round((v/sum)*100));
+      // Generate 3 random values that sum to 100, ensuring all >= 1
+      // Method: pick two random integers (1..98), sort them, derive percentages
+      const a = Math.floor(Math.random() * 98) + 1;
+      const b = Math.floor(Math.random() * 98) + 1;
+      const sorted = [a, b].sort((x,y) => x-y);
+      let pcts = [sorted[0], sorted[1] - sorted[0], 100 - sorted[1]];
       
-      // Ensure sum is exactly 100
-      const diff = 100 - pcts.reduce((a,b)=>a+b,0);
-      if(diff !== 0) pcts[0] += diff;
+      // Ensure all values are >= 1 (adjust if needed)
+      if(pcts[0] < 1) { pcts[0] = 1; pcts[2] -= 1; }
+      if(pcts[1] < 1) { pcts[1] = 1; pcts[2] -= 1; }
+      if(pcts[2] < 1) { pcts[2] = 1; pcts[0] -= 1; }
+      
+      // Final adjustment to ensure sum is exactly 100
+      const sum = pcts.reduce((x,y)=>x+y,0);
+      if(sum !== 100) pcts[0] += (100 - sum);
       
       // Update display
       slots.forEach((slot, i) => {
@@ -650,7 +657,11 @@
         slot.pctLabel.textContent = pcts[i] + '%';
       });
       
-      console.info('[publicFav] updating', pcts);
+      // Log only on first update
+      if(isFirstUpdate){
+        console.info('[publicFav] updating');
+        isFirstUpdate = false;
+      }
     }
     
     // Update every 150-250ms with jitter

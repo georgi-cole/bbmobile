@@ -2247,68 +2247,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   }
 }
 
-/* Legacy classes for backwards compatibility */
-.pfv-container {
-  display:flex;
-  flex-wrap:wrap;
-  gap:14px;
-  justify-content:center;
-  margin-top:10px;
-}
 
-.pfv-item {
-  width:120px;
-  background:#162632;
-  border:1px solid #2d4558;
-  border-radius:12px;
-  padding:8px 6px;
-  font-size:.62rem;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:6px;
-  position:relative;
-  transition:opacity .35s ease, transform .35s ease;
-}
-
-.pfv-item img {
-  width:56px;
-  height:56px;
-  border-radius:10px;
-  object-fit:cover;
-}
-
-.pfv-barOuter {
-  width:100%;
-  height:10px;
-  background:#0d1a23;
-  border:1px solid #2c485d;
-  border-radius:10px;
-  overflow:hidden;
-}
-
-.pfv-barFill {
-  height:100%;
-  width:0%;
-  background:linear-gradient(90deg,#4aa8ff,#64d4a1);
-  transition:width .18s linear;
-}
-
-.pfv-elim {
-  opacity:0 !important;
-  transform:scale(.85) !important;
-}
-
-.pfv-winner {
-  outline:2px solid #6fd7ff;
-  box-shadow:0 0 6px 1px #6fd7ff;
-}
-
-@media (prefers-reduced-motion: reduce){
-  .pfv-item, .pfv-barFill {
-    transition:none!important;
-  }
-}
 
 /* Screen reader only class for accessibility */
 .sr-only{
