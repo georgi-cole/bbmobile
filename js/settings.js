@@ -24,7 +24,7 @@
     tripleChance: 7,    // %
     returnChance: 10,   // % chance a juror returns (mid-season)
     selfEvictChance: 1, // % tiny chance of auto self-eviction
-    enablePublicFav: false, // Public's Favourite Player feature at finale (default OFF)
+    enablePublicFav: true, // Public's Favourite Player feature at finale (default ON)
     // Timing (seconds)
     tVote: 30,
     tVeto: 40,
@@ -220,7 +220,7 @@
     return [
       '<div class="settingsGrid">',
         group('Features', [
-          checkbox('enablePublicFav','Public\'s Favourite Player at finale')
+          checkbox('enablePublicFav','Public\'s favourite player - this is a new module!')
         ].join('')),
         group('Week twists', [
           number('doubleChance','Double eviction chance (%)',0,100,1),
