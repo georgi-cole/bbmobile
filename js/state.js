@@ -135,7 +135,8 @@
     let compBeast = 0.35 + rng()*0.30; // Base range 0.35-0.65
     const persona={ aggr:0.25+rng()*0.7, loyalty:0.25+rng()*0.7, chaos:0.1+rng()*0.5 };
     
-    const avatar=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+    // Avatar will be resolved by resolveAvatar() which checks ./avatars/ folder first
+    const avatar=`./avatars/${id}.jpg`;
     const meta={
       age:21+Math.floor(rng()*29),
       sex:SEXES[Math.floor(rng()*SEXES.length)],
