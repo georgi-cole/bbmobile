@@ -225,6 +225,72 @@
     // Full results are shown in reveal card
   }
   
+  // Reusable tri-slot reveal sequence for competitions
+  // Can be used for HOH, Veto, or other top-3 reveals
+  async function showTriSlotReveal(options){
+    const {
+      title = 'Competition',
+      topThree = [],
+      winnerEmoji = '👑',
+      winnerTone = 'ok',
+      introDuration = 2000,
+      placeDuration = 2000,
+      winnerDuration = 3200,
+      showIntro = true
+    } = options;
+    
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+    
+    try {
+      // Show intro card
+      if(showIntro && typeof global.showCard === 'function'){
+        global.showCard(title, ['Revealing top 3...'], 'neutral', introDuration);
+        if(typeof global.cardQueueWaitIdle === 'function'){
+          await global.cardQueueWaitIdle();
+        }
+        await sleep(400);
+      }
+      
+      // Reveal 3rd place
+      if(topThree[2]){
+        if(typeof global.showCard === 'function'){
+          global.showCard('3rd Place', [topThree[2].name || topThree[2]], 'neutral', placeDuration);
+          if(typeof global.cardQueueWaitIdle === 'function'){
+            await global.cardQueueWaitIdle();
+          }
+          await sleep(1200);
+        }
+      }
+      
+      // Reveal 2nd place
+      if(topThree[1]){
+        if(typeof global.showCard === 'function'){
+          global.showCard('2nd Place', [topThree[1].name || topThree[1]], 'neutral', placeDuration);
+          if(typeof global.cardQueueWaitIdle === 'function'){
+            await global.cardQueueWaitIdle();
+          }
+          await sleep(1200);
+        }
+      }
+      
+      // Reveal winner
+      if(topThree[0]){
+        if(typeof global.showCard === 'function'){
+          const winnerTitle = `${title} Winner ${winnerEmoji}`;
+          global.showCard(winnerTitle, [topThree[0].name || topThree[0]], winnerTone, winnerDuration);
+          if(typeof global.cardQueueWaitIdle === 'function'){
+            await global.cardQueueWaitIdle();
+          }
+        }
+      }
+    } catch(e) {
+      console.warn('[triSlotReveal] sequence error', e);
+    }
+  }
+  
+  // Expose globally for reuse
+  global.showTriSlotReveal = showTriSlotReveal;
+  
   // New: Show top-3 reveal card with crown animation
   async function showCompetitionReveal(title, scoresMap, ids){
     const arr=[...scoresMap.entries()]
@@ -235,15 +301,15 @@
     if(arr.length === 0) return;
     
     const top3 = arr.slice(0, 3);
-    const lines = top3.map((x,i)=>{
-      const rank = i+1;
-      const crown = rank === 1 ? ' 👑' : '';
-      return `${rank}. ${x.name}${crown} — ${x.sc.toFixed(1)}`;
-    });
     
-    if(typeof global.showCard === 'function'){
-      await global.showCard(`${title} Results`, lines, 'ok', 5500, true);
-    }
+    // Use reusable tri-slot reveal
+    await showTriSlotReveal({
+      title: title,
+      topThree: top3,
+      winnerEmoji: '👑',
+      winnerTone: 'ok',
+      showIntro: true
+    });
     
     // Add crown animation to winner
     setTimeout(()=>{

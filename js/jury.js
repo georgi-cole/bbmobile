@@ -574,8 +574,8 @@
     
     // Get all players for selection
     const allPlayers = (gg.players || []).slice();
-    if(allPlayers.length < 1){
-      console.info('[publicFav] skipped (no players)');
+    if(allPlayers.length < 3){
+      console.info('[publicFav] skipped (need at least 3 players)');
       return;
     }
     
@@ -583,6 +583,52 @@
     
     // Helper
     function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+    
+    // Calculate total weeks (current week number)
+    const totalWeeks = gg.week || 1;
+    
+    // Calculate weights for all players based on survival time
+    // Weight formula: weight = 1 + 0.10 * normalizedSurvival
+    // normalizedSurvival = (weekEvicted ? weekEvicted : totalWeeks) / totalWeeks (clamped 0..1)
+    const playersWithWeights = allPlayers.map(p => {
+      const survivalWeek = p.weekEvicted != null ? p.weekEvicted : totalWeeks;
+      const normalizedSurvival = Math.max(0, Math.min(1, survivalWeek / totalWeeks));
+      const weight = 1 + 0.10 * normalizedSurvival;
+      return { player: p, weight };
+    });
+    
+    // Weighted sampling without replacement for 3 candidates
+    function weightedSample(candidates, count) {
+      const selected = [];
+      const pool = candidates.slice(); // Copy array
+      
+      for (let i = 0; i < count && pool.length > 0; i++) {
+        // Calculate total weight of remaining candidates
+        const totalWeight = pool.reduce((sum, c) => sum + c.weight, 0);
+        
+        // Pick random value in [0, totalWeight)
+        let rand = rng() * totalWeight;
+        
+        // Find the selected candidate
+        let selectedIdx = 0;
+        for (let j = 0; j < pool.length; j++) {
+          rand -= pool[j].weight;
+          if (rand <= 0) {
+            selectedIdx = j;
+            break;
+          }
+        }
+        
+        // Add to selected and remove from pool
+        selected.push(pool[selectedIdx]);
+        pool.splice(selectedIdx, 1);
+      }
+      
+      return selected;
+    }
+    
+    // Select 3 candidates using weighted sampling
+    const selectedCandidates = weightedSample(playersWithWeights, 3);
     
     // Card 1: Intro with exact text (including typos per spec)
     try{
@@ -717,18 +763,9 @@
     }catch(e){ console.warn('[publicFav] showCard error:', e); }
     await sleep(400);
     
-    // Randomly select winner from wildcard slots (then map to real player)
-    const winnerSlotIdx = Math.floor(Math.random() * 3);
-    
-    // Determine a real player to name: pick random non-winner player if possible
-    let fanFavPlayer = null;
-    const nonWinners = allPlayers.filter(p => p.id !== winnerId);
-    if(nonWinners.length > 0){
-      fanFavPlayer = nonWinners[Math.floor(Math.random() * nonWinners.length)];
-    } else {
-      // Fallback: just pick anyone
-      fanFavPlayer = allPlayers[Math.floor(Math.random() * allPlayers.length)];
-    }
+    // Randomly select winner from the 3 weighted candidates
+    const winnerSlotIdx = Math.floor(rng() * 3);
+    const fanFavPlayer = selectedCandidates[winnerSlotIdx].player;
     const fanFavName = safeName(fanFavPlayer.id);
     
     console.info('[publicFav] winner:', fanFavName);
