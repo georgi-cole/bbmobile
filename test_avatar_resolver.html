@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Avatar Resolver Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      background: #333;
+      border-radius: 4px;
+    }
+    .pass { color: #4ade80; }
+    .fail { color: #f87171; }
+    .avatar-preview {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      object-fit: cover;
+      margin: 10px 0;
+      background: #444;
+    }
+    h1 { color: #4ade80; }
+    h2 { color: #60a5fa; }
+    .code { 
+      background: #1a1a1a;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      display: inline-block;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Avatar Resolver Test Suite</h1>
+  <div id="testResults"></div>
+
+  <script src="js/avatar.js"></script>
+  <script>
+    const results = document.getElementById('testResults');
+    const tests = [];
+
+    function addTest(name, passed, details) {
+      tests.push({ name, passed, details });
+    }
+
+    function runTests() {
+      console.log('[Test] Starting Avatar Resolver Tests');
+
+      // Setup: Create mock game object
+      window.Game = window.Game || {};
+      window.Game.game = {
+        players: [
+          { id: 1, name: 'Alice', avatar: 'custom-avatar.jpg' },
+          { id: 2, name: 'Bob', img: 'bob-img.jpg' },
+          { id: 3, name: 'Charlie' },
+          { id: 4, name: 'Diana', photo: 'diana-photo.jpg' }
+        ]
+      };
+      window.Game.getP = (id) => window.Game.game.players.find(p => p.id === id);
+
+      // Test 1: resolveAvatar exists
+      addTest(
+        'resolveAvatar function exists',
+        typeof window.Game.resolveAvatar === 'function',
+        'Function should be available on window.Game'
+      );
+
+      // Test 2: getAvatarFallback exists
+      addTest(
+        'getAvatarFallback function exists',
+        typeof window.Game.getAvatarFallback === 'function',
+        'Function should be available on window.Game'
+      );
+
+      // Test 3: Player with custom avatar property
+      const result1 = window.Game.resolveAvatar(1);
+      addTest(
+        'Player with avatar property',
+        result1 === 'custom-avatar.jpg',
+        `Expected: custom-avatar.jpg, Got: ${result1}`
+      );
+
+      // Test 4: Player with img property
+      const result2 = window.Game.resolveAvatar(2);
+      addTest(
+        'Player with img property',
+        result2 === 'bob-img.jpg',
+        `Expected: bob-img.jpg, Got: ${result2}`
+      );
+
+      // Test 5: Player with photo property
+      const result4 = window.Game.resolveAvatar(4);
+      addTest(
+        'Player with photo property',
+        result4 === 'diana-photo.jpg',
+        `Expected: diana-photo.jpg, Got: ${result4}`
+      );
+
+      // Test 6: Player without custom avatar - should use ./avatars/ folder
+      const result3 = window.Game.resolveAvatar(3);
+      addTest(
+        'Player without custom avatar uses ./avatars/ folder',
+        result3 === './avatars/3.jpg',
+        `Expected: ./avatars/3.jpg, Got: ${result3}`
+      );
+
+      // Test 7: Pass player object directly
+      const player = window.Game.game.players[0];
+      const result5 = window.Game.resolveAvatar(player);
+      addTest(
+        'Pass player object directly',
+        result5 === 'custom-avatar.jpg',
+        `Expected: custom-avatar.jpg, Got: ${result5}`
+      );
+
+      // Test 8: getAvatarFallback with name
+      const fallback = window.Game.getAvatarFallback('TestPlayer');
+      addTest(
+        'getAvatarFallback returns dicebear URL',
+        fallback.includes('dicebear.com') && fallback.includes('TestPlayer'),
+        `Expected dicebear URL with TestPlayer, Got: ${fallback}`
+      );
+
+      // Test 9: Player object without ID
+      const playerNoId = { name: 'NoId', avatar: 'no-id-avatar.jpg' };
+      const result6 = window.Game.resolveAvatar(playerNoId);
+      addTest(
+        'Player object without ID uses avatar property',
+        result6 === 'no-id-avatar.jpg',
+        `Expected: no-id-avatar.jpg, Got: ${result6}`
+      );
+
+      displayResults();
+    }
+
+    function displayResults() {
+      const passed = tests.filter(t => t.passed).length;
+      const total = tests.length;
+      
+      let html = `
+        <div class="test-section">
+          <h2>Test Results: ${passed}/${total} passed</h2>
+          <div style="font-size: 24px; margin: 10px 0;">
+            ${passed === total ? '✅ All tests passed!' : '⚠️ Some tests failed'}
+          </div>
+        </div>
+      `;
+
+      tests.forEach(test => {
+        const status = test.passed ? '✅' : '❌';
+        const className = test.passed ? 'pass' : 'fail';
+        html += `
+          <div class="test-section">
+            <div class="test-result ${className}">
+              ${status} <strong>${test.name}</strong>
+              <div class="code">${test.details}</div>
+            </div>
+          </div>
+        `;
+      });
+
+      // Add visual tests
+      html += `
+        <div class="test-section">
+          <h2>Visual Avatar Tests</h2>
+          <p>These avatars should fall back to dicebear since files don't exist:</p>
+          <div>
+            <p>Player 3 (Charlie) - should try ./avatars/3.jpg then fallback:</p>
+            <img class="avatar-preview" 
+                 src="${window.Game.resolveAvatar(3)}" 
+                 onerror="this.onerror=null;this.src='${window.Game.getAvatarFallback('Charlie')}'"
+                 alt="Charlie">
+          </div>
+          <div>
+            <p>Fallback directly:</p>
+            <img class="avatar-preview" 
+                 src="${window.Game.getAvatarFallback('TestPlayer')}" 
+                 alt="TestPlayer">
+          </div>
+        </div>
+      `;
+
+      results.innerHTML = html;
+      
+      console.log('[Test] Results:', { passed, total, tests });
+    }
+
+    // Run tests when page loads
+    window.addEventListener('load', runTests);
+  </script>
+</body>
+</html>

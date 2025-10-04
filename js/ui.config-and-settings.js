@@ -480,10 +480,11 @@
       const chip = document.createElement('div');
       chip.className = 'cast-chip'+(i===state.idx?' active':'');
       chip.setAttribute('data-idx', String(i));
-      const imgSrc = p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
+      const imgSrc = (window.Game||window).resolveAvatar?.(p) || p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
+      const fallbackSrc = (window.Game||window).getAvatarFallback?.(p.name||'guest') || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
       chip.innerHTML = `
         <div class="chip-ava">
-          <img src="${imgSrc}" alt="${UI.escapeHtml(p.name||'player')}" onerror="this.onerror=null;this.src='https://api.dicebear.com/6.x/bottts/svg?seed='+encodeURIComponent(this.alt||'guest')">
+          <img src="${imgSrc}" alt="${UI.escapeHtml(p.name||'player')}" onerror="this.onerror=null;this.src='${fallbackSrc}'">
           ${chipBadgesHtml(p,game)}
         </div>
         <div class="nm">${UI.escapeHtml(p.name||'')}</div>
@@ -539,7 +540,7 @@
     motto.value = meta.motto || '';
     url.value = p.avatar || '';
 
-    const imgSrc = p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
+    const imgSrc = (window.Game||window).resolveAvatar?.(p) || p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
     if(preview) preview.src = imgSrc;
 
     castState(modal).dirty = false;

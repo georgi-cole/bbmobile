@@ -168,7 +168,8 @@
         const img=document.createElement('img');
         img.className='rc-face'+(size?(' '+size):'');
         img.alt=p?.name||'Player';
-        img.src=p?.avatar||p?.img||p?.photo||`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p?.name||String(id))}`;
+        const resolveAvatar = (window.Game||window).resolveAvatar;
+        img.src=resolveAvatar?.(p||id) || p?.avatar||p?.img||p?.photo||`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p?.name||String(id))}`;
         return img;
       };
       if(opts.arrow && ids.length===2){
