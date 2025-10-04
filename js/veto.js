@@ -212,6 +212,28 @@
 
   // Veto suspense reveal sequence
   async function showVetoRevealSequence(top3){
+    // Convert top3 format from [[id, score], ...] to [{name, ...}, ...]
+    const formatted = top3.map(function(entry){
+      return { name: safeName(entry[0]), score: entry[1] };
+    });
+    
+    // Use reusable tri-slot reveal if available
+    if(typeof global.showTriSlotReveal === 'function'){
+      try{
+        await global.showTriSlotReveal({
+          title: 'Veto Results',
+          topThree: formatted,
+          winnerEmoji: '🛡️',
+          winnerTone: 'veto',
+          showIntro: true
+        });
+        return;
+      }catch(e){
+        console.warn('[veto] tri-slot reveal error, using fallback', e);
+      }
+    }
+    
+    // Fallback to original implementation if reusable component not available
     function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
     
     try{
