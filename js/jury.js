@@ -533,25 +533,32 @@
   // Public Favourite Segment: elimination-style with bars
   async function runPublicFavouriteSegment(){
     const gg = g.game || {};
+    const cfg = gg.cfg || {};
     const finale = ensureFinaleState();
     
-    if(finale.publicFavDone){
-      console.info('[publicFav] skipped reason=already_done');
+    // Check toggle
+    if(!cfg.enablePublicFav){
+      console.info('[publicFav] skipped (toggle false)');
       return;
     }
     
-    // Get eligible candidates (all evicted players)
-    const allPlayers = (gg.players || []).filter(p => p.evicted);
+    if(finale.publicFavDone){
+      console.info('[publicFav] skipped (already completed)');
+      return;
+    }
     
-    if(allPlayers.length < 3){
-      console.info(`[publicFav] skipped reason=insufficient_candidates N=${allPlayers.length}`);
+    // Get eligible candidates (full season cast: evicted + remaining)
+    const allPlayers = (gg.players || []).slice();
+    
+    if(allPlayers.length < 2){
+      console.info(`[publicFav] skipped (insufficient players N=${allPlayers.length})`);
       finale.publicFavDone = true;
       return;
     }
     
-    console.info(`[publicFav] start N=${allPlayers.length}`);
+    console.info(`[publicFav] start (pre-jury)`);
     
-    // Pick random candidates (max 5)
+    // Pick up to 5 random candidates from full cast
     const maxCandidates = Math.min(5, allPlayers.length);
     const shuffled = allPlayers.slice().sort(() => rng() - 0.5);
     const candidates = shuffled.slice(0, maxCandidates);
@@ -572,10 +579,10 @@
       eliminated: false
     }));
     
-    // Show intro card
+    // Show intro card with new copy
     try{
       if(typeof g.showCard === 'function'){
-        g.showCard('Public\'s Favourite', ['Who will the audience crown?'], 'neutral', 2000, true);
+        g.showCard('Audience Spotlight', ['Before we reveal the jury votes and crown the winner. Let\'s see who you voted as your favourite!'], 'neutral', 3000, true);
         if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
       }
     }catch(e){}
@@ -585,56 +592,58 @@
     const panel = document.createElement('div');
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-label', 'Public\'s Favourite Player voting');
-    panel.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;background:linear-gradient(145deg,#0e1622,#0a131f);border:2px solid rgba(110,160,220,.25);border-radius:16px;padding:20px;width:min(600px,92vw);box-shadow:0 10px 40px rgba(0,0,0,.8);';
+    panel.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;background:linear-gradient(145deg,#0e1622,#0a131f);border:2px solid rgba(110,160,220,.25);border-radius:16px;padding:20px;width:min(700px,92vw);box-shadow:0 10px 40px rgba(0,0,0,.8);';
     
     const title = document.createElement('div');
     title.style.cssText = 'font-size:1.1rem;font-weight:800;letter-spacing:0.6px;margin-bottom:14px;text-align:center;color:#ffdc8b;';
-    title.textContent = 'PUBLIC\'S FAVOURITE';
+    title.textContent = 'AUDIENCE SPOTLIGHT';
     panel.appendChild(title);
     
     // Live region for screen readers
     const liveRegion = document.createElement('div');
+    liveRegion.id = 'publicFavLive';
     liveRegion.setAttribute('role', 'status');
     liveRegion.setAttribute('aria-live', 'polite');
     liveRegion.className = 'sr-only';
     panel.appendChild(liveRegion);
     
     const container = document.createElement('div');
-    container.className = 'pfv-container';
+    container.className = 'pfGrid5';
     panel.appendChild(container);
     
     // Create candidate tiles
     const tiles = [];
     candData.forEach((cd, idx) => {
       const tile = document.createElement('div');
-      tile.className = 'pfv-item';
+      tile.className = 'pfCell';
       tile.setAttribute('data-idx', idx);
       
       const img = document.createElement('img');
       img.src = cd.player.avatar || cd.player.img || '';
-      img.alt = cd.player.name;
+      img.alt = `${cd.player.name} avatar`;
       tile.appendChild(img);
       
       const name = document.createElement('div');
-      name.style.cssText = 'font-weight:700;font-size:0.7rem;text-align:center;';
+      name.style.cssText = 'font-weight:700;font-size:0.7rem;text-align:center;color:#eaf4ff;';
       name.textContent = cd.player.name;
       tile.appendChild(name);
       
       const barOuter = document.createElement('div');
-      barOuter.className = 'pfv-barOuter';
+      barOuter.className = 'pfBarOuter';
       barOuter.setAttribute('role', 'progressbar');
       barOuter.setAttribute('aria-valuemin', '0');
       barOuter.setAttribute('aria-valuemax', '100');
       barOuter.setAttribute('aria-valuenow', '0');
+      barOuter.setAttribute('aria-label', `${cd.player.name} vote percentage`);
       
       const barFill = document.createElement('div');
-      barFill.className = 'pfv-barFill';
+      barFill.className = 'pfBarFill';
       barFill.setAttribute('data-idx', idx);
       barOuter.appendChild(barFill);
       tile.appendChild(barOuter);
       
       const pctLabel = document.createElement('div');
-      pctLabel.style.cssText = 'font-size:0.68rem;color:#b7cbe2;font-weight:700;margin-top:2px;';
+      pctLabel.style.cssText = 'font-size:0.68rem;color:#b7cbe2;font-weight:700;margin-top:2px;text-align:center;';
       pctLabel.textContent = '0%';
       pctLabel.setAttribute('data-idx', idx);
       tile.appendChild(pctLabel);
@@ -645,10 +654,14 @@
     
     document.body.appendChild(panel);
     
+    // Check prefers-reduced-motion
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches || false;
+    const animDuration = prefersReducedMotion ? 2000 : 5000;
+    
     // Animate bars up to current percentages
     await sleep(100);
     candData.forEach((cd, idx) => {
-      const barFill = panel.querySelector(`.pfv-barFill[data-idx="${idx}"]`);
+      const barFill = panel.querySelector(`.pfBarFill[data-idx="${idx}"]`);
       const pctLabel = panel.querySelectorAll('[data-idx]');
       if(barFill){
         barFill.style.width = cd.pct + '%';
@@ -659,51 +672,63 @@
     });
     
     liveRegion.textContent = 'Vote tallies revealed';
-    await sleep(3000); // Let bars animate (170ms update x ~18 steps)
+    await sleep(animDuration); // Let bars animate
     
-    // Elimination sequence: every 3 seconds, eliminate lowest
-    while(candData.filter(c => !c.eliminated).length > 1){
-      await sleep(3000);
-      
-      const remaining = candData.filter(c => !c.eliminated);
-      if(remaining.length <= 1) break;
-      
-      // Find lowest percentage
-      const lowest = remaining.reduce((a,b) => a.pct < b.pct ? a : b);
-      
-      // Handle ties: pick random among tied
-      const tied = remaining.filter(c => c.pct === lowest.pct);
-      const toElim = tied[Math.floor(rng() * tied.length)];
-      toElim.eliminated = true;
-      
-      const idx = candData.indexOf(toElim);
+    // Elimination sequence: sort ascending by percentage
+    const sorted = candData.slice().sort((a,b) => a.pct - b.pct);
+    const toEliminate = sorted.slice(0, candData.length - 1); // All except winner
+    
+    // Sequential elimination with 800ms stagger
+    for(const cd of toEliminate){
+      const idx = candData.indexOf(cd);
       const tile = tiles[idx];
-      if(tile) tile.classList.add('pfv-elim');
+      if(tile) tile.classList.add('pfElim');
       
+      cd.eliminated = true;
       const remainingCount = candData.filter(c => !c.eliminated).length;
-      console.info(`[publicFav] eliminate player=${toElim.player.id} remaining=${remainingCount}`);
-      liveRegion.textContent = `${toElim.player.name} eliminated. ${remainingCount} remaining.`;
+      
+      console.info(`[publicFav] eliminate player=${cd.player.name} pct=${cd.pct}% remaining=${remainingCount}`);
+      liveRegion.textContent = `${cd.player.name} eliminated with ${cd.pct}%. ${remainingCount} remaining.`;
+      
+      await sleep(800);
     }
     
-    // Announce winner
+    // Winner enlargement
     const winner = candData.find(c => !c.eliminated);
     if(winner){
       const idx = candData.indexOf(winner);
       const tile = tiles[idx];
-      if(tile) tile.classList.add('pfv-winner');
       
-      console.info(`[publicFav] final winner=${winner.player.id} pct=${winner.pct}`);
-      liveRegion.textContent = `${winner.player.name} wins Public's Favourite with ${winner.pct}%!`;
+      // Hide eliminated tiles
+      tiles.forEach((t, i) => {
+        if(i !== idx) t.style.display = 'none';
+      });
       
+      // Enlarge winner tile
+      if(tile){
+        tile.classList.add('pfWinnerBig');
+        await sleep(200); // Brief delay for enlargement animation
+      }
+      
+      console.info(`[publicFav] done`);
+      liveRegion.textContent = `${winner.player.name} wins with ${winner.pct}%!`;
+      
+      // Wait for enlargement to complete
+      await sleep(1200);
+      
+      // Show final announcement card with new copy
       try{
         if(typeof g.showCard === 'function'){
-          g.showCard('Public\'s Favourite! 🌟', [`${winner.player.name} — ${winner.pct}%`], 'ok', 3500);
+          g.showCard('Fan Favourite', [
+            `The Public has chosen ${winner.player.name} for their Favourite player!`,
+            `Now let's see who is the Jury's favorite houseguest!`
+          ], 'ok', 4000);
           if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
         }
       }catch(e){}
     }
     
-    await sleep(4000);
+    await sleep(1000);
     panel.remove();
     
     finale.publicFavDone = true;
@@ -854,8 +879,18 @@
     return startFinaleRefactorFlow();
   }
 
+  // Integration helper: run Public Favourite before jury reveal
+  async function maybeRunPublicFavouriteBeforeJury(){
+    try {
+      await runPublicFavouriteSegment();
+    } catch(e) {
+      console.error('[publicFav] error', e);
+    }
+  }
+
   // Export
   g.startJuryVote = startJuryVote;
   g.juryOnEviction = juryOnEviction;
+  g.maybeRunPublicFavouriteBeforeJury = maybeRunPublicFavouriteBeforeJury;
 
 })(window);

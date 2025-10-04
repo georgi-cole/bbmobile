@@ -342,19 +342,31 @@ Run through full sequence and verify these console messages appear:
 - [ ] No vote tallies shown during casting phase
 - [ ] Finalist names NOT shown during this phase
 
-#### Phase 2: Public Favourite Segment (>=3 Candidates)
-- [ ] If >=3 evicted players exist, segment runs automatically
-- [ ] Console shows: `[publicFav] start N=X` where X is total evicted count
-- [ ] Public Favourite panel appears with 3-5 candidates
-- [ ] Vote bars start at 0% and animate up
+#### Phase 2: Public Favourite Segment (Enhanced - 5 Candidates, Pre-Jury)
+- [ ] Runs BEFORE jury reveal phase (between Phase 1 and Phase 3)
+- [ ] Only runs if toggle `cfg.enablePublicFav === true` (default OFF)
+- [ ] Console shows: `[publicFav] start (pre-jury)` if enabled
+- [ ] Console shows: `[publicFav] skipped (toggle false)` if disabled
+- [ ] If <2 players: `[publicFav] skipped (insufficient players N=X)`
+- [ ] Intro card: "Audience Spotlight" / "Before we reveal the jury votes and crown the winner. Let's see who you voted as your favourite!"
+- [ ] Panel uses up to 5 candidates from FULL cast (evicted + remaining)
+- [ ] Panel has class `.pfGrid5` with `.pfCell` tiles
+- [ ] Each cell shows: avatar, name, progress bar, percentage
+- [ ] Vote bars start at 0% and animate to final percentages
+- [ ] Animation duration: 5s (or 2s if prefers-reduced-motion)
 - [ ] Percentages sum to exactly 100%
-- [ ] Every 3 seconds, lowest candidate is eliminated
-- [ ] Console shows: `[publicFav] eliminate player=X remaining=Y`
+- [ ] After animation, sequential elimination begins
+- [ ] Each elimination: 800ms delay, `.pfElim` class applied
+- [ ] Console shows: `[publicFav] eliminate player=Name pct=X% remaining=Y`
+- [ ] Live region announces: "Name eliminated with X%. Y remaining."
 - [ ] Eliminated candidates fade out (opacity 0, scale 0.85)
-- [ ] Final winner highlighted with outline and glow
-- [ ] Console shows: `[publicFav] final winner=X pct=YY`
-- [ ] Winner card shown with percentage
-- [ ] Panel closes after ~4 seconds
+- [ ] After all eliminations, eliminated tiles hidden (display: none)
+- [ ] Winner tile enlarged with `.pfWinnerBig` class (scale 1.5 or 1.2 if reduced-motion)
+- [ ] Winner gets 3px outline, box-shadow glow
+- [ ] Console shows: `[publicFav] done`
+- [ ] Announcement card: "Fan Favourite" / "The Public has chosen Name for their Favourite player!" / "Now let's see who is the Jury's favorite houseguest!"
+- [ ] Panel closes and jury reveal begins immediately
+- [ ] No confetti triggered during segment
 
 #### Phase 2: Public Favourite Skip (<3 Candidates)
 - [ ] If <3 evicted players, segment is skipped

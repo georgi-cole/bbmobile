@@ -379,6 +379,111 @@ Complete refactor of finale flow implementing a two-phase jury vote system with 
 - Dialog with `role="dialog"` and `aria-label`
 - Screen reader class `.sr-only`
 
+## Enhanced Public's Favourite Player Feature (5 Candidates, Pre-Jury Flow)
+
+### Summary
+The Public's Favourite Player feature has been enhanced with new timing, expanded candidates (up to 5), elimination animation with winner enlargement, and updated copy to match show style. The feature runs BEFORE jury votes are revealed, creating a natural transition from jury casting to the winner announcement.
+
+### Key Enhancements
+
+**Timing & Flow Integration**
+- Runs BEFORE jury reveal phase (between Phase 1 jury casting and Phase 3 vote reveal)
+- New integration helper: `g.maybeRunPublicFavouriteBeforeJury()` for explicit invocation
+- Toggle-aware: respects `cfg.enablePublicFav` setting (default OFF)
+- Single-run guard: `game.finale.publicFavDone` prevents duplicate runs
+- Console markers: `[publicFav] start (pre-jury)`, `[publicFav] done`, `[publicFav] skipped (toggle false/already completed)`
+
+**Candidate Selection (Updated)**
+- Selects up to 5 distinct houseguests from FULL season cast (evicted + remaining)
+- No exclusions - includes finalists since winner not known yet at this stage
+- Random shuffle before slicing to ensure variety
+- Minimum requirement: 2 players (reduced from 3)
+- Previous implementation limited to evicted players only - now uses entire cast
+
+**Intro Card Text (Updated)**
+- Title: "Audience Spotlight"
+- Line: "Before we reveal the jury votes and crown the winner. Let's see who you voted as your favourite!"
+- Duration: 3000ms
+- Previous: "Public's Favourite" / "Who will the audience crown?"
+
+**Voting Animation Panel (Enhanced)**
+- Grid class: `.pfGrid5` with up to 5 `.pfCell` tiles (previous: 3 tiles in `.pfv-container`)
+- Panel width increased to 700px to accommodate 5 candidates
+- Each cell: avatar (with descriptive alt text), name, `.pfBarOuter` background, `.pfBarFill` animated fill, percentage label
+- Bars animate from 0% to final normalized percentages
+- Animation duration: 5 seconds (reduced to 2s if `prefers-reduced-motion: reduce`)
+- Percentages normalized to total exactly 100% (integer rounding with fix-up pass)
+
+**Elimination Sequence (New)**
+- After bar animation completes, candidates sorted ascending by percentage
+- Sequential elimination of all but winner with 800ms stagger between each
+- Each elimination: `.pfElim` class applied (opacity 0, scale 0.85, fade out)
+- Live region announces: "Name eliminated with X%. Y remaining."
+- Previous implementation had no elimination animation - just revealed results
+
+**Winner Enlargement (New)**
+- After all eliminations complete, eliminated tiles hidden (`display: none`)
+- Winner tile enlarged with `.pfWinnerBig` class (scale 1.5, highlight outline 3px, box-shadow glow)
+- Winner occupies most of panel width for visual emphasis
+- Scale reduced to 1.2 for users with `prefers-reduced-motion: reduce`
+- 1.2s delay for enlargement animation to complete before announcement
+
+**Winner Announcement Card (Updated)**
+- Title: "Fan Favourite"
+- Line 1: "The Public has chosen [Name] for their Favourite player!"
+- Line 2: "Now let's see who is the Jury's favorite houseguest!"
+- Duration: 4000ms
+- Immediately proceeds to jury reveal flow after card dismisses
+- Previous: "Public's Favourite! 🌟" / "Name — X%" with no jury transition
+
+**Accessibility (Enhanced)**
+- Panel has `role="dialog"` and `aria-label="Public's Favourite Player voting"`
+- Live region `#publicFavLive` with `role="status"` and `aria-live="polite"`
+- Each progress bar has `aria-label`, `aria-valuemin="0"`, `aria-valuemax="100"`, `aria-valuenow` (updated live)
+- Avatar images include descriptive alt text: "Name avatar"
+- Contrast-compliant background colors (#1b2c3b)
+
+**CSS Classes (New)**
+- `.pfGrid5` - Grid container for up to 5 candidates
+- `.pfCell` - Individual candidate tile (replaces `.pfv-item`)
+- `.pfBarOuter` - Bar background container (replaces `.pfv-barOuter`)
+- `.pfBarFill` - Animated fill bar (replaces `.pfv-barFill`)
+- `.pfElim` - Elimination state (opacity 0, scale 0.85)
+- `.pfWinnerBig` - Enlarged winner state (scale 1.5, outline 3px solid #6fd7ff, box-shadow glow)
+- Legacy classes (`.pfv-*`) retained for backward compatibility
+- Reduced motion media query: disables transitions, reduces winner scale to 1.2
+
+**Defensive Measures**
+- Skip if toggle disabled: logs `[publicFav] skipped (toggle false)`
+- Skip if already run: logs `[publicFav] skipped (already completed)`
+- Skip if fewer than 2 players: logs `[publicFav] skipped (insufficient players N=X)`
+- Try/catch wrapper around entire segment for error safety
+- No confetti triggered during this segment (preserves existing winner confetti only)
+- Error logging with `[publicFav] error` marker
+
+**Integration Points**
+- Old `finale.js` implementation marked as deprecated with warning log
+- Debug helper `g.__debugRunPublicFavOnce()` updated to prefer new pre-jury flow
+- Integration helper `g.maybeRunPublicFavouriteBeforeJury()` exported for external use
+- Automatically invoked in `startFinaleRefactorFlow()` between Phase 1 and Phase 3
+
+**Settings Toggle**
+- `cfg.enablePublicFav` - defaults to `false` (OFF)
+- Located in Settings → Gameplay pane
+- Label: "Public's Favourite Player at finale"
+
+**Testing with Debug Helper**
+```javascript
+// In console after game starts:
+game.cfg.enablePublicFav = true;  // Enable feature
+game.__debugRunPublicFavOnce();   // Run segment manually
+
+// Reset for re-run:
+game.finale.publicFavDone = false;
+game.__publicFavouriteCompleted = false;
+game.__debugRunPublicFavOnce();
+```
+
 ## Integration Fix (Public Favourite + Confetti) - PR #39 [DEPRECATED]
 
 ### Summary
