@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Avatar Resolver Test (avatar-resolver.js)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      background: #333;
+      border-radius: 4px;
+    }
+    .pass { color: #4ade80; }
+    .fail { color: #f87171; }
+    .info { color: #60a5fa; }
+    h1 { color: #4ade80; }
+    h2 { color: #60a5fa; }
+    .code { 
+      background: #1a1a1a;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      display: inline-block;
+      margin: 5px 0;
+    }
+    button {
+      background: #4ade80;
+      color: #1a1a1a;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #22c55e;
+    }
+  </style>
+</head>
+<body>
+  <h1>Avatar Resolver Test Suite (avatar-resolver.js)</h1>
+  <div id="testResults"></div>
+
+  <!-- Load the avatar-resolver module -->
+  <script src="js/state.js"></script>
+  <script src="js/avatar-resolver.js"></script>
+
+  <script>
+    const testResults = document.getElementById('testResults');
+
+    function addTest(name, passed, details, category = 'core') {
+      const result = document.createElement('div');
+      result.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      result.innerHTML = `
+        <strong>[${category}]</strong> ${name}: 
+        <span class="${passed ? 'pass' : 'fail'}">${passed ? '✓ PASS' : '✗ FAIL'}</span>
+        <br><span class="code">${details}</span>
+      `;
+      testResults.appendChild(result);
+    }
+
+    function addInfo(message) {
+      const info = document.createElement('div');
+      info.className = 'test-result info';
+      info.innerHTML = `<strong>ℹ️</strong> ${message}`;
+      testResults.appendChild(info);
+    }
+
+    // Setup test environment
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: 'https://example.com/alice.jpg' },
+        { id: 2, name: 'Bob', img: 'https://example.com/bob.png' },
+        { id: 3, name: 'Charlie', photo: 'https://example.com/charlie.jpg' },
+        { id: 4, name: 'Diana' },
+        { id: 5, name: 'Eve' }
+      ]
+    };
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+
+    // Run tests
+    addInfo('Testing avatar-resolver.js module...');
+
+    // ===== Core Function Availability Tests =====
+    addTest(
+      'resolveAvatar function is available',
+      typeof window.resolveAvatar === 'function' || typeof window.Game.resolveAvatar === 'function',
+      'Function must be accessible from window or window.Game',
+      'core'
+    );
+
+    addTest(
+      'preloadAllAvatars function is available',
+      typeof window.preloadAllAvatars === 'function' || typeof window.Game.preloadAllAvatars === 'function',
+      'Function must be accessible from window or window.Game',
+      'core'
+    );
+
+    const resolveAvatar = window.Game.resolveAvatar || window.resolveAvatar;
+    const preloadAllAvatars = window.Game.preloadAllAvatars || window.preloadAllAvatars;
+
+    // ===== Priority Order Tests =====
+    // Priority 1: ./avatars/ folder should be checked first
+    const test1 = resolveAvatar(1);
+    addTest(
+      'Priority 1: ./avatars/ folder is checked first',
+      test1 === './avatars/1.jpg',
+      `Expected: ./avatars/1.jpg, Got: ${test1}`,
+      'priority'
+    );
+
+    const test2 = resolveAvatar(2);
+    addTest(
+      'Priority 1: ./avatars/ folder for player 2',
+      test2 === './avatars/2.jpg',
+      `Expected: ./avatars/2.jpg, Got: ${test2}`,
+      'priority'
+    );
+
+    const test3 = resolveAvatar(4);
+    addTest(
+      'Priority 1: ./avatars/ folder for player without custom avatar',
+      test3 === './avatars/4.jpg',
+      `Expected: ./avatars/4.jpg, Got: ${test3}`,
+      'priority'
+    );
+
+    // ===== Object vs ID Tests =====
+    const directObject = { id: 99, name: 'Direct' };
+    const test4 = resolveAvatar(directObject);
+    addTest(
+      'Can pass player object directly',
+      test4 === './avatars/99.jpg',
+      `Expected: ./avatars/99.jpg, Got: ${test4}`,
+      'flexibility'
+    );
+
+    const test5 = resolveAvatar(5);
+    addTest(
+      'Can pass player ID as number',
+      test5 === './avatars/5.jpg',
+      `Expected: ./avatars/5.jpg, Got: ${test5}`,
+      'flexibility'
+    );
+
+    // ===== Edge Cases =====
+    const noIdObject = { name: 'NoID' };
+    const test6 = resolveAvatar(noIdObject);
+    addTest(
+      'Handles player object without ID (fallback to Dicebear)',
+      test6.includes('dicebear.com'),
+      `Expected fallback URL, Got: ${test6}`,
+      'edge-cases'
+    );
+
+    const test7 = resolveAvatar(null);
+    addTest(
+      'Handles null input gracefully',
+      test7.includes('dicebear.com'),
+      `Expected fallback URL, Got: ${test7}`,
+      'edge-cases'
+    );
+
+    // ===== preloadAllAvatars Tests =====
+    addInfo('Testing preloadAllAvatars function...');
+
+    if (preloadAllAvatars) {
+      const preloadButton = document.createElement('button');
+      preloadButton.textContent = 'Run preloadAllAvatars()';
+      preloadButton.onclick = async () => {
+        addInfo('Calling preloadAllAvatars()...');
+        try {
+          const results = await preloadAllAvatars();
+          addTest(
+            'preloadAllAvatars returns a Promise',
+            Array.isArray(results),
+            `Returned ${results.length} results`,
+            'preload'
+          );
+          
+          addTest(
+            'preloadAllAvatars processes all players',
+            results.length === window.game.players.length,
+            `Expected ${window.game.players.length} results, got ${results.length}`,
+            'preload'
+          );
+
+          results.forEach(result => {
+            addInfo(`Player ${result.playerId}: ${result.success ? '✓' : '✗'} ${result.url}`);
+          });
+        } catch (error) {
+          addTest(
+            'preloadAllAvatars error handling',
+            false,
+            `Error: ${error.message}`,
+            'preload'
+          );
+        }
+      };
+      testResults.appendChild(preloadButton);
+    }
+
+    // ===== Summary =====
+    const section = document.createElement('div');
+    section.className = 'test-section';
+    section.innerHTML = `
+      <h2>Test Summary</h2>
+      <p>This test suite validates the avatar-resolver.js module which implements:</p>
+      <ul>
+        <li><strong>resolveAvatar()</strong> - Resolves avatar URLs with ./avatars/ folder as first priority</li>
+        <li><strong>preloadAllAvatars()</strong> - Preloads all player avatars for performance</li>
+      </ul>
+      <p><strong>Priority Order:</strong></p>
+      <ol>
+        <li>./avatars/{playerId}.jpg (local avatar folder)</li>
+        <li>player.avatar (custom property)</li>
+        <li>player.img (legacy property)</li>
+        <li>player.photo (legacy property)</li>
+        <li>Dicebear API fallback</li>
+      </ol>
+    `;
+    testResults.appendChild(section);
+  </script>
+</body>
+</html>
