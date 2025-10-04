@@ -26,6 +26,14 @@
     return player?.name || String(id);
   }
 
+  // Helper to detect legacy numeric .jpg pattern (e.g., "./avatars/1.jpg")
+  function isNumericJpgPattern(path, playerId) {
+    if (!path || typeof path !== 'string') return false;
+    // Match patterns like "./avatars/1.jpg" or "avatars/1.jpg"
+    const pattern = new RegExp(`avatars[/\\\\]${playerId}\\.jpg$`, 'i');
+    return pattern.test(path);
+  }
+
   /**
    * Resolve avatar with priority:
    * 1. player.avatar (if defined in player object)
@@ -49,8 +57,8 @@
       player = playerIdOrObject;
       playerId = player.id;
       
-      // If passed a player object with these legacy properties, use them
-      if (player.avatar) {
+      // Check legacy properties, but skip numeric .jpg defaults (buggy pattern)
+      if (player.avatar && !isNumericJpgPattern(player.avatar, playerId)) {
         stats.resolved++;
         return player.avatar;
       }
@@ -67,8 +75,8 @@
       player = gp(playerId);
       
       if (player) {
-        // Check player object properties
-        if (player.avatar) {
+        // Check player object properties, skip numeric .jpg defaults
+        if (player.avatar && !isNumericJpgPattern(player.avatar, playerId)) {
           stats.resolved++;
           return player.avatar;
         }
