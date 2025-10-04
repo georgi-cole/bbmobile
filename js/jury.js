@@ -574,15 +574,25 @@
     
     // Get all players for selection
     const allPlayers = (gg.players || []).slice();
-    if(allPlayers.length < 3){
-      console.info('[publicFav] skipped (need at least 3 players)');
+    if(allPlayers.length < 4){
+      console.info('[publicFav] skipped (need at least 4 players, have ' + allPlayers.length + ')');
       return;
     }
     
-    console.info('[publicFav] start');
+    // Capture current generation token for abort safety
+    const myGeneration = g.__cardGen || 0;
     
     // Helper
     function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+    
+    // Helper: check if we should abort
+    function shouldAbort(){
+      if((g.__cardGen || 0) !== myGeneration){
+        console.info('[publicFav] aborted (flush)');
+        return true;
+      }
+      return false;
+    }
     
     // Calculate total weeks (current week number)
     const totalWeeks = gg.week || 1;
@@ -597,7 +607,7 @@
       return { player: p, weight };
     });
     
-    // Weighted sampling without replacement for 3 candidates
+    // Weighted sampling without replacement for 4 candidates
     function weightedSample(candidates, count) {
       const selected = [];
       const pool = candidates.slice(); // Copy array
@@ -627,8 +637,10 @@
       return selected;
     }
     
-    // Select 3 candidates using weighted sampling
-    const selectedCandidates = weightedSample(playersWithWeights, 3);
+    // Select 4 candidates using weighted sampling
+    const selectedCandidates = weightedSample(playersWithWeights, 4);
+    
+    console.info('[publicFav] start candidates=[' + selectedCandidates.map(c => c.player.id).join(',') + ']');
     
     // Card 1: Intro with corrected spelling
     try{
@@ -644,8 +656,9 @@
     // Build modal host wrapper with flexbox centering
     const modalHost = document.createElement('div');
     modalHost.className = 'pfModalHost';
+    modalHost.setAttribute('data-bb-card', 'true');
     
-    // Build panel with 3 real player slots (real avatars and names)
+    // Build panel with 4 real player slots (real avatars and names)
     const panel = document.createElement('div');
     panel.className = 'pfPanel';
     panel.setAttribute('role', 'dialog');
@@ -670,9 +683,9 @@
     
     modalHost.appendChild(panel);
     
-    // Create 3 real player slots with avatars and names
+    // Create 4 real player slots with avatars and names
     const slots = [];
-    for(let i = 0; i < 3; i++){
+    for(let i = 0; i < 4; i++){
       const candidate = selectedCandidates[i];
       const player = candidate.player;
       
@@ -739,8 +752,8 @@
       return gammas.map(g => g / sum);
     }
     
-    // Generate start distribution (neutral Dirichlet with alpha=1)
-    const startPcts = dirichlet([1, 1, 1]).map(v => v * 100);
+    // Generate start distribution (neutral Dirichlet with alpha=1 for 4 candidates)
+    const startPcts = dirichlet([1, 1, 1, 1]).map(v => v * 100);
     
     // Generate target distribution (biased by weight formula: 1 + 0.20 * normalizedSurvival)
     const targetAlphas = slots.map(slot => {
@@ -766,6 +779,11 @@
     let extensionCount = 0;
     
     function updatePercentages(){
+      // Check for abort
+      if(shouldAbort()){
+        return;
+      }
+      
       const elapsed = Date.now() - startTime;
       const t = Math.min(1, elapsed / currentDuration); // Progress 0..1
       const eased = Math.pow(t, 0.85); // Eased interpolation
@@ -814,6 +832,7 @@
     function scheduleNext(){
       const jitter = 180 + rng() * 60;
       setTimeout(() => {
+        if(shouldAbort()) return;
         if(Date.now() - startTime < currentDuration){
           updatePercentages();
           scheduleNext();
@@ -862,13 +881,25 @@
     
     // If still tied after max extensions, force tiebreak
     if (!locked) {
+      if(shouldAbort()) return;
+      
       const sorted = slots.map((s, i) => ({ pct: s.currentPct, idx: i })).sort((a, b) => b.pct - a.pct);
       const topDiff = sorted[0].pct - sorted[1].pct;
       
       if (topDiff < 1.0) {
-        // Apply tiebreak: +1 to first, -1 to second
-        slots[sorted[0].idx].currentPct += 1;
-        slots[sorted[1].idx].currentPct -= 1;
+        // For 4 candidates: find all tied at top, pick 2 to adjust
+        const topPct = sorted[0].pct;
+        const tiedIndices = sorted.filter(s => Math.abs(s.pct - topPct) < 0.5).map(s => s.idx);
+        
+        if(tiedIndices.length >= 2){
+          // Apply tiebreak: +1 to first tied, -1 to second tied
+          slots[tiedIndices[0]].currentPct += 1;
+          slots[tiedIndices[1]].currentPct -= 1;
+        } else {
+          // Fallback: adjust top 2
+          slots[sorted[0].idx].currentPct += 1;
+          slots[sorted[1].idx].currentPct -= 1;
+        }
         
         // Re-normalize
         const sum = slots.reduce((acc, s) => acc + s.currentPct, 0);
@@ -881,8 +912,12 @@
       }
       locked = true;
       liveRegion.textContent = 'Public vote locked';
-      console.info('[publicFav] locked');
+      const totalDuration = Date.now() - startTime;
+      console.info('[publicFav] locked durationMs=' + totalDuration);
     }
+    
+    // Check for abort before continuing
+    if(shouldAbort()) return;
     
     // Freeze final percentages
     const finalPcts = slots.map(s => s.currentPct);
@@ -899,22 +934,108 @@
     }catch(e){ console.warn('[publicFav] showCard error:', e); }
     await sleep(400);
     
-    // Randomly select winner from the 3 weighted candidates
-    const winnerSlotIdx = Math.floor(rng() * 3);
+    if(shouldAbort()) return;
+    
+    // Find winner (highest percentage)
+    let winnerSlotIdx = 0;
+    let maxPct = finalPcts[0];
+    for(let i = 1; i < finalPcts.length; i++){
+      if(finalPcts[i] > maxPct){
+        maxPct = finalPcts[i];
+        winnerSlotIdx = i;
+      }
+    }
+    
     const fanFavPlayer = selectedCandidates[winnerSlotIdx].player;
     const fanFavName = safeName(fanFavPlayer.id);
+    const winnerPct = Math.round(maxPct);
     
-    console.info('[publicFav] winner:', fanFavName);
+    console.info('[publicFav] winner:' + fanFavPlayer.id + ' pct=' + winnerPct);
     
-    // Card 3: Congratulations with corrected text
-    try{
-      if(typeof g.showCard === 'function'){
-        g.showCard('Congratulations! 🌟', [
-          `Congratulations to ${fanFavName} for being your favourite player. Join us again next season when the winner can be YOU!`
-        ], 'ok', 4500);
-        if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
+    // Create enhanced winner card showing all 4 ranked percentages
+    const winnerCard = document.createElement('div');
+    winnerCard.className = 'pfWinnerCard';
+    winnerCard.setAttribute('role', 'alert');
+    winnerCard.setAttribute('data-bb-card', 'true');
+    
+    // Winner section
+    const winnerSection = document.createElement('div');
+    winnerSection.className = 'pfWinnerMain';
+    
+    const winnerAvatar = document.createElement('img');
+    winnerAvatar.className = 'pfWinnerAvatar';
+    winnerAvatar.src = fanFavPlayer.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(fanFavName)}`;
+    winnerAvatar.alt = fanFavName + ' wins with ' + winnerPct + '%';
+    winnerAvatar.onerror = function(){ this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(fanFavName)}`; };
+    
+    const winnerName = document.createElement('div');
+    winnerName.className = 'pfWinnerName';
+    winnerName.textContent = fanFavName;
+    
+    const winnerPctText = document.createElement('div');
+    winnerPctText.className = 'pfWinnerPct';
+    winnerPctText.textContent = winnerPct + '%';
+    
+    winnerSection.appendChild(winnerAvatar);
+    winnerSection.appendChild(winnerName);
+    winnerSection.appendChild(winnerPctText);
+    winnerCard.appendChild(winnerSection);
+    
+    // Runners-up list (other 3 sorted descending)
+    const runnersUp = [];
+    for(let i = 0; i < selectedCandidates.length; i++){
+      if(i !== winnerSlotIdx){
+        runnersUp.push({ 
+          player: selectedCandidates[i].player, 
+          pct: Math.round(finalPcts[i])
+        });
       }
-    }catch(e){ console.warn('[publicFav] showCard error:', e); }
+    }
+    runnersUp.sort((a, b) => b.pct - a.pct);
+    
+    const runnersList = document.createElement('div');
+    runnersList.className = 'pfRunnersList';
+    
+    runnersUp.forEach(ru => {
+      const runnerItem = document.createElement('div');
+      runnerItem.className = 'pfRunnerItem';
+      
+      const runnerAvatar = document.createElement('img');
+      runnerAvatar.className = 'pfRunnerAvatar';
+      runnerAvatar.src = ru.player.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(ru.player.name)}`;
+      runnerAvatar.alt = ru.player.name + ' - ' + ru.pct + '%';
+      runnerAvatar.onerror = function(){ this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(ru.player.name)}`; };
+      
+      const runnerName = document.createElement('span');
+      runnerName.className = 'pfRunnerName';
+      runnerName.textContent = ru.player.name;
+      
+      const runnerPct = document.createElement('span');
+      runnerPct.className = 'pfRunnerPct';
+      runnerPct.textContent = ru.pct + '%';
+      
+      runnerItem.appendChild(runnerAvatar);
+      runnerItem.appendChild(runnerName);
+      runnerItem.appendChild(runnerPct);
+      runnersList.appendChild(runnerItem);
+    });
+    
+    winnerCard.appendChild(runnersList);
+    document.body.appendChild(winnerCard);
+    
+    // Move focus to winner card
+    winnerCard.focus();
+    
+    console.info('[publicFav] winnerCard shown id=' + fanFavPlayer.id + ' pct=' + winnerPct);
+    
+    await sleep(6000);
+    
+    if(shouldAbort()){
+      winnerCard.remove();
+      return;
+    }
+    
+    winnerCard.remove();
     
     console.info('[publicFav] done');
   }
@@ -984,6 +1105,12 @@
   // Main orchestrator for new finale flow
   async function startFinaleRefactorFlow(){
     const gg=g.game||{};
+    
+    // Flush all pending cards before entering finale
+    if(typeof g.flushAllCards === 'function'){
+      g.flushAllCards('enter-finale');
+    }
+    
     let jurors = getJurors();
     
     if(!jurors.length){
@@ -1063,5 +1190,79 @@
   // Export
   g.startJuryVote = startJuryVote;
   g.juryOnEviction = juryOnEviction;
+
+  // Debug helpers for testing Public Favourite
+  g.__pfSimDebug = function(seasons = 200) {
+    console.log('[pfSimDebug] Simulating ' + seasons + ' seasons to test weighted distribution...');
+    const gg = g.game || {};
+    const allPlayers = (gg.players || []).slice();
+    if(allPlayers.length < 4){
+      console.warn('[pfSimDebug] Need at least 4 players');
+      return null;
+    }
+    
+    const totalWeeks = gg.week || 1;
+    const playersWithWeights = allPlayers.map(p => {
+      const survivalWeek = p.weekEvicted != null ? p.weekEvicted : totalWeeks;
+      const normalizedSurvival = Math.max(0, Math.min(1, survivalWeek / totalWeeks));
+      const weight = 1 + 0.10 * normalizedSurvival;
+      return { player: p, weight };
+    });
+    
+    const pickCounts = {};
+    allPlayers.forEach(p => pickCounts[p.id] = 0);
+    
+    function weightedSample(candidates, count) {
+      const selected = [];
+      const pool = candidates.slice();
+      for (let i = 0; i < count && pool.length > 0; i++) {
+        const totalWeight = pool.reduce((sum, c) => sum + c.weight, 0);
+        let rand = rng() * totalWeight;
+        let selectedIdx = 0;
+        for (let j = 0; j < pool.length; j++) {
+          rand -= pool[j].weight;
+          if (rand <= 0) {
+            selectedIdx = j;
+            break;
+          }
+        }
+        selected.push(pool[selectedIdx]);
+        pool.splice(selectedIdx, 1);
+      }
+      return selected;
+    }
+    
+    for(let i = 0; i < seasons; i++){
+      const selected = weightedSample(playersWithWeights, 4);
+      selected.forEach(c => pickCounts[c.player.id]++);
+    }
+    
+    console.table(allPlayers.map(p => ({
+      id: p.id,
+      name: p.name,
+      weekEvicted: p.weekEvicted || 'N/A',
+      weight: playersWithWeights.find(pw => pw.player.id === p.id).weight.toFixed(3),
+      pickCount: pickCounts[p.id],
+      frequency: ((pickCounts[p.id] / seasons) * 100).toFixed(1) + '%'
+    })));
+    
+    return pickCounts;
+  };
+  
+  g.forcePFRunOnce = function() {
+    console.log('[forcePFRunOnce] Forcing Public Favourite to run (resetting guards)...');
+    g.__publicFavDone = false;
+    const gg = g.game || {};
+    if(gg.finale) gg.finale.publicFavDone = false;
+    if(!gg.cfg) gg.cfg = {};
+    gg.cfg.enablePublicFav = true;
+    
+    // Get winner or pick a random finalist
+    const [A, B] = finalists();
+    const winner = A || 1;
+    
+    console.log('[forcePFRunOnce] Running Public Favourite with winner=' + winner);
+    return runPublicFavouritePostWinner(winner);
+  };
 
 })(window);
