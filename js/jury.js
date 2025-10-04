@@ -630,18 +630,18 @@
     // Select 3 candidates using weighted sampling
     const selectedCandidates = weightedSample(playersWithWeights, 3);
     
-    // Card 1: Intro with exact text (including typos per spec)
+    // Card 1: Intro with corrected spelling
     try{
       if(typeof g.showCard === 'function'){
         g.showCard('Audience Spotlight', [
-          'And just before we say goodbye of another amazing season, let\'s see whom you have chosed as the Puiblic\'s favourite player.'
+          'And just before we say goodbye to another amazing season, let\'s see whom you have chosen as the Public\'s favourite player.'
         ], 'neutral', 3500, true);
         if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
       }
     }catch(e){ console.warn('[publicFav] showCard error:', e); }
     await sleep(300);
     
-    // Build panel with 3 wildcard slots (generic question marks, no real player avatars yet)
+    // Build panel with 3 real player slots (real avatars and names)
     const panel = document.createElement('div');
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-label', 'Public\'s Favourite Player voting simulation');
@@ -665,19 +665,35 @@
     container.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;justify-items:center;margin-top:10px;';
     panel.appendChild(container);
     
-    // Create 3 wildcard slots with question mark avatars
+    // Create 3 real player slots with avatars and names
     const slots = [];
     for(let i = 0; i < 3; i++){
+      const candidate = selectedCandidates[i];
+      const player = candidate.player;
+      
       const slot = document.createElement('div');
       slot.className = 'pfSlot';
       slot.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;';
       
-      // Question mark avatar (placeholder)
-      const avatar = document.createElement('div');
-      avatar.style.cssText = 'width:68px;height:68px;border-radius:12px;background:#1b2c3b;border:2px solid #3d5a72;display:grid;place-items:center;font-size:32px;color:#7a9bb8;';
-      avatar.textContent = '?';
+      // Real player avatar (with fallback to dicebear)
+      const avatar = document.createElement('img');
+      const avatarSrc = player?.avatar || player?.img || player?.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player?.name || 'player')}`;
+      avatar.src = avatarSrc;
+      avatar.alt = player?.name || 'Player';
+      avatar.onerror = function() {
+        this.onerror = null;
+        this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player?.name || 'player')}`;
+      };
+      avatar.style.cssText = 'width:68px;height:68px;border-radius:12px;background:#1b2c3b;border:2px solid #3d5a72;object-fit:cover;';
       slot.appendChild(avatar);
       
+      // Player name label
+      const nameLabel = document.createElement('div');
+      nameLabel.style.cssText = 'font-size:0.85rem;font-weight:700;color:#b8d4f0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;';
+      nameLabel.textContent = player?.name || 'Unknown';
+      slot.appendChild(nameLabel);
+      
+      // Percentage label
       const pctLabel = document.createElement('div');
       pctLabel.className = 'pfPct';
       pctLabel.style.cssText = 'font-size:1.1rem;font-weight:800;color:#eaf4ff;text-align:center;';
@@ -686,45 +702,102 @@
       slot.appendChild(pctLabel);
       
       container.appendChild(slot);
-      slots.push({ pctLabel, currentPct: 0 });
+      slots.push({ pctLabel, currentPct: 0, weight: candidate.weight });
     }
     
     document.body.appendChild(panel);
     
-    // Simulate live voting for 5 seconds
+    // Helper: Generate Dirichlet distribution (simplified approximation using Gamma distribution)
+    function dirichlet(alphas) {
+      // Use Gamma(alpha, 1) to generate Dirichlet samples
+      const gammas = alphas.map(alpha => {
+        // Gamma distribution approximation using rejection sampling
+        if (alpha < 1) {
+          // For alpha < 1, use a different approach
+          const u = rng();
+          return Math.pow(u, 1 / alpha);
+        }
+        // Marsaglia and Tsang method for alpha >= 1
+        const d = alpha - 1/3;
+        const c = 1 / Math.sqrt(9 * d);
+        while (true) {
+          let x, v;
+          do {
+            x = Math.sqrt(-2 * Math.log(rng())) * Math.cos(2 * Math.PI * rng()); // Box-Muller
+            v = 1 + c * x;
+          } while (v <= 0);
+          v = v * v * v;
+          const u = rng();
+          if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+          if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+        }
+      });
+      const sum = gammas.reduce((a, b) => a + b, 0);
+      return gammas.map(g => g / sum);
+    }
+    
+    // Generate start distribution (neutral Dirichlet with alpha=1)
+    const startPcts = dirichlet([1, 1, 1]).map(v => v * 100);
+    
+    // Generate target distribution (biased by weight formula: 1 + 0.20 * normalizedSurvival)
+    const targetAlphas = slots.map(slot => {
+      const p = selectedCandidates[slots.indexOf(slot)].player;
+      const survivalWeek = p.weekEvicted != null ? p.weekEvicted : totalWeeks;
+      const normalizedSurvival = Math.max(0, Math.min(1, survivalWeek / totalWeeks));
+      return 1 + 0.20 * normalizedSurvival;
+    });
+    const targetPcts = dirichlet(targetAlphas).map(v => v * 100);
+    
+    // Initialize current percentages
+    slots.forEach((slot, i) => {
+      slot.currentPct = startPcts[i];
+      slot.pctLabel.textContent = Math.round(startPcts[i]) + '%';
+    });
+    
+    // Simulate live voting for 10 seconds base + possible extensions
     const startTime = Date.now();
-    const updateDuration = 5000;
-    let updateInterval = null;
+    const baseDuration = 10000; // 10 seconds
+    let currentDuration = baseDuration;
+    const maxExtension = 5000; // +5 seconds max
     let isFirstUpdate = true;
+    let extensionCount = 0;
     
     function updatePercentages(){
-      if(Date.now() - startTime >= updateDuration){
-        clearInterval(updateInterval);
-        liveRegion.textContent = 'Public vote locked';
-        console.info('[publicFav] locked');
-        return;
-      }
+      const elapsed = Date.now() - startTime;
+      const t = Math.min(1, elapsed / currentDuration); // Progress 0..1
+      const eased = Math.pow(t, 0.85); // Eased interpolation
       
-      // Generate 3 random values that sum to 100, ensuring all >= 1
-      // Method: pick two random integers (1..98), sort them, derive percentages
-      const a = Math.floor(Math.random() * 98) + 1;
-      const b = Math.floor(Math.random() * 98) + 1;
-      const sorted = [a, b].sort((x,y) => x-y);
-      let pcts = [sorted[0], sorted[1] - sorted[0], 100 - sorted[1]];
+      // Interpolate between start and target
+      const newPcts = slots.map((slot, i) => {
+        const start = startPcts[i];
+        const target = targetPcts[i];
+        const base = start + (target - start) * eased;
+        
+        // Add bounded noise: ±(2 * (1 - eased))
+        const noiseBound = 2 * (1 - eased);
+        const noise = (rng() * 2 - 1) * noiseBound;
+        
+        return base + noise;
+      });
       
-      // Ensure all values are >= 1 (adjust if needed)
-      if(pcts[0] < 1) { pcts[0] = 1; pcts[2] -= 1; }
-      if(pcts[1] < 1) { pcts[1] = 1; pcts[2] -= 1; }
-      if(pcts[2] < 1) { pcts[2] = 1; pcts[0] -= 1; }
+      // Cap per-tick swing to ≤4 percentage points
+      const cappedPcts = newPcts.map((newPct, i) => {
+        const oldPct = slots[i].currentPct;
+        const delta = newPct - oldPct;
+        if (Math.abs(delta) > 4) {
+          return oldPct + Math.sign(delta) * 4;
+        }
+        return newPct;
+      });
       
-      // Final adjustment to ensure sum is exactly 100
-      const sum = pcts.reduce((x,y)=>x+y,0);
-      if(sum !== 100) pcts[0] += (100 - sum);
+      // Re-normalize to sum to 100
+      const sum = cappedPcts.reduce((a, b) => a + b, 0);
+      const normalized = cappedPcts.map(p => (p / sum) * 100);
       
       // Update display
       slots.forEach((slot, i) => {
-        slot.currentPct = pcts[i];
-        slot.pctLabel.textContent = pcts[i] + '%';
+        slot.currentPct = normalized[i];
+        slot.pctLabel.textContent = Math.round(normalized[i]) + '%';
       });
       
       // Log only on first update
@@ -734,19 +807,79 @@
       }
     }
     
-    // Update every 150-250ms with jitter
+    // Update every 180-240ms with jitter
     function scheduleNext(){
-      const jitter = 150 + Math.random() * 100;
-      updateInterval = setTimeout(() => {
-        updatePercentages();
-        if(Date.now() - startTime < updateDuration) scheduleNext();
+      const jitter = 180 + rng() * 60;
+      setTimeout(() => {
+        if(Date.now() - startTime < currentDuration){
+          updatePercentages();
+          scheduleNext();
+        }
       }, jitter);
     }
     scheduleNext();
     
-    // Wait for 5 seconds
-    await sleep(updateDuration + 100);
-    clearInterval(updateInterval);
+    // Wait for base duration
+    await sleep(baseDuration);
+    
+    // Check if we need to lock or extend
+    let locked = false;
+    while (!locked && extensionCount < 5) {
+      // Get current percentages sorted descending
+      const sorted = slots.map(s => s.currentPct).sort((a, b) => b - a);
+      const topDiff = sorted[0] - sorted[1];
+      
+      if (topDiff >= 1.0) {
+        // Lock condition met
+        locked = true;
+        liveRegion.textContent = 'Public vote locked';
+        console.info('[publicFav] locked');
+      } else {
+        // Extend by 1 second
+        extensionCount++;
+        currentDuration += 1000;
+        console.info(`[publicFav] extend(+1000ms diff=${topDiff.toFixed(2)}%)`);
+        
+        // Add noise ±1 to percentages during extension
+        const extendedPcts = slots.map(slot => {
+          const noise = (rng() * 2 - 1) * 1;
+          return slot.currentPct + noise;
+        });
+        
+        // Re-normalize
+        const sum = extendedPcts.reduce((a, b) => a + b, 0);
+        slots.forEach((slot, i) => {
+          slot.currentPct = (extendedPcts[i] / sum) * 100;
+          slot.pctLabel.textContent = Math.round(slot.currentPct) + '%';
+        });
+        
+        await sleep(1000);
+      }
+    }
+    
+    // If still tied after max extensions, force tiebreak
+    if (!locked) {
+      const sorted = slots.map((s, i) => ({ pct: s.currentPct, idx: i })).sort((a, b) => b.pct - a.pct);
+      const topDiff = sorted[0].pct - sorted[1].pct;
+      
+      if (topDiff < 1.0) {
+        // Apply tiebreak: +1 to first, -1 to second
+        slots[sorted[0].idx].currentPct += 1;
+        slots[sorted[1].idx].currentPct -= 1;
+        
+        // Re-normalize
+        const sum = slots.reduce((acc, s) => acc + s.currentPct, 0);
+        slots.forEach(slot => {
+          slot.currentPct = (slot.currentPct / sum) * 100;
+          slot.pctLabel.textContent = Math.round(slot.currentPct) + '%';
+        });
+        
+        console.info('[publicFav] tiebreak applied');
+      }
+      locked = true;
+      liveRegion.textContent = 'Public vote locked';
+      console.info('[publicFav] locked');
+    }
     
     // Freeze final percentages
     const finalPcts = slots.map(s => s.currentPct);
@@ -770,11 +903,11 @@
     
     console.info('[publicFav] winner:', fanFavName);
     
-    // Card 3: Congratulations with exact text
+    // Card 3: Congratulations with corrected text
     try{
       if(typeof g.showCard === 'function'){
         g.showCard('Congratulations! 🌟', [
-          `congratulations to ${fanFavName} about being your favourite player. Join us again next season when the winner can be YOU!`
+          `Congratulations to ${fanFavName} for being your favourite player. Join us again next season when the winner can be YOU!`
         ], 'ok', 4500);
         if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
       }
