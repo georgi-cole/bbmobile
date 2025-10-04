@@ -11,6 +11,11 @@
     return g.game.cfg;
   }
 
+  // === Card Queue Flush Infrastructure ===
+  // Global generation token and timeout tracking
+  g.__cardGen = g.__cardGen || 1;
+  g.__cardTimeouts = g.__cardTimeouts || [];
+
   // TV helpers
   g.tv = g.tv || {};
   g.tv.say = function(txt){
@@ -249,6 +254,7 @@
       host.style.visibility='';
       const card=document.createElement('div');
       card.className='revealCard'+((tone==='big'||tone==='announce')?' bigAnnounce':'');
+      card.setAttribute('data-bb-card', 'true'); // Mark for flush system
       const h=document.createElement('h3'); h.textContent=title; card.appendChild(h);
       (lines||[]).forEach((txt,i)=>{
         const d=document.createElement('div'); if(!uniform && i===0) d.className='big';
@@ -335,11 +341,94 @@
     writeToPane(getLogPaneByKey('jury'),msg,cls);
   }
 
+  // === Card Flush System ===
+  function flushAllCards(reason){
+    // Increment generation token
+    g.__cardGen = (g.__cardGen || 0) + 1;
+    
+    // Clear all tracked timeouts
+    if(Array.isArray(g.__cardTimeouts)){
+      g.__cardTimeouts.forEach(id => {
+        try { clearTimeout(id); } catch(e){}
+      });
+      g.__cardTimeouts.length = 0;
+    }
+    
+    // Remove any active card DOM nodes
+    try {
+      // Remove cards with bb-card-host class or data-bb-card attribute
+      const cards = document.querySelectorAll('.bb-card-host, [data-bb-card], .revealCard');
+      cards.forEach(card => {
+        try { card.remove(); } catch(e){}
+      });
+      
+      // Clear tvOverlay if present
+      const host = uiEnsureTvOverlay();
+      if(host) host.innerHTML = '';
+      
+      // Remove tvTall class
+      document.getElementById('tv')?.classList.remove('tvTall');
+    } catch(e){
+      console.error('[cards] flush DOM cleanup error:', e);
+    }
+    
+    console.info(`[cards] flushed (reason=${reason||'unspecified'})`);
+  }
+  
+  // Safe wrapper for showCard with generation token tracking
+  function safeShowCard(title, lines=[], tone='neutral', dur=4200, uniform=false){
+    // Capture current generation token
+    const myGen = g.__cardGen || 1;
+    
+    // Check if original showCard is available
+    if(typeof showCard === 'function'){
+      try {
+        // Call showCard (it will queue the card)
+        showCard(title, lines, tone, dur, uniform);
+        
+        // Register any follow-up timeout (card display timeout)
+        const timeoutId = setTimeout(() => {
+          // Before executing, check if generation still matches
+          if((g.__cardGen || 1) === myGen){
+            // Card display completed normally
+          } else {
+            // Aborted due to flush
+            console.info('[cards] card aborted due to flush:', title);
+          }
+          
+          // Remove from tracking
+          const idx = (g.__cardTimeouts || []).indexOf(timeoutId);
+          if(idx >= 0) g.__cardTimeouts.splice(idx, 1);
+        }, dur || 4200);
+        
+        // Track timeout with generation token
+        if(!Array.isArray(g.__cardTimeouts)) g.__cardTimeouts = [];
+        g.__cardTimeouts.push(timeoutId);
+        
+        return timeoutId;
+      } catch(e){
+        console.warn('[cards] safeShowCard error:', e);
+      }
+    } else {
+      // Fallback: update tvNow text
+      try {
+        const tvNow = document.getElementById('tvNow');
+        if(tvNow){
+          const msg = [title || 'Update'].concat(Array.isArray(lines) ? lines : []).join(' — ');
+          tvNow.textContent = msg;
+        }
+      } catch(e){}
+    }
+    return undefined;
+  }
+
   // Exports
   UI.showCard=showCard; UI.showBigCard=showBigCard;
   UI.cardQueueWaitIdle=CardQueue.waitIdle; UI.activateSkipCascade=activateSkipCascade;
   UI.addLog=addLog; UI.addJuryLog=addJuryLog; UI.selectLogTabForPhase=selectLogTabForPhase;
+  UI.flushAllCards=flushAllCards; UI.safeShowCard=safeShowCard;
   g.showCard=showCard; g.showBigCard=showBigCard; g.cardQueueWaitIdle=CardQueue.waitIdle; g.activateSkipCascade=activateSkipCascade;
+  g.flushAllCards=flushAllCards; g.safeShowCard=safeShowCard;
   g.addLog=addLog; g.addJuryLog=addJuryLog; g.selectLogTabForPhase=selectLogTabForPhase;
 
   document.addEventListener('DOMContentLoaded',()=>{

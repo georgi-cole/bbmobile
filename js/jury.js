@@ -755,6 +755,10 @@
     });
     
     // Simulate live voting for 10 seconds base + possible extensions
+    // Capture generation token for abort safety
+    const myGen = g.__cardGen || 1;
+    let aborted = false;
+    
     const startTime = Date.now();
     const baseDuration = 10000; // 10 seconds
     let currentDuration = baseDuration;
@@ -763,6 +767,13 @@
     let extensionCount = 0;
     
     function updatePercentages(){
+      // Check if we should abort (flush happened)
+      if((g.__cardGen || 1) !== myGen){
+        aborted = true;
+        console.info('[publicFav] aborted (flush)');
+        return false;
+      }
+      
       const elapsed = Date.now() - startTime;
       const t = Math.min(1, elapsed / currentDuration); // Progress 0..1
       const eased = Math.pow(t, 0.85); // Eased interpolation
@@ -805,15 +816,19 @@
         console.info('[publicFav] updating');
         isFirstUpdate = false;
       }
+      
+      return true;
     }
     
     // Update every 180-240ms with jitter
     function scheduleNext(){
       const jitter = 180 + rng() * 60;
       setTimeout(() => {
+        if(aborted) return;
         if(Date.now() - startTime < currentDuration){
-          updatePercentages();
-          scheduleNext();
+          if(updatePercentages() !== false){
+            scheduleNext();
+          }
         }
       }, jitter);
     }
@@ -822,9 +837,24 @@
     // Wait for base duration
     await sleep(baseDuration);
     
+    // Check if aborted during base duration
+    if(aborted || (g.__cardGen || 1) !== myGen){
+      console.info('[publicFav] aborted (flush)');
+      try { panel.remove(); } catch(e){}
+      return;
+    }
+    
     // Check if we need to lock or extend
     let locked = false;
     while (!locked && extensionCount < 5) {
+      // Check for abort
+      if((g.__cardGen || 1) !== myGen){
+        aborted = true;
+        console.info('[publicFav] aborted (flush)');
+        try { panel.remove(); } catch(e){}
+        return;
+      }
+      
       // Get current percentages sorted descending
       const sorted = slots.map(s => s.currentPct).sort((a, b) => b - a);
       const topDiff = sorted[0] - sorted[1];
@@ -885,6 +915,15 @@
     const finalPcts = slots.map(s => s.currentPct);
     
     await sleep(800);
+    
+    // Check for abort before removing panel
+    if((g.__cardGen || 1) !== myGen){
+      aborted = true;
+      console.info('[publicFav] aborted (flush)');
+      try { panel.remove(); } catch(e){}
+      return;
+    }
+    
     panel.remove();
     
     // Card 2: Reveal intro
@@ -896,22 +935,84 @@
     }catch(e){ console.warn('[publicFav] showCard error:', e); }
     await sleep(400);
     
+    // Check for abort before winner reveal
+    if((g.__cardGen || 1) !== myGen){
+      aborted = true;
+      console.info('[publicFav] aborted (flush)');
+      return;
+    }
+    
     // Randomly select winner from the 3 weighted candidates
     const winnerSlotIdx = Math.floor(rng() * 3);
     const fanFavPlayer = selectedCandidates[winnerSlotIdx].player;
     const fanFavName = safeName(fanFavPlayer.id);
+    const winnerPct = Math.round(finalPcts[winnerSlotIdx]);
     
     console.info('[publicFav] winner:', fanFavName);
     
-    // Card 3: Congratulations with corrected text
-    try{
+    // Store PF results for future reference
+    g.__publicFavResult = {
+      winnerId: fanFavPlayer.id,
+      winnerPct: winnerPct,
+      entries: selectedCandidates.map((c, i) => ({
+        id: c.player.id,
+        pct: Math.round(finalPcts[i])
+      }))
+    };
+    
+    // Enhanced Winner Card with Avatar + %
+    try {
+      const winnerCard = document.createElement('div');
+      winnerCard.className = 'pfWinnerCard';
+      winnerCard.setAttribute('data-pf-winner', 'true');
+      winnerCard.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;background:linear-gradient(145deg,#1a2942,#0f1a2f);border:2px solid #ffdc8b;border-radius:16px;padding:24px;width:min(400px,90vw);box-shadow:0 12px 36px rgba(0,0,0,.8);text-align:center;';
+      
+      // Title
+      const title = document.createElement('div');
+      title.style.cssText = 'font-size:1.2rem;font-weight:800;color:#ffdc8b;margin-bottom:16px;letter-spacing:0.6px;';
+      title.textContent = 'PUBLIC\'S FAVOURITE 🌟';
+      winnerCard.appendChild(title);
+      
+      // Avatar
+      const avatar = document.createElement('img');
+      const avatarSrc = fanFavPlayer?.avatar || fanFavPlayer?.img || fanFavPlayer?.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(fanFavPlayer?.name || 'player')}`;
+      avatar.src = avatarSrc;
+      avatar.alt = fanFavName;
+      avatar.onerror = function() {
+        this.onerror = null;
+        this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(fanFavPlayer?.name || 'player')}`;
+      };
+      avatar.style.cssText = 'width:72px;height:72px;border-radius:12px;object-fit:cover;border:2px solid #3e6ba8;margin:0 auto 12px;display:block;';
+      winnerCard.appendChild(avatar);
+      
+      // Name
+      const nameLabel = document.createElement('div');
+      nameLabel.style.cssText = 'font-size:1.1rem;font-weight:700;color:#eaf4ff;margin-bottom:8px;';
+      nameLabel.textContent = fanFavName;
+      winnerCard.appendChild(nameLabel);
+      
+      // Percentage
+      const pctLabel = document.createElement('div');
+      pctLabel.style.cssText = 'font-size:1.5rem;font-weight:800;color:#ffdc8b;';
+      pctLabel.textContent = `${winnerPct}%`;
+      winnerCard.appendChild(pctLabel);
+      
+      document.body.appendChild(winnerCard);
+      
+      console.info(`[publicFav] winnerCard shown id=${fanFavPlayer.id} pct=${winnerPct}`);
+      
+      await sleep(4500);
+      winnerCard.remove();
+    } catch(e){
+      console.warn('[publicFav] winnerCard error:', e);
+      // Fallback to regular card
       if(typeof g.showCard === 'function'){
         g.showCard('Congratulations! 🌟', [
           `Congratulations to ${fanFavName} for being your favourite player. Join us again next season when the winner can be YOU!`
         ], 'ok', 4500);
         if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
       }
-    }catch(e){ console.warn('[publicFav] showCard error:', e); }
+    }
     
     console.info('[publicFav] done');
   }
@@ -980,6 +1081,11 @@
 
   // Main orchestrator for new finale flow
   async function startFinaleRefactorFlow(){
+    // Flush all cards before entering finale
+    if(typeof g.flushAllCards === 'function'){
+      g.flushAllCards('enter-finale');
+    }
+    
     const gg=g.game||{};
     let jurors = getJurors();
     

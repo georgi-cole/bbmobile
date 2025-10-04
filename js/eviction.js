@@ -533,6 +533,12 @@
 
   function handleSelfEviction(evId,reason='self'){
     const g=global.game; const ev=global.getP(evId); if(!ev) return;
+    
+    // Flush all existing cards before showing eviction
+    if(reason==='self' && typeof global.flushAllCards === 'function'){
+      global.flushAllCards('self-evict');
+    }
+    
     ev.evicted=true; ev.weekEvicted=g.week;
     if(Array.isArray(g.players)) g.players.forEach(p=>p.nominated=false);
 

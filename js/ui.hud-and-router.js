@@ -483,6 +483,12 @@ header.innerHTML = `
   // ------------ Fast Forward / Skip ------------
   function fastForwardPhase(){
     const game=g.game; if(!game) return;
+    
+    // Flush all existing cards before skipping
+    if(typeof g.flushAllCards === 'function'){
+      g.flushAllCards('skip');
+    }
+    
     try{ UI.activateSkipCascade?.(game.cfg?.skipTurboWindowMs || 4500); }catch{}
     const now=Date.now();
     if(game.endAt && game.endAt-now>1200){

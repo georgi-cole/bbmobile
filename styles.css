@@ -2230,6 +2230,11 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   align-items:center;
   gap:8px;
   width:100%;
+  transition: transform 0.2s ease;
+}
+
+.pfSlot:hover {
+  transform: translateY(-3px);
 }
 
 .pfPct {
@@ -2241,9 +2246,32 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   text-shadow:0 1px 2px rgba(0,0,0,.8);
 }
 
+/* Mobile: 2 columns for smaller screens */
+@media (max-width: 559.98px) {
+  .pfVotePanel {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}
+
+/* Very narrow screens: reduce min width */
+@media (max-width: 359.98px) {
+  .pfVotePanel {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+
+/* Winner card responsive */
+.pfWinnerCard {
+  max-width: min(400px, 90vw);
+  text-align: center;
+}
+
 @media (prefers-reduced-motion: reduce){
   .pfVotePanel, .pfSlot, .pfPct {
     transition:none!important;
+  }
+  .pfSlot:hover {
+    transform: none;
   }
 }
 
