@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Public Favourite v2 - Weighted Distribution Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #0a0e14;
+            color: #e0e6f0;
+        }
+        h1 {
+            color: #ffdc8b;
+            text-align: center;
+        }
+        .container {
+            background: #141b26;
+            border: 1px solid #2d3f56;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+        }
+        .player-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: #1a2332;
+            border-radius: 8px;
+            border-left: 4px solid #3a5a7a;
+        }
+        .player-info {
+            flex: 1;
+        }
+        .player-name {
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: #d8e6f5;
+        }
+        .player-details {
+            font-size: 0.85rem;
+            color: #8ca3c0;
+            margin-top: 4px;
+        }
+        .weight-display {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ffdc8b;
+            min-width: 80px;
+            text-align: right;
+        }
+        .bar-container {
+            width: 200px;
+            height: 24px;
+            background: #0f1620;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-left: 16px;
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3a7bb5, #5a9bd5);
+            transition: width 0.5s ease;
+        }
+        button {
+            background: #3563a7;
+            color: #e0e6f0;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #4573b7;
+        }
+        button:active {
+            background: #2553a7;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .selected {
+            background: #2a4a2a;
+            border-left-color: #4a8a4a;
+            animation: pulse 0.5s;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: #1a2332;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffdc8b;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #8ca3c0;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Public Favourite v2 - Weighted Distribution Test</h1>
+    
+    <div class="container">
+        <h2>Season Players</h2>
+        <div id="players"></div>
+    </div>
+    
+    <div class="container">
+        <button onclick="runSingleTest()">Run Single Selection (3 candidates)</button>
+        <button onclick="runDistributionTest()">Run Distribution Test (100 iterations)</button>
+        <button onclick="reset()">Reset</button>
+        
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        // Mock players for a 9-week season
+        const players = [
+            { id: 1, name: 'Alice', weekEvicted: 1 },
+            { id: 2, name: 'Bob', weekEvicted: 2 },
+            { id: 3, name: 'Charlie', weekEvicted: 3 },
+            { id: 4, name: 'Diana', weekEvicted: 4 },
+            { id: 5, name: 'Eve', weekEvicted: 5 },
+            { id: 6, name: 'Frank', weekEvicted: 6 },
+            { id: 7, name: 'Grace', weekEvicted: 7 },
+            { id: 8, name: 'Henry', weekEvicted: 8 },
+            { id: 9, name: 'Ivy', weekEvicted: null }, // Finalist
+            { id: 10, name: 'Jack', weekEvicted: null } // Finalist
+        ];
+
+        const totalWeeks = 9;
+        let selectionCounts = {};
+        let testRuns = 0;
+
+        // Calculate weights
+        const playersWithWeights = players.map(p => {
+            const survivalWeek = p.weekEvicted != null ? p.weekEvicted : totalWeeks;
+            const normalizedSurvival = Math.max(0, Math.min(1, survivalWeek / totalWeeks));
+            const weight = 1 + 0.10 * normalizedSurvival;
+            selectionCounts[p.name] = 0;
+            return { player: p, weight, survivalWeek };
+        });
+
+        // Display players
+        function displayPlayers() {
+            const container = document.getElementById('players');
+            const maxWeight = Math.max(...playersWithWeights.map(pw => pw.weight));
+            
+            container.innerHTML = playersWithWeights.map(pw => {
+                const barWidth = (pw.weight / maxWeight) * 100;
+                const status = pw.player.weekEvicted != null 
+                    ? `Evicted Week ${pw.player.weekEvicted}`
+                    : 'Finalist';
+                
+                return `
+                    <div class="player-row" id="player-${pw.player.id}">
+                        <div class="player-info">
+                            <div class="player-name">${pw.player.name}</div>
+                            <div class="player-details">${status} • Survived ${pw.survivalWeek} weeks</div>
+                        </div>
+                        <div class="weight-display">${pw.weight.toFixed(3)}</div>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: ${barWidth}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Weighted sampling
+        function weightedSample(candidates, count) {
+            const selected = [];
+            const pool = candidates.slice();
+            
+            for (let i = 0; i < count && pool.length > 0; i++) {
+                const totalWeight = pool.reduce((sum, c) => sum + c.weight, 0);
+                let rand = Math.random() * totalWeight;
+                
+                let selectedIdx = 0;
+                for (let j = 0; j < pool.length; j++) {
+                    rand -= pool[j].weight;
+                    if (rand <= 0) {
+                        selectedIdx = j;
+                        break;
+                    }
+                }
+                
+                selected.push(pool[selectedIdx]);
+                pool.splice(selectedIdx, 1);
+            }
+            
+            return selected;
+        }
+
+        // Run single test
+        function runSingleTest() {
+            // Clear previous selections
+            document.querySelectorAll('.player-row').forEach(row => {
+                row.classList.remove('selected');
+            });
+
+            const selected = weightedSample(playersWithWeights, 3);
+            
+            // Highlight selected players
+            selected.forEach((pw, index) => {
+                const row = document.getElementById(`player-${pw.player.id}`);
+                setTimeout(() => {
+                    row.classList.add('selected');
+                }, index * 200);
+            });
+
+            // Pick winner from the 3
+            const winnerIdx = Math.floor(Math.random() * 3);
+            const winner = selected[winnerIdx];
+
+            document.getElementById('results').innerHTML = `
+                <div class="container">
+                    <h3>Selection Results</h3>
+                    <p><strong>3 Candidates Selected:</strong></p>
+                    <ul>
+                        ${selected.map(pw => `<li>${pw.player.name} (weight: ${pw.weight.toFixed(3)})</li>`).join('')}
+                    </ul>
+                    <p style="margin-top: 16px; color: #ffdc8b; font-size: 1.2rem;">
+                        <strong>Public Favourite Winner:</strong> ${winner.player.name}
+                    </p>
+                </div>
+            `;
+        }
+
+        // Run distribution test
+        function runDistributionTest() {
+            const iterations = 100;
+            
+            // Reset counts
+            Object.keys(selectionCounts).forEach(key => {
+                selectionCounts[key] = 0;
+            });
+
+            // Run iterations
+            for (let i = 0; i < iterations; i++) {
+                const selected = weightedSample(playersWithWeights, 3);
+                selected.forEach(pw => {
+                    selectionCounts[pw.player.name]++;
+                });
+            }
+
+            testRuns += iterations;
+
+            // Calculate expected frequencies based on weights
+            const totalWeight = playersWithWeights.reduce((sum, pw) => sum + pw.weight, 0);
+            
+            // Display results
+            const sortedResults = Object.entries(selectionCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name, count]) => {
+                    const player = playersWithWeights.find(pw => pw.player.name === name);
+                    const expectedFreq = (player.weight / totalWeight) * 100;
+                    const actualFreq = (count / (iterations * 3)) * 100;
+                    const diff = actualFreq - expectedFreq;
+                    
+                    return { name, count, weight: player.weight, expectedFreq, actualFreq, diff };
+                });
+
+            document.getElementById('results').innerHTML = `
+                <div class="container">
+                    <h3>Distribution Test Results (${iterations} iterations)</h3>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value">${iterations * 3}</div>
+                            <div class="stat-label">Total Selections</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${sortedResults[0].name}</div>
+                            <div class="stat-label">Most Selected</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${sortedResults[sortedResults.length - 1].name}</div>
+                            <div class="stat-label">Least Selected</div>
+                        </div>
+                    </div>
+                    
+                    <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #3a5a7a;">
+                                <th style="text-align: left; padding: 8px;">Player</th>
+                                <th style="text-align: right; padding: 8px;">Weight</th>
+                                <th style="text-align: right; padding: 8px;">Count</th>
+                                <th style="text-align: right; padding: 8px;">Actual %</th>
+                                <th style="text-align: right; padding: 8px;">Expected %</th>
+                                <th style="text-align: right; padding: 8px;">Diff</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${sortedResults.map(r => `
+                                <tr style="border-bottom: 1px solid #2d3f56;">
+                                    <td style="padding: 8px;">${r.name}</td>
+                                    <td style="text-align: right; padding: 8px;">${r.weight.toFixed(3)}</td>
+                                    <td style="text-align: right; padding: 8px;">${r.count}</td>
+                                    <td style="text-align: right; padding: 8px;">${r.actualFreq.toFixed(1)}%</td>
+                                    <td style="text-align: right; padding: 8px;">${r.expectedFreq.toFixed(1)}%</td>
+                                    <td style="text-align: right; padding: 8px; color: ${r.diff >= 0 ? '#4a8a4a' : '#8a4a4a'};">
+                                        ${r.diff >= 0 ? '+' : ''}${r.diff.toFixed(1)}%
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <p style="margin-top: 16px; font-size: 0.9rem; color: #8ca3c0;">
+                        <strong>Observation:</strong> Finalists (Ivy & Jack) should have ~10% higher selection frequency than Week 1 evictions (Alice).
+                        The actual frequencies should converge to expected frequencies with more iterations.
+                    </p>
+                </div>
+            `;
+        }
+
+        function reset() {
+            Object.keys(selectionCounts).forEach(key => {
+                selectionCounts[key] = 0;
+            });
+            testRuns = 0;
+            document.getElementById('results').innerHTML = '';
+            document.querySelectorAll('.player-row').forEach(row => {
+                row.classList.remove('selected');
+            });
+        }
+
+        // Initialize
+        displayPlayers();
+    </script>
+</body>
+</html>
