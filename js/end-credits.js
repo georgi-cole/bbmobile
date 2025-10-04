@@ -323,33 +323,6 @@ No copyright infringement intended.` }
 
 })(window);
 
-// Integration wrapper: Public Favourite segment before credits
-(function(){
-  'use strict';
-  
-  // Guard to avoid double wrapping
-  if(window.__publicFavHooked) return;
-  window.__publicFavHooked = true;
-  
-  const orig = window.startEndCreditsSequence;
-  if(!orig) return;
-  
-  window.startEndCreditsSequence = async function(...args){
-    try {
-      const g = window.game || window;
-      const winnerId = (g?.players||[]).find(p=>p.winner)?.id;
-      
-      if(g?.cfg?.enablePublicFav && typeof window.showPublicFavourite === 'function'){
-        console.info('[publicFav] start');
-        await window.showPublicFavourite(winnerId);
-        console.info('[publicFav] done');
-      } else {
-        console.info('[publicFav] skipped');
-      }
-    } catch(e){ 
-      console.warn('[publicFav] error', e); 
-    }
-    
-    return orig?.apply(this, args);
-  };
-})();
+// REMOVED: Post-winner Public Favourite integration wrapper per requirements
+// Public Favourite now runs PRE-JURY in jury.js (between casting and reveal phases)
+// This ensures the correct flow: casting → Public Favourite → jury reveal → outro

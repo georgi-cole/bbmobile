@@ -861,7 +861,7 @@
       if(typeof g.playMedalAnimation==='function'){ usedExternalMedal=true; await g.playMedalAnimation({duration:MEDAL_MS, winner}); }
       else if(typeof g.startWinnerMedalAnimation==='function'){ usedExternalMedal=true; await g.startWinnerMedalAnimation(MEDAL_MS, winner); }
       else if(typeof g.showWinnerMedal==='function'){ usedExternalMedal=true; await g.showWinnerMedal(winner, MEDAL_MS); }
-      else if(typeof g.showFinaleCinematic==='function'){ usedExternalMedal=true; g.showFinaleCinematic(winner); await sleep(MEDAL_MS); }
+      // REMOVED: showFinaleCinematic call (legacy overlay) - now using outro video directly
     }catch(e){ console.warn('[jury] medal animation error', e); }
     
     if(!usedExternalMedal){
@@ -869,8 +869,22 @@
       await sleep(MEDAL_MS);
     }
     
-    const imgs = (g.game?.players || g.players || []).map(p=>p?.avatar || p?.img || p?.photo).filter(Boolean);
-    startCreditsPreferred(imgs);
+    // Play outro video instead of credits sequence (outro includes credits)
+    console.info('[jury] finale complete, triggering outro video');
+    if(typeof g.playOutroVideo === 'function'){
+      try { 
+        await g.playOutroVideo(); 
+      } catch(e){ 
+        console.warn('[jury] playOutroVideo error, falling back to credits', e);
+        const imgs = (g.game?.players || g.players || []).map(p=>p?.avatar || p?.img || p?.photo).filter(Boolean);
+        startCreditsPreferred(imgs);
+      }
+    } else {
+      // Fallback to credits if outro not available
+      console.info('[jury] playOutroVideo not available, using credits sequence');
+      const imgs = (g.game?.players || g.players || []).map(p=>p?.avatar || p?.img || p?.photo).filter(Boolean);
+      startCreditsPreferred(imgs);
+    }
   }
 
   // ===== Main flow (now delegates to new finale flow) =====
