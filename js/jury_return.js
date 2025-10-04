@@ -130,7 +130,7 @@
       global.setMusic?.('victory',true);
       global.showCard?.('Returns!',[safeName(winnerId)],'return',4400,true);
       await global.cardQueueWaitIdle?.();
-      global.UI?.spawnConfetti?.(5600,240);
+      // Confetti removed per spec
     }catch{}
 
     try{

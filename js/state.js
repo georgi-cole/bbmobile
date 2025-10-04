@@ -48,7 +48,13 @@
     juryPreRevealShown:false,
     jurySequentialRevealActive:false,
     pendingAdvance:null,
-    miniHistory:[]
+    miniHistory:[],
+    finale:{
+      juryVotesRaw:[],
+      castingDone:false,
+      publicFavDone:false,
+      revealStarted:false
+    }
   };
 
   /* ===== Balance & Social Constants ===== */

@@ -172,7 +172,7 @@
           jurorRow.classList.add('return-flash');
           setTimeout(()=>jurorRow.classList.remove('return-flash'), 2200);
         }
-        global.UI?.spawnConfetti?.(1800,120);
+        // Confetti removed per spec
       }
 
       // Resume HOH, do NOT increment week

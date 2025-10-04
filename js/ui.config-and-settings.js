@@ -142,8 +142,10 @@
     });
   };
 
-  // Confetti spawner (visual celebration effect)
+  // Confetti spawner (visual celebration effect) - DISABLED per spec
   UI.spawnConfetti = function(durationMs, particleCount){
+    // No-op: confetti removed per finale refactor spec
+    return;
     try{
       const cfg = g.game?.cfg || {};
       // Respect FX settings: skip if both fxAnim and fxCards are explicitly disabled

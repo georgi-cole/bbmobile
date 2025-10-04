@@ -92,7 +92,7 @@
     g.addJuryLog?.(`${safeName(evictedId)} is the ${ordinal} juror. They were sent to the jury house by the HOH reign of ${hohName}.`);
   }
 
-  // C) Jury banter templates
+  // C) Jury banter templates (shown BEFORE casting - anonymous phase)
   const juryBanterTemplates = [
     "I will vote for the person who never betrayed me.",
     "I respect the strongest strategist.",
@@ -109,6 +109,17 @@
   function getJuryBanter(){
     return juryBanterTemplates[Math.floor(rng() * juryBanterTemplates.length)];
   }
+
+  // NEW: Locked-in jury phrases (during reveal phase)
+  const JURY_LOCKED_LINES = [
+    "I'm voting for the player who steered the game.",
+    "My vote goes to strategic consistency.",
+    "I'm rewarding social influence and resilience.",
+    "I respect bold moves that landed.",
+    "Adaptability mattered most to me.",
+    "I value clean, effective gameplay."
+  ];
+  function getLockedJuryPhrase(){ return JURY_LOCKED_LINES[Math.floor(rng()*JURY_LOCKED_LINES.length)]; }
 
   // America's Vote tiebreaker (random for now; can be enhanced later)
   function americasVoteWinner(A, B){
@@ -474,153 +485,373 @@
     }catch(e){ console.warn('[jury] credits failed', e); }
   }
 
-  // ===== Main flow =====
-  async function startJuryVote(){
+  // ===== NEW FINALE FLOW FUNCTIONS =====
+  
+  // Initialize finale state if not present
+  function ensureFinaleState(){
+    const gg = g.game || {};
+    if(!gg.finale){
+      gg.finale = {
+        juryVotesRaw: [],
+        castingDone: false,
+        publicFavDone: false,
+        revealStarted: false
+      };
+    }
+    return gg.finale;
+  }
+
+  // Phase 1: Anonymous Jury Casting (blind voting without revealing picks)
+  async function startJuryCastingPhase(jurors, A, B){
+    const gg = g.game || {};
+    const finale = ensureFinaleState();
+    
+    if(finale.castingDone){
+      console.warn('[juryCast] already done, skipping');
+      return;
+    }
+    
+    console.info('[juryCast] start');
+    
+    // Cast votes anonymously
+    for(const jid of jurors){
+      const pick = ballotPick(jid, A, B);
+      finale.juryVotesRaw.push({ jurorId: jid, pick });
+      console.info(`[juryCast] vote juror=${jid} stored`);
+      
+      // Show banter (no finalist names)
+      const banter = getJuryBanter();
+      g.addJuryLog?.(`${safeName(jid)}: ${banter}`, 'muted');
+      
+      await sleep(800);
+    }
+    
+    finale.castingDone = true;
+    console.info('[juryCast] complete');
+  }
+
+  // Public Favourite Segment: elimination-style with bars
+  async function runPublicFavouriteSegment(){
+    const gg = g.game || {};
+    const finale = ensureFinaleState();
+    
+    if(finale.publicFavDone){
+      console.info('[publicFav] skipped reason=already_done');
+      return;
+    }
+    
+    // Get eligible candidates (all evicted players)
+    const allPlayers = (gg.players || []).filter(p => p.evicted);
+    
+    if(allPlayers.length < 3){
+      console.info(`[publicFav] skipped reason=insufficient_candidates N=${allPlayers.length}`);
+      finale.publicFavDone = true;
+      return;
+    }
+    
+    console.info(`[publicFav] start N=${allPlayers.length}`);
+    
+    // Pick random candidates (max 5)
+    const maxCandidates = Math.min(5, allPlayers.length);
+    const shuffled = allPlayers.slice().sort(() => rng() - 0.5);
+    const candidates = shuffled.slice(0, maxCandidates);
+    
+    // Generate random percentages
+    const raw = candidates.map(() => rng() * 100);
+    const sum = raw.reduce((a,b) => a+b, 0);
+    let percentages = raw.map(v => Math.round((v/sum)*100));
+    
+    // Normalize to 100%
+    const diff = 100 - percentages.reduce((a,b)=>a+b,0);
+    if(diff !== 0) percentages[0] += diff;
+    
+    // Create candidate data
+    const candData = candidates.map((c,i) => ({
+      player: c,
+      pct: percentages[i],
+      eliminated: false
+    }));
+    
+    // Show intro card
+    try{
+      if(typeof g.showCard === 'function'){
+        g.showCard('Public\'s Favourite', ['Who will the audience crown?'], 'neutral', 2000, true);
+        if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
+      }
+    }catch(e){}
+    await sleep(500);
+    
+    // Build UI panel with accessibility
+    const panel = document.createElement('div');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Public\'s Favourite Player voting');
+    panel.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;background:linear-gradient(145deg,#0e1622,#0a131f);border:2px solid rgba(110,160,220,.25);border-radius:16px;padding:20px;width:min(600px,92vw);box-shadow:0 10px 40px rgba(0,0,0,.8);';
+    
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:1.1rem;font-weight:800;letter-spacing:0.6px;margin-bottom:14px;text-align:center;color:#ffdc8b;';
+    title.textContent = 'PUBLIC\'S FAVOURITE';
+    panel.appendChild(title);
+    
+    // Live region for screen readers
+    const liveRegion = document.createElement('div');
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.className = 'sr-only';
+    panel.appendChild(liveRegion);
+    
+    const container = document.createElement('div');
+    container.className = 'pfv-container';
+    panel.appendChild(container);
+    
+    // Create candidate tiles
+    const tiles = [];
+    candData.forEach((cd, idx) => {
+      const tile = document.createElement('div');
+      tile.className = 'pfv-item';
+      tile.setAttribute('data-idx', idx);
+      
+      const img = document.createElement('img');
+      img.src = cd.player.avatar || cd.player.img || '';
+      img.alt = cd.player.name;
+      tile.appendChild(img);
+      
+      const name = document.createElement('div');
+      name.style.cssText = 'font-weight:700;font-size:0.7rem;text-align:center;';
+      name.textContent = cd.player.name;
+      tile.appendChild(name);
+      
+      const barOuter = document.createElement('div');
+      barOuter.className = 'pfv-barOuter';
+      barOuter.setAttribute('role', 'progressbar');
+      barOuter.setAttribute('aria-valuemin', '0');
+      barOuter.setAttribute('aria-valuemax', '100');
+      barOuter.setAttribute('aria-valuenow', '0');
+      
+      const barFill = document.createElement('div');
+      barFill.className = 'pfv-barFill';
+      barFill.setAttribute('data-idx', idx);
+      barOuter.appendChild(barFill);
+      tile.appendChild(barOuter);
+      
+      const pctLabel = document.createElement('div');
+      pctLabel.style.cssText = 'font-size:0.68rem;color:#b7cbe2;font-weight:700;margin-top:2px;';
+      pctLabel.textContent = '0%';
+      pctLabel.setAttribute('data-idx', idx);
+      tile.appendChild(pctLabel);
+      
+      container.appendChild(tile);
+      tiles.push(tile);
+    });
+    
+    document.body.appendChild(panel);
+    
+    // Animate bars up to current percentages
+    await sleep(100);
+    candData.forEach((cd, idx) => {
+      const barFill = panel.querySelector(`.pfv-barFill[data-idx="${idx}"]`);
+      const pctLabel = panel.querySelectorAll('[data-idx]');
+      if(barFill){
+        barFill.style.width = cd.pct + '%';
+        barFill.parentElement.setAttribute('aria-valuenow', cd.pct);
+      }
+      const label = Array.from(pctLabel).find(el => el.textContent.includes('%') && el.getAttribute('data-idx') == idx);
+      if(label) label.textContent = cd.pct + '%';
+    });
+    
+    liveRegion.textContent = 'Vote tallies revealed';
+    await sleep(3000); // Let bars animate (170ms update x ~18 steps)
+    
+    // Elimination sequence: every 3 seconds, eliminate lowest
+    while(candData.filter(c => !c.eliminated).length > 1){
+      await sleep(3000);
+      
+      const remaining = candData.filter(c => !c.eliminated);
+      if(remaining.length <= 1) break;
+      
+      // Find lowest percentage
+      const lowest = remaining.reduce((a,b) => a.pct < b.pct ? a : b);
+      
+      // Handle ties: pick random among tied
+      const tied = remaining.filter(c => c.pct === lowest.pct);
+      const toElim = tied[Math.floor(rng() * tied.length)];
+      toElim.eliminated = true;
+      
+      const idx = candData.indexOf(toElim);
+      const tile = tiles[idx];
+      if(tile) tile.classList.add('pfv-elim');
+      
+      const remainingCount = candData.filter(c => !c.eliminated).length;
+      console.info(`[publicFav] eliminate player=${toElim.player.id} remaining=${remainingCount}`);
+      liveRegion.textContent = `${toElim.player.name} eliminated. ${remainingCount} remaining.`;
+    }
+    
+    // Announce winner
+    const winner = candData.find(c => !c.eliminated);
+    if(winner){
+      const idx = candData.indexOf(winner);
+      const tile = tiles[idx];
+      if(tile) tile.classList.add('pfv-winner');
+      
+      console.info(`[publicFav] final winner=${winner.player.id} pct=${winner.pct}`);
+      liveRegion.textContent = `${winner.player.name} wins Public's Favourite with ${winner.pct}%!`;
+      
+      try{
+        if(typeof g.showCard === 'function'){
+          g.showCard('Public\'s Favourite! 🌟', [`${winner.player.name} — ${winner.pct}%`], 'ok', 3500);
+          if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
+        }
+      }catch(e){}
+    }
+    
+    await sleep(4000);
+    panel.remove();
+    
+    finale.publicFavDone = true;
+  }
+
+  // Phase 3: Jury Reveal with vote tallies
+  async function startJuryRevealPhase(jurors, A, B){
+    const gg = g.game || {};
+    const finale = ensureFinaleState();
+    
+    if(finale.revealStarted){
+      console.warn('[juryReveal] already started, skipping');
+      return null;
+    }
+    
+    finale.revealStarted = true;
+    console.info('[juryReveal] start');
+    
+    const votes = new Map([[A,0],[B,0]]);
+    
+    // Shuffle reveal order
+    const order = jurors.slice().sort(()=>rng()-.5);
+    
+    for(const jid of order){
+      await sleep(1800);
+      
+      // Find this juror's vote
+      const voteRecord = finale.juryVotesRaw.find(v => v.jurorId === jid);
+      const pick = voteRecord ? voteRecord.pick : ballotPick(jid, A, B);
+      
+      votes.set(pick, (votes.get(pick)||0)+1);
+      
+      // Show locked phrase with finalist name
+      const phrase = getLockedJuryPhrase();
+      g.addJuryLog?.(`${safeName(jid)}: ${phrase}`, 'muted');
+      g.addJuryLog?.(`${safeName(jid)} votes for ${safeName(pick)}`, 'jury');
+      console.info(`[juryReveal] show juror=${jid} vote=${pick}`);
+      
+      // Update UI
+      try{ juryPanelOnBallot(jid, pick); }catch{}
+      const a=votes.get(A)||0, b=votes.get(B)||0;
+      updateFinaleGraph(a,b);
+      addFaceoffVoteCard(safeName(jid), safeName(pick));
+    }
+    
+    // Determine winner
+    const a=votes.get(A)||0, b=votes.get(B)||0;
+    let winner;
+    
+    if(a===b){
+      // Tiebreaker: America's Vote
+      winner = americasVoteWinner(A, B);
+      votes.set(winner, (votes.get(winner)||0)+1);
+      await sleep(2400);
+      updateFinaleGraph(votes.get(A)||0, votes.get(B)||0);
+      await sleep(800);
+    } else {
+      winner = a>b ? A : B;
+    }
+    
+    const finalA = votes.get(A)||0;
+    const finalB = votes.get(B)||0;
+    console.info(`[juryReveal] winner=${winner} votes=${finalA}-${finalB}`);
+    
+    return winner;
+  }
+
+  // Main orchestrator for new finale flow
+  async function startFinaleRefactorFlow(){
     const gg=g.game||{};
     let jurors = getJurors();
-
-    // Ensure odd number of jurors to prevent ties
-    const beforeOdd = jurors.slice();
-    jurors = ensureOddJurors(jurors);
-
-    // A) Normalize canonical juror list
-    // Deduplicate and set as the official jury
-    const finalJurors = [...new Set(jurors)];
-    gg.juryHouse = finalJurors;
     
-    // Update all player juror flags
-    const players = gg.players || g.players || [];
-    players.forEach(p => {
-      if (!p) return;
-      p.juror = finalJurors.includes(p.id);
-    });
-    
-    // Log excluded jurors
-    const excluded = beforeOdd.filter(id => !finalJurors.includes(id));
-    excluded.forEach(id => {
-      g.addJuryLog?.(`${safeName(id)} did not make the final jury (odd-size rule).`, 'muted');
-    });
-    
-    // Update HUD to reflect accurate juror badges
-    g.updateHud?.();
-
-    setTvNow('Voting the Winner');
-
     if(!jurors.length){
-      const [A,B]=finalists(); const winner = rng()<0.5?A:B;
+      // No jurors: default winner
+      const [A,B]=finalists();
+      const winner = rng()<0.5?A:B;
       g.showCard?.('Winner',['By default decision, '+safeName(winner)],'jury',2600,true);
       setTimeout(()=>g.showFinaleCinematic?.(winner), 1200);
       return;
     }
-
+    
+    // Ensure odd jurors
+    jurors = ensureOddJurors(jurors);
+    const finalJurors = [...new Set(jurors)];
+    gg.juryHouse = finalJurors;
+    
     const [A,B]=finalists();
-
+    
     renderFinaleGraph(A,B,jurors.length);
     try{ renderJuryBallotsPanel(jurors,A,B); }catch{}
-
+    
     const secs = Number(gg.cfg?.tJuryFinale ?? gg.cfg?.tJury ?? 42) || 42;
     g.setPhase?.('jury', secs, null);
-
-    let humanPick=null;
-    const humanIsJuror = jurors.includes(gg.humanId);
-    if(humanIsJuror){
-      try{ humanPick = await waitForHumanJuryVote(A,B); }catch{}
+    
+    setTvNow('Final Jury Vote');
+    
+    // PHASE 1: Anonymous casting
+    await startJuryCastingPhase(jurors, A, B);
+    
+    // PHASE 2: Public Favourite (if >=3 eligible)
+    await runPublicFavouriteSegment();
+    
+    // PHASE 3: Jury reveal
+    const winner = await startJuryRevealPhase(jurors, A, B);
+    
+    if(!winner) return;
+    
+    // Show winner
+    await sleep(1000);
+    try{ await g.cardQueueWaitIdle?.(); }catch{}
+    
+    showFinalTallyBanner();
+    showPlacementLabels(winner);
+    showWinnerMessageBanner(winner);
+    
+    // NO CONFETTI per spec
+    
+    try{ g.setMusic?.('victory', true); }catch(e){}
+    await sleep(5000);
+    try{
+      if (typeof g.stopMusic === 'function') g.stopMusic();
+      else if (typeof g.setMusicEnabled === 'function') g.setMusicEnabled(false);
+      else document.getElementById('bgm')?.pause?.();
+    }catch(e){}
+    await sleep(1000);
+    
+    const MEDAL_MS = 8000;
+    let usedExternalMedal=false;
+    try{
+      if(typeof g.playMedalAnimation==='function'){ usedExternalMedal=true; await g.playMedalAnimation({duration:MEDAL_MS, winner}); }
+      else if(typeof g.startWinnerMedalAnimation==='function'){ usedExternalMedal=true; await g.startWinnerMedalAnimation(MEDAL_MS, winner); }
+      else if(typeof g.showWinnerMedal==='function'){ usedExternalMedal=true; await g.showWinnerMedal(winner, MEDAL_MS); }
+      else if(typeof g.showFinaleCinematic==='function'){ usedExternalMedal=true; g.showFinaleCinematic(winner); await sleep(MEDAL_MS); }
+    }catch(e){ console.warn('[jury] medal animation error', e); }
+    
+    if(!usedExternalMedal){
+      showMedalOverlayFallback(MEDAL_MS);
+      await sleep(MEDAL_MS);
     }
+    
+    const imgs = (g.game?.players || g.players || []).map(p=>p?.avatar || p?.img || p?.photo).filter(Boolean);
+    startCreditsPreferred(imgs);
+  }
 
-    const votes = new Map([[A,0],[B,0]]);
-    const step = Math.max(900, (secs*1000 - 2600) / Math.max(1,jurors.length));
-    let t=700;
-    const need = Math.floor(jurors.length/2)+1;
-    let majorityAnnounced=false;
-
-    const order = jurors.slice().sort(()=>rng()-.5);
-
-    order.forEach((jid,i)=>{
-      setTimeout(()=>{
-        // C) Add banter before vote
-        const banter = getJuryBanter();
-        g.addJuryLog?.(`${safeName(jid)}: ${banter}`, 'muted');
-        
-        const pick = (jid===gg.humanId && humanPick!=null) ? humanPick : ballotPick(jid, A, B);
-        votes.set(pick,(votes.get(pick)||0)+1);
-
-        try{ juryPanelOnBallot(jid, pick); }catch{}
-
-        const a=votes.get(A)||0, b=votes.get(B)||0;
-        updateFinaleGraph(a,b);
-
-        addFaceoffVoteCard(safeName(jid), safeName(pick));
-        
-        // C) Add reveal log
-        g.addJuryLog?.(`${safeName(jid)} voted for ${safeName(pick)} to win the Big Brother game.`);
-      }, t + Math.floor(rng()*500));
-      t += step;
-    });
-
-    setTimeout(async ()=>{
-      let a=votes.get(A)||0, b=votes.get(B)||0;
-
-      try{ await g.cardQueueWaitIdle?.(); }catch{}
-
-      showFinalTallyBanner();
-
-      // Handle tie with America's Vote
-      let winner;
-      if(a===b){
-        winner = americasVoteWinner(A, B);
-        // Increment the winner's vote count and update graph
-        votes.set(winner, (votes.get(winner)||0)+1);
-        a=votes.get(A)||0;
-        b=votes.get(B)||0;
-        await sleep(2400); // wait for America's Vote card to show
-        updateFinaleGraph(a,b);
-        await sleep(800);
-      } else {
-        winner = a>b ? A : B;
-      }
-
-      showPlacementLabels(winner);
-
-      showWinnerMessageBanner(winner);
-      
-      // Spawn confetti for winner (respect fxAnim/fxCards settings)
-      try{
-        const cfg = gg.cfg || {};
-        if(cfg.fxAnim !== false || cfg.fxCards !== false){
-          if(g.UI?.spawnConfetti || g.UI?.spawnConfettiOnce){
-            (g.UI.spawnConfettiOnce || g.UI.spawnConfetti)(6000, 260);
-            console.info('[finale] winner confetti spawn');
-          }
-        }
-      }catch(e){ console.warn('[finale] confetti error', e); }
-      
-      try{ g.setMusic?.('victory', true); }catch(e){}
-      await sleep(5000);
-      try{
-        if (typeof g.stopMusic === 'function') g.stopMusic();
-        else if (typeof g.setMusicEnabled === 'function') g.setMusicEnabled(false);
-        else document.getElementById('bgm')?.pause?.();
-      }catch(e){}
-      await sleep(1000);
-
-      const MEDAL_MS = 8000;
-      let usedExternalMedal=false;
-      try{
-        if(typeof g.playMedalAnimation==='function'){ usedExternalMedal=true; await g.playMedalAnimation({duration:MEDAL_MS, winner}); }
-        else if(typeof g.startWinnerMedalAnimation==='function'){ usedExternalMedal=true; await g.startWinnerMedalAnimation(MEDAL_MS, winner); }
-        else if(typeof g.showWinnerMedal==='function'){ usedExternalMedal=true; await g.showWinnerMedal(winner, MEDAL_MS); }
-        else if(typeof g.showFinaleCinematic==='function'){ usedExternalMedal=true; g.showFinaleCinematic(winner); await sleep(MEDAL_MS); }
-      }catch(e){ console.warn('[jury] medal animation error', e); }
-
-      if(!usedExternalMedal){
-        showMedalOverlayFallback(MEDAL_MS);
-        await sleep(MEDAL_MS);
-      }
-
-      const imgs = (g.game?.players || g.players || []).map(p=>p?.avatar || p?.img || p?.photo).filter(Boolean);
-      startCreditsPreferred(imgs);
-
-    }, Math.max(4200, secs*1000 + 400));
+  // ===== Main flow (now delegates to new finale flow) =====
+  async function startJuryVote(){
+    // Simply call the new refactored flow
+    return startFinaleRefactorFlow();
   }
 
   // Export
