@@ -130,6 +130,7 @@
       const nm = (i===0) ? humanName : defaults[(i-1)%defaults.length];
       global.pushPlayer({name:nm, human:i===0});
     }
+    global.attachBios?.(g);
     global.initAffinities();
     global.initRelationships();
     resetRoundState();
@@ -153,6 +154,7 @@
         p.threat = global.THREAT_BASE ?? 0.5;
         p.weekEvicted=null; p.winner=false; p.runnerUp=false;
       });
+      global.attachBios?.(g);
       global.initAffinities();
       global.initRelationships();
       resetRoundState();

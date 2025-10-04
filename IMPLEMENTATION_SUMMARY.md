@@ -759,3 +759,162 @@ window.game.__debugRunPublicFavOnce()
 - Public's Favourite can be disabled via settings toggle
 - Cheer.mp3 audio file should be added to audio/ folder for full functionality
 - Confetti function now exists and is called by existing return twist features
+
+---
+
+## Rich Player Bio Panel Feature
+
+### Overview
+Replaced transient rotating tooltip with a stable, data-driven bio panel that displays rich player information when hovering (desktop) or tapping (mobile) roster avatars.
+
+### Key Features
+
+1. **Structured Bio Data**
+   - 22 players with complete bios: Name, Gender, Age, Location, Sexuality, Motto, Fun Fact
+   - Static bios map in `js/player-bio.js` keyed by exact player names (case-sensitive)
+   - Fallback values (`—`) for unmapped players
+   - Representation: Includes Bisexual (Lux) and Gay (Rune) characters
+
+2. **Bio Panel Display**
+   - **Desktop**: Positioned near cursor with viewport bounds clamping (14px padding)
+   - **Mobile**: Bottom-sheet layout (full width, border-radius top corners)
+   - Enlarged avatar: 120px (desktop), 96px (mobile screens <640px)
+   - Clean two-column grid layout (definition list: labels on left, values on right)
+   - Close button (×) in top-right corner
+   - Glassy gradient background with shadow (z-index: 650)
+
+3. **Interaction & UX**
+   - **60ms debounce** on hover transitions to prevent flicker
+   - **Cross-fade animation** when switching between players (150ms opacity transition)
+   - **Avatar caching**: First load cached in `player.__avatarUrl` to prevent re-fetching
+   - **Escape key** closes panel
+   - **Click outside** closes panel on mobile
+   - Smooth `bioFadeIn` and `bioSlideUp` animations
+
+4. **Accessibility**
+   - **Desktop**: `role="tooltip"`, positioned near trigger
+   - **Mobile** (<640px): `role="dialog"`, `aria-modal="true"`
+   - Escape key support for keyboard users
+   - `aria-describedby` set on avatar when panel open
+   - Focus management: restore focus to trigger on close
+
+5. **Logging & Diagnostics**
+   - `[bio] show id=<id> name=<Name>` - Panel displayed
+   - `[bio] hide` - Panel closed
+   - `[bio] missing name=<Name>` - Fallback bio used
+   - `[bio] attached N bios, M fallbacks` - Bootstrap attachment summary
+
+6. **Public API**
+   - `window.showPlayerBio(id)` - Programmatically show bio for player ID
+   - `window.__bios` - Access bios map for debugging/inspection
+
+### Implementation Files
+
+#### New Files
+- **`js/player-bio.js`**
+  - `BIOS` map with all 22 player bios
+  - `attachBios(game)` function called after player creation
+  - `getBio(name)` helper for name-based lookup
+  - Exposed as `window.__bios` for debugging
+
+#### Modified Files
+- **`js/bootstrap.js`**
+  - Added `global.attachBios?.(g)` after player creation in `buildCast()`
+  - Added `global.attachBios?.(g)` in `rebuildGame()` for preserved players
+
+- **`js/ui.hud-and-router.js`**
+  - Replaced tooltip system with bio panel
+  - New functions:
+    - `ensureBioPanel()` - Creates and configures panel element
+    - `renderBioContent(p)` - Generates bio HTML from `p.bio` data
+    - `positionBioPanel(panel, event)` - Handles desktop/mobile positioning
+  - Updated `showProfileFor(p, anchor)` - 60ms debounce, cross-fade, logging
+  - Updated `hideProfileTip()` - Cleanup, logging, focus restoration
+  - Added `window.showPlayerBio(id)` public API
+
+- **`styles.css`**
+  - `.profile-panel` base styles (glassy gradient, shadow, z-index:650)
+  - `.profile-panel.mobile` variant (bottom sheet, slide-up animation)
+  - `.bio-avatar-container`, `.bio-avatar` (120px/96px responsive sizing)
+  - `.bio-name` heading style
+  - `.bio-grid` two-column definition list layout
+  - `.bio-close-btn` floating close button
+  - `@keyframes bioFadeIn` and `@keyframes bioSlideUp` animations
+
+- **`index.html`**
+  - Added `<script src="js/player-bio.js"></script>` before bootstrap.js
+  - Added version parameter `?v=bio-panel-2` to ui.hud-and-router.js for cache busting
+
+### Usage
+
+**Hover Behavior (Desktop)**
+```javascript
+// User hovers avatar → showProfileFor(player, event) called
+// After 60ms debounce:
+// 1. Panel positioned near cursor (clamped to viewport)
+// 2. Bio content rendered from player.bio
+// 3. Console logs: [bio] show id=2 name=Finn
+```
+
+**Mobile Behavior**
+```javascript
+// User taps avatar → showProfileFor(player, event) called  
+// Panel displayed as bottom sheet (role="dialog")
+// Close button or click outside closes panel
+```
+
+**Programmatic Access**
+```javascript
+// Show bio for player ID
+window.showPlayerBio(5); // Shows bio for player with id=5
+
+// Hide current bio
+window.hideProfileTip();
+
+// Access bios map
+console.table(window.__bios); // All player bios
+```
+
+### Extension Points
+
+**Adding New Players**
+```javascript
+// In js/player-bio.js, add to BIOS map:
+'NewName': {
+  gender: 'Female',
+  age: 30,
+  location: 'City, Country',
+  sexuality: 'Straight',
+  motto: 'Your motto here',
+  funFact: 'Interesting fact'
+}
+```
+
+**Customizing Bio Panel**
+```css
+/* In styles.css, modify: */
+.profile-panel { /* Panel appearance */ }
+.bio-avatar { /* Avatar size */ }
+.bio-grid { /* Grid layout */ }
+```
+
+**Future Enhancements** (Documented, not implemented)
+- Stats tab (wins, threat, nominations)
+- Relationship summary (allies, enemies)
+- Mini timeline of player journey
+- Performance charts
+- Editable bios UI
+
+### Testing Verification
+
+✅ Desktop hover shows bio panel near cursor  
+✅ Mobile tap shows bottom sheet (CSS-based, no animation yet)  
+✅ Cross-fade works when switching players  
+✅ Escape key closes panel  
+✅ Avatar caching prevents duplicate fetches  
+✅ Logging outputs correctly  
+✅ Fallback bios work for unmapped names  
+✅ Accessible markup (role, aria attributes)  
+✅ Debounce prevents flicker on rapid hover  
+✅ Focus restoration works (needs keyboard trigger implementation)
+

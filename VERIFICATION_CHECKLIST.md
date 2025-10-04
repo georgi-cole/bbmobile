@@ -593,3 +593,102 @@ Run through full finale and verify these appear in exact order:
 
 ### Deprecated: PR #39 Integration Fix [OLD]
 The sections below are deprecated as the finale has been completely refactored.
+
+---
+
+## Rich Player Bio Panel Verification
+
+### Bio Data Attachment
+- [ ] **Module Load**: Console shows `[bio] player-bio.js loaded`
+- [ ] **Bios Attached**: Console shows `[bio] attached N bios, M fallbacks` (N=12, M=0 for default cast)
+- [ ] **Debug Access**: `window.__bios` is accessible and contains all 22 player definitions
+- [ ] **Player Objects**: Each player has `player.bio` object with gender, age, location, sexuality, motto, funFact
+
+### Desktop Hover Behavior
+- [ ] **Panel Appears**: Hovering avatar shows bio panel near cursor
+- [ ] **Positioning**: Panel clamped within viewport (14px padding, no overflow)
+- [ ] **Content Display**: Shows enlarged avatar (120px), name, and 6 bio fields in grid
+- [ ] **Debounce**: Rapid hover changes don't cause flicker (60ms debounce)
+- [ ] **Cross-fade**: Moving to different player shows smooth opacity transition
+- [ ] **Escape Close**: Pressing Escape closes panel
+- [ ] **Logging**: Console shows `[bio] show id=X name=Y` on hover
+- [ ] **Logging**: Console shows `[bio] hide` on close
+
+### Mobile Behavior (<640px)
+- [ ] **Bottom Sheet**: Panel appears at bottom of screen (full width)
+- [ ] **Border Radius**: Top corners have border-radius
+- [ ] **Close Button**: × button visible and clickable in top-right
+- [ ] **Click Outside**: Clicking outside panel closes it (mobile only)
+- [ ] **Scroll**: Panel content scrolls if it exceeds 75vh
+- [ ] **Role**: Panel has `role="dialog"` and `aria-modal="true"`
+- [ ] **Avatar Size**: Avatar is 96px on mobile
+
+### Data Accuracy
+- [ ] **Finn**: Male, 41, Helsinki Finland, Straight, "Ride the waves", Surfs daily
+- [ ] **Lux**: Female, 24, Paris France, Bisexual, "Elegant simplicity", Former runway model
+- [ ] **Rune**: Male, 32, Oslo Norway, Gay, "Create with soul", Writes poetry
+- [ ] **You**: Shows fallback bio with (You), —, Your Space, etc.
+- [ ] **All 22 Players**: Each has unique, correct bio data
+
+### Avatar Caching
+- [ ] **First Load**: Avatar fetched from server (check network tab or server logs)
+- [ ] **Subsequent Hovers**: Same avatar NOT refetched (cached in `player.__avatarUrl`)
+- [ ] **Network Efficiency**: Only ONE request per unique avatar during session
+
+### Accessibility
+- [ ] **Desktop Role**: Panel has `role="tooltip"` on desktop
+- [ ] **Mobile Role**: Panel has `role="dialog"` with `aria-modal="true"` on mobile
+- [ ] **Close Button**: Has `aria-label="Close bio panel"`
+- [ ] **Avatar Alt**: Bio avatar has descriptive `alt` text
+- [ ] **Keyboard Close**: Escape key closes panel from any focus state
+- [ ] **Focus Management**: Focus returns to trigger after keyboard close (needs keyboard open impl)
+
+### Logging & Diagnostics
+- [ ] **Show Log**: `[bio] show id=<id> name=<Name>` appears on hover
+- [ ] **Hide Log**: `[bio] hide` appears on close
+- [ ] **Missing Log**: `[bio] missing name=<Name>` if player not in bios map
+- [ ] **Attachment Log**: `[bio] attached N bios, M fallbacks` on game start
+- [ ] **No Errors**: No console errors or warnings related to bio panel
+
+### Public API
+- [ ] **`window.showPlayerBio(id)`**: Programmatically shows bio for player ID
+- [ ] **`window.hideProfileTip()`**: Programmatically closes panel
+- [ ] **`window.__bios`**: Returns complete bios map object
+- [ ] **`window.showProfileFor(player, event)`**: Works with player object
+
+### Styling & Animation
+- [ ] **Glassy Background**: Panel has gradient background with good contrast
+- [ ] **Shadow**: Panel has visible drop shadow (z-index: 650)
+- [ ] **Grid Layout**: Bio fields in clean 2-column layout (labels left, values right)
+- [ ] **Fade In**: Desktop panel fades in smoothly
+- [ ] **Slide Up**: Mobile panel has slide-up keyframe (may not animate without JS trigger)
+- [ ] **Cross-fade**: Opacity transition when switching players (150ms)
+- [ ] **Responsive**: Avatar size changes at 640px breakpoint
+
+### Edge Cases
+- [ ] **Rapid Hover**: No flicker or multiple panels (debounce working)
+- [ ] **Viewport Edges**: Panel never clips outside viewport bounds
+- [ ] **Long Names**: Player names don't break layout
+- [ ] **Long Location**: Long location strings wrap properly in grid
+- [ ] **Missing Bio**: Fallback values (—) display for unmapped players
+- [ ] **Phase Changes**: Panel hides gracefully if phase changes
+
+### Integration
+- [ ] **Bootstrap**: Bios attached after `pushPlayer` calls, before `initAffinities`
+- [ ] **Rebuild**: Bios reattached when game rebuilt with preserved players
+- [ ] **Top Roster**: Works with existing top roster hover handlers
+- [ ] **No Conflicts**: Doesn't interfere with other tooltips or modals
+- [ ] **Performance**: No noticeable lag or frame drops on hover
+
+### Documentation
+- [ ] **IMPLEMENTATION_SUMMARY.md**: Bio panel section added
+- [ ] **Usage Examples**: Code examples provided for extension
+- [ ] **Future Enhancements**: Documented but not implemented features listed
+- [ ] **Testing Results**: Verification checklist completed
+
+### Regression Testing
+- [ ] **Old Tooltips**: No old tooltip artifacts appear
+- [ ] **Avatar Resolution**: Avatar system still works (resolveAvatar)
+- [ ] **Game Flow**: Normal game flow unaffected (HOH, noms, veto, eviction)
+- [ ] **Settings**: Settings modal and game controls still work
+- [ ] **Other Panels**: Nominations, veto, jury panels unaffected

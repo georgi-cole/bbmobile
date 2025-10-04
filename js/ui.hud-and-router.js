@@ -206,46 +206,127 @@ header.innerHTML = `
     host.appendChild(list);
   }
 
-  // ------------ Tooltip (hover profiles) ------------
-  let tipEl=null;
-  function ensureProfileTip(){
-    if(tipEl) return tipEl;
-    tipEl=document.createElement('div');
-    tipEl.id='profileTip';
-    tipEl.className='profile-tip';
-    tipEl.style.display='none';
-    document.body.appendChild(tipEl);
-    return tipEl;
+  // ------------ Bio Panel (hover/tap profiles) ------------
+  let bioPanel=null;
+  let bioDebounceTimer=null;
+  let currentBioPlayerId=null;
+  let lastTriggerElement=null;
+  function ensureBioPanel(){
+    if(bioPanel) return bioPanel;
+    bioPanel=document.createElement('div');
+    bioPanel.id='profilePanel';
+    bioPanel.className='profile-panel';
+    bioPanel.style.display='none';
+    bioPanel.setAttribute('tabindex', '-1');
+    
+    // Close on Escape
+    bioPanel.addEventListener('keydown', (e)=>{
+      if(e.key==='Escape') hideProfileTip();
+    });
+    
+    // Create close button for mobile
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'bio-close-btn';
+    closeBtn.innerHTML = '✕';
+    closeBtn.setAttribute('aria-label', 'Close bio panel');
+    closeBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      hideProfileTip();
+    });
+    bioPanel.appendChild(closeBtn);
+    
+    document.body.appendChild(bioPanel);
+    
+    // Click outside to close on mobile
+    document.addEventListener('click', (e)=>{
+      if(bioPanel && bioPanel.style.display==='block' && !bioPanel.contains(e.target)){
+        const isMobile = window.innerWidth < 640;
+        if(isMobile) hideProfileTip();
+      }
+    });
+    
+    return bioPanel;
   }
-  function buildProfileHtml(p, game){
+  
+  // Alias for backward compatibility
+  function ensureProfileTip(){ return ensureBioPanel(); }
+  
+  function renderBioContent(p){
     const esc = (s)=> UI.escapeHtml ? UI.escapeHtml(String(s)) : String(s);
-    const meta = p.meta || {};
-    const age = (meta.age!=null) ? meta.age : '—';
-    const sex = meta.sex || meta.gender || '—';
-    const loc = meta.loc || meta.location || '—';
-    const motto = meta.motto ? `“${esc(meta.motto)}”` : '—';
-    let allies = [], enemies=[];
-    try{ allies = (g.allyNames?.(p)||[]).slice(0,5); }catch{}
-    try{ enemies = (g.enemyNames?.(p)||[]).slice(0,5); }catch{}
-    const avatar = getAvatar(p);
+    const bio = p.bio || {};
+    const name = p.name || 'Guest';
+    const gender = bio.gender || '—';
+    const age = bio.age || '—';
+    const location = bio.location || '—';
+    const sexuality = bio.sexuality || '—';
+    const motto = bio.motto || '—';
+    const funFact = bio.funFact || '—';
+    
+    // Use cached avatar URL if available, otherwise resolve
+    const avatar = p.__avatarUrl || getAvatar(p);
+    if(!p.__avatarUrl) p.__avatarUrl = avatar; // Cache for next time
+    
     return `
-      <div class="pt-head">
-        <div class="pt-ava-wrap">
-          <img class="pt-ava" src="${avatar}" alt="${esc(p.name||'guest')}"
-            onerror="this.onerror=null;this.src='${FALLBACK}'">
-        </div>
-        <div class="pt-meta">
-          <div class="pt-name">${esc(p.name||'')}</div>
-          <div class="pt-sub tiny">${esc(age)} • ${esc(sex)} • ${esc(loc)}</div>
-        </div>
+      <div class="bio-avatar-container">
+        <img class="bio-avatar" src="${avatar}" alt="${esc(name)}"
+          onerror="this.onerror=null;this.src='${FALLBACK}'">
       </div>
-      <div class="pt-motto tiny muted">${motto}</div>
-      <div class="pt-row"><span class="pt-label tiny muted">Allies</span>
-        <span class="pt-val tiny">${esc(allies.join(', ')||'—')}</span></div>
-      <div class="pt-row"><span class="pt-label tiny muted">Enemies</span>
-        <span class="pt-val tiny">${esc(enemies.join(', ')||'—')}</span></div>
+      <div class="bio-content">
+        <h3 class="bio-name">${esc(name)}</h3>
+        <dl class="bio-grid">
+          <dt>Gender</dt><dd>${esc(gender)}</dd>
+          <dt>Age</dt><dd>${esc(age)}</dd>
+          <dt>Location</dt><dd>${esc(location)}</dd>
+          <dt>Sexuality</dt><dd>${esc(sexuality)}</dd>
+          <dt>Motto</dt><dd class="bio-motto">"${esc(motto)}"</dd>
+          <dt>Fun Fact</dt><dd>${esc(funFact)}</dd>
+        </dl>
+      </div>
     `;
   }
+  
+  function positionBioPanel(panel, event){
+    const isMobile = window.innerWidth < 640;
+    
+    if(isMobile){
+      // Mobile: bottom sheet layout
+      panel.classList.add('mobile');
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-modal', 'true');
+      // Position is handled by CSS
+    } else {
+      // Desktop: position near cursor
+      panel.classList.remove('mobile');
+      panel.setAttribute('role', 'tooltip');
+      panel.removeAttribute('aria-modal');
+      
+      if(event && event.clientX!=null){
+        const pad = 14;
+        const x = event.clientX;
+        const y = event.clientY;
+        
+        // Initial positioning
+        panel.style.left = (x+12) + 'px';
+        panel.style.top = (y+12) + 'px';
+        
+        // Get bounds and adjust if needed
+        const rect = panel.getBoundingClientRect();
+        let finalX = x + 12;
+        let finalY = y + 12;
+        
+        if(rect.right > window.innerWidth - pad){
+          finalX = Math.max(pad, window.innerWidth - rect.width - pad);
+        }
+        if(rect.bottom > window.innerHeight - pad){
+          finalY = Math.max(pad, window.innerHeight - rect.height - pad);
+        }
+        
+        panel.style.left = finalX + 'px';
+        panel.style.top = finalY + 'px';
+      }
+    }
+  }
+  
   function positionTipNear(x, y){
     const tip = ensureProfileTip();
     const pad = 8;
@@ -259,19 +340,89 @@ header.innerHTML = `
     tip.style.top = ny + 'px';
   }
   function showProfileFor(p, anchor){
-    const tip = ensureProfileTip();
-    const game = g.game || {};
-    tip.innerHTML = buildProfileHtml(p, game);
-    tip.style.display = 'block';
-    if(anchor && anchor.clientX!=null) positionTipNear(anchor.clientX, anchor.clientY);
-    else positionTipNear(window.innerWidth/2, window.innerHeight/2);
+    if(!p) return;
+    
+    // Debounce rapid transitions
+    if(bioDebounceTimer){
+      clearTimeout(bioDebounceTimer);
+    }
+    
+    bioDebounceTimer = setTimeout(()=>{
+      const panel = ensureBioPanel();
+      const isSamePlayer = currentBioPlayerId === p.id;
+      
+      // Store current player and trigger element
+      currentBioPlayerId = p.id;
+      if(anchor && anchor.target) lastTriggerElement = anchor.target;
+      
+      // Log bio display
+      console.info(`[bio] show id=${p.id} name=${p.name||'unknown'}`);
+      
+      // Render content (with cross-fade if switching players)
+      if(panel.style.display === 'block' && !isSamePlayer){
+        panel.style.opacity = '0';
+        setTimeout(()=>{
+          panel.innerHTML = `<button class="bio-close-btn" aria-label="Close bio panel">✕</button>` + renderBioContent(p);
+          panel.querySelector('.bio-close-btn').addEventListener('click', (e)=>{
+            e.stopPropagation();
+            hideProfileTip();
+          });
+          panel.style.opacity = '1';
+        }, 150);
+      } else {
+        panel.innerHTML = `<button class="bio-close-btn" aria-label="Close bio panel">✕</button>` + renderBioContent(p);
+        panel.querySelector('.bio-close-btn').addEventListener('click', (e)=>{
+          e.stopPropagation();
+          hideProfileTip();
+        });
+      }
+      
+      panel.style.display = 'block';
+      positionBioPanel(panel, anchor);
+      
+      // Set aria-describedby on avatar if available
+      if(anchor && anchor.target){
+        anchor.target.setAttribute('aria-describedby', 'profilePanel');
+      }
+      
+      // Focus management for keyboard access
+      const isMobile = window.innerWidth < 640;
+      if(isMobile && document.activeElement && document.activeElement.matches('[data-trigger-bio]')){
+        panel.focus();
+      }
+    }, 60); // 60ms debounce
   }
+  
   function hideProfileTip(){
-    const tip = ensureProfileTip();
-    tip.style.display='none';
+    if(bioDebounceTimer){
+      clearTimeout(bioDebounceTimer);
+      bioDebounceTimer = null;
+    }
+    
+    const panel = ensureBioPanel();
+    panel.style.display='none';
+    panel.classList.remove('mobile');
+    currentBioPlayerId = null;
+    
+    console.info('[bio] hide');
+    
+    // Restore focus to trigger element if keyboard-activated
+    if(lastTriggerElement){
+      lastTriggerElement.removeAttribute('aria-describedby');
+      if(document.activeElement === panel){
+        lastTriggerElement.focus();
+      }
+      lastTriggerElement = null;
+    }
   }
+  
+  // Public API
   g.showProfileFor = showProfileFor;
   g.hideProfileTip = hideProfileTip;
+  g.showPlayerBio = function(playerId){
+    const p = (g.game?.players || []).find(pl => pl.id === playerId);
+    if(p) showProfileFor(p, null);
+  };
 
   // ------------ Top Roster ------------
   function renderTopRoster(){
