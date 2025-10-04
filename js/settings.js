@@ -18,6 +18,7 @@
     fxCards: true,
     showTopRoster: true,
     colorblindMode: false,
+    strictAvatars: false, // When true, use local silhouette instead of external fallback
     // Core game mechanics
     enableJuryHouse: true,
     doubleChance: 18,   // %
@@ -260,6 +261,9 @@
       '<div class="settingsGrid">',
         group('Badges & effects', [
           checkbox('useRibbon','Use EVICTED ribbon overlay')
+        ].join('')),
+        group('Avatars', [
+          checkbox('strictAvatars','Strict local avatars (no external fallback)')
         ].join('')),
       '</div>'
     ].join('');

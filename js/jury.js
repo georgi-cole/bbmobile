@@ -17,8 +17,14 @@
   }
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
   
-  // Helper to get avatar with ./avatars/ folder fallback
+  // Helper to get avatar - uses global avatar resolver if available
   function getAvatar(playerId) {
+    // Use global resolver if available
+    if (g.resolveAvatar) {
+      return g.resolveAvatar(playerId);
+    }
+    
+    // Fallback to local implementation
     const player = gp(playerId);
     if (!player) {
       console.warn(`[jury] avatar: player not found id=${playerId}`);
@@ -32,14 +38,16 @@
       return player.avatar;
     }
     
-    // Try avatars folder
-    const avatarPath = `./avatars/${playerId}.jpg`;
-    // We'll use the path and let onerror handle fallback
-    return avatarPath;
+    // Try multiple formats
+    return `./avatars/${name}.png`;
   }
   
   // Standard onerror handler for avatars
-  function getAvatarFallback(name) {
+  function getAvatarFallback(name, failedUrl) {
+    // Use global fallback if available
+    if (g.getAvatarFallback) {
+      return g.getAvatarFallback(name, failedUrl);
+    }
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name || 'player')}`;
   }
 
@@ -1010,11 +1018,14 @@
     
     const fanFavPlayer = selectedCandidates[winnerSlotIdx].player;
     const fanFavName = safeName(fanFavPlayer.id);
-    const winnerPct = Math.round(maxPct);
     
-    console.info('[publicFav] winner:' + fanFavPlayer.id + ' pct=' + winnerPct);
+    // Store raw percentage and compute display with one decimal
+    const winnerPctRaw = maxPct;
+    const winnerPctDisplay = maxPct.toFixed(1);
     
-    // Create enhanced winner card showing all 4 ranked percentages
+    console.info('[publicFav] winner finalRaw=' + winnerPctRaw + ' display=' + winnerPctDisplay);
+    
+    // Create winner-only card (no runners-up list per spec)
     const winnerCard = document.createElement('div');
     winnerCard.className = 'pfWinnerCard';
     winnerCard.setAttribute('role', 'alert');
@@ -1027,10 +1038,10 @@
     const winnerAvatar = document.createElement('img');
     winnerAvatar.className = 'pfWinnerAvatar';
     winnerAvatar.src = getAvatar(fanFavPlayer.id);
-    winnerAvatar.alt = fanFavName + ' wins with ' + winnerPct + '%';
+    winnerAvatar.alt = fanFavName + ' wins with ' + winnerPctDisplay + '%';
     winnerAvatar.onerror = function(){
       console.warn('[publicFav] winner avatar fallback for ' + fanFavName);
-      this.src = getAvatarFallback(fanFavName);
+      this.src = getAvatarFallback(fanFavName, this.src);
     };
     
     const winnerName = document.createElement('div');
@@ -1039,62 +1050,24 @@
     
     const winnerPctText = document.createElement('div');
     winnerPctText.className = 'pfWinnerPct';
-    winnerPctText.textContent = winnerPct + '%';
+    winnerPctText.textContent = winnerPctDisplay + '%';
+    
+    const winnerTitle = document.createElement('div');
+    winnerTitle.className = 'pfWinnerTitle';
+    winnerTitle.textContent = 'Public\'s Favourite Player';
     
     winnerSection.appendChild(winnerAvatar);
     winnerSection.appendChild(winnerName);
     winnerSection.appendChild(winnerPctText);
+    winnerSection.appendChild(winnerTitle);
     winnerCard.appendChild(winnerSection);
     
-    // Runners-up list (other 3 sorted descending)
-    const runnersUp = [];
-    for(let i = 0; i < selectedCandidates.length; i++){
-      if(i !== winnerSlotIdx){
-        runnersUp.push({ 
-          player: selectedCandidates[i].player, 
-          pct: Math.round(finalPcts[i])
-        });
-      }
-    }
-    runnersUp.sort((a, b) => b.pct - a.pct);
-    
-    const runnersList = document.createElement('div');
-    runnersList.className = 'pfRunnersList';
-    
-    runnersUp.forEach(ru => {
-      const runnerItem = document.createElement('div');
-      runnerItem.className = 'pfRunnerItem';
-      
-      const runnerAvatar = document.createElement('img');
-      runnerAvatar.className = 'pfRunnerAvatar';
-      runnerAvatar.src = getAvatar(ru.player.id);
-      runnerAvatar.alt = ru.player.name + ' - ' + ru.pct + '%';
-      runnerAvatar.onerror = function(){
-        console.warn('[publicFav] runner avatar fallback for ' + ru.player.name);
-        this.src = getAvatarFallback(ru.player.name);
-      };
-      
-      const runnerName = document.createElement('span');
-      runnerName.className = 'pfRunnerName';
-      runnerName.textContent = ru.player.name;
-      
-      const runnerPct = document.createElement('span');
-      runnerPct.className = 'pfRunnerPct';
-      runnerPct.textContent = ru.pct + '%';
-      
-      runnerItem.appendChild(runnerAvatar);
-      runnerItem.appendChild(runnerName);
-      runnerItem.appendChild(runnerPct);
-      runnersList.appendChild(runnerItem);
-    });
-    
-    winnerCard.appendChild(runnersList);
     document.body.appendChild(winnerCard);
     
     // Move focus to winner card
     winnerCard.focus();
     
-    console.info('[publicFav] winnerCard shown id=' + fanFavPlayer.id + ' pct=' + winnerPct);
+    console.info('[publicFav] winnerCard shown id=' + fanFavPlayer.id + ' pct=' + winnerPctDisplay);
     
     await sleep(6000);
     
@@ -1225,7 +1198,9 @@
       baselineMs += getBaselineDuration(i, numJurors);
     }
     
-    console.info(`[jury] pacing plan baselineMs=${baselineMs} jurors=${numJurors}`);
+    // Log pacing summary
+    const totalPlannedMs = baselineMs;
+    console.info(`[jury] pacing totalPlannedMs=${totalPlannedMs} cap=${maxTotalMs} compressed=${baselineMs > maxTotalMs}`);
     
     // Determine if compression needed
     let durations = [];
@@ -1289,7 +1264,13 @@
       
       g.addJuryLog?.(`${safeName(jid)}: ${phrase}`, 'muted');
       g.addJuryLog?.(`${safeName(jid)} votes for ${safeName(pick)}`, 'jury');
-      console.info(`[juryReveal] show juror=${jid} vote=${pick}`);
+      
+      // Enhanced logging with scores
+      const scoreA = votes.get(A) || 0;
+      const scoreB = votes.get(B) || 0;
+      const newScoreA = pick === A ? scoreA + 1 : scoreA;
+      const newScoreB = pick === B ? scoreB + 1 : scoreB;
+      console.info(`[jury] voteReveal juror=${jid} finalist=${pick} scoreA=${newScoreA} scoreB=${newScoreB}`);
       
       // Update UI
       try{ juryPanelOnBallot(jid, pick); }catch{}
