@@ -3,6 +3,97 @@
 ## Overview
 This implementation addresses all 7 objectives outlined in the problem statement with minimal, surgical changes to the codebase.
 
+## LATEST UPDATE: Clean Finale Flow (Removal of Legacy Overlay)
+
+### Changes Made
+**Files Modified:** js/finale.js, js/end-credits.js, js/jury.js
+
+### Key Changes
+1. **Removed Legacy End Credits Overlay** (js/finale.js)
+   - Removed `.cinDim` / `.cinPanel` overlay with rotating cup
+   - Removed manual buttons (New Season / Stats / Credits / Exit)
+   - Removed `ensureFinaleStyles()`, `computeStats()`, `statsHtml()`, `ensureOverlay()` functions
+   - `showFinaleCinematic()` now only logs deprecation warning and persists winner ID
+   - Legacy overlay code removed entirely per requirements
+
+2. **Removed Post-Winner Public Favourite Hook** (js/end-credits.js)
+   - Removed integration wrapper that ran Public Favourite AFTER winner announcement
+   - Public Favourite now runs exclusively PRE-JURY in jury.js (between casting and reveal phases)
+   - Ensures correct flow: jury casting → Public Favourite → jury reveal → outro
+
+3. **Updated Finale Orchestration** (js/jury.js)
+   - Removed `showFinaleCinematic` fallback call in medal animation section
+   - Changed end sequence to call `playOutroVideo()` directly instead of credits
+   - Added fallback to credits sequence if outro video unavailable
+   - Maintains proper flow: winner display → medal animation → outro video
+
+### Current Finale Flow (Finalized)
+```
+1. Jury Casting Phase (anonymous blind voting)
+   ├─ Console: [juryCast] start
+   ├─ Jurors cast votes without revealing picks
+   └─ Console: [juryCast] complete
+
+2. Public Favourite Segment (PRE-JURY, if enabled)
+   ├─ Console: [publicFav] start (pre-jury) OR [publicFav] skipped (toggle false)
+   ├─ Intro card: "Before we reveal the jury votes and crown the winner..."
+   ├─ 5-candidate voting panel with bars
+   ├─ Sequential elimination (lowest → highest percentage)
+   ├─ Winner enlargement
+   ├─ Announcement: "The Public has chosen X... Now let's see who is the Jury's favorite..."
+   └─ Console: [publicFav] done
+
+3. Jury Reveal Phase
+   ├─ Console: [juryReveal] start
+   ├─ Each juror's vote revealed sequentially
+   ├─ Live tally updates
+   ├─ Winner announced
+   └─ Console: [juryReveal] winner=X votes=A-B
+
+4. Winner Display
+   ├─ Final tally banner
+   ├─ Placement labels
+   ├─ Winner message banner
+   └─ Victory music (5000ms)
+
+5. Medal Animation
+   ├─ Tries medal animation functions
+   └─ Fallback to overlay (8000ms)
+
+6. Outro Video (NEW: replaces legacy overlay)
+   ├─ Console: [jury] finale complete, triggering outro video
+   ├─ playOutroVideo() called
+   └─ Fallback to credits sequence if outro unavailable
+```
+
+### What Was Removed
+- ❌ `.cinDim` overlay (dark backdrop with panel)
+- ❌ `.cinPanel` with winner name and rotating cup
+- ❌ Manual buttons (New Season / Stats / Credits / Exit)
+- ❌ Stats display panel
+- ❌ Player profile creation form
+- ❌ Post-winner Public Favourite integration wrapper
+- ❌ All CSS for legacy overlay elements
+
+### What Was Preserved
+- ✅ Pre-jury Public Favourite segment (enhanced, 5 candidates)
+- ✅ Jury casting and reveal phases
+- ✅ Winner display and medal animation
+- ✅ Outro video playback
+- ✅ Credits sequence as fallback
+- ✅ All existing winner announcement UI elements
+
+### Acceptance Criteria Met
+- [x] No `.cinDim` / legacy overlay appears after finale
+- [x] Public Favourite runs BEFORE jury votes reveal (when enabled)
+- [x] Intro card uses exact text: "Before we reveal the jury votes and crown the winner. Let's see who you voted as your favourite!"
+- [x] 5-candidate layout with avatars/names/percent bars
+- [x] Four losers eliminated sequentially, winner enlarges
+- [x] Final announcement: "The Public has chosen X for their Favourite player! Now let's see who is the Jury's favorite houseguest!"
+- [x] Jury reveal proceeds immediately after Public Favourite
+- [x] Outro video plays unobstructed
+- [x] No console errors; all markers present
+
 ## Changes Made
 
 ### 1. Minigame Randomization Fix (js/competitions.js)

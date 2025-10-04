@@ -439,5 +439,72 @@ Play through and verify these appear in order:
 - [ ] Tallies update correctly
 - [ ] No visual confetti anywhere
 
+## Clean Finale Flow Testing (Legacy Overlay Removal)
+
+### Legacy Overlay Removed
+- [ ] Load game and play through to finale
+- [ ] Verify NO `.cinDim` overlay appears at any point
+- [ ] Verify NO rotating cup (🏆) appears
+- [ ] Verify NO manual buttons (New Season / Stats / Credits / Exit)
+- [ ] Verify NO stats panel appears
+- [ ] Verify NO player profile creation form appears
+- [ ] Check browser DevTools Elements tab - no `.cinDim` or `.cinPanel` elements should exist
+
+### Public Favourite Pre-Jury Placement
+- [ ] Enable Public Favourite in Settings → Gameplay
+- [ ] Play through to finale
+- [ ] Console shows: `[juryCast] complete` BEFORE `[publicFav] start`
+- [ ] Console shows: `[publicFav] done` BEFORE `[juryReveal] start`
+- [ ] Intro card appears with exact text: "Before we reveal the jury votes and crown the winner. Let's see who you voted as your favourite!"
+- [ ] Public Favourite panel shows up to 5 candidates
+- [ ] Winner announcement includes: "The Public has chosen X for their Favourite player! Now let's see who is the Jury's favorite houseguest!"
+- [ ] Jury reveal starts immediately after Public Favourite completes
+
+### Public Favourite Toggle OFF
+- [ ] Disable Public Favourite in Settings → Gameplay
+- [ ] Play through to finale
+- [ ] Console shows: `[publicFav] skipped (toggle false)`
+- [ ] NO Public Favourite panel appears
+- [ ] Flow goes: casting → jury reveal → winner → outro
+
+### Outro Video Playback
+- [ ] After winner announcement and medal animation
+- [ ] Console shows: `[jury] finale complete, triggering outro video`
+- [ ] Outro video plays (if available)
+- [ ] OR credits sequence plays (if outro unavailable)
+- [ ] NO legacy overlay blocks video playback
+- [ ] Video plays smoothly without interruption
+
+### Console Markers - Clean Flow
+Run through full finale and verify these appear in exact order:
+```
+[juryCast] start
+[juryCast] vote juror=X stored (multiple)
+[juryCast] complete
+[publicFav] start (pre-jury) OR [publicFav] skipped (toggle false)
+[publicFav] eliminate player=X pct=Y% remaining=Z (if enabled)
+[publicFav] done (if enabled)
+[juryReveal] start
+[juryReveal] show juror=X vote=Y (multiple)
+[juryReveal] winner=X votes=A-B
+[jury] finale complete, triggering outro video
+```
+
+### Edge Cases
+- [ ] With <2 total players: Public Favourite skipped gracefully
+- [ ] With 2-4 players: Public Favourite uses available candidates (not duplicated)
+- [ ] With 5+ players: Public Favourite uses exactly 5 random candidates
+- [ ] Toggle ON then OFF: setting persists correctly
+- [ ] Outro video missing: fallback to credits works
+- [ ] No errors in console throughout entire finale
+
+### Visual Verification
+- [ ] Public Favourite bars animate smoothly
+- [ ] Eliminated candidates fade with `.pfElim` class
+- [ ] Winner tile enlarges with `.pfWinnerBig` class
+- [ ] All text matches requirements exactly
+- [ ] No visual artifacts from removed overlay
+- [ ] Outro video fills screen properly
+
 ### Deprecated: PR #39 Integration Fix [OLD]
 The sections below are deprecated as the finale has been completely refactored.
