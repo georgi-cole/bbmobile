@@ -2468,6 +2468,42 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   }
 }
 
+/* Mobile jury reveal stage fixes - ensure no overlay blocking vote buttons */
+@media (max-width: 768px) {
+  #juryGraphBox {
+    position: relative !important;
+    max-height: calc(100dvh - 180px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 10 !important;
+    margin-bottom: 12px;
+  }
+  
+  /* Ensure human jury vote panel is always visible and accessible */
+  #humanJuryVote {
+    position: relative !important;
+    z-index: 11 !important;
+    margin-top: 12px;
+    clear: both;
+  }
+  
+  /* Prevent any fixed/absolute overlays from covering interactive elements */
+  .tvViewport {
+    overflow-y: auto;
+    max-height: calc(100dvh - 120px);
+  }
+}
+
+/* Ensure PF winner card title is visible */
+.pfWinnerTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #a5c9e8;
+  margin-top: 8px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
 /* Screen reader only class for accessibility */
 .sr-only{
   position: absolute;

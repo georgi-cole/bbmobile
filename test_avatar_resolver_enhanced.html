@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced Avatar Resolver Tests</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e0e6f0;
+    }
+    h1 {
+      color: #ffdc8b;
+      text-align: center;
+    }
+    .test-section {
+      background: #141b26;
+      border: 1px solid #2d3f56;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    .pass {
+      background: rgba(76, 175, 80, 0.2);
+      border-left: 4px solid #4caf50;
+      color: #a5d6a7;
+    }
+    .fail {
+      background: rgba(244, 67, 54, 0.2);
+      border-left: 4px solid #f44336;
+      color: #ef9a9a;
+    }
+    button {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #1976d2;
+    }
+    .stats {
+      background: #1a2332;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+    }
+    .avatar-preview {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Enhanced Avatar Resolver Tests</h1>
+  
+  <div class="test-section">
+    <button onclick="runBasicTests()">Run Basic Tests</button>
+    <button onclick="runMultiFormatTests()">Run Multi-Format Tests</button>
+    <button onclick="runStrictModeTests()">Run Strict Mode Tests</button>
+    <button onclick="runDiagnosticTests()">Run Diagnostic Tests</button>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+  </div>
+  
+  <div id="results" class="test-section"></div>
+
+  <script src="js/avatar.js"></script>
+  <script>
+    // Mock game object
+    window.Game = window.Game || {};
+    window.Game.game = {
+      cfg: {
+        strictAvatars: false
+      },
+      players: [
+        { id: 1, name: 'Aria', avatar: null },
+        { id: 2, name: 'Bea', avatar: null },
+        { id: 3, name: 'Blue', avatar: null },
+        { id: 4, name: 'Echo', avatar: null },
+        { id: 5, name: 'Ivy', avatar: null },
+        { id: 6, name: 'TestPlayer', avatar: null }, // No file exists
+        { id: 7, name: 'CustomPlayer', avatar: 'custom-avatar.png' }
+      ]
+    };
+    window.Game.getP = (id) => window.Game.game.players.find(p => p.id === id);
+
+    let tests = [];
+    
+    function addTest(name, passed, message) {
+      tests.push({ name, passed, message });
+      displayTest(name, passed, message);
+    }
+    
+    function displayTest(name, passed, message) {
+      const results = document.getElementById('results');
+      const div = document.createElement('div');
+      div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      div.textContent = `${passed ? '✓' : '✗'} ${name}: ${message}`;
+      results.appendChild(div);
+    }
+    
+    function clearResults() {
+      tests = [];
+      document.getElementById('results').innerHTML = '';
+    }
+    
+    function displayStats() {
+      const passed = tests.filter(t => t.passed).length;
+      const total = tests.length;
+      const results = document.getElementById('results');
+      
+      const statsDiv = document.createElement('div');
+      statsDiv.className = 'stats';
+      statsDiv.innerHTML = `
+        <h3>Test Summary</h3>
+        <p><strong>Passed:</strong> ${passed}/${total}</p>
+        <p><strong>Success Rate:</strong> ${total > 0 ? ((passed/total)*100).toFixed(1) : 0}%</p>
+      `;
+      results.insertBefore(statsDiv, results.firstChild);
+    }
+
+    function runBasicTests() {
+      console.log('[Test] Running basic tests...');
+      
+      // Test 1: resolveAvatar exists
+      addTest(
+        'resolveAvatar function exists',
+        typeof window.Game.resolveAvatar === 'function',
+        'Function should be available on window.Game'
+      );
+
+      // Test 2: getAvatarFallback exists
+      addTest(
+        'getAvatarFallback function exists',
+        typeof window.Game.getAvatarFallback === 'function',
+        'Function should be available on window.Game'
+      );
+
+      // Test 3: Player with custom avatar property
+      const result1 = window.Game.resolveAvatar(7);
+      addTest(
+        'Player with custom avatar property',
+        result1 === 'custom-avatar.png',
+        `Expected: custom-avatar.png, Got: ${result1}`
+      );
+
+      // Test 4: Player with name-based avatar (PNG)
+      const result2 = window.Game.resolveAvatar(1);
+      addTest(
+        'Player name-based avatar (PNG)',
+        result2.includes('Aria.png') || result2.includes('aria.png'),
+        `Expected: Aria.png or aria.png, Got: ${result2}`
+      );
+
+      displayStats();
+    }
+
+    function runMultiFormatTests() {
+      console.log('[Test] Running multi-format tests...');
+      
+      // Test various format permutations
+      const testCases = [
+        { id: 1, name: 'Aria', expected: 'png' },
+        { id: 2, name: 'Bea', expected: 'png' },
+        { id: 3, name: 'Blue', expected: 'png' }
+      ];
+      
+      testCases.forEach(tc => {
+        const result = window.Game.resolveAvatar(tc.id);
+        const hasPng = result.includes('.png');
+        addTest(
+          `Multi-format: ${tc.name} resolves to PNG`,
+          hasPng,
+          `Expected .png in path, Got: ${result}`
+        );
+      });
+      
+      // Test fallback to JPG (simulated)
+      const result = window.Game.resolveAvatar(6); // TestPlayer - no file exists
+      addTest(
+        'Multi-format: fallback includes multiple attempts',
+        result.includes('TestPlayer') || result.includes('dicebear'),
+        `Got: ${result}`
+      );
+      
+      displayStats();
+    }
+
+    function runStrictModeTests() {
+      console.log('[Test] Running strict mode tests...');
+      
+      // Enable strict mode
+      window.Game.game.cfg.strictAvatars = true;
+      
+      const result = window.Game.getAvatarFallback('TestPlayer', './avatars/TestPlayer.png');
+      const isLocalFallback = result.startsWith('data:image/svg+xml');
+      
+      addTest(
+        'Strict mode: uses local silhouette',
+        isLocalFallback,
+        `Expected local SVG data URI, Got: ${result.substring(0, 50)}...`
+      );
+      
+      addTest(
+        'Strict mode: does not use external API',
+        !result.includes('dicebear'),
+        `Should not contain dicebear, Got: ${result.substring(0, 50)}...`
+      );
+      
+      // Disable strict mode
+      window.Game.game.cfg.strictAvatars = false;
+      
+      const normalResult = window.Game.getAvatarFallback('TestPlayer2');
+      addTest(
+        'Normal mode: uses external API',
+        normalResult.includes('dicebear'),
+        `Expected dicebear URL, Got: ${normalResult}`
+      );
+      
+      displayStats();
+    }
+
+    function runDiagnosticTests() {
+      console.log('[Test] Running diagnostic tests...');
+      
+      // Test __dumpAvatarStatus exists
+      addTest(
+        'Diagnostic function exists',
+        typeof window.__dumpAvatarStatus === 'function',
+        'window.__dumpAvatarStatus should be available'
+      );
+      
+      // Run diagnostic
+      const status = window.__dumpAvatarStatus();
+      
+      addTest(
+        'Diagnostic returns object',
+        status && typeof status === 'object',
+        `Expected object, Got: ${typeof status}`
+      );
+      
+      addTest(
+        'Diagnostic has players array',
+        Array.isArray(status.players),
+        `Expected array, Got: ${typeof status.players}`
+      );
+      
+      addTest(
+        'Diagnostic has counts',
+        status.counts && typeof status.counts.total === 'number',
+        `Expected counts.total number, Got: ${status.counts?.total}`
+      );
+      
+      addTest(
+        'Diagnostic has strict flag',
+        typeof status.strict === 'boolean',
+        `Expected boolean, Got: ${typeof status.strict}`
+      );
+      
+      console.log('[Test] Diagnostic output:', status);
+      
+      displayStats();
+    }
+
+    function runAllTests() {
+      clearResults();
+      runBasicTests();
+      runMultiFormatTests();
+      runStrictModeTests();
+      runDiagnosticTests();
+    }
+
+    // Auto-run on load
+    window.addEventListener('load', () => {
+      console.log('[Test] Page loaded, ready to run tests');
+    });
+  </script>
+</body>
+</html>
