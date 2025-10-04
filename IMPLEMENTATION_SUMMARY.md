@@ -304,6 +304,85 @@ All modified files passed Node.js syntax checks:
 - **10s hard timeout**: Ensures credits always progress even if errors occur
 - **Guard flag**: `g.__publicFavouriteCompleted` prevents duplicate runs per season
 
+## Integration Fix (Public Favourite + Confetti) - PR #39
+
+### Summary
+Applied integration fixes to ensure Public Favourite segment reliably runs (only when enabled) after winner confetti and before end credits. Enhanced winner confetti reliability with better logging and debug helpers.
+
+### Changes Made
+
+#### js/end-credits.js
+- **Added integration wrapper** (IIFE at end of file):
+  - Wraps `window.startEndCreditsSequence` to inject Public Favourite segment before credits
+  - Checks `game.cfg.enablePublicFav` flag
+  - Finds winner by `p.winner === true`
+  - Calls `window.showPublicFavourite(winnerId)` with await
+  - Logs `[publicFav] start`, `[publicFav] done`, or `[publicFav] skipped`
+  - Try/catch wrapper prevents blocking credits on error
+  - `window.__publicFavHooked` flag prevents double wrapping
+  - Preserves original function signature and context
+
+#### js/finale.js
+- **Removed Public Favourite invocation from `showFinaleCinematic()`**:
+  - Public Favourite now runs via credits wrapper (proper sequencing)
+  - Added comment explaining the change
+- **Enhanced `__debugRunPublicFavOnce()` helper**:
+  - Added global `window.__debugRunPublicFavOnce` fallback
+  - Enables `cfg.enablePublicFav` temporarily
+  - Resets `__publicFavouriteCompleted` guard to allow re-run
+  - Persists config to localStorage
+  - Better error handling and logging
+  - Can be called manually from console after finale
+
+#### js/jury.js
+- **Enhanced winner confetti spawn**:
+  - Changed from `spawnConfetti` to support both `spawnConfetti` and `spawnConfettiOnce`
+  - Increased duration to 6000ms and particles to 260 (was 5000ms/180)
+  - Added console.info('[finale] winner confetti spawn') log
+  - Better error logging: `[finale] confetti error` (was `[jury] confetti error`)
+
+### Flags & Global Hooks
+- `window.__publicFavHooked` - Prevents double wrapping of `startEndCreditsSequence`
+- `window.__winnerConfettiDone` - (Not yet implemented, but reserved for future use if needed)
+- `window.__debugRunPublicFavOnce()` - Manual trigger for Public Favourite segment
+
+### Flow Sequence
+```
+1. Jury voting completes
+2. Winner announced → showWinnerMessageBanner()
+3. Winner confetti spawns (6000ms, 260 particles) ← [finale] winner confetti spawn
+4. Victory music plays
+5. Sleep 5000ms
+6. Medal animation (8000ms) OR showFinaleCinematic()
+7. startCreditsPreferred() called from jury.js
+8. → startEndCreditsSequence() wrapper intercepts
+9.    → IF enablePublicFav: showPublicFavourite(winnerId) ← [publicFav] start/done
+10.   → Original credits proceed
+```
+
+### Debug Commands
+```javascript
+// Manual trigger (enables toggle, resets guard, runs segment)
+window.__debugRunPublicFavOnce()
+
+// Direct call (respects current toggle state)
+window.game.__debugRunPublicFavOnce()
+```
+
+### Accessibility
+- Live region already present with `role="status"` and `aria-live="polite"`
+- Updates text on each reveal phase
+- Progress bars have proper ARIA attributes
+- Panel has `role="dialog"` and `aria-label`
+
+### Logging Markers
+- `[finale] winner confetti spawn` - When confetti is spawned for winner
+- `[publicFav] start` - Public Favourite segment begins
+- `[publicFav] done` - Public Favourite segment completes successfully
+- `[publicFav] skipped` - When toggle is OFF or already completed
+- `[publicFav] error` - On caught exceptions
+- `[finale] confetti error` - On confetti spawn errors
+
 ## Notes
 - No test infrastructure exists in repo, so manual testing recommended
 - All changes are minimal and surgical as requested

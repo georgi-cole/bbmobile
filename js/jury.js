@@ -587,9 +587,12 @@
       try{
         const cfg = gg.cfg || {};
         if(cfg.fxAnim !== false || cfg.fxCards !== false){
-          g.UI?.spawnConfetti?.(5000, 180);
+          if(g.UI?.spawnConfetti || g.UI?.spawnConfettiOnce){
+            (g.UI.spawnConfettiOnce || g.UI.spawnConfetti)(6000, 260);
+            console.info('[finale] winner confetti spawn');
+          }
         }
-      }catch(e){ console.warn('[jury] confetti error', e); }
+      }catch(e){ console.warn('[finale] confetti error', e); }
       
       try{ g.setMusic?.('victory', true); }catch(e){}
       await sleep(5000);
