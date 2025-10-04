@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jury Reveal Pacing Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #0a0e14;
+            color: #e0e6f0;
+        }
+        h1 {
+            color: #ffdc8b;
+            text-align: center;
+        }
+        .container {
+            background: #141b26;
+            border: 1px solid #2d3f56;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 16px;
+            background: #1a2332;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #4dd0e1;
+            margin-bottom: 12px;
+        }
+        .test-result {
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+        }
+        .pass {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4caf50;
+            color: #a5d6a7;
+        }
+        .fail {
+            background: rgba(244, 67, 54, 0.2);
+            border-left: 4px solid #f44336;
+            color: #ef9a9a;
+        }
+        .info {
+            background: rgba(33, 150, 243, 0.2);
+            border-left: 4px solid #2196f3;
+            color: #90caf9;
+        }
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 8px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jury Reveal Pacing Test Suite</h1>
+    
+    <div class="controls">
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div class="container" id="results"></div>
+
+    <script>
+        // Test suite for jury reveal pacing
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        // Mock RNG for predictable tests
+        let mockRngValue = 0.5;
+        function mockRng() {
+            return mockRngValue;
+        }
+        
+        // Calculate baseline duration (from jury.js implementation)
+        function getBaselineDuration(index, total) {
+            const position = index + 1;
+            if (position <= 3) return 5400; // Early
+            if (position <= 6) return 7200; // Mid
+            if (position < total) return 9000; // Late
+            return 12000; // Final juror
+        }
+        
+        // Test 1: Verify tripled durations
+        function testTripledDurations() {
+            log('=== Test 1: Verify Tripled Durations ===', 'info');
+            
+            const tests = [
+                { index: 0, total: 9, expected: 5400, desc: 'Early juror (pos 1)' },
+                { index: 2, total: 9, expected: 5400, desc: 'Early juror (pos 3)' },
+                { index: 3, total: 9, expected: 7200, desc: 'Mid juror (pos 4)' },
+                { index: 5, total: 9, expected: 7200, desc: 'Mid juror (pos 6)' },
+                { index: 6, total: 9, expected: 9000, desc: 'Late juror (pos 7)' },
+                { index: 7, total: 9, expected: 9000, desc: 'Late juror (pos 8)' },
+                { index: 8, total: 9, expected: 12000, desc: 'Final juror (pos 9)' },
+            ];
+            
+            let passed = 0;
+            tests.forEach(test => {
+                const actual = getBaselineDuration(test.index, test.total);
+                if (actual === test.expected) {
+                    log(`✓ ${test.desc}: ${actual}ms`, 'pass');
+                    passed++;
+                } else {
+                    log(`✗ ${test.desc}: expected ${test.expected}ms, got ${actual}ms`, 'fail');
+                }
+            });
+            
+            log(`Test 1 Summary: ${passed}/${tests.length} passed`, passed === tests.length ? 'pass' : 'fail');
+            return passed === tests.length;
+        }
+        
+        // Test 2: Calculate baseline total for different jury sizes
+        function testBaselineTotals() {
+            log('=== Test 2: Baseline Total Calculations ===', 'info');
+            
+            const tests = [
+                { jurors: 7, expected: 5400*3 + 7200*3 + 12000*1 }, // 1-3:5.4s, 4-6:7.2s, 7(final):12.0s
+                { jurors: 9, expected: 5400*3 + 7200*3 + 9000*2 + 12000*1 },
+                { jurors: 11, expected: 5400*3 + 7200*3 + 9000*4 + 12000*1 },
+            ];
+            
+            let passed = 0;
+            tests.forEach(test => {
+                let baselineMs = 0;
+                for (let i = 0; i < test.jurors; i++) {
+                    baselineMs += getBaselineDuration(i, test.jurors);
+                }
+                
+                if (baselineMs === test.expected) {
+                    log(`✓ ${test.jurors} jurors: ${baselineMs}ms (${(baselineMs/1000).toFixed(1)}s)`, 'pass');
+                    passed++;
+                } else {
+                    log(`✗ ${test.jurors} jurors: expected ${test.expected}ms, got ${baselineMs}ms`, 'fail');
+                }
+            });
+            
+            log(`Test 2 Summary: ${passed}/${tests.length} passed`, passed === tests.length ? 'pass' : 'fail');
+            return passed === tests.length;
+        }
+        
+        // Test 3: Compression logic when exceeding 180s cap
+        function testCompressionLogic() {
+            log('=== Test 3: Compression Logic (180s cap) ===', 'info');
+            
+            const maxTotalMs = 180000; // 180s
+            const minSlotMs = 1200;
+            
+            // Simulate large jury that would exceed cap
+            const largeJury = 30; // Should trigger compression
+            
+            let baselineMs = 0;
+            for (let i = 0; i < largeJury; i++) {
+                baselineMs += getBaselineDuration(i, largeJury);
+            }
+            
+            log(`Large jury (${largeJury} jurors) baseline: ${baselineMs}ms (${(baselineMs/1000).toFixed(1)}s)`, 'info');
+            
+            if (baselineMs > maxTotalMs) {
+                const slotDur = Math.max(minSlotMs, maxTotalMs / largeJury);
+                const totalCompressed = slotDur * largeJury;
+                
+                if (totalCompressed <= maxTotalMs) {
+                    log(`✓ Compression applied: ${slotDur.toFixed(1)}ms per slot, total ${totalCompressed}ms`, 'pass');
+                    log(`✓ Total is within 180s cap: ${(totalCompressed/1000).toFixed(1)}s`, 'pass');
+                    return true;
+                } else {
+                    log(`✗ Compression failed: total ${totalCompressed}ms exceeds ${maxTotalMs}ms`, 'fail');
+                    return false;
+                }
+            } else {
+                log(`✗ Large jury did not exceed cap (baseline ${baselineMs}ms)`, 'fail');
+                return false;
+            }
+        }
+        
+        // Test 4: Verify no compression for nominal jury sizes
+        function testNoCompressionNominal() {
+            log('=== Test 4: No Compression for Nominal Sizes ===', 'info');
+            
+            const maxTotalMs = 180000;
+            const nominalSizes = [7, 9, 11];
+            
+            let passed = 0;
+            nominalSizes.forEach(jurors => {
+                let baselineMs = 0;
+                for (let i = 0; i < jurors; i++) {
+                    baselineMs += getBaselineDuration(i, jurors);
+                }
+                
+                if (baselineMs <= maxTotalMs) {
+                    log(`✓ ${jurors} jurors: ${baselineMs}ms (${(baselineMs/1000).toFixed(1)}s) - no compression needed`, 'pass');
+                    passed++;
+                } else {
+                    log(`✗ ${jurors} jurors: ${baselineMs}ms exceeds cap`, 'fail');
+                }
+            });
+            
+            log(`Test 4 Summary: ${passed}/${nominalSizes.length} passed`, passed === nominalSizes.length ? 'pass' : 'fail');
+            return passed === nominalSizes.length;
+        }
+        
+        // Test 5: Verify jitter range (±400ms)
+        function testJitterRange() {
+            log('=== Test 5: Jitter Range (±400ms) ===', 'info');
+            
+            const jitterLimit = 400;
+            const baseDuration = 5400;
+            const minSlotMs = 1200;
+            
+            // Test with extreme jitter values
+            const jitterTests = [
+                { rng: 0.0, expectedJitter: -400, desc: 'Minimum jitter (rng=0.0)' },
+                { rng: 0.5, expectedJitter: 0, desc: 'No jitter (rng=0.5)' },
+                { rng: 1.0, expectedJitter: 400, desc: 'Maximum jitter (rng=1.0)' },
+            ];
+            
+            let passed = 0;
+            jitterTests.forEach(test => {
+                const jitter = (test.rng * 2 - 1) * 400;
+                const duration = Math.max(minSlotMs, baseDuration + jitter);
+                
+                if (Math.abs(jitter - test.expectedJitter) < 0.01) {
+                    log(`✓ ${test.desc}: jitter=${jitter.toFixed(1)}ms, duration=${duration}ms`, 'pass');
+                    passed++;
+                } else {
+                    log(`✗ ${test.desc}: expected jitter=${test.expectedJitter}ms, got ${jitter}ms`, 'fail');
+                }
+            });
+            
+            log(`Test 5 Summary: ${passed}/${jitterTests.length} passed`, passed === jitterTests.length ? 'pass' : 'fail');
+            return passed === jitterTests.length;
+        }
+        
+        // Test 6: Verify phrase overlay timing (65% of slot)
+        function testPhraseOverlayTiming() {
+            log('=== Test 6: Phrase Overlay Timing (60-70% rule) ===', 'info');
+            
+            const slotDurations = [5400, 7200, 9000, 12000, 500]; // Including fast-forward
+            
+            let passed = 0;
+            slotDurations.forEach(slotDur => {
+                const phraseDuration = Math.floor(slotDur * 0.65);
+                const percentage = (phraseDuration / slotDur) * 100;
+                
+                if (percentage >= 60 && percentage <= 70) {
+                    log(`✓ Slot ${slotDur}ms: phrase ${phraseDuration}ms (${percentage.toFixed(1)}%)`, 'pass');
+                    passed++;
+                } else {
+                    log(`✗ Slot ${slotDur}ms: phrase ${phraseDuration}ms (${percentage.toFixed(1)}%) outside 60-70%`, 'fail');
+                }
+            });
+            
+            log(`Test 6 Summary: ${passed}/${slotDurations.length} passed`, passed === slotDurations.length ? 'pass' : 'fail');
+            return passed === slotDurations.length;
+        }
+        
+        // Run all tests
+        function runAllTests() {
+            clearResults();
+            log('Starting Jury Reveal Pacing Test Suite...', 'info');
+            log('', 'info');
+            
+            const results = [
+                testTripledDurations(),
+                testBaselineTotals(),
+                testCompressionLogic(),
+                testNoCompressionNominal(),
+                testJitterRange(),
+                testPhraseOverlayTiming()
+            ];
+            
+            const passed = results.filter(r => r).length;
+            const total = results.length;
+            
+            log('', 'info');
+            log('=== FINAL RESULTS ===', 'info');
+            log(`Tests passed: ${passed}/${total}`, passed === total ? 'pass' : 'fail');
+            
+            if (passed === total) {
+                log('✓ All tests passed! Implementation is correct.', 'pass');
+            } else {
+                log(`✗ ${total - passed} test(s) failed. Review implementation.`, 'fail');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1372,6 +1372,22 @@
     // PHASE 1: Anonymous casting
     await startJuryCastingPhase(jurors, A, B);
     
+    // Intro cards before reveal (tripled durations)
+    // Intro card 1: 6.0s (was 2.0s)
+    try {
+      await g.showCard?.('Jury Votes', ['The jury has deliberated...'], 'jury', 6000, true);
+      await g.cardQueueWaitIdle?.();
+    } catch(e) {}
+    
+    // Intro card 2: 4.5s (was 1.5s)
+    try {
+      await g.showCard?.('Time to Reveal', ['Let\'s reveal the votes one by one'], 'jury', 4500, true);
+      await g.cardQueueWaitIdle?.();
+    } catch(e) {}
+    
+    // Setup gap: 1.5s (was 0.5s)
+    await sleep(1500);
+    
     // PHASE 2: Jury reveal (no Public Favourite before jury)
     const winner = await startJuryRevealPhase(jurors, A, B);
     
