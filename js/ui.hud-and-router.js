@@ -84,7 +84,7 @@
 
   // ------------ Roster Rendering ------------
   function getAvatar(p){
-    return p.avatar || p.img || p.photo ||
+    return g.resolveAvatar?.(p) || p.avatar || p.img || p.photo ||
       `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
   }
   function ensureDashboardRosterHost(){
