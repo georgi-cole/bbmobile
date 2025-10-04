@@ -73,7 +73,7 @@
     tripleChance: 7,
     returnChance: 10,
     selfEvictChance: 1,
-    enablePublicFav: false,
+    enablePublicFav: true,
     tOpening: 90,
     tIntermission: 4,
     tHOH: 40,
@@ -323,6 +323,9 @@
   function buildGameplayPaneHTML(){
     return [
       '<div class="settingsGrid">',
+        group('Features', [
+          checkbox('enablePublicFav','Public\'s favourite player - this is a new module!')
+        ].join('')),
         group('Week twists', [
           number('doubleChance','Double eviction chance (%)',0,100,1),
           number('tripleChance','Triple eviction chance (%)',0,100,1),
