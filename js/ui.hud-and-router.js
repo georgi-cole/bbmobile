@@ -253,31 +253,35 @@ header.innerHTML = `
   
   function renderBioContent(p){
     const esc = (s)=> UI.escapeHtml ? UI.escapeHtml(String(s)) : String(s);
-    const meta = p.meta || {};
-    const age = (meta.age!=null) ? meta.age : '—';
-    const sex = meta.sex || meta.gender || '—';
-    const loc = meta.loc || meta.location || '—';
-    const motto = meta.motto ? `“${esc(meta.motto)}”` : '—';
-    let allies = [], enemies=[];
-    try{ allies = (g.allyNames?.(p)||[]).slice(0,5); }catch{}
-    try{ enemies = (g.enemyNames?.(p)||[]).slice(0,5); }catch{}
-    const avatar = getAvatar(p);
+    const bio = p.bio || {};
+    const name = p.name || 'Guest';
+    const gender = bio.gender || '—';
+    const age = bio.age || '—';
+    const location = bio.location || '—';
+    const sexuality = bio.sexuality || '—';
+    const motto = bio.motto || '—';
+    const funFact = bio.funFact || '—';
+    
+    // Use cached avatar URL if available, otherwise resolve
+    const avatar = p.__avatarUrl || getAvatar(p);
+    if(!p.__avatarUrl) p.__avatarUrl = avatar; // Cache for next time
+    
     return `
-      <div class="pt-head">
-        <div class="pt-ava-wrap">
-          <img class="pt-ava" src="${avatar}" alt="${esc(p.name||'guest')}"
-            onerror="this.onerror=null;this.src='${FALLBACK}'">
-        </div>
-        <div class="pt-meta">
-          <div class="pt-name">${esc(p.name||'')}</div>
-          <div class="pt-sub tiny">${esc(age)} • ${esc(sex)} • ${esc(loc)}</div>
-        </div>
+      <div class="bio-avatar-container">
+        <img class="bio-avatar" src="${avatar}" alt="${esc(name)}"
+          onerror="this.onerror=null;this.src='${FALLBACK}'">
       </div>
-      <div class="pt-motto tiny muted">${motto}</div>
-      <div class="pt-row"><span class="pt-label tiny muted">Allies</span>
-        <span class="pt-val tiny">${esc(allies.join(', ')||'—')}</span></div>
-      <div class="pt-row"><span class="pt-label tiny muted">Enemies</span>
-        <span class="pt-val tiny">${esc(enemies.join(', ')||'—')}</span></div>
+      <div class="bio-content">
+        <h3 class="bio-name">${esc(name)}</h3>
+        <dl class="bio-grid">
+          <dt>Gender</dt><dd>${esc(gender)}</dd>
+          <dt>Age</dt><dd>${esc(age)}</dd>
+          <dt>Location</dt><dd>${esc(location)}</dd>
+          <dt>Sexuality</dt><dd>${esc(sexuality)}</dd>
+          <dt>Motto</dt><dd class="bio-motto">"${esc(motto)}"</dd>
+          <dt>Fun Fact</dt><dd>${esc(funFact)}</dd>
+        </dl>
+      </div>
     `;
   }
   
