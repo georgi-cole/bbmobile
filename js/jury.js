@@ -641,14 +641,18 @@
     }catch(e){ console.warn('[publicFav] showCard error:', e); }
     await sleep(300);
     
+    // Build modal host wrapper with flexbox centering
+    const modalHost = document.createElement('div');
+    modalHost.className = 'pfModalHost';
+    
     // Build panel with 3 real player slots (real avatars and names)
     const panel = document.createElement('div');
+    panel.className = 'pfPanel';
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-label', 'Public\'s Favourite Player voting simulation');
-    panel.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;background:linear-gradient(145deg,#0e1622,#0a131f);border:2px solid rgba(110,160,220,.25);border-radius:16px;padding:20px;width:min(560px,90vw);box-shadow:0 10px 40px rgba(0,0,0,.8);';
     
     const title = document.createElement('div');
-    title.style.cssText = 'font-size:1.05rem;font-weight:800;letter-spacing:0.6px;margin-bottom:14px;text-align:center;color:#ffdc8b;';
+    title.className = 'pfTitle';
     title.textContent = 'PUBLIC\'S FAVOURITE PLAYER';
     panel.appendChild(title);
     
@@ -656,14 +660,15 @@
     const liveRegion = document.createElement('div');
     liveRegion.setAttribute('role', 'status');
     liveRegion.setAttribute('aria-live', 'polite');
-    liveRegion.style.cssText = 'position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden;';
+    liveRegion.className = 'sr-only';
     panel.appendChild(liveRegion);
     liveRegion.textContent = 'Live public vote updating';
     
     const container = document.createElement('div');
     container.className = 'pfVotePanel';
-    container.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;justify-items:center;margin-top:10px;';
     panel.appendChild(container);
+    
+    modalHost.appendChild(panel);
     
     // Create 3 real player slots with avatars and names
     const slots = [];
@@ -673,10 +678,10 @@
       
       const slot = document.createElement('div');
       slot.className = 'pfSlot';
-      slot.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;';
       
       // Real player avatar (with fallback to dicebear)
       const avatar = document.createElement('img');
+      avatar.className = 'pfAvatar';
       const avatarSrc = player?.avatar || player?.img || player?.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player?.name || 'player')}`;
       avatar.src = avatarSrc;
       avatar.alt = player?.name || 'Player';
@@ -684,19 +689,17 @@
         this.onerror = null;
         this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player?.name || 'player')}`;
       };
-      avatar.style.cssText = 'width:68px;height:68px;border-radius:12px;background:#1b2c3b;border:2px solid #3d5a72;object-fit:cover;';
       slot.appendChild(avatar);
       
       // Player name label
       const nameLabel = document.createElement('div');
-      nameLabel.style.cssText = 'font-size:0.85rem;font-weight:700;color:#b8d4f0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;';
+      nameLabel.className = 'pfName';
       nameLabel.textContent = player?.name || 'Unknown';
       slot.appendChild(nameLabel);
       
       // Percentage label
       const pctLabel = document.createElement('div');
       pctLabel.className = 'pfPct';
-      pctLabel.style.cssText = 'font-size:1.1rem;font-weight:800;color:#eaf4ff;text-align:center;';
       pctLabel.textContent = '0%';
       pctLabel.setAttribute('data-slot', i);
       slot.appendChild(pctLabel);
@@ -705,7 +708,7 @@
       slots.push({ pctLabel, currentPct: 0, weight: candidate.weight });
     }
     
-    document.body.appendChild(panel);
+    document.body.appendChild(modalHost);
     
     // Helper: Generate Dirichlet distribution (simplified approximation using Gamma distribution)
     function dirichlet(alphas) {
@@ -885,7 +888,7 @@
     const finalPcts = slots.map(s => s.currentPct);
     
     await sleep(800);
-    panel.remove();
+    modalHost.remove();
     
     // Card 2: Reveal intro
     try{
