@@ -165,6 +165,8 @@
 
   // Expose
   g.showFinaleCinematic = showFinaleCinematic;
+  // Mark as wrapped to prevent intro-outro-video.js from overriding our 8-second autoplay logic
+  g.showFinaleCinematic.__ioWrapped = true;
 
   document.addEventListener('DOMContentLoaded',()=>{ applyPreseedProfile(); }, {once:true});
 })(window);
