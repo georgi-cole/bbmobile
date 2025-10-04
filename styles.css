@@ -2215,35 +2215,123 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 }
 
 /* === Public's Favourite Player Feature (New Clean Implementation) ========== */
-/* 3-slot wildcard voting panel */
+/* Modal host wrapper with flexbox centering */
+.pfModalHost {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 4vw, 32px);
+  z-index: 500;
+}
+
+/* Panel container with responsive sizing */
+.pfPanel {
+  max-width: 640px;
+  width: 100%;
+  background: linear-gradient(145deg, #0e1622, #0a131f);
+  border: 2px solid rgba(110, 160, 220, .25);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .8);
+}
+
+/* Panel title with responsive typography */
+.pfTitle {
+  font-size: clamp(0.95rem, 2.5vw, 1.05rem);
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  margin-bottom: 14px;
+  text-align: center;
+  color: #ffdc8b;
+}
+
+/* 3-slot wildcard voting panel with responsive grid */
 .pfVotePanel {
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:14px;
-  justify-items:center;
-  margin-top:10px;
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  margin-top: 10px;
+}
+
+/* Desktop: 3 columns (>=760px) */
+@media (min-width: 760px) {
+  .pfVotePanel {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* Mid-size: auto-fit with minmax (560-759px) */
+@media (min-width: 560px) and (max-width: 759px) {
+  .pfVotePanel {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+/* Mobile: 2 columns (<560px) */
+@media (max-width: 559px) {
+  .pfVotePanel {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  .pfPanel {
+    padding: 16px;
+  }
 }
 
 .pfSlot {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:8px;
-  width:100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
+/* Player name with responsive typography */
+.pfName {
+  font-size: clamp(0.8rem, 2vw, 0.85rem);
+  font-weight: 700;
+  color: #b8d4f0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Percentage display with responsive typography */
 .pfPct {
-  font-size:1.1rem;
-  font-weight:800;
-  color:#eaf4ff;
-  text-align:center;
+  font-size: clamp(1rem, 2.5vw, 1.1rem);
+  font-weight: 800;
+  color: #eaf4ff;
+  text-align: center;
   /* Ensure contrast ratio ≥4.5:1 on dark background */
-  text-shadow:0 1px 2px rgba(0,0,0,.8);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
 }
 
-@media (prefers-reduced-motion: reduce){
+/* Avatar styling */
+.pfAvatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 12px;
+  background: #1b2c3b;
+  border: 2px solid #3d5a72;
+  object-fit: cover;
+}
+
+/* Smaller avatars on mobile */
+@media (max-width: 559px) {
+  .pfAvatar {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .pfVotePanel, .pfSlot, .pfPct {
-    transition:none!important;
+    transition: none !important;
   }
 }
 
