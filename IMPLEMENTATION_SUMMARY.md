@@ -3,6 +3,104 @@
 ## Overview
 This implementation addresses all 7 objectives outlined in the problem statement with minimal, surgical changes to the codebase.
 
+## CONSOLIDATED PR: Public Favourite 4-Candidate Upgrade + Card Flush System
+
+### Summary
+This PR supersedes draft PR #49 and absorbs PR #50 work, implementing a comprehensive upgrade to the Public Favourite feature:
+- **Expanded from 3 to 4 candidates** with adjusted weighting, layout, and tie handling
+- **Global card flush system** with abort-safe simulation using generation tokens
+- **Enhanced winner card** showing all 4 ranked final percentages
+- **Responsive layout** optimized for 4 slots across all breakpoints
+- **Comprehensive logging** and debug helpers for QA
+
+### Key Changes
+
+#### A. Public Favourite 4-Candidate Upgrade (js/jury.js)
+- **Candidate Selection**: Now selects 4 distinct players (up from 3)
+- **Weight Formula**: Retained `weight = 1 + 0.10 * normalizedSurvival`
+- **Dirichlet Distribution**: Updated to 4 dimensions `[1, 1, 1, 1]` for start, weighted alphas for target
+- **Simulation**: 10s base duration, same smoothing/interpolation, per-tick swing cap=4 points
+- **Tie Handling**: At lock time requires top1 - top2 ≥ 1%. If not, extends in 1s increments up to +5s total (15s max)
+  - Forced tiebreak for 4 candidates: picks 2 among tied highest, distributes +1/-1
+- **Winner Selection**: Highest final percentage (not random from 3)
+- **Minimum Players**: Requires at least 4 players (was 3)
+
+#### B. Card Flush System (js/state.js)
+- **Global Generation Token**: `g.__cardGen` tracks current generation
+- **Timeout Array**: `g.__cardTimeouts` stores all pending card timeouts
+- **safeShowCard Wrapper**: Tags operations with generation token
+- **flushAllCards(reason)**: 
+  - Increments generation to invalidate pending operations
+  - Clears all pending timeouts
+  - Removes existing card DOM elements (`.bb-card-host` or `[data-bb-card]`)
+  - Logs `[cards] flushed (reason=REASON)`
+- **Hook Points**:
+  - Finale entry: `flushAllCards('enter-finale')` before jury reveal & PF sequence
+
+#### C. Abort-Safe Public Favourite Simulation (js/jury.js)
+- Captures generation token at start: `myGeneration = g.__cardGen`
+- Each simulation tick checks token via `shouldAbort()` helper
+- Mismatch aborts gracefully with log: `[publicFav] aborted (flush)`
+- Prevents winner card display if aborted
+- Marked modal host with `data-bb-card="true"` for flush cleanup
+
+#### D. Enhanced Winner Card (js/jury.js + styles.css)
+- **Winner Display**: Large avatar (72px), name, final percentage
+- **Runners-Up List**: Other 3 candidates with smaller avatars (40px), names, percentages (sorted descending)
+- **Accessibility**: 
+  - `role="alert"` on card container
+  - Descriptive `alt` text on all avatars
+  - Focus moved to winner card on display
+- **Animation**: Smooth zoom-in effect
+- **Duration**: 6s display time with abort check
+
+#### E. Responsive Layout for 4 Slots (styles.css)
+- **Desktop (≥900px)**: 4 columns, panel max-width 800px
+- **Mid (640-899px)**: 2x2 grid
+- **Mobile (<640px)**: 2 columns in 2 rows
+- **Very Narrow (<400px)**: 1 column fallback with scroll
+- **Panel Centering**: `.pfModalHost` maintains flex centering with vertical scroll on overflow
+- **Winner Card**: Responsive sizing on mobile (64px avatar, smaller fonts)
+
+#### F. Comprehensive Logging (js/jury.js)
+All logs prefixed with `[publicFav]` for easy filtering:
+- `start candidates=[id1,id2,id3,id4]` - Startup with selected IDs
+- `updating` - First tick logged once
+- `extend(+1000ms diff=<diff>)` - Each extension with current diff
+- `tiebreak applied` - Forced tiebreak triggered
+- `locked durationMs=<ms>` - Lock time with total duration
+- `winner:<id> pct=<pct>` - Winner determined
+- `winnerCard shown id=<id> pct=<pct>` - Card displayed
+- `aborted (flush)` - Graceful abort
+- `skipped (need at least 4 players, have N)` - Insufficient players
+
+Card flush logs prefixed with `[cards]`:
+- `flushed (reason=REASON)` - Flush executed
+
+#### G. Debug Helpers (js/jury.js)
+- **`window.__pfSimDebug(seasons=200)`**: 
+  - Simulates N seasons of weighted selection
+  - Returns frequency table showing pick distribution
+  - Validates weighting formula correctness
+  - Console.table output with player stats
+- **`window.forcePFRunOnce()`**: 
+  - Resets all guards (`__publicFavDone`, `finale.publicFavDone`)
+  - Enables toggle
+  - Triggers PF simulation immediately for QA
+  - Returns Promise for await
+
+### Files Modified
+- **js/state.js**: Added card flush system (safeShowCard, flushAllCards)
+- **js/jury.js**: Updated PF to 4 candidates, abort safety, winner card, debug helpers, flush hook
+- **styles.css**: Updated layout for 4 slots, added winner card styles
+
+### Migration Notes
+This PR consolidates and supersedes:
+- **PR #49** (draft): Partial layout changes - now absorbed and completed
+- **PR #50**: Flush system proposal - now fully implemented with abort safety
+
+No breaking changes to existing functionality. Feature remains opt-in via `cfg.enablePublicFav` toggle.
+
 ## LATEST UPDATE: Clean Finale Flow (Removal of Legacy Overlay)
 
 ### Changes Made

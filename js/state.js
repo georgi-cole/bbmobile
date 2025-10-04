@@ -76,6 +76,50 @@
   function rng(){ let x=Math.sin(game.rngSeed++)*10000; return x-Math.floor(x); }
   function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
 
+  /* ===== Card Flush System ===== */
+  // Global generation token for abort-safe card operations
+  if(!global.__cardGen) global.__cardGen = 0;
+  if(!global.__cardTimeouts) global.__cardTimeouts = [];
+
+  // Safe card wrapper that tags with generation token
+  function safeShowCard(title, lines, type, duration, queue){
+    const currentGen = global.__cardGen;
+    const timeoutId = setTimeout(() => {
+      // Check if generation still valid
+      if(global.__cardGen === currentGen && typeof global.showCard === 'function'){
+        try {
+          global.showCard(title, lines, type, duration, queue);
+        } catch(e){
+          console.warn('[cards] showCard error:', e);
+        }
+      }
+      // Remove from timeouts array
+      const idx = global.__cardTimeouts.indexOf(timeoutId);
+      if(idx >= 0) global.__cardTimeouts.splice(idx, 1);
+    }, 0);
+    global.__cardTimeouts.push(timeoutId);
+    return timeoutId;
+  }
+
+  // Flush all pending cards and DOM elements
+  function flushAllCards(reason){
+    // Increment generation to invalidate pending operations
+    global.__cardGen++;
+    
+    // Clear all pending timeouts
+    global.__cardTimeouts.forEach(id => clearTimeout(id));
+    global.__cardTimeouts = [];
+    
+    // Remove existing card DOM elements
+    const cardHosts = document.querySelectorAll('.bb-card-host, [data-bb-card]');
+    cardHosts.forEach(el => el.remove());
+    
+    console.info(`[cards] flushed (reason=${reason || 'manual'})`);
+  }
+
+  global.safeShowCard = safeShowCard;
+  global.flushAllCards = flushAllCards;
+
   /* ===== Basic Accessors ===== */
   function getP(id){ return game.players.find(p=>p.id===id); }
   function safeName(id){ return getP(id)?.name||'(?)'; }

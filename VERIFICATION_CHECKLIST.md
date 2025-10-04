@@ -1,5 +1,90 @@
 # Post-PR35 Enhancements - Verification Checklist
 
+## Consolidated PR: Public Favourite 4-Candidate + Flush System
+
+### Public Favourite 4-Candidate Upgrade
+- [ ] **Candidate Selection**: Exactly 4 distinct players displayed (not 3)
+- [ ] **Minimum Players**: Requires at least 4 players - skips with message if fewer
+- [ ] **Console Log**: `[publicFav] start candidates=[id1,id2,id3,id4]` shows 4 IDs
+- [ ] **Weight Formula**: Still uses `weight = 1 + 0.10 * normalizedSurvival`
+- [ ] **Dirichlet Distribution**: 4-dimensional (not 3)
+- [ ] **Winner Selection**: Highest final percentage wins (not random from top 3)
+- [ ] **Tie Handling**: 
+  - [ ] Extends in 1s increments if top1 - top2 < 1%
+  - [ ] Max 5 extensions (+5s total = 15s max)
+  - [ ] Forced tiebreak applies to 2 among tied if still tied
+- [ ] **Duration**: 10s base simulation with same smoothing
+
+### Responsive Layout (4 Slots)
+- [ ] **Desktop (≥900px)**: 4 columns displayed side-by-side
+- [ ] **Desktop**: Panel max-width increases to 800px
+- [ ] **Mid-size (700px)**: 2x2 grid layout (2 columns, 2 rows)
+- [ ] **Mobile (500px)**: 2 columns layout
+- [ ] **Very Narrow (340px)**: 1 column fallback
+- [ ] **All Breakpoints**: Proper centering and no overflow
+- [ ] **Vertical Scroll**: Works if panel height exceeds viewport
+
+### Card Flush System
+- [ ] **Global Token**: `window.__cardGen` exists and increments on flush
+- [ ] **Timeout Array**: `window.__cardTimeouts` tracks pending cards
+- [ ] **Flush on Finale**: Console shows `[cards] flushed (reason=enter-finale)` at start
+- [ ] **DOM Cleanup**: Elements with `.bb-card-host` or `[data-bb-card]` removed on flush
+- [ ] **Timeout Clear**: All pending timeouts cleared
+
+### Abort Safety
+- [ ] **Simulation Abort**: Each tick checks generation token
+- [ ] **Graceful Exit**: Console shows `[publicFav] aborted (flush)` if flushed mid-simulation
+- [ ] **Winner Card Abort**: Winner card not shown if aborted
+- [ ] **No Errors**: No uncaught exceptions or console errors on abort
+
+### Enhanced Winner Card
+- [ ] **Winner Display**: Large avatar (72px desktop, 64px mobile)
+- [ ] **Winner Name**: Displayed prominently in gold (#ffdc8b)
+- [ ] **Winner Percentage**: Large text (2rem desktop, 1.7rem mobile) in cyan (#6fd7ff)
+- [ ] **Runners-Up List**: Shows other 3 candidates
+- [ ] **Runners-Up Sorted**: Descending by final percentage
+- [ ] **Runner Avatars**: Smaller (40px desktop, 36px mobile)
+- [ ] **Accessibility**: 
+  - [ ] `role="alert"` on card
+  - [ ] Descriptive alt text on all avatars
+  - [ ] Focus moves to card on display
+- [ ] **Animation**: Smooth zoom-in effect
+- [ ] **Duration**: Displays for 6 seconds
+- [ ] **Console Log**: `[publicFav] winnerCard shown id=<id> pct=<pct>`
+
+### Logging (4-Candidate Aware)
+- [ ] `[publicFav] start candidates=[id1,id2,id3,id4]` - Shows 4 IDs
+- [ ] `[publicFav] updating` - Logged once on first tick
+- [ ] `[publicFav] extend(+1000ms diff=<diff>)` - Each extension logged
+- [ ] `[publicFav] tiebreak applied` - If forced tiebreak
+- [ ] `[publicFav] locked durationMs=<ms>` - Lock with total duration
+- [ ] `[publicFav] winner:<id> pct=<pct>` - Winner determined
+- [ ] `[publicFav] winnerCard shown id=<id> pct=<pct>` - Card shown
+- [ ] `[publicFav] aborted (flush)` - If aborted
+- [ ] `[publicFav] skipped (need at least 4 players, have N)` - If insufficient
+
+### Debug Helpers
+- [ ] **`window.__pfSimDebug(seasons)`**: 
+  - [ ] Exists and callable
+  - [ ] Returns frequency table
+  - [ ] Console.table shows distribution
+  - [ ] Validates weighted selection works correctly
+- [ ] **`window.forcePFRunOnce()`**: 
+  - [ ] Exists and callable
+  - [ ] Resets guards
+  - [ ] Enables toggle
+  - [ ] Triggers PF simulation immediately
+  - [ ] Returns Promise
+
+### Distribution Testing
+- [ ] **Run Simulation**: `window.__pfSimDebug(200)` completes without errors
+- [ ] **Weight Correlation**: Players with higher survival weeks picked more frequently
+- [ ] **Finalists Favored**: Finalists (weekEvicted=null) have highest pick rates
+- [ ] **All Players Valid**: Every player has non-zero chance of selection
+- [ ] **4 Selected**: Each simulation picks exactly 4 unique candidates
+
+---
+
 ## Code Quality ✅
 - [x] All 9 modified files pass Node.js syntax validation
 - [x] 592 lines added, 35 lines removed (net +557 lines)
