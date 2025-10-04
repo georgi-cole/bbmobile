@@ -479,6 +479,91 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
 .profile-tip .pt-label{ width:54px; color:#a9bccd; }
 .profile-tip .pt-motto{ margin:4px 0 2px; font-style:italic; }
 
+/* 15b. BIO PANEL (Rich Player Profiles) ------------------------------------ */
+.profile-panel{
+  position:fixed; z-index:650; 
+  background:linear-gradient(145deg, #1a2e42, #0f1c2d);
+  border:1px solid #3d5a72; border-radius:16px;
+  box-shadow:0 16px 48px -18px rgba(0,0,0,.85);
+  padding:20px; max-width:340px; width:90vw;
+  font-size:.7rem; line-height:1.4;
+  animation:bioFadeIn .3s ease;
+  transition:opacity .15s ease;
+}
+
+.profile-panel.mobile{
+  position:fixed; bottom:0; left:0; right:0;
+  max-width:100%; width:100%;
+  border-radius:20px 20px 0 0;
+  animation:bioSlideUp .35s cubic-bezier(.25,.9,.25,1);
+  max-height:75vh; overflow-y:auto;
+}
+
+.bio-close-btn{
+  position:absolute; top:12px; right:12px;
+  background:rgba(0,0,0,.3); border:none; border-radius:50%;
+  width:32px; height:32px; font-size:1.2rem; line-height:1;
+  color:#c8dae8; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .2s;
+}
+.bio-close-btn:hover{
+  background:rgba(0,0,0,.5);
+}
+
+.bio-avatar-container{
+  display:flex; justify-content:center; margin-bottom:16px;
+}
+.bio-avatar{
+  width:120px; height:120px; border-radius:16px;
+  object-fit:cover; border:3px solid #3d5a72;
+  box-shadow:0 4px 12px -4px rgba(0,0,0,.6);
+}
+
+@media (max-width: 639px) {
+  .bio-avatar{
+    width:96px; height:96px;
+  }
+}
+
+.bio-content{
+  text-align:center;
+}
+
+.bio-name{
+  font-size:1.2rem; font-weight:700; letter-spacing:.6px;
+  color:#e8f4ff; margin:0 0 14px;
+}
+
+.bio-grid{
+  display:grid; grid-template-columns:minmax(80px,auto) 1fr;
+  gap:8px 14px; margin:0;
+  text-align:left; max-height:260px; overflow-y:auto;
+}
+
+.bio-grid dt{
+  font-weight:600; color:#8ca8be; font-size:.68rem;
+  letter-spacing:.4px;
+}
+
+.bio-grid dd{
+  margin:0; color:#d4e3f0; font-size:.72rem;
+}
+
+.bio-motto{
+  font-style:italic; color:#b9d4e8;
+}
+
+@keyframes bioFadeIn{
+  from{ opacity:0; transform:scale(.95); }
+  to{ opacity:1; transform:scale(1); }
+}
+
+@keyframes bioSlideUp{
+  from{ transform:translateY(100%); opacity:0; }
+  to{ transform:translateY(0); opacity:1; }
+}
+
 /* 16. MINIGAME / COMPETITION STUBS ----------------------------------------- */
 .minigame-host{
   background:#182a3b; border:1px solid #26405b; padding:12px 14px 14px; border-radius:14px;
