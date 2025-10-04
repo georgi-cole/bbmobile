@@ -190,7 +190,7 @@
         global.setMusic?.('victory',true);
         global.showCard?.('They\'re Back!',[`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],'return',5600,true);
         await global.cardQueueWaitIdle?.();
-        global.UI?.spawnConfetti?.(5600,240);
+        // Confetti removed per spec
       }catch(e){}
       g.__returnFlashId=winnerId;
       setTimeout(()=>{ g.__returnFlashId=null; global.updateHud?.(); },6500);
