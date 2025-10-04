@@ -166,8 +166,10 @@
     }catch{}
   }
 
-  // Public's Favourite Player feature
+  // Public's Favourite Player feature (DEPRECATED - moved to jury.js pre-jury flow)
   async function showPublicFavourite(winnerId){
+    console.warn('[finale] showPublicFavourite is deprecated. Public Favourite now runs pre-jury in jury.js');
+    
     const cfg = g.game?.cfg || {};
     if(!cfg.enablePublicFav){
       console.info('[publicFav] skipped (toggle false)');
@@ -181,7 +183,7 @@
     }
     g.__publicFavouriteCompleted = true;
 
-    console.info('[publicFav] start');
+    console.info('[publicFav] start (post-winner fallback)');
     
     function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
     
@@ -425,7 +427,7 @@
   g.showFinaleCinematic = showFinaleCinematic;
   g.showPublicFavourite = showPublicFavourite;
 
-  // Debug test hook (for QA)
+  // Debug test hook (for QA) - updated to use new pre-jury logic
   g.__debugRunPublicFavOnce = function(){
     const cfg = g.game?.cfg || {};
     if(!cfg.enablePublicFav){
@@ -436,14 +438,24 @@
     if(phase !== 'finale' && phase !== 'jury'){
       console.warn('[finale] Debug hook should only be used post-winner (current phase:', phase, ')');
     }
-    // Reset the flag to allow re-run
-    g.__publicFavouriteCompleted = false;
-    const winnerId = g.__lastWinnerId || g.game?.players?.find(p => p.winner)?.id;
-    if(!winnerId){
-      console.warn('[finale] No winner found');
-      return;
+    
+    // Use new pre-jury integration if available
+    if(typeof g.maybeRunPublicFavouriteBeforeJury === 'function'){
+      // Reset flags to allow re-run
+      if(g.game?.finale) g.game.finale.publicFavDone = false;
+      g.__publicFavouriteCompleted = false;
+      console.info('[finale] Using new pre-jury Public Favourite flow');
+      g.maybeRunPublicFavouriteBeforeJury();
+    } else {
+      // Fallback to old implementation
+      g.__publicFavouriteCompleted = false;
+      const winnerId = g.__lastWinnerId || g.game?.players?.find(p => p.winner)?.id;
+      if(!winnerId){
+        console.warn('[finale] No winner found');
+        return;
+      }
+      showPublicFavourite(winnerId);
     }
-    showPublicFavourite(winnerId);
   };
 
   // Enhanced debug hook (development helper) - as specified in problem statement
