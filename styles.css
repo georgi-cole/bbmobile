@@ -396,6 +396,25 @@ button:focus-visible,.btn:focus-visible{ outline:2px solid var(--accent-2); outl
 }
 
 /* 11. LIVE VOTE / EVICTION UI ---------------------------------------------- */
+/* Live Vote Panel - positioned inside TV viewport */
+.liveVotePanel{
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+  z-index:14; /* Above confetti(11), tvOverlay(12), tvNow(13), below liveBadge(15) */
+  max-height:60%; /* Don't cover more than 60% of TV screen */
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:8px 12px 10px;
+  pointer-events:auto; /* Allow interactions with vote buttons */
+}
+
+/* Ensure vote panel scrolls on small screens */
+.liveVotePanel::-webkit-scrollbar{ width:6px; }
+.liveVotePanel::-webkit-scrollbar-track{ background:rgba(15,31,48,.5); }
+.liveVotePanel::-webkit-scrollbar-thumb{ background:rgba(38,67,93,.8); border-radius:3px; }
+
 .lvCol{ flex:1; }
 .lvBarWrap{ height:14px; background:#1d2740; border:1px solid #2a3b5a; border-radius:8px; overflow:hidden; box-shadow:0 4px 10px -6px rgba(0,0,0,.7) inset; }
 .lvBar{ height:100%; width:0%; background:#6fd3ff; box-shadow:0 0 8px -2px #6fd3ff; transition:width .25s; }
@@ -2614,6 +2633,65 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   .tvViewport {
     overflow-y: auto;
     max-height: calc(100dvh - 120px);
+  }
+  
+  /* Live vote panel mobile optimization */
+  .liveVotePanel {
+    max-height: 70%; /* Allow more space on mobile */
+    padding: 6px 8px 8px;
+    font-size: 0.68rem;
+  }
+  
+  .liveVotePanel .minigame-host {
+    padding: 8px 10px 10px;
+    font-size: 0.68rem;
+  }
+  
+  .liveVotePanel .minigame-host h3 {
+    font-size: 0.82rem;
+    margin-bottom: 4px;
+  }
+  
+  /* Stack vote buttons vertically on mobile */
+  .liveVotePanel .row {
+    flex-direction: column;
+    gap: 6px !important;
+  }
+  
+  .liveVotePanel .btn {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.7rem;
+  }
+  
+  /* Adjust tally bars for mobile */
+  .liveVotePanel .lvBarWrap {
+    height: 12px;
+  }
+  
+  .liveVotePanel .tiny {
+    font-size: 0.64rem;
+  }
+}
+
+/* Extra small mobile screens - more compact live vote panel */
+@media (max-width: 559px) {
+  .liveVotePanel {
+    max-height: 75%;
+    padding: 4px 6px 6px;
+  }
+  
+  .liveVotePanel .minigame-host {
+    padding: 6px 8px 8px;
+  }
+  
+  .liveVotePanel .minigame-host h3 {
+    font-size: 0.75rem;
+  }
+  
+  .liveVotePanel .btn {
+    padding: 6px 10px;
+    font-size: 0.68rem;
   }
 }
 

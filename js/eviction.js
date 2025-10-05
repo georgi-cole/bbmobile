@@ -78,12 +78,23 @@
   global.startLiveVote=startLiveVote;
 
   function renderLiveVotePanel(){
-    const g=global.game; const panel=document.querySelector('#panel'); if(!panel) return;
-    panel.innerHTML='';
+    const g=global.game;
+    // Render inside TV viewport instead of outside panel
+    const viewport=document.querySelector('.tvViewport'); if(!viewport) return;
+    
+    // Remove any existing live vote panel
+    const existing = viewport.querySelector('.liveVotePanel');
+    if(existing) existing.remove();
+    
     if(!g.eviction){
-      panel.innerHTML='<div class="tiny muted">Eviction flow not initialized.</div>';
+      // Don't show anything if eviction not initialized
       return;
     }
+    
+    // Create container for live vote panel (will be positioned inside TV)
+    const panel=document.createElement('div');
+    panel.className='liveVotePanel';
+    
     const box=document.createElement('div'); box.className='minigame-host'; box.innerHTML='<h3>Live Vote</h3>';
     const remain=global.alivePlayers().length;
 
@@ -190,6 +201,7 @@
     }
 
     panel.appendChild(box);
+    viewport.appendChild(panel);
   }
   global.renderLiveVotePanel=renderLiveVotePanel;
 
