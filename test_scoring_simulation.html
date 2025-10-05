@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minigame Scoring Simulation & Testing</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0d151f;
+      color: #e3ecf5;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1, h2, h3 {
+      color: #83bfff;
+    }
+    .section {
+      background: rgba(19, 33, 50, 0.8);
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(131, 191, 255, 0.2);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .test-card {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .test-result {
+      margin: 8px 0;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+    button {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #4a90e2, #357abd);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      margin: 4px;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    .success { color: #77d58d; }
+    .warning { color: #f2ce7b; }
+    .error { color: #ff6d6d; }
+    .chart {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+    .bar {
+      background: linear-gradient(90deg, #4a90e2, #357abd);
+      height: 20px;
+      margin: 4px 0;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      font-size: 0.85em;
+      transition: width 0.3s;
+    }
+    .distribution-viz {
+      display: flex;
+      align-items: flex-end;
+      height: 150px;
+      gap: 4px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    .distribution-bar {
+      flex: 1;
+      background: linear-gradient(180deg, #83bfff, #4a90e2);
+      border-radius: 4px 4px 0 0;
+      min-width: 10px;
+      position: relative;
+    }
+    .distribution-bar:hover::after {
+      content: attr(data-count);
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      white-space: nowrap;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    th {
+      background: rgba(131, 191, 255, 0.1);
+      color: #83bfff;
+      font-weight: 600;
+    }
+    .stat-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: 500;
+    }
+    .stat-badge.good { background: rgba(119, 213, 141, 0.2); color: #77d58d; }
+    .stat-badge.neutral { background: rgba(131, 191, 255, 0.2); color: #83bfff; }
+    .stat-badge.bad { background: rgba(255, 109, 109, 0.2); color: #ff6d6d; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Minigame Scoring Simulation & Balance Testing</h1>
+
+    <!-- Quick Tests -->
+    <div class="section">
+      <h2>Quick Normalization Tests</h2>
+      <div class="grid">
+        <div class="test-card">
+          <h3>Time-Based Scoring</h3>
+          <p>Lower time = higher score</p>
+          <button onclick="testTimeNormalization()">Run Test</button>
+          <div id="time-results"></div>
+        </div>
+        <div class="test-card">
+          <h3>Accuracy-Based Scoring</h3>
+          <p>Correct/total ratio to 0-100</p>
+          <button onclick="testAccuracyNormalization()">Run Test</button>
+          <div id="accuracy-results"></div>
+        </div>
+        <div class="test-card">
+          <h3>Hybrid Scoring</h3>
+          <p>Combines time & accuracy</p>
+          <button onclick="testHybridNormalization()">Run Test</button>
+          <div id="hybrid-results"></div>
+        </div>
+        <div class="test-card">
+          <h3>Endurance Scoring</h3>
+          <p>Longer duration = higher score</p>
+          <button onclick="testEnduranceNormalization()">Run Test</button>
+          <div id="endurance-results"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribution Simulation -->
+    <div class="section">
+      <h2>Score Distribution Simulation</h2>
+      <p>Simulate multiple competitions to verify fair score distribution across different player skill levels.</p>
+      
+      <div>
+        <label>Number of simulations: 
+          <input type="number" id="sim-count" value="100" min="10" max="1000" style="padding: 4px 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #e3ecf5;">
+        </label>
+        <button onclick="runDistributionSimulation()">Run Simulation</button>
+        <button onclick="runAllGamesSimulation()">Test All Game Types</button>
+      </div>
+
+      <div id="distribution-chart" class="chart" style="display: none;">
+        <h3>Score Distribution (0-100)</h3>
+        <div class="distribution-viz" id="distribution-viz"></div>
+        <div id="distribution-stats" style="margin-top: 16px;"></div>
+      </div>
+    </div>
+
+    <!-- Fairness Analysis -->
+    <div class="section">
+      <h2>Fairness Analysis</h2>
+      <button onclick="runFairnessAnalysis()">Analyze All Games</button>
+      <div id="fairness-results"></div>
+    </div>
+
+    <!-- Game Comparison -->
+    <div class="section">
+      <h2>Game-by-Game Comparison</h2>
+      <button onclick="runGameComparison()">Compare All Games</button>
+      <div id="game-comparison"></div>
+    </div>
+
+    <!-- Edge Cases -->
+    <div class="section">
+      <h2>Edge Case Testing</h2>
+      <div class="grid">
+        <div class="test-card">
+          <h3>Boundary Values</h3>
+          <button onclick="testBoundaryValues()">Test</button>
+          <div id="boundary-results"></div>
+        </div>
+        <div class="test-card">
+          <h3>Invalid Inputs</h3>
+          <button onclick="testInvalidInputs()">Test</button>
+          <div id="invalid-results"></div>
+        </div>
+        <div class="test-card">
+          <h3>Extreme Values</h3>
+          <button onclick="testExtremeValues()">Test</button>
+          <div id="extreme-results"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Modules -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/scoring.js"></script>
+
+  <script>
+    // Test Helper Functions
+    function displayResult(containerId, results){
+      const container = document.getElementById(containerId);
+      container.innerHTML = results.map(r => 
+        `<div class="test-result"><strong>${r.label}:</strong> ${r.value} ${r.pass ? '<span class="success">✓</span>' : '<span class="error">✗</span>'}</div>`
+      ).join('');
+    }
+
+    // Time-Based Normalization Tests
+    function testTimeNormalization(){
+      if(!window.MinigameScoring){
+        alert('MinigameScoring module not loaded');
+        return;
+      }
+
+      const tests = [
+        { time: 500, expected: 100, label: 'Fast time (500ms)' },
+        { time: 1000, expected: 100, label: 'Target time (1000ms)' },
+        { time: 2500, expected: '>50', label: 'Medium time (2500ms)' },
+        { time: 5000, expected: 20, label: 'Max time (5000ms)' },
+        { time: 10000, expected: 20, label: 'Over max (10000ms)' }
+      ];
+
+      const results = tests.map(test => {
+        const score = window.MinigameScoring.normalizeTime(test.time);
+        const pass = typeof test.expected === 'number' ? 
+          Math.abs(score - test.expected) < 5 : 
+          (test.expected === '>50' ? score > 50 : true);
+        return {
+          label: test.label,
+          value: score.toFixed(1),
+          pass: pass
+        };
+      });
+
+      displayResult('time-results', results);
+    }
+
+    // Accuracy-Based Normalization Tests
+    function testAccuracyNormalization(){
+      if(!window.MinigameScoring){
+        alert('MinigameScoring module not loaded');
+        return;
+      }
+
+      const tests = [
+        { correct: 10, total: 10, label: 'Perfect (10/10)' },
+        { correct: 7, total: 10, label: 'Good (7/10)' },
+        { correct: 5, total: 10, label: 'Half (5/10)' },
+        { correct: 0, total: 10, label: 'None (0/10)' },
+        { correct: 8, total: 10, incorrect: 2, penalize: true, label: 'With penalty (8/10, 2 wrong)' }
+      ];
+
+      const results = tests.map(test => {
+        const score = window.MinigameScoring.normalizeAccuracy(
+          test.correct, 
+          test.total, 
+          test.penalize || false,
+          test.incorrect || 0
+        );
+        const expected = test.penalize ? 
+          (test.correct / test.total * 100) - (test.incorrect / test.total * 20) :
+          (test.correct / test.total * 100);
+        const pass = Math.abs(score - expected) < 1;
+        return {
+          label: test.label,
+          value: score.toFixed(1),
+          pass: pass
+        };
+      });
+
+      displayResult('accuracy-results', results);
+    }
+
+    // Hybrid Normalization Tests
+    function testHybridNormalization(){
+      if(!window.MinigameScoring){
+        alert('MinigameScoring module not loaded');
+        return;
+      }
+
+      const tests = [
+        { correct: 10, total: 10, timeMs: 5000, label: 'Perfect accuracy, medium time' },
+        { correct: 5, total: 10, timeMs: 2000, label: 'Half accuracy, fast time' },
+        { correct: 8, total: 10, timeMs: 8000, label: 'Good accuracy, slow time' },
+        { correct: 10, total: 10, timeMs: 15000, label: 'Perfect accuracy, very slow' }
+      ];
+
+      const results = tests.map(test => {
+        const score = window.MinigameScoring.normalizeHybrid({
+          correct: test.correct,
+          total: test.total,
+          timeMs: test.timeMs,
+          targetTimeMs: 1000,
+          accuracyWeight: 0.6
+        });
+        const pass = score >= 0 && score <= 100;
+        return {
+          label: test.label,
+          value: score.toFixed(1),
+          pass: pass
+        };
+      });
+
+      displayResult('hybrid-results', results);
+    }
+
+    // Endurance Normalization Tests
+    function testEnduranceNormalization(){
+      if(!window.MinigameScoring){
+        alert('MinigameScoring module not loaded');
+        return;
+      }
+
+      const tests = [
+        { duration: 500, expected: '<10', label: 'Very short (500ms)' },
+        { duration: 5000, expected: '>10', label: 'Short (5s)' },
+        { duration: 15000, expected: '>50', label: 'Medium (15s)' },
+        { duration: 30000, expected: 100, label: 'Target (30s)' },
+        { duration: 60000, expected: 100, label: 'Long (60s)' }
+      ];
+
+      const results = tests.map(test => {
+        const score = window.MinigameScoring.normalizeEndurance(test.duration);
+        let pass = false;
+        if(test.expected === '<10') pass = score < 10;
+        else if(test.expected === '>10') pass = score > 10;
+        else if(test.expected === '>50') pass = score > 50;
+        else if(typeof test.expected === 'number') pass = Math.abs(score - test.expected) < 5;
+        
+        return {
+          label: test.label,
+          value: score.toFixed(1),
+          pass: pass
+        };
+      });
+
+      displayResult('endurance-results', results);
+    }
+
+    // Distribution Simulation
+    function runDistributionSimulation(){
+      if(!window.MinigameScoring){
+        alert('MinigameScoring module not loaded');
+        return;
+      }
+
+      const count = parseInt(document.getElementById('sim-count').value) || 100;
+      const scores = [];
+
+      // Simulate scores with normal distribution
+      for(let i = 0; i < count; i++){
+        const baseSkill = 0.3 + Math.random() * 0.7; // 0.3 to 1.0
+        const variance = (Math.random() - 0.5) * 0.3; // -0.15 to +0.15
+        const rawScore = (baseSkill + variance) * 100;
+        const clampedScore = Math.max(0, Math.min(100, rawScore));
+        scores.push(clampedScore);
+      }
+
+      // Create distribution bins
+      const bins = Array(10).fill(0);
+      scores.forEach(score => {
+        const bin = Math.min(9, Math.floor(score / 10));
+        bins[bin]++;
+      });
+
+      // Calculate statistics
+      const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+      const sortedScores = scores.slice().sort((a, b) => a - b);
+      const median = sortedScores[Math.floor(sortedScores.length / 2)];
+      const min = Math.min(...scores);
+      const max = Math.max(...scores);
+      const stdDev = Math.sqrt(
+        scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length
+      );
+
+      // Display distribution chart
+      const chartDiv = document.getElementById('distribution-chart');
+      chartDiv.style.display = 'block';
+      
+      const vizDiv = document.getElementById('distribution-viz');
+      const maxBin = Math.max(...bins);
+      vizDiv.innerHTML = bins.map((count, i) => {
+        const height = (count / maxBin) * 100;
+        return `<div class="distribution-bar" 
+                     style="height: ${height}%" 
+                     data-count="${count} scores in ${i * 10}-${(i + 1) * 10} range"
+                     title="${count} scores"></div>`;
+      }).join('');
+
+      // Display statistics
+      document.getElementById('distribution-stats').innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+          <div><strong>Mean:</strong> ${mean.toFixed(2)}</div>
+          <div><strong>Median:</strong> ${median.toFixed(2)}</div>
+          <div><strong>Std Dev:</strong> ${stdDev.toFixed(2)}</div>
+          <div><strong>Min:</strong> ${min.toFixed(2)}</div>
+          <div><strong>Max:</strong> ${max.toFixed(2)}</div>
+          <div><strong>Range:</strong> ${(max - min).toFixed(2)}</div>
+        </div>
+        <p style="margin-top: 12px;">
+          ${stdDev < 15 ? '<span class="stat-badge good">Low variance - Consistent</span>' : ''}
+          ${stdDev >= 15 && stdDev < 25 ? '<span class="stat-badge neutral">Medium variance - Balanced</span>' : ''}
+          ${stdDev >= 25 ? '<span class="stat-badge bad">High variance - Unpredictable</span>' : ''}
+        </p>
+      `;
+    }
+
+    // Test All Game Types
+    function runAllGamesSimulation(){
+      if(!window.MinigameScoring || !window.MinigameRegistry){
+        alert('Required modules not loaded');
+        return;
+      }
+
+      const games = window.MinigameRegistry.getImplementedGames(true);
+      const results = [];
+
+      games.forEach(gameKey => {
+        const game = window.MinigameRegistry.getGame(gameKey);
+        const strategy = window.MinigameScoring.getScoringStrategy(gameKey);
+        
+        // Simulate 50 plays
+        const scores = [];
+        for(let i = 0; i < 50; i++){
+          let score;
+          
+          switch(strategy.type){
+            case 'time':
+              const time = 1000 + Math.random() * 3000;
+              score = window.MinigameScoring.normalizeTime(time);
+              break;
+            case 'accuracy':
+              const correct = Math.floor(Math.random() * 10) + 1;
+              score = window.MinigameScoring.normalizeAccuracy(correct, 10);
+              break;
+            case 'hybrid':
+              score = window.MinigameScoring.normalizeHybrid({
+                correct: Math.floor(Math.random() * 10) + 1,
+                total: 10,
+                timeMs: 5000 + Math.random() * 5000
+              });
+              break;
+            case 'endurance':
+              const duration = 5000 + Math.random() * 25000;
+              score = window.MinigameScoring.normalizeEndurance(duration);
+              break;
+            default:
+              score = Math.random() * 100;
+          }
+          
+          scores.push(score);
+        }
+
+        const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+        const stdDev = Math.sqrt(
+          scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length
+        );
+
+        results.push({
+          name: game.name,
+          type: strategy.type,
+          mean: mean.toFixed(1),
+          stdDev: stdDev.toFixed(1),
+          min: Math.min(...scores).toFixed(1),
+          max: Math.max(...scores).toFixed(1)
+        });
+      });
+
+      // Display results table
+      document.getElementById('game-comparison').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Game</th>
+              <th>Type</th>
+              <th>Mean Score</th>
+              <th>Std Dev</th>
+              <th>Min</th>
+              <th>Max</th>
+              <th>Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${results.map(r => {
+              const balanced = parseFloat(r.stdDev) < 20;
+              return `
+                <tr>
+                  <td>${r.name}</td>
+                  <td>${r.type}</td>
+                  <td>${r.mean}</td>
+                  <td>${r.stdDev}</td>
+                  <td>${r.min}</td>
+                  <td>${r.max}</td>
+                  <td>${balanced ? '<span class="stat-badge good">✓ Balanced</span>' : '<span class="stat-badge neutral">~ Variable</span>'}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // Fairness Analysis
+    function runFairnessAnalysis(){
+      if(!window.MinigameScoring){
+        alert('MinigameScoring module not loaded');
+        return;
+      }
+
+      const tests = [
+        { name: 'Score Ceiling', test: () => {
+          const score = window.MinigameScoring.normalize(150, 0, 100);
+          return score === 100;
+        }},
+        { name: 'Score Floor', test: () => {
+          const score = window.MinigameScoring.normalize(-50, 0, 100);
+          return score === 0;
+        }},
+        { name: 'Linear Scaling', test: () => {
+          const score50 = window.MinigameScoring.normalize(50, 0, 100);
+          return Math.abs(score50 - 50) < 1;
+        }},
+        { name: 'Time Consistency', test: () => {
+          const fast = window.MinigameScoring.normalizeTime(800);
+          const slow = window.MinigameScoring.normalizeTime(4000);
+          return fast > slow && fast === 100;
+        }},
+        { name: 'Accuracy Precision', test: () => {
+          const perfect = window.MinigameScoring.normalizeAccuracy(10, 10);
+          const half = window.MinigameScoring.normalizeAccuracy(5, 10);
+          return perfect === 100 && half === 50;
+        }}
+      ];
+
+      const results = tests.map(t => ({
+        label: t.name,
+        value: t.test() ? 'Pass' : 'Fail',
+        pass: t.test()
+      }));
+
+      displayResult('fairness-results', results);
+    }
+
+    // Boundary Value Testing
+    function testBoundaryValues(){
+      if(!window.MinigameScoring){
+        alert('MinigameScoring module not loaded');
+        return;
+      }
+
+      const tests = [
+        { label: 'Zero time', value: window.MinigameScoring.normalizeTime(0), expected: 100 },
+        { label: 'Max time', value: window.MinigameScoring.normalizeTime(5000), expected: 20 },
+        { label: 'Zero accuracy', value: window.MinigameScoring.normalizeAccuracy(0, 10), expected: 0 },
+        { label: 'Perfect accuracy', value: window.MinigameScoring.normalizeAccuracy(10, 10), expected: 100 },
+        { label: 'Min endurance', value: window.MinigameScoring.normalizeEndurance(0), expected: 0 },
+        { label: 'Max endurance', value: window.MinigameScoring.normalizeEndurance(30000), expected: 100 }
+      ];
+
+      const results = tests.map(t => ({
+        label: t.label,
+        value: t.value.toFixed(1),
+        pass: Math.abs(t.value - t.expected) < 5
+      }));
+
+      displayResult('boundary-results', results);
+    }
+
+    // Invalid Input Testing
+    function testInvalidInputs(){
+      if(!window.MinigameScoring){
+        alert('MinigameScoring module not loaded');
+        return;
+      }
+
+      const tests = [
+        { 
+          label: 'Negative time', 
+          test: () => {
+            const score = window.MinigameScoring.normalizeTime(-100);
+            return score >= 0 && score <= 100;
+          }
+        },
+        { 
+          label: 'Zero total (accuracy)', 
+          test: () => {
+            const score = window.MinigameScoring.normalizeAccuracy(5, 0);
+            return score === 0;
+          }
+        },
+        { 
+          label: 'More correct than total', 
+          test: () => {
+            const score = window.MinigameScoring.normalizeAccuracy(15, 10);
+            return score >= 0 && score <= 100;
+          }
+        },
+        { 
+          label: 'Negative duration', 
+          test: () => {
+            const score = window.MinigameScoring.normalizeEndurance(-1000);
+            return score >= 0;
+          }
+        }
+      ];
+
+      const results = tests.map(t => ({
+        label: t.label,
+        value: t.test() ? 'Handled' : 'Failed',
+        pass: t.test()
+      }));
+
+      displayResult('invalid-results', results);
+    }
+
+    // Extreme Value Testing
+    function testExtremeValues(){
+      if(!window.MinigameScoring){
+        alert('MinigameScoring module not loaded');
+        return;
+      }
+
+      const tests = [
+        { label: 'Very large time', value: window.MinigameScoring.normalizeTime(999999) },
+        { label: 'Very large accuracy', value: window.MinigameScoring.normalizeAccuracy(1000, 1000) },
+        { label: 'Very long endurance', value: window.MinigameScoring.normalizeEndurance(999999) },
+        { label: 'Extreme multiplier', value: window.MinigameScoring.applyCompetitiveMultiplier(100, 1.0, 2.0) }
+      ];
+
+      const results = tests.map(t => ({
+        label: t.label,
+        value: t.value.toFixed(1),
+        pass: t.value >= 0 && t.value <= 150
+      }));
+
+      displayResult('extreme-results', results);
+    }
+
+    // Auto-run basic tests on load
+    window.addEventListener('load', () => {
+      console.log('✅ Scoring simulation page loaded');
+      console.log('📊 Ready to run tests');
+    });
+  </script>
+</body>
+</html>

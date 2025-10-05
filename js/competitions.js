@@ -196,6 +196,20 @@
     const final = Math.max(0, Math.min(150, normalizedBase * mult));
     
     g.lastCompScores.set(id, final);
+    
+    // Log completion to telemetry
+    if(global.MinigameTelemetry && label){
+      const gameKey = label.split('/')[1] || 'unknown';
+      global.MinigameTelemetry.logComplete(gameKey, {
+        score: base,
+        normalizedScore: normalizedBase,
+        finalScore: final,
+        playerId: id,
+        phase: g.phase,
+        multiplier: mult
+      });
+    }
+    
     // Hidden scoring: only log that player completed, not the score
     global.addLog(`${global.safeName(id)} completed the ${g.phase === 'hoh' ? 'HOH' : 'competition'}.`,'tiny');
     return true;

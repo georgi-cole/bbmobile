@@ -101,6 +101,16 @@
     console.info('[MinigameSelector] Selected:', selectedGame, 
                 `(${game.__minigameIndex}/${game.__minigamePool.length} in pool)`);
     
+    // Log selection to telemetry
+    if(g.MinigameTelemetry){
+      g.MinigameTelemetry.logSelection(selectedGame, {
+        poolSize: game.__minigamePool.length,
+        poolIndex: game.__minigameIndex,
+        historyLength: game.__minigameHistory.length,
+        method: 'pool'
+      });
+    }
+    
     return selectedGame;
   }
 

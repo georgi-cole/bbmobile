@@ -251,6 +251,12 @@
     const entry = REGISTRY[key];
     if(!entry){
       console.error('[MiniGames] Unknown minigame:', key);
+      
+      // Log error to telemetry
+      if(g.MinigameTelemetry){
+        g.MinigameTelemetry.logError(key, 'Unknown minigame key', {});
+      }
+      
       // Fallback to first implemented
       const impl = getImplemented();
       if(impl.length > 0){
@@ -259,12 +265,45 @@
       return;
     }
 
-    // Check if module is loaded
-    if(g.MiniGames && g.MiniGames[key] && typeof g.MiniGames[key].render === 'function'){
-      g.MiniGames[key].render(container, onComplete);
+    // Use error handler if available
+    if(g.MinigameErrorHandler){
+      const metadata = {
+        phase: g.game?.phase,
+        playerId: g.game?.humanId,
+        week: g.game?.week
+      };
+      
+      g.MinigameErrorHandler.safeRender(key, container, onComplete, metadata);
     } else {
-      // Module not loaded, show error
-      container.innerHTML = `<div style="padding:20px;text-align:center;"><p>Minigame "${entry.name}" failed to load.</p><button class="btn" onclick="this.parentElement.parentElement.innerHTML='';(${onComplete})(50)">Skip</button></div>`;
+      // Fallback to direct rendering (legacy mode)
+      // Check if module is loaded
+      if(g.MiniGames && g.MiniGames[key] && typeof g.MiniGames[key].render === 'function'){
+        try {
+          g.MiniGames[key].render(container, onComplete);
+          
+          // Log start to telemetry
+          if(g.MinigameTelemetry){
+            g.MinigameTelemetry.logStart(key, {
+              playerId: g.game?.humanId,
+              phase: g.game?.phase,
+              week: g.game?.week
+            });
+          }
+        } catch(error){
+          console.error(`[MiniGames] Error rendering "${key}":`, error);
+          
+          // Log error
+          if(g.MinigameTelemetry){
+            g.MinigameTelemetry.logError(key, error, {});
+          }
+          
+          // Module not loaded, show error
+          container.innerHTML = `<div style="padding:20px;text-align:center;"><p>Minigame "${entry.name}" failed to load.</p><button class="btn" onclick="this.parentElement.parentElement.innerHTML='';(${onComplete})(50)">Skip</button></div>`;
+        }
+      } else {
+        // Module not loaded, show error
+        container.innerHTML = `<div style="padding:20px;text-align:center;"><p>Minigame "${entry.name}" failed to load.</p><button class="btn" onclick="this.parentElement.parentElement.innerHTML='';(${onComplete})(50)">Skip</button></div>`;
+      }
     }
   }
 
