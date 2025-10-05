@@ -244,17 +244,25 @@
     const grid=host.querySelector('#rtGrid');
     st.jurors.forEach(id=>{
       const p=gp(id);
+      const jurorName = global.safeName?.(id) || 'Juror';
       const card=document.createElement('div');
       card.className='rtCard';
       card.dataset.id=String(id);
       card.setAttribute('role','listitem');
+      
+      // Use global avatar resolver
+      const avatarUrl = (global.resolveAvatar?.(id)) || 
+                       (p?.avatar) || (p?.img) || (p?.photo) || 
+                       `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p?.name||'juror')}`;
+      
       card.innerHTML=`
         <div class="rtAvatarWrap">
-          <img src="${(p?.avatar||p?.img||p?.photo||`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p?.name||'juror')}`)}"
-               class="rtAvatar" alt="${global.safeName?.(id) || 'Juror'}"/>
+          <img src="${avatarUrl}"
+               class="rtAvatar" alt="${jurorName}"
+               onerror="console.info('[twists] avatar fallback for juror=${id} url='+this.src); this.onerror=null; this.src=(window.Game||window).getAvatarFallback?.('${jurorName}', this.src) || 'https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(jurorName)}';"/>
           <div class="rtAvatarRing"></div>
         </div>
-        <div class="rtName tiny" title="${global.safeName?.(id) || 'Juror'}">${global.safeName?.(id) || 'Juror'}</div>
+        <div class="rtName tiny" title="${jurorName}">${jurorName}</div>
         <div class="rtBarOuter"><div class="rtBarFill"></div></div>
         <div class="rtPct tiny">0%</div>
       `;

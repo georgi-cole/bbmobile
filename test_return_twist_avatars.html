@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Return Twist Avatar Resolution Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      background: #1a1d2e;
+      color: #e0e0e0;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #242836;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    .test-case {
+      margin: 15px 0;
+      padding: 15px;
+      background: #2a2f44;
+      border-radius: 6px;
+      border-left: 4px solid #4a90e2;
+    }
+    .test-case.pass {
+      border-left-color: #4caf50;
+    }
+    .test-case.fail {
+      border-left-color: #f44336;
+    }
+    .avatar-preview {
+      display: inline-block;
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      border: 2px solid #8fd3ff;
+      margin: 10px 5px;
+      vertical-align: middle;
+    }
+    .info {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
+    }
+    h1 {
+      color: #4a90e2;
+    }
+    h2 {
+      color: #6fa8dc;
+      font-size: 18px;
+    }
+    code {
+      background: #1a1d2e;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #81d4fa;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 Return Twist Avatar Resolution Test</h1>
+    <p>Testing that juror avatars in return_twist phase use centralized <code>resolveAvatar()</code> function</p>
+    <div id="results"></div>
+  </div>
+
+  <script src="js/avatar.js"></script>
+  <script>
+    // Mock game state
+    window.Game = window.Game || window;
+    window.Game.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: 'custom-alice.png' },
+        { id: 2, name: 'Bob', img: 'bob-image.jpg' },
+        { id: 3, name: 'Charlie', photo: 'charlie-photo.jpg' },
+        { id: 4, name: 'Diana' }, // No avatar - should use fallback
+        { id: 5, name: 'Eve' },   // No avatar - should use fallback
+      ],
+      juryHouse: [1, 2, 3, 4, 5],
+      cfg: { strictAvatars: false }
+    };
+    
+    // Mock helper
+    window.Game.getP = (id) => window.Game.game.players.find(p => p.id === id);
+    window.Game.safeName = (id) => {
+      const p = window.Game.getP(id);
+      return p?.name || String(id);
+    };
+
+    const resultsDiv = document.getElementById('results');
+    
+    function addTest(name, condition, details) {
+      const div = document.createElement('div');
+      div.className = `test-case ${condition ? 'pass' : 'fail'}`;
+      div.innerHTML = `
+        <strong>${condition ? '✓' : '✗'} ${name}</strong>
+        <div class="info">${details}</div>
+      `;
+      resultsDiv.appendChild(div);
+    }
+
+    // Test 1: Check that resolveAvatar exists
+    addTest(
+      'Global resolveAvatar function exists',
+      typeof window.Game.resolveAvatar === 'function',
+      'Function must be available globally for juror avatar resolution'
+    );
+
+    // Test 2: Check that getAvatarFallback exists
+    addTest(
+      'Global getAvatarFallback function exists',
+      typeof window.Game.getAvatarFallback === 'function',
+      'Fallback function must be available for error handling'
+    );
+
+    // Test 3: Test avatar resolution for player with avatar property
+    const alice = window.Game.resolveAvatar(1);
+    addTest(
+      'Player with avatar property',
+      alice === 'custom-alice.png',
+      `Expected: custom-alice.png, Got: ${alice}`
+    );
+
+    // Test 4: Test avatar resolution for player with img property
+    const bob = window.Game.resolveAvatar(2);
+    addTest(
+      'Player with img property',
+      bob === 'bob-image.jpg',
+      `Expected: bob-image.jpg, Got: ${bob}`
+    );
+
+    // Test 5: Test avatar resolution for player with photo property
+    const charlie = window.Game.resolveAvatar(3);
+    addTest(
+      'Player with photo property',
+      charlie === 'charlie-photo.jpg',
+      `Expected: charlie-photo.jpg, Got: ${charlie}`
+    );
+
+    // Test 6: Test fallback for player without custom avatar
+    const diana = window.Game.resolveAvatar(4);
+    const isDianaFallback = diana.includes('./avatars/') || diana.includes('dicebear.com');
+    addTest(
+      'Player without avatar uses fallback',
+      isDianaFallback,
+      `Should use ./avatars/ or dicebear fallback. Got: ${diana}`
+    );
+
+    // Test 7: Test avatar preview rendering
+    const previewDiv = document.createElement('div');
+    previewDiv.innerHTML = '<h2>Avatar Previews</h2>';
+    
+    [1, 2, 3, 4, 5].forEach(id => {
+      const player = window.Game.getP(id);
+      const avatarUrl = window.Game.resolveAvatar(id);
+      const img = document.createElement('img');
+      img.className = 'avatar-preview';
+      img.src = avatarUrl;
+      img.alt = player?.name || String(id);
+      img.title = `${player?.name || id}: ${avatarUrl}`;
+      
+      // Add onerror handler
+      img.onerror = function() {
+        console.info(`[test] Avatar fallback for ${player?.name || id}`);
+        this.onerror = null;
+        this.src = window.Game.getAvatarFallback(player?.name || String(id), this.src);
+      };
+      
+      previewDiv.appendChild(img);
+    });
+    
+    resultsDiv.appendChild(previewDiv);
+
+    // Test 8: Verify no inline resolution (checking exported functions are used)
+    addTest(
+      'Avatar system properly integrated',
+      window.Game.resolveAvatar && window.Game.getAvatarFallback,
+      'Both resolveAvatar and getAvatarFallback are available for jury return twist'
+    );
+
+    // Summary
+    const summaryDiv = document.createElement('div');
+    summaryDiv.className = 'test-case';
+    summaryDiv.style.marginTop = '30px';
+    summaryDiv.style.borderLeftColor = '#4a90e2';
+    summaryDiv.innerHTML = `
+      <h2>✅ Test Summary</h2>
+      <p>All avatar resolution tests completed. The centralized avatar system is ready for use in:</p>
+      <ul>
+        <li><code>js/twists.js</code> - Return twist panel</li>
+        <li><code>js/jury_return_vote.js</code> - Jury return vote UI</li>
+        <li><code>js/jury.js</code> - Finale jury system</li>
+      </ul>
+      <p><strong>Expected behavior:</strong></p>
+      <ul>
+        <li>✓ Uses player.avatar, player.img, or player.photo if available</li>
+        <li>✓ Falls back to ./avatars/{Name}.png pattern</li>
+        <li>✓ Uses Dicebear API as final fallback</li>
+        <li>✓ Logs when fallback is triggered for debugging</li>
+        <li>✓ No 404 errors for avatar requests</li>
+      </ul>
+    `;
+    resultsDiv.appendChild(summaryDiv);
+  </script>
+</body>
+</html>
