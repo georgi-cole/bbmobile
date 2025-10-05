@@ -267,6 +267,30 @@
   function avgAffinity(p){ const vals=Object.values(p.affinity||{}); return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0; }
   function updatePlayerThreat(p){ p.threat=THREAT_BASE+0.1*(p.wins.hoh+p.wins.veto); }
 
+  /* ===== Badge State Synchronization ===== */
+  // Synchronize per-player properties (p.hoh, p.nominated, p.nominationState) with game state (g.hohId, g.nominees)
+  // This ensures badge rendering always matches the true HOH and nominees state
+  function syncPlayerBadgeStates(){
+    const g = game;
+    const nominees = Array.isArray(g.nominees) ? g.nominees : [];
+    const nomineeSet = new Set(nominees);
+    
+    for(const p of g.players){
+      // Sync HOH badge
+      p.hoh = (p.id === g.hohId);
+      
+      // Sync nomination badge and state
+      const isNominated = nomineeSet.has(p.id);
+      p.nominated = isNominated;
+      
+      // Only update nominationState if it's not in a transition state (pendingSave, saved, replacement)
+      // During veto ceremony, these states are managed by veto.js
+      if(p.nominationState !== 'pendingSave' && p.nominationState !== 'saved' && p.nominationState !== 'replacement'){
+        p.nominationState = isNominated ? 'nominated' : 'none';
+      }
+    }
+  }
+
   /* ===== Exports ===== */
   global.game=game;
   global.TRAITS=TRAITS;
@@ -286,6 +310,7 @@
   global.enemyNames=enemyNames;
   global.avgAffinity=avgAffinity;
   global.updatePlayerThreat=updatePlayerThreat;
+  global.syncPlayerBadgeStates=syncPlayerBadgeStates;
 
   global.ALLY_T=ALLY_T;
   global.ENEMY_T=ENEMY_T;

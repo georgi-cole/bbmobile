@@ -166,6 +166,9 @@
     g.__nomsCommitted = true;
     applyNominationSideEffects();
 
+    // Sync player badge states after nominations are locked
+    if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
+
     (async function ceremony(){
       const hoh=global.getP(g.hohId);
       g.__suppressNomBadges = true; global.updateHud?.();
