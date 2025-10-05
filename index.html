@@ -235,7 +235,7 @@
 
 <!-- Game flows -->
 <script src="js/social.js"></script>
-<script src="js/minigames.js"></script>
+<script src="js/minigames.js"></script><!-- Legacy stub - see docs/minigames.md -->
 
 <!-- Utilities -->
 <script defer src="js/bbGameBus.js"></script>
@@ -284,17 +284,17 @@
 <script defer src="js/minigames/hidden-object.js"></script>
 <script defer src="js/minigames/balance-game.js"></script>
 
-<!-- Phase 1: Minigame system refactor modules -->
-<script defer src="js/minigames/registry.js"></script>
-<script defer src="js/minigames/selector.js"></script>
-<script defer src="js/minigames/scoring.js"></script>
-<script defer src="js/minigames/mobile-utils.js"></script>
-<script defer src="js/minigames/accessibility.js"></script>
-<script defer src="js/minigames/telemetry.js"></script>
-<script defer src="js/minigames/error-handler.js"></script>
-<script defer src="js/minigames/debug-panel.js"></script>
+<!-- Phase 1-8: Minigame system (see docs/minigames.md) -->
+<script defer src="js/minigames/registry.js"></script><!-- Central metadata store -->
+<script defer src="js/minigames/selector.js"></script><!-- Non-repeating pool selection -->
+<script defer src="js/minigames/scoring.js"></script><!-- Unified scoring -->
+<script defer src="js/minigames/mobile-utils.js"></script><!-- Touch/tap helpers -->
+<script defer src="js/minigames/accessibility.js"></script><!-- A11y features -->
+<script defer src="js/minigames/telemetry.js"></script><!-- Event logging -->
+<script defer src="js/minigames/error-handler.js"></script><!-- Error recovery -->
+<script defer src="js/minigames/debug-panel.js"></script><!-- Debug tools -->
 
-<!-- Minigames registry (legacy bridge) -->
+<!-- Legacy compatibility bridge - maps old keys to new modules -->
 <script defer src="js/minigames/index.js"></script>
 <script src="js/competitions.js"></script>
 <script src="js/nominations.js"></script>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 8 Cleanup Validation</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0f1419;
+      color: #e3ecf5;
+    }
+    h1, h2 { color: #6fd3ff; }
+    .test-section {
+      background: #1d2734;
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .test-result {
+      padding: 8px 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass { background: #1b4332; color: #74e48b; border-left: 4px solid #74e48b; }
+    .fail { background: #4d1616; color: #ff6b6b; border-left: 4px solid #ff6b6b; }
+    .info { background: #1a2a44; color: #6fd3ff; border-left: 4px solid #6fd3ff; }
+    button {
+      background: #167bb4;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 4px;
+    }
+    button:hover { background: #1a8fcd; }
+    #minigame-container {
+      min-height: 200px;
+      background: #0f1419;
+      border: 2px dashed #2c3a4d;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Phase 8: Minigame System Cleanup Validation</h1>
+  
+  <div class="test-section">
+    <h2>1. Legacy Code Removal Tests</h2>
+    <div id="legacy-tests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. System Integration Tests</h2>
+    <div id="integration-tests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Documentation Tests</h2>
+    <div id="docs-tests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Live Minigame Test</h2>
+    <p>Test that a minigame can still be rendered:</p>
+    <button onclick="testRenderMinigame()">Render Test Game</button>
+    <button onclick="clearContainer()">Clear</button>
+    <div id="minigame-container"></div>
+  </div>
+
+  <!-- Load minigame system -->
+  <script src="js/minigames.js"></script><!-- Legacy stub -->
+  <script defer src="js/minigames/registry.js"></script>
+  <script defer src="js/minigames/selector.js"></script>
+  <script defer src="js/minigames/scoring.js"></script>
+  <script defer src="js/minigames/mobile-utils.js"></script>
+  <script defer src="js/minigames/index.js"></script>
+
+  <!-- Load a test game -->
+  <script defer src="js/minigames/quick-tap.js"></script>
+  <script defer src="js/minigames/count-house.js"></script>
+
+  <script>
+    // Wait for modules to load
+    window.addEventListener('load', function() {
+      setTimeout(runTests, 100);
+    });
+
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function runTests() {
+      testLegacyRemoval();
+      testIntegration();
+      testDocumentation();
+    }
+
+    function testLegacyRemoval() {
+      const container = 'legacy-tests';
+      
+      // Test 1: Legacy game functions should NOT exist in global scope
+      const legacyFunctions = [
+        'mgClicker', 'mgMemoryColors', 'mgMath', 'mgTimingBar', 
+        'mgTyping', 'mgReaction', 'mgNumberSeq', 'mgPatternMatch',
+        'mgSlider', 'mgAnagram', 'mgPathfinder', 'mgTargetPractice',
+        'mgFindPair', 'mgSimon', 'mgEstimation'
+      ];
+      
+      let allRemoved = true;
+      legacyFunctions.forEach(fn => {
+        if(typeof window[fn] === 'function') {
+          log(container, `✗ Legacy function still exists: ${fn}`, 'fail');
+          allRemoved = false;
+        }
+      });
+      
+      if(allRemoved) {
+        log(container, `✓ All ${legacyFunctions.length} legacy functions removed`, 'pass');
+      }
+
+      // Test 2: renderMinigame should still exist as a stub
+      if(typeof window.renderMinigame === 'function') {
+        log(container, '✓ renderMinigame stub exists for compatibility', 'pass');
+      } else {
+        log(container, '✗ renderMinigame stub missing', 'fail');
+      }
+    }
+
+    function testIntegration() {
+      const container = 'integration-tests';
+
+      // Test 1: Registry should be loaded
+      if(window.MinigameRegistry && window.MinigameRegistry.registry) {
+        const gameCount = Object.keys(window.MinigameRegistry.registry).length;
+        log(container, `✓ MinigameRegistry loaded with ${gameCount} games`, 'pass');
+      } else {
+        log(container, '✗ MinigameRegistry not loaded', 'fail');
+        return;
+      }
+
+      // Test 2: Selector should be loaded
+      if(window.MinigameSelector && typeof window.MinigameSelector.selectNext === 'function') {
+        log(container, '✓ MinigameSelector loaded', 'pass');
+      } else {
+        log(container, '✗ MinigameSelector not loaded', 'fail');
+      }
+
+      // Test 3: Scoring should be loaded
+      if(window.MinigameScoring && typeof window.MinigameScoring.normalizeTime === 'function') {
+        log(container, '✓ MinigameScoring loaded', 'pass');
+      } else {
+        log(container, '✗ MinigameScoring not loaded', 'fail');
+      }
+
+      // Test 4: Mobile utils should be loaded
+      if(window.MobileUtils && typeof window.MobileUtils.createButton === 'function') {
+        log(container, '✓ MobileUtils loaded', 'pass');
+      } else {
+        log(container, '✗ MobileUtils not loaded', 'fail');
+      }
+
+      // Test 5: Legacy bridge should work
+      if(window.MiniGamesRegistry && typeof window.MiniGamesRegistry.render === 'function') {
+        log(container, '✓ Legacy compatibility bridge active', 'pass');
+      } else {
+        log(container, '✗ Legacy compatibility bridge missing', 'fail');
+      }
+
+      // Test 6: Check implemented games
+      if(window.MinigameRegistry && typeof window.MinigameRegistry.getImplemented === 'function') {
+        const implemented = window.MinigameRegistry.getImplemented();
+        log(container, `✓ ${implemented.length} games marked as implemented`, 'pass');
+      } else {
+        log(container, '✗ Cannot check implemented games', 'fail');
+      }
+
+      // Test 7: Test legacy key mapping
+      const legacyKeys = ['clicker', 'memory', 'math', 'bar'];
+      log(container, `ℹ Testing legacy key mapping for: ${legacyKeys.join(', ')}`, 'info');
+    }
+
+    function testDocumentation() {
+      const container = 'docs-tests';
+      
+      log(container, 'ℹ Documentation should be available at docs/minigames.md', 'info');
+      log(container, 'ℹ ESLint config should be at .eslintrc.json', 'info');
+      
+      // Test: Check if game modules follow the pattern
+      if(window.MiniGames) {
+        const loadedModules = Object.keys(window.MiniGames);
+        log(container, `✓ ${loadedModules.length} game modules loaded: ${loadedModules.slice(0, 5).join(', ')}...`, 'pass');
+        
+        // Check module structure
+        let allValid = true;
+        loadedModules.forEach(key => {
+          if(!window.MiniGames[key].render || typeof window.MiniGames[key].render !== 'function') {
+            log(container, `✗ Module ${key} missing render function`, 'fail');
+            allValid = false;
+          }
+        });
+        
+        if(allValid) {
+          log(container, '✓ All loaded modules have correct structure', 'pass');
+        }
+      } else {
+        log(container, '✗ No game modules loaded (window.MiniGames not found)', 'fail');
+      }
+    }
+
+    function testRenderMinigame() {
+      const container = document.getElementById('minigame-container');
+      container.innerHTML = '<p style="color:#6fd3ff;">Loading minigame...</p>';
+      
+      try {
+        // Test with new key
+        if(window.MiniGamesRegistry && typeof window.MiniGamesRegistry.render === 'function') {
+          window.MiniGamesRegistry.render('quickTap', container, function(score) {
+            container.innerHTML = `<div style="color:#74e48b;padding:20px;text-align:center;">
+              <h3>✓ Minigame Completed!</h3>
+              <p>Score: ${score}</p>
+              <p>The minigame system is working correctly after Phase 8 cleanup.</p>
+            </div>`;
+          });
+        } else {
+          container.innerHTML = '<p style="color:#ff6b6b;">✗ MinigameRegistry not available</p>';
+        }
+      } catch(error) {
+        container.innerHTML = `<p style="color:#ff6b6b;">✗ Error: ${error.message}</p>`;
+      }
+    }
+
+    function clearContainer() {
+      document.getElementById('minigame-container').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
