@@ -73,6 +73,14 @@
   }
 
   let el = null, currentSrc = '', stopPending = false;
+  
+  // Mute state - loaded early to ensure consistency
+  let isMuted = false;
+  try{
+    const stored = localStorage.getItem('bb_soundMuted');
+    if(stored === '1' || stored === 'true') isMuted = true;
+  }catch{}
+  
   function ensureEl(){
     if (el) return el;
     el = document.createElement('audio');
@@ -80,12 +88,10 @@
     el.style.display = 'none';
     el.preload = 'auto';
     el.loop = true;
-    // Initialize with saved mute state
-    try{
-      const stored = localStorage.getItem('bb_soundMuted');
-      if(stored === '1' || stored === 'true') el.muted = true;
-    }catch{}
+    // Initialize with current mute state
+    el.muted = isMuted;
     document.body.appendChild(el);
+    console.info(`[audio] created audio element, muted=${isMuted}`);
     return el;
   }
 
@@ -284,14 +290,6 @@
   }
 
   // Mute toggle functionality
-  let isMuted = false;
-  
-  // Load mute state from localStorage
-  try{
-    const stored = localStorage.getItem('bb_soundMuted');
-    if(stored === '1' || stored === 'true') isMuted = true;
-  }catch{}
-  
   function setMuted(muted){
     isMuted = !!muted;
     // Only set the muted property, don't pause/resume
