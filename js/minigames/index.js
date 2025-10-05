@@ -1,5 +1,8 @@
 // MODULE: minigames/index.js
-// Minigames registry for mobile-friendly competitions
+// Legacy minigames registry and bridge to new Phase 1 system
+// This module provides backwards compatibility while the new system (registry.js,
+// selector.js, scoring.js, mobile-utils.js) is being rolled out.
+// Use cfg.useNewMinigames=true to enable the new non-repeating pool system.
 
 (function(g){
   'use strict';
