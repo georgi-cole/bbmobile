@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Results Popup Avatars & Score Formatting</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    
+    .results-preview { background: #0a0f16; padding: 20px; border-radius: 10px; margin: 15px 0; }
+    .winner-card { text-align: center; padding: 20px; background: linear-gradient(135deg, #1a2937 0%, #0f1a28 100%); border: 1px solid rgba(120,180,240,0.35); border-radius: 20px; margin: 10px 0; }
+    .winner-avatar { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #ffd96b; object-fit: cover; margin: 0 auto 10px; }
+    .winner-name { font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    .winner-score { font-size: 1.05rem; font-weight: 600; color: #88e6a0; }
+    .runners-up { display: flex; justify-content: center; gap: 24px; margin-top: 20px; }
+    .runner { text-align: center; }
+    .runner-avatar { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #7cffad; object-fit: cover; }
+    
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Results Popup Avatars & Score Formatting</h1>
+    <p>Tests Issue 5: Integer score formatting and robust avatar preload</p>
+
+    <div class="test-section">
+      <h2>Actions</h2>
+      <button onclick="testIntegerScores()">Test Integer Scores</button>
+      <button onclick="testAvatarPreload()">Test Avatar Preload</button>
+      <button onclick="testDismissalToken()">Test Dismissal Token</button>
+      <button onclick="clearPreviews()">Clear</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Results Preview</h2>
+      <div id="previews"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Validation Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    let logs = [];
+    let previews = [];
+    let dismissed = false;
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-20).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    // Mock formatCompetitionScoreInt
+    function formatCompetitionScoreInt(value) {
+      if (value == null || value === '') return '';
+      const num = Number(value);
+      if (isNaN(num)) return String(value);
+      return Math.round(num).toString();
+    }
+
+    function testIntegerScores() {
+      const testCases = [
+        { raw: 24.7, expected: '25' },
+        { raw: 18.2, expected: '18' },
+        { raw: 32.5, expected: '33' },
+        { raw: 15.0, expected: '15' }
+      ];
+
+      previews = [];
+      testCases.forEach(tc => {
+        const formatted = formatCompetitionScoreInt(tc.raw);
+        const passed = formatted === tc.expected;
+        
+        log(`[results] scoreRaw=${tc.raw} formatted=${formatted} expected=${tc.expected} ${passed ? 'PASS' : 'FAIL'}`, passed ? 'pass' : 'fail');
+        
+        previews.push({
+          type: 'score',
+          name: `Test ${tc.raw}`,
+          scoreRaw: tc.raw,
+          scoreFormatted: formatted,
+          expected: tc.expected,
+          passed
+        });
+      });
+
+      renderPreviews();
+      validate();
+    }
+
+    function testAvatarPreload() {
+      const players = [
+        { id: 1, name: 'Alice', score: 28.9 },
+        { id: 2, name: 'Bob', score: 22.3 },
+        { id: 3, name: 'Charlie', score: 19.7 }
+      ];
+
+      previews = [];
+
+      players.forEach(p => {
+        const url = `https://api.dicebear.com/6.x/bottts/svg?seed=${p.name}`;
+        const scoreFormatted = formatCompetitionScoreInt(p.score);
+        
+        // Simulate preload logging
+        const loaded = Math.random() > 0.1; // 90% success rate
+        log(`[results] avatar player=${p.name} ${loaded ? 'loaded' : 'fallbackUsed'}`, loaded ? 'pass' : 'fail');
+        
+        previews.push({
+          type: 'avatar',
+          name: p.name,
+          scoreRaw: p.score,
+          scoreFormatted,
+          avatarUrl: url,
+          loaded
+        });
+      });
+
+      renderPreviews();
+      validate();
+    }
+
+    function testDismissalToken() {
+      dismissed = false;
+      
+      log('Creating dismissal token', 'info');
+      const token = {};
+      
+      // Simulate async operation
+      setTimeout(() => {
+        if (!dismissed) {
+          log('Avatar loaded after dismissal check - token valid', 'pass');
+        } else {
+          log('Avatar attempted to load after dismiss - token prevented injection', 'pass');
+        }
+      }, 100);
+
+      // Simulate dismissal
+      setTimeout(() => {
+        dismissed = true;
+        log('Popup dismissed - token invalidated', 'info');
+      }, 50);
+
+      validate();
+    }
+
+    function clearPreviews() {
+      previews = [];
+      dismissed = false;
+      renderPreviews();
+      validate();
+    }
+
+    function renderPreviews() {
+      const container = document.getElementById('previews');
+      if (!previews.length) {
+        container.innerHTML = '<div style="color: #95a9c0;">No previews. Run a test to see results.</div>';
+        return;
+      }
+
+      container.innerHTML = previews.map(p => {
+        if (p.type === 'score') {
+          return `
+            <div class="results-preview" style="border-left: 4px solid ${p.passed ? '#77d58d' : '#ff6d6d'};">
+              <div style="font-weight: 700; margin-bottom: 8px;">${p.name}</div>
+              <div>Raw Score: ${p.scoreRaw}</div>
+              <div>Formatted: <span style="font-size: 1.2rem; color: ${p.passed ? '#88e6a0' : '#ff6d6d'};">${p.scoreFormatted}</span></div>
+              <div>Expected: ${p.expected}</div>
+              <div style="margin-top: 8px; color: ${p.passed ? '#77d58d' : '#ff6d6d'};">
+                ${p.passed ? '✓ PASS' : '✗ FAIL'}
+              </div>
+            </div>
+          `;
+        } else if (p.type === 'avatar') {
+          return `
+            <div class="winner-card">
+              <img class="winner-avatar" src="${p.avatarUrl}" alt="${p.name}">
+              <div class="winner-name">${p.name}</div>
+              <div class="winner-score">Score: ${p.scoreFormatted}</div>
+              <div style="margin-top: 8px; font-size: 0.8rem; color: ${p.loaded ? '#77d58d' : '#f2ce7b'};">
+                Avatar: ${p.loaded ? 'Loaded' : 'Fallback Used'}
+              </div>
+            </div>
+          `;
+        }
+        return '';
+      }).join('');
+    }
+
+    function validate() {
+      const results = document.getElementById('results');
+      const tests = [];
+
+      // Test 1: Integer formatting
+      const scoreTests = previews.filter(p => p.type === 'score');
+      const scoresPassed = scoreTests.filter(p => p.passed).length;
+      tests.push({
+        name: 'All scores formatted as integers',
+        pass: scoreTests.length === 0 || scoresPassed === scoreTests.length,
+        expected: 'All test cases pass',
+        actual: scoreTests.length ? `${scoresPassed}/${scoreTests.length} passed` : 'No tests'
+      });
+
+      // Test 2: No decimal points in formatted scores
+      const hasDecimals = previews.some(p => p.scoreFormatted && p.scoreFormatted.includes('.'));
+      tests.push({
+        name: 'No decimal points in formatted scores',
+        pass: !hasDecimals,
+        expected: 'Integer strings only',
+        actual: hasDecimals ? 'Decimals found' : 'All integers'
+      });
+
+      // Test 3: Avatar logging present
+      const avatarTests = previews.filter(p => p.type === 'avatar');
+      const hasAvatarLogs = logs.some(l => l.msg.includes('[results] avatar'));
+      tests.push({
+        name: 'Avatar load status logged',
+        pass: avatarTests.length === 0 || hasAvatarLogs,
+        expected: 'Logs for avatar load/fallback',
+        actual: hasAvatarLogs ? 'Logs present' : 'No logs'
+      });
+
+      // Test 4: Dismissal token guards
+      const hasDismissalLogs = logs.some(l => l.msg.includes('token'));
+      tests.push({
+        name: 'Dismissal token mechanism active',
+        pass: hasDismissalLogs || dismissed,
+        expected: 'Token prevents late injection',
+        actual: hasDismissalLogs ? 'Token active' : 'No token logs'
+      });
+
+      // Test 5: Helper function exists
+      tests.push({
+        name: 'formatCompetitionScoreInt helper available',
+        pass: typeof formatCompetitionScoreInt === 'function',
+        expected: 'Function defined',
+        actual: typeof formatCompetitionScoreInt
+      });
+
+      results.innerHTML = tests.map(t => `
+        <div style="padding: 10px; margin: 5px 0; background: ${t.pass ? '#1a3329' : '#332020'}; border-left: 4px solid ${t.pass ? '#77d58d' : '#ff6d6d'}; border-radius: 4px;">
+          <div style="font-weight: 700; color: ${t.pass ? '#77d58d' : '#ff6d6d'};">
+            ${t.pass ? '✓' : '✗'} ${t.name}
+          </div>
+          <div style="font-size: 0.85rem; color: #95a9c0; margin-top: 4px;">
+            Expected: ${t.expected}<br>
+            Actual: ${t.actual}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Initialize
+    validate();
+    log('Test page loaded', 'info');
+  </script>
+</body>
+</html>

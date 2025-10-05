@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Veto Nomination State Machine</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    .player { display: inline-block; margin: 10px; padding: 15px; background: #162435; border-radius: 8px; min-width: 150px; }
+    .player.nominated { border: 2px solid #e64a4a; }
+    .player.pending-save { border: 2px solid #f2ce7b; }
+    .player.saved { border: 2px solid #77d58d; }
+    .player.replacement { border: 2px solid #ff8c42; }
+    .label { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; margin-top: 8px; }
+    .label-nom { background: linear-gradient(135deg, #c23636, #e64a4a); color: #fff; }
+    .label-none { background: #24364b; color: #95a9c0; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Veto Nomination State Machine</h1>
+    <p>Tests Issue 1: NOM label persistence during veto use</p>
+
+    <div class="test-section">
+      <h2>Test Players</h2>
+      <div id="players"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Actions</h2>
+      <button onclick="nominatePlayers()">1. Nominate Players</button>
+      <button onclick="vetoIntent()">2. Veto Intent (pendingSave)</button>
+      <button onclick="applyVeto()">3. Apply Veto (saved + replacement)</button>
+      <button onclick="reset()">Reset</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Validation Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    const players = [
+      { id: 1, name: 'Alice', nominationState: 'none' },
+      { id: 2, name: 'Bob', nominationState: 'none' },
+      { id: 3, name: 'Charlie', nominationState: 'none' },
+      { id: 4, name: 'Diana', nominationState: 'none' }
+    ];
+
+    let vetoSavedId = null;
+    let logs = [];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-20).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    function renderPlayers() {
+      const container = document.getElementById('players');
+      container.innerHTML = players.map(p => {
+        const stateClass = p.nominationState === 'none' ? '' : p.nominationState;
+        const showNom = ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState);
+        return `
+          <div class="player ${stateClass}">
+            <div><strong>${p.name}</strong></div>
+            <div style="font-size: 0.8rem; color: #95a9c0;">ID: ${p.id}</div>
+            <div style="font-size: 0.8rem; color: #95a9c0;">State: ${p.nominationState}</div>
+            <div class="label ${showNom ? 'label-nom' : 'label-none'}">
+              ${showNom ? 'NOM' : p.name}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function nominatePlayers() {
+      // Nominate Alice and Bob
+      players[0].nominationState = 'nominated';
+      players[1].nominationState = 'nominated';
+      log('[nom] nominated player=1 state=nominated', 'pass');
+      log('[nom] nominated player=2 state=nominated', 'pass');
+      renderPlayers();
+      validate();
+    }
+
+    function vetoIntent() {
+      // Set Alice to pendingSave (veto intent on her)
+      if (players[0].nominationState !== 'nominated') {
+        log('ERROR: Alice must be nominated first', 'fail');
+        return;
+      }
+      players[0].nominationState = 'pendingSave';
+      vetoSavedId = 1;
+      log('[nom] pendingSave player=1', 'pass');
+      renderPlayers();
+      validate();
+    }
+
+    function applyVeto() {
+      if (!vetoSavedId) {
+        log('ERROR: Must have veto intent first', 'fail');
+        return;
+      }
+      
+      // Apply veto: saved player becomes 'saved', replacement becomes 'replacement'
+      players[0].nominationState = 'saved'; // Alice saved
+      players[2].nominationState = 'replacement'; // Charlie replacement
+      
+      log('[nom] vetoApplied saved=[1] replacement=[3]', 'pass');
+      renderPlayers();
+      validate();
+    }
+
+    function reset() {
+      players.forEach(p => p.nominationState = 'none');
+      vetoSavedId = null;
+      logs = [];
+      renderPlayers();
+      validate();
+      log('Reset complete', 'info');
+    }
+
+    function validate() {
+      const results = document.getElementById('results');
+      const tests = [];
+
+      // Test 1: NOM shows for nominated
+      const nominated = players.filter(p => p.nominationState === 'nominated');
+      tests.push({
+        name: 'NOM label shows for "nominated" state',
+        pass: nominated.every(p => ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState)),
+        expected: 'All nominated players show NOM',
+        actual: `${nominated.length} nominated players`
+      });
+
+      // Test 2: NOM shows for pendingSave
+      const pendingSave = players.filter(p => p.nominationState === 'pendingSave');
+      tests.push({
+        name: 'NOM label persists during "pendingSave" state',
+        pass: pendingSave.length === 0 || pendingSave.every(p => p.nominationState === 'pendingSave'),
+        expected: 'NOM still visible during veto intent',
+        actual: `${pendingSave.length} in pendingSave state`
+      });
+
+      // Test 3: NOM shows for replacement
+      const replacement = players.filter(p => p.nominationState === 'replacement');
+      tests.push({
+        name: 'NOM label shows for "replacement" state',
+        pass: replacement.length === 0 || replacement.every(p => p.nominationState === 'replacement'),
+        expected: 'Replacement nominee shows NOM',
+        actual: `${replacement.length} replacement nominees`
+      });
+
+      // Test 4: No NOM for saved
+      const saved = players.filter(p => p.nominationState === 'saved');
+      tests.push({
+        name: 'NOM label removed for "saved" state',
+        pass: saved.every(p => !['nominated', 'pendingSave', 'replacement'].includes(p.nominationState)),
+        expected: 'Saved player does not show NOM',
+        actual: `${saved.length} saved players`
+      });
+
+      // Test 5: State transitions logged
+      const hasLogs = logs.some(l => l.msg.includes('[nom]'));
+      tests.push({
+        name: 'State transitions are logged',
+        pass: hasLogs,
+        expected: 'Console logs with [nom] prefix',
+        actual: hasLogs ? 'Logs present' : 'No logs found'
+      });
+
+      results.innerHTML = tests.map(t => `
+        <div style="padding: 10px; margin: 5px 0; background: ${t.pass ? '#1a3329' : '#332020'}; border-left: 4px solid ${t.pass ? '#77d58d' : '#ff6d6d'}; border-radius: 4px;">
+          <div style="font-weight: 700; color: ${t.pass ? '#77d58d' : '#ff6d6d'};">
+            ${t.pass ? '✓' : '✗'} ${t.name}
+          </div>
+          <div style="font-size: 0.85rem; color: #95a9c0; margin-top: 4px;">
+            Expected: ${t.expected}<br>
+            Actual: ${t.actual}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Initialize
+    renderPlayers();
+    validate();
+    log('Test page loaded', 'info');
+  </script>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Final Labels After Winner Declaration</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    
+    .player { display: inline-block; margin: 10px; padding: 15px; background: #162435; border-radius: 8px; min-width: 180px; vertical-align: top; }
+    .avatar { width: 100px; height: 100px; border-radius: 12px; object-fit: cover; margin-bottom: 10px; }
+    .label { display: inline-block; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 0.9rem; margin-top: 8px; }
+    .label-winner { background: linear-gradient(135deg, #ffd700, #ffed4e); color: #1a1a1a; }
+    .label-runner-up { background: linear-gradient(135deg, #c0c0c0, #e8e8e8); color: #1a1a1a; }
+    .label-hoh { background: linear-gradient(135deg, #c49b2e, #d4b95b); color: #1a1a1a; }
+    .label-pov { background: linear-gradient(135deg, #2f8a3e, #4db85b); color: #fff; }
+    .label-nom { background: linear-gradient(135deg, #c23636, #e64a4a); color: #fff; }
+    
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Final Labels After Winner Declaration</h1>
+    <p>Tests Issue 4: Winner/Runner-Up labels replace HOH/POV/NOM after finale</p>
+
+    <div class="test-section">
+      <h2>Actions</h2>
+      <button onclick="setupFinalTwo()">1. Setup Final Two</button>
+      <button onclick="giveStatuses()">2. Give Statuses (HOH/POV/NOM)</button>
+      <button onclick="declareWinner()">3. Declare Winner</button>
+      <button onclick="reset()">Reset</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Final Two Players</h2>
+      <div id="players"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Validation Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    let players = [];
+    let logs = [];
+    let winnerDeclared = false;
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-20).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    function setupFinalTwo() {
+      players = [
+        {
+          id: 1,
+          name: 'Alice',
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice',
+          showFinalLabel: null,
+          hoh: false,
+          vetoHolder: false,
+          nominated: false,
+          nominationState: 'none'
+        },
+        {
+          id: 2,
+          name: 'Bob',
+          avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob',
+          showFinalLabel: null,
+          hoh: false,
+          vetoHolder: false,
+          nominated: false,
+          nominationState: 'none'
+        }
+      ];
+      winnerDeclared = false;
+      renderPlayers();
+      validate();
+      log('Final two setup complete', 'info');
+    }
+
+    function giveStatuses() {
+      if (!players.length) {
+        log('ERROR: Setup final two first', 'fail');
+        return;
+      }
+      
+      // Alice: HOH + POV
+      players[0].hoh = true;
+      players[0].vetoHolder = true;
+      
+      // Bob: Nominated
+      players[1].nominated = true;
+      players[1].nominationState = 'nominated';
+      
+      renderPlayers();
+      validate();
+      log('Statuses assigned: Alice=HOH+POV, Bob=NOM', 'info');
+    }
+
+    function declareWinner() {
+      if (!players.length) {
+        log('ERROR: Setup final two first', 'fail');
+        return;
+      }
+      
+      // Alice wins
+      players[0].showFinalLabel = 'WINNER';
+      players[0].hoh = false;
+      players[0].vetoHolder = false;
+      players[0].nominated = false;
+      players[0].nominationState = 'none';
+      
+      // Bob is runner-up
+      players[1].showFinalLabel = 'RUNNER-UP';
+      players[1].hoh = false;
+      players[1].vetoHolder = false;
+      players[1].nominated = false;
+      players[1].nominationState = 'none';
+      
+      winnerDeclared = true;
+      
+      log('[finale] labels winner=1 runnerUp=2', 'pass');
+      
+      renderPlayers();
+      validate();
+    }
+
+    function reset() {
+      players = [];
+      winnerDeclared = false;
+      renderPlayers();
+      validate();
+      log('Reset complete', 'info');
+    }
+
+    function getLabel(player) {
+      // Label precedence: WINNER > RUNNER-UP > NOM states > HOH·POV > HOH > POV > name
+      if (player.showFinalLabel === 'WINNER') {
+        return { text: 'WINNER', class: 'label-winner' };
+      }
+      if (player.showFinalLabel === 'RUNNER-UP') {
+        return { text: 'RUNNER-UP', class: 'label-runner-up' };
+      }
+      if (player.nominationState === 'nominated' || player.nominationState === 'pendingSave' || player.nominationState === 'replacement') {
+        return { text: 'NOM', class: 'label-nom' };
+      }
+      if (player.hoh && player.vetoHolder) {
+        return { text: 'HOH·POV', class: 'label-hoh' };
+      }
+      if (player.hoh) {
+        return { text: 'HOH', class: 'label-hoh' };
+      }
+      if (player.vetoHolder) {
+        return { text: 'POV', class: 'label-pov' };
+      }
+      return { text: player.name, class: '' };
+    }
+
+    function renderPlayers() {
+      const container = document.getElementById('players');
+      if (!players.length) {
+        container.innerHTML = '<div style="color: #95a9c0;">No players. Click "Setup Final Two" to begin.</div>';
+        return;
+      }
+
+      container.innerHTML = players.map(p => {
+        const label = getLabel(p);
+        return `
+          <div class="player">
+            <img class="avatar" src="${p.avatar}" alt="${p.name}">
+            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 4px;">${p.name}</div>
+            <div style="font-size: 0.8rem; color: #95a9c0; margin-bottom: 8px;">
+              HOH: ${p.hoh ? 'Yes' : 'No'}<br>
+              POV: ${p.vetoHolder ? 'Yes' : 'No'}<br>
+              NOM: ${p.nominated ? 'Yes' : 'No'}
+            </div>
+            <div class="label ${label.class}">${label.text}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function validate() {
+      const results = document.getElementById('results');
+      const tests = [];
+
+      if (!players.length) {
+        results.innerHTML = '<div style="color: #95a9c0;">No validation data yet.</div>';
+        return;
+      }
+
+      // Test 1: Winner label overrides other labels
+      if (winnerDeclared) {
+        const winner = players.find(p => p.showFinalLabel === 'WINNER');
+        const label = winner ? getLabel(winner) : null;
+        tests.push({
+          name: 'WINNER label shown for winner',
+          pass: winner && label && label.text === 'WINNER',
+          expected: 'Winner shows WINNER label',
+          actual: label ? label.text : 'No winner'
+        });
+
+        // Test 2: HOH/POV/NOM cleared for winner
+        tests.push({
+          name: 'HOH/POV/NOM cleared for winner',
+          pass: winner && !winner.hoh && !winner.vetoHolder && !winner.nominated,
+          expected: 'All statuses false',
+          actual: winner ? `HOH=${winner.hoh}, POV=${winner.vetoHolder}, NOM=${winner.nominated}` : 'No winner'
+        });
+
+        // Test 3: Runner-up label shown
+        const runnerUp = players.find(p => p.showFinalLabel === 'RUNNER-UP');
+        const runnerLabel = runnerUp ? getLabel(runnerUp) : null;
+        tests.push({
+          name: 'RUNNER-UP label shown for runner-up',
+          pass: runnerUp && runnerLabel && runnerLabel.text === 'RUNNER-UP',
+          expected: 'Runner-up shows RUNNER-UP label',
+          actual: runnerLabel ? runnerLabel.text : 'No runner-up'
+        });
+
+        // Test 4: HOH/POV/NOM cleared for runner-up
+        tests.push({
+          name: 'HOH/POV/NOM cleared for runner-up',
+          pass: runnerUp && !runnerUp.hoh && !runnerUp.vetoHolder && !runnerUp.nominated,
+          expected: 'All statuses false',
+          actual: runnerUp ? `HOH=${runnerUp.hoh}, POV=${runnerUp.vetoHolder}, NOM=${runnerUp.nominated}` : 'No runner-up'
+        });
+
+        // Test 5: Finale logging
+        const hasFinaleLog = logs.some(l => l.msg.includes('[finale] labels'));
+        tests.push({
+          name: 'Finale labels logged',
+          pass: hasFinaleLog,
+          expected: 'Log entry with [finale] labels',
+          actual: hasFinaleLog ? 'Log present' : 'No log found'
+        });
+      } else {
+        // Before winner declared
+        tests.push({
+          name: 'Waiting for winner declaration',
+          pass: true,
+          expected: 'Click "Declare Winner" to test finale labels',
+          actual: 'Pre-finale state'
+        });
+      }
+
+      results.innerHTML = tests.map(t => `
+        <div style="padding: 10px; margin: 5px 0; background: ${t.pass ? '#1a3329' : '#332020'}; border-left: 4px solid ${t.pass ? '#77d58d' : '#ff6d6d'}; border-radius: 4px;">
+          <div style="font-weight: 700; color: ${t.pass ? '#77d58d' : '#ff6d6d'};">
+            ${t.pass ? '✓' : '✗'} ${t.name}
+          </div>
+          <div style="font-size: 0.85rem; color: #95a9c0; margin-top: 4px;">
+            Expected: ${t.expected}<br>
+            Actual: ${t.actual}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Initialize
+    validate();
+    log('Test page loaded', 'info');
+  </script>
+</body>
+</html>
