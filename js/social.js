@@ -90,9 +90,10 @@
       B.affinity[A.id]= (B.affinity?.[A.id]??0) + deltaB;
 
       if(g.__socialLogBudget>0){ logHuman('positive', A.name, B.name); g.__socialLogBudget--; }
-      try{
-        global.addLog?.(`Δ ${A.name}→${B.name} ${(deltaA>=0?'+':'')}${deltaA.toFixed(2)}; ${B.name}→${A.name} ${(deltaB>=0?'+':'')}${deltaB.toFixed(2)}`,'tiny');
-      }catch{}
+      // Issue #4: Remove affinity delta lines from social feed (keep for debug only)
+      // try{
+      //   global.addLog?.(`Δ ${A.name}→${B.name} ${(deltaA>=0?'+':'')}${deltaA.toFixed(2)}; ${B.name}→${A.name} ${(deltaB>=0?'+':'')}${deltaB.toFixed(2)}`,'tiny');
+      // }catch{}
     }else if(kind==='negative'){
       const k=weekKey(actorId,targetId);
       const used=g.__weekNegInteractions.get(k)||0;
@@ -117,9 +118,10 @@
       B.affinity[A.id]= (B.affinity?.[A.id]??0) + deltaB;
 
       if(g.__socialLogBudget>0){ logHuman('negative', A.name, B.name); g.__socialLogBudget--; }
-      try{
-        global.addLog?.(`Δ ${A.name}→${B.name} ${(deltaA>=0?'+':'')}${deltaA.toFixed(2)}; ${B.name}→${A.name} ${(deltaB>=0?'+':'')}${deltaB.toFixed(2)}`,'tiny');
-      }catch{}
+      // Issue #4: Remove affinity delta lines from social feed (keep for debug only)
+      // try{
+      //   global.addLog?.(`Δ ${A.name}→${B.name} ${(deltaA>=0?'+':'')}${deltaA.toFixed(2)}; ${B.name}→${A.name} ${(deltaB>=0?'+':'')}${deltaB.toFixed(2)}`,'tiny');
+      // }catch{}
     }
 
     global.updateHud?.();

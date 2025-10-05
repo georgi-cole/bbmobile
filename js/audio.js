@@ -113,6 +113,10 @@
     audio.src = full;
     audio.loop = true;
     audio.currentTime = 0;
+    
+    // Issue #7: Log music start attempt
+    const muted = audio.muted || false;
+    console.info(`[audio] attempted start music, muted=${muted}, file=${file}`);
 
     // Special handling for social.mp3: seek to 13s
     if (/social\.mp3$/i.test(file)) {
