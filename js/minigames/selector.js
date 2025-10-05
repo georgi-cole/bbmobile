@@ -48,14 +48,30 @@
       const registry = g.MinigameRegistry;
       if(!registry){
         console.error('[MinigameSelector] MinigameRegistry not available');
-        return null;
+        // Fallback to canonical quickTap
+        console.warn('[Minigames] Fallback: using quickTap (no registry)');
+        if(g.MinigameTelemetry){
+          g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+            reason: 'no-registry',
+            fallbackKey: 'quickTap'
+          });
+        }
+        return 'quickTap';
       }
       
-      // Get all implemented, non-retired games
+      // Get all implemented, non-retired games - ONLY canonical keys
       const availableGames = registry.getImplementedGames(true);
       if(availableGames.length === 0){
         console.error('[MinigameSelector] No games available');
-        return null;
+        // Fallback to canonical quickTap
+        console.warn('[Minigames] Fallback: using quickTap (no games available)');
+        if(g.MinigameTelemetry){
+          g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+            reason: 'no-games',
+            fallbackKey: 'quickTap'
+          });
+        }
+        return 'quickTap';
       }
       
       initializeSeasonPool(availableGames);
@@ -81,13 +97,44 @@
         game.__minigameIndex = 0;
       } else {
         console.warn('[MinigameSelector] Pool exhausted and repeat not allowed');
-        return null;
+        // Fallback to canonical quickTap
+        console.warn('[Minigames] Fallback: using quickTap (pool exhausted)');
+        if(g.MinigameTelemetry){
+          g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+            reason: 'pool-exhausted',
+            fallbackKey: 'quickTap'
+          });
+        }
+        return 'quickTap';
       }
     }
     
     // Get next game from pool
-    const selectedGame = game.__minigamePool[game.__minigameIndex];
+    let selectedGame = game.__minigamePool[game.__minigameIndex];
     game.__minigameIndex++;
+    
+    // Resolve the key through the resolver if available
+    if(g.MGKeyResolver){
+      const resolved = g.MGKeyResolver.resolveGameKey(selectedGame);
+      if(!resolved){
+        console.warn('[MinigameSelector] Unknown game in pool:', selectedGame, '- using fallback');
+        if(g.MinigameTelemetry){
+          g.MinigameTelemetry.logEvent('minigame.key.unknown', {
+            requestedKey: selectedGame,
+            atPhase: 'selection'
+          });
+          g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+            reason: 'unknown-key',
+            requestedKey: selectedGame,
+            fallbackKey: 'quickTap'
+          });
+        }
+        selectedGame = 'quickTap';
+      } else if(resolved !== selectedGame){
+        console.info('[MinigameSelector] Resolved alias:', selectedGame, '→', resolved);
+        selectedGame = resolved;
+      }
+    }
     
     // Track in history
     game.__minigameHistory = game.__minigameHistory || [];

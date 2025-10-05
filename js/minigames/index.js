@@ -63,37 +63,86 @@
   /**
    * Render a minigame by key
    * Delegates to MinigameRegistry if available, otherwise renders directly
+   * Enhanced with key resolution and fallback handling
    * 
    * @param {string} key - Game key (e.g., 'quickTap', 'memoryMatch')
    * @param {HTMLElement} container - Container element
    * @param {Function} onComplete - Callback function(score)
    */
   function render(key, container, onComplete){
+    // Resolve key through resolver if available
+    let resolvedKey = key;
+    if(g.MGKeyResolver){
+      const resolved = g.MGKeyResolver.resolveGameKey(key);
+      if(!resolved){
+        console.warn('[MiniGames] Unknown minigame key:', key, '- using fallback');
+        if(g.MinigameTelemetry){
+          g.MinigameTelemetry.logEvent('minigame.key.unknown', {
+            requestedKey: key,
+            atPhase: 'render'
+          });
+          g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+            reason: 'unknown',
+            requestedKey: key,
+            fallbackKey: 'quickTap'
+          });
+        }
+        resolvedKey = 'quickTap';
+      } else {
+        resolvedKey = resolved;
+        if(resolved !== key){
+          console.info('[MiniGames] Resolved alias:', key, '→', resolved);
+        }
+      }
+    }
+    
     // Delegate to MinigameRegistry if available
     if(g.MinigameRegistry && typeof g.MinigameRegistry.render === 'function'){
-      return g.MinigameRegistry.render(key, container, onComplete);
+      return g.MinigameRegistry.render(resolvedKey, container, onComplete);
     }
     
     // Fallback rendering (if registry.js not loaded yet)
     const REGISTRY = getRegistry();
-    const entry = REGISTRY[key];
+    const entry = REGISTRY[resolvedKey];
     
     if(!entry){
-      console.error('[MiniGames] Unknown minigame:', key);
+      console.error('[MiniGames] Unknown minigame:', resolvedKey);
+      if(g.MinigameTelemetry){
+        g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+          reason: 'not-in-registry',
+          requestedKey: key,
+          resolvedKey: resolvedKey,
+          fallbackKey: 'quickTap'
+        });
+      }
+      
+      // Try quickTap as fallback
+      if(resolvedKey !== 'quickTap' && REGISTRY['quickTap']){
+        console.warn('[MiniGames] Falling back to quickTap');
+        return render('quickTap', container, onComplete);
+      }
+      
       container.innerHTML = '<div style="padding:20px;text-align:center;"><p style="color:#e3ecf5;">Unknown minigame. Please refresh.</p></div>';
       return;
     }
 
     // Check if module is loaded
-    if(g.MiniGames && g.MiniGames[key] && typeof g.MiniGames[key].render === 'function'){
+    if(g.MiniGames && g.MiniGames[resolvedKey] && typeof g.MiniGames[resolvedKey].render === 'function'){
       try {
-        g.MiniGames[key].render(container, onComplete);
+        g.MiniGames[resolvedKey].render(container, onComplete);
       } catch(error){
-        console.error(`[MiniGames] Error rendering "${key}":`, error);
+        console.error(`[MiniGames] Error rendering "${resolvedKey}":`, error);
+        if(g.MinigameTelemetry){
+          g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+            reason: 'error',
+            gameKey: resolvedKey,
+            error: error.message
+          });
+        }
         container.innerHTML = `<div style="padding:20px;text-align:center;"><p>Minigame "${entry.name}" failed to load.</p><button class="btn" onclick="this.parentElement.parentElement.innerHTML='';(${onComplete})(50)">Skip</button></div>`;
       }
     } else {
-      container.innerHTML = `<div style="padding:20px;text-align:center;"><p>Minigame "${entry.name || key}" is loading...</p></div>`;
+      container.innerHTML = `<div style="padding:20px;text-align:center;"><p>Minigame "${entry.name || resolvedKey}" is loading...</p></div>`;
     }
   }
 
