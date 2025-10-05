@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Badge State Synchronization</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    .player { display: inline-block; margin: 10px; padding: 15px; background: #162435; border-radius: 8px; min-width: 180px; vertical-align: top; }
+    .player.hoh { border: 2px solid #ffd966; }
+    .player.nominated { border: 2px solid #e64a4a; }
+    .player.both { border: 2px solid #ff8c42; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; margin: 4px 2px; }
+    .badge-hoh { background: linear-gradient(135deg, #d4a629, #ffd966); color: #1a1200; }
+    .badge-nom { background: linear-gradient(135deg, #c23636, #e64a4a); color: #fff; }
+    .badge-none { background: #24364b; color: #95a9c0; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    button.danger { background: #c23636; }
+    button.danger:hover { background: #e64a4a; }
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+    .game-state { background: #1a2636; padding: 12px; border-radius: 6px; margin: 10px 0; }
+    .game-state div { margin: 4px 0; }
+    .label { font-weight: 700; color: #83bfff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Badge State Synchronization</h1>
+    <p>Tests that player badges (p.hoh, p.nominated, p.nominationState) always match game state (g.hohId, g.nominees)</p>
+
+    <div class="test-section">
+      <h2>Game State</h2>
+      <div class="game-state" id="gameState"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Player States</h2>
+      <div id="players"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Actions</h2>
+      <button onclick="setHOH(1)">Set Alice as HOH</button>
+      <button onclick="setHOH(2)">Set Bob as HOH</button>
+      <button onclick="nominatePlayers([2, 3])">Nominate Bob & Charlie</button>
+      <button onclick="nominatePlayers([1, 4])">Nominate Alice & Diana</button>
+      <button onclick="vetoUse(2, 5)">Use Veto (Save Bob, Replace Eve)</button>
+      <button onclick="sync()">🔄 Sync Badges</button>
+      <button class="danger" onclick="reset()">Reset</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Validation Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    // Mock game state
+    const game = {
+      hohId: null,
+      nominees: [],
+      players: [
+        { id: 1, name: 'Alice', hoh: false, nominated: false, nominationState: 'none' },
+        { id: 2, name: 'Bob', hoh: false, nominated: false, nominationState: 'none' },
+        { id: 3, name: 'Charlie', hoh: false, nominated: false, nominationState: 'none' },
+        { id: 4, name: 'Diana', hoh: false, nominated: false, nominationState: 'none' },
+        { id: 5, name: 'Eve', hoh: false, nominated: false, nominationState: 'none' }
+      ]
+    };
+
+    let logs = [];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-30).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    // Simulate the syncPlayerBadgeStates function
+    function syncPlayerBadgeStates() {
+      const nominees = Array.isArray(game.nominees) ? game.nominees : [];
+      const nomineeSet = new Set(nominees);
+      
+      for(const p of game.players){
+        // Sync HOH badge
+        p.hoh = (p.id === game.hohId);
+        
+        // Sync nomination badge and state
+        const isNominated = nomineeSet.has(p.id);
+        p.nominated = isNominated;
+        
+        // Only update nominationState if it's not in a transition state
+        if(p.nominationState !== 'pendingSave' && p.nominationState !== 'saved' && p.nominationState !== 'replacement'){
+          p.nominationState = isNominated ? 'nominated' : 'none';
+        }
+      }
+      
+      log('✓ Badge states synchronized', 'pass');
+    }
+
+    function renderGameState() {
+      const el = document.getElementById('gameState');
+      const hohName = game.hohId ? game.players.find(p => p.id === game.hohId)?.name : 'none';
+      const nomNames = game.nominees.map(id => game.players.find(p => p.id === id)?.name).join(', ') || 'none';
+      el.innerHTML = `
+        <div><span class="label">g.hohId:</span> ${game.hohId || 'null'} (${hohName})</div>
+        <div><span class="label">g.nominees:</span> [${game.nominees.join(', ')}] (${nomNames})</div>
+      `;
+    }
+
+    function renderPlayers() {
+      const container = document.getElementById('players');
+      container.innerHTML = game.players.map(p => {
+        const showHOH = p.hoh;
+        const showNom = p.nominated || ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState);
+        const borderClass = showHOH && showNom ? 'both' : showHOH ? 'hoh' : showNom ? 'nominated' : '';
+        
+        // Check for mismatch
+        const hohMismatch = p.hoh !== (p.id === game.hohId);
+        const nomMismatch = p.nominated !== game.nominees.includes(p.id);
+        const hasMismatch = hohMismatch || nomMismatch;
+        
+        return `
+          <div class="player ${borderClass}" style="${hasMismatch ? 'outline: 3px solid #ff6d6d;' : ''}">
+            <div><strong>${p.name}</strong></div>
+            <div style="font-size: 0.8rem; color: #95a9c0;">ID: ${p.id}</div>
+            <div style="font-size: 0.8rem; color: #95a9c0; margin-top: 4px;">
+              p.hoh: ${p.hoh} ${hohMismatch ? '❌' : '✓'}<br>
+              p.nominated: ${p.nominated} ${nomMismatch ? '❌' : '✓'}<br>
+              p.nominationState: ${p.nominationState}
+            </div>
+            <div style="margin-top: 8px;">
+              ${showHOH ? '<span class="badge badge-hoh">HOH</span>' : ''}
+              ${showNom ? '<span class="badge badge-nom">NOM</span>' : ''}
+              ${!showHOH && !showNom ? `<span class="badge badge-none">${p.name}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function setHOH(playerId) {
+      game.hohId = playerId;
+      const name = game.players.find(p => p.id === playerId)?.name;
+      log(`Set g.hohId = ${playerId} (${name})`, 'info');
+      renderGameState();
+      renderPlayers();
+      validate();
+    }
+
+    function nominatePlayers(ids) {
+      game.nominees = ids;
+      const names = ids.map(id => game.players.find(p => p.id === id)?.name).join(', ');
+      log(`Set g.nominees = [${ids.join(', ')}] (${names})`, 'info');
+      renderGameState();
+      renderPlayers();
+      validate();
+    }
+
+    function vetoUse(savedId, replacementId) {
+      game.nominees = game.nominees.filter(id => id !== savedId);
+      if (!game.nominees.includes(replacementId)) {
+        game.nominees.push(replacementId);
+      }
+      
+      // Manually set states like veto.js does
+      for (const p of game.players) {
+        if (p.id === savedId) {
+          p.nominated = false;
+          p.nominationState = 'saved';
+        } else if (p.id === replacementId) {
+          p.nominated = true;
+          p.nominationState = 'replacement';
+        }
+      }
+      
+      const savedName = game.players.find(p => p.id === savedId)?.name;
+      const repName = game.players.find(p => p.id === replacementId)?.name;
+      log(`Veto used: saved ${savedId} (${savedName}), replaced with ${replacementId} (${repName})`, 'info');
+      renderGameState();
+      renderPlayers();
+      validate();
+    }
+
+    function sync() {
+      syncPlayerBadgeStates();
+      renderGameState();
+      renderPlayers();
+      validate();
+    }
+
+    function reset() {
+      game.hohId = null;
+      game.nominees = [];
+      game.players.forEach(p => {
+        p.hoh = false;
+        p.nominated = false;
+        p.nominationState = 'none';
+      });
+      logs = [];
+      renderGameState();
+      renderPlayers();
+      validate();
+      log('Reset complete', 'info');
+    }
+
+    function validate() {
+      const results = document.getElementById('results');
+      const tests = [];
+
+      // Test 1: HOH badge matches g.hohId
+      const hohMatches = game.players.every(p => p.hoh === (p.id === game.hohId));
+      const hohMismatches = game.players.filter(p => p.hoh !== (p.id === game.hohId));
+      tests.push({
+        name: 'HOH badge matches g.hohId for all players',
+        pass: hohMatches,
+        expected: 'p.hoh === (p.id === g.hohId)',
+        actual: hohMatches ? 'All match' : `Mismatches: ${hohMismatches.map(p => p.name).join(', ')}`
+      });
+
+      // Test 2: Nominated badge matches g.nominees
+      const nomMatches = game.players.every(p => p.nominated === game.nominees.includes(p.id));
+      const nomMismatches = game.players.filter(p => p.nominated !== game.nominees.includes(p.id));
+      tests.push({
+        name: 'Nominated badge matches g.nominees for all players',
+        pass: nomMatches,
+        expected: 'p.nominated === g.nominees.includes(p.id)',
+        actual: nomMatches ? 'All match' : `Mismatches: ${nomMismatches.map(p => p.name).join(', ')}`
+      });
+
+      // Test 3: NominationState is correct for nominated players
+      const nominatedPlayers = game.players.filter(p => game.nominees.includes(p.id));
+      const stateCorrect = nominatedPlayers.every(p => 
+        ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState)
+      );
+      tests.push({
+        name: 'Nomination state is valid for nominated players',
+        pass: stateCorrect || nominatedPlayers.length === 0,
+        expected: 'State in [nominated, pendingSave, replacement]',
+        actual: nominatedPlayers.length === 0 ? 'No nominees' : 
+          nominatedPlayers.map(p => `${p.name}: ${p.nominationState}`).join(', ')
+      });
+
+      // Test 4: NominationState is 'none' for non-nominated players
+      const nonNominated = game.players.filter(p => !game.nominees.includes(p.id));
+      const nonNomCorrect = nonNominated.every(p => 
+        p.nominationState === 'none' || p.nominationState === 'saved'
+      );
+      tests.push({
+        name: 'Non-nominated players have correct state',
+        pass: nonNomCorrect || nonNominated.length === 0,
+        expected: 'State is none or saved',
+        actual: nonNominated.length === 0 ? 'All nominated' :
+          nonNominated.filter(p => p.nominationState !== 'none' && p.nominationState !== 'saved')
+            .map(p => `${p.name}: ${p.nominationState}`).join(', ') || 'All correct'
+      });
+
+      // Test 5: Overall consistency
+      const overallConsistent = hohMatches && nomMatches;
+      tests.push({
+        name: 'Overall badge consistency',
+        pass: overallConsistent,
+        expected: 'All badges match game state',
+        actual: overallConsistent ? 'Perfect sync' : 'Badges out of sync'
+      });
+
+      results.innerHTML = tests.map(t => `
+        <div style="padding: 10px; margin: 5px 0; background: ${t.pass ? '#1a3329' : '#332020'}; border-left: 4px solid ${t.pass ? '#77d58d' : '#ff6d6d'}; border-radius: 4px;">
+          <div style="font-weight: 700; color: ${t.pass ? '#77d58d' : '#ff6d6d'};">
+            ${t.pass ? '✓' : '✗'} ${t.name}
+          </div>
+          <div style="font-size: 0.85rem; color: #95a9c0; margin-top: 4px;">
+            Expected: ${t.expected}<br>
+            Actual: ${t.actual}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Initialize
+    renderGameState();
+    renderPlayers();
+    validate();
+    log('Test page loaded. Try actions without syncing to see mismatches, then click Sync to fix.', 'info');
+  </script>
+</body>
+</html>
