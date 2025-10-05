@@ -1,5 +1,19 @@
 // MODULE: minigames.js
-// 15 compact minigames. Each renderer: (host,onSubmit)=>void and calls onSubmit(score).
+// LEGACY MINIGAMES - DEPRECATED IN PHASE 1 REFACTOR
+// 
+// All 15 minigames have been migrated to individual module files in js/minigames/*.js
+// This file is kept for backwards compatibility only.
+// 
+// The individual game functions below are NO LONGER CALLED directly.
+// All routing now happens through:
+//   1. js/minigames/registry.js - Game metadata and filtering
+//   2. js/minigames/selector.js - Non-repeating pool selection
+//   3. js/minigames/index.js - Legacy key mapping bridge
+// 
+// The renderMinigame() function at the bottom is now a stub that delegates
+// to the new system via minigames/index.js bridge.
+//
+// DO NOT ADD NEW GAMES HERE - Create new modules in js/minigames/ instead.
 
 (function(global){
   const $=global.$;

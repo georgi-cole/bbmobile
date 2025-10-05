@@ -4,19 +4,23 @@
 // increment HOH win stats.
 // New: guard to ensure HOH selection and winner card happen only once.
 // Hardened: safe fallbacks if social module name differs.
+//
+// PHASE 1 REFACTOR COMPLETE:
+// - All legacy minigames migrated to new module pattern (js/minigames/*.js)
+// - Non-repeating pool selection enforced via MinigameSelector
+// - Legacy renderMinigame function deprecated (bridged in minigames/index.js)
+// - All game selection now routes through unified registry and selector
+// - Mobile-first design with 11 active games, 4 retired for UX reasons
 
 (function(global){
   const $=global.$;
-  // Legacy games (retired in Phase 1, kept for compatibility)
+  
+  // Legacy game list constants kept for backwards compatibility
+  // NOTE: These are no longer used for selection - kept for reference only
+  // All selection now happens through MinigameSelector (js/minigames/selector.js)
   const LEGACY_MG_LIST=['clicker','memory','math','bar','typing','reaction','numseq','pattern','slider','anagram','path','target','pairs','simon','estimate'];
-  
-  // Retired legacy games that should not be used
   const RETIRED_GAMES = ['typing', 'reaction', 'slider', 'path', 'simon'];
-  
-  // Active legacy games (non-retired subset)
   const ACTIVE_LEGACY = LEGACY_MG_LIST.filter(g => !RETIRED_GAMES.includes(g));
-  
-  // Use active legacy list for now (will be replaced with new games)
   const MG_LIST = ACTIVE_LEGACY;
 
   function safeShowCard(title, lines=[], tone='neutral', dur=4200, uniform=false){
