@@ -459,6 +459,40 @@
     st.els.leftSlot.appendChild(l);
     st.els.rightSlot.appendChild(r);
     st._fitSchedule && st._fitSchedule();
+    
+    // Issue 4: Set final labels and clear other states
+    const [A, B] = finalists();
+    const winner = gp(winnerId);
+    const runnerUp = gp(A === winnerId ? B : A);
+    
+    if(winner){
+      winner.showFinalLabel = 'WINNER';
+      winner.winner = true; // Keep existing property for compatibility
+      // Clear HOH, POV, and nomination states
+      winner.hoh = false;
+      winner.nominated = false;
+      winner.nominationState = 'none';
+    }
+    
+    if(runnerUp){
+      runnerUp.showFinalLabel = 'RUNNER-UP';
+      runnerUp.runnerUp = true; // Keep existing property for compatibility
+      // Clear HOH, POV, and nomination states
+      runnerUp.hoh = false;
+      runnerUp.nominated = false;
+      runnerUp.nominationState = 'none';
+    }
+    
+    // Clear veto holder if it's one of the finalists
+    const gg = g.game || {};
+    if(gg.vetoHolder === winnerId || gg.vetoHolder === (A === winnerId ? B : A)){
+      gg.vetoHolder = null;
+    }
+    
+    console.info(`[finale] labels winner=${winnerId} runnerUp=${A === winnerId ? B : A}`);
+    
+    // Update HUD to reflect changes
+    try{ if(typeof g.updateHud === 'function') g.updateHud(); }catch(e){}
   }
 
   function showMedalOverlayFallback(durationMs=5000){
