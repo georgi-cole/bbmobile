@@ -334,7 +334,7 @@ button:focus-visible,.btn:focus-visible{ outline:2px solid var(--accent-2); outl
 .top-roster-tile{
   width:var(--topTile,80px); flex:0 0 auto; position:relative; isolation:isolate;
   background:linear-gradient(145deg,#182636,#101a28); border:1px solid #2d4258; border-radius:14px;
-  padding:6px 6px 8px; text-align:center; font-size:.6rem; display:flex; flex-direction:column; gap:4px;
+  padding:12px 6px 8px; text-align:center; font-size:.6rem; display:flex; flex-direction:column; gap:4px;
   transition:transform .25s, box-shadow .25s, border-color .2s;
 }
 .top-roster-tile:hover{ transform:translateY(-4px); box-shadow:0 10px 22px -12px rgba(0,0,0,.7); border-color:#305074; }
@@ -349,25 +349,25 @@ button:focus-visible,.btn:focus-visible{ outline:2px solid var(--accent-2); outl
   font-size:.56rem; letter-spacing:.5px; font-weight:600; color:#cedbeb; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.15; width:100%; text-align:center;
 }
 
-/* Small badges on tiles - NEW MICRO-BADGE SYSTEM */
+/* Small badges on tiles - NEW MICRO-BADGE SYSTEM (positioned OUTSIDE avatar) */
 .hg-badges{ position:absolute; inset:0; pointer-events:none; z-index:3; }
 .hg-badge{
-  position:absolute; width:20px; height:20px; display:flex; align-items:center; justify-content:center;
-  font-size:.85rem; border-radius:50%; box-shadow:0 2px 6px -2px rgba(0,0,0,.7);
+  position:absolute; width:22px; height:22px; display:flex; align-items:center; justify-content:center;
+  font-size:.9rem; border-radius:50%; box-shadow:0 2px 8px -1px rgba(0,0,0,.75);
 }
 .hg-badge.hoh-badge{
-  top:4px; left:4px; background:radial-gradient(circle at 50% 40%, #ffd96b, #b6800c 70%);
-  box-shadow:0 0 0 2px #142234,0 0 8px -2px rgba(255,220,120,.7);
+  top:-8px; left:-8px; background:radial-gradient(circle at 50% 40%, #ffd96b, #b6800c 70%);
+  box-shadow:0 0 0 2px #142234,0 0 8px -2px rgba(255,220,120,.7), 0 2px 8px -1px rgba(0,0,0,.75);
 }
 .hg-badge.hoh-badge::after{ content:'👑'; }
 .hg-badge.veto-badge{
-  top:4px; right:4px; background:radial-gradient(circle at 50% 50%, #7cffad, #1c6b3a 70%);
-  box-shadow:0 0 0 2px #142234,0 0 8px -2px rgba(130,250,180,.8);
+  top:-8px; right:-8px; background:radial-gradient(circle at 50% 50%, #7cffad, #1c6b3a 70%);
+  box-shadow:0 0 0 2px #142234,0 0 8px -2px rgba(130,250,180,.8), 0 2px 8px -1px rgba(0,0,0,.75);
 }
-.hg-badge.veto-badge::after{ content:'🛡'; font-size:.75rem; }
+.hg-badge.veto-badge::after{ content:'🛡'; font-size:.8rem; }
 .hg-badge.nom-badge{
-  bottom:4px; right:4px; width:18px; height:18px; background:#c23838; color:#fff;
-  font-size:.7rem; font-weight:700; box-shadow:0 0 0 2px #142234,0 0 8px -2px rgba(255,100,100,.8);
+  bottom:-8px; right:-8px; width:20px; height:20px; background:#c23838; color:#fff;
+  font-size:.75rem; font-weight:700; box-shadow:0 0 0 2px #142234,0 0 8px -2px rgba(255,100,100,.8), 0 2px 8px -1px rgba(0,0,0,.75);
 }
 .hg-badge.nom-badge::after{ content:'?'; }
 
@@ -1897,6 +1897,11 @@ img{ max-width:100%; display:block; }
 }
 @keyframes fadeIn{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:translateY(0);} }
 @keyframes fadeOut{ to{ opacity:0; } }
+
+/* === Results Modal Animations === */
+@keyframes resultsModalFadeIn{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes resultsModalFadeOut{ to{ opacity:0; } }
+@keyframes resultsCardSlideIn{ from{ opacity:0; transform:translateY(30px) scale(0.95); } to{ opacity:1; transform:translateY(0) scale(1); } }
 
 /* === TV-docked jury visuals — ensure no cut-offs and no ticker overlap ==== */
 .juryVizDock{
