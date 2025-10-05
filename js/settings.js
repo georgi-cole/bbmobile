@@ -36,7 +36,9 @@
     // Reserved for future toggles
     useRibbon: true,
     // Minigame mode
-    miniMode: 'random'  // 'random' | 'clicker' | 'cycle'
+    miniMode: 'random',  // 'random' | 'clicker' | 'cycle'
+    // Minigame system
+    useNewMinigames: false  // When true, use new Phase 1 minigame system with non-repeating pools
   };
 
   // Load/save helpers
@@ -238,7 +240,8 @@
               '<option value="cycle">Cycle through all</option>',
             '</select>',
             '<div class="tiny muted">Choose how minigames are selected during competitions.</div>',
-          '</div>'
+          '</div>',
+          checkbox('useNewMinigames','Use new minigame system (Phase 1) - non-repeating pools')
         ].join('')),
       '</div>'
     ].join('');

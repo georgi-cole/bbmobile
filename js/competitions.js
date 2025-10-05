@@ -82,7 +82,17 @@
       return t; 
     }
     
-    // Try new registry if available (with lazy retry)
+    // NEW SYSTEM: Use Phase 1 minigame system when feature flag is enabled
+    if(g?.cfg?.useNewMinigames && global.MinigameSelector && global.MinigameRegistry){
+      console.info('[Minigame] Using new Phase 1 system (non-repeating pool)');
+      const selectedGame = global.MinigameSelector.selectNext(true);
+      if(selectedGame){
+        return selectedGame;
+      }
+      console.warn('[Minigame] New system failed, falling back to legacy');
+    }
+    
+    // LEGACY SYSTEM: Try old registry if available (with lazy retry)
     let registryGame = null;
     if(global.MiniGamesRegistry){
       registryGame = global.MiniGamesRegistry.getRandom(g.miniHistory);
@@ -196,11 +206,18 @@
     const g=global.game; g.lastCompScores=g.lastCompScores||new Map();
     if(g.lastCompScores.has(id)) return false;
     
-    // Normalize base score to 0-100 if needed (new games already do this)
+    // Use new scoring system if enabled and available
     let normalizedBase = base;
-    if(base > 100){
-      // Legacy games might return higher scores, normalize them
-      normalizedBase = Math.min(100, (base / 120) * 100);
+    if(g?.cfg?.useNewMinigames && global.MinigameScoring){
+      // New system: scores should already be 0-100 from games
+      // Just ensure they're in valid range
+      normalizedBase = Math.max(0, Math.min(100, base));
+    } else {
+      // Legacy normalization
+      if(base > 100){
+        // Legacy games might return higher scores, normalize them
+        normalizedBase = Math.min(100, (base / 120) * 100);
+      }
     }
     
     // Apply compBeast multiplier and clamp to reasonable range

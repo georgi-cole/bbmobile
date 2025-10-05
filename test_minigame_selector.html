@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minigame Selector Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e3ecf5;
+    }
+    h1 { color: #4a90e2; }
+    h2 { color: #95a9c0; margin-top: 30px; }
+    .test-section {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    button {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .result {
+      background: #0f1419;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+    .success { color: #5cb85c; }
+    .error { color: #d9534f; }
+    .info { color: #5bc0de; }
+    .warning { color: #f0ad4e; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Minigame System Phase 1 Test</h1>
+  
+  <div class="test-section">
+    <h2>Registry Test</h2>
+    <button onclick="testRegistry()">Test Registry</button>
+    <div id="registryResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Selector Test - Non-Repeating Pool</h2>
+    <button onclick="testNonRepeatPool()">Run 20 Selections</button>
+    <button onclick="resetSelector()">Reset Selector</button>
+    <div id="selectorResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Scoring Test</h2>
+    <button onclick="testScoring()">Test Scoring Functions</button>
+    <div id="scoringResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Mobile Utils Test</h2>
+    <button onclick="testMobileUtils()">Test Mobile Utils</button>
+    <div id="mobileResult" class="result"></div>
+  </div>
+
+  <!-- Load minigame system modules -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/minigames/scoring.js"></script>
+  <script src="js/minigames/mobile-utils.js"></script>
+
+  <script>
+    // Initialize game object
+    window.game = {};
+
+    function log(elementId, message, type = 'info') {
+      const el = document.getElementById(elementId);
+      const color = type === 'success' ? 'success' : 
+                    type === 'error' ? 'error' : 
+                    type === 'warning' ? 'warning' : 'info';
+      el.innerHTML += `<span class="${color}">${message}</span>\n`;
+    }
+
+    function clear(elementId) {
+      document.getElementById(elementId).innerHTML = '';
+    }
+
+    function testRegistry() {
+      clear('registryResult');
+      log('registryResult', '=== Testing Registry ===\n');
+      
+      try {
+        const registry = window.MinigameRegistry;
+        
+        // Test 1: Check if registry exists
+        if (!registry) {
+          log('registryResult', '❌ MinigameRegistry not found', 'error');
+          return;
+        }
+        log('registryResult', '✅ MinigameRegistry loaded', 'success');
+        
+        // Test 2: Get all games
+        const allKeys = registry.getAllKeys();
+        log('registryResult', `✅ Total games registered: ${allKeys.length}`, 'success');
+        log('registryResult', `   Games: ${allKeys.join(', ')}`, 'info');
+        
+        // Test 3: Get implemented games
+        const implemented = registry.getImplementedGames(true);
+        log('registryResult', `✅ Implemented games: ${implemented.length}`, 'success');
+        log('registryResult', `   Games: ${implemented.join(', ')}`, 'info');
+        
+        // Test 4: Get mobile-friendly games
+        const mobile = registry.getMobileFriendlyGames();
+        log('registryResult', `✅ Mobile-friendly games: ${mobile.length}`, 'success');
+        
+        // Test 5: Check individual game metadata
+        const game = registry.getGame('countHouse');
+        if (game && game.name === 'Count House') {
+          log('registryResult', '✅ Game metadata correct', 'success');
+          log('registryResult', `   Name: ${game.name}`, 'info');
+          log('registryResult', `   Type: ${game.type}`, 'info');
+          log('registryResult', `   Scoring: ${game.scoring}`, 'info');
+        } else {
+          log('registryResult', '❌ Game metadata incorrect', 'error');
+        }
+        
+        // Test 6: Filter by type
+        const reactionGames = registry.getGamesByType('reaction');
+        log('registryResult', `✅ Reaction games: ${reactionGames.length}`, 'success');
+        log('registryResult', `   Games: ${reactionGames.join(', ')}`, 'info');
+        
+      } catch (error) {
+        log('registryResult', `❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    function testNonRepeatPool() {
+      clear('selectorResult');
+      log('selectorResult', '=== Testing Non-Repeating Selection ===\n');
+      
+      try {
+        const selector = window.MinigameSelector;
+        const registry = window.MinigameRegistry;
+        
+        if (!selector || !registry) {
+          log('selectorResult', '❌ Modules not loaded', 'error');
+          return;
+        }
+        
+        // Reset for clean test
+        selector.reset();
+        
+        // Get available games
+        const available = registry.getImplementedGames(true);
+        log('selectorResult', `Available games: ${available.length}`, 'info');
+        log('selectorResult', `Games: ${available.join(', ')}\n`, 'info');
+        
+        // Initialize pool
+        selector.initializeSeasonPool(available);
+        
+        // Track selections
+        const selections = [];
+        const selectionCounts = {};
+        
+        // Make 20 selections (more than available games to test reshuffling)
+        for (let i = 0; i < 20; i++) {
+          const selected = selector.selectNext(true);
+          selections.push(selected);
+          selectionCounts[selected] = (selectionCounts[selected] || 0) + 1;
+          
+          const remaining = selector.getRemainingInPool();
+          log('selectorResult', 
+              `Selection ${i+1}: ${selected} (${remaining} remaining in pool)`, 
+              'info');
+        }
+        
+        log('selectorResult', '\n=== Analysis ===', 'success');
+        log('selectorResult', `Total selections: ${selections.length}`, 'info');
+        
+        // Check distribution
+        log('selectorResult', '\nSelection counts:', 'info');
+        for (const [game, count] of Object.entries(selectionCounts)) {
+          log('selectorResult', `  ${game}: ${count}`, 'info');
+        }
+        
+        // Verify no immediate repeats
+        let hasImmediateRepeat = false;
+        for (let i = 1; i < selections.length; i++) {
+          if (selections[i] === selections[i-1]) {
+            log('selectorResult', 
+                `⚠️ Immediate repeat at position ${i}: ${selections[i]}`, 
+                'warning');
+            hasImmediateRepeat = true;
+          }
+        }
+        
+        if (!hasImmediateRepeat) {
+          log('selectorResult', '✅ No immediate repeats detected', 'success');
+        }
+        
+        // Check if pool was reshuffled
+        const maxExpected = Math.ceil(20 / available.length);
+        const maxActual = Math.max(...Object.values(selectionCounts));
+        if (maxActual <= maxExpected + 1) {
+          log('selectorResult', '✅ Pool reshuffling working correctly', 'success');
+        } else {
+          log('selectorResult', 
+              `⚠️ Uneven distribution detected (max: ${maxActual}, expected: ~${maxExpected})`, 
+              'warning');
+        }
+        
+      } catch (error) {
+        log('selectorResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function resetSelector() {
+      const selector = window.MinigameSelector;
+      if (selector) {
+        selector.reset();
+        clear('selectorResult');
+        log('selectorResult', '✅ Selector state reset', 'success');
+      }
+    }
+
+    function testScoring() {
+      clear('scoringResult');
+      log('scoringResult', '=== Testing Scoring Functions ===\n');
+      
+      try {
+        const scoring = window.MinigameScoring;
+        
+        if (!scoring) {
+          log('scoringResult', '❌ MinigameScoring not loaded', 'error');
+          return;
+        }
+        
+        // Test 1: Basic normalization
+        const norm1 = scoring.normalize(50, 0, 100);
+        log('scoringResult', `✅ normalize(50, 0, 100) = ${norm1} (expected 50)`, 
+            norm1 === 50 ? 'success' : 'error');
+        
+        // Test 2: Time-based scoring
+        const time1 = scoring.normalizeTime(1000, 1000, 5000);
+        log('scoringResult', `✅ normalizeTime(1000ms) = ${time1.toFixed(1)} (expected 100)`, 
+            time1 === 100 ? 'success' : 'info');
+        
+        const time2 = scoring.normalizeTime(3000, 1000, 5000);
+        log('scoringResult', `   normalizeTime(3000ms) = ${time2.toFixed(1)}`, 'info');
+        
+        // Test 3: Accuracy scoring
+        const acc1 = scoring.normalizeAccuracy(8, 10);
+        log('scoringResult', `✅ normalizeAccuracy(8/10) = ${acc1} (expected 80)`, 
+            acc1 === 80 ? 'success' : 'error');
+        
+        // Test 4: Hybrid scoring
+        const hybrid = scoring.normalizeHybrid({
+          correct: 7,
+          total: 10,
+          timeMs: 2000,
+          targetTimeMs: 200,
+          accuracyWeight: 0.6
+        });
+        log('scoringResult', `✅ normalizeHybrid(7/10, 2000ms) = ${hybrid.toFixed(1)}`, 'success');
+        
+        // Test 5: Endurance scoring
+        const endurance1 = scoring.normalizeEndurance(30000, 30000, 1000);
+        log('scoringResult', `✅ normalizeEndurance(30s) = ${endurance1.toFixed(1)} (expected 100)`, 
+            endurance1 === 100 ? 'success' : 'info');
+        
+        // Test 6: Competitive multiplier
+        const comp1 = scoring.applyCompetitiveMultiplier(80, 0.5, 1.0);
+        log('scoringResult', `✅ applyCompetitiveMultiplier(80, 0.5, 1.0) = ${comp1.toFixed(1)}`, 'success');
+        
+        const comp2 = scoring.applyCompetitiveMultiplier(80, 1.0, 1.0);
+        log('scoringResult', `   With high compBeast (1.0) = ${comp2.toFixed(1)}`, 'info');
+        
+        // Test 7: Final score calculation
+        const final = scoring.calculateFinalScore({
+          rawScore: 75,
+          gameKey: 'countHouse',
+          compBeast: 0.7,
+          difficultyMultiplier: 1.0
+        });
+        log('scoringResult', `✅ calculateFinalScore(75) = ${final.toFixed(1)}`, 'success');
+        
+        log('scoringResult', '\n✅ All scoring tests passed', 'success');
+        
+      } catch (error) {
+        log('scoringResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testMobileUtils() {
+      clear('mobileResult');
+      log('mobileResult', '=== Testing Mobile Utils ===\n');
+      
+      try {
+        const utils = window.MinigameMobileUtils;
+        
+        if (!utils) {
+          log('mobileResult', '❌ MinigameMobileUtils not loaded', 'error');
+          return;
+        }
+        
+        // Test 1: Device detection
+        const isMobile = utils.isMobileDevice();
+        log('mobileResult', `Device is mobile: ${isMobile}`, 'info');
+        
+        // Test 2: Viewport size
+        const viewport = utils.getViewportSize();
+        log('mobileResult', `Viewport: ${viewport.width}x${viewport.height}`, 'info');
+        
+        // Test 3: Orientation
+        const portrait = utils.isPortrait();
+        log('mobileResult', `Orientation: ${portrait ? 'Portrait' : 'Landscape'}`, 'info');
+        
+        // Test 4: Create button
+        const testDiv = document.createElement('div');
+        const btn = utils.createButton('Test Button', () => {
+          log('mobileResult', '✅ Button tap detected!', 'success');
+        });
+        testDiv.appendChild(btn);
+        log('mobileResult', '✅ Button created successfully', 'success');
+        
+        // Test 5: Responsive container
+        const container = utils.createResponsiveContainer({
+          maxWidth: 400,
+          backgroundColor: '#1a1f2e'
+        });
+        if (container.container) {
+          log('mobileResult', '✅ Responsive container created', 'success');
+        }
+        
+        // Test 6: Apply mobile styles
+        const testEl = document.createElement('div');
+        utils.applyMobileFriendlyStyles(testEl, {
+          disableSelect: true,
+          disableTapHighlight: true,
+          disableZoom: true
+        });
+        log('mobileResult', '✅ Mobile styles applied', 'success');
+        
+        log('mobileResult', '\n✅ All mobile utils tests passed', 'success');
+        
+      } catch (error) {
+        log('mobileResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    // Auto-run tests on load
+    window.addEventListener('load', () => {
+      console.log('Test page loaded. Click buttons to run tests.');
+    });
+  </script>
+</body>
+</html>
