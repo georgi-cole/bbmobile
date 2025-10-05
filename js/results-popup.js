@@ -199,6 +199,7 @@
       const winnerAvatarEl = document.createElement('img');
       winnerAvatarEl.src = winnerAvatar;
       winnerAvatarEl.alt = winnerData.name;
+      // Always start with shimmer, remove when image loads
       winnerAvatarEl.style.cssText = `
         width: 120px;
         height: 120px;
@@ -206,8 +207,15 @@
         border: 3px solid #ffd96b;
         box-shadow: 0 4px 24px rgba(255,217,107,0.5);
         object-fit: cover;
-        ${!loadedAvatars[0] ? 'background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite;' : ''}
+        background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 1.5s infinite;
       `;
+      // Remove shimmer when image loads
+      winnerAvatarEl.onload = () => {
+        winnerAvatarEl.style.background = '';
+        winnerAvatarEl.style.animation = '';
+      };
       winnerSection.appendChild(winnerAvatarEl);
       
       const winnerName = document.createElement('div');
@@ -263,6 +271,7 @@
           const runnerAvatar = document.createElement('img');
           runnerAvatar.src = avatarUrl;
           runnerAvatar.alt = player.name;
+          // Always start with shimmer, remove when image loads
           runnerAvatar.style.cssText = `
             width: 70px;
             height: 70px;
@@ -270,8 +279,15 @@
             border: 2px solid #7cffad;
             box-shadow: 0 2px 14px rgba(124,255,173,0.35);
             object-fit: cover;
-            ${!loadedAvatars[idx + 1] ? 'background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite;' : ''}
+            background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite;
           `;
+          // Remove shimmer when image loads
+          runnerAvatar.onload = () => {
+            runnerAvatar.style.background = '';
+            runnerAvatar.style.animation = '';
+          };
           runnerUp.appendChild(runnerAvatar);
           
           const runnerPlace = document.createElement('div');
