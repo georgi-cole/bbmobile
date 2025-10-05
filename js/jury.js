@@ -468,6 +468,7 @@
     if(winner){
       winner.showFinalLabel = 'WINNER';
       winner.winner = true; // Keep existing property for compatibility
+      winner.finalRank = 1; // Issue #3: Winner gets rank 1
       // Clear HOH, POV, and nomination states
       winner.hoh = false;
       winner.nominated = false;
@@ -477,6 +478,7 @@
     if(runnerUp){
       runnerUp.showFinalLabel = 'RUNNER-UP';
       runnerUp.runnerUp = true; // Keep existing property for compatibility
+      runnerUp.finalRank = 2; // Issue #3: Runner-up gets rank 2
       // Clear HOH, POV, and nomination states
       runnerUp.hoh = false;
       runnerUp.nominated = false;
@@ -489,7 +491,7 @@
       gg.vetoHolder = null;
     }
     
-    console.info(`[finale] labels winner=${winnerId} runnerUp=${A === winnerId ? B : A}`);
+    console.info(`[finale] labels winner=${winnerId} (rank=1) runnerUp=${A === winnerId ? B : A} (rank=2)`);
     
     // Update HUD to reflect changes
     try{ if(typeof g.updateHud === 'function') g.updateHud(); }catch(e){}

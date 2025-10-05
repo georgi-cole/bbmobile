@@ -327,6 +327,11 @@
         const winnerAvatar = document.createElement('img');
         winnerAvatar.src = winner.avatarUrl;
         winnerAvatar.alt = winner.name;
+        winnerAvatar.onerror = function(){
+          console.warn(`[avatar] failed to load url=${this.src} player=${winner.name}`);
+          this.onerror=null;
+          this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(winner.name)}`;
+        };
         winnerAvatar.style.cssText = `
           width: 110px;
           height: 110px;
@@ -390,6 +395,11 @@
           const runnerAvatar = document.createElement('img');
           runnerAvatar.src = player.avatarUrl;
           runnerAvatar.alt = player.name;
+          runnerAvatar.onerror = function(){
+            console.warn(`[avatar] failed to load url=${this.src} player=${player.name}`);
+            this.onerror=null;
+            this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name)}`;
+          };
           runnerAvatar.style.cssText = `
             width: 65px;
             height: 65px;

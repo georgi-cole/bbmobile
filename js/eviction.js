@@ -262,6 +262,98 @@
     });
   }
 
+  // Helper to show diary room card with avatars (Issue #5)
+  function showDiaryRoomWithAvatars(voterId, targetId, message, duration=3000){
+    const voter = global.getP?.(voterId);
+    const target = global.getP?.(targetId);
+    if(!voter || !target) {
+      global.showCard?.('Diary Room', [message], 'live', duration, true);
+      return;
+    }
+
+    // Get avatars with fallback
+    const voterAvatar = global.resolveAvatar?.(voter) || voter.avatar || 
+      `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(voter.name)}`;
+    const targetAvatar = global.resolveAvatar?.(target) || target.avatar || 
+      `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(target.name)}`;
+
+    // Create custom card with avatars
+    const card = document.createElement('div');
+    card.className = 'revealCard';
+    card.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 999;
+      background: linear-gradient(135deg, #1a2937, #0f1a28);
+      border: 2px solid rgba(120,180,240,0.4);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 50px -20px rgba(0,0,0,0.9);
+      max-width: 450px;
+      width: 90vw;
+      text-align: center;
+    `;
+
+    const title = document.createElement('div');
+    title.textContent = 'Diary Room';
+    title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 16px;';
+    card.appendChild(title);
+
+    const avatarRow = document.createElement('div');
+    avatarRow.style.cssText = 'display: flex; justify-content: space-around; align-items: center; margin-bottom: 16px;';
+
+    const voterImg = document.createElement('img');
+    voterImg.src = voterAvatar;
+    voterImg.alt = voter.name;
+    voterImg.onerror = function(){
+      console.warn(`[avatar] failed to load url=${this.src} player=${voter.name}`);
+      this.onerror=null;
+      this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(voter.name)}`;
+    };
+    voterImg.style.cssText = `
+      width: 80px; height: 80px; border-radius: 50%; 
+      border: 3px solid #7cffad; object-fit: cover;
+      box-shadow: 0 4px 12px rgba(124,255,173,0.3);
+    `;
+
+    const arrow = document.createElement('div');
+    arrow.textContent = '→';
+    arrow.style.cssText = 'font-size: 2rem; color: #ff6b6b; font-weight: 700;';
+
+    const targetImg = document.createElement('img');
+    targetImg.src = targetAvatar;
+    targetImg.alt = target.name;
+    targetImg.onerror = function(){
+      console.warn(`[avatar] failed to load url=${this.src} player=${target.name}`);
+      this.onerror=null;
+      this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(target.name)}`;
+    };
+    targetImg.style.cssText = `
+      width: 80px; height: 80px; border-radius: 50%; 
+      border: 3px solid #ff6b6b; object-fit: cover;
+      box-shadow: 0 4px 12px rgba(255,107,107,0.3);
+    `;
+
+    avatarRow.appendChild(voterImg);
+    avatarRow.appendChild(arrow);
+    avatarRow.appendChild(targetImg);
+    card.appendChild(avatarRow);
+
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = message;
+    messageDiv.style.cssText = 'font-size: 1rem; color: #cedbeb; line-height: 1.4;';
+    card.appendChild(messageDiv);
+
+    document.body.appendChild(card);
+
+    // Auto-remove after duration
+    setTimeout(() => {
+      try{ card.remove(); }catch{}
+    }, duration);
+  }
+
   /* ----- Diary Room Sequence (Animated / Per Voter) ----- */
   async function beginDiaryRoomSequence(){
     const g=global.game; if(!g) return;
@@ -292,7 +384,10 @@
       const pick=entry.evict;
       const nameV=global.safeName(entry.voter), namePick=global.safeName(pick);
       markVoter(entry.voter,'voting…');
-      global.showCard('Diary Room',[`${nameV}: I vote to evict ${namePick}.`],'live',3000,true);
+      
+      // Issue #5: Show diary room with avatars
+      showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
+      await sleep(3000);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
 
       if(twoMode){
@@ -499,16 +594,55 @@
   async function multiEvictFinalize(evictedIds,counts,K){
     const g=global.game;
     const modeLabel=(K===3)?'Triple Eviction':'Double Eviction';
-    for(const id of evictedIds){
-      const p=global.getP(id); if(!p) continue;
-      p.evicted=true; p.weekEvicted=g.week;
+    
+    // Calculate finalRank for multi-evictions (Issue #3)
+    // Rank by votes (more votes = earlier out = lower placement), then alphabetically, then randomly
+    const rankedEvictions = evictedIds.map(id => ({
+      id,
+      votes: counts.get(id) || 0,
+      name: global.safeName(id)
+    }))
+    .sort((a, b) => {
+      // More votes first (earlier out)
+      if(b.votes !== a.votes) return b.votes - a.votes;
+      // Alphabetical tiebreak
+      const nameCompare = a.name.localeCompare(b.name);
+      if(nameCompare !== 0) return nameCompare;
+      // Random tiebreak
+      return Math.random() - 0.5;
+    });
+    
+    // Calculate base rank from remaining alive players
+    const aliveBeforeEviction = global.alivePlayers().length + evictedIds.length;
+    
+    for(let i = 0; i < rankedEvictions.length; i++){
+      const {id, votes} = rankedEvictions[i];
+      const p = global.getP(id);
+      if(!p) continue;
+      
+      p.evicted=true;
+      p.weekEvicted=g.week;
+      // Assign finalRank: higher rank for those evicted later (less votes)
+      p.finalRank = aliveBeforeEviction - i;
+      
+      console.info(`[eviction] assigned finalRank=${p.finalRank} to ${p.name} votes=${votes}`);
+      
       if(global.alivePlayers().length<=JURY_START_AT && g.cfg.enableJuryHouse){
         if(!g.juryHouse?.includes(id)) g.juryHouse=(g.juryHouse||[]).concat([id]);
       }
       try{ global.juryOnEviction?.(id); }catch{}
     }
+    
+    // Clear all badges immediately after eviction reveal (Issue #1)
     g.nominees=[]; g.vetoHolder=null; g.nomsLocked=false;
-    if(Array.isArray(g.players)) g.players.forEach(p=>p.nominated=false);
+    if(Array.isArray(g.players)){
+      g.players.forEach(p=>{
+        p.nominated=false;
+        p.hoh=false;
+      });
+    }
+    g.hohId=null;
+    console.info('[eviction] badges cleared after multi-eviction reveal');
     global.updateHud?.();
 
     const parts=[...counts.keys()].map(id=>`${global.safeName(id)} ${counts.get(id)||0}`).join(' — ');
@@ -534,7 +668,11 @@
   function handleSelfEviction(evId,reason='self'){
     const g=global.game; const ev=global.getP(evId); if(!ev) return;
     ev.evicted=true; ev.weekEvicted=g.week;
-    if(Array.isArray(g.players)) g.players.forEach(p=>p.nominated=false);
+    
+    // Assign finalRank based on remaining players (Issue #3)
+    const aliveCount = global.alivePlayers().length + 1; // +1 because this player is being evicted
+    ev.finalRank = aliveCount;
+    console.info(`[eviction] assigned finalRank=${ev.finalRank} to ${ev.name}`);
 
     if(reason==='self'){
       global.showCard('Self-Evicted',[ev.name],'evict',3800,true);
@@ -549,7 +687,16 @@
     }
     try{ global.juryOnEviction?.(evId); }catch{}
 
+    // Clear all badges immediately after eviction reveal (Issue #1)
     g.nominees=[]; g.vetoHolder=null; g.nomsLocked=false;
+    if(Array.isArray(g.players)){
+      g.players.forEach(p=>{
+        p.nominated=false;
+        p.hoh=false;
+      });
+    }
+    g.hohId=null;
+    console.info('[eviction] badges cleared after eviction reveal');
 
     if(!g.__twistMode) global.twists?.afterPhase?.('eviction');
 
