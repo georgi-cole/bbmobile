@@ -251,6 +251,70 @@ header.innerHTML = `
   // Alias for backward compatibility
   function ensureProfileTip(){ return ensureBioPanel(); }
   
+  // Helper functions for bio panel
+  function ordinal(n){
+    const s = ['th','st','nd','rd'];
+    const v = n % 100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+  }
+  
+  function computeAlliesEnemies(p){
+    const affinity = p.affinity || {};
+    const ALLY_THRESHOLD = 0.50;
+    const ENEMY_THRESHOLD = -0.50;
+    
+    const allies = [];
+    const enemies = [];
+    
+    for(const id in affinity){
+      const val = affinity[id];
+      const other = (g.game?.players || []).find(pl => pl.id === parseInt(id));
+      if(!other || other.evicted) continue;
+      
+      if(val > ALLY_THRESHOLD){
+        allies.push({ id: parseInt(id), name: other.name || '?', affinity: val });
+      } else if(val < ENEMY_THRESHOLD){
+        enemies.push({ id: parseInt(id), name: other.name || '?', affinity: val });
+      }
+    }
+    
+    // Sort and limit
+    allies.sort((a,b) => b.affinity - a.affinity);
+    enemies.sort((a,b) => a.affinity - b.affinity);
+    
+    return {
+      allies: allies.slice(0, 4),
+      enemies: enemies.slice(0, 4)
+    };
+  }
+  
+  function computeRanking(p){
+    // Only compute for evicted players
+    if(!p.evicted) return null;
+    
+    // Check if already cached
+    if(p.finalRank) return ordinal(p.finalRank);
+    
+    // Compute ranking based on original player count and eviction order
+    const game = g.game || {};
+    const allPlayers = game.players || [];
+    const originalCount = allPlayers.length;
+    
+    // Count how many players were evicted before this one
+    const evictedBefore = allPlayers.filter(other => 
+      other.evicted && 
+      other.id !== p.id && 
+      (other.weekEvicted || 0) < (p.weekEvicted || 0)
+    ).length;
+    
+    // Rank is: total players - players evicted before
+    p.finalRank = originalCount - evictedBefore;
+    
+    const rankStr = ordinal(p.finalRank);
+    console.info(`[bio] rank id=${p.id} rank=${rankStr}`);
+    return rankStr;
+  }
+  
   function renderBioContent(p){
     const esc = (s)=> UI.escapeHtml ? UI.escapeHtml(String(s)) : String(s);
     const bio = p.bio || {};
@@ -259,8 +323,26 @@ header.innerHTML = `
     const age = bio.age || '—';
     const location = bio.location || '—';
     const sexuality = bio.sexuality || '—';
+    const occupation = bio.occupation || '—';
     const motto = bio.motto || '—';
     const funFact = bio.funFact || '—';
+    
+    // Compute allies and enemies
+    const relations = computeAlliesEnemies(p);
+    const alliesText = relations.allies.length 
+      ? relations.allies.map(a => esc(a.name)).join(', ')
+      : 'None';
+    const enemiesText = relations.enemies.length
+      ? relations.enemies.map(e => esc(e.name)).join(', ')
+      : 'None';
+    
+    // Log relations (optional)
+    if(relations.allies.length || relations.enemies.length){
+      console.info(`[bio] relations id=${p.id} allies=${relations.allies.length} enemies=${relations.enemies.length}`);
+    }
+    
+    // Compute ranking for evicted players
+    const ranking = computeRanking(p);
     
     // Use cached avatar URL if available, otherwise resolve
     const avatar = p.__avatarUrl || getAvatar(p);
@@ -274,12 +356,14 @@ header.innerHTML = `
       <div class="bio-content">
         <h3 class="bio-name">${esc(name)}</h3>
         <dl class="bio-grid">
-          <dt>Gender</dt><dd>${esc(gender)}</dd>
-          <dt>Age</dt><dd>${esc(age)}</dd>
+          <dt>Age</dt><dd>${esc(age)}, ${esc(gender)}</dd>
           <dt>Location</dt><dd>${esc(location)}</dd>
-          <dt>Sexuality</dt><dd>${esc(sexuality)}</dd>
+          <dt>Occupation</dt><dd class="bio-occupation">${esc(occupation)}</dd>
           <dt>Motto</dt><dd class="bio-motto">"${esc(motto)}"</dd>
           <dt>Fun Fact</dt><dd>${esc(funFact)}</dd>
+          <dt>Allies</dt><dd>${alliesText}</dd>
+          <dt>Enemies</dt><dd>${enemiesText}</dd>
+          ${ranking ? `<dt>Ranking</dt><dd>${esc(ranking)}</dd>` : ''}
         </dl>
       </div>
     `;
@@ -449,11 +533,49 @@ header.innerHTML = `
       if(game.__returnFlashId === p.id) tile.classList.add('return-flash');
 
       const wrap=document.createElement('div'); wrap.className='top-tile-avatar-wrap';
-      if(p.hoh){ const b=document.createElement('div'); b.className='badge-crown'; wrap.appendChild(b); }
-      if(game.vetoHolder===p.id){ const b=document.createElement('div'); b.className='badge-veto'; wrap.appendChild(b); }
-      if(p.nominated && !p.evicted && !game.__suppressNomBadges){
-        const b=document.createElement('div'); b.className='badge-nom'; wrap.appendChild(b);
+      
+      // New badge system
+      const hasHOH = !!p.hoh;
+      const hasVeto = game.vetoHolder===p.id;
+      const hasNom = p.nominated && !p.evicted && !game.__suppressNomBadges;
+      
+      if(hasHOH || hasVeto || hasNom){
+        const badgeContainer = document.createElement('div');
+        badgeContainer.className = 'hg-badges';
+        badgeContainer.setAttribute('aria-hidden', 'true');
+        
+        if(hasHOH){
+          const b = document.createElement('div');
+          b.className = 'hg-badge hoh-badge';
+          b.title = 'Head of Household';
+          badgeContainer.appendChild(b);
+        }
+        
+        if(hasVeto){
+          const b = document.createElement('div');
+          b.className = 'hg-badge veto-badge';
+          b.title = 'Veto Holder';
+          badgeContainer.appendChild(b);
+        }
+        
+        if(hasNom){
+          const b = document.createElement('div');
+          b.className = 'hg-badge nom-badge';
+          b.title = 'Nominated';
+          badgeContainer.appendChild(b);
+          // Add pulse effect to avatar wrap
+          wrap.classList.add('nominee-pulse');
+        }
+        
+        wrap.appendChild(badgeContainer);
+        
+        // Log badge application
+        const cfg = g.game?.cfg || {};
+        if(cfg.logBadges !== false){
+          console.info(`[badges] applied hoh=${hasHOH} veto=${hasVeto} nom=${hasNom} id=${p.id}`);
+        }
       }
+      
       if(p.evicted){
         const r=document.createElement('div'); r.className='ribbon-evicted small'; r.textContent='EVICTED'; wrap.appendChild(r);
       }
@@ -671,20 +793,31 @@ header.innerHTML = `
   function removeSkipIntroButton(){ const b=document.getElementById('btnSkipIntro'); if(b) b.remove(); }
   function clearIntroDeck(){ const deck=document.getElementById('introDeck'); if(deck) deck.remove(); }
   function buildProfileCard(p){
-    const avatar = p.avatar || p.img || p.photo
-      || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
+    const avatar = getAvatar(p);
+    const bio = p.bio || {};
+    const age = bio.age || '—';
+    const gender = bio.gender || '—';
+    const location = bio.location || '—';
+    const occupation = bio.occupation || '—';
+    const motto = bio.motto || '—';
+    
     const card=document.createElement('div');
     card.className='revealCard introCard';
-    card.style.maxWidth='320px';
+    card.style.maxWidth='380px';
     card.innerHTML = `
       <h3>Meet the Cast</h3>
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <img class="avatar" style="width:60px;height:60px;border-width:3px"
+      <div style="display:flex;gap:16px;align-items:flex-start">
+        <img class="intro-avatar" style="width:120px;height:120px;border-radius:16px;border:3px solid #3d5a72;object-fit:cover"
           src="${avatar}" alt="${UI.escapeHtml?.(p.name||'guest')}"
           onerror="this.onerror=null;this.src='${FALLBACK}'">
-        <div style="text-align:left">
-          <div class="big">${UI.escapeHtml?.(p.name||'')}</div>
-          <div class="tiny muted">${UI.escapeHtml?.(p.meta?.loc||'—')} • ${UI.escapeHtml?.(p.meta?.occupation||'—')}</div>
+        <div style="text-align:left;flex:1">
+          <div class="big" style="font-size:1.1rem;font-weight:700;margin-bottom:8px">${UI.escapeHtml?.(p.name||'')}</div>
+          <div style="display:flex;flex-direction:column;gap:4px;font-size:.72rem;line-height:1.4">
+            <div class="intro-demo">${UI.escapeHtml?.(age)}, ${UI.escapeHtml?.(gender)}</div>
+            <div class="intro-demo">${UI.escapeHtml?.(location)}</div>
+            <div class="intro-demo" style="font-weight:600;color:#9fc5e8">${UI.escapeHtml?.(occupation)}</div>
+            <div class="intro-motto" style="font-style:italic;color:#b9d4e8;margin-top:2px">"${UI.escapeHtml?.(motto)}"</div>
+          </div>
         </div>
       </div>`;
     return card;
