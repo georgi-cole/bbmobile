@@ -110,6 +110,8 @@
     g.nominees.forEach(id=>{
       const p=global.getP(id); p.nominated=true;
       p.nominatedCount = (p.nominatedCount||0)+1;
+      p.nominationState = 'nominated'; // Set initial nomination state
+      console.info(`[nom] nominated player=${id} state=nominated`);
       global.addBond?.(hohId,id, global.NOMINATION_PENALTY);
       const hoh=global.getP(hohId);
       hoh.affinity[id]=global.clamp?.((hoh.affinity[id]??0)-0.15,-1,1) ?? (hoh.affinity[id]??0)-0.15;

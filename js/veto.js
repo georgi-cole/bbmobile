@@ -510,8 +510,14 @@
       var savedName = safeName(savedId);
       g.vetoSavedId = savedId;
 
+      // Set pendingSave state - NOM label should still show
       var savedP = getP(savedId);
-      if(savedP){ savedP.nominated = false; try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){} }
+      if(savedP){ 
+        savedP.nominationState = 'pendingSave'; 
+        console.info(`[nom] pendingSave player=${savedId}`);
+        // Don't clear nominated flag yet - wait for veto application
+        try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){} 
+      }
 
       if(!g.__vetoNarrativeShown){
         try{ if(typeof global.showCard==='function') global.showCard('Veto Decision', [pickPhrase(VETO_USE_PHRASES)], 'veto', 3200, true); }catch(e){}
@@ -620,7 +626,33 @@
       g.nominees = (g.nominees||[]).filter(function(id){ return id!==savedId; });
       if(g.nominees.indexOf(replacementId)===-1) g.nominees.push(replacementId);
 
-      for(var i=0;i<g.players.length;i++){ g.players[i].nominated = (g.nominees.indexOf(g.players[i].id)!==-1); }
+      // Update nomination states after veto is applied
+      for(var i=0;i<g.players.length;i++){ 
+        var p = g.players[i];
+        if(p.id === savedId){
+          // Saved player - clear nomination and set state to 'saved'
+          p.nominated = false;
+          p.nominationState = 'saved';
+        } else if(p.id === replacementId){
+          // Replacement nominee - set state to 'replacement'
+          p.nominated = true;
+          p.nominationState = 'replacement';
+        } else if(g.nominees.indexOf(p.id) !== -1){
+          // Other nominees keep their state
+          p.nominated = true;
+        } else {
+          // Clear nomination for others
+          p.nominated = false;
+          if(p.nominationState === 'nominated' || p.nominationState === 'pendingSave'){
+            p.nominationState = 'none';
+          }
+        }
+      }
+
+      // Log the veto application with saved and replacement IDs
+      var savedIds = [savedId];
+      var replacementIds = [replacementId];
+      console.info('[nom] vetoApplied saved=' + JSON.stringify(savedIds) + ' replacement=' + JSON.stringify(replacementIds));
 
       var hoh = getP(g.hohId);
       var announce = (hoh ? hoh.name : 'HOH')+': I name '+safeName(replacementId)+' as the replacement nominee.';

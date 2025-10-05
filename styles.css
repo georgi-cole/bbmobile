@@ -2681,6 +2681,23 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   letter-spacing: .6px;
 }
 
+.top-tile-name.status-winner {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: #1a1a1a;
+  font-weight: 800;
+  font-size: .72rem;
+  letter-spacing: .8px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.top-tile-name.status-runner-up {
+  background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: .66rem;
+  letter-spacing: .4px;
+}
+
 /* 2. TV Card Rail with Fixed Min-Height */
 .tv-card-rail {
   min-height: 280px;

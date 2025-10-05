@@ -4,7 +4,7 @@
 (function(global){
   'use strict';
 
-  // Central score formatting helper
+  // Central score formatting helper (1 decimal)
   function formatCompetitionScore(value){
     if(value == null || value === '') return '';
     const num = Number(value);
@@ -12,8 +12,17 @@
     return num.toFixed(1);
   }
   
+  // Integer score formatting helper (Issue 5)
+  function formatCompetitionScoreInt(value){
+    if(value == null || value === '') return '';
+    const num = Number(value);
+    if(isNaN(num)) return String(value);
+    return Math.round(num).toString();
+  }
+  
   // Expose globally
   global.formatCompetitionScore = formatCompetitionScore;
+  global.formatCompetitionScoreInt = formatCompetitionScoreInt;
 
   // Preload image with skeleton fallback
   function preloadAvatar(url, timeoutMs = 3000){
@@ -52,6 +61,7 @@
     const startTime = Date.now();
     let dismissible = false;
     let dismissed = false;
+    const dismissToken = {}; // Token to guard against late injection after dismiss
     
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
     
@@ -79,7 +89,7 @@
         avatarUrl = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
       }
       
-      const scoreFormatted = formatCompetitionScore(scoreRaw);
+      const scoreFormatted = formatCompetitionScoreInt(scoreRaw); // Use integer formatting
       
       return { id, name, scoreRaw, scoreFormatted, avatarUrl };
     }
@@ -96,6 +106,16 @@
       });
       
       const loadedAvatars = await Promise.all(avatarPromises);
+      
+      // Log avatar load status
+      topThree.forEach((entry, idx) => {
+        const data = getPlayerData(entry);
+        const loaded = !!loadedAvatars[idx];
+        console.info(`[results] avatar player=${data.id || data.name} ${loaded ? 'loaded' : 'fallbackUsed'}`);
+      });
+      
+      // Check if already dismissed during avatar loading
+      if(dismissed) return;
       
       // Create modal overlay
       const modal = document.createElement('div');
@@ -310,7 +330,9 @@
         modal.removeEventListener('click', dismissHandler);
         modal.removeEventListener('keydown', keyHandler);
         modal.style.animation = 'resultsModalFadeOut 0.25s ease';
-        setTimeout(() => modal.remove(), 250);
+        setTimeout(() => {
+          if(modal.parentNode) modal.remove();
+        }, 250);
       };
       
       // ESC to dismiss
