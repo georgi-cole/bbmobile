@@ -81,12 +81,17 @@
         name = entry || 'Player';
       }
       
-      let avatarUrl = player?.avatar || player?.img || player?.photo;
-      if(!avatarUrl && id){
-        avatarUrl = global.resolveAvatar?.(player) || 
+      // Use centralized avatar resolver
+      let avatarUrl;
+      if(global.resolveAvatar){
+        // Pass player object if available, otherwise pass id or name
+        avatarUrl = global.resolveAvatar(player || id || name);
+        console.info(`[results-popup] avatar url=${avatarUrl} player=${id || name}`);
+      } else {
+        // Fallback if resolveAvatar not available
+        avatarUrl = player?.avatar || player?.img || player?.photo || 
           `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
-      } else if(!avatarUrl){
-        avatarUrl = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+        console.info(`[results-popup] avatar url=${avatarUrl} player=${id || name} (no resolver)`);
       }
       
       const scoreFormatted = formatCompetitionScoreInt(scoreRaw); // Use integer formatting
@@ -216,6 +221,16 @@
         winnerAvatarEl.style.background = '';
         winnerAvatarEl.style.animation = '';
       };
+      // Handle avatar load failure
+      winnerAvatarEl.onerror = function(){
+        console.info(`[results-popup] avatar fallback used for player=${winnerData.id || winnerData.name}`);
+        this.onerror = null;
+        if(global.getAvatarFallback){
+          this.src = global.getAvatarFallback(winnerData.name, this.src);
+        } else {
+          this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(winnerData.name)}`;
+        }
+      };
       winnerSection.appendChild(winnerAvatarEl);
       
       const winnerName = document.createElement('div');
@@ -287,6 +302,16 @@
           runnerAvatar.onload = () => {
             runnerAvatar.style.background = '';
             runnerAvatar.style.animation = '';
+          };
+          // Handle avatar load failure
+          runnerAvatar.onerror = function(){
+            console.info(`[results-popup] avatar fallback used for player=${player.id || player.name}`);
+            this.onerror = null;
+            if(global.getAvatarFallback){
+              this.src = global.getAvatarFallback(player.name, this.src);
+            } else {
+              this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name)}`;
+            }
           };
           runnerUp.appendChild(runnerAvatar);
           
