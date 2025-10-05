@@ -465,10 +465,18 @@
     } = options;
     
     // Use new results popup if enabled
-    if(useNewPopup){
-      return showResultsPopup({
+    if(useNewPopup && typeof global.showResultsPopup === 'function'){
+      // Map topThree to include proper score field
+      const formattedTopThree = topThree.map(entry => ({
+        id: entry.id,
+        name: entry.name,
+        score: entry.sc || entry.score
+      }));
+      
+      return global.showResultsPopup({
         title: title,
-        topThree: topThree,
+        phase: global.game?.phase || '',
+        topThree: formattedTopThree,
         winnerEmoji: winnerEmoji,
         duration: winnerDuration
       });
@@ -543,7 +551,7 @@
   
   // Expose globally for reuse
   global.showTriSlotReveal = showTriSlotReveal;
-  global.showResultsPopup = showResultsPopup;
+  // Note: showResultsPopup is now provided by results-popup.js module
   
   // New: Show top-3 reveal card with crown animation
   async function showCompetitionReveal(title, scoresMap, ids){

@@ -753,7 +753,17 @@ header.innerHTML = `
   // ------------ Fast Forward / Skip ------------
   function fastForwardPhase(){
     const game=g.game; if(!game) return;
+    
+    // Log fast-forward activation
+    console.info(`[ff] activate phase=${game.phase}`);
+    
+    // Stop audio and clear overlays
+    cancelAllPhaseAudio();
+    flushPhaseCards();
+    
+    // Activate skip cascade for turbo card display
     try{ UI.activateSkipCascade?.(game.cfg?.skipTurboWindowMs || 4500); }catch{}
+    
     const now=Date.now();
     if(game.endAt && game.endAt-now>1200){
       game.endAt = now + 1000;
@@ -992,11 +1002,99 @@ header.innerHTML = `
     });
   }
 
+  // ------------ Phase Cleanup Functions ------------
+  function flushPhaseCards(){
+    // Cancel all pending card timeouts
+    if(g.__cardTimeouts && Array.isArray(g.__cardTimeouts)){
+      g.__cardTimeouts.forEach(tid => clearTimeout(tid));
+      g.__cardTimeouts.length = 0;
+    }
+    // Increment card generation to abort safe cards
+    if(typeof g.__cardGen === 'number'){
+      g.__cardGen++;
+    }
+  }
+  
+  function cancelAllPhaseAudio(){
+    // Fade out music if playing
+    if(typeof g.fadeOutMusic === 'function'){
+      try{
+        g.fadeOutMusic(500); // 500ms fade
+      }catch(e){
+        console.warn('[phase] fadeOutMusic error:', e);
+      }
+    }
+  }
+  
+  // Check terminal state after evictions and jump to appropriate phase
+  function checkTerminalState(){
+    const game = g.game;
+    if(!game) return;
+    
+    const alive = g.alivePlayers?.() || [];
+    const count = alive.length;
+    
+    console.info(`[phase] checkTerminalState remaining=${count}`);
+    
+    if(count === 1){
+      // Auto-winner
+      const winner = alive[0];
+      console.info(`[phase] jump reason=remainingPlayers count=1 targetPhase=finale`);
+      g.addLog?.(`${winner.name} is the last houseguest standing!`, 'accent');
+      
+      // Declare winner immediately
+      winner.winner = true;
+      if(typeof g.declareWinner === 'function'){
+        g.declareWinner(winner.id);
+      } else {
+        setPhase('finale', 0);
+      }
+    } else if(count === 2){
+      // Direct to jury vote
+      console.info(`[phase] jump reason=remainingPlayers count=2 targetPhase=jury`);
+      g.addLog?.('Final Two! Time for the jury to vote.', 'accent');
+      setPhase('jury', game.cfg?.tJury || 42, ()=>{
+        if(typeof g.startJuryVoting === 'function'){
+          g.startJuryVoting();
+        }
+      });
+    } else if(count === 3){
+      // Final HOH sequence
+      console.info(`[phase] jump reason=remainingPlayers count=3 targetPhase=final3_comp1`);
+      g.addLog?.('Final Three! Beginning Final HOH competition.', 'accent');
+      setPhase('final3_comp1', game.cfg?.tFinal3Comp1 || 35);
+    } else if(count === 4){
+      // Final 4 HOH
+      console.info(`[phase] jump reason=remainingPlayers count=4 targetPhase=hoh`);
+      g.addLog?.('Final Four! Standard HOH competition.', 'accent');
+      setPhase('hoh', game.cfg?.tHOH || 35);
+    } else if(count >= 5){
+      // Standard cycle
+      console.info(`[phase] jump reason=remainingPlayers count=${count} targetPhase=intermission`);
+      setPhase('intermission', 3, ()=>{
+        if(typeof g.startHOH === 'function'){
+          g.startHOH();
+        }
+      });
+    }
+  }
+  
+  g.checkTerminalState = checkTerminalState;
+  
   // ------------ Phase Router ------------
   let tickHandle=null;
+  
+  // Phase token cancellation system
+  if(!g.currentPhaseToken) g.currentPhaseToken = 0;
+  
   function setPhase(phase, seconds, onTimeout){
     const game=g.game; if(!game) return;
     sanitizeJuryConsistency(true);
+    
+    // Increment phase token to cancel all previous phase operations
+    const oldToken = g.currentPhaseToken;
+    g.currentPhaseToken = (g.currentPhaseToken || 0) + 1;
+    console.info(`[phase] cancel token=${oldToken} new=${g.currentPhaseToken}`);
 
     // Force-clear all previous phase UI elements
     forceClearPhaseUI(phase);
@@ -1009,6 +1107,12 @@ header.innerHTML = `
     if(typeof g.CardQueue?.attachToPhase === 'function'){
       g.CardQueue.attachToPhase(phase);
     }
+    
+    // Cancel all phase audio
+    cancelAllPhaseAudio();
+    
+    // Flush phase cards
+    flushPhaseCards();
 
     // Show/hide LIVE badge for voting phases
     if(typeof g.TV?.setLiveBadge === 'function'){
