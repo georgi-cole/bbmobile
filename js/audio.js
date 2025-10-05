@@ -239,6 +239,73 @@
     }
   }
 
+  // Mute toggle functionality
+  let isMuted = false;
+  
+  // Load mute state from localStorage
+  try{
+    const stored = localStorage.getItem('bb_soundMuted');
+    if(stored === '1' || stored === 'true') isMuted = true;
+  }catch{}
+  
+  function setMuted(muted){
+    isMuted = !!muted;
+    if(el){
+      if(isMuted){
+        el.pause();
+      } else {
+        // Resume if there's a current source
+        if(currentSrc && el.src){
+          el.play().catch(e => console.warn('[audio] resume failed:', e));
+        }
+      }
+    }
+    // Persist to localStorage
+    try{
+      localStorage.setItem('bb_soundMuted', isMuted ? '1' : '0');
+    }catch{}
+    console.info(`[audio] muted=${isMuted}`);
+    return isMuted;
+  }
+  
+  function toggleMute(){
+    return setMuted(!isMuted);
+  }
+  
+  function getMuted(){
+    return isMuted;
+  }
+  
+  // Override play to respect mute state
+  const originalPlayFile = playFile;
+  playFile = async function(file){
+    if(isMuted){
+      console.info('[audio] skipped play (muted)');
+      return;
+    }
+    return originalPlayFile(file);
+  };
+  
+  // Fade out helper
+  function fadeOut(duration = 1000){
+    if(!el || !el.src) return Promise.resolve();
+    return new Promise(resolve => {
+      const startVol = el.volume;
+      const startTime = Date.now();
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        el.volume = startVol * (1 - progress);
+        if(progress >= 1){
+          clearInterval(interval);
+          stopMusic();
+          el.volume = startVol; // Restore volume
+          resolve();
+        }
+      }, 50);
+    });
+  }
+
   // Compat aliases and public API
   g.playMusicForPhase = playMusicForPhase;
   g.stopMusic = stopMusic;
@@ -247,6 +314,10 @@
   g.phaseMusic = playMusicForPhase;  // compat
   g.playMusic = playMusicForPhase;   // accept filename or phase
   g.playCheerSfx = playCheerSfx;     // public cheer helper
+  g.setMuted = setMuted;
+  g.toggleMute = toggleMute;
+  g.getMuted = getMuted;
+  g.fadeOutMusic = fadeOut;
 
   console.info('[audio] ready (phase-wrapped, filename+phase inputs, immediate-play with gesture fallback)');
 

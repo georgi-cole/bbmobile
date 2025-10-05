@@ -294,6 +294,29 @@
       if(key && key!=='none') global.setMusic?.(key, true);
     });
     onOnce($('#btnStopMusic'), 'click', ()=> global.setMusic?.('none', true));
+    
+    // Mute toggle button
+    const muteBtn = $('#btnMuteToggle');
+    if(muteBtn && !muteBtn.__muteWired){
+      muteBtn.__muteWired = true;
+      
+      // Initialize button state
+      const updateMuteBtn = ()=>{
+        const muted = global.getMuted?.() || false;
+        muteBtn.textContent = muted ? '🔇' : '🔊';
+        muteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+        muteBtn.classList.toggle('muted', muted);
+      };
+      
+      updateMuteBtn();
+      
+      muteBtn.addEventListener('click', ()=>{
+        if(typeof global.toggleMute === 'function'){
+          global.toggleMute();
+          updateMuteBtn();
+        }
+      });
+    }
   }
 
   // ---------- Boot ----------
