@@ -277,32 +277,46 @@
     const targetAvatar = global.resolveAvatar?.(target) || target.avatar || 
       `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(target.name)}`;
 
-    // Create custom card with avatars
+    // Get or create TV overlay container
+    let tvOverlay = document.getElementById('tvOverlay');
+    if(!tvOverlay){
+      const tv = document.getElementById('tv');
+      if(!tv) {
+        console.warn('[DiaryRoom] TV element not found, falling back to showCard');
+        global.showCard?.('Diary Room', [message], 'live', duration, true);
+        return;
+      }
+      tvOverlay = document.createElement('div');
+      tvOverlay.id = 'tvOverlay';
+      tv.appendChild(tvOverlay);
+    }
+
+    // Ensure TV grows to accommodate card
+    const tv = document.getElementById('tv');
+    if(tv) tv.classList.add('tvTall');
+
+    // Create custom card with avatars - positioned within tvOverlay
     const card = document.createElement('div');
-    card.className = 'revealCard';
+    card.className = 'revealCard diaryRoomCard';
     card.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 999;
       background: linear-gradient(135deg, #1a2937, #0f1a28);
       border: 2px solid rgba(120,180,240,0.4);
       border-radius: 16px;
-      padding: 20px;
+      padding: 16px;
       box-shadow: 0 20px 50px -20px rgba(0,0,0,0.9);
-      max-width: 450px;
-      width: 90vw;
+      max-width: min(420px, 90%);
+      width: 100%;
       text-align: center;
+      pointer-events: auto;
     `;
 
     const title = document.createElement('div');
     title.textContent = 'Diary Room';
-    title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 16px;';
+    title.style.cssText = 'font-size: 1.1rem; font-weight: 700; color: #ffd96b; margin-bottom: 12px;';
     card.appendChild(title);
 
     const avatarRow = document.createElement('div');
-    avatarRow.style.cssText = 'display: flex; justify-content: space-around; align-items: center; margin-bottom: 16px;';
+    avatarRow.style.cssText = 'display: flex; justify-content: space-around; align-items: center; margin-bottom: 12px; gap: 8px;';
 
     const voterImg = document.createElement('img');
     voterImg.src = voterAvatar;
@@ -313,14 +327,17 @@
       this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(voter.name)}`;
     };
     voterImg.style.cssText = `
-      width: 80px; height: 80px; border-radius: 50%; 
-      border: 3px solid #7cffad; object-fit: cover;
+      width: clamp(60px, 15vw, 80px); 
+      height: clamp(60px, 15vw, 80px); 
+      border-radius: 50%; 
+      border: 3px solid #7cffad; 
+      object-fit: cover;
       box-shadow: 0 4px 12px rgba(124,255,173,0.3);
     `;
 
     const arrow = document.createElement('div');
     arrow.textContent = '→';
-    arrow.style.cssText = 'font-size: 2rem; color: #ff6b6b; font-weight: 700;';
+    arrow.style.cssText = 'font-size: clamp(1.5rem, 4vw, 2rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0;';
 
     const targetImg = document.createElement('img');
     targetImg.src = targetAvatar;
@@ -331,8 +348,11 @@
       this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(target.name)}`;
     };
     targetImg.style.cssText = `
-      width: 80px; height: 80px; border-radius: 50%; 
-      border: 3px solid #ff6b6b; object-fit: cover;
+      width: clamp(60px, 15vw, 80px); 
+      height: clamp(60px, 15vw, 80px); 
+      border-radius: 50%; 
+      border: 3px solid #ff6b6b; 
+      object-fit: cover;
       box-shadow: 0 4px 12px rgba(255,107,107,0.3);
     `;
 
@@ -343,14 +363,22 @@
 
     const messageDiv = document.createElement('div');
     messageDiv.textContent = message;
-    messageDiv.style.cssText = 'font-size: 1rem; color: #cedbeb; line-height: 1.4;';
+    messageDiv.style.cssText = 'font-size: clamp(0.85rem, 2vw, 1rem); color: #cedbeb; line-height: 1.4;';
     card.appendChild(messageDiv);
 
-    document.body.appendChild(card);
+    // Clear any existing content and append new card
+    tvOverlay.innerHTML = '';
+    tvOverlay.appendChild(card);
+    tvOverlay.style.visibility = '';
 
     // Auto-remove after duration
     setTimeout(() => {
-      try{ card.remove(); }catch{}
+      try{ 
+        card.remove(); 
+        if(tv && tvOverlay && tvOverlay.children.length === 0){
+          tv.classList.remove('tvTall');
+        }
+      }catch{}
     }, duration);
   }
 

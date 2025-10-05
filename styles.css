@@ -227,7 +227,7 @@ button:focus-visible,.btn:focus-visible{ outline:2px solid var(--accent-2); outl
 #tvOverlay{
   position:absolute; z-index:12;
   inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
-  pointer-events:none; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
+  pointer-events:auto; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
 }
 #confetti{
   position:absolute; z-index:11;
