@@ -21,10 +21,10 @@
     box-sizing: border-box;
     min-height: 300px;
   }
-  /* Vote cards lane (top center) */
+  /* Vote cards lane (top center) - Issue 3: Safe region above finalists */
   .finalFaceoff .fo-cards{
     position: absolute;
-    top: -6px;
+    top: -80px; /* Moved higher to avoid overlap with finalists */
     left: 50%;
     transform: translateX(-50%);
     width: min(90%, 980px);
@@ -34,6 +34,23 @@
     gap: 6px;
     pointer-events: none;
     z-index: 5;
+  }
+  /* Jury lane safe region class for collision detection */
+  .jury-lane {
+    position: absolute;
+    top: -80px;
+    left: 0;
+    right: 0;
+    height: 200px;
+    pointer-events: none;
+    z-index: 5;
+  }
+  /* Offset class for collision detection fallback */
+  .fo-card.offset-up {
+    transform: translateY(-20px);
+  }
+  .fo-card.offset-up.enter {
+    transform: translateY(-20px);
   }
   .finalFaceoff .fo-card{
     background: rgba(0,0,0,0.45);
@@ -246,13 +263,36 @@
     const text = `${jurorName}: I vote for ${votedName} to win the Big Brother game.`;
     const card = el('div', 'fo-card', text);
     state.cards.appendChild(card);
+    
+    // Issue 3: Collision detection - check if card overlaps finalist avatars
+    let offsetApplied = false;
+    requestAnimationFrame(() => {
+      const cardRect = card.getBoundingClientRect();
+      const leftSlotRect = state.left.slot.getBoundingClientRect();
+      const rightSlotRect = state.right.slot.getBoundingClientRect();
+      
+      // Check for overlap
+      const overlapsLeft = !(cardRect.bottom < leftSlotRect.top || cardRect.top > leftSlotRect.bottom);
+      const overlapsRight = !(cardRect.bottom < rightSlotRect.top || cardRect.top > rightSlotRect.bottom);
+      
+      if(overlapsLeft || overlapsRight){
+        card.classList.add('offset-up');
+        offsetApplied = true;
+      }
+      
+      // Log bubble positioning (Issue 3)
+      console.info(`[jury] bubble juror=${jurorName} offsetApplied=${offsetApplied}`);
+      
+      card.classList.add('enter');
+    });
+    
     // keep last 3 cards
     const nodes = Array.from(state.cards.children);
     while (nodes.length > 3){
       nodes[0].remove();
       nodes.shift();
     }
-    requestAnimationFrame(()=> card.classList.add('enter'));
+    
     setTimeout(()=> card.classList.add('fade'), 1400);
     setTimeout(()=> card.remove(), 2200);
   }

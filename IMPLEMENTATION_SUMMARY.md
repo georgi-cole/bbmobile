@@ -99,6 +99,70 @@ This PR consolidates and supersedes:
 - **PR #49** (draft): Partial layout changes - now absorbed and completed
 - **PR #50**: Flush system proposal - now fully implemented with abort safety
 
+## Final Polish & Critical Bug Fixes (Set 1-5)
+
+### Issue 1: Nomination State Machine
+**Files Modified:** `js/state.js`, `js/nominations.js`, `js/veto.js`, `js/ui.hud-and-router.js`, `styles.css`
+
+Implemented nomination state machine to persist NOM labels during veto use:
+- **States**: `none`, `nominated`, `pendingSave`, `saved`, `replacement`
+- **NOM Label Shows For**: `nominated`, `pendingSave`, `replacement`
+- **State Transitions**:
+  1. Initial nomination → `nominated` (NOM shows)
+  2. Veto intent → `pendingSave` (NOM persists)
+  3. Veto applied → saved = `saved` (NOM removed), replacement = `replacement` (NOM shows)
+- **Logging**: `[nom] nominated player=X`, `[nom] pendingSave player=X`, `[nom] vetoApplied saved=[X] replacement=[Y]`
+
+### Issue 2: Card Builder with Actor/Target Avatars
+**Files Modified:** `js/ui.overlay-and-logs.js`, `styles.css`
+
+Created explicit card builder for action cards with avatars:
+- **Function**: `buildCardWithAvatars(options)` - builds cards with actor avatar (left), arrow, target avatars (right)
+- **Overflow Badge**: Shows `+N` when targets exceed 2
+- **Logging**: `[card] build type=X actor=Y targets=[Z,...]`
+- **CSS Added**: `.rc-overflow-badge` styling
+
+### Issue 3: Jury Vote UI Safe Region
+**Files Modified:** `js/jury-viz.js`
+
+Fixed jury vote bubbles overlaying finalist avatars:
+- **Jury Lane**: Vote cards positioned at `top: -80px` (safe region above finalists)
+- **Collision Detection**: Checks overlap with finalist avatars, applies `.offset-up` class if needed
+- **Offset Fallback**: Moves bubbles up 20px when overlap detected
+- **Logging**: `[jury] bubble juror=X offsetApplied=true/false`
+
+### Issue 4: Final Labels After Winner Declaration
+**Files Modified:** `js/jury.js`, `js/state.js`, `js/ui.hud-and-router.js`, `styles.css`
+
+Updated player labels to show WINNER/RUNNER-UP after finale:
+- **Final Labels**: `showFinalLabel` property set to `'WINNER'` or `'RUNNER-UP'`
+- **State Clearing**: HOH, POV, NOM, nominationState cleared on winner declaration
+- **Label Precedence**: WINNER > RUNNER-UP > NOM states > HOH·POV > HOH > POV > name
+- **CSS Added**: `.status-winner` and `.status-runner-up` styles
+- **Logging**: `[finale] labels winner=X runnerUp=Y`
+
+### Issue 5: Integer Score Formatting & Avatar Preload
+**Files Modified:** `js/results-popup.js`
+
+Enhanced results popup with integer scores and robust avatar loading:
+- **Helper Function**: `formatCompetitionScoreInt(value)` - returns rounded integer string
+- **Dismissal Token**: Guards against late avatar injection after popup dismissed
+- **Avatar Preload**: Robust preloading with skeleton fallback
+- **Logging**: `[results] avatar player=X loaded` or `fallbackUsed`
+
+### Test Pages Created
+- `test_veto_nom_state.html`: Validates nomination state transitions
+- `test_action_cards.html`: Tests card builder with avatars
+- `test_jury_layout.html`: Highlights jury bubble collision detection
+- `test_final_labels.html`: Simulates winner declaration
+- `test_results_popup.html`: Tests score formatting and avatar preload
+
+All test pages include:
+- Interactive demonstrations
+- Automated validation with pass/fail indicators
+- Real-time console logging
+- Visual feedback
+
 No breaking changes to existing functionality. Feature remains opt-in via `cfg.enablePublicFav` toggle.
 
 ## LATEST UPDATE: Clean Finale Flow (Removal of Legacy Overlay)

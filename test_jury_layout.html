@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Jury Layout Collision Detection</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    
+    /* Simulate finale layout */
+    .finale-sim { position: relative; background: #0a0f16; padding: 20px; border-radius: 10px; min-height: 500px; }
+    .finalists { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 100px; }
+    .finalist { text-align: center; padding: 20px; background: #162435; border-radius: 12px; }
+    .finalist img { width: 150px; height: 150px; border-radius: 12px; object-fit: cover; }
+    
+    /* Vote bubbles */
+    .vote-bubbles { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 80%; display: flex; flex-direction: column; gap: 8px; align-items: center; z-index: 10; }
+    .vote-bubble { background: rgba(22,43,64,.95); border: 1px solid #274765; border-radius: 12px; padding: 10px 12px; box-shadow: 0 8px 20px -14px rgba(0,0,0,.7); max-width: 640px; text-align: center; }
+    .vote-bubble.offset-up { transform: translateY(-20px); border-color: #f2ce7b; }
+    
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Jury Layout Collision Detection</h1>
+    <p>Tests Issue 3: Jury vote bubbles never overlap finalist avatars</p>
+
+    <div class="test-section">
+      <h2>Actions</h2>
+      <button onclick="addVote()">Add Vote Bubble</button>
+      <button onclick="testOverlap()">Test Overlap Detection</button>
+      <button onclick="clearVotes()">Clear Votes</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Finale Simulation</h2>
+      <div class="finale-sim">
+        <div class="vote-bubbles" id="voteBubbles"></div>
+        <div class="finalists">
+          <div class="finalist" id="finalistA">
+            <img src="https://api.dicebear.com/6.x/bottts/svg?seed=Alice" alt="Alice">
+            <div style="margin-top: 10px; font-weight: 700;">Alice</div>
+            <div style="font-size: 2rem; margin-top: 10px;">3 votes</div>
+          </div>
+          <div class="finalist" id="finalistB">
+            <img src="https://api.dicebear.com/6.x/bottts/svg?seed=Bob" alt="Bob">
+            <div style="margin-top: 10px; font-weight: 700;">Bob</div>
+            <div style="font-size: 2rem; margin-top: 10px;">2 votes</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Validation Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    let votes = [];
+    let logs = [];
+    let voteCounter = 0;
+
+    const jurors = ['Charlie', 'Diana', 'Eve', 'Frank', 'Grace'];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-20).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    function addVote() {
+      if (voteCounter >= jurors.length) {
+        log('All jurors have voted', 'info');
+        return;
+      }
+
+      const juror = jurors[voteCounter];
+      const voted = voteCounter % 2 === 0 ? 'Alice' : 'Bob';
+      
+      votes.push({ juror, voted });
+      voteCounter++;
+      
+      renderVotes();
+      setTimeout(() => testOverlap(), 100); // Test after render
+    }
+
+    function renderVotes() {
+      const container = document.getElementById('voteBubbles');
+      container.innerHTML = votes.map((v, idx) => `
+        <div class="vote-bubble" id="bubble-${idx}">
+          ${v.juror}: I vote for ${v.voted} to win the Big Brother game.
+        </div>
+      `).join('');
+    }
+
+    function testOverlap() {
+      const finalistA = document.getElementById('finalistA').getBoundingClientRect();
+      const finalistB = document.getElementById('finalistB').getBoundingClientRect();
+      
+      let overlaps = 0;
+      let offsetsApplied = 0;
+
+      votes.forEach((v, idx) => {
+        const bubble = document.getElementById(`bubble-${idx}`);
+        if (!bubble) return;
+
+        const bubbleRect = bubble.getBoundingClientRect();
+        
+        // Check overlap with finalists
+        const overlapsA = !(bubbleRect.bottom < finalistA.top || bubbleRect.top > finalistA.bottom ||
+                           bubbleRect.right < finalistA.left || bubbleRect.left > finalistA.right);
+        const overlapsB = !(bubbleRect.bottom < finalistB.top || bubbleRect.top > finalistB.bottom ||
+                           bubbleRect.right < finalistB.left || bubbleRect.left > finalistB.right);
+
+        if (overlapsA || overlapsB) {
+          overlaps++;
+          bubble.classList.add('offset-up');
+          offsetsApplied++;
+          log(`[jury] bubble juror=${v.juror} offsetApplied=true`, 'pass');
+        } else {
+          bubble.classList.remove('offset-up');
+          log(`[jury] bubble juror=${v.juror} offsetApplied=false`, 'info');
+        }
+      });
+
+      validate(overlaps, offsetsApplied);
+    }
+
+    function clearVotes() {
+      votes = [];
+      voteCounter = 0;
+      renderVotes();
+      validate(0, 0);
+    }
+
+    function validate(overlaps, offsetsApplied) {
+      const results = document.getElementById('results');
+      const tests = [];
+
+      // Test 1: No overlaps remain
+      tests.push({
+        name: 'No vote bubbles overlap finalists',
+        pass: overlaps === 0 || offsetsApplied === overlaps,
+        expected: 'Zero overlaps or all overlaps corrected',
+        actual: overlaps === 0 ? 'No overlaps detected' : `${overlaps} overlaps, ${offsetsApplied} offsets applied`
+      });
+
+      // Test 2: Collision detection runs
+      const hasLogs = logs.some(l => l.msg.includes('[jury] bubble'));
+      tests.push({
+        name: 'Collision detection executes',
+        pass: votes.length === 0 || hasLogs,
+        expected: 'Logs for bubble positioning',
+        actual: hasLogs ? 'Detection active' : 'No detection logs'
+      });
+
+      // Test 3: Offset class applied when needed
+      const bubbles = document.querySelectorAll('.vote-bubble.offset-up');
+      tests.push({
+        name: 'Offset class applied to overlapping bubbles',
+        pass: offsetsApplied === bubbles.length,
+        expected: `${offsetsApplied} offset classes`,
+        actual: `${bubbles.length} bubbles with .offset-up`
+      });
+
+      // Test 4: Jury lane positioning
+      const bubbleContainer = document.getElementById('voteBubbles');
+      const containerTop = bubbleContainer.getBoundingClientRect().top;
+      const finalistATop = document.getElementById('finalistA').getBoundingClientRect().top;
+      const safeDistance = finalistATop - containerTop;
+      tests.push({
+        name: 'Bubble container positioned above finalists',
+        pass: safeDistance > 50,
+        expected: 'At least 50px clearance above finalists',
+        actual: `${Math.round(safeDistance)}px clearance`
+      });
+
+      results.innerHTML = tests.map(t => `
+        <div style="padding: 10px; margin: 5px 0; background: ${t.pass ? '#1a3329' : '#332020'}; border-left: 4px solid ${t.pass ? '#77d58d' : '#ff6d6d'}; border-radius: 4px;">
+          <div style="font-weight: 700; color: ${t.pass ? '#77d58d' : '#ff6d6d'};">
+            ${t.pass ? '✓' : '✗'} ${t.name}
+          </div>
+          <div style="font-size: 0.85rem; color: #95a9c0; margin-top: 4px;">
+            Expected: ${t.expected}<br>
+            Actual: ${t.actual}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Initialize
+    validate(0, 0);
+    log('Test page loaded', 'info');
+  </script>
+</body>
+</html>

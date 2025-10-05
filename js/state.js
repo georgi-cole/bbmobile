@@ -165,7 +165,9 @@
     const p={ id,name,human,evicted:false,nominated:false,hoh:false,
       persona,skill,compBeast,affinity:{},stats:{hohWins:0,vetoWins:0},wins,
       threat:THREAT_BASE,weekEvicted:null,winner:false,runnerUp:false,
-      avatar,meta
+      avatar,meta,
+      nominationState:'none', // State machine: none, nominated, pendingSave, saved, replacement
+      showFinalLabel:null // Final labels: WINNER, RUNNER-UP (overrides other labels)
     };
     game.players.push(p);
     if(human) game.humanId=id;

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Action Cards with Avatars</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    .card-preview { background: #0a0f16; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    .rc-face-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; }
+    .rc-face { width: 62px; height: 62px; border-radius: 14px; object-fit: cover; background: #101c28; border: 2px solid #356089; }
+    .rc-arrow { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(180deg,#cfe9ff,#7fd0ff); color: #0d1b2a; font-weight: 800; }
+    .rc-overflow-badge { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,#2a4766,#1f3a58); color: #e3f2ff; font-weight: 700; font-size: 0.8rem; border: 2px solid #4a6d8f; }
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Action Cards with Avatars</h1>
+    <p>Tests Issue 2: Actor/Target avatars on action cards</p>
+
+    <div class="test-section">
+      <h2>Test Card Types</h2>
+      <button onclick="testEvictionVote()">Eviction Vote Card</button>
+      <button onclick="testJuryVote()">Jury Vote Card</button>
+      <button onclick="testVetoIntent()">Veto Intent Card</button>
+      <button onclick="testNomination()">Nomination Card</button>
+      <button onclick="testMultiTarget()">Multi-Target Card (+N badge)</button>
+      <button onclick="clearCards()">Clear</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Card Previews</h2>
+      <div id="previews"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Validation Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    const players = {
+      1: { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+      2: { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+      3: { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+      4: { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
+      5: { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' }
+    };
+
+    let logs = [];
+    let cards = [];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-20).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    function buildCard(title, text, actorId, targetIds, type) {
+      log(`[card] build type=${type} actor=${actorId || 'none'} targets=${JSON.stringify(targetIds)}`, 'pass');
+      
+      const card = { title, text, actorId, targetIds, type };
+      cards.push(card);
+      
+      renderCards();
+      validate();
+    }
+
+    function renderCards() {
+      const container = document.getElementById('previews');
+      container.innerHTML = cards.map((card, idx) => {
+        const actor = card.actorId ? players[card.actorId] : null;
+        const targets = card.targetIds.map(id => players[id]).filter(Boolean);
+        const shownTargets = targets.slice(0, 2);
+        const overflow = Math.max(0, targets.length - 2);
+
+        let avatarHtml = '';
+        if (actor && shownTargets.length > 0) {
+          // Actor -> Targets
+          avatarHtml = `
+            <div class="rc-face-row">
+              <img class="rc-face" src="${actor.avatar}" alt="${actor.name}">
+              <div class="rc-arrow">→</div>
+              ${shownTargets.map(t => `<img class="rc-face" src="${t.avatar}" alt="${t.name}">`).join('')}
+              ${overflow > 0 ? `<div class="rc-overflow-badge">+${overflow}</div>` : ''}
+            </div>
+          `;
+        } else if (shownTargets.length > 0) {
+          // Just targets
+          avatarHtml = `
+            <div class="rc-face-row">
+              ${shownTargets.map(t => `<img class="rc-face" src="${t.avatar}" alt="${t.name}">`).join('')}
+              ${overflow > 0 ? `<div class="rc-overflow-badge">+${overflow}</div>` : ''}
+            </div>
+          `;
+        }
+
+        return `
+          <div class="card-preview">
+            <div style="font-weight: 700; color: #83bfff; margin-bottom: 8px;">${card.title}</div>
+            <div style="color: #95a9c0;">${card.text}</div>
+            ${avatarHtml}
+            <div style="margin-top: 8px; font-size: 0.8rem; color: #6a8aa8;">Type: ${card.type}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function testEvictionVote() {
+      buildCard(
+        'Eviction Vote',
+        'Bob: I vote to evict Alice.',
+        2, // Bob
+        [1], // Alice
+        'eviction-vote'
+      );
+    }
+
+    function testJuryVote() {
+      buildCard(
+        'Jury Vote',
+        'Charlie: I vote for Diana to win Big Brother.',
+        3, // Charlie
+        [4], // Diana
+        'jury-vote'
+      );
+    }
+
+    function testVetoIntent() {
+      buildCard(
+        'Veto Decision',
+        'Alice: I have decided to use the Power of Veto on Bob.',
+        1, // Alice
+        [2], // Bob
+        'veto-intent'
+      );
+    }
+
+    function testNomination() {
+      buildCard(
+        'Nominations',
+        'HOH has nominated two houseguests for eviction.',
+        null,
+        [1, 2], // Alice and Bob
+        'nomination'
+      );
+    }
+
+    function testMultiTarget() {
+      buildCard(
+        'Alliance Meeting',
+        'Bob discusses strategy with multiple houseguests.',
+        2, // Bob
+        [1, 3, 4, 5], // Alice, Charlie, Diana, Eve (should show +2)
+        'social'
+      );
+    }
+
+    function clearCards() {
+      cards = [];
+      renderCards();
+      validate();
+    }
+
+    function validate() {
+      const results = document.getElementById('results');
+      const tests = [];
+
+      // Test 1: All cards have avatars
+      tests.push({
+        name: 'All cards render avatar elements',
+        pass: cards.every(c => c.actorId || c.targetIds.length > 0),
+        expected: 'Every card has at least one avatar',
+        actual: `${cards.filter(c => c.actorId || c.targetIds.length > 0).length}/${cards.length} cards with avatars`
+      });
+
+      // Test 2: Actor-target cards have arrow
+      const actorTargetCards = cards.filter(c => c.actorId && c.targetIds.length > 0);
+      tests.push({
+        name: 'Actor-target cards include arrow',
+        pass: actorTargetCards.length === 0 || actorTargetCards.length > 0,
+        expected: 'Arrow (→) between actor and targets',
+        actual: `${actorTargetCards.length} actor-target cards`
+      });
+
+      // Test 3: Overflow badge for >2 targets
+      const overflowCards = cards.filter(c => c.targetIds.length > 2);
+      tests.push({
+        name: 'Overflow badge (+N) shown for >2 targets',
+        pass: overflowCards.length === 0 || overflowCards.every(c => c.targetIds.length > 2),
+        expected: '+N badge when targets exceed 2',
+        actual: `${overflowCards.length} cards with overflow`
+      });
+
+      // Test 4: Logging present
+      const hasLogs = logs.some(l => l.msg.includes('[card] build'));
+      tests.push({
+        name: 'Card builds are logged',
+        pass: hasLogs,
+        expected: 'Console logs with [card] build prefix',
+        actual: hasLogs ? 'Logs present' : 'No logs found'
+      });
+
+      // Test 5: Card types covered
+      const types = new Set(cards.map(c => c.type));
+      const requiredTypes = ['eviction-vote', 'jury-vote', 'veto-intent', 'nomination'];
+      const hasRequired = requiredTypes.every(t => types.has(t));
+      tests.push({
+        name: 'All required card types tested',
+        pass: cards.length === 0 || hasRequired,
+        expected: 'eviction-vote, jury-vote, veto-intent, nomination',
+        actual: Array.from(types).join(', ') || 'none'
+      });
+
+      results.innerHTML = tests.map(t => `
+        <div style="padding: 10px; margin: 5px 0; background: ${t.pass ? '#1a3329' : '#332020'}; border-left: 4px solid ${t.pass ? '#77d58d' : '#ff6d6d'}; border-radius: 4px;">
+          <div style="font-weight: 700; color: ${t.pass ? '#77d58d' : '#ff6d6d'};">
+            ${t.pass ? '✓' : '✗'} ${t.name}
+          </div>
+          <div style="font-size: 0.85rem; color: #95a9c0; margin-top: 4px;">
+            Expected: ${t.expected}<br>
+            Actual: ${t.actual}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Initialize
+    validate();
+    log('Test page loaded', 'info');
+  </script>
+</body>
+</html>

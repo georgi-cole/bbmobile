@@ -537,7 +537,10 @@ header.innerHTML = `
       // Status checks
       const hasHOH = !!p.hoh;
       const hasVeto = game.vetoHolder===p.id;
-      const hasNom = p.nominated && !p.evicted && !game.__suppressNomBadges;
+      // Show NOM for states: nominated, pendingSave, replacement
+      const nomState = p.nominationState || 'none';
+      const hasNom = !p.evicted && !game.__suppressNomBadges && 
+        (nomState === 'nominated' || nomState === 'pendingSave' || nomState === 'replacement');
       
       // Add pulse effect for nominees
       if(hasNom){
@@ -562,8 +565,16 @@ header.innerHTML = `
       let statusClass = '';
       let ariaLabel = p.name;
       
-      // NOM always exclusive (HOH cannot be nominated)
-      if(hasNom){
+      // Label precedence: WINNER > RUNNER-UP > NOM states > HOH·POV > HOH > POV > name
+      if(p.showFinalLabel === 'WINNER'){
+        labelText = 'WINNER';
+        statusClass = 'status-winner';
+        ariaLabel = `${p.name} (Winner)`;
+      } else if(p.showFinalLabel === 'RUNNER-UP'){
+        labelText = 'RUNNER-UP';
+        statusClass = 'status-runner-up';
+        ariaLabel = `${p.name} (Runner-Up)`;
+      } else if(hasNom){
         labelText = 'NOM';
         statusClass = 'status-nom';
         ariaLabel = `${p.name} (Nominated)`;

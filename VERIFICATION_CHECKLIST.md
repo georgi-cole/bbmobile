@@ -48,6 +48,51 @@
   - [ ] `role="alert"` on card
   - [ ] Descriptive alt text on all avatars
   - [ ] Focus moves to card on display
+
+## Final Polish & Critical Bug Fixes (Set 1-5)
+
+### Issue 1: Nomination State Machine
+- [ ] **State Transitions**: Players have `nominationState` property (none/nominated/pendingSave/saved/replacement)
+- [ ] **NOM Label Persistence**: Label shows for nominated, pendingSave, replacement states
+- [ ] **Veto Intent**: Setting veto intent transitions to `pendingSave` (NOM still shows)
+- [ ] **Veto Application**: Saved player → `saved` (no NOM), replacement → `replacement` (NOM shows)
+- [ ] **Console Logging**: `[nom] nominated`, `[nom] pendingSave`, `[nom] vetoApplied` present
+- [ ] **Test Page**: `test_veto_nom_state.html` passes all validations
+
+### Issue 2: Card Builder with Avatars
+- [ ] **Card Builder**: `buildCardWithAvatars()` function available globally
+- [ ] **Actor Avatar**: Shows on left side of card
+- [ ] **Arrow**: Appears between actor and targets
+- [ ] **Target Avatars**: Shows up to 2 targets on right side
+- [ ] **Overflow Badge**: `+N` badge appears when targets > 2
+- [ ] **Console Logging**: `[card] build type=X actor=Y targets=[...]` present
+- [ ] **CSS Styling**: `.rc-overflow-badge` styled correctly
+- [ ] **Test Page**: `test_action_cards.html` passes all validations
+
+### Issue 3: Jury Vote UI Safe Region
+- [ ] **Safe Positioning**: Vote bubbles positioned at `top: -80px` above finalists
+- [ ] **No Overlap**: Vote bubbles never overlap finalist avatars
+- [ ] **Collision Detection**: Checks overlap and applies `.offset-up` class
+- [ ] **Offset Applied**: Overlapping bubbles moved up 20px
+- [ ] **Console Logging**: `[jury] bubble juror=X offsetApplied=true/false` present
+- [ ] **Test Page**: `test_jury_layout.html` passes all validations
+
+### Issue 4: Final Labels After Winner
+- [ ] **Winner Label**: `showFinalLabel='WINNER'` shown with gold gradient
+- [ ] **Runner-Up Label**: `showFinalLabel='RUNNER-UP'` shown with silver gradient
+- [ ] **States Cleared**: HOH, POV, NOM cleared for both finalists
+- [ ] **Label Precedence**: WINNER > RUNNER-UP > NOM > HOH·POV > HOH > POV > name
+- [ ] **CSS Styling**: `.status-winner` and `.status-runner-up` styled correctly
+- [ ] **Console Logging**: `[finale] labels winner=X runnerUp=Y` present
+- [ ] **Test Page**: `test_final_labels.html` passes all validations
+
+### Issue 5: Integer Score Formatting
+- [ ] **Helper Function**: `formatCompetitionScoreInt()` available globally
+- [ ] **Integer Scores**: All competition scores show as rounded integers (no decimals)
+- [ ] **Dismissal Token**: Token guards against late avatar injection
+- [ ] **Avatar Preload**: Robust preloading with skeleton fallback
+- [ ] **Console Logging**: `[results] avatar player=X loaded` or `fallbackUsed` present
+- [ ] **Test Page**: `test_results_popup.html` passes all validations
 - [ ] **Animation**: Smooth zoom-in effect
 - [ ] **Duration**: Displays for 6 seconds
 - [ ] **Console Log**: `[publicFav] winnerCard shown id=<id> pct=<pct>`
