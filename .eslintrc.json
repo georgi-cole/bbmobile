@@ -1,0 +1,80 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "script"
+  },
+  "globals": {
+    "window": "readonly",
+    "document": "readonly",
+    "console": "readonly",
+    "$": "readonly",
+    "global": "writable",
+    "MiniGames": "readonly",
+    "MiniGamesRegistry": "readonly",
+    "MinigameSelector": "readonly",
+    "MinigameScoring": "readonly",
+    "MobileUtils": "readonly",
+    "MinigameErrorHandler": "readonly",
+    "MinigameTelemetry": "readonly",
+    "MinigameA11y": "readonly",
+    "renderMinigame": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-console": "off",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "CallExpression[callee.name=/^mg(Clicker|MemoryColors|Math|TimingBar|Typing|Reaction|NumberSeq|PatternMatch|Slider|Anagram|Pathfinder|TargetPractice|FindPair|Simon|Estimation)$/]",
+        "message": "Direct calls to legacy minigame functions (mg*) are deprecated. Use MiniGamesRegistry.render() instead."
+      },
+      {
+        "selector": "MemberExpression[object.name='window'][property.name=/^mg/]",
+        "message": "Direct access to legacy minigame functions is deprecated. Use MiniGamesRegistry.render() instead."
+      },
+      {
+        "selector": "VariableDeclarator[id.name='gameMap'] ObjectExpression Property[value.name=/^mg/]",
+        "message": "Creating manual game maps with legacy functions is deprecated. Use MinigameRegistry instead."
+      }
+    ],
+    "no-restricted-properties": [
+      {
+        "object": "window",
+        "property": "mgClicker",
+        "message": "Legacy minigame functions are deprecated. Use MiniGamesRegistry.render('quickTap', ...) instead."
+      }
+    ],
+    "prefer-const": "warn",
+    "no-var": "warn",
+    "eqeqeq": ["warn", "always"],
+    "curly": ["warn", "multi-line"],
+    "brace-style": ["warn", "1tbs", { "allowSingleLine": true }],
+    "semi": ["warn", "always"],
+    "quotes": ["warn", "single", { "avoidEscape": true, "allowTemplateLiterals": true }]
+  },
+  "overrides": [
+    {
+      "files": ["js/minigames.js"],
+      "rules": {
+        "no-restricted-syntax": "off",
+        "no-restricted-properties": "off"
+      }
+    },
+    {
+      "files": ["js/minigames/*.js"],
+      "rules": {
+        "no-undef": ["error", { 
+          "typeof": true 
+        }]
+      },
+      "globals": {
+        "g": "readonly"
+      }
+    }
+  ]
+}
