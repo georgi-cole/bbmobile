@@ -922,11 +922,87 @@ header.innerHTML = `
   }
   g.finishOpening = finishOpening;
 
+  // ------------ Phase UI Force Clear ------------
+  function forceClearPhaseUI(newPhase){
+    try{
+      // Remove any lingering modal overlays, cards, or phase-specific UI
+      document.querySelectorAll('[data-bb-card], .results-modal-overlay, .pfWinnerCard, .pfModalHost').forEach(el => {
+        try{ el.remove(); }catch{}
+      });
+      
+      // Clear any reveal cards or announcement overlays
+      const tvOverlay = document.getElementById('tvOverlay');
+      if(tvOverlay){
+        tvOverlay.querySelectorAll('.reveal-card, .announcement-overlay').forEach(el => {
+          try{ el.remove(); }catch{}
+        });
+      }
+      
+      console.info(`[phase] forceClearCards phase=${newPhase}`);
+    }catch(e){
+      console.warn('[phase] forceClearCards error', e);
+    }
+  }
+
+  // ------------ Phase Timer Helpers ------------
+  function doesHumanNeedToVote(phase){
+    const game = g.game;
+    if(!game || !game.humanId) return false;
+    
+    // Check if human needs to vote in this phase
+    if(phase === 'livevote'){
+      // Check if human is eligible voter (not HOH, not nominated, not evicted)
+      const human = game.players?.find(p => p.id === game.humanId);
+      if(!human || human.evicted || human.hoh || human.nominated) return false;
+      return true;
+    }
+    
+    if(phase === 'jury'){
+      // Check if human is in jury
+      const jury = game.jury || [];
+      return jury.includes(game.humanId);
+    }
+    
+    return false;
+  }
+
+  async function waitForHumanVoteInPhase(phase){
+    const game = g.game;
+    return new Promise(resolve => {
+      if(phase === 'livevote'){
+        // Wait for human vote event
+        const handler = () => {
+          window.removeEventListener('bb:livevote:humanVoted', handler);
+          console.info(`[phase] human vote received phase=${phase}`);
+          resolve();
+        };
+        window.addEventListener('bb:livevote:humanVoted', handler, { once: true });
+        
+        // Also check if already voted
+        if(game.__human_vote != null){
+          window.removeEventListener('bb:livevote:humanVoted', handler);
+          console.info(`[phase] human vote already cast phase=${phase}`);
+          resolve();
+        }
+      } else if(phase === 'jury'){
+        // For jury, we rely on the jury module's own vote handling
+        // Just resolve immediately as jury has its own pacing
+        console.info(`[phase] jury phase, timer starts normally phase=${phase}`);
+        resolve();
+      } else {
+        resolve();
+      }
+    });
+  }
+
   // ------------ Phase Router ------------
   let tickHandle=null;
   function setPhase(phase, seconds, onTimeout){
     const game=g.game; if(!game) return;
     sanitizeJuryConsistency(true);
+
+    // Force-clear all previous phase UI elements
+    forceClearPhaseUI(phase);
 
     // Cancel any pending cards from previous phase
     if(typeof g.CardQueue?.cancelAll === 'function'){
@@ -1007,6 +1083,31 @@ header.innerHTML = `
       return;
     }
 
+    // Check if we need to wait for human vote before starting timer
+    const needsHumanVote = doesHumanNeedToVote(phase);
+    
+    if(needsHumanVote){
+      console.info(`[phase] timer start phase=${phase} afterHumanVote=true`);
+      
+      // Show timer as paused/waiting
+      setClock('--:--');
+      if(bar) bar.style.width='0%';
+      
+      // Wait for human vote, then start timer
+      waitForHumanVoteInPhase(phase).then(() => {
+        console.info(`[phase] starting timer after human vote phase=${phase}`);
+        startPhaseTimer(phase, seconds, onTimeout, bar, setClock);
+      });
+    } else {
+      console.info(`[phase] timer start phase=${phase} afterHumanVote=false`);
+      startPhaseTimer(phase, seconds, onTimeout, bar, setClock);
+    }
+  }
+  
+  function startPhaseTimer(phase, seconds, onTimeout, bar, setClock){
+    const game = g.game;
+    if(!game) return;
+    
     game.endAt=Date.now()+seconds*1000; const total=seconds*1000;
     // Expose a canonical phase end pointer used by other modules (e.g., veto auto-submit)
     game.phaseEndsAt = game.endAt;

@@ -228,6 +228,228 @@
   // Reusable tri-slot reveal sequence for competitions
   // Can be used for HOH, Veto, or other top-3 reveals
   // Enhanced with optional avatar display
+  // NEW: Show single results popup with winner + top 2 runners-up with avatars
+  async function showResultsPopup(options){
+    const {
+      title = 'Results',
+      topThree = [],
+      winnerEmoji = '👑',
+      duration = 4500
+    } = options;
+    
+    if(!topThree || topThree.length === 0) return;
+    
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+    
+    // Helper to get avatar URL and player data
+    function getPlayerData(entry){
+      let player = null;
+      let name = '';
+      let score = '';
+      
+      // Handle different entry formats
+      if(typeof entry === 'object'){
+        if(entry.id){
+          player = global.getP?.(entry.id);
+        }
+        name = entry.name || player?.name || 'Player';
+        score = entry.score !== undefined ? entry.score : (entry.sc !== undefined ? entry.sc : '');
+      } else {
+        name = entry || 'Player';
+      }
+      
+      // Get avatar URL
+      let avatarUrl = player?.avatar || player?.img || player?.photo;
+      if(!avatarUrl){
+        avatarUrl = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+      }
+      
+      return { name, score, avatarUrl };
+    }
+    
+    try {
+      // Create modal overlay
+      const modal = document.createElement('div');
+      modal.className = 'results-modal-overlay';
+      modal.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(3px);
+        display: grid;
+        place-items: center;
+        animation: resultsModalFadeIn 0.3s ease;
+      `;
+      
+      // Create card
+      const card = document.createElement('div');
+      card.className = 'results-card';
+      card.style.cssText = `
+        background: linear-gradient(135deg, #1a2937, #0f1a28);
+        border: 1px solid rgba(120,180,240,0.3);
+        border-radius: 20px;
+        padding: 28px 24px;
+        box-shadow: 0 20px 50px -20px rgba(0,0,0,0.9);
+        max-width: min(480px, 90vw);
+        width: 100%;
+        animation: resultsCardSlideIn 0.4s ease;
+      `;
+      
+      // Title
+      const titleEl = document.createElement('div');
+      titleEl.textContent = `${title} ${winnerEmoji}`;
+      titleEl.style.cssText = `
+        font-size: 1.4rem;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        color: #ffd96b;
+        text-align: center;
+        margin-bottom: 24px;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      `;
+      card.appendChild(titleEl);
+      
+      // Winner section (large, centered)
+      if(topThree[0]){
+        const winner = getPlayerData(topThree[0]);
+        const winnerSection = document.createElement('div');
+        winnerSection.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 20px;
+          padding-bottom: 20px;
+          border-bottom: 1px solid rgba(120,180,240,0.2);
+        `;
+        
+        const winnerAvatar = document.createElement('img');
+        winnerAvatar.src = winner.avatarUrl;
+        winnerAvatar.alt = winner.name;
+        winnerAvatar.style.cssText = `
+          width: 110px;
+          height: 110px;
+          border-radius: 50%;
+          border: 3px solid #ffd96b;
+          box-shadow: 0 4px 20px rgba(255,217,107,0.4);
+          object-fit: cover;
+        `;
+        winnerSection.appendChild(winnerAvatar);
+        
+        const winnerName = document.createElement('div');
+        winnerName.textContent = winner.name;
+        winnerName.style.cssText = `
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: #ffffff;
+          text-align: center;
+        `;
+        winnerSection.appendChild(winnerName);
+        
+        if(winner.score !== ''){
+          const winnerScore = document.createElement('div');
+          winnerScore.textContent = `Score: ${winner.score}`;
+          winnerScore.style.cssText = `
+            font-size: 1rem;
+            font-weight: 600;
+            color: #88e6a0;
+            text-align: center;
+          `;
+          winnerSection.appendChild(winnerScore);
+        }
+        
+        card.appendChild(winnerSection);
+      }
+      
+      // Runners-up section (2nd and 3rd in horizontal row)
+      if(topThree[1] || topThree[2]){
+        const runnersUpSection = document.createElement('div');
+        runnersUpSection.style.cssText = `
+          display: flex;
+          justify-content: center;
+          gap: 20px;
+          flex-wrap: wrap;
+        `;
+        
+        [topThree[1], topThree[2]].forEach((entry, idx) => {
+          if(!entry) return;
+          
+          const player = getPlayerData(entry);
+          const place = idx === 0 ? '2nd' : '3rd';
+          
+          const runnerUp = document.createElement('div');
+          runnerUp.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+          `;
+          
+          const runnerAvatar = document.createElement('img');
+          runnerAvatar.src = player.avatarUrl;
+          runnerAvatar.alt = player.name;
+          runnerAvatar.style.cssText = `
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            border: 2px solid #7cffad;
+            box-shadow: 0 2px 12px rgba(124,255,173,0.3);
+            object-fit: cover;
+          `;
+          runnerUp.appendChild(runnerAvatar);
+          
+          const runnerPlace = document.createElement('div');
+          runnerPlace.textContent = place;
+          runnerPlace.style.cssText = `
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #96cfff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          `;
+          runnerUp.appendChild(runnerPlace);
+          
+          const runnerName = document.createElement('div');
+          runnerName.textContent = player.name;
+          runnerName.style.cssText = `
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #cedbeb;
+            text-align: center;
+          `;
+          runnerUp.appendChild(runnerName);
+          
+          if(player.score !== ''){
+            const runnerScore = document.createElement('div');
+            runnerScore.textContent = player.score;
+            runnerScore.style.cssText = `
+              font-size: 0.85rem;
+              color: #88e6a0;
+            `;
+            runnerUp.appendChild(runnerScore);
+          }
+          
+          runnersUpSection.appendChild(runnerUp);
+        });
+        
+        card.appendChild(runnersUpSection);
+      }
+      
+      modal.appendChild(card);
+      document.body.appendChild(modal);
+      
+      // Auto-remove after duration
+      await sleep(duration);
+      modal.style.animation = 'resultsModalFadeOut 0.3s ease';
+      await sleep(300);
+      modal.remove();
+    } catch(e) {
+      console.warn('[resultsPopup] error', e);
+    }
+  }
+  
   async function showTriSlotReveal(options){
     const {
       title = 'Competition',
@@ -238,8 +460,19 @@
       placeDuration = 2000,
       winnerDuration = 3200,
       showIntro = true,
-      showAvatars = false // New option to show avatars in modal
+      showAvatars = false, // New option to show avatars in modal
+      useNewPopup = true // NEW: Use the new popup design
     } = options;
+    
+    // Use new results popup if enabled
+    if(useNewPopup){
+      return showResultsPopup({
+        title: title,
+        topThree: topThree,
+        winnerEmoji: winnerEmoji,
+        duration: winnerDuration
+      });
+    }
     
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
     
@@ -310,6 +543,7 @@
   
   // Expose globally for reuse
   global.showTriSlotReveal = showTriSlotReveal;
+  global.showResultsPopup = showResultsPopup;
   
   // New: Show top-3 reveal card with crown animation
   async function showCompetitionReveal(title, scoresMap, ids){
@@ -322,13 +556,14 @@
     
     const top3 = arr.slice(0, 3);
     
-    // Use reusable tri-slot reveal
+    // Use reusable tri-slot reveal with new popup design
     await showTriSlotReveal({
       title: title,
       topThree: top3,
       winnerEmoji: '👑',
       winnerTone: 'ok',
-      showIntro: true
+      showIntro: false,
+      useNewPopup: true
     });
     
     // Add crown animation to winner
