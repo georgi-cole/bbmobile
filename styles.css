@@ -2634,3 +2634,282 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   height: 1px;
   overflow: hidden;
 }
+
+/* ========== COMPREHENSIVE ENHANCEMENT PR STYLES ========== */
+
+/* 1. Status Labels (Replace Badges) */
+.top-tile-name {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .4px;
+  color: var(--ink);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(30, 50, 70, .6);
+  margin-top: 4px;
+  text-align: center;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Status label pill backgrounds */
+.top-tile-name.status-hoh {
+  background: linear-gradient(135deg, #c49b2e, #d4b95b);
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.top-tile-name.status-pov {
+  background: linear-gradient(135deg, #2f8a3e, #4db85b);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.top-tile-name.status-nom {
+  background: linear-gradient(135deg, #c23636, #e64a4a);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.top-tile-name.status-hoh-pov {
+  background: linear-gradient(135deg, #c49b2e, #4db85b);
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: .68rem;
+  letter-spacing: .6px;
+}
+
+/* 2. TV Card Rail with Fixed Min-Height */
+.tv-card-rail {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+/* 4. Card Actor-Target Avatar Cluster */
+.card-avatar-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.card-actor-avatar,
+.card-target-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 2px solid #356089;
+  background: #101c28;
+}
+
+.card-arrow {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg,#cfe9ff,#7fd0ff);
+  color: #0d1b2a;
+  font-weight: 800;
+  font-size: .7rem;
+}
+
+.card-overflow-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(120,180,240,.25);
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* 8. Jury Lane Safe Region */
+.jury-lane {
+  position: absolute;
+  top: var(--tv-safe-top);
+  left: var(--tv-safe-x);
+  right: var(--tv-safe-x);
+  bottom: var(--tv-safe-bottom);
+  z-index: 11;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.jury-speech-bubble {
+  background: rgba(22,43,64,.95);
+  border: 1px solid #274765;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 20px -14px rgba(0,0,0,.7);
+  max-width: 640px;
+  width: 94%;
+  animation: bubbleSlideIn .3s ease;
+}
+
+@keyframes bubbleSlideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 9. Generic Overlay Strip */
+.tv-overlay-strip {
+  position: absolute;
+  top: calc(var(--tv-safe-top) + 40px);
+  left: var(--tv-safe-x);
+  right: var(--tv-safe-x);
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.overlay-message {
+  background: rgba(12,22,36,.9);
+  border: 1px solid rgba(120,180,240,.3);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: .78rem;
+  color: var(--ink);
+  box-shadow: 0 6px 18px -10px rgba(0,0,0,.6);
+  animation: messageFloat .4s ease;
+}
+
+@keyframes messageFloat {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 10. Audio Mute Toggle Button */
+#muteToggleBtn {
+  background: rgba(30,50,70,.7);
+  border: 1px solid rgba(120,180,240,.3);
+  color: var(--ink);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: .85rem;
+  transition: background .2s ease;
+}
+
+#muteToggleBtn:hover {
+  background: rgba(40,65,90,.8);
+}
+
+#muteToggleBtn.muted {
+  background: rgba(140,50,50,.7);
+  border-color: rgba(220,100,100,.4);
+}
+
+/* 11. Mobile Card Responsiveness */
+@media (max-width: 640px) {
+  .revealCard {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 160px);
+    padding: 14px 16px 16px;
+    font-size: .72rem;
+    overflow-y: auto;
+  }
+  
+  .revealCard h3 {
+    font-size: .95rem;
+  }
+  
+  .card-avatar-cluster {
+    gap: 8px;
+  }
+  
+  .card-actor-avatar,
+  .card-target-avatar {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* 12. Dual HOH·POV Label Compact Styling (already handled in status-hoh-pov above) */
+
+/* 13. Skeleton Shimmer for Avatar Preloading */
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-avatar {
+  background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+/* Results modal skeleton states */
+.results-modal-overlay .skeleton-avatar {
+  background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+/* 16. Reduced Motion Support */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Nominee pulse animation (optional, disabled in reduced motion) */
+.nominee-pulse {
+  animation: nomineeP pulse 2s ease-in-out infinite;
+}
+
+@keyframes nomineePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,100,100,.4); }
+  50% { box-shadow: 0 0 12px 2px rgba(255,100,100,.6); }
+}
+
+.reduced-motion .nominee-pulse {
+  animation: none;
+}
+
+/* Hide old badge system */
+.hg-badges {
+  display: none !important;
+}
+
+/* Accessibility improvements */
+.top-tile-avatar-wrap[aria-label] {
+  cursor: pointer;
+}
+
+.results-modal-overlay[role="dialog"] {
+  outline: none;
+}
+
+.results-modal-overlay:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+/* Additional logging styles for debug console */
+.log-entry[data-type="results"],
+.log-entry[data-type="phase"],
+.log-entry[data-type="ff"],
+.log-entry[data-type="social"],
+.log-entry[data-type="jury"] {
+  font-family: 'Courier New', monospace;
+  font-size: .68rem;
+}

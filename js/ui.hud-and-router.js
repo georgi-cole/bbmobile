@@ -534,46 +534,14 @@ header.innerHTML = `
 
       const wrap=document.createElement('div'); wrap.className='top-tile-avatar-wrap';
       
-      // New badge system
+      // Status checks
       const hasHOH = !!p.hoh;
       const hasVeto = game.vetoHolder===p.id;
       const hasNom = p.nominated && !p.evicted && !game.__suppressNomBadges;
       
-      if(hasHOH || hasVeto || hasNom){
-        const badgeContainer = document.createElement('div');
-        badgeContainer.className = 'hg-badges';
-        badgeContainer.setAttribute('aria-hidden', 'true');
-        
-        if(hasHOH){
-          const b = document.createElement('div');
-          b.className = 'hg-badge hoh-badge';
-          b.title = 'Head of Household';
-          badgeContainer.appendChild(b);
-        }
-        
-        if(hasVeto){
-          const b = document.createElement('div');
-          b.className = 'hg-badge veto-badge';
-          b.title = 'Veto Holder';
-          badgeContainer.appendChild(b);
-        }
-        
-        if(hasNom){
-          const b = document.createElement('div');
-          b.className = 'hg-badge nom-badge';
-          b.title = 'Nominated';
-          badgeContainer.appendChild(b);
-          // Add pulse effect to avatar wrap
-          wrap.classList.add('nominee-pulse');
-        }
-        
-        wrap.appendChild(badgeContainer);
-        
-        // Log badge application
-        const cfg = g.game?.cfg || {};
-        if(cfg.logBadges !== false){
-          console.info(`[badges] applied hoh=${hasHOH} veto=${hasVeto} nom=${hasNom} id=${p.id}`);
-        }
+      // Add pulse effect for nominees
+      if(hasNom){
+        wrap.classList.add('nominee-pulse');
       }
       
       if(p.evicted){
@@ -586,7 +554,36 @@ header.innerHTML = `
       img.onerror=function(){ this.onerror=null; this.src=FALLBACK; };
       wrap.appendChild(img);
 
-      const name=document.createElement('div'); name.className='top-tile-name'; name.textContent=p.name;
+      // Status label (replaces name when status active)
+      const name=document.createElement('div'); 
+      name.className='top-tile-name';
+      
+      let labelText = p.name;
+      let statusClass = '';
+      let ariaLabel = p.name;
+      
+      // NOM always exclusive (HOH cannot be nominated)
+      if(hasNom){
+        labelText = 'NOM';
+        statusClass = 'status-nom';
+        ariaLabel = `${p.name} (Nominated)`;
+      } else if(hasHOH && hasVeto){
+        labelText = 'HOH·POV';
+        statusClass = 'status-hoh-pov';
+        ariaLabel = `${p.name} (Head of Household and Veto Holder)`;
+      } else if(hasHOH){
+        labelText = 'HOH';
+        statusClass = 'status-hoh';
+        ariaLabel = `${p.name} (Head of Household)`;
+      } else if(hasVeto){
+        labelText = 'POV';
+        statusClass = 'status-pov';
+        ariaLabel = `${p.name} (Veto Holder)`;
+      }
+      
+      name.textContent = labelText;
+      if(statusClass) name.classList.add(statusClass);
+      wrap.setAttribute('aria-label', ariaLabel);
 
       const moveHandler = (e)=> showProfileFor(p, e);
       const enterHandler = (e)=> showProfileFor(p, e);
