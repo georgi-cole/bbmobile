@@ -27,7 +27,8 @@
     phase: LifecyclePhase.IDLE,
     gameKey: null,
     startTime: null,
-    metadata: {}
+    metadata: {},
+    rendered: false  // Track if game successfully rendered
   };
 
   /**
@@ -102,6 +103,7 @@
     const loadTime = currentState.loadStartTime ? Date.now() - currentState.loadStartTime : 0;
     
     currentState.phase = LifecyclePhase.READY;
+    currentState.rendered = true;  // Mark as successfully rendered
 
     console.info(`[Lifecycle] Ready: ${gameKey} (load: ${loadTime}ms)`);
 
@@ -139,10 +141,24 @@
    * Mark game as completing (score submitted)
    * @param {string} gameKey - The game completing
    * @param {number} score - Raw score
+   * @returns {boolean} True if completion allowed, false if blocked
    */
   function markCompleting(gameKey, score){
     if(currentState.gameKey !== gameKey){
       console.warn('[Lifecycle] markCompleting called for different game:', gameKey, 'vs', currentState.gameKey);
+    }
+
+    // Guard: block completion if game hasn't rendered yet (phantom completion)
+    if(!currentState.rendered){
+      console.warn('[Lifecycle] ⚠️ Completion blocked - game not rendered yet:', gameKey);
+      if(g.MinigameTelemetry){
+        g.MinigameTelemetry.logEvent('minigame.completion.blocked', {
+          gameKey,
+          attemptedBeforeRender: true,
+          phase: currentState.phase
+        });
+      }
+      return false;
     }
 
     const playTime = currentState.playStartTime ? Date.now() - currentState.playStartTime : 0;
@@ -152,6 +168,7 @@
     currentState.playTime = playTime;
 
     console.info(`[Lifecycle] Completing: ${gameKey} (score: ${score}, time: ${playTime}ms)`);
+    return true;
   }
 
   /**
@@ -231,7 +248,8 @@
         phase: LifecyclePhase.IDLE,
         gameKey: null,
         startTime: null,
-        metadata: {}
+        metadata: {},
+        rendered: false
       };
     }, 100);
   }

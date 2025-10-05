@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minigame Stabilization Hotfix Tests</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: #ff6b9d;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin: 2rem 0 1rem;
+      color: #4ecdc4;
+      border-bottom: 2px solid #4ecdc4;
+      padding-bottom: 0.5rem;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2a3f5f;
+    }
+    button {
+      background: #4ecdc4;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #45b7ae;
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #0f1626;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .success { color: #4ecdc4; }
+    .error { color: #ff6b9d; }
+    .warning { color: #ffa500; }
+    .info { color: #e3ecf5; }
+    .stat-card {
+      background: #0f1626;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #2a3f5f;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Minigame Stabilization Hotfix Tests</h1>
+    <p style="margin-bottom: 20px;">Tests for key resolution, lifecycle guards, and fallback handling</p>
+
+    <div class="test-section">
+      <h2>1. Key Resolver Tests</h2>
+      <button onclick="testKeyResolver()">Test Key Resolver</button>
+      <button onclick="testAliasResolution()">Test Alias Resolution</button>
+      <div id="resolverResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Registry Bootstrap Tests</h2>
+      <button onclick="testBootstrap()">Test Bootstrap</button>
+      <button onclick="testDevUtilities()">Test Dev Utilities</button>
+      <div id="bootstrapResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Selector Hardening Tests</h2>
+      <button onclick="testSelectorWithResolver()">Test Selector with Resolver</button>
+      <button onclick="testFallbackHandling()">Test Fallback Handling</button>
+      <div id="selectorResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>4. Lifecycle Guard Tests</h2>
+      <button onclick="testLifecycleGuard()">Test Completion Guard</button>
+      <div id="lifecycleResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>5. Sequential Competition Test (30 rounds)</h2>
+      <button onclick="runSequentialTest()" id="seqTestBtn">Run 30 Sequential Selections</button>
+      <div id="sequentialResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>6. Telemetry Audit</h2>
+      <button onclick="auditTelemetry()">Audit Telemetry Events</button>
+      <div id="telemetryResult" class="result"></div>
+    </div>
+  </div>
+
+  <!-- Load minigame system modules -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/minigames/scoring.js"></script>
+  <script src="js/minigames/mobile-utils.js"></script>
+  <script src="js/minigames/telemetry.js"></script>
+  <script src="js/minigames/error-handler.js"></script>
+  <script src="js/minigames/core/lifecycle.js"></script>
+  <script src="js/minigames/core/watchdog.js"></script>
+  <script src="js/minigames/core/compat-bridge.js"></script>
+  <script src="js/minigames/core/context.js"></script>
+  <script src="js/minigames/core/key-resolver.js"></script>
+  <script src="js/minigames/core/registry-bootstrap.js"></script>
+  <script src="js/minigames/index.js"></script>
+
+  <script>
+    // Initialize game object
+    window.game = {};
+
+    function log(elementId, message, type = 'info') {
+      const el = document.getElementById(elementId);
+      const color = type === 'success' ? 'success' : 
+                    type === 'error' ? 'error' : 
+                    type === 'warning' ? 'warning' : 'info';
+      el.innerHTML += `<span class="${color}">${message}</span>\n`;
+    }
+
+    function clear(elementId) {
+      document.getElementById(elementId).innerHTML = '';
+    }
+
+    function testKeyResolver() {
+      clear('resolverResult');
+      log('resolverResult', '=== Testing Key Resolver ===\n');
+      
+      try {
+        const resolver = window.MGKeyResolver;
+        
+        if (!resolver) {
+          log('resolverResult', '❌ MGKeyResolver not found', 'error');
+          return;
+        }
+
+        log('resolverResult', '✅ MGKeyResolver loaded', 'success');
+        
+        const summary = resolver.getAuditSummary();
+        log('resolverResult', `\nCanonical keys: ${summary.canonicalCount}`, 'info');
+        log('resolverResult', `Total aliases: ${summary.aliasCount}`, 'info');
+        log('resolverResult', `Unknown keys: ${summary.unknownCount}`, 'info');
+        
+        // Test resolution of various keys
+        const testKeys = ['quickTap', 'clicker', 'bar', 'timingBar', 'memory', 'unknown'];
+        log('resolverResult', '\nTesting key resolution:', 'info');
+        
+        for (const key of testKeys) {
+          const resolved = resolver.resolveGameKey(key);
+          if (resolved) {
+            log('resolverResult', `  "${key}" → "${resolved}" ✅`, 'success');
+          } else {
+            log('resolverResult', `  "${key}" → null (unknown) ⚠️`, 'warning');
+          }
+        }
+        
+        // Test aliases
+        log('resolverResult', '\nTesting getAliases("quickTap"):', 'info');
+        const aliases = resolver.getAliases('quickTap');
+        log('resolverResult', `  Aliases: ${aliases.join(', ')}`, 'info');
+        
+        log('resolverResult', '\n✅ Key resolver tests complete', 'success');
+      } catch (error) {
+        log('resolverResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testAliasResolution() {
+      clear('resolverResult');
+      log('resolverResult', '=== Testing Alias Resolution ===\n');
+      
+      try {
+        const resolver = window.MGKeyResolver;
+        
+        if (!resolver) {
+          log('resolverResult', '❌ MGKeyResolver not found', 'error');
+          return;
+        }
+
+        // Test all legacy aliases
+        const legacyAliases = {
+          'clicker': 'quickTap',
+          'memory': 'memoryMatch',
+          'math': 'mathBlitz',
+          'bar': 'timingBar',
+          'reaction': 'reactionTimer',
+          'numseq': 'sequenceMemory',
+          'pattern': 'patternMatch',
+          'slider': 'sliderPuzzle',
+          'anagram': 'wordAnagram',
+          'path': 'pathFinder',
+          'target': 'targetPractice',
+          'pairs': 'memoryPairs',
+          'simon': 'simonSays',
+          'estimate': 'estimationGame'
+        };
+
+        let passed = 0;
+        let failed = 0;
+
+        for (const [alias, expected] of Object.entries(legacyAliases)) {
+          const resolved = resolver.resolveGameKey(alias);
+          if (resolved === expected) {
+            log('resolverResult', `✅ "${alias}" → "${resolved}"`, 'success');
+            passed++;
+          } else {
+            log('resolverResult', `❌ "${alias}" → "${resolved}" (expected "${expected}")`, 'error');
+            failed++;
+          }
+        }
+
+        log('resolverResult', `\nResults: ${passed} passed, ${failed} failed`, failed === 0 ? 'success' : 'error');
+      } catch (error) {
+        log('resolverResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testBootstrap() {
+      clear('bootstrapResult');
+      log('bootstrapResult', '=== Testing Registry Bootstrap ===\n');
+      
+      try {
+        const bootstrap = window.MGRegistryBootstrap;
+        
+        if (!bootstrap) {
+          log('bootstrapResult', '❌ MGRegistryBootstrap not found', 'error');
+          return;
+        }
+
+        log('bootstrapResult', '✅ MGRegistryBootstrap loaded', 'success');
+        
+        // Re-run bootstrap
+        const summary = bootstrap.bootstrap();
+        
+        log('bootstrapResult', `\nBootstrap summary:`, 'info');
+        log('bootstrapResult', `  Canonical keys: ${summary.canonicalCount}`, 'info');
+        log('bootstrapResult', `  Aliases: ${summary.aliasCount}`, 'info');
+        log('bootstrapResult', `  Unknown keys: ${summary.unknownCount}`, 'info');
+        
+        if (summary.unknownCount > 0) {
+          log('bootstrapResult', `\n⚠️ Unknown keys: ${summary.unknownKeys.join(', ')}`, 'warning');
+        } else {
+          log('bootstrapResult', '\n✅ No unknown keys', 'success');
+        }
+      } catch (error) {
+        log('bootstrapResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testDevUtilities() {
+      clear('bootstrapResult');
+      log('bootstrapResult', '=== Testing Dev Utilities ===\n');
+      
+      try {
+        // Test __mgTestKeys
+        if (typeof window.__mgTestKeys === 'function') {
+          log('bootstrapResult', '✅ __mgTestKeys() available', 'success');
+          const testResult = window.__mgTestKeys();
+          log('bootstrapResult', `\nRegistered keys (${testResult.registered.length}):`, 'info');
+          log('bootstrapResult', `  ${testResult.registered.slice(0, 5).join(', ')}...`, 'info');
+          log('bootstrapResult', `Sample selection: ${testResult.sampleSelection || 'N/A'}`, 'info');
+        } else {
+          log('bootstrapResult', '❌ __mgTestKeys() not available', 'error');
+        }
+
+        // Test __mgForceKey
+        if (typeof window.__mgForceKey === 'function') {
+          log('bootstrapResult', '\n✅ __mgForceKey() available', 'success');
+          const forceResult = window.__mgForceKey('clicker');
+          log('bootstrapResult', `\nForce key "clicker":`, 'info');
+          log('bootstrapResult', `  Resolved: ${forceResult.resolvedKey}`, 'info');
+          log('bootstrapResult', `  Registered: ${forceResult.registered}`, 'info');
+          log('bootstrapResult', `  In registry: ${forceResult.inRegistry}`, 'info');
+        } else {
+          log('bootstrapResult', '❌ __mgForceKey() not available', 'error');
+        }
+
+        log('bootstrapResult', '\n✅ Dev utilities tests complete', 'success');
+      } catch (error) {
+        log('bootstrapResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testSelectorWithResolver() {
+      clear('selectorResult');
+      log('selectorResult', '=== Testing Selector with Resolver ===\n');
+      
+      try {
+        const selector = window.MinigameSelector;
+        const resolver = window.MGKeyResolver;
+        
+        if (!selector || !resolver) {
+          log('selectorResult', '❌ MinigameSelector or MGKeyResolver not found', 'error');
+          return;
+        }
+
+        // Reset selector
+        selector.reset();
+        
+        // Make 10 selections
+        log('selectorResult', 'Making 10 selections:\n', 'info');
+        
+        let unknownCount = 0;
+        for (let i = 0; i < 10; i++) {
+          const selected = selector.selectNext(true);
+          const resolved = resolver.resolveGameKey(selected);
+          
+          if (!resolved) {
+            log('selectorResult', `  ${i+1}. ${selected} → UNKNOWN ❌`, 'error');
+            unknownCount++;
+          } else if (resolved !== selected) {
+            log('selectorResult', `  ${i+1}. ${selected} → ${resolved} (alias)`, 'warning');
+          } else {
+            log('selectorResult', `  ${i+1}. ${selected} ✅`, 'success');
+          }
+        }
+
+        log('selectorResult', `\nResults: ${10 - unknownCount}/10 valid selections`, unknownCount === 0 ? 'success' : 'error');
+        
+        if (unknownCount === 0) {
+          log('selectorResult', '✅ All selections resolved successfully', 'success');
+        } else {
+          log('selectorResult', `⚠️ ${unknownCount} unknown selections`, 'warning');
+        }
+      } catch (error) {
+        log('selectorResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testFallbackHandling() {
+      clear('selectorResult');
+      log('selectorResult', '=== Testing Fallback Handling ===\n');
+      
+      try {
+        const resolver = window.MGKeyResolver;
+        
+        if (!resolver) {
+          log('selectorResult', '❌ MGKeyResolver not found', 'error');
+          return;
+        }
+
+        // Test with unknown keys
+        const unknownKeys = ['invalidGame', 'notAGame', 'fakeMinigame'];
+        
+        log('selectorResult', 'Testing unknown keys:\n', 'info');
+        
+        for (const key of unknownKeys) {
+          const resolved = resolver.resolveGameKey(key);
+          if (resolved === null) {
+            log('selectorResult', `  "${key}" → null (correctly rejected) ✅`, 'success');
+          } else {
+            log('selectorResult', `  "${key}" → "${resolved}" (unexpected) ❌`, 'error');
+          }
+        }
+
+        log('selectorResult', '\n✅ Fallback handling tests complete', 'success');
+      } catch (error) {
+        log('selectorResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testLifecycleGuard() {
+      clear('lifecycleResult');
+      log('lifecycleResult', '=== Testing Lifecycle Guard ===\n');
+      
+      try {
+        const lifecycle = window.MinigameLifecycle;
+        
+        if (!lifecycle) {
+          log('lifecycleResult', '❌ MinigameLifecycle not found', 'error');
+          return;
+        }
+
+        log('lifecycleResult', '✅ MinigameLifecycle loaded', 'success');
+        
+        // Test 1: Initialize without rendering
+        log('lifecycleResult', '\nTest 1: Attempt completion before render', 'info');
+        lifecycle.initialize('quickTap', { test: true });
+        const blocked = lifecycle.markCompleting('quickTap', 100);
+        
+        if (blocked === false) {
+          log('lifecycleResult', '✅ Completion correctly blocked', 'success');
+        } else {
+          log('lifecycleResult', '⚠️ Completion was not blocked', 'warning');
+        }
+        
+        // Test 2: Mark as ready (rendered) then complete
+        log('lifecycleResult', '\nTest 2: Completion after render', 'info');
+        lifecycle.markReady('quickTap');
+        lifecycle.markPlaying('quickTap');
+        const allowed = lifecycle.markCompleting('quickTap', 100);
+        
+        if (allowed !== false) {
+          log('lifecycleResult', '✅ Completion allowed after render', 'success');
+        } else {
+          log('lifecycleResult', '❌ Completion blocked after render', 'error');
+        }
+        
+        // Cleanup
+        lifecycle.dispose();
+        
+        log('lifecycleResult', '\n✅ Lifecycle guard tests complete', 'success');
+      } catch (error) {
+        log('lifecycleResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    async function runSequentialTest() {
+      clear('sequentialResult');
+      const btn = document.getElementById('seqTestBtn');
+      btn.disabled = true;
+      
+      log('sequentialResult', '=== Running 30 Sequential Selections ===\n');
+      
+      try {
+        const selector = window.MinigameSelector;
+        const resolver = window.MGKeyResolver;
+        
+        if (!selector || !resolver) {
+          log('sequentialResult', '❌ Required modules not found', 'error');
+          btn.disabled = false;
+          return;
+        }
+
+        // Reset selector
+        selector.reset();
+        
+        // Clear unknown tracking
+        resolver.clearUnknownTracking();
+        
+        const selections = [];
+        let unknownCount = 0;
+        let fallbackCount = 0;
+        
+        for (let i = 0; i < 30; i++) {
+          const selected = selector.selectNext(true);
+          const resolved = resolver.resolveGameKey(selected);
+          
+          selections.push({ original: selected, resolved });
+          
+          if (!resolved) {
+            unknownCount++;
+            log('sequentialResult', `${i+1}. ${selected} → UNKNOWN ❌`, 'error');
+          } else if (resolved !== selected) {
+            log('sequentialResult', `${i+1}. ${selected} → ${resolved}`, 'info');
+          } else {
+            if (i % 5 === 0) {
+              log('sequentialResult', `${i+1}. ${selected} ✅`, 'success');
+            }
+          }
+          
+          if (selected === 'quickTap' && i > 0 && selections[i-1].resolved !== 'quickTap') {
+            fallbackCount++;
+          }
+        }
+        
+        // Summary
+        log('sequentialResult', `\n=== Summary ===`, 'info');
+        log('sequentialResult', `Total selections: 30`, 'info');
+        log('sequentialResult', `Unknown keys: ${unknownCount}`, unknownCount === 0 ? 'success' : 'error');
+        log('sequentialResult', `Fallbacks used: ${fallbackCount}`, 'info');
+        
+        const summary = resolver.getAuditSummary();
+        log('sequentialResult', `Unknown keys encountered: ${summary.unknownCount}`, summary.unknownCount === 0 ? 'success' : 'warning');
+        
+        if (unknownCount === 0) {
+          log('sequentialResult', '\n✅ ALL TESTS PASSED: Zero unknown minigame errors!', 'success');
+        } else {
+          log('sequentialResult', `\n⚠️ ${unknownCount} unknown minigame errors detected`, 'warning');
+        }
+        
+      } catch (error) {
+        log('sequentialResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+      
+      btn.disabled = false;
+    }
+
+    function auditTelemetry() {
+      clear('telemetryResult');
+      log('telemetryResult', '=== Telemetry Audit ===\n');
+      
+      try {
+        const telemetry = window.MinigameTelemetry;
+        
+        if (!telemetry) {
+          log('telemetryResult', '❌ MinigameTelemetry not found', 'error');
+          return;
+        }
+
+        log('telemetryResult', '✅ MinigameTelemetry loaded', 'success');
+        
+        // Get recent events
+        const events = telemetry.getRecentEvents(50);
+        
+        log('telemetryResult', `\nTotal events: ${events.length}`, 'info');
+        
+        // Count event types
+        const eventCounts = {};
+        for (const event of events) {
+          eventCounts[event.type] = (eventCounts[event.type] || 0) + 1;
+        }
+        
+        log('telemetryResult', '\nEvent breakdown:', 'info');
+        for (const [type, count] of Object.entries(eventCounts)) {
+          log('telemetryResult', `  ${type}: ${count}`, 'info');
+        }
+        
+        // Check for specific events
+        const unknownEvents = events.filter(e => e.type === 'minigame.key.unknown');
+        const fallbackEvents = events.filter(e => e.type === 'minigame.fallback.used');
+        const blockedEvents = events.filter(e => e.type === 'minigame.completion.blocked');
+        
+        log('telemetryResult', '\nStabilization events:', 'info');
+        log('telemetryResult', `  Unknown keys: ${unknownEvents.length}`, unknownEvents.length === 0 ? 'success' : 'warning');
+        log('telemetryResult', `  Fallbacks: ${fallbackEvents.length}`, 'info');
+        log('telemetryResult', `  Blocked completions: ${blockedEvents.length}`, blockedEvents.length === 0 ? 'success' : 'warning');
+        
+        if (unknownEvents.length > 0) {
+          log('telemetryResult', '\n⚠️ Unknown key events:', 'warning');
+          for (const event of unknownEvents.slice(0, 5)) {
+            log('telemetryResult', `  ${event.data.requestedKey} (${event.data.atPhase})`, 'warning');
+          }
+        }
+        
+        log('telemetryResult', '\n✅ Telemetry audit complete', 'success');
+      } catch (error) {
+        log('telemetryResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    // Auto-run basic tests on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.log('Running auto-tests...');
+        testKeyResolver();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
