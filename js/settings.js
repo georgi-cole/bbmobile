@@ -37,8 +37,11 @@
     useRibbon: true,
     // Minigame mode
     miniMode: 'random',  // 'random' | 'clicker' | 'cycle'
-    // Minigame system
-    useNewMinigames: true  // When true, use new Phase 1 minigame system with non-repeating pools
+    // Minigame system (Phase 1-8 unified system)
+    useNewMinigames: true,  // When true, use new Phase 1 minigame system with non-repeating pools
+    useUnifiedMinigames: true,  // Master switch for unified minigame system (Phases 0-8)
+    enableMinigameBridge: true,  // Compatibility bridge for legacy keys (temporary, can disable after migration)
+    enableMinigameTelemetryPanel: false  // Dev debug panel (Ctrl+Shift+D when enabled)
   };
 
   // Load/save helpers

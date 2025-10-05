@@ -1,0 +1,101 @@
+{
+  "timestamp": "2025-10-05T23:01:09.225Z",
+  "status": "READY",
+  "passed": 18,
+  "failed": 0,
+  "warnings": 0,
+  "details": [
+    {
+      "check": "Module MinigameRegistry",
+      "passed": true,
+      "path": "js/minigames/registry.js"
+    },
+    {
+      "check": "Module MinigameSelector",
+      "passed": true,
+      "path": "js/minigames/selector.js"
+    },
+    {
+      "check": "Module MinigameScoring",
+      "passed": true,
+      "path": "js/minigames/scoring.js"
+    },
+    {
+      "check": "Module MinigameTelemetry",
+      "passed": true,
+      "path": "js/minigames/telemetry.js"
+    },
+    {
+      "check": "Module MinigameErrorHandler",
+      "passed": true,
+      "path": "js/minigames/error-handler.js"
+    },
+    {
+      "check": "Module MinigameAccessibility",
+      "passed": true,
+      "path": "js/minigames/accessibility.js"
+    },
+    {
+      "check": "Module MinigameMobileUtils",
+      "passed": true,
+      "path": "js/minigames/mobile-utils.js"
+    },
+    {
+      "check": "Module MinigameLifecycle",
+      "passed": true,
+      "path": "js/minigames/core/lifecycle.js"
+    },
+    {
+      "check": "Module MinigameWatchdog",
+      "passed": true,
+      "path": "js/minigames/core/watchdog.js"
+    },
+    {
+      "check": "Module MinigameCompatBridge",
+      "passed": true,
+      "path": "js/minigames/core/compat-bridge.js"
+    },
+    {
+      "check": "Module MinigameContext",
+      "passed": true,
+      "path": "js/minigames/core/context.js"
+    },
+    {
+      "check": "Manifest generator script",
+      "passed": true,
+      "path": "scripts/generate-minigame-manifest.mjs"
+    },
+    {
+      "check": "Contract test suite",
+      "passed": true,
+      "path": "tests/minigames/contract.spec.js"
+    },
+    {
+      "check": "Distribution test suite",
+      "passed": true,
+      "path": "tests/minigames/distribution.spec.js"
+    },
+    {
+      "check": "Manifest",
+      "passed": true,
+      "games": 34
+    },
+    {
+      "check": "Registry",
+      "passed": true,
+      "total": 23,
+      "implemented": 22
+    },
+    {
+      "check": "Documentation",
+      "passed": true
+    }
+  ],
+  "manifest": {
+    "games": 34
+  },
+  "registry": {
+    "total": 23,
+    "implemented": 22
+  }
+}

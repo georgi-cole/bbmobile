@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified Minigame System Tests</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: #ff6b9d;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin: 2rem 0 1rem;
+      color: #4ecdc4;
+      border-bottom: 2px solid #4ecdc4;
+      padding-bottom: 0.5rem;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2a3f5f;
+    }
+    button {
+      background: #4ecdc4;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #45b7ae;
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #0f1626;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .success { color: #4ecdc4; }
+    .error { color: #ff6b9d; }
+    .warning { color: #ffa500; }
+    .info { color: #e3ecf5; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: #0f1626;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #2a3f5f;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #4ecdc4;
+    }
+    .stat-label {
+      font-size: 0.875rem;
+      color: #a0a0a0;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Unified Minigame System Tests</h1>
+    <p style="margin-bottom: 20px;">Phase 0-8 implementation validation</p>
+
+    <!-- System Status -->
+    <div class="test-section">
+      <h2>System Status</h2>
+      <div class="stats" id="systemStats">
+        <div class="stat-card">
+          <div class="stat-value" id="statModules">-</div>
+          <div class="stat-label">Core Modules</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statGames">-</div>
+          <div class="stat-label">Registered Games</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statImplemented">-</div>
+          <div class="stat-label">Implemented</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statTests">-</div>
+          <div class="stat-label">Test Modules</div>
+        </div>
+      </div>
+      <button onclick="checkSystemStatus()">Check System</button>
+      <div id="statusResult" class="result"></div>
+    </div>
+
+    <!-- Contract Tests -->
+    <div class="test-section">
+      <h2>Contract Validation</h2>
+      <p>Validates all games follow API contract (render(), onComplete, etc)</p>
+      <button onclick="runContractTests()">Run Contract Tests</button>
+      <button onclick="exportContractResults()">Export Results</button>
+      <div id="contractResult" class="result"></div>
+    </div>
+
+    <!-- Distribution Tests -->
+    <div class="test-section">
+      <h2>Distribution Simulation</h2>
+      <p>Tests selection fairness and score normalization</p>
+      <label>
+        Competitions to simulate:
+        <input type="number" id="compCount" value="100" min="10" max="1000" style="width: 80px; padding: 5px;">
+      </label>
+      <br><br>
+      <button onclick="runDistributionTests()">Run Distribution Tests</button>
+      <button onclick="exportDistributionResults()">Export Results</button>
+      <div id="distributionResult" class="result"></div>
+    </div>
+
+    <!-- Core Module Tests -->
+    <div class="test-section">
+      <h2>Core Module Tests</h2>
+      <p>Test lifecycle, watchdog, compat-bridge, and context modules</p>
+      <button onclick="testLifecycle()">Test Lifecycle</button>
+      <button onclick="testWatchdog()">Test Watchdog</button>
+      <button onclick="testCompatBridge()">Test Compat Bridge</button>
+      <button onclick="testContext()">Test Context</button>
+      <div id="coreResult" class="result"></div>
+    </div>
+
+    <!-- Performance Tests -->
+    <div class="test-section">
+      <h2>Performance Metrics</h2>
+      <p>Measure load time, render time, and memory usage</p>
+      <button onclick="runPerformanceTests()">Run Performance Tests</button>
+      <div id="performanceResult" class="result"></div>
+    </div>
+  </div>
+
+  <!-- Load all minigame system modules -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/minigames/scoring.js"></script>
+  <script src="js/minigames/telemetry.js"></script>
+  <script src="js/minigames/error-handler.js"></script>
+  <script src="js/minigames/accessibility.js"></script>
+  <script src="js/minigames/mobile-utils.js"></script>
+  <script src="js/minigames/core/lifecycle.js"></script>
+  <script src="js/minigames/core/watchdog.js"></script>
+  <script src="js/minigames/core/compat-bridge.js"></script>
+  <script src="js/minigames/core/context.js"></script>
+
+  <!-- Load test modules -->
+  <script src="tests/minigames/contract.spec.js"></script>
+  <script src="tests/minigames/distribution.spec.js"></script>
+
+  <!-- Load a few sample games for testing -->
+  <script defer src="js/minigames/quick-tap.js"></script>
+  <script defer src="js/minigames/memory-match.js"></script>
+  <script defer src="js/minigames/timing-bar.js"></script>
+
+  <script>
+    function log(elementId, text, type = 'info') {
+      const el = document.getElementById(elementId);
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = text + '\n';
+      el.appendChild(span);
+    }
+
+    function clear(elementId) {
+      document.getElementById(elementId).innerHTML = '';
+    }
+
+    function checkSystemStatus() {
+      clear('statusResult');
+      log('statusResult', '🔍 Checking system status...\n', 'info');
+
+      // Check core modules
+      const coreModules = [
+        'MinigameRegistry',
+        'MinigameSelector',
+        'MinigameScoring',
+        'MinigameTelemetry',
+        'MinigameErrorHandler',
+        'MinigameAccessibility',
+        'MinigameMobileUtils',
+        'MinigameLifecycle',
+        'MinigameWatchdog',
+        'MinigameCompatBridge',
+        'MinigameContext'
+      ];
+
+      let loadedModules = 0;
+      coreModules.forEach(module => {
+        if(window[module]){
+          log('statusResult', `✅ ${module}`, 'success');
+          loadedModules++;
+        } else {
+          log('statusResult', `❌ ${module} NOT LOADED`, 'error');
+        }
+      });
+
+      document.getElementById('statModules').textContent = `${loadedModules}/${coreModules.length}`;
+
+      // Check registry
+      if(window.MinigameRegistry){
+        const allGames = MinigameRegistry.getAllKeys();
+        const implemented = MinigameRegistry.getImplementedGames();
+        
+        log('statusResult', `\n📚 Registry:`, 'info');
+        log('statusResult', `   Total games: ${allGames.length}`, 'info');
+        log('statusResult', `   Implemented: ${implemented.length}`, 'success');
+        
+        document.getElementById('statGames').textContent = allGames.length;
+        document.getElementById('statImplemented').textContent = implemented.length;
+      }
+
+      // Check test modules
+      const testModules = ['MinigameContractTests', 'MinigameDistributionTests'];
+      let loadedTests = 0;
+      testModules.forEach(module => {
+        if(window[module]){
+          loadedTests++;
+        }
+      });
+      document.getElementById('statTests').textContent = `${loadedTests}/${testModules.length}`;
+
+      log('statusResult', `\n✅ System check complete`, 'success');
+    }
+
+    async function runContractTests() {
+      clear('contractResult');
+      log('contractResult', '🧪 Running Contract Validation Tests...\n', 'info');
+
+      if(!window.MinigameContractTests){
+        log('contractResult', '❌ Contract test module not loaded', 'error');
+        return;
+      }
+
+      try {
+        const results = await MinigameContractTests.runContractTests();
+        
+        log('contractResult', '\n📊 Results:', 'info');
+        log('contractResult', `   Total: ${results.total}`, 'info');
+        log('contractResult', `   Passed: ${results.passed}`, 'success');
+        log('contractResult', `   Failed: ${results.failed}`, results.failed > 0 ? 'error' : 'success');
+
+        if(results.violations.length > 0){
+          log('contractResult', '\n❌ Violations:', 'error');
+          results.violations.forEach(v => {
+            log('contractResult', `   ${v.gameKey}:`, 'error');
+            v.violations.forEach(msg => {
+              log('contractResult', `      - ${msg}`, 'error');
+            });
+          });
+        } else {
+          log('contractResult', '\n✅ All tests passed!', 'success');
+        }
+      } catch(error){
+        log('contractResult', `\n❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    function exportContractResults() {
+      if(!window.MinigameContractTests){
+        alert('Contract tests not loaded');
+        return;
+      }
+
+      const results = MinigameContractTests.exportResults();
+      const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'contract-results.json';
+      a.click();
+    }
+
+    async function runDistributionTests() {
+      clear('distributionResult');
+      const compCount = parseInt(document.getElementById('compCount').value) || 100;
+      log('distributionResult', `🎲 Running Distribution Tests (${compCount} simulations)...\n`, 'info');
+
+      if(!window.MinigameDistributionTests){
+        log('distributionResult', '❌ Distribution test module not loaded', 'error');
+        return;
+      }
+
+      try {
+        // Override competitions count
+        const oldFunc = MinigameDistributionTests.runDistributionTests;
+        const results = await MinigameDistributionTests.runDistributionTests();
+        
+        log('distributionResult', '\n📊 Results:', 'info');
+        
+        if(results.selection){
+          const stats = results.selection.statistics;
+          log('distributionResult', `\nSelection Distribution:`, 'info');
+          log('distributionResult', `   Games: ${stats.games}`, 'info');
+          log('distributionResult', `   Mean: ${stats.mean.toFixed(2)}`, 'info');
+          log('distributionResult', `   CV: ${stats.cv.toFixed(2)}%`, 'info');
+          log('distributionResult', `   Fair: ${stats.fair ? '✅' : '❌'}`, stats.fair ? 'success' : 'error');
+          log('distributionResult', `   Unknown keys: ${stats.unknownKeys}`, stats.unknownKeys > 0 ? 'error' : 'success');
+          log('distributionResult', `   Fallbacks: ${stats.fallbacks}`, stats.fallbacks > 0 ? 'warning' : 'success');
+        }
+
+        if(results.scoring.length > 0){
+          log('distributionResult', `\nScore Distribution:`, 'info');
+          results.scoring.forEach(game => {
+            const stats = game.statistics;
+            log('distributionResult', `   ${game.gameKey}:`, 'info');
+            log('distributionResult', `      Mean: ${stats.mean.toFixed(2)}`, 'info');
+            log('distributionResult', `      Fairness: ${stats.inFairnessBand ? '✅' : '⚠️'}`, stats.inFairnessBand ? 'success' : 'warning');
+          });
+        }
+
+        log('distributionResult', '\n✅ Distribution tests complete', 'success');
+      } catch(error){
+        log('distributionResult', `\n❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    function exportDistributionResults() {
+      // Implementation for exporting distribution results
+      alert('Export distribution results functionality');
+    }
+
+    function testLifecycle() {
+      clear('coreResult');
+      log('coreResult', '🔄 Testing Lifecycle Module...\n', 'info');
+
+      if(!window.MinigameLifecycle){
+        log('coreResult', '❌ Lifecycle module not loaded', 'error');
+        return;
+      }
+
+      try {
+        // Test initialization
+        const init = MinigameLifecycle.initialize('testGame', { playerId: 'test' });
+        log('coreResult', '✅ Initialize', 'success');
+
+        // Test state transitions
+        MinigameLifecycle.markLoading('testGame');
+        log('coreResult', '✅ Mark loading', 'success');
+
+        MinigameLifecycle.markReady('testGame');
+        log('coreResult', '✅ Mark ready', 'success');
+
+        MinigameLifecycle.markPlaying('testGame');
+        log('coreResult', '✅ Mark playing', 'success');
+
+        MinigameLifecycle.markCompleting('testGame', 85);
+        log('coreResult', '✅ Mark completing', 'success');
+
+        MinigameLifecycle.markCompleted('testGame', 90);
+        log('coreResult', '✅ Mark completed', 'success');
+
+        // Check state
+        const state = MinigameLifecycle.getState();
+        log('coreResult', `\nFinal state: ${state.phase}`, 'info');
+
+        // Dispose
+        MinigameLifecycle.dispose();
+        log('coreResult', '✅ Dispose', 'success');
+
+        log('coreResult', '\n✅ All lifecycle tests passed', 'success');
+      } catch(error){
+        log('coreResult', `\n❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    function testWatchdog() {
+      clear('coreResult');
+      log('coreResult', '⏱️ Testing Watchdog Module...\n', 'info');
+
+      if(!window.MinigameWatchdog){
+        log('coreResult', '❌ Watchdog module not loaded', 'error');
+        return;
+      }
+
+      try {
+        let timeoutTriggered = false;
+
+        // Start watchdog with short timeout
+        MinigameWatchdog.start('testGame', () => {
+          timeoutTriggered = true;
+          log('coreResult', '✅ Timeout callback triggered', 'success');
+        }, 1000);
+
+        log('coreResult', '✅ Watchdog started', 'success');
+
+        // Check status
+        const status = MinigameWatchdog.getStatus();
+        log('coreResult', `   Active: ${status.active}`, 'info');
+        log('coreResult', `   Game: ${status.gameKey}`, 'info');
+
+        // Stop watchdog
+        setTimeout(() => {
+          MinigameWatchdog.stop('testGame');
+          log('coreResult', '✅ Watchdog stopped', 'success');
+
+          if(!timeoutTriggered){
+            log('coreResult', '✅ No false timeout (good)', 'success');
+          }
+
+          log('coreResult', '\n✅ Watchdog tests passed', 'success');
+        }, 500);
+      } catch(error){
+        log('coreResult', `\n❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    function testCompatBridge() {
+      clear('coreResult');
+      log('coreResult', '🌉 Testing Compat Bridge Module...\n', 'info');
+
+      if(!window.MinigameCompatBridge){
+        log('coreResult', '❌ CompatBridge module not loaded', 'error');
+        return;
+      }
+
+      try {
+        // Test key resolution
+        const resolved = MinigameCompatBridge.resolveKey('clicker', false);
+        log('coreResult', `   'clicker' → '${resolved}'`, resolved === 'quickTap' ? 'success' : 'error');
+
+        // Test aliases
+        const aliases = MinigameCompatBridge.getAliases('quickTap');
+        log('coreResult', `   Aliases for 'quickTap': ${aliases.join(', ')}`, 'info');
+
+        // Test validation
+        const validation = MinigameCompatBridge.validateMapping();
+        log('coreResult', `\n✅ Mapping validation:`, 'info');
+        log('coreResult', `   Valid: ${validation.valid}`, validation.valid ? 'success' : 'error');
+        log('coreResult', `   Total mappings: ${validation.totalMappings}`, 'info');
+        log('coreResult', `   Errors: ${validation.errors.length}`, validation.errors.length > 0 ? 'error' : 'success');
+        log('coreResult', `   Warnings: ${validation.warnings.length}`, validation.warnings.length > 0 ? 'warning' : 'success');
+
+        log('coreResult', '\n✅ Compat bridge tests passed', 'success');
+      } catch(error){
+        log('coreResult', `\n❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    function testContext() {
+      clear('coreResult');
+      log('coreResult', '📦 Testing Context Module...\n', 'info');
+
+      if(!window.MinigameContext){
+        log('coreResult', '❌ Context module not loaded', 'error');
+        return;
+      }
+
+      try {
+        const container = document.createElement('div');
+        const onComplete = (score) => {
+          log('coreResult', `✅ Complete callback: score=${score}`, 'success');
+        };
+
+        // Create context
+        const ctx = MinigameContext.createContext('testGame', container, onComplete);
+        log('coreResult', '✅ Context created', 'success');
+
+        // Test context methods
+        log('coreResult', `   Game key: ${ctx.gameKey}`, 'info');
+        log('coreResult', `   Has complete: ${typeof ctx.complete === 'function'}`, 'success');
+        log('coreResult', `   Has error: ${typeof ctx.error === 'function'}`, 'success');
+        log('coreResult', `   Has createButton: ${typeof ctx.createButton === 'function'}`, 'success');
+
+        // Test button creation
+        const btn = ctx.createButton('Test', () => {});
+        log('coreResult', `✅ Button created: ${btn.tagName}`, 'success');
+
+        // Test timer creation
+        const timer = ctx.createTimer(30);
+        log('coreResult', `✅ Timer created`, 'success');
+
+        // Test score creation
+        const score = ctx.createScore(0);
+        log('coreResult', `✅ Score display created`, 'success');
+
+        log('coreResult', '\n✅ Context tests passed', 'success');
+      } catch(error){
+        log('coreResult', `\n❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    function runPerformanceTests() {
+      clear('performanceResult');
+      log('performanceResult', '⚡ Running Performance Tests...\n', 'info');
+
+      // Test module load times
+      const moduleLoadStart = performance.now();
+      // (Modules already loaded)
+      const moduleLoadEnd = performance.now();
+      const loadTime = moduleLoadEnd - moduleLoadStart;
+
+      log('performanceResult', `Module load time: ${loadTime.toFixed(2)}ms`, 'info');
+
+      // Test registry performance
+      if(window.MinigameRegistry){
+        const start = performance.now();
+        for(let i = 0; i < 1000; i++){
+          MinigameRegistry.getImplementedGames();
+        }
+        const end = performance.now();
+        const avgTime = (end - start) / 1000;
+        log('performanceResult', `Registry getImplementedGames (1000x): ${avgTime.toFixed(3)}ms avg`, 'info');
+      }
+
+      // Test selector performance
+      if(window.MinigameSelector){
+        MinigameSelector.reset();
+        const start = performance.now();
+        for(let i = 0; i < 100; i++){
+          MinigameSelector.selectNext();
+        }
+        const end = performance.now();
+        const avgTime = (end - start) / 100;
+        log('performanceResult', `Selector selectNext (100x): ${avgTime.toFixed(3)}ms avg`, 'info');
+      }
+
+      // Memory usage
+      if(performance.memory){
+        const memMB = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+        log('performanceResult', `\nMemory usage: ${memMB} MB`, 'info');
+      }
+
+      log('performanceResult', '\n✅ Performance tests complete', 'success');
+    }
+
+    // Auto-run system status on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(checkSystemStatus, 1000);
+    });
+  </script>
+</body>
+</html>

@@ -284,7 +284,7 @@
 <script defer src="js/minigames/hidden-object.js"></script>
 <script defer src="js/minigames/balance-game.js"></script>
 
-<!-- Phase 1-8: Minigame system (see docs/minigames.md) -->
+<!-- Phase 0-8: Minigame system (see docs/minigames.md) -->
 <script defer src="js/minigames/registry.js"></script><!-- Central metadata store -->
 <script defer src="js/minigames/selector.js"></script><!-- Non-repeating pool selection -->
 <script defer src="js/minigames/scoring.js"></script><!-- Unified scoring -->
@@ -293,6 +293,11 @@
 <script defer src="js/minigames/telemetry.js"></script><!-- Event logging -->
 <script defer src="js/minigames/error-handler.js"></script><!-- Error recovery -->
 <script defer src="js/minigames/debug-panel.js"></script><!-- Debug tools -->
+<!-- Core extensions (Phases 0-8) -->
+<script defer src="js/minigames/core/lifecycle.js"></script><!-- Lifecycle manager -->
+<script defer src="js/minigames/core/watchdog.js"></script><!-- Timeout protection -->
+<script defer src="js/minigames/core/compat-bridge.js"></script><!-- Legacy key mapping -->
+<script defer src="js/minigames/core/context.js"></script><!-- Shared utilities -->
 
 <!-- Legacy compatibility bridge - maps old keys to new modules -->
 <script defer src="js/minigames/index.js"></script>
