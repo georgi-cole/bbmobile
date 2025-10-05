@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Playback Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #f0f0f0;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    .test-section {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #64B5F6;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button.secondary {
+      background: #2196F3;
+    }
+    button.secondary:hover {
+      background: #0b7dda;
+    }
+    button.danger {
+      background: #f44336;
+    }
+    button.danger:hover {
+      background: #da190b;
+    }
+    #console {
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 5px;
+    }
+    .log-info {
+      color: #64B5F6;
+    }
+    .log-warn {
+      color: #FFA726;
+    }
+    .log-error {
+      color: #EF5350;
+    }
+    .status {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 3px;
+      margin: 5px 0;
+      font-weight: bold;
+    }
+    .status.playing {
+      background: #4CAF50;
+      color: white;
+    }
+    .status.stopped {
+      background: #757575;
+      color: white;
+    }
+    .status.muted {
+      background: #FF5722;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎵 Audio Playback Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Current Status</h2>
+    <div>
+      <span class="status stopped" id="playStatus">STOPPED</span>
+      <span class="status" id="muteStatus">UNMUTED</span>
+    </div>
+    <p>Current track: <strong id="currentTrack">none</strong></p>
+    <p>Audio element exists: <strong id="audioExists">false</strong></p>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Basic Playback</h2>
+    <p>Test that audio starts and stops correctly.</p>
+    <button onclick="testPlay('opening')">Play Opening (intro.mp3)</button>
+    <button onclick="testPlay('social')">Play Social</button>
+    <button onclick="testPlay('hoh')">Play HOH (competition.mp3)</button>
+    <button class="danger" onclick="testStop()">Stop Music</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Phase Transitions</h2>
+    <p>Test that phase changes switch music immediately without overlap.</p>
+    <button onclick="testPhaseSequence()">Run Phase Sequence</button>
+    <p><small>Will play: Opening → Social → HOH → Nominations</small></p>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Mute Toggle</h2>
+    <p>Test that mute only affects audio volume, not playback state.</p>
+    <button onclick="testPlay('hoh')">Start HOH Music</button>
+    <button class="secondary" onclick="testToggleMute()">Toggle Mute</button>
+    <button onclick="checkMuteState()">Check Mute State</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Rapid Phase Changes (Skip Test)</h2>
+    <p>Test that rapid phase changes don't cause AbortError.</p>
+    <button onclick="testRapidChanges()">Rapid Phase Changes</button>
+    <p><small>Will quickly cycle through multiple phases</small></p>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Same Track Protection</h2>
+    <p>Test that playing the same track twice doesn't restart it.</p>
+    <button onclick="testSameTrack()">Test Same Track</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Log</h2>
+    <button class="secondary" onclick="clearConsole()">Clear Log</button>
+    <div id="console"></div>
+  </div>
+
+  <script>
+    // Intercept console methods to display in our custom console
+    const consoleDiv = document.getElementById('console');
+    const originalConsole = {
+      log: console.log,
+      info: console.info,
+      warn: console.warn,
+      error: console.error
+    };
+
+    function addToConsole(type, args) {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${type.toUpperCase()}] ${Array.from(args).join(' ')}`;
+      consoleDiv.appendChild(entry);
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    console.log = function(...args) {
+      originalConsole.log.apply(console, args);
+      addToConsole('info', args);
+    };
+
+    console.info = function(...args) {
+      originalConsole.info.apply(console, args);
+      addToConsole('info', args);
+    };
+
+    console.warn = function(...args) {
+      originalConsole.warn.apply(console, args);
+      addToConsole('warn', args);
+    };
+
+    console.error = function(...args) {
+      originalConsole.error.apply(console, args);
+      addToConsole('error', args);
+    };
+
+    function clearConsole() {
+      consoleDiv.innerHTML = '';
+    }
+
+    function updateStatus() {
+      const audioEl = document.getElementById('bbMusic');
+      const playStatus = document.getElementById('playStatus');
+      const muteStatus = document.getElementById('muteStatus');
+      const currentTrack = document.getElementById('currentTrack');
+      const audioExists = document.getElementById('audioExists');
+
+      if (audioEl) {
+        audioExists.textContent = 'true';
+        const playing = !audioEl.paused;
+        playStatus.textContent = playing ? 'PLAYING' : 'STOPPED';
+        playStatus.className = 'status ' + (playing ? 'playing' : 'stopped');
+
+        const muted = audioEl.muted;
+        muteStatus.textContent = muted ? 'MUTED' : 'UNMUTED';
+        muteStatus.className = 'status ' + (muted ? 'muted' : '');
+
+        const src = audioEl.src || 'none';
+        const filename = src.split('/').pop() || 'none';
+        currentTrack.textContent = filename;
+      } else {
+        audioExists.textContent = 'false';
+        playStatus.textContent = 'NO AUDIO ELEMENT';
+        playStatus.className = 'status stopped';
+        currentTrack.textContent = 'none';
+      }
+    }
+
+    // Update status periodically
+    setInterval(updateStatus, 500);
+
+    async function testPlay(phase) {
+      console.info(`[TEST] Playing phase: ${phase}`);
+      if (window.playMusicForPhase) {
+        window.playMusicForPhase(phase);
+      } else {
+        console.error('[TEST] playMusicForPhase not available');
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+      updateStatus();
+    }
+
+    async function testStop() {
+      console.info('[TEST] Stopping music');
+      if (window.stopMusic) {
+        await window.stopMusic();
+      } else {
+        console.error('[TEST] stopMusic not available');
+      }
+      updateStatus();
+    }
+
+    async function testPhaseSequence() {
+      console.info('[TEST] Starting phase sequence...');
+      const phases = ['opening', 'social', 'hoh', 'nominations'];
+      for (const phase of phases) {
+        console.info(`[TEST] Phase transition to: ${phase}`);
+        await testPlay(phase);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      console.info('[TEST] Phase sequence complete');
+    }
+
+    function testToggleMute() {
+      console.info('[TEST] Toggling mute');
+      if (window.toggleMute) {
+        const newState = window.toggleMute();
+        console.info(`[TEST] Mute toggled to: ${newState}`);
+      } else {
+        console.error('[TEST] toggleMute not available');
+      }
+      updateStatus();
+    }
+
+    function checkMuteState() {
+      if (window.getMuted) {
+        const muted = window.getMuted();
+        console.info(`[TEST] Mute state is: ${muted}`);
+      } else {
+        console.error('[TEST] getMuted not available');
+      }
+      updateStatus();
+    }
+
+    async function testRapidChanges() {
+      console.info('[TEST] Starting rapid phase changes...');
+      const phases = ['opening', 'hoh', 'nominations', 'veto', 'livevote'];
+      for (const phase of phases) {
+        console.info(`[TEST] Rapid change to: ${phase}`);
+        testPlay(phase);
+        await new Promise(resolve => setTimeout(resolve, 100)); // Very short delay
+      }
+      console.info('[TEST] Rapid changes complete - check for AbortError');
+    }
+
+    async function testSameTrack() {
+      console.info('[TEST] Playing HOH competition');
+      await testPlay('hoh');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.info('[TEST] Playing HOH again (should not restart)');
+      await testPlay('hoh');
+      console.info('[TEST] Same track test complete');
+    }
+
+    console.info('[TEST] Audio test page loaded. Waiting for audio.js...');
+    
+    // Check if audio.js is loaded
+    setTimeout(() => {
+      if (window.playMusicForPhase) {
+        console.info('[TEST] ✅ audio.js loaded successfully');
+      } else {
+        console.warn('[TEST] ⚠️ audio.js not loaded or playMusicForPhase not available');
+      }
+    }, 1000);
+  </script>
+
+  <!-- Load the audio.js module -->
+  <script src="js/audio.js"></script>
+</body>
+</html>

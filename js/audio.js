@@ -72,7 +72,15 @@
     return null;
   }
 
-  let el = null, currentSrc = '';
+  let el = null, currentSrc = '', stopPending = false;
+  
+  // Mute state - loaded early to ensure consistency
+  let isMuted = false;
+  try{
+    const stored = localStorage.getItem('bb_soundMuted');
+    if(stored === '1' || stored === 'true') isMuted = true;
+  }catch{}
+  
   function ensureEl(){
     if (el) return el;
     el = document.createElement('audio');
@@ -80,7 +88,10 @@
     el.style.display = 'none';
     el.preload = 'auto';
     el.loop = true;
+    // Initialize with current mute state
+    el.muted = isMuted;
     document.body.appendChild(el);
+    console.info(`[audio] created audio element, muted=${isMuted}`);
     return el;
   }
 
@@ -89,34 +100,63 @@
     if (el) el.volume = vol;
   }
 
-  function stopMusic(){
+  async function stopMusic(){
     if (!el) return;
+    if (stopPending) return; // Prevent multiple simultaneous stops
+    stopPending = true;
+    
+    const wasSrc = currentSrc;
     currentSrc = '';
-    try { el.pause(); } catch {}
-    try { el.removeAttribute('src'); el.load(); } catch {}
+    
+    try { 
+      el.pause(); 
+      console.info(`[audio] stopped music, file=${wasSrc || 'none'}`);
+    } catch(e) {
+      console.warn('[audio] pause failed:', e);
+    }
+    
+    // Small delay to ensure pause completes before clearing source
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    try { 
+      el.removeAttribute('src'); 
+      el.load(); 
+    } catch(e) {
+      console.warn('[audio] clear src failed:', e);
+    }
+    
+    stopPending = false;
   }
 
   function srcFor(file){ return BASE + file.split('/').map(encodeURIComponent).join('/'); }
 
   // Try to play immediately; if NotAllowedError, attach one-time unlock to retry
   async function playFile(file){
-    if (!file) { stopMusic(); return; }
+    if (!file) { 
+      await stopMusic(); 
+      return; 
+    }
 
     const audio = ensureEl();
     const full = srcFor(file);
 
-    if (currentSrc === full && !audio.paused) return;
+    // If already playing the same track, don't restart
+    if (currentSrc === full && !audio.paused) {
+      console.info(`[audio] already playing file=${file}`);
+      return;
+    }
 
-    // Always stop before switching
-    stopMusic();
+    // Always await stop before switching to prevent race condition
+    await stopMusic();
+    
     currentSrc = full;
     audio.src = full;
     audio.loop = true;
     audio.currentTime = 0;
     
-    // Issue #7: Log music start attempt
+    // Log music start attempt
     const muted = audio.muted || false;
-    console.info(`[audio] attempted start music, muted=${muted}, file=${file}`);
+    console.info(`[audio] starting music, muted=${muted}, file=${file}`);
 
     // Special handling for social.mp3: seek to 13s
     if (/social\.mp3$/i.test(file)) {
@@ -124,6 +164,7 @@
         try {
           if (audio.duration >= 13) {
             audio.currentTime = 13;
+            console.info('[audio] seeked social.mp3 to 13s');
           }
         } catch (e) {
           console.warn('[audio] seek to 13s failed:', e);
@@ -135,13 +176,18 @@
 
     try {
       await audio.play();
+      console.info(`[audio] successfully started music, file=${file}`);
     } catch (e) {
       if (e && String(e.name).toLowerCase() === 'notallowederror') {
         // Browser blocked autoplay: retry on next gesture
+        console.info('[audio] autoplay blocked, waiting for user gesture');
         const retry = async () => {
           document.removeEventListener('pointerdown', retry);
           document.removeEventListener('keydown', retry);
-          try { await audio.play(); }
+          try { 
+            await audio.play(); 
+            console.info(`[audio] successfully started after gesture, file=${file}`);
+          }
           catch (err) { console.warn('[audio] play retry failed:', err); }
         };
         document.addEventListener('pointerdown', retry, { once:true, passive:true });
@@ -244,25 +290,11 @@
   }
 
   // Mute toggle functionality
-  let isMuted = false;
-  
-  // Load mute state from localStorage
-  try{
-    const stored = localStorage.getItem('bb_soundMuted');
-    if(stored === '1' || stored === 'true') isMuted = true;
-  }catch{}
-  
   function setMuted(muted){
     isMuted = !!muted;
+    // Only set the muted property, don't pause/resume
     if(el){
-      if(isMuted){
-        el.pause();
-      } else {
-        // Resume if there's a current source
-        if(currentSrc && el.src){
-          el.play().catch(e => console.warn('[audio] resume failed:', e));
-        }
-      }
+      el.muted = isMuted;
     }
     // Persist to localStorage
     try{
@@ -280,31 +312,24 @@
     return isMuted;
   }
   
-  // Override play to respect mute state
-  const originalPlayFile = playFile;
-  playFile = async function(file){
-    if(isMuted){
-      console.info('[audio] skipped play (muted)');
-      return;
-    }
-    return originalPlayFile(file);
-  };
-  
   // Fade out helper
-  function fadeOut(duration = 1000){
-    if(!el || !el.src) return Promise.resolve();
-    return new Promise(resolve => {
-      const startVol = el.volume;
-      const startTime = Date.now();
+  async function fadeOut(duration = 1000){
+    if(!el || !el.src) return;
+    console.info(`[audio] fading out over ${duration}ms`);
+    const startVol = el.volume;
+    const startTime = Date.now();
+    
+    return new Promise(async resolve => {
       const interval = setInterval(() => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(1, elapsed / duration);
         el.volume = startVol * (1 - progress);
         if(progress >= 1){
           clearInterval(interval);
-          stopMusic();
-          el.volume = startVol; // Restore volume
-          resolve();
+          stopMusic().then(() => {
+            el.volume = startVol; // Restore volume
+            resolve();
+          });
         }
       }, 50);
     });
