@@ -1,0 +1,280 @@
+{
+  "generated": "2025-10-05T22:48:01.959Z",
+  "version": "1.0.0",
+  "gamesScanned": 34,
+  "registryGames": 23,
+  "games": [
+    {
+      "key": "balanceGame",
+      "name": "Balance Game",
+      "module": "balance-game.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1209
+    },
+    {
+      "key": "colorMatch",
+      "name": "Color Match",
+      "module": "color-match.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1228
+    },
+    {
+      "key": "comixSpot",
+      "name": "Comix Spot",
+      "module": "comix-spot.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1829
+    },
+    {
+      "key": "countHouse",
+      "name": "Count House",
+      "module": "count-house.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 6940
+    },
+    {
+      "key": "estimationGame",
+      "name": "Estimation Game",
+      "module": "estimation-game.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3407
+    },
+    {
+      "key": "guessNumber",
+      "name": "Guess Number",
+      "module": "guess-number.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1209
+    },
+    {
+      "key": "hiddenObject",
+      "name": "Hidden Object",
+      "module": "hidden-object.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1213
+    },
+    {
+      "key": "holdWall",
+      "name": "Hold Wall",
+      "module": "hold-wall.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1813
+    },
+    {
+      "key": "mathBlitz",
+      "name": "Math Blitz",
+      "module": "math-blitz.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4452
+    },
+    {
+      "key": "memoryMatch",
+      "name": "Memory Match",
+      "module": "memory-match.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 5482
+    },
+    {
+      "key": "memoryPairs",
+      "name": "Memory Pairs",
+      "module": "memory-pairs.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4263
+    },
+    {
+      "key": "memoryZipline",
+      "name": "Memory Zipline",
+      "module": "memory-zipline.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1841
+    },
+    {
+      "key": "miniMaze",
+      "name": "Mini Maze",
+      "module": "mini-maze.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1197
+    },
+    {
+      "key": "oteviator",
+      "name": "Oteviator",
+      "module": "oteviator.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1862
+    },
+    {
+      "key": "pathFinder",
+      "name": "Path Finder",
+      "module": "path-finder.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4370
+    },
+    {
+      "key": "patternMatch",
+      "name": "Pattern Match",
+      "module": "pattern-match.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3986
+    },
+    {
+      "key": "quickTap",
+      "name": "Quick Tap",
+      "module": "quick-tap.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4930
+    },
+    {
+      "key": "reactionRoyale",
+      "name": "Reaction Royale",
+      "module": "reaction-royale.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 6840
+    },
+    {
+      "key": "reactionTimer",
+      "name": "Reaction Timer",
+      "module": "reaction-timer.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4197
+    },
+    {
+      "key": "sequenceMemory",
+      "name": "Sequence Memory",
+      "module": "sequence-memory.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3734
+    },
+    {
+      "key": "simonSays",
+      "name": "Simon Says",
+      "module": "simon-says.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4378
+    },
+    {
+      "key": "sliderPuzzle",
+      "name": "Slider Puzzle",
+      "module": "slider-puzzle.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 2844
+    },
+    {
+      "key": "slipperyShuttle",
+      "name": "Slippery Shuttle",
+      "module": "slippery-shuttle.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1852
+    },
+    {
+      "key": "socialStrings",
+      "name": "Social Strings",
+      "module": "social-strings.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1842
+    },
+    {
+      "key": "spotDifference",
+      "name": "Spot Difference",
+      "module": "spot-difference.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1221
+    },
+    {
+      "key": "swipeMaze",
+      "name": "Swipe Maze",
+      "module": "swipe-maze.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1818
+    },
+    {
+      "key": "targetPractice",
+      "name": "Target Practice",
+      "module": "target-practice.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4363
+    },
+    {
+      "key": "timingBar",
+      "name": "Timing Bar",
+      "module": "timing-bar.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 8383
+    },
+    {
+      "key": "towerStack",
+      "name": "Tower Stack",
+      "module": "tower-stack.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1205
+    },
+    {
+      "key": "triviaPulse",
+      "name": "Trivia Pulse",
+      "module": "trivia-pulse.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 10167
+    },
+    {
+      "key": "triviaQuiz",
+      "name": "Trivia Quiz",
+      "module": "trivia-quiz.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4654
+    },
+    {
+      "key": "wordAnagram",
+      "name": "Word Anagram",
+      "module": "word-anagram.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3545
+    },
+    {
+      "key": "wordBuilder",
+      "name": "Word Builder",
+      "module": "word-builder.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1209
+    },
+    {
+      "key": "wordTyping",
+      "name": "Word Typing",
+      "module": "word-typing.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4672
+    }
+  ]
+}
