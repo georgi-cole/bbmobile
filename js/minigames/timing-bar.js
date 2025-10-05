@@ -16,8 +16,22 @@
   function render(container, onComplete){
     container.innerHTML = '';
     
+    // Use accessibility and mobile utils if available
+    const useAccessibility = !!g.MinigameAccessibility;
+    const useMobileUtils = !!g.MinigameMobileUtils;
+    const reducedMotion = useAccessibility && g.MinigameAccessibility.prefersReducedMotion();
+    
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;';
+    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;max-width:600px;margin:0 auto;';
+    
+    // Apply ARIA for accessibility
+    if(useAccessibility){
+      g.MinigameAccessibility.applyAria(wrapper, {
+        'role': 'region',
+        'aria-label': 'Timing Bar minigame',
+        'aria-live': 'polite'
+      });
+    }
     
     // Title
     const title = document.createElement('h3');
@@ -27,7 +41,7 @@
     // Instructions
     const instructions = document.createElement('p');
     instructions.textContent = 'Stop the bar near center (3 tries)';
-    instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
+    instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;line-height:1.5;';
     
     // Bar container
     const wrap = document.createElement('div');
@@ -83,7 +97,9 @@
     function frame(){
       if(!running) return;
       
-      position += direction * 0.0135;
+      // Adjust speed for reduced motion
+      const speed = reducedMotion ? 0.008 : 0.0135;
+      position += direction * speed;
       
       // Bounce at edges
       if(position >= 0.93){
@@ -99,8 +115,15 @@
       rafId = requestAnimationFrame(frame);
     }
     
+    // Apply accessibility to buttons
+    if(useAccessibility){
+      g.MinigameAccessibility.makeAccessibleButton(startBtn, { label: 'Start timing bar' });
+      g.MinigameAccessibility.makeAccessibleButton(stopBtn, { label: 'Stop timing bar', disabled: true });
+      g.MinigameAccessibility.makeAccessibleButton(submitBtn, { label: 'Submit score', disabled: true });
+    }
+    
     // Start button handler
-    startBtn.addEventListener('click', () => {
+    const startHandler = () => {
       if(attempts >= 3) return;
       
       startBtn.disabled = true;
@@ -109,12 +132,28 @@
       direction = 1;
       position = 0;
       
+      // Announce to screen readers
+      if(useAccessibility){
+        g.MinigameAccessibility.announceToSR(`Attempt ${attempts + 1} started`, 'polite');
+      }
+      
+      // Haptic feedback
+      if(useMobileUtils){
+        g.MinigameMobileUtils.vibrate(30);
+      }
+      
       if(rafId) cancelAnimationFrame(rafId);
       frame();
-    });
+    };
+    
+    if(useMobileUtils){
+      g.MinigameMobileUtils.addTapListener(startBtn, startHandler);
+    } else {
+      startBtn.addEventListener('click', startHandler);
+    }
     
     // Stop button handler
-    stopBtn.addEventListener('click', () => {
+    const stopHandler = () => {
       running = false;
       if(rafId) cancelAnimationFrame(rafId);
       
@@ -134,17 +173,45 @@
         bestScore = attemptScore;
       }
       
-      status.textContent = `Attempts: ${attempts}/3 | Best: ${(bestScore * 100).toFixed(1)}%`;
+      const scorePercent = (bestScore * 100).toFixed(1);
+      status.textContent = `Attempts: ${attempts}/3 | Best: ${scorePercent}%`;
+      status.setAttribute('aria-label', `Attempts: ${attempts} of 3. Best score: ${scorePercent} percent`);
+      
+      // Announce result to screen readers
+      if(useAccessibility){
+        const quality = attemptScore > 0.9 ? 'Excellent' : attemptScore > 0.7 ? 'Good' : 'Fair';
+        g.MinigameAccessibility.announceToSR(`${quality}! ${scorePercent}% accuracy`, 'polite');
+      }
+      
+      // Haptic feedback based on accuracy
+      if(useMobileUtils){
+        if(attemptScore > 0.9){
+          g.MinigameMobileUtils.vibrate([50, 30, 50]);
+        } else {
+          g.MinigameMobileUtils.vibrate(50);
+        }
+      }
       
       // Enable submit after 3 attempts
       if(attempts >= 3){
         startBtn.disabled = true;
         submitBtn.disabled = false;
+        
+        if(useAccessibility){
+          submitBtn.setAttribute('aria-disabled', 'false');
+          g.MinigameAccessibility.announceToSR('All attempts complete. Press submit to finish', 'polite');
+        }
       }
-    });
+    };
+    
+    if(useMobileUtils){
+      g.MinigameMobileUtils.addTapListener(stopBtn, stopHandler);
+    } else {
+      stopBtn.addEventListener('click', stopHandler);
+    }
     
     // Submit button handler
-    submitBtn.addEventListener('click', () => {
+    const submitHandler = () => {
       submitBtn.disabled = true;
       
       // Score is 0-100 based on best attempt
@@ -152,8 +219,24 @@
       const rng = g.rng || Math.random;
       const finalScore = (bestScore * 100) + rng() * 4;
       
+      // Announce completion
+      if(useAccessibility){
+        g.MinigameAccessibility.announceToSR(`Final score: ${finalScore.toFixed(0)}`, 'assertive');
+      }
+      
+      // Haptic feedback
+      if(useMobileUtils){
+        g.MinigameMobileUtils.vibrate([100, 50, 100]);
+      }
+      
       onComplete(finalScore);
-    });
+    };
+    
+    if(useMobileUtils){
+      g.MinigameMobileUtils.addTapListener(submitBtn, submitHandler);
+    } else {
+      submitBtn.addEventListener('click', submitHandler);
+    }
     
     // Assemble UI
     wrapper.appendChild(title);

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minigame Telemetry & Debug Panel Test</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0d151f;
+      color: #e3ecf5;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1, h2 {
+      color: #83bfff;
+    }
+    .section {
+      background: rgba(19, 33, 50, 0.8);
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(131, 191, 255, 0.2);
+    }
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    button {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #4a90e2, #357abd);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    button.secondary {
+      background: rgba(131, 191, 255, 0.2);
+      border: 1px solid rgba(131, 191, 255, 0.4);
+    }
+    button.danger {
+      background: linear-gradient(135deg, #ff6d6d, #d94949);
+    }
+    .info-box {
+      background: rgba(131, 191, 255, 0.1);
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #83bfff;
+      margin: 16px 0;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: #95a9c0;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #83bfff;
+    }
+    pre {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .event-log {
+      max-height: 400px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .event-item {
+      padding: 8px;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 6px;
+      border-left: 3px solid #83bfff;
+    }
+    .success { color: #77d58d; }
+    .warning { color: #f2ce7b; }
+    .error { color: #ff6d6d; }
+    .kbd {
+      display: inline-block;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+      margin: 0 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Minigame Telemetry & Debug Panel Test</h1>
+    
+    <div class="info-box">
+      <strong>Keyboard Shortcut:</strong> Press <span class="kbd">Ctrl</span> + <span class="kbd">Shift</span> + <span class="kbd">D</span> to toggle the debug panel
+    </div>
+
+    <!-- Controls Section -->
+    <div class="section">
+      <h2>Debug Panel Controls</h2>
+      <div class="button-group">
+        <button onclick="showDebugPanel()">Show Debug Panel</button>
+        <button onclick="hideDebugPanel()">Hide Debug Panel</button>
+        <button class="secondary" onclick="toggleDebugPanel()">Toggle Debug Panel</button>
+      </div>
+    </div>
+
+    <!-- Telemetry Test Section -->
+    <div class="section">
+      <h2>Telemetry Test Actions</h2>
+      <p>Simulate various minigame events to see telemetry in action:</p>
+      <div class="button-group">
+        <button onclick="simulateSelection()">Simulate Selection</button>
+        <button onclick="simulateStart()">Simulate Start</button>
+        <button onclick="simulateComplete()">Simulate Complete</button>
+        <button onclick="simulateError()">Simulate Error</button>
+        <button class="secondary" onclick="simulateFullGame()">Simulate Full Game</button>
+        <button class="secondary" onclick="simulateMultipleGames()">Simulate 5 Games</button>
+      </div>
+    </div>
+
+    <!-- Accessibility Test Section -->
+    <div class="section">
+      <h2>Accessibility Features</h2>
+      <div class="button-group">
+        <button onclick="toggleReducedMotion()">Toggle Reduced Motion</button>
+        <button onclick="testScreenReaderAnnounce()">Test SR Announcement</button>
+        <button onclick="testFocusTrap()">Test Focus Trap</button>
+        <button onclick="testKeyboardNav()">Test Keyboard Navigation</button>
+      </div>
+      <div id="accessibility-test-area"></div>
+    </div>
+
+    <!-- Error Handling Test Section -->
+    <div class="section">
+      <h2>Error Handling & Fallback</h2>
+      <div class="button-group">
+        <button onclick="testErrorFallback()">Test Error with Fallback</button>
+        <button onclick="testFailedGameTracking()">Check Failed Games</button>
+        <button class="danger" onclick="clearFailedGames()">Clear Failed Games</button>
+      </div>
+      <div id="error-test-output"></div>
+    </div>
+
+    <!-- Statistics Display -->
+    <div class="section">
+      <h2>Live Statistics</h2>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Selections</div>
+          <div class="stat-value" id="stat-selections">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Starts</div>
+          <div class="stat-value" id="stat-starts">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Completions</div>
+          <div class="stat-value" id="stat-completions">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Errors</div>
+          <div class="stat-value" id="stat-errors">0</div>
+        </div>
+      </div>
+      <button onclick="refreshStats()">Refresh Stats</button>
+      <button class="secondary" onclick="exportTelemetry()">Export Data</button>
+      <button class="danger" onclick="clearTelemetry()">Clear All Data</button>
+    </div>
+
+    <!-- Recent Events -->
+    <div class="section">
+      <h2>Recent Events (Last 10)</h2>
+      <div class="event-log" id="event-log">
+        <p style="color: #95a9c0;">No events yet. Try simulating some actions above.</p>
+      </div>
+      <button onclick="refreshEvents()">Refresh Events</button>
+    </div>
+
+    <!-- Console Output -->
+    <div class="section">
+      <h2>Console Messages</h2>
+      <div id="console-output">
+        <p style="color: #95a9c0;">Open browser console to see detailed logs.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Minigame System Modules -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/scoring.js"></script>
+  <script src="js/minigames/mobile-utils.js"></script>
+  <script src="js/minigames/accessibility.js"></script>
+  <script src="js/minigames/telemetry.js"></script>
+  <script src="js/minigames/error-handler.js"></script>
+  <script src="js/minigames/debug-panel.js"></script>
+
+  <script>
+    // Mock game object for testing
+    window.game = {
+      phase: 'hoh',
+      week: 3,
+      humanId: 'human1'
+    };
+
+    // Debug Panel Controls
+    function showDebugPanel(){
+      if(window.MinigameDebugPanel){
+        window.MinigameDebugPanel.show();
+        log('Debug panel shown', 'success');
+      } else {
+        log('Debug panel module not loaded', 'error');
+      }
+    }
+
+    function hideDebugPanel(){
+      if(window.MinigameDebugPanel){
+        window.MinigameDebugPanel.hide();
+        log('Debug panel hidden', 'success');
+      }
+    }
+
+    function toggleDebugPanel(){
+      if(window.MinigameDebugPanel){
+        window.MinigameDebugPanel.toggle();
+      }
+    }
+
+    // Telemetry Test Functions
+    function simulateSelection(){
+      if(!window.MinigameTelemetry) return;
+      
+      const games = ['quickTap', 'memoryMatch', 'mathBlitz', 'timingBar'];
+      const game = games[Math.floor(Math.random() * games.length)];
+      
+      window.MinigameTelemetry.logSelection(game, {
+        poolSize: 11,
+        poolIndex: Math.floor(Math.random() * 11),
+        historyLength: Math.floor(Math.random() * 20),
+        method: 'pool'
+      });
+      
+      log(`Simulated selection: ${game}`, 'success');
+      refreshStats();
+      refreshEvents();
+    }
+
+    function simulateStart(){
+      if(!window.MinigameTelemetry) return;
+      
+      const games = ['quickTap', 'memoryMatch', 'mathBlitz', 'timingBar'];
+      const game = games[Math.floor(Math.random() * games.length)];
+      
+      window.MinigameTelemetry.logStart(game, {
+        playerId: 'human1',
+        phase: 'hoh',
+        week: 3
+      });
+      
+      log(`Simulated start: ${game}`, 'success');
+      refreshStats();
+      refreshEvents();
+    }
+
+    function simulateComplete(){
+      if(!window.MinigameTelemetry) return;
+      
+      const games = ['quickTap', 'memoryMatch', 'mathBlitz', 'timingBar'];
+      const game = games[Math.floor(Math.random() * games.length)];
+      const score = Math.random() * 100;
+      const timeMs = 2000 + Math.random() * 3000;
+      
+      window.MinigameTelemetry.logComplete(game, {
+        score: score,
+        normalizedScore: score,
+        timeMs: timeMs,
+        playerId: 'human1',
+        phase: 'hoh',
+        success: true
+      });
+      
+      log(`Simulated completion: ${game} (score: ${score.toFixed(1)})`, 'success');
+      refreshStats();
+      refreshEvents();
+    }
+
+    function simulateError(){
+      if(!window.MinigameTelemetry) return;
+      
+      const games = ['quickTap', 'memoryMatch', 'mathBlitz', 'timingBar'];
+      const game = games[Math.floor(Math.random() * games.length)];
+      
+      window.MinigameTelemetry.logError(game, new Error('Simulated error'), {
+        phase: 'hoh',
+        playerId: 'human1',
+        fallbackAttempted: true,
+        fallbackGame: 'quickTap'
+      });
+      
+      log(`Simulated error: ${game}`, 'error');
+      refreshStats();
+      refreshEvents();
+    }
+
+    function simulateFullGame(){
+      simulateSelection();
+      setTimeout(() => {
+        simulateStart();
+        setTimeout(() => {
+          simulateComplete();
+        }, 500);
+      }, 500);
+    }
+
+    function simulateMultipleGames(){
+      for(let i = 0; i < 5; i++){
+        setTimeout(() => {
+          simulateFullGame();
+        }, i * 1000);
+      }
+    }
+
+    // Accessibility Tests
+    function toggleReducedMotion(){
+      if(!window.MinigameAccessibility) return;
+      
+      const current = window.MinigameAccessibility.prefersReducedMotion();
+      window.MinigameAccessibility.setReducedMotion(!current);
+      log(`Reduced motion: ${!current ? 'enabled' : 'disabled'}`, 'success');
+    }
+
+    function testScreenReaderAnnounce(){
+      if(!window.MinigameAccessibility) return;
+      
+      window.MinigameAccessibility.announceToSR('This is a test announcement for screen readers', 'polite');
+      log('Screen reader announcement sent', 'success');
+    }
+
+    function testFocusTrap(){
+      if(!window.MinigameAccessibility) return;
+      
+      const testArea = document.getElementById('accessibility-test-area');
+      testArea.innerHTML = `
+        <div style="background: rgba(131, 191, 255, 0.1); padding: 16px; border-radius: 8px; margin-top: 12px;">
+          <p>Focus trap test area - Tab through these elements:</p>
+          <button>Button 1</button>
+          <button>Button 2</button>
+          <button>Button 3</button>
+          <button onclick="releaseFocusTrap()">Release Trap</button>
+        </div>
+      `;
+      
+      window.currentTrapCleanup = window.MinigameAccessibility.createFocusTrap(testArea.querySelector('div'));
+      log('Focus trap created. Tab through the elements.', 'success');
+    }
+
+    function releaseFocusTrap(){
+      if(window.currentTrapCleanup){
+        window.currentTrapCleanup();
+        log('Focus trap released', 'success');
+      }
+    }
+
+    function testKeyboardNav(){
+      if(!window.MinigameAccessibility) return;
+      
+      const testArea = document.getElementById('accessibility-test-area');
+      testArea.innerHTML = `
+        <div style="background: rgba(131, 191, 255, 0.1); padding: 16px; border-radius: 8px; margin-top: 12px;">
+          <p>Use arrow keys to navigate:</p>
+          <div id="nav-items" style="display: flex; gap: 8px; margin-top: 12px;">
+            <button>Item 1</button>
+            <button>Item 2</button>
+            <button>Item 3</button>
+            <button>Item 4</button>
+          </div>
+        </div>
+      `;
+      
+      const items = testArea.querySelectorAll('#nav-items button');
+      window.MinigameAccessibility.addKeyboardNav(Array.from(items), {
+        orientation: 'horizontal',
+        wrap: true,
+        onSelect: (el, idx) => {
+          log(`Selected item ${idx + 1}`, 'success');
+        }
+      });
+      
+      items[0].focus();
+      log('Keyboard navigation enabled. Use arrow keys and Enter.', 'success');
+    }
+
+    // Error Handling Tests
+    function testErrorFallback(){
+      if(!window.MinigameErrorHandler) return;
+      
+      const stats = window.MinigameErrorHandler.getStats();
+      document.getElementById('error-test-output').innerHTML = `
+        <pre>${JSON.stringify(stats, null, 2)}</pre>
+      `;
+      log('Error handler stats displayed', 'success');
+    }
+
+    function testFailedGameTracking(){
+      if(!window.MinigameErrorHandler) return;
+      
+      const failed = window.MinigameErrorHandler.getFailedGames();
+      document.getElementById('error-test-output').innerHTML = `
+        <p>Failed games: ${failed.length > 0 ? failed.join(', ') : 'None'}</p>
+      `;
+      log(`Failed games: ${failed.length}`, failed.length > 0 ? 'warning' : 'success');
+    }
+
+    function clearFailedGames(){
+      if(!window.MinigameErrorHandler) return;
+      
+      window.MinigameErrorHandler.clearAllFailures();
+      log('All failed games cleared', 'success');
+      testFailedGameTracking();
+    }
+
+    // Statistics Functions
+    function refreshStats(){
+      if(!window.MinigameTelemetry) return;
+      
+      const stats = window.MinigameTelemetry.getStats();
+      document.getElementById('stat-selections').textContent = stats.totalSelections;
+      document.getElementById('stat-starts').textContent = stats.totalStarts;
+      document.getElementById('stat-completions').textContent = stats.totalCompletions;
+      document.getElementById('stat-errors').textContent = stats.totalErrors;
+    }
+
+    function refreshEvents(){
+      if(!window.MinigameTelemetry) return;
+      
+      const events = window.MinigameTelemetry.getRecentEvents(10);
+      const eventLog = document.getElementById('event-log');
+      
+      if(events.length === 0){
+        eventLog.innerHTML = '<p style="color: #95a9c0;">No events yet.</p>';
+        return;
+      }
+      
+      eventLog.innerHTML = events.reverse().map(event => {
+        const time = new Date(event.timestamp).toLocaleTimeString();
+        const emoji = {
+          selection: '🎯',
+          start: '▶️',
+          complete: '✅',
+          error: '❌'
+        }[event.type] || '📊';
+        
+        const gameKey = event.data.gameKey || 'unknown';
+        const gameName = window.MinigameRegistry?.getGame(gameKey)?.name || gameKey;
+        
+        let details = '';
+        if(event.data.score !== undefined){
+          details += ` - Score: ${event.data.score.toFixed(1)}`;
+        }
+        if(event.data.timeMs !== undefined){
+          details += ` - Time: ${(event.data.timeMs / 1000).toFixed(2)}s`;
+        }
+        
+        return `
+          <div class="event-item">
+            <strong>${emoji} ${event.type}</strong> - ${gameName}${details}
+            <div style="font-size: 0.85em; color: #95a9c0; margin-top: 4px;">${time}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function exportTelemetry(){
+      if(!window.MinigameTelemetry) return;
+      
+      const data = window.MinigameTelemetry.exportData();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `minigame-telemetry-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      log('Telemetry data exported', 'success');
+    }
+
+    function clearTelemetry(){
+      if(!window.MinigameTelemetry) return;
+      
+      if(confirm('Clear all telemetry data?')){
+        window.MinigameTelemetry.clearTelemetry();
+        refreshStats();
+        refreshEvents();
+        log('All telemetry data cleared', 'success');
+      }
+    }
+
+    // Logging helper
+    function log(message, type = 'info'){
+      const colors = {
+        success: '#77d58d',
+        warning: '#f2ce7b',
+        error: '#ff6d6d',
+        info: '#83bfff'
+      };
+      
+      console.log(`%c[Test] ${message}`, `color: ${colors[type] || colors.info}`);
+    }
+
+    // Auto-refresh stats
+    setInterval(refreshStats, 2000);
+  </script>
+</body>
+</html>
