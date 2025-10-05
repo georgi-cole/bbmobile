@@ -275,21 +275,34 @@
       g.__originalRenderMinigame = g.renderMinigame;
     }
 
-    // Override with new system (for new minigame types)
+    // Override with new system - map ALL legacy game keys to new modules
     const originalFn = g.renderMinigame;
     g.renderMinigame = function(type, host, onSubmit){
-      // Map legacy types to new minigames
+      // Complete mapping of legacy game keys to new module keys
       const legacyMap = {
         'clicker': 'quickTap',
+        'memory': 'memoryMatch',
+        'math': 'mathBlitz',
+        'bar': 'timingBar',
+        'typing': 'wordTyping',
         'reaction': 'reactionTimer',
-        'trivia': 'triviaQuiz'
+        'numseq': 'sequenceMemory',
+        'pattern': 'patternMatch',
+        'slider': 'sliderPuzzle',
+        'anagram': 'wordAnagram',
+        'path': 'pathFinder',
+        'target': 'targetPractice',
+        'pairs': 'memoryPairs',
+        'simon': 'simonSays',
+        'estimate': 'estimationGame'
       };
 
       const newType = legacyMap[type];
       if(newType && REGISTRY[newType]){
+        // Use new module system
         render(newType, host, onSubmit);
       } else if(originalFn){
-        // Fall back to original for old types
+        // Fall back to original for old types (shouldn't happen after migration)
         originalFn(type, host, onSubmit);
       } else {
         // No fallback, use first available

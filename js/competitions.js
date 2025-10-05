@@ -56,10 +56,15 @@
     return g.__shuffledLegacyPool || MG_LIST;
   }
 
+  /**
+   * Pick the next minigame type using the Phase 1 unified system
+   * Uses non-repeating pool selection to ensure variety within a season
+   * All games are now routed through the MinigameSelector for consistent behavior
+   */
   function pickMinigameType(){
     const g=global.game;
     
-    // Initialize miniHistory if needed
+    // Initialize miniHistory if needed (for backwards compatibility tracking)
     if(!g.miniHistory) g.miniHistory = [];
     
     // Purge stale 'clicker' miniMode when user switches to random
@@ -70,95 +75,58 @@
       g.__lastMiniMode = g.cfg.miniMode;
     }
     
-    // Legacy mode overrides
+    // Legacy mode override: clicker only (for backwards compatibility)
     if(g?.cfg?.miniMode==='clicker'){
-      g.miniHistory.push('clicker');
-      return 'clicker';
+      g.miniHistory.push('quickTap');
+      return 'quickTap'; // Map to new quickTap module
     }
-    if(g?.cfg?.miniMode==='cycle'){ 
-      const t=MG_LIST[g.miniIndex%MG_LIST.length]; 
+    
+    // Cycle mode: use deterministic cycling through available games
+    if(g?.cfg?.miniMode==='cycle'){
+      if(!global.MinigameRegistry){
+        console.warn('[Minigame] Registry not available for cycle mode');
+        return 'quickTap';
+      }
+      
+      const available = global.MinigameRegistry.getImplementedGames(true);
+      if(available.length === 0){
+        console.warn('[Minigame] No games available for cycle mode');
+        return 'quickTap';
+      }
+      
+      // Initialize cycle index if needed
+      if(typeof g.miniIndex !== 'number') g.miniIndex = 0;
+      
+      const selected = available[g.miniIndex % available.length];
       g.miniIndex++;
-      g.miniHistory.push(t);
-      return t; 
+      g.miniHistory.push(selected);
+      
+      console.info('[Minigame] Cycle mode selected:', selected);
+      return selected;
     }
     
-    // NEW SYSTEM: Use Phase 1 minigame system when feature flag is enabled
-    if(g?.cfg?.useNewMinigames && global.MinigameSelector && global.MinigameRegistry){
-      console.info('[Minigame] Using new Phase 1 system (non-repeating pool)');
-      const selectedGame = global.MinigameSelector.selectNext(true);
-      if(selectedGame){
-        return selectedGame;
-      }
-      console.warn('[Minigame] New system failed, falling back to legacy');
+    // PRIMARY SYSTEM: Use Phase 1 minigame system with non-repeating pool
+    // This is now the ONLY selection method for random mode
+    if(!global.MinigameSelector || !global.MinigameRegistry){
+      console.error('[Minigame] Phase 1 system not available! MinigameSelector:', !!global.MinigameSelector, 'MinigameRegistry:', !!global.MinigameRegistry);
+      // Emergency fallback
+      return 'quickTap';
     }
     
-    // LEGACY SYSTEM: Try old registry if available (with lazy retry)
-    let registryGame = null;
-    if(global.MiniGamesRegistry){
-      registryGame = global.MiniGamesRegistry.getRandom(g.miniHistory);
-    } else {
-      // Lazy retry: give registry a short timeout to initialize
-      const startTime = Date.now();
-      const maxWait = 50; // 50ms timeout
-      while(!global.MiniGamesRegistry && (Date.now() - startTime) < maxWait){
-        // Busy wait for a short time
-      }
-      if(global.MiniGamesRegistry){
-        registryGame = global.MiniGamesRegistry.getRandom(g.miniHistory);
-        console.info('[Minigame] Registry loaded after short delay');
-      } else {
-        console.info('[Minigame] Registry not available, using legacy fallback');
-      }
+    console.info('[Minigame] Using Phase 1 non-repeating pool system');
+    const selectedGame = global.MinigameSelector.selectNext(true);
+    
+    if(!selectedGame){
+      console.error('[Minigame] Selector failed to return a game!');
+      return 'quickTap'; // Emergency fallback
     }
     
-    // Use registry game 80% of the time if available
-    if(registryGame && Math.random() < 0.8){
-      g.miniHistory.push(registryGame);
-      return registryGame;
-    }
+    // Track in history for backwards compatibility
+    g.miniHistory.push(selectedGame);
     
-    // Fall back to shuffled legacy games with history weighting
-    const pool = shuffleLegacyPool();
-    const recentGames = g.miniHistory.slice(-3);
-    const lastGame = g.miniHistory[g.miniHistory.length - 1];
+    console.info('[Minigame] Selected:', selectedGame);
     
-    // Build weighted candidate list (penalize recently used games)
-    const candidates = [];
-    for(const game of pool){
-      const recentCount = recentGames.filter(g => g === game).length;
-      const weight = Math.max(1, 5 - recentCount * 2); // Weight: 5 (new) to 1 (used 2+ times recently)
-      for(let i = 0; i < weight; i++){
-        candidates.push(game);
-      }
-    }
-    
-    // Pick from weighted candidates
-    let chosen = candidates[Math.floor((global.rng?.()||Math.random()) * candidates.length)];
-    
-    // Avoid immediate repeat if pool has >1 game
-    if(chosen === lastGame && pool.length > 1){
-      const alternatives = pool.filter(g => g !== lastGame);
-      if(alternatives.length > 0){
-        // Build weighted alternatives (excluding last game)
-        const altCandidates = [];
-        for(const game of alternatives){
-          const recentCount = recentGames.filter(g => g === game).length;
-          const weight = Math.max(1, 5 - recentCount * 2);
-          for(let i = 0; i < weight; i++){
-            altCandidates.push(game);
-          }
-        }
-        chosen = altCandidates[Math.floor((global.rng?.()||Math.random()) * altCandidates.length)];
-        console.info('[Minigame] Avoided immediate repeat:', lastGame, '→', chosen);
-      }
-    }
-    
-    g.miniHistory.push(chosen);
-    
-    // Update legacy pool index for cycle mode compatibility
-    g.__legacyPoolIndex = (pool.indexOf(chosen) + 1) % pool.length;
-    
-    return chosen;
+    return selectedGame;
   }
   global.pickMinigameType=pickMinigameType;
 

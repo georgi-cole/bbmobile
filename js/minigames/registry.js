@@ -79,7 +79,148 @@
       retired: false
     },
     
-    // Legacy games: still available but not preferred
+    // Migrated Legacy Games (now in module format)
+    memoryMatch: {
+      key: 'memoryMatch',
+      name: 'Memory Colors',
+      description: 'Watch and repeat color sequence',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'memory-match.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false
+    },
+    
+    mathBlitz: {
+      key: 'mathBlitz',
+      name: 'Math Blitz',
+      description: 'Solve math problems quickly',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'math-blitz.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false
+    },
+    
+    timingBar: {
+      key: 'timingBar',
+      name: 'Timing Bar',
+      description: 'Stop the bar near center for high score',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'timing-bar.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false
+    },
+    
+    sequenceMemory: {
+      key: 'sequenceMemory',
+      name: 'Number Sequence',
+      description: 'Memorize and repeat number sequences',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'sequence-memory.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false
+    },
+    
+    patternMatch: {
+      key: 'patternMatch',
+      name: 'Pattern Match',
+      description: 'Match the pattern of shapes',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'pattern-match.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false
+    },
+    
+    wordAnagram: {
+      key: 'wordAnagram',
+      name: 'Word Anagram',
+      description: 'Unscramble Big Brother words',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'word-anagram.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false
+    },
+    
+    targetPractice: {
+      key: 'targetPractice',
+      name: 'Target Practice',
+      description: 'Click moving targets quickly',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'target-practice.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false
+    },
+    
+    memoryPairs: {
+      key: 'memoryPairs',
+      name: 'Memory Pairs',
+      description: 'Find matching pairs of cards',
+      type: 'memory',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'memory-pairs.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false
+    },
+    
+    estimationGame: {
+      key: 'estimationGame',
+      name: 'Estimation',
+      description: 'Count dots and guess the total',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'estimation-game.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false
+    },
+    
+    // Retired Legacy Games (implemented but not preferred)
+    wordTyping: {
+      key: 'wordTyping',
+      name: 'Word Typing',
+      description: 'Type passage accurately',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: false,
+      implemented: true,
+      module: 'word-typing.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: true
+    },
+    
     reactionTimer: {
       key: 'reactionTimer',
       name: 'Reaction Timer',
@@ -92,6 +233,48 @@
       minScore: 0,
       maxScore: 100,
       retired: false
+    },
+    
+    sliderPuzzle: {
+      key: 'sliderPuzzle',
+      name: 'Slider Precision',
+      description: 'Set slider to exact value',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'slider-puzzle.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: true
+    },
+    
+    pathFinder: {
+      key: 'pathFinder',
+      name: 'Path Finder',
+      description: 'Remember directional path sequence',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'path-finder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: true
+    },
+    
+    simonSays: {
+      key: 'simonSays',
+      name: 'Simon Says',
+      description: 'Press arrow key sequence',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: false,
+      implemented: true,
+      module: 'simon-says.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: true
     },
     
     // Phase 1: Scaffolds (coming soon)
