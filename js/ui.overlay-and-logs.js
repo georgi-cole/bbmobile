@@ -183,6 +183,100 @@
       card.appendChild(row);
     }
 
+    // Issue 2: Card builder with explicit actor/target avatars
+    function buildCardWithAvatars(options){
+      const {title, lines, tone, duration, actorId, targetIds=[], type='action'} = options;
+      
+      // Log card build
+      const targets = Array.isArray(targetIds) ? targetIds : [targetIds].filter(Boolean);
+      console.info(`[card] build type=${type} actor=${actorId || 'none'} targets=${JSON.stringify(targets)}`);
+      
+      // Build card spec with explicit faces
+      const ids = [];
+      if(actorId) ids.push(actorId);
+      
+      // For targets: show first 2 with arrow, add +N badge if more
+      const maxTargets = 2;
+      const shownTargets = targets.slice(0, maxTargets);
+      ids.push(...shownTargets);
+      
+      const overflowCount = Math.max(0, targets.length - maxTargets);
+      
+      // Create card
+      const cfg=ensureCfg(); if(!cfg.fxCards) return;
+      const host=uiEnsureTvOverlay(); if(!host) return;
+      host.style.visibility='';
+      const card=document.createElement('div');
+      card.className='revealCard'+((tone==='big'||tone==='announce')?' bigAnnounce':'');
+      const h=document.createElement('h3'); h.textContent=title; card.appendChild(h);
+      (lines||[]).forEach((txt,i)=>{
+        const d=document.createElement('div'); if(i===0) d.className='big';
+        d.textContent=txt; card.appendChild(d);
+      });
+
+      // Add avatar row
+      if(ids.length > 0){
+        const row=document.createElement('div'); row.className='rc-face-row';
+        const size = ids.length>=4 ? 'xs' : ids.length>=3 ? 'small' : '';
+        
+        if(actorId && shownTargets.length > 0){
+          // Actor -> Targets with arrow
+          const actorImg = document.createElement('img');
+          const ap = getP(actorId);
+          actorImg.className='rc-face'+(size?(' '+size):'');
+          actorImg.alt=ap?.name||'Actor';
+          const resolveAvatar = (window.Game||window).resolveAvatar;
+          actorImg.src=resolveAvatar?.(ap||actorId) || ap?.avatar||ap?.img||ap?.photo||
+            `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(ap?.name||String(actorId))}`;
+          row.appendChild(actorImg);
+          
+          const arrow=document.createElement('div'); arrow.className='rc-arrow'; arrow.textContent='→';
+          row.appendChild(arrow);
+          
+          // Add target avatars
+          shownTargets.forEach(tid => {
+            const tp = getP(tid);
+            const tImg = document.createElement('img');
+            tImg.className='rc-face'+(size?(' '+size):'');
+            tImg.alt=tp?.name||'Target';
+            tImg.src=resolveAvatar?.(tp||tid) || tp?.avatar||tp?.img||tp?.photo||
+              `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(tp?.name||String(tid))}`;
+            row.appendChild(tImg);
+          });
+          
+          // Add overflow badge if needed
+          if(overflowCount > 0){
+            const badge = document.createElement('div');
+            badge.className = 'rc-overflow-badge';
+            badge.textContent = `+${overflowCount}`;
+            row.appendChild(badge);
+          }
+        } else {
+          // No arrow, just show faces
+          ids.forEach(id => {
+            const p = getP(id);
+            const img = document.createElement('img');
+            img.className='rc-face'+(size?(' '+size):'');
+            img.alt=p?.name||'Player';
+            const resolveAvatar = (window.Game||window).resolveAvatar;
+            img.src=resolveAvatar?.(p||id) || p?.avatar||p?.img||p?.photo||
+              `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p?.name||String(id))}`;
+            row.appendChild(img);
+          });
+        }
+        
+        card.appendChild(row);
+      }
+
+      host.innerHTML=''; host.appendChild(card);
+      document.getElementById('tv')?.classList.add('tvTall');
+
+      return card;
+    }
+    
+    // Export card builder
+    g.buildCardWithAvatars = buildCardWithAvatars;
+
     // Decide if a card should show faces; no avatars for generic announcements
     function deduceAvatarSpec(title, lines){
       const spec = { ids:[], arrow:false };
