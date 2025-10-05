@@ -38,7 +38,7 @@
     // Minigame mode
     miniMode: 'random',  // 'random' | 'clicker' | 'cycle'
     // Minigame system
-    useNewMinigames: false  // When true, use new Phase 1 minigame system with non-repeating pools
+    useNewMinigames: true  // When true, use new Phase 1 minigame system with non-repeating pools
   };
 
   // Load/save helpers

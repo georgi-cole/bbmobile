@@ -1,5 +1,19 @@
 // MODULE: minigames.js
-// 15 compact minigames. Each renderer: (host,onSubmit)=>void and calls onSubmit(score).
+// LEGACY MINIGAMES - DEPRECATED IN PHASE 1 REFACTOR
+// 
+// All 15 minigames have been migrated to individual module files in js/minigames/*.js
+// This file is kept for backwards compatibility only.
+// 
+// The individual game functions below are NO LONGER CALLED directly.
+// All routing now happens through:
+//   1. js/minigames/registry.js - Game metadata and filtering
+//   2. js/minigames/selector.js - Non-repeating pool selection
+//   3. js/minigames/index.js - Legacy key mapping bridge
+// 
+// The renderMinigame() function at the bottom is now a stub that delegates
+// to the new system via minigames/index.js bridge.
+//
+// DO NOT ADD NEW GAMES HERE - Create new modules in js/minigames/ instead.
 
 (function(global){
   const $=global.$;
@@ -231,25 +245,48 @@
     submit.onclick=()=>{ const val=+inp.value||0; const diff=Math.abs(n-val); onSubmit(Math.max(0,100-diff*4)); };
   }
 
-  function renderMinigame(type,host,onSubmit){
-    const map={
-      clicker:mgClicker,
-      memory:mgMemoryColors,
-      math:mgMath,
-      bar:mgTimingBar,
-      typing:mgTyping,
-      reaction:mgReaction,
-      numseq:mgNumberSeq,
-      pattern:mgPatternMatch,
-      slider:mgSlider,
-      anagram:mgAnagram,
-      path:mgPathfinder,
-      target:mgTargetPractice,
-      pairs:mgFindPair,
-      simon:mgSimon,
-      estimate:mgEstimation
-    };
-    (map[type]||mgClicker)(host,onSubmit);
+  /**
+   * Legacy renderMinigame function - NOW DEPRECATED
+   * All minigames have been migrated to the new module system.
+   * This function is kept as a stub for backwards compatibility.
+   * The actual routing is handled by js/minigames/index.js bridge.
+   * 
+   * @deprecated Use the new module system via MinigameRegistry and MinigameSelector
+   */
+  function renderMinigame(type, host, onSubmit){
+    // This is now a stub - the bridge in minigames/index.js will override this
+    // and handle all routing through the new module system.
+    console.warn('[renderMinigame] Legacy function called with type:', type);
+    console.info('[renderMinigame] Routing should be handled by minigames/index.js bridge');
+    
+    // Fallback: try to use new system directly
+    if(global.MiniGamesRegistry && typeof global.MiniGamesRegistry.render === 'function'){
+      // Map legacy key to new key
+      const legacyMap = {
+        'clicker': 'quickTap',
+        'memory': 'memoryMatch',
+        'math': 'mathBlitz',
+        'bar': 'timingBar',
+        'typing': 'wordTyping',
+        'reaction': 'reactionTimer',
+        'numseq': 'sequenceMemory',
+        'pattern': 'patternMatch',
+        'slider': 'sliderPuzzle',
+        'anagram': 'wordAnagram',
+        'path': 'pathFinder',
+        'target': 'targetPractice',
+        'pairs': 'memoryPairs',
+        'simon': 'simonSays',
+        'estimate': 'estimationGame'
+      };
+      
+      const newKey = legacyMap[type] || type;
+      global.MiniGamesRegistry.render(newKey, host, onSubmit);
+    } else {
+      // Emergency fallback
+      console.error('[renderMinigame] New system not available! Showing error message.');
+      host.innerHTML = '<div style="padding:20px;text-align:center;"><p style="color:#e3ecf5;">Minigame system not loaded. Please refresh the page.</p></div>';
+    }
   }
 
   global.renderMinigame=renderMinigame;
