@@ -1,2 +1,26 @@
 results_popup_with_avatars.png
 results_popup_with_fallback.png
+
+# Development files
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node modules (if npm is ever used)
+node_modules/
+package-lock.json
+
+# Build artifacts
+dist/
+build/
+*.map
+
+# Test coverage
+coverage/
