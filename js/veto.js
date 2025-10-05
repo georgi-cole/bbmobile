@@ -541,6 +541,8 @@
             g.nominees = forced.slice(0,2);
             g.nomsLocked = true;
             for(var i=0;i<g.players.length;i++){ g.players[i].nominated = (g.nominees.indexOf(g.players[i].id)!==-1); }
+            // Sync player badge states after F4 veto application
+            try{ if(typeof global.syncPlayerBadgeStates==='function') global.syncPlayerBadgeStates(); }catch(e){}
             try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
           }
           try{ if(typeof global.showCard==='function') global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 3200, true); }catch(e){}

@@ -733,6 +733,11 @@ header.innerHTML = `
     sanitizeJuryConsistency(true);
     const game=g.game; if(!game) return;
 
+    // Synchronize player badge states before rendering
+    if(typeof g.syncPlayerBadgeStates === 'function'){
+      g.syncPlayerBadgeStates();
+    }
+
     function setText(id, val){
       const el = document.getElementById(id);
       if(el) el.textContent = String(val);

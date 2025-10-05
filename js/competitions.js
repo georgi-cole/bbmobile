@@ -685,6 +685,9 @@
     const winner=[...g.lastCompScores.entries()].filter(([id])=>elig.includes(id)).sort((a,b)=>b[1]-a[1])[0][0];
     for(const p of g.players) p.hoh=false; g.hohId=winner; g.lastHOHId=winner; const W=global.getP(winner); W.hoh=true; W.stats=W.stats||{}; W.wins=W.wins||{}; W.stats.hohWins=(W.stats.hohWins||0)+1; W.wins.hoh=(W.wins.hoh||0)+1;
 
+    // Sync player badge states after HOH change
+    if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
+
     global.addLog(`HOH: <span class="accent">${global.safeName(winner)}</span>.`);
 
     await waitCardsIdle();
@@ -790,6 +793,10 @@
     const winner=sorted[0][0], loser=sorted[1][0];
     for(const p of g.players) p.hoh=false; g.hohId=winner; global.getP(winner).hoh=true;
     const nomA=g.nominees[0]; g.nominees=[nomA, loser];
+    
+    // Sync player badge states after HOH and nominees change
+    if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
+    
     global.addLog(`Final 3 Part 2: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`,'ok');
     safeShowCard('Final 3 Winner',[global.safeName(winner)],'hoh',2800);
     global.tv.say('Final 3 Decision');
