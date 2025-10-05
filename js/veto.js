@@ -626,6 +626,13 @@
       g.nominees = (g.nominees||[]).filter(function(id){ return id!==savedId; });
       if(g.nominees.indexOf(replacementId)===-1) g.nominees.push(replacementId);
 
+      // [BUGFIX] Safety filter: HOH can never be a nominee
+      var preFilterCount = g.nominees.length;
+      g.nominees = g.nominees.filter(function(id){ return id !== g.hohId; });
+      if(g.nominees.length < preFilterCount){
+        console.info('[bugfix] HOH removed from nominees after Veto if present');
+      }
+
       // Update nomination states after veto is applied
       for(var i=0;i<g.players.length;i++){ 
         var p = g.players[i];

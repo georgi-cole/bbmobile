@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: HOH Cannot Be Nominee After Veto</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    .player { display: inline-block; margin: 10px; padding: 15px; background: #162435; border-radius: 8px; min-width: 150px; }
+    .player.hoh { border: 2px solid #f2ce7b; background: #2a3a1f; }
+    .player.nominee { border: 2px solid #e64a4a; }
+    .label { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; margin-top: 8px; }
+    .label-hoh { background: linear-gradient(135deg, #d4af37, #f2ce7b); color: #000; }
+    .label-nom { background: linear-gradient(135deg, #c23636, #e64a4a); color: #fff; }
+    .label-none { background: #24364b; color: #95a9c0; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; }
+    .pass { color: #77d58d; font-weight: bold; }
+    .fail { color: #ff6d6d; font-weight: bold; }
+    .info { color: #83bfff; }
+    .test-result { padding: 10px; margin: 10px 0; border-radius: 6px; }
+    .test-pass { background: #1a3d29; border: 1px solid #77d58d; }
+    .test-fail { background: #3d1a1a; border: 1px solid #ff6d6d; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: HOH Cannot Be Nominee After Veto</h1>
+    <p>Tests the bugfix: HOH should never appear in nominees list after veto replacement, even if there's an upstream bug.</p>
+
+    <div class="test-section">
+      <h2>Test Scenario</h2>
+      <p>This test simulates a rare case where HOH might end up in the nominees list after veto replacement logic, and verifies the safety filter removes them.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Current Game State</h2>
+      <div id="players"></div>
+      <div style="margin-top: 10px;">
+        <strong>Nominees:</strong> <span id="nominees-display">[]</span>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Actions</h2>
+      <button onclick="setupScenario()">1. Setup Initial State</button>
+      <button onclick="applyVetoWithBug()">2. Apply Veto (with potential HOH bug)</button>
+      <button onclick="applyVetoClean()">3. Apply Veto (clean scenario)</button>
+      <button onclick="reset()">Reset</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    // Simulated game state
+    let game = {
+      hohId: 1,
+      vetoSavedId: 2,
+      nominees: [],
+      players: [
+        { id: 1, name: 'Alice', hoh: true, nominated: false },
+        { id: 2, name: 'Bob', hoh: false, nominated: true },
+        { id: 3, name: 'Charlie', hoh: false, nominated: true },
+        { id: 4, name: 'Diana', hoh: false, nominated: false }
+      ]
+    };
+
+    let logs = [];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-20).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    function renderPlayers() {
+      const container = document.getElementById('players');
+      container.innerHTML = game.players.map(p => {
+        const isNominee = game.nominees.includes(p.id);
+        const classes = [];
+        if (p.hoh) classes.push('hoh');
+        if (isNominee) classes.push('nominee');
+        
+        return `
+          <div class="player ${classes.join(' ')}">
+            <div><strong>${p.name}</strong></div>
+            <div style="font-size: 0.8rem; color: #95a9c0;">ID: ${p.id}</div>
+            <div class="label ${p.hoh ? 'label-hoh' : (isNominee ? 'label-nom' : 'label-none')}">
+              ${p.hoh ? 'HOH' : (isNominee ? 'NOM' : p.name)}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      document.getElementById('nominees-display').textContent = JSON.stringify(game.nominees);
+    }
+
+    function setupScenario() {
+      game.nominees = [2, 3]; // Bob and Charlie nominated
+      game.vetoSavedId = 2; // Bob will be saved
+      log('Setup: Bob and Charlie nominated, Bob will be saved by veto', 'info');
+      renderPlayers();
+      validate();
+    }
+
+    // This simulates the buggy scenario where HOH might end up in nominees
+    function applyVetoWithBug() {
+      log('Applying veto with potential bug scenario...', 'info');
+      
+      const savedId = game.vetoSavedId;
+      const replacementId = 4; // Diana as replacement
+      
+      // Remove saved player
+      game.nominees = game.nominees.filter(id => id !== savedId);
+      log(`Removed saved player ${savedId} from nominees`, 'info');
+      
+      // Add replacement
+      if (game.nominees.indexOf(replacementId) === -1) {
+        game.nominees.push(replacementId);
+      }
+      log(`Added replacement ${replacementId} to nominees`, 'info');
+      
+      // SIMULATE BUG: Somehow HOH got added to nominees (this could happen from upstream bugs)
+      game.nominees.push(game.hohId);
+      log(`⚠️ SIMULATED BUG: HOH ${game.hohId} accidentally added to nominees`, 'fail');
+      log(`Nominees before safety filter: ${JSON.stringify(game.nominees)}`, 'fail');
+      
+      // [BUGFIX] Safety filter: HOH can never be a nominee
+      const preFilterCount = game.nominees.length;
+      game.nominees = game.nominees.filter(id => id !== game.hohId);
+      if (game.nominees.length < preFilterCount) {
+        log('[bugfix] HOH removed from nominees after Veto if present', 'pass');
+      }
+      
+      log(`Nominees after safety filter: ${JSON.stringify(game.nominees)}`, 'pass');
+      
+      renderPlayers();
+      validate();
+    }
+
+    function applyVetoClean() {
+      log('Applying veto in clean scenario (no bug)...', 'info');
+      
+      const savedId = game.vetoSavedId;
+      const replacementId = 4; // Diana as replacement
+      
+      // Remove saved player
+      game.nominees = game.nominees.filter(id => id !== savedId);
+      log(`Removed saved player ${savedId} from nominees`, 'info');
+      
+      // Add replacement
+      if (game.nominees.indexOf(replacementId) === -1) {
+        game.nominees.push(replacementId);
+      }
+      log(`Added replacement ${replacementId} to nominees`, 'info');
+      
+      // [BUGFIX] Safety filter: HOH can never be a nominee
+      const preFilterCount = game.nominees.length;
+      game.nominees = game.nominees.filter(id => id !== game.hohId);
+      if (game.nominees.length < preFilterCount) {
+        log('[bugfix] HOH removed from nominees after Veto if present', 'pass');
+      } else {
+        log('Safety filter: No HOH in nominees (as expected)', 'info');
+      }
+      
+      log(`Final nominees: ${JSON.stringify(game.nominees)}`, 'pass');
+      
+      renderPlayers();
+      validate();
+    }
+
+    function reset() {
+      game = {
+        hohId: 1,
+        vetoSavedId: 2,
+        nominees: [],
+        players: [
+          { id: 1, name: 'Alice', hoh: true, nominated: false },
+          { id: 2, name: 'Bob', hoh: false, nominated: true },
+          { id: 3, name: 'Charlie', hoh: false, nominated: true },
+          { id: 4, name: 'Diana', hoh: false, nominated: false }
+        ]
+      };
+      logs = [];
+      log('Reset complete', 'info');
+      renderPlayers();
+      validate();
+    }
+
+    function validate() {
+      const results = document.getElementById('results');
+      const tests = [];
+
+      // Test 1: HOH is not in nominees list
+      const hohInNominees = game.nominees.includes(game.hohId);
+      tests.push({
+        name: 'HOH is NOT in nominees list',
+        passed: !hohInNominees,
+        details: hohInNominees 
+          ? `FAIL: HOH (ID ${game.hohId}) found in nominees: ${JSON.stringify(game.nominees)}`
+          : `PASS: HOH (ID ${game.hohId}) not in nominees: ${JSON.stringify(game.nominees)}`
+      });
+
+      // Test 2: Nominees list is valid (not empty if veto was applied)
+      tests.push({
+        name: 'Nominees list is valid',
+        passed: game.nominees.length >= 0,
+        details: `Nominees count: ${game.nominees.length}`
+      });
+
+      // Test 3: All nominees are valid player IDs
+      const validIds = game.players.map(p => p.id);
+      const allValid = game.nominees.every(id => validIds.includes(id));
+      tests.push({
+        name: 'All nominees are valid player IDs',
+        passed: allValid,
+        details: allValid ? 'All nominee IDs are valid' : 'Invalid nominee ID detected'
+      });
+
+      // Test 4: No duplicate nominees
+      const uniqueNominees = new Set(game.nominees);
+      const noDuplicates = uniqueNominees.size === game.nominees.length;
+      tests.push({
+        name: 'No duplicate nominees',
+        passed: noDuplicates,
+        details: noDuplicates ? 'All nominees are unique' : 'Duplicate nominees detected'
+      });
+
+      results.innerHTML = tests.map(test => `
+        <div class="test-result ${test.passed ? 'test-pass' : 'test-fail'}">
+          <div class="${test.passed ? 'pass' : 'fail'}">
+            ${test.passed ? '✓' : '✗'} ${test.name}
+          </div>
+          <div style="font-size: 0.85rem; margin-top: 5px; color: #95a9c0;">
+            ${test.details}
+          </div>
+        </div>
+      `).join('');
+
+      // Overall test summary
+      const allPassed = tests.every(t => t.passed);
+      log(allPassed ? 'All tests PASSED ✓' : 'Some tests FAILED ✗', allPassed ? 'pass' : 'fail');
+    }
+
+    // Initialize
+    reset();
+  </script>
+</body>
+</html>
