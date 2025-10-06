@@ -275,23 +275,9 @@
     wrapper.appendChild(submitBtn);
     container.appendChild(wrapper);
   }
-      const score = correctCount * 20;
-      
-      onComplete(score);
-    });
-    
-    // Assemble UI
-    wrapper.appendChild(title);
-    wrapper.appendChild(instructions);
-    wrapper.appendChild(displayDiv);
-    wrapper.appendChild(hideBtn);
-    wrapper.appendChild(inputDiv);
-    wrapper.appendChild(submitBtn);
-    container.appendChild(wrapper);
-  }
 
-  // Export to global minigames namespace
   if(typeof g.MiniGames === 'undefined') g.MiniGames = {};
   g.MiniGames.patternMatch = { render };
 
 })(window);
+
