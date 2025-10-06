@@ -24,6 +24,7 @@
       -webkit-backdrop-filter: blur(4px);
       opacity: 0;
       transition: opacity 0.3s ease;
+      cursor: pointer;
     `;
 
     const content = document.createElement('div');
@@ -38,14 +39,35 @@
       padding: 40px;
     `;
 
-    const emoji = document.createElement('div');
-    emoji.className = 'weekIntroEmoji';
-    emoji.textContent = '👁️';
-    emoji.style.cssText = `
+    const emojiContainer = document.createElement('div');
+    emojiContainer.className = 'weekIntroEmojiContainer';
+    emojiContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    `;
+
+    const eyeEmoji = document.createElement('div');
+    eyeEmoji.className = 'weekIntroEmoji';
+    eyeEmoji.textContent = '👁️';
+    eyeEmoji.style.cssText = `
       font-size: 4rem;
       line-height: 1;
       animation: pulse 1.5s ease-in-out infinite;
     `;
+
+    const houseEmoji = document.createElement('div');
+    houseEmoji.className = 'weekIntroEmoji';
+    houseEmoji.textContent = '🏠';
+    houseEmoji.style.cssText = `
+      font-size: 4rem;
+      line-height: 1;
+      animation: pulse 1.5s ease-in-out infinite 0.2s;
+    `;
+
+    emojiContainer.appendChild(eyeEmoji);
+    emojiContainer.appendChild(houseEmoji);
 
     const title = document.createElement('div');
     title.className = 'weekIntroTitle';
@@ -66,9 +88,20 @@
       opacity: 0.85;
     `;
 
-    content.appendChild(emoji);
+    const dismissHint = document.createElement('div');
+    dismissHint.className = 'weekIntroDismissHint';
+    dismissHint.textContent = 'Click to continue';
+    dismissHint.style.cssText = `
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+      margin-top: 8px;
+      opacity: 0.7;
+    `;
+
+    content.appendChild(emojiContainer);
     content.appendChild(title);
     content.appendChild(subtitle);
+    content.appendChild(dismissHint);
     dim.appendChild(content);
 
     // Add pulse animation
@@ -94,18 +127,25 @@
       title.textContent = `Get Ready for Week ${weekNumber}`;
     }
 
-    // Show modal with fade-in
-    modal.style.display = 'flex';
-    requestAnimationFrame(() => {
-      modal.style.opacity = '1';
-    });
+    // Track dismissal state
+    let dismissed = false;
+    let timeoutId = null;
 
-    // Lock page scroll
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+    // Dismiss handler
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
 
-    // Auto-dismiss after 2300ms
-    setTimeout(() => {
+      // Clear timeout if it exists
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+
+      // Remove event listener
+      modal.removeEventListener('click', dismiss);
+      modal.removeEventListener('touchstart', dismiss);
+
       // Fade out
       modal.style.opacity = '0';
       
@@ -121,7 +161,24 @@
           callback();
         }
       }, 300); // Wait for fade-out transition
-    }, 2300);
+    };
+
+    // Show modal with fade-in
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => {
+      modal.style.opacity = '1';
+    });
+
+    // Lock page scroll
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
+    // Add click/tap event listeners for dismissal
+    modal.addEventListener('click', dismiss);
+    modal.addEventListener('touchstart', dismiss);
+
+    // Auto-dismiss after 5000ms (5 seconds)
+    timeoutId = setTimeout(dismiss, 5000);
   }
 
   // Expose to global

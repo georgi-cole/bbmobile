@@ -99,8 +99,9 @@ if(game.__introPairsShown >= game.__introPairsTotal &&
 
 ### What Changed
 - New modal appears before each HOH competition showing "Get Ready for Week X"
-- Modal features eye emoji (👁️), week number, and subtitle
-- Auto-dismisses after 2.3 seconds
+- Modal features eye emoji (👁️) AND house emoji (🏠), week number, and subtitle
+- Auto-dismisses after 5 seconds OR can be dismissed early by clicking/tapping
+- Includes "Click to continue" hint text
 - Shown exactly once per week transition
 
 ### New Files
@@ -117,8 +118,9 @@ if(game.__introPairsShown >= game.__introPairsTotal &&
 ```javascript
 function showWeekIntroModal(weekNumber, callback) {
   // Creates full-screen overlay with high z-index (999999)
-  // Shows eye emoji, title, and subtitle
-  // Auto-dismisses after 2300ms
+  // Shows eye emoji (👁️) and house emoji (🏠), title, and subtitle
+  // Auto-dismisses after 5000ms (5 seconds)
+  // Can be dismissed early by clicking/tapping on the modal
   // Calls callback when done
 }
 ```
@@ -215,7 +217,7 @@ Or add to settings modal as a checkbox option.
 - Settings modal: `120`
 
 ### Timing Values
-- Week intro duration: `2300ms` (display) + `300ms` (fade-out) = `2600ms` total
+- Week intro duration: `5000ms` (display) + `300ms` (fade-out) = `5300ms` total (or dismisses early on click)
 - Early opening grace period: `300ms`
 - Rules fallback delay: `2000ms`
 

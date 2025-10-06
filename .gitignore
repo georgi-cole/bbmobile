@@ -6,6 +6,9 @@ results_popup_with_fallback.png
 .DS_Store
 Thumbs.db
 
+# Test files (temporary)
+test_week_intro_modal.html
+
 # Editor files
 .vscode/
 .idea/
