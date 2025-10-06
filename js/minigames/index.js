@@ -15,7 +15,10 @@
    * Falls back to empty object if not loaded yet
    */
   function getRegistry(){
-    return (g.MinigameRegistry && g.MinigameRegistry.registry) || {};
+    if(g.MinigameRegistry && typeof g.MinigameRegistry.getRegistry === 'function'){
+      return g.MinigameRegistry.getRegistry();
+    }
+    return {};
   }
 
   /**
