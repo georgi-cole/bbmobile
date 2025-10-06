@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Enhancements Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="overrides-fixes.css">
+  <style>
+    body {
+      background: #0d151f;
+      color: #e3ecf5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #83bfff;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin-bottom: 40px;
+      padding: 20px;
+      background: rgba(13, 21, 31, 0.5);
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    .results {
+      background: rgba(13, 21, 31, 0.8);
+      padding: 15px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+    .pass { color: #22c55e; }
+    .fail { color: #dc2626; }
+    .info { color: #83bfff; }
+    #test-container {
+      min-height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Game System Enhancements Test Suite</h1>
+
+  <div class="test-section">
+    <h2>1. Module Loading Test</h2>
+    <button class="btn primary" onclick="testModuleLoading()">Run Test</button>
+    <div id="module-results" class="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Win Probability Test</h2>
+    <button class="btn primary" onclick="testWinProbability()">Run Test (100 iterations)</button>
+    <div id="win-prob-results" class="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Debug Game Selector Test</h2>
+    <button class="btn primary" onclick="showDebugSelector()">Launch Debug Selector</button>
+    <div id="test-container"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Anti-Cheat Test</h2>
+    <button class="btn primary" onclick="testAntiCheat()">Run Test</button>
+    <div id="anticheat-results" class="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Memory Match Enhanced Test</h2>
+    <button class="btn primary" onclick="testMemoryMatch('debug')">Test Debug Mode</button>
+    <button class="btn" onclick="testMemoryMatch('competition')">Test Competition Mode</button>
+    <div id="memory-results" class="results"></div>
+  </div>
+
+  <!-- Load all required scripts -->
+  <script src="js/state.js"></script>
+  <script src="js/bbSeededRng.js"></script>
+  
+  <!-- Load minigame core -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/telemetry.js"></script>
+  <script src="js/minigames/error-handler.js"></script>
+  
+  <!-- Load our new modules -->
+  <script src="js/minigames/gameUtils.js"></script>
+  <script src="js/minigames/GameConfig.js"></script>
+  <script src="js/minigames/components/AntiCheatWrapper.js"></script>
+  <script src="js/debug/GameSelector.js"></script>
+  
+  <!-- Load enhanced games -->
+  <script src="js/minigames/memory-match.js"></script>
+  <script src="js/minigames/pattern-match.js"></script>
+  
+  <!-- Load debug panel -->
+  <script src="js/minigames/debug-panel.js"></script>
+
+  <script>
+    // Test 1: Module Loading
+    function testModuleLoading() {
+      const results = document.getElementById('module-results');
+      let output = '<div class="info">Testing module loading...</div>';
+      
+      const modules = [
+        { name: 'GameUtils', obj: window.GameUtils },
+        { name: 'GameConfig', obj: window.GameConfig },
+        { name: 'AntiCheatWrapper', obj: window.AntiCheatWrapper },
+        { name: 'DebugGameSelector', obj: window.DebugGameSelector },
+        { name: 'MinigameRegistry', obj: window.MinigameRegistry },
+        { name: 'MiniGames.memoryMatch', obj: window.MiniGames?.memoryMatch },
+        { name: 'MiniGames.patternMatch', obj: window.MiniGames?.patternMatch }
+      ];
+      
+      let passed = 0;
+      let failed = 0;
+      
+      modules.forEach(mod => {
+        if(mod.obj) {
+          output += `<div class="pass">✓ ${mod.name} loaded</div>`;
+          passed++;
+        } else {
+          output += `<div class="fail">✗ ${mod.name} NOT loaded</div>`;
+          failed++;
+        }
+      });
+      
+      output += `<div class="info">Results: ${passed} passed, ${failed} failed</div>`;
+      results.innerHTML = output;
+    }
+
+    // Test 2: Win Probability
+    function testWinProbability() {
+      const results = document.getElementById('win-prob-results');
+      results.innerHTML = '<div class="info">Running 100 simulations...</div>';
+      
+      setTimeout(() => {
+        if(!window.GameUtils) {
+          results.innerHTML = '<div class="fail">GameUtils not loaded!</div>';
+          return;
+        }
+        
+        let wins = 0;
+        const iterations = 100;
+        
+        for(let i = 0; i < iterations; i++) {
+          const playerSucceeded = true;
+          const shouldWin = window.GameUtils.determineGameResult(playerSucceeded, false);
+          if(shouldWin) wins++;
+        }
+        
+        const winRate = (wins / iterations * 100).toFixed(1);
+        const expected = 25;
+        const variance = Math.abs(winRate - expected);
+        
+        let output = '<div class="info">Win Probability Test Results:</div>';
+        output += `<div>Iterations: ${iterations}</div>`;
+        output += `<div>Wins: ${wins}</div>`;
+        output += `<div>Win Rate: ${winRate}%</div>`;
+        output += `<div>Expected: ${expected}%</div>`;
+        output += `<div>Variance: ${variance.toFixed(1)}%</div>`;
+        
+        if(variance < 10) {
+          output += '<div class="pass">✓ Win rate within acceptable range!</div>';
+        } else {
+          output += '<div class="fail">✗ Win rate outside expected range (random variation expected)</div>';
+        }
+        
+        results.innerHTML = output;
+      }, 100);
+    }
+
+    // Test 3: Debug Selector
+    function showDebugSelector() {
+      const container = document.getElementById('test-container');
+      container.innerHTML = '';
+      
+      if(!window.DebugGameSelector) {
+        container.innerHTML = '<div class="fail">DebugGameSelector not loaded!</div>';
+        return;
+      }
+      
+      try {
+        const selector = window.DebugGameSelector.createSelector(container);
+        console.log('Debug selector created:', selector);
+      } catch(error) {
+        container.innerHTML = `<div class="fail">Error: ${error.message}</div>`;
+        console.error(error);
+      }
+    }
+
+    // Test 4: Anti-Cheat
+    function testAntiCheat() {
+      const results = document.getElementById('anticheat-results');
+      
+      if(!window.AntiCheatWrapper) {
+        results.innerHTML = '<div class="fail">AntiCheatWrapper not loaded!</div>';
+        return;
+      }
+      
+      let output = '<div class="info">Testing anti-cheat features...</div>';
+      
+      // Test 1: Create wrapper
+      const testContainer = document.createElement('div');
+      try {
+        const wrapper = window.AntiCheatWrapper.createWrapper(testContainer, {
+          onCheatDetected: (event) => {
+            console.log('Cheat detected:', event);
+          }
+        });
+        output += '<div class="pass">✓ Wrapper created successfully</div>';
+        
+        // Test 2: Start/stop monitoring
+        wrapper.startMonitoring();
+        output += '<div class="pass">✓ Monitoring started</div>';
+        
+        wrapper.stopMonitoring();
+        output += '<div class="pass">✓ Monitoring stopped</div>';
+        
+        wrapper.cleanup();
+        output += '<div class="pass">✓ Cleanup completed</div>';
+      } catch(error) {
+        output += `<div class="fail">✗ Error: ${error.message}</div>`;
+      }
+      
+      // Test 3: Protect element
+      const testElement = document.createElement('div');
+      testElement.textContent = 'Test content';
+      try {
+        const cleanup = window.AntiCheatWrapper.protectElement(testElement);
+        output += '<div class="pass">✓ Element protection applied</div>';
+        
+        // Check if styles were applied
+        if(testElement.style.userSelect === 'none') {
+          output += '<div class="pass">✓ userSelect style applied</div>';
+        }
+        
+        cleanup();
+        output += '<div class="pass">✓ Protection cleanup completed</div>';
+      } catch(error) {
+        output += `<div class="fail">✗ Protection error: ${error.message}</div>`;
+      }
+      
+      results.innerHTML = output;
+    }
+
+    // Test 5: Memory Match Enhanced
+    function testMemoryMatch(mode) {
+      const results = document.getElementById('memory-results');
+      const container = document.createElement('div');
+      container.style.cssText = 'margin-top: 20px; padding: 20px; background: #0d151f; border-radius: 8px;';
+      
+      results.innerHTML = '';
+      results.appendChild(container);
+      
+      if(!window.MiniGames?.memoryMatch) {
+        results.innerHTML = '<div class="fail">Memory Match not loaded!</div>';
+        return;
+      }
+      
+      const options = {
+        debugMode: mode === 'debug',
+        competitionMode: mode === 'competition',
+        difficulty: 'easy'
+      };
+      
+      try {
+        window.MiniGames.memoryMatch.render(container, (score) => {
+          const resultDiv = document.createElement('div');
+          resultDiv.className = 'results';
+          resultDiv.innerHTML = `
+            <div class="info">Game completed!</div>
+            <div>Mode: ${mode}</div>
+            <div>Score: ${score}</div>
+            <div class="${score > 0 ? 'pass' : 'fail'}">
+              ${score > 0 ? '✓ Success' : '✗ Failed'}
+            </div>
+          `;
+          results.appendChild(resultDiv);
+        }, options);
+      } catch(error) {
+        results.innerHTML = `<div class="fail">Error: ${error.message}</div>`;
+        console.error(error);
+      }
+    }
+
+    // Auto-run module loading test on page load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        testModuleLoading();
+      }, 500);
+    });
+  </script>
+</body>
+</html>

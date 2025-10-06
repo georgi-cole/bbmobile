@@ -89,7 +89,7 @@
       margin-bottom: 12px;
     `;
 
-    const tabs = ['Events', 'Stats', 'Games'];
+    const tabs = ['Events', 'Stats', 'Games', 'Test'];
     tabs.forEach(tabName => {
       const tab = document.createElement('button');
       tab.textContent = tabName;
@@ -204,6 +204,9 @@
         break;
       case 'games':
         showGamesTab(content);
+        break;
+      case 'test':
+        showTestTab(content);
         break;
     }
   }
@@ -351,6 +354,208 @@
 
     html += '</div>';
     container.innerHTML = html;
+  }
+
+  /**
+   * Show test tab with game selector
+   */
+  function showTestTab(container){
+    container.innerHTML = '';
+    container.style.cssText = 'overflow-y: auto; overflow-x: hidden; max-height: 60vh;';
+    
+    // Check if GameSelector is available
+    if(!g.DebugGameSelector){
+      container.innerHTML = `
+        <div style="color:#ff6d6d;padding:20px;text-align:center;">
+          DebugGameSelector not loaded<br>
+          <small>Please ensure debug/GameSelector.js is loaded</small>
+        </div>
+      `;
+      return;
+    }
+
+    // Info message
+    const info = document.createElement('div');
+    info.style.cssText = `
+      background: rgba(242, 206, 123, 0.1);
+      border: 1px solid rgba(242, 206, 123, 0.3);
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      color: #f2ce7b;
+    `;
+    info.innerHTML = `
+      <strong>⚙️ Game Tester</strong><br>
+      Launch any game in test mode to verify functionality.<br>
+      Click "Full Screen Test" to open in a larger window.
+    `;
+    container.appendChild(info);
+
+    // Game selector dropdown
+    const selectorDiv = document.createElement('div');
+    selectorDiv.style.cssText = 'margin-bottom: 12px;';
+
+    const select = document.createElement('select');
+    select.style.cssText = `
+      width: 100%;
+      padding: 8px;
+      background: #1d2734;
+      color: #e3ecf5;
+      border: 1px solid #2c3a4d;
+      border-radius: 6px;
+      font-size: 11px;
+    `;
+
+    const defaultOption = document.createElement('option');
+    defaultOption.textContent = '-- Select a game --';
+    defaultOption.value = '';
+    select.appendChild(defaultOption);
+
+    // Get available games
+    const games = g.GameConfig ? g.GameConfig.getAllGames({ supportsDebugMode: true }) : [];
+    games.forEach(game => {
+      const option = document.createElement('option');
+      option.value = game.key;
+      option.textContent = game.name;
+      select.appendChild(option);
+    });
+
+    selectorDiv.appendChild(select);
+    container.appendChild(selectorDiv);
+
+    // Button to launch full screen test
+    const launchBtn = document.createElement('button');
+    launchBtn.textContent = '🚀 Full Screen Test';
+    launchBtn.style.cssText = `
+      width: 100%;
+      padding: 8px;
+      background: rgba(131, 191, 255, 0.2);
+      border: 1px solid rgba(131, 191, 255, 0.5);
+      color: #83bfff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 11px;
+      transition: all 0.2s;
+    `;
+    launchBtn.disabled = true;
+
+    select.addEventListener('change', () => {
+      launchBtn.disabled = !select.value;
+    });
+
+    launchBtn.addEventListener('click', () => {
+      if(select.value){
+        openFullScreenTest(select.value);
+      }
+    });
+
+    launchBtn.addEventListener('mouseenter', () => {
+      if(!launchBtn.disabled){
+        launchBtn.style.background = 'rgba(131, 191, 255, 0.3)';
+      }
+    });
+
+    launchBtn.addEventListener('mouseleave', () => {
+      launchBtn.style.background = 'rgba(131, 191, 255, 0.2)';
+    });
+
+    container.appendChild(launchBtn);
+
+    // Mini preview area (optional)
+    const preview = document.createElement('div');
+    preview.style.cssText = `
+      margin-top: 12px;
+      padding: 10px;
+      background: rgba(13, 21, 31, 0.5);
+      border: 1px solid rgba(131, 191, 255, 0.2);
+      border-radius: 6px;
+      font-size: 10px;
+      color: #95a9c0;
+      min-height: 60px;
+    `;
+    preview.textContent = 'Select a game to see details...';
+
+    select.addEventListener('change', () => {
+      if(select.value && g.GameConfig){
+        const game = g.GameConfig.getGame(select.value);
+        if(game){
+          preview.innerHTML = `
+            <strong style="color:#83bfff;">${game.name}</strong><br>
+            <em>${game.description}</em><br>
+            <br>
+            Type: ${game.type}<br>
+            Module: ${game.module}
+          `;
+        }
+      } else {
+        preview.textContent = 'Select a game to see details...';
+      }
+    });
+
+    container.appendChild(preview);
+  }
+
+  /**
+   * Open full screen test window
+   */
+  function openFullScreenTest(gameKey){
+    // Hide the debug panel
+    hide();
+
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'debug-game-test-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+    `;
+
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕ Close Test';
+    closeBtn.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 10px 20px;
+      background: rgba(220, 38, 38, 0.8);
+      border: 1px solid rgba(220, 38, 38, 1);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      z-index: 10001;
+    `;
+    closeBtn.addEventListener('click', () => {
+      document.body.removeChild(overlay);
+    });
+    overlay.appendChild(closeBtn);
+
+    // Game container
+    const gameContainer = document.createElement('div');
+    gameContainer.style.cssText = `
+      flex: 1;
+      overflow: auto;
+      padding: 20px;
+    `;
+    overlay.appendChild(gameContainer);
+
+    document.body.appendChild(overlay);
+
+    // Use DebugGameSelector to render the game
+    if(g.DebugGameSelector){
+      const selector = g.DebugGameSelector.createSelector(gameContainer);
+      selector.loadGame(gameKey);
+    }
   }
 
   /**
