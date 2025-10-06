@@ -2,10 +2,35 @@
 (function(global){
   'use strict';
 
-  // Helper for avatar images
+  // Helper for avatar images - uses global resolver
   function getAvatar(id) {
+    // Use global resolver if available
+    if (global.resolveAvatar) {
+      return global.resolveAvatar(id);
+    }
+    
+    // Fallback to local implementation
     const p = global.getP?.(id);
-    return p?.avatar || p?.img || p?.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p?.name||String(id))}`;
+    if (!p) {
+      console.warn(`[jury_return_vote] avatar: player not found id=${id}`);
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(String(id))}`;
+    }
+    
+    // Priority: player.avatar > player.img > player.photo > dicebear
+    if (p.avatar) return p.avatar;
+    if (p.img) return p.img;
+    if (p.photo) return p.photo;
+    
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name || String(id))}`;
+  }
+  
+  // Standard onerror handler for avatars
+  function getAvatarFallback(name, failedUrl) {
+    // Use global fallback if available
+    if (global.getAvatarFallback) {
+      return global.getAvatarFallback(name, failedUrl);
+    }
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name || 'player')}`;
   }
 
   // Full screen flash effect
@@ -84,13 +109,25 @@
       state.total += state.counts.get(id);
       const cell = document.createElement('div');
       cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;';
+      const jurorName = global.safeName?.(id) || String(id);
+      const avatarUrl = getAvatar(id);
+      const img = document.createElement('img');
+      img.src = avatarUrl;
+      img.alt = jurorName;
+      img.style.cssText = 'width:54px;height:54px;border-radius:12px;border:2px solid #8fd3ff;box-shadow:0 2px 10px -4px #8fd3ff;';
+      img.onerror = function() {
+        console.info(`[jury_return_vote] avatar fallback used for juror=${id} url=${this.src}`);
+        this.onerror = null;
+        this.src = getAvatarFallback(jurorName, this.src);
+      };
+      
       cell.innerHTML = `
-        <img src="${getAvatar(id)}" alt="" style="width:54px;height:54px;border-radius:12px;border:2px solid #8fd3ff;box-shadow:0 2px 10px -4px #8fd3ff;">
         <div style="height:14px;width:84px;background:#1d2740;border-radius:9px;border:1px solid #2a3b5a;overflow:hidden;">
           <div class="avBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6fd3ff,#74e48b);box-shadow:0 0 8px -2px #6fd3ff;transition:width .24s"></div>
         </div>
         <span class="avPct tiny muted">0%</span>
       `;
+      cell.insertBefore(img, cell.firstChild);
       cell.setAttribute('data-j-id', id);
       grid.appendChild(cell);
     });
