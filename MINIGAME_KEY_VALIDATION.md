@@ -159,6 +159,24 @@ When adding a new minigame:
 
 ## Testing
 
+### Automated Tests
+
+Run the complete test suite:
+```bash
+npm run test:minigames
+```
+
+This runs:
+1. **validate-minigame-keys.mjs** - Static validation of key registration
+2. **test-runtime-validation.mjs** - Simulated runtime resolution test
+
+Individual tests:
+```bash
+npm run validate:minigames  # Static validation only
+npm run test:runtime        # Runtime simulation only
+npm run audit:minigames     # Detailed audit
+```
+
 ### Browser Console Testing
 ```javascript
 // Check registration status
@@ -196,6 +214,8 @@ MGKeyResolver.getAuditSummary()
 **Created:**
 - `scripts/validate-minigame-keys.mjs` - CI validation script
 - `scripts/audit-minigame-keys.mjs` - Detailed audit script
+- `scripts/test-runtime-validation.mjs` - Runtime resolution test
+- `test_key_validation.html` - Browser test page
 - `package.json` - npm scripts for validation
 - `.github/workflows/validate-minigames.yml` - CI workflow
 - `MINIGAME_KEY_VALIDATION.md` - This documentation

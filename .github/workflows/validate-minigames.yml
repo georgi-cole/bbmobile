@@ -27,5 +27,8 @@ jobs:
     - name: Validate Minigame Key Registration
       run: node scripts/validate-minigame-keys.mjs
     
+    - name: Test Runtime Resolution
+      run: node scripts/test-runtime-validation.mjs
+    
     - name: Audit Minigame Keys (informational)
       run: node scripts/audit-minigame-keys.mjs || true
