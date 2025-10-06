@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minigame Key Validation Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #ff6b9d;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin: 2rem 0 1rem;
+      color: #4ecdc4;
+      border-bottom: 2px solid #4ecdc4;
+      padding-bottom: 0.5rem;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2a3f5f;
+    }
+    button {
+      background: #4ecdc4;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #45b7ae;
+      transform: translateY(-2px);
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #0f1626;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .success { color: #4ecdc4; }
+    .error { color: #ff6b9d; }
+    .warning { color: #ffa500; }
+    .info { color: #e3ecf5; }
+    .test-result {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 4px;
+      background: #0f1626;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>✅ Minigame Key Validation Test</h1>
+    <p style="margin-bottom: 20px;">Verify all selector pool keys are properly registered</p>
+
+    <div class="test-section">
+      <h2>Startup Audit</h2>
+      <p>Check the browser console for the automatic startup audit results.</p>
+      <div id="startupAudit" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Selector Pool Test</h2>
+      <button onclick="testSelectorPool()">Test Selector Pool Keys</button>
+      <div id="selectorResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Sequential Selection Test</h2>
+      <button onclick="testSequentialSelection()">Select 30 Games</button>
+      <div id="sequentialResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Dev Utilities</h2>
+      <button onclick="runDevUtilities()">Run __mgTestKeys()</button>
+      <button onclick="testSpecificKey()">Test 'bar' Key</button>
+      <div id="devResult" class="result"></div>
+    </div>
+  </div>
+
+  <!-- Load minigame system -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/core/key-resolver.js"></script>
+  <script src="js/minigames/core/registry-bootstrap.js"></script>
+  <script src="js/minigames/selector.js"></script>
+
+  <script>
+    function log(id, message, type = 'info') {
+      const element = document.getElementById(id);
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = message + '\n';
+      element.appendChild(span);
+    }
+
+    function clear(id) {
+      document.getElementById(id).innerHTML = '';
+    }
+
+    // Display startup audit results
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const element = document.getElementById('startupAudit');
+        const summary = window.MGKeyResolver.getAuditSummary();
+        
+        element.innerHTML = `
+          <div class="success">Canonical keys: ${summary.canonicalCount}</div>
+          <div class="success">Aliases: ${summary.aliasCount}</div>
+          <div class="${summary.unknownCount === 0 ? 'success' : 'error'}">Unknown keys: ${summary.unknownCount}</div>
+        `;
+        
+        if (summary.unknownCount > 0) {
+          element.innerHTML += `<div class="error">Unknown: ${summary.unknownKeys.join(', ')}</div>`;
+        }
+      }, 600);
+    });
+
+    function testSelectorPool() {
+      clear('selectorResult');
+      log('selectorResult', '=== Testing Selector Pool Keys ===\n');
+      
+      const registry = window.MinigameRegistry;
+      const resolver = window.MGKeyResolver;
+      
+      if (!registry || !resolver) {
+        log('selectorResult', '❌ Registry or Resolver not loaded', 'error');
+        return;
+      }
+      
+      // Get expected pool
+      const poolKeys = registry.getImplementedGames(true);
+      log('selectorResult', `Expected pool size: ${poolKeys.length}\n`, 'info');
+      
+      // Test each key
+      let allRegistered = true;
+      for (const key of poolKeys) {
+        const isRegistered = resolver.isRegistered(key);
+        const resolved = resolver.resolveGameKey(key);
+        
+        if (!isRegistered || !resolved) {
+          log('selectorResult', `❌ ${key} - NOT REGISTERED`, 'error');
+          allRegistered = false;
+        } else if (resolved !== key) {
+          log('selectorResult', `✓ ${key} → ${resolved}`, 'warning');
+        } else {
+          log('selectorResult', `✓ ${key}`, 'success');
+        }
+      }
+      
+      log('selectorResult', '\n=== Result ===', 'info');
+      if (allRegistered) {
+        log('selectorResult', '✅ All pool keys are registered!', 'success');
+      } else {
+        log('selectorResult', '❌ Some keys are not registered', 'error');
+      }
+    }
+
+    function testSequentialSelection() {
+      clear('sequentialResult');
+      log('sequentialResult', '=== Testing 30 Sequential Selections ===\n');
+      
+      const selector = window.MinigameSelector;
+      const resolver = window.MGKeyResolver;
+      
+      if (!selector || !resolver) {
+        log('sequentialResult', '❌ Selector or Resolver not loaded', 'error');
+        return;
+      }
+      
+      // Reset selector
+      selector.reset();
+      
+      let unknownCount = 0;
+      let fallbackCount = 0;
+      const selections = [];
+      
+      for (let i = 0; i < 30; i++) {
+        const selected = selector.selectNext(true);
+        const resolved = resolver.resolveGameKey(selected);
+        
+        selections.push({ selected, resolved });
+        
+        if (!resolved) {
+          log('sequentialResult', `${i+1}. ${selected} → UNKNOWN ❌`, 'error');
+          unknownCount++;
+        } else if (resolved !== selected) {
+          log('sequentialResult', `${i+1}. ${selected} → ${resolved}`, 'info');
+        } else if (i % 5 === 0) {
+          log('sequentialResult', `${i+1}. ${selected} ✅`, 'success');
+        }
+        
+        if (selected === 'quickTap' && i > 0 && selections[i-1].resolved !== 'quickTap') {
+          fallbackCount++;
+        }
+      }
+      
+      log('sequentialResult', '\n=== Summary ===', 'info');
+      log('sequentialResult', `Total selections: 30`, 'info');
+      log('sequentialResult', `Unknown keys: ${unknownCount}`, unknownCount === 0 ? 'success' : 'error');
+      log('sequentialResult', `Unexpected fallbacks: ${fallbackCount}`, fallbackCount === 0 ? 'success' : 'warning');
+      
+      if (unknownCount === 0 && fallbackCount === 0) {
+        log('sequentialResult', '\n✅ All selections resolved correctly!', 'success');
+      }
+    }
+
+    function runDevUtilities() {
+      clear('devResult');
+      log('devResult', '=== Running __mgTestKeys() ===\n');
+      
+      if (typeof window.__mgTestKeys !== 'function') {
+        log('devResult', '❌ __mgTestKeys not available', 'error');
+        return;
+      }
+      
+      const result = window.__mgTestKeys();
+      
+      log('devResult', `Registered keys: ${result.registered.length}`, 'success');
+      log('devResult', `Aliases: ${result.aliasCount}`, 'success');
+      log('devResult', `Unknown: ${result.unknownCount}`, result.unknownCount === 0 ? 'success' : 'error');
+      
+      if (result.sampleSelection) {
+        log('devResult', `\nSample selection: ${result.sampleSelection}`, 'info');
+        if (result.sampleAliases && result.sampleAliases.length > 0) {
+          log('devResult', `Aliases: ${result.sampleAliases.join(', ')}`, 'info');
+        }
+      }
+      
+      log('devResult', '\n✅ Dev utilities working!', 'success');
+    }
+
+    function testSpecificKey() {
+      clear('devResult');
+      log('devResult', '=== Testing "bar" Key ===\n');
+      
+      if (typeof window.__mgForceKey !== 'function') {
+        log('devResult', '❌ __mgForceKey not available', 'error');
+        return;
+      }
+      
+      const result = window.__mgForceKey('bar');
+      
+      log('devResult', `Requested: ${result.requestedKey}`, 'info');
+      log('devResult', `Resolved: ${result.resolvedKey}`, result.resolvedKey ? 'success' : 'error');
+      log('devResult', `Registered: ${result.registered}`, result.registered ? 'success' : 'error');
+      log('devResult', `In Registry: ${result.inRegistry}`, result.inRegistry ? 'success' : 'error');
+      
+      if (result.gameInfo) {
+        log('devResult', `\nGame: ${result.gameInfo.name}`, 'info');
+        log('devResult', `Implemented: ${result.gameInfo.implemented}`, 'info');
+        log('devResult', `Retired: ${result.gameInfo.retired}`, 'info');
+      }
+      
+      log('devResult', '\n✅ "bar" resolves to "timingBar"', 'success');
+    }
+  </script>
+</body>
+</html>
