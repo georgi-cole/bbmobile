@@ -1,0 +1,31 @@
+name: Validate Minigame Keys
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'js/minigames/**'
+      - 'scripts/validate-minigame-keys.mjs'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'js/minigames/**'
+      - 'scripts/validate-minigame-keys.mjs'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Validate Minigame Key Registration
+      run: node scripts/validate-minigame-keys.mjs
+    
+    - name: Audit Minigame Keys (informational)
+      run: node scripts/audit-minigame-keys.mjs || true

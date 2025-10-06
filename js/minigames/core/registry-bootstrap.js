@@ -36,7 +36,8 @@
         'memoryMatch', 'mathBlitz', 'timingBar', 'sequenceMemory',
         'patternMatch', 'wordAnagram', 'targetPractice', 'memoryPairs',
         'estimationGame', 'wordTyping', 'reactionTimer', 'sliderPuzzle',
-        'pathFinder', 'simonSays'
+        'pathFinder', 'simonSays', 'oteviator', 'comixSpot', 'holdWall',
+        'slipperyShuttle', 'memoryZipline'
       ];
       
       for(const key of fallbackKeys){
@@ -142,13 +143,28 @@
         console.info('✅ No unknown keys detected');
       }
 
-      // Audit against MinigameSelector pool if available
+      // Audit against expected selector pool (all implemented, non-retired games)
+      if(g.MinigameRegistry){
+        const implementedGames = g.MinigameRegistry.getImplementedGames(true);
+        console.info('Expected selector pool size:', implementedGames.length);
+        
+        const poolAudit = g.MGKeyResolver.auditUnknown(implementedGames);
+        if(poolAudit.unknown.length > 0){
+          console.error('❌ CRITICAL: Selector pool contains unregistered keys!');
+          console.error('   These keys will cause "Unknown minigame" errors:', poolAudit.unknown);
+          console.error('   FIX: Add aliases for these keys in registry-bootstrap.js');
+        } else {
+          console.info('✅ All selector pool keys are registered');
+        }
+      }
+
+      // Audit against actual MinigameSelector pool if it exists
       if(g.game && g.game.__minigamePool){
         const poolAudit = g.MGKeyResolver.auditUnknown(g.game.__minigamePool);
         if(poolAudit.unknown.length > 0){
-          console.warn('⚠️ Pool contains unknown keys:', poolAudit.unknown);
+          console.warn('⚠️ Active pool contains unknown keys:', poolAudit.unknown);
         } else {
-          console.info('✅ All pool keys are registered');
+          console.info('✅ All active pool keys are registered');
         }
       }
 

@@ -1,0 +1,17 @@
+{
+  "name": "bbmobile",
+  "version": "1.0.0",
+  "description": "Big Brother Mobile Game",
+  "type": "module",
+  "scripts": {
+    "validate:minigames": "node scripts/validate-minigame-keys.mjs",
+    "audit:minigames": "node scripts/audit-minigame-keys.mjs",
+    "test:minigames": "npm run validate:minigames"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/georgi-cole/bbmobile.git"
+  },
+  "author": "",
+  "license": "ISC"
+}
