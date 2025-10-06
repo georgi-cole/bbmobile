@@ -28,6 +28,123 @@
   };
 
   /**
+   * Legacy Minigame Module Map (FALLBACK SYSTEM)
+   * Direct mapping of ALL minigame keys to their g.MiniGames module keys
+   * 
+   * This serves as the ultimate fallback when:
+   * 1. Registry/alias system fails to resolve a key
+   * 2. A competition/selector uses an unregistered key
+   * 3. Module is loaded but key resolution failed
+   * 
+   * CRITICAL: This map guarantees every competition can load a playable game.
+   * When adding new minigames, ALWAYS add entries here with all possible keys/aliases.
+   * 
+   * Format: 'anyPossibleKey' -> 'g.MiniGames.moduleKey'
+   */
+  const LEGACY_MINIGAME_MAP = {
+    // Phase 1: Fully Implemented Mobile-First Games
+    'countHouse': 'countHouse',
+    'count-house': 'countHouse',
+    'counthouse': 'countHouse',
+    
+    'reactionRoyale': 'reactionRoyale',
+    'reaction-royale': 'reactionRoyale',
+    'reactionroyale': 'reactionRoyale',
+    
+    'triviaPulse': 'triviaPulse',
+    'trivia-pulse': 'triviaPulse',
+    'triviapulse': 'triviaPulse',
+    
+    'quickTap': 'quickTap',
+    'quick-tap': 'quickTap',
+    'quicktap': 'quickTap',
+    'clicker': 'quickTap',  // Legacy alias
+    
+    // Migrated Legacy Games
+    'memoryMatch': 'memoryMatch',
+    'memory-match': 'memoryMatch',
+    'memorymatch': 'memoryMatch',
+    'memory': 'memoryMatch',  // Legacy alias
+    
+    'mathBlitz': 'mathBlitz',
+    'math-blitz': 'mathBlitz',
+    'mathblitz': 'mathBlitz',
+    'math': 'mathBlitz',  // Legacy alias
+    
+    'timingBar': 'timingBar',
+    'timing-bar': 'timingBar',
+    'timingbar': 'timingBar',
+    'bar': 'timingBar',  // Legacy alias
+    
+    'sequenceMemory': 'sequenceMemory',
+    'sequence-memory': 'sequenceMemory',
+    'sequencememory': 'sequenceMemory',
+    'numseq': 'sequenceMemory',  // Legacy alias
+    
+    'patternMatch': 'patternMatch',
+    'pattern-match': 'patternMatch',
+    'patternmatch': 'patternMatch',
+    'pattern': 'patternMatch',  // Legacy alias
+    
+    'wordAnagram': 'wordAnagram',
+    'word-anagram': 'wordAnagram',
+    'wordanagram': 'wordAnagram',
+    'anagram': 'wordAnagram',  // Legacy alias
+    
+    'targetPractice': 'targetPractice',
+    'target-practice': 'targetPractice',
+    'targetpractice': 'targetPractice',
+    'target': 'targetPractice',  // Legacy alias
+    
+    'memoryPairs': 'memoryPairs',
+    'memory-pairs': 'memoryPairs',
+    'memorypairs': 'memoryPairs',
+    'pairs': 'memoryPairs',  // Legacy alias
+    
+    'estimationGame': 'estimationGame',
+    'estimation-game': 'estimationGame',
+    'estimationgame': 'estimationGame',
+    'estimate': 'estimationGame',  // Legacy alias
+    
+    'reactionTimer': 'reactionTimer',
+    'reaction-timer': 'reactionTimer',
+    'reactiontimer': 'reactionTimer',
+    'reaction': 'reactionTimer',  // Legacy alias
+    
+    // Retired Legacy Games (still playable if needed)
+    'wordTyping': 'wordTyping',
+    'word-typing': 'wordTyping',
+    'wordtyping': 'wordTyping',
+    'typing': 'wordTyping',  // Legacy alias
+    
+    'sliderPuzzle': 'sliderPuzzle',
+    'slider-puzzle': 'sliderPuzzle',
+    'sliderpuzzle': 'sliderPuzzle',
+    'slider': 'sliderPuzzle',  // Legacy alias
+    
+    'pathFinder': 'pathFinder',
+    'path-finder': 'pathFinder',
+    'pathfinder': 'pathFinder',
+    'path': 'pathFinder',  // Legacy alias
+    
+    'simonSays': 'simonSays',
+    'simon-says': 'simonSays',
+    'simonsays': 'simonSays',
+    'simon': 'simonSays',  // Legacy alias
+    
+    // Phase 1: Scaffolds (future games)
+    'oteviator': 'oteviator',
+    'comixSpot': 'comixSpot',
+    'comix-spot': 'comixSpot',
+    'holdWall': 'holdWall',
+    'hold-wall': 'holdWall',
+    'slipperyShuttle': 'slipperyShuttle',
+    'slippery-shuttle': 'slipperyShuttle',
+    'memoryZipline': 'memoryZipline',
+    'memory-zipline': 'memoryZipline'
+  };
+
+  /**
    * Reverse mapping (new key to legacy keys)
    * Used for backwards compatibility checks
    */
@@ -141,6 +258,55 @@
   }
 
   /**
+   * Get full legacy minigame map (for reference)
+   * @returns {Object} Legacy minigame module mapping
+   */
+  function getLegacyMinigameMap(){
+    return { ...LEGACY_MINIGAME_MAP };
+  }
+
+  /**
+   * Resolve a key to its module key using the legacy minigame map
+   * This is the ultimate fallback for when registry/alias systems fail
+   * @param {string} key - Game key to resolve
+   * @returns {string|null} Module key or null if not found
+   */
+  function resolveToModule(key){
+    if(!key){
+      return null;
+    }
+    
+    // Direct lookup in legacy minigame map
+    return LEGACY_MINIGAME_MAP[key] || null;
+  }
+
+  /**
+   * Check if a key exists in the legacy minigame map
+   * @param {string} key - Game key to check
+   * @returns {boolean} True if key exists in legacy map
+   */
+  function isInLegacyMinigameMap(key){
+    return key in LEGACY_MINIGAME_MAP;
+  }
+
+  /**
+   * Get all keys from legacy minigame map
+   * @returns {Array<string>} All keys in the legacy map
+   */
+  function getAllLegacyMinigameKeys(){
+    return Object.keys(LEGACY_MINIGAME_MAP);
+  }
+
+  /**
+   * Get all unique module keys from legacy minigame map
+   * @returns {Array<string>} All unique module keys
+   */
+  function getAllLegacyModuleKeys(){
+    const modules = new Set(Object.values(LEGACY_MINIGAME_MAP));
+    return Array.from(modules);
+  }
+
+  /**
    * Validate that all legacy keys map to valid registry entries
    * @returns {Object} Validation result with any errors
    */
@@ -182,9 +348,16 @@
     getAccessedLegacyKeys,
     clearAccessedKeys,
     getLegacyMap,
-    validateMapping
+    validateMapping,
+    // Legacy minigame map functions (fallback system)
+    getLegacyMinigameMap,
+    resolveToModule,
+    isInLegacyMinigameMap,
+    getAllLegacyMinigameKeys,
+    getAllLegacyModuleKeys
   };
 
-  console.info('[MinigameCompatBridge] Module loaded with', Object.keys(LEGACY_KEY_MAP).length, 'legacy mappings');
+  console.info('[MinigameCompatBridge] Module loaded with', Object.keys(LEGACY_KEY_MAP).length, 'legacy key mappings');
+  console.info('[MinigameCompatBridge] Legacy minigame map loaded with', Object.keys(LEGACY_MINIGAME_MAP).length, 'key entries covering', getAllLegacyModuleKeys().length, 'unique modules');
 
 })(window);
