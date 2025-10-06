@@ -934,8 +934,6 @@ header.innerHTML = `
                !game.__introEarlyFinished) {
               console.info('[opening] All intro pairs shown, finishing early');
               game.__introEarlyFinished = true;
-              // Store timestamp when last pair was shown
-              game.__lastPairShownAt = Date.now();
               // Ensure last card remains visible for at least 3 seconds
               const minLastCardVisibility = 3000; // 3 seconds minimum
               setTimeout(() => {
