@@ -7,7 +7,9 @@
     "validate:minigames": "node scripts/validate-minigame-keys.mjs",
     "audit:minigames": "node scripts/audit-minigame-keys.mjs",
     "test:minigames": "npm run validate:minigames && node scripts/test-runtime-validation.mjs",
-    "test:runtime": "node scripts/test-runtime-validation.mjs"
+    "test:runtime": "node scripts/test-runtime-validation.mjs",
+    "test:e2e": "node scripts/test-e2e-competitions.mjs",
+    "test:all": "npm run test:minigames && npm run test:e2e"
   },
   "repository": {
     "type": "git",
