@@ -297,6 +297,12 @@ button:focus-visible,.btn:focus-visible{ outline:2px solid var(--accent-2); outl
 }
 .revealCard.has-avatars .rc-body{ flex:1 1 auto; min-width:0; }
 
+/* Diary Room Card - Live Eviction Modal */
+.revealCard.diaryRoomCard{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  backdrop-filter:blur(12px) saturate(1.3); -webkit-backdrop-filter:blur(12px) saturate(1.3);
+}
+
 /* 09. LOGS & TABS ----------------------------------------------------------- */
 #logTabs{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
 #logTabs .tab-btn{
@@ -686,6 +692,12 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
     font-size:.72rem;
   }
   .revealCard h3{ font-size:.95rem; }
+  
+  /* Diary Room Card mobile adjustments */
+  .revealCard.diaryRoomCard{
+    max-width:calc(100vw - 32px);
+    padding:18px 20px 20px;
+  }
   
   /* Decision cards in social phase */
   .decisionCard{

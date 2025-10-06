@@ -299,24 +299,25 @@
     const card = document.createElement('div');
     card.className = 'revealCard diaryRoomCard';
     card.style.cssText = `
-      background: linear-gradient(135deg, #1a2937, #0f1a28);
-      border: 2px solid rgba(120,180,240,0.4);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 20px 50px -20px rgba(0,0,0,0.9);
-      max-width: min(420px, 90%);
+      background: linear-gradient(135deg, #1c2b3e, #0e1a28);
+      border: 2px solid rgba(120,180,240,0.5);
+      border-radius: 20px;
+      padding: 24px 28px;
+      box-shadow: 0 24px 64px -24px rgba(0,0,0,0.95), 0 8px 24px -8px rgba(0,0,0,0.7);
+      max-width: min(480px, 92%);
       width: 100%;
       text-align: center;
       pointer-events: auto;
+      margin: auto;
     `;
 
     const title = document.createElement('div');
     title.textContent = 'Diary Room';
-    title.style.cssText = 'font-size: 1.1rem; font-weight: 700; color: #ffd96b; margin-bottom: 12px;';
+    title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
     card.appendChild(title);
 
     const avatarRow = document.createElement('div');
-    avatarRow.style.cssText = 'display: flex; justify-content: space-around; align-items: center; margin-bottom: 12px; gap: 8px;';
+    avatarRow.style.cssText = 'display: flex; justify-content: center; align-items: center; margin-bottom: 18px; gap: 16px;';
 
     const voterImg = document.createElement('img');
     voterImg.src = voterAvatar;
@@ -327,17 +328,17 @@
       this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(voter.name)}`;
     };
     voterImg.style.cssText = `
-      width: clamp(60px, 15vw, 80px); 
-      height: clamp(60px, 15vw, 80px); 
+      width: clamp(64px, 16vw, 88px); 
+      height: clamp(64px, 16vw, 88px); 
       border-radius: 50%; 
       border: 3px solid #7cffad; 
       object-fit: cover;
-      box-shadow: 0 4px 12px rgba(124,255,173,0.3);
+      box-shadow: 0 6px 16px rgba(124,255,173,0.4), 0 0 0 1px rgba(124,255,173,0.2);
     `;
 
     const arrow = document.createElement('div');
     arrow.textContent = '→';
-    arrow.style.cssText = 'font-size: clamp(1.5rem, 4vw, 2rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0;';
+    arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
 
     const targetImg = document.createElement('img');
     targetImg.src = targetAvatar;
@@ -348,12 +349,12 @@
       this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(target.name)}`;
     };
     targetImg.style.cssText = `
-      width: clamp(60px, 15vw, 80px); 
-      height: clamp(60px, 15vw, 80px); 
+      width: clamp(64px, 16vw, 88px); 
+      height: clamp(64px, 16vw, 88px); 
       border-radius: 50%; 
       border: 3px solid #ff6b6b; 
       object-fit: cover;
-      box-shadow: 0 4px 12px rgba(255,107,107,0.3);
+      box-shadow: 0 6px 16px rgba(255,107,107,0.4), 0 0 0 1px rgba(255,107,107,0.2);
     `;
 
     avatarRow.appendChild(voterImg);
@@ -363,7 +364,7 @@
 
     const messageDiv = document.createElement('div');
     messageDiv.textContent = message;
-    messageDiv.style.cssText = 'font-size: clamp(0.85rem, 2vw, 1rem); color: #cedbeb; line-height: 1.4;';
+    messageDiv.style.cssText = 'font-size: clamp(0.9rem, 2.2vw, 1.05rem); color: #e8f4ff; line-height: 1.5; font-weight: 500;';
     card.appendChild(messageDiv);
 
     // Clear any existing content and append new card
