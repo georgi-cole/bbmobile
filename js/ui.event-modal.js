@@ -91,6 +91,10 @@
       let dismissible = false;
       let dismissed = false;
 
+      // Make modal dismissible after minDisplayTime
+      setTimeout(() => {
+        dismissible = true;
+      }, minDisplayTime);
       // Create overlay
       const overlay = document.createElement('div');
       overlay.className = 'event-modal-overlay';
