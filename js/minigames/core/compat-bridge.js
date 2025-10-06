@@ -141,7 +141,39 @@
     'slipperyShuttle': 'slipperyShuttle',
     'slippery-shuttle': 'slipperyShuttle',
     'memoryZipline': 'memoryZipline',
-    'memory-zipline': 'memoryZipline'
+    'memory-zipline': 'memoryZipline',
+    
+    // New Mobile-Friendly Games (placeholders)
+    'swipeMaze': 'placeholder',
+    'swipe-maze': 'placeholder',
+    'swipemaze': 'placeholder',
+    'patternTrace': 'placeholder',
+    'pattern-trace': 'placeholder',
+    'patterntrace': 'placeholder',
+    'audioMatch': 'placeholder',
+    'audio-match': 'placeholder',
+    'audiomatch': 'placeholder',
+    'balanceBridge': 'placeholder',
+    'balance-bridge': 'placeholder',
+    'balancebridge': 'placeholder',
+    'colorMix': 'placeholder',
+    'color-mix': 'placeholder',
+    'colormix': 'placeholder',
+    'wordLadder': 'placeholder',
+    'word-ladder': 'placeholder',
+    'wordladder': 'placeholder',
+    'rhythmTap': 'placeholder',
+    'rhythm-tap': 'placeholder',
+    'rhythmtap': 'placeholder',
+    'spotTheDifference': 'placeholder',
+    'spot-the-difference': 'placeholder',
+    'spotthedifference': 'placeholder',
+    'logicLocks': 'placeholder',
+    'logic-locks': 'placeholder',
+    'logiclocks': 'placeholder',
+    'astroJumper': 'placeholder',
+    'astro-jumper': 'placeholder',
+    'astrojumper': 'placeholder'
   };
 
   /**
