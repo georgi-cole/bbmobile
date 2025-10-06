@@ -295,6 +295,13 @@
 
   // Listen for intro finished event
   function setupIntroListener() {
+    // Only set up listener if autoShowRulesOnStart is enabled
+    const cfg = (global.game && global.game.cfg) || {};
+    if (!cfg.autoShowRulesOnStart) {
+      console.info('[rules] autoShowRulesOnStart is false — skipping intro listener');
+      return;
+    }
+    
     window.addEventListener('bb:intro:finished', function(e) {
       console.info('[rules] bb:intro:finished received');
       introFinishedReceived = true;
@@ -306,6 +313,13 @@
 
   // Fallback: wrap startOpeningSequence and show rules if no event arrives
   function setupFallback() {
+    // Only set up fallback if autoShowRulesOnStart is enabled
+    const cfg = (global.game && global.game.cfg) || {};
+    if (!cfg.autoShowRulesOnStart) {
+      console.info('[rules] autoShowRulesOnStart is false — skipping fallback');
+      return;
+    }
+    
     const origStart = global.startOpeningSequence;
     if (typeof origStart !== 'function') {
       console.warn('[rules] startOpeningSequence not found — fallback inactive');

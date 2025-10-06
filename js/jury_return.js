@@ -147,8 +147,26 @@
     const g=global.game||{};
     try{ global.tv?.say?.('Intermission'); }catch{}
     g.week=(g.week||0)+1;
-    global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
-    global.updateHud?.();
+    
+    // Show week intro modal before starting HOH if not already shown
+    const currentWeek = g.week;
+    const alivePlayers = (typeof global.alivePlayers === 'function') ? global.alivePlayers() : [];
+    const shouldShow = alivePlayers.length > 2 && 
+                      (!g.phase || !['jury', 'finale'].includes(g.phase));
+    
+    if (shouldShow && g.__weekIntroShownFor !== currentWeek && typeof global.showWeekIntroModal === 'function') {
+      g.__weekIntroShownFor = currentWeek;
+      console.info(`[jury_return] Showing week intro for week ${currentWeek}`);
+      
+      global.showWeekIntroModal(currentWeek, () => {
+        global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
+        global.updateHud?.();
+      });
+    } else {
+      // No week intro needed, proceed normally
+      global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
+      global.updateHud?.();
+    }
   }
 
   async function startJuryReturnTwist(){

@@ -915,10 +915,33 @@ header.innerHTML = `
       const pairs=[]; for(let i=0;i<players.length;i+=2){ pairs.push([players[i], players[i+1]]); }
       const perPair=5600, gap=150;
       game.__introHandles = [];
+      game.__introPairsTotal = pairs.length;
+      game.__introPairsShown = 0;
+      game.__introEarlyFinished = false;
       ensureSkipIntroButton();
       pairs.forEach((pair,idx)=>{
         const id=setTimeout(()=>{
-          try{ const hid=showDualProfileCards(pair[0], pair[1], perPair-100); if(hid!=null) game.__introHandles.push(hid); }catch{}
+          try{ 
+            const hid=showDualProfileCards(pair[0], pair[1], perPair-100); 
+            if(hid!=null) game.__introHandles.push(hid); 
+            
+            // Increment shown count
+            game.__introPairsShown = (game.__introPairsShown || 0) + 1;
+            
+            // Check if all pairs have been shown
+            if(game.__introPairsShown >= game.__introPairsTotal && 
+               game.phase === 'opening' && 
+               !game.__introEarlyFinished) {
+              console.info('[opening] All intro pairs shown, finishing early');
+              game.__introEarlyFinished = true;
+              // Brief grace period before finishing
+              setTimeout(() => {
+                if(game.phase === 'opening') {
+                  g.finishOpening();
+                }
+              }, 300);
+            }
+          }catch{}
         }, idx*(perPair+gap));
         game.__introHandles.push(id);
       });
@@ -938,6 +961,10 @@ header.innerHTML = `
   g.skipIntro = skipIntro;
   function finishOpening(){
     const game=g.game; if(!game) return;
+    // Prevent duplicate calls if already marked as early finished
+    if(game.__introEarlyFinished && game.__introEarlyFinishCalled) return;
+    if(game.__introEarlyFinished) game.__introEarlyFinishCalled = true;
+    
     skipIntro(false);
     UI.showCard?.('Get Ready',['HOH Competition'],'hoh',2000);
     g.tv?.say?.('HOH Competition soon…');
