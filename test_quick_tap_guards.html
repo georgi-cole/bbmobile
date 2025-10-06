@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Tap Guard Tests</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0f1419;
+      color: #e3ecf5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: #1a2332;
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-title {
+      font-size: 1.5rem;
+      color: #83bfff;
+      margin-bottom: 16px;
+    }
+    .test-description {
+      color: #95a9c0;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .test-result {
+      padding: 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+      font-family: monospace;
+    }
+    .test-result.success {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid #4caf50;
+      color: #4caf50;
+    }
+    .test-result.error {
+      background: rgba(244, 67, 54, 0.2);
+      border: 1px solid #f44336;
+      color: #f44336;
+    }
+    .test-result.info {
+      background: rgba(33, 150, 243, 0.2);
+      border: 1px solid #2196f3;
+      color: #2196f3;
+    }
+    .game-container {
+      min-height: 300px;
+      background: #0f1419;
+      border: 2px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+    button {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 8px;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .control-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 32px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Quick Tap Guard Tests</h1>
+  
+  <div class="test-section">
+    <div class="test-title">Test 1: Full Helpers Available</div>
+    <div class="test-description">
+      Tests the game with both MinigameAccessibility and MinigameMobileUtils available.
+      This should work normally without any errors.
+    </div>
+    <div class="control-panel">
+      <button onclick="runTest1()">Run Test 1</button>
+      <button onclick="clearTest1()">Clear</button>
+    </div>
+    <div id="test1-result"></div>
+    <div id="test1-container" class="game-container"></div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">Test 2: No Helpers Available</div>
+    <div class="test-description">
+      Tests the game without any helper modules (MinigameAccessibility and MinigameMobileUtils undefined).
+      The game should work with basic functionality and no errors.
+    </div>
+    <div class="control-panel">
+      <button onclick="runTest2()">Run Test 2</button>
+      <button onclick="clearTest2()">Clear</button>
+    </div>
+    <div id="test2-result"></div>
+    <div id="test2-container" class="game-container"></div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">Test 3: Partial Helpers (Missing Methods)</div>
+    <div class="test-description">
+      Tests the game with helper objects present but missing some methods.
+      The game should gracefully skip unavailable methods and continue working.
+    </div>
+    <div class="control-panel">
+      <button onclick="runTest3()">Run Test 3</button>
+      <button onclick="clearTest3()">Clear</button>
+    </div>
+    <div id="test3-result"></div>
+    <div id="test3-container" class="game-container"></div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">Test 4: Invalid onComplete Callback</div>
+    <div class="test-description">
+      Tests the game with various invalid onComplete callbacks (null, undefined, not a function).
+      The game should complete without errors.
+    </div>
+    <div class="control-panel">
+      <button onclick="runTest4()">Run Test 4</button>
+      <button onclick="clearTest4()">Clear</button>
+    </div>
+    <div id="test4-result"></div>
+    <div id="test4-container" class="game-container"></div>
+  </div>
+
+  <!-- Load the minigame -->
+  <script src="js/minigames/accessibility.js"></script>
+  <script src="js/minigames/mobile-utils.js"></script>
+  <script src="js/minigames/quick-tap.js"></script>
+
+  <script>
+    // Store original helpers
+    const originalAccessibility = window.MinigameAccessibility;
+    const originalMobileUtils = window.MinigameMobileUtils;
+
+    // Track errors
+    let errorCount = 0;
+    const originalConsoleError = console.error;
+    
+    function startErrorTracking() {
+      errorCount = 0;
+      console.error = function(...args) {
+        errorCount++;
+        originalConsoleError.apply(console, args);
+      };
+    }
+
+    function stopErrorTracking() {
+      console.error = originalConsoleError;
+      return errorCount;
+    }
+
+    function showResult(containerId, message, type = 'info') {
+      const resultDiv = document.getElementById(containerId);
+      resultDiv.className = `test-result ${type}`;
+      resultDiv.textContent = message;
+    }
+
+    function clearTest1() {
+      document.getElementById('test1-container').innerHTML = '';
+      document.getElementById('test1-result').innerHTML = '';
+    }
+
+    function clearTest2() {
+      document.getElementById('test2-container').innerHTML = '';
+      document.getElementById('test2-result').innerHTML = '';
+    }
+
+    function clearTest3() {
+      document.getElementById('test3-container').innerHTML = '';
+      document.getElementById('test3-result').innerHTML = '';
+    }
+
+    function clearTest4() {
+      document.getElementById('test4-container').innerHTML = '';
+      document.getElementById('test4-result').innerHTML = '';
+    }
+
+    function runTest1() {
+      clearTest1();
+      showResult('test1-result', 'Starting test with full helpers...', 'info');
+      
+      // Restore full helpers
+      window.MinigameAccessibility = originalAccessibility;
+      window.MinigameMobileUtils = originalMobileUtils;
+      
+      startErrorTracking();
+      
+      try {
+        const container = document.getElementById('test1-container');
+        window.MiniGames.quickTap.render(container, (score) => {
+          const errors = stopErrorTracking();
+          showResult('test1-result', 
+            `✓ Test passed! Game completed with score: ${score}. Errors: ${errors}`, 
+            errors === 0 ? 'success' : 'error'
+          );
+        });
+        
+        setTimeout(() => {
+          const errors = stopErrorTracking();
+          if (errors === 0) {
+            showResult('test1-result', '✓ No errors during render. Game is running...', 'success');
+          } else {
+            showResult('test1-result', `✗ ${errors} error(s) during render`, 'error');
+          }
+        }, 100);
+      } catch (error) {
+        stopErrorTracking();
+        showResult('test1-result', `✗ Test failed with exception: ${error.message}`, 'error');
+      }
+    }
+
+    function runTest2() {
+      clearTest2();
+      showResult('test2-result', 'Starting test without helpers...', 'info');
+      
+      // Remove helpers
+      delete window.MinigameAccessibility;
+      delete window.MinigameMobileUtils;
+      
+      startErrorTracking();
+      
+      try {
+        const container = document.getElementById('test2-container');
+        window.MiniGames.quickTap.render(container, (score) => {
+          const errors = stopErrorTracking();
+          showResult('test2-result', 
+            `✓ Test passed! Game completed with score: ${score}. Errors: ${errors}`, 
+            errors === 0 ? 'success' : 'error'
+          );
+          
+          // Restore helpers for other tests
+          window.MinigameAccessibility = originalAccessibility;
+          window.MinigameMobileUtils = originalMobileUtils;
+        });
+        
+        setTimeout(() => {
+          const errors = stopErrorTracking();
+          if (errors === 0) {
+            showResult('test2-result', '✓ No errors during render. Game is running...', 'success');
+          } else {
+            showResult('test2-result', `✗ ${errors} error(s) during render`, 'error');
+          }
+        }, 100);
+      } catch (error) {
+        stopErrorTracking();
+        showResult('test2-result', `✗ Test failed with exception: ${error.message}`, 'error');
+        // Restore helpers
+        window.MinigameAccessibility = originalAccessibility;
+        window.MinigameMobileUtils = originalMobileUtils;
+      }
+    }
+
+    function runTest3() {
+      clearTest3();
+      showResult('test3-result', 'Starting test with partial helpers...', 'info');
+      
+      // Create partial helpers (missing some methods)
+      window.MinigameAccessibility = {
+        applyAria: originalAccessibility.applyAria,
+        // Missing makeAccessibleButton and announceToSR
+      };
+      
+      window.MinigameMobileUtils = {
+        addTapListener: originalMobileUtils.addTapListener,
+        // Missing vibrate
+      };
+      
+      startErrorTracking();
+      
+      try {
+        const container = document.getElementById('test3-container');
+        window.MiniGames.quickTap.render(container, (score) => {
+          const errors = stopErrorTracking();
+          showResult('test3-result', 
+            `✓ Test passed! Game completed with score: ${score}. Errors: ${errors}`, 
+            errors === 0 ? 'success' : 'error'
+          );
+          
+          // Restore helpers
+          window.MinigameAccessibility = originalAccessibility;
+          window.MinigameMobileUtils = originalMobileUtils;
+        });
+        
+        setTimeout(() => {
+          const errors = stopErrorTracking();
+          if (errors === 0) {
+            showResult('test3-result', '✓ No errors during render. Game is running...', 'success');
+          } else {
+            showResult('test3-result', `✗ ${errors} error(s) during render`, 'error');
+          }
+        }, 100);
+      } catch (error) {
+        stopErrorTracking();
+        showResult('test3-result', `✗ Test failed with exception: ${error.message}`, 'error');
+        // Restore helpers
+        window.MinigameAccessibility = originalAccessibility;
+        window.MinigameMobileUtils = originalMobileUtils;
+      }
+    }
+
+    function runTest4() {
+      clearTest4();
+      showResult('test4-result', 'Starting test with invalid onComplete callbacks...', 'info');
+      
+      // Restore helpers
+      window.MinigameAccessibility = originalAccessibility;
+      window.MinigameMobileUtils = originalMobileUtils;
+      
+      const testCases = [
+        { callback: null, name: 'null' },
+        { callback: undefined, name: 'undefined' },
+        { callback: 'not a function', name: 'string' },
+        { callback: 123, name: 'number' }
+      ];
+      
+      let passedTests = 0;
+      startErrorTracking();
+      
+      testCases.forEach((testCase, index) => {
+        try {
+          const container = document.createElement('div');
+          container.style.cssText = 'border: 1px solid #2c3a4d; padding: 10px; margin: 8px 0;';
+          document.getElementById('test4-container').appendChild(container);
+          
+          const info = document.createElement('div');
+          info.style.cssText = 'font-size: 0.9rem; color: #95a9c0; margin-bottom: 8px;';
+          info.textContent = `Testing with onComplete = ${testCase.name}`;
+          container.appendChild(info);
+          
+          const gameContainer = document.createElement('div');
+          container.appendChild(gameContainer);
+          
+          window.MiniGames.quickTap.render(gameContainer, testCase.callback);
+          
+          passedTests++;
+        } catch (error) {
+          showResult('test4-result', 
+            `✗ Test failed for ${testCase.name}: ${error.message}`, 
+            'error'
+          );
+        }
+      });
+      
+      setTimeout(() => {
+        const errors = stopErrorTracking();
+        if (passedTests === testCases.length && errors === 0) {
+          showResult('test4-result', 
+            `✓ All ${testCases.length} tests passed! No errors during render. Games are running...`, 
+            'success'
+          );
+        } else {
+          showResult('test4-result', 
+            `Partial: ${passedTests}/${testCases.length} tests passed. Errors: ${errors}`, 
+            'error'
+          );
+        }
+      }, 100);
+    }
+
+    // Show initial status
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('✓ Quick Tap module loaded');
+      console.log('✓ MinigameAccessibility available:', !!window.MinigameAccessibility);
+      console.log('✓ MinigameMobileUtils available:', !!window.MinigameMobileUtils);
+    });
+  </script>
+</body>
+</html>
