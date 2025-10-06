@@ -11,6 +11,91 @@
    */
   
   /**
+   * Get the current season based on the date
+   * @returns {string} Current season ('spring', 'summer', 'autumn', 'winter')
+   */
+  function getCurrentSeason(){
+    const now = new Date();
+    const month = now.getMonth(); // 0-11
+    
+    // Northern hemisphere seasons
+    // Spring: March (2), April (3), May (4)
+    // Summer: June (5), July (6), August (7)
+    // Autumn: September (8), October (9), November (10)
+    // Winter: December (11), January (0), February (1)
+    
+    if(month >= 2 && month <= 4){
+      return 'spring';
+    } else if(month >= 5 && month <= 7){
+      return 'summer';
+    } else if(month >= 8 && month <= 10){
+      return 'autumn';
+    } else {
+      return 'winter';
+    }
+  }
+  
+  /**
+   * Filter games by current season
+   * @param {Array<string>} gameKeys - Array of game keys
+   * @returns {Array<string>} Games available in current season
+   */
+  function filterBySeason(gameKeys){
+    const currentSeason = getCurrentSeason();
+    const registry = g.MinigameRegistry;
+    
+    if(!registry){
+      console.warn('[MinigameSelector] No registry available for season filtering');
+      return gameKeys;
+    }
+    
+    const filtered = gameKeys.filter(key => {
+      const game = registry.getGame(key);
+      if(!game){
+        return false;
+      }
+      
+      // If no seasons defined, available all year
+      if(!game.seasons || game.seasons.length === 0){
+        return true;
+      }
+      
+      // Check if current season is in game's seasons
+      return game.seasons.includes(currentSeason);
+    });
+    
+    console.info(`[MinigameSelector] Season: ${currentSeason}, filtered ${gameKeys.length} → ${filtered.length} games`);
+    
+    return filtered;
+  }
+  
+  /**
+   * Calculate win chance for a player
+   * @param {Object} player - Player object
+   * @param {number} score - Player's score in the challenge
+   * @returns {number} Win chance percentage (0-100)
+   */
+  function calculateWin(player, score){
+    // Rule: If player fails (score is 0), win chance is 0%
+    if(score === 0){
+      return 0;
+    }
+    
+    // Special rule for "YOU" player: base 25% winning chance
+    const isYouPlayer = player && (player.name === 'YOU' || player.name === 'You');
+    const baseLuck = isYouPlayer ? 25 : 50;
+    
+    // Small improvement with each win (track wins in player.stats)
+    const wins = (player && player.stats && player.stats.minigameWins) || 0;
+    const winBonus = Math.min(wins * 2, 20); // Max 20% bonus from wins
+    
+    // Calculate final win chance
+    const winChance = Math.min(100, baseLuck + winBonus);
+    
+    return winChance;
+  }
+  
+  /**
    * Initialize selection state for a new season
    * This should be called when starting a new game/season
    * @param {Array<string>} availableGames - Array of game keys to include in pool
@@ -22,16 +107,26 @@
     }
     
     const game = g.game || {};
+    const currentSeason = getCurrentSeason();
+    
+    // Filter games by current season
+    const seasonalGames = filterBySeason(availableGames);
+    
+    if(seasonalGames.length === 0){
+      console.warn('[MinigameSelector] No games available for current season, using all games');
+      seasonalGames.push(...availableGames);
+    }
     
     // Create shuffled pool for the season
-    const pool = shuffleArray(availableGames.slice());
+    const pool = shuffleArray(seasonalGames.slice());
     
     // Store pool and tracking state
     game.__minigamePool = pool;
     game.__minigameIndex = 0;
     game.__minigameHistory = game.__minigameHistory || [];
+    game.__minigameSeason = currentSeason; // Track the season for reset detection
     
-    console.info('[MinigameSelector] Initialized season pool with', pool.length, 'games:', pool);
+    console.info('[MinigameSelector] Initialized season pool with', pool.length, 'games for', currentSeason, ':', pool);
   }
 
   /**
@@ -42,6 +137,15 @@
    */
   function selectNext(allowRepeatAfterExhaustion = true){
     const game = g.game || {};
+    const currentSeason = getCurrentSeason();
+    
+    // Check if season has changed - if so, reset pool
+    if(game.__minigameSeason && game.__minigameSeason !== currentSeason){
+      console.info('[MinigameSelector] Season changed from', game.__minigameSeason, 'to', currentSeason, '- resetting pool');
+      delete game.__minigamePool;
+      delete game.__minigameIndex;
+      delete game.__minigameSeason;
+    }
     
     // Initialize pool if not exists
     if(!game.__minigamePool || game.__minigamePool.length === 0){
@@ -312,7 +416,10 @@
     selectWeightedRandom,
     getRemainingInPool,
     getHistory,
-    reset
+    reset,
+    getCurrentSeason,
+    filterBySeason,
+    calculateWin
   };
 
 })(window);
