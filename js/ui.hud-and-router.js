@@ -934,12 +934,15 @@ header.innerHTML = `
                !game.__introEarlyFinished) {
               console.info('[opening] All intro pairs shown, finishing early');
               game.__introEarlyFinished = true;
-              // Brief grace period before finishing
+              // Store timestamp when last pair was shown
+              game.__lastPairShownAt = Date.now();
+              // Ensure last card remains visible for at least 3 seconds
+              const minLastCardVisibility = 3000; // 3 seconds minimum
               setTimeout(() => {
                 if(game.phase === 'opening') {
                   g.finishOpening();
                 }
-              }, 300);
+              }, minLastCardVisibility);
             }
           }catch{}
         }, idx*(perPair+gap));
@@ -966,7 +969,7 @@ header.innerHTML = `
     if(game.__introEarlyFinished) game.__introEarlyFinishCalled = true;
     
     skipIntro(false);
-    UI.showCard?.('Get Ready',['HOH Competition'],'hoh',2000);
+    // Old card removed - now handled by showWeekIntroModal in ui.week-intro.js
     g.tv?.say?.('HOH Competition soon…');
     g.setPhase('intermission', game.cfg?.tIntermission || 4, ()=>{ g.tv?.say?.('HOH Competition'); g.startHOH?.(); });
   }
