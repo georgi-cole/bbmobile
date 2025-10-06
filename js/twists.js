@@ -32,13 +32,13 @@
       g.__twistMode='triple';
       g.__twistPlannedEvictions=3;
       g.__twistNomSlots=4;
-      global.showCard?.('TRIPLE WEEK!',['Triple Eviction Week is active.','Four nominees — three leave.'],'warn',4700,true);
+      // Twist announcement now handled by showTwistAnnouncementIfNeeded modal
     }else if(dc>0 && r<dc){
       g.doubleEvictionWeek=true;
       g.__twistMode='double';
       g.__twistPlannedEvictions=2;
       g.__twistNomSlots=3;
-      global.showCard?.('DOUBLE WEEK!',['Double Eviction Week is active.','Three nominees — two leave.'],'warn',4300,true);
+      // Twist announcement now handled by showTwistAnnouncementIfNeeded modal
     }
     global.updateHud?.();
   }
@@ -50,6 +50,22 @@
 
     const jurors=Array.isArray(g.juryHouse)?g.juryHouse.slice():[];
     if(jurors.length<1){ return resumeWeekAfterReturn(); }
+
+    // Show twist announcement modal before starting the twist
+    if (typeof global.showEventModal === 'function' && !g.__jurorReturnModalShown) {
+      g.__jurorReturnModalShown = true;
+      try {
+        await global.showEventModal({
+          title: 'House Shock!',
+          emojis: '👁️⚖️🔙',
+          subtitle: 'A jury member re-enters the house!',
+          tone: 'special',
+          duration: 4000
+        });
+      } catch (e) {
+        console.error('[twists] Error showing juror return modal:', e);
+      }
+    }
 
     g.__returnTwist={
       jurors: jurors.slice(),
@@ -68,16 +84,6 @@
     global.setPhase?.('return_twist', 16, ()=>{
       if(!g.__returnTwist?.finished) finalizeAmericaReturnVote(true);
     });
-
-    try{
-      const ov=document.getElementById('tvOverlay');
-      if(ov) ov.innerHTML='';
-      global.playSfx?.('twist');
-      await global.showBigCard?.("AMERICA'S VOTE — JUROR RETURN", [
-        'A live 10-second vote will decide who re-enters.',
-        'Watch the bars fill in real time!'
-      ], 2600);
-    }catch(e){}
 
     seedReturnCounts(g.__returnTwist);
     renderReturnTwistPanel();
