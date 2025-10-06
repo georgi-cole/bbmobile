@@ -62,30 +62,10 @@
     const jurors = Array.isArray(global.game?.juryHouse) ? global.game.juryHouse.slice() : [];
     if(jurors.length < 1) return;
 
-    // Step 1: Flash and sound
-    flashScreen();
-    playFlashSfx();
+    // Twist announcement now handled by showTwistAnnouncementIfNeeded modal
+    // Old cards removed: Stop the presses!, America's Vote, How it works
 
-    await new Promise(res => setTimeout(res, 730)); // Wait for flash/sound to finish
-
-    // Step 2: Dramatic interruption
-    await global.showBigCard?.('Stop the presses!', [
-      'Big Brother has an urgent announcement…'
-    ], 1600);
-
-    // Step 3: Twist announcement
-    await global.showBigCard?.('America\'s Vote: Juror Return!', [
-      'America will vote live for which juror returns to the game.'
-    ], 2100);
-
-    // Step 4: Instructions
-    await global.showBigCard?.('How it works', [
-      '• Bars fill live for 12 seconds.',
-      '• The juror with the highest percentage returns.',
-      '• Their avatar will flash and they rejoin the game.'
-    ], 2200);
-
-    // Step 5: Show panel (avatars + live bars, timer starts)
+    // Show panel (avatars + live bars, timer starts)
     showReturnVotePanel(jurors, Number(global.game?.cfg?.tJuryReturnVote||12), (state)=>{
       finalizeAmericaVote(state, jurors);
     });

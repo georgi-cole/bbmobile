@@ -183,15 +183,8 @@
 
     ensureState();
 
-    try{
-      global.playSfx?.('twist');
-      await global.showBigCard?.('BREAKING TWIST', ['A juror will battle for re-entry.'], 2600);
-      await global.showBigCard?.('Participants', [
-        (g.juryHouse||[]).map(id=>safeName(id)).join(', ') || '—'
-      ], 2400);
-      global.showCard?.('Competition Begins',['Jurors, prepare…'],'hoh',3200,true);
-      await global.cardQueueWaitIdle?.();
-    }catch(e){}
+    // Twist announcement now handled by showTwistAnnouncementIfNeeded modal
+    // Old cards removed: BREAKING TWIST, Participants, Competition Begins
 
     global.setPhase?.('jury_return', (g.cfg?.tJuryReturn || 45), null); // default longer
     renderJuryReturnPanel();

@@ -169,11 +169,11 @@
     }
     // Check for juror return (based on next phase or flag)
     else if (g.__jurorReturnPending || (g.juryHouse && g.juryHouse.length > 0 && !g.__jurorReturnDone && !g.__americaReturnDone)) {
-      // Only show if we're about to trigger a juror return
+      // Only show if we're about to trigger a juror return and modal hasn't been shown yet
       const alive = (typeof global.alivePlayers === 'function') ? global.alivePlayers() : [];
       const shouldReturn = alive.length >= 4 && alive.length <= 6;
       
-      if (shouldReturn && g.juryHouse && g.juryHouse.length > 0) {
+      if (shouldReturn && g.juryHouse && g.juryHouse.length > 0 && !g.__jurorReturnModalShown) {
         twistConfig = {
           title: 'House Shock!',
           emojis: '👁️⚖️🔙',
@@ -181,6 +181,7 @@
           tone: 'special',
           duration: 4000
         };
+        g.__jurorReturnModalShown = true;
       }
     }
 
