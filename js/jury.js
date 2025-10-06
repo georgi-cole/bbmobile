@@ -747,15 +747,25 @@
     
     console.info('[publicFav] start candidates=[' + selectedCandidates.map(c => c.player.id).join(',') + ']');
     
-    // Card 1: Intro with corrected spelling
+    // Card 1: Show celebratory event modal instead of regular card
     try{
-      if(typeof g.showCard === 'function'){
+      if(typeof g.showEventModal === 'function'){
+        await g.showEventModal({
+          title: 'Fan Favourite!',
+          emojis: '🏆⭐🥇',
+          subtitle: 'Public vote to determine favourite houseguest!',
+          tone: 'special',
+          duration: 4000,
+          minDisplayTime: 500
+        });
+      } else if(typeof g.showCard === 'function'){
+        // Fallback to regular card if event modal not available
         g.showCard('Audience Spotlight', [
           'And just before we say goodbye to another amazing season, let\'s see whom you have chosen as the Public\'s favourite player.'
         ], 'neutral', 3500, true);
         if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
       }
-    }catch(e){ console.warn('[publicFav] showCard error:', e); }
+    }catch(e){ console.warn('[publicFav] showEventModal/showCard error:', e); }
     await sleep(300);
     
     // Build modal host wrapper with flexbox centering
