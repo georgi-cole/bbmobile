@@ -126,13 +126,18 @@
   </div>
 
   <!-- Load required scripts -->
-  <script src="js/ui.event-modal.js"></script>
+  <script src="js/ui.event-modal.js" onerror="handleScriptError('js/ui.event-modal.js')"></script>
   <script src="js/ui.week-intro.js"></script>
   <script src="js/twists.js"></script>
   <script src="js/jury_return.js"></script>
   <script src="js/jury_return_vote.js"></script>
 
   <script>
+    function handleScriptError(scriptName) {
+      log('test-results', `❌ Failed to load required script: <b>${scriptName}</b>. Modal tests cannot run.`, 'error');
+      // Optionally disable test buttons to prevent further errors
+      document.querySelectorAll('.test-buttons button').forEach(btn => btn.disabled = true);
+    }
     function log(id, message, type = 'info') {
       const el = document.getElementById(id);
       if (!el) return;
