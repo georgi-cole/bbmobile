@@ -16,10 +16,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, '..');
 
+// Default number of competitions
+const DEFAULT_NUM_COMPETITIONS = 100;
+
 // Parse command line args
 const args = process.argv.slice(2);
 const numCompetitions = parseInt(
-  args.find(arg => arg.startsWith('--competitions='))?.split('=')[1] || '100'
+  args.find(arg => arg.startsWith('--competitions='))?.split('=')[1] || DEFAULT_NUM_COMPETITIONS
 );
 const headless = args.includes('--headless');
 
