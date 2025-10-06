@@ -7,7 +7,7 @@ results_popup_with_fallback.png
 Thumbs.db
 
 # Test files (temporary)
-test_week_intro_modal.html
+test_week_intro*.html
 
 # Editor files
 .vscode/
