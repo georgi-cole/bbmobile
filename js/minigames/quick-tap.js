@@ -1,5 +1,11 @@
 // MODULE: minigames/quick-tap.js
 // Quick Tap Race - Tap as many times as possible in 5 seconds
+//
+// SAFETY: All helper method calls are guarded with existence checks
+// - MinigameAccessibility methods: applyAria, makeAccessibleButton, announceToSR
+// - MinigameMobileUtils methods: addTapListener, vibrate
+// - onComplete callback is validated before invocation
+// Game works on desktop/mobile with or without helper modules
 
 (function(g){
   'use strict';
@@ -15,7 +21,7 @@
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;max-width:600px;margin:0 auto;';
     
     // Apply ARIA attributes for accessibility
-    if(useAccessibility){
+    if(useAccessibility && typeof g.MinigameAccessibility.applyAria === 'function'){
       g.MinigameAccessibility.applyAria(wrapper, {
         'role': 'region',
         'aria-label': 'Quick Tap Race minigame',
@@ -43,7 +49,7 @@
     tapBtn.style.cssText = 'font-size:1.5rem;padding:24px 48px;min-width:200px;min-height:60px;touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent;';
     
     // Apply accessibility attributes
-    if(useAccessibility){
+    if(useAccessibility && typeof g.MinigameAccessibility.makeAccessibleButton === 'function'){
       g.MinigameAccessibility.makeAccessibleButton(tapBtn, {
         label: 'Start tapping game'
       });
@@ -55,7 +61,7 @@
     const DURATION = 5000;
     
     // Use mobile-friendly tap listener if available
-    const addListener = useMobileUtils ? 
+    const addListener = (useMobileUtils && typeof g.MinigameMobileUtils.addTapListener === 'function') ? 
       g.MinigameMobileUtils.addTapListener : 
       (el, handler) => {
         el.addEventListener('click', handler);
@@ -73,12 +79,12 @@
         counter.textContent = '0';
         
         // Announce start to screen readers
-        if(useAccessibility){
+        if(useAccessibility && typeof g.MinigameAccessibility.announceToSR === 'function'){
           g.MinigameAccessibility.announceToSR('Game started! Tap rapidly!', 'assertive');
         }
         
         // Add haptic feedback on mobile if available
-        if(useMobileUtils){
+        if(useMobileUtils && typeof g.MinigameMobileUtils.vibrate === 'function'){
           g.MinigameMobileUtils.vibrate(50);
         }
         
@@ -102,17 +108,19 @@
             const score = Math.min(100, Math.max(10, taps * 3.5));
             
             // Announce completion to screen readers
-            if(useAccessibility){
+            if(useAccessibility && typeof g.MinigameAccessibility.announceToSR === 'function'){
               g.MinigameAccessibility.announceToSR(`Game complete! You tapped ${taps} times. Score: ${score.toFixed(0)}`, 'assertive');
             }
             
             // Haptic feedback for completion
-            if(useMobileUtils){
+            if(useMobileUtils && typeof g.MinigameMobileUtils.vibrate === 'function'){
               g.MinigameMobileUtils.vibrate([100, 50, 100]);
             }
             
             setTimeout(() => {
-              onComplete(score);
+              if(typeof onComplete === 'function'){
+                onComplete(score);
+              }
             }, 1000);
           }
         }, 100);
@@ -122,7 +130,7 @@
         counter.textContent = String(taps);
         
         // Light haptic feedback on each tap (not too aggressive)
-        if(useMobileUtils && taps % 5 === 0){
+        if(useMobileUtils && taps % 5 === 0 && typeof g.MinigameMobileUtils.vibrate === 'function'){
           g.MinigameMobileUtils.vibrate(10);
         }
       }

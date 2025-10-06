@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Tap - Manual Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0f1419;
+      color: #e3ecf5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .test-wrapper {
+      background: #1a2332;
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-title {
+      font-size: 1.3rem;
+      color: #83bfff;
+      margin-bottom: 16px;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .status.success {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid #4caf50;
+      color: #4caf50;
+    }
+    .status.error {
+      background: rgba(244, 67, 54, 0.2);
+      border: 1px solid #f44336;
+      color: #f44336;
+    }
+    .status.info {
+      background: rgba(33, 150, 243, 0.2);
+      border: 1px solid #2196f3;
+      color: #2196f3;
+    }
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 32px;
+    }
+    .game-container {
+      min-height: 350px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Quick Tap - Manual Functionality Test</h1>
+  
+  <div class="status info" id="init-status">
+    Loading modules...
+  </div>
+  
+  <div class="test-wrapper">
+    <div class="test-title">Quick Tap Game</div>
+    <div class="game-container" id="gameContainer"></div>
+  </div>
+  
+  <div class="status info" id="completion-status" style="display: none;">
+    Waiting for game completion...
+  </div>
+
+  <!-- Load helper modules -->
+  <script src="js/minigames/accessibility.js"></script>
+  <script src="js/minigames/mobile-utils.js"></script>
+  
+  <!-- Load the minigame -->
+  <script src="js/minigames/quick-tap.js"></script>
+
+  <script>
+    const initStatus = document.getElementById('init-status');
+    const completionStatus = document.getElementById('completion-status');
+    const gameContainer = document.getElementById('gameContainer');
+    
+    // Check what's loaded
+    const hasAccessibility = !!window.MinigameAccessibility;
+    const hasMobileUtils = !!window.MinigameMobileUtils;
+    const hasQuickTap = !!(window.MiniGames && window.MiniGames.quickTap);
+    
+    let statusMsg = 'Module Status:\n';
+    statusMsg += `✓ MinigameAccessibility: ${hasAccessibility ? 'LOADED' : 'NOT LOADED'}\n`;
+    statusMsg += `✓ MinigameMobileUtils: ${hasMobileUtils ? 'LOADED' : 'NOT LOADED'}\n`;
+    statusMsg += `✓ Quick Tap Game: ${hasQuickTap ? 'LOADED' : 'NOT LOADED'}`;
+    
+    initStatus.textContent = statusMsg;
+    initStatus.className = hasQuickTap ? 'status success' : 'status error';
+    
+    if (hasQuickTap) {
+      // Render the game
+      try {
+        window.MiniGames.quickTap.render(gameContainer, (score) => {
+          completionStatus.style.display = 'block';
+          completionStatus.className = 'status success';
+          completionStatus.textContent = `✓ Game completed successfully!\nFinal Score: ${score.toFixed(2)}`;
+          
+          console.log('Game completed with score:', score);
+        });
+        
+        completionStatus.style.display = 'block';
+        completionStatus.textContent = '✓ Game rendered successfully. Play the game!';
+        
+        console.log('Quick Tap game rendered successfully');
+      } catch (error) {
+        completionStatus.style.display = 'block';
+        completionStatus.className = 'status error';
+        completionStatus.textContent = `✗ Error rendering game:\n${error.message}`;
+        
+        console.error('Error rendering game:', error);
+      }
+    } else {
+      completionStatus.style.display = 'block';
+      completionStatus.className = 'status error';
+      completionStatus.textContent = '✗ Quick Tap game failed to load';
+    }
+  </script>
+</body>
+</html>
