@@ -108,15 +108,33 @@ Run the test file: `test_twist_modal_integration.html`
 
 ### Historical Reference (Before Changes)
 
-#### Image 1: Old Double/Triple Week Cards
-![Old twist cards showing "DOUBLE WEEK!" and "TRIPLE WEEK!" standard cards](image1)
+For detailed visual descriptions of the old behavior, see [VISUAL_DOCUMENTATION.md](VISUAL_DOCUMENTATION.md).
 
-*Caption: Previous behavior showing standard cards for double and triple eviction announcements. These cards appeared before the inter-week modal and were redundant.*
+#### Image 1: Old Double/Triple Week Cards
+**Description:** Previous behavior showing standard cards for double and triple eviction announcements. These cards appeared before the inter-week modal and were redundant.
+
+**What was shown:**
+- "DOUBLE WEEK!" card with yellow/orange warning background (~4.3s)
+- "TRIPLE WEEK!" card with yellow/orange warning background (~4.7s)
+- Both appeared BEFORE the inter-week modal, creating awkward timing
+- No emoji or enhanced visual indicators
 
 #### Image 2: Old Juror Return Cards  
-![Old juror return cards showing "BREAKING TWIST", "Participants", etc.](image2)
+**Description:** Previous behavior showing multiple standard cards for juror return announcement. The sequence included numerous cards, creating a lengthy and redundant announcement sequence.
 
-*Caption: Previous behavior showing multiple standard cards for juror return announcement. The sequence included "BREAKING TWIST", participant list, and competition start cards, creating a lengthy and redundant announcement sequence.*
+**What was shown (Competition-based):**
+- "BREAKING TWIST" card (~2.6s)
+- "Participants" card with jury member list (~2.4s)
+- "Competition Begins" card (~3.2s)
+- Total sequence: ~8.2 seconds before competition started
+
+**What was shown (America's Vote):**
+- Flash screen effect (~0.7s)
+- "Stop the presses!" card (~1.6s)
+- "America's Vote: Juror Return!" card (~2.1s)
+- "How it works" card (~2.2s)
+- "AMERICA'S VOTE — JUROR RETURN" card (~2.6s)
+- Total sequence: ~9.2 seconds before voting panel
 
 ### New Behavior (After Changes)
 
@@ -126,6 +144,7 @@ All twist announcements now use a single, clean modal with:
 - Consistent visual style
 - Auto-dismiss after 4 seconds
 - Click-to-dismiss functionality
+- **Total announcement time: 4 seconds (or instant if clicked)**
 
 ## Acceptance Criteria Status
 
