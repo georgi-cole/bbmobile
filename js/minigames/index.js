@@ -15,7 +15,10 @@
    * Falls back to empty object if not loaded yet
    */
   function getRegistry(){
-    return (g.MinigameRegistry && g.MinigameRegistry.registry) || {};
+    if(g.MinigameRegistry && typeof g.MinigameRegistry.getRegistry === 'function'){
+      return g.MinigameRegistry.getRegistry();
+    }
+    return {};
   }
 
   /**
@@ -75,6 +78,24 @@
    * @param {Function} onComplete - Callback function(score)
    */
   function render(key, container, onComplete){
+    // Early check: ensure basic system components are loaded
+    if(!g.MinigameRegistry || !g.MiniGames){
+      console.warn('[MiniGames] System not fully loaded yet. Registry:', !!g.MinigameRegistry, 'MiniGames:', !!g.MiniGames);
+      container.innerHTML = '<div style="padding:20px;text-align:center;"><p style="color:#e3ecf5;">Loading minigame system...</p></div>';
+      
+      // Retry after a short delay
+      setTimeout(() => {
+        if(g.MinigameRegistry && g.MiniGames){
+          console.info('[MiniGames] System loaded, retrying render for:', key);
+          render(key, container, onComplete);
+        } else {
+          console.error('[MiniGames] System failed to load after retry');
+          container.innerHTML = '<div style="padding:20px;text-align:center;"><p style="color:#ff6b9d;">Error: Minigame system failed to load. Please refresh the page.</p></div>';
+        }
+      }, 500);
+      return;
+    }
+    
     // Resolve key through resolver if available
     let resolvedKey = key;
     let resolutionMethod = 'none';
@@ -195,7 +216,20 @@
         container.innerHTML = `<div style="padding:20px;text-align:center;"><p>Minigame "${entry.name}" failed to load.</p><button class="btn" onclick="this.parentElement.parentElement.innerHTML='';(${onComplete})(50)">Skip</button></div>`;
       }
     } else {
-      container.innerHTML = `<div style="padding:20px;text-align:center;"><p>Minigame "${entry.name || resolvedKey}" is loading...</p></div>`;
+      // Module not loaded yet - show loading message and retry
+      console.warn(`[MiniGames] Module not loaded yet for "${resolvedKey}", retrying...`);
+      container.innerHTML = `<div style="padding:20px;text-align:center;"><p style="color:#e3ecf5;">Loading ${entry.name || resolvedKey}...</p></div>`;
+      
+      // Retry after a short delay
+      setTimeout(() => {
+        if(g.MiniGames && g.MiniGames[resolvedKey] && typeof g.MiniGames[resolvedKey].render === 'function'){
+          console.info(`[MiniGames] Module loaded, rendering "${resolvedKey}"`);
+          render(key, container, onComplete);
+        } else {
+          console.error(`[MiniGames] Module "${resolvedKey}" failed to load after retry`);
+          container.innerHTML = `<div style="padding:20px;text-align:center;"><p style="color:#ff6b9d;">Error: Minigame "${entry.name || resolvedKey}" failed to load.</p><button class="btn" onclick="this.parentElement.parentElement.innerHTML='';(${onComplete})(50)">Skip</button></div>`;
+        }
+      }, 500);
     }
   }
 
