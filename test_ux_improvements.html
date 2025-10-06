@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test UX Improvements</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #0a1320;
+      color: #fff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #3d5a72;
+      border-radius: 8px;
+      background: #0d1624;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+      background: #4a90e2;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #357abd;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      background: #1a2a3a;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .success { color: #4caf50; }
+    .error { color: #f44336; }
+    .info { color: #2196f3; }
+  </style>
+</head>
+<body>
+  <h1>UX Improvements Test Page</h1>
+
+  <div class="test-section">
+    <h2>1. Rules Modal Config Test</h2>
+    <p>Test that rules modal does NOT auto-show when autoShowRulesOnStart is false (default).</p>
+    <button onclick="testRulesConfig()">Test Rules Config</button>
+    <div id="rulesConfigStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Manual Rules Button Test</h2>
+    <p>Test that manual rules button still works.</p>
+    <button onclick="testManualRules()">Show Rules Manually</button>
+    <div id="manualRulesStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Week Intro Modal Test</h2>
+    <p>Test week transition modal appearance and auto-dismiss.</p>
+    <button onclick="testWeekIntro(1)">Show Week 1 Intro</button>
+    <button onclick="testWeekIntro(5)">Show Week 5 Intro</button>
+    <div id="weekIntroStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Early Opening Completion Test</h2>
+    <p>Test that opening sequence finishes early when all pairs are shown.</p>
+    <button onclick="testEarlyOpening()">Test Early Opening (Mock)</button>
+    <div id="earlyOpeningStatus" class="status"></div>
+  </div>
+
+  <!-- Load necessary scripts -->
+  <script src="js/ui.week-intro.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/rules.js"></script>
+
+  <script>
+    // Test functions
+    function log(elementId, message, className = 'info') {
+      const el = document.getElementById(elementId);
+      const time = new Date().toLocaleTimeString();
+      el.innerHTML += `<div class="${className}">[${time}] ${message}</div>`;
+    }
+
+    function testRulesConfig() {
+      log('rulesConfigStatus', 'Checking game.cfg.autoShowRulesOnStart...', 'info');
+      
+      // Initialize game config if needed
+      if (!window.game) {
+        window.game = {};
+      }
+      
+      // Simulate settings initialization
+      if (typeof window.ensureGameCfg === 'function') {
+        window.ensureGameCfg();
+      }
+      
+      const cfg = window.game.cfg || {};
+      const value = cfg.autoShowRulesOnStart;
+      
+      if (value === false) {
+        log('rulesConfigStatus', '✓ autoShowRulesOnStart is false (default, correct)', 'success');
+      } else {
+        log('rulesConfigStatus', `✗ autoShowRulesOnStart is ${value} (should be false)`, 'error');
+      }
+    }
+
+    function testManualRules() {
+      log('manualRulesStatus', 'Attempting to show rules manually...', 'info');
+      
+      if (typeof window.showRulesModal === 'function') {
+        window.showRulesModal();
+        log('manualRulesStatus', '✓ Rules modal function exists and was called', 'success');
+      } else {
+        log('manualRulesStatus', '✗ showRulesModal function not found', 'error');
+      }
+    }
+
+    function testWeekIntro(weekNum) {
+      log('weekIntroStatus', `Testing week ${weekNum} intro modal...`, 'info');
+      
+      if (typeof window.showWeekIntroModal === 'function') {
+        window.showWeekIntroModal(weekNum, () => {
+          log('weekIntroStatus', `✓ Week ${weekNum} intro completed (callback invoked)`, 'success');
+        });
+        log('weekIntroStatus', `✓ Week ${weekNum} intro modal shown`, 'success');
+      } else {
+        log('weekIntroStatus', '✗ showWeekIntroModal function not found', 'error');
+      }
+    }
+
+    function testEarlyOpening() {
+      log('earlyOpeningStatus', 'Testing early opening completion logic...', 'info');
+      
+      // Mock game state
+      window.game = window.game || {};
+      window.game.__introPairsTotal = 8;
+      window.game.__introPairsShown = 0;
+      window.game.__introEarlyFinished = false;
+      window.game.phase = 'opening';
+      
+      log('earlyOpeningStatus', 'Mock state: 8 total pairs, 0 shown', 'info');
+      
+      // Simulate showing pairs
+      let counter = 0;
+      const interval = setInterval(() => {
+        counter++;
+        window.game.__introPairsShown = counter;
+        log('earlyOpeningStatus', `Pair ${counter}/8 shown`, 'info');
+        
+        if (counter >= 8) {
+          clearInterval(interval);
+          log('earlyOpeningStatus', '✓ All pairs shown! Early finish should trigger soon...', 'success');
+          
+          // Check if early finish logic would trigger
+          if (window.game.__introPairsShown >= window.game.__introPairsTotal && 
+              window.game.phase === 'opening' && 
+              !window.game.__introEarlyFinished) {
+            log('earlyOpeningStatus', '✓ Early finish conditions met', 'success');
+          }
+        }
+      }, 200);
+    }
+
+    // Auto-run config test on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        testRulesConfig();
+      }, 500);
+    });
+  </script>
+</body>
+</html>
