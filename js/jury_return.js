@@ -159,8 +159,16 @@
       console.info(`[jury_return] Showing week intro for week ${currentWeek}`);
       
       global.showWeekIntroModal(currentWeek, () => {
-        global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
-        global.updateHud?.();
+        // After week intro, show twist announcement if juror return is pending
+        if (typeof global.showTwistAnnouncementIfNeeded === 'function') {
+          global.showTwistAnnouncementIfNeeded(() => {
+            global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
+            global.updateHud?.();
+          });
+        } else {
+          global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
+          global.updateHud?.();
+        }
       });
     } else {
       // No week intro needed, proceed normally

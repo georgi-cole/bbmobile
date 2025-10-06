@@ -133,6 +133,74 @@
   console.info('[ui.week-intro] showWeekIntroModal registered globally');
 
   /**
+   * Show twist announcement modal if a twist is active
+   * @param {function} callback - Function to call after twist modal dismisses
+   */
+  async function showTwistAnnouncementIfNeeded(callback) {
+    const g = global.game || {};
+    
+    // Check if a twist is active and event modal is available
+    if (typeof global.showEventModal !== 'function') {
+      if (typeof callback === 'function') callback();
+      return;
+    }
+
+    let twistConfig = null;
+
+    // Check for double eviction
+    if (g.doubleEvictionWeek || g.__twistMode === 'double') {
+      twistConfig = {
+        title: 'House Shock!',
+        emojis: '⚠️😱',
+        subtitle: 'Double Eviction Week!! Three nominees — two leave.',
+        tone: 'danger',
+        duration: 4000
+      };
+    }
+    // Check for triple eviction
+    else if (g.tripleEvictionWeek || g.__twistMode === 'triple') {
+      twistConfig = {
+        title: 'House Shock!',
+        emojis: '⚠️💥😱',
+        subtitle: 'Triple Eviction Week!!! Four nominees — three leave.',
+        tone: 'danger',
+        duration: 4000
+      };
+    }
+    // Check for juror return (based on next phase or flag)
+    else if (g.__jurorReturnPending || (g.juryHouse && g.juryHouse.length > 0 && !g.__jurorReturnDone && !g.__americaReturnDone)) {
+      // Only show if we're about to trigger a juror return
+      const alive = (typeof global.alivePlayers === 'function') ? global.alivePlayers() : [];
+      const shouldReturn = alive.length >= 4 && alive.length <= 6;
+      
+      if (shouldReturn && g.juryHouse && g.juryHouse.length > 0) {
+        twistConfig = {
+          title: 'House Shock!',
+          emojis: '👁️⚖️🔙',
+          subtitle: 'A jury member re-enters the house!',
+          tone: 'special',
+          duration: 4000
+        };
+      }
+    }
+
+    // Show twist modal if configured
+    if (twistConfig) {
+      console.info('[ui.week-intro] Showing twist announcement:', twistConfig.subtitle);
+      try {
+        await global.showEventModal(twistConfig);
+      } catch (e) {
+        console.error('[ui.week-intro] Error showing twist modal:', e);
+      }
+    }
+
+    // Call callback after twist modal (or immediately if no twist)
+    if (typeof callback === 'function') {
+      callback();
+    }
+  }
+
+  /**
    * Wrap the `startHOH` function to show the "Get Ready for Week X" modal before it starts.
    */
   function wrapStartHOH() {
@@ -143,11 +211,14 @@
         if (!g.__weekIntroShownFor || g.__weekIntroShownFor !== g.week) {
           g.__weekIntroShownFor = g.week;
           return global.showWeekIntroModal(g.week, () => {
-            try {
-              origStartHOH.apply(global, arguments);
-            } catch (e) {
-              console.error('[ui.week-intro] Error in wrapped startHOH:', e);
-            }
+            // After week intro modal, show twist announcement if needed
+            showTwistAnnouncementIfNeeded(() => {
+              try {
+                origStartHOH.apply(global, arguments);
+              } catch (e) {
+                console.error('[ui.week-intro] Error in wrapped startHOH:', e);
+              }
+            });
           });
         }
         return origStartHOH.apply(global, arguments);
@@ -158,6 +229,9 @@
       console.warn('[ui.week-intro] startHOH not found — wrapper inactive');
     }
   }
+
+  // Expose twist announcement function globally
+  global.showTwistAnnouncementIfNeeded = showTwistAnnouncementIfNeeded;
 
   /**
    * Wait until `startHOH` is defined, then wrap it.
