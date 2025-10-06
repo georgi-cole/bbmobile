@@ -49,7 +49,7 @@ This PR implements three major UX flow improvements as requested in the issue:
   - Full-screen dim overlay with z-index 999999
   - Eye emoji (👁️) icon
   - "Get Ready for Week X" text with subtitle
-  - Auto-dismisses after 2300ms then invokes callback
+  - Auto-dismisses after 5000ms then invokes callback
   - Wraps `startHOH()` to show modal when appropriate
 
 **Modified Files:**
@@ -72,7 +72,7 @@ This PR implements three major UX flow improvements as requested in the issue:
 - ✅ Music and subsequent flow preserved (intermission → HOH)
 - ✅ Week intro modal appears exactly once per week transition prior to HOH competition
 - ✅ Week intro appears after eviction, including jury return flow
-- ✅ Week intro auto-dismisses after 2.3 seconds
+- ✅ Week intro auto-dismisses after 5 seconds
 - ✅ Manual Rules button still opens rules modal
 - ✅ No uncaught errors
 - ✅ Code passes lint/TypeScript (JS style consistent)
