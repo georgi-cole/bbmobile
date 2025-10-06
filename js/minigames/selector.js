@@ -117,22 +117,58 @@
     if(g.MGKeyResolver){
       const resolved = g.MGKeyResolver.resolveGameKey(selectedGame);
       if(!resolved){
-        console.warn('[MinigameSelector] Unknown game in pool:', selectedGame, '- using fallback');
-        if(g.MinigameTelemetry){
-          g.MinigameTelemetry.logEvent('minigame.key.unknown', {
-            requestedKey: selectedGame,
-            atPhase: 'selection'
-          });
-          g.MinigameTelemetry.logEvent('minigame.fallback.used', {
-            reason: 'unknown-key',
-            requestedKey: selectedGame,
-            fallbackKey: 'quickTap'
-          });
+        console.warn('[MinigameSelector] Key not in registry/resolver:', selectedGame);
+        
+        // FALLBACK: Try legacy minigame map
+        if(g.MinigameCompatBridge){
+          const legacyResolved = g.MinigameCompatBridge.resolveToModule(selectedGame);
+          if(legacyResolved){
+            console.info('[MinigameSelector] ✓ Resolved via legacy minigame map:', selectedGame, '→', legacyResolved);
+            selectedGame = legacyResolved;
+            
+            if(g.MinigameTelemetry){
+              g.MinigameTelemetry.logEvent('minigame.resolution.legacy-map', {
+                requestedKey: selectedGame,
+                resolvedKey: legacyResolved,
+                atPhase: 'selection'
+              });
+            }
+          } else {
+            console.warn('[MinigameSelector] Unknown game in pool:', selectedGame, '- using fallback');
+            if(g.MinigameTelemetry){
+              g.MinigameTelemetry.logEvent('minigame.key.unknown', {
+                requestedKey: selectedGame,
+                atPhase: 'selection'
+              });
+              g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+                reason: 'unknown-key',
+                requestedKey: selectedGame,
+                fallbackKey: 'quickTap'
+              });
+            }
+            selectedGame = 'quickTap';
+          }
+        } else {
+          // No compat bridge, use final fallback
+          if(g.MinigameTelemetry){
+            g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+              reason: 'unknown-key-no-bridge',
+              requestedKey: selectedGame,
+              fallbackKey: 'quickTap'
+            });
+          }
+          selectedGame = 'quickTap';
         }
-        selectedGame = 'quickTap';
       } else if(resolved !== selectedGame){
         console.info('[MinigameSelector] Resolved alias:', selectedGame, '→', resolved);
         selectedGame = resolved;
+      }
+    } else if(g.MinigameCompatBridge){
+      // No resolver, try legacy map directly
+      const legacyResolved = g.MinigameCompatBridge.resolveToModule(selectedGame);
+      if(legacyResolved && legacyResolved !== selectedGame){
+        console.info('[MinigameSelector] Resolved via legacy map (no resolver):', selectedGame, '→', legacyResolved);
+        selectedGame = legacyResolved;
       }
     }
     

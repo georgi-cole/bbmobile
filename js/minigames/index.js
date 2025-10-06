@@ -65,6 +65,11 @@
    * Delegates to MinigameRegistry if available, otherwise renders directly
    * Enhanced with key resolution and fallback handling
    * 
+   * Fallback order:
+   * 1. Try registry/alias system (MGKeyResolver)
+   * 2. Try legacy minigame map (LEGACY_MINIGAME_MAP)
+   * 3. Final fallback to quickTap
+   * 
    * @param {string} key - Game key (e.g., 'quickTap', 'memoryMatch')
    * @param {HTMLElement} container - Container element
    * @param {Function} onComplete - Callback function(score)
@@ -72,26 +77,64 @@
   function render(key, container, onComplete){
     // Resolve key through resolver if available
     let resolvedKey = key;
+    let resolutionMethod = 'none';
+    
     if(g.MGKeyResolver){
       const resolved = g.MGKeyResolver.resolveGameKey(key);
       if(!resolved){
-        console.warn('[MiniGames] Unknown minigame key:', key, '- using fallback');
-        if(g.MinigameTelemetry){
-          g.MinigameTelemetry.logEvent('minigame.key.unknown', {
-            requestedKey: key,
-            atPhase: 'render'
-          });
-          g.MinigameTelemetry.logEvent('minigame.fallback.used', {
-            reason: 'unknown',
-            requestedKey: key,
-            fallbackKey: 'quickTap'
-          });
+        console.warn('[MiniGames] Key not in registry/resolver:', key);
+        
+        // FALLBACK: Try legacy minigame map
+        if(g.MinigameCompatBridge){
+          const legacyResolved = g.MinigameCompatBridge.resolveToModule(key);
+          if(legacyResolved){
+            console.info('[MiniGames] ✓ Resolved via legacy minigame map:', key, '→', legacyResolved);
+            resolvedKey = legacyResolved;
+            resolutionMethod = 'legacy-map';
+            
+            if(g.MinigameTelemetry){
+              g.MinigameTelemetry.logEvent('minigame.resolution.legacy-map', {
+                requestedKey: key,
+                resolvedKey: legacyResolved
+              });
+            }
+          } else {
+            console.warn('[MiniGames] Key not in legacy map either, using fallback');
+            if(g.MinigameTelemetry){
+              g.MinigameTelemetry.logEvent('minigame.key.unknown', {
+                requestedKey: key,
+                atPhase: 'render'
+              });
+              g.MinigameTelemetry.logEvent('minigame.fallback.used', {
+                reason: 'unknown',
+                requestedKey: key,
+                fallbackKey: 'quickTap'
+              });
+            }
+            resolvedKey = 'quickTap';
+            resolutionMethod = 'final-fallback';
+          }
+        } else {
+          // No compat bridge, final fallback
+          console.warn('[MiniGames] No compat bridge available, using quickTap');
+          resolvedKey = 'quickTap';
+          resolutionMethod = 'final-fallback';
         }
-        resolvedKey = 'quickTap';
       } else {
         resolvedKey = resolved;
+        resolutionMethod = 'registry';
         if(resolved !== key){
           console.info('[MiniGames] Resolved alias:', key, '→', resolved);
+        }
+      }
+    } else {
+      // No resolver, try legacy map directly
+      if(g.MinigameCompatBridge){
+        const legacyResolved = g.MinigameCompatBridge.resolveToModule(key);
+        if(legacyResolved){
+          console.info('[MiniGames] Resolved via legacy map (no resolver):', key, '→', legacyResolved);
+          resolvedKey = legacyResolved;
+          resolutionMethod = 'legacy-map';
         }
       }
     }
@@ -107,6 +150,16 @@
     
     if(!entry){
       console.error('[MiniGames] Unknown minigame:', resolvedKey);
+      
+      // FALLBACK: Try legacy minigame map one more time
+      if(resolutionMethod !== 'legacy-map' && g.MinigameCompatBridge){
+        const legacyResolved = g.MinigameCompatBridge.resolveToModule(key);
+        if(legacyResolved && legacyResolved !== resolvedKey){
+          console.info('[MiniGames] ✓ Second attempt via legacy map:', key, '→', legacyResolved);
+          return render(legacyResolved, container, onComplete);
+        }
+      }
+      
       if(g.MinigameTelemetry){
         g.MinigameTelemetry.logEvent('minigame.fallback.used', {
           reason: 'not-in-registry',
@@ -116,7 +169,7 @@
         });
       }
       
-      // Try quickTap as fallback
+      // Try quickTap as final fallback
       if(resolvedKey !== 'quickTap' && REGISTRY['quickTap']){
         console.warn('[MiniGames] Falling back to quickTap');
         return render('quickTap', container, onComplete);

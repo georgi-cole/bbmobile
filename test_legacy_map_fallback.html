@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Legacy Map Fallback Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a2e;
+      color: #e3ecf5;
+    }
+    .container {
+      background-color: #2a2a3e;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    h2 {
+      color: #95a9c0;
+      border-bottom: 1px solid #3a3a4e;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background-color: #1a1a2e;
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    button {
+      background-color: #83bfff;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #6aa5e6;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #2a2a3e;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success {
+      color: #4ade80;
+    }
+    .error {
+      color: #f87171;
+    }
+    .warning {
+      color: #fbbf24;
+    }
+    .info {
+      color: #60a5fa;
+    }
+    #gameContainer {
+      min-height: 300px;
+      background-color: #1a1a2e;
+      border-radius: 4px;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Legacy Minigame Map - Fallback System Test</h1>
+    <p>This page tests the legacy minigame map fallback system to ensure all keys can be resolved.</p>
+  </div>
+
+  <div class="container">
+    <h2>System Status</h2>
+    <div id="systemStatus" class="result">Loading...</div>
+  </div>
+
+  <div class="container">
+    <h2>Test: Key Resolution</h2>
+    <p>Test resolution of various key types through the fallback system</p>
+    
+    <button onclick="testKeyResolution()">Test Key Resolution</button>
+    <button onclick="testUnregisteredKey()">Test Unregistered Key</button>
+    <button onclick="testLegacyAlias()">Test Legacy Alias</button>
+    
+    <div id="resolutionResult" class="result"></div>
+  </div>
+
+  <div class="container">
+    <h2>Test: Render Fallback</h2>
+    <p>Test actual rendering with fallback system</p>
+    
+    <button onclick="renderCanonicalKey()">Render Canonical Key</button>
+    <button onclick="renderLegacyKey()">Render Legacy Key</button>
+    <button onclick="renderVariation()">Render Variation</button>
+    <button onclick="renderUnknown()">Render Unknown (Fallback)</button>
+    
+    <div id="gameContainer"></div>
+  </div>
+
+  <div class="container">
+    <h2>Test: Legacy Map Coverage</h2>
+    <p>Verify legacy map has entries for all games</p>
+    
+    <button onclick="testCoverage()">Test Coverage</button>
+    
+    <div id="coverageResult" class="result"></div>
+  </div>
+
+  <!-- Load minigame system -->
+  <script src="js/minigames/telemetry.js"></script>
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/core/key-resolver.js"></script>
+  <script src="js/minigames/core/compat-bridge.js"></script>
+  <script src="js/minigames/core/registry-bootstrap.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/minigames/index.js"></script>
+  
+  <!-- Load a few game modules for testing -->
+  <script src="js/minigames/quick-tap.js"></script>
+  <script src="js/minigames/memory-match.js"></script>
+  <script src="js/minigames/math-blitz.js"></script>
+
+  <script>
+    // Wait for system to load
+    setTimeout(checkSystemStatus, 500);
+
+    function checkSystemStatus() {
+      const status = document.getElementById('systemStatus');
+      let output = '';
+      
+      // Check core modules
+      output += '=== Core Modules ===\n';
+      output += `MinigameRegistry: ${window.MinigameRegistry ? '✓' : '✗'}\n`;
+      output += `MGKeyResolver: ${window.MGKeyResolver ? '✓' : '✗'}\n`;
+      output += `MinigameCompatBridge: ${window.MinigameCompatBridge ? '✓' : '✗'}\n`;
+      output += `MiniGamesRegistry: ${window.MiniGamesRegistry ? '✓' : '✗'}\n`;
+      output += `MinigameSelector: ${window.MinigameSelector ? '✓' : '✗'}\n\n`;
+      
+      // Check legacy map
+      if (window.MinigameCompatBridge) {
+        const legacyMap = window.MinigameCompatBridge.getLegacyMinigameMap();
+        const legacyKeys = window.MinigameCompatBridge.getAllLegacyMinigameKeys();
+        const moduleKeys = window.MinigameCompatBridge.getAllLegacyModuleKeys();
+        
+        output += '=== Legacy Minigame Map ===\n';
+        output += `Total entries: ${legacyKeys.length}\n`;
+        output += `Unique modules: ${moduleKeys.length}\n\n`;
+      }
+      
+      // Check registry
+      if (window.MinigameRegistry) {
+        const allKeys = window.MinigameRegistry.getAllKeys();
+        const implemented = window.MinigameRegistry.getImplementedGames(true);
+        
+        output += '=== Registry ===\n';
+        output += `Total games: ${allKeys.length}\n`;
+        output += `Implemented (non-retired): ${implemented.length}\n\n`;
+      }
+      
+      status.textContent = output;
+      status.className = 'result success';
+    }
+
+    function testKeyResolution() {
+      const result = document.getElementById('resolutionResult');
+      let output = '=== Key Resolution Test ===\n\n';
+      
+      const testKeys = [
+        'quickTap',          // Canonical
+        'clicker',           // Legacy alias
+        'quick-tap',         // Variation
+        'memoryMatch',       // Canonical
+        'memory',            // Legacy alias
+        'reactionRoyale',    // New game
+      ];
+      
+      output += 'Testing key resolution through fallback chain:\n\n';
+      
+      for (const key of testKeys) {
+        output += `Testing: "${key}"\n`;
+        
+        // Try resolver first
+        if (window.MGKeyResolver) {
+          const resolved = window.MGKeyResolver.resolveGameKey(key);
+          if (resolved) {
+            output += `  ✓ Resolver: ${key} → ${resolved}\n`;
+          } else {
+            output += `  ✗ Resolver: Not found\n`;
+            
+            // Try legacy map
+            if (window.MinigameCompatBridge) {
+              const legacyResolved = window.MinigameCompatBridge.resolveToModule(key);
+              if (legacyResolved) {
+                output += `  ✓ Legacy Map: ${key} → ${legacyResolved}\n`;
+              } else {
+                output += `  ✗ Legacy Map: Not found\n`;
+              }
+            }
+          }
+        }
+        
+        output += '\n';
+      }
+      
+      result.textContent = output;
+      result.className = 'result success';
+    }
+
+    function testUnregisteredKey() {
+      const result = document.getElementById('resolutionResult');
+      let output = '=== Unregistered Key Test ===\n\n';
+      
+      const unregisteredKey = 'totally-fake-game-xyz';
+      
+      output += `Testing: "${unregisteredKey}"\n\n`;
+      
+      // Check resolver
+      if (window.MGKeyResolver) {
+        const resolved = window.MGKeyResolver.resolveGameKey(unregisteredKey);
+        output += `Resolver result: ${resolved || 'null (not found)'}\n`;
+      }
+      
+      // Check legacy map
+      if (window.MinigameCompatBridge) {
+        const legacyResolved = window.MinigameCompatBridge.resolveToModule(unregisteredKey);
+        output += `Legacy map result: ${legacyResolved || 'null (not found)'}\n`;
+        output += `\nExpected: Both should return null, triggering fallback to quickTap\n`;
+      }
+      
+      result.textContent = output;
+      result.className = 'result info';
+    }
+
+    function testLegacyAlias() {
+      const result = document.getElementById('resolutionResult');
+      let output = '=== Legacy Alias Test ===\n\n';
+      
+      const legacyAliases = {
+        'clicker': 'quickTap',
+        'memory': 'memoryMatch',
+        'math': 'mathBlitz',
+        'bar': 'timingBar',
+      };
+      
+      for (const [legacy, expected] of Object.entries(legacyAliases)) {
+        output += `Testing: "${legacy}" (should resolve to "${expected}")\n`;
+        
+        if (window.MinigameCompatBridge) {
+          const resolved = window.MinigameCompatBridge.resolveToModule(legacy);
+          if (resolved === expected) {
+            output += `  ✓ Correct: ${legacy} → ${resolved}\n`;
+          } else {
+            output += `  ✗ Error: ${legacy} → ${resolved} (expected ${expected})\n`;
+          }
+        }
+        
+        output += '\n';
+      }
+      
+      result.textContent = output;
+      result.className = 'result success';
+    }
+
+    function renderCanonicalKey() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<p class="info">Rendering "quickTap" (canonical key)...</p>';
+      
+      if (window.MiniGamesRegistry && window.MiniGamesRegistry.render) {
+        window.MiniGamesRegistry.render('quickTap', container, (score) => {
+          container.innerHTML = `<p class="success">Game completed! Score: ${score}</p>`;
+        });
+      } else {
+        container.innerHTML = '<p class="error">MiniGamesRegistry.render not available</p>';
+      }
+    }
+
+    function renderLegacyKey() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<p class="info">Rendering "clicker" (legacy alias for quickTap)...</p>';
+      
+      if (window.MiniGamesRegistry && window.MiniGamesRegistry.render) {
+        window.MiniGamesRegistry.render('clicker', container, (score) => {
+          container.innerHTML = `<p class="success">Game completed! Score: ${score}</p>`;
+        });
+      } else {
+        container.innerHTML = '<p class="error">MiniGamesRegistry.render not available</p>';
+      }
+    }
+
+    function renderVariation() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<p class="info">Rendering "quick-tap" (kebab-case variation)...</p>';
+      
+      if (window.MiniGamesRegistry && window.MiniGamesRegistry.render) {
+        window.MiniGamesRegistry.render('quick-tap', container, (score) => {
+          container.innerHTML = `<p class="success">Game completed! Score: ${score}</p>`;
+        });
+      } else {
+        container.innerHTML = '<p class="error">MiniGamesRegistry.render not available</p>';
+      }
+    }
+
+    function renderUnknown() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '<p class="warning">Rendering "fake-game-xyz" (should fallback to quickTap)...</p>';
+      
+      if (window.MiniGamesRegistry && window.MiniGamesRegistry.render) {
+        window.MiniGamesRegistry.render('fake-game-xyz', container, (score) => {
+          container.innerHTML = `<p class="success">Fallback worked! Score: ${score}</p>`;
+        });
+      } else {
+        container.innerHTML = '<p class="error">MiniGamesRegistry.render not available</p>';
+      }
+    }
+
+    function testCoverage() {
+      const result = document.getElementById('coverageResult');
+      let output = '=== Legacy Map Coverage Test ===\n\n';
+      
+      if (!window.MinigameRegistry || !window.MinigameCompatBridge) {
+        result.textContent = 'Error: Required modules not loaded';
+        result.className = 'result error';
+        return;
+      }
+      
+      const allRegistryKeys = window.MinigameRegistry.getAllKeys();
+      const selectorPool = window.MinigameRegistry.getImplementedGames(true);
+      
+      output += `Registry keys: ${allRegistryKeys.length}\n`;
+      output += `Selector pool: ${selectorPool.length}\n\n`;
+      
+      output += '=== Checking Selector Pool Coverage ===\n\n';
+      
+      let allCovered = true;
+      for (const key of selectorPool) {
+        const inLegacyMap = window.MinigameCompatBridge.isInLegacyMinigameMap(key);
+        if (inLegacyMap) {
+          output += `✓ ${key}\n`;
+        } else {
+          output += `✗ ${key} - MISSING FROM LEGACY MAP\n`;
+          allCovered = false;
+        }
+      }
+      
+      output += '\n=== Checking All Registry Keys ===\n\n';
+      
+      let registryCovered = 0;
+      for (const key of allRegistryKeys) {
+        const inLegacyMap = window.MinigameCompatBridge.isInLegacyMinigameMap(key);
+        if (inLegacyMap) {
+          registryCovered++;
+        }
+      }
+      
+      output += `Covered: ${registryCovered}/${allRegistryKeys.length}\n`;
+      
+      if (allCovered && registryCovered === allRegistryKeys.length) {
+        output += '\n✓ FULL COVERAGE: All games in legacy map\n';
+        result.className = 'result success';
+      } else {
+        output += '\n✗ INCOMPLETE COVERAGE\n';
+        result.className = 'result error';
+      }
+      
+      result.textContent = output;
+    }
+  </script>
+</body>
+</html>
