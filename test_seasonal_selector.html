@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seasonal Selector Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1f2e;
+      color: #e3ecf5;
+    }
+    h1 {
+      color: #83bfff;
+    }
+    .test-section {
+      background: #242935;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2d3446;
+    }
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #357abd;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 10px;
+      background: #1a1f2e;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .success { color: #5cb85c; }
+    .error { color: #d9534f; }
+    .warning { color: #f0ad4e; }
+    .info { color: #5bc0de; }
+  </style>
+</head>
+<body>
+  <h1>Seasonal Selector & Win Calculation Tests</h1>
+
+  <div class="test-section">
+    <h2>Registry Test - Seasons Property</h2>
+    <button onclick="testRegistrySeasons()">Test Registry Seasons</button>
+    <div id="registryResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Seasonal Rotation Test</h2>
+    <button onclick="testSeasonalRotation()">Test Current Season</button>
+    <button onclick="testSeasonFiltering()">Test Season Filtering</button>
+    <button onclick="testSeasonReset()">Test Season Change Reset</button>
+    <div id="seasonResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Win Calculation Test</h2>
+    <button onclick="testWinCalculation()">Test Win Calculation</button>
+    <div id="winResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Placeholder Game Test</h2>
+    <button onclick="testPlaceholder()">Test Placeholder Module</button>
+    <div id="placeholderResult" class="result"></div>
+  </div>
+
+  <!-- Load minigame system modules -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/minigames/placeholder.js"></script>
+
+  <script>
+    // Initialize game state for testing
+    window.game = window.game || {
+      cfg: {},
+      players: []
+    };
+
+    function clear(id) {
+      document.getElementById(id).innerHTML = '';
+    }
+
+    function log(id, message, type = 'info') {
+      const output = document.getElementById(id);
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = message + '\n';
+      output.appendChild(span);
+    }
+
+    function testRegistrySeasons() {
+      clear('registryResult');
+      log('registryResult', '=== Testing Registry Seasons Property ===\n');
+      
+      try {
+        const registry = window.MinigameRegistry;
+        if (!registry) {
+          log('registryResult', '❌ MinigameRegistry not available', 'error');
+          return;
+        }
+
+        const allKeys = registry.getAllKeys();
+        log('registryResult', `Total games in registry: ${allKeys.length}`, 'info');
+
+        let withSeasons = 0;
+        let withoutSeasons = 0;
+        const seasonCounts = {
+          spring: 0,
+          summer: 0,
+          autumn: 0,
+          winter: 0
+        };
+
+        allKeys.forEach(key => {
+          const game = registry.getGame(key);
+          if (game.seasons && game.seasons.length > 0) {
+            withSeasons++;
+            game.seasons.forEach(season => {
+              seasonCounts[season]++;
+            });
+          } else {
+            withoutSeasons++;
+            log('registryResult', `  ⚠️  ${key} has no seasons property`, 'warning');
+          }
+        });
+
+        log('registryResult', '\n=== Season Coverage ===', 'info');
+        log('registryResult', `Games with seasons: ${withSeasons}`, 'success');
+        log('registryResult', `Games without seasons: ${withoutSeasons}`, withoutSeasons > 0 ? 'warning' : 'success');
+        
+        log('registryResult', '\n=== Games per Season ===', 'info');
+        Object.entries(seasonCounts).forEach(([season, count]) => {
+          log('registryResult', `  ${season}: ${count} games`, 'info');
+        });
+
+        // Test new games
+        log('registryResult', '\n=== New Games Check ===', 'info');
+        const newGames = ['swipeMaze', 'patternTrace', 'audioMatch', 'balanceBridge', 
+                         'colorMix', 'wordLadder', 'rhythmTap', 'spotTheDifference', 
+                         'logicLocks', 'astroJumper'];
+        
+        newGames.forEach(key => {
+          const game = registry.getGame(key);
+          if (game) {
+            log('registryResult', `  ✓ ${game.name}: ${game.seasons.join(', ')}`, 'success');
+          } else {
+            log('registryResult', `  ❌ ${key} not found`, 'error');
+          }
+        });
+
+        log('registryResult', '\n✅ Registry seasons test complete', 'success');
+      } catch (error) {
+        log('registryResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testSeasonalRotation() {
+      clear('seasonResult');
+      log('seasonResult', '=== Testing Seasonal Rotation ===\n');
+      
+      try {
+        const selector = window.MinigameSelector;
+        if (!selector) {
+          log('seasonResult', '❌ MinigameSelector not available', 'error');
+          return;
+        }
+
+        // Test getCurrentSeason
+        const currentSeason = selector.getCurrentSeason();
+        log('seasonResult', `Current season: ${currentSeason}`, 'success');
+
+        const now = new Date();
+        log('seasonResult', `Current month: ${now.toLocaleString('default', { month: 'long' })}`, 'info');
+
+        // Verify season logic
+        const month = now.getMonth();
+        let expectedSeason;
+        if (month >= 2 && month <= 4) expectedSeason = 'spring';
+        else if (month >= 5 && month <= 7) expectedSeason = 'summer';
+        else if (month >= 8 && month <= 10) expectedSeason = 'autumn';
+        else expectedSeason = 'winter';
+
+        if (currentSeason === expectedSeason) {
+          log('seasonResult', '✅ Season detection correct', 'success');
+        } else {
+          log('seasonResult', `❌ Season mismatch: expected ${expectedSeason}, got ${currentSeason}`, 'error');
+        }
+
+        log('seasonResult', '\n=== Season Test Complete ===', 'success');
+      } catch (error) {
+        log('seasonResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testSeasonFiltering() {
+      clear('seasonResult');
+      log('seasonResult', '=== Testing Season Filtering ===\n');
+      
+      try {
+        const registry = window.MinigameRegistry;
+        const selector = window.MinigameSelector;
+        
+        if (!registry || !selector) {
+          log('seasonResult', '❌ Required modules not available', 'error');
+          return;
+        }
+
+        const allGames = registry.getImplementedGames(true);
+        log('seasonResult', `Total implemented games: ${allGames.length}`, 'info');
+
+        const currentSeason = selector.getCurrentSeason();
+        log('seasonResult', `Current season: ${currentSeason}`, 'info');
+
+        const filtered = selector.filterBySeason(allGames);
+        log('seasonResult', `Games available in ${currentSeason}: ${filtered.length}`, 'success');
+
+        log('seasonResult', '\nFiltered games:', 'info');
+        filtered.forEach(key => {
+          const game = registry.getGame(key);
+          log('seasonResult', `  - ${game.name} (${key})`, 'info');
+        });
+
+        // Verify filtering is correct
+        log('seasonResult', '\n=== Verification ===', 'info');
+        let correctCount = 0;
+        filtered.forEach(key => {
+          const game = registry.getGame(key);
+          if (!game.seasons || game.seasons.length === 0 || game.seasons.includes(currentSeason)) {
+            correctCount++;
+          } else {
+            log('seasonResult', `  ⚠️  ${key} should not be in season ${currentSeason}`, 'warning');
+          }
+        });
+
+        if (correctCount === filtered.length) {
+          log('seasonResult', '✅ All filtered games are correct for current season', 'success');
+        } else {
+          log('seasonResult', `⚠️  ${filtered.length - correctCount} games incorrectly filtered`, 'warning');
+        }
+
+        log('seasonResult', '\n=== Filtering Test Complete ===', 'success');
+      } catch (error) {
+        log('seasonResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testSeasonReset() {
+      clear('seasonResult');
+      log('seasonResult', '=== Testing Season Change Reset ===\n');
+      
+      try {
+        const selector = window.MinigameSelector;
+        const registry = window.MinigameRegistry;
+        
+        if (!selector || !registry) {
+          log('seasonResult', '❌ Required modules not available', 'error');
+          return;
+        }
+
+        // Reset state
+        selector.reset();
+        
+        // Initialize with current season
+        const availableGames = registry.getImplementedGames(true);
+        selector.initializeSeasonPool(availableGames);
+        
+        const initialSeason = window.game.__minigameSeason;
+        log('seasonResult', `Initialized with season: ${initialSeason}`, 'info');
+        log('seasonResult', `Initial pool size: ${window.game.__minigamePool.length}`, 'info');
+
+        // Simulate a season change by manually changing the stored season
+        log('seasonResult', '\nSimulating season change...', 'info');
+        const newSeason = initialSeason === 'spring' ? 'summer' : 'spring';
+        window.game.__minigameSeason = newSeason;
+        
+        log('seasonResult', `Changed stored season to: ${newSeason}`, 'info');
+
+        // Now select a game - it should detect the season change and reset
+        const originalGetSeason = selector.getCurrentSeason;
+        selector.getCurrentSeason = () => initialSeason; // Mock to return initial season
+
+        const selected = selector.selectNext();
+        
+        // Restore original function
+        selector.getCurrentSeason = originalGetSeason;
+
+        log('seasonResult', `Selected game: ${selected}`, 'info');
+        log('seasonResult', `Pool reset detected: ${window.game.__minigameSeason === initialSeason}`, 
+            window.game.__minigameSeason === initialSeason ? 'success' : 'error');
+
+        if (window.game.__minigameSeason === initialSeason) {
+          log('seasonResult', '\n✅ Season change reset works correctly', 'success');
+        } else {
+          log('seasonResult', '\n⚠️  Season change reset may not be working', 'warning');
+        }
+
+        log('seasonResult', '\n=== Season Reset Test Complete ===', 'success');
+      } catch (error) {
+        log('seasonResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testWinCalculation() {
+      clear('winResult');
+      log('winResult', '=== Testing Win Calculation ===\n');
+      
+      try {
+        const selector = window.MinigameSelector;
+        if (!selector || !selector.calculateWin) {
+          log('winResult', '❌ MinigameSelector.calculateWin not available', 'error');
+          return;
+        }
+
+        // Test 1: Score of 0 should return 0% win chance
+        log('winResult', 'Test 1: Failed challenge (score = 0)', 'info');
+        const failedPlayer = { name: 'TestPlayer', stats: { minigameWins: 0 } };
+        const failedChance = selector.calculateWin(failedPlayer, 0);
+        log('winResult', `  Win chance: ${failedChance}%`, failedChance === 0 ? 'success' : 'error');
+        if (failedChance === 0) {
+          log('winResult', '  ✅ Failed challenge gives 0% win chance', 'success');
+        } else {
+          log('winResult', '  ❌ Failed challenge should give 0% win chance', 'error');
+        }
+
+        // Test 2: Regular player with no wins
+        log('winResult', '\nTest 2: Regular player, no wins', 'info');
+        const regularPlayer = { name: 'TestPlayer', stats: { minigameWins: 0 } };
+        const regularChance = selector.calculateWin(regularPlayer, 50);
+        log('winResult', `  Win chance: ${regularChance}%`, 'info');
+        if (regularChance === 50) {
+          log('winResult', '  ✅ Base luck is 50%', 'success');
+        } else {
+          log('winResult', `  ❌ Expected 50%, got ${regularChance}%`, 'error');
+        }
+
+        // Test 3: "YOU" player with no wins
+        log('winResult', '\nTest 3: "YOU" player, no wins', 'info');
+        const youPlayer = { name: 'YOU', stats: { minigameWins: 0 } };
+        const youChance = selector.calculateWin(youPlayer, 50);
+        log('winResult', `  Win chance: ${youChance}%`, 'info');
+        if (youChance === 25) {
+          log('winResult', '  ✅ "YOU" player has 25% base chance', 'success');
+        } else {
+          log('winResult', `  ❌ Expected 25%, got ${youChance}%`, 'error');
+        }
+
+        // Test 4: Player with wins (bonus)
+        log('winResult', '\nTest 4: Regular player with 5 wins', 'info');
+        const experiencedPlayer = { name: 'TestPlayer', stats: { minigameWins: 5 } };
+        const experiencedChance = selector.calculateWin(experiencedPlayer, 50);
+        log('winResult', `  Win chance: ${experiencedChance}%`, 'info');
+        const expectedBonus = 50 + (5 * 2); // 50 base + 10 bonus
+        if (experiencedChance === expectedBonus) {
+          log('winResult', '  ✅ Win bonus calculated correctly (2% per win)', 'success');
+        } else {
+          log('winResult', `  ❌ Expected ${expectedBonus}%, got ${experiencedChance}%`, 'error');
+        }
+
+        // Test 5: Player with many wins (capped)
+        log('winResult', '\nTest 5: Regular player with 15 wins (bonus cap test)', 'info');
+        const veteranPlayer = { name: 'TestPlayer', stats: { minigameWins: 15 } };
+        const veteranChance = selector.calculateWin(veteranPlayer, 50);
+        log('winResult', `  Win chance: ${veteranChance}%`, 'info');
+        if (veteranChance <= 70) {
+          log('winResult', '  ✅ Win bonus capped at 20%', 'success');
+        } else {
+          log('winResult', `  ❌ Win bonus should be capped at 20%`, 'error');
+        }
+
+        // Test 6: Edge case - no player stats
+        log('winResult', '\nTest 6: Player with no stats object', 'info');
+        const noStatsPlayer = { name: 'TestPlayer' };
+        const noStatsChance = selector.calculateWin(noStatsPlayer, 50);
+        log('winResult', `  Win chance: ${noStatsChance}%`, 'info');
+        if (noStatsChance === 50) {
+          log('winResult', '  ✅ Handles missing stats gracefully', 'success');
+        } else {
+          log('winResult', `  ⚠️  Expected 50%, got ${noStatsChance}%`, 'warning');
+        }
+
+        log('winResult', '\n✅ Win Calculation Test Complete', 'success');
+      } catch (error) {
+        log('winResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    function testPlaceholder() {
+      clear('placeholderResult');
+      log('placeholderResult', '=== Testing Placeholder Module ===\n');
+      
+      try {
+        if (!window.MiniGames || !window.MiniGames.placeholder) {
+          log('placeholderResult', '❌ Placeholder module not loaded', 'error');
+          return;
+        }
+
+        log('placeholderResult', '✅ Placeholder module loaded', 'success');
+        log('placeholderResult', 'Module has render function: ' + 
+            (typeof window.MiniGames.placeholder.render === 'function'), 
+            typeof window.MiniGames.placeholder.render === 'function' ? 'success' : 'error');
+
+        // Test render function
+        const testContainer = document.createElement('div');
+        let scoreReceived = null;
+        
+        const onComplete = (score) => {
+          scoreReceived = score;
+          log('placeholderResult', '\nCallback received score: ' + score, 'success');
+        };
+
+        window.MiniGames.placeholder.render(testContainer, onComplete);
+        
+        log('placeholderResult', '\n=== Rendered Content ===', 'info');
+        log('placeholderResult', 'Container has content: ' + (testContainer.innerHTML.length > 0), 
+            testContainer.innerHTML.length > 0 ? 'success' : 'error');
+
+        // Check for expected elements
+        const hasTitle = testContainer.querySelector('h3') !== null;
+        const hasMessage = testContainer.querySelector('p') !== null;
+        const hasButton = testContainer.querySelector('button') !== null;
+
+        log('placeholderResult', 'Has title: ' + hasTitle, hasTitle ? 'success' : 'error');
+        log('placeholderResult', 'Has message: ' + hasMessage, hasMessage ? 'success' : 'error');
+        log('placeholderResult', 'Has button: ' + hasButton, hasButton ? 'success' : 'error');
+
+        if (hasTitle && hasMessage && hasButton) {
+          log('placeholderResult', '\n✅ Placeholder module renders correctly', 'success');
+        }
+
+        log('placeholderResult', '\n=== Placeholder Test Complete ===', 'success');
+      } catch (error) {
+        log('placeholderResult', `❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -34,7 +34,8 @@
       module: 'count-house.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     reactionRoyale: {
@@ -48,7 +49,8 @@
       module: 'reaction-royale.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     triviaPulse: {
@@ -62,7 +64,8 @@
       module: 'trivia-pulse.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     quickTap: {
@@ -76,7 +79,8 @@
       module: 'quick-tap.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     // Migrated Legacy Games (now in module format)
@@ -91,7 +95,8 @@
       module: 'memory-match.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     mathBlitz: {
@@ -105,7 +110,8 @@
       module: 'math-blitz.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     timingBar: {
@@ -119,7 +125,8 @@
       module: 'timing-bar.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     sequenceMemory: {
@@ -133,7 +140,8 @@
       module: 'sequence-memory.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     patternMatch: {
@@ -147,7 +155,8 @@
       module: 'pattern-match.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     wordAnagram: {
@@ -161,7 +170,8 @@
       module: 'word-anagram.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     targetPractice: {
@@ -175,7 +185,8 @@
       module: 'target-practice.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     memoryPairs: {
@@ -189,7 +200,8 @@
       module: 'memory-pairs.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     estimationGame: {
@@ -203,7 +215,8 @@
       module: 'estimation-game.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     // Retired Legacy Games (implemented but not preferred)
@@ -218,7 +231,8 @@
       module: 'word-typing.js',
       minScore: 0,
       maxScore: 100,
-      retired: true
+      retired: true,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     reactionTimer: {
@@ -232,7 +246,8 @@
       module: 'reaction-timer.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     sliderPuzzle: {
@@ -246,7 +261,8 @@
       module: 'slider-puzzle.js',
       minScore: 0,
       maxScore: 100,
-      retired: true
+      retired: true,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     pathFinder: {
@@ -260,7 +276,8 @@
       module: 'path-finder.js',
       minScore: 0,
       maxScore: 100,
-      retired: true
+      retired: true,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     simonSays: {
@@ -274,7 +291,8 @@
       module: 'simon-says.js',
       minScore: 0,
       maxScore: 100,
-      retired: true
+      retired: true,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     // Phase 1: Scaffolds (coming soon)
@@ -289,7 +307,8 @@
       module: 'oteviator.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     comixSpot: {
@@ -303,7 +322,8 @@
       module: 'comix-spot.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     holdWall: {
@@ -317,7 +337,8 @@
       module: 'hold-wall.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     slipperyShuttle: {
@@ -331,7 +352,8 @@
       module: 'slippery-shuttle.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     memoryZipline: {
@@ -345,7 +367,159 @@
       module: 'memory-zipline.js',
       minScore: 0,
       maxScore: 100,
-      retired: false
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    // New Mobile-Friendly Games (placeholders)
+    swipeMaze: {
+      key: 'swipeMaze',
+      name: 'Swipe Maze',
+      description: 'Navigate through a maze using swipe gestures',
+      type: 'puzzle',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer']
+    },
+    
+    patternTrace: {
+      key: 'patternTrace',
+      name: 'Pattern Trace',
+      description: 'Trace the pattern shown on screen',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'autumn']
+    },
+    
+    audioMatch: {
+      key: 'audioMatch',
+      name: 'Audio Match',
+      description: 'Match sounds to their sources',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['summer', 'winter']
+    },
+    
+    balanceBridge: {
+      key: 'balanceBridge',
+      name: 'Balance Bridge',
+      description: 'Keep balance while crossing a virtual bridge',
+      type: 'reaction',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn']
+    },
+    
+    colorMix: {
+      key: 'colorMix',
+      name: 'Color Mix',
+      description: 'Mix colors to match the target shade',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    wordLadder: {
+      key: 'wordLadder',
+      name: 'Word Ladder',
+      description: 'Change one word to another by changing one letter at a time',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['autumn', 'winter']
+    },
+    
+    rhythmTap: {
+      key: 'rhythmTap',
+      name: 'Rhythm Tap',
+      description: 'Tap to the rhythm of the beat',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['summer', 'autumn']
+    },
+    
+    spotTheDifference: {
+      key: 'spotTheDifference',
+      name: 'Spot The Difference',
+      description: 'Find differences between two similar images',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    logicLocks: {
+      key: 'logicLocks',
+      name: 'Logic Locks',
+      description: 'Solve logic puzzles to unlock the vault',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['autumn', 'winter']
+    },
+    
+    astroJumper: {
+      key: 'astroJumper',
+      name: 'Astro Jumper',
+      description: 'Jump through space avoiding obstacles',
+      type: 'reaction',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'winter']
     }
   };
 
