@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Tap - No Helpers Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0f1419;
+      color: #e3ecf5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .test-wrapper {
+      background: #1a2332;
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-title {
+      font-size: 1.3rem;
+      color: #83bfff;
+      margin-bottom: 16px;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .status.success {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid #4caf50;
+      color: #4caf50;
+    }
+    .status.error {
+      background: rgba(244, 67, 54, 0.2);
+      border: 1px solid #f44336;
+      color: #f44336;
+    }
+    .status.warning {
+      background: rgba(255, 152, 0, 0.2);
+      border: 1px solid #ff9800;
+      color: #ff9800;
+    }
+    .status.info {
+      background: rgba(33, 150, 243, 0.2);
+      border: 1px solid #2196f3;
+      color: #2196f3;
+    }
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 16px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 32px;
+      font-size: 1rem;
+    }
+    .game-container {
+      min-height: 350px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Quick Tap - No Helpers Test</h1>
+  <div class="subtitle">Testing game without MinigameAccessibility or MinigameMobileUtils</div>
+  
+  <div class="status warning">
+    ⚠️ This test intentionally does NOT load the helper modules to verify the game works without them.
+  </div>
+  
+  <div class="status info" id="init-status">
+    Loading game module (without helpers)...
+  </div>
+  
+  <div class="test-wrapper">
+    <div class="test-title">Quick Tap Game (Basic Mode)</div>
+    <div class="game-container" id="gameContainer"></div>
+  </div>
+  
+  <div class="status info" id="completion-status" style="display: none;">
+    Waiting for game completion...
+  </div>
+
+  <!-- INTENTIONALLY NOT loading helper modules -->
+  <!-- <script src="js/minigames/accessibility.js"></script> -->
+  <!-- <script src="js/minigames/mobile-utils.js"></script> -->
+  
+  <!-- Load ONLY the minigame -->
+  <script src="js/minigames/quick-tap.js"></script>
+
+  <script>
+    const initStatus = document.getElementById('init-status');
+    const completionStatus = document.getElementById('completion-status');
+    const gameContainer = document.getElementById('gameContainer');
+    
+    // Track any console errors
+    let errorCount = 0;
+    const originalError = console.error;
+    console.error = function(...args) {
+      errorCount++;
+      originalError.apply(console, args);
+    };
+    
+    // Check what's loaded
+    const hasAccessibility = !!window.MinigameAccessibility;
+    const hasMobileUtils = !!window.MinigameMobileUtils;
+    const hasQuickTap = !!(window.MiniGames && window.MiniGames.quickTap);
+    
+    let statusMsg = 'Module Status:\n';
+    statusMsg += `${hasAccessibility ? '✗ ERROR' : '✓ CORRECT'}: MinigameAccessibility ${hasAccessibility ? 'loaded (should not be)' : 'not loaded (expected)'}\n`;
+    statusMsg += `${hasMobileUtils ? '✗ ERROR' : '✓ CORRECT'}: MinigameMobileUtils ${hasMobileUtils ? 'loaded (should not be)' : 'not loaded (expected)'}\n`;
+    statusMsg += `${hasQuickTap ? '✓ SUCCESS' : '✗ FAILED'}: Quick Tap Game ${hasQuickTap ? 'loaded' : 'NOT LOADED'}`;
+    
+    initStatus.textContent = statusMsg;
+    initStatus.className = (hasQuickTap && !hasAccessibility && !hasMobileUtils) ? 'status success' : 'status error';
+    
+    if (hasQuickTap) {
+      // Render the game
+      try {
+        window.MiniGames.quickTap.render(gameContainer, (score) => {
+          completionStatus.style.display = 'block';
+          
+          if (errorCount === 0) {
+            completionStatus.className = 'status success';
+            completionStatus.textContent = `✓ PERFECT! Game completed without any errors!\nFinal Score: ${score.toFixed(2)}\nErrors during execution: 0`;
+          } else {
+            completionStatus.className = 'status error';
+            completionStatus.textContent = `✗ Game completed but with errors!\nFinal Score: ${score.toFixed(2)}\nErrors during execution: ${errorCount}`;
+          }
+          
+          console.log('Game completed with score:', score);
+          console.log('Total errors:', errorCount);
+        });
+        
+        // Check after a brief delay
+        setTimeout(() => {
+          if (errorCount === 0) {
+            completionStatus.style.display = 'block';
+            completionStatus.className = 'status success';
+            completionStatus.textContent = '✓ Game rendered successfully without errors!\n✓ Play the game to complete the test!';
+          } else {
+            completionStatus.style.display = 'block';
+            completionStatus.className = 'status error';
+            completionStatus.textContent = `✗ Game rendered but with ${errorCount} error(s)\nCheck console for details`;
+          }
+        }, 100);
+        
+        console.log('Quick Tap game render called');
+      } catch (error) {
+        completionStatus.style.display = 'block';
+        completionStatus.className = 'status error';
+        completionStatus.textContent = `✗ Error rendering game:\n${error.message}\n\nStack: ${error.stack}`;
+        
+        console.error('Error rendering game:', error);
+      }
+    } else {
+      completionStatus.style.display = 'block';
+      completionStatus.className = 'status error';
+      completionStatus.textContent = '✗ Quick Tap game failed to load';
+    }
+  </script>
+</body>
+</html>

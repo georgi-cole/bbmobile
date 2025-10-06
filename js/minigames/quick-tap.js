@@ -1,5 +1,11 @@
 // MODULE: minigames/quick-tap.js
 // Quick Tap Race - Tap as many times as possible in 5 seconds
+//
+// SAFETY: All helper method calls are guarded with existence checks
+// - MinigameAccessibility methods: applyAria, makeAccessibleButton, announceToSR
+// - MinigameMobileUtils methods: addTapListener, vibrate
+// - onComplete callback is validated before invocation
+// Game works on desktop/mobile with or without helper modules
 
 (function(g){
   'use strict';
