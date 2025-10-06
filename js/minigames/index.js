@@ -75,6 +75,24 @@
    * @param {Function} onComplete - Callback function(score)
    */
   function render(key, container, onComplete){
+    // Early check: ensure basic system components are loaded
+    if(!g.MinigameRegistry || !g.MiniGames){
+      console.warn('[MiniGames] System not fully loaded yet. Registry:', !!g.MinigameRegistry, 'MiniGames:', !!g.MiniGames);
+      container.innerHTML = '<div style="padding:20px;text-align:center;"><p style="color:#e3ecf5;">Loading minigame system...</p></div>';
+      
+      // Retry after a short delay
+      setTimeout(() => {
+        if(g.MinigameRegistry && g.MiniGames){
+          console.info('[MiniGames] System loaded, retrying render for:', key);
+          render(key, container, onComplete);
+        } else {
+          console.error('[MiniGames] System failed to load after retry');
+          container.innerHTML = '<div style="padding:20px;text-align:center;"><p style="color:#ff6b9d;">Error: Minigame system failed to load. Please refresh the page.</p></div>';
+        }
+      }, 500);
+      return;
+    }
+    
     // Resolve key through resolver if available
     let resolvedKey = key;
     let resolutionMethod = 'none';

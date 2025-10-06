@@ -61,6 +61,17 @@
   }
 
   /**
+   * Check if minigame system is ready
+   * Returns true if all required components are loaded
+   */
+  function isMinigameSystemReady(){
+    return !!(global.MinigameRegistry && 
+              global.MinigameSelector && 
+              global.renderMinigame &&
+              global.MiniGamesRegistry);
+  }
+
+  /**
    * Pick the next minigame type using the Phase 1 unified system
    * Uses non-repeating pool selection to ensure variety within a season
    * All games are now routed through the MinigameSelector for consistent behavior
@@ -613,6 +624,23 @@
     const g=global.game; panel.innerHTML='';
     const host=document.createElement('div'); host.className='minigame-host';
     const you=global.getP?.(g.humanId);
+    
+    // Check if minigame system is ready
+    if(!isMinigameSystemReady()){
+      host.innerHTML='<div class="tiny muted">Loading minigame system...</div>';
+      panel.appendChild(host);
+      // Retry after a short delay
+      setTimeout(() => {
+        if(isMinigameSystemReady()){
+          renderHOH(panel);
+        } else {
+          console.error('[Competition] Minigame system failed to load');
+          host.innerHTML='<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+        }
+      }, 500);
+      return;
+    }
+    
     if(you && !you.evicted){
       const alive=global.alivePlayers(); const blocked=(alive.length!==4 && g.week>1)?g.lastHOHId:null;
       if(you.id!==blocked && !g.lastCompScores?.has(you.id)){
@@ -725,6 +753,23 @@
     const g=global.game; panel.innerHTML='';
     const host=document.createElement('div'); host.className='minigame-host';
     const you=global.getP?.(g.humanId);
+    
+    // Check if minigame system is ready
+    if(!isMinigameSystemReady()){
+      host.innerHTML='<div class="tiny muted">Loading minigame system...</div>';
+      panel.appendChild(host);
+      // Retry after a short delay
+      setTimeout(() => {
+        if(isMinigameSystemReady()){
+          renderF3P1(panel);
+        } else {
+          console.error('[Competition] Minigame system failed to load');
+          host.innerHTML='<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+        }
+      }, 500);
+      return;
+    }
+    
     if(you && !you.evicted && !g.lastCompScores?.has(you.id)){
       const mg=pickMinigameType();
       global.renderMinigame?.(mg,host,(base)=> submitScore(you.id, base, (0.8+(you?.skill||0.5)*0.6), `F3-P1/${mg}`));
@@ -774,9 +819,26 @@
       if(p.human){
         const host=document.querySelector('#panel .minigame-host')||document.querySelector('#panel');
         if(host){
-          const mg=pickMinigameType(); const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
-          wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 2.</div>'; host.appendChild(wrap);
-          global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P2/${mg}`));
+          // Check if minigame system is ready before rendering
+          if(!isMinigameSystemReady()){
+            const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
+            wrap.innerHTML='<div class="tiny muted">Loading minigame system...</div>'; host.appendChild(wrap);
+            // Retry after a short delay
+            setTimeout(() => {
+              if(isMinigameSystemReady()){
+                wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 2.</div>';
+                const mg=pickMinigameType();
+                global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P2/${mg}`));
+              } else {
+                console.error('[Competition] Minigame system failed to load');
+                wrap.innerHTML='<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+              }
+            }, 500);
+          } else {
+            const mg=pickMinigameType(); const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
+            wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 2.</div>'; host.appendChild(wrap);
+            global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P2/${mg}`));
+          }
         }
       } else {
         setTimeout(()=>{ if(g.phase!=='final3_comp2') return;
