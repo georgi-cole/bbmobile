@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minigame E2E Competition Tests</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1f2e 0%, #2a3f5f 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+      color: #4ecdc4;
+    }
+    .description {
+      margin-bottom: 30px;
+      opacity: 0.8;
+    }
+    .test-controls {
+      background: #0f1626;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #2a3f5f;
+    }
+    .test-controls h2 {
+      margin-bottom: 15px;
+      color: #4ecdc4;
+    }
+    .control-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    label {
+      min-width: 200px;
+    }
+    input[type="number"] {
+      background: #1a1f2e;
+      border: 1px solid #2a3f5f;
+      color: #e3ecf5;
+      padding: 8px 12px;
+      border-radius: 4px;
+      width: 120px;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .result {
+      background: #0f1626;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #2a3f5f;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      max-height: 600px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    .success { color: #4ecdc4; }
+    .error { color: #ff6b9d; }
+    .warning { color: #ffa500; }
+    .info { color: #e3ecf5; }
+    .progress {
+      background: #0f1626;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border: 1px solid #2a3f5f;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 30px;
+      background: #1a1f2e;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4ecdc4 0%, #667eea 100%);
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: #0f1626;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #2a3f5f;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #4ecdc4;
+      margin: 10px 0;
+    }
+    .stat-label {
+      opacity: 0.8;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Minigame E2E Competition Tests</h1>
+    <p class="description">
+      End-to-end test harness that guarantees every competition launches a real, working minigame.
+      Tests for fallback prevention, interactivity, mobile-friendliness, variety, and accessibility.
+    </p>
+
+    <div class="test-controls">
+      <h2>Test Configuration</h2>
+      <div class="control-group">
+        <label for="numCompetitions">Number of Competitions:</label>
+        <input type="number" id="numCompetitions" value="100" min="10" max="1000">
+      </div>
+      <div class="control-group">
+        <button id="btnRunTests" onclick="runTests()">▶ Run E2E Tests</button>
+        <button id="btnRunQuick" onclick="runQuickTest()">⚡ Quick Test (10 competitions)</button>
+        <button id="btnExport" onclick="exportResults()" disabled>📥 Export Results</button>
+      </div>
+    </div>
+
+    <div id="progress" class="progress" style="display: none;">
+      <div id="progressText">Running tests...</div>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill" style="width: 0%">0%</div>
+      </div>
+    </div>
+
+    <div id="stats" class="stats-grid" style="display: none;">
+      <div class="stat-card">
+        <div class="stat-label">Competitions</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Passed</div>
+        <div class="stat-value" id="statPassed" style="color: #4ecdc4;">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Failed</div>
+        <div class="stat-value" id="statFailed" style="color: #ff6b9d;">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pass Rate</div>
+        <div class="stat-value" id="statRate">0%</div>
+      </div>
+    </div>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <!-- Load all required modules -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/minigames/scoring.js"></script>
+  <script src="js/minigames/mobile-utils.js"></script>
+  <script src="js/minigames/telemetry.js"></script>
+  <script src="js/minigames/error-handler.js"></script>
+
+  <!-- Load core modules -->
+  <script src="js/minigames/core/key-resolver.js"></script>
+  <script src="js/minigames/core/registry-bootstrap.js"></script>
+  <script src="js/minigames/core/lifecycle.js"></script>
+  <script src="js/minigames/core/watchdog.js"></script>
+
+  <!-- Load all minigame modules -->
+  <script src="js/minigames/count-house.js"></script>
+  <script src="js/minigames/reaction-royale.js"></script>
+  <script src="js/minigames/trivia-pulse.js"></script>
+  <script src="js/minigames/quick-tap.js"></script>
+  <script src="js/minigames/memory-match.js"></script>
+  <script src="js/minigames/math-blitz.js"></script>
+  <script src="js/minigames/timing-bar.js"></script>
+  <script src="js/minigames/sequence-memory.js"></script>
+  <script src="js/minigames/pattern-match.js"></script>
+  <script src="js/minigames/word-anagram.js"></script>
+  <script src="js/minigames/target-practice.js"></script>
+  <script src="js/minigames/memory-pairs.js"></script>
+  <script src="js/minigames/estimation-game.js"></script>
+  <script src="js/minigames/reaction-timer.js"></script>
+
+  <!-- Load test modules -->
+  <script src="startup/minigame-registry-audit.js"></script>
+  <script src="tests/minigame-competition.e2e.js"></script>
+
+  <script>
+    let currentResults = null;
+
+    function log(text, type = 'info') {
+      const result = document.getElementById('result');
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = text + '\n';
+      result.appendChild(span);
+      result.scrollTop = result.scrollHeight;
+    }
+
+    function clear() {
+      document.getElementById('result').innerHTML = '';
+    }
+
+    function updateProgress(current, total) {
+      const percent = Math.round((current / total) * 100);
+      const fill = document.getElementById('progressFill');
+      fill.style.width = percent + '%';
+      fill.textContent = percent + '%';
+      
+      document.getElementById('progressText').textContent = 
+        `Running tests... ${current}/${total} competitions completed`;
+    }
+
+    function updateStats(results) {
+      document.getElementById('statTotal').textContent = results.competitions;
+      document.getElementById('statPassed').textContent = results.passed;
+      document.getElementById('statFailed').textContent = results.failed;
+      
+      const passRate = results.competitions > 0 
+        ? (results.passed / results.competitions * 100).toFixed(1) 
+        : '0';
+      document.getElementById('statRate').textContent = passRate + '%';
+      
+      // Color code the pass rate
+      const rateEl = document.getElementById('statRate');
+      if(parseFloat(passRate) === 100) {
+        rateEl.style.color = '#4ecdc4';
+      } else if(parseFloat(passRate) >= 90) {
+        rateEl.style.color = '#ffa500';
+      } else {
+        rateEl.style.color = '#ff6b9d';
+      }
+    }
+
+    async function runTests() {
+      const numCompetitions = parseInt(document.getElementById('numCompetitions').value);
+      
+      if(numCompetitions < 10 || numCompetitions > 1000) {
+        alert('Please enter a number between 10 and 1000');
+        return;
+      }
+
+      // Disable buttons
+      document.getElementById('btnRunTests').disabled = true;
+      document.getElementById('btnRunQuick').disabled = true;
+      document.getElementById('btnExport').disabled = true;
+
+      // Show progress
+      document.getElementById('progress').style.display = 'block';
+      document.getElementById('stats').style.display = 'grid';
+      
+      clear();
+
+      try {
+        // Run audit first
+        log('='.repeat(70));
+        log('🔍 Running startup audit...', 'info');
+        log('='.repeat(70) + '\n');
+        
+        if(window.MinigameRegistryAudit) {
+          const auditResult = window.MinigameRegistryAudit.performAudit(false);
+          
+          if(auditResult.passed) {
+            log('✅ Startup audit PASSED\n', 'success');
+          } else {
+            log('❌ Startup audit FAILED', 'error');
+            auditResult.critical.forEach(c => log(`   ${c}`, 'error'));
+            log('\n');
+          }
+        }
+
+        // Run E2E tests
+        log('='.repeat(70));
+        log('🧪 Starting E2E Competition Tests', 'info');
+        log('='.repeat(70) + '\n');
+
+        // Intercept console.log to show progress
+        const originalLog = console.log;
+        console.log = function(...args) {
+          const text = args.join(' ');
+          if(text.includes('Progress:')) {
+            const match = text.match(/(\d+)\/(\d+)/);
+            if(match) {
+              updateProgress(parseInt(match[1]), parseInt(match[2]));
+            }
+          }
+          originalLog.apply(console, args);
+        };
+
+        currentResults = await window.MinigameE2ETests.runE2ETests(numCompetitions);
+        
+        // Restore console.log
+        console.log = originalLog;
+
+        updateStats(currentResults);
+
+        // Log results to UI
+        log('\n' + '='.repeat(70));
+        log('📊 FINAL RESULTS', 'info');
+        log('='.repeat(70) + '\n');
+        
+        log(`Competitions: ${currentResults.competitions}`, 'info');
+        log(`Passed: ${currentResults.passed} (${(currentResults.passed / currentResults.competitions * 100).toFixed(1)}%)`, 
+            currentResults.passed === currentResults.competitions ? 'success' : 'warning');
+        log(`Failed: ${currentResults.failed} (${(currentResults.failed / currentResults.competitions * 100).toFixed(1)}%)`, 
+            currentResults.failed > 0 ? 'error' : 'info');
+        log('');
+        
+        log('Test Breakdown:', 'info');
+        log(`  No Fallback: ${currentResults.tests.noFallback.passed}/${currentResults.competitions} passed`, 
+            currentResults.tests.noFallback.failed === 0 ? 'success' : 'error');
+        log(`  Interactive: ${currentResults.tests.interactive.passed}/${currentResults.competitions} passed`, 
+            currentResults.tests.interactive.failed === 0 ? 'success' : 'error');
+        log(`  Variety: ${currentResults.tests.variety.passed > 0 ? 'PASSED' : 'FAILED'}`, 
+            currentResults.tests.variety.passed > 0 ? 'success' : 'error');
+        log(`  Mobile: ${currentResults.tests.mobile.passed} mobile tests passed`, 'info');
+        log(`  Accessibility: ${currentResults.tests.accessibility.passed} accessibility checks passed`, 'info');
+        log('');
+
+        if(currentResults.failed === 0 && currentResults.tests.variety.passed > 0) {
+          log('✅ ALL TESTS PASSED!', 'success');
+          log('   Every competition launched a real, working minigame', 'success');
+        } else {
+          log('❌ SOME TESTS FAILED', 'error');
+          if(currentResults.errors.length > 0) {
+            log('\nFirst 5 errors:', 'error');
+            currentResults.errors.slice(0, 5).forEach(err => {
+              log(`  Competition ${err.competition} (${err.gameKey}):`, 'error');
+              err.errors.forEach(e => log(`    - ${e}`, 'error'));
+            });
+          }
+        }
+
+        document.getElementById('btnExport').disabled = false;
+
+      } catch(error) {
+        log(`\n❌ Test execution error: ${error.message}`, 'error');
+        console.error(error);
+      } finally {
+        // Re-enable buttons
+        document.getElementById('btnRunTests').disabled = false;
+        document.getElementById('btnRunQuick').disabled = false;
+        document.getElementById('progress').style.display = 'none';
+      }
+    }
+
+    async function runQuickTest() {
+      document.getElementById('numCompetitions').value = 10;
+      await runTests();
+    }
+
+    function exportResults() {
+      if(!currentResults) {
+        alert('No results to export. Run tests first.');
+        return;
+      }
+
+      const json = JSON.stringify(currentResults, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `e2e-results-${new Date().toISOString()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Run startup audit on page load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        log('Page loaded. Ready to run tests.\n', 'info');
+        log('Click "Run E2E Tests" to start, or "Quick Test" for a 10-competition test.\n', 'info');
+      }, 500);
+    });
+  </script>
+</body>
+</html>

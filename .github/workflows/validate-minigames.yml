@@ -6,11 +6,17 @@ on:
     paths:
       - 'js/minigames/**'
       - 'scripts/validate-minigame-keys.mjs'
+      - 'scripts/test-e2e-competitions.mjs'
+      - 'tests/minigame-competition.e2e.js'
+      - 'startup/minigame-registry-audit.js'
   pull_request:
     branches: [ main ]
     paths:
       - 'js/minigames/**'
       - 'scripts/validate-minigame-keys.mjs'
+      - 'scripts/test-e2e-competitions.mjs'
+      - 'tests/minigame-competition.e2e.js'
+      - 'startup/minigame-registry-audit.js'
 
 jobs:
   validate:
@@ -32,3 +38,6 @@ jobs:
     
     - name: Audit Minigame Keys (informational)
       run: node scripts/audit-minigame-keys.mjs || true
+    
+    - name: Validate E2E Test Structure
+      run: node scripts/test-e2e-competitions.mjs
