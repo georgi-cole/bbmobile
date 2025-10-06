@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Modal Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: #0a0e14;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin-bottom: 30px;
+    }
+    .test-section {
+      background: #1a2530;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #2a3540;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #4a9eff;
+    }
+    .test-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #3a7bd5;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #4a8be5;
+    }
+    button.danger {
+      background: #d53a3a;
+    }
+    button.danger:hover {
+      background: #e54a4a;
+    }
+    button.special {
+      background: #8a3ad5;
+    }
+    button.special:hover {
+      background: #9a4ae5;
+    }
+    button.ok {
+      background: #3ad56a;
+    }
+    button.ok:hover {
+      background: #4ae57a;
+    }
+    .description {
+      color: #8a9fb5;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      background: #0a1520;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      min-height: 40px;
+      color: #6a8fa5;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎭 Event Modal System Test</h1>
+    
+    <div class="test-section">
+      <h2>Twist Announcements</h2>
+      <div class="description">Test twist announcement modals with different emojis and tones</div>
+      <div class="test-buttons">
+        <button class="danger" onclick="testDoubleEviction()">Double Eviction</button>
+        <button class="danger" onclick="testTripleEviction()">Triple Eviction</button>
+        <button class="special" onclick="testJurorReturn()">Juror Return</button>
+      </div>
+      <div class="status" id="twist-status">Click a button to test twist modals</div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Public Favourite</h2>
+      <div class="description">Test celebratory Public Favourite announcement modal</div>
+      <div class="test-buttons">
+        <button class="special" onclick="testPublicFavourite()">Fan Favourite</button>
+      </div>
+      <div class="status" id="pf-status">Click to test Public Favourite modal</div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Custom Modals</h2>
+      <div class="description">Test custom event modals with different tones and configurations</div>
+      <div class="test-buttons">
+        <button onclick="testCustomNeutral()">Neutral</button>
+        <button class="danger" onclick="testCustomDanger()">Danger</button>
+        <button class="ok" onclick="testCustomOK()">Success</button>
+        <button class="special" onclick="testCustomSpecial()">Special</button>
+      </div>
+      <div class="status" id="custom-status">Click to test custom modals</div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Modal Queue</h2>
+      <div class="description">Test sequential modal display (queue system)</div>
+      <div class="test-buttons">
+        <button onclick="testModalQueue()">Queue 3 Modals</button>
+        <button class="danger" onclick="testClearQueue()">Clear Queue</button>
+      </div>
+      <div class="status" id="queue-status">Click to test modal queueing</div>
+    </div>
+  </div>
+
+  <script src="js/ui.event-modal.js"></script>
+  <script>
+    function log(id, message) {
+      const el = document.getElementById(id);
+      if (el) {
+        const timestamp = new Date().toLocaleTimeString();
+        el.textContent = `[${timestamp}] ${message}`;
+      }
+    }
+
+    async function testDoubleEviction() {
+      log('twist-status', 'Showing Double Eviction modal...');
+      await window.showEventModal({
+        title: 'House Shock!',
+        emojis: '⚠️😱',
+        subtitle: 'Double Eviction Week!! Three nominees — two leave.',
+        tone: 'danger',
+        duration: 4000,
+        callback: () => log('twist-status', 'Double Eviction modal dismissed')
+      });
+    }
+
+    async function testTripleEviction() {
+      log('twist-status', 'Showing Triple Eviction modal...');
+      await window.showEventModal({
+        title: 'House Shock!',
+        emojis: '⚠️💥😱',
+        subtitle: 'Triple Eviction Week!!! Four nominees — three leave.',
+        tone: 'danger',
+        duration: 4000,
+        callback: () => log('twist-status', 'Triple Eviction modal dismissed')
+      });
+    }
+
+    async function testJurorReturn() {
+      log('twist-status', 'Showing Juror Return modal...');
+      await window.showEventModal({
+        title: 'House Shock!',
+        emojis: '👁️⚖️🔙',
+        subtitle: 'A jury member re-enters the house!',
+        tone: 'special',
+        duration: 4000,
+        callback: () => log('twist-status', 'Juror Return modal dismissed')
+      });
+    }
+
+    async function testPublicFavourite() {
+      log('pf-status', 'Showing Public Favourite modal...');
+      await window.showEventModal({
+        title: 'Fan Favourite!',
+        emojis: '🏆⭐🥇',
+        subtitle: 'Public vote to determine favourite houseguest!',
+        tone: 'special',
+        duration: 4000,
+        callback: () => log('pf-status', 'Public Favourite modal dismissed')
+      });
+    }
+
+    async function testCustomNeutral() {
+      log('custom-status', 'Showing neutral modal...');
+      await window.showEventModal({
+        title: 'Information',
+        emojis: 'ℹ️',
+        subtitle: 'This is a neutral information modal',
+        tone: 'neutral',
+        duration: 3000
+      });
+      log('custom-status', 'Neutral modal dismissed');
+    }
+
+    async function testCustomDanger() {
+      log('custom-status', 'Showing danger modal...');
+      await window.showEventModal({
+        title: 'Warning!',
+        emojis: '🚨',
+        subtitle: 'This is a danger/warning modal',
+        tone: 'danger',
+        duration: 3000
+      });
+      log('custom-status', 'Danger modal dismissed');
+    }
+
+    async function testCustomOK() {
+      log('custom-status', 'Showing success modal...');
+      await window.showEventModal({
+        title: 'Success!',
+        emojis: '✅',
+        subtitle: 'This is a success modal',
+        tone: 'ok',
+        duration: 3000
+      });
+      log('custom-status', 'Success modal dismissed');
+    }
+
+    async function testCustomSpecial() {
+      log('custom-status', 'Showing special modal...');
+      await window.showEventModal({
+        title: 'Special Event',
+        emojis: '🌟',
+        subtitle: 'This is a special event modal',
+        tone: 'special',
+        duration: 3000
+      });
+      log('custom-status', 'Special modal dismissed');
+    }
+
+    async function testModalQueue() {
+      log('queue-status', 'Queueing 3 modals...');
+      
+      // Queue 3 modals - they should appear sequentially
+      window.showEventModal({
+        title: 'First Modal',
+        emojis: '1️⃣',
+        subtitle: 'This is the first modal in the queue',
+        tone: 'neutral',
+        duration: 2500
+      });
+      
+      window.showEventModal({
+        title: 'Second Modal',
+        emojis: '2️⃣',
+        subtitle: 'This is the second modal in the queue',
+        tone: 'ok',
+        duration: 2500
+      });
+      
+      await window.showEventModal({
+        title: 'Third Modal',
+        emojis: '3️⃣',
+        subtitle: 'This is the third and final modal in the queue',
+        tone: 'special',
+        duration: 2500
+      });
+      
+      log('queue-status', 'All 3 modals completed!');
+    }
+
+    function testClearQueue() {
+      if (typeof window.clearEventModalQueue === 'function') {
+        window.clearEventModalQueue();
+        log('queue-status', 'Modal queue cleared');
+      } else {
+        log('queue-status', 'Clear function not available');
+      }
+    }
+
+    // Initial log
+    console.log('[Test] Event modal system loaded');
+    console.log('[Test] Available functions:', {
+      showEventModal: typeof window.showEventModal,
+      clearEventModalQueue: typeof window.clearEventModalQueue
+    });
+  </script>
+</body>
+</html>
