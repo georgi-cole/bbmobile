@@ -130,9 +130,9 @@ try {
     'Should have correct title text'
   );
   test(
-    'Auto-dismiss after ~2300ms',
-    weekIntroContent.includes('2300'),
-    'Should auto-dismiss after 2300ms'
+    'Auto-dismiss after ~5000ms',
+    weekIntroContent.includes('5000'),
+    'Should auto-dismiss after 5000ms (5 seconds)'
   );
   test(
     'High z-index for overlay',
