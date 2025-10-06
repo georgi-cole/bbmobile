@@ -16,6 +16,18 @@ This is the **complete Phase 0-8 implementation** as specified in the hybrid uni
 
 ## Architecture
 
+### Important: Legacy Minigame Map (Fallback System)
+
+⚠️ **CRITICAL**: The system includes a **Legacy Minigame Map** as an ultimate fallback to guarantee 100% competition coverage. This ensures no "Unknown minigame" errors ever reach users.
+
+**See [LEGACY_MINIGAME_MAP.md](./LEGACY_MINIGAME_MAP.md) for complete documentation on:**
+- Why the legacy map exists
+- How to maintain it when adding new games
+- Resolution order and fallback behavior
+- When it can be removed
+
+**When adding new minigames, you MUST update BOTH the registry AND the legacy map.**
+
 ### Core Modules (Phase 0-1)
 
 #### 1. Registry (`js/minigames/registry.js`)
@@ -268,18 +280,36 @@ All game modules follow this consistent structure:
 
 ## Integration
 
+### Quick Start: Adding a New Minigame
+
+**IMPORTANT**: When adding a new minigame, you must update **TWO** systems: the registry AND the legacy map. See [LEGACY_MINIGAME_MAP.md](./LEGACY_MINIGAME_MAP.md) for complete instructions.
+
+**Quick checklist:**
+1. ✅ Add entry to `js/minigames/registry.js` with `implemented: true`
+2. ✅ Add ALL key variations to `LEGACY_MINIGAME_MAP` in `js/minigames/core/compat-bridge.js`
+3. ✅ Create module file `js/minigames/your-game.js` with `g.MiniGames.yourGame = { render }`
+4. ✅ Run `npm run test:minigames` to validate coverage
+5. ✅ Test in browser with `test_legacy_map_fallback.html`
+
 ### Rendering a Minigame
 
 ```javascript
 // Get game key from selector
 const gameKey = MinigameSelector.selectNext();
 
-// Render using registry
+// Render using registry (with automatic fallback)
 MiniGamesRegistry.render(gameKey, containerElement, function(score) {
   console.log('Game completed with score:', score);
   // Process score...
 });
 ```
+
+**Resolution order:**
+1. Try `MGKeyResolver` (registry/alias system)
+2. Fallback to `LEGACY_MINIGAME_MAP` if not found
+3. Final fallback to `'quickTap'`
+
+This 3-tier system guarantees **zero "Unknown minigame" errors** for users.
 
 ### Legacy Compatibility
 
@@ -687,6 +717,18 @@ For issues or questions:
 
 **Automated Scripts:**
 ```bash
+# Validate minigame keys and registry
+npm run validate:minigames
+
+# Validate legacy map coverage (NEW)
+npm run validate:legacy-map
+
+# Runtime validation simulation
+npm run test:runtime
+
+# Full minigame test suite
+npm run test:minigames
+
 # Generate manifest
 node scripts/generate-minigame-manifest.mjs
 
@@ -698,9 +740,11 @@ node scripts/readiness-checklist.mjs
 - `test_minigame_unified.html` - Complete system validation
 - `test_minigame_selector.html` - Selector tests
 - `test_minigame_telemetry.html` - Telemetry & debug
+- `test_legacy_map_fallback.html` - Legacy map fallback testing ⭐ NEW
 
 ### Documentation
 
+- [Legacy Minigame Map Guide](./LEGACY_MINIGAME_MAP.md) - Fallback system & maintenance ⭐ NEW
 - [Scoring Guide](./minigames-scoring.md) - Normalization and fairness
 - [Telemetry Guide](./minigames-telemetry.md) - Event logging
 - [Accessibility Guide](./minigames-accessibility.md) - WCAG compliance
