@@ -333,7 +333,34 @@
     /* Fade out animation for tally removal */
     .fadeOutFast{ opacity:0; transition:opacity .45s ease; }
 
-    @media (max-width: 1120px){ .finalFaceoff{ grid-template-columns:1fr; gap:14px } }
+    /* Mobile responsive: stack vertically on narrow screens */
+    @media (max-width: 640px){ 
+      .finalFaceoff{ 
+        grid-template-columns:1fr; 
+        gap:16px;
+        padding:16px 8px;
+      }
+      .fo-slot{ 
+        width:100%;
+        max-width:320px;
+        margin:0 auto;
+      }
+      .fo-avatar{
+        width:clamp(120px,32vw,180px);
+        height:clamp(120px,32vw,180px);
+      }
+      .fo-crown{
+        font-size:36px;
+        top:-40px;
+      }
+      .fo-check-card .check-icon{
+        font-size:64px;
+      }
+    }
+    
+    @media (max-width: 1120px) and (min-width: 641px){ 
+      .finalFaceoff{ grid-template-columns:1fr; gap:14px } 
+    }
     `;
     const style=document.createElement('style'); style.id='faceoff-css'; style.textContent=css; document.head.appendChild(style);
   })();
