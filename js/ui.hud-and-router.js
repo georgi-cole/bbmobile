@@ -1256,8 +1256,16 @@ header.innerHTML = `
     game.endAt=Date.now()+seconds*1000; const total=seconds*1000;
     // Expose a canonical phase end pointer used by other modules (e.g., veto auto-submit)
     game.phaseEndsAt = game.endAt;
+    // Track pause state
+    game.timerPaused = false;
+    game.pausedTimeRemaining = null;
 
     function tick(){
+      // Skip ticking if paused
+      if(game.timerPaused){
+        return;
+      }
+      
       const rem=game.endAt-Date.now();
       if(rem<=0){
         clearInterval(tickHandle); setClock('00:00'); if(bar) bar.style.width='0%';
@@ -1274,7 +1282,31 @@ header.innerHTML = `
     }
     tickHandle=setInterval(tick,200); tick();
   }
+  
+  // Pause the phase timer
+  function pausePhaseTimer(){
+    const game = g.game;
+    if(!game || game.timerPaused) return;
+    game.timerPaused = true;
+    game.pausedTimeRemaining = game.endAt - Date.now();
+    console.info('[phase] timer paused, remaining:', game.pausedTimeRemaining);
+  }
+  
+  // Resume the phase timer
+  function resumePhaseTimer(){
+    const game = g.game;
+    if(!game || !game.timerPaused) return;
+    game.timerPaused = false;
+    if(game.pausedTimeRemaining != null){
+      game.endAt = Date.now() + game.pausedTimeRemaining;
+      game.phaseEndsAt = game.endAt;
+      console.info('[phase] timer resumed, new endAt:', game.endAt);
+    }
+  }
+  
   g.setPhase = setPhase;
+  g.pausePhaseTimer = pausePhaseTimer;
+  g.resumePhaseTimer = resumePhaseTimer;
 
   function defaultAdvance(phase){
     try{
