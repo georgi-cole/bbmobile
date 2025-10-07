@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Test: New Jury Vote UI Refactor</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      margin: 0;
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: #83bfff; 
+      font-size: clamp(1.2rem, 4vw, 2rem);
+    }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover { background: #4876c2; }
+    button:disabled { background: #2a3d52; opacity: 0.5; cursor: not-allowed; }
+    
+    /* Simulate finale layout with auto-fit */
+    .tv-sim { 
+      position: relative; 
+      background: #0a0f16; 
+      border-radius: 10px; 
+      padding: 20px;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    
+    /* Centering wrapper */
+    .fo-center { 
+      width: 100%; 
+      display: flex; 
+      justify-content: center; 
+    }
+    
+    /* Auto-fit wrapper */
+    .fo-fit {
+      position: relative;
+      transform-origin: top center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Message belt - stacking bubbles */
+    .fo-belt { 
+      width: 100%; 
+      min-height: 46px; 
+      display: flex; 
+      flex-direction: column;
+      align-items: center; 
+      justify-content: flex-start;
+      gap: 6px;
+      pointer-events: none; 
+      z-index: 1;
+      max-height: 180px;
+      overflow: hidden;
+    }
+    
+    .fo-bubble { 
+      background: rgba(0,0,0,.65); 
+      padding: 8px 12px; 
+      border-radius: 10px; 
+      font-size: clamp(12px,1.3vw,16px); 
+      line-height: 1.25; 
+      color: #e8f9ff; 
+      text-align: center; 
+      max-width: 92%; 
+      box-shadow: 0 6px 18px rgba(0,0,0,.45); 
+      opacity: 0; 
+      transform: translateY(-6px) scale(0.95); 
+      transition: opacity .3s ease, transform .3s ease;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .fo-bubble.show { 
+      opacity: 1; 
+      transform: translateY(0) scale(1);
+    }
+    
+    .fo-bubble.fo-statement strong { 
+      color: #ffdc8b; 
+      font-weight: 700; 
+    }
+    
+    /* Finalist grid */
+    .finalFaceoff {
+      position: relative;
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(14px, 2vw, 24px);
+      align-items: start;
+      justify-items: center;
+      width: auto;
+      max-width: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      min-height: 280px;
+    }
+    
+    .fo-slot {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 8px;
+      align-items: center;
+      justify-items: center;
+      padding: 10px 12px;
+      width: clamp(140px, 24vw, 280px);
+      border-radius: 14px;
+      background: rgba(255,255,255,.04);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+      transition: box-shadow .25s ease;
+      overflow: visible;
+    }
+    
+    .fo-slot.fo-leader {
+      box-shadow: inset 0 0 0 2px #4dd, 0 0 24px rgba(0,255,230,.25);
+    }
+    
+    .fo-avatar {
+      width: clamp(80px, 15vw, 170px);
+      height: clamp(80px, 15vw, 170px);
+      object-fit: cover;
+      border-radius: 12px;
+      background: #111;
+      box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+    
+    .fo-name {
+      font-size: clamp(14px, 1.4vw, 18px);
+      font-weight: 700;
+      letter-spacing: .3px;
+      text-align: center;
+    }
+    
+    .fo-votes {
+      font-size: clamp(15px, 1.6vw, 22px);
+      font-weight: 800;
+      background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.65));
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+    
+    /* Crown animation */
+    .fo-crown {
+      position: absolute;
+      top: -45px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 42px;
+      z-index: 5;
+      opacity: 0;
+      animation: crownDrop 0.6s ease-out forwards;
+      filter: drop-shadow(0 4px 12px rgba(255,215,0,0.4));
+    }
+    
+    @keyframes crownDrop {
+      0% { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.5); }
+      60% { transform: translateX(-50%) translateY(3px) scale(1.1); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    }
+    
+    /* Check card */
+    .fo-check-card {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(16,28,40,0.95), rgba(10,20,30,0.98));
+      border-radius: 12px;
+      z-index: 6;
+      opacity: 0;
+      animation: checkSlideIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s forwards;
+    }
+    
+    .fo-check-card .check-icon {
+      font-size: 72px;
+      animation: checkPulse 0.6s ease-in-out 1.3s;
+    }
+    
+    @keyframes checkSlideIn {
+      0% { opacity: 0; transform: translateX(-100%) scale(0.8); }
+      100% { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    
+    @keyframes checkPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+    
+    .fo-ribbon {
+      position: absolute;
+      top: -10px;
+      left: 12px;
+      background: rgba(0,0,0,.7);
+      border: 1px solid rgba(255,255,255,.18);
+      color: #e9fcff;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.35);
+      z-index: 3;
+    }
+    
+    .fo-ribbon.right {
+      left: auto;
+      right: 12px;
+    }
+    
+    .info-box {
+      background: #1a2942;
+      border: 1px solid #3e6ba8;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 0.9rem;
+    }
+    
+    .info-box strong {
+      color: #83bfff;
+    }
+    
+    .viewport-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(26, 41, 66, 0.95);
+      border: 1px solid #3e6ba8;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 11px;
+      z-index: 1000;
+      color: #83bfff;
+    }
+    
+    /* Mobile optimizations */
+    @media (max-width: 375px) {
+      .fo-slot {
+        padding: 8px;
+      }
+      .fo-crown {
+        font-size: 32px;
+        top: -35px;
+      }
+      .fo-check-card .check-icon {
+        font-size: 56px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-info" id="viewportInfo">
+    Viewport: <span id="vpSize">-</span>
+  </div>
+  
+  <div class="container">
+    <h1>🧪 New Jury Vote UI Refactor Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div class="info-box">
+        <strong>Feature:</strong> Non-blocking vote bubble stack with crown + check animations<br>
+        <strong>Test on:</strong> Desktop, iPhone (375x812), iPad<br>
+        <strong>Flag:</strong> <code>useNewJuryRevealUI = true</code>
+      </div>
+      
+      <button onclick="addVoteBubble()">Add Vote Bubble</button>
+      <button onclick="revealWinner()">Reveal Winner</button>
+      <button onclick="reset()">Reset</button>
+      <button onclick="testMobileViewport()">Test iPhone Size</button>
+    </div>
+    
+    <div class="test-section">
+      <h2>Finale Simulation</h2>
+      <div class="tv-sim" id="tvSim">
+        <div class="fo-center">
+          <div class="fo-fit">
+            <div class="fo-belt" id="foBelt"></div>
+            <div class="finalFaceoff" id="faceoff">
+              <div class="fo-slot left" id="slotA">
+                <img class="fo-avatar" src="https://api.dicebear.com/6.x/bottts/svg?seed=Alice" alt="Alice">
+                <div class="fo-name">Alice</div>
+                <div class="fo-votes"><span id="votesA">0</span></div>
+              </div>
+              <div class="fo-slot right" id="slotB">
+                <img class="fo-avatar" src="https://api.dicebear.com/6.x/bottts/svg?seed=Bob" alt="Bob">
+                <div class="fo-name">Bob</div>
+                <div class="fo-votes"><span id="votesB">0</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Checklist</h2>
+      <div id="checklist">
+        <div>✓ Vote bubbles stack (newest at top)</div>
+        <div>✓ Bubbles fade in smoothly (300ms)</div>
+        <div>✓ Max 3 bubbles visible (auto-remove oldest)</div>
+        <div>✓ Crown drops above winner (never covers face)</div>
+        <div>✓ Check card slides over loser's photo</div>
+        <div>✓ Animations work on mobile viewport (375x812)</div>
+        <div>✓ No blocking modals during vote reveal</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let voteCount = 0;
+    let votesA = 0;
+    let votesB = 0;
+    const jurors = ['Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Iris'];
+    const phrases = [
+      "I'm voting for the strategic player",
+      "My vote goes to who played honestly",
+      "I respect the social game",
+      "I'm rewarding bold moves",
+      "Adaptability matters most",
+      "I value consistent gameplay",
+      "My vote is for the competition beast"
+    ];
+    
+    function updateViewport() {
+      const vpSize = document.getElementById('vpSize');
+      vpSize.textContent = `${window.innerWidth}x${window.innerHeight}`;
+    }
+    
+    function addVoteBubble() {
+      if (voteCount >= jurors.length) {
+        alert('All jurors have voted!');
+        return;
+      }
+      
+      const belt = document.getElementById('foBelt');
+      const juror = jurors[voteCount];
+      const phrase = phrases[voteCount % phrases.length];
+      const votedFor = voteCount % 2 === 0 ? 'Alice' : 'Bob';
+      
+      // Update vote counts
+      if (votedFor === 'Alice') {
+        votesA++;
+        document.getElementById('votesA').textContent = votesA;
+        document.getElementById('slotA').classList.add('fo-leader');
+        document.getElementById('slotB').classList.remove('fo-leader');
+      } else {
+        votesB++;
+        document.getElementById('votesB').textContent = votesB;
+        document.getElementById('slotB').classList.add('fo-leader');
+        document.getElementById('slotA').classList.remove('fo-leader');
+      }
+      
+      // Create bubble
+      const bubble = document.createElement('div');
+      bubble.className = 'fo-bubble fo-statement';
+      bubble.innerHTML = `<strong>${juror}:</strong> ${phrase}`;
+      
+      // Add to stack (prepend)
+      belt.insertBefore(bubble, belt.firstChild);
+      
+      // Animate in
+      requestAnimationFrame(() => {
+        bubble.classList.add('show');
+      });
+      
+      // Auto-remove after 3 seconds
+      setTimeout(() => {
+        bubble.classList.remove('show');
+        setTimeout(() => bubble.remove(), 300);
+      }, 3000);
+      
+      // Limit to 3 visible bubbles
+      const allBubbles = belt.querySelectorAll('.fo-bubble');
+      if (allBubbles.length > 3) {
+        for (let i = 3; i < allBubbles.length; i++) {
+          allBubbles[i].remove();
+        }
+      }
+      
+      voteCount++;
+    }
+    
+    function revealWinner() {
+      const winner = votesA > votesB ? 'A' : 'B';
+      const slotWinner = document.getElementById('slot' + winner);
+      const slotLoser = document.getElementById('slot' + (winner === 'A' ? 'B' : 'A'));
+      
+      // Clear existing decorations
+      document.querySelectorAll('.fo-crown, .fo-check-card, .fo-ribbon').forEach(el => el.remove());
+      
+      // Add ribbons
+      const ribbonWinner = document.createElement('div');
+      ribbonWinner.className = 'fo-ribbon';
+      ribbonWinner.textContent = 'WINNER';
+      slotWinner.appendChild(ribbonWinner);
+      
+      const ribbonLoser = document.createElement('div');
+      ribbonLoser.className = 'fo-ribbon ' + (winner === 'A' ? 'right' : '');
+      ribbonLoser.textContent = 'RUNNER-UP';
+      slotLoser.appendChild(ribbonLoser);
+      
+      // Add crown to winner
+      const crown = document.createElement('div');
+      crown.className = 'fo-crown';
+      crown.textContent = '👑';
+      slotWinner.appendChild(crown);
+      
+      // Add check card to loser
+      const checkCard = document.createElement('div');
+      checkCard.className = 'fo-check-card';
+      checkCard.innerHTML = '<div class="check-icon">✓</div>';
+      slotLoser.appendChild(checkCard);
+      
+      console.log('Winner revealed:', winner);
+    }
+    
+    function reset() {
+      voteCount = 0;
+      votesA = 0;
+      votesB = 0;
+      document.getElementById('votesA').textContent = '0';
+      document.getElementById('votesB').textContent = '0';
+      document.getElementById('foBelt').innerHTML = '';
+      document.querySelectorAll('.fo-crown, .fo-check-card, .fo-ribbon').forEach(el => el.remove());
+      document.querySelectorAll('.fo-slot').forEach(slot => slot.classList.remove('fo-leader'));
+    }
+    
+    function testMobileViewport() {
+      const tvSim = document.getElementById('tvSim');
+      const isNarrow = tvSim.style.maxWidth === '375px';
+      
+      if (isNarrow) {
+        tvSim.style.maxWidth = '';
+        tvSim.style.margin = '';
+      } else {
+        tvSim.style.maxWidth = '375px';
+        tvSim.style.margin = '0 auto';
+        alert('TV simulating iPhone viewport (375px width). Scroll to see full content.');
+      }
+    }
+    
+    // Update viewport display
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    
+    // Auto-demo
+    console.log('Test page loaded. Click "Add Vote Bubble" to simulate jury votes.');
+    console.log('Click "Reveal Winner" after votes to see crown + check animations.');
+  </script>
+</body>
+</html>
