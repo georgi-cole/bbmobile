@@ -7,42 +7,42 @@
 
   const THEME_STORAGE_KEY = 'bb_theme_preference';
   
-  // Available themes
+  // Available themes - NEW STYLISH THEMES
   const THEMES = {
-    classic: {
-      name: 'Classic',
-      description: 'Original Big Brother dark blue theme'
+    midnight: {
+      name: 'Midnight Glass',
+      description: 'Dark glassmorphism with blue/purple gradients and prominent glass textures'
     },
-    wooden: {
-      name: 'Wooden House',
-      description: 'Warm cabin vibes with wood grain texture'
+    sunset: {
+      name: 'Sunset Boulevard',
+      description: 'Warm gradients with rich orange/pink hues and visible fabric texture'
     },
-    studio: {
-      name: 'TV Studio',
-      description: 'Bright professional broadcast look'
+    ocean: {
+      name: 'Ocean Depths',
+      description: 'Deep teal/blue with prominent wave textures and aquatic feel'
     },
-    modern: {
-      name: 'Modern House',
-      description: 'Sleek minimalist with fiber texture'
+    neon: {
+      name: 'Neon Nights',
+      description: 'Vibrant purple/pink gradients with neon glow effects'
     }
   };
 
   /**
    * Get the current active theme
-   * @returns {string} Theme key (e.g., 'classic', 'wooden')
+   * @returns {string} Theme key (e.g., 'midnight', 'sunset')
    */
   function getCurrentTheme(){
-    return document.body.getAttribute('data-theme') || 'classic';
+    return document.body.getAttribute('data-theme') || 'midnight';
   }
 
   /**
    * Apply a theme to the UI
-   * @param {string} themeKey - Theme identifier (classic, wooden, studio, modern)
+   * @param {string} themeKey - Theme identifier (midnight, sunset, ocean, neon)
    */
   function applyTheme(themeKey){
     if(!THEMES[themeKey]){
-      console.warn(`[theme-switcher] Unknown theme: ${themeKey}, falling back to classic`);
-      themeKey = 'classic';
+      console.warn(`[theme-switcher] Unknown theme: ${themeKey}, falling back to midnight`);
+      themeKey = 'midnight';
     }
 
     // Apply theme data attribute to body
@@ -75,7 +75,7 @@
     }catch(e){
       console.warn('[theme-switcher] Failed to load theme preference:', e);
     }
-    return 'classic';
+    return 'midnight';
   }
 
   /**

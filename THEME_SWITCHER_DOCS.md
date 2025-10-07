@@ -1,32 +1,46 @@
 # Theme Switcher Documentation
 
 ## Overview
-The Big Brother Mobile Game now includes a theme switcher that allows users to customize the visual atmosphere of the game with different house-inspired themes.
+The Big Brother Mobile Game now includes a completely overhauled theme system featuring modern, stylish designs with gradients, glassmorphism, rich textures, and professional visual effects.
 
 ## Available Themes
 
-### 1. Classic (Default)
-- **Description:** Original Big Brother dark blue theme
-- **Colors:** Deep blue backgrounds, bright cyan accents
-- **Best for:** Traditional Big Brother experience
+All themes have been redesigned with:
+- **Modern gradients** for depth and visual interest
+- **Glassmorphism effects** with blur and transparency
+- **Prominent textures** (glass, fabric, waves, neon) - not just flat colors
+- **Enhanced shadows** and glow effects
+- **Pill-shaped buttons** with gradient backgrounds
+- **Rounded corners** on all UI elements
+- **Professional spacing** and typography
 
-### 2. Wooden House
-- **Description:** Warm cabin vibes with woodgrain texture
-- **Colors:** Warm browns, earthy tones, muted oranges
-- **Texture:** Woodgrain pattern overlay on cards
-- **Best for:** Cozy, rustic atmosphere
+### 1. Midnight Glass (Default)
+- **Description:** Dark glassmorphism with blue/purple gradients
+- **Colors:** Deep navy backgrounds with vibrant blue accents
+- **Texture:** Prominent glass effect with radial gradients and vertical lines
+- **Best for:** Sleek, modern look with professional appeal
+- **Visual Style:** High-tech, premium feel with subtle transparency
 
-### 3. TV Studio
-- **Description:** Bright professional broadcast look
-- **Colors:** Cool grays, bright blues, professional lighting
-- **Texture:** Studio light radial gradients
-- **Best for:** Professional, broadcast-quality feel
+### 2. Sunset Boulevard
+- **Description:** Warm gradients with rich orange/pink hues
+- **Colors:** Deep warm browns, vibrant orange and coral accents
+- **Texture:** Visible fabric/weave pattern overlay
+- **Best for:** Welcoming, energetic atmosphere
+- **Visual Style:** Warm, inviting with textile-inspired design
 
-### 4. Modern House
-- **Description:** Sleek minimalist with fiber texture
-- **Colors:** Dark grays, cool blues, clean whites
-- **Texture:** Subtle crosshatch fiber pattern
-- **Best for:** Contemporary, sleek aesthetic
+### 3. Ocean Depths
+- **Description:** Deep teal/blue with prominent wave textures
+- **Colors:** Rich aquatic blues and teals with cyan accents
+- **Texture:** Animated wave patterns with gradient fills
+- **Best for:** Calm, flowing aesthetic
+- **Visual Style:** Fluid, dynamic with aquatic inspiration
+
+### 4. Neon Nights
+- **Description:** Vibrant purple/pink gradients with neon glow effects
+- **Colors:** Deep purple backgrounds with bright pink/magenta accents
+- **Texture:** Neon glow circles and grid lines
+- **Best for:** Bold, energetic, cyberpunk atmosphere
+- **Visual Style:** High-energy with glowing neon aesthetics
 
 ## How to Use
 
@@ -89,9 +103,9 @@ Add an option to the theme selector in two places:
 '<option value="mytheme">My Custom Theme - Description</option>',
 ```
 
-**In `index.html` (Features tab):**
-```html
-<option value="mytheme">My Custom Theme - Description</option>
+**In `js/ui.config-and-settings.js` (buildVisualPaneHTML function):**
+```javascript
+'<option value="mytheme">My Custom Theme - Description</option>',
 ```
 
 ### Step 4: Test Your Theme
@@ -100,30 +114,64 @@ Add an option to the theme selector in two places:
 3. Select your new theme from the dropdown
 4. Verify all UI elements look correct
 
+## Modern Design Features
+
+### Glassmorphism Effects
+All themes now feature glassmorphism with:
+- `backdrop-filter: blur(16px)` for frosted glass effect
+- Semi-transparent backgrounds with gradient overlays
+- Enhanced border highlights with accent colors
+- Subtle glow effects on interactive elements
+
+### Enhanced Buttons
+Buttons have been completely redesigned:
+- **Pill shape** (border-radius: 999px) for modern look
+- **Gradient backgrounds** using CSS linear-gradients
+- **Layered shadows** with glow effects on hover
+- **Shine animation** on hover for premium feel
+- **Active states** with accent color glows
+
+### Rich Textures
+Textures are now highly visible (opacity 0.35-0.5):
+- Glass effects with radial gradients
+- Fabric weave patterns
+- Wave animations
+- Neon glow grids
+- All created with SVG data URLs for performance
+
+### Typography
+Enhanced typography with:
+- Gradient text effects on headings
+- Increased font weights (700) for better readability
+- Improved letter-spacing and line-height
+- Better visual hierarchy
+
 ## Creating Custom Textures
 
-Themes can include subtle texture overlays using SVG data URLs. These textures are applied to card elements via CSS pseudo-elements.
+Themes include prominent texture overlays using SVG data URLs. These textures are applied to card elements via CSS pseudo-elements.
 
 ### Example Texture Pattern:
 ```css
 --texture-overlay:url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='...' /%3E%3C/svg%3E");
 ```
 
-**Tips:**
-- Keep textures subtle (opacity: 0.08-0.2)
-- Use simple patterns to avoid performance issues
+**Tips for Modern Textures:**
+- Make textures **prominent** (opacity: 0.35-0.5) for visibility
+- Use **gradients** within SVG for depth
+- Combine **multiple patterns** for richness
+- Add **animation** with CSS for dynamic effects
 - Test textures on different screen sizes
 - SVG data URLs must be properly URL-encoded
 
-## Reverting to Classic Theme
+## Default Theme
 
-To return to the original theme:
+The default theme is now **Midnight Glass** (previously Classic):
 1. Open Settings → Visual tab
-2. Select "Classic - Original Big Brother" from the dropdown
+2. Select "Midnight Glass - Dark Glassmorphism" from the dropdown
 
 OR programmatically:
 ```javascript
-window.ThemeSwitcher.applyTheme('classic');
+window.ThemeSwitcher.applyTheme('midnight');
 ```
 
 ## Technical Details
@@ -132,11 +180,12 @@ window.ThemeSwitcher.applyTheme('classic');
 - Themes use CSS custom properties (CSS variables)
 - Theme switching is achieved by changing the `data-theme` attribute on the `<body>` element
 - All color references use `var(--variable-name)` for dynamic updates
+- Enhanced with gradients, glassmorphism, and layered effects
 
 ### JavaScript API
 ```javascript
 // Apply a theme
-window.ThemeSwitcher.applyTheme('wooden');
+window.ThemeSwitcher.applyTheme('sunset');
 
 // Get current theme
 const current = window.ThemeSwitcher.getCurrentTheme();
@@ -144,6 +193,12 @@ const current = window.ThemeSwitcher.getCurrentTheme();
 // Get list of available themes
 const themes = window.ThemeSwitcher.getAvailableThemes();
 ```
+
+### Available Theme Keys
+- `midnight` - Midnight Glass (default)
+- `sunset` - Sunset Boulevard
+- `ocean` - Ocean Depths
+- `neon` - Neon Nights
 
 ### Storage
 Theme preferences are stored in localStorage under the key `bb_theme_preference`.
