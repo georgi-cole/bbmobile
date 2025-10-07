@@ -7,7 +7,7 @@
 
   const THEME_STORAGE_KEY = 'bb_theme_preference';
   
-  // Available themes - NEW THEMES: TV Studio and Modern Big Brother House
+  // Available themes - Modern stylish themes with diverse aesthetics
   const THEMES = {
     tvstudio: {
       name: 'TV Studio',
@@ -16,6 +16,34 @@
     modernhouse: {
       name: 'Modern Big Brother House',
       description: 'Light theme with glassmorphism, soft accents, and contemporary design'
+    },
+    midnight: {
+      name: 'Midnight Glass',
+      description: 'Original dark glassmorphism with blue/purple gradients and glass textures'
+    },
+    miami: {
+      name: 'Miami Beach',
+      description: 'Vibrant tropical theme with turquoise and coral colors'
+    },
+    cabin: {
+      name: 'Wooden Cabin',
+      description: 'Warm rustic theme with rich wood tones and cozy atmosphere'
+    },
+    starrynight: {
+      name: 'Starry Night',
+      description: 'Deep space theme with twinkling stars and cosmic feel'
+    },
+    rainbow: {
+      name: 'Over the Rainbow',
+      description: 'Vibrant multi-colored theme with playful rainbow gradients'
+    },
+    matrix: {
+      name: 'The Matrix',
+      description: 'Digital green code rain theme with cyberpunk aesthetics'
+    },
+    apartment: {
+      name: 'Modern Apartment',
+      description: 'Clean minimalist theme with warm neutrals and professional look'
     }
   };
 

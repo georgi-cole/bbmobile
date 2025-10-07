@@ -375,8 +375,15 @@
             '<select id="themeSelector" style="width:100%;max-width:300px;padding:6px 10px;border-radius:6px;background:var(--card-2);border:1px solid var(--line);color:var(--ink);font-size:.7rem;">',
               '<option value="tvstudio">TV Studio - Dark with Neon Accents</option>',
               '<option value="modernhouse">Modern Big Brother House - Light with Glassmorphism</option>',
+              '<option value="midnight">Midnight Glass - Original Dark Theme</option>',
+              '<option value="miami">Miami Beach - Tropical Turquoise</option>',
+              '<option value="cabin">Wooden Cabin - Rustic Wood Tones</option>',
+              '<option value="starrynight">Starry Night - Deep Space</option>',
+              '<option value="rainbow">Over the Rainbow - Multi-Colored</option>',
+              '<option value="matrix">The Matrix - Digital Green Code</option>',
+              '<option value="apartment">Modern Apartment - Clean Minimalist</option>',
             '</select>',
-            '<div class="tiny muted" style="margin-top:6px;">Choose between TV Studio (dark, neon, spotlight effects) or Modern Big Brother House (light, glass, soft accents). Your preference is saved automatically.</div>',
+            '<div class="tiny muted" style="margin-top:6px;">Choose from 9 unique themes with distinct colors, textures, and aesthetics. Your preference is saved automatically.</div>',
           '</div>'
         ].join('')),
         group('Badges & effects', [
