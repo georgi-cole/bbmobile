@@ -1323,6 +1323,7 @@ header.innerHTML = `
     if(game.phase==='return_twist'){ g.renderReturnTwistPanel?.(); return; }
     if(game.phase==='nominations'){ g.renderNominationsPanel?.(); return; }
     if(game.phase==='veto_ceremony'){ g.renderVetoCeremonyPanel?.(); return; }
+    if(game.phase==='final4_eviction'){ g.renderFinal4EvictionPanel?.(); return; }
     if(game.phase==='final3_decision'){ g.renderFinal3DecisionPanel?.(); return; }
     if(game.phase==='jury'){ g.renderJuryVotePanel?.(); return; }
     if(game.phase==='livevote'){ g.renderLiveVotePanel?.(); return; }

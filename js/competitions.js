@@ -746,9 +746,154 @@
     global.updateHud(); global.renderPanel();
   }
 
-  // Final 3 flow (unchanged from your current file)
-  function startFinal3Flow(){ startF3P1(); }
+  // Final 3 flow with enhanced modals and pacing
+  function startFinal3Flow(){ 
+    showFinalWeekAnnouncement();
+  }
   global.startFinal3Flow=startFinal3Flow;
+  
+  function showFinalWeekAnnouncement(){
+    const g=global.game;
+    
+    // Prevent duplicate announcement
+    if(g.__finalWeekAnnouncementShown) {
+      startF3P1();
+      return;
+    }
+    g.__finalWeekAnnouncementShown = true;
+    
+    // Create full-screen announcement modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: linear-gradient(135deg, rgba(20,20,40,0.97) 0%, rgba(10,10,30,0.98) 100%);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: modalFadeIn 0.4s ease;
+    `;
+    
+    const content = document.createElement('div');
+    content.style.cssText = `
+      background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
+      border: 2px solid #ffdc8b;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 520px;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    `;
+    
+    const icon = document.createElement('div');
+    icon.textContent = '🎬';
+    icon.style.cssText = `
+      font-size: 64px;
+      margin-bottom: 16px;
+      animation: iconPulse 2s ease infinite;
+    `;
+    content.appendChild(icon);
+    
+    const title = document.createElement('h2');
+    title.textContent = 'FINAL WEEK';
+    title.style.cssText = `
+      font-size: 2rem;
+      font-weight: 800;
+      color: #ffdc8b;
+      margin: 0 0 16px 0;
+      letter-spacing: 2px;
+      text-shadow: 0 2px 8px rgba(255,220,139,0.4);
+    `;
+    content.appendChild(title);
+    
+    const desc = document.createElement('p');
+    desc.textContent = 'Three houseguests remain. The endgame begins with a special three-part competition to determine the Final Head of Household.';
+    desc.style.cssText = `
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: #cedbeb;
+      margin: 0 0 20px 0;
+    `;
+    content.appendChild(desc);
+    
+    const structure = document.createElement('div');
+    structure.style.cssText = `
+      background: rgba(255,220,139,0.08);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      text-align: left;
+    `;
+    
+    const structureTitle = document.createElement('div');
+    structureTitle.textContent = 'Competition Structure:';
+    structureTitle.style.cssText = `
+      font-weight: 700;
+      color: #ffdc8b;
+      margin-bottom: 12px;
+      font-size: 1rem;
+    `;
+    structure.appendChild(structureTitle);
+    
+    const parts = [
+      'Part 1: All three compete → Winner to Part 3',
+      'Part 2: Two losers compete → Winner to Part 3',
+      'Part 3: Final showdown → Winner becomes Final HOH'
+    ];
+    
+    parts.forEach(partText => {
+      const partLine = document.createElement('div');
+      partLine.textContent = '• ' + partText;
+      partLine.style.cssText = `
+        color: #b8c9e0;
+        margin: 8px 0;
+        font-size: 0.95rem;
+        line-height: 1.5;
+      `;
+      structure.appendChild(partLine);
+    });
+    
+    content.appendChild(structure);
+    
+    const note = document.createElement('div');
+    note.textContent = 'The Final HOH will then choose who to evict in a live ceremony.';
+    note.style.cssText = `
+      font-style: italic;
+      color: #96cfff;
+      font-size: 0.95rem;
+      margin-top: 16px;
+    `;
+    content.appendChild(note);
+    
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+    
+    // Add CSS animations if not present
+    if(!document.getElementById('finalWeekModalStyles')){
+      const style = document.createElement('style');
+      style.id = 'finalWeekModalStyles';
+      style.textContent = `
+        @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalFadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes iconPulse { 
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    // Auto-dismiss after 5 seconds with fade out
+    setTimeout(() => {
+      modal.style.animation = 'modalFadeOut 0.4s ease';
+      setTimeout(() => {
+        modal.remove();
+        startF3P1();
+      }, 400);
+    }, 5000);
+  }
 
   function renderF3P1(panel){
     const g=global.game; panel.innerHTML='';
@@ -779,8 +924,31 @@
   }
 
   function startF3P1(){
-    const g=global.game; g.lastCompScores=new Map();
-    global.tv.say('Final 3 — Part 1'); global.phaseMusic?.('hoh');
+    const g=global.game;
+    
+    // Show Part 1 explanation modal
+    safeShowCard('🏆 Part 1', [
+      'All three houseguests will compete.',
+      'The winner advances directly to Part 3.',
+      'The two losers will face off in Part 2.'
+    ], 'hoh', 4500, true);
+    
+    (function waitCards(){
+      if(typeof global.cardQueueWaitIdle === 'function'){
+        try{ 
+          global.cardQueueWaitIdle().then(function(){ beginF3P1Competition(); }); 
+          return; 
+        }catch(e){}
+      }
+      setTimeout(function(){ beginF3P1Competition(); }, 500);
+    })();
+  }
+  
+  function beginF3P1Competition(){
+    const g=global.game; 
+    g.lastCompScores=new Map();
+    global.tv.say('Final 3 — Part 1'); 
+    global.phaseMusic?.('hoh');
     global.setPhase('final3_comp1', Math.max(18, Math.floor(g.cfg.tHOH*0.7)), finishF3P1);
     const diffMult = getAIDifficultyMultiplier();
     for(const p of global.alivePlayers()){
@@ -802,8 +970,9 @@
     const losers=[arr[1][0], arr[2][0]];
     g.__f3p1Winner=winner;
     global.addLog(`Final 3 Part 1: Winner is ${global.safeName(winner)} (advances to Part 3).`,'ok');
-    safeShowCard('🏆 F3 Part 1 Winner',[global.safeName(winner),'Advances directly to Part 3!'],'hoh',3200,true);
-    setTimeout(()=>startF3P2(losers), 3300);
+    // Increased duration for readability
+    safeShowCard('🏆 F3 Part 1 Winner',[global.safeName(winner),'Advances directly to Part 3!'],'hoh',4500,true);
+    setTimeout(()=>startF3P2(losers), 4600);
   }
 
   function renderF3P2(panel){
@@ -812,8 +981,32 @@
   }
 
   function startF3P2(duo){
-    const g=global.game; g.__f3_duo=duo.slice(); g.lastCompScores=new Map();
-    global.tv.say('Final 3 — Part 2'); global.phaseMusic?.('hoh');
+    const g=global.game; 
+    
+    // Show Part 2 explanation modal
+    safeShowCard('🏆 Part 2', [
+      'The two losers from Part 1 compete head-to-head.',
+      'The winner advances to Part 3.',
+      'The loser is out of the running for Final HOH.'
+    ], 'hoh', 4500, true);
+    
+    (function waitCards(){
+      if(typeof global.cardQueueWaitIdle === 'function'){
+        try{ 
+          global.cardQueueWaitIdle().then(function(){ beginF3P2Competition(duo); }); 
+          return; 
+        }catch(e){}
+      }
+      setTimeout(function(){ beginF3P2Competition(duo); }, 500);
+    })();
+  }
+  
+  function beginF3P2Competition(duo){
+    const g=global.game;
+    g.__f3_duo=duo.slice(); 
+    g.lastCompScores=new Map();
+    global.tv.say('Final 3 — Part 2'); 
+    global.phaseMusic?.('hoh');
     global.setPhase('final3_comp2', Math.max(18, Math.floor(g.cfg.tHOH*0.7)), finishF3P2);
     const diffMult = getAIDifficultyMultiplier();
     for(const id of duo){
@@ -860,8 +1053,9 @@
     const winner=sorted[0][0];
     g.__f3p2Winner=winner;
     global.addLog(`Final 3 Part 2: Winner is ${global.safeName(winner)} (advances to Part 3).`,'ok');
-    safeShowCard('🏆 F3 Part 2 Winner',[global.safeName(winner),'Advances to Part 3!'],'hoh',3200);
-    setTimeout(()=>startF3P3(), 3300);
+    // Increased duration for readability
+    safeShowCard('🏆 F3 Part 2 Winner',[global.safeName(winner),'Advances to Part 3!'],'hoh',4500);
+    setTimeout(()=>startF3P3(), 4600);
   }
 
   function renderF3P3(panel){
@@ -870,10 +1064,33 @@
   }
 
   function startF3P3(){
-    const g=global.game; g.lastCompScores=new Map();
+    const g=global.game;
+    
+    // Show Part 3 explanation modal
+    safeShowCard('🏆 Part 3 — Final Showdown', [
+      'The winners of Parts 1 and 2 compete.',
+      'The winner becomes the Final Head of Household.',
+      'The Final HOH will choose who to evict.'
+    ], 'hoh', 4500, true);
+    
+    (function waitCards(){
+      if(typeof global.cardQueueWaitIdle === 'function'){
+        try{ 
+          global.cardQueueWaitIdle().then(function(){ beginF3P3Competition(); }); 
+          return; 
+        }catch(e){}
+      }
+      setTimeout(function(){ beginF3P3Competition(); }, 500);
+    })();
+  }
+  
+  function beginF3P3Competition(){
+    const g=global.game; 
+    g.lastCompScores=new Map();
     const finalists=[g.__f3p1Winner, g.__f3p2Winner];
     g.__f3_finalists=finalists.slice();
-    global.tv.say('Final 3 — Part 3'); global.phaseMusic?.('hoh');
+    global.tv.say('Final 3 — Part 3'); 
+    global.phaseMusic?.('hoh');
     global.setPhase('final3_comp3', Math.max(18, Math.floor(g.cfg.tHOH*0.7)), finishF3P3);
     const diffMult = getAIDifficultyMultiplier();
     for(const id of finalists){
@@ -929,7 +1146,8 @@
     if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
     
     global.addLog(`Final 3 Part 3: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`,'ok');
-    safeShowCard('👑 Final HOH',[global.safeName(winner),'Winner of the Final 3 Competition!','Must now evict one houseguest'],'hoh',3600);
+    // Increased duration for dramatic effect
+    safeShowCard('👑 Final HOH',[global.safeName(winner),'Winner of the Final 3 Competition!','Must now evict one houseguest'],'hoh',5000);
     global.tv.say('Final 3 Eviction Ceremony');
     global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote*0.8)), ()=>global.finalizeFinal3Decision?.());
     setTimeout(()=>global.renderFinal3DecisionPanel?.(),50);
@@ -942,21 +1160,22 @@
     const box=document.createElement('div'); box.className='minigame-host';
     box.innerHTML=`<h3>🎬 Final 3 Eviction Ceremony</h3><div class="tiny">Final HOH ${hoh.name} must evict one houseguest in this live ceremony.</div>`;
     if(hoh.human){
-      const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+      const row=document.createElement('div'); row.className='row'; row.style.marginTop='12px';
       const btnA=document.createElement('button'); btnA.className='btn danger'; btnA.textContent=`Evict ${a.name}`;
       const btnB=document.createElement('button'); btnB.className='btn danger'; btnB.textContent=`Evict ${b.name}`;
+      
+      // Enhanced justification system
       btnA.onclick=()=>{
-        // Optional: show justification modal
-        if(confirm(`Are you sure you want to evict ${a.name}?`)){
+        showEvictionJustificationModal(a, hoh, () => {
           global.finalizeFinal3Decision?.(a.id);
-        }
+        });
       };
       btnB.onclick=()=>{
-        // Optional: show justification modal
-        if(confirm(`Are you sure you want to evict ${b.name}?`)){
+        showEvictionJustificationModal(b, hoh, () => {
           global.finalizeFinal3Decision?.(b.id);
-        }
+        });
       };
+      
       row.append(btnA,btnB); box.appendChild(row);
       const hint=document.createElement('div'); hint.className='tiny muted'; hint.style.marginTop='8px';
       hint.textContent='Choose wisely — this decision determines who sits beside you in the Final 2.';
@@ -967,6 +1186,143 @@
     panel.appendChild(box);
   }
   global.renderFinal3DecisionPanel=renderFinal3DecisionPanel;
+  
+  function showEvictionJustificationModal(evictee, hoh, onConfirm){
+    // Create justification modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 999998;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: modalFadeIn 0.3s ease;
+    `;
+    
+    const content = document.createElement('div');
+    content.style.cssText = `
+      background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
+      border: 2px solid #ff6b6b;
+      border-radius: 16px;
+      padding: 28px;
+      max-width: 480px;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    `;
+    
+    const title = document.createElement('h3');
+    title.textContent = `Evict ${evictee.name}?`;
+    title.style.cssText = `
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ff6b6b;
+      margin: 0 0 16px 0;
+    `;
+    content.appendChild(title);
+    
+    const desc = document.createElement('p');
+    desc.textContent = 'You can optionally provide a reason for your decision:';
+    desc.style.cssText = `
+      color: #cedbeb;
+      margin: 0 0 16px 0;
+      font-size: 0.95rem;
+    `;
+    content.appendChild(desc);
+    
+    // Justification options
+    const justifications = [
+      'You are the biggest threat to win.',
+      'I have a stronger bond with the other finalist.',
+      'You\'ve played a stronger game and deserve jury respect.',
+      'Strategic choice - I think I can beat the other person.',
+      'This is a game move, nothing personal.'
+    ];
+    
+    const justificationSelect = document.createElement('select');
+    justificationSelect.style.cssText = `
+      width: 100%;
+      padding: 10px;
+      margin: 12px 0;
+      font-size: 0.95rem;
+      border: 1px solid #6b7a99;
+      border-radius: 8px;
+      background: rgba(20,20,40,0.8);
+      color: #cedbeb;
+    `;
+    
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '(Optional) Select a reason...';
+    justificationSelect.appendChild(defaultOption);
+    
+    justifications.forEach(just => {
+      const opt = document.createElement('option');
+      opt.value = just;
+      opt.textContent = just;
+      justificationSelect.appendChild(opt);
+    });
+    
+    content.appendChild(justificationSelect);
+    
+    // Custom justification text area
+    const customJust = document.createElement('textarea');
+    customJust.placeholder = 'Or write your own reason (optional)...';
+    customJust.style.cssText = `
+      width: 100%;
+      min-height: 70px;
+      padding: 10px;
+      margin: 12px 0;
+      font-size: 0.9rem;
+      border: 1px solid #6b7a99;
+      border-radius: 8px;
+      background: rgba(20,20,40,0.8);
+      color: #cedbeb;
+      font-family: inherit;
+      resize: vertical;
+    `;
+    content.appendChild(customJust);
+    
+    const buttonRow = document.createElement('div');
+    buttonRow.style.cssText = `
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    `;
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.flex = '1';
+    cancelBtn.onclick = () => {
+      modal.style.animation = 'modalFadeOut 0.3s ease';
+      setTimeout(() => modal.remove(), 300);
+    };
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn danger';
+    confirmBtn.textContent = 'Confirm Eviction';
+    confirmBtn.style.flex = '1';
+    confirmBtn.onclick = () => {
+      const justification = customJust.value.trim() || justificationSelect.value || null;
+      if(justification){
+        global.addLog(`${hoh.name}'s reasoning: "${justification}"`, 'muted');
+      }
+      modal.style.animation = 'modalFadeOut 0.3s ease';
+      setTimeout(() => {
+        modal.remove();
+        onConfirm();
+      }, 300);
+    };
+    
+    buttonRow.append(cancelBtn, confirmBtn);
+    content.appendChild(buttonRow);
+    
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+  }
 
   function aiPickFinal3Eviction(){
     const g=global.game; const hoh=global.getP(g.hohId); const [a,b]=g.nominees;
@@ -979,9 +1335,10 @@
     const ev=global.getP(target); const hoh=global.getP(g.hohId);
     ev.evicted=true; ev.weekEvicted=g.week;
     global.addLog(`Final 3 eviction: <b>${hoh.name}</b> has chosen to evict <b>${ev.name}</b>.`,'danger');
-    safeShowCard('🎬 Final Eviction',[`${hoh.name} has chosen to evict`,ev.name,'to the Jury'],'evict',4000,true);
+    // Increased duration for dramatic effect
+    safeShowCard('🎬 Final Eviction',[`${hoh.name} has chosen to evict`,ev.name,'to the Jury'],'evict',5000,true);
     if(global.alivePlayers().length<=9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target)) g.juryHouse.push(target);
-    setTimeout(()=>global.startJuryVote?.(), 700);
+    setTimeout(()=>global.startJuryVote?.(), 1000);
   }
   global.finalizeFinal3Decision=finalizeFinal3Decision;
 
