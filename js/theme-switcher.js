@@ -91,19 +91,23 @@
    */
   function init(){
     loadSavedTheme();
-    wireThemeSelector();
+    wireThemeSelector(0);
     console.log('[theme-switcher] Initialized');
   }
 
   /**
    * Wire up theme selector in settings modal
    */
-  function wireThemeSelector(){
+  function wireThemeSelector(retryCount = 0){
     // Wait for DOM to be ready and settings modal to exist
     const themeSelector = document.getElementById('themeSelector');
     if(!themeSelector){
-      // Retry after a short delay if element not found yet
-      setTimeout(wireThemeSelector, 100);
+      // Retry after a short delay if element not found yet, up to max retries
+      if (retryCount < 50) {
+        setTimeout(function() { wireThemeSelector(retryCount + 1); }, 100);
+      } else {
+        console.warn('[theme-switcher] themeSelector element not found after maximum retries.');
+      }
       return;
     }
 
