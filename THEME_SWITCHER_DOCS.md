@@ -1,46 +1,25 @@
 # Theme Switcher Documentation
 
 ## Overview
-The Big Brother Mobile Game now includes a completely overhauled theme system featuring modern, stylish designs with gradients, glassmorphism, rich textures, and professional visual effects.
+The Big Brother Mobile Game features two modern, stylish themes designed for optimal viewing experience: TV Studio (dark) and Modern Big Brother House (light). Each theme includes custom colors, textures, and visual effects optimized for the game interface.
 
 ## Available Themes
 
-All themes have been redesigned with:
-- **Modern gradients** for depth and visual interest
-- **Glassmorphism effects** with blur and transparency
-- **Prominent textures** (glass, fabric, waves, neon) - not just flat colors
-- **Enhanced shadows** and glow effects
-- **Pill-shaped buttons** with gradient backgrounds
-- **Rounded corners** on all UI elements
-- **Professional spacing** and typography
+### 1. TV Studio (Default - Dark Theme)
+- **Description:** Dark theme with neon cyan accents and spotlight effects
+- **Colors:** Deep dark backgrounds (#0a0a12) with bright cyan (#00d9ff) accents
+- **Texture:** Neon grid with spotlight effects and geometric patterns
+- **Best for:** Dramatic TV studio atmosphere, high contrast viewing
+- **Visual Style:** Modern broadcast studio with neon lighting and grid overlays
+- **Roster Styling:** Cyan borders with neon glow effects
 
-### 1. Midnight Glass (Default)
-- **Description:** Dark glassmorphism with blue/purple gradients
-- **Colors:** Deep navy backgrounds with vibrant blue accents
-- **Texture:** Prominent glass effect with radial gradients and vertical lines
-- **Best for:** Sleek, modern look with professional appeal
-- **Visual Style:** High-tech, premium feel with subtle transparency
-
-### 2. Sunset Boulevard
-- **Description:** Warm gradients with rich orange/pink hues
-- **Colors:** Deep warm browns, vibrant orange and coral accents
-- **Texture:** Visible fabric/weave pattern overlay
-- **Best for:** Welcoming, energetic atmosphere
-- **Visual Style:** Warm, inviting with textile-inspired design
-
-### 3. Ocean Depths
-- **Description:** Deep teal/blue with prominent wave textures
-- **Colors:** Rich aquatic blues and teals with cyan accents
-- **Texture:** Animated wave patterns with gradient fills
-- **Best for:** Calm, flowing aesthetic
-- **Visual Style:** Fluid, dynamic with aquatic inspiration
-
-### 4. Neon Nights
-- **Description:** Vibrant purple/pink gradients with neon glow effects
-- **Colors:** Deep purple backgrounds with bright pink/magenta accents
-- **Texture:** Neon glow circles and grid lines
-- **Best for:** Bold, energetic, cyberpunk atmosphere
-- **Visual Style:** High-energy with glowing neon aesthetics
+### 2. Modern Big Brother House (Light Theme)
+- **Description:** Clean light theme with glassmorphism and soft accents
+- **Colors:** Light backgrounds (#f5f5fa) with purple/blue accents (#6b8fff)
+- **Texture:** Soft glassmorphism with light ray effects
+- **Best for:** Comfortable daytime viewing, contemporary aesthetic
+- **Visual Style:** Professional, clean, with subtle depth and transparency
+- **Roster Styling:** Purple borders with soft glow effects
 
 ## How to Use
 
@@ -96,14 +75,8 @@ const THEMES = {
 ```
 
 ### Step 3: Add to UI Selector
-Add an option to the theme selector in two places:
+Add an option to the theme selector in `js/ui.config-and-settings.js` (buildVisualPaneHTML function):
 
-**In `js/settings.js` (buildVisualPaneHTML function):**
-```javascript
-'<option value="mytheme">My Custom Theme - Description</option>',
-```
-
-**In `js/ui.config-and-settings.js` (buildVisualPaneHTML function):**
 ```javascript
 '<option value="mytheme">My Custom Theme - Description</option>',
 ```
@@ -116,27 +89,44 @@ Add an option to the theme selector in two places:
 
 ## Modern Design Features
 
+### Theme-Aware Roster Styling
+The top roster (houseguest avatars) adapts to the active theme:
+- **Theme-specific CSS variables** for gradients, borders, and glow effects
+- `--roster-gradient-1` and `--roster-gradient-2` for background gradients
+- `--roster-border` for border colors
+- `--roster-glow` for base glow effect
+- `--roster-hover-glow` for enhanced hover glow
+
+### Enhanced Hover Effects
+Roster tiles feature modern hover interactions:
+- **Transform**: Scale (1.05x) with vertical lift (-6px translateY)
+- **Glass reflection**: Overlay gradient on hover
+- **Avatar zoom**: Scale and brightness increase
+- **Smooth animations**: Cubic-bezier transitions for premium feel
+
+### TV Section Enhancement
+- **Default background**: Uses `assets/videos/tvscreen.jpg`
+- **Blended overlay**: Semi-transparent gradient (70-80%) to avoid distraction
+- **Custom background support**: Maintains `.hasTvBg` class for user uploads
+
 ### Glassmorphism Effects
-All themes now feature glassmorphism with:
-- `backdrop-filter: blur(16px)` for frosted glass effect
+Cards and UI elements feature glassmorphism with:
+- `backdrop-filter: blur(12px)` for frosted glass effect
 - Semi-transparent backgrounds with gradient overlays
 - Enhanced border highlights with accent colors
 - Subtle glow effects on interactive elements
 
 ### Enhanced Buttons
-Buttons have been completely redesigned:
+Buttons are designed with:
 - **Pill shape** (border-radius: 999px) for modern look
 - **Gradient backgrounds** using CSS linear-gradients
 - **Layered shadows** with glow effects on hover
 - **Shine animation** on hover for premium feel
-- **Active states** with accent color glows
 
 ### Rich Textures
-Textures are now highly visible (opacity 0.35-0.5):
-- Glass effects with radial gradients
-- Fabric weave patterns
-- Wave animations
-- Neon glow grids
+Textures are highly visible (opacity 0.35-0.5):
+- Neon grids with spotlight effects (TV Studio)
+- Glassmorphism with light rays (Modern House)
 - All created with SVG data URLs for performance
 
 ### Typography
