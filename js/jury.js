@@ -226,10 +226,37 @@
       display:flex; flex-direction:column; align-items:center; gap:8px;
     }
 
-    /* Message belt (fixed above; never overlays portraits) */
-    .fo-belt{ width:100%; min-height:46px; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:1 }
-    .fo-bubble{ background:rgba(0,0,0,.45); padding:8px 12px; border-radius:10px; font-size:clamp(13px,1.4vw,17px); line-height:1.25; color:#e8f9ff; text-align:center; max-width:92%; box-shadow:0 6px 18px rgba(0,0,0,.35); opacity:0; transform:translateY(-4px); transition:opacity .22s ease,transform .22s ease }
-    .fo-bubble.show{ opacity:1; transform:translateY(0) }
+    /* Message belt (fixed above; never overlays portraits) - Now supports stacking */
+    .fo-belt{ 
+      width:100%; 
+      min-height:46px; 
+      display:flex; 
+      flex-direction:column; 
+      align-items:center; 
+      justify-content:flex-start; 
+      gap:6px;
+      pointer-events:none; 
+      z-index:1;
+      max-height:180px;
+      overflow:hidden;
+    }
+    .fo-bubble{ 
+      background:rgba(0,0,0,.65); 
+      padding:8px 12px; 
+      border-radius:10px; 
+      font-size:clamp(12px,1.3vw,16px); 
+      line-height:1.25; 
+      color:#e8f9ff; 
+      text-align:center; 
+      max-width:92%; 
+      box-shadow:0 6px 18px rgba(0,0,0,.45); 
+      opacity:0; 
+      transform:translateY(-6px) scale(0.95); 
+      transition:opacity .3s ease,transform .3s ease;
+      border:1px solid rgba(255,255,255,0.1);
+    }
+    .fo-bubble.show{ opacity:1; transform:translateY(0) scale(1) }
+    .fo-bubble.fo-statement strong{ color:#ffdc8b; font-weight:700; }
 
     /* Portrait layout — inline-grid + width:auto so the pair can be truly centered */
     .finalFaceoff{
@@ -260,10 +287,80 @@
     .fo-ribbon{ position:absolute; top:-10px; left:12px; background:rgba(0,0,0,.7); border:1px solid rgba(255,255,255,.18); color:#e9fcff; font-weight:800; font-size:11px; padding:6px 8px; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,.35); z-index:3 }
     .fo-ribbon.right{ left:auto; right:12px }
 
+    /* NEW: Crown animation above winner (never covers face) */
+    .fo-crown{
+      position:absolute;
+      top:-45px;
+      left:50%;
+      transform:translateX(-50%);
+      font-size:42px;
+      z-index:5;
+      opacity:0;
+      animation:crownDrop 0.6s ease-out forwards;
+      filter:drop-shadow(0 4px 12px rgba(255,215,0,0.4));
+    }
+    @keyframes crownDrop{
+      0%{ opacity:0; transform:translateX(-50%) translateY(-20px) scale(0.5); }
+      60%{ transform:translateX(-50%) translateY(3px) scale(1.1); }
+      100%{ opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+    }
+    
+    /* NEW: Check card that replaces loser's photo */
+    .fo-check-card{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      background:linear-gradient(135deg, rgba(16,28,40,0.95), rgba(10,20,30,0.98));
+      border-radius:12px;
+      z-index:6;
+      opacity:0;
+      animation:checkSlideIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s forwards;
+    }
+    .fo-check-card .check-icon{
+      font-size:72px;
+      animation:checkPulse 0.6s ease-in-out 1.3s;
+    }
+    @keyframes checkSlideIn{
+      0%{ opacity:0; transform:translateX(-100%) scale(0.8); }
+      100%{ opacity:1; transform:translateX(0) scale(1); }
+    }
+    @keyframes checkPulse{
+      0%, 100%{ transform:scale(1); }
+      50%{ transform:scale(1.15); }
+    }
+
     /* Fade out animation for tally removal */
     .fadeOutFast{ opacity:0; transition:opacity .45s ease; }
 
-    @media (max-width: 1120px){ .finalFaceoff{ grid-template-columns:1fr; gap:14px } }
+    /* Mobile responsive: stack vertically on narrow screens */
+    @media (max-width: 640px){ 
+      .finalFaceoff{ 
+        grid-template-columns:1fr; 
+        gap:16px;
+        padding:16px 8px;
+      }
+      .fo-slot{ 
+        width:100%;
+        max-width:320px;
+        margin:0 auto;
+      }
+      .fo-avatar{
+        width:clamp(120px,32vw,180px);
+        height:clamp(120px,32vw,180px);
+      }
+      .fo-crown{
+        font-size:36px;
+        top:-40px;
+      }
+      .fo-check-card .check-icon{
+        font-size:64px;
+      }
+    }
+    
+    @media (max-width: 1120px) and (min-width: 641px){ 
+      .finalFaceoff{ grid-template-columns:1fr; gap:14px } 
+    }
     `;
     const style=document.createElement('style'); style.id='faceoff-css'; style.textContent=css; document.head.appendChild(style);
   })();
@@ -458,6 +555,37 @@
     const r = document.createElement('div'); r.className='fo-ribbon right'; r.textContent = leftIsWinner ? 'Runner-up' : 'Finalist';
     st.els.leftSlot.appendChild(l);
     st.els.rightSlot.appendChild(r);
+    
+    // NEW: Add crown above winner's photo (never covers face)
+    const gg = g.game || {};
+    const cfg = gg.cfg || {};
+    const useNewUI = cfg.useNewJuryRevealUI !== false;
+    
+    if (useNewUI) {
+      const winnerSlot = leftIsWinner ? st.els.leftSlot : st.els.rightSlot;
+      const loserSlot = leftIsWinner ? st.els.rightSlot : st.els.leftSlot;
+      
+      // Remove any existing crowns
+      st.els.root.querySelectorAll('.fo-crown').forEach(x=>x.remove());
+      
+      // Add crown to winner
+      const crown = document.createElement('div');
+      crown.className = 'fo-crown';
+      crown.textContent = '👑';
+      crown.setAttribute('aria-label', 'Winner crown');
+      winnerSlot.appendChild(crown);
+      
+      // Add check card to loser (replaces their photo with animated check)
+      st.els.root.querySelectorAll('.fo-check-card').forEach(x=>x.remove());
+      
+      const checkCard = document.createElement('div');
+      checkCard.className = 'fo-check-card';
+      checkCard.innerHTML = '<div class="check-icon" aria-label="Finalist eliminated">✓</div>';
+      loserSlot.appendChild(checkCard);
+      
+      console.info('[jury] winner crown and check card added');
+    }
+    
     st._fitSchedule && st._fitSchedule();
     
     // Issue 4: Set final labels and clear other states
@@ -486,9 +614,9 @@
     }
     
     // Clear veto holder if it's one of the finalists
-    const gg = g.game || {};
-    if(gg.vetoHolder === winnerId || gg.vetoHolder === (A === winnerId ? B : A)){
-      gg.vetoHolder = null;
+    const gg2 = g.game || {};
+    if(gg2.vetoHolder === winnerId || gg2.vetoHolder === (A === winnerId ? B : A)){
+      gg2.vetoHolder = null;
     }
     
     console.info(`[finale] labels winner=${winnerId} (rank=1) runnerUp=${A === winnerId ? B : A} (rank=2)`);
@@ -773,6 +901,10 @@
     modalHost.className = 'pfModalHost';
     modalHost.setAttribute('data-bb-card', 'true');
     
+    // NEW: Start with opacity 0 for smooth fade-in transition
+    modalHost.style.opacity = '0';
+    modalHost.style.transition = 'opacity 0.6s ease-in-out';
+    
     // Build panel with 4 real player slots (real avatars and names)
     const panel = document.createElement('div');
     panel.className = 'pfPanel';
@@ -838,6 +970,13 @@
     }
     
     document.body.appendChild(modalHost);
+    
+    // NEW: Trigger smooth fade-in after mounting
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        modalHost.style.opacity = '1';
+      });
+    });
     
     // Helper: Generate Dirichlet distribution (simplified approximation using Gamma distribution)
     function dirichlet(alphas) {
@@ -1038,8 +1177,13 @@
     // Freeze final percentages
     const finalPcts = slots.map(s => s.currentPct);
     
-    await sleep(800);
+    // NEW: Smooth fade-out before removal
+    modalHost.style.opacity = '0';
+    await sleep(600); // Wait for fade-out transition
     modalHost.remove();
+    
+    // Small gap for smooth transition
+    await sleep(200);
     
     // Card 2: Reveal intro
     try{
@@ -1150,54 +1294,104 @@
   }
   
   // Helper: Show juror phrase overlay (non-blocking)
+  // NEW: Can use either blocking modal (legacy) or unobtrusive bubble stack (new)
   function showJurorPhraseOverlay(jurorName, phrase, durationMs) {
-    const tv = document.getElementById('tv');
-    if (!tv) return;
+    const gg = g.game || {};
+    const cfg = gg.cfg || {};
+    const useNewUI = cfg.useNewJuryRevealUI !== false; // Default true for new behavior
     
-    // Remove any existing phrase overlay
-    const existing = document.getElementById('jurorPhraseOverlay');
-    if (existing) existing.remove();
+    if (!useNewUI) {
+      // Legacy blocking modal (for revert/fallback)
+      const tv = document.getElementById('tv');
+      if (!tv) return;
+      
+      const existing = document.getElementById('jurorPhraseOverlay');
+      if (existing) existing.remove();
+      
+      const overlay = document.createElement('div');
+      overlay.id = 'jurorPhraseOverlay';
+      overlay.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.85);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 16px 24px;
+        color: #fff;
+        font-size: 16px;
+        font-style: italic;
+        text-align: center;
+        max-width: 80%;
+        z-index: 14;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      `;
+      overlay.innerHTML = `<div style="font-weight: 700; margin-bottom: 8px;">${jurorName}</div><div>"${phrase}"</div>`;
+      
+      tv.appendChild(overlay);
+      
+      requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+      });
+      
+      const fadeOutAt = Math.max(300, durationMs - 300);
+      setTimeout(() => {
+        overlay.style.opacity = '0';
+      }, fadeOutAt);
+      
+      setTimeout(() => {
+        if (overlay.parentNode) overlay.remove();
+      }, durationMs);
+      return;
+    }
     
-    const overlay = document.createElement('div');
-    overlay.id = 'jurorPhraseOverlay';
-    overlay.style.cssText = `
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.85);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      padding: 16px 24px;
-      color: #fff;
-      font-size: 16px;
-      font-style: italic;
-      text-align: center;
-      max-width: 80%;
-      z-index: 14;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    `;
-    overlay.innerHTML = `<div style="font-weight: 700; margin-bottom: 8px;">${jurorName}</div><div>"${phrase}"</div>`;
+    // NEW: Non-blocking bubble stack (accumulates, doesn't replace)
+    // Shows juror statement in vote bubble belt above finalists
+    addVoteBubbleToStack(jurorName, phrase, durationMs);
+  }
+  
+  // NEW: Add vote bubble to accumulating stack
+  function addVoteBubbleToStack(jurorName, phrase, durationMs) {
+    const belt = document.querySelector('.fo-belt');
+    if (!belt) return;
     
-    tv.appendChild(overlay);
+    // Create bubble with juror statement
+    const bubble = document.createElement('div');
+    bubble.className = 'fo-bubble fo-statement';
+    bubble.innerHTML = `<strong>${jurorName}:</strong> ${phrase}`;
     
-    // Fade in
+    // Add to stack (prepend so newest appears at top)
+    belt.insertBefore(bubble, belt.firstChild);
+    
+    // Animate in
     requestAnimationFrame(() => {
-      overlay.style.opacity = '1';
+      bubble.classList.add('show');
     });
     
-    // Fade out before duration ends
+    // Fade out before removal
     const fadeOutAt = Math.max(300, durationMs - 300);
     setTimeout(() => {
-      overlay.style.opacity = '0';
+      bubble.classList.remove('show');
     }, fadeOutAt);
     
     // Remove after duration
     setTimeout(() => {
-      if (overlay.parentNode) overlay.remove();
+      if (bubble.parentNode) bubble.remove();
     }, durationMs);
+    
+    // Limit stack size to prevent overflow (keep last 3 visible)
+    const allBubbles = belt.querySelectorAll('.fo-bubble');
+    if (allBubbles.length > 3) {
+      // Remove oldest bubbles beyond 3
+      for (let i = 3; i < allBubbles.length; i++) {
+        if (allBubbles[i].parentNode) {
+          allBubbles[i].remove();
+        }
+      }
+    }
   }
 
   // Phase 3: Jury Reveal with vote tallies
@@ -1432,11 +1626,20 @@
     
     try{ g.setMusic?.('victory', true); }catch(e){}
     
-    // Wait 5 seconds for winner display
-    await sleep(5000);
+    // NEW: Extended delay for winner display (8 seconds total: 3s reveal + 5s smooth transition)
+    const gg2 = g.game || {};
+    const cfg2 = gg2.cfg || {};
+    const useNewUI = cfg2.useNewJuryRevealUI !== false;
+    const winnerDisplayDelay = useNewUI ? 8000 : 5000;
+    
+    console.info(`[jury] winner display delay=${winnerDisplayDelay}ms`);
+    await sleep(winnerDisplayDelay);
     
     // Fade out and remove the tally/faceoff graph
     await hideFaceoffGraph();
+    
+    // Small transition gap for smoothness (300ms)
+    await sleep(300);
     
     // Run Public Favourite AFTER tally hidden, BEFORE cinematic overlay
     try{
