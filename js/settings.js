@@ -459,18 +459,24 @@
     var root = modal;
     root.__advancedWired = true;
 
-    root.addEventListener('click', function(e){
+    root.addEventListener('click', async function(e){
       var btn = e.target.closest('button[data-action]'); if(!btn) return;
       var action = btn.getAttribute('data-action');
       if(action === 'reset-defaults'){
-        if(!confirm('Reset all settings to defaults?')) return;
+        if(!await window.showConfirm('Reset all settings to defaults?', {
+          title: 'Reset Settings',
+          tone: 'danger'
+        })) return;
         var g = global.game = global.game || {};
         g.cfg = Object.assign({}, DEFAULT_CFG);
         saveStoredCfg(g.cfg);
         notify('Settings reset to defaults', 'warn');
         closeSettingsModal();
       }else if(action === 'clear-storage'){
-        if(!confirm('Clear saved settings from localStorage?')) return;
+        if(!await window.showConfirm('Clear saved settings from localStorage?', {
+          title: 'Clear Storage',
+          tone: 'danger'
+        })) return;
         localStorage.removeItem(STORAGE_KEY);
         notify('Saved settings cleared', 'warn');
         closeSettingsModal();

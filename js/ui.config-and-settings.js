@@ -489,8 +489,8 @@
         </div>
         <div class="nm">${UI.escapeHtml(p.name||'')}</div>
       `;
-      chip.addEventListener('click', ()=>{
-        if(!maybeConfirmDiscard(modal)) return;
+      chip.addEventListener('click', async ()=>{
+        if(!await maybeConfirmDiscard(modal)) return;
         state.idx = i;
         state.pendingAvatarDataUrl = null;
         state.dirty = false;
@@ -547,16 +547,19 @@
     castState(modal).pendingAvatarDataUrl = null;
   }
   function markDirty(modal){ castState(modal).dirty = true; }
-  function maybeConfirmDiscard(modal){
+  async function maybeConfirmDiscard(modal){
     const st = castState(modal);
     if(!st.dirty) return true;
-    return confirm('You have unsaved changes. Discard them?');
+    return await window.showConfirm('You have unsaved changes. Discard them?', {
+      title: 'Unsaved Changes',
+      tone: 'warn'
+    });
   }
   function wireCastEditor(modal){
     const state = castState(modal);
     modal.querySelectorAll('.cast-filters .pill').forEach(pill=>{
-      pill.addEventListener('click', ()=>{
-        if(!maybeConfirmDiscard(modal)) return;
+      pill.addEventListener('click', async ()=>{
+        if(!await maybeConfirmDiscard(modal)) return;
         modal.querySelectorAll('.cast-filters .pill').forEach(x=>x.classList.remove('active'));
         pill.classList.add('active');
         state.filter = pill.getAttribute('data-filter') || 'all';
@@ -601,15 +604,15 @@
     const next = modal.querySelector('#castNext');
     const saveNext = modal.querySelector('#castSaveNext');
 
-    prev.addEventListener('click', ()=>{
-      if(!maybeConfirmDiscard(modal)) return;
+    prev.addEventListener('click', async ()=>{
+      if(!await maybeConfirmDiscard(modal)) return;
       const st = castState(modal);
       st.idx = Math.max(0, st.idx-1);
       st.pendingAvatarDataUrl = null; st.dirty=false;
       renderCastStrip(modal); fillCastForm(modal);
     });
-    next.addEventListener('click', ()=>{
-      if(!maybeConfirmDiscard(modal)) return;
+    next.addEventListener('click', async ()=>{
+      if(!await maybeConfirmDiscard(modal)) return;
       const st = castState(modal);
       st.idx = Math.min(st.order.length-1, st.idx+1);
       st.pendingAvatarDataUrl = null; st.dirty=false;
@@ -622,12 +625,12 @@
         renderCastStrip(modal); fillCastForm(modal);
       }
     });
-    modal.addEventListener('keydown', (e)=>{
+    modal.addEventListener('keydown', async (e)=>{
       const mac = navigator.platform.toUpperCase().includes('MAC');
       const modKey = mac ? e.metaKey : e.ctrlKey;
       if(e.key==='Enter'){ e.preventDefault(); if(saveCurrentCastForm(modal)){ const st=castState(modal); st.idx=Math.min(st.order.length-1, st.idx+1); renderCastStrip(modal); fillCastForm(modal);} }
-      else if(e.key==='ArrowLeft'){ e.preventDefault(); const st=castState(modal); if(!maybeConfirmDiscard(modal)) return; st.idx=Math.max(0, st.idx-1); st.dirty=false; st.pendingAvatarDataUrl=null; renderCastStrip(modal); fillCastForm(modal); }
-      else if(e.key==='ArrowRight'){ e.preventDefault(); const st=castState(modal); if(!maybeConfirmDiscard(modal)) return; st.idx=Math.min(st.order.length-1, st.idx+1); st.dirty=false; st.pendingAvatarDataUrl=null; renderCastStrip(modal); fillCastForm(modal); }
+      else if(e.key==='ArrowLeft'){ e.preventDefault(); const st=castState(modal); if(!await maybeConfirmDiscard(modal)) return; st.idx=Math.max(0, st.idx-1); st.dirty=false; st.pendingAvatarDataUrl=null; renderCastStrip(modal); fillCastForm(modal); }
+      else if(e.key==='ArrowRight'){ e.preventDefault(); const st=castState(modal); if(!await maybeConfirmDiscard(modal)) return; st.idx=Math.min(st.order.length-1, st.idx+1); st.dirty=false; st.pendingAvatarDataUrl=null; renderCastStrip(modal); fillCastForm(modal); }
     }, {capture:true});
   }
   function saveCurrentCastForm(modal){
@@ -804,12 +807,12 @@
     document.body.appendChild(dim);
 
     // Tabs with dirty-state guard for Cast
-    tabBar.addEventListener('click', (e)=>{
+    tabBar.addEventListener('click', async (e)=>{
       const btn = e.target.closest('.tab-btn'); if(!btn) return;
       const to = btn.getAttribute('data-tab');
       const fromPane = panes.querySelector('.settingsTabPane.active');
       if(fromPane && fromPane.getAttribute('data-pane')==='cast'){
-        if(!maybeConfirmDiscard(modal)) return;
+        if(!await maybeConfirmDiscard(modal)) return;
       }
       tabBar.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b===btn));
       panes.querySelectorAll('.settingsTabPane').forEach(p=>p.classList.toggle('active', p.getAttribute('data-pane')===to));
@@ -818,10 +821,10 @@
     panes.querySelector('.settingsTabPane[data-pane="general"]').classList.add('active');
 
     // Close with cast dirty guard
-    function guardedClose(){
+    async function guardedClose(){
       const active = panes.querySelector('.settingsTabPane.active');
       if(active && active.getAttribute('data-pane')==='cast'){
-        if(!maybeConfirmDiscard(modal)) return;
+        if(!await maybeConfirmDiscard(modal)) return;
       }
       closeSettingsModal();
     }
@@ -846,11 +849,14 @@
     });
 
     // Advanced actions
-    modal.addEventListener('click', (e)=>{
+    modal.addEventListener('click', async (e)=>{
       const b = e.target.closest('button[data-action]'); if(!b) return;
       const act = b.getAttribute('data-action');
       if(act==='reset-defaults'){
-        if(!confirm('Reset all settings to defaults?')) return;
+        if(!await window.showConfirm('Reset all settings to defaults?', {
+          title: 'Reset Settings',
+          tone: 'danger'
+        })) return;
         const game=g.game||{}; game.cfg = Object.assign({}, DEFAULT_CFG);
         saveStoredCfg(game.cfg);
         fillSettingsModalValues(modal, game.cfg);
@@ -858,7 +864,10 @@
         applyCfgEffects(game.cfg);
         notify('Settings reset', 'warn');
       } else if(act==='clear-storage'){
-        if(!confirm('Clear saved settings from localStorage?')) return;
+        if(!await window.showConfirm('Clear saved settings from localStorage?', {
+          title: 'Clear Storage',
+          tone: 'danger'
+        })) return;
         localStorage.removeItem(SETTINGS_STORE_KEY);
         notify('Saved settings cleared', 'warn');
       } else if(act==='export'){
@@ -894,7 +903,11 @@
         const id = sel ? +sel.value : NaN;
         if(!id || Number.isNaN(id)) { alert('Pick a player to self-evict.'); return; }
         const name = g.safeName?.(id) || ('#'+id);
-        if(!confirm(`Confirm self-eviction for ${name}? This cannot be undone.`)) return;
+        if(!await window.showConfirm(`Confirm self-eviction for ${name}? This cannot be undone.`, {
+          title: 'Confirm Self-Eviction',
+          confirmText: 'Evict',
+          tone: 'danger'
+        })) return;
         try{ g.handleSelfEviction?.(id,'self'); }catch(err){ alert('Self-evict failed: '+err); }
         try{ g.updateHud?.(); }catch(e){}
         closeSettingsModal();

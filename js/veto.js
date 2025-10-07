@@ -445,9 +445,13 @@
           b.className = 'btn danger'; 
           b.textContent = 'Evict ' + (p ? p.name : '?');
           b.disabled = !!g.__f4EvictionInProgress;
-          b.onclick = function(){ 
+          b.onclick = async function(){ 
             if(g.__f4EvictionInProgress) return; 
-            if(confirm('Are you sure you want to evict ' + (p ? p.name : '?') + '?')){
+            if(await window.showConfirm('Are you sure you want to evict ' + (p ? p.name : '?') + '?', {
+              title: 'Confirm Eviction',
+              confirmText: 'Evict',
+              tone: 'danger'
+            })){
               disableAll(); 
               finalizeFinal4Eviction(id); 
             }
