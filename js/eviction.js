@@ -741,6 +741,7 @@
 
     proceedNextWeek();
   }
+  global.postEvictionRouting=postEvictionRouting;
 
   function proceedNextWeek(){
     const g=global.game;

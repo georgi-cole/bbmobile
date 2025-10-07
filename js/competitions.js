@@ -1142,6 +1142,10 @@
     const third=all3.find(id=>!finalists.includes(id));
     g.nominees=[loser, third];
     
+    // Initialize eviction guard flags (Issue fix)
+    g.__f3EvictionResolved = false;
+    g.__f3EvictionInProgress = false;
+    
     // Sync player badge states after HOH and nominees change
     if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
     
@@ -1159,19 +1163,41 @@
     panel.innerHTML='';
     const box=document.createElement('div'); box.className='minigame-host';
     box.innerHTML=`<h3>🎬 Final 3 Eviction Ceremony</h3><div class="tiny">Final HOH ${hoh.name} must evict one houseguest in this live ceremony.</div>`;
+    
+    // Check if eviction already resolved (Issue fix)
+    if(g.__f3EvictionResolved){
+      const done=document.createElement('div'); done.className='tiny ok';
+      done.textContent='Eviction choice locked.';
+      box.appendChild(done); panel.appendChild(box); return;
+    }
+    
     if(hoh.human){
       const row=document.createElement('div'); row.className='row'; row.style.marginTop='12px';
       const btnA=document.createElement('button'); btnA.className='btn danger'; btnA.textContent=`Evict ${a.name}`;
       const btnB=document.createElement('button'); btnB.className='btn danger'; btnB.textContent=`Evict ${b.name}`;
       
+      // Disable buttons if eviction in progress (Issue fix)
+      btnA.disabled=!!g.__f3EvictionInProgress;
+      btnB.disabled=!!g.__f3EvictionInProgress;
+      
+      // Helper to disable all buttons
+      const disableAll=()=>{
+        btnA.disabled=true;
+        btnB.disabled=true;
+      };
+      
       // Enhanced justification system
       btnA.onclick=()=>{
+        if(g.__f3EvictionInProgress) return;
         showEvictionJustificationModal(a, hoh, () => {
+          disableAll();
           global.finalizeFinal3Decision?.(a.id);
         });
       };
       btnB.onclick=()=>{
+        if(g.__f3EvictionInProgress) return;
         showEvictionJustificationModal(b, hoh, () => {
+          disableAll();
           global.finalizeFinal3Decision?.(b.id);
         });
       };
@@ -1392,8 +1418,19 @@
   }
 
   async function finalizeFinal3Decision(id){
-    const g=global.game; const target=id??aiPickFinal3Eviction();
+    const g=global.game; 
+    
+    // Guard against duplicate evictions (Issue fix)
+    if(g.__f3EvictionResolved) return;
+    if(g.__f3EvictionInProgress) return;
+    
+    g.__f3EvictionInProgress = true;
+    
+    const target=id??aiPickFinal3Eviction();
     const ev=global.getP(target); const hoh=global.getP(g.hohId);
+    if(!ev) return;
+    
+    g.__f3EvictionResolved = true;
     ev.evicted=true; ev.weekEvicted=g.week;
     
     global.addLog(`Final 3 eviction: <b>${hoh.name}</b> has chosen to evict <b>${ev.name}</b>.`,'danger');
@@ -1443,8 +1480,29 @@
       g.juryHouse.push(target);
     }
     
-    // Start jury vote after a brief pause
-    setTimeout(()=>global.startJuryVote?.(), 800);
+    // Clear all badges after eviction (Issue fix)
+    g.nominees=[]; g.vetoHolder=null; g.nomsLocked=false;
+    if(Array.isArray(g.players)){
+      g.players.forEach(p=>{
+        p.nominated=false;
+        p.hoh=false;
+      });
+    }
+    g.hohId=null;
+    console.info('[final3] badges cleared after eviction reveal');
+    
+    // Use postEvictionRouting to handle proper flow (Issue fix)
+    // This will check alivePlayers().length === 2 and call startJuryVote
+    try{ global.updateHud?.(); }catch{}
+    setTimeout(()=>{
+      if(typeof global.postEvictionRouting === 'function'){
+        // postEvictionRouting will detect 2 players and start jury vote
+        global.postEvictionRouting();
+      } else {
+        // Fallback to direct call if postEvictionRouting not available
+        global.startJuryVote?.();
+      }
+    }, 800);
   }
   global.finalizeFinal3Decision=finalizeFinal3Decision;
 
