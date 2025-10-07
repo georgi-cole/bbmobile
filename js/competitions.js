@@ -1485,12 +1485,10 @@
     
     // Clear all badges after eviction (Issue fix)
     g.nominees=[]; g.vetoHolder=null; g.nomsLocked=false;
-    if(Array.isArray(g.players)){
-      g.players.forEach(p=>{
-        p.nominated=false;
-        p.hoh=false;
-      });
-    }
+    g.players.forEach(p=>{
+      p.nominated=false;
+      p.hoh=false;
+    });
     g.hohId=null;
     console.info('[final3] badges cleared after eviction reveal');
     
