@@ -1428,7 +1428,10 @@
     
     const target=id??aiPickFinal3Eviction();
     const ev=global.getP(target); const hoh=global.getP(g.hohId);
-    if(!ev) return;
+    if(!ev) {
+      g.__f3EvictionInProgress = false;
+      return;
+    }
     
     g.__f3EvictionResolved = true;
     ev.evicted=true; ev.weekEvicted=g.week;
