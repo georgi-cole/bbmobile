@@ -7,32 +7,24 @@
 
   const THEME_STORAGE_KEY = 'bb_theme_preference';
   
-  // Available themes - NEW STYLISH THEMES
+  // Available themes - NEW THEMES: TV Studio and Modern Big Brother House
   const THEMES = {
-    midnight: {
-      name: 'Midnight Glass',
-      description: 'Dark glassmorphism with blue/purple gradients and prominent glass textures'
+    tvstudio: {
+      name: 'TV Studio',
+      description: 'Dark theme with neon accents, spotlight effects, and modern TV studio vibes'
     },
-    sunset: {
-      name: 'Sunset Boulevard',
-      description: 'Warm gradients with rich orange/pink hues and visible fabric texture'
-    },
-    ocean: {
-      name: 'Ocean Depths',
-      description: 'Deep teal/blue with prominent wave textures and aquatic feel'
-    },
-    neon: {
-      name: 'Neon Nights',
-      description: 'Vibrant purple/pink gradients with neon glow effects'
+    modernhouse: {
+      name: 'Modern Big Brother House',
+      description: 'Light theme with glassmorphism, soft accents, and contemporary design'
     }
   };
 
   /**
    * Get the current active theme
-   * @returns {string} Theme key (e.g., 'midnight', 'sunset')
+   * @returns {string} Theme key (e.g., 'tvstudio', 'modernhouse')
    */
   function getCurrentTheme(){
-    return document.body.getAttribute('data-theme') || 'midnight';
+    return document.body.getAttribute('data-theme') || 'tvstudio';
   }
 
   /**
@@ -41,8 +33,8 @@
    */
   function applyTheme(themeKey){
     if(!THEMES[themeKey]){
-      console.warn(`[theme-switcher] Unknown theme: ${themeKey}, falling back to midnight`);
-      themeKey = 'midnight';
+      console.warn(`[theme-switcher] Unknown theme: ${themeKey}, falling back to tvstudio`);
+      themeKey = 'tvstudio';
     }
 
     // Apply theme data attribute to body
@@ -75,7 +67,7 @@
     }catch(e){
       console.warn('[theme-switcher] Failed to load theme preference:', e);
     }
-    return 'midnight';
+    return 'tvstudio';
   }
 
   /**
