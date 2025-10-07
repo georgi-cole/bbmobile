@@ -1188,6 +1188,11 @@
   global.renderFinal3DecisionPanel=renderFinal3DecisionPanel;
   
   function showEvictionJustificationModal(evictee, hoh, onConfirm){
+    // Pause the phase timer while modal is open
+    if(typeof global.pausePhaseTimer === 'function'){
+      global.pausePhaseTimer();
+    }
+    
     // Create justification modal
     const modal = document.createElement('div');
     modal.style.cssText = `
@@ -1298,7 +1303,13 @@
     cancelBtn.style.flex = '1';
     cancelBtn.onclick = () => {
       modal.style.animation = 'modalFadeOut 0.3s ease';
-      setTimeout(() => modal.remove(), 300);
+      setTimeout(() => {
+        modal.remove();
+        // Resume timer on cancel
+        if(typeof global.resumePhaseTimer === 'function'){
+          global.resumePhaseTimer();
+        }
+      }, 300);
     };
     
     const confirmBtn = document.createElement('button');
@@ -1309,10 +1320,17 @@
       const justification = customJust.value.trim() || justificationSelect.value || null;
       if(justification){
         global.addLog(`${hoh.name}'s reasoning: "${justification}"`, 'muted');
+        // Store justification for later use in dialogue
+        if(!global.game) global.game = {};
+        global.game.__lastEvictionJustification = justification;
       }
       modal.style.animation = 'modalFadeOut 0.3s ease';
       setTimeout(() => {
         modal.remove();
+        // Resume timer before confirming
+        if(typeof global.resumePhaseTimer === 'function'){
+          global.resumePhaseTimer();
+        }
         onConfirm();
       }, 300);
     };
@@ -1330,15 +1348,103 @@
     const ta=global.getP(a).threat||0.5, tb=global.getP(b).threat||0.5; return ta>=tb? a : b;
   }
 
-  function finalizeFinal3Decision(id){
+  // Generate evictee reply based on affinity
+  function generateEvicteeReply(evictee, hoh){
+    const affinity = evictee.affinity?.[hoh.id] ?? 0;
+    
+    // Spicy/unkind replies (affinity < -0.15)
+    const unkindReplies = [
+      `You made the wrong choice, ${hoh.name}. The jury will remember this.`,
+      `I hope you enjoy second place, ${hoh.name}.`,
+      `This is a mistake. You should have taken me to the end.`,
+      `Good luck winning against them. You're going to need it.`,
+      `You're going to regret this decision.`
+    ];
+    
+    // Neutral/gracious replies (affinity between -0.15 and 0.15)
+    const neutralReplies = [
+      `Good game, ${hoh.name}. Best of luck in the finale.`,
+      `It's been a journey. May the best player win.`,
+      `I respect your decision. Good luck.`,
+      `Well played. I'll see you on the other side.`,
+      `I understand. It's just a game. Good luck.`
+    ];
+    
+    // Kind/supportive replies (affinity > 0.15)
+    const kindReplies = [
+      `I'm rooting for you, ${hoh.name}. Go win this!`,
+      `You've got this, ${hoh.name}. Make me proud!`,
+      `No hard feelings. You played an amazing game.`,
+      `I hope you take it all the way. Good luck, friend.`,
+      `You deserve to win this. Give them hell!`
+    ];
+    
+    let replies;
+    if(affinity < -0.15){
+      replies = unkindReplies;
+    } else if(affinity > 0.15){
+      replies = kindReplies;
+    } else {
+      replies = neutralReplies;
+    }
+    
+    return replies[Math.floor(Math.random() * replies.length)];
+  }
+
+  async function finalizeFinal3Decision(id){
     const g=global.game; const target=id??aiPickFinal3Eviction();
     const ev=global.getP(target); const hoh=global.getP(g.hohId);
     ev.evicted=true; ev.weekEvicted=g.week;
+    
     global.addLog(`Final 3 eviction: <b>${hoh.name}</b> has chosen to evict <b>${ev.name}</b>.`,'danger');
-    // Increased duration for dramatic effect
-    safeShowCard('🎬 Final Eviction',[`${hoh.name} has chosen to evict`,ev.name,'to the Jury'],'evict',5000,true);
-    if(global.alivePlayers().length<=9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target)) g.juryHouse.push(target);
-    setTimeout(()=>global.startJuryVote?.(), 1000);
+    
+    // Show decision card with generous duration (5 seconds)
+    safeShowCard('🎬 Final Eviction Decision',[`${hoh.name} has chosen to evict`,ev.name,'to the Jury'],'evict',5000,true);
+    
+    // Wait for decision card to complete
+    try{ await global.cardQueueWaitIdle?.(); }catch{}
+    
+    // Show dramatic bronze medalist card (3rd place)
+    safeShowCard('🥉 Third Place',[ev.name,'finishes in 3rd place','The Bronze Medalist'],'warn',4500,true);
+    
+    // Wait for bronze card to complete
+    try{ await global.cardQueueWaitIdle?.(); }catch{}
+    
+    // Show dialogue cards if justification was provided
+    const justification = g.__lastEvictionJustification;
+    if(justification){
+      // HOH states their reason
+      safeShowCard(`💬 ${hoh.name}`,[`"${justification}"`],'neutral',4000,true);
+      try{ await global.cardQueueWaitIdle?.(); }catch{}
+      
+      // Evictee replies based on affinity
+      const reply = generateEvicteeReply(ev, hoh);
+      safeShowCard(`💬 ${ev.name}`,[`"${reply}"`],'neutral',4000,true);
+      try{ await global.cardQueueWaitIdle?.(); }catch{}
+      
+      // Clear the stored justification
+      delete g.__lastEvictionJustification;
+    }
+    
+    // Show jury vote explanation modal
+    if(typeof global.showEventModal === 'function'){
+      await global.showEventModal({
+        title: 'Time for the Jury Vote',
+        emojis: '⚖️',
+        subtitle: 'The Jury will now cast their votes one by one.\n\nThe winner of Big Brother will be crowned after all votes are revealed.',
+        duration: 5000,
+        minDisplayTime: 5000,
+        tone: 'special'
+      });
+    }
+    
+    // Add to jury house
+    if(global.alivePlayers().length<=9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target)){
+      g.juryHouse.push(target);
+    }
+    
+    // Start jury vote after a brief pause
+    setTimeout(()=>global.startJuryVote?.(), 800);
   }
   global.finalizeFinal3Decision=finalizeFinal3Decision;
 

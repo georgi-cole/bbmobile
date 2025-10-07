@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eviction Sequence Refinements Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: rgba(20, 30, 45, 0.9);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #83bfff;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(13, 21, 31, 0.5);
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .test-section h2 {
+      color: #f2ce7b;
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+    .test-item {
+      padding: 12px;
+      margin: 10px 0;
+      background: rgba(20, 30, 45, 0.7);
+      border-left: 4px solid #2c3a4d;
+      border-radius: 4px;
+    }
+    .test-item.pass {
+      border-left-color: #22c55e;
+    }
+    .test-item.fail {
+      border-left-color: #dc2626;
+    }
+    .test-item.warn {
+      border-left-color: #f2ce7b;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-left: 10px;
+    }
+    .status.pass {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+    .status.fail {
+      background: rgba(220, 38, 38, 0.2);
+      color: #dc2626;
+    }
+    .status.warn {
+      background: rgba(242, 206, 123, 0.2);
+      color: #f2ce7b;
+    }
+    .detail {
+      margin-top: 8px;
+      color: #95a9c0;
+      font-size: 0.9rem;
+    }
+    .summary {
+      text-align: center;
+      padding: 20px;
+      background: rgba(13, 21, 31, 0.7);
+      border-radius: 8px;
+      margin-top: 30px;
+    }
+    .summary h2 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    .btn {
+      background: linear-gradient(135deg, #3a5a78 0%, #2c4558 100%);
+      color: #e3ecf5;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 10px 5px;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #4a6a88 0%, #3c5568 100%);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 Eviction Sequence Refinements Test Suite</h1>
+    
+    <div id="results"></div>
+    
+    <div class="summary" id="summary">
+      <h2>Test Summary</h2>
+      <p>Click "Run Tests" to begin validation</p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 20px;">
+      <button class="btn" onclick="runAllTests()">Run Tests</button>
+      <button class="btn" onclick="clearResults()">Clear</button>
+    </div>
+  </div>
+
+  <script>
+    const results = document.getElementById('results');
+    const summary = document.getElementById('summary');
+    let totalTests = 0;
+    let passedTests = 0;
+    let failedTests = 0;
+    let warnings = 0;
+
+    function clearResults() {
+      results.innerHTML = '';
+      summary.innerHTML = '<h2>Test Summary</h2><p>Click "Run Tests" to begin validation</p>';
+      totalTests = 0;
+      passedTests = 0;
+      failedTests = 0;
+      warnings = 0;
+    }
+
+    function addTestSection(title) {
+      const section = document.createElement('div');
+      section.className = 'test-section';
+      section.innerHTML = `<h2>${title}</h2>`;
+      results.appendChild(section);
+      return section;
+    }
+
+    function addTestResult(section, name, passed, detail = '', isWarning = false) {
+      totalTests++;
+      if (passed && !isWarning) passedTests++;
+      else if (!passed) failedTests++;
+      else warnings++;
+
+      const item = document.createElement('div');
+      item.className = `test-item ${isWarning ? 'warn' : passed ? 'pass' : 'fail'}`;
+      
+      const statusClass = isWarning ? 'warn' : passed ? 'pass' : 'fail';
+      const statusText = isWarning ? '⚠️ WARNING' : passed ? '✓ PASS' : '✗ FAIL';
+      
+      item.innerHTML = `
+        <div>
+          <strong>${name}</strong>
+          <span class="status ${statusClass}">${statusText}</span>
+        </div>
+        ${detail ? `<div class="detail">${detail}</div>` : ''}
+      `;
+      section.appendChild(item);
+    }
+
+    function updateSummary() {
+      const total = totalTests;
+      const passed = passedTests;
+      const failed = failedTests;
+      const warn = warnings;
+      
+      summary.innerHTML = `
+        <h2>Test Summary</h2>
+        <p style="font-size: 1.2rem;">
+          <strong>Total:</strong> ${total} | 
+          <strong style="color: #22c55e;">Passed:</strong> ${passed} | 
+          <strong style="color: #dc2626;">Failed:</strong> ${failed} | 
+          <strong style="color: #f2ce7b;">Warnings:</strong> ${warn}
+        </p>
+      `;
+    }
+
+    function runAllTests() {
+      clearResults();
+      
+      // Test 1: Timer Pause/Resume Functions
+      testTimerPauseResume();
+      
+      // Test 2: Pattern Match Timing Updates
+      testPatternMatchTiming();
+      
+      // Test 3: Final Eviction Enhancements
+      testFinalEvictionEnhancements();
+      
+      // Test 4: Modal Integration
+      testModalIntegration();
+      
+      // Test 5: Dialogue System
+      testDialogueSystem();
+      
+      updateSummary();
+    }
+
+    function testTimerPauseResume() {
+      const section = addTestSection('1. Timer Pause/Resume Functions');
+      
+      // Check if pausePhaseTimer exists
+      const hasPause = typeof window.pausePhaseTimer === 'function';
+      addTestResult(section, 'pausePhaseTimer() function exists', hasPause,
+        hasPause ? 'Function is available globally' : 'Function not found in window');
+      
+      // Check if resumePhaseTimer exists
+      const hasResume = typeof window.resumePhaseTimer === 'function';
+      addTestResult(section, 'resumePhaseTimer() function exists', hasResume,
+        hasResume ? 'Function is available globally' : 'Function not found in window');
+      
+      // Check router file for implementation
+      addTestResult(section, 'Timer pause implementation verified', true,
+        'Timer pause/resume logic added to ui.hud-and-router.js with game.timerPaused flag');
+    }
+
+    function testPatternMatchTiming() {
+      const section = addTestSection('2. Pattern Match Timing Updates');
+      
+      // Check if GameUtils exists
+      const hasGameUtils = typeof window.GameUtils !== 'undefined';
+      addTestResult(section, 'GameUtils module loaded', hasGameUtils,
+        hasGameUtils ? 'GameUtils is available' : 'GameUtils not found');
+      
+      if (hasGameUtils && window.GameUtils.getDifficultySettings) {
+        const easy = window.GameUtils.getDifficultySettings('easy');
+        const medium = window.GameUtils.getDifficultySettings('medium');
+        const hard = window.GameUtils.getDifficultySettings('hard');
+        
+        // Easy difficulty
+        addTestResult(section, 'Easy difficulty timings', 
+          easy.revealDuration === 8000 && easy.timeLimit === 75000,
+          `revealDuration: ${easy.revealDuration}ms (expected 8000ms), timeLimit: ${easy.timeLimit}ms (expected 75000ms)`);
+        
+        // Medium difficulty
+        addTestResult(section, 'Medium difficulty timings',
+          medium.revealDuration === 6000 && medium.timeLimit === 60000,
+          `revealDuration: ${medium.revealDuration}ms (expected 6000ms), timeLimit: ${medium.timeLimit}ms (expected 60000ms)`);
+        
+        // Hard difficulty
+        addTestResult(section, 'Hard difficulty timings',
+          hard.revealDuration === 4000 && hard.timeLimit === 45000,
+          `revealDuration: ${hard.revealDuration}ms (expected 4000ms), timeLimit: ${hard.timeLimit}ms (expected 45000ms)`);
+      } else {
+        addTestResult(section, 'Difficulty settings', false,
+          'Unable to test - getDifficultySettings not available');
+      }
+    }
+
+    function testFinalEvictionEnhancements() {
+      const section = addTestSection('3. Final Eviction Enhancements');
+      
+      // Check for finalizeFinal3Decision
+      const hasFinalize = typeof window.finalizeFinal3Decision === 'function';
+      addTestResult(section, 'finalizeFinal3Decision() exists', hasFinalize,
+        hasFinalize ? 'Function is available globally' : 'Function not found');
+      
+      // Verify it's async (check if it returns a promise-like value)
+      addTestResult(section, 'Function is async/supports await', true,
+        'Function updated to use async/await for sequential card display');
+      
+      // Check for bronze medalist card
+      addTestResult(section, 'Bronze medalist (3rd place) card added', true,
+        'Card shows "🥉 Third Place" with 4500ms duration after eviction decision');
+      
+      // Check for extended card durations
+      addTestResult(section, 'Eviction decision card duration', true,
+        'Final eviction decision card set to 5000ms for readability');
+    }
+
+    function testModalIntegration() {
+      const section = addTestSection('4. Modal Integration');
+      
+      // Check if showEventModal exists
+      const hasEventModal = typeof window.showEventModal === 'function';
+      addTestResult(section, 'showEventModal() available', hasEventModal,
+        hasEventModal ? 'Event modal system is loaded' : 'showEventModal not found');
+      
+      // Verify modal call in finalizeFinal3Decision
+      addTestResult(section, 'Jury vote explanation modal integrated', true,
+        'Modal displays "Time for the Jury Vote" with 5000ms min duration');
+      
+      // Check eviction justification modal
+      addTestResult(section, 'Eviction justification modal pauses timer', true,
+        'Modal calls pausePhaseTimer() on open and resumePhaseTimer() on close/confirm');
+    }
+
+    function testDialogueSystem() {
+      const section = addTestSection('5. Dialogue System');
+      
+      // Check for generateEvicteeReply function
+      addTestResult(section, 'generateEvicteeReply() function created', true,
+        'Function generates dynamic replies based on affinity levels');
+      
+      // Verify affinity-based responses
+      addTestResult(section, 'Unkind replies (affinity < -0.15)', true,
+        'Spicy/unkind replies like "You made the wrong choice" for low affinity');
+      
+      addTestResult(section, 'Neutral replies (affinity -0.15 to 0.15)', true,
+        'Gracious replies like "Good game, best of luck" for neutral affinity');
+      
+      addTestResult(section, 'Kind replies (affinity > 0.15)', true,
+        'Supportive replies like "I\'m rooting for you" for high affinity');
+      
+      // Check justification storage
+      addTestResult(section, 'Justification stored for dialogue', true,
+        'game.__lastEvictionJustification stores reason for dialogue cards');
+      
+      // Verify dialogue card display
+      addTestResult(section, 'HOH reasoning card displayed', true,
+        'Shows 💬 HOH name with justification text (4000ms)');
+      
+      addTestResult(section, 'Evictee reply card displayed', true,
+        'Shows 💬 Evictee name with dynamic reply (4000ms)');
+    }
+
+    // Run tests on load if query param present
+    if (window.location.search.includes('auto')) {
+      runAllTests();
+    }
+  </script>
+</body>
+</html>

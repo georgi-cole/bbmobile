@@ -135,21 +135,21 @@
     const settings = {
       easy: {
         patternLength: 4,
-        revealDuration: 5000,
+        revealDuration: 8000,
         allowedMistakes: 2,
-        timeLimit: 60000
+        timeLimit: 75000
       },
       medium: {
         patternLength: 6,
-        revealDuration: 3000,
+        revealDuration: 6000,
         allowedMistakes: 1,
-        timeLimit: 45000
+        timeLimit: 60000
       },
       hard: {
         patternLength: 8,
-        revealDuration: 2000,
+        revealDuration: 4000,
         allowedMistakes: 0,
-        timeLimit: 30000
+        timeLimit: 45000
       }
     };
     
