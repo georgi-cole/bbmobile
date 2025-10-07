@@ -228,6 +228,8 @@ h1{
   background:linear-gradient(135deg, var(--ink) 0%, var(--accent) 100%);
   -webkit-background-clip:text;
   background-clip:text;
+  color: var(--ink); /* Fallback color for accessibility */
+  -webkit-text-fill-color: var(--ink); /* Ensures text is visible with gradient */
 }
 h2{
   margin:0 0 .65em;
