@@ -87,7 +87,7 @@ body:not([data-theme]){
   --primary-2:#252540;
   --primary-3:#3a3a60;
   /* Neon grid with spotlight effects */
-  --texture-overlay:url("data:image/svg+xml,%3Csvg width='120' height='120' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3CradialGradient id='spotlight1' cx='25%25' cy='25%25'%3E%3Cstop offset='0%25' stop-color='%2300d9ff' stop-opacity='0.15'/%3E%3Cstop offset='50%25' stop-color='%2300d9ff' stop-opacity='0.05'/%3E%3Cstop offset='100%25' stop-color='%2300d9ff' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='spotlight2' cx='75%25' cy='75%25'%3E%3Cstop offset='0%25' stop-color='%23ff3366' stop-opacity='0.12'/%3E%3Cstop offset='100%25' stop-color='%23ff3366' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='120' height='120' fill='url(%23spotlight1)'/%3E%3Crect width='120' height='120' fill='url(%23spotlight2)'/%3E%3Cpath d='M0,20 L120,20 M0,40 L120,40 M0,60 L120,60 M0,80 L120,80 M0,100 L120,100' stroke='%2300d9ff' stroke-width='0.3' opacity='0.15'/%3E%3Cpath d='M20,0 L20,120 M40,0 L40,120 M60,0 L60,120 M80,0 L80,120 M100,0 L100,120' stroke='%2300d9ff' stroke-width='0.3' opacity='0.15'/%3E%3Ccircle cx='60' cy='60' r='30' fill='none' stroke='%2300d9ff' stroke-width='0.5' opacity='0.1'/%3E%3C/svg%3E");
+  --texture-overlay:url("./spotlight-texture.svg");
   --texture-opacity:0.4;
   /* Theme-specific roster styling */
   --roster-gradient-1:#00d9ff;
