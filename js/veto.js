@@ -330,11 +330,235 @@
     // Build top-3 reveal sequence
     var top3 = arr.slice(0, Math.min(3, arr.length));
     showVetoRevealSequence(top3).then(function(){
-      setTimeout(function(){ startVetoCeremony(); }, 500);
+      // Check for Final 4 — skip veto ceremony and go direct to eviction
+      var aliveCount = alivePlayers().length;
+      if(aliveCount === 4){
+        setTimeout(function(){ startFinal4Eviction(); }, 500);
+      } else {
+        setTimeout(function(){ startVetoCeremony(); }, 500);
+      }
     }).catch(function(e){
       console.warn('[veto] reveal error, proceeding', e);
-      setTimeout(function(){ startVetoCeremony(); }, 500);
+      var aliveCount = alivePlayers().length;
+      if(aliveCount === 4){
+        setTimeout(function(){ startFinal4Eviction(); }, 500);
+      } else {
+        setTimeout(function(){ startVetoCeremony(); }, 500);
+      }
     });
+  }
+
+  /* ===== Final 4 Eviction (Big Brother US/CA Rules) ===== */
+  // At Final 4: No veto ceremony. POV holder directly chooses who to evict.
+  // The two non-HOH, non-POV players are automatically on the block.
+  function startFinal4Eviction(){
+    var g = global.game;
+    g.__f4EvictionResolved = false;
+    g.__f4EvictionInProgress = false;
+    
+    // Determine the two nominees (non-HOH, non-POV holder)
+    var f4 = alivePlayers().map(function(p){ return p.id; });
+    var forced = f4.filter(function(id){ return id !== g.hohId && id !== g.vetoHolder; });
+    if(forced.length >= 2){
+      g.nominees = forced.slice(0, 2);
+      g.nomsLocked = true;
+      for(var i = 0; i < g.players.length; i++){ 
+        g.players[i].nominated = (g.nominees.indexOf(g.players[i].id) !== -1); 
+      }
+      // Sync player badge states after F4 nominees set
+      try{ if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates(); }catch(e){}
+      try{ if(typeof global.updateHud === 'function') global.updateHud(); }catch(e){}
+    }
+    
+    if(global.tv && typeof global.tv.say === 'function') global.tv.say('Final 4 Eviction');
+    if(typeof global.phaseMusic === 'function') global.phaseMusic('livevote');
+    
+    // Show explanatory card with longer duration for readability
+    try{ 
+      if(typeof global.showCard === 'function') 
+        global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 4000, true); 
+    }catch(e){}
+    
+    (function waitCards(){
+      if(typeof global.cardQueueWaitIdle === 'function'){
+        try{ global.cardQueueWaitIdle().then(function(){ afterWait(); }); return; }catch(e){}
+      }
+      afterWait();
+    })();
+    
+    function afterWait(){
+      if(typeof global.setPhase === 'function')
+        global.setPhase('final4_eviction', Math.max(20, Math.floor(g.cfg.tVote * 0.9)), finalizeFinal4Eviction);
+      setTimeout(function(){ renderFinal4EvictionPanel(); }, 50);
+      
+      var holder = getP(g.vetoHolder);
+      if(holder && !holder.human){
+        // AI decides after a short delay
+        setTimeout(function(){
+          var gg = global.game;
+          if(gg && gg.phase === 'final4_eviction' && !gg.__f4EvictionResolved){
+            try{ finalizeFinal4Eviction(); }catch(e){}
+          }
+        }, 1200);
+      }
+    }
+  }
+  global.startFinal4Eviction = startFinal4Eviction;
+  
+  function renderFinal4EvictionPanel(){
+    var g = global.game;
+    var panel = document.querySelector('#panel'); if(!panel) return;
+    panel.innerHTML = '';
+    var box = document.createElement('div'); box.className = 'minigame-host';
+    box.innerHTML = '<h3>Final 4 Eviction</h3>';
+    var holder = getP(g.vetoHolder);
+    var hoh = getP(g.hohId);
+    var noms = (g.nominees || []).map(getP);
+    
+    var info = document.createElement('div'); info.className = 'tiny';
+    info.textContent = 'POV Holder: ' + (holder ? holder.name : '?') + 
+                      '. HOH: ' + (hoh ? hoh.name : '?') + 
+                      '. Nominees: ' + noms.map(function(n){ return n ? n.name : '?'; }).join(', ') + '.';
+    box.appendChild(info);
+    
+    if(g.__f4EvictionResolved){
+      var done = document.createElement('div'); done.className = 'tiny ok'; 
+      done.textContent = 'Eviction choice locked.';
+      box.appendChild(done); panel.appendChild(box); return;
+    }
+    
+    var note = document.createElement('div'); note.className = 'tiny warn';
+    note.style.marginTop = '8px';
+    note.textContent = 'At Final 4, the Power of Veto holder has sole power to evict.';
+    box.appendChild(note);
+    
+    if(holder && holder.human){
+      var row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '12px';
+      function disableAll(){
+        var bs = row.querySelectorAll('button');
+        for(var i = 0; i < bs.length; i++){ bs[i].disabled = true; }
+      }
+      
+      for(var i = 0; i < g.nominees.length; i++){
+        (function wrapEvict(id){
+          var p = getP(id);
+          var b = document.createElement('button'); 
+          b.className = 'btn danger'; 
+          b.textContent = 'Evict ' + (p ? p.name : '?');
+          b.disabled = !!g.__f4EvictionInProgress;
+          b.onclick = function(){ 
+            if(g.__f4EvictionInProgress) return; 
+            if(confirm('Are you sure you want to evict ' + (p ? p.name : '?') + '?')){
+              disableAll(); 
+              finalizeFinal4Eviction(id); 
+            }
+          };
+          row.appendChild(b);
+        })(g.nominees[i]);
+      }
+      
+      box.appendChild(row);
+      var hint = document.createElement('div'); hint.className = 'tiny muted';
+      hint.style.marginTop = '8px';
+      hint.textContent = 'Choose wisely — your decision determines who moves forward to the Final 3.';
+      box.appendChild(hint);
+    } else {
+      var aiNote = document.createElement('div'); aiNote.className = 'tiny muted'; 
+      aiNote.textContent = 'POV holder is deciding…';
+      box.appendChild(aiNote);
+    }
+    
+    panel.appendChild(box);
+  }
+  global.renderFinal4EvictionPanel = renderFinal4EvictionPanel;
+  
+  function finalizeFinal4Eviction(targetId){
+    var g = global.game;
+    if(g.__f4EvictionResolved) return;
+    if(g.__f4EvictionInProgress) return;
+    
+    g.__f4EvictionInProgress = true;
+    
+    var holder = getP(g.vetoHolder);
+    var target = targetId;
+    
+    // AI decision if not provided
+    if(typeof target !== 'number'){
+      target = aiFinal4EvictionChoice();
+    }
+    
+    var evictee = getP(target);
+    if(!evictee) return;
+    
+    g.__f4EvictionResolved = true;
+    evictee.evicted = true;
+    evictee.weekEvicted = g.week;
+    
+    global.addLog('Final 4 eviction: <b>' + holder.name + '</b> has chosen to evict <b>' + evictee.name + '</b>.', 'danger');
+    
+    // Show eviction card with generous duration
+    try{ 
+      if(typeof global.showCard === 'function') 
+        global.showCard('Evicted', [evictee.name + ' has been evicted.', 'Three remain.'], 'evict', 4500, true); 
+    }catch(e){}
+    
+    // Add to jury if enabled
+    if(global.alivePlayers().length <= 9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target)){
+      g.juryHouse.push(target);
+    }
+    
+    // Proceed to next phase after card displays
+    (function waitCards(){
+      if(typeof global.cardQueueWaitIdle === 'function'){
+        try{ 
+          global.cardQueueWaitIdle().then(function(){ 
+            setTimeout(function(){ proceedAfterFinal4Eviction(); }, 700); 
+          }); 
+          return; 
+        }catch(e){}
+      }
+      setTimeout(function(){ proceedAfterFinal4Eviction(); }, 700);
+    })();
+  }
+  global.finalizeFinal4Eviction = finalizeFinal4Eviction;
+  
+  function aiFinal4EvictionChoice(){
+    var g = global.game;
+    var holder = getP(g.vetoHolder);
+    var noms = (g.nominees || []).slice();
+    var bestId = null, bestScore = -Infinity;
+    
+    for(var i = 0; i < noms.length; i++){
+      var id = noms[i];
+      var cand = getP(id);
+      var aff = (holder && holder.affinity && typeof holder.affinity[id] === 'number') ? holder.affinity[id] : 0;
+      var threat = cand.threat || 0.5;
+      // Evict lower affinity OR higher threat
+      var score = (-aff) + threat;
+      if(score > bestScore){ bestScore = score; bestId = id; }
+    }
+    
+    return bestId;
+  }
+  
+  function proceedAfterFinal4Eviction(){
+    var g = global.game;
+    var remain = global.alivePlayers();
+    
+    if(remain.length === 3){
+      // Transition to Final 3
+      setTimeout(function(){ 
+        if(typeof global.startFinal3Flow === 'function') global.startFinal3Flow(); 
+      }, 300);
+    } else {
+      // Something went wrong, fall back to standard flow
+      console.warn('[F4] Unexpected player count after eviction:', remain.length);
+      setTimeout(function(){ 
+        if(typeof global.advanceWeek === 'function') global.advanceWeek(); 
+      }, 500);
+    }
+    
+    try{ if(typeof global.updateHud === 'function') global.updateHud(); }catch(e){}
   }
 
   function startVetoCeremony(){
