@@ -616,6 +616,7 @@
     if(g.phase==='hoh') return renderHOH(panel);
     if(g.phase==='final3_comp1') return renderF3P1(panel);
     if(g.phase==='final3_comp2') return renderF3P2(panel);
+    if(g.phase==='final3_comp3') return renderF3P3(panel);
     panel.innerHTML='<div class="tiny muted">Competition running…</div>';
   }
   global.renderCompPanel=renderCompPanel;
@@ -796,12 +797,13 @@
     const g=global.game; if(g.phase!=='final3_comp1') return;
     const ids=global.alivePlayers().map(p=>p.id);
     for(const id of ids) if(!g.lastCompScores.has(id)) g.lastCompScores.set(id,5+(global.rng?.()||Math.random())*5);
-    const arr=[...g.lastCompScores.entries()].filter(([id])=>ids.includes(id)).sort((a,b)=>a[1]-b[1]);
-    const lowest=arr[0][0];
-    const others=ids.filter(id=>id!==lowest);
-    global.addLog(`Final 3 Part 1: Lowest is ${global.safeName(lowest)} (Nominee A).`,'warn');
-    safeShowCard('F3 Part 1',[`Nominee A: ${global.safeName(lowest)}`],'noms',2800,true);
-    global.game.nominees=[lowest]; startF3P2(others);
+    const arr=[...g.lastCompScores.entries()].filter(([id])=>ids.includes(id)).sort((a,b)=>b[1]-a[1]);
+    const winner=arr[0][0];
+    const losers=[arr[1][0], arr[2][0]];
+    g.__f3p1Winner=winner;
+    global.addLog(`Final 3 Part 1: Winner is ${global.safeName(winner)} (advances to Part 3).`,'ok');
+    safeShowCard('🏆 F3 Part 1 Winner',[global.safeName(winner),'Advances directly to Part 3!'],'hoh',3200,true);
+    setTimeout(()=>startF3P2(losers), 3300);
   }
 
   function renderF3P2(panel){
@@ -855,16 +857,80 @@
     const duo=(g.__f3_duo||[]).slice();
     for(const id of duo) if(!g.lastCompScores.has(id)) g.lastCompScores.set(id,5+(global.rng?.()||Math.random())*5);
     const sorted=[...g.lastCompScores.entries()].filter(([id])=>duo.includes(id)).sort((a,b)=>b[1]-a[1]);
+    const winner=sorted[0][0];
+    g.__f3p2Winner=winner;
+    global.addLog(`Final 3 Part 2: Winner is ${global.safeName(winner)} (advances to Part 3).`,'ok');
+    safeShowCard('🏆 F3 Part 2 Winner',[global.safeName(winner),'Advances to Part 3!'],'hoh',3200);
+    setTimeout(()=>startF3P3(), 3300);
+  }
+
+  function renderF3P3(panel){
+    panel.innerHTML=''; const host=document.createElement('div'); host.className='minigame-host';
+    host.innerHTML='<div class="tiny muted">Final 3 — Part 3 (final showdown) is running…</div>'; panel.appendChild(host);
+  }
+
+  function startF3P3(){
+    const g=global.game; g.lastCompScores=new Map();
+    const finalists=[g.__f3p1Winner, g.__f3p2Winner];
+    g.__f3_finalists=finalists.slice();
+    global.tv.say('Final 3 — Part 3'); global.phaseMusic?.('hoh');
+    global.setPhase('final3_comp3', Math.max(18, Math.floor(g.cfg.tHOH*0.7)), finishF3P3);
+    const diffMult = getAIDifficultyMultiplier();
+    for(const id of finalists){
+      const p=global.getP(id);
+      if(p.human){
+        const host=document.querySelector('#panel .minigame-host')||document.querySelector('#panel');
+        if(host){
+          // Check if minigame system is ready before rendering
+          if(!isMinigameSystemReady()){
+            const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
+            wrap.innerHTML='<div class="tiny muted">Loading minigame system...</div>'; host.appendChild(wrap);
+            // Retry after a short delay
+            setTimeout(() => {
+              if(isMinigameSystemReady()){
+                wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 3.</div>';
+                const mg=pickMinigameType();
+                global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P3/${mg}`));
+              } else {
+                console.error('[Competition] Minigame system failed to load');
+                wrap.innerHTML='<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+              }
+            }, 500);
+          } else {
+            const mg=pickMinigameType(); const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
+            wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 3.</div>'; host.appendChild(wrap);
+            global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P3/${mg}`));
+          }
+        }
+      } else {
+        setTimeout(()=>{ if(g.phase!=='final3_comp3') return;
+          const baseScore = 10+(global.rng?.()||Math.random())*25;
+          const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.65) * diffMult;
+          submitScore(p.id, baseScore, aiMultiplier, 'F3-P3/AI');
+        }, 300+(global.rng?.()||Math.random())*(g.cfg.tHOH*520));
+      }
+    }
+  }
+
+  function finishF3P3(){
+    const g=global.game; if(g.phase!=='final3_comp3') return;
+    const finalists=(g.__f3_finalists||[]).slice();
+    for(const id of finalists) if(!g.lastCompScores.has(id)) g.lastCompScores.set(id,5+(global.rng?.()||Math.random())*5);
+    const sorted=[...g.lastCompScores.entries()].filter(([id])=>finalists.includes(id)).sort((a,b)=>b[1]-a[1]);
     const winner=sorted[0][0], loser=sorted[1][0];
     for(const p of g.players) p.hoh=false; g.hohId=winner; global.getP(winner).hoh=true;
-    const nomA=g.nominees[0]; g.nominees=[nomA, loser];
+    
+    // Determine the third person who didn't make it to Part 3
+    const all3=global.alivePlayers().map(p=>p.id);
+    const third=all3.find(id=>!finalists.includes(id));
+    g.nominees=[loser, third];
     
     // Sync player badge states after HOH and nominees change
     if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
     
-    global.addLog(`Final 3 Part 2: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`,'ok');
-    safeShowCard('Final 3 Winner',[global.safeName(winner)],'hoh',2800);
-    global.tv.say('Final 3 Decision');
+    global.addLog(`Final 3 Part 3: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`,'ok');
+    safeShowCard('👑 Final HOH',[global.safeName(winner),'Winner of the Final 3 Competition!','Must now evict one houseguest'],'hoh',3600);
+    global.tv.say('Final 3 Eviction Ceremony');
     global.setPhase('final3_decision', Math.max(16, Math.floor(g.cfg.tVote*0.8)), ()=>global.finalizeFinal3Decision?.());
     setTimeout(()=>global.renderFinal3DecisionPanel?.(),50);
   }
@@ -874,16 +940,29 @@
     const hoh=global.getP(g.hohId); const [a,b]=g.nominees.map(global.getP);
     panel.innerHTML='';
     const box=document.createElement('div'); box.className='minigame-host';
-    box.innerHTML=`<h3>Final 3 Decision</h3><div class="tiny">HOH ${hoh.name} must evict one houseguest.</div>`;
+    box.innerHTML=`<h3>🎬 Final 3 Eviction Ceremony</h3><div class="tiny">Final HOH ${hoh.name} must evict one houseguest in this live ceremony.</div>`;
     if(hoh.human){
       const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
       const btnA=document.createElement('button'); btnA.className='btn danger'; btnA.textContent=`Evict ${a.name}`;
       const btnB=document.createElement('button'); btnB.className='btn danger'; btnB.textContent=`Evict ${b.name}`;
-      btnA.onclick=()=>global.finalizeFinal3Decision?.(a.id);
-      btnB.onclick=()=>global.finalizeFinal3Decision?.(b.id);
+      btnA.onclick=()=>{
+        // Optional: show justification modal
+        if(confirm(`Are you sure you want to evict ${a.name}?`)){
+          global.finalizeFinal3Decision?.(a.id);
+        }
+      };
+      btnB.onclick=()=>{
+        // Optional: show justification modal
+        if(confirm(`Are you sure you want to evict ${b.name}?`)){
+          global.finalizeFinal3Decision?.(b.id);
+        }
+      };
       row.append(btnA,btnB); box.appendChild(row);
+      const hint=document.createElement('div'); hint.className='tiny muted'; hint.style.marginTop='8px';
+      hint.textContent='Choose wisely — this decision determines who sits beside you in the Final 2.';
+      box.appendChild(hint);
     } else {
-      const note=document.createElement('div'); note.className='tiny muted'; note.textContent='AI will decide at end.'; box.appendChild(note);
+      const note=document.createElement('div'); note.className='tiny muted'; note.textContent='AI will make the decision at end.'; box.appendChild(note);
     }
     panel.appendChild(box);
   }
@@ -897,9 +976,10 @@
 
   function finalizeFinal3Decision(id){
     const g=global.game; const target=id??aiPickFinal3Eviction();
-    const ev=global.getP(target); ev.evicted=true; ev.weekEvicted=g.week;
-    global.addLog(`Final 3 eviction: <b>${ev.name}</b>.`,'danger');
-    safeShowCard('Evicted',[ev.name],'evict',3600,true);
+    const ev=global.getP(target); const hoh=global.getP(g.hohId);
+    ev.evicted=true; ev.weekEvicted=g.week;
+    global.addLog(`Final 3 eviction: <b>${hoh.name}</b> has chosen to evict <b>${ev.name}</b>.`,'danger');
+    safeShowCard('🎬 Final Eviction',[`${hoh.name} has chosen to evict`,ev.name,'to the Jury'],'evict',4000,true);
     if(global.alivePlayers().length<=9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target)) g.juryHouse.push(target);
     setTimeout(()=>global.startJuryVote?.(), 700);
   }

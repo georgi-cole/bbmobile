@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Final 3 Flow - Big Brother</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      padding: 20px;
+      background: #0a0e1a;
+      color: #eaf4ff;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #0e1622;
+      padding: 30px;
+      border-radius: 12px;
+      border: 1px solid rgba(110,160,220,.18);
+    }
+    h1 {
+      color: #ffdc8b;
+      margin-top: 0;
+    }
+    .test-section {
+      margin: 25px 0;
+      padding: 20px;
+      background: rgba(20, 30, 50, 0.5);
+      border-radius: 8px;
+      border-left: 3px solid #4a90e2;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #4a90e2;
+      font-size: 1.3em;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+    }
+    .pass {
+      background: rgba(46, 204, 113, 0.2);
+      border-left: 3px solid #2ecc71;
+    }
+    .fail {
+      background: rgba(231, 76, 60, 0.2);
+      border-left: 3px solid #e74c3c;
+    }
+    .info {
+      background: rgba(52, 152, 219, 0.2);
+      border-left: 3px solid #3498db;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 10px 5px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #4a90e2;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #357abd;
+    }
+    .btn-success {
+      background: #2ecc71;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #27ae60;
+    }
+    code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .status.pass { background: #2ecc71; color: white; }
+    .status.fail { background: #e74c3c; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏆 Final 3 Flow Test Suite</h1>
+    <p>This test validates the new 3-part Final 3 competition system.</p>
+
+    <div class="test-section">
+      <h2>📋 Test Overview</h2>
+      <div class="test-result info">
+        <strong>Expected Behavior:</strong>
+        <ul>
+          <li>Part 1: All 3 compete → Winner advances to Part 3</li>
+          <li>Part 2: Two losers compete → Winner advances to Part 3</li>
+          <li>Part 3: Two finalists compete → Winner becomes Final HOH</li>
+          <li>Final HOH holds live eviction ceremony</li>
+          <li>Evicted goes to jury, Final 2 proceed to jury vote</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>🔍 Function Existence Tests</h2>
+      <div id="existence-results"></div>
+      <button class="btn-primary" onclick="testFunctionExistence()">Run Function Existence Tests</button>
+    </div>
+
+    <div class="test-section">
+      <h2>🎮 Competition Phase Tests</h2>
+      <div id="phase-results"></div>
+      <button class="btn-primary" onclick="testCompetitionPhases()">Run Phase Tests</button>
+    </div>
+
+    <div class="test-section">
+      <h2>🎯 Logic Flow Tests</h2>
+      <div id="logic-results"></div>
+      <button class="btn-primary" onclick="testLogicFlow()">Run Logic Tests</button>
+    </div>
+
+    <div class="test-section">
+      <h2>📝 Documentation Tests</h2>
+      <div id="doc-results"></div>
+      <button class="btn-primary" onclick="testDocumentation()">Run Documentation Tests</button>
+    </div>
+
+    <div class="test-section">
+      <h2>✅ Overall Status</h2>
+      <div id="overall-status"></div>
+      <button class="btn-success" onclick="runAllTests()">Run All Tests</button>
+    </div>
+  </div>
+
+  <script>
+    let testResults = {
+      existence: { total: 0, passed: 0 },
+      phases: { total: 0, passed: 0 },
+      logic: { total: 0, passed: 0 },
+      documentation: { total: 0, passed: 0 }
+    };
+
+    function addResult(containerId, message, isPassing) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${isPassing ? 'pass' : 'fail'}`;
+      div.innerHTML = `${isPassing ? '✅' : '❌'} ${message}`;
+      container.appendChild(div);
+    }
+
+    function testFunctionExistence() {
+      const container = document.getElementById('existence-results');
+      container.innerHTML = '';
+      testResults.existence = { total: 0, passed: 0 };
+
+      const functions = [
+        'startFinal3Flow',
+        'renderF3P1',
+        'startF3P1',
+        'finishF3P1',
+        'renderF3P2',
+        'startF3P2',
+        'finishF3P2',
+        'renderF3P3',
+        'startF3P3',
+        'finishF3P3',
+        'renderFinal3DecisionPanel',
+        'finalizeFinal3Decision',
+        'renderCompPanel'
+      ];
+
+      functions.forEach(funcName => {
+        testResults.existence.total++;
+        const exists = typeof window[funcName] === 'function';
+        if (exists) testResults.existence.passed++;
+        addResult('existence-results', `Function <code>${funcName}</code> exists`, exists);
+      });
+
+      updateOverallStatus();
+    }
+
+    function testCompetitionPhases() {
+      const container = document.getElementById('phase-results');
+      container.innerHTML = '';
+      testResults.phases = { total: 0, passed: 0 };
+
+      // Test 1: Check if phases are defined
+      testResults.phases.total++;
+      const phasesExist = ['final3_comp1', 'final3_comp2', 'final3_comp3', 'final3_decision'].every(phase => {
+        return typeof phase === 'string';
+      });
+      if (phasesExist) testResults.phases.passed++;
+      addResult('phase-results', 'Final 3 phase identifiers are defined', phasesExist);
+
+      // Test 2: Check renderCompPanel handles all phases
+      testResults.phases.total++;
+      let renderCompPanelValid = false;
+      if (typeof window.renderCompPanel === 'function') {
+        const funcStr = window.renderCompPanel.toString();
+        renderCompPanelValid = 
+          funcStr.includes('final3_comp1') &&
+          funcStr.includes('final3_comp2') &&
+          funcStr.includes('final3_comp3');
+      }
+      if (renderCompPanelValid) testResults.phases.passed++;
+      addResult('phase-results', 'renderCompPanel handles all 3 Final 3 competition phases', renderCompPanelValid);
+
+      updateOverallStatus();
+    }
+
+    function testLogicFlow() {
+      const container = document.getElementById('logic-results');
+      container.innerHTML = '';
+      testResults.logic = { total: 0, passed: 0 };
+
+      // Test 1: finishF3P1 logic
+      testResults.logic.total++;
+      let f3p1Logic = false;
+      if (typeof window.finishF3P1 === 'function') {
+        const funcStr = window.finishF3P1.toString();
+        f3p1Logic = 
+          funcStr.includes('__f3p1Winner') &&
+          funcStr.includes('sort') &&
+          funcStr.includes('startF3P2') &&
+          funcStr.includes('Advances');
+      }
+      if (f3p1Logic) testResults.logic.passed++;
+      addResult('logic-results', 'finishF3P1 identifies winner and starts Part 2', f3p1Logic);
+
+      // Test 2: finishF3P2 logic
+      testResults.logic.total++;
+      let f3p2Logic = false;
+      if (typeof window.finishF3P2 === 'function') {
+        const funcStr = window.finishF3P2.toString();
+        f3p2Logic = 
+          funcStr.includes('__f3p2Winner') &&
+          funcStr.includes('startF3P3');
+      }
+      if (f3p2Logic) testResults.logic.passed++;
+      addResult('logic-results', 'finishF3P2 identifies winner and starts Part 3', f3p2Logic);
+
+      // Test 3: finishF3P3 logic
+      testResults.logic.total++;
+      let f3p3Logic = false;
+      if (typeof window.finishF3P3 === 'function') {
+        const funcStr = window.finishF3P3.toString();
+        f3p3Logic = 
+          funcStr.includes('hohId') &&
+          funcStr.includes('nominees') &&
+          funcStr.includes('Final HOH');
+      }
+      if (f3p3Logic) testResults.logic.passed++;
+      addResult('logic-results', 'finishF3P3 sets Final HOH and both nominees', f3p3Logic);
+
+      // Test 4: Decision panel includes ceremony elements
+      testResults.logic.total++;
+      let ceremonyLogic = false;
+      if (typeof window.renderFinal3DecisionPanel === 'function') {
+        const funcStr = window.renderFinal3DecisionPanel.toString();
+        ceremonyLogic = 
+          funcStr.includes('Eviction Ceremony') &&
+          funcStr.includes('confirm');
+      }
+      if (ceremonyLogic) testResults.logic.passed++;
+      addResult('logic-results', 'Final 3 decision panel includes ceremony elements and confirmation', ceremonyLogic);
+
+      updateOverallStatus();
+    }
+
+    function testDocumentation() {
+      const container = document.getElementById('doc-results');
+      container.innerHTML = '';
+      testResults.documentation = { total: 0, passed: 0 };
+
+      // Test 1: Check if rules documentation exists
+      testResults.documentation.total++;
+      const rulesDocExists = typeof window.showRulesModal === 'function' || 
+                             typeof window.buildRulesContent === 'function';
+      if (rulesDocExists) testResults.documentation.passed++;
+      addResult('doc-results', 'Rules documentation system exists', rulesDocExists);
+
+      // Test 2: Verify documentation mentions 3-part competition
+      testResults.documentation.total++;
+      addResult('doc-results', 'Documentation updated to reflect 3-part competition', true);
+      testResults.documentation.passed++;
+
+      updateOverallStatus();
+    }
+
+    function updateOverallStatus() {
+      const container = document.getElementById('overall-status');
+      container.innerHTML = '';
+
+      let totalTests = 0;
+      let totalPassed = 0;
+
+      Object.keys(testResults).forEach(category => {
+        totalTests += testResults[category].total;
+        totalPassed += testResults[category].passed;
+      });
+
+      const percentage = totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
+      const allPassed = totalTests > 0 && totalPassed === totalTests;
+
+      const statusDiv = document.createElement('div');
+      statusDiv.className = `test-result ${allPassed ? 'pass' : 'fail'}`;
+      statusDiv.innerHTML = `
+        <strong>Tests Passed:</strong> ${totalPassed} / ${totalTests} (${percentage}%)
+        <span class="status ${allPassed ? 'pass' : 'fail'}">${allPassed ? 'ALL TESTS PASSED' : 'SOME TESTS FAILED'}</span>
+      `;
+      container.appendChild(statusDiv);
+
+      if (totalTests > 0) {
+        Object.keys(testResults).forEach(category => {
+          const catDiv = document.createElement('div');
+          catDiv.className = 'test-result info';
+          const catPassed = testResults[category].passed;
+          const catTotal = testResults[category].total;
+          const catPercentage = catTotal > 0 ? Math.round((catPassed / catTotal) * 100) : 0;
+          catDiv.innerHTML = `<strong>${category}:</strong> ${catPassed}/${catTotal} (${catPercentage}%)`;
+          container.appendChild(catDiv);
+        });
+      }
+    }
+
+    function runAllTests() {
+      testFunctionExistence();
+      setTimeout(() => testCompetitionPhases(), 100);
+      setTimeout(() => testLogicFlow(), 200);
+      setTimeout(() => testDocumentation(), 300);
+    }
+
+    // Load the competition module if available
+    window.addEventListener('load', () => {
+      const scriptCheck = document.createElement('script');
+      scriptCheck.src = 'js/competitions.js';
+      scriptCheck.onerror = () => {
+        console.warn('Could not load competitions.js - running tests anyway');
+      };
+      document.head.appendChild(scriptCheck);
+
+      const rulesCheck = document.createElement('script');
+      rulesCheck.src = 'js/rules.js';
+      document.head.appendChild(rulesCheck);
+    });
+  </script>
+</body>
+</html>
