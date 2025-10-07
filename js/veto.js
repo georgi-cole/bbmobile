@@ -283,6 +283,15 @@
     }
   }
 
+  function handlePostVetoReveal(){
+    var aliveCount = alivePlayers().length;
+    if(aliveCount === 4){
+      setTimeout(function(){ startFinal4Eviction(); }, 500);
+    } else {
+      setTimeout(function(){ startVetoCeremony(); }, 500);
+    }
+  }
+
   function finishVetoComp(){
     var g = global.game;
     if(!g || g.phase!=='veto_comp') return;
@@ -331,20 +340,10 @@
     var top3 = arr.slice(0, Math.min(3, arr.length));
     showVetoRevealSequence(top3).then(function(){
       // Check for Final 4 — skip veto ceremony and go direct to eviction
-      var aliveCount = alivePlayers().length;
-      if(aliveCount === 4){
-        setTimeout(function(){ startFinal4Eviction(); }, 500);
-      } else {
-        setTimeout(function(){ startVetoCeremony(); }, 500);
-      }
+      handlePostVetoReveal();
     }).catch(function(e){
       console.warn('[veto] reveal error, proceeding', e);
-      var aliveCount = alivePlayers().length;
-      if(aliveCount === 4){
-        setTimeout(function(){ startFinal4Eviction(); }, 500);
-      } else {
-        setTimeout(function(){ startVetoCeremony(); }, 500);
-      }
+      handlePostVetoReveal();
     });
   }
 
