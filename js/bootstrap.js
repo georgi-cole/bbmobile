@@ -170,11 +170,15 @@
   }
 
   // ---------- Start / Skip ----------
-  function safeStartGame(){
+  async function safeStartGame(){
     try{
       if(global.game?.phase==='opening'){ return; }
       if(global.game?.phase!=='lobby'){
-        if(!confirm('Restart season from the beginning?')) return;
+        if(!await window.showConfirm('Restart season from the beginning?', {
+          title: 'Restart Season',
+          confirmText: 'Restart',
+          tone: 'warn'
+        })) return;
         rebuildGame(false);
       }
       global.startOpeningSequence?.();
