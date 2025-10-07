@@ -549,6 +549,7 @@ button:focus-visible,.btn:focus-visible{
   background:linear-gradient(135deg, #f0f8ff 0%, var(--accent-2) 50%, #f0f8ff 100%);
   -webkit-background-clip:text;
   background-clip:text;
+  color:#f0f8ff; /* Fallback color for gradient text */
   color:transparent;
   text-shadow:0 0 28px var(--accent);
   filter:drop-shadow(0 2px 8px rgba(140,200,255,.4));
