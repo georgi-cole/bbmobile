@@ -266,6 +266,18 @@
   function buildVisualPaneHTML(){
     return [
       '<div class="settingsGrid">',
+        group('Theme', [
+          '<div class="toggleRow">',
+            '<label style="display:block;margin-bottom:8px;">House Theme</label>',
+            '<select id="themeSelector" style="width:100%;max-width:300px;padding:6px 10px;border-radius:6px;background:var(--card-2);border:1px solid var(--line);color:var(--ink);font-size:.7rem;">',
+              '<option value="classic">Classic - Original Big Brother</option>',
+              '<option value="wooden">Wooden House - Cozy Cabin</option>',
+              '<option value="studio">TV Studio - Broadcast Professional</option>',
+              '<option value="modern">Modern House - Sleek Minimalist</option>',
+            '</select>',
+            '<div class="tiny muted" style="margin-top:6px;">Select a house theme to change colors, textures, and overall atmosphere. Your preference is saved automatically.</div>',
+          '</div>'
+        ].join('')),
         group('Badges & effects', [
           checkbox('useRibbon','Use EVICTED ribbon overlay')
         ].join('')),
@@ -404,6 +416,9 @@
       }
     });
 
+    // Wire theme selector
+    wireThemeSelector(modal);
+
     // Wire advanced actions each open (in case modal reused)
     modal.__advancedWired || wireAdvanced(modal);
     modal.__debugWired || wireDebug(modal);
@@ -513,6 +528,31 @@
           fr.readAsText(file);
         };
         inp.click();
+      }
+    });
+  }
+
+  function wireThemeSelector(modal){
+    if(modal.__themeSelectorWired) return;
+    modal.__themeSelectorWired = true;
+
+    var themeSelector = modal.querySelector('#themeSelector');
+    if(!themeSelector) return;
+
+    // Set current theme
+    if(global.ThemeSwitcher){
+      themeSelector.value = global.ThemeSwitcher.getCurrentTheme();
+    }
+
+    // Listen for changes
+    themeSelector.addEventListener('change', function(){
+      var theme = themeSelector.value;
+      if(global.ThemeSwitcher){
+        global.ThemeSwitcher.applyTheme(theme);
+        var themeName = (global.ThemeSwitcher.THEMES && global.ThemeSwitcher.THEMES[theme] && global.ThemeSwitcher.THEMES[theme].name) ? global.ThemeSwitcher.THEMES[theme].name : theme;
+        notify('Theme changed to ' + themeName, 'ok');
+      }else{
+        console.warn('[settings] ThemeSwitcher not available');
       }
     });
   }

@@ -166,7 +166,16 @@
             <option value="cycle">Cycle</option>
           </select>
         </label>
+        <label class="inline" style="width:100%;flex-basis:100%;">House Theme:
+          <select id="themeSelector" style="margin-left:8px;">
+            <option value="classic">Classic - Original Big Brother</option>
+            <option value="wooden">Wooden House - Cozy Cabin</option>
+            <option value="studio">TV Studio - Broadcast Pro</option>
+            <option value="modern">Modern House - Sleek Minimalist</option>
+          </select>
+        </label>
       </div>
+      <div class="tiny muted" style="margin-top:6px;">Select a house theme to change colors and atmosphere. Your preference is saved automatically.</div>
     </div>
     <div class="settingsTabPane" id="tabTwists">
       <h3>Twists</h3>
@@ -220,6 +229,7 @@
 
 <!-- Settings & UI -->
 <script defer src="js/ui.config-and-settings.js"></script>
+<script defer src="js/theme-switcher.js"></script>
 
 <!-- NEW: TV screen upload (image/video) -->
 <script defer src="js/ui.tv-media.js"></script>
