@@ -373,12 +373,12 @@
           '<div class="toggleRow">',
             '<label style="display:block;margin-bottom:8px;">House Theme</label>',
             '<select id="themeSelector" style="width:100%;max-width:300px;padding:6px 10px;border-radius:6px;background:var(--card-2);border:1px solid var(--line);color:var(--ink);font-size:.7rem;">',
-              '<option value="classic">Classic - Original Big Brother</option>',
-              '<option value="wooden">Wooden House - Cozy Cabin</option>',
-              '<option value="studio">TV Studio - Broadcast Professional</option>',
-              '<option value="modern">Modern House - Sleek Minimalist</option>',
+              '<option value="midnight">Midnight Glass - Dark Glassmorphism</option>',
+              '<option value="sunset">Sunset Boulevard - Warm Gradients</option>',
+              '<option value="ocean">Ocean Depths - Teal Wave Textures</option>',
+              '<option value="neon">Neon Nights - Vibrant Purple/Pink</option>',
             '</select>',
-            '<div class="tiny muted" style="margin-top:6px;">Select a house theme to change colors, textures, and overall atmosphere. Your preference is saved automatically.</div>',
+            '<div class="tiny muted" style="margin-top:6px;">Choose from our new stylish themes with modern gradients, glassmorphism, and rich textures. Your preference is saved automatically.</div>',
           '</div>'
         ].join('')),
         group('Badges & effects', [
