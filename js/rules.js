@@ -172,21 +172,29 @@
 
     // Section 4b: Final Week
     const h4b = document.createElement('h3');
-    h4b.textContent = '4b. Final Week & Two-Part Final Competition';
+    h4b.textContent = '4b. Final Week & Three-Part Final Competition';
     h4b.style.cssText = 'margin-top:16px;margin-bottom:6px;color:#ffdc8b;font-weight:700;';
     container.appendChild(h4b);
 
     const p4d = document.createElement('p');
-    p4d.textContent = 'When only three houseguests remain, the endgame unfolds with a special two-part competition.';
+    p4d.textContent = 'When only three houseguests remain, the endgame unfolds with a special three-part competition.';
     container.appendChild(p4d);
 
     const p4e = document.createElement('p');
-    p4e.innerHTML = '<strong>Part 1:</strong> All three compete. The houseguest with the lowest score is automatically nominated for eviction.';
+    p4e.innerHTML = '<strong>Part 1:</strong> All three compete. The houseguest with the highest score advances directly to Part 3.';
     container.appendChild(p4e);
 
     const p4f = document.createElement('p');
-    p4f.innerHTML = '<strong>Part 2:</strong> The remaining two houseguests face off head-to-head. The winner becomes the final HOH and chooses which of the other two sits beside them in the Final 2, while the third is sent to the Jury.';
+    p4f.innerHTML = '<strong>Part 2:</strong> The two losers from Part 1 face off head-to-head. The winner advances to Part 3.';
     container.appendChild(p4f);
+
+    const p4f2 = document.createElement('p');
+    p4f2.innerHTML = '<strong>Part 3:</strong> The winners of Parts 1 and 2 compete in the final showdown. The winner becomes the Final HOH.';
+    container.appendChild(p4f2);
+
+    const p4f3 = document.createElement('p');
+    p4f3.textContent = 'The Final HOH then holds a live eviction ceremony in the living room, choosing which of the other two houseguests to evict. The evicted houseguest joins the jury, while the Final 2 await the jury\'s vote.';
+    container.appendChild(p4f3);
 
     const p4g = document.createElement('p');
     p4g.textContent = 'This format ensures that competition performance matters right up until the very end.';
