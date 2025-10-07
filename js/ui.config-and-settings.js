@@ -369,6 +369,18 @@
   function buildVisualPaneHTML(){
     return [
       '<div class="settingsGrid">',
+        group('Theme', [
+          '<div class="toggleRow">',
+            '<label style="display:block;margin-bottom:8px;">House Theme</label>',
+            '<select id="themeSelector" style="width:100%;max-width:300px;padding:6px 10px;border-radius:6px;background:var(--card-2);border:1px solid var(--line);color:var(--ink);font-size:.7rem;">',
+              '<option value="classic">Classic - Original Big Brother</option>',
+              '<option value="wooden">Wooden House - Cozy Cabin</option>',
+              '<option value="studio">TV Studio - Broadcast Professional</option>',
+              '<option value="modern">Modern House - Sleek Minimalist</option>',
+            '</select>',
+            '<div class="tiny muted" style="margin-top:6px;">Select a house theme to change colors, textures, and overall atmosphere. Your preference is saved automatically.</div>',
+          '</div>'
+        ].join('')),
         group('Badges & effects', [
           checkbox('useRibbon','Use EVICTED ribbon overlay')
         ].join('')),
@@ -1030,11 +1042,36 @@
     fillCastForm(modal);
     if(!modal.__castWired){ wireCastEditor(modal); modal.__castWired = true; }
   }
+  function wireThemeSelector(modal){
+    if(modal.__themeSelectorWired) return;
+    modal.__themeSelectorWired = true;
+
+    const themeSelector = modal.querySelector('#themeSelector');
+    if(!themeSelector) return;
+
+    // Set current theme
+    if(g.ThemeSwitcher){
+      themeSelector.value = g.ThemeSwitcher.getCurrentTheme();
+    }
+
+    // Listen for changes
+    themeSelector.addEventListener('change', function(){
+      const theme = themeSelector.value;
+      if(g.ThemeSwitcher){
+        g.ThemeSwitcher.applyTheme(theme);
+        const themeName = (g.ThemeSwitcher.THEMES && g.ThemeSwitcher.THEMES[theme] && g.ThemeSwitcher.THEMES[theme].name) ? g.ThemeSwitcher.THEMES[theme].name : theme;
+        notify('Theme changed to ' + themeName, 'ok');
+      }else{
+        console.warn('[ui.config-and-settings] ThemeSwitcher not available');
+      }
+    });
+  }
   function openSettingsModal(){
     ensureGameCfg();
     const dim = ensureSettingsModal();
     const modal = dim.querySelector('.modal');
     fillSettingsModalValues(modal, g.game.cfg);
+    wireThemeSelector(modal);
     const activePane = modal.querySelector('.settingsTabPane.active');
     if(activePane && activePane.getAttribute('data-pane')==='cast'){ initCastTab(modal); }
     dim.style.display = 'flex';
