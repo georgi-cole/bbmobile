@@ -237,8 +237,8 @@
     
     async function testModal() {
       log('Testing modal announcement...');
-      if (typeof window.showEventModal === 'function') {
-        await window.showEventModal({
+      if (typeof showEventModal === 'function') {
+        await showEventModal({
           title: 'Time for the Jury Vote',
           emojis: '⚖️👑',
           subtitle: 'It\'s time for the jurors to vote and crown the winner of Big Brother',
