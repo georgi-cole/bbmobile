@@ -1034,22 +1034,26 @@ button:focus-visible,.btn:focus-visible{
   position:absolute;
   top:50%;
   left:50%;
-  transform:translate(-50%,-50%) rotate(0deg);
+  transform:translate(-50%,-50%) rotate(-8deg);
   font-size:4rem;
-  font-weight:900;
+  font-weight:700;
   color:#d32f2f;
-  text-shadow:0 0 20px rgba(211,47,47,0.9),
-              0 0 40px rgba(211,47,47,0.6),
-              2px 2px 4px rgba(0,0,0,0.8);
+  text-shadow:0 0 12px rgba(211,47,47,0.7),
+              0 0 24px rgba(211,47,47,0.4),
+              2px 2px 6px rgba(0,0,0,0.6);
   z-index:3;
   pointer-events:none;
+  opacity:0.92;
+  filter:drop-shadow(0 0 8px rgba(211,47,47,0.6));
+  /* Remove animation after first play - stays static */
+  /* Animation plays only once when element is first added */
   animation:crossFadeIn 0.5s ease-out;
-  filter:drop-shadow(0 0 10px rgba(211,47,47,0.8));
+  animation-fill-mode:forwards;
 }
 
 @keyframes crossFadeIn{
-  0%{ opacity:0; transform:translate(-50%,-50%) scale(0.5) rotate(-45deg); }
-  100%{ opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+  0%{ opacity:0; transform:translate(-50%,-50%) scale(0.6) rotate(-25deg); }
+  100%{ opacity:0.92; transform:translate(-50%,-50%) scale(1) rotate(-8deg); }
 }
 
 /* OLD BADGES - HIDDEN (deprecated, kept for compatibility) */

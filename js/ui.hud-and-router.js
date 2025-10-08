@@ -549,12 +549,15 @@ header.innerHTML = `
         wrap.classList.add('nominee-pulse');
       }
       
-      // Evicted overlay with red cross
+      // Evicted overlay with red cross - add only if not already present
       if(p.evicted){
-        const cross=document.createElement('div'); 
-        cross.className='evicted-cross'; 
-        cross.innerHTML='✖';
-        wrap.appendChild(cross);
+        // Check if cross already exists to prevent replay
+        if(!wrap.querySelector('.evicted-cross')){
+          const cross=document.createElement('div'); 
+          cross.className='evicted-cross'; 
+          cross.innerHTML='✖';
+          wrap.appendChild(cross);
+        }
       }
 
       const img=document.createElement('img');
