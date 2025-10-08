@@ -1046,10 +1046,7 @@ button:focus-visible,.btn:focus-visible{
   opacity:0.92;
   filter:drop-shadow(0 0 8px rgba(211,47,47,0.6));
   /* Remove animation after first play - stays static */
-}
-
-/* Animation plays only once when element is first added */
-.evicted-cross{
+  /* Animation plays only once when element is first added */
   animation:crossFadeIn 0.5s ease-out;
   animation-fill-mode:forwards;
 }
