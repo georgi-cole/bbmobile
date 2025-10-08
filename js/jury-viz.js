@@ -149,7 +149,7 @@
   }
   .fo-pulse{ animation: foPulse 600ms ease; }
 
-  /* Final tally and winner banner - Fully transparent inline panels */
+  /* Final tally and winner banner - Positioned at sides/bottom to not cover faces */
   .finalFaceoff .fo-tally,
   .finalFaceoff .fo-winner{
     position: absolute;
@@ -189,7 +189,9 @@
     font-size: clamp(12px, 1.8vw, 16px);
   }
   .finalFaceoff .fo-winner{
-    top: 56px;
+    /* Position at bottom instead of top to not cover finalist photos */
+    bottom: 12px;
+    top: auto;
     font-size: clamp(13px, 2vw, 18px);
     /* Highlight winner with subtle cyan tint - ultra transparent */
     background: rgba(0, 224, 204, 0.12);
@@ -202,15 +204,17 @@
   @media (max-width: 768px) {
     .finalFaceoff .fo-tally,
     .finalFaceoff .fo-winner {
-      /* On mobile, position at top center to save horizontal space */
-      left: 50%;
-      right: auto;
-      transform: translateX(-50%);
-      max-width: min(90vw, 340px);
+      /* On mobile, position at sides */
+      left: auto;
+      right: 8px;
+      transform: none;
+      max-width: min(45vw, 280px);
       font-size: clamp(11px, 3vw, 14px);
     }
     .finalFaceoff .fo-winner {
-      top: 50px;
+      /* Keep at bottom on mobile */
+      bottom: 8px;
+      top: auto;
       font-size: clamp(12px, 3.2vw, 16px);
     }
   }
