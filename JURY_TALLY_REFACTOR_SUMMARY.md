@@ -4,17 +4,18 @@
 The final jury vote live tally modal covered the entire TV area and underlying cards/messages, making it a blocking overlay that obstructed important UI elements during the finale.
 
 ## Solution Implemented
-Replaced the blocking modal with a **non-blocking glassmorphism panel** that floats alongside finalist photos without obstructing content.
+Completely redesigned the jury tally UI as an **ultra-transparent inline panel** with maximum glassmorphism, ensuring the TV background and all underlying content remain fully visible and unobstructed.
 
 ## Key Changes
 
-### Visual Design
-- **Ultra-transparent background**: `rgba(10, 15, 22, 0.35)` - 35% opacity (enhanced from 65%)
-- **Subtle backdrop blur**: `blur(8px) saturate(1.1)` - Lighter glass effect (reduced from 12px)
-- **Minimal finalist backgrounds**: `rgba(0,0,0,0.15)` - 15% opacity for TV visibility
-- **Transparent vote cards**: `rgba(0,0,0,0.30)` - 30% opacity
+### Visual Design (Complete Redesign - Maximum Transparency)
+- **Tally panel**: `rgba(0, 0, 0, 0.08)` - 8% opacity with `blur(6px)` for minimal visual weight
+- **Winner panel**: `rgba(0, 224, 204, 0.12)` - 12% opacity with subtle cyan tint
+- **Finalist card backgrounds**: `transparent` - Completely removed, TV fully visible
+- **Vote bubbles**: `rgba(0,0,0,0.15)` - 15% opacity with `blur(4px)` glassmorphism
+- **Text shadows**: Added for readability over transparent backgrounds
 - **Compact footprint**: Max width 280px (desktop) / 340px (mobile)
-- **Smooth animations**: Slide-in entrance effect
+- **Smooth animations**: Slide-in entrance effect maintained
 
 ### Positioning
 - **Desktop (>768px)**: Top-right corner at `right: 12px, top: 12px`
@@ -79,11 +80,13 @@ All tests passing:
 **Test Coverage**: 100% (all validation checks passing)  
 **Browser Support**: Modern browsers with backdrop-filter support
 
-## Transparency Enhancement (Latest Update)
-The tally UI received a major transparency enhancement to make it even more integrated into the TV area:
-- Reduced panel opacity from 65% to **35%** for maximum TV visibility
-- Lightened backdrop blur from 12px to **8px** for subtler effect
-- Made finalist card backgrounds nearly transparent (**15%** opacity)
-- Reduced vote card opacity to **30%** for natural fade
-- Minimized shadows and borders for lighter visual weight
-- TV background now clearly visible through all UI elements while maintaining readability
+## Complete Redesign (Latest Update - Maximum Transparency)
+The tally UI received a complete redesign for maximum transparency and integration into the TV area:
+- **Tally panel**: Reduced opacity from 35% to **8%** for near-complete transparency
+- **Winner panel**: Reduced to **12%** opacity with subtle cyan highlight
+- **Finalist backgrounds**: Changed from 15% opacity to **fully transparent** - TV completely unobstructed
+- **Vote cards**: Reduced to **15%** opacity with lighter 4px blur for minimal visual weight
+- **Pulse animation**: Simplified to subtle glow-only effect (no borders)
+- **Text enhancement**: Added text shadows for readability against transparent backgrounds
+- **TV background dominates**: All UI elements are now truly see-through overlays
+- **Zero obstruction**: Background cards, messages, and TV content fully visible at all times
