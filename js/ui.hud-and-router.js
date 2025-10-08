@@ -537,6 +537,8 @@ header.innerHTML = `
       // Status checks
       const hasHOH = !!p.hoh;
       const hasVeto = game.vetoHolder===p.id;
+      const isWinner = p.showFinalLabel === 'WINNER' || p.winner;
+      const isRunnerUp = p.showFinalLabel === 'RUNNER-UP' || p.runnerUp;
       // Show NOM for states: nominated, pendingSave, replacement
       const nomState = p.nominationState || 'none';
       const hasNom = !p.evicted && !game.__suppressNomBadges && 
@@ -547,8 +549,12 @@ header.innerHTML = `
         wrap.classList.add('nominee-pulse');
       }
       
+      // Evicted overlay with red cross
       if(p.evicted){
-        const r=document.createElement('div'); r.className='ribbon-evicted small'; r.textContent='EVICTED'; wrap.appendChild(r);
+        const cross=document.createElement('div'); 
+        cross.className='evicted-cross'; 
+        cross.innerHTML='✖';
+        wrap.appendChild(cross);
       }
 
       const img=document.createElement('img');
@@ -556,45 +562,69 @@ header.innerHTML = `
       img.src=getAvatar(p); img.alt=p.name||'guest';
       img.onerror=function(){ this.onerror=null; this.src=FALLBACK; };
       wrap.appendChild(img);
-
-      // Status label (replaces name when status active)
-      const name=document.createElement('div'); 
-      name.className='top-tile-name';
       
-      let labelText = p.name;
-      let statusClass = '';
-      let ariaLabel = p.name;
+      // Icon badges container (positioned above/below avatar)
+      const badgeContainer=document.createElement('div');
+      badgeContainer.className='status-badges';
       
-      // Label precedence: WINNER > RUNNER-UP > NOM states > HOH·POV > HOH > POV > name
-      if(p.showFinalLabel === 'WINNER'){
-        labelText = 'WINNER';
-        statusClass = 'status-winner';
-        ariaLabel = `${p.name} (Winner)`;
-      } else if(p.showFinalLabel === 'RUNNER-UP'){
-        labelText = 'RUNNER-UP';
-        statusClass = 'status-runner-up';
-        ariaLabel = `${p.name} (Runner-Up)`;
-      } else if(hasNom){
-        labelText = 'NOM';
-        statusClass = 'status-nom';
-        ariaLabel = `${p.name} (Nominated)`;
-      } else if(hasHOH && hasVeto){
-        labelText = 'HOH·POV';
-        statusClass = 'status-hoh-pov';
-        ariaLabel = `${p.name} (Head of Household and Veto Holder)`;
-      } else if(hasHOH){
-        labelText = 'HOH';
-        statusClass = 'status-hoh';
-        ariaLabel = `${p.name} (Head of Household)`;
-      } else if(hasVeto){
-        labelText = 'POV';
-        statusClass = 'status-pov';
-        ariaLabel = `${p.name} (Veto Holder)`;
+      // Build aria label parts
+      const ariaLabelParts = [p.name];
+      
+      // Winner and Runner-up medals (top priority, replace other badges)
+      if(isWinner){
+        const medal=document.createElement('div');
+        medal.className='status-badge medal-winner';
+        medal.innerHTML='🥇';
+        medal.title='Winner';
+        badgeContainer.appendChild(medal);
+        ariaLabelParts.push('Winner');
+      } else if(isRunnerUp){
+        const medal=document.createElement('div');
+        medal.className='status-badge medal-runner-up';
+        medal.innerHTML='🥈';
+        medal.title='Runner-Up';
+        badgeContainer.appendChild(medal);
+        ariaLabelParts.push('Runner-Up');
+      } else {
+        // Regular game badges (HOH, POV, NOM) - only if not winner/runner-up
+        if(hasHOH){
+          const hohBadge=document.createElement('div');
+          hohBadge.className='status-badge hoh-icon';
+          hohBadge.innerHTML='👑';
+          hohBadge.title='Head of Household';
+          badgeContainer.appendChild(hohBadge);
+          ariaLabelParts.push('Head of Household');
+        }
+        if(hasVeto){
+          const vetoBadge=document.createElement('div');
+          vetoBadge.className='status-badge veto-icon';
+          vetoBadge.innerHTML='🛡';
+          vetoBadge.title='Veto Holder';
+          badgeContainer.appendChild(vetoBadge);
+          ariaLabelParts.push('Veto Holder');
+        }
+        if(hasNom){
+          const nomBadge=document.createElement('div');
+          nomBadge.className='status-badge nom-icon';
+          nomBadge.innerHTML='🎯';
+          nomBadge.title='Nominated';
+          badgeContainer.appendChild(nomBadge);
+          ariaLabelParts.push('Nominated');
+        }
       }
       
-      name.textContent = labelText;
-      if(statusClass) name.classList.add(statusClass);
-      wrap.setAttribute('aria-label', ariaLabel);
+      // Add badge container if has any badges
+      if(badgeContainer.children.length > 0){
+        wrap.appendChild(badgeContainer);
+      }
+
+      // Name label (always show player name, not status text)
+      const name=document.createElement('div'); 
+      name.className='top-tile-name';
+      name.textContent = p.name;
+      
+      // Set comprehensive aria label
+      wrap.setAttribute('aria-label', ariaLabelParts.join(' - '));
 
       const moveHandler = (e)=> showProfileFor(p, e);
       const enterHandler = (e)=> showProfileFor(p, e);
