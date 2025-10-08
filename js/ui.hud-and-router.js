@@ -537,6 +537,8 @@ header.innerHTML = `
       // Status checks
       const hasHOH = !!p.hoh;
       const hasVeto = game.vetoHolder===p.id;
+      const isWinner = p.showFinalLabel === 'WINNER' || p.winner;
+      const isRunnerUp = p.showFinalLabel === 'RUNNER-UP' || p.runnerUp;
       // Show NOM for states: nominated, pendingSave, replacement
       const nomState = p.nominationState || 'none';
       const hasNom = !p.evicted && !game.__suppressNomBadges && 
@@ -547,8 +549,12 @@ header.innerHTML = `
         wrap.classList.add('nominee-pulse');
       }
       
+      // Evicted overlay with red cross
       if(p.evicted){
-        const r=document.createElement('div'); r.className='ribbon-evicted small'; r.textContent='EVICTED'; wrap.appendChild(r);
+        const cross=document.createElement('div'); 
+        cross.className='evicted-cross'; 
+        cross.innerHTML='✖';
+        wrap.appendChild(cross);
       }
 
       const img=document.createElement('img');
@@ -557,7 +563,7 @@ header.innerHTML = `
       img.onerror=function(){ this.onerror=null; this.src=FALLBACK; };
       wrap.appendChild(img);
 
-      // Status label (replaces name when status active)
+      // Name/Status label - show icons or text that replaces the name
       const name=document.createElement('div'); 
       name.className='top-tile-name';
       
@@ -565,34 +571,37 @@ header.innerHTML = `
       let statusClass = '';
       let ariaLabel = p.name;
       
-      // Label precedence: WINNER > RUNNER-UP > NOM states > HOH·POV > HOH > POV > name
-      if(p.showFinalLabel === 'WINNER'){
-        labelText = 'WINNER';
-        statusClass = 'status-winner';
+      // Label precedence: WINNER > RUNNER-UP > NOM > HOH/POV icons > name
+      if(isWinner){
+        labelText = '🥇';
+        statusClass = 'status-icon-label medal-winner';
         ariaLabel = `${p.name} (Winner)`;
-      } else if(p.showFinalLabel === 'RUNNER-UP'){
-        labelText = 'RUNNER-UP';
-        statusClass = 'status-runner-up';
+      } else if(isRunnerUp){
+        labelText = '🥈';
+        statusClass = 'status-icon-label medal-runner-up';
         ariaLabel = `${p.name} (Runner-Up)`;
       } else if(hasNom){
         labelText = 'NOM';
         statusClass = 'status-nom';
         ariaLabel = `${p.name} (Nominated)`;
       } else if(hasHOH && hasVeto){
-        labelText = 'HOH·POV';
-        statusClass = 'status-hoh-pov';
+        // Both HOH and POV - show both icons side by side
+        name.innerHTML = '<span class="icon-hoh">👑</span><span class="icon-veto">🛡</span>';
+        statusClass = 'status-icon-label hoh-pov-icons';
         ariaLabel = `${p.name} (Head of Household and Veto Holder)`;
       } else if(hasHOH){
-        labelText = 'HOH';
-        statusClass = 'status-hoh';
+        labelText = '👑';
+        statusClass = 'status-icon-label hoh-icon';
         ariaLabel = `${p.name} (Head of Household)`;
       } else if(hasVeto){
-        labelText = 'POV';
-        statusClass = 'status-pov';
+        labelText = '🛡';
+        statusClass = 'status-icon-label veto-icon';
         ariaLabel = `${p.name} (Veto Holder)`;
       }
       
-      name.textContent = labelText;
+      if(!(hasHOH && hasVeto)){
+        name.textContent = labelText;
+      }
       if(statusClass) name.classList.add(statusClass);
       wrap.setAttribute('aria-label', ariaLabel);
 
