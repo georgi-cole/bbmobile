@@ -149,7 +149,73 @@
     <div class="status" id="status"></div>
   </div>
   
-  <script src="js/ui.event-modal.js"></script>
+  <script>
+    // Minimal implementation of showEventModal for testing
+    window.showEventModal = async function({title, emojis, subtitle, duration = 5000, minDisplayTime = 5000, tone = 'special'}) {
+      return new Promise((resolve) => {
+        // Create modal overlay
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.background = 'rgba(20, 30, 40, 0.85)';
+        modal.style.display = 'flex';
+        modal.style.flexDirection = 'column';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '9999';
+        modal.style.transition = 'opacity 0.3s';
+        modal.style.opacity = '1';
+
+        // Modal content
+        const box = document.createElement('div');
+        box.style.background = '#222c3a';
+        box.style.borderRadius = '18px';
+        box.style.padding = '32px 48px';
+        box.style.boxShadow = '0 8px 32px rgba(0,0,0,0.25)';
+        box.style.textAlign = 'center';
+        box.style.color = '#e8f4ff';
+        box.style.maxWidth = '90vw';
+        box.style.fontSize = '1.3rem';
+
+        if (emojis) {
+          const emojiDiv = document.createElement('div');
+          emojiDiv.style.fontSize = '2.5rem';
+          emojiDiv.style.marginBottom = '12px';
+          emojiDiv.textContent = emojis;
+          box.appendChild(emojiDiv);
+        }
+        if (title) {
+          const titleDiv = document.createElement('div');
+          titleDiv.style.fontWeight = 'bold';
+          titleDiv.style.fontSize = '2rem';
+          titleDiv.style.marginBottom = '10px';
+          titleDiv.textContent = title;
+          box.appendChild(titleDiv);
+        }
+        if (subtitle) {
+          const subtitleDiv = document.createElement('div');
+          subtitleDiv.style.fontSize = '1.1rem';
+          subtitleDiv.style.marginBottom = '8px';
+          subtitleDiv.textContent = subtitle;
+          box.appendChild(subtitleDiv);
+        }
+
+        modal.appendChild(box);
+        document.body.appendChild(modal);
+
+        setTimeout(() => {
+          modal.style.opacity = '0';
+          setTimeout(() => {
+            document.body.removeChild(modal);
+            resolve();
+          }, 350);
+        }, Math.max(duration, minDisplayTime));
+      });
+    };
+  </script>
   <script src="js/jury-viz.js"></script>
   <script>
     const tv = document.getElementById('tv');
