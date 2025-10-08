@@ -49,17 +49,18 @@
         opacity: 0;
         transition: opacity 0.25s ease;
         padding: 20px;
+        color: var(--ink);
       `;
 
       // Create modal content
       const modal = document.createElement('div');
       modal.className = `confirm-modal confirm-modal-${tone}`;
       
-      // Tone-based colors
+      // Tone-based colors - now using theme variables
       const toneColors = {
-        neutral: { bg: 'linear-gradient(135deg, #1a2f44 0%, #243a50 100%)', border: '#3d5a75', btnBg: '#2a4a65', btnHover: '#345a7a' },
-        warn: { bg: 'linear-gradient(135deg, #4a3c1a 0%, #5a4620 100%)', border: '#8a6a2a', btnBg: '#6a5020', btnHover: '#7a6030' },
-        danger: { bg: 'linear-gradient(135deg, #4a1a1a 0%, #5a2020 100%)', border: '#8a2a2a', btnBg: '#6a2020', btnHover: '#7a3030' }
+        neutral: { bg: 'var(--card-2)', border: 'var(--line)', btnBg: 'var(--primary-2)', btnHover: 'var(--primary-3)' },
+        warn: { bg: 'var(--card-2)', border: 'var(--warn)', btnBg: 'var(--warn)', btnHover: 'var(--warn)' },
+        danger: { bg: 'var(--card-2)', border: 'var(--bad)', btnBg: 'var(--bad)', btnHover: 'var(--bad)' }
       };
       const colors = toneColors[tone] || toneColors.warn;
 
@@ -76,6 +77,7 @@
         opacity: 0;
         transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         position: relative;
+        color: var(--ink);
       `;
 
       // Title
@@ -84,7 +86,7 @@
       titleEl.style.cssText = `
         font-size: 1.5rem;
         font-weight: 700;
-        color: #ffffff;
+        color: var(--ink);
         margin-bottom: 16px;
         text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
       `;
@@ -96,7 +98,7 @@
       messageEl.className = 'confirm-modal-message';
       messageEl.style.cssText = `
         font-size: 1rem;
-        color: #d5e0f0;
+        color: var(--muted-2);
         margin-bottom: 28px;
         line-height: 1.5;
       `;
@@ -120,9 +122,9 @@
         padding: 12px 24px;
         font-size: 0.95rem;
         font-weight: 600;
-        border: 2px solid #4a5a6a;
-        background: #2a3a4a;
-        color: #e0e8f0;
+        border: 2px solid var(--line);
+        background: var(--card);
+        color: var(--muted-2);
         border-radius: 10px;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -140,7 +142,7 @@
         font-weight: 600;
         border: 2px solid ${colors.border};
         background: ${colors.btnBg};
-        color: #ffffff;
+        color: var(--ink);
         border-radius: 10px;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -150,12 +152,12 @@
 
       // Button hover effects
       cancelButton.addEventListener('mouseenter', () => {
-        cancelButton.style.background = '#3a4a5a';
-        cancelButton.style.borderColor = '#5a6a7a';
+        cancelButton.style.background = 'var(--primary-1)';
+        cancelButton.style.borderColor = 'var(--line-2)';
       });
       cancelButton.addEventListener('mouseleave', () => {
-        cancelButton.style.background = '#2a3a4a';
-        cancelButton.style.borderColor = '#4a5a6a';
+        cancelButton.style.background = 'var(--card)';
+        cancelButton.style.borderColor = 'var(--line)';
       });
 
       confirmButton.addEventListener('mouseenter', () => {

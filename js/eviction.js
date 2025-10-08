@@ -299,8 +299,8 @@
     const card = document.createElement('div');
     card.className = 'revealCard diaryRoomCard';
     card.style.cssText = `
-      background: linear-gradient(135deg, #1c2b3e, #0e1a28);
-      border: 2px solid rgba(120,180,240,0.5);
+      background: var(--card-2);
+      border: 2px solid var(--line);
       border-radius: 20px;
       padding: 24px 28px;
       box-shadow: 0 24px 64px -24px rgba(0,0,0,0.95), 0 8px 24px -8px rgba(0,0,0,0.7);
@@ -313,7 +313,7 @@
 
     const title = document.createElement('div');
     title.textContent = 'Diary Room';
-    title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
+    title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: var(--warn); margin-bottom: 18px; text-shadow: 0 2px 8px rgba(0,0,0,0.3);';
     card.appendChild(title);
 
     const avatarRow = document.createElement('div');
@@ -331,14 +331,14 @@
       width: clamp(64px, 16vw, 88px); 
       height: clamp(64px, 16vw, 88px); 
       border-radius: 50%; 
-      border: 3px solid #7cffad; 
+      border: 3px solid var(--good); 
       object-fit: cover;
-      box-shadow: 0 6px 16px rgba(124,255,173,0.4), 0 0 0 1px rgba(124,255,173,0.2);
+      box-shadow: 0 6px 16px var(--good);
     `;
 
     const arrow = document.createElement('div');
     arrow.textContent = '→';
-    arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
+    arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: var(--bad); font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(0,0,0,0.5);';
 
     const targetImg = document.createElement('img');
     targetImg.src = targetAvatar;
@@ -352,9 +352,9 @@
       width: clamp(64px, 16vw, 88px); 
       height: clamp(64px, 16vw, 88px); 
       border-radius: 50%; 
-      border: 3px solid #ff6b6b; 
+      border: 3px solid var(--bad); 
       object-fit: cover;
-      box-shadow: 0 6px 16px rgba(255,107,107,0.4), 0 0 0 1px rgba(255,107,107,0.2);
+      box-shadow: 0 6px 16px var(--bad);
     `;
 
     avatarRow.appendChild(voterImg);

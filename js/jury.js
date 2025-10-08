@@ -162,10 +162,10 @@
     
     // Show brief "America's Vote" card
     const card = document.createElement('div');
-    card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;background:linear-gradient(145deg,#1a2942,#0f1a2f);border:2px solid #3e6ba8;border-radius:16px;padding:24px 32px;text-align:center;color:#eaf4ff;box-shadow:0 12px 36px rgba(0,0,0,.6);animation:popIn 0.3s ease;';
+    card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;background:var(--card-2);border:2px solid var(--accent);border-radius:16px;padding:24px 32px;text-align:center;color:var(--ink);box-shadow:0 12px 36px rgba(0,0,0,.6);animation:popIn 0.3s ease;';
     card.innerHTML = `
-      <div style="font-size:1.1rem;font-weight:700;letter-spacing:0.8px;margin-bottom:8px;color:#ffdc8b;">🇺🇸 AMERICA'S VOTE 🇺🇸</div>
-      <div style="font-size:0.9rem;color:#cfe0f5;">Breaking the tie...</div>
+      <div style="font-size:1.1rem;font-weight:700;letter-spacing:0.8px;margin-bottom:8px;color:var(--warn);">🇺🇸 AMERICA'S VOTE 🇺🇸</div>
+      <div style="font-size:0.9rem;color:var(--muted-2);">Breaking the tie...</div>
     `;
     document.body.appendChild(card);
     setTimeout(()=>{ try{card.remove();}catch{} }, 2400);
@@ -1162,11 +1162,11 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.85);
-      border: 2px solid rgba(255, 255, 255, 0.2);
+      background: var(--card-2);
+      border: 2px solid var(--line);
       border-radius: 12px;
       padding: 16px 24px;
-      color: #fff;
+      color: var(--ink);
       font-size: 16px;
       font-style: italic;
       text-align: center;

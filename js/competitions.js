@@ -294,14 +294,15 @@
         display: grid;
         place-items: center;
         animation: resultsModalFadeIn 0.3s ease;
+        color: var(--ink);
       `;
       
       // Create card
       const card = document.createElement('div');
       card.className = 'results-card';
       card.style.cssText = `
-        background: linear-gradient(135deg, #1a2937, #0f1a28);
-        border: 1px solid rgba(120,180,240,0.3);
+        background: var(--card-2);
+        border: 1px solid var(--line);
         border-radius: 20px;
         padding: 28px 24px;
         box-shadow: 0 20px 50px -20px rgba(0,0,0,0.9);
@@ -317,7 +318,7 @@
         font-size: 1.4rem;
         font-weight: 800;
         letter-spacing: 0.5px;
-        color: #ffd96b;
+        color: var(--warn);
         text-align: center;
         margin-bottom: 24px;
         text-shadow: 0 2px 8px rgba(0,0,0,0.5);
@@ -335,7 +336,7 @@
           gap: 12px;
           margin-bottom: 20px;
           padding-bottom: 20px;
-          border-bottom: 1px solid rgba(120,180,240,0.2);
+          border-bottom: 1px solid var(--line);
         `;
         
         const winnerAvatar = document.createElement('img');
@@ -350,8 +351,8 @@
           width: 110px;
           height: 110px;
           border-radius: 50%;
-          border: 3px solid #ffd96b;
-          box-shadow: 0 4px 20px rgba(255,217,107,0.4);
+          border: 3px solid var(--warn);
+          box-shadow: 0 4px 20px var(--warn);
           object-fit: cover;
         `;
         winnerSection.appendChild(winnerAvatar);
@@ -361,7 +362,7 @@
         winnerName.style.cssText = `
           font-size: 1.3rem;
           font-weight: 700;
-          color: #ffffff;
+          color: var(--ink);
           text-align: center;
         `;
         winnerSection.appendChild(winnerName);
@@ -372,7 +373,7 @@
           winnerScore.style.cssText = `
             font-size: 1rem;
             font-weight: 600;
-            color: #88e6a0;
+            color: var(--good);
             text-align: center;
           `;
           winnerSection.appendChild(winnerScore);
@@ -418,8 +419,8 @@
             width: 65px;
             height: 65px;
             border-radius: 50%;
-            border: 2px solid #7cffad;
-            box-shadow: 0 2px 12px rgba(124,255,173,0.3);
+            border: 2px solid var(--good);
+            box-shadow: 0 2px 12px var(--good);
             object-fit: cover;
           `;
           runnerUp.appendChild(runnerAvatar);
@@ -429,7 +430,7 @@
           runnerPlace.style.cssText = `
             font-size: 0.75rem;
             font-weight: 700;
-            color: #96cfff;
+            color: var(--accent);
             text-transform: uppercase;
             letter-spacing: 0.5px;
           `;
@@ -440,7 +441,7 @@
           runnerName.style.cssText = `
             font-size: 0.95rem;
             font-weight: 600;
-            color: #cedbeb;
+            color: var(--muted-2);
             text-align: center;
           `;
           runnerUp.appendChild(runnerName);
@@ -450,7 +451,7 @@
             runnerScore.textContent = player.score;
             runnerScore.style.cssText = `
               font-size: 0.85rem;
-              color: #88e6a0;
+              color: var(--good);
             `;
             runnerUp.appendChild(runnerScore);
           }
@@ -768,18 +769,19 @@
       position: fixed;
       inset: 0;
       z-index: 999999;
-      background: linear-gradient(135deg, rgba(20,20,40,0.97) 0%, rgba(10,10,30,0.98) 100%);
+      background: var(--bg);
       backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
       animation: modalFadeIn 0.4s ease;
+      color: var(--ink);
     `;
     
     const content = document.createElement('div');
     content.style.cssText = `
-      background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
-      border: 2px solid #ffdc8b;
+      background: var(--card-2);
+      border: 2px solid var(--warn);
       border-radius: 16px;
       padding: 32px;
       max-width: 520px;
@@ -801,10 +803,10 @@
     title.style.cssText = `
       font-size: 2rem;
       font-weight: 800;
-      color: #ffdc8b;
+      color: var(--warn);
       margin: 0 0 16px 0;
       letter-spacing: 2px;
-      text-shadow: 0 2px 8px rgba(255,220,139,0.4);
+      text-shadow: 0 2px 8px rgba(0,0,0,0.4);
     `;
     content.appendChild(title);
     
@@ -813,14 +815,14 @@
     desc.style.cssText = `
       font-size: 1.1rem;
       line-height: 1.6;
-      color: #cedbeb;
+      color: var(--muted-2);
       margin: 0 0 20px 0;
     `;
     content.appendChild(desc);
     
     const structure = document.createElement('div');
     structure.style.cssText = `
-      background: rgba(255,220,139,0.08);
+      background: var(--primary-1);
       border-radius: 12px;
       padding: 20px;
       margin: 20px 0;
@@ -1231,12 +1233,13 @@
       align-items: center;
       justify-content: center;
       animation: modalFadeIn 0.3s ease;
+      color: var(--ink);
     `;
     
     const content = document.createElement('div');
     content.style.cssText = `
-      background: linear-gradient(145deg, rgba(40,40,80,0.95) 0%, rgba(25,25,50,0.95) 100%);
-      border: 2px solid #ff6b6b;
+      background: var(--card-2);
+      border: 2px solid var(--bad);
       border-radius: 16px;
       padding: 28px;
       max-width: 480px;
@@ -1249,7 +1252,7 @@
     title.style.cssText = `
       font-size: 1.5rem;
       font-weight: 700;
-      color: #ff6b6b;
+      color: var(--bad);
       margin: 0 0 16px 0;
     `;
     content.appendChild(title);
@@ -1257,7 +1260,7 @@
     const desc = document.createElement('p');
     desc.textContent = 'You can optionally provide a reason for your decision:';
     desc.style.cssText = `
-      color: #cedbeb;
+      color: var(--muted-2);
       margin: 0 0 16px 0;
       font-size: 0.95rem;
     `;
@@ -1278,10 +1281,10 @@
       padding: 10px;
       margin: 12px 0;
       font-size: 0.95rem;
-      border: 1px solid #6b7a99;
+      border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(20,20,40,0.8);
-      color: #cedbeb;
+      background: var(--card);
+      color: var(--muted-2);
     `;
     
     const defaultOption = document.createElement('option');
@@ -1307,10 +1310,10 @@
       padding: 10px;
       margin: 12px 0;
       font-size: 0.9rem;
-      border: 1px solid #6b7a99;
+      border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(20,20,40,0.8);
-      color: #cedbeb;
+      background: var(--card);
+      color: var(--muted-2);
       font-family: inherit;
       resize: vertical;
     `;

@@ -138,14 +138,15 @@
         place-items: center;
         animation: resultsModalFadeIn 0.3s ease;
         cursor: default;
+        color: var(--ink);
       `;
       
       // Create card
       const card = document.createElement('div');
       card.className = 'results-card';
       card.style.cssText = `
-        background: linear-gradient(135deg, #1a2937 0%, #0f1a28 100%);
-        border: 1px solid rgba(120,180,240,0.35);
+        background: var(--card-2);
+        border: 1px solid var(--line);
         border-radius: 20px;
         padding: 32px 28px;
         box-shadow: 0 20px 60px -20px rgba(0,0,0,0.95);
@@ -164,7 +165,7 @@
         top: 8px;
         right: 12px;
         font-size: 0.7rem;
-        color: rgba(255,255,255,0.4);
+        color: var(--muted);
         opacity: 0;
         transition: opacity 0.3s ease;
         pointer-events: none;
@@ -179,7 +180,7 @@
         font-size: 1.5rem;
         font-weight: 800;
         letter-spacing: 0.6px;
-        color: #ffd96b;
+        color: var(--warn);
         text-align: center;
         margin-bottom: 26px;
         text-shadow: 0 2px 10px rgba(0,0,0,0.6);
@@ -198,7 +199,7 @@
         gap: 14px;
         margin-bottom: 22px;
         padding-bottom: 22px;
-        border-bottom: 1px solid rgba(120,180,240,0.25);
+        border-bottom: 1px solid var(--line);
       `;
       
       const winnerAvatarEl = document.createElement('img');
@@ -209,10 +210,10 @@
         width: 120px;
         height: 120px;
         border-radius: 50%;
-        border: 3px solid #ffd96b;
-        box-shadow: 0 4px 24px rgba(255,217,107,0.5);
+        border: 3px solid var(--warn);
+        box-shadow: 0 4px 24px var(--warn);
         object-fit: cover;
-        background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%);
+        background: var(--card);
         background-size: 200% 100%;
         animation: skeleton-shimmer 1.5s infinite;
       `;
@@ -238,7 +239,7 @@
       winnerName.style.cssText = `
         font-size: 1.35rem;
         font-weight: 700;
-        color: #ffffff;
+        color: var(--ink);
         text-align: center;
       `;
       winnerSection.appendChild(winnerName);
@@ -249,7 +250,7 @@
         winnerScore.style.cssText = `
           font-size: 1.05rem;
           font-weight: 600;
-          color: #88e6a0;
+          color: var(--good);
           text-align: center;
         `;
         winnerSection.appendChild(winnerScore);
@@ -291,10 +292,10 @@
             width: 70px;
             height: 70px;
             border-radius: 50%;
-            border: 2px solid #7cffad;
-            box-shadow: 0 2px 14px rgba(124,255,173,0.35);
+            border: 2px solid var(--good);
+            box-shadow: 0 2px 14px var(--good);
             object-fit: cover;
-            background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%);
+            background: var(--card);
             background-size: 200% 100%;
             animation: skeleton-shimmer 1.5s infinite;
           `;
@@ -320,7 +321,7 @@
           runnerPlace.style.cssText = `
             font-size: 0.78rem;
             font-weight: 700;
-            color: #96cfff;
+            color: var(--accent);
             text-transform: uppercase;
             letter-spacing: 0.6px;
           `;
@@ -331,7 +332,7 @@
           runnerName.style.cssText = `
             font-size: 0.98rem;
             font-weight: 600;
-            color: #cedbeb;
+            color: var(--muted-2);
             text-align: center;
           `;
           runnerUp.appendChild(runnerName);
@@ -341,7 +342,7 @@
             runnerScore.textContent = player.scoreFormatted;
             runnerScore.style.cssText = `
               font-size: 0.88rem;
-              color: #88e6a0;
+              color: var(--good);
               font-weight: 500;
             `;
             runnerUp.appendChild(runnerScore);
