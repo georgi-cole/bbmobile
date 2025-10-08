@@ -242,6 +242,110 @@
   @keyframes spin{
     0%{ transform: rotate(0deg); }
     100%{ transform: rotate(360deg); }
+  }
+  
+  /* Crown overlay - non-face-covering, positioned above photo */
+  .fo-crown{
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 48px;
+    filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.6));
+    animation: crownDrop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 10;
+  }
+  @keyframes crownDrop{
+    0%{ 
+      opacity: 0; 
+      transform: translateX(-50%) translateY(-60px) scale(0.3); 
+    }
+    60%{
+      transform: translateX(-50%) translateY(5px) scale(1.1);
+    }
+    100%{ 
+      opacity: 1; 
+      transform: translateX(-50%) translateY(0) scale(1); 
+    }
+  }
+  
+  /* Check card - displays next to winner, elegant cinematic style */
+  .fo-check-card{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(420px, 85vw);
+    background: linear-gradient(135deg, #1a2942 0%, #0f1a2f 100%);
+    border: 2px solid #d4af37;
+    border-radius: 16px;
+    padding: 32px 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7),
+                0 0 0 1px rgba(212, 175, 55, 0.3);
+    z-index: 9;
+    animation: checkSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity: 0;
+    animation-fill-mode: forwards;
+  }
+  @keyframes checkSlideIn{
+    0%{
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.7) rotateY(-15deg);
+    }
+    100%{
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1) rotateY(0deg);
+    }
+  }
+  @keyframes checkSlideOut{
+    0%{
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    100%{
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.8) translateY(20px);
+    }
+  }
+  .fo-check-header{
+    text-align: center;
+    font-size: clamp(11px, 2vw, 14px);
+    color: #8b9dc3;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .fo-check-amount{
+    text-align: center;
+    font-size: clamp(36px, 6vw, 56px);
+    font-weight: 900;
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #d4af37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+    margin: 12px 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+  .fo-check-payto{
+    text-align: center;
+    font-size: clamp(13px, 2.2vw, 18px);
+    color: #e8f4ff;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .fo-check-payto strong{
+    color: #ffd700;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+  .fo-check-memo{
+    text-align: center;
+    font-size: clamp(11px, 1.8vw, 14px);
+    color: #9bb5d4;
+    margin-top: 12px;
+    font-style: italic;
   }`;
   const style = document.createElement('style');
   style.id = 'faceoff-css';
@@ -392,6 +496,45 @@
     state.wrap.appendChild(o);
     setTimeout(()=> o.remove(), durationMs);
   }
+  
+  function showCrown(which){
+    if(!state) return;
+    const slot = which === 'left' ? state.left.slot : state.right.slot;
+    if(!slot) return;
+    
+    // Remove any existing crowns
+    remove('.fo-crown');
+    
+    const crown = el('div', 'fo-crown', '👑');
+    slot.style.position = 'relative';
+    slot.appendChild(crown);
+    
+    console.log('[jury-viz] Crown displayed on winner');
+    return crown;
+  }
+  
+  function showCheckCard(winnerName, durationMs=5000){
+    if(!state) return;
+    remove('.fo-check-card');
+    
+    const card = el('div', 'fo-check-card');
+    card.innerHTML = `
+      <div class="fo-check-header">Big Brother Winner Prize</div>
+      <div class="fo-check-amount">$1,000,000</div>
+      <div class="fo-check-payto">Pay to the order of<br><strong>${winnerName}</strong></div>
+      <div class="fo-check-memo">Congratulations on an incredible game!</div>
+    `;
+    
+    state.wrap.appendChild(card);
+    
+    setTimeout(()=> {
+      card.style.animation = 'checkSlideOut 0.4s ease forwards';
+      setTimeout(()=> card.remove(), 400);
+    }, durationMs);
+    
+    console.log('[jury-viz] Check card displayed for winner');
+    return card;
+  }
 
   function writeCounts(){
     state.left.votesEl.textContent  = String(state.left.count);
@@ -424,7 +567,8 @@
   // Public API
   global.FinalFaceoff = {
     mount, showVoteCard, setCounts, onVote,
-    showFinalTally, showWinnerMessage, showMedalOverlay, destroy
+    showFinalTally, showWinnerMessage, showMedalOverlay, 
+    showCrown, showCheckCard, destroy
   };
 
   // Backward-compatible shims (replace old "final graph" helpers)

