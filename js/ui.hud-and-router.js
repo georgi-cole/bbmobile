@@ -567,9 +567,6 @@ header.innerHTML = `
       const badgeContainer=document.createElement('div');
       badgeContainer.className='status-badges';
       
-      // Build aria label parts
-      const ariaLabelParts = [p.name];
-      
       // Winner and Runner-up medals (top priority, replace other badges)
       if(isWinner){
         const medal=document.createElement('div');
@@ -577,23 +574,20 @@ header.innerHTML = `
         medal.innerHTML='🥇';
         medal.title='Winner';
         badgeContainer.appendChild(medal);
-        ariaLabelParts.push('Winner');
       } else if(isRunnerUp){
         const medal=document.createElement('div');
         medal.className='status-badge medal-runner-up';
         medal.innerHTML='🥈';
         medal.title='Runner-Up';
         badgeContainer.appendChild(medal);
-        ariaLabelParts.push('Runner-Up');
       } else {
-        // Regular game badges (HOH, POV, NOM) - only if not winner/runner-up
+        // Regular game badges (HOH, POV) - only if not winner/runner-up
         if(hasHOH){
           const hohBadge=document.createElement('div');
           hohBadge.className='status-badge hoh-icon';
           hohBadge.innerHTML='👑';
           hohBadge.title='Head of Household';
           badgeContainer.appendChild(hohBadge);
-          ariaLabelParts.push('Head of Household');
         }
         if(hasVeto){
           const vetoBadge=document.createElement('div');
@@ -601,15 +595,6 @@ header.innerHTML = `
           vetoBadge.innerHTML='🛡';
           vetoBadge.title='Veto Holder';
           badgeContainer.appendChild(vetoBadge);
-          ariaLabelParts.push('Veto Holder');
-        }
-        if(hasNom){
-          const nomBadge=document.createElement('div');
-          nomBadge.className='status-badge nom-icon';
-          nomBadge.innerHTML='🎯';
-          nomBadge.title='Nominated';
-          badgeContainer.appendChild(nomBadge);
-          ariaLabelParts.push('Nominated');
         }
       }
       
@@ -618,13 +603,40 @@ header.innerHTML = `
         wrap.appendChild(badgeContainer);
       }
 
-      // Name label (always show player name, not status text)
+      // Name/Status label - show status text for nominees, winner/runner-up, or name
       const name=document.createElement('div'); 
       name.className='top-tile-name';
-      name.textContent = p.name;
       
-      // Set comprehensive aria label
-      wrap.setAttribute('aria-label', ariaLabelParts.join(' - '));
+      let labelText = p.name;
+      let statusClass = '';
+      let ariaLabel = p.name;
+      
+      // Label precedence: WINNER > RUNNER-UP > NOM > name
+      // (HOH and POV use icon badges instead of text)
+      if(isWinner){
+        labelText = 'WINNER';
+        statusClass = 'status-winner';
+        ariaLabel = `${p.name} (Winner)`;
+      } else if(isRunnerUp){
+        labelText = 'RUNNER-UP';
+        statusClass = 'status-runner-up';
+        ariaLabel = `${p.name} (Runner-Up)`;
+      } else if(hasNom){
+        labelText = 'NOM';
+        statusClass = 'status-nom';
+        ariaLabel = `${p.name} (Nominated)`;
+      } else if(hasHOH && hasVeto){
+        // Both HOH and POV show icons above, keep name
+        ariaLabel = `${p.name} (Head of Household and Veto Holder)`;
+      } else if(hasHOH){
+        ariaLabel = `${p.name} (Head of Household)`;
+      } else if(hasVeto){
+        ariaLabel = `${p.name} (Veto Holder)`;
+      }
+      
+      name.textContent = labelText;
+      if(statusClass) name.classList.add(statusClass);
+      wrap.setAttribute('aria-label', ariaLabel);
 
       const moveHandler = (e)=> showProfileFor(p, e);
       const enterHandler = (e)=> showProfileFor(p, e);
