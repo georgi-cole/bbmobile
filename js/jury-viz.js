@@ -53,20 +53,23 @@
     transform: translateY(-20px);
   }
   .finalFaceoff .fo-card{
-    /* More transparent vote cards */
-    background: rgba(0,0,0,0.30);
-    border: 1px solid rgba(255,255,255,0.18);
+    /* Ultra-transparent vote cards with glassmorphism */
+    background: rgba(0,0,0,0.15);
+    backdrop-filter: blur(4px) saturate(1.1);
+    -webkit-backdrop-filter: blur(4px) saturate(1.1);
+    border: 1px solid rgba(255,255,255,0.12);
     padding: 8px 12px;
     border-radius: 10px;
     font-size: clamp(13px, 1.7vw, 18px);
     line-height: 1.25;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     opacity: 0;
     transform: translateY(-6px);
     transition: opacity .25s ease, transform .25s ease;
     color: #e8f9ff;
     text-align: center;
     max-width: 100%;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   .finalFaceoff .fo-card.enter{
     opacity: 1;
@@ -87,13 +90,14 @@
     padding: 14px 16px;
     width: min(46vw, 520px);
     border-radius: 14px;
-    /* Ultra-transparent background - TV visible through */
-    background: rgba(0,0,0,0.15);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+    /* Completely transparent background - TV fully visible */
+    background: transparent;
+    box-shadow: none;
     transition: box-shadow .25s ease, transform .25s ease;
   }
   .finalFaceoff .fo-slot.fo-leader{
-    box-shadow: inset 0 0 0 2px #4dd, 0 0 24px rgba(0,255,230,0.25);
+    /* Subtle glow only, no border */
+    box-shadow: 0 0 20px rgba(0,255,230,0.15);
     transform: translateY(-2px);
   }
 
@@ -137,32 +141,32 @@
     z-index: 6;
   }
 
-  /* Pulse when a vote lands on a finalist */
+  /* Pulse when a vote lands on a finalist - ultra-subtle */
   @keyframes foPulse {
-    0%   { box-shadow: inset 0 0 0 2px rgba(0,224,204,0.0), 0 0 0 rgba(0,224,204,0.0); }
-    40%  { box-shadow: inset 0 0 0 2px rgba(0,224,204,0.8), 0 0 24px rgba(0,224,204,0.25); }
-    100% { box-shadow: inset 0 0 0 2px rgba(0,224,204,0.2), 0 0 0 rgba(0,224,204,0.0); }
+    0%   { box-shadow: 0 0 0 rgba(0,224,204,0.0); }
+    40%  { box-shadow: 0 0 28px rgba(0,224,204,0.35); }
+    100% { box-shadow: 0 0 0 rgba(0,224,204,0.0); }
   }
   .fo-pulse{ animation: foPulse 600ms ease; }
 
-  /* Final tally and winner banner - Non-blocking floating panels with glassmorphism */
+  /* Final tally and winner banner - Fully transparent inline panels */
   .finalFaceoff .fo-tally,
   .finalFaceoff .fo-winner{
     position: absolute;
     right: 12px;
     padding: 8px 14px;
     border-radius: 10px;
-    /* Enhanced transparency: ultra-minimal glass effect - TV fully visible */
-    background: rgba(10, 15, 22, 0.35);
-    backdrop-filter: blur(8px) saturate(1.1);
-    -webkit-backdrop-filter: blur(8px) saturate(1.1);
-    border: 1px solid rgba(255,255,255,0.25);
-    color: #f2feff;
+    /* Maximum transparency: minimal glass effect - TV background dominates */
+    background: rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(6px) saturate(1.2);
+    -webkit-backdrop-filter: blur(6px) saturate(1.2);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #ffffff;
     font-weight: 800;
     text-align: center;
-    /* Minimal shadow for subtle depth */
-    box-shadow: 0 4px 16px rgba(0,0,0,0.25), 
-                inset 0 1px 0 rgba(255,255,255,0.15);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5);
+    /* Minimal shadow for readability */
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
     z-index: 7;
     /* Smooth entrance animation */
     animation: tallySlideIn 0.4s cubic-bezier(0.25, 0.9, 0.25, 1);
@@ -187,12 +191,11 @@
   .finalFaceoff .fo-winner{
     top: 56px;
     font-size: clamp(13px, 2vw, 18px);
-    /* Highlight winner with subtle glow - more transparent */
-    background: rgba(0, 224, 204, 0.20);
-    border-color: rgba(0, 224, 204, 0.5);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.25),
-                0 0 16px rgba(0, 224, 204, 0.3),
-                inset 0 1px 0 rgba(255,255,255,0.2);
+    /* Highlight winner with subtle cyan tint - ultra transparent */
+    background: rgba(0, 224, 204, 0.12);
+    border-color: rgba(0, 224, 204, 0.35);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15),
+                0 0 12px rgba(0, 224, 204, 0.2);
   }
 
   /* Mobile responsive adjustments for tally panels */
