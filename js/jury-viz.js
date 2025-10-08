@@ -53,13 +53,14 @@
     transform: translateY(-20px);
   }
   .finalFaceoff .fo-card{
-    background: rgba(0,0,0,0.45);
-    border: 1px solid rgba(255,255,255,0.12);
+    /* More transparent vote cards */
+    background: rgba(0,0,0,0.30);
+    border: 1px solid rgba(255,255,255,0.18);
     padding: 8px 12px;
     border-radius: 10px;
     font-size: clamp(13px, 1.7vw, 18px);
     line-height: 1.25;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     opacity: 0;
     transform: translateY(-6px);
     transition: opacity .25s ease, transform .25s ease;
@@ -86,8 +87,9 @@
     padding: 14px 16px;
     width: min(46vw, 520px);
     border-radius: 14px;
-    background: rgba(255,255,255,0.04);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    /* Ultra-transparent background - TV visible through */
+    background: rgba(0,0,0,0.15);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
     transition: box-shadow .25s ease, transform .25s ease;
   }
   .finalFaceoff .fo-slot.fo-leader{
@@ -150,16 +152,17 @@
     right: 12px;
     padding: 8px 14px;
     border-radius: 10px;
-    /* Glassmorphism: semi-transparent with backdrop blur */
-    background: rgba(10, 15, 22, 0.65);
-    backdrop-filter: blur(12px) saturate(1.2);
-    -webkit-backdrop-filter: blur(12px) saturate(1.2);
-    border: 1px solid rgba(255,255,255,0.18);
+    /* Enhanced transparency: ultra-minimal glass effect - TV fully visible */
+    background: rgba(10, 15, 22, 0.35);
+    backdrop-filter: blur(8px) saturate(1.1);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    border: 1px solid rgba(255,255,255,0.25);
     color: #f2feff;
     font-weight: 800;
     text-align: center;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.45), 
-                inset 0 1px 0 rgba(255,255,255,0.1);
+    /* Minimal shadow for subtle depth */
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25), 
+                inset 0 1px 0 rgba(255,255,255,0.15);
     z-index: 7;
     /* Smooth entrance animation */
     animation: tallySlideIn 0.4s cubic-bezier(0.25, 0.9, 0.25, 1);
@@ -184,12 +187,12 @@
   .finalFaceoff .fo-winner{
     top: 56px;
     font-size: clamp(13px, 2vw, 18px);
-    /* Highlight winner with subtle glow */
-    background: rgba(0, 224, 204, 0.25);
-    border-color: rgba(0, 224, 204, 0.4);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.45),
-                0 0 20px rgba(0, 224, 204, 0.2),
-                inset 0 1px 0 rgba(255,255,255,0.15);
+    /* Highlight winner with subtle glow - more transparent */
+    background: rgba(0, 224, 204, 0.20);
+    border-color: rgba(0, 224, 204, 0.5);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25),
+                0 0 16px rgba(0, 224, 204, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
   }
 
   /* Mobile responsive adjustments for tally panels */
