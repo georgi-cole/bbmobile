@@ -512,6 +512,9 @@
     const w = document.createElement('div');
     w.className='fo-winner';
     w.textContent = `${safeName(winnerId)} has won the Big Brother game!`;
+    // Position at bottom instead of covering finalist photos
+    w.style.bottom = '8px';
+    w.style.top = 'auto';
     st.els.root.appendChild(w);
     st._fitSchedule && st._fitSchedule();
   }
@@ -520,8 +523,16 @@
     const st = faceoff.state; if(!st?.els?.root) return;
     st.els.root.querySelectorAll('.fo-ribbon').forEach(x=>x.remove());
     const leftIsWinner = String(st.A) === String(winnerId);
-    const l = document.createElement('div'); l.className='fo-ribbon'; l.textContent = leftIsWinner ? 'Finalist' : 'Runner-up';
-    const r = document.createElement('div'); r.className='fo-ribbon right'; r.textContent = leftIsWinner ? 'Runner-up' : 'Finalist';
+    
+    // Create medal labels instead of text ribbons
+    const l = document.createElement('div'); 
+    l.className='fo-ribbon'; 
+    l.innerHTML = leftIsWinner ? '🥇 1st' : '🥈 2nd';
+    
+    const r = document.createElement('div'); 
+    r.className='fo-ribbon right'; 
+    r.innerHTML = leftIsWinner ? '🥈 2nd' : '🥇 1st';
+    
     st.els.leftSlot.appendChild(l);
     st.els.rightSlot.appendChild(r);
     st._fitSchedule && st._fitSchedule();
@@ -1228,9 +1239,9 @@
     overlay.id = 'jurorPhraseOverlay';
     overlay.style.cssText = `
       position: absolute;
-      top: 50%;
+      bottom: 12px;
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translateX(-50%);
       background: rgba(0, 0, 0, 0.85);
       border: 2px solid rgba(255, 255, 255, 0.2);
       border-radius: 12px;
@@ -1466,6 +1477,16 @@
     // PHASE 1: Anonymous casting
     await startJuryCastingPhase(jurors, A, B);
     
+    // Show jury vote modal announcement (similar to twists)
+    if (g.showEventModal) await g.showEventModal({
+      title: 'Time for the Jury Vote',
+      emojis: '⚖️👑',
+      subtitle: 'It\'s time for the jurors to vote and crown the winner of Big Brother',
+      duration: 5000,
+      minDisplayTime: 5000,
+      tone: 'special'
+    });
+    
     // Intro cards before reveal (tripled durations)
     // Intro card 1: 6.0s (was 2.0s)
     try {
@@ -1515,8 +1536,8 @@
       console.info('[jury] Check card displayed');
     }
     
-    // Wait 5 seconds total for winner display (3 more after check card appears)
-    await sleep(3000);
+    // Wait full 5 seconds for check card to display and auto-remove
+    await sleep(5000);
     
     // Fade out and remove the tally/faceoff graph
     await hideFaceoffGraph();
