@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jury Tally Fixes Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f1a2f 0%, #1a2942 100%);
+      color: #e8f9ff;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #2196F3;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #1976D2;
+      transform: translateY(-2px);
+    }
+    button.danger {
+      background: #f44336;
+    }
+    button.success {
+      background: #4CAF50;
+    }
+    .log {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .timestamp {
+      color: #888;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Jury Tally Fixes - Test Suite</h1>
+    <p>Test the two critical fixes for jury vote tally:</p>
+    <ol>
+      <li>Finalist avatars remain in top roster with medal display after winner announcement</li>
+      <li>$1M check card appears properly for 5 seconds before public favorite</li>
+    </ol>
+
+    <div class="test-section">
+      <h2>Test Setup</h2>
+      <div class="test-buttons">
+        <button onclick="setupTestGame()">1. Setup Test Game</button>
+        <button onclick="showTopRosterState()" class="success">Show Top Roster State</button>
+        <button onclick="clearLog()" class="danger">Clear Log</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Issue 1: Top Roster Medal Display</h2>
+      <p>Test that finalist avatars remain visible with medals after winner announcement</p>
+      <div class="test-buttons">
+        <button onclick="testTopRosterBeforeWinner()">Show Roster Before Winner</button>
+        <button onclick="testSetWinnerProperties()">Set Winner Properties</button>
+        <button onclick="testTopRosterAfterWinner()">Show Roster After Winner</button>
+        <button onclick="testFullSequence()">Test Full Sequence</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Issue 2: Check Card Timing</h2>
+      <p>Test that check card appears for full 5 seconds before public favorite</p>
+      <div class="test-buttons">
+        <button onclick="testCheckCardDisplay()">Show Check Card (5s)</button>
+        <button onclick="testCheckCardTiming()">Test Full Timing Sequence</button>
+      </div>
+    </div>
+
+    <div class="log" id="testLog">
+      <div class="log-entry">
+        <span class="timestamp">00:00:00</span>
+        <span>Test suite loaded. Click "Setup Test Game" to begin.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mock TV viewport for rendering -->
+  <div id="rosterBar" style="position: fixed; top: 0; left: 0; right: 0; height: 100px; z-index: 1000; background: rgba(0,0,0,0.3);"></div>
+  <div id="tv" style="display: none;"></div>
+  <div id="panel" style="display: none;"></div>
+
+  <script>
+    // Initialize global game object
+    window.game = {
+      players: [],
+      juryHouse: [],
+      cfg: { showTopRoster: true }
+    };
+
+    const startTime = Date.now();
+    
+    function log(message, type = 'info') {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+      const timestamp = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      const logEl = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `<span class="timestamp">${timestamp}</span><span>${message}</span>`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      
+      console.log(`[${timestamp}] ${message}`);
+    }
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '';
+      log('Log cleared');
+    }
+
+    function setupTestGame() {
+      log('Setting up test game with 2 finalists and 7 jurors...');
+      
+      // Create test players
+      window.game.players = [
+        { id: 1, name: 'Alice', evicted: false, juror: false },
+        { id: 2, name: 'Bob', evicted: false, juror: false },
+        { id: 3, name: 'Charlie', evicted: true, juror: true, weekEvicted: 1 },
+        { id: 4, name: 'Diana', evicted: true, juror: true, weekEvicted: 2 },
+        { id: 5, name: 'Eve', evicted: true, juror: true, weekEvicted: 3 },
+        { id: 6, name: 'Frank', evicted: true, juror: true, weekEvicted: 4 },
+        { id: 7, name: 'Grace', evicted: true, juror: true, weekEvicted: 5 },
+        { id: 8, name: 'Henry', evicted: true, juror: true, weekEvicted: 6 },
+        { id: 9, name: 'Ivy', evicted: true, juror: true, weekEvicted: 7 }
+      ];
+      
+      window.game.juryHouse = [3, 4, 5, 6, 7, 8, 9];
+      window.game.finalTwo = [1, 2];
+      
+      log('✓ Created 9 players: 2 finalists (Alice, Bob) and 7 jurors');
+      log('✓ Game state initialized');
+      
+      // Render top roster
+      if (typeof window.renderTopRoster === 'function') {
+        window.renderTopRoster();
+        log('✓ Top roster rendered');
+      } else {
+        log('⚠️ renderTopRoster function not available yet');
+      }
+    }
+
+    function showTopRosterState() {
+      log('--- Top Roster State ---');
+      const host = document.getElementById('topRoster');
+      if (!host) {
+        log('❌ Top roster element not found');
+        return;
+      }
+      
+      log(`Display: ${host.style.display || 'default'}`);
+      log(`Children: ${host.children.length}`);
+      
+      if (window.game && window.game.players) {
+        window.game.players.forEach(p => {
+          const medals = [];
+          if (p.winner || p.showFinalLabel === 'WINNER') medals.push('🥇 WINNER');
+          if (p.runnerUp || p.showFinalLabel === 'RUNNER-UP') medals.push('🥈 RUNNER-UP');
+          if (medals.length > 0) {
+            log(`  ${p.name}: ${medals.join(', ')}`);
+          }
+        });
+      }
+      log('--- End State ---');
+    }
+
+    function testTopRosterBeforeWinner() {
+      log('Testing top roster BEFORE winner announcement...');
+      if (typeof window.renderTopRoster === 'function') {
+        window.renderTopRoster();
+        log('✓ Top roster rendered (no winners yet)');
+        const tiles = document.querySelectorAll('.top-roster-tile');
+        log(`  Found ${tiles.length} tiles in roster`);
+      }
+    }
+
+    function testSetWinnerProperties() {
+      log('Setting winner properties on players...');
+      
+      if (!window.game.players || window.game.players.length < 2) {
+        log('❌ No players found. Run "Setup Test Game" first.');
+        return;
+      }
+      
+      const winner = window.game.players[0]; // Alice
+      const runnerUp = window.game.players[1]; // Bob
+      
+      // Simulate what showPlacementLabels does
+      winner.showFinalLabel = 'WINNER';
+      winner.winner = true;
+      winner.finalRank = 1;
+      
+      runnerUp.showFinalLabel = 'RUNNER-UP';
+      runnerUp.runnerUp = true;
+      runnerUp.finalRank = 2;
+      
+      log(`✓ Set ${winner.name} as WINNER (🥇)`);
+      log(`✓ Set ${runnerUp.name} as RUNNER-UP (🥈)`);
+      
+      // Update HUD (triggers renderTopRoster)
+      if (typeof window.updateHud === 'function') {
+        window.updateHud();
+        log('✓ Called updateHud()');
+      } else if (typeof window.renderTopRoster === 'function') {
+        window.renderTopRoster();
+        log('✓ Called renderTopRoster()');
+      }
+    }
+
+    function testTopRosterAfterWinner() {
+      log('Testing top roster AFTER winner announcement...');
+      if (typeof window.renderTopRoster === 'function') {
+        window.renderTopRoster();
+        log('✓ Top roster rendered (with winners)');
+        
+        const tiles = document.querySelectorAll('.top-roster-tile');
+        log(`  Found ${tiles.length} tiles in roster`);
+        
+        // Check for medal icons
+        const medalLabels = document.querySelectorAll('.top-tile-name.medal-winner, .top-tile-name.medal-runner-up');
+        log(`  Found ${medalLabels.length} medal labels`);
+        
+        medalLabels.forEach(label => {
+          log(`    Medal: ${label.textContent}`);
+        });
+      }
+    }
+
+    async function testFullSequence() {
+      log('=== FULL SEQUENCE TEST ===');
+      log('Step 1: Setup game');
+      setupTestGame();
+      
+      await sleep(1000);
+      log('Step 2: Show initial roster state');
+      testTopRosterBeforeWinner();
+      
+      await sleep(1000);
+      log('Step 3: Announce winner and update properties');
+      testSetWinnerProperties();
+      
+      await sleep(1000);
+      log('Step 4: Check roster displays medals');
+      testTopRosterAfterWinner();
+      
+      log('=== SEQUENCE COMPLETE ===');
+    }
+
+    function testCheckCardDisplay() {
+      log('Testing check card display for 5 seconds...');
+      
+      if (!window.FinalFaceoff || typeof window.FinalFaceoff.showCheckCard !== 'function') {
+        log('❌ FinalFaceoff.showCheckCard not available');
+        return;
+      }
+      
+      const startTime = Date.now();
+      log('✓ Showing check card...');
+      
+      window.FinalFaceoff.showCheckCard('Alice', 5000);
+      
+      // Check after 5 seconds if card is removed
+      setTimeout(() => {
+        const elapsed = Date.now() - startTime;
+        const card = document.querySelector('.fo-check-card');
+        if (!card) {
+          log(`✓ Check card removed after ${elapsed}ms (expected ~5000ms)`);
+        } else {
+          log(`⚠️ Check card still visible after ${elapsed}ms`);
+        }
+      }, 5500);
+    }
+
+    async function testCheckCardTiming() {
+      log('=== CHECK CARD TIMING TEST ===');
+      
+      log('Step 1: Display crown (2s)');
+      await sleep(2000);
+      
+      log('Step 2: Display check card (5s)');
+      const checkStart = Date.now();
+      
+      if (window.FinalFaceoff && typeof window.FinalFaceoff.showCheckCard === 'function') {
+        window.FinalFaceoff.showCheckCard('Alice', 5000);
+        log('✓ Check card displayed');
+      }
+      
+      log('Step 3: Waiting 5 seconds...');
+      await sleep(5000);
+      
+      const checkElapsed = Date.now() - checkStart;
+      log(`✓ Wait complete (${checkElapsed}ms)`);
+      
+      const card = document.querySelector('.fo-check-card');
+      if (!card) {
+        log('✓ Check card properly removed before public favorite');
+      } else {
+        log('⚠️ Check card still visible - timing issue detected!');
+      }
+      
+      log('Step 4: Would transition to public favorite now');
+      log('=== TIMING TEST COMPLETE ===');
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+  </script>
+
+  <!-- Load game scripts -->
+  <script src="js/ui.hud-and-router.js"></script>
+  <script src="js/jury-viz.js"></script>
+  <script src="js/jury.js"></script>
+</body>
+</html>

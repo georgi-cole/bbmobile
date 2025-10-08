@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jury Flow Visual Test - Medal & Check Card</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f1a2f 0%, #1a2942 100%);
+      color: #e8f9ff;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #00e0cc;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 10px rgba(0, 224, 204, 0.3);
+    }
+    .info-box {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    button {
+      background: linear-gradient(135deg, #00e0cc 0%, #00b8a3 100%);
+      color: #001a18;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.2);
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 224, 204, 0.3);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    #rosterBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 120px;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      border-bottom: 2px solid rgba(0, 224, 204, 0.3);
+    }
+    #tv {
+      background: linear-gradient(135deg, #0f1a2f 0%, #1a2942 100%);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      min-height: 700px;
+      position: relative;
+      overflow: visible;
+      margin-top: 130px;
+      padding: 20px;
+    }
+    .status {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .status-entry {
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .status-entry:last-child {
+      border-bottom: none;
+    }
+    .highlight {
+      color: #00e0cc;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="rosterBar"></div>
+  
+  <div class="container">
+    <h1>🏆 Jury Flow Visual Test</h1>
+    
+    <div class="info-box">
+      <h2>Testing Complete Jury Flow</h2>
+      <p>This test demonstrates the full jury vote sequence with:</p>
+      <ul>
+        <li>✅ Finalist face-off with vote tallying</li>
+        <li>✅ Winner announcement with crown</li>
+        <li>✅ Top roster medal display (🥇 1st, 🥈 2nd)</li>
+        <li>✅ $1M check card for 5 seconds</li>
+        <li>✅ Proper timing before public favorite</li>
+      </ul>
+    </div>
+    
+    <div class="controls">
+      <button onclick="setupGame()">1. Setup Game</button>
+      <button onclick="startJuryFlow()" id="btnStart" disabled>2. Start Jury Flow</button>
+      <button onclick="showRosterState()">Show Roster State</button>
+      <button onclick="clearStatus()">Clear Status</button>
+    </div>
+    
+    <div id="tv"></div>
+    
+    <div class="status" id="status">
+      <div class="status-entry">Ready. Click "Setup Game" to begin.</div>
+    </div>
+  </div>
+
+  <script>
+    let gameReady = false;
+    
+    function log(message, highlight = false) {
+      const status = document.getElementById('status');
+      const entry = document.createElement('div');
+      entry.className = 'status-entry' + (highlight ? ' highlight' : '');
+      const time = new Date().toLocaleTimeString();
+      entry.textContent = `[${time}] ${message}`;
+      status.appendChild(entry);
+      status.scrollTop = status.scrollHeight;
+      console.log(message);
+    }
+    
+    function clearStatus() {
+      document.getElementById('status').innerHTML = '<div class="status-entry">Status cleared.</div>';
+    }
+    
+    function setupGame() {
+      log('Setting up game...', true);
+      
+      // Initialize global game object
+      window.game = {
+        players: [
+          { id: 1, name: 'Alice', evicted: false, juror: false, avatar: './avatars/Alice.png' },
+          { id: 2, name: 'Bob', evicted: false, juror: false, avatar: './avatars/Bob.png' },
+          { id: 3, name: 'Charlie', evicted: true, juror: true, weekEvicted: 1 },
+          { id: 4, name: 'Diana', evicted: true, juror: true, weekEvicted: 2 },
+          { id: 5, name: 'Eve', evicted: true, juror: true, weekEvicted: 3 },
+          { id: 6, name: 'Frank', evicted: true, juror: true, weekEvicted: 4 },
+          { id: 7, name: 'Grace', evicted: true, juror: true, weekEvicted: 5 },
+          { id: 8, name: 'Henry', evicted: true, juror: true, weekEvicted: 6 },
+          { id: 9, name: 'Ivy', evicted: true, juror: true, weekEvicted: 7 }
+        ],
+        juryHouse: [3, 4, 5, 6, 7, 8, 9],
+        finalTwo: [1, 2],
+        cfg: { showTopRoster: true }
+      };
+      
+      log('✓ Created 9 players');
+      log('✓ Finalists: Alice vs Bob');
+      log('✓ Jury: 7 members');
+      
+      // Render top roster
+      if (typeof window.renderTopRoster === 'function') {
+        window.renderTopRoster();
+        log('✓ Top roster rendered');
+      }
+      
+      gameReady = true;
+      document.getElementById('btnStart').disabled = false;
+      log('Game ready! Click "Start Jury Flow" to begin.', true);
+    }
+    
+    async function startJuryFlow() {
+      if (!gameReady) {
+        log('❌ Setup game first!');
+        return;
+      }
+      
+      log('=== STARTING JURY FLOW ===', true);
+      document.getElementById('btnStart').disabled = true;
+      
+      // Step 1: Render faceoff
+      log('Step 1: Rendering finalist faceoff...');
+      await sleep(500);
+      
+      const tv = document.getElementById('tv');
+      const box = document.createElement('div');
+      box.id = 'juryGraphBox';
+      box.style.cssText = 'width: 100%; max-width: 1200px; margin: 0 auto;';
+      tv.appendChild(box);
+      
+      // Mount faceoff UI
+      if (window.FinalFaceoff && typeof window.FinalFaceoff.mount === 'function') {
+        window.FinalFaceoff.mount({
+          left: { id: 1, name: 'Alice', avatar: './avatars/Alice.png', votes: 0 },
+          right: { id: 2, name: 'Bob', avatar: './avatars/Bob.png', votes: 0 },
+          majority: 4,
+          container: box
+        });
+        log('✓ Faceoff mounted');
+      }
+      
+      await sleep(1000);
+      
+      // Step 2: Simulate vote reveals
+      log('Step 2: Revealing jury votes...');
+      const votes = [1, 2, 1, 2, 1, 2, 1]; // Alice wins 4-3
+      
+      for (let i = 0; i < votes.length; i++) {
+        await sleep(1200);
+        const votedFor = votes[i];
+        const jurorNum = i + 1;
+        const votedName = votedFor === 1 ? 'Alice' : 'Bob';
+        
+        // Update tally
+        if (window.FinalFaceoff && typeof window.FinalFaceoff.addVote === 'function') {
+          window.FinalFaceoff.addVote(votedFor === 1 ? 'left' : 'right');
+        }
+        
+        log(`  Juror ${jurorNum} votes for ${votedName}`);
+      }
+      
+      await sleep(1500);
+      
+      // Step 3: Announce winner
+      log('Step 3: Announcing winner...', true);
+      const winner = window.game.players[0]; // Alice
+      const runnerUp = window.game.players[1]; // Bob
+      
+      // Set winner properties (this is what showPlacementLabels does)
+      winner.showFinalLabel = 'WINNER';
+      winner.winner = true;
+      winner.finalRank = 1;
+      
+      runnerUp.showFinalLabel = 'RUNNER-UP';
+      runnerUp.runnerUp = true;
+      runnerUp.finalRank = 2;
+      
+      log('✓ Alice declared winner (4-3)');
+      
+      // Update top roster to show medals
+      if (typeof window.updateHud === 'function') {
+        window.updateHud();
+      } else if (typeof window.renderTopRoster === 'function') {
+        window.renderTopRoster();
+      }
+      
+      log('✓ Top roster updated with medals', true);
+      await sleep(1000);
+      
+      // Step 4: Show crown
+      log('Step 4: Displaying crown...');
+      if (window.FinalFaceoff && typeof window.FinalFaceoff.showCrown === 'function') {
+        window.FinalFaceoff.showCrown('left');
+        log('✓ Crown displayed on Alice');
+      }
+      
+      await sleep(2000);
+      
+      // Step 5: Show check card
+      log('Step 5: Displaying $1M check card...', true);
+      const checkStart = Date.now();
+      
+      if (window.FinalFaceoff && typeof window.FinalFaceoff.showCheckCard === 'function') {
+        window.FinalFaceoff.showCheckCard('Alice', 5000);
+        log('✓ Check card displayed');
+      }
+      
+      // Wait full 5 seconds
+      await sleep(5000);
+      const checkDuration = Date.now() - checkStart;
+      log(`✓ Check card completed (${checkDuration}ms)`, true);
+      
+      // Step 6: Fade out faceoff
+      log('Step 6: Fading out faceoff graph...');
+      if (box) {
+        box.style.transition = 'opacity 0.45s ease';
+        box.style.opacity = '0';
+        await sleep(500);
+        box.remove();
+        log('✓ Faceoff removed');
+      }
+      
+      await sleep(500);
+      
+      // Step 7: Final check
+      log('Step 7: Verifying final state...', true);
+      const rosterTiles = document.querySelectorAll('.top-roster-tile');
+      const medals = document.querySelectorAll('.top-tile-name.medal-winner, .top-tile-name.medal-runner-up');
+      
+      log(`  Roster tiles: ${rosterTiles.length}`);
+      log(`  Medal labels: ${medals.length}`);
+      
+      if (medals.length === 2) {
+        log('✅ SUCCESS: Both medals visible in roster!', true);
+      } else {
+        log('⚠️ WARNING: Expected 2 medals, found ' + medals.length);
+      }
+      
+      log('=== FLOW COMPLETE ===', true);
+      log('Public favorite would start now.');
+      
+      document.getElementById('btnStart').disabled = false;
+    }
+    
+    function showRosterState() {
+      log('--- Roster State ---', true);
+      if (window.game && window.game.players) {
+        window.game.players.forEach(p => {
+          const status = [];
+          if (p.winner || p.showFinalLabel === 'WINNER') status.push('🥇 WINNER');
+          if (p.runnerUp || p.showFinalLabel === 'RUNNER-UP') status.push('🥈 RUNNER-UP');
+          if (status.length > 0) {
+            log(`  ${p.name}: ${status.join(', ')}`);
+          }
+        });
+      }
+      const tiles = document.querySelectorAll('.top-roster-tile');
+      const medals = document.querySelectorAll('.top-tile-name.medal-winner, .top-tile-name.medal-runner-up');
+      log(`  DOM: ${tiles.length} tiles, ${medals.length} medals`);
+      log('--- End State ---');
+    }
+    
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+  </script>
+
+  <!-- Load game scripts -->
+  <script src="js/ui.hud-and-router.js"></script>
+  <script src="js/jury-viz.js"></script>
+  <script src="js/jury.js"></script>
+</body>
+</html>

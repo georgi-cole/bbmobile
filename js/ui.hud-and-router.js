@@ -605,7 +605,12 @@ header.innerHTML = `
       if(!(hasHOH && hasVeto)){
         name.textContent = labelText;
       }
-      if(statusClass) name.classList.add(statusClass);
+      if(statusClass) {
+        // Split multiple classes and add them individually
+        statusClass.trim().split(' ').forEach(cls => {
+          if(cls) name.classList.add(cls);
+        });
+      }
       wrap.setAttribute('aria-label', ariaLabel);
 
       const moveHandler = (e)=> showProfileFor(p, e);
