@@ -607,7 +607,7 @@ header.innerHTML = `
       }
       if(statusClass) {
         // Split multiple classes and add them individually
-        statusClass.split(' ').forEach(cls => {
+        statusClass.trim().split(' ').forEach(cls => {
           if(cls) name.classList.add(cls);
         });
       }
