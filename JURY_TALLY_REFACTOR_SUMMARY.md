@@ -9,8 +9,10 @@ Replaced the blocking modal with a **non-blocking glassmorphism panel** that flo
 ## Key Changes
 
 ### Visual Design
-- **Semi-transparent background**: `rgba(10, 15, 22, 0.65)` - 65% opacity
-- **Backdrop blur**: `blur(12px) saturate(1.2)` - Modern glass effect
+- **Ultra-transparent background**: `rgba(10, 15, 22, 0.35)` - 35% opacity (enhanced from 65%)
+- **Subtle backdrop blur**: `blur(8px) saturate(1.1)` - Lighter glass effect (reduced from 12px)
+- **Minimal finalist backgrounds**: `rgba(0,0,0,0.15)` - 15% opacity for TV visibility
+- **Transparent vote cards**: `rgba(0,0,0,0.30)` - 30% opacity
 - **Compact footprint**: Max width 280px (desktop) / 340px (mobile)
 - **Smooth animations**: Slide-in entrance effect
 
@@ -51,11 +53,12 @@ All tests passing:
 - No changes to game logic or state management
 
 ## Visual Improvements
-- Modern glassmorphism aesthetic
-- Better visual hierarchy
-- Unobstructed finalist photos
-- Background content remains visible
-- Professional, polished appearance
+- Ultra-minimal glassmorphism aesthetic with enhanced transparency
+- Better visual hierarchy with TV background highly visible
+- Unobstructed finalist photos with subtle card backgrounds
+- Background content fully visible through all UI elements
+- Professional, polished appearance with light touch design
+- Vote cards and tally panels blend seamlessly into TV area
 
 ## Performance
 - No performance impact
@@ -72,5 +75,15 @@ All tests passing:
 ---
 
 **Implementation Date**: January 2025  
+**Enhanced Transparency Update**: January 2025 (35% opacity redesign)  
 **Test Coverage**: 100% (all validation checks passing)  
 **Browser Support**: Modern browsers with backdrop-filter support
+
+## Transparency Enhancement (Latest Update)
+The tally UI received a major transparency enhancement to make it even more integrated into the TV area:
+- Reduced panel opacity from 65% to **35%** for maximum TV visibility
+- Lightened backdrop blur from 12px to **8px** for subtler effect
+- Made finalist card backgrounds nearly transparent (**15%** opacity)
+- Reduced vote card opacity to **30%** for natural fade
+- Minimized shadows and borders for lighter visual weight
+- TV background now clearly visible through all UI elements while maintaining readability
