@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Transparent Jury Container Fix</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { color: #83bfff; margin-bottom: 8px; }
+    .subtitle { color: #95a9c0; font-size: 0.95rem; margin-bottom: 20px; }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 30px 0;
+    }
+    
+    .comparison-item {
+      background: #132132;
+      border: 1px solid #24364b;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    
+    .comparison-item h3 {
+      margin-top: 0;
+      color: #ff6d6d;
+    }
+    
+    .comparison-item.fixed h3 {
+      color: #77d58d;
+    }
+    
+    /* Simulate TV container */
+    .tv-sim {
+      position: relative;
+      background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
+                  url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%230e1730" width="100" height="100"/><circle cx="50" cy="50" r="30" fill="%231a2f44"/></svg>') center/cover;
+      border: 2px solid #213349;
+      border-radius: 12px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: visible;
+      margin: 15px 0;
+    }
+    
+    /* Background cards to show obstruction */
+    .bg-cards {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .bg-card {
+      background: rgba(22, 43, 64, 0.9);
+      border: 1px solid #274765;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #d7e8fa;
+      font-size: 0.85rem;
+    }
+    
+    /* OLD: Blocking minigame-host container */
+    .minigame-host-old {
+      background: #182a3b;
+      border: 1px solid #26405b;
+      padding: 12px 14px 14px;
+      border-radius: 14px;
+      box-shadow: 0 6px 16px -10px rgba(0,0,0,0.6);
+      position: relative;
+      z-index: 5;
+    }
+    
+    /* NEW: Transparent container */
+    .minigame-host-new {
+      background: transparent;
+      border: none;
+      padding: 0;
+      box-shadow: none;
+      position: relative;
+      z-index: 5;
+    }
+    
+    /* Faceoff UI (simplified for demo) */
+    .faceoff-demo {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .finalist-demo {
+      text-align: center;
+    }
+    
+    .finalist-demo img {
+      width: 120px;
+      height: 120px;
+      border-radius: 10px;
+      background: #222;
+      object-fit: cover;
+    }
+    
+    .finalist-demo .name {
+      margin-top: 8px;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    
+    .finalist-demo .votes {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    
+    /* Tally panel */
+    .tally-panel {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+      z-index: 10;
+    }
+    
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+    
+    .status-item {
+      background: rgba(22, 43, 64, 0.5);
+      border: 1px solid #274765;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    
+    .status-label {
+      font-size: 0.7rem;
+      color: #95a9c0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    
+    .status-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #d7e8fa;
+    }
+    
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    
+    code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+    
+    @media (max-width: 900px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Test: Transparent Jury Container Fix</h1>
+    <p class="subtitle">Demonstrates the fix for the obstructing modal overlay issue</p>
+
+    <div class="comparison-grid">
+      <!-- BEFORE: Blocking overlay -->
+      <div class="comparison-item">
+        <h3>❌ BEFORE: Obstructing Container</h3>
+        <div class="tv-sim">
+          <div class="bg-cards">
+            <div class="bg-card">📨 Message 1: Important game update...</div>
+            <div class="bg-card">📨 Message 2: Alliance formed...</div>
+          </div>
+          
+          <div class="minigame-host-old">
+            <div class="faceoff-demo">
+              <div class="finalist-demo">
+                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=PlayerA" alt="Finalist A">
+                <div class="name">Finalist A</div>
+                <div class="votes">3</div>
+              </div>
+              <div class="finalist-demo">
+                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=PlayerB" alt="Finalist B">
+                <div class="name">Finalist B</div>
+                <div class="votes">4</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="tally-panel">Final Tally — A: 3 · B: 4</div>
+        </div>
+        
+        <div class="status-grid">
+          <div class="status-item">
+            <div class="status-label">Container Background</div>
+            <div class="status-value fail">❌ Solid (#182a3b)</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Background Cards</div>
+            <div class="status-value fail">❌ Obstructed</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">TV Background</div>
+            <div class="status-value fail">❌ Hidden</div>
+          </div>
+        </div>
+        
+        <p><strong>Issue:</strong> The <code>.minigame-host</code> container has a solid background that blocks the TV screen and background cards.</p>
+      </div>
+
+      <!-- AFTER: Transparent -->
+      <div class="comparison-item fixed">
+        <h3>✅ AFTER: Non-Obstructing Container</h3>
+        <div class="tv-sim">
+          <div class="bg-cards">
+            <div class="bg-card">📨 Message 1: Important game update...</div>
+            <div class="bg-card">📨 Message 2: Alliance formed...</div>
+          </div>
+          
+          <div class="minigame-host-new">
+            <div class="faceoff-demo">
+              <div class="finalist-demo">
+                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=PlayerA" alt="Finalist A">
+                <div class="name">Finalist A</div>
+                <div class="votes">3</div>
+              </div>
+              <div class="finalist-demo">
+                <img src="https://api.dicebear.com/6.x/bottts/svg?seed=PlayerB" alt="Finalist B">
+                <div class="name">Finalist B</div>
+                <div class="votes">4</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="tally-panel">Final Tally — A: 3 · B: 4</div>
+        </div>
+        
+        <div class="status-grid">
+          <div class="status-item">
+            <div class="status-label">Container Background</div>
+            <div class="status-value pass">✅ Transparent</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Background Cards</div>
+            <div class="status-value pass">✅ Fully Visible</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">TV Background</div>
+            <div class="status-value pass">✅ Fully Visible</div>
+          </div>
+        </div>
+        
+        <p><strong>Fix:</strong> Container now has <code>background: transparent</code>, <code>border: none</code>, <code>box-shadow: none</code>, <code>padding: 0</code>.</p>
+      </div>
+    </div>
+
+    <div style="background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 30px 0;">
+      <h2>🔧 Implementation Details</h2>
+      <p>The fix was applied in <code>js/jury.js</code> at line 394-401:</p>
+      <pre style="background: #0a0f16; padding: 15px; border-radius: 8px; overflow-x: auto;"><code>const box = document.createElement('div');
+box.className = 'minigame-host';
+box.id = 'juryGraphBox';
+box.style.position = 'relative';
+box.style.zIndex = '5';
+box.style.overflow = 'visible';
+<strong style="color: #77d58d;">// Make container transparent - no blocking overlay
+box.style.background = 'transparent';
+box.style.border = 'none';
+box.style.boxShadow = 'none';
+box.style.padding = '0';</strong></code></pre>
+      
+      <h3>What Changed:</h3>
+      <ul>
+        <li>✅ <code>background: transparent</code> (was <code>#182a3b</code> from .minigame-host)</li>
+        <li>✅ <code>border: none</code> (was <code>1px solid #26405b</code>)</li>
+        <li>✅ <code>box-shadow: none</code> (was <code>0 6px 16px -10px rgba(0,0,0,0.6)</code>)</li>
+        <li>✅ <code>padding: 0</code> (was <code>12px 14px 14px</code>)</li>
+      </ul>
+      
+      <h3>Features Retained:</h3>
+      <ul>
+        <li>✅ Crown overlay on winner's photo</li>
+        <li>✅ $1M check card with winner's name</li>
+        <li>✅ Dynamic vote reasons based on relationships</li>
+        <li>✅ Smooth animations (slide-in, pulse, glow)</li>
+        <li>✅ 5-second delay before public's favorite modal</li>
+        <li>✅ Ultra-transparent tally panel (8% opacity)</li>
+        <li>✅ Glassmorphism effects with backdrop blur</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

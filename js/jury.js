@@ -395,6 +395,11 @@
     box.style.position = 'relative';
     box.style.zIndex = '5';
     box.style.overflow = 'visible';
+    // Make container transparent - no blocking overlay
+    box.style.background = 'transparent';
+    box.style.border = 'none';
+    box.style.boxShadow = 'none';
+    box.style.padding = '0';
 
     const need = Math.floor(totalJurors/2)+1;
 
