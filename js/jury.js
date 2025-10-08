@@ -329,9 +329,8 @@
 
     const box=document.createElement('div'); box.className='minigame-host'; box.id='juryGraphBox';
     box.style.position = 'relative';
-    box.style.zIndex = '12';
+    box.style.zIndex = '5';
     box.style.overflow = 'visible';
-    box.style.marginBottom = '8px';
 
     const need = Math.floor(totalJurors/2)+1;
 
@@ -339,8 +338,6 @@
     const Bimg = getAvatar(B);
 
     box.innerHTML = `
-      <h3>Voting the Winner — Live Tally</h3>
-      <div class="tiny muted">First to ${need} clinches the win.</div>
       <div class="fo-center">
         <div class="fo-fit" id="foFit">
           <div class="fo-belt" id="foBelt"></div>

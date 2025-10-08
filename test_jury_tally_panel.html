@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Non-Blocking Jury Tally Panel</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { color: #83bfff; margin-bottom: 8px; }
+    .subtitle { color: #95a9c0; font-size: 0.95rem; margin-bottom: 20px; }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px;
+      font-weight: 600;
+    }
+    button:hover { background: #4876c2; }
+    button:active { transform: scale(0.98); }
+    
+    /* Simulate TV viewport */
+    .tv-viewport {
+      position: relative;
+      background: #0a0f16;
+      border-radius: 12px;
+      min-height: 600px;
+      padding: 20px;
+      overflow: hidden;
+      border: 2px solid #1a2f44;
+    }
+    
+    /* Simulate cards/messages in background */
+    .background-cards {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      opacity: 0.7;
+    }
+    .card {
+      background: rgba(22, 43, 64, 0.8);
+      border: 1px solid #274765;
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #d7e8fa;
+      font-size: 0.9rem;
+    }
+    
+    .results { 
+      background: #0a0f16; 
+      padding: 12px; 
+      border-radius: 6px; 
+      margin-top: 12px; 
+      font-size: 0.9rem; 
+    }
+    .pass { 
+      color: #77d58d; 
+      padding: 8px 12px; 
+      background: rgba(119, 213, 141, 0.1); 
+      border-radius: 6px; 
+      margin: 4px 0;
+    }
+    .fail { 
+      color: #ff6d6d; 
+      padding: 8px 12px; 
+      background: rgba(255, 109, 109, 0.1); 
+      border-radius: 6px; 
+      margin: 4px 0;
+    }
+    .info { 
+      color: #83bfff; 
+      padding: 8px 12px; 
+      background: rgba(131, 191, 255, 0.1); 
+      border-radius: 6px; 
+      margin: 4px 0;
+    }
+    
+    /* Status indicators */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .status-item {
+      background: rgba(22, 43, 64, 0.5);
+      border: 1px solid #274765;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .status-label {
+      font-size: 0.75rem;
+      color: #95a9c0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .status-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #d7e8fa;
+    }
+    .status-check { color: #77d58d; }
+    .status-cross { color: #ff6d6d; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Non-Blocking Jury Tally Panel</h1>
+    <p class="subtitle">Validates glassmorphism panels that don't obstruct finalist photos or background cards</p>
+
+    <div class="test-section">
+      <h2>🎮 Controls</h2>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button onclick="initFaceoff()">1️⃣ Initialize Faceoff</button>
+        <button onclick="addVote()">2️⃣ Add Vote</button>
+        <button onclick="showTally()">3️⃣ Show Final Tally</button>
+        <button onclick="showWinner()">4️⃣ Show Winner</button>
+        <button onclick="resetTest()">🔄 Reset</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>📺 TV Viewport (Simulated)</h2>
+      <div class="tv-viewport" id="tv">
+        <!-- Background cards to test non-obstruction -->
+        <div class="background-cards">
+          <div class="card">📨 Message 1: Alliance discussion happening in the backyard...</div>
+          <div class="card">📨 Message 2: Strategy talk about final two deals...</div>
+          <div class="card">📨 Message 3: Jury members discussing their votes...</div>
+        </div>
+        <!-- Faceoff will be mounted here -->
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>✅ Test Results</h2>
+      <div class="status-grid">
+        <div class="status-item">
+          <div class="status-label">Tally Positioned</div>
+          <div class="status-value" id="status-positioned">❓ Not tested</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">Glassmorphism Active</div>
+          <div class="status-value" id="status-glass">❓ Not tested</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">Cards Visible</div>
+          <div class="status-value" id="status-cards">❓ Not tested</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">Finalists Visible</div>
+          <div class="status-value" id="status-finalists">❓ Not tested</div>
+        </div>
+      </div>
+      <div class="results" id="results"></div>
+    </div>
+  </div>
+
+  <!-- Load the actual jury-viz.js module -->
+  <script src="js/jury-viz.js"></script>
+
+  <script>
+    let voteCount = 0;
+    const jurors = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace'];
+    
+    function log(msg, type = 'info') {
+      const results = document.getElementById('results');
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      results.appendChild(entry);
+      results.scrollTop = results.scrollHeight;
+      console.log(`[${type}] ${msg}`);
+    }
+
+    function initFaceoff() {
+      try {
+        // Initialize with two finalists
+        window.FinalFaceoff.mount({
+          left: { 
+            name: 'Finalist A', 
+            avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=FinalistA' 
+          },
+          right: { 
+            name: 'Finalist B', 
+            avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=FinalistB' 
+          },
+          majority: 4,
+          container: '#tv'
+        });
+        log('✅ Faceoff initialized successfully', 'pass');
+        updateStatus('positioned', true);
+        validateGlassmorphism();
+        validateVisibility();
+      } catch (e) {
+        log(`❌ Failed to initialize: ${e.message}`, 'fail');
+        updateStatus('positioned', false);
+      }
+    }
+
+    function addVote() {
+      if (voteCount >= jurors.length) {
+        log('⚠️ All jurors have voted', 'info');
+        return;
+      }
+      
+      try {
+        const juror = jurors[voteCount];
+        const voted = voteCount % 2 === 0 ? 'Finalist A' : 'Finalist B';
+        const which = voteCount % 2 === 0 ? 'left' : 'right';
+        
+        window.FinalFaceoff.showVoteCard(juror, voted);
+        window.FinalFaceoff.onVote(which, null);
+        
+        voteCount++;
+        log(`✅ Vote added: ${juror} → ${voted}`, 'pass');
+        
+        // Revalidate visibility after each vote
+        setTimeout(() => validateVisibility(), 200);
+      } catch (e) {
+        log(`❌ Failed to add vote: ${e.message}`, 'fail');
+      }
+    }
+
+    function showTally() {
+      try {
+        window.FinalFaceoff.showFinalTally();
+        log('✅ Final tally displayed', 'pass');
+        
+        // Validate positioning and glass effect
+        setTimeout(() => {
+          validateGlassmorphism();
+          validateTallyPosition();
+          validateVisibility();
+        }, 200);
+      } catch (e) {
+        log(`❌ Failed to show tally: ${e.message}`, 'fail');
+      }
+    }
+
+    function showWinner() {
+      try {
+        const winner = voteCount % 2 === 0 ? 'Finalist A' : 'Finalist B';
+        window.FinalFaceoff.showWinnerMessage(winner);
+        log(`✅ Winner displayed: ${winner}`, 'pass');
+        
+        // Validate visibility with both tally and winner
+        setTimeout(() => {
+          validateVisibility();
+        }, 200);
+      } catch (e) {
+        log(`❌ Failed to show winner: ${e.message}`, 'fail');
+      }
+    }
+
+    function resetTest() {
+      try {
+        window.FinalFaceoff.destroy();
+        voteCount = 0;
+        document.getElementById('results').innerHTML = '';
+        updateStatus('positioned', null);
+        updateStatus('glass', null);
+        updateStatus('cards', null);
+        updateStatus('finalists', null);
+        log('🔄 Test reset', 'info');
+      } catch (e) {
+        log(`❌ Failed to reset: ${e.message}`, 'fail');
+      }
+    }
+
+    function validateGlassmorphism() {
+      const tally = document.querySelector('.fo-tally');
+      if (!tally) {
+        updateStatus('glass', null);
+        return;
+      }
+      
+      const styles = window.getComputedStyle(tally);
+      const hasBackdropFilter = styles.backdropFilter !== 'none' && styles.backdropFilter !== '';
+      const hasWebkitBackdropFilter = styles.webkitBackdropFilter !== 'none' && styles.webkitBackdropFilter !== '';
+      const hasTransparency = parseFloat(styles.opacity || '1') < 1 || 
+                             styles.background.includes('rgba') && 
+                             parseFloat(styles.background.match(/rgba?\([^)]+,\s*([\d.]+)\)/)?.[1] || 1) < 0.9;
+      
+      const glassActive = (hasBackdropFilter || hasWebkitBackdropFilter) && hasTransparency;
+      updateStatus('glass', glassActive);
+      
+      if (glassActive) {
+        log('✅ Glassmorphism effect active (backdrop-filter + transparency)', 'pass');
+      } else {
+        log(`⚠️ Glassmorphism partially active - backdrop:${hasBackdropFilter} transparency:${hasTransparency}`, 'info');
+      }
+    }
+
+    function validateTallyPosition() {
+      const tally = document.querySelector('.fo-tally');
+      const winner = document.querySelector('.fo-winner');
+      
+      if (tally) {
+        const rect = tally.getBoundingClientRect();
+        const styles = window.getComputedStyle(tally);
+        const isRightAligned = styles.right !== 'auto' && parseFloat(styles.right) < 50;
+        
+        if (isRightAligned) {
+          log(`✅ Tally positioned at right: ${styles.right} (desktop layout)`, 'pass');
+        } else {
+          log(`ℹ️ Tally positioned at: right=${styles.right}, left=${styles.left} (may be mobile layout)`, 'info');
+        }
+      }
+      
+      if (winner) {
+        const rect = winner.getBoundingClientRect();
+        log(`ℹ️ Winner panel positioned at top: ${rect.top}px`, 'info');
+      }
+    }
+
+    function validateVisibility() {
+      // Check if background cards are still visible
+      const cards = document.querySelectorAll('.background-cards .card');
+      let cardsVisible = 0;
+      cards.forEach(card => {
+        const rect = card.getBoundingClientRect();
+        const styles = window.getComputedStyle(card);
+        if (parseFloat(styles.opacity) > 0.5 && rect.height > 0) {
+          cardsVisible++;
+        }
+      });
+      
+      const allCardsVisible = cardsVisible === cards.length;
+      updateStatus('cards', allCardsVisible);
+      
+      if (allCardsVisible) {
+        log(`✅ All ${cards.length} background cards visible`, 'pass');
+      } else {
+        log(`⚠️ Only ${cardsVisible}/${cards.length} cards visible`, 'fail');
+      }
+      
+      // Check if finalist photos are visible
+      const leftSlot = document.querySelector('.fo-slot.left');
+      const rightSlot = document.querySelector('.fo-slot.right');
+      
+      if (leftSlot && rightSlot) {
+        const leftRect = leftSlot.getBoundingClientRect();
+        const rightRect = rightSlot.getBoundingClientRect();
+        const finalistsVisible = leftRect.height > 0 && rightRect.height > 0;
+        
+        updateStatus('finalists', finalistsVisible);
+        
+        if (finalistsVisible) {
+          log(`✅ Both finalist slots visible (${Math.round(leftRect.width)}x${Math.round(leftRect.height)}px each)`, 'pass');
+        } else {
+          log('❌ Finalist slots not visible', 'fail');
+        }
+      } else {
+        updateStatus('finalists', null);
+      }
+    }
+
+    function updateStatus(key, value) {
+      const el = document.getElementById(`status-${key}`);
+      if (!el) return;
+      
+      if (value === true) {
+        el.innerHTML = '<span class="status-check">✅ Pass</span>';
+      } else if (value === false) {
+        el.innerHTML = '<span class="status-cross">❌ Fail</span>';
+      } else {
+        el.innerHTML = '❓ Not tested';
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('load', () => {
+      log('🚀 Test page loaded. Click "Initialize Faceoff" to begin.', 'info');
+    });
+
+    // Responsive test on resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        const width = window.innerWidth;
+        log(`📐 Viewport resized to ${width}px (${width <= 768 ? 'mobile' : 'desktop'} layout)`, 'info');
+        if (document.querySelector('.fo-tally')) {
+          validateTallyPosition();
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>

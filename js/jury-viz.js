@@ -143,29 +143,70 @@
   }
   .fo-pulse{ animation: foPulse 600ms ease; }
 
-  /* Final tally and winner banner */
+  /* Final tally and winner banner - Non-blocking floating panels with glassmorphism */
   .finalFaceoff .fo-tally,
   .finalFaceoff .fo-winner{
     position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    right: 12px;
     padding: 8px 14px;
     border-radius: 10px;
-    background: rgba(0,0,0,0.55);
-    border: 1px solid rgba(255,255,255,0.12);
+    /* Glassmorphism: semi-transparent with backdrop blur */
+    background: rgba(10, 15, 22, 0.65);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    border: 1px solid rgba(255,255,255,0.18);
     color: #f2feff;
     font-weight: 800;
     text-align: center;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45), 
+                inset 0 1px 0 rgba(255,255,255,0.1);
     z-index: 7;
+    /* Smooth entrance animation */
+    animation: tallySlideIn 0.4s cubic-bezier(0.25, 0.9, 0.25, 1);
+    /* Reduce size for minimal obstruction */
+    max-width: min(280px, 35vw);
+    word-wrap: break-word;
+  }
+  @keyframes tallySlideIn {
+    0% { 
+      opacity: 0; 
+      transform: translateX(20px); 
+    }
+    100% { 
+      opacity: 1; 
+      transform: translateX(0); 
+    }
   }
   .finalFaceoff .fo-tally{
-    top: 42px;
-    font-size: clamp(14px, 2.2vw, 20px);
+    top: 12px;
+    font-size: clamp(12px, 1.8vw, 16px);
   }
   .finalFaceoff .fo-winner{
-    bottom: 16px;
-    font-size: clamp(16px, 2.6vw, 24px);
+    top: 56px;
+    font-size: clamp(13px, 2vw, 18px);
+    /* Highlight winner with subtle glow */
+    background: rgba(0, 224, 204, 0.25);
+    border-color: rgba(0, 224, 204, 0.4);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45),
+                0 0 20px rgba(0, 224, 204, 0.2),
+                inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  /* Mobile responsive adjustments for tally panels */
+  @media (max-width: 768px) {
+    .finalFaceoff .fo-tally,
+    .finalFaceoff .fo-winner {
+      /* On mobile, position at top center to save horizontal space */
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+      max-width: min(90vw, 340px);
+      font-size: clamp(11px, 3vw, 14px);
+    }
+    .finalFaceoff .fo-winner {
+      top: 50px;
+      font-size: clamp(12px, 3.2vw, 16px);
+    }
   }
 
   /* Fallback medal overlay */
