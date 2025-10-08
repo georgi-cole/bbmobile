@@ -1478,16 +1478,14 @@
     await startJuryCastingPhase(jurors, A, B);
     
     // Show jury vote modal announcement (similar to twists)
-    if(typeof g.showEventModal === 'function'){
-      await g.showEventModal({
-        title: 'Time for the Jury Vote',
-        emojis: '⚖️👑',
-        subtitle: 'It\'s time for the jurors to vote and crown the winner of Big Brother',
-        duration: 5000,
-        minDisplayTime: 5000,
-        tone: 'special'
-      });
-    }
+    await g.showEventModal?.({
+      title: 'Time for the Jury Vote',
+      emojis: '⚖️👑',
+      subtitle: 'It\'s time for the jurors to vote and crown the winner of Big Brother',
+      duration: 5000,
+      minDisplayTime: 5000,
+      tone: 'special'
+    });
     
     // Intro cards before reveal (tripled durations)
     // Intro card 1: 6.0s (was 2.0s)
