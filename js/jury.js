@@ -75,13 +75,77 @@
     return list;
   }
 
-  // Simple AI ballot logic
+  // Simple AI ballot logic with reason tracking
   function ballotPick(jurorId, A, B){
     const j = gp(jurorId); if(!j) return (rng()<0.5?A:B);
     const affA = j.affinity?.[A] ?? 0, affB = j.affinity?.[B] ?? 0;
     if(Math.abs(affA-affB) > 0.08) return affA>affB ? A : B;
     const thA = gp(A)?.threat ?? 0.5, thB = gp(B)?.threat ?? 0.5;
     return thA>thB ? B : A;
+  }
+  
+  // Generate dynamic vote reason based on ballot logic
+  function generateVoteReason(jurorId, pick, A, B, usedReasons = new Set()){
+    const j = gp(jurorId);
+    const finalist = gp(pick);
+    const finalistName = safeName(pick);
+    
+    if(!j || !finalist) return `I vote for ${finalistName} to win Big Brother.`;
+    
+    const affPick = j.affinity?.[pick] ?? 0;
+    const affOther = j.affinity?.[pick === A ? B : A] ?? 0;
+    const thPick = finalist.threat ?? 0.5;
+    
+    // Reason templates based on ballot logic
+    const reasons = [];
+    
+    // Affinity-based reasons
+    if(affPick > affOther + 0.15){
+      reasons.push(`${finalistName} and I had great chemistry in the house.`);
+      reasons.push(`${finalistName} always had my back when it mattered.`);
+      reasons.push(`I trust ${finalistName}'s loyalty completely.`);
+    } else if(affPick > affOther + 0.05){
+      reasons.push(`${finalistName} played with integrity.`);
+      reasons.push(`${finalistName} was genuine with everyone.`);
+    }
+    
+    // Threat/strategy-based reasons
+    if(thPick > 0.65){
+      reasons.push(`${finalistName} dominated competitions when needed.`);
+      reasons.push(`${finalistName}'s strategic moves were brilliant.`);
+      reasons.push(`${finalistName} controlled the game masterfully.`);
+    } else if(thPick > 0.45){
+      reasons.push(`${finalistName} played a well-rounded game.`);
+      reasons.push(`${finalistName} adapted to every situation.`);
+    } else {
+      reasons.push(`${finalistName}'s social game was underrated.`);
+      reasons.push(`${finalistName} navigated the house brilliantly.`);
+    }
+    
+    // Underdog reasons
+    if(thPick < 0.4){
+      reasons.push(`${finalistName} overcame incredible odds.`);
+      reasons.push(`${finalistName}'s resilience impressed me.`);
+    }
+    
+    // Generic high-quality reasons
+    reasons.push(`${finalistName} earned my respect throughout the season.`);
+    reasons.push(`${finalistName} deserves this win, hands down.`);
+    reasons.push(`${finalistName} played the better game overall.`);
+    reasons.push(`${finalistName} made big moves at critical moments.`);
+    reasons.push(`${finalistName}'s game speaks for itself.`);
+    
+    // Filter out already used reasons
+    const available = reasons.filter(r => !usedReasons.has(r));
+    
+    // Pick a random available reason, or fallback to generic if all used
+    if(available.length > 0){
+      const chosen = available[Math.floor(rng() * available.length)];
+      usedReasons.add(chosen);
+      return chosen;
+    }
+    
+    return `${finalistName} has my vote to win.`;
   }
 
   // Resolve eviction week from various field names
@@ -1279,6 +1343,7 @@
     // Reveal each juror's vote
     const need = Math.floor(numJurors / 2) + 1;
     let majorityReached = false;
+    const usedReasons = new Set(); // Track used reasons to avoid repetition
     
     for (let i = 0; i < order.length; i++) {
       const jid = order[i];
@@ -1300,12 +1365,12 @@
       
       votes.set(pick, (votes.get(pick)||0)+1);
       
-      // Show locked phrase with finalist name (visible ~60-70% of slot duration)
-      const phrase = getLockedJuryPhrase();
+      // Generate dynamic reason based on ballot logic
+      const dynamicReason = generateVoteReason(jid, pick, A, B, usedReasons);
       const phraseDuration = Math.floor(delay * 0.65); // 65% of slot
-      showJurorPhraseOverlay(safeName(jid), phrase, phraseDuration);
+      showJurorPhraseOverlay(safeName(jid), dynamicReason, phraseDuration);
       
-      g.addJuryLog?.(`${safeName(jid)}: ${phrase}`, 'muted');
+      g.addJuryLog?.(`${safeName(jid)}: ${dynamicReason}`, 'muted');
       g.addJuryLog?.(`${safeName(jid)} votes for ${safeName(pick)}`, 'jury');
       
       // Enhanced logging with scores
@@ -1429,8 +1494,24 @@
     
     try{ g.setMusic?.('victory', true); }catch(e){}
     
-    // Wait 5 seconds for winner display
-    await sleep(5000);
+    // Add crown overlay on winner's photo (non-face-covering)
+    const winnerSide = winner === A ? 'left' : 'right';
+    if(typeof g.FinalFaceoff?.showCrown === 'function'){
+      g.FinalFaceoff.showCrown(winnerSide);
+      console.info('[jury] Crown displayed on winner');
+    }
+    
+    // Wait 2 seconds with crown
+    await sleep(2000);
+    
+    // Show 1M dollar check card
+    if(typeof g.FinalFaceoff?.showCheckCard === 'function'){
+      g.FinalFaceoff.showCheckCard(safeName(winner), 5000);
+      console.info('[jury] Check card displayed');
+    }
+    
+    // Wait 5 seconds total for winner display (3 more after check card appears)
+    await sleep(3000);
     
     // Fade out and remove the tally/faceoff graph
     await hideFaceoffGraph();
