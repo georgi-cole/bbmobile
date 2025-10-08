@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Popup Theme Test - Big Brother</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { 
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      min-height: 100vh;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 800px;
+    }
+    button {
+      padding: 12px 20px;
+      background: var(--primary-2);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      background: var(--primary-3);
+      transform: translateY(-1px);
+    }
+    .info {
+      color: var(--muted-2);
+      font-size: 14px;
+      text-align: center;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+    .theme-switcher {
+      display: flex;
+      gap: 8px;
+      padding: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .theme-btn {
+      padding: 8px 16px;
+      font-size: 12px;
+    }
+    .theme-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    h1 {
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body data-theme="tvstudio">
+  <h1>🎨 Popup Theme Test</h1>
+  
+  <div class="info">
+    <strong>Test popup and modal theming</strong><br>
+    Switch between themes and test various popups to ensure they use theme CSS variables.
+    All popups should update colors when switching themes.
+  </div>
+
+  <div class="theme-switcher">
+    <strong style="margin-right: 8px;">Theme:</strong>
+    <button class="theme-btn active" onclick="switchTheme('tvstudio')">TV Studio</button>
+    <button class="theme-btn" onclick="switchTheme('modernhouse')">Modern House</button>
+    <button class="theme-btn" onclick="switchTheme('midnight')">Midnight</button>
+    <button class="theme-btn" onclick="switchTheme('miami')">Miami</button>
+  </div>
+  
+  <div class="controls">
+    <button onclick="testResultsPopup()">Test Results Popup</button>
+    <button onclick="testConfirmModal()">Test Confirm Modal (Warn)</button>
+    <button onclick="testConfirmDanger()">Test Confirm Modal (Danger)</button>
+    <button onclick="testCompetitionResult()">Test Competition Result</button>
+    <button onclick="testEvictionJustification()">Test Eviction Modal</button>
+    <button onclick="testAmericasVote()">Test America's Vote Card</button>
+    <button onclick="testJurorPhrase()">Test Juror Phrase Overlay</button>
+  </div>
+
+  <script src="js/bbSeededRng.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/results-popup.js"></script>
+  <script src="js/ui.confirm-modal.js"></script>
+  
+  <script>
+    // Mock data and functions
+    window.game = { phase: 'Test Phase' };
+    window.getP = (id) => ({ id, name: `Player${id}`, avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=Player${id}` });
+    window.resolveAvatar = (player) => {
+      if (typeof player === 'object' && player.avatar) return player.avatar;
+      const seed = typeof player === 'string' ? player : `Player${player}`;
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed)}`;
+    };
+    window.getAvatarFallback = (name, failedUrl) => {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name || 'fallback')}`;
+    };
+
+    function switchTheme(theme) {
+      document.body.setAttribute('data-theme', theme);
+      // Update active button
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+    }
+
+    function testResultsPopup() {
+      if (typeof showResultsPopup !== 'function') {
+        alert('Results popup module not loaded');
+        return;
+      }
+      showResultsPopup({
+        title: 'HOH Competition',
+        phase: 'Week 5',
+        topThree: [
+          { id: 1, name: 'Alice', score: 95 },
+          { id: 2, name: 'Bob', score: 87 },
+          { id: 3, name: 'Charlie', score: 82 }
+        ],
+        winnerEmoji: '👑',
+        duration: 8000
+      });
+    }
+
+    function testConfirmModal() {
+      if (typeof showConfirm !== 'function') {
+        alert('Confirm modal module not loaded');
+        return;
+      }
+      showConfirm('Are you sure you want to proceed with this action?', {
+        title: 'Confirm Action',
+        tone: 'warn'
+      }).then(result => {
+        alert(result ? 'Confirmed!' : 'Cancelled');
+      });
+    }
+
+    function testConfirmDanger() {
+      if (typeof showConfirm !== 'function') {
+        alert('Confirm modal module not loaded');
+        return;
+      }
+      showConfirm('This action cannot be undone. Are you absolutely sure?', {
+        title: 'Danger Zone',
+        tone: 'danger',
+        confirmText: 'Delete',
+        cancelText: 'Keep'
+      }).then(result => {
+        alert(result ? 'Deleted!' : 'Kept');
+      });
+    }
+
+    function testCompetitionResult() {
+      // Simulate competition results popup inline
+      const modal = document.createElement('div');
+      modal.className = 'results-modal-overlay';
+      modal.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(3px);
+        display: grid;
+        place-items: center;
+        animation: resultsModalFadeIn 0.3s ease;
+        color: var(--ink);
+        cursor: pointer;
+      `;
+      
+      const card = document.createElement('div');
+      card.className = 'results-card';
+      card.style.cssText = `
+        background: var(--card-2);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 28px 24px;
+        box-shadow: 0 20px 50px -20px rgba(0,0,0,0.9);
+        max-width: min(480px, 90vw);
+        width: 100%;
+      `;
+      
+      card.innerHTML = `
+        <div style="font-size: 1.4rem; font-weight: 800; color: var(--warn); text-align: center; margin-bottom: 24px;">
+          Veto Competition 🏆
+        </div>
+        <div style="text-align: center; color: var(--ink);">
+          <div style="font-size: 1.2rem; font-weight: 700; margin-bottom: 12px;">Winner: Dana</div>
+          <div style="color: var(--good); font-size: 1rem;">Score: 88</div>
+        </div>
+      `;
+      
+      modal.appendChild(card);
+      document.body.appendChild(modal);
+      
+      modal.addEventListener('click', () => {
+        modal.style.animation = 'resultsModalFadeOut 0.3s ease';
+        setTimeout(() => modal.remove(), 300);
+      });
+    }
+
+    function testEvictionJustification() {
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 999998;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(5px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: modalFadeIn 0.3s ease;
+        color: var(--ink);
+        cursor: pointer;
+      `;
+      
+      const content = document.createElement('div');
+      content.style.cssText = `
+        background: var(--card-2);
+        border: 2px solid var(--bad);
+        border-radius: 16px;
+        padding: 28px;
+        max-width: 480px;
+        text-align: center;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+      `;
+      
+      content.innerHTML = `
+        <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--bad); margin: 0 0 16px 0;">
+          Evict Player?
+        </h3>
+        <p style="color: var(--muted-2); margin: 0 0 16px 0; font-size: 0.95rem;">
+          You can optionally provide a reason for your decision:
+        </p>
+        <div style="padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; color: var(--muted-2);">
+          This is a strategic choice...
+        </div>
+      `;
+      
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      
+      modal.addEventListener('click', () => {
+        modal.style.animation = 'modalFadeOut 0.3s ease';
+        setTimeout(() => modal.remove(), 300);
+      });
+    }
+
+    function testAmericasVote() {
+      const card = document.createElement('div');
+      card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;background:var(--card-2);border:2px solid var(--accent);border-radius:16px;padding:24px 32px;text-align:center;color:var(--ink);box-shadow:0 12px 36px rgba(0,0,0,.6);animation:popIn 0.3s ease;cursor:pointer;';
+      card.innerHTML = `
+        <div style="font-size:1.1rem;font-weight:700;letter-spacing:0.8px;margin-bottom:8px;color:var(--warn);">🇺🇸 AMERICA'S VOTE 🇺🇸</div>
+        <div style="font-size:0.9rem;color:var(--muted-2);">Breaking the tie...</div>
+      `;
+      document.body.appendChild(card);
+      card.addEventListener('click', () => card.remove());
+      setTimeout(() => { try{card.remove();}catch{} }, 3000);
+    }
+
+    function testJurorPhrase() {
+      const tv = document.createElement('div');
+      tv.id = 'tv';
+      tv.style.cssText = 'position: fixed; inset: 100px; background: var(--bg); border: 2px solid var(--line); border-radius: 12px;';
+      document.body.appendChild(tv);
+      
+      const overlay = document.createElement('div');
+      overlay.id = 'jurorPhraseOverlay';
+      overlay.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--card-2);
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        padding: 16px 24px;
+        color: var(--ink);
+        font-size: 16px;
+        font-style: italic;
+        text-align: center;
+        max-width: 80%;
+        z-index: 14;
+        opacity: 1;
+        cursor: pointer;
+      `;
+      overlay.innerHTML = `<div style="font-weight: 700; margin-bottom: 8px;">Juror Emily</div><div>"I'm voting for the strongest player"</div>`;
+      
+      tv.appendChild(overlay);
+      overlay.addEventListener('click', () => tv.remove());
+      setTimeout(() => { try{tv.remove();}catch{} }, 3000);
+    }
+  </script>
+</body>
+</html>
