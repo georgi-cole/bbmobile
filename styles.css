@@ -3169,6 +3169,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   align-items: center;
   gap: 8px;
   width: 100%;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 /* Player name with responsive typography */
@@ -3191,6 +3192,13 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   text-align: center;
   /* Ensure contrast ratio ≥4.5:1 on dark background */
   text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+/* Percentage highlight animation when updating */
+.pfPct.pfUpdating {
+  color: #6fd7ff;
+  transform: scale(1.1);
 }
 
 /* Avatar styling */
@@ -3201,6 +3209,15 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   background: #1b2c3b;
   border: 2px solid #3d5a72;
   object-fit: cover;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Avatar glow effect on hover or update */
+.pfAvatar:hover,
+.pfSlot.pfLeading .pfAvatar {
+  transform: scale(1.05);
+  border-color: #6fd7ff;
+  box-shadow: 0 0 20px rgba(111, 215, 255, 0.5);
 }
 
 /* Smaller avatars on mobile */
@@ -3372,6 +3389,118 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   margin-top: 8px;
   text-align: center;
   letter-spacing: 0.5px;
+}
+
+/* $1M Check Card Display for Public Favorite Winner */
+.pfCheckCard {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(145deg, #2a1810, #1a1108);
+  border: 3px solid #d4af37;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.4), 
+              inset 0 1px 0 rgba(255, 223, 128, 0.3);
+  animation: checkSpinIn 0.8s ease-out, checkPulse 2s ease-in-out 0.8s infinite;
+}
+
+@keyframes checkSpinIn {
+  0% {
+    opacity: 0;
+    transform: rotateY(-90deg) scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: rotateY(10deg) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: rotateY(0deg) scale(1);
+  }
+}
+
+@keyframes checkPulse {
+  0%, 100% {
+    box-shadow: 0 8px 24px rgba(212, 175, 55, 0.4), 
+                inset 0 1px 0 rgba(255, 223, 128, 0.3);
+  }
+  50% {
+    box-shadow: 0 12px 32px rgba(212, 175, 55, 0.6), 
+                inset 0 1px 0 rgba(255, 223, 128, 0.5);
+  }
+}
+
+.pfCheckHeader {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #b8976e;
+  text-align: center;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.pfCheckAmount {
+  font-size: 2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #d4af37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(212, 175, 55, 0.5);
+  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.pfCheckPayto {
+  font-size: 0.8rem;
+  color: #b8d4f0;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.pfCheckPayto strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #ffdc8b;
+  margin-top: 4px;
+  text-shadow: 0 1px 4px rgba(255, 220, 140, 0.4);
+}
+
+.pfCheckMemo {
+  font-size: 0.7rem;
+  font-style: italic;
+  color: #8fa9c3;
+  text-align: center;
+  margin-top: 8px;
+}
+
+@media (max-width: 559px) {
+  .pfCheckCard {
+    padding: 16px;
+    margin-top: 16px;
+  }
+  
+  .pfCheckAmount {
+    font-size: 1.5rem;
+  }
+  
+  .pfCheckPayto {
+    font-size: 0.75rem;
+  }
+  
+  .pfCheckPayto strong {
+    font-size: 0.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pfCheckCard {
+    animation: none;
+  }
 }
 
 /* Screen reader only class for accessibility */

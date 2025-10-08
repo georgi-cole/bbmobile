@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Public Favorite Updates Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0e14;
+      color: #eaf4ff;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      margin-bottom: 40px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+    }
+    h1 {
+      color: #ffdc8b;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #6fd7ff;
+      margin-bottom: 15px;
+    }
+    .btn {
+      background: #3563a7;
+      color: #d8e6f5;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    .btn:hover {
+      background: #4573b7;
+    }
+    #eventLog {
+      background: #0e1622;
+      padding: 15px;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #b8d4f0;
+    }
+    .log-entry {
+      margin: 3px 0;
+      padding: 2px 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Public Favorite Vote Flow - Updates Test</h1>
+    
+    <div class="test-section">
+      <h2>Test 1: Modal Text & Emojis</h2>
+      <p>Updated modal should show:</p>
+      <ul>
+        <li>✅ Only 2 emojis (🏆⭐)</li>
+        <li>✅ New text: "This season of Big brother is about to end. Before we go, let's see whom you voted as your favorite player!"</li>
+      </ul>
+      <button class="btn" onclick="testModalText()">Show Updated Modal</button>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 2: Enhanced Vote UI with Animations</h2>
+      <p>Vote panel should display with:</p>
+      <ul>
+        <li>✅ Smooth percentage transitions</li>
+        <li>✅ Leading candidate highlighted with glow effect</li>
+        <li>✅ Avatar hover effects</li>
+        <li>✅ Responsive layout for mobile</li>
+      </ul>
+      <button class="btn" onclick="testVoteUI()">Show Vote Panel</button>
+      <button class="btn" onclick="simulateVoting()">Simulate Live Voting</button>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 3: $1M Check Display (Winner Card)</h2>
+      <p>Winner card should show:</p>
+      <ul>
+        <li>✅ Winner avatar and name</li>
+        <li>✅ $1,000,000 check with golden gradient</li>
+        <li>✅ Spinning animation on entrance</li>
+        <li>✅ Pulsing glow effect</li>
+        <li>✅ "Pay to the order of [Winner]" format</li>
+      </ul>
+      <button class="btn" onclick="testWinnerCard()">Show Winner with Check</button>
+    </div>
+    
+    <div class="test-section">
+      <h2>Event Log</h2>
+      <div id="eventLog"></div>
+    </div>
+  </div>
+
+  <script src="js/ui.event-modal.js"></script>
+  <script>
+    const log = (msg) => {
+      const logDiv = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logDiv.insertBefore(entry, logDiv.firstChild);
+      console.log(msg);
+    };
+
+    // Test 1: Modal Text & Emojis
+    async function testModalText() {
+      log('Testing updated modal text with 2 emojis...');
+      if (typeof window.showEventModal === 'function') {
+        await window.showEventModal({
+          title: 'This season of Big brother is about to end. Before we go, let\'s see whom you voted as your favorite player!',
+          emojis: '🏆⭐',
+          subtitle: '',
+          tone: 'special',
+          duration: 5000,
+          minDisplayTime: 500
+        });
+        log('Modal displayed successfully!');
+      } else {
+        log('ERROR: showEventModal function not available');
+      }
+    }
+
+    // Test 2: Vote UI Panel
+    function testVoteUI() {
+      log('Creating vote UI panel...');
+      
+      // Remove any existing modal
+      const existing = document.querySelector('.pfModalHost');
+      if (existing) existing.remove();
+      
+      // Create modal host
+      const modalHost = document.createElement('div');
+      modalHost.className = 'pfModalHost';
+      
+      const panel = document.createElement('div');
+      panel.className = 'pfPanel';
+      
+      const title = document.createElement('div');
+      title.className = 'pfTitle';
+      title.textContent = 'PUBLIC\'S FAVOURITE PLAYER';
+      panel.appendChild(title);
+      
+      const container = document.createElement('div');
+      container.className = 'pfVotePanel';
+      panel.appendChild(container);
+      
+      // Create 4 test candidates
+      const candidates = [
+        { name: 'Alice', pct: 15 },
+        { name: 'Bob', pct: 28 },
+        { name: 'Charlie', pct: 35 },
+        { name: 'Diana', pct: 22 }
+      ];
+      
+      window.testSlots = [];
+      
+      candidates.forEach((candidate, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'pfSlot';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'pfAvatar';
+        avatar.style.cssText = 'background: linear-gradient(135deg, #3d5a72, #2a4058); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;';
+        avatar.textContent = candidate.name[0];
+        slot.appendChild(avatar);
+        
+        const nameLabel = document.createElement('div');
+        nameLabel.className = 'pfName';
+        nameLabel.textContent = candidate.name;
+        slot.appendChild(nameLabel);
+        
+        const pctLabel = document.createElement('div');
+        pctLabel.className = 'pfPct';
+        pctLabel.textContent = candidate.pct + '%';
+        slot.appendChild(pctLabel);
+        
+        container.appendChild(slot);
+        window.testSlots.push({ slot, pctLabel, currentPct: candidate.pct });
+      });
+      
+      // Highlight leading candidate
+      const maxPct = Math.max(...candidates.map(c => c.pct));
+      window.testSlots.forEach((slotData, i) => {
+        if (candidates[i].pct === maxPct) {
+          slotData.slot.classList.add('pfLeading');
+        }
+      });
+      
+      modalHost.appendChild(panel);
+      document.body.appendChild(modalHost);
+      
+      log('Vote UI panel created with 4 candidates');
+      log('Leading candidate (Charlie, 35%) is highlighted');
+      
+      // Add close button
+      setTimeout(() => {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'btn';
+        closeBtn.textContent = 'Close Panel';
+        closeBtn.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000;';
+        closeBtn.onclick = () => {
+          modalHost.remove();
+          log('Vote panel closed');
+        };
+        document.body.appendChild(closeBtn);
+      }, 100);
+    }
+
+    // Simulate live voting
+    let votingInterval = null;
+    function simulateVoting() {
+      if (!window.testSlots || window.testSlots.length === 0) {
+        log('Please show vote panel first!');
+        return;
+      }
+      
+      log('Starting live voting simulation...');
+      
+      let iterations = 0;
+      votingInterval = setInterval(() => {
+        iterations++;
+        
+        // Update percentages randomly
+        window.testSlots.forEach(slotData => {
+          const change = (Math.random() - 0.5) * 5;
+          slotData.currentPct = Math.max(5, Math.min(50, slotData.currentPct + change));
+        });
+        
+        // Normalize to 100%
+        const sum = window.testSlots.reduce((acc, s) => acc + s.currentPct, 0);
+        window.testSlots.forEach(slotData => {
+          slotData.currentPct = (slotData.currentPct / sum) * 100;
+          slotData.pctLabel.textContent = Math.round(slotData.currentPct) + '%';
+        });
+        
+        // Update leading candidate
+        const maxPct = Math.max(...window.testSlots.map(s => s.currentPct));
+        window.testSlots.forEach(slotData => {
+          if (slotData.currentPct === maxPct) {
+            slotData.slot.classList.add('pfLeading');
+          } else {
+            slotData.slot.classList.remove('pfLeading');
+          }
+        });
+        
+        if (iterations >= 20) {
+          clearInterval(votingInterval);
+          log('Voting simulation complete (20 updates)');
+        }
+      }, 300);
+    }
+
+    // Test 3: Winner Card with Check
+    function testWinnerCard() {
+      log('Creating winner card with $1M check...');
+      
+      // Remove any existing winner card
+      const existing = document.querySelector('.pfWinnerCard');
+      if (existing) existing.remove();
+      
+      const winnerCard = document.createElement('div');
+      winnerCard.className = 'pfWinnerCard';
+      
+      const winnerSection = document.createElement('div');
+      winnerSection.className = 'pfWinnerMain';
+      
+      // Avatar
+      const winnerAvatar = document.createElement('div');
+      winnerAvatar.className = 'pfWinnerAvatar';
+      winnerAvatar.style.cssText = 'background: linear-gradient(135deg, #6fd7ff, #4a9dc7); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 2rem;';
+      winnerAvatar.textContent = 'A';
+      winnerSection.appendChild(winnerAvatar);
+      
+      // Name
+      const winnerName = document.createElement('div');
+      winnerName.className = 'pfWinnerName';
+      winnerName.textContent = 'Alice';
+      winnerSection.appendChild(winnerName);
+      
+      // Percentage
+      const winnerPct = document.createElement('div');
+      winnerPct.className = 'pfWinnerPct';
+      winnerPct.textContent = '42.5%';
+      winnerSection.appendChild(winnerPct);
+      
+      // Title
+      const winnerTitle = document.createElement('div');
+      winnerTitle.className = 'pfWinnerTitle';
+      winnerTitle.textContent = 'Public\'s Favourite Player';
+      winnerSection.appendChild(winnerTitle);
+      
+      // Check Card
+      const checkCard = document.createElement('div');
+      checkCard.className = 'pfCheckCard';
+      checkCard.innerHTML = `
+        <div class="pfCheckHeader">Big Brother Favorite Prize</div>
+        <div class="pfCheckAmount">$1,000,000</div>
+        <div class="pfCheckPayto">Pay to the order of<br><strong>Alice</strong></div>
+        <div class="pfCheckMemo">Congratulations on being the fan favorite!</div>
+      `;
+      winnerSection.appendChild(checkCard);
+      
+      winnerCard.appendChild(winnerSection);
+      document.body.appendChild(winnerCard);
+      
+      log('Winner card displayed with $1M check');
+      log('Check features golden gradient and spinning animation');
+      
+      // Add close button
+      setTimeout(() => {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'btn';
+        closeBtn.textContent = 'Close Winner Card';
+        closeBtn.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000;';
+        closeBtn.onclick = () => {
+          winnerCard.remove();
+          closeBtn.remove();
+          log('Winner card closed');
+        };
+        document.body.appendChild(closeBtn);
+      }, 100);
+    }
+
+    // Initialize
+    log('Test page loaded. Click buttons to test each feature.');
+  </script>
+</body>
+</html>
