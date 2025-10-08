@@ -451,9 +451,10 @@
   }
 
   // Vote message belt
-  function addFaceoffVoteCard(jurorName, finalistName){
+  function addFaceoffVoteCard(jurorName, finalistName, dynamicReason){
     const st = faceoff.state; if(!st?.els?.belt) return;
-    const text = `${jurorName}: I vote for ${finalistName} to win the Big Brother game.`;
+    // Use dynamic reason if provided, otherwise fall back to default message
+    const text = dynamicReason || `${jurorName}: I vote for ${finalistName} to win the Big Brother game.`;
     const bubble = document.createElement('div');
     bubble.className='fo-bubble';
     bubble.textContent = text;
@@ -1383,8 +1384,6 @@
       
       // Generate dynamic reason based on ballot logic
       const dynamicReason = generateVoteReason(jid, pick, A, B, usedReasons);
-      const phraseDuration = Math.floor(delay * 0.65); // 65% of slot
-      showJurorPhraseOverlay(safeName(jid), dynamicReason, phraseDuration);
       
       g.addJuryLog?.(`${safeName(jid)}: ${dynamicReason}`, 'muted');
       g.addJuryLog?.(`${safeName(jid)} votes for ${safeName(pick)}`, 'jury');
@@ -1396,11 +1395,11 @@
       const newScoreB = pick === B ? scoreB + 1 : scoreB;
       console.info(`[jury] voteReveal juror=${jid} finalist=${pick} scoreA=${newScoreA} scoreB=${newScoreB}`);
       
-      // Update UI
+      // Update UI - use only upper vote cards with dynamic reasons (no duplicate bottom overlay)
       try{ juryPanelOnBallot(jid, pick); }catch{}
       const a=votes.get(A)||0, b=votes.get(B)||0;
       updateFinaleGraph(a,b);
-      addFaceoffVoteCard(safeName(jid), safeName(pick));
+      addFaceoffVoteCard(safeName(jid), safeName(pick), dynamicReason);
       
       // Check for majority clinch (but don't fast-track unless would exceed cap)
       if (!majorityReached && (a >= need || b >= need)) {
@@ -1466,9 +1465,6 @@
     
     const [A,B]=finalists();
     
-    renderFinaleGraph(A,B,jurors.length);
-    try{ renderJuryBallotsPanel(jurors,A,B); }catch{}
-    
     const secs = Number(gg.cfg?.tJuryFinale ?? gg.cfg?.tJury ?? 42) || 42;
     g.setPhase?.('jury', secs, null);
     
@@ -1477,7 +1473,7 @@
     // PHASE 1: Anonymous casting
     await startJuryCastingPhase(jurors, A, B);
     
-    // Show jury vote modal announcement (similar to twists)
+    // Show jury vote modal announcement (similar to twists) BEFORE finalists appear
     if (g.showEventModal) await g.showEventModal({
       title: 'Time for the Jury Vote',
       emojis: '⚖️👑',
@@ -1486,6 +1482,10 @@
       minDisplayTime: 5000,
       tone: 'special'
     });
+    
+    // NOW render the finalists - modal appears just before they appear
+    renderFinaleGraph(A,B,jurors.length);
+    try{ renderJuryBallotsPanel(jurors,A,B); }catch{}
     
     // Intro cards before reveal (tripled durations)
     // Intro card 1: 6.0s (was 2.0s)
