@@ -575,18 +575,6 @@
     try{ if(typeof g.updateHud === 'function') g.updateHud(); }catch(e){}
   }
 
-  function showMedalOverlayFallback(durationMs=5000){
-    const st = faceoff.state; if(!st?.els?.root) return;
-    st.els.root.querySelectorAll('.fo-medal').forEach(x=>x.remove());
-    const o = document.createElement('div'); o.className='fo-medal';
-    const wrap = document.createElement('div'); wrap.className='medal-wrap';
-    const medal = document.createElement('div'); medal.className='medal'; medal.textContent='🏅';
-    wrap.appendChild(medal); o.appendChild(wrap);
-    st.els.root.appendChild(o);
-    setTimeout(()=>o.remove(), durationMs);
-    st._fitSchedule && st._fitSchedule();
-  }
-
   // Helper to hide and remove the faceoff graph with fade animation
   async function hideFaceoffGraph(){
     console.info('[publicFav] waitForTallyHide');
