@@ -329,12 +329,12 @@
 
       // Test 11: Database schemaVersion
       {
-        const meta = await Progression.db.readMetaEntry('schemaVersion');
-        const passed = meta && meta.value === 2;
+        const schemaVersion = await Progression.getSchemaVersion();
+        const passed = schemaVersion === 2;
         renderTest(
           'Database schemaVersion Persists',
           passed,
-          `schemaVersion: ${meta?.value} (expected 2)`
+          `schemaVersion: ${schemaVersion} (expected 2)`
         );
       }
 
