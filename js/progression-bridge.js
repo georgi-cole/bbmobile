@@ -150,8 +150,9 @@
    * Show the XP modal
    * @param {number} seasonId - Season ID
    * @param {string} playerId - Player ID
+   * @param {Array} leaderboard - Optional leaderboard data
    */
-  async function showModal(seasonId, playerId) {
+  async function showModal(seasonId, playerId, leaderboard = null) {
     // Safe no-op when disabled
     if (!isEnabled()) {
       console.log('[Progression Bridge] Modal disabled (feature flag off)');
@@ -167,6 +168,11 @@
       const state = await progressionCore.getCurrentState();
       const breakdown = await progressionCore.getBreakdown();
       
+      // Get leaderboard if not provided
+      if (!leaderboard) {
+        leaderboard = await getLeaderboard(seasonId);
+      }
+      
       // Create modal with current state
       const modal = xpModal.createModal({
         theme: 'dark',
@@ -175,9 +181,18 @@
         }
       });
 
-      // Update modal content
-      if (modal && modal.update) {
-        modal.update(state, breakdown);
+      // Update modal content with all tabs
+      if (modal.updateLeaderboard) {
+        modal.updateLeaderboard(leaderboard, playerId);
+      }
+      if (modal.updateOverview) {
+        modal.updateOverview(state, progressionCore.DEFAULT_LEVEL_THRESHOLDS || []);
+      }
+      if (modal.updateBreakdown) {
+        modal.updateBreakdown(breakdown);
+      }
+      if (modal.updateUnlocks) {
+        modal.updateUnlocks(state, progressionCore.DEFAULT_LEVEL_THRESHOLDS || []);
       }
     } catch (error) {
       console.error('[Progression Bridge] Failed to show modal:', error);

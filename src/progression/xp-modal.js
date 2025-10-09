@@ -29,6 +29,9 @@ export function createModal(options = {}) {
   // Modal
   const modal = document.createElement('div');
   modal.className = 'xp-modal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'xp-modal-title');
   modal.style.cssText = `
     background: ${theme === 'dark' ? '#1a1a1a' : '#fff'};
     border-radius: 12px;
@@ -53,6 +56,7 @@ export function createModal(options = {}) {
   `;
 
   const title = document.createElement('h2');
+  title.id = 'xp-modal-title';
   title.textContent = 'Progression';
   title.style.cssText = `
     margin: 0;
@@ -62,6 +66,8 @@ export function createModal(options = {}) {
 
   const closeButton = document.createElement('button');
   closeButton.textContent = '✕';
+  closeButton.setAttribute('aria-label', 'Close progression modal');
+  closeButton.setAttribute('title', 'Close');
   closeButton.style.cssText = `
     background: transparent;
     border: none;
@@ -93,6 +99,7 @@ export function createModal(options = {}) {
 
   // Tabs
   const tabBar = document.createElement('div');
+  tabBar.setAttribute('role', 'tablist');
   tabBar.style.cssText = `
     display: flex;
     gap: 0;
@@ -101,11 +108,15 @@ export function createModal(options = {}) {
     border-bottom: 1px solid ${theme === 'dark' ? '#333' : '#ddd'};
   `;
 
-  const tabs = ['Overview', 'Breakdown', 'Unlocks'];
+  const tabs = ['Leaderboard', 'Overview', 'Breakdown', 'Unlocks'];
   const tabButtons = tabs.map((tabName, index) => {
     const button = document.createElement('button');
     button.textContent = tabName;
     button.dataset.tab = tabName.toLowerCase();
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+    button.setAttribute('aria-controls', `${tabName.toLowerCase()}-panel`);
+    button.setAttribute('id', `${tabName.toLowerCase()}-tab`);
     button.style.cssText = `
       padding: 12px 20px;
       background: transparent;
@@ -128,14 +139,31 @@ export function createModal(options = {}) {
       tabButtons.forEach(b => {
         b.style.borderBottomColor = 'transparent';
         b.style.color = theme === 'dark' ? '#b0b0b0' : '#666';
+        b.setAttribute('aria-selected', 'false');
       });
       button.style.borderBottomColor = '#ffdc8b';
       button.style.color = theme === 'dark' ? '#ffdc8b' : '#ffa500';
+      button.setAttribute('aria-selected', 'true');
 
       // Show corresponding content
       contentPanes.forEach((pane, i) => {
         pane.style.display = i === index ? 'block' : 'none';
       });
+    });
+
+    // Keyboard navigation for tabs
+    button.addEventListener('keydown', (e) => {
+      let newIndex = index;
+      if (e.key === 'ArrowLeft' && index > 0) {
+        newIndex = index - 1;
+      } else if (e.key === 'ArrowRight' && index < tabs.length - 1) {
+        newIndex = index + 1;
+      } else {
+        return;
+      }
+      e.preventDefault();
+      tabButtons[newIndex].focus();
+      tabButtons[newIndex].click();
     });
 
     tabBar.appendChild(button);
@@ -152,19 +180,36 @@ export function createModal(options = {}) {
   `;
 
   // Content panes
+  const leaderboardPane = document.createElement('div');
+  leaderboardPane.dataset.pane = 'leaderboard';
+  leaderboardPane.setAttribute('role', 'tabpanel');
+  leaderboardPane.setAttribute('id', 'leaderboard-panel');
+  leaderboardPane.setAttribute('aria-labelledby', 'leaderboard-tab');
+  
   const overviewPane = document.createElement('div');
   overviewPane.dataset.pane = 'overview';
+  overviewPane.setAttribute('role', 'tabpanel');
+  overviewPane.setAttribute('id', 'overview-panel');
+  overviewPane.setAttribute('aria-labelledby', 'overview-tab');
+  overviewPane.style.display = 'none';
   
   const breakdownPane = document.createElement('div');
   breakdownPane.dataset.pane = 'breakdown';
+  breakdownPane.setAttribute('role', 'tabpanel');
+  breakdownPane.setAttribute('id', 'breakdown-panel');
+  breakdownPane.setAttribute('aria-labelledby', 'breakdown-tab');
   breakdownPane.style.display = 'none';
   
   const unlocksPane = document.createElement('div');
   unlocksPane.dataset.pane = 'unlocks';
+  unlocksPane.setAttribute('role', 'tabpanel');
+  unlocksPane.setAttribute('id', 'unlocks-panel');
+  unlocksPane.setAttribute('aria-labelledby', 'unlocks-tab');
   unlocksPane.style.display = 'none';
 
-  const contentPanes = [overviewPane, breakdownPane, unlocksPane];
+  const contentPanes = [leaderboardPane, overviewPane, breakdownPane, unlocksPane];
 
+  content.appendChild(leaderboardPane);
   content.appendChild(overviewPane);
   content.appendChild(breakdownPane);
   content.appendChild(unlocksPane);
@@ -182,6 +227,16 @@ export function createModal(options = {}) {
     }
   });
 
+  // Close on Escape key
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      backdrop.remove();
+      if (onClose) onClose();
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+
   // Add animations
   const style = document.createElement('style');
   style.textContent = `
@@ -193,10 +248,181 @@ export function createModal(options = {}) {
       from { transform: translateY(20px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
+    @media (prefers-reduced-motion: reduce) {
+      .xp-modal-backdrop, .xp-modal {
+        animation: none !important;
+      }
+    }
   `;
   document.head.appendChild(style);
 
   // Update methods
+  backdrop.updateLeaderboard = (leaderboard = [], currentPlayerId = null) => {
+    // Sort leaderboard by totalXP descending
+    const sortedLeaderboard = [...leaderboard].sort((a, b) => b.totalXP - a.totalXP);
+    
+    // Find current player's rank
+    const currentPlayerIndex = sortedLeaderboard.findIndex(p => p.playerId === currentPlayerId);
+    const currentPlayerRank = currentPlayerIndex >= 0 ? currentPlayerIndex + 1 : null;
+    const currentPlayerData = currentPlayerIndex >= 0 ? sortedLeaderboard[currentPlayerIndex] : null;
+    
+    // Get top 5
+    const top5 = sortedLeaderboard.slice(0, 5);
+    
+    if (top5.length === 0) {
+      leaderboardPane.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: ${theme === 'dark' ? '#888' : '#999'};">
+          <div style="font-size: 48px; margin-bottom: 16px;">🏆</div>
+          <div style="font-size: 18px; margin-bottom: 8px;">No leaderboard data yet</div>
+          <div style="font-size: 14px;">Start playing to see rankings!</div>
+        </div>
+      `;
+      return;
+    }
+    
+    leaderboardPane.innerHTML = `
+      <div style="margin-bottom: 24px;">
+        <h3 style="
+          font-size: 20px;
+          margin-bottom: 16px;
+          color: ${theme === 'dark' ? '#ffdc8b' : '#ffa500'};
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          <span>🏆</span>
+          <span>Top 5 Players</span>
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          ${top5.map((player, index) => {
+            const rank = index + 1;
+            const isFirst = rank === 1;
+            const isCurrentPlayer = player.playerId === currentPlayerId;
+            
+            return `
+              <div style="
+                padding: ${isFirst ? '20px' : '16px'};
+                background: ${isFirst 
+                  ? 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)' 
+                  : (theme === 'dark' ? '#2a2a2a' : '#f5f5f5')};
+                border-radius: ${isFirst ? '12px' : '8px'};
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                ${isFirst ? 'box-shadow: 0 8px 24px rgba(255, 215, 0, 0.4);' : ''}
+                ${isCurrentPlayer && !isFirst ? `border: 2px solid ${theme === 'dark' ? '#83bfff' : '#2196f3'};` : ''}
+              ">
+                <div style="
+                  width: ${isFirst ? '56px' : '48px'};
+                  height: ${isFirst ? '56px' : '48px'};
+                  background: ${isFirst 
+                    ? 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)' 
+                    : 'linear-gradient(135deg, #ffdc8b 0%, #ffa500 100%)'};
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: ${isFirst ? '28px' : '20px'};
+                  font-weight: bold;
+                  color: #1a1a1a;
+                  flex-shrink: 0;
+                  ${isFirst ? 'box-shadow: 0 4px 12px rgba(255, 107, 53, 0.5);' : ''}
+                ">
+                  ${isFirst ? '👑' : rank}
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="
+                    font-weight: 600;
+                    font-size: ${isFirst ? '18px' : '16px'};
+                    color: ${isFirst ? '#1a1a1a' : (theme === 'dark' ? '#e0e0e0' : '#333')};
+                    margin-bottom: 4px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                  ">
+                    ${player.playerName || player.playerId}
+                    ${isCurrentPlayer ? ' <span style="font-size: 14px;">(You)</span>' : ''}
+                  </div>
+                  <div style="
+                    font-size: ${isFirst ? '16px' : '14px'};
+                    color: ${isFirst ? '#333' : (theme === 'dark' ? '#b0b0b0' : '#666')};
+                  ">
+                    Level ${player.level || 1}
+                  </div>
+                </div>
+                <div style="
+                  text-align: right;
+                  font-size: ${isFirst ? '20px' : '18px'};
+                  font-weight: 600;
+                  color: ${isFirst ? '#1a1a1a' : (theme === 'dark' ? '#ffdc8b' : '#ffa500')};
+                ">
+                  ${player.totalXP || 0} XP
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+      
+      ${currentPlayerData && currentPlayerRank > 5 ? `
+        <div style="margin-top: 24px;">
+          <h3 style="
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: ${theme === 'dark' ? '#83bfff' : '#2196f3'};
+          ">Your Rank</h3>
+          <div style="
+            padding: 16px;
+            background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+            border: 2px solid ${theme === 'dark' ? '#83bfff' : '#2196f3'};
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+          ">
+            <div style="
+              width: 48px;
+              height: 48px;
+              background: linear-gradient(135deg, #83bfff 0%, #2196f3 100%);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 20px;
+              font-weight: bold;
+              color: #fff;
+              flex-shrink: 0;
+            ">#${currentPlayerRank}</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="
+                font-weight: 600;
+                font-size: 16px;
+                color: ${theme === 'dark' ? '#e0e0e0' : '#333'};
+                margin-bottom: 4px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              ">
+                ${currentPlayerData.playerName || currentPlayerData.playerId}
+              </div>
+              <div style="font-size: 14px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">
+                Level ${currentPlayerData.level || 1}
+              </div>
+            </div>
+            <div style="
+              text-align: right;
+              font-size: 18px;
+              font-weight: 600;
+              color: ${theme === 'dark' ? '#83bfff' : '#2196f3'};
+            ">
+              ${currentPlayerData.totalXP || 0} XP
+            </div>
+          </div>
+        </div>
+      ` : ''}
+    `;
+  };
+
   backdrop.updateOverview = (state, levelThresholds) => {
     overviewPane.innerHTML = `
       <div style="text-align: center; margin-bottom: 30px;">

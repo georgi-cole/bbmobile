@@ -142,3 +142,75 @@ export function createFloatingButton(options = {}) {
   document.body.appendChild(button);
   return button;
 }
+
+/**
+ * Create a top-right badge button (respects safe-area)
+ * @param {Object} options - Configuration options
+ * @returns {HTMLElement} Badge button element
+ */
+export function createBadgeButton(options = {}) {
+  const {
+    onClick = null,
+    theme = 'dark'
+  } = options;
+
+  const button = document.createElement('button');
+  button.className = 'xp-badge-button';
+  button.setAttribute('aria-label', 'Open Progression Leaderboard');
+  button.setAttribute('title', 'View Score & Level');
+  button.textContent = '📊';
+  
+  button.style.cssText = `
+    position: fixed;
+    top: var(--tv-safe-top, 60px);
+    right: var(--tv-safe-x, 20px);
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #ffdc8b 0%, #ffa500 100%);
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(255, 220, 139, 0.4);
+    transition: all 0.2s ease;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  `;
+
+  button.addEventListener('mouseenter', () => {
+    button.style.transform = 'scale(1.1)';
+    button.style.boxShadow = '0 6px 20px rgba(255, 220, 139, 0.6)';
+  });
+
+  button.addEventListener('mouseleave', () => {
+    button.style.transform = 'scale(1)';
+    button.style.boxShadow = '0 4px 12px rgba(255, 220, 139, 0.4)';
+  });
+
+  button.addEventListener('focus', () => {
+    button.style.outline = '3px solid #ffdc8b';
+    button.style.outlineOffset = '2px';
+  });
+
+  button.addEventListener('blur', () => {
+    button.style.outline = 'none';
+  });
+
+  if (onClick) {
+    button.addEventListener('click', onClick);
+  }
+
+  // Support keyboard navigation
+  button.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      button.click();
+    }
+  });
+
+  document.body.appendChild(button);
+  return button;
+}
