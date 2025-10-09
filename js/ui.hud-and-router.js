@@ -593,12 +593,12 @@ header.innerHTML = `
         statusClass = 'status-icon-label hoh-pov-icons';
         ariaLabel = `${p.name} (Head of Household and Veto Holder)`;
       } else if(hasHOH){
-        labelText = '👑';
-        statusClass = 'status-icon-label hoh-icon';
+        labelText = 'HOH';
+        statusClass = 'status-hoh';
         ariaLabel = `${p.name} (Head of Household)`;
       } else if(hasVeto){
-        labelText = '🛡';
-        statusClass = 'status-icon-label veto-icon';
+        labelText = 'POV';
+        statusClass = 'status-pov';
         ariaLabel = `${p.name} (Veto Holder)`;
       }
       
