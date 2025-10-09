@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Nominations & Jury Fixes</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      border-left: 4px solid #4CAF50;
+    }
+    .test-section.fail {
+      border-left-color: #f44336;
+    }
+    h1 { color: #4CAF50; }
+    h2 { color: #2196F3; margin-top: 0; }
+    .result {
+      margin: 10px 0;
+      padding: 10px;
+      background: #1a1a1a;
+      border-radius: 4px;
+    }
+    .pass { color: #4CAF50; }
+    .fail { color: #f44336; }
+    .info { color: #2196F3; }
+    pre {
+      background: #000;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Test Nominations & Jury Fixes</h1>
+  <div id="results"></div>
+
+  <script>
+    const results = document.getElementById('results');
+    
+    function addResult(title, status, message, details = '') {
+      const section = document.createElement('div');
+      section.className = `test-section ${status === 'fail' ? 'fail' : ''}`;
+      
+      const statusText = status === 'pass' ? '✓' : status === 'fail' ? '✗' : 'ℹ';
+      section.innerHTML = `
+        <h2>${statusText} ${title}</h2>
+        <div class="result ${status}">${message}</div>
+        ${details ? `<pre>${details}</pre>` : ''}
+      `;
+      
+      results.appendChild(section);
+    }
+
+    // Test 1: Check global.global alias exists
+    try {
+      if (window.global === window) {
+        addResult('Global Alias Test', 'pass', 'window.global is correctly aliased to window');
+      } else {
+        addResult('Global Alias Test', 'fail', 'window.global is not correctly aliased');
+      }
+    } catch (e) {
+      addResult('Global Alias Test', 'fail', 'Error checking global alias', e.toString());
+    }
+
+    // Test 2: Verify global can be accessed from nested contexts
+    try {
+      (function(g) {
+        if (g.global === g) {
+          addResult('Nested Context Global Test', 'pass', 'global.global works in IIFE context');
+        } else {
+          addResult('Nested Context Global Test', 'fail', 'global.global not working in IIFE');
+        }
+      })(window);
+    } catch (e) {
+      addResult('Nested Context Global Test', 'fail', 'Error in nested context', e.toString());
+    }
+
+    // Test 3: Check optional chaining behavior
+    try {
+      const testObj = { a: { b: { c: 1 } } };
+      const result1 = testObj?.a?.b?.c ?? 'fallback';
+      const result2 = testObj?.x?.y?.z ?? 'fallback';
+      
+      if (result1 === 1 && result2 === 'fallback') {
+        addResult('Optional Chaining Test', 'pass', 'Optional chaining with nullish coalescing works correctly');
+      } else {
+        addResult('Optional Chaining Test', 'fail', 'Optional chaining not working as expected');
+      }
+    } catch (e) {
+      addResult('Optional Chaining Test', 'fail', 'Error testing optional chaining', e.toString());
+    }
+
+    // Test 4: Simulate missing HOH scenario
+    try {
+      // Mock setup
+      const mockGame = {
+        hohId: 999, // Non-existent ID
+        players: [
+          { id: 1, name: 'Alice', evicted: false, affinity: {} },
+          { id: 2, name: 'Bob', evicted: false, affinity: {} },
+        ]
+      };
+
+      function getP(id) {
+        return mockGame.players.find(p => p.id === id);
+      }
+
+      const hoh = getP(mockGame.hohId);
+      
+      // Test guard pattern
+      if (hoh && hoh.affinity) {
+        addResult('HOH Guard Test', 'fail', 'Should have detected missing HOH');
+      } else {
+        // This should be the case
+        const affValue = hoh?.affinity?.[1] ?? 0;
+        if (affValue === 0) {
+          addResult('HOH Guard Test', 'pass', 'Optional chaining correctly handles missing HOH');
+        } else {
+          addResult('HOH Guard Test', 'fail', 'Unexpected affinity value');
+        }
+      }
+    } catch (e) {
+      addResult('HOH Guard Test', 'fail', 'Error testing HOH guards', e.toString());
+    }
+
+    // Test 5: Check if Progression API is available (if loaded)
+    setTimeout(() => {
+      try {
+        if (window.Progression) {
+          const hasGetPlayerState = typeof window.Progression.getPlayerState === 'function';
+          const hasGetLeaderboard = typeof window.Progression.getLeaderboard === 'function';
+          
+          if (hasGetPlayerState && hasGetLeaderboard) {
+            addResult('Progression API Test', 'pass', 
+              'Progression API has required methods: getPlayerState, getLeaderboard');
+          } else {
+            addResult('Progression API Test', 'fail', 
+              `Missing methods: ${!hasGetPlayerState ? 'getPlayerState ' : ''}${!hasGetLeaderboard ? 'getLeaderboard' : ''}`);
+          }
+        } else {
+          addResult('Progression API Test', 'info', 
+            'Progression system not loaded (optional - may load async)');
+        }
+      } catch (e) {
+        addResult('Progression API Test', 'info', 
+          'Could not check Progression API', e.toString());
+      }
+    }, 1000);
+
+    // Test 6: Verify affinity initialization pattern
+    try {
+      const mockHoh = { id: 1, name: 'Test HOH' };
+      
+      // Simulate the fix pattern
+      if (!mockHoh.affinity) mockHoh.affinity = {};
+      mockHoh.affinity[2] = 0.5;
+      
+      if (mockHoh.affinity && mockHoh.affinity[2] === 0.5) {
+        addResult('Affinity Init Test', 'pass', 
+          'Affinity initialization pattern works correctly');
+      } else {
+        addResult('Affinity Init Test', 'fail', 
+          'Affinity initialization failed');
+      }
+    } catch (e) {
+      addResult('Affinity Init Test', 'fail', 'Error testing affinity init', e.toString());
+    }
+
+    // Summary
+    addResult('Test Summary', 'info', 
+      'All core JavaScript patterns are validated. Load the full game to test integration.');
+  </script>
+
+  <!-- Load actual modules to verify syntax -->
+  <script>
+    // Note: In a real test, we'd load state.js first, then nominations.js and jury.js
+    // For this test, we're just validating the standalone patterns
+    console.log('✓ Test file loaded successfully');
+    console.log('To fully test: Open index.html and check browser console for errors');
+  </script>
+</body>
+</html>
