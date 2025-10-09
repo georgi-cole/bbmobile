@@ -3443,6 +3443,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   font-size: 2rem;
   font-weight: 900;
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #d4af37 100%);
+  color: #ffd700;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
