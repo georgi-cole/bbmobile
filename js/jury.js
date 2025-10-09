@@ -829,9 +829,9 @@
     try{
       if(typeof g.showEventModal === 'function'){
         await g.showEventModal({
-          title: 'Fan Favourite!',
-          emojis: '🏆⭐🥇',
-          subtitle: 'Public vote to determine favourite houseguest!',
+          title: 'This season of Big brother is about to end. Before we go, let\'s see whom you voted as your favorite player!',
+          emojis: '🏆⭐',
+          subtitle: '',
           tone: 'special',
           duration: 4000,
           minDisplayTime: 500
@@ -839,7 +839,7 @@
       } else if(typeof g.showCard === 'function'){
         // Fallback to regular card if event modal not available
         g.showCard('Audience Spotlight', [
-          'And just before we say goodbye to another amazing season, let\'s see whom you have chosen as the Public\'s favourite player.'
+          'This season of Big brother is about to end. Before we go, let\'s see whom you voted as your favorite player!'
         ], 'neutral', 3500, true);
         if(typeof g.cardQueueWaitIdle === 'function') await g.cardQueueWaitIdle();
       }
@@ -912,7 +912,7 @@
       slot.appendChild(pctLabel);
       
       container.appendChild(slot);
-      slots.push({ pctLabel, currentPct: 0, weight: candidate.weight });
+      slots.push({ slot, pctLabel, currentPct: 0, weight: candidate.weight });
     }
     
     document.body.appendChild(modalHost);
@@ -1013,6 +1013,16 @@
       slots.forEach((slot, i) => {
         slot.currentPct = normalized[i];
         slot.pctLabel.textContent = Math.round(normalized[i]) + '%';
+      });
+      
+      // Highlight leading candidate
+      const maxPct = Math.max(...normalized);
+      slots.forEach((slot, i) => {
+        if (normalized[i] === maxPct) {
+          slot.slot.classList.add('pfLeading');
+        } else {
+          slot.slot.classList.remove('pfLeading');
+        }
       });
       
       // Log only on first update
@@ -1180,10 +1190,21 @@
     winnerTitle.className = 'pfWinnerTitle';
     winnerTitle.textContent = 'Public\'s Favourite Player';
     
+    // Create $1M check card display
+    const checkCard = document.createElement('div');
+    checkCard.className = 'pfCheckCard';
+    checkCard.innerHTML = `
+      <div class="pfCheckHeader">Big Brother Favorite Prize</div>
+      <div class="pfCheckAmount">$1,000,000</div>
+      <div class="pfCheckPayto">Pay to the order of<br><strong>${fanFavName}</strong></div>
+      <div class="pfCheckMemo">Congratulations on being the fan favorite!</div>
+    `;
+    
     winnerSection.appendChild(winnerAvatar);
     winnerSection.appendChild(winnerName);
     winnerSection.appendChild(winnerPctText);
     winnerSection.appendChild(winnerTitle);
+    winnerSection.appendChild(checkCard);
     winnerCard.appendChild(winnerSection);
     
     document.body.appendChild(winnerCard);
