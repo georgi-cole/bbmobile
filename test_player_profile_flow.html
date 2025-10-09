@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player Profile Modal Flow Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #ffdc8b;
+      text-align: center;
+    }
+    .info {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #2d4b6a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #3f6385;
+    }
+    .log {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    .success { color: #77d58d; }
+    .error { color: #ff6d6d; }
+    .info-text { color: #83bfff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Player Profile Modal Flow Test</h1>
+    
+    <div class="info">
+      <h2>Test Sequence</h2>
+      <ol>
+        <li>Intro video plays (or skip it)</li>
+        <li>Rules modal appears automatically</li>
+        <li>Click OK to acknowledge rules</li>
+        <li>Player profile modal appears</li>
+        <li>Fill in profile information</li>
+        <li>Click "Start Game" button</li>
+        <li>Opening sequence starts with cast introduction cards</li>
+        <li>Player name should be updated from profile</li>
+      </ol>
+    </div>
+    
+    <div class="controls">
+      <button onclick="testIntroEvent()">1. Simulate Intro Finish</button>
+      <button onclick="testRulesAcknowledge()">2. Simulate Rules Acknowledge</button>
+      <button onclick="checkPlayerData()">3. Check Player Data</button>
+      <button onclick="clearStorage()">Clear Storage</button>
+    </div>
+    
+    <div class="log" id="testLog">
+      <div class="log-entry info-text">Test log will appear here...</div>
+    </div>
+  </div>
+
+  <script>
+    const log = document.getElementById('testLog');
+    
+    function addLog(message, type = 'info-text') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+    
+    function testIntroEvent() {
+      addLog('Dispatching bb:intro:finished event...', 'info-text');
+      try {
+        const evt = new CustomEvent('bb:intro:finished', { detail: {} });
+        window.dispatchEvent(evt);
+        addLog('✓ Event dispatched successfully', 'success');
+      } catch(e) {
+        addLog('✗ Failed to dispatch event: ' + e.message, 'error');
+      }
+    }
+    
+    function testRulesAcknowledge() {
+      addLog('Dispatching bb:rules:acknowledged event...', 'info-text');
+      try {
+        const evt = new CustomEvent('bb:rules:acknowledged', { detail: {} });
+        window.dispatchEvent(evt);
+        addLog('✓ Event dispatched successfully', 'success');
+      } catch(e) {
+        addLog('✗ Failed to dispatch event: ' + e.message, 'error');
+      }
+    }
+    
+    function checkPlayerData() {
+      addLog('Checking player data...', 'info-text');
+      try {
+        const profile = localStorage.getItem('bb_human_profile');
+        if (profile) {
+          const data = JSON.parse(profile);
+          addLog('✓ Profile found: ' + JSON.stringify(data), 'success');
+        } else {
+          addLog('✗ No profile data found', 'error');
+        }
+        
+        if (window.game && window.game.players) {
+          const human = window.game.players.find(p => p.human);
+          if (human) {
+            addLog('✓ Human player: ' + human.name, 'success');
+          } else {
+            addLog('✗ No human player found', 'error');
+          }
+        } else {
+          addLog('⚠ Game not initialized yet', 'info-text');
+        }
+      } catch(e) {
+        addLog('✗ Error checking data: ' + e.message, 'error');
+      }
+    }
+    
+    function clearStorage() {
+      addLog('Clearing storage...', 'info-text');
+      try {
+        localStorage.removeItem('bb_human_profile');
+        sessionStorage.removeItem('bb.introPlayed');
+        addLog('✓ Storage cleared', 'success');
+      } catch(e) {
+        addLog('✗ Failed to clear storage: ' + e.message, 'error');
+      }
+    }
+    
+    // Listen for events
+    window.addEventListener('bb:intro:finished', () => {
+      addLog('📺 bb:intro:finished received', 'success');
+    });
+    
+    window.addEventListener('bb:rules:acknowledged', () => {
+      addLog('📋 bb:rules:acknowledged received', 'success');
+    });
+    
+    addLog('Test page loaded. Use buttons above to test the flow.', 'info-text');
+  </script>
+</body>
+</html>

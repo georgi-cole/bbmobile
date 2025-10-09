@@ -19,7 +19,7 @@
     showTopRoster: true,
     colorblindMode: false,
     strictAvatars: false, // When true, use local silhouette instead of external fallback
-    autoShowRulesOnStart: false, // When true, shows rules modal automatically after intro
+    autoShowRulesOnStart: true, // When true, shows rules modal automatically after intro
     // Core game mechanics
     enableJuryHouse: true,
     doubleChance: 18,   // %

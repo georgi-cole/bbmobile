@@ -298,6 +298,15 @@
       document.body.style.overflow = '';
       // Restore focus
       try { lastFocusEl && lastFocusEl.focus && lastFocusEl.focus(); } catch {}
+      
+      // Dispatch event that rules were acknowledged
+      try {
+        const evt = new CustomEvent('bb:rules:acknowledged', { detail: {} });
+        window.dispatchEvent(evt);
+        console.info('[rules] dispatched bb:rules:acknowledged');
+      } catch(e) {
+        console.warn('[rules] failed to dispatch bb:rules:acknowledged', e);
+      }
     }, 200);
   }
 
