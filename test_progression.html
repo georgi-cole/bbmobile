@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XP/Level Progression System Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2.5em;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    .subtitle {
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1.1em;
+    }
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .section h2 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 1.5em;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 1em;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .info-card {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    .info-label {
+      font-size: 0.85em;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    .info-value {
+      font-size: 1.4em;
+      font-weight: 700;
+      color: #667eea;
+    }
+    #log {
+      background: #1a1a1a;
+      color: #0f0;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-left: 2px solid #0f0;
+      padding-left: 10px;
+    }
+    .badge-display {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .test-results {
+      margin-top: 15px;
+      padding: 15px;
+      background: #e8f4f8;
+      border-radius: 8px;
+      border-left: 4px solid #4caf50;
+    }
+    .test-pass {
+      color: #4caf50;
+      font-weight: 600;
+    }
+    .test-fail {
+      color: #f44336;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 XP/Level Progression System</h1>
+    <div class="subtitle">Event-Sourced Progression with Web Components</div>
+
+    <!-- Status Section -->
+    <div class="section">
+      <h2>📊 System Status</h2>
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-label">Modules Loaded</div>
+          <div class="info-value" id="modulesLoaded">-</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Events Recorded</div>
+          <div class="info-value" id="eventsRecorded">0</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Players Initialized</div>
+          <div class="info-value" id="playersInit">0</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Components Registered</div>
+          <div class="info-value" id="componentsReg">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Badge Display -->
+    <div class="section">
+      <h2>🏆 Current Player Badge</h2>
+      <div class="badge-display">
+        <progression-badge id="playerBadge" level="1" xp="0" show-progress></progression-badge>
+      </div>
+    </div>
+
+    <!-- XP Actions -->
+    <div class="section">
+      <h2>⚡ Award XP Actions</h2>
+      <div class="button-grid">
+        <button onclick="awardXP('win_hoh')">Win HOH (+100 XP)</button>
+        <button onclick="awardXP('win_veto')">Win Veto (+80 XP)</button>
+        <button onclick="awardXP('comp_participation')">Participate (+10 XP)</button>
+        <button onclick="awardXP('comp_top3')">Top 3 Finish (+30 XP)</button>
+        <button onclick="awardXP('comp_perfect_score')">Perfect Score (+50 XP)</button>
+        <button onclick="awardXP('survive_nomination')">Survive Nom (+40 XP)</button>
+        <button onclick="awardXP('form_alliance')">Form Alliance (+25 XP)</button>
+        <button onclick="awardXP('reach_jury')">Reach Jury (+100 XP)</button>
+        <button onclick="awardCustomXP()">Custom XP Amount</button>
+      </div>
+    </div>
+
+    <!-- Badge Actions -->
+    <div class="section">
+      <h2>🎖️ Badge Actions</h2>
+      <div class="button-grid">
+        <button onclick="awardBadge('comp_beast', 'Competition Beast')">Award "Competition Beast"</button>
+        <button onclick="awardBadge('social_king', 'Social King')">Award "Social King"</button>
+        <button onclick="awardBadge('strategic_mastermind', 'Strategic Mastermind')">Award "Strategic Mastermind"</button>
+        <button onclick="awardBadge('survivor', 'Survivor')">Award "Survivor"</button>
+      </div>
+    </div>
+
+    <!-- Progression Summary -->
+    <div class="section">
+      <h2>📈 Progression Summary</h2>
+      <progression-summary id="playerSummary" player-id="test-player-1"></progression-summary>
+    </div>
+
+    <!-- System Controls -->
+    <div class="section">
+      <h2>🔧 System Controls</h2>
+      <div class="button-grid">
+        <button onclick="showLevelUpTest()">Test Level-Up Modal</button>
+        <button onclick="runTests()">Run Unit Tests</button>
+        <button onclick="exportData()">Export Data</button>
+        <button onclick="importData()">Import Data</button>
+        <button onclick="resetPlayer()">Reset Player</button>
+        <button onclick="clearLog()">Clear Log</button>
+      </div>
+      <div id="testResults"></div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="section">
+      <h2>📝 Event Log</h2>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <!-- Level-Up Modal (hidden until triggered) -->
+  <level-up-modal id="levelUpModal" level="2" old-level="1"></level-up-modal>
+
+  <!-- Load Dependencies -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/progression/events.js"></script>
+  <script src="js/progression/rules.js"></script>
+  <script src="js/progression/engine.js"></script>
+  <script src="js/progression/components.js"></script>
+  <script src="js/progression/integration.js"></script>
+
+  <!-- Test Script -->
+  <script>
+    const TEST_PLAYER_ID = 'test-player-1';
+    let logEntries = [];
+
+    // Initialize player
+    function initPlayer() {
+      if (window.ProgressionEngine) {
+        window.ProgressionEngine.initializePlayer(TEST_PLAYER_ID);
+        updateUI();
+        log('Initialized test player');
+      }
+    }
+
+    // Award XP
+    function awardXP(action) {
+      if (!window.ProgressionEngine) {
+        log('ERROR: ProgressionEngine not loaded', 'error');
+        return;
+      }
+
+      const result = window.ProgressionEngine.awardXPForAction(TEST_PLAYER_ID, action);
+      if (result) {
+        log(`Awarded ${result.xpAwarded} XP for "${action}"`);
+        
+        if (result.leveledUp) {
+          log(`🎉 LEVEL UP! ${result.oldLevel} → ${result.newLevel}`, 'success');
+          showLevelUpModal(result.newLevel, result.oldLevel);
+        }
+        
+        updateUI();
+      } else {
+        log(`Failed to award XP for "${action}"`, 'error');
+      }
+    }
+
+    // Award custom XP
+    function awardCustomXP() {
+      const amount = parseInt(prompt('Enter XP amount:', '50'), 10);
+      if (isNaN(amount) || amount <= 0) return;
+
+      const result = window.ProgressionEngine.awardXP(TEST_PLAYER_ID, amount, 'custom_award');
+      if (result) {
+        log(`Awarded ${amount} custom XP`);
+        
+        if (result.leveledUp) {
+          log(`🎉 LEVEL UP! ${result.oldLevel} → ${result.newLevel}`, 'success');
+          showLevelUpModal(result.newLevel, result.oldLevel);
+        }
+        
+        updateUI();
+      }
+    }
+
+    // Award badge
+    function awardBadge(badgeId, badgeName) {
+      if (!window.ProgressionEngine) {
+        log('ERROR: ProgressionEngine not loaded', 'error');
+        return;
+      }
+
+      const success = window.ProgressionEngine.awardBadge(TEST_PLAYER_ID, badgeId, badgeName);
+      if (success) {
+        log(`Earned badge: "${badgeName}"`);
+        updateUI();
+      } else {
+        log(`Badge "${badgeName}" already earned`, 'warning');
+      }
+    }
+
+    // Show level-up modal
+    function showLevelUpModal(level, oldLevel) {
+      const modal = document.getElementById('levelUpModal');
+      if (modal) {
+        modal.setAttribute('level', level);
+        modal.setAttribute('old-level', oldLevel);
+        modal.show();
+      }
+    }
+
+    // Test level-up modal
+    function showLevelUpTest() {
+      showLevelUpModal(5, 4);
+      log('Showing test level-up modal (Level 4 → 5)');
+    }
+
+    // Update UI
+    function updateUI() {
+      const state = window.ProgressionEngine.getPlayerState(TEST_PLAYER_ID);
+      if (!state) return;
+
+      // Update badge
+      const badge = document.getElementById('playerBadge');
+      if (badge) {
+        badge.setAttribute('level', state.level);
+        badge.setAttribute('xp', state.totalXP);
+      }
+
+      // Update summary
+      const summary = document.getElementById('playerSummary');
+      if (summary && summary.refresh) {
+        summary.refresh();
+      }
+
+      // Update stats
+      document.getElementById('eventsRecorded').textContent = 
+        window.ProgressionEvents ? window.ProgressionEvents.getAllEvents().length : 0;
+      document.getElementById('playersInit').textContent = 
+        window.ProgressionEngine ? window.ProgressionEngine.getAllPlayerStates().length : 0;
+    }
+
+    // Reset player
+    function resetPlayer() {
+      if (confirm('Reset player progression?')) {
+        window.ProgressionEngine.resetPlayer(TEST_PLAYER_ID);
+        window.ProgressionEvents.clearEvents();
+        initPlayer();
+        log('Player progression reset');
+      }
+    }
+
+    // Export data
+    function exportData() {
+      const data = window.ProgressionEngine.exportData();
+      const json = JSON.stringify(data, null, 2);
+      console.log('Exported data:', json);
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(json).then(() => {
+        log('Data exported to clipboard');
+        alert('Progression data copied to clipboard!');
+      });
+    }
+
+    // Import data
+    function importData() {
+      const json = prompt('Paste JSON data to import:');
+      if (!json) return;
+
+      try {
+        const data = JSON.parse(json);
+        window.ProgressionEngine.importData(data);
+        updateUI();
+        log('Data imported successfully');
+      } catch (e) {
+        log('ERROR: Failed to import data: ' + e.message, 'error');
+      }
+    }
+
+    // Run tests
+    function runTests() {
+      const results = [];
+      
+      // Test 1: Rules engine
+      results.push(testRulesEngine());
+      
+      // Test 2: Event sourcing
+      results.push(testEventSourcing());
+      
+      // Test 3: XP awards
+      results.push(testXPAwards());
+      
+      // Test 4: Level calculation
+      results.push(testLevelCalculation());
+      
+      // Test 5: Web Components
+      results.push(testWebComponents());
+      
+      // Display results
+      displayTestResults(results);
+    }
+
+    function testRulesEngine() {
+      try {
+        const xp = window.ProgressionRules.getXPReward('win_hoh');
+        const level = window.ProgressionRules.getLevelForXP(500);
+        const info = window.ProgressionRules.getLevelInfo(500);
+        
+        return {
+          name: 'Rules Engine',
+          pass: xp === 100 && level > 1 && info.level === level,
+          details: `XP for HOH: ${xp}, Level at 500XP: ${level}`
+        };
+      } catch (e) {
+        return { name: 'Rules Engine', pass: false, details: e.message };
+      }
+    }
+
+    function testEventSourcing() {
+      try {
+        const initialCount = window.ProgressionEvents.getAllEvents().length;
+        window.ProgressionEvents.recordEvent('test_event', { test: true });
+        const newCount = window.ProgressionEvents.getAllEvents().length;
+        
+        return {
+          name: 'Event Sourcing',
+          pass: newCount > initialCount,
+          details: `Events: ${initialCount} → ${newCount}`
+        };
+      } catch (e) {
+        return { name: 'Event Sourcing', pass: false, details: e.message };
+      }
+    }
+
+    function testXPAwards() {
+      try {
+        const testId = 'test-award-player';
+        window.ProgressionEngine.initializePlayer(testId);
+        const result = window.ProgressionEngine.awardXP(testId, 50, 'test');
+        window.ProgressionEngine.resetPlayer(testId);
+        
+        return {
+          name: 'XP Awards',
+          pass: result && result.success && result.xpAwarded === 50,
+          details: `Awarded ${result ? result.xpAwarded : 0} XP`
+        };
+      } catch (e) {
+        return { name: 'XP Awards', pass: false, details: e.message };
+      }
+    }
+
+    function testLevelCalculation() {
+      try {
+        const level1 = window.ProgressionRules.getLevelForXP(0);
+        const level2 = window.ProgressionRules.getLevelForXP(100);
+        const level3 = window.ProgressionRules.getLevelForXP(1000);
+        
+        return {
+          name: 'Level Calculation',
+          pass: level1 === 1 && level2 === 2 && level3 > level2,
+          details: `Levels: 0XP=${level1}, 100XP=${level2}, 1000XP=${level3}`
+        };
+      } catch (e) {
+        return { name: 'Level Calculation', pass: false, details: e.message };
+      }
+    }
+
+    function testWebComponents() {
+      try {
+        const badge = document.getElementById('playerBadge');
+        const summary = document.getElementById('playerSummary');
+        const modal = document.getElementById('levelUpModal');
+        
+        return {
+          name: 'Web Components',
+          pass: badge && summary && modal,
+          details: `Components: badge=${!!badge}, summary=${!!summary}, modal=${!!modal}`
+        };
+      } catch (e) {
+        return { name: 'Web Components', pass: false, details: e.message };
+      }
+    }
+
+    function displayTestResults(results) {
+      const passCount = results.filter(r => r.pass).length;
+      const totalCount = results.length;
+      
+      let html = `<div style="margin-top: 15px;">`;
+      html += `<h3>Test Results: ${passCount}/${totalCount} Passed</h3>`;
+      
+      results.forEach(result => {
+        const status = result.pass ? 'test-pass' : 'test-fail';
+        const icon = result.pass ? '✅' : '❌';
+        html += `<div class="${status}">${icon} ${result.name}: ${result.details}</div>`;
+      });
+      
+      html += `</div>`;
+      
+      document.getElementById('testResults').innerHTML = html;
+      log(`Tests completed: ${passCount}/${totalCount} passed`);
+    }
+
+    // Log message
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = `[${timestamp}] ${message}`;
+      logEntries.push(entry);
+      
+      const logDiv = document.getElementById('log');
+      const entryDiv = document.createElement('div');
+      entryDiv.className = 'log-entry';
+      entryDiv.textContent = entry;
+      logDiv.appendChild(entryDiv);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    // Clear log
+    function clearLog() {
+      logEntries = [];
+      document.getElementById('log').innerHTML = '';
+    }
+
+    // Check system status
+    function checkSystemStatus() {
+      const modules = {
+        GameBus: !!window.bbGameBus,
+        Events: !!window.ProgressionEvents,
+        Rules: !!window.ProgressionRules,
+        Engine: !!window.ProgressionEngine,
+        Integration: !!window.ProgressionIntegration
+      };
+
+      const loadedCount = Object.values(modules).filter(Boolean).length;
+      document.getElementById('modulesLoaded').textContent = `${loadedCount}/5`;
+
+      const components = {
+        Badge: !!customElements.get('progression-badge'),
+        Modal: !!customElements.get('level-up-modal'),
+        Summary: !!customElements.get('progression-summary')
+      };
+
+      const compCount = Object.values(components).filter(Boolean).length;
+      document.getElementById('componentsReg').textContent = `${compCount}/3`;
+
+      log('System status checked');
+      log(`Modules loaded: ${loadedCount}/5`);
+      log(`Components registered: ${compCount}/3`);
+
+      return loadedCount === 5 && compCount === 3;
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const ready = checkSystemStatus();
+        if (ready) {
+          initPlayer();
+          log('🎮 Progression system ready!', 'success');
+        } else {
+          log('⚠️ Some modules failed to load', 'warning');
+        }
+      }, 200);
+    });
+  </script>
+</body>
+</html>
