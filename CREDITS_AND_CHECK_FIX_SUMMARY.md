@@ -108,7 +108,7 @@ All features verified working:
 ## Screenshots
 
 ### 1. Test Page - All Modules Loaded
-![Test Page Initial](https://github.com/user-attachments/assets/7eebff41-30c4-4704-a39f-b67ef04d8976)
+![Test Page Initial](https://github.com/project/screenshots/test-page-initial.png)
 - All credits functions available
 - FinalFaceoff module with showCrown and showCheckCard
 - showMedalOverlay correctly removed
