@@ -127,7 +127,8 @@ export async function updateRuleSet(rules: XPRule[]): Promise<void> {
  */
 export async function getCurrentRuleSet(): Promise<XPRuleSet | null> {
   const ruleSets = await db.getAllRuleSets();
-  return ruleSets[ruleSets.length - 1] || null;
+  if (!ruleSets || ruleSets.length === 0) return null;
+  return ruleSets.reduce((max, curr) => (curr.version > max.version ? curr : max), ruleSets[0]);
 }
 
 /**
