@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progression System Tests</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #ffdc8b;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #83bfff;
+      margin-top: 30px;
+    }
+    .test {
+      margin: 15px 0;
+      padding: 12px;
+      border-radius: 6px;
+      background: #2a2a2a;
+    }
+    .test.pass {
+      border-left: 4px solid #4caf50;
+    }
+    .test.fail {
+      border-left: 4px solid #f44336;
+    }
+    .test-name {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .test.pass .test-name::before {
+      content: '✓ ';
+      color: #4caf50;
+    }
+    .test.fail .test-name::before {
+      content: '✗ ';
+      color: #f44336;
+    }
+    .test-detail {
+      font-size: 0.9em;
+      color: #b0b0b0;
+      margin-top: 5px;
+    }
+    .summary {
+      margin-top: 30px;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      font-size: 1.1em;
+    }
+    .summary.all-pass {
+      border: 2px solid #4caf50;
+    }
+    .summary.has-fail {
+      border: 2px solid #f44336;
+    }
+  </style>
+</head>
+<body>
+  <h1>Progression System Tests</h1>
+  <p>These tests verify the progression system's core invariants without any build step required.</p>
+  
+  <div id="tests"></div>
+  <div id="summary" class="summary"></div>
+
+  <script type="module">
+    import * as Progression from '../dist/core.js';
+
+    const testsContainer = document.getElementById('tests');
+    const summaryContainer = document.getElementById('summary');
+    let passCount = 0;
+    let failCount = 0;
+
+    function renderTest(name, passed, detail = '') {
+      const div = document.createElement('div');
+      div.className = `test ${passed ? 'pass' : 'fail'}`;
+      
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'test-name';
+      nameDiv.textContent = name;
+      div.appendChild(nameDiv);
+      
+      if (detail) {
+        const detailDiv = document.createElement('div');
+        detailDiv.className = 'test-detail';
+        detailDiv.textContent = detail;
+        div.appendChild(detailDiv);
+      }
+      
+      testsContainer.appendChild(div);
+      
+      if (passed) passCount++;
+      else failCount++;
+    }
+
+    function renderSummary() {
+      const total = passCount + failCount;
+      summaryContainer.className = `summary ${failCount === 0 ? 'all-pass' : 'has-fail'}`;
+      summaryContainer.innerHTML = `
+        <strong>Results:</strong> ${passCount} / ${total} tests passed
+        ${failCount === 0 ? '<br>✓ All tests passed!' : `<br>✗ ${failCount} test(s) failed`}
+      `;
+    }
+
+    // Run tests
+    async function runTests() {
+      console.log('Starting progression system tests...');
+      
+      // Reset database
+      await Progression.reset();
+      
+      // Test 1: Replay determinism
+      {
+        const events = [
+          { ruleId: 'COMP_WIN', amount: 100, week: 1, season: 1 },
+          { ruleId: 'HOH_WIN', amount: 150, week: 1, season: 1 },
+          { ruleId: 'NOMINATED', amount: -25, week: 2, season: 1 }
+        ];
+        
+        // First replay
+        await Progression.reset();
+        for (const e of events) {
+          await Progression.recordEvent(e.ruleId, e.amount, { week: e.week, season: e.season });
+        }
+        const state1 = await Progression.getCurrentState();
+        
+        // Second replay
+        await Progression.reset();
+        for (const e of events) {
+          await Progression.recordEvent(e.ruleId, e.amount, { week: e.week, season: e.season });
+        }
+        const state2 = await Progression.getCurrentState();
+        
+        const passed = state1.totalXP === state2.totalXP && state1.level === state2.level;
+        renderTest(
+          'Replay Determinism',
+          passed,
+          `First: ${state1.totalXP} XP, Level ${state1.level}; Second: ${state2.totalXP} XP, Level ${state2.level}`
+        );
+      }
+
+      // Test 2: Rule changes don't mutate log
+      {
+        await Progression.reset();
+        
+        // Record some events with default rules
+        await Progression.recordEvent('COMP_WIN', 100, { week: 1, season: 1 });
+        await Progression.recordEvent('HOH_WIN', 150, { week: 1, season: 1 });
+        
+        const eventsBefore = await Progression.getEvents();
+        const countBefore = eventsBefore.length;
+        
+        // Update rules (change XP values)
+        const customRules = [...Progression.DEFAULT_RULES];
+        customRules[0].baseXP = 200; // Change COMP_WIN from 100 to 200
+        await Progression.updateRuleSet(customRules);
+        
+        // Events should remain unchanged
+        const eventsAfter = await Progression.getEvents();
+        const countAfter = eventsAfter.length;
+        
+        const passed = countBefore === countAfter && countBefore === 2;
+        renderTest(
+          'Rule Changes Don\'t Mutate Log',
+          passed,
+          `Events before: ${countBefore}, Events after: ${countAfter}`
+        );
+      }
+
+      // Test 3: Negative XP flooring
+      {
+        await Progression.reset();
+        
+        // Record lots of negative events
+        await Progression.recordEvent('NOMINATED', -25, { week: 1, season: 1 });
+        await Progression.recordEvent('BETRAYAL', -50, { week: 1, season: 1 });
+        await Progression.recordEvent('NOMINATED', -25, { week: 2, season: 1 });
+        
+        const state = await Progression.getCurrentState();
+        const passed = state.totalXP === 0;
+        renderTest(
+          'Negative XP Floored to 0',
+          passed,
+          `Total XP: ${state.totalXP} (should be 0, not negative)`
+        );
+      }
+
+      // Test 4: Per-week cap for COMP_PARTICIPATE
+      {
+        await Progression.reset();
+        
+        // Try to record 5 COMP_PARTICIPATE events in week 1 (cap is 3)
+        for (let i = 0; i < 5; i++) {
+          await Progression.recordEvent('COMP_PARTICIPATE', 50, { week: 1, season: 1 });
+        }
+        
+        const state = await Progression.getCurrentState();
+        const expectedXP = 3 * 50; // Only 3 should count
+        const passed = state.totalXP === expectedXP;
+        renderTest(
+          'Per-Week Cap: COMP_PARTICIPATE (max 3/week)',
+          passed,
+          `Total XP: ${state.totalXP} (expected ${expectedXP} from 3 of 5 events)`
+        );
+      }
+
+      // Test 5: Per-week cap for CLEAN_WEEK
+      {
+        await Progression.reset();
+        
+        // Try to record 3 CLEAN_WEEK events in week 1 (cap is 1)
+        for (let i = 0; i < 3; i++) {
+          await Progression.recordEvent('CLEAN_WEEK', 100, { week: 1, season: 1 });
+        }
+        
+        const state = await Progression.getCurrentState();
+        const expectedXP = 1 * 100; // Only 1 should count
+        const passed = state.totalXP === expectedXP;
+        renderTest(
+          'Per-Week Cap: CLEAN_WEEK (max 1/week)',
+          passed,
+          `Total XP: ${state.totalXP} (expected ${expectedXP} from 1 of 3 events)`
+        );
+      }
+
+      // Test 6: Per-season cap for HOH_STREAK_2
+      {
+        await Progression.reset();
+        
+        // Try to record 3 HOH_STREAK_2 events in season 1 (cap is 1)
+        for (let i = 0; i < 3; i++) {
+          await Progression.recordEvent('HOH_STREAK_2', 200, { week: i + 1, season: 1 });
+        }
+        
+        const state = await Progression.getCurrentState();
+        const expectedXP = 1 * 200; // Only 1 should count
+        const passed = state.totalXP === expectedXP;
+        renderTest(
+          'Per-Season Cap: HOH_STREAK_2 (max 1/season)',
+          passed,
+          `Total XP: ${state.totalXP} (expected ${expectedXP} from 1 of 3 events)`
+        );
+      }
+
+      // Test 7: Per-season cap for POV_STREAK_2
+      {
+        await Progression.reset();
+        
+        // Try to record 2 POV_STREAK_2 events in season 1 (cap is 1)
+        for (let i = 0; i < 2; i++) {
+          await Progression.recordEvent('POV_STREAK_2', 175, { week: i + 1, season: 1 });
+        }
+        
+        const state = await Progression.getCurrentState();
+        const expectedXP = 1 * 175; // Only 1 should count
+        const passed = state.totalXP === expectedXP;
+        renderTest(
+          'Per-Season Cap: POV_STREAK_2 (max 1/season)',
+          passed,
+          `Total XP: ${state.totalXP} (expected ${expectedXP} from 1 of 2 events)`
+        );
+      }
+
+      // Test 8: Level computation
+      {
+        await Progression.reset();
+        
+        // Record enough XP to reach level 3 (250 XP)
+        await Progression.recordEvent('COMP_WIN', 100, { week: 1, season: 1 });
+        await Progression.recordEvent('HOH_WIN', 150, { week: 1, season: 1 });
+        
+        const state = await Progression.getCurrentState();
+        const passed = state.level === 3 && state.totalXP === 250;
+        renderTest(
+          'Level Computation',
+          passed,
+          `Level ${state.level} with ${state.totalXP} XP (expected Level 3 with 250 XP)`
+        );
+      }
+
+      // Test 9: Progress percentage
+      {
+        await Progression.reset();
+        
+        // Get exactly halfway to level 2 (need 100 XP, give 50)
+        await Progression.recordEvent('COMP_PARTICIPATE', 50, { week: 1, season: 1 });
+        
+        const state = await Progression.getCurrentState();
+        const passed = state.level === 1 && state.progressPercent === 50;
+        renderTest(
+          'Progress Percentage',
+          passed,
+          `Level ${state.level}, Progress: ${state.progressPercent}% (expected Level 1, 50%)`
+        );
+      }
+
+      // Test 10: Breakdown computation
+      {
+        await Progression.reset();
+        
+        await Progression.recordEvent('COMP_WIN', 100, { week: 1, season: 1 });
+        await Progression.recordEvent('COMP_WIN', 100, { week: 2, season: 1 });
+        await Progression.recordEvent('HOH_WIN', 150, { week: 1, season: 1 });
+        
+        const breakdown = await Progression.getBreakdown();
+        const compWin = breakdown.get('COMP_WIN');
+        const hohWin = breakdown.get('HOH_WIN');
+        
+        const passed = 
+          compWin && compWin.count === 2 && compWin.totalXP === 200 &&
+          hohWin && hohWin.count === 1 && hohWin.totalXP === 150;
+        
+        renderTest(
+          'XP Breakdown',
+          passed,
+          `COMP_WIN: ${compWin?.count} events, ${compWin?.totalXP} XP; HOH_WIN: ${hohWin?.count} events, ${hohWin?.totalXP} XP`
+        );
+      }
+
+      // Test 11: Database schemaVersion
+      {
+        const meta = await Progression.db.readMetaEntry('schemaVersion');
+        const passed = meta && meta.value === 2;
+        renderTest(
+          'Database schemaVersion Persists',
+          passed,
+          `schemaVersion: ${meta?.value} (expected 2)`
+        );
+      }
+
+      // Render summary
+      renderSummary();
+      console.log(`Tests complete: ${passCount} passed, ${failCount} failed`);
+    }
+
+    // Run tests on load
+    runTests().catch(err => {
+      console.error('Test error:', err);
+      renderTest('Test Suite Execution', false, err.message);
+      renderSummary();
+    });
+  </script>
+</body>
+</html>

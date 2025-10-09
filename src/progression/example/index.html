@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progression System Example</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #ffdc8b;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #83bfff;
+      margin-top: 30px;
+    }
+    .demo-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    button {
+      padding: 10px 20px;
+      background: #83bfff;
+      border: none;
+      border-radius: 6px;
+      color: #1a1a1a;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      background: #a5d4ff;
+      transform: translateY(-2px);
+    }
+    button.danger {
+      background: #f44336;
+      color: white;
+    }
+    button.danger:hover {
+      background: #ff5a4d;
+    }
+    .badge-container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .info-box {
+      padding: 16px;
+      background: #0f0f0f;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+    .info-box h3 {
+      margin: 0 0 8px 0;
+      color: #ffdc8b;
+      font-size: 16px;
+    }
+    .info-box p {
+      margin: 4px 0;
+      font-size: 14px;
+      color: #b0b0b0;
+    }
+    .season-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .season-card {
+      padding: 16px;
+      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+      border: 1px solid #ffdc8b;
+      border-radius: 8px;
+    }
+    .season-card h4 {
+      margin: 0 0 12px 0;
+      color: #ffdc8b;
+    }
+    .season-card .stat {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      font-size: 14px;
+    }
+    .season-card .stat-label {
+      color: #b0b0b0;
+    }
+    .season-card .stat-value {
+      color: #e0e0e0;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>Progression System Example</h1>
+  <p>This page demonstrates the progression system's features. All code runs without a build step, importing from <code>dist/*.js</code>.</p>
+
+  <!-- Badge Section -->
+  <div class="demo-section">
+    <h2>1. XP Badge Component</h2>
+    <p>Displays current level and XP. Click to open the modal.</p>
+    <div class="badge-container" id="badgeContainer"></div>
+  </div>
+
+  <!-- Modal Section -->
+  <div class="demo-section">
+    <h2>2. XP Modal</h2>
+    <p>Detailed view with three tabs: Overview, Breakdown, and Unlocks.</p>
+    <button id="btnOpenModal">Open Modal</button>
+  </div>
+
+  <!-- Floating Button Section -->
+  <div class="demo-section">
+    <h2>3. Floating Button</h2>
+    <p>An always-on entry point that can be placed anywhere on the page.</p>
+    <button id="btnToggleFloat">Toggle Floating Button</button>
+    <div class="info-box">
+      <h3>Integration</h3>
+      <p><strong>Usage:</strong> <code>createFloatingButton({ position: 'bottom-right', onClick: openModal })</code></p>
+      <p>Positions: bottom-right, bottom-left, top-right, top-left</p>
+    </div>
+  </div>
+
+  <!-- Actions Section -->
+  <div class="demo-section">
+    <h2>4. Simulate Actions</h2>
+    <p>Record XP events to see the system in action.</p>
+    <div class="controls">
+      <button onclick="recordAction('COMP_WIN', 100, 'Won Competition')">Win Competition (+100)</button>
+      <button onclick="recordAction('HOH_WIN', 150, 'Won HOH')">Win HOH (+150)</button>
+      <button onclick="recordAction('POV_WIN', 125, 'Won POV')">Win POV (+125)</button>
+      <button onclick="recordAction('COMP_PARTICIPATE', 50, 'Participated')">Participate (+50)</button>
+      <button onclick="recordAction('CLEAN_WEEK', 100, 'Clean Week')">Clean Week (+100)</button>
+      <button onclick="recordAction('NOMINATED', -25, 'Nominated')">Nominated (-25)</button>
+      <button onclick="recordAction('BETRAYAL', -50, 'Betrayed')">Betrayal (-50)</button>
+      <button class="danger" onclick="resetProgress()">Reset All Data</button>
+    </div>
+    <div id="recentEvents" class="info-box" style="display:none;">
+      <h3>Recent Event</h3>
+      <p id="recentEventText"></p>
+    </div>
+  </div>
+
+  <!-- Season Summary Section -->
+  <div class="demo-section">
+    <h2>5. Season Summary</h2>
+    <p>Track progress across a season.</p>
+    <div class="season-summary" id="seasonSummary"></div>
+  </div>
+
+  <script type="module">
+    import * as Progression from '../dist/core.js';
+    import { createBadge, createFloatingButton } from '../xp-badge.js';
+    import { createModal } from '../xp-modal.js';
+
+    let badge = null;
+    let floatingButton = null;
+    let currentWeek = 1;
+    let currentSeason = 1;
+
+    // Initialize
+    async function init() {
+      await Progression.initialize();
+      await updateUI();
+    }
+
+    // Update all UI elements
+    async function updateUI() {
+      const state = await Progression.getCurrentState();
+      const breakdown = await Progression.getBreakdown();
+      
+      // Update badge
+      if (!badge) {
+        badge = createBadge(document.getElementById('badgeContainer'), {
+          onClick: openModal
+        });
+      }
+      badge.update(state);
+
+      // Update season summary
+      updateSeasonSummary(state, breakdown);
+    }
+
+    // Update season summary
+    function updateSeasonSummary(state, breakdown) {
+      const container = document.getElementById('seasonSummary');
+      
+      const wins = (breakdown.get('HOH_WIN')?.count || 0) + 
+                   (breakdown.get('POV_WIN')?.count || 0) + 
+                   (breakdown.get('COMP_WIN')?.count || 0);
+      
+      const nominations = breakdown.get('NOMINATED')?.count || 0;
+      const cleanWeeks = breakdown.get('CLEAN_WEEK')?.count || 0;
+
+      container.innerHTML = `
+        <div class="season-card">
+          <h4>Season ${currentSeason}</h4>
+          <div class="stat">
+            <span class="stat-label">Current Level</span>
+            <span class="stat-value">${state.level}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Total XP</span>
+            <span class="stat-value">${state.totalXP}</span>
+          </div>
+        </div>
+        <div class="season-card">
+          <h4>Competition Stats</h4>
+          <div class="stat">
+            <span class="stat-label">Wins</span>
+            <span class="stat-value">${wins}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Participations</span>
+            <span class="stat-value">${breakdown.get('COMP_PARTICIPATE')?.count || 0}</span>
+          </div>
+        </div>
+        <div class="season-card">
+          <h4>Game Stats</h4>
+          <div class="stat">
+            <span class="stat-label">Nominations</span>
+            <span class="stat-value">${nominations}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Clean Weeks</span>
+            <span class="stat-value">${cleanWeeks}</span>
+          </div>
+        </div>
+        <div class="season-card">
+          <h4>Progress</h4>
+          <div class="stat">
+            <span class="stat-label">Events</span>
+            <span class="stat-value">${state.eventsCount}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">To Next Level</span>
+            <span class="stat-value">${state.nextLevelXP - state.totalXP} XP</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Open modal
+    async function openModal() {
+      const state = await Progression.getCurrentState();
+      const breakdown = await Progression.getBreakdown();
+      
+      const modal = createModal({
+        theme: 'dark'
+      });
+      
+      modal.updateOverview(state, Progression.DEFAULT_LEVEL_THRESHOLDS);
+      modal.updateBreakdown(breakdown);
+      modal.updateUnlocks(state, Progression.DEFAULT_LEVEL_THRESHOLDS);
+    }
+
+    // Record action
+    window.recordAction = async function(ruleId, amount, description) {
+      await Progression.recordEvent(ruleId, amount, {
+        week: currentWeek,
+        season: currentSeason
+      });
+      
+      // Show recent event
+      const recentBox = document.getElementById('recentEvents');
+      const recentText = document.getElementById('recentEventText');
+      recentBox.style.display = 'block';
+      recentText.textContent = `${description}: ${amount >= 0 ? '+' : ''}${amount} XP`;
+      
+      await updateUI();
+    };
+
+    // Reset progress
+    window.resetProgress = async function() {
+      if (confirm('Are you sure you want to reset all progression data?')) {
+        await Progression.reset();
+        currentWeek = 1;
+        currentSeason = 1;
+        await updateUI();
+        document.getElementById('recentEvents').style.display = 'none';
+        alert('All data has been reset!');
+      }
+    };
+
+    // Toggle floating button
+    document.getElementById('btnToggleFloat').addEventListener('click', () => {
+      if (floatingButton) {
+        floatingButton.remove();
+        floatingButton = null;
+      } else {
+        floatingButton = createFloatingButton({
+          position: 'bottom-right',
+          onClick: openModal
+        });
+      }
+    });
+
+    // Open modal button
+    document.getElementById('btnOpenModal').addEventListener('click', openModal);
+
+    // Initialize on load
+    init().catch(console.error);
+  </script>
+</body>
+</html>

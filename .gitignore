@@ -25,5 +25,9 @@ dist/
 build/
 *.map
 
+# But include progression system's dist (browser-first approach)
+!src/progression/dist/
+!src/progression/dist/**
+
 # Test coverage
 coverage/
