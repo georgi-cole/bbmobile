@@ -102,6 +102,10 @@
     const st=ensureState();
     if(st.finished) return;
 
+    // Normalize once-per-season flags: set both to ensure consistency
+    g.__jurorReturnDone=true;
+    g.__americaReturnDone=true;
+
     const jurors=Array.isArray(g.juryHouse)?g.juryHouse.slice():[];
     jurors.forEach(id=>{ if(!st.scores.has(id)) st.scores.set(id,5+rng()*5); });
 

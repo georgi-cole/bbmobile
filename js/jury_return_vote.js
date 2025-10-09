@@ -60,37 +60,34 @@
   async function runJurorReturnTwist() {
     const g=global.game||{};
     
-    // ======= ELIGIBILITY CHECKS (mirror of twists.js) =======
-    // Check if twist has already run this season (both flags must be false)
-    if(g.__americaReturnDone || g.__jurorReturnDone) return;
-
-    const alive=(typeof global.alivePlayers==='function')?global.alivePlayers():[];
-    const aliveCount=alive.length;
-    const jurors=Array.isArray(g.juryHouse)?g.juryHouse.slice():[];
-    const jurorCount=jurors.length;
-    const initialPlayers=Number(g.cfg?.numPlayers||12);
-
-    // Condition 1: At least 5 players must be alive
-    if(aliveCount<5) return;
-
-    // Condition 2: Juror count threshold based on initial cast size
-    const requiredJurors=(initialPlayers>10)?5:4;
-    if(jurorCount<requiredJurors) return;
-
-    // Condition 3: At least one juror must exist
-    if(jurors.length<1) return;
-
-    // Condition 4: Probability check - use returnChance config (0..1 or 0..100)
-    const returnChance=Number(g.cfg?.returnChance||g.cfg?.juryReturnChance||g.cfg?.jurorReturnChance||g.cfg?.pJuryReturn||0);
-    // Normalize percentage: if value > 1, treat as 0..100, else treat as 0..1
-    const normalizedChance=(returnChance>1)?returnChance:returnChance*100;
-    const roll=Math.random()*100;
-    if(roll>=normalizedChance) return;
+    // Use centralized decision logic (includes eligibility + RNG, cached per week)
+    // If helpers are available, use them; otherwise use local fallback
+    if(typeof global.decideJurorReturnThisWeek === 'function'){
+      if(!global.decideJurorReturnThisWeek(g)) return;
+    } else {
+      // Fallback: local eligibility checks (mirrors old behavior)
+      if(g.__americaReturnDone || g.__jurorReturnDone) return;
+      const alive=(typeof global.alivePlayers==='function')?global.alivePlayers():[];
+      const aliveCount=alive.length;
+      const jurors=Array.isArray(g.juryHouse)?g.juryHouse.slice():[];
+      const jurorCount=jurors.length;
+      const initialPlayers=Number(g.cfg?.numPlayers||12);
+      if(aliveCount<5) return;
+      const requiredJurors=(initialPlayers>10)?5:4;
+      if(jurorCount<requiredJurors) return;
+      if(jurors.length<1) return;
+      const returnChance=Number(g.cfg?.returnChance||g.cfg?.juryReturnChance||g.cfg?.jurorReturnChance||g.cfg?.pJuryReturn||0);
+      const normalizedChance=(returnChance>1)?returnChance:returnChance*100;
+      const roll=Math.random()*100;
+      if(roll>=normalizedChance) return;
+    }
 
     // ======= TWIST ACTIVATED - SET FLAGS =======
     // Set both flags to prevent twist from running again this season
     g.__americaReturnDone=true;
     g.__jurorReturnDone=true;
+
+    const jurors=Array.isArray(g.juryHouse)?g.juryHouse.slice():[];
 
     // Twist announcement now handled by showTwistAnnouncementIfNeeded modal
     // Old cards removed: Stop the presses!, America's Vote, How it works
