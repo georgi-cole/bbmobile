@@ -159,6 +159,16 @@
       me.age = p.age || me.age;
       me.location = p.location || me.location;
       me.occupation = p.occupation || me.occupation;
+      // Update meta object
+      if(!me.meta) me.meta = {};
+      if(p.age) me.meta.age = parseInt(p.age, 10) || me.meta.age;
+      if(p.location) me.meta.location = p.location;
+      if(p.occupation) me.meta.occupation = p.occupation;
+      // Update bio object (used by profile cards)
+      if(!me.bio) me.bio = {};
+      if(p.age) me.bio.age = p.age;
+      if(p.location) me.bio.location = p.location;
+      if(p.occupation) me.bio.occupation = p.occupation;
       g.updateHud?.();
     }catch{}
   }
