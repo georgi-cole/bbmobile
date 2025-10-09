@@ -1,6 +1,7 @@
 // MODULE: progression-bridge.js
 // Bridge between the progression system (TypeScript modules) and the main game.
 // Exposes a simple API on window.Progression for logging events and showing UI.
+// Feature-flagged: all operations are safe no-ops when disabled.
 
 (function(global) {
   'use strict';
@@ -12,9 +13,43 @@
   let isInitialized = false;
 
   /**
+   * Check if progression is enabled via feature flag
+   * Priority: window.progression.enabled > localStorage > g.cfg.progressionEnabled > false (default)
+   */
+  function isEnabled() {
+    // Check window.progression first (allows runtime override)
+    if (global.progression && typeof global.progression.enabled === 'boolean') {
+      return global.progression.enabled;
+    }
+    
+    // Check localStorage
+    try {
+      const stored = localStorage.getItem('progression.enabled');
+      if (stored !== null) {
+        return stored === 'true';
+      }
+    } catch (e) {
+      // localStorage not available
+    }
+    
+    // Check game config
+    if (global.g && global.g.cfg && typeof global.g.cfg.progressionEnabled === 'boolean') {
+      return global.g.cfg.progressionEnabled;
+    }
+    
+    // Default: disabled
+    return false;
+  }
+
+  /**
    * Initialize the progression system
    */
   async function initializeProgression() {
+    // Check feature flag first
+    if (!isEnabled()) {
+      return false;
+    }
+    
     if (isInitialized) return true;
     
     try {
@@ -30,6 +65,7 @@
       await progressionCore.initialize();
       
       isInitialized = true;
+      console.log('[Progression Bridge] Initialized successfully');
       return true;
     } catch (error) {
       console.warn('[Progression Bridge] Failed to initialize:', error);
@@ -47,10 +83,14 @@
    * @param {object} options.payload - Additional event data
    */
   async function log(eventType, options = {}) {
+    // Safe no-op when disabled
+    if (!isEnabled()) {
+      return null;
+    }
+    
     if (!isInitialized) {
       const success = await initializeProgression();
       if (!success) {
-        console.warn('[Progression Bridge] Cannot log event - initialization failed');
         return null;
       }
     }
@@ -88,6 +128,11 @@
    * @returns {Promise<object>} Player state
    */
   async function recompute(seasonId, playerId) {
+    // Safe no-op when disabled
+    if (!isEnabled()) {
+      return { totalXP: 0, level: 1, nextLevelXP: 100, currentLevelXP: 0, progressPercent: 0, eventsCount: 0 };
+    }
+    
     if (!isInitialized) {
       await initializeProgression();
     }
@@ -107,6 +152,12 @@
    * @param {string} playerId - Player ID
    */
   async function showModal(seasonId, playerId) {
+    // Safe no-op when disabled
+    if (!isEnabled()) {
+      console.log('[Progression Bridge] Modal disabled (feature flag off)');
+      return;
+    }
+    
     if (!isInitialized) {
       const success = await initializeProgression();
       if (!success) return;
@@ -139,6 +190,11 @@
    * @returns {Promise<Array>} Top players by XP
    */
   async function getLeaderboard(seasonId) {
+    // Safe no-op when disabled
+    if (!isEnabled()) {
+      return [];
+    }
+    
     if (!isInitialized) {
       await initializeProgression();
     }
@@ -185,6 +241,18 @@
    * Get current player state
    */
   async function getCurrentState() {
+    // Safe no-op when disabled
+    if (!isEnabled()) {
+      return {
+        totalXP: 0,
+        level: 1,
+        nextLevelXP: 100,
+        currentLevelXP: 0,
+        progressPercent: 0,
+        eventsCount: 0
+      };
+    }
+    
     if (!isInitialized) {
       await initializeProgression();
     }
@@ -210,6 +278,18 @@
    * @returns {Promise<object>} Player progression state
    */
   async function getPlayerState(playerId) {
+    // Safe no-op when disabled
+    if (!isEnabled()) {
+      return {
+        totalXP: 0,
+        level: 1,
+        nextLevelXP: 100,
+        currentLevelXP: 0,
+        progressPercent: 0,
+        eventsCount: 0
+      };
+    }
+    
     if (!isInitialized) {
       await initializeProgression();
     }
@@ -268,7 +348,8 @@
     getLeaderboard,
     getCurrentState,
     getPlayerState,
-    initialize: initializeProgression
+    initialize: initializeProgression,
+    isEnabled
   };
 
 })(window);
