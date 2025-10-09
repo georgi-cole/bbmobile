@@ -51,7 +51,7 @@
    * Generate unique event ID
    */
   function generateEventId() {
-    return `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `evt_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   /**
