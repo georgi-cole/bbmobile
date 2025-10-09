@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finale Crash Fixes Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #4CAF50;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 0.5rem;
+    }
+    .test-section {
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      border-left: 4px solid #4CAF50;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #64B5F6;
+    }
+    .result {
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .result.pass {
+      background: rgba(76, 175, 80, 0.2);
+      border-left: 3px solid #4CAF50;
+    }
+    .result.fail {
+      background: rgba(244, 67, 54, 0.2);
+      border-left: 3px solid #f44336;
+    }
+    .result.warn {
+      background: rgba(255, 152, 0, 0.2);
+      border-left: 3px solid #FF9800;
+    }
+    .icon {
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    .icon.pass { color: #4CAF50; }
+    .icon.fail { color: #f44336; }
+    .icon.warn { color: #FF9800; }
+    .summary {
+      background: #333;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .summary h3 {
+      margin: 0 0 0.5rem 0;
+    }
+    .code {
+      background: #1a1a1a;
+      padding: 0.75rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      margin: 0.5rem 0;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+    }
+    button:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Finale Crash Fixes - Validation Tests</h1>
+  
+  <div class="summary" id="summary">
+    <h3>Test Summary</h3>
+    <p>Click "Run All Tests" to validate the fixes</p>
+  </div>
+
+  <div class="test-section">
+    <h2>Fix A: jury.js - Replace global.ProgressionEvents with g.ProgressionEvents</h2>
+    <p>Tests that all references to <code>global.ProgressionEvents</code> have been replaced with <code>g.ProgressionEvents</code> to prevent ReferenceError.</p>
+    <button onclick="testJuryFix()">Run Jury Tests</button>
+    <div id="jury-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Fix B: competitions.js - Harden finishF3P1() losers derivation</h2>
+    <p>Tests that the losers array is safely derived with guards against array bounds errors.</p>
+    <button onclick="testF3P1Fix()">Run F3P1 Tests</button>
+    <div id="f3p1-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Fix C: spotlight-texture.svg exists</h2>
+    <p>Tests that the optional spotlight texture file has been created to prevent 404 errors.</p>
+    <button onclick="testSpotlightSvg()">Test SVG File</button>
+    <div id="svg-results"></div>
+  </div>
+
+  <button onclick="runAllTests()" style="background: #2196F3;">Run All Tests</button>
+
+  <script>
+    let testResults = {
+      jury: { total: 0, passed: 0 },
+      f3p1: { total: 0, passed: 0 },
+      svg: { total: 0, passed: 0 }
+    };
+
+    function addResult(containerId, message, status) {
+      const container = document.getElementById(containerId);
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `result ${status}`;
+      resultDiv.innerHTML = `
+        <span class="icon ${status}">${status === 'pass' ? '✓' : status === 'fail' ? '✗' : '⚠'}</span>
+        <span>${message}</span>
+      `;
+      container.appendChild(resultDiv);
+    }
+
+    async function testJuryFix() {
+      const container = document.getElementById('jury-results');
+      container.innerHTML = '';
+      testResults.jury = { total: 0, passed: 0 };
+
+      // Test 1: Check that jury.js file exists and loads
+      testResults.jury.total++;
+      try {
+        const response = await fetch('js/jury.js');
+        const text = await response.text();
+        
+        // Test 2: Check that global.ProgressionEvents is NOT present (except in comments)
+        testResults.jury.total++;
+        const globalMatches = text.match(/global\.ProgressionEvents/g);
+        if (!globalMatches) {
+          testResults.jury.passed += 2;
+          addResult('jury-results', 'jury.js loaded successfully', 'pass');
+          addResult('jury-results', 'No references to global.ProgressionEvents found', 'pass');
+        } else {
+          testResults.jury.passed++;
+          addResult('jury-results', 'jury.js loaded successfully', 'pass');
+          addResult('jury-results', `Found ${globalMatches.length} references to global.ProgressionEvents (should be 0)`, 'fail');
+        }
+
+        // Test 3: Check that g.ProgressionEvents IS present
+        testResults.jury.total++;
+        const gMatches = text.match(/g\.ProgressionEvents/g);
+        if (gMatches && gMatches.length >= 6) { // 6 because each hook has 2 lines (if and call)
+          testResults.jury.passed++;
+          addResult('jury-results', `Found ${gMatches.length} references to g.ProgressionEvents (expected at least 6)`, 'pass');
+        } else {
+          addResult('jury-results', `Found ${gMatches ? gMatches.length : 0} references to g.ProgressionEvents (expected at least 6)`, 'fail');
+        }
+
+        // Test 4: Check specific hooks are using g.ProgressionEvents
+        testResults.jury.total += 3;
+        const hasOnPublicFavorite = text.includes('g.ProgressionEvents?.onPublicFavorite');
+        const hasOnJuryVote = text.includes('g.ProgressionEvents?.onJuryVote');
+        const hasOnFinalWinner = text.includes('g.ProgressionEvents?.onFinalWinner');
+
+        if (hasOnPublicFavorite) {
+          testResults.jury.passed++;
+          addResult('jury-results', 'onPublicFavorite hook uses g.ProgressionEvents', 'pass');
+        } else {
+          addResult('jury-results', 'onPublicFavorite hook does not use g.ProgressionEvents', 'fail');
+        }
+
+        if (hasOnJuryVote) {
+          testResults.jury.passed++;
+          addResult('jury-results', 'onJuryVote hook uses g.ProgressionEvents', 'pass');
+        } else {
+          addResult('jury-results', 'onJuryVote hook does not use g.ProgressionEvents', 'fail');
+        }
+
+        if (hasOnFinalWinner) {
+          testResults.jury.passed++;
+          addResult('jury-results', 'onFinalWinner hook uses g.ProgressionEvents', 'pass');
+        } else {
+          addResult('jury-results', 'onFinalWinner hook does not use g.ProgressionEvents', 'fail');
+        }
+
+      } catch (error) {
+        addResult('jury-results', `Error loading jury.js: ${error.message}`, 'fail');
+      }
+
+      updateSummary();
+    }
+
+    async function testF3P1Fix() {
+      const container = document.getElementById('f3p1-results');
+      container.innerHTML = '';
+      testResults.f3p1 = { total: 0, passed: 0 };
+
+      try {
+        const response = await fetch('js/competitions.js');
+        const text = await response.text();
+        
+        // Test 1: Old unsafe code is NOT present
+        testResults.f3p1.total++;
+        const oldCode = text.includes('const losers=[arr[1][0], arr[2][0]];');
+        if (!oldCode) {
+          testResults.f3p1.passed++;
+          addResult('f3p1-results', 'Old unsafe losers derivation removed', 'pass');
+        } else {
+          addResult('f3p1-results', 'Old unsafe losers derivation still present', 'fail');
+        }
+
+        // Test 2: Guard for empty arr is present
+        testResults.f3p1.total++;
+        const hasArrGuard = text.includes('if(arr.length === 0)');
+        if (hasArrGuard) {
+          testResults.f3p1.passed++;
+          addResult('f3p1-results', 'Guard for empty arr present', 'pass');
+        } else {
+          addResult('f3p1-results', 'Guard for empty arr missing', 'fail');
+        }
+
+        // Test 3: Robust losers derivation is present
+        testResults.f3p1.total++;
+        const hasRobustLosers = text.includes('arr.slice(1, 3).map(e => e && e[0]).filter(Boolean)');
+        if (hasRobustLosers) {
+          testResults.f3p1.passed++;
+          addResult('f3p1-results', 'Robust losers derivation with slice/filter present', 'pass');
+        } else {
+          addResult('f3p1-results', 'Robust losers derivation missing', 'fail');
+        }
+
+        // Test 4: Fallback logic for fewer than 2 losers
+        testResults.f3p1.total++;
+        const hasFallback = text.includes('if(losers.length < 2)') && 
+                            text.includes('ids.filter(id => id !== winner');
+        if (hasFallback) {
+          testResults.f3p1.passed++;
+          addResult('f3p1-results', 'Fallback logic for insufficient losers present', 'pass');
+        } else {
+          addResult('f3p1-results', 'Fallback logic for insufficient losers missing', 'fail');
+        }
+
+        // Test 5: Warning messages are present
+        testResults.f3p1.total++;
+        const hasWarnings = text.includes('console.warn') && 
+                           text.includes('[F3P1]');
+        if (hasWarnings) {
+          testResults.f3p1.passed++;
+          addResult('f3p1-results', 'Warning messages for edge cases present', 'pass');
+        } else {
+          addResult('f3p1-results', 'Warning messages for edge cases missing', 'fail');
+        }
+
+        // Test 6: Extract and display the finishF3P1 function
+        const funcMatch = text.match(/function finishF3P1\(\)\{[\s\S]*?\n  \}/);
+        if (funcMatch) {
+          const codeDiv = document.createElement('div');
+          codeDiv.className = 'code';
+          codeDiv.innerHTML = '<strong>finishF3P1() function (first 30 lines):</strong><br>' + 
+                             funcMatch[0].split('\n').slice(0, 30).join('\n').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          container.appendChild(codeDiv);
+        }
+
+      } catch (error) {
+        addResult('f3p1-results', `Error loading competitions.js: ${error.message}`, 'fail');
+      }
+
+      updateSummary();
+    }
+
+    async function testSpotlightSvg() {
+      const container = document.getElementById('svg-results');
+      container.innerHTML = '';
+      testResults.svg = { total: 1, passed: 0 };
+
+      try {
+        const response = await fetch('spotlight-texture.svg');
+        if (response.ok) {
+          const text = await response.text();
+          testResults.svg.passed++;
+          addResult('svg-results', 'spotlight-texture.svg exists and loads successfully', 'pass');
+          
+          // Optional: validate it's actual SVG
+          if (text.includes('<svg') && text.includes('radialGradient')) {
+            addResult('svg-results', 'SVG contains radialGradient (valid content)', 'pass');
+          } else {
+            addResult('svg-results', 'SVG loaded but may not have expected content', 'warn');
+          }
+        } else {
+          addResult('svg-results', `spotlight-texture.svg returned ${response.status}`, 'fail');
+        }
+      } catch (error) {
+        addResult('svg-results', `Error loading spotlight-texture.svg: ${error.message}`, 'fail');
+      }
+
+      updateSummary();
+    }
+
+    async function runAllTests() {
+      await testJuryFix();
+      await testF3P1Fix();
+      await testSpotlightSvg();
+    }
+
+    function updateSummary() {
+      const total = testResults.jury.total + testResults.f3p1.total + testResults.svg.total;
+      const passed = testResults.jury.passed + testResults.f3p1.passed + testResults.svg.passed;
+      
+      const summaryDiv = document.getElementById('summary');
+      const percentage = total > 0 ? Math.round((passed / total) * 100) : 0;
+      const status = percentage === 100 ? '✓ All tests passed!' : 
+                     percentage >= 75 ? '⚠ Most tests passed' : 
+                     '✗ Some tests failed';
+      
+      summaryDiv.innerHTML = `
+        <h3>Test Summary</h3>
+        <p style="font-size: 1.5rem; margin: 0.5rem 0;">
+          ${passed} / ${total} tests passed (${percentage}%)
+        </p>
+        <p style="font-size: 1.2rem; margin: 0.5rem 0; color: ${percentage === 100 ? '#4CAF50' : percentage >= 75 ? '#FF9800' : '#f44336'}">
+          ${status}
+        </p>
+        <p style="font-size: 0.9rem; color: #999;">
+          Jury: ${testResults.jury.passed}/${testResults.jury.total} | 
+          F3P1: ${testResults.f3p1.passed}/${testResults.f3p1.total} | 
+          SVG: ${testResults.svg.passed}/${testResults.svg.total}
+        </p>
+      `;
+    }
+
+    // Run tests on page load
+    window.addEventListener('DOMContentLoaded', runAllTests);
+  </script>
+</body>
+</html>
