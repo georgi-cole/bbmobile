@@ -1576,8 +1576,8 @@
     
     // Show Top 5 Leaderboard
     try{
-      if(typeof global.showTop5Leaderboard === 'function'){
-        await global.showTop5Leaderboard(7000); // Show for 7 seconds
+      if(typeof g.showTop5Leaderboard === 'function'){
+        await g.showTop5Leaderboard(7000); // Show for 7 seconds
         console.info('[jury] Top 5 leaderboard displayed');
       }
     }catch(e){

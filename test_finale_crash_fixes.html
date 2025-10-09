@@ -119,13 +119,21 @@
     <div id="svg-results"></div>
   </div>
 
+  <div class="test-section">
+    <h2>Fix D: Global shim for resilience</h2>
+    <p>Tests that the <code>window.global = window</code> shim is present early in index.html to prevent crashes from stray global references.</p>
+    <button onclick="testGlobalShim()">Test Global Shim</button>
+    <div id="shim-results"></div>
+  </div>
+
   <button onclick="runAllTests()" style="background: #2196F3;">Run All Tests</button>
 
   <script>
     let testResults = {
       jury: { total: 0, passed: 0 },
       f3p1: { total: 0, passed: 0 },
-      svg: { total: 0, passed: 0 }
+      svg: { total: 0, passed: 0 },
+      shim: { total: 0, passed: 0 }
     };
 
     function addResult(containerId, message, status) {
@@ -198,6 +206,20 @@
           addResult('jury-results', 'onFinalWinner hook uses g.ProgressionEvents', 'pass');
         } else {
           addResult('jury-results', 'onFinalWinner hook does not use g.ProgressionEvents', 'fail');
+        }
+
+        // Test 5: Check that g.showTop5Leaderboard is used (not global.showTop5Leaderboard)
+        testResults.jury.total++;
+        const hasGlobalShowTop5 = text.includes('global.showTop5Leaderboard');
+        const hasGShowTop5 = text.includes('g.showTop5Leaderboard');
+        
+        if (!hasGlobalShowTop5 && hasGShowTop5) {
+          testResults.jury.passed++;
+          addResult('jury-results', 'showTop5Leaderboard uses g (not global)', 'pass');
+        } else if (hasGlobalShowTop5) {
+          addResult('jury-results', 'showTop5Leaderboard still uses global (should use g)', 'fail');
+        } else if (!hasGShowTop5) {
+          addResult('jury-results', 'showTop5Leaderboard reference not found', 'warn');
         }
 
       } catch (error) {
@@ -313,15 +335,48 @@
       updateSummary();
     }
 
+    async function testGlobalShim() {
+      const container = document.getElementById('shim-results');
+      container.innerHTML = '';
+      testResults.shim = { total: 1, passed: 0 };
+
+      try {
+        const response = await fetch('index.html');
+        if (response.ok) {
+          const text = await response.text();
+          
+          // Check for global shim presence
+          const hasGlobalShim = text.includes('window.global = window');
+          const isBeforeStateJs = text.indexOf('window.global = window') < text.indexOf('js/state.js');
+          
+          if (hasGlobalShim && isBeforeStateJs) {
+            testResults.shim.passed++;
+            addResult('shim-results', 'Global shim (window.global = window) present before other scripts', 'pass');
+          } else if (hasGlobalShim && !isBeforeStateJs) {
+            addResult('shim-results', 'Global shim present but not early enough (should be before js/state.js)', 'warn');
+          } else {
+            addResult('shim-results', 'Global shim (window.global = window) missing', 'fail');
+          }
+        } else {
+          addResult('shim-results', `index.html returned ${response.status}`, 'fail');
+        }
+      } catch (error) {
+        addResult('shim-results', `Error loading index.html: ${error.message}`, 'fail');
+      }
+
+      updateSummary();
+    }
+
     async function runAllTests() {
       await testJuryFix();
       await testF3P1Fix();
       await testSpotlightSvg();
+      await testGlobalShim();
     }
 
     function updateSummary() {
-      const total = testResults.jury.total + testResults.f3p1.total + testResults.svg.total;
-      const passed = testResults.jury.passed + testResults.f3p1.passed + testResults.svg.passed;
+      const total = testResults.jury.total + testResults.f3p1.total + testResults.svg.total + (testResults.shim?.total || 0);
+      const passed = testResults.jury.passed + testResults.f3p1.passed + testResults.svg.passed + (testResults.shim?.passed || 0);
       
       const summaryDiv = document.getElementById('summary');
       const percentage = total > 0 ? Math.round((passed / total) * 100) : 0;
@@ -340,7 +395,8 @@
         <p style="font-size: 0.9rem; color: #999;">
           Jury: ${testResults.jury.passed}/${testResults.jury.total} | 
           F3P1: ${testResults.f3p1.passed}/${testResults.f3p1.total} | 
-          SVG: ${testResults.svg.passed}/${testResults.svg.total}
+          SVG: ${testResults.svg.passed}/${testResults.svg.total} |
+          Shim: ${testResults.shim?.passed || 0}/${testResults.shim?.total || 0}
         </p>
       `;
     }
