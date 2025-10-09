@@ -442,6 +442,12 @@
     const hoh=global.getP(global.game.hohId);
     global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
     try{ await global.cardQueueWaitIdle?.(); }catch{}
+    
+    // Hook: Log XP for tiebreaker
+    if(global.ProgressionEvents?.onTiebreakerWin){
+      global.ProgressionEvents.onTiebreakerWin(hoh.id);
+    }
+    
     if(hoh?.human){
       const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict');
       if(pick===a) ca++; else cb++;
@@ -520,6 +526,28 @@
       try{ await global.cardQueueWaitIdle?.(); }catch{}
       global.addLog?.(`Evicted: ${evName} (${finalA}–${finalB}).`,'danger');
       g.eviction.revealed=true; g.eviction.revealing=false; g.eviction.evicted=evId;
+      
+      // Hook: Log XP for eviction events
+      if(global.ProgressionEvents){
+        // Log votes against for evicted player
+        const evictedVotes = Math.max(finalA, finalB);
+        if(global.ProgressionEvents.onEvictionVotes) global.ProgressionEvents.onEvictionVotes(evId, evictedVotes);
+        
+        // Log survivor XP for the other nominee
+        const survivorId = (evId === a) ? b : a;
+        if(global.ProgressionEvents.onSurviveEviction) global.ProgressionEvents.onSurviveEviction(survivorId);
+        
+        // Log correct votes for majority voters
+        const majorityTarget = evId;
+        if(global.ProgressionEvents.onCorrectVote){
+          g.eviction.votes.forEach(v => {
+            if(v.evict === majorityTarget){
+              global.ProgressionEvents.onCorrectVote(v.voter);
+            }
+          });
+        }
+      }
+      
       setTimeout(()=>finalizeEviction(),220);
     } else {
       let counts=preAorCounts;

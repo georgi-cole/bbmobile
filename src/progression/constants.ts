@@ -101,6 +101,66 @@ export const DEFAULT_RULES: XPRule[] = [
     name: 'Winner',
     baseXP: 500,
     description: 'Won the game'
+  },
+  {
+    id: 'SURVIVE_EVICTION',
+    name: 'Survived Eviction',
+    baseXP: 100,
+    description: 'Survived eviction vote'
+  },
+  {
+    id: 'USED_VETO_ON_SELF',
+    name: 'Used Veto on Self',
+    baseXP: 75,
+    description: 'Used Power of Veto to save yourself'
+  },
+  {
+    id: 'USED_VETO_ON_OTHER',
+    name: 'Used Veto on Other',
+    baseXP: 50,
+    description: 'Used Power of Veto to save someone else'
+  },
+  {
+    id: 'REMOVED_FROM_BLOCK',
+    name: 'Removed from Block',
+    baseXP: 60,
+    description: 'Saved from nomination by veto'
+  },
+  {
+    id: 'RECEIVED_VOTES_AGAINST',
+    name: 'Received Votes Against',
+    baseXP: -10,
+    description: 'Received eviction votes'
+  },
+  {
+    id: 'CAST_CORRECT_VOTE',
+    name: 'Cast Correct Vote',
+    baseXP: 15,
+    description: 'Voted with the majority'
+  },
+  {
+    id: 'TIEBREAKER_WIN',
+    name: 'Tiebreaker Win',
+    baseXP: 75,
+    description: 'Broke a tie as HOH'
+  },
+  {
+    id: 'WON_JURY_VOTE',
+    name: 'Won Jury Vote',
+    baseXP: 50,
+    description: 'Received a jury vote in finale'
+  },
+  {
+    id: 'WON_FINAL',
+    name: 'Won Final',
+    baseXP: 500,
+    description: 'Won the game in finale'
+  },
+  {
+    id: 'WON_PUBLIC_FAVORITE',
+    name: "Won Public's Favorite",
+    baseXP: 100,
+    description: "Won public's favorite player award"
   }
 ];
 

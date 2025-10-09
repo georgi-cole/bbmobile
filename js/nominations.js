@@ -169,6 +169,9 @@
     // Sync player badge states after nominations are locked
     if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
 
+    // Hook: Log XP for nominations
+    if(global.ProgressionEvents?.onNominations) global.ProgressionEvents.onNominations(g.nominees);
+
     (async function ceremony(){
       const hoh=global.getP(g.hohId);
       g.__suppressNomBadges = true; global.updateHud?.();

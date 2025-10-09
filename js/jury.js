@@ -1148,6 +1148,11 @@
     
     console.info('[publicFav] winner finalRaw=' + winnerPctRaw + ' display=' + winnerPctDisplay);
     
+    // Hook: Log XP for public's favorite
+    if(global.ProgressionEvents?.onPublicFavorite){
+      global.ProgressionEvents.onPublicFavorite(fanFavPlayer.id);
+    }
+    
     // Create winner-only card (no runners-up list per spec)
     const winnerCard = document.createElement('div');
     winnerCard.className = 'pfWinnerCard';
@@ -1392,6 +1397,11 @@
       
       votes.set(pick, (votes.get(pick)||0)+1);
       
+      // Hook: Log XP for jury vote
+      if(global.ProgressionEvents?.onJuryVote){
+        global.ProgressionEvents.onJuryVote(pick);
+      }
+      
       // Generate dynamic reason based on ballot logic
       const dynamicReason = generateVoteReason(jid, pick, A, B, usedReasons);
       
@@ -1518,6 +1528,11 @@
     
     if(!winner) return;
     
+    // Hook: Log XP for final winner
+    if(global.ProgressionEvents?.onFinalWinner){
+      global.ProgressionEvents.onFinalWinner(winner);
+    }
+    
     // Show winner
     await sleep(1000);
     try{ await g.cardQueueWaitIdle?.(); }catch{}
@@ -1557,6 +1572,17 @@
       await runPublicFavouritePostWinner(winner);
     }catch(e){
       console.warn('[publicFav] error:', e);
+    }
+    
+    // Show Top 5 Leaderboard
+    try{
+      if(typeof global.showTop5Leaderboard === 'function'){
+        await global.showTop5Leaderboard(7000); // Show for 7 seconds
+        console.info('[jury] Top 5 leaderboard displayed');
+        await sleep(7000);
+      }
+    }catch(e){
+      console.warn('[jury] leaderboard error:', e);
     }
     
     // Show classic cinematic overlay (restored)
