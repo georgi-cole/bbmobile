@@ -334,6 +334,12 @@
       W.wins.veto = (W.wins.veto||0)+1;
     }
 
+    // Hook: Log XP for POV win
+    if(global.ProgressionEvents?.onPOVWin){
+      var participants = eligible || [];
+      global.ProgressionEvents.onPOVWin(global.game.vetoHolder, participants);
+    }
+
     try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
 
     // Build top-3 reveal sequence
@@ -854,6 +860,16 @@
       var savedId = g.vetoSavedId;
       g.nominees = (g.nominees||[]).filter(function(id){ return id!==savedId; });
       if(g.nominees.indexOf(replacementId)===-1) g.nominees.push(replacementId);
+
+      // Hook: Log XP for veto usage
+      if(global.ProgressionEvents){
+        var vetoWinner = g.vetoHolder;
+        if(savedId === vetoWinner){
+          if(global.ProgressionEvents.onVetoUsedOnSelf) global.ProgressionEvents.onVetoUsedOnSelf(vetoWinner);
+        } else {
+          if(global.ProgressionEvents.onVetoUsedOnOther) global.ProgressionEvents.onVetoUsedOnOther(vetoWinner, savedId);
+        }
+      }
 
       // Update nomination states after veto is applied
       for(var i=0;i<g.players.length;i++){ 

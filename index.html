@@ -15,6 +15,11 @@
 <link rel="stylesheet" href="overrides-fixes.css?v=fixes-5">
 </head>
 <body>
+<!-- XP/Leaderboard Badge Button (top-right) -->
+<button id="xpLeaderboardBadge" class="xp-leaderboard-badge" title="View Score & Level" aria-label="Open leaderboard">
+  📊
+</button>
+
 <!-- Top Controls -->
 <div class="topbar">
   <button class="btn" id="btnOpenSettings">⚙️ Settings</button>
@@ -358,6 +363,11 @@
 
 <!-- Debug tools for competition fairness testing -->
 <script defer src="js/debug-tools.js"></script>
+
+<!-- Progression System Integration -->
+<script type="module" src="js/progression-bridge.js"></script>
+<script defer src="js/progression-events.js"></script>
+<script defer src="js/progression-ui.js"></script>
 
 <!-- Single Skip + roster placement hover (no external deps) -->
 <script>

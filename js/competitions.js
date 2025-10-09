@@ -722,6 +722,9 @@
 
     global.addLog(`HOH: <span class="accent">${global.safeName(winner)}</span>.`);
 
+    // Hook: Log XP for HOH win
+    if(global.ProgressionEvents?.onHOHWin) global.ProgressionEvents.onHOHWin(winner, elig);
+
     await waitCardsIdle();
 
     safeShowCard('Strategize', ['It’s time to strategize before the Nomination Ceremony.'], 'social', 4200, true);

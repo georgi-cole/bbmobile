@@ -8,7 +8,7 @@ import * as db from './db.js';
  * Generate a unique ID
  */
 function generateId() {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 /**
  * Initialize the progression system
@@ -104,7 +104,9 @@ export async function updateRuleSet(rules) {
  */
 export async function getCurrentRuleSet() {
     const ruleSets = await db.getAllRuleSets();
-    return ruleSets[ruleSets.length - 1] || null;
+    if (!ruleSets || ruleSets.length === 0)
+        return null;
+    return ruleSets.reduce((max, curr) => (curr.version > max.version ? curr : max), ruleSets[0]);
 }
 /**
  * Reset all data
@@ -122,4 +124,4 @@ export function close() {
 // Export types and constants for convenience
 export * from './types.js';
 export * from './constants.js';
-export { reduceEvents, computeBreakdown } from './reducer.js';
+// Internal reducer functions are not exported to preserve encapsulation.

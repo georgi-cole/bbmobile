@@ -67,14 +67,31 @@ export function reduceEvents(events, rules, options = {}) {
  * Compute level from total XP
  */
 function computeLevel(totalXP, thresholds) {
+    if (!Array.isArray(thresholds) || thresholds.length === 0) {
+        throw new Error("Level thresholds must be a non-empty array.");
+    }
     let level = 1;
     let currentLevelXP = 0;
-    let nextLevelXP = thresholds[1]?.xpRequired || 100;
+    let nextLevelXP;
+    if (thresholds[1] && typeof thresholds[1].xpRequired === 'number') {
+        nextLevelXP = thresholds[1].xpRequired;
+    }
+    else if (thresholds[0] && typeof thresholds[0].xpRequired === 'number') {
+        nextLevelXP = thresholds[0].xpRequired + 1000;
+    }
+    else {
+        throw new Error("Invalid level thresholds: missing xpRequired for next level.");
+    }
     for (let i = 0; i < thresholds.length; i++) {
         if (totalXP >= thresholds[i].xpRequired) {
             level = thresholds[i].level;
             currentLevelXP = thresholds[i].xpRequired;
-            nextLevelXP = thresholds[i + 1]?.xpRequired || currentLevelXP + 1000;
+            if (thresholds[i + 1] && typeof thresholds[i + 1].xpRequired === 'number') {
+                nextLevelXP = thresholds[i + 1].xpRequired;
+            }
+            else {
+                nextLevelXP = currentLevelXP + 1000;
+            }
         }
         else {
             break;
