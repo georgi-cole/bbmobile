@@ -1579,7 +1579,6 @@
       if(typeof global.showTop5Leaderboard === 'function'){
         await global.showTop5Leaderboard(7000); // Show for 7 seconds
         console.info('[jury] Top 5 leaderboard displayed');
-        await sleep(7000);
       }
     }catch(e){
       console.warn('[jury] leaderboard error:', e);
