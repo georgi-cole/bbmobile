@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Credits Button and Check Card Integration</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: #fff;
+      min-height: 100vh;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 2rem;
+      text-align: center;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      font-size: 1.3rem;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+      padding-bottom: 10px;
+    }
+    .test-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+    button.primary {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    button.success {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: monospace;
+    }
+    .status-item {
+      padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-ok::before {
+      content: '✓';
+      color: #00ff88;
+      font-weight: bold;
+    }
+    .status-fail::before {
+      content: '✗';
+      color: #ff4444;
+      font-weight: bold;
+    }
+    .status-info::before {
+      content: 'ℹ';
+      color: #4dabf7;
+      font-weight: bold;
+    }
+    #tv {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      background: radial-gradient(ellipse at center, #2a5298, #1e3c72);
+      border-radius: 12px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎬 Credits Button & Check Card Test</h1>
+    
+    <div class="test-section">
+      <h2>1. End Credits Module Test</h2>
+      <div class="status" id="credits-status">
+        <div class="status-item status-info">Checking module load status...</div>
+      </div>
+      <div class="test-buttons">
+        <button onclick="testCreditsModule()">Check Credits Module</button>
+        <button class="primary" onclick="testStartCredits()">Start Credits Sequence</button>
+        <button onclick="stopCredits()">Stop Credits</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Check Card Integration Test</h2>
+      <div class="status" id="checkcard-status">
+        <div class="status-item status-info">Checking FinalFaceoff module...</div>
+      </div>
+      <div class="test-buttons">
+        <button onclick="testCheckCardModule()">Check FinalFaceoff Module</button>
+        <button class="primary" onclick="testCheckCard()">Show $1M Check Card</button>
+        <button class="success" onclick="testFullWinnerSequence()">Full Winner Sequence (Crown + Check)</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Finale Cinematic Test</h2>
+      <div class="status" id="finale-status">
+        <div class="status-item status-info">Checking finale module...</div>
+      </div>
+      <div class="test-buttons">
+        <button onclick="testFinaleModule()">Check Finale Module</button>
+        <button class="primary" onclick="testFinaleCinematic()">Show Finale Cinematic</button>
+      </div>
+    </div>
+
+    <div id="tv"></div>
+  </div>
+
+  <!-- Load required scripts -->
+  <script src="js/end-credits.js"></script>
+  <script src="js/jury-viz.js"></script>
+  <script src="js/finale.js"></script>
+
+  <script>
+    // Mock game data
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/avataaars/svg?seed=Alice' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/avataaars/svg?seed=Bob' },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/avataaars/svg?seed=Charlie' }
+      ]
+    };
+
+    window.safeName = function(id) {
+      const player = window.game.players.find(p => p.id === id);
+      return player ? player.name : 'Winner';
+    };
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    // Test functions
+    function updateStatus(containerId, items) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = items.map(item => 
+        `<div class="status-item status-${item.type}">${item.text}</div>`
+      ).join('');
+    }
+
+    function testCreditsModule() {
+      const status = [];
+      
+      if (typeof window.startEndCreditsMontageSplit === 'function') {
+        status.push({ type: 'ok', text: 'startEndCreditsMontageSplit: Available' });
+      } else {
+        status.push({ type: 'fail', text: 'startEndCreditsMontageSplit: Not found' });
+      }
+      
+      if (typeof window.startEndCreditsSequence === 'function') {
+        status.push({ type: 'ok', text: 'startEndCreditsSequence: Available' });
+      } else {
+        status.push({ type: 'fail', text: 'startEndCreditsSequence: Not found' });
+      }
+      
+      if (typeof window.stopEndCreditsSequence === 'function') {
+        status.push({ type: 'ok', text: 'stopEndCreditsSequence: Available' });
+      } else {
+        status.push({ type: 'fail', text: 'stopEndCreditsSequence: Not found' });
+      }
+      
+      if (typeof window.startEndCreditsSplit === 'function') {
+        status.push({ type: 'ok', text: 'startEndCreditsSplit (compat): Available' });
+      } else {
+        status.push({ type: 'info', text: 'startEndCreditsSplit (compat): Not found' });
+      }
+      
+      updateStatus('credits-status', status);
+    }
+
+    function testStartCredits() {
+      console.log('[test] Starting credits sequence...');
+      if (typeof window.startEndCreditsSequence === 'function') {
+        try {
+          window.startEndCreditsSequence();
+          updateStatus('credits-status', [
+            { type: 'ok', text: 'Credits sequence started successfully' },
+            { type: 'info', text: 'Press ESC or click Skip to close' }
+          ]);
+        } catch(e) {
+          console.error('[test] Credits error:', e);
+          updateStatus('credits-status', [
+            { type: 'fail', text: 'Error starting credits: ' + e.message }
+          ]);
+        }
+      } else {
+        updateStatus('credits-status', [
+          { type: 'fail', text: 'startEndCreditsSequence function not available' }
+        ]);
+      }
+    }
+
+    function stopCredits() {
+      if (typeof window.stopEndCreditsSequence === 'function') {
+        window.stopEndCreditsSequence();
+        updateStatus('credits-status', [
+          { type: 'ok', text: 'Credits stopped' }
+        ]);
+      }
+    }
+
+    function testCheckCardModule() {
+      const status = [];
+      
+      if (typeof window.FinalFaceoff === 'object') {
+        status.push({ type: 'ok', text: 'FinalFaceoff module: Available' });
+        
+        const methods = ['mount', 'showVoteCard', 'setCounts', 'onVote', 'showFinalTally', 
+                        'showWinnerMessage', 'showCrown', 'showCheckCard', 'destroy'];
+        
+        methods.forEach(method => {
+          if (typeof window.FinalFaceoff[method] === 'function') {
+            status.push({ type: 'ok', text: `  ${method}: Available` });
+          } else {
+            status.push({ type: 'fail', text: `  ${method}: Not found` });
+          }
+        });
+        
+        // Check that showMedalOverlay is NOT present (should be removed)
+        if (typeof window.FinalFaceoff.showMedalOverlay === 'undefined') {
+          status.push({ type: 'ok', text: '  showMedalOverlay: Correctly removed ✓' });
+        } else {
+          status.push({ type: 'fail', text: '  showMedalOverlay: Still present (should be removed)' });
+        }
+      } else {
+        status.push({ type: 'fail', text: 'FinalFaceoff module: Not found' });
+      }
+      
+      updateStatus('checkcard-status', status);
+    }
+
+    function testCheckCard() {
+      console.log('[test] Testing check card display...');
+      
+      // First mount the FinalFaceoff UI
+      if (typeof window.FinalFaceoff === 'object' && typeof window.FinalFaceoff.mount === 'function') {
+        try {
+          const tv = document.getElementById('tv');
+          tv.innerHTML = ''; // Clear any existing content
+          
+          // Mount a minimal faceoff UI for testing
+          window.FinalFaceoff.mount({
+            left: { id: 1, name: 'Alice', photo: 'https://api.dicebear.com/6.x/avataaars/svg?seed=Alice' },
+            right: { id: 2, name: 'Bob', photo: 'https://api.dicebear.com/6.x/avataaars/svg?seed=Bob' },
+            majority: 4,
+            container: '#tv'
+          });
+          
+          // Show check card after a brief delay
+          setTimeout(() => {
+            if (typeof window.FinalFaceoff.showCheckCard === 'function') {
+              window.FinalFaceoff.showCheckCard('Alice', 8000);
+              updateStatus('checkcard-status', [
+                { type: 'ok', text: 'Check card displayed for Alice' },
+                { type: 'info', text: 'Check card will auto-remove after 8 seconds' }
+              ]);
+            }
+          }, 100);
+        } catch(e) {
+          console.error('[test] Check card error:', e);
+          updateStatus('checkcard-status', [
+            { type: 'fail', text: 'Error displaying check card: ' + e.message }
+          ]);
+        }
+      } else {
+        updateStatus('checkcard-status', [
+          { type: 'fail', text: 'FinalFaceoff.mount not available' }
+        ]);
+      }
+    }
+
+    function testFullWinnerSequence() {
+      console.log('[test] Testing full winner sequence...');
+      
+      if (typeof window.FinalFaceoff === 'object') {
+        try {
+          const tv = document.getElementById('tv');
+          tv.innerHTML = '';
+          
+          // Mount faceoff UI
+          window.FinalFaceoff.mount({
+            left: { id: 1, name: 'Alice', photo: 'https://api.dicebear.com/6.x/avataaars/svg?seed=Alice' },
+            right: { id: 2, name: 'Bob', photo: 'https://api.dicebear.com/6.x/avataaars/svg?seed=Bob' },
+            majority: 4,
+            container: '#tv'
+          });
+          
+          // Simulate winner sequence
+          setTimeout(() => {
+            // Show crown on left winner
+            window.FinalFaceoff.showCrown('left');
+            updateStatus('checkcard-status', [
+              { type: 'ok', text: 'Crown displayed on Alice' }
+            ]);
+            
+            // Wait 2 seconds, then show check card
+            setTimeout(() => {
+              window.FinalFaceoff.showCheckCard('Alice', 5000);
+              updateStatus('checkcard-status', [
+                { type: 'ok', text: 'Crown displayed on Alice' },
+                { type: 'ok', text: 'Check card displayed - $1,000,000 to Alice' },
+                { type: 'info', text: 'Sequence matches jury winner flow' }
+              ]);
+            }, 2000);
+          }, 100);
+        } catch(e) {
+          console.error('[test] Winner sequence error:', e);
+          updateStatus('checkcard-status', [
+            { type: 'fail', text: 'Error in winner sequence: ' + e.message }
+          ]);
+        }
+      }
+    }
+
+    function testFinaleModule() {
+      const status = [];
+      
+      if (typeof window.showFinaleCinematic === 'function') {
+        status.push({ type: 'ok', text: 'showFinaleCinematic: Available' });
+      } else {
+        status.push({ type: 'fail', text: 'showFinaleCinematic: Not found' });
+      }
+      
+      updateStatus('finale-status', status);
+    }
+
+    function testFinaleCinematic() {
+      console.log('[test] Testing finale cinematic...');
+      
+      if (typeof window.showFinaleCinematic === 'function') {
+        try {
+          window.showFinaleCinematic(1); // Show for Alice
+          updateStatus('finale-status', [
+            { type: 'ok', text: 'Finale cinematic displayed' },
+            { type: 'info', text: 'Click CREDITS button to test credits integration' }
+          ]);
+        } catch(e) {
+          console.error('[test] Finale error:', e);
+          updateStatus('finale-status', [
+            { type: 'fail', text: 'Error showing finale: ' + e.message }
+          ]);
+        }
+      } else {
+        updateStatus('finale-status', [
+          { type: 'fail', text: 'showFinaleCinematic not available' }
+        ]);
+      }
+    }
+
+    // Auto-run module checks on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        testCreditsModule();
+        testCheckCardModule();
+        testFinaleModule();
+      }, 500);
+    });
+  </script>
+</body>
+</html>
