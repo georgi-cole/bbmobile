@@ -969,8 +969,36 @@
     const ids=global.alivePlayers().map(p=>p.id);
     for(const id of ids) if(!g.lastCompScores.has(id)) g.lastCompScores.set(id,5+(global.rng?.()||Math.random())*5);
     const arr=[...g.lastCompScores.entries()].filter(([id])=>ids.includes(id)).sort((a,b)=>b[1]-a[1]);
+    
+    // Guard: ensure arr has at least one entry for winner
+    if(arr.length === 0){
+      console.warn('[F3P1] No scores available, cannot determine winner');
+      return;
+    }
+    
     const winner=arr[0][0];
-    const losers=[arr[1][0], arr[2][0]];
+    
+    // Robust losers derivation with guards
+    const wanted = arr.slice(1, 3).map(e => e && e[0]).filter(Boolean);
+    let losers = wanted.slice();
+    
+    // If fewer than 2 losers, fill from remaining ids (exclude winner and any already chosen)
+    if(losers.length < 2){
+      const remaining = ids.filter(id => id !== winner && !losers.includes(id));
+      while(losers.length < 2 && remaining.length > 0){
+        losers.push(remaining.shift());
+      }
+    }
+    
+    // Final safety check - if still fewer than 2, log warning and continue safely
+    if(losers.length < 2){
+      console.warn(`[F3P1] Only ${losers.length} losers available (expected 2). Continuing with available players.`);
+      if(losers.length === 0){
+        console.warn('[F3P1] No losers available, cannot proceed to Part 2');
+        return;
+      }
+    }
+    
     g.__f3p1Winner=winner;
     global.addLog(`Final 3 Part 1: Winner is ${global.safeName(winner)} (advances to Part 3).`,'ok');
     // Increased duration for readability
