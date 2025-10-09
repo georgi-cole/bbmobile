@@ -21,6 +21,7 @@
    * @param {number} options.minDisplayTime - Minimum display time before dismissible (default: 500)
    * @param {function} options.callback - Function to call after modal dismisses
    * @param {string} options.tone - Color tone: 'neutral', 'warn', 'danger', 'ok', 'special' (default: 'neutral')
+   * @param {string} options.titleFontSize - Custom font size for title (e.g., '1.5rem', '24px')
    * @returns {Promise} Resolves when modal is dismissed
    */
   async function showEventModal(options) {
@@ -32,7 +33,8 @@
       duration = 4000,
       minDisplayTime = 500,
       callback = null,
-      tone = 'neutral'
+      tone = 'neutral',
+      titleFontSize = null
     } = options;
 
     return new Promise((resolve) => {
@@ -45,6 +47,7 @@
         minDisplayTime,
         callback,
         tone,
+        titleFontSize,
         resolve
       });
 
@@ -83,6 +86,7 @@
       minDisplayTime,
       callback,
       tone,
+      titleFontSize,
       resolve
     } = config;
 
@@ -197,8 +201,9 @@
       // Title
       const titleEl = document.createElement('div');
       titleEl.className = 'event-modal-title';
+      const defaultFontSize = '2.5rem';
       titleEl.style.cssText = `
-        font-size: 2.5rem;
+        font-size: ${titleFontSize || defaultFontSize};
         font-weight: 800;
         color: #ffffff;
         margin-bottom: 16px;
