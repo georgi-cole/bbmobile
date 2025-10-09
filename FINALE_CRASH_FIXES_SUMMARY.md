@@ -8,14 +8,17 @@ Successfully fixed three critical issues causing finale crashes in the Big Broth
 ### 1. ReferenceError: global is not defined (jury.js)
 **Root Cause:** The jury.js module uses IIFE pattern `(function(g){ ... })(window)` but was incorrectly referencing `global` instead of the injected parameter `g`.
 
-**Error:** `ReferenceError: global is not defined` during jury reveal phase when attempting to call progression hooks.
+**Error:** `ReferenceError: global is not defined` during jury reveal phase when attempting to call progression hooks and showTop5Leaderboard.
 
-**Solution:** Replaced 3 occurrences of `global.ProgressionEvents` with `g.ProgressionEvents`:
-- `runPublicFavouritePostWinner()` - Line 1152
-- `startJuryRevealPhase()` - Line 1401  
-- `startFinaleRefactorFlow()` - Line 1532
+**Solution:** Replaced 4 occurrences of `global.*` with `g.*`:
+- `runPublicFavouritePostWinner()` - Line 1152: `global.ProgressionEvents` → `g.ProgressionEvents`
+- `startJuryRevealPhase()` - Line 1401: `global.ProgressionEvents` → `g.ProgressionEvents`
+- `startFinaleRefactorFlow()` - Line 1532: `global.ProgressionEvents` → `g.ProgressionEvents`
+- `startFinaleRefactorFlow()` - Line 1579-1580: `global.showTop5Leaderboard` → `g.showTop5Leaderboard` ✨ **NEW FIX**
 
-**Files Changed:** `js/jury.js` (6 lines)
+**Additional Resilience:** Added `window.global = window;` shim in index.html before other scripts to prevent any remaining stray global references from crashing.
+
+**Files Changed:** `js/jury.js` (8 lines), `index.html` (2 lines)
 
 ### 2. TypeError in finishF3P1 - Array Index Out of Bounds (competitions.js)
 **Root Cause:** Unsafe array access `losers=[arr[1][0], arr[2][0]]` throws when `arr.length < 3`.
@@ -70,12 +73,13 @@ if(losers.length < 2){
 ### Automated Test Suite
 Created comprehensive test suite: `test_finale_crash_fixes.html`
 
-**Test Results: 12/12 PASSED (100%)**
-- ✅ Jury tests: 6/6 passed
+**Test Results: 14/14 PASSED (100%)** ✨ **UPDATED**
+- ✅ Jury tests: 7/7 passed (added showTop5Leaderboard test)
   - jury.js loads successfully
-  - No references to `global.ProgressionEvents` 
-  - Correct references to `g.ProgressionEvents`
+  - No references to `global.ProgressionEvents` or `global.showTop5Leaderboard`
+  - Correct references to `g.ProgressionEvents` and `g.showTop5Leaderboard`
   - All 3 hooks verified (onPublicFavorite, onJuryVote, onFinalWinner)
+  - showTop5Leaderboard uses g (not global)
   
 - ✅ F3P1 tests: 5/5 passed
   - Old unsafe code removed
@@ -87,6 +91,11 @@ Created comprehensive test suite: `test_finale_crash_fixes.html`
 - ✅ SVG test: 1/1 passed
   - spotlight-texture.svg exists and loads
   - Contains valid radialGradient content
+
+- ✅ Shim test: 1/1 passed ✨ **NEW**
+  - window.global = window shim present
+  - Positioned before other scripts
+  - Provides defensive resilience
 
 ### Syntax Validation
 ```bash
@@ -103,10 +112,10 @@ Created comprehensive test suite: `test_finale_crash_fixes.html`
 ## Code Quality
 
 ### Changes Summary
-- 4 files changed
-- 397 insertions (+)
-- 7 deletions (-)
-- Net: +390 lines (mostly safety guards and test suite)
+- 4 files changed (jury.js, competitions.js, index.html, test suite)
+- 461 insertions (+) ✨ **UPDATED**
+- 13 deletions (-)
+- Net: +448 lines (mostly safety guards, test suite, and global shim)
 
 ### Non-Breaking Guarantees
 - ✅ No function renames or signature changes
