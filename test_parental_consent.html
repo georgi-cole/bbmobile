@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parental Consent Modal Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #ffdc8b;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .info {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #2d4b6a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #3f6385;
+    }
+    .log {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px;
+      border-left: 3px solid #4a90e2;
+      padding-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Parental Consent Modal Test</h1>
+    
+    <div class="info">
+      <h3>Test Instructions:</h3>
+      <ol>
+        <li>Click "Show Profile Modal" to open the profile modal</li>
+        <li>Enter a name and age under 18</li>
+        <li>Click "Start Game" - parental consent modal should appear</li>
+        <li>Check the checkbox and confirm to proceed</li>
+        <li>Try again with age 18+ - should proceed directly</li>
+      </ol>
+    </div>
+
+    <div class="controls">
+      <button onclick="showProfileModalTest()">Show Profile Modal</button>
+      <button onclick="clearStorage()">Clear localStorage</button>
+      <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="log" id="testLog">
+      <div class="log-entry">Ready to test...</div>
+    </div>
+  </div>
+
+  <script src="js/player-profile-modal.js"></script>
+  <script>
+    function log(message) {
+      const logDiv = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showProfileModalTest() {
+      log('Opening profile modal...');
+      if (typeof window.showProfileModal === 'function') {
+        window.showProfileModal();
+        log('Profile modal opened');
+      } else {
+        log('ERROR: showProfileModal not found');
+      }
+    }
+
+    function clearStorage() {
+      localStorage.removeItem('bb_human_profile');
+      localStorage.removeItem('bb_parental_consent');
+      log('localStorage cleared');
+    }
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '<div class="log-entry">Log cleared...</div>';
+    }
+
+    // Mock functions to prevent errors
+    window.game = window.game || {};
+    window.game.cfg = window.game.cfg || {};
+    window.game.players = window.game.players || [];
+    
+    window.startOpeningSequence = function() {
+      log('✓ startOpeningSequence called - game would start here');
+      log('Profile saved successfully!');
+    };
+
+    // Listen for profile completion
+    window.addEventListener('storage', function(e) {
+      if (e.key === 'bb_human_profile') {
+        log('Profile updated in localStorage');
+      }
+      if (e.key === 'bb_parental_consent') {
+        log('Parental consent stored');
+      }
+    });
+
+    log('Test page initialized');
+  </script>
+</body>
+</html>

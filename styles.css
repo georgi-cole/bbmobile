@@ -3099,6 +3099,89 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   .profileBody{ padding: 6px 2px; }
 }
 
+/* === Parental Consent Modal ================================================ */
+.parentalConsentDim{
+  position:fixed; inset:0; z-index:450;
+  display:none; align-items:center; justify-content:center;
+  background: radial-gradient(120% 120% at 50% 10%, rgba(2,6,10,.82), rgba(0,0,0,.94));
+  backdrop-filter: blur(3px);
+  transition: opacity .15s ease;
+}
+.parentalConsentDim.open{ opacity:1; }
+
+.parentalConsentPanel{
+  width:min(460px, 92vw);
+  display:flex; flex-direction:column; gap:16px;
+  padding:24px 28px 22px;
+  border-radius:16px;
+  background: linear-gradient(145deg, #0d1624, #0a1320);
+  border: 1px solid rgba(255,180,80,.28);
+  box-shadow:
+    0 18px 48px -18px rgba(0,0,0,.85),
+    inset 0 0 42px -18px rgba(255,180,80,.22);
+  transform: translateY(6px) scale(.98);
+  opacity: .98;
+  transition: transform .18s ease, opacity .18s ease;
+}
+.parentalConsentPanel.in{
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.parentalConsentTitle{
+  text-align:center;
+  font-weight:800;
+  font-size:1.2rem;
+  letter-spacing:.6px;
+  color:#ffb84d;
+  text-shadow:0 0 14px rgba(255,184,77,.35);
+  margin-bottom:4px;
+}
+
+.parentalConsentBody{
+  padding: 8px 4px;
+  color: #c4d9ec;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.parentalConsentCheckbox{
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(20,40,60,.35);
+  border: 1px solid rgba(120,180,255,.15);
+  border-radius: 10px;
+  margin: 8px 0;
+}
+
+.parentalConsentCheckbox input[type="checkbox"]{
+  margin-top: 2px;
+  min-width: 20px;
+  min-height: 20px;
+  cursor: pointer;
+}
+
+.parentalConsentCheckbox label{
+  color: #d7e8fa;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  cursor: pointer;
+  user-select: none;
+}
+
+.parentalConsentBtns{
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  padding-top:8px; margin-top:4px;
+}
+
+@media (max-width: 520px){
+  .parentalConsentPanel{ padding:20px 20px 18px; border-radius:14px; }
+  .parentalConsentTitle{ font-size:1.05rem; }
+  .parentalConsentBody{ font-size: 0.9rem; }
+}
+
 /* === TV Viewport-Safe Roster Rendering ====================================== */
 /* Ensure roster renders properly inside .tvViewport without overflow */
 .tvViewport #topRoster,

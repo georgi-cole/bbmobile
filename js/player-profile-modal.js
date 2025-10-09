@@ -8,6 +8,7 @@
   let lastFocusEl = null;
   let modalShown = false;
   let pendingAvatarDataUrl = null;
+  let parentalConsentGiven = false;
 
   function ensureModal() {
     let dim = document.querySelector('.profileDim');
@@ -192,6 +193,169 @@
     return dim;
   }
 
+  function ensureParentalConsentModal() {
+    let dim = document.querySelector('.parentalConsentDim');
+    if (dim) return dim;
+
+    dim = document.createElement('div');
+    dim.className = 'parentalConsentDim';
+    dim.setAttribute('role', 'dialog');
+    dim.setAttribute('aria-modal', 'true');
+    dim.setAttribute('aria-labelledby', 'parentalConsentTitle');
+
+    const panel = document.createElement('div');
+    panel.className = 'parentalConsentPanel';
+
+    const title = document.createElement('div');
+    title.className = 'parentalConsentTitle';
+    title.id = 'parentalConsentTitle';
+    title.textContent = '⚠️ Parental Permission Required';
+
+    const body = document.createElement('div');
+    body.className = 'parentalConsentBody';
+    body.innerHTML = 'You have indicated that you are under 18 years old.<br><br>You must have parental or guardian permission to play this game.';
+
+    const checkboxContainer = document.createElement('div');
+    checkboxContainer.className = 'parentalConsentCheckbox';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = 'parentalConsentCheckbox';
+    checkbox.setAttribute('aria-label', 'I confirm I have parental permission');
+
+    const label = document.createElement('label');
+    label.htmlFor = 'parentalConsentCheckbox';
+    label.textContent = 'I confirm that I have parental or guardian permission to play this game.';
+
+    checkboxContainer.appendChild(checkbox);
+    checkboxContainer.appendChild(label);
+
+    const btns = document.createElement('div');
+    btns.className = 'parentalConsentBtns';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn primary';
+    confirmBtn.id = 'parentalConsentConfirmBtn';
+    confirmBtn.textContent = 'Confirm';
+    confirmBtn.style.cssText = 'min-height: 44px; padding: 10px 28px; font-size: 1rem; font-weight: 700;';
+    confirmBtn.setAttribute('aria-label', 'Confirm parental permission');
+
+    btns.appendChild(confirmBtn);
+
+    panel.appendChild(title);
+    panel.appendChild(body);
+    panel.appendChild(checkboxContainer);
+    panel.appendChild(btns);
+    dim.appendChild(panel);
+    document.body.appendChild(dim);
+
+    // Prevent closing by clicking backdrop
+    dim.addEventListener('mousedown', (e) => {
+      if (e.target === dim) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Focus the confirm button to guide the user
+        try { confirmBtn.focus(); } catch {}
+      }
+    });
+
+    // Block ESC key - user must confirm
+    dim.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      // Basic focus trap
+      if (e.key === 'Tab') {
+        const focusables = panel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled'));
+        if (list.length) {
+          const first = list[0];
+          const last = list[list.length - 1];
+          const active = document.activeElement;
+          if (e.shiftKey && (active === first || active === panel)) {
+            e.preventDefault(); 
+            last.focus();
+          } else if (!e.shiftKey && (active === last)) {
+            e.preventDefault(); 
+            first.focus();
+          }
+        }
+      }
+    });
+
+    return dim;
+  }
+
+  function showParentalConsentModal(onConfirm) {
+    const dim = ensureParentalConsentModal();
+    const panel = dim.querySelector('.parentalConsentPanel');
+    const confirmBtn = dim.querySelector('#parentalConsentConfirmBtn');
+    const checkbox = document.getElementById('parentalConsentCheckbox');
+
+    // Reset checkbox state
+    if (checkbox) checkbox.checked = false;
+
+    dim.style.display = 'flex';
+    requestAnimationFrame(() => {
+      dim.classList.add('open');
+      panel.classList.add('in');
+    });
+
+    // Lock page scroll
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
+    // Focus checkbox
+    setTimeout(() => { 
+      try { checkbox ? checkbox.focus() : confirmBtn.focus(); } catch {} 
+    }, 100);
+
+    confirmBtn.onclick = () => {
+      if (!checkbox || !checkbox.checked) {
+        alert('Please check the box to confirm you have parental permission.');
+        checkbox?.focus();
+        return;
+      }
+
+      // Mark consent as given
+      parentalConsentGiven = true;
+      
+      // Save to localStorage
+      try {
+        localStorage.setItem('bb_parental_consent', 'true');
+      } catch (e) {
+        console.warn('[parental-consent] failed to save consent', e);
+      }
+
+      hideParentalConsentModal(() => {
+        if (onConfirm) onConfirm();
+      });
+    };
+  }
+
+  function hideParentalConsentModal(callback) {
+    const dim = document.querySelector('.parentalConsentDim');
+    if (!dim) {
+      if (callback) callback();
+      return;
+    }
+
+    const panel = dim.querySelector('.parentalConsentPanel');
+    dim.classList.remove('open');
+    if (panel) panel.classList.remove('in');
+
+    // Small delay for CSS transition, then hide
+    setTimeout(() => {
+      dim.style.display = 'none';
+      // Restore scroll
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      if (callback) callback();
+    }, 200);
+  }
+
   function showProfileModal() {
     if (modalShown) {
       console.info('[profile-modal] already shown this session');
@@ -265,6 +429,27 @@
       avatar: pendingAvatarDataUrl || null
     };
 
+    // Check if user is under 18 and needs parental consent
+    const age = parseInt(profile.age, 10);
+    if (!isNaN(age) && age < 18) {
+      // Check if consent already given
+      const consentGiven = parentalConsentGiven || localStorage.getItem('bb_parental_consent') === 'true';
+      
+      if (!consentGiven) {
+        // Show parental consent modal
+        showParentalConsentModal(() => {
+          // After consent is given, continue with profile
+          continueWithProfile(profile);
+        });
+        return;
+      }
+    }
+
+    // If age >= 18 or consent already given, continue normally
+    continueWithProfile(profile);
+  }
+
+  function continueWithProfile(profile) {
     // Save profile
     try {
       localStorage.setItem('bb_human_profile', JSON.stringify(profile));
