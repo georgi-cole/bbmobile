@@ -42,7 +42,9 @@
     useNewMinigames: true,  // When true, use new Phase 1 minigame system with non-repeating pools
     useUnifiedMinigames: true,  // Master switch for unified minigame system (Phases 0-8)
     enableMinigameBridge: true,  // Compatibility bridge for legacy keys (temporary, can disable after migration)
-    enableMinigameTelemetryPanel: false  // Dev debug panel (Ctrl+Shift+D when enabled)
+    enableMinigameTelemetryPanel: false,  // Dev debug panel (Ctrl+Shift+D when enabled)
+    // Progression system (feature-flagged, off by default)
+    progressionEnabled: false  // Enable XP and leveling system
   };
 
   // Load/save helpers
@@ -227,7 +229,8 @@
     return [
       '<div class="settingsGrid">',
         group('Features', [
-          checkbox('enablePublicFav','Public\'s favourite player - this is a new module!')
+          checkbox('enablePublicFav','Public\'s favourite player - this is a new module!'),
+          checkbox('progressionEnabled','Enable XP and leveling system (experimental)')
         ].join('')),
         group('Week twists', [
           number('doubleChance','Double eviction chance (%)',0,100,1),
