@@ -144,21 +144,34 @@
     }
 
     try {
-      // For now, return current player state as single-player
-      // In a multi-player system, this would aggregate across all players
-      const state = await progressionCore.getCurrentState();
+      // Aggregate per-player XP/level for leaderboard
       const game = global.game || {};
       const players = game.players || [];
       
-      // Build leaderboard from current game state
-      const leaderboard = players
-        .filter(p => !p.evicted)
-        .map(p => ({
-          playerId: p.id,
-          playerName: p.name,
-          totalXP: state.totalXP, // Simplified - would track per player
-          level: state.level
-        }))
+      // Fetch each player's progression state
+      const leaderboardStates = await Promise.all(
+        players
+          .filter(p => !p.evicted)
+          .map(async p => {
+            let playerState = { totalXP: 0, level: 1 };
+            if (progressionCore.getPlayerState) {
+              try {
+                playerState = await progressionCore.getPlayerState(p.id);
+              } catch (e) {
+                // fallback to default
+              }
+            }
+            return {
+              playerId: p.id,
+              playerName: p.name,
+              totalXP: playerState.totalXP || 0,
+              level: playerState.level || 1
+            };
+          })
+      );
+
+      // Sort and take top 5
+      const leaderboard = leaderboardStates
         .sort((a, b) => b.totalXP - a.totalXP)
         .slice(0, 5);
 
