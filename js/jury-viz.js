@@ -219,35 +219,6 @@
     }
   }
 
-  /* Fallback medal overlay */
-  .finalFaceoff .fo-medal{
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    z-index: 8;
-    pointer-events: none;
-  }
-  .finalFaceoff .fo-medal .medal-wrap{
-    display: grid;
-    place-items: center;
-    width: 180px;
-    height: 180px;
-    border-radius: 999px;
-    background: radial-gradient(ellipse at center, rgba(255,255,255,0.06), rgba(0,0,0,0.3));
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
-  }
-  .finalFaceoff .fo-medal .medal{
-    font-size: 72px;
-    animation: spin 2s linear infinite;
-    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.45));
-  }
-  @keyframes spin{
-    0%{ transform: rotate(0deg); }
-    100%{ transform: rotate(360deg); }
-  }
-  
   /* Crown overlay - non-face-covering, positioned above photo */
   .fo-crown{
     position: absolute;
@@ -489,17 +460,6 @@
     state.wrap.appendChild(w);
     return w;
   }
-
-  function showMedalOverlay(durationMs=5000){
-    if(!state) return;
-    remove('.fo-medal');
-    const o = el('div', 'fo-medal');
-    const wrap = el('div', 'medal-wrap');
-    const medal = el('div', 'medal', '🏅');
-    wrap.appendChild(medal); o.appendChild(wrap);
-    state.wrap.appendChild(o);
-    setTimeout(()=> o.remove(), durationMs);
-  }
   
   function showCrown(which){
     if(!state) return;
@@ -571,7 +531,7 @@
   // Public API
   global.FinalFaceoff = {
     mount, showVoteCard, setCounts, onVote,
-    showFinalTally, showWinnerMessage, showMedalOverlay, 
+    showFinalTally, showWinnerMessage,
     showCrown, showCheckCard, destroy
   };
 
