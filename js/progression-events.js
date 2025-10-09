@@ -91,9 +91,7 @@
    */
   function onEvictionVotes(targetId, voteCount, voters = []) {
     // Each vote against adds negative XP
-    for (let i = 0; i < voteCount; i++) {
-      logXP('RECEIVED_VOTES_AGAINST', targetId, { count: voteCount });
-    }
+    logXP('RECEIVED_VOTES_AGAINST', targetId, { count: voteCount });
   }
 
   /**
