@@ -9,6 +9,132 @@
   function gp(id){ return global.getP?.(id); }
   function rand(){ return (global.rng?.() ?? Math.random()); }
 
+  // ======= CENTRALIZED JUROR RETURN HELPERS =======
+  
+  /**
+   * Get or initialize the initial player count for the season
+   * @param {object} g - Game state object
+   * @returns {number} Initial player count
+   */
+  function getInitialPlayersCount(g){
+    if(!g) return 12;
+    // If already set, use cached value
+    if(typeof g.__initialPlayers === 'number' && g.__initialPlayers > 0){
+      return g.__initialPlayers;
+    }
+    // Otherwise, determine from config or current roster and cache it
+    const fromConfig = Number(g.cfg?.numPlayers || 0);
+    if(fromConfig > 0){
+      g.__initialPlayers = fromConfig;
+      return fromConfig;
+    }
+    // Fallback: count current roster (alive + evicted + jury)
+    const alive = ap().length;
+    const jurors = Array.isArray(g.juryHouse) ? g.juryHouse.length : 0;
+    const evicted = (g.cast || []).filter(p => p.evicted && !g.juryHouse?.includes(p.id)).length;
+    const total = alive + jurors + evicted;
+    g.__initialPlayers = Math.max(total, 12); // Default to 12 if calculation fails
+    return g.__initialPlayers;
+  }
+
+  /**
+   * Determine required juror count based on initial cast size
+   * @param {number} initialPlayers - Initial player count
+   * @returns {number} Required juror count (5 if >10 players, else 4)
+   */
+  function getJurorReturnRequiredJurors(initialPlayers){
+    return (initialPlayers > 10) ? 5 : 4;
+  }
+
+  /**
+   * Check if juror return twist has already run this season
+   * @param {object} g - Game state object
+   * @returns {boolean} True if twist has run
+   */
+  function hasJurorReturnRun(g){
+    if(!g) return true;
+    return !!(g.__americaReturnDone || g.__jurorReturnDone);
+  }
+
+  /**
+   * Check if juror return twist is eligible to run (not considering chance/RNG)
+   * @param {object} g - Game state object
+   * @returns {boolean} True if all eligibility criteria are met
+   */
+  function isJurorReturnEligible(g){
+    if(!g) return false;
+    
+    // Must have jury house enabled
+    if(!g.cfg?.enableJuryHouse) return false;
+    
+    // Must not have already run
+    if(hasJurorReturnRun(g)) return false;
+    
+    // Must have at least 5 alive players
+    const aliveCount = ap().length;
+    if(aliveCount < 5) return false;
+    
+    // Must have sufficient jurors
+    const jurorCount = Array.isArray(g.juryHouse) ? g.juryHouse.length : 0;
+    const initialPlayers = getInitialPlayersCount(g);
+    const requiredJurors = getJurorReturnRequiredJurors(initialPlayers);
+    if(jurorCount < requiredJurors) return false;
+    
+    // Must have at least one juror
+    if(jurorCount < 1) return false;
+    
+    return true;
+  }
+
+  /**
+   * Parse and normalize juror return chance from config
+   * @param {object} cfg - Game config object
+   * @returns {number} Normalized chance as percentage (0-100)
+   */
+  function getJurorReturnChance(cfg){
+    if(!cfg) return 0;
+    const returnChance = Number(
+      cfg.juryReturnChance || cfg.jurorReturnChance || cfg.returnChance || cfg.pJuryReturn || 0
+    );
+    // Normalize: if value > 1, treat as 0..100, else treat as 0..1
+    return (returnChance > 1) ? returnChance : returnChance * 100;
+  }
+
+  /**
+   * Decide if juror return should activate THIS week (cached per week)
+   * This function checks eligibility AND rolls the RNG once per week
+   * @param {object} g - Game state object
+   * @returns {boolean} True if twist should activate this week
+   */
+  function decideJurorReturnThisWeek(g){
+    if(!g) return false;
+    
+    // Check if we already decided for this week
+    if(g.__jurorReturnDecision && g.__jurorReturnDecision.week === g.week){
+      return g.__jurorReturnDecision.pass;
+    }
+    
+    // First, check eligibility (doesn't involve RNG)
+    if(!isJurorReturnEligible(g)){
+      // Cache negative decision
+      g.__jurorReturnDecision = { week: g.week, pass: false };
+      return false;
+    }
+    
+    // Now roll the dice (once per week)
+    const normalizedChance = getJurorReturnChance(g.cfg);
+    const roll = rand() * 100;
+    const pass = roll < normalizedChance;
+    
+    // Cache the decision
+    g.__jurorReturnDecision = { week: g.week, pass: pass };
+    return pass;
+  }
+
+  // Expose helpers on global
+  global.isJurorReturnEligible = isJurorReturnEligible;
+  global.decideJurorReturnThisWeek = decideJurorReturnThisWeek;
+
   function decideForWeek(){
     const g=global.game; if(!g) return;
     if(g.__twistDecidedWeek===g.week) return;
@@ -45,43 +171,9 @@
 
   async function startAmericaReturnVote(){
     const g=global.game||{};
-    if(!g.cfg?.enableJuryHouse) return;
     
-    // ======= ELIGIBILITY CHECKS =======
-    // Check if twist has already run this season (both flags must be false)
-    if(g.__americaReturnDone || g.__jurorReturnDone) return;
-
-    const alive=ap();
-    const aliveCount=alive.length;
-    const jurors=Array.isArray(g.juryHouse)?g.juryHouse.slice():[];
-    const jurorCount=jurors.length;
-    const initialPlayers=Number(g.cfg?.numPlayers||12);
-
-    // Condition 1: At least 5 players must be alive
-    if(aliveCount<5){
-      return resumeWeekAfterReturn();
-    }
-
-    // Condition 2: Juror count threshold based on initial cast size
-    // - Seasons with >10 initial players need at least 5 jurors
-    // - Seasons with ≤10 initial players need at least 4 jurors
-    const requiredJurors=(initialPlayers>10)?5:4;
-    if(jurorCount<requiredJurors){
-      return resumeWeekAfterReturn();
-    }
-
-    // Condition 3: At least one juror must exist
-    if(jurors.length<1){ 
-      return resumeWeekAfterReturn(); 
-    }
-
-    // Condition 4: Probability check - use returnChance config (0..1 or 0..100)
-    const returnChance=Number(g.cfg?.returnChance||g.cfg?.juryReturnChance||g.cfg?.jurorReturnChance||g.cfg?.pJuryReturn||0);
-    // Normalize percentage: if value > 1, treat as 0..100, else treat as 0..1
-    const normalizedChance=(returnChance>1)?returnChance:returnChance*100;
-    const roll=rand()*100;
-    if(roll>=normalizedChance){
-      // Twist not activated this week, but conditions were met
+    // Use centralized decision logic (includes eligibility + RNG, cached per week)
+    if(!decideJurorReturnThisWeek(g)){
       return resumeWeekAfterReturn();
     }
 
@@ -89,6 +181,8 @@
     // Set both flags to prevent twist from running again this season
     g.__americaReturnDone=true;
     g.__jurorReturnDone=true;
+
+    const jurors=Array.isArray(g.juryHouse)?g.juryHouse.slice():[];
 
     // Show twist announcement modal before starting the twist
     if (typeof global.showEventModal === 'function' && !g.__jurorReturnModalShown) {

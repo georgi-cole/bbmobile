@@ -167,7 +167,21 @@
         duration: 4000
       };
     }
-    // Check for juror return (based on next phase or flag)
+    // Check for juror return (based on centralized decision logic)
+    else if (typeof global.decideJurorReturnThisWeek === 'function') {
+      // Use centralized helper if available (includes eligibility + RNG)
+      if (global.decideJurorReturnThisWeek(g) && !g.__jurorReturnModalShown) {
+        twistConfig = {
+          title: 'House Shock!',
+          emojis: '👁️⚖️🔙',
+          subtitle: 'A jury member re-enters the house!',
+          tone: 'special',
+          duration: 4000
+        };
+        g.__jurorReturnModalShown = true;
+      }
+    }
+    // Fallback for legacy behavior (if helpers not loaded)
     else if (g.__jurorReturnPending || (g.juryHouse && g.juryHouse.length > 0 && !g.__jurorReturnDone && !g.__americaReturnDone)) {
       // Only show if we're about to trigger a juror return and modal hasn't been shown yet
       const alive = (typeof global.alivePlayers === 'function') ? global.alivePlayers() : [];

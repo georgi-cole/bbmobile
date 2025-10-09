@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Juror Return Gating Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a1628;
+      color: #e3ecf5;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1, h2 { color: #8fd3ff; }
+    .scenario {
+      background: #152235;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2a3b5a;
+    }
+    .scenario h3 {
+      color: #6fd3ff;
+      margin-top: 0;
+    }
+    .info {
+      background: #1a2740;
+      padding: 10px;
+      margin: 10px 0;
+      border-left: 3px solid #6fd3ff;
+    }
+    .result {
+      background: #1a2740;
+      padding: 10px;
+      margin: 10px 0;
+      border-left: 3px solid #74e48b;
+    }
+    .result.fail {
+      border-left-color: #ff6b6b;
+    }
+    button {
+      background: #6fd3ff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      color: #0a1628;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #8fd3ff; }
+    code {
+      background: #0a1628;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #8fd3ff;
+    }
+    .value {
+      color: #74e48b;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Manual Juror Return Gating Test</h1>
+  <p>This page demonstrates the centralized juror return gating logic under different scenarios.</p>
+
+  <div class="scenario">
+    <h3>Scenario 1: Insufficient Alive Players</h3>
+    <div class="info">
+      <strong>Setup:</strong> 6 players initially, 1 self-evicts → 5 alive (edge case), 1 juror (insufficient)
+    </div>
+    <button onclick="testScenario1()">Run Test</button>
+    <div id="result1"></div>
+  </div>
+
+  <div class="scenario">
+    <h3>Scenario 2: Insufficient Jurors</h3>
+    <div class="info">
+      <strong>Setup:</strong> 12 players initially, 3 jurors (need 5 for >10 players), alive ≥ 5
+    </div>
+    <button onclick="testScenario2()">Run Test</button>
+    <div id="result2"></div>
+  </div>
+
+  <div class="scenario">
+    <h3>Scenario 3: All Conditions Met, 100% Chance</h3>
+    <div class="info">
+      <strong>Setup:</strong> 10 players initially, 4 jurors (enough), 6 alive, 100% chance
+    </div>
+    <button onclick="testScenario3()">Run Test</button>
+    <div id="result3"></div>
+  </div>
+
+  <div class="scenario">
+    <h3>Scenario 4: All Conditions Met, 20% Chance (RNG)</h3>
+    <div class="info">
+      <strong>Setup:</strong> 10 players initially, 4 jurors (enough), 6 alive, 20% chance<br>
+      <em>Run multiple times to see chance-based activation</em>
+    </div>
+    <button onclick="testScenario4()">Run Test</button>
+    <div id="result4"></div>
+  </div>
+
+  <div class="scenario">
+    <h3>Scenario 5: Already Run (Flag Check)</h3>
+    <div class="info">
+      <strong>Setup:</strong> Same as Scenario 3, but <code>__jurorReturnDone</code> flag is set
+    </div>
+    <button onclick="testScenario5()">Run Test</button>
+    <div id="result5"></div>
+  </div>
+
+  <div class="scenario">
+    <h3>Scenario 6: Decision Caching</h3>
+    <div class="info">
+      <strong>Setup:</strong> Call decision function twice in same week - should return same result
+    </div>
+    <button onclick="testScenario6()">Run Test</button>
+    <div id="result6"></div>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script src="js/twists.js"></script>
+  
+  <script>
+    // Setup global helpers
+    window.alivePlayers = function() {
+      return (window.game?.cast || []).filter(p => !p.evicted);
+    };
+    
+    window.getP = function(id) {
+      return (window.game?.cast || []).find(p => p.id === id);
+    };
+
+    window.rng = Math.random;
+
+    function createGame(numPlayers, evictedCount, jurorCount, cfg = {}) {
+      const game = {
+        week: 1,
+        cast: [],
+        juryHouse: [],
+        cfg: {
+          enableJuryHouse: true,
+          numPlayers: numPlayers,
+          juryReturnChance: 100,
+          ...cfg
+        }
+      };
+
+      // Create cast
+      for (let i = 1; i <= numPlayers; i++) {
+        game.cast.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: i <= evictedCount,
+          weekEvicted: i <= evictedCount ? i : null,
+          skill: 0.5
+        });
+      }
+
+      // Set jurors
+      game.juryHouse = [];
+      for (let i = 1; i <= Math.min(jurorCount, evictedCount); i++) {
+        game.juryHouse.push(i);
+      }
+
+      window.game = game;
+      return game;
+    }
+
+    function displayResult(resultId, eligible, shouldActivate, explanation) {
+      const resultDiv = document.getElementById(resultId);
+      resultDiv.className = 'result' + (shouldActivate ? '' : ' fail');
+      resultDiv.innerHTML = `
+        <strong>Eligible:</strong> <span class="value">${eligible}</span><br>
+        <strong>Should Activate This Week:</strong> <span class="value">${shouldActivate}</span><br>
+        <strong>Explanation:</strong> ${explanation}<br>
+        <strong>Cached Decision:</strong> <code>${JSON.stringify(window.game.__jurorReturnDecision || null)}</code>
+      `;
+    }
+
+    function testScenario1() {
+      createGame(6, 1, 1, {});
+      // Make only 4 alive (below threshold)
+      for (let i = 3; i <= 6; i++) {
+        window.game.cast[i-1].evicted = true;
+      }
+      window.game.juryHouse = [3]; // Only 1 juror
+      
+      const alive = window.alivePlayers().length;
+      const eligible = window.isJurorReturnEligible(window.game);
+      const shouldActivate = window.decideJurorReturnThisWeek(window.game);
+      
+      displayResult('result1', eligible, shouldActivate, 
+        `Only ${alive} alive (need 5+) and ${window.game.juryHouse.length} juror (need 4 for ≤10 players). Twist should NOT activate.`);
+    }
+
+    function testScenario2() {
+      createGame(12, 3, 3, {});
+      
+      const alive = window.alivePlayers().length;
+      const jurors = window.game.juryHouse.length;
+      const eligible = window.isJurorReturnEligible(window.game);
+      const shouldActivate = window.decideJurorReturnThisWeek(window.game);
+      
+      displayResult('result2', eligible, shouldActivate, 
+        `${alive} alive (need 5+) but only ${jurors} jurors (need 5 for >10 players). Twist should NOT activate.`);
+    }
+
+    function testScenario3() {
+      createGame(10, 4, 4, { juryReturnChance: 100 });
+      
+      const alive = window.alivePlayers().length;
+      const jurors = window.game.juryHouse.length;
+      const eligible = window.isJurorReturnEligible(window.game);
+      const shouldActivate = window.decideJurorReturnThisWeek(window.game);
+      
+      displayResult('result3', eligible, shouldActivate, 
+        `${alive} alive, ${jurors} jurors (need 4 for ≤10 players), 100% chance. Twist SHOULD activate.`);
+    }
+
+    function testScenario4() {
+      createGame(10, 4, 4, { juryReturnChance: 20 });
+      
+      const alive = window.alivePlayers().length;
+      const jurors = window.game.juryHouse.length;
+      const eligible = window.isJurorReturnEligible(window.game);
+      const shouldActivate = window.decideJurorReturnThisWeek(window.game);
+      
+      displayResult('result4', eligible, shouldActivate, 
+        `${alive} alive, ${jurors} jurors (need 4 for ≤10 players), 20% chance. RNG roll = ${shouldActivate ? 'PASS' : 'FAIL'}. Decision cached for week ${window.game.week}.`);
+    }
+
+    function testScenario5() {
+      createGame(10, 4, 4, { juryReturnChance: 100 });
+      window.game.__jurorReturnDone = true;
+      
+      const alive = window.alivePlayers().length;
+      const jurors = window.game.juryHouse.length;
+      const eligible = window.isJurorReturnEligible(window.game);
+      const shouldActivate = window.decideJurorReturnThisWeek(window.game);
+      
+      displayResult('result5', eligible, shouldActivate, 
+        `${alive} alive, ${jurors} jurors, 100% chance BUT __jurorReturnDone=true. Twist should NOT activate (already ran).`);
+    }
+
+    function testScenario6() {
+      createGame(10, 4, 4, { juryReturnChance: 50 });
+      
+      // First call
+      const firstCall = window.decideJurorReturnThisWeek(window.game);
+      const firstDecision = { ...window.game.__jurorReturnDecision };
+      
+      // Second call (same week)
+      const secondCall = window.decideJurorReturnThisWeek(window.game);
+      const secondDecision = { ...window.game.__jurorReturnDecision };
+      
+      // Third call after week change
+      window.game.week = 2;
+      const thirdCall = window.decideJurorReturnThisWeek(window.game);
+      const thirdDecision = { ...window.game.__jurorReturnDecision };
+      
+      const resultDiv = document.getElementById('result6');
+      const allMatch = firstCall === secondCall && firstDecision.week === secondDecision.week;
+      const weekChanged = thirdDecision.week === 2;
+      resultDiv.className = 'result' + (allMatch && weekChanged ? '' : ' fail');
+      resultDiv.innerHTML = `
+        <strong>First Call (Week 1):</strong> <span class="value">${firstCall}</span> <code>${JSON.stringify(firstDecision)}</code><br>
+        <strong>Second Call (Week 1):</strong> <span class="value">${secondCall}</span> <code>${JSON.stringify(secondDecision)}</code><br>
+        <strong>Calls Match:</strong> <span class="value">${allMatch ? '✓ YES' : '✗ NO'}</span><br>
+        <strong>Third Call (Week 2):</strong> <span class="value">${thirdCall}</span> <code>${JSON.stringify(thirdDecision)}</code><br>
+        <strong>Week Updated:</strong> <span class="value">${weekChanged ? '✓ YES' : '✗ NO'}</span><br>
+        <strong>Explanation:</strong> Same week returns cached result, new week recalculates with new RNG roll.
+      `;
+    }
+  </script>
+</body>
+</html>
