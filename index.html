@@ -228,6 +228,8 @@
 <audio id="bgm" preload="auto" loop></audio>
 
 <!-- SCRIPT LOAD ORDER -->
+<!-- Global shim for resilience against stray global references -->
+<script>window.global = window;</script>
 <script src="js/state.js"></script>
 <script src="js/avatar.js"></script>
 <script>window.MUSIC_BASE = 'audio/';</script> <script src="js/audio.js?v=fixes-6"></script>
