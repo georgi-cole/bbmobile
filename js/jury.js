@@ -1149,8 +1149,8 @@
     console.info('[publicFav] winner finalRaw=' + winnerPctRaw + ' display=' + winnerPctDisplay);
     
     // Hook: Log XP for public's favorite
-    if(global.ProgressionEvents?.onPublicFavorite){
-      global.ProgressionEvents.onPublicFavorite(fanFavPlayer.id);
+    if(g.ProgressionEvents?.onPublicFavorite){
+      g.ProgressionEvents.onPublicFavorite(fanFavPlayer.id);
     }
     
     // Create winner-only card (no runners-up list per spec)
@@ -1398,8 +1398,8 @@
       votes.set(pick, (votes.get(pick)||0)+1);
       
       // Hook: Log XP for jury vote
-      if(global.ProgressionEvents?.onJuryVote){
-        global.ProgressionEvents.onJuryVote(pick);
+      if(g.ProgressionEvents?.onJuryVote){
+        g.ProgressionEvents.onJuryVote(pick);
       }
       
       // Generate dynamic reason based on ballot logic
@@ -1529,8 +1529,8 @@
     if(!winner) return;
     
     // Hook: Log XP for final winner
-    if(global.ProgressionEvents?.onFinalWinner){
-      global.ProgressionEvents.onFinalWinner(winner);
+    if(g.ProgressionEvents?.onFinalWinner){
+      g.ProgressionEvents.onFinalWinner(winner);
     }
     
     // Show winner
