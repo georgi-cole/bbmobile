@@ -158,6 +158,7 @@
               try {
                 playerState = await progressionCore.getPlayerState(p.id);
               } catch (e) {
+                console.warn('[Progression Bridge] Failed to get player state for playerId:', p.id, e);
                 // fallback to default
               }
             }
