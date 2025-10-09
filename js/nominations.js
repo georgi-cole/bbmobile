@@ -4,6 +4,9 @@
 // One-shot safety: once locked, UI disables and duplicate triggers are ignored.
 
 (function(global){
+  // Browser global alias for modules that expect window.global
+  if (!global.global) global.global = global;
+  
   const $=global.$;
 
   function aliveIds(){ return global.alivePlayers().map(p=>p.id); }
@@ -15,7 +18,9 @@
     const pool=eligibleNomIds();
     const scored=pool.map(id=>{
       const cand=global.getP(id);
-      const aff=hoh.affinity[id]??0, threat=cand.threat||0.5, inAl=global.inSameAlliance?.(hoh.id,id)?1:0;
+      const aff=hoh?.affinity?.[id] ?? 0;
+      const threat=cand?.threat ?? 0.5;
+      const inAl=hoh && global.inSameAlliance?.(hoh.id,id)?1:0;
       return {id,score:(-aff)+threat+(inAl?0.6:0)};
     }).sort((a,b)=>b.score-a.score);
     const picks=[]; 
@@ -48,7 +53,7 @@
       return;
     }
 
-    if(hoh.human){
+    if(hoh && hoh.human){
       const row=document.createElement('div'); row.className='row';
       const selects=[];
       for(let i=0;i<need;i++){
@@ -107,13 +112,20 @@
 
   function applyNominationSideEffects(){
     const g=global.game; const hohId=g.hohId;
+    const hoh=global.getP(hohId);
+    if (!hoh) {
+      console.warn('[nom] HOH not found for side effects, skipping affinity updates');
+      return;
+    }
+    // Ensure affinity object exists
+    if (!hoh.affinity) hoh.affinity = {};
+    
     g.nominees.forEach(id=>{
       const p=global.getP(id); p.nominated=true;
       p.nominatedCount = (p.nominatedCount||0)+1;
       p.nominationState = 'nominated'; // Set initial nomination state
       console.info(`[nom] nominated player=${id} state=nominated`);
       global.addBond?.(hohId,id, global.NOMINATION_PENALTY);
-      const hoh=global.getP(hohId);
       hoh.affinity[id]=global.clamp?.((hoh.affinity[id]??0)-0.15,-1,1) ?? (hoh.affinity[id]??0)-0.15;
     });
   }
