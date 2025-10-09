@@ -42,7 +42,14 @@
     avatarPreview.style.cssText = 'width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #3f6385; background: #1a2634; display: block; margin: 0 auto 12px;';
     
     // Set default avatar
-    const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2748%27 fill=%27%231a2634%27 stroke=%27%233f6385%27 stroke-width=%272%27/%3E%3Ccircle cx=%2750%27 cy=%2740%27 r=%2715%27 fill=%27%233f6385%27/%3E%3Cellipse cx=%2750%27 cy=%2775%27 rx=%2725%27 ry=%2720%27 fill=%27%233f6385%27/%3E%3C/svg%3E';
+    const FALLBACK_AVATAR_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="#1a2634" stroke="#3f6385" stroke-width="2"/>
+  <circle cx="50" cy="40" r="15" fill="#3f6385"/>
+  <ellipse cx="50" cy="75" rx="25" ry="20" fill="#3f6385"/>
+</svg>
+`;
+    const FALLBACK_AVATAR = 'data:image/svg+xml,' + encodeURIComponent(FALLBACK_AVATAR_SVG.trim());
     avatarPreview.src = FALLBACK_AVATAR;
     avatarPreview.onerror = function() {
       this.onerror = null;
