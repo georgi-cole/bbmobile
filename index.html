@@ -13,6 +13,9 @@
   <!-- After fonts in <head> -->
 <link rel="stylesheet" href="styles.css?v=fixes-5">
 <link rel="stylesheet" href="overrides-fixes.css?v=fixes-5">
+
+<!-- Global shim for resilience against stray global references -->
+<script>window.global = window;</script>
 </head>
 <body>
 <!-- XP/Leaderboard Badge Button (top-right) -->
@@ -228,8 +231,6 @@
 <audio id="bgm" preload="auto" loop></audio>
 
 <!-- SCRIPT LOAD ORDER -->
-<!-- Global shim for resilience against stray global references -->
-<script>window.global = window;</script>
 <script src="js/state.js"></script>
 <script src="js/avatar.js"></script>
 <script>window.MUSIC_BASE = 'audio/';</script> <script src="js/audio.js?v=fixes-6"></script>
