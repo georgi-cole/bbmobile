@@ -304,6 +304,12 @@
         if (profile.location) humanPlayer.meta.location = profile.location;
         if (profile.occupation) humanPlayer.meta.occupation = profile.occupation;
         
+        // Update bio object (used by profile cards during opening sequence)
+        if (!humanPlayer.bio) humanPlayer.bio = {};
+        if (profile.age) humanPlayer.bio.age = profile.age;
+        if (profile.location) humanPlayer.bio.location = profile.location;
+        if (profile.occupation) humanPlayer.bio.occupation = profile.occupation;
+        
         console.info('[profile-modal] updated human player:', humanPlayer);
       }
     }
