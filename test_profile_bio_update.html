@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Bio Update Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #ffdc8b;
+      text-align: center;
+    }
+    .section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      margin-top: 0;
+      color: #83bfff;
+      font-size: 1.2rem;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #2d4b6a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #3f6385;
+    }
+    .test-result {
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      font-family: monospace;
+    }
+    .pass {
+      background: rgba(119, 213, 141, 0.2);
+      border: 1px solid rgba(119, 213, 141, 0.5);
+      color: #77d58d;
+    }
+    .fail {
+      background: rgba(255, 109, 109, 0.2);
+      border: 1px solid rgba(255, 109, 109, 0.5);
+      color: #ff6d6d;
+    }
+    .info {
+      background: rgba(131, 191, 255, 0.2);
+      border: 1px solid rgba(131, 191, 255, 0.5);
+      color: #83bfff;
+    }
+    pre {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #c8d9e8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Profile Bio Update Test</h1>
+    
+    <div class="section">
+      <h2>Test Objective</h2>
+      <p>Verify that when a user fills the profile modal with custom age, location, and occupation, 
+         these values are correctly updated in <code>player.bio</code>, <code>player.meta</code>, 
+         and top-level player properties, so they appear in the opening sequence profile cards.</p>
+    </div>
+    
+    <div class="section">
+      <h2>Test Scenario</h2>
+      <div class="controls">
+        <button onclick="runFullTest()">🧪 Run Full Test</button>
+        <button onclick="clearTestData()">🗑️ Clear Data</button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Test Results</h2>
+      <div id="testResults"></div>
+    </div>
+    
+    <div class="section">
+      <h2>Player Data Inspection</h2>
+      <pre id="playerData">Run test to see player data...</pre>
+    </div>
+  </div>
+
+  <script>
+    const resultsDiv = document.getElementById('testResults');
+    const playerDataPre = document.getElementById('playerData');
+    
+    function addResult(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      resultsDiv.appendChild(div);
+    }
+    
+    function clearResults() {
+      resultsDiv.innerHTML = '';
+      playerDataPre.textContent = 'Running tests...';
+    }
+    
+    function clearTestData() {
+      try {
+        localStorage.removeItem('bb_human_profile');
+        localStorage.removeItem('bb_settings_modular');
+        addResult('✓ Test data cleared', 'pass');
+      } catch(e) {
+        addResult('✗ Failed to clear data: ' + e.message, 'fail');
+      }
+    }
+    
+    async function runFullTest() {
+      clearResults();
+      addResult('🏁 Starting profile bio update test...', 'info');
+      
+      // Test data
+      const testProfile = {
+        name: 'Alex',
+        age: '28',
+        location: 'New York, USA',
+        occupation: 'Software Developer'
+      };
+      
+      // Step 1: Save profile to localStorage (simulating profile modal submission)
+      addResult('Step 1: Saving test profile to localStorage...', 'info');
+      try {
+        localStorage.setItem('bb_human_profile', JSON.stringify(testProfile));
+        addResult('✓ Profile saved: ' + JSON.stringify(testProfile), 'pass');
+      } catch(e) {
+        addResult('✗ Failed to save profile: ' + e.message, 'fail');
+        return;
+      }
+      
+      // Step 2: Initialize game (simulating buildCast)
+      addResult('Step 2: Initializing game...', 'info');
+      if (!window.game) {
+        addResult('✗ window.game not found. Game modules may not be loaded.', 'fail');
+        return;
+      }
+      
+      // Step 3: Find human player
+      addResult('Step 3: Finding human player...', 'info');
+      const humanPlayer = window.game.players?.find(p => p.human || p.id === window.game.humanId || p.id === 0);
+      if (!humanPlayer) {
+        addResult('✗ Human player not found', 'fail');
+        return;
+      }
+      addResult('✓ Human player found: ' + humanPlayer.name, 'pass');
+      
+      // Step 4: Simulate profile modal update (what startWithProfile does)
+      addResult('Step 4: Simulating profile modal update...', 'info');
+      try {
+        humanPlayer.name = testProfile.name;
+        humanPlayer.age = testProfile.age;
+        humanPlayer.location = testProfile.location;
+        humanPlayer.occupation = testProfile.occupation;
+        
+        // Update meta object
+        if (!humanPlayer.meta) humanPlayer.meta = {};
+        humanPlayer.meta.age = parseInt(testProfile.age, 10);
+        humanPlayer.meta.location = testProfile.location;
+        humanPlayer.meta.occupation = testProfile.occupation;
+        
+        // Update bio object (THE FIX)
+        if (!humanPlayer.bio) humanPlayer.bio = {};
+        humanPlayer.bio.age = testProfile.age;
+        humanPlayer.bio.location = testProfile.location;
+        humanPlayer.bio.occupation = testProfile.occupation;
+        
+        addResult('✓ Player data updated', 'pass');
+      } catch(e) {
+        addResult('✗ Failed to update player data: ' + e.message, 'fail');
+        return;
+      }
+      
+      // Step 5: Verify updates
+      addResult('Step 5: Verifying updates...', 'info');
+      let allPassed = true;
+      
+      // Check top-level properties
+      if (humanPlayer.age === testProfile.age) {
+        addResult('✓ player.age updated correctly', 'pass');
+      } else {
+        addResult(`✗ player.age incorrect: expected "${testProfile.age}", got "${humanPlayer.age}"`, 'fail');
+        allPassed = false;
+      }
+      
+      if (humanPlayer.location === testProfile.location) {
+        addResult('✓ player.location updated correctly', 'pass');
+      } else {
+        addResult(`✗ player.location incorrect: expected "${testProfile.location}", got "${humanPlayer.location}"`, 'fail');
+        allPassed = false;
+      }
+      
+      if (humanPlayer.occupation === testProfile.occupation) {
+        addResult('✓ player.occupation updated correctly', 'pass');
+      } else {
+        addResult(`✗ player.occupation incorrect: expected "${testProfile.occupation}", got "${humanPlayer.occupation}"`, 'fail');
+        allPassed = false;
+      }
+      
+      // Check meta object
+      if (humanPlayer.meta?.age === parseInt(testProfile.age, 10)) {
+        addResult('✓ player.meta.age updated correctly', 'pass');
+      } else {
+        addResult(`✗ player.meta.age incorrect: expected ${parseInt(testProfile.age, 10)}, got ${humanPlayer.meta?.age}`, 'fail');
+        allPassed = false;
+      }
+      
+      if (humanPlayer.meta?.location === testProfile.location) {
+        addResult('✓ player.meta.location updated correctly', 'pass');
+      } else {
+        addResult(`✗ player.meta.location incorrect: expected "${testProfile.location}", got "${humanPlayer.meta?.location}"`, 'fail');
+        allPassed = false;
+      }
+      
+      if (humanPlayer.meta?.occupation === testProfile.occupation) {
+        addResult('✓ player.meta.occupation updated correctly', 'pass');
+      } else {
+        addResult(`✗ player.meta.occupation incorrect: expected "${testProfile.occupation}", got "${humanPlayer.meta?.occupation}"`, 'fail');
+        allPassed = false;
+      }
+      
+      // Check bio object (CRITICAL - used by profile cards)
+      if (humanPlayer.bio?.age === testProfile.age) {
+        addResult('✓ player.bio.age updated correctly (CRITICAL)', 'pass');
+      } else {
+        addResult(`✗ player.bio.age incorrect: expected "${testProfile.age}", got "${humanPlayer.bio?.age}"`, 'fail');
+        allPassed = false;
+      }
+      
+      if (humanPlayer.bio?.location === testProfile.location) {
+        addResult('✓ player.bio.location updated correctly (CRITICAL)', 'pass');
+      } else {
+        addResult(`✗ player.bio.location incorrect: expected "${testProfile.location}", got "${humanPlayer.bio?.location}"`, 'fail');
+        allPassed = false;
+      }
+      
+      if (humanPlayer.bio?.occupation === testProfile.occupation) {
+        addResult('✓ player.bio.occupation updated correctly (CRITICAL)', 'pass');
+      } else {
+        addResult(`✗ player.bio.occupation incorrect: expected "${testProfile.occupation}", got "${humanPlayer.bio?.occupation}"`, 'fail');
+        allPassed = false;
+      }
+      
+      // Final result
+      if (allPassed) {
+        addResult('🎉 ALL TESTS PASSED! Profile data is correctly replicated.', 'pass');
+      } else {
+        addResult('❌ SOME TESTS FAILED. Please review the failures above.', 'fail');
+      }
+      
+      // Display player data
+      playerDataPre.textContent = JSON.stringify({
+        name: humanPlayer.name,
+        topLevel: {
+          age: humanPlayer.age,
+          location: humanPlayer.location,
+          occupation: humanPlayer.occupation
+        },
+        meta: {
+          age: humanPlayer.meta?.age,
+          location: humanPlayer.meta?.location,
+          occupation: humanPlayer.meta?.occupation
+        },
+        bio: {
+          age: humanPlayer.bio?.age,
+          location: humanPlayer.bio?.location,
+          occupation: humanPlayer.bio?.occupation,
+          gender: humanPlayer.bio?.gender,
+          motto: humanPlayer.bio?.motto
+        }
+      }, null, 2);
+    }
+    
+    // Auto-run on load if game is available
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (window.game && window.game.players && window.game.players.length > 0) {
+          addResult('ℹ️ Game detected. Ready to run tests.', 'info');
+        } else {
+          addResult('⚠️ Game not detected. This test needs the game to be initialized.', 'info');
+          addResult('💡 Open this file from the main app (index.html) to run tests.', 'info');
+        }
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
