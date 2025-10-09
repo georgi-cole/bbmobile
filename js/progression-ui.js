@@ -47,7 +47,7 @@
    * @param {number} durationMs - How long to show the panel (default 7000ms)
    */
   async function showTop5Leaderboard(durationMs = 7000) {
-    if (!global.Progression || typeof global.Progression.getLeaderboard !== 'function') {
+    if (!global.Progression) {
       console.warn('[Progression UI] Progression system not available for leaderboard');
       return;
     }
@@ -57,30 +57,58 @@
       const game = global.game || {};
       const players = game.players || [];
       
-      // Get individual progression state for each player
-      const playerStates = await Promise.all(
-        players
-          .filter(p => !p.evicted)
-          .map(p => global.Progression.getPlayerState(p.id))
-      );
+      let leaderboard = [];
       
-      // Build leaderboard with actual player data
-      const leaderboard = players
-        .filter(p => !p.evicted)
-        .map((p, idx) => ({
-          playerId: p.id,
-          playerName: p.name,
-          totalXP: playerStates[idx].totalXP,
-          level: playerStates[idx].level
-        }))
-        .sort((a, b) => b.totalXP - a.totalXP)
-        .slice(0, 5);
+      // Prefer getLeaderboard API
+      if (typeof global.Progression.getLeaderboard === 'function') {
+        leaderboard = await global.Progression.getLeaderboard(seasonId);
+      } else if (typeof global.Progression.getPlayerState === 'function') {
+        // Fallback: build leaderboard manually using getPlayerState
+        const playerStates = await Promise.all(
+          players
+            .filter(p => !p.evicted)
+            .map(p => global.Progression.getPlayerState(p.id))
+        );
+        
+        leaderboard = players
+          .filter(p => !p.evicted)
+          .map((p, idx) => ({
+            playerId: p.id,
+            playerName: p.name,
+            totalXP: playerStates[idx]?.totalXP || 0,
+            level: playerStates[idx]?.level || 1
+          }))
+          .sort((a, b) => b.totalXP - a.totalXP)
+          .slice(0, 5);
+      } else {
+        console.warn('[Progression UI] No leaderboard methods available');
+        return;
+      }
+      
+      // Ensure names are populated from game.players if missing
+      leaderboard = leaderboard.map(entry => {
+        if (!entry.playerName || entry.playerName === 'undefined') {
+          const player = players.find(p => p.id === entry.playerId);
+          entry.playerName = player?.name || entry.playerId;
+        }
+        return entry;
+      });
 
       // Create leaderboard panel
-      const tvOverlay = document.getElementById('tvOverlay');
+      let tvOverlay = document.getElementById('tvOverlay');
       if (!tvOverlay) {
-        console.warn('[Progression UI] TV overlay not found');
-        return;
+        // Fallback: try to find #tv container
+        const tvContainer = document.getElementById('tv');
+        if (!tvContainer) {
+          console.warn('[Progression UI] TV overlay and container not found');
+          return;
+        }
+        // Create tvOverlay if it doesn't exist
+        tvOverlay = document.createElement('div');
+        tvOverlay.id = 'tvOverlay';
+        tvOverlay.className = 'tvOverlay';
+        tvContainer.appendChild(tvOverlay);
+        console.info('[Progression UI] Created tvOverlay container');
       }
 
       const panel = document.createElement('div');

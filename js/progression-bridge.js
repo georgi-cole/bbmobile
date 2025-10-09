@@ -148,19 +148,17 @@
       const game = global.game || {};
       const players = game.players || [];
       
-      // Fetch each player's progression state
+      // Fetch each player's progression state using getPlayerState (with fallbacks)
       const leaderboardStates = await Promise.all(
         players
           .filter(p => !p.evicted)
           .map(async p => {
             let playerState = { totalXP: 0, level: 1 };
-            if (progressionCore.getPlayerState) {
-              try {
-                playerState = await progressionCore.getPlayerState(p.id);
-              } catch (e) {
-                console.warn('[Progression Bridge] Failed to get player state for playerId:', p.id, e);
-                // fallback to default
-              }
+            try {
+              playerState = await getPlayerState(p.id);
+            } catch (e) {
+              console.warn('[Progression Bridge] Failed to get player state for playerId:', p.id, e);
+              // playerState remains at default
             }
             return {
               playerId: p.id,
@@ -217,10 +215,37 @@
     }
     
     try {
+      // Preferred: use core's getPlayerState if available
       if (progressionCore.getPlayerState) {
         return await progressionCore.getPlayerState(playerId);
       }
-      // Fallback: return current state (aggregate)
+      
+      // Fallback: derive player state from events filtered by playerId
+      if (progressionCore.getEvents) {
+        const allEvents = await progressionCore.getEvents();
+        const playerEvents = allEvents.filter(e => e.meta?.playerId === playerId);
+        
+        // Calculate totals from player's events
+        const totalXP = playerEvents.reduce((sum, e) => sum + (e.amount || 0), 0);
+        const eventsCount = playerEvents.length;
+        
+        // Simple level calculation (100 XP per level)
+        const level = Math.floor(totalXP / 100) + 1;
+        const currentLevelXP = totalXP % 100;
+        const nextLevelXP = 100;
+        const progressPercent = Math.round((currentLevelXP / nextLevelXP) * 100);
+        
+        return {
+          totalXP,
+          level,
+          nextLevelXP,
+          currentLevelXP,
+          progressPercent,
+          eventsCount
+        };
+      }
+      
+      // Last resort: return aggregate state for all players
       return await getCurrentState();
     } catch (error) {
       console.error('[Progression Bridge] Failed to get player state:', error);
