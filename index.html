@@ -368,6 +368,7 @@
 <script defer src="js/debug-tools.js"></script>
 
 <!-- Progression System Integration -->
+<!-- Load order: bridge first (synchronous module) → events and ui (deferred) -->
 <script type="module" src="js/progression-bridge.js"></script>
 <script defer src="js/progression-events.js"></script>
 <script defer src="js/progression-ui.js"></script>
