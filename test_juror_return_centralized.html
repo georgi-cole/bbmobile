@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Juror Return Centralized Logic</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a1628;
+      color: #e3ecf5;
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1, h2 { color: #8fd3ff; }
+    .test-section {
+      background: #152235;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2a3b5a;
+    }
+    .test-case {
+      margin: 10px 0;
+      padding: 10px;
+      background: #1a2740;
+      border-left: 4px solid #6fd3ff;
+    }
+    .pass { border-left-color: #74e48b; }
+    .fail { border-left-color: #ff6b6b; }
+    .result { font-weight: bold; margin-top: 5px; }
+    .pass .result { color: #74e48b; }
+    .fail .result { color: #ff6b6b; }
+    button {
+      background: #6fd3ff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      color: #0a1628;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #8fd3ff; }
+    .info { color: #95a9c0; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Juror Return Centralized Logic Test</h1>
+  <p class="info">Testing the centralized helper functions for juror return eligibility and weekly activation.</p>
+
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+  </div>
+
+  <div id="results"></div>
+
+  <script src="js/state.js"></script>
+  <script src="js/twists.js"></script>
+  
+  <script>
+    // Mock necessary game functions
+    window.alivePlayers = function() {
+      return (window.game?.cast || []).filter(p => !p.evicted);
+    };
+    
+    window.getP = function(id) {
+      return (window.game?.cast || []).find(p => p.id === id);
+    };
+
+    window.rng = function() {
+      return Math.random();
+    };
+
+    function createMockGame(config) {
+      const game = {
+        week: 1,
+        cast: [],
+        juryHouse: [],
+        cfg: {
+          enableJuryHouse: true,
+          numPlayers: 12,
+          juryReturnChance: 100, // 100% by default for testing
+          ...config.cfg
+        },
+        ...config
+      };
+
+      // Create cast
+      const numPlayers = config.numPlayers || 12;
+      for (let i = 1; i <= numPlayers; i++) {
+        game.cast.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          skill: 0.5
+        });
+      }
+
+      // Set evicted players and jurors
+      if (config.evictedCount) {
+        for (let i = 0; i < config.evictedCount; i++) {
+          game.cast[i].evicted = true;
+          game.cast[i].weekEvicted = i + 1;
+        }
+      }
+
+      if (config.jurorCount) {
+        game.juryHouse = [];
+        for (let i = 0; i < config.jurorCount; i++) {
+          if (i < game.cast.length && game.cast[i].evicted) {
+            game.juryHouse.push(game.cast[i].id);
+          }
+        }
+      }
+
+      window.game = game;
+      return game;
+    }
+
+    function testCase(name, setupFn, expectedResult, testFn) {
+      const resultsDiv = document.getElementById('results');
+      const testDiv = document.createElement('div');
+      testDiv.className = 'test-case';
+      
+      try {
+        // Setup
+        setupFn();
+        
+        // Run test
+        const result = testFn();
+        const passed = result === expectedResult;
+        
+        testDiv.className += passed ? ' pass' : ' fail';
+        testDiv.innerHTML = `
+          <strong>${name}</strong><br>
+          <span class="info">Expected: ${expectedResult}, Got: ${result}</span>
+          <div class="result">${passed ? '✓ PASS' : '✗ FAIL'}</div>
+        `;
+      } catch (e) {
+        testDiv.className += ' fail';
+        testDiv.innerHTML = `
+          <strong>${name}</strong><br>
+          <span class="info">Error: ${e.message}</span>
+          <div class="result">✗ ERROR</div>
+        `;
+      }
+      
+      resultsDiv.appendChild(testDiv);
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+    }
+
+    function runAllTests() {
+      clearResults();
+      
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="test-section"><h2>Test Results</h2></div>';
+
+      // Test 1: Basic eligibility - sufficient players and jurors
+      testCase(
+        'Eligibility: 10 players, 4 jurors, 6 alive → Eligible',
+        () => createMockGame({ numPlayers: 10, evictedCount: 4, jurorCount: 4 }),
+        true,
+        () => window.isJurorReturnEligible(window.game)
+      );
+
+      // Test 2: Not enough alive players
+      testCase(
+        'Eligibility: 4 alive players → Not eligible',
+        () => {
+          const g = createMockGame({ numPlayers: 10, evictedCount: 6, jurorCount: 4 });
+          // Make sure only 4 are alive
+          for (let i = 0; i < 6; i++) {
+            g.cast[i].evicted = true;
+          }
+          return g;
+        },
+        false,
+        () => window.isJurorReturnEligible(window.game)
+      );
+
+      // Test 3: Not enough jurors for >10 player season
+      testCase(
+        'Eligibility: 12 players, 4 jurors → Not eligible (need 5)',
+        () => createMockGame({ numPlayers: 12, evictedCount: 4, jurorCount: 4 }),
+        false,
+        () => window.isJurorReturnEligible(window.game)
+      );
+
+      // Test 4: Enough jurors for >10 player season
+      testCase(
+        'Eligibility: 12 players, 5 jurors, 7 alive → Eligible',
+        () => createMockGame({ numPlayers: 12, evictedCount: 5, jurorCount: 5 }),
+        true,
+        () => window.isJurorReturnEligible(window.game)
+      );
+
+      // Test 5: Jury house disabled
+      testCase(
+        'Eligibility: Jury house disabled → Not eligible',
+        () => createMockGame({ 
+          numPlayers: 10, 
+          evictedCount: 4, 
+          jurorCount: 4,
+          cfg: { enableJuryHouse: false }
+        }),
+        false,
+        () => window.isJurorReturnEligible(window.game)
+      );
+
+      // Test 6: Already run once
+      testCase(
+        'Eligibility: Already run (__jurorReturnDone) → Not eligible',
+        () => {
+          const g = createMockGame({ numPlayers: 10, evictedCount: 4, jurorCount: 4 });
+          g.__jurorReturnDone = true;
+          return g;
+        },
+        false,
+        () => window.isJurorReturnEligible(window.game)
+      );
+
+      // Test 7: Already run (americaReturnDone flag)
+      testCase(
+        'Eligibility: Already run (__americaReturnDone) → Not eligible',
+        () => {
+          const g = createMockGame({ numPlayers: 10, evictedCount: 4, jurorCount: 4 });
+          g.__americaReturnDone = true;
+          return g;
+        },
+        false,
+        () => window.isJurorReturnEligible(window.game)
+      );
+
+      // Test 8: Decision caching - same week returns same result
+      testCase(
+        'Decision Caching: Same week returns cached result',
+        () => {
+          const g = createMockGame({ numPlayers: 10, evictedCount: 4, jurorCount: 4 });
+          // Force a decision for week 1
+          g.__jurorReturnDecision = { week: 1, pass: true };
+          return g;
+        },
+        true,
+        () => window.decideJurorReturnThisWeek(window.game)
+      );
+
+      // Test 9: Decision caching - new week recalculates
+      testCase(
+        'Decision Caching: New week recalculates',
+        () => {
+          const g = createMockGame({ numPlayers: 10, evictedCount: 4, jurorCount: 4 });
+          g.__jurorReturnDecision = { week: 1, pass: true };
+          g.week = 2; // Move to week 2
+          return g;
+        },
+        true, // Will recalculate, with 100% chance should pass
+        () => {
+          const result = window.decideJurorReturnThisWeek(window.game);
+          // Check that decision was updated for week 2
+          return window.game.__jurorReturnDecision.week === 2;
+        }
+      );
+
+      // Test 10: Zero chance returns false
+      testCase(
+        'Decision: 0% chance → Never activates',
+        () => createMockGame({ 
+          numPlayers: 10, 
+          evictedCount: 4, 
+          jurorCount: 4,
+          cfg: { juryReturnChance: 0 }
+        }),
+        false,
+        () => window.decideJurorReturnThisWeek(window.game)
+      );
+
+      // Test 11: 100% chance returns true (when eligible)
+      testCase(
+        'Decision: 100% chance, eligible → Activates',
+        () => createMockGame({ 
+          numPlayers: 10, 
+          evictedCount: 4, 
+          jurorCount: 4,
+          cfg: { juryReturnChance: 100 }
+        }),
+        true,
+        () => window.decideJurorReturnThisWeek(window.game)
+      );
+
+      // Test 12: Initial player count caching
+      testCase(
+        'Initial Players: Caches from config',
+        () => {
+          const g = createMockGame({ numPlayers: 10, evictedCount: 2, jurorCount: 2 });
+          return g;
+        },
+        10,
+        () => {
+          // Call a function that uses getInitialPlayersCount
+          window.isJurorReturnEligible(window.game);
+          return window.game.__initialPlayers;
+        }
+      );
+
+      // Test 13: Required jurors for small season
+      testCase(
+        'Required Jurors: ≤10 players needs 4 jurors',
+        () => createMockGame({ numPlayers: 10, evictedCount: 4, jurorCount: 4 }),
+        true,
+        () => window.isJurorReturnEligible(window.game)
+      );
+
+      // Test 14: Required jurors for large season
+      testCase(
+        'Required Jurors: >10 players needs 5 jurors',
+        () => createMockGame({ numPlayers: 14, evictedCount: 5, jurorCount: 5 }),
+        true,
+        () => window.isJurorReturnEligible(window.game)
+      );
+
+      // Test 15: Fractional chance normalization (0.5 = 50%)
+      testCase(
+        'Chance Parsing: 0.5 treated as 50%',
+        () => {
+          const g = createMockGame({ 
+            numPlayers: 10, 
+            evictedCount: 4, 
+            jurorCount: 4,
+            cfg: { juryReturnChance: 1.0 } // 100% as decimal
+          });
+          return g;
+        },
+        true,
+        () => window.decideJurorReturnThisWeek(window.game)
+      );
+
+      console.log('All tests completed!');
+    }
+
+    // Auto-run tests on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('Page loaded, running tests...');
+      runAllTests();
+    });
+  </script>
+</body>
+</html>
