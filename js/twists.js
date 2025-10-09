@@ -46,10 +46,49 @@
   async function startAmericaReturnVote(){
     const g=global.game||{};
     if(!g.cfg?.enableJuryHouse) return;
-    if(g.__americaReturnDone) return;
+    
+    // ======= ELIGIBILITY CHECKS =======
+    // Check if twist has already run this season (both flags must be false)
+    if(g.__americaReturnDone || g.__jurorReturnDone) return;
 
+    const alive=ap();
+    const aliveCount=alive.length;
     const jurors=Array.isArray(g.juryHouse)?g.juryHouse.slice():[];
-    if(jurors.length<1){ return resumeWeekAfterReturn(); }
+    const jurorCount=jurors.length;
+    const initialPlayers=Number(g.cfg?.numPlayers||12);
+
+    // Condition 1: At least 5 players must be alive
+    if(aliveCount<5){
+      return resumeWeekAfterReturn();
+    }
+
+    // Condition 2: Juror count threshold based on initial cast size
+    // - Seasons with >10 initial players need at least 5 jurors
+    // - Seasons with ≤10 initial players need at least 4 jurors
+    const requiredJurors=(initialPlayers>10)?5:4;
+    if(jurorCount<requiredJurors){
+      return resumeWeekAfterReturn();
+    }
+
+    // Condition 3: At least one juror must exist
+    if(jurors.length<1){ 
+      return resumeWeekAfterReturn(); 
+    }
+
+    // Condition 4: Probability check - use returnChance config (0..1 or 0..100)
+    const returnChance=Number(g.cfg?.returnChance||g.cfg?.juryReturnChance||g.cfg?.jurorReturnChance||g.cfg?.pJuryReturn||0);
+    // Normalize percentage: if value > 1, treat as 0..100, else treat as 0..1
+    const normalizedChance=(returnChance>1)?returnChance:returnChance*100;
+    const roll=rand()*100;
+    if(roll>=normalizedChance){
+      // Twist not activated this week, but conditions were met
+      return resumeWeekAfterReturn();
+    }
+
+    // ======= TWIST ACTIVATED - SET FLAGS =======
+    // Set both flags to prevent twist from running again this season
+    g.__americaReturnDone=true;
+    g.__jurorReturnDone=true;
 
     // Show twist announcement modal before starting the twist
     if (typeof global.showEventModal === 'function' && !g.__jurorReturnModalShown) {
@@ -200,7 +239,7 @@
       }catch(e){}
       g.__returnFlashId=winnerId;
       setTimeout(()=>{ g.__returnFlashId=null; global.updateHud?.(); },6500);
-      g.__americaReturnDone=true;
+      // Flags already set at eligibility check
     } else {
       try{ global.showCard?.('No Returnee',['Vote produced no clear winner.'],'jury',3200,true); }catch(e){}
     }
