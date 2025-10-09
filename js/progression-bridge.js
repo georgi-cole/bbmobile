@@ -206,6 +206,35 @@
     }
   }
 
+  /**
+   * Get individual player state
+   * @param {string} playerId - Player ID
+   * @returns {Promise<object>} Player progression state
+   */
+  async function getPlayerState(playerId) {
+    if (!isInitialized) {
+      await initializeProgression();
+    }
+    
+    try {
+      if (progressionCore.getPlayerState) {
+        return await progressionCore.getPlayerState(playerId);
+      }
+      // Fallback: return current state (aggregate)
+      return await getCurrentState();
+    } catch (error) {
+      console.error('[Progression Bridge] Failed to get player state:', error);
+      return {
+        totalXP: 0,
+        level: 1,
+        nextLevelXP: 100,
+        currentLevelXP: 0,
+        progressPercent: 0,
+        eventsCount: 0
+      };
+    }
+  }
+
   // Expose API on window.Progression
   global.Progression = {
     log,
@@ -213,6 +242,7 @@
     showModal,
     getLeaderboard,
     getCurrentState,
+    getPlayerState,
     initialize: initializeProgression
   };
 

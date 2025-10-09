@@ -3,6 +3,9 @@
 
 (function(g){
   'use strict';
+  
+  // Browser global alias for modules that expect window.global
+  if (!g.global) g.global = g;
 
   // ===== Utilities =====
   function ap(){ return (g.alivePlayers?.()||[]).slice(); }
