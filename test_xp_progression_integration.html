@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XP Progression System Integration Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    .test-section h2 {
+      color: #764ba2;
+      margin-top: 0;
+    }
+    .result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+    }
+    .result.pass {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+      color: #155724;
+    }
+    .result.fail {
+      background: #f8d7da;
+      border-left: 4px solid #dc3545;
+      color: #721c24;
+    }
+    .result.info {
+      background: #d1ecf1;
+      border-left: 4px solid #17a2b8;
+      color: #0c5460;
+    }
+    .result.warn {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      color: #856404;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      margin: 10px 5px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .summary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 30px;
+      text-align: center;
+    }
+    .summary h3 {
+      margin: 0 0 10px 0;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 XP Progression System Integration Test</h1>
+    
+    <div class="test-section">
+      <h2>📋 Test Overview</h2>
+      <p>This test suite verifies the end-to-end integration of the XP progression system with the main game.</p>
+      <div id="overview"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>1️⃣ API Availability Tests</h2>
+      <button onclick="testAPIAvailability()">Run API Tests</button>
+      <div id="api-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>2️⃣ Bridge Initialization Tests</h2>
+      <button onclick="testBridgeInitialization()">Run Bridge Tests</button>
+      <div id="bridge-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>3️⃣ Event Hooks Tests</h2>
+      <button onclick="testEventHooks()">Run Event Hook Tests</button>
+      <div id="hooks-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>4️⃣ Leaderboard Display Tests</h2>
+      <button onclick="testLeaderboardDisplay()">Run Leaderboard Tests</button>
+      <div id="leaderboard-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>5️⃣ Global Aliases Tests</h2>
+      <button onclick="testGlobalAliases()">Run Global Alias Tests</button>
+      <div id="globals-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>🔄 Run All Tests</h2>
+      <button onclick="runAllTests()">Run Complete Test Suite</button>
+    </div>
+
+    <div class="summary" id="summary" style="display: none;">
+      <h3>Test Summary</h3>
+      <div id="summary-content"></div>
+    </div>
+  </div>
+
+  <!-- Simulated game context -->
+  <div id="tvOverlay" style="display: none;"></div>
+
+  <script>
+    // Mock game state for testing
+    window.game = {
+      week: 3,
+      players: [
+        { id: 'p1', name: 'Alice', evicted: false, human: true },
+        { id: 'p2', name: 'Bob', evicted: false, human: false },
+        { id: 'p3', name: 'Charlie', evicted: false, human: false },
+        { id: 'p4', name: 'Diana', evicted: true, human: false },
+        { id: 'p5', name: 'Eve', evicted: false, human: false }
+      ]
+    };
+
+    let testResults = {
+      passed: 0,
+      failed: 0,
+      warnings: 0
+    };
+
+    function logResult(container, message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `result ${type}`;
+      div.textContent = message;
+      document.getElementById(container).appendChild(div);
+      
+      if (type === 'pass') testResults.passed++;
+      if (type === 'fail') testResults.failed++;
+      if (type === 'warn') testResults.warnings++;
+    }
+
+    function clearResults(container) {
+      document.getElementById(container).innerHTML = '';
+    }
+
+    async function testAPIAvailability() {
+      clearResults('api-results');
+      
+      // Test 1: window.Progression exists
+      if (typeof window.Progression !== 'undefined') {
+        logResult('api-results', '✓ window.Progression is defined', 'pass');
+      } else {
+        logResult('api-results', '✗ window.Progression is NOT defined', 'fail');
+        return;
+      }
+
+      // Test 2: Check all required methods
+      const requiredMethods = [
+        'initialize', 'log', 'recompute', 'showModal', 
+        'getLeaderboard', 'getCurrentState', 'getPlayerState'
+      ];
+
+      requiredMethods.forEach(method => {
+        if (typeof window.Progression[method] === 'function') {
+          logResult('api-results', `✓ Progression.${method} is a function`, 'pass');
+        } else {
+          logResult('api-results', `✗ Progression.${method} is NOT a function`, 'fail');
+        }
+      });
+    }
+
+    async function testBridgeInitialization() {
+      clearResults('bridge-results');
+      
+      if (typeof window.Progression === 'undefined') {
+        logResult('bridge-results', '✗ Cannot test - Progression API not available', 'fail');
+        return;
+      }
+
+      try {
+        // Test initialization
+        logResult('bridge-results', 'Attempting to initialize progression system...', 'info');
+        const initialized = await window.Progression.initialize();
+        
+        if (initialized) {
+          logResult('bridge-results', '✓ Progression system initialized successfully', 'pass');
+        } else {
+          logResult('bridge-results', '⚠ Progression system initialization returned false (may not be fatal)', 'warn');
+        }
+
+        // Test getPlayerState with fallback
+        logResult('bridge-results', 'Testing getPlayerState with player p1...', 'info');
+        const playerState = await window.Progression.getPlayerState('p1');
+        
+        if (playerState && typeof playerState.totalXP !== 'undefined') {
+          logResult('bridge-results', `✓ getPlayerState returned valid state: ${playerState.totalXP} XP, Level ${playerState.level}`, 'pass');
+        } else {
+          logResult('bridge-results', '✗ getPlayerState returned invalid state', 'fail');
+        }
+
+        // Test getLeaderboard
+        logResult('bridge-results', 'Testing getLeaderboard...', 'info');
+        const leaderboard = await window.Progression.getLeaderboard(1);
+        
+        if (Array.isArray(leaderboard)) {
+          logResult('bridge-results', `✓ getLeaderboard returned array with ${leaderboard.length} entries`, 'pass');
+          if (leaderboard.length > 0 && leaderboard[0].playerName) {
+            logResult('bridge-results', `✓ Leaderboard entries have player names (e.g., ${leaderboard[0].playerName})`, 'pass');
+          }
+        } else {
+          logResult('bridge-results', '✗ getLeaderboard did not return an array', 'fail');
+        }
+
+      } catch (error) {
+        logResult('bridge-results', `✗ Bridge test error: ${error.message}`, 'fail');
+      }
+    }
+
+    function testEventHooks() {
+      clearResults('hooks-results');
+      
+      // Test 1: ProgressionEvents exists
+      if (typeof window.ProgressionEvents !== 'undefined') {
+        logResult('hooks-results', '✓ window.ProgressionEvents is defined', 'pass');
+      } else {
+        logResult('hooks-results', '✗ window.ProgressionEvents is NOT defined', 'fail');
+        return;
+      }
+
+      // Test 2: Check all required hooks
+      const requiredHooks = [
+        'onHOHWin', 'onNominations', 'onPOVWin', 'onVetoUsedOnSelf',
+        'onVetoUsedOnOther', 'onEvictionVotes', 'onSurviveEviction',
+        'onCorrectVote', 'onTiebreakerWin', 'onJuryVote',
+        'onFinalWinner', 'onPublicFavorite'
+      ];
+
+      requiredHooks.forEach(hook => {
+        if (typeof window.ProgressionEvents[hook] === 'function') {
+          logResult('hooks-results', `✓ ProgressionEvents.${hook} is a function`, 'pass');
+        } else {
+          logResult('hooks-results', `✗ ProgressionEvents.${hook} is NOT a function`, 'fail');
+        }
+      });
+
+      // Test 3: Try calling a hook (should not throw)
+      try {
+        window.ProgressionEvents.onHOHWin('p1', ['p1', 'p2', 'p3']);
+        logResult('hooks-results', '✓ Hook call (onHOHWin) executed without error', 'pass');
+      } catch (error) {
+        logResult('hooks-results', `✗ Hook call failed: ${error.message}`, 'fail');
+      }
+    }
+
+    async function testLeaderboardDisplay() {
+      clearResults('leaderboard-results');
+      
+      // Test 1: showTop5Leaderboard function exists
+      if (typeof window.showTop5Leaderboard === 'function') {
+        logResult('leaderboard-results', '✓ window.showTop5Leaderboard is defined', 'pass');
+      } else if (typeof window.ProgressionUI?.showTop5Leaderboard === 'function') {
+        logResult('leaderboard-results', '✓ ProgressionUI.showTop5Leaderboard is defined', 'pass');
+      } else {
+        logResult('leaderboard-results', '✗ showTop5Leaderboard function not found', 'fail');
+        return;
+      }
+
+      // Test 2: Check tvOverlay exists or can be created
+      let tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) {
+        logResult('leaderboard-results', '✓ tvOverlay element exists', 'pass');
+      } else {
+        logResult('leaderboard-results', '⚠ tvOverlay element not found (will be created on demand)', 'warn');
+      }
+
+      // Test 3: Try to show leaderboard
+      try {
+        const showFunc = window.showTop5Leaderboard || window.ProgressionUI?.showTop5Leaderboard;
+        if (showFunc) {
+          logResult('leaderboard-results', 'Attempting to display leaderboard...', 'info');
+          await showFunc(2000); // Show for 2 seconds
+          
+          // Check if panel was created
+          setTimeout(() => {
+            const panel = document.querySelector('.leaderboard-panel');
+            if (panel) {
+              logResult('leaderboard-results', '✓ Leaderboard panel created and visible', 'pass');
+              
+              // Check for player names
+              const names = panel.querySelectorAll('.leaderboard-name');
+              if (names.length > 0) {
+                logResult('leaderboard-results', `✓ Leaderboard shows ${names.length} players`, 'pass');
+              }
+            } else {
+              logResult('leaderboard-results', '⚠ Leaderboard panel not found (might have been removed)', 'warn');
+            }
+          }, 100);
+        }
+      } catch (error) {
+        logResult('leaderboard-results', `✗ Leaderboard display error: ${error.message}`, 'fail');
+      }
+    }
+
+    function testGlobalAliases() {
+      clearResults('globals-results');
+      
+      // Test 1: window.global exists
+      if (typeof window.global !== 'undefined') {
+        logResult('globals-results', '✓ window.global is defined', 'pass');
+      } else {
+        logResult('globals-results', '✗ window.global is NOT defined', 'fail');
+      }
+
+      // Test 2: window.global === window
+      if (window.global === window) {
+        logResult('globals-results', '✓ window.global correctly aliases window', 'pass');
+      } else {
+        logResult('globals-results', '⚠ window.global does not equal window', 'warn');
+      }
+
+      // Test 3: Check if global can access game
+      if (window.global && window.global.game) {
+        logResult('globals-results', '✓ global.game is accessible', 'pass');
+      } else {
+        logResult('globals-results', '⚠ global.game not accessible (may be timing issue)', 'warn');
+      }
+    }
+
+    async function runAllTests() {
+      testResults = { passed: 0, failed: 0, warnings: 0 };
+      
+      await testAPIAvailability();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await testBridgeInitialization();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      testEventHooks();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await testLeaderboardDisplay();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      testGlobalAliases();
+      
+      // Show summary
+      setTimeout(() => {
+        const summary = document.getElementById('summary');
+        const content = document.getElementById('summary-content');
+        
+        const total = testResults.passed + testResults.failed + testResults.warnings;
+        const passRate = Math.round((testResults.passed / total) * 100);
+        
+        content.innerHTML = `
+          <p style="font-size: 24px; margin: 10px 0;">
+            <strong>${testResults.passed}</strong> passed | 
+            <strong>${testResults.failed}</strong> failed | 
+            <strong>${testResults.warnings}</strong> warnings
+          </p>
+          <p style="font-size: 18px;">Pass Rate: ${passRate}%</p>
+          ${testResults.failed === 0 ? 
+            '<p style="font-size: 20px; margin-top: 20px;">🎉 All critical tests passed!</p>' : 
+            '<p style="font-size: 20px; margin-top: 20px;">⚠️ Some tests failed - please review</p>'}
+        `;
+        
+        summary.style.display = 'block';
+      }, 2000);
+    }
+
+    // Show overview on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const overview = document.getElementById('overview');
+      overview.innerHTML = `
+        <div class="result info">
+          <strong>Test Categories:</strong><br>
+          1. API Availability - Checks if Progression API is exposed correctly<br>
+          2. Bridge Initialization - Tests core functionality and fallbacks<br>
+          3. Event Hooks - Verifies game event wiring<br>
+          4. Leaderboard Display - Tests UI rendering<br>
+          5. Global Aliases - Checks browser compatibility fixes
+        </div>
+        <div class="result info">
+          <strong>How to use:</strong> Click individual test buttons or run the complete suite.
+          Tests will verify that the XP progression system is properly integrated.
+        </div>
+      `;
+    });
+  </script>
+
+  <!-- Load progression system scripts -->
+  <script type="module" src="js/progression-bridge.js"></script>
+  <script src="js/progression-events.js"></script>
+  <script src="js/progression-ui.js"></script>
+</body>
+</html>
