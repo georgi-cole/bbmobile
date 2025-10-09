@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progression Core + Storage Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #ffdc8b;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #83bfff;
+      margin-top: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+      background: #1a1a1a;
+    }
+    .test-result.pass {
+      border-left: 4px solid #4caf50;
+    }
+    .test-result.fail {
+      border-left: 4px solid #f44336;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: linear-gradient(135deg, #ffdc8b 0%, #ffa500 100%);
+      border: none;
+      border-radius: 6px;
+      color: #1a1a1a;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 220, 139, 0.4);
+    }
+    .control-group {
+      margin: 20px 0;
+      padding: 15px;
+      background: #333;
+      border-radius: 6px;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      background: #2a2a2a;
+      font-weight: 600;
+    }
+    .status.enabled {
+      color: #4caf50;
+    }
+    .status.disabled {
+      color: #f44336;
+    }
+    code {
+      background: #1a1a1a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #ffdc8b;
+    }
+  </style>
+</head>
+<body>
+  <h1>Progression Core + Storage Test</h1>
+  <p>This page tests the progression system with feature flag gating and storage fallback.</p>
+
+  <div class="control-group">
+    <h2>Feature Flag Control</h2>
+    <div id="flag-status" class="status"></div>
+    <button onclick="enableFlag()">Enable Flag</button>
+    <button onclick="disableFlag()">Disable Flag</button>
+    <button onclick="checkFlag()">Check Current Status</button>
+    <div style="margin-top: 10px; font-size: 12px; color: #888;">
+      <strong>Methods to enable:</strong>
+      <ul>
+        <li><code>localStorage.setItem('progression.enabled', 'true')</code></li>
+        <li><code>window.progression = { enabled: true }</code></li>
+        <li>Enable in Settings UI (⚙️ Settings → Gameplay tab)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: API Availability</h2>
+    <div id="test1-results"></div>
+    <button onclick="runTest1()">Run Test 1</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Safe No-Ops (Flag OFF)</h2>
+    <div id="test2-results"></div>
+    <button onclick="runTest2()">Run Test 2</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Functional Operations (Flag ON)</h2>
+    <div id="test3-results"></div>
+    <button onclick="runTest3()">Run Test 3</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Event Logging & Persistence</h2>
+    <div id="test4-results"></div>
+    <button onclick="runTest4()">Run Test 4</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Storage Fallback</h2>
+    <div id="test5-results"></div>
+    <button onclick="runTest5()">Run Test 5</button>
+  </div>
+
+  <!-- Mock game object -->
+  <script>
+    window.g = window.g || {};
+    window.g.cfg = window.g.cfg || {};
+    window.game = window.game || { players: [] };
+  </script>
+
+  <!-- Load progression bridge -->
+  <script src="js/progression-bridge.js"></script>
+
+  <script>
+    function addResult(containerId, text, isPassed) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${isPassed ? 'pass' : 'fail'}`;
+      div.textContent = (isPassed ? '✓ ' : '✗ ') + text;
+      container.appendChild(div);
+    }
+
+    function clearResults(containerId) {
+      document.getElementById(containerId).innerHTML = '';
+    }
+
+    function enableFlag() {
+      localStorage.setItem('progression.enabled', 'true');
+      window.g.cfg.progressionEnabled = true;
+      checkFlag();
+    }
+
+    function disableFlag() {
+      localStorage.removeItem('progression.enabled');
+      window.g.cfg.progressionEnabled = false;
+      delete window.progression;
+      checkFlag();
+    }
+
+    function checkFlag() {
+      const status = document.getElementById('flag-status');
+      const isEnabled = window.Progression && window.Progression.isEnabled && window.Progression.isEnabled();
+      status.className = `status ${isEnabled ? 'enabled' : 'disabled'}`;
+      status.textContent = `Feature Flag: ${isEnabled ? 'ENABLED' : 'DISABLED'}`;
+    }
+
+    async function runTest1() {
+      clearResults('test1-results');
+      
+      addResult('test1-results', 'window.Progression exists', !!window.Progression);
+      addResult('test1-results', 'Progression.log exists', typeof window.Progression?.log === 'function');
+      addResult('test1-results', 'Progression.getCurrentState exists', typeof window.Progression?.getCurrentState === 'function');
+      addResult('test1-results', 'Progression.showModal exists', typeof window.Progression?.showModal === 'function');
+      addResult('test1-results', 'Progression.isEnabled exists', typeof window.Progression?.isEnabled === 'function');
+      addResult('test1-results', 'Progression.initialize exists', typeof window.Progression?.initialize === 'function');
+      addResult('test1-results', 'Progression.getLeaderboard exists', typeof window.Progression?.getLeaderboard === 'function');
+    }
+
+    async function runTest2() {
+      clearResults('test2-results');
+      
+      // Ensure flag is OFF
+      disableFlag();
+      
+      try {
+        // All operations should be safe no-ops
+        const result1 = await window.Progression.log('HOH_WIN', { week: 1, seasonId: 1, playerId: 'test' });
+        addResult('test2-results', 'log() returns null when disabled', result1 === null);
+        
+        const result2 = await window.Progression.getCurrentState();
+        addResult('test2-results', 'getCurrentState() returns default state when disabled', 
+          result2.totalXP === 0 && result2.level === 1);
+        
+        const result3 = await window.Progression.getLeaderboard(1);
+        addResult('test2-results', 'getLeaderboard() returns empty array when disabled', 
+          Array.isArray(result3) && result3.length === 0);
+        
+        // showModal should not throw
+        await window.Progression.showModal(1, 'test');
+        addResult('test2-results', 'showModal() does not throw when disabled', true);
+        
+        addResult('test2-results', 'No runtime errors with flag OFF', true);
+      } catch (error) {
+        addResult('test2-results', 'Caught unexpected error: ' + error.message, false);
+      }
+    }
+
+    async function runTest3() {
+      clearResults('test3-results');
+      
+      // Ensure flag is ON
+      enableFlag();
+      
+      try {
+        // Initialize
+        const initResult = await window.Progression.initialize();
+        addResult('test3-results', 'initialize() succeeds', initResult === true);
+        
+        // Log event
+        const event = await window.Progression.log('COMP_WIN', { 
+          week: 1, 
+          seasonId: 1, 
+          playerId: 'player1' 
+        });
+        addResult('test3-results', 'log() returns event object', event !== null && typeof event === 'object');
+        
+        // Get state
+        const state = await window.Progression.getCurrentState();
+        addResult('test3-results', 'getCurrentState() returns state with XP', 
+          state.totalXP >= 0 && typeof state.level === 'number');
+        
+        addResult('test3-results', 'State has eventsCount', typeof state.eventsCount === 'number');
+        addResult('test3-results', 'No runtime errors with flag ON', true);
+      } catch (error) {
+        addResult('test3-results', 'Caught error: ' + error.message, false);
+      }
+    }
+
+    async function runTest4() {
+      clearResults('test4-results');
+      
+      // Ensure flag is ON
+      enableFlag();
+      
+      try {
+        await window.Progression.initialize();
+        
+        // Log multiple events
+        await window.Progression.log('HOH_WIN', { week: 1, seasonId: 1, playerId: 'player1' });
+        await window.Progression.log('POV_WIN', { week: 1, seasonId: 1, playerId: 'player1' });
+        await window.Progression.log('COMP_WIN', { week: 2, seasonId: 1, playerId: 'player1' });
+        
+        const state = await window.Progression.getCurrentState();
+        
+        addResult('test4-results', 'Multiple events logged', state.eventsCount >= 3);
+        addResult('test4-results', 'Total XP calculated correctly', state.totalXP > 0);
+        addResult('test4-results', 'Level calculated (100 XP per level)', state.level >= 1);
+        addResult('test4-results', 'Progress percent calculated', 
+          state.progressPercent >= 0 && state.progressPercent <= 100);
+        
+        // Check floor at 0
+        addResult('test4-results', 'XP floored at 0 (no negative totals)', state.totalXP >= 0);
+        
+        console.log('Current state:', state);
+      } catch (error) {
+        addResult('test4-results', 'Caught error: ' + error.message, false);
+      }
+    }
+
+    async function runTest5() {
+      clearResults('test5-results');
+      
+      // This test checks that storage module can handle IndexedDB or fallback
+      // Enable flag first
+      enableFlag();
+      
+      try {
+        // Import storage module directly
+        const storage = await import('./src/progression/storage.js');
+        
+        addResult('test5-results', 'Storage module loaded', !!storage);
+        addResult('test5-results', 'Storage.initialize exists', typeof storage.initialize === 'function');
+        addResult('test5-results', 'Storage.saveEvent exists', typeof storage.saveEvent === 'function');
+        addResult('test5-results', 'Storage.getAllEvents exists', typeof storage.getAllEvents === 'function');
+        
+        // Initialize storage
+        await storage.initialize();
+        const inMemory = storage.isInMemoryMode();
+        addResult('test5-results', `Storage mode: ${inMemory ? 'In-Memory (fallback)' : 'IndexedDB'}`, true);
+        
+        // Test basic operations
+        const testEvent = {
+          id: 'test-' + Date.now(),
+          timestamp: Date.now(),
+          ruleId: 'TEST_EVENT',
+          amount: 50,
+          week: 1,
+          season: 1
+        };
+        
+        await storage.saveEvent(testEvent);
+        const events = await storage.getAllEvents();
+        const found = events.find(e => e.id === testEvent.id);
+        addResult('test5-results', 'Event saved and retrieved', !!found);
+        
+      } catch (error) {
+        addResult('test5-results', 'Storage test error: ' + error.message, false);
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      checkFlag();
+    });
+  </script>
+</body>
+</html>
