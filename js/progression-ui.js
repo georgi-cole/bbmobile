@@ -57,17 +57,21 @@
       const game = global.game || {};
       const players = game.players || [];
       
-      // Get current state for all players (simplified - using same state for demo)
-      const state = await global.Progression.getCurrentState();
+      // Get individual progression state for each player
+      const playerStates = await Promise.all(
+        players
+          .filter(p => !p.evicted)
+          .map(p => global.Progression.getPlayerState(p.id))
+      );
       
       // Build leaderboard with actual player data
       const leaderboard = players
         .filter(p => !p.evicted)
-        .map(p => ({
+        .map((p, idx) => ({
           playerId: p.id,
           playerName: p.name,
-          totalXP: state.totalXP,
-          level: state.level
+          totalXP: playerStates[idx].totalXP,
+          level: playerStates[idx].level
         }))
         .sort((a, b) => b.totalXP - a.totalXP)
         .slice(0, 5);
