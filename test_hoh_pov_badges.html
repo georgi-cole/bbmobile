@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOH/POV Badge Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: #0d1521;
+      color: #c9d3e8;
+      font-family: Arial, sans-serif;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: rgba(30, 50, 70, 0.3);
+      border: 1px solid #1f3248;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: #77d58d;
+    }
+    .test-description {
+      margin-bottom: 15px;
+      color: #95a9c0;
+    }
+    .expected {
+      color: #77d58d;
+      font-weight: 600;
+    }
+    .roster-demo {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .top-roster-tile {
+      background: linear-gradient(145deg, rgba(30, 50, 70, 0.6), rgba(20, 35, 50, 0.7));
+      border: 1px solid rgba(120, 210, 255, 0.15);
+      border-radius: 12px;
+      padding: 12px 8px 18px;
+      min-width: 90px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .top-tile-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin: 0 auto 8px;
+      display: block;
+      border: 2px solid rgba(120, 210, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>HOH/POV Badge Rendering Test</h1>
+    <p style="margin-bottom: 20px;">
+      This test verifies the correct rendering of HOH and POV badges on mobile.
+    </p>
+
+    <div class="test-section">
+      <div class="test-title">Test 1: Single HOH</div>
+      <div class="test-description">
+        <span class="expected">Expected:</span> Text label "HOH" with gold gradient background (no emoji)
+      </div>
+      <div class="roster-demo" id="test1"></div>
+    </div>
+
+    <div class="test-section">
+      <div class="test-title">Test 2: Single POV</div>
+      <div class="test-description">
+        <span class="expected">Expected:</span> Text label "POV" with green gradient background (no emoji)
+      </div>
+      <div class="roster-demo" id="test2"></div>
+    </div>
+
+    <div class="test-section">
+      <div class="test-title">Test 3: Both HOH and POV</div>
+      <div class="test-description">
+        <span class="expected">Expected:</span> Emojis 👑🛡️ displayed side by side (space-saving on mobile)
+      </div>
+      <div class="roster-demo" id="test3"></div>
+    </div>
+
+    <div class="test-section">
+      <div class="test-title">Test 4: Winner/Runner-up (unchanged)</div>
+      <div class="test-description">
+        <span class="expected">Expected:</span> Winner shows 🥇, Runner-up shows 🥈 (emojis remain unchanged)
+      </div>
+      <div class="roster-demo" id="test4"></div>
+    </div>
+
+    <div class="test-section">
+      <div class="test-title">Test 5: NOM (unchanged)</div>
+      <div class="test-description">
+        <span class="expected">Expected:</span> Text label "NOM" with red gradient background
+      </div>
+      <div class="roster-demo" id="test5"></div>
+    </div>
+  </div>
+
+  <script>
+    // Create mock player avatar
+    function createAvatar() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      
+      // Draw a simple colored circle
+      ctx.fillStyle = '#4a7c9e';
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = '#2d5a7b';
+      ctx.beginPath();
+      ctx.arc(64, 64, 50, 0, Math.PI * 2);
+      ctx.fill();
+      
+      return canvas.toDataURL();
+    }
+
+    function createRosterTile(name, labelText, statusClass, ariaLabel, useInnerHTML = false) {
+      const wrap = document.createElement('div');
+      wrap.className = 'top-roster-tile';
+      wrap.setAttribute('aria-label', ariaLabel);
+      
+      const img = document.createElement('img');
+      img.className = 'top-tile-avatar';
+      img.src = createAvatar();
+      img.alt = name;
+      wrap.appendChild(img);
+      
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'top-tile-name';
+      
+      if (useInnerHTML) {
+        nameDiv.innerHTML = labelText;
+      } else {
+        nameDiv.textContent = labelText;
+      }
+      
+      if (statusClass) {
+        statusClass.trim().split(' ').forEach(cls => {
+          if (cls) nameDiv.classList.add(cls);
+        });
+      }
+      
+      wrap.appendChild(nameDiv);
+      return wrap;
+    }
+
+    // Test 1: Single HOH
+    const test1 = document.getElementById('test1');
+    test1.appendChild(createRosterTile(
+      'Alice',
+      'HOH',
+      'status-hoh',
+      'Alice (Head of Household)'
+    ));
+
+    // Test 2: Single POV
+    const test2 = document.getElementById('test2');
+    test2.appendChild(createRosterTile(
+      'Bob',
+      'POV',
+      'status-pov',
+      'Bob (Veto Holder)'
+    ));
+
+    // Test 3: Both HOH and POV
+    const test3 = document.getElementById('test3');
+    test3.appendChild(createRosterTile(
+      'Charlie',
+      '<span class="icon-hoh">👑</span><span class="icon-veto">🛡</span>',
+      'status-icon-label hoh-pov-icons',
+      'Charlie (Head of Household and Veto Holder)',
+      true
+    ));
+
+    // Test 4: Winner and Runner-up
+    const test4 = document.getElementById('test4');
+    test4.appendChild(createRosterTile(
+      'Diana',
+      '🥇',
+      'status-icon-label medal-winner',
+      'Diana (Winner)'
+    ));
+    test4.appendChild(createRosterTile(
+      'Eve',
+      '🥈',
+      'status-icon-label medal-runner-up',
+      'Eve (Runner-Up)'
+    ));
+
+    // Test 5: NOM
+    const test5 = document.getElementById('test5');
+    test5.appendChild(createRosterTile(
+      'Frank',
+      'NOM',
+      'status-nom',
+      'Frank (Nominated)'
+    ));
+  </script>
+</body>
+</html>
