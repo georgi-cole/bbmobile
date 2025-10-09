@@ -834,7 +834,8 @@
           subtitle: '',
           tone: 'special',
           duration: 4000,
-          minDisplayTime: 500
+          minDisplayTime: 500,
+          titleFontSize: '1.5rem'
         });
       } else if(typeof g.showCard === 'function'){
         // Fallback to regular card if event modal not available
@@ -1190,12 +1191,12 @@
     winnerTitle.className = 'pfWinnerTitle';
     winnerTitle.textContent = 'Public\'s Favourite Player';
     
-    // Create $1M check card display
+    // Create $20K check card display
     const checkCard = document.createElement('div');
     checkCard.className = 'pfCheckCard';
     checkCard.innerHTML = `
       <div class="pfCheckHeader">Big Brother Favorite Prize</div>
-      <div class="pfCheckAmount">$1,000,000</div>
+      <div class="pfCheckAmount">$20,000</div>
       <div class="pfCheckPayto">Pay to the order of<br><strong>${fanFavName}</strong></div>
       <div class="pfCheckMemo">Congratulations on being the fan favorite!</div>
     `;

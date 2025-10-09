@@ -90,11 +90,11 @@
     </div>
     
     <div class="test-section">
-      <h2>Test 3: $1M Check Display (Winner Card)</h2>
+      <h2>Test 3: $20K Check Display (Winner Card)</h2>
       <p>Winner card should show:</p>
       <ul>
         <li>✅ Winner avatar and name</li>
-        <li>✅ $1,000,000 check with golden gradient</li>
+        <li>✅ $20,000 check with golden gradient</li>
         <li>✅ Spinning animation on entrance</li>
         <li>✅ Pulsing glow effect</li>
         <li>✅ "Pay to the order of [Winner]" format</li>
@@ -129,7 +129,8 @@
           subtitle: '',
           tone: 'special',
           duration: 5000,
-          minDisplayTime: 500
+          minDisplayTime: 500,
+          titleFontSize: '1.5rem'
         });
         log('Modal displayed successfully!');
       } else {
@@ -311,7 +312,7 @@
       checkCard.className = 'pfCheckCard';
       checkCard.innerHTML = `
         <div class="pfCheckHeader">Big Brother Favorite Prize</div>
-        <div class="pfCheckAmount">$1,000,000</div>
+        <div class="pfCheckAmount">$20,000</div>
         <div class="pfCheckPayto">Pay to the order of<br><strong>Alice</strong></div>
         <div class="pfCheckMemo">Congratulations on being the fan favorite!</div>
       `;
@@ -320,7 +321,7 @@
       winnerCard.appendChild(winnerSection);
       document.body.appendChild(winnerCard);
       
-      log('Winner card displayed with $1M check');
+      log('Winner card displayed with $20K check');
       log('Check features golden gradient and spinning animation');
       
       // Add close button
