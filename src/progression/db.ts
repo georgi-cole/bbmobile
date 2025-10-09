@@ -21,7 +21,8 @@ export async function openDB(): Promise<IDBDatabase> {
       dbInstance = request.result;
       
       // Write schemaVersion to meta store
-      writeMetaEntry({ key: 'schemaVersion', value: DB_VERSION }).catch(console.error);
+      writeMetaEntry({ key: 'schemaVersion', value: DB_VERSION })
+        .catch(err => console.error("Failed to write schemaVersion to meta store:", err));
       
       resolve(dbInstance);
     };
