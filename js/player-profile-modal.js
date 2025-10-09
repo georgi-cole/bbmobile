@@ -277,9 +277,36 @@
     // Start the opening sequence
     console.info('[profile-modal] starting opening sequence with profile:', profile);
     
-    // Apply the profile to config
+    // Apply the profile to config and the actual player
     if (global.game && global.game.cfg) {
       global.game.cfg.humanName = profile.name;
+    }
+    
+    // Find and update the human player
+    if (global.game && global.game.players) {
+      const humanPlayer = global.game.players.find(p => p.human || p.id === global.game.humanId || p.id === 0);
+      if (humanPlayer) {
+        humanPlayer.name = profile.name;
+        if (profile.age) humanPlayer.age = profile.age;
+        if (profile.location) humanPlayer.location = profile.location;
+        if (profile.occupation) humanPlayer.occupation = profile.occupation;
+        
+        // Update meta object if it exists
+        if (!humanPlayer.meta) humanPlayer.meta = {};
+        if (profile.age) humanPlayer.meta.age = parseInt(profile.age, 10);
+        if (profile.location) humanPlayer.meta.location = profile.location;
+        if (profile.occupation) humanPlayer.meta.occupation = profile.occupation;
+        
+        console.info('[profile-modal] updated human player:', humanPlayer);
+      }
+    }
+    
+    // Update HUD to reflect the new name
+    if (typeof global.updateHud === 'function') {
+      global.updateHud();
+    }
+    if (typeof global.renderPanel === 'function') {
+      global.renderPanel();
     }
     
     // Trigger opening sequence
