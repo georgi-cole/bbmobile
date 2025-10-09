@@ -149,4 +149,4 @@ export function close(): void {
 // Export types and constants for convenience
 export * from './types.js';
 export * from './constants.js';
-export { reduceEvents, computeBreakdown } from './reducer.js';
+// Internal reducer functions are not exported to preserve encapsulation.
