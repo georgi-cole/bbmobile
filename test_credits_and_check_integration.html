@@ -112,14 +112,13 @@
     <h1>🎬 Credits Button & Check Card Test</h1>
     
     <div class="test-section">
-      <h2>1. End Credits Module Test</h2>
+      <h2>1. Credits Button Test (Outro Video)</h2>
       <div class="status" id="credits-status">
-        <div class="status-item status-info">Checking module load status...</div>
+        <div class="status-item status-info">Checking outro video system...</div>
       </div>
       <div class="test-buttons">
-        <button onclick="testCreditsModule()">Check Credits Module</button>
-        <button class="primary" onclick="testStartCredits()">Start Credits Sequence</button>
-        <button onclick="stopCredits()">Stop Credits</button>
+        <button onclick="testCreditsModule()">Check Credits Functions</button>
+        <button class="primary" onclick="testFinaleCinematicWithCredits()">Test Finale with Credits Button</button>
       </div>
     </div>
 
@@ -150,9 +149,9 @@
   </div>
 
   <!-- Load required scripts -->
-  <script src="js/end-credits.js"></script>
   <script src="js/jury-viz.js"></script>
   <script src="js/finale.js"></script>
+  <script defer src="js/intro-outro-video.js"></script>
 
   <script>
     // Mock game data
@@ -184,60 +183,46 @@
     function testCreditsModule() {
       const status = [];
       
-      if (typeof window.startEndCreditsMontageSplit === 'function') {
-        status.push({ type: 'ok', text: 'startEndCreditsMontageSplit: Available' });
+      if (typeof window.playOutroVideo === 'function') {
+        status.push({ type: 'ok', text: 'playOutroVideo: Available (plays outro.mp4)' });
       } else {
-        status.push({ type: 'fail', text: 'startEndCreditsMontageSplit: Not found' });
+        status.push({ type: 'fail', text: 'playOutroVideo: Not found' });
       }
       
-      if (typeof window.startEndCreditsSequence === 'function') {
-        status.push({ type: 'ok', text: 'startEndCreditsSequence: Available' });
+      if (typeof window.showFinaleCinematic === 'function') {
+        status.push({ type: 'ok', text: 'showFinaleCinematic: Available' });
       } else {
-        status.push({ type: 'fail', text: 'startEndCreditsSequence: Not found' });
+        status.push({ type: 'fail', text: 'showFinaleCinematic: Not found' });
       }
       
-      if (typeof window.stopEndCreditsSequence === 'function') {
-        status.push({ type: 'ok', text: 'stopEndCreditsSequence: Available' });
+      // Verify end-credits.js is NOT loaded (obsolete)
+      if (typeof window.startEndCreditsMontageSplit === 'undefined') {
+        status.push({ type: 'ok', text: 'Old end-credits.js: Correctly not loaded (obsolete)' });
       } else {
-        status.push({ type: 'fail', text: 'stopEndCreditsSequence: Not found' });
-      }
-      
-      if (typeof window.startEndCreditsSplit === 'function') {
-        status.push({ type: 'ok', text: 'startEndCreditsSplit (compat): Available' });
-      } else {
-        status.push({ type: 'info', text: 'startEndCreditsSplit (compat): Not found' });
+        status.push({ type: 'fail', text: 'Old end-credits.js: Should not be loaded' });
       }
       
       updateStatus('credits-status', status);
     }
 
-    function testStartCredits() {
-      console.log('[test] Starting credits sequence...');
-      if (typeof window.startEndCreditsSequence === 'function') {
+    function testFinaleCinematicWithCredits() {
+      console.log('[test] Testing finale cinematic with credits button...');
+      if (typeof window.showFinaleCinematic === 'function') {
         try {
-          window.startEndCreditsSequence();
+          window.showFinaleCinematic(1); // Show for Alice
           updateStatus('credits-status', [
-            { type: 'ok', text: 'Credits sequence started successfully' },
-            { type: 'info', text: 'Press ESC or click Skip to close' }
+            { type: 'ok', text: 'Finale cinematic displayed' },
+            { type: 'info', text: 'Click CREDITS button to test - it will play outro.mp4' }
           ]);
         } catch(e) {
-          console.error('[test] Credits error:', e);
+          console.error('[test] Finale error:', e);
           updateStatus('credits-status', [
-            { type: 'fail', text: 'Error starting credits: ' + e.message }
+            { type: 'fail', text: 'Error showing finale: ' + e.message }
           ]);
         }
       } else {
         updateStatus('credits-status', [
-          { type: 'fail', text: 'startEndCreditsSequence function not available' }
-        ]);
-      }
-    }
-
-    function stopCredits() {
-      if (typeof window.stopEndCreditsSequence === 'function') {
-        window.stopEndCreditsSequence();
-        updateStatus('credits-status', [
-          { type: 'ok', text: 'Credits stopped' }
+          { type: 'fail', text: 'showFinaleCinematic not available' }
         ]);
       }
     }
