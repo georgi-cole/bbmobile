@@ -209,6 +209,58 @@
   </script>
 
   <!-- Load the actual game scripts -->
+  <script>
+    // Minimal mock for UI utilities that renderTopRoster needs
+    window.g = window.g || {};
+    window.UI = window.UI || {};
+    window.UI.FALLBACK_AVATAR = 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest';
+    window.UI.escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[m]);
+
+    // Mock functions that renderTopRoster depends on
+    function ensureTopRosterHost() {
+      let host = document.getElementById('rosterBar');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'rosterBar';
+        document.body.appendChild(host);
+      }
+      return host;
+    }
+
+    function computeTopTileSize(host, n) {
+      const containerWidth = host.offsetWidth || 800;
+      const gap = 12;
+      const minSize = 80;
+      const maxSize = 120;
+      
+      if (n <= 0) return minSize;
+      
+      const availableWidth = containerWidth - (n - 1) * gap;
+      let tileSize = Math.floor(availableWidth / n);
+      
+      tileSize = Math.max(minSize, Math.min(maxSize, tileSize));
+      return tileSize;
+    }
+
+    function getAvatar(p) {
+      if (p.avatar) return p.avatar;
+      const seed = encodeURIComponent(p.name || 'guest');
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${seed}`;
+    }
+
+    function showProfileFor(p, e) {
+      // Mock - no action
+    }
+
+    function hideProfileTip() {
+      // Mock - no action
+    }
+
+    const FALLBACK = 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest';
+  </script>
+  
   <script src="js/ui.hud-and-router.js"></script>
   
   <script>
