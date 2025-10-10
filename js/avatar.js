@@ -94,6 +94,9 @@
     // Get player name for name-based lookups
     const playerName = player?.name || String(playerId);
     
+    // Check if this is the human player (id 0 or human flag)
+    const isHumanPlayer = (playerId === 0 || playerId === '0' || player?.human || player?.id === 0);
+    
     // Try multi-case permutations: plural first (PNG), then singular (JPG)
     // Priority order: Name.png, name.png, id.png, Name.jpg, name.jpg, id.jpg
     const candidates = [];
@@ -112,6 +115,11 @@
     if (playerId) {
       candidates.push(`./avatars/${playerId}.png`);
       candidates.push(`./avatars/${playerId}.jpg`);
+    }
+    
+    // For human player, add You.png as a specific fallback before generic fallback
+    if (isHumanPlayer) {
+      candidates.push('./avatars/You.png');
     }
     
     // Return first candidate not in negative cache

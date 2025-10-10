@@ -92,15 +92,26 @@
       const s=panel.querySelector('#cinStats'); s.style.display = (s.style.display==='none'||!s.style.display) ? 'block' : 'none';
     };
     panel.querySelector('#cinCredits').onclick=()=>{
-      if(g.__outroStarted){
-        console.info('[finale] outro already started');
-        return;
-      }
-      g.__outroStarted = true;
+      // Reset the flag to allow replaying credits every time
+      g.__outroStarted = false;
+      
+      console.info('[finale] credits button clicked, playing outro');
       if(typeof g.playOutroVideo === 'function'){
-        try { g.playOutroVideo(); } catch(e){ console.warn('[finale] playOutroVideo error', e); }
+        try { 
+          g.__outroStarted = true;
+          g.playOutroVideo(); 
+        } catch(e){ 
+          console.warn('[finale] playOutroVideo error', e); 
+          g.__outroStarted = false;
+        }
       } else if(typeof g.startEndCreditsSequence === 'function'){
-        try { g.startEndCreditsSequence(); } catch(e){ console.warn('[finale] startEndCreditsSequence error', e); }
+        try { 
+          g.__outroStarted = true;
+          g.startEndCreditsSequence(); 
+        } catch(e){ 
+          console.warn('[finale] startEndCreditsSequence error', e); 
+          g.__outroStarted = false;
+        }
       }
     };
     panel.querySelector('#cinNewSeason').onclick=()=>{

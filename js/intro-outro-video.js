@@ -289,21 +289,26 @@
       if(typeof g.startCreditsSequence === 'function'){
         try { g.startCreditsSequence(); } catch {}
       }
+      g.__outroStarted = false; // Reset flag on failure
       return;
     }
     // D) Return to winner panel after outro
     playVideo(url, { 
       onEnd: ()=>{ 
+        g.__outroStarted = false; // Reset flag to allow replay
         if(g.__lastWinnerId != null) {
           setTimeout(()=>g.showFinaleCinematic?.(g.__lastWinnerId), 100);
         }
       }, 
       onSkip: ()=>{
+        g.__outroStarted = false; // Reset flag to allow replay
         if(g.__lastWinnerId != null) {
           setTimeout(()=>g.showFinaleCinematic?.(g.__lastWinnerId), 100);
         }
       }, 
-      onFail: ()=>{} 
+      onFail: ()=>{
+        g.__outroStarted = false; // Reset flag on failure
+      } 
     });
   };
 

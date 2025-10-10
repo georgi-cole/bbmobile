@@ -9,6 +9,11 @@
   let modalShown = false;
   let pendingAvatarDataUrl = null;
   let parentalConsentGiven = false;
+  let ageTooltip = null;
+  let over99Confirmed = false;
+  
+  // Track if modals have already been shown once this session
+  let rulesAcknowledged = false;
 
   function ensureModal() {
     let dim = document.querySelector('.profileDim');
@@ -106,7 +111,14 @@
     };
 
     formSection.appendChild(createField('Name', 'profileName', 'text', 'Enter your name', true));
-    formSection.appendChild(createField('Age', 'profileAge', 'number', 'Enter your age'));
+    
+    // Age field with tooltip container
+    const ageFieldContainer = document.createElement('div');
+    ageFieldContainer.style.cssText = 'position: relative;';
+    const ageField = createField('Age', 'profileAge', 'number', 'Enter your age');
+    ageFieldContainer.appendChild(ageField);
+    formSection.appendChild(ageFieldContainer);
+    
     formSection.appendChild(createField('Location', 'profileLocation', 'text', 'City, Country'));
     formSection.appendChild(createField('Occupation', 'profileOccupation', 'text', 'Your occupation'));
 
@@ -191,6 +203,90 @@
     });
 
     return dim;
+  }
+
+  // Age tooltip functions
+  function showAgeTooltip(message) {
+    hideAgeTooltip(); // Remove any existing tooltip
+    
+    const ageInput = document.getElementById('profileAge');
+    if (!ageInput) return;
+    
+    ageTooltip = document.createElement('div');
+    ageTooltip.className = 'age-tooltip';
+    ageTooltip.textContent = message;
+    ageTooltip.style.cssText = `
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      right: 0;
+      margin-bottom: 8px;
+      background: #2d3f56;
+      color: #f5f9fc;
+      border: 2px solid #ff9933;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      z-index: 10;
+      animation: fadeIn 0.25s ease;
+      pointer-events: none;
+      text-align: center;
+      line-height: 1.4;
+    `;
+    
+    // Add tooltip to age field container
+    const ageFieldContainer = ageInput.closest('div').parentElement;
+    if (ageFieldContainer) {
+      ageFieldContainer.style.position = 'relative';
+      ageFieldContainer.appendChild(ageTooltip);
+      
+      // Highlight age input
+      ageInput.style.borderColor = '#ff9933';
+      ageInput.style.boxShadow = '0 0 0 2px rgba(255, 153, 51, 0.3)';
+    }
+  }
+
+  function hideAgeTooltip() {
+    if (ageTooltip && ageTooltip.parentElement) {
+      ageTooltip.remove();
+      ageTooltip = null;
+    }
+    
+    // Remove highlight from age input
+    const ageInput = document.getElementById('profileAge');
+    if (ageInput) {
+      ageInput.style.borderColor = '';
+      ageInput.style.boxShadow = '';
+    }
+  }
+
+  function checkAgeInput() {
+    const ageInput = document.getElementById('profileAge');
+    if (!ageInput || !ageInput.value) {
+      hideAgeTooltip();
+      over99Confirmed = false;
+      return;
+    }
+    
+    const age = parseInt(ageInput.value, 10);
+    
+    if (isNaN(age)) {
+      hideAgeTooltip();
+      over99Confirmed = false;
+      return;
+    }
+    
+    if (age < 5 && age > 0) {
+      showAgeTooltip("Wow, you must be a wunderkind! 🧠👶");
+    } else if (age >= 6 && age <= 12) {
+      showAgeTooltip("You sure you don't have some homework to do? 🏫📚");
+    } else if (age > 99) {
+      showAgeTooltip("You must be related to Dracula? 🧛🩸");
+      // Don't block, just show tooltip
+    } else {
+      hideAgeTooltip();
+    }
   }
 
   function ensureParentalConsentModal() {
@@ -357,6 +453,12 @@
   }
 
   function showProfileModal() {
+    // Check if this is a restart and we should skip the modal
+    if (modalShown && rulesAcknowledged) {
+      console.info('[profile-modal] skipping modal on restart');
+      return;
+    }
+    
     if (modalShown) {
       console.info('[profile-modal] already shown this session');
       return;
@@ -402,6 +504,17 @@
       const nameInput = document.getElementById('profileName');
       try { nameInput ? nameInput.focus() : startBtn.focus(); } catch {} 
     }, 100);
+
+    // Wire age input to show tooltips
+    const ageInput = document.getElementById('profileAge');
+    if (ageInput) {
+      ageInput.addEventListener('input', checkAgeInput);
+      ageInput.addEventListener('blur', hideAgeTooltip);
+      // Check immediately if there's a value
+      if (ageInput.value) {
+        setTimeout(() => checkAgeInput(), 200);
+      }
+    }
 
     startBtn.onclick = () => {
       startWithProfile();
@@ -541,6 +654,7 @@
     // Listen for when rules modal is closed
     window.addEventListener('bb:rules:acknowledged', function(e) {
       console.info('[profile-modal] rules acknowledged, showing profile modal');
+      rulesAcknowledged = true;
       setTimeout(() => showProfileModal(), 150);
     }, { once: true });
   }
@@ -548,6 +662,13 @@
   // Expose to global
   global.showProfileModal = showProfileModal;
   global.hideProfileModal = hideProfileModal;
+  
+  // Function to allow restart to skip modals
+  global.skipModalFlow = function() {
+    modalShown = true;
+    rulesAcknowledged = true;
+    console.info('[profile-modal] modal flow skipped for restart');
+  };
 
   // Initialize
   function init() {
