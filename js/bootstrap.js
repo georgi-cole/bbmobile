@@ -384,7 +384,7 @@
     
     // Update visibility on game state changes
     if(!global.__exitBtnUpdater){
-      global.__exitBtnUpdater = setInterval(updateExitBtn, 1000);
+      global.__exitBtnUpdater = setInterval(updateExitBtn, 5000);
     }
   }
 
