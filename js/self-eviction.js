@@ -80,10 +80,9 @@
    * Central self-eviction handler with phase-aware branching
    * @param {number} playerId - ID of player self-evicting
    * @param {string} origin - Origin: 'human', 'ai', 'manual', 'admin'
-   * @param {object} options - Additional options
    * @returns {boolean} True if self-eviction was processed
    */
-  function handleSelfEviction(playerId, origin = 'human', options = {}){
+  function handleSelfEviction(playerId, origin = 'human'){
     const g = global.game;
     
     // Guard: prevent duplicate processing
