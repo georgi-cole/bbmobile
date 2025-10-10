@@ -119,7 +119,7 @@ export function createBadgeButton(options = {}) {
   if (showTooltip) {
     // Check if user has created profile (simplified check - assume true after first interaction)
     const hasCreatedProfile = localStorage.getItem('xp-profile-created') === 'true';
-    createTooltip(button, hasCreatedProfile);
+    createTooltip(button, !hasCreatedProfile);
   }
 
   return button;
