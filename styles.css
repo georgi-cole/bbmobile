@@ -772,24 +772,28 @@ button:focus-visible,.btn:focus-visible{
   transition:all 0.2s ease;
 }
 .dashboard-badge-hoh{
-  background:linear-gradient(135deg, #f4d03f 0%, #e6a900 100%);
-  color:#1a1a1a;
-  box-shadow:0 2px 8px rgba(244,208,63,0.3);
+  background:linear-gradient(135deg, var(--warn) 0%, rgba(242,206,123,0.8) 100%);
+  color:var(--card);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid rgba(242,206,123,0.3);
 }
 .dashboard-badge-pov{
-  background:linear-gradient(135deg, #77d58d 0%, #4fb369 100%);
-  color:#1a1a1a;
-  box-shadow:0 2px 8px rgba(119,213,141,0.3);
+  background:linear-gradient(135deg, var(--good) 0%, rgba(119,213,141,0.8) 100%);
+  color:var(--card);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid rgba(119,213,141,0.3);
 }
 .dashboard-badge-alive{
-  background:linear-gradient(135deg, #77d58d 0%, #4fb369 100%);
-  color:#1a1a1a;
-  box-shadow:0 2px 8px rgba(119,213,141,0.3);
+  background:linear-gradient(135deg, var(--good) 0%, rgba(119,213,141,0.8) 100%);
+  color:var(--card);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid rgba(119,213,141,0.3);
 }
 .dashboard-badge-evicted{
-  background:linear-gradient(135deg, #ff6d6d 0%, #d64545 100%);
-  color:#fff;
-  box-shadow:0 2px 8px rgba(255,109,109,0.3);
+  background:linear-gradient(135deg, var(--bad) 0%, rgba(255,109,109,0.8) 100%);
+  color:var(--ink);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid rgba(255,109,109,0.3);
 }
 .dashboard-nominees{
   display:flex;
@@ -799,11 +803,12 @@ button:focus-visible,.btn:focus-visible{
 .nominee-badge{
   padding:6px 12px;
   border-radius:6px;
-  background:linear-gradient(135deg, #f2ce7b 0%, #daa950 100%);
-  color:#1a1a1a;
+  background:linear-gradient(135deg, var(--warn) 0%, rgba(242,206,123,0.8) 100%);
+  color:var(--card);
   font-weight:600;
   font-size:0.9rem;
-  box-shadow:0 2px 6px rgba(242,206,123,0.3);
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  border:1px solid rgba(242,206,123,0.3);
 }
 .dashboard-special-badges{
   display:flex;
@@ -877,11 +882,6 @@ button:focus-visible,.btn:focus-visible{
   display:flex;
   justify-content:flex-start;
   margin-top:2px;
-}
-.timer-skip-container .btn{
-  padding:4px 12px;
-  font-size:0.75rem;
-  min-width:auto;
 }
 .dashboard-timer-label{
   font-size:0.65rem;
