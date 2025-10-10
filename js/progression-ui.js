@@ -63,16 +63,14 @@
             onClick: handleBadgeClick
           });
           
-          // Insert into topbar after Settings button
+          // Insert into topbar at the end
           const topbar = document.querySelector('.topbar');
-          const settingsBtn = document.getElementById('btnOpenSettings');
           
-          if (topbar && settingsBtn) {
-            // Insert after Settings button
-            settingsBtn.insertAdjacentElement('afterend', badgeBtn);
+          if (topbar) {
+            topbar.appendChild(badgeBtn);
             console.info('[Progression UI] Badge button created and added to topbar');
           } else {
-            console.warn('[Progression UI] Could not find topbar or Settings button');
+            console.warn('[Progression UI] Could not find topbar');
           }
         })
         .catch(error => {
