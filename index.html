@@ -58,7 +58,12 @@
       <span id="countdown" class="timeReading">00:00</span>
       <!-- Only one Skip will be kept here by the script below -->
     </div>
-    <div class="progressbar"><div id="tvProgressFill" class="progressbar-fill"></div></div>
+    <!-- PREVIOUS PROGRESS BAR (preserved for rollback) -->
+    <!-- <div class="progressbar"><div id="tvProgressFill" class="progressbar-fill"></div></div> -->
+    
+    <!-- NEW HOURGLASS TIMER -->
+    <div id="hourglassContainer" class="hourglass-container"></div>
+    <div class="progressbar" style="display:none;"><div id="tvProgressFill" class="progressbar-fill"></div></div>
     <!-- Cast header, table, and note intentionally removed -->
   </div>
 
@@ -348,6 +353,10 @@
 <script src="js/twists.js"></script>
 <script src="js/persistence.js"></script>
 <script src="js/player-bio.js"></script>
+
+<!-- NEW: Hourglass Timer (isolated module) -->
+<script src="js/hourglass-timer.js"></script>
+
 <script src="js/bootstrap.js"></script>
 <script src="js/integrity.js"></script>
 <script src="js/finale.js"></script>

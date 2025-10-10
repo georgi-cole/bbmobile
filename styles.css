@@ -729,8 +729,68 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* Timer progress (outside TV) */
+/* PREVIOUS CIRCULAR PROGRESS BAR (preserved for easy rollback) */
+/*
 .progressbar{ height:10px; background:#112030; border:1px solid #203347; border-radius:8px; overflow:hidden; margin:8px 0 2px; position:relative; }
 .progressbar-fill{ height:100%; width:0%; background:linear-gradient(90deg,#4695ff,#71bfff); box-shadow:0 0 8px -2px #4695ff; transition:width .22s linear; }
+*/
+
+/* NEW HOURGLASS TIMER (animated SVG indicator) */
+.hourglass-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0 8px;
+  min-height: 80px;
+}
+
+.hourglass-svg {
+  width: 60px;
+  height: 84px;
+  filter: drop-shadow(0 2px 8px rgba(74, 144, 226, 0.3));
+}
+
+.hourglass-glass {
+  stroke: #4a90e2;
+  stroke-width: 2;
+  fill: none;
+  opacity: 0.6;
+}
+
+.hourglass-frame {
+  fill: #357abd;
+  opacity: 0.8;
+}
+
+.hourglass-sand-top,
+.hourglass-sand-bottom {
+  fill: url(#sandGradient);
+  transition: d 0.2s linear;
+}
+
+.hourglass-stream {
+  stroke: #ffa500;
+  stroke-width: 1.5;
+  opacity: 0;
+  animation: sandFall 0.8s infinite linear;
+}
+
+@keyframes sandFall {
+  0%, 100% {
+    opacity: 0.3;
+    stroke-width: 1.5;
+  }
+  50% {
+    opacity: 0.8;
+    stroke-width: 2;
+  }
+}
+
+/* Hide old progressbar when using hourglass */
+.progressbar {
+  display: none;
+}
+
 .timeReading{ font-size:1.8rem; font-weight:600; letter-spacing:1px; color:#dde9f6; }
 
 /* 08. REVEAL CARDS + BIG ANNOUNCEMENT -------------------------------------- */

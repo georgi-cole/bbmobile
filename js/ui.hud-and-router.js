@@ -1236,7 +1236,11 @@ header.innerHTML = `
     }
 
     if(!seconds){
-      setClock('00:00'); if(bar) bar.style.width='0%';
+      setClock('00:00'); 
+      if(bar) bar.style.width='0%';
+      // NEW: Reset hourglass
+      if(g.HourglassTimer && g.HourglassTimer.svgElement) g.HourglassTimer.update(0);
+      
       try{
         if(typeof onTimeout==='function'){ onTimeout(); }
         else { defaultAdvance(phase); }
@@ -1254,6 +1258,8 @@ header.innerHTML = `
       // Show timer as paused/waiting
       setClock('--:--');
       if(bar) bar.style.width='0%';
+      // NEW: Reset hourglass
+      if(g.HourglassTimer && g.HourglassTimer.svgElement) g.HourglassTimer.update(0);
       
       // Wait for human vote, then start timer
       waitForHumanVoteInPhase(phase).then(() => {
@@ -1277,6 +1283,11 @@ header.innerHTML = `
     game.timerPaused = false;
     game.pausedTimeRemaining = null;
 
+    // Initialize hourglass if available
+    if(g.HourglassTimer && !g.HourglassTimer.svgElement){
+      g.HourglassTimer.init('hourglassContainer');
+    }
+
     function tick(){
       // Skip ticking if paused
       if(game.timerPaused){
@@ -1285,7 +1296,12 @@ header.innerHTML = `
       
       const rem=game.endAt-Date.now();
       if(rem<=0){
-        clearInterval(tickHandle); setClock('00:00'); if(bar) bar.style.width='0%';
+        clearInterval(tickHandle); setClock('00:00'); 
+        // PREVIOUS: Update old progress bar
+        if(bar) bar.style.width='0%';
+        // NEW: Update hourglass
+        if(g.HourglassTimer && g.HourglassTimer.svgElement) g.HourglassTimer.update(0);
+        
         try{
           if(typeof onTimeout==='function'){ onTimeout(); }
           else { defaultAdvance(phase); }
@@ -1295,7 +1311,17 @@ header.innerHTML = `
       }
       const s=Math.ceil(rem/1000), m=Math.floor(s/60), r=s%60;
       setClock(`${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`);
-      if(bar) bar.style.width=((rem/total)*100)+'%';
+      
+      // Calculate percentage remaining
+      const percent = ((rem/total)*100);
+      
+      // PREVIOUS: Update old progress bar (kept for compatibility)
+      if(bar) bar.style.width=percent+'%';
+      
+      // NEW: Update hourglass
+      if(g.HourglassTimer && g.HourglassTimer.svgElement) {
+        g.HourglassTimer.update(percent);
+      }
     }
     tickHandle=setInterval(tick,200); tick();
   }
