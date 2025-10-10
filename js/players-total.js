@@ -191,8 +191,9 @@
     try{
       const btn = document.getElementById('btnStartQuick');
       if(btn && g.game?.phase!=='lobby'){
-        btn.textContent = '↻ Restart';
+        btn.textContent = '↻';
         btn.title = 'Restart (reload and apply saved settings)';
+        btn.setAttribute('aria-label', 'Restart game');
       }
     }catch{}
   }
