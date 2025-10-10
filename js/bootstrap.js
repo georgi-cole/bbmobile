@@ -205,8 +205,9 @@
     const btn = document.getElementById('btnStartQuick');
     if(!btn) return;
     const inLobby = (global.game?.phase === 'lobby');
-    btn.textContent = inLobby ? '▶ Start' : '↻ Restart';
+    btn.textContent = inLobby ? '▶' : '↻';
     btn.title = inLobby ? 'Start new season' : 'Restart (reload and apply saved settings)';
+    btn.setAttribute('aria-label', inLobby ? 'Start game' : 'Restart game');
   }
 
   // ---------- Settings Modal Tabs ----------
