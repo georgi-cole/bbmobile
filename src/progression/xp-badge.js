@@ -2,6 +2,46 @@
  * XP Badge Component - displays current level and XP
  */
 
+/**
+ * Create a topbar badge button that matches the standard button style
+ * @param {Object} options - Configuration options
+ * @returns {HTMLElement} Badge button element
+ */
+export function createBadgeButton(options = {}) {
+  const {
+    onClick = null,
+    theme = 'dark'
+  } = options;
+
+  const button = document.createElement('button');
+  button.id = 'xpLeaderboardBadge';
+  button.className = 'btn';
+  button.setAttribute('aria-label', 'Open Progression Leaderboard');
+  button.setAttribute('title', 'View Score & Level');
+  button.textContent = '📊 XP';
+  
+  if (onClick) {
+    button.addEventListener('click', onClick);
+  }
+
+  // Find the topbar and insert the button
+  const topbar = document.querySelector('.topbar');
+  if (topbar) {
+    // Insert after the Start button
+    const startButton = document.getElementById('btnStartQuick');
+    if (startButton && startButton.nextSibling) {
+      topbar.insertBefore(button, startButton.nextSibling);
+    } else {
+      topbar.appendChild(button);
+    }
+  } else {
+    // Fallback: append to body if topbar not found
+    document.body.appendChild(button);
+  }
+
+  return button;
+}
+
 export function createBadge(container, options = {}) {
   const {
     onClick = null,
