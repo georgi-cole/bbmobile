@@ -849,6 +849,41 @@ button:focus-visible,.btn:focus-visible{
   flex-wrap:wrap;
   margin-top:8px;
 }
+/* Players Status Bar (unified alive/evicted with gradient) */
+.players-status-bar{
+  position:relative;
+  width:100%;
+  height:28px;
+  border-radius:8px;
+  background:linear-gradient(90deg, var(--bad) 0%, var(--bad) 100%);
+  border:1px solid var(--line);
+  overflow:hidden;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,0.2);
+}
+.players-status-fill{
+  position:absolute;
+  top:0;
+  left:0;
+  bottom:0;
+  background:linear-gradient(90deg, var(--good) 0%, var(--accent) 100%);
+  width:100%;
+  transition:width 0.5s ease;
+  box-shadow:inset 0 1px 3px rgba(255,255,255,0.1);
+}
+.players-status-text{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  font-size:0.85rem;
+  font-weight:700;
+  color:var(--ink);
+  z-index:1;
+  text-shadow:0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* Dashboard Timer Section */
 .dashboard-timer-section{
   margin-top:12px;
   /* Glass effect styling */
@@ -860,12 +895,29 @@ button:focus-visible,.btn:focus-visible{
   -webkit-backdrop-filter:blur(8px) brightness(1.05);
   box-shadow:0 4px 12px -4px rgba(0,0,0,0.3);
 }
-.dashboard-timer-compact-header{
+
+/* Row 1: Season + Week */
+.dashboard-timer-row-1{
   display:flex;
   gap:8px;
   align-items:center;
-  margin-bottom:12px;
-  min-height:24px;
+  margin-bottom:8px;
+  justify-content:center;
+}
+.timer-season-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 10px;
+  border-radius:12px;
+  background:linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color:var(--card);
+  font-size:0.7rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  white-space:nowrap;
+  flex-shrink:0;
 }
 .timer-week-badge{
   display:inline-flex;
@@ -882,16 +934,22 @@ button:focus-visible,.btn:focus-visible{
   white-space:nowrap;
   flex-shrink:0;
 }
+
+/* Row 2: Phase + Next */
+.dashboard-timer-row-2{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-bottom:12px;
+  justify-content:center;
+}
 .timer-phase-name{
   font-size:0.85rem;
   font-weight:600;
   color:var(--ink);
   white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  letter-spacing:0.3px;
-  flex:1;
-  min-width:0;
+  letter-spacing:0.5px;
+  text-transform:uppercase;
 }
 .timer-next-badge{
   display:inline-flex;
@@ -909,26 +967,21 @@ button:focus-visible,.btn:focus-visible{
   flex-shrink:0;
   opacity:0.85;
 }
+
+/* Timer Display (centered and bigger) */
 .dashboard-timer-content{
   display:flex;
-  gap:8px;
-  align-items:baseline;
+  justify-content:center;
+  align-items:center;
   margin-bottom:12px;
 }
-.dashboard-timer-label{
-  font-size:0.7rem;
-  text-transform:uppercase;
-  letter-spacing:0.8px;
-  color:var(--muted);
-  font-weight:700;
-  line-height:1;
-}
 .dashboard-timer-display{
-  font-size:1rem;
+  font-size:1.5rem;
   font-weight:700;
-  letter-spacing:1px;
+  letter-spacing:2px;
   color:var(--ink);
   line-height:1;
+  text-align:center;
 }
 
 /* Skip Progress Bar */
@@ -1012,24 +1065,25 @@ button:focus-visible,.btn:focus-visible{
 
 /* Mobile responsiveness */
 @media (max-width: 600px){
-  .dashboard-timer-compact-header{
+  .dashboard-timer-row-1,
+  .dashboard-timer-row-2{
     flex-wrap:wrap;
     gap:6px;
   }
-  .dashboard-timer-content{
-    gap:6px;
-  }
-  .dashboard-timer-label{
-    font-size:0.65rem;
-  }
   .dashboard-timer-display{
-    font-size:0.95rem;
+    font-size:1.3rem;
   }
   .timer-skip-progress-bar{
     height:36px;
   }
   .timer-skip-label{
     font-size:0.7rem;
+  }
+  .players-status-bar{
+    height:32px;
+  }
+  .players-status-text{
+    font-size:0.9rem;
   }
 }
 
