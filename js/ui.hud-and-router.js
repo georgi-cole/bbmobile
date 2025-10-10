@@ -109,7 +109,20 @@
   function updateDashboardTitleText(){
     const el = findDashboardTitleEl();
     if(!el) return;
-    try{ el.textContent = computeWeekTitle(); }catch{}
+    
+    // Check if using new badge+phase structure
+    const weekBadge = document.getElementById('dashboardWeekBadge');
+    const phaseName = document.getElementById('dashboardPhaseName');
+    
+    if(weekBadge && phaseName){
+      // Use new structure - update via inline script function
+      if(typeof window.updateDashboardHeader === 'function'){
+        window.updateDashboardHeader();
+      }
+    } else {
+      // Fallback to old behavior
+      try{ el.textContent = computeWeekTitle(); }catch{}
+    }
   }
 
   // ------------ Roster Rendering ------------
@@ -826,6 +839,11 @@ header.innerHTML = `
     renderCastRoster();
     renderTopRoster();
     renderJuryHousePanel();
+    
+    // Update timer header with week and phase
+    if(typeof window.updateTimerHeader === 'function'){
+      window.updateTimerHeader();
+    }
   }
   g.updateHud = updateHud;
 

@@ -729,12 +729,50 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* Timer progress (outside TV) */
-/* OLD CIRCULAR BAR (commented out - to restore, uncomment these lines and remove .hourglass-container styles)
+/* OLD CIRCULAR BAR (preserved for reversibility via timerStyle config flag)
+ * To restore circular progress: 
+ * 1. Set g.cfg.timerStyle = 'circular' in config
+ * 2. Uncomment these styles
+ * 3. Hide .hourglass-container in dashboard-timer-section when timerStyle === 'circular'
+ * 
 .progressbar{ height:10px; background:#112030; border:1px solid #203347; border-radius:8px; overflow:hidden; margin:8px 0 2px; position:relative; }
 .progressbar-fill{ height:100%; width:0%; background:linear-gradient(90deg,#4695ff,#71bfff); box-shadow:0 0 8px -2px #4695ff; transition:width .22s linear; }
 */
 
 /* REDESIGNED DASHBOARD */
+.dashboard-title-header{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-bottom:16px;
+  min-height:32px;
+}
+.dashboard-week-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 12px;
+  border-radius:12px;
+  background:linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color:var(--card);
+  font-size:0.75rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.dashboard-phase-name{
+  font-size:1rem;
+  font-weight:600;
+  color:var(--ink);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  letter-spacing:0.4px;
+  flex:1;
+  min-width:0;
+}
 .dashboard-row{
   display:flex;
   gap:12px;
@@ -767,24 +805,28 @@ button:focus-visible,.btn:focus-visible{
   transition:all 0.2s ease;
 }
 .dashboard-badge-hoh{
-  background:linear-gradient(135deg, #f4d03f 0%, #e6a900 100%);
-  color:#1a1a1a;
-  box-shadow:0 2px 8px rgba(244,208,63,0.3);
+  background:linear-gradient(135deg, var(--warn) 0%, var(--primary-2) 100%);
+  color:var(--ink);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid var(--line);
 }
 .dashboard-badge-pov{
-  background:linear-gradient(135deg, #77d58d 0%, #4fb369 100%);
-  color:#1a1a1a;
-  box-shadow:0 2px 8px rgba(119,213,141,0.3);
+  background:linear-gradient(135deg, var(--good) 0%, var(--primary-2) 100%);
+  color:var(--ink);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid var(--line);
 }
 .dashboard-badge-alive{
-  background:linear-gradient(135deg, #77d58d 0%, #4fb369 100%);
-  color:#1a1a1a;
-  box-shadow:0 2px 8px rgba(119,213,141,0.3);
+  background:linear-gradient(135deg, var(--good) 0%, var(--primary-2) 100%);
+  color:var(--ink);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid var(--line);
 }
 .dashboard-badge-evicted{
-  background:linear-gradient(135deg, #ff6d6d 0%, #d64545 100%);
-  color:#fff;
-  box-shadow:0 2px 8px rgba(255,109,109,0.3);
+  background:linear-gradient(135deg, var(--bad) 0%, var(--primary-2) 100%);
+  color:var(--ink);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid var(--line);
 }
 .dashboard-nominees{
   display:flex;
@@ -794,11 +836,12 @@ button:focus-visible,.btn:focus-visible{
 .nominee-badge{
   padding:6px 12px;
   border-radius:6px;
-  background:linear-gradient(135deg, #f2ce7b 0%, #daa950 100%);
-  color:#1a1a1a;
+  background:linear-gradient(135deg, var(--warn) 0%, var(--primary-2) 100%);
+  color:var(--ink);
   font-weight:600;
   font-size:0.9rem;
-  box-shadow:0 2px 6px rgba(242,206,123,0.3);
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  border:1px solid var(--line);
 }
 .dashboard-special-badges{
   display:flex;
@@ -808,41 +851,104 @@ button:focus-visible,.btn:focus-visible{
 }
 .dashboard-timer-section{
   margin-top:12px;
+  /* Glass effect styling */
+  background:linear-gradient(135deg, var(--card) 0%, var(--card-2) 100%);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:14px;
+  backdrop-filter:blur(8px) brightness(1.05);
+  -webkit-backdrop-filter:blur(8px) brightness(1.05);
+  box-shadow:0 4px 12px -4px rgba(0,0,0,0.3);
 }
-.dashboard-timer-header{
+.dashboard-timer-compact-header{
   display:flex;
-  justify-content:space-between;
+  gap:8px;
   align-items:center;
   margin-bottom:12px;
+  min-height:24px;
 }
-.dashboard-timer-label{
-  font-size:0.85rem;
+.timer-week-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 10px;
+  border-radius:12px;
+  background:linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color:var(--card);
+  font-size:0.7rem;
+  font-weight:700;
   text-transform:uppercase;
   letter-spacing:0.5px;
-  color:var(--muted);
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.timer-phase-name{
+  font-size:0.85rem;
   font-weight:600;
+  color:var(--ink);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  letter-spacing:0.3px;
+  flex:1;
+  min-width:0;
+}
+.dashboard-timer-content{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:16px;
+  align-items:center;
+}
+.timer-left-column{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  justify-content:space-between;
+  min-height:60px;
+}
+.timer-right-column{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.timer-skip-container{
+  display:flex;
+  justify-content:flex-start;
+  margin-top:2px;
+}
+.timer-skip-container .btn{
+  width:100%;
+  max-width:100%;
+}
+.dashboard-timer-label{
+  font-size:0.65rem;
+  text-transform:uppercase;
+  letter-spacing:0.8px;
+  color:var(--muted);
+  font-weight:700;
+  line-height:1;
 }
 .dashboard-timer-display{
-  font-size:2rem;
+  font-size:1.8rem;
   font-weight:700;
   letter-spacing:2px;
-  color:#dde9f6;
-  text-shadow:0 2px 8px rgba(70,149,255,0.4);
+  color:var(--ink);
+  text-shadow:0 2px 8px var(--accent);
+  line-height:1;
 }
 
 /* HOURGLASS TIMER */
 .hourglass-container{ 
-  height:70px; 
+  height:60px; 
   display:flex; 
   align-items:center; 
   justify-content:center; 
-  margin:12px 0 8px; 
   position:relative; 
 }
 .hourglass-svg{ 
-  width:50px; 
-  height:70px; 
-  filter:drop-shadow(0 2px 8px rgba(70,149,255,0.3)); 
+  width:45px; 
+  height:60px; 
+  filter:drop-shadow(0 2px 6px var(--accent)); 
 }
 .hourglass-frame{ 
   transition:opacity 0.3s ease; 
@@ -860,6 +966,40 @@ button:focus-visible,.btn:focus-visible{
   20%{ opacity:0.8; cy:48; r:2.5; }
   50%{ opacity:1; cy:50; r:3; }
   80%{ opacity:0.8; cy:52; r:2.5; }
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce){
+  .hourglass-sand-flow{
+    animation:none;
+    opacity:0.6;
+  }
+  .dashboard-timer-display{
+    text-shadow:none;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px){
+  .dashboard-timer-content{
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  .timer-left-column{
+    min-height:auto;
+  }
+  .timer-right-column{
+    justify-content:flex-start;
+  }
+  .timer-skip-container{
+    margin-top:4px;
+  }
+  .dashboard-timer-label{
+    font-size:0.6rem;
+  }
+  .dashboard-timer-display{
+    font-size:1.6rem;
+  }
 }
 
 .timeReading{ font-size:1.8rem; font-weight:600; letter-spacing:1px; color:#dde9f6; }

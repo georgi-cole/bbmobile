@@ -74,6 +74,7 @@
     returnChance: 10,
     selfEvictChance: 1,
     enablePublicFav: true,
+    timerStyle: 'hourglass', // 'hourglass' | 'circular'
     tOpening: 90,
     tIntermission: 4,
     tHOH: 40,

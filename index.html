@@ -36,8 +36,7 @@
 <div class="wrap">
   <!-- Dashboard (left) — Cast completely removed -->
   <div class="card" id="dashboardCard">
-    <!-- REDESIGNED DASHBOARD: Dynamic title with week and phase -->
-    <h1 id="dashboardTitle">House</h1>
+    <!-- REDESIGNED DASHBOARD: Title moved to timer section below -->
     
     <!-- Row 1: HOH / POV -->
     <div class="dashboard-row">
@@ -83,39 +82,51 @@
     <div class="sep"></div>
     
     <!-- Timer Section with Hourglass -->
-    <div class="dashboard-timer-section">
-      <div class="dashboard-timer-header">
-        <span class="dashboard-timer-label">Time Remaining</span>
-        <span id="countdown" class="dashboard-timer-display">00:00</span>
-        <!-- Skip button will be positioned here by script -->
+    <div class="dashboard-timer-section" role="region" aria-label="Phase timer and status">
+      <!-- Compact header row: Week + Phase -->
+      <div class="dashboard-timer-compact-header" aria-label="Current game status">
+        <span id="timerWeekBadge" class="timer-week-badge" aria-label="Current week">Week 1</span>
+        <span id="timerPhaseName" class="timer-phase-name">Season Premiere</span>
       </div>
       
-      <!-- HOURGLASS TIMER -->
-      <div class="hourglass-container">
-        <svg class="hourglass-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#4695ff;stop-opacity:0.3" />
-              <stop offset="100%" style="stop-color:#71bfff;stop-opacity:0.5" />
-            </linearGradient>
-            <linearGradient id="sandGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style="stop-color:#ffdc8b;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#ff9f4a;stop-opacity:1" />
-            </linearGradient>
-          </defs>
-          <path class="hourglass-frame" d="M 20,10 L 80,10 L 80,15 Q 80,20 75,25 L 55,45 Q 50,50 50,50 Q 50,50 45,45 L 25,25 Q 20,20 20,15 Z M 20,130 L 80,130 L 80,125 Q 80,120 75,115 L 55,95 Q 50,90 50,90 Q 50,90 45,95 L 25,115 Q 20,120 20,125 Z" 
-                fill="url(#glassGradient)" stroke="#4695ff" stroke-width="2" opacity="0.4"/>
-          <clipPath id="hourglassClip">
-            <path d="M 22,12 L 78,12 L 78,15 Q 78,19 74,23 L 54,43 Q 50,47 50,50 Q 50,53 54,57 L 74,77 Q 78,81 78,85 L 78,128 L 22,128 L 22,85 Q 22,81 26,77 L 46,57 Q 50,53 50,50 Q 50,47 46,43 L 26,23 Q 22,19 22,15 Z"/>
-          </clipPath>
-          <g clip-path="url(#hourglassClip)">
-            <rect id="hourglassSandTop" class="hourglass-sand-top" x="22" y="12" width="56" height="0" fill="url(#sandGradient)"/>
-          </g>
-          <g clip-path="url(#hourglassClip)">
-            <rect id="hourglassSandBottom" class="hourglass-sand-bottom" x="22" y="88" width="56" height="0" fill="url(#sandGradient)"/>
-          </g>
-          <circle id="hourglassSandFlow" class="hourglass-sand-flow" cx="50" cy="50" r="2" fill="#ffdc8b" opacity="0"/>
-        </svg>
+      <!-- Two-column layout: left (time/timer/skip stacked), right (hourglass) -->
+      <div class="dashboard-timer-content">
+        <div class="timer-left-column">
+          <span class="dashboard-timer-label" id="timerLabel">TIME:</span>
+          <span id="countdown" class="dashboard-timer-display" aria-live="polite" aria-atomic="true" aria-labelledby="timerLabel">00:00</span>
+          <!-- Skip button will be positioned here by script -->
+          <div id="timerSkipContainer" class="timer-skip-container" role="group" aria-label="Timer controls"></div>
+        </div>
+        
+        <div class="timer-right-column">
+          <!-- HOURGLASS TIMER -->
+          <div class="hourglass-container" aria-hidden="true">
+            <svg class="hourglass-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#4695ff;stop-opacity:0.3" />
+                  <stop offset="100%" style="stop-color:#71bfff;stop-opacity:0.5" />
+                </linearGradient>
+                <linearGradient id="sandGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:#ffdc8b;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#ff9f4a;stop-opacity:1" />
+                </linearGradient>
+              </defs>
+              <path class="hourglass-frame" d="M 20,10 L 80,10 L 80,15 Q 80,20 75,25 L 55,45 Q 50,50 50,50 Q 50,50 45,45 L 25,25 Q 20,20 20,15 Z M 20,130 L 80,130 L 80,125 Q 80,120 75,115 L 55,95 Q 50,90 50,90 Q 50,90 45,95 L 25,115 Q 20,120 20,125 Z" 
+                    fill="url(#glassGradient)" stroke="#4695ff" stroke-width="2" opacity="0.4"/>
+              <clipPath id="hourglassClip">
+                <path d="M 22,12 L 78,12 L 78,15 Q 78,19 74,23 L 54,43 Q 50,47 50,50 Q 50,53 54,57 L 74,77 Q 78,81 78,85 L 78,128 L 22,128 L 22,85 Q 22,81 26,77 L 46,57 Q 50,53 50,50 Q 50,47 46,43 L 26,23 Q 22,19 22,15 Z"/>
+              </clipPath>
+              <g clip-path="url(#hourglassClip)">
+                <rect id="hourglassSandTop" class="hourglass-sand-top" x="22" y="12" width="56" height="0" fill="url(#sandGradient)"/>
+              </g>
+              <g clip-path="url(#hourglassClip)">
+                <rect id="hourglassSandBottom" class="hourglass-sand-bottom" x="22" y="88" width="56" height="0" fill="url(#sandGradient)"/>
+              </g>
+              <circle id="hourglassSandFlow" class="hourglass-sand-flow" cx="50" cy="50" r="2" fill="#ffdc8b" opacity="0"/>
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
     <!-- Cast header, table, and note intentionally removed -->
@@ -440,11 +451,11 @@
       if (/^\\s*skip\\s*$/i.test(el.textContent||'')) el.style.display = 'none';
     });
     
-    // Move skip button to timer header
-    const timerHeader = document.querySelector('.dashboard-timer-header');
+    // Move skip button to timer skip container
+    const timerSkipContainer = document.querySelector('#timerSkipContainer');
     const oldBase = document.querySelector('#dashboardCard .row.baseline');
     
-    if (timerHeader) {
+    if (timerSkipContainer) {
       // Find all skip buttons
       let skipBtn = null;
       if(oldBase){
@@ -456,12 +467,115 @@
           .find(el => /^\\s*skip\\s*$/i.test(el.textContent||''));
       }
       
-      // Move to timer header if found
+      // Move to timer skip container if found
       if(skipBtn){
-        timerHeader.appendChild(skipBtn);
+        timerSkipContainer.appendChild(skipBtn);
       }
     }
+    
+    // Update timer header with week and phase
+    updateTimerHeader();
   }
+  
+  // Update timer header with week and phase info
+  function updateTimerHeader(){
+    const game = window.game || {};
+    const weekBadge = document.getElementById('timerWeekBadge');
+    const phaseName = document.getElementById('timerPhaseName');
+    
+    if(weekBadge && phaseName){
+      // Determine week text
+      let aliveCount = 0;
+      try{ aliveCount = (window.alivePlayers?.() || []).length; }catch{}
+      
+      let weekText = 'House';
+      if(game.phase && game.phase !== 'lobby'){
+        if(aliveCount <= 2){
+          weekText = 'Final Week';
+        } else {
+          weekText = `Week ${game.week || 1}`;
+        }
+      }
+      weekBadge.textContent = weekText;
+      
+      // Determine phase name
+      let phaseText = '';
+      if(game.phase && game.phase !== 'lobby'){
+        const phaseNames = {
+          'opening': 'Season Premiere',
+          'intermission': 'Strategizing',
+          'hoh': 'HOH Competition',
+          'nominations': 'Nominations',
+          'veto_comp': 'Veto Competition',
+          'veto': 'Veto Competition',
+          'veto_ceremony': 'Veto Ceremony',
+          'livevote': 'Eviction',
+          'jury': 'Jury Deliberation',
+          'return_twist': 'Return Challenge',
+          'final3_comp1': 'Final 3 – Part 1',
+          'final3_comp2': 'Final 3 – Part 2',
+          'final3_decision': 'Final 3 – Decision',
+          'social': 'Social Time'
+        };
+        phaseText = phaseNames[game.phase] || game.phase.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      }
+      phaseName.textContent = phaseText;
+      phaseName.title = phaseText; // Tooltip for truncated text
+    }
+    
+    // Also update the main dashboard title header
+    updateDashboardHeader();
+  }
+  
+  // Update main dashboard title header with week and phase info
+  function updateDashboardHeader(){
+    const game = window.game || {};
+    const weekBadge = document.getElementById('dashboardWeekBadge');
+    const phaseName = document.getElementById('dashboardPhaseName');
+    
+    if(weekBadge && phaseName){
+      // Determine week text
+      let aliveCount = 0;
+      try{ aliveCount = (window.alivePlayers?.() || []).length; }catch{}
+      
+      let weekText = 'House';
+      if(game.phase && game.phase !== 'lobby'){
+        if(aliveCount <= 2){
+          weekText = 'Final Week';
+        } else {
+          weekText = `Week ${game.week || 1}`;
+        }
+      }
+      weekBadge.textContent = weekText;
+      
+      // Determine phase name
+      let phaseText = '';
+      if(game.phase && game.phase !== 'lobby'){
+        const phaseNames = {
+          'opening': 'Season Premiere',
+          'intermission': 'Strategizing',
+          'hoh': 'HOH Competition',
+          'nominations': 'Nominations',
+          'veto_comp': 'Veto Competition',
+          'veto': 'Veto Competition',
+          'veto_ceremony': 'Veto Ceremony',
+          'livevote': 'Eviction',
+          'jury': 'Jury Deliberation',
+          'return_twist': 'Return Challenge',
+          'final3_comp1': 'Final 3 – Part 1',
+          'final3_comp2': 'Final 3 – Part 2',
+          'final3_decision': 'Final 3 – Decision',
+          'social': 'Social Time'
+        };
+        phaseText = phaseNames[game.phase] || game.phase.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      }
+      phaseName.textContent = phaseText;
+      phaseName.title = phaseText; // Tooltip for truncated text
+    }
+  }
+  
+  // Expose to window for external access
+  window.updateDashboardHeader = updateDashboardHeader;
 
   // Hover: Winner/Runner-up/12th... on top roster tiles
   function placementsHover(){
@@ -535,6 +649,9 @@
   function init(){ keepSingleSkip(); placementsHover(); ensureRulesButton(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true });
   else init();
+  
+  // Expose updateTimerHeader globally so it can be called from ui.hud-and-router.js
+  window.updateTimerHeader = updateTimerHeader;
 })();
 </script>
 
