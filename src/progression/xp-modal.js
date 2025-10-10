@@ -2,11 +2,34 @@
  * XP Modal Component - displays detailed progression info
  */
 
+/**
+ * Detect if current theme is light or dark
+ */
+function getThemeStyle() {
+  const themeKey = document.body.getAttribute('data-theme') || 'tvstudio';
+  // modernhouse is the only light theme
+  const isLight = themeKey === 'modernhouse';
+  
+  return {
+    themeKey,
+    isLight,
+    // Use CSS variables that adapt to the theme
+    bgColor: 'var(--card)',
+    textColor: 'var(--ink)',
+    mutedColor: 'var(--muted)',
+    borderColor: 'var(--accent)',
+    accentColor: 'var(--accent)',
+    cardBg: 'var(--card-2)',
+    lineColor: 'var(--line)'
+  };
+}
+
 export function createModal(options = {}) {
   const {
-    theme = 'dark',
     onClose = null
   } = options;
+
+  const theme = getThemeStyle();
 
   // Backdrop
   const backdrop = document.createElement('div');
@@ -33,7 +56,7 @@ export function createModal(options = {}) {
   modal.setAttribute('aria-modal', 'true');
   modal.setAttribute('aria-labelledby', 'xp-modal-title');
   modal.style.cssText = `
-    background: ${theme === 'dark' ? '#1a1a1a' : '#fff'};
+    background: ${theme.bgColor};
     border-radius: 12px;
     max-width: 700px;
     width: 100%;
@@ -49,7 +72,7 @@ export function createModal(options = {}) {
   const header = document.createElement('div');
   header.style.cssText = `
     padding: 20px;
-    border-bottom: 2px solid ${theme === 'dark' ? '#ffdc8b' : '#ffa500'};
+    border-bottom: 2px solid ${theme.borderColor};
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -60,7 +83,7 @@ export function createModal(options = {}) {
   title.textContent = 'Progression';
   title.style.cssText = `
     margin: 0;
-    color: ${theme === 'dark' ? '#ffdc8b' : '#333'};
+    color: ${theme.accentColor};
     font-size: 24px;
   `;
 
@@ -72,7 +95,7 @@ export function createModal(options = {}) {
     background: transparent;
     border: none;
     font-size: 28px;
-    color: ${theme === 'dark' ? '#b0b0b0' : '#666'};
+    color: ${theme.mutedColor};
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -84,7 +107,7 @@ export function createModal(options = {}) {
     transition: all 0.2s ease;
   `;
   closeButton.addEventListener('mouseenter', () => {
-    closeButton.style.background = theme === 'dark' ? '#2a2a2a' : '#f0f0f0';
+    closeButton.style.background = theme.cardBg;
   });
   closeButton.addEventListener('mouseleave', () => {
     closeButton.style.background = 'transparent';
@@ -104,8 +127,8 @@ export function createModal(options = {}) {
     display: flex;
     gap: 0;
     padding: 0 20px;
-    background: ${theme === 'dark' ? '#0f0f0f' : '#f5f5f5'};
-    border-bottom: 1px solid ${theme === 'dark' ? '#333' : '#ddd'};
+    background: ${theme.cardBg};
+    border-bottom: 1px solid ${theme.lineColor};
   `;
 
   const tabs = ['Leaderboard', 'Overview', 'Breakdown', 'Unlocks'];
@@ -122,7 +145,7 @@ export function createModal(options = {}) {
       background: transparent;
       border: none;
       border-bottom: 3px solid transparent;
-      color: ${theme === 'dark' ? '#b0b0b0' : '#666'};
+      color: ${theme.mutedColor};
       cursor: pointer;
       font-size: 14px;
       font-weight: 600;
@@ -130,19 +153,19 @@ export function createModal(options = {}) {
     `;
     
     if (index === 0) {
-      button.style.borderBottomColor = '#ffdc8b';
-      button.style.color = theme === 'dark' ? '#ffdc8b' : '#ffa500';
+      button.style.borderBottomColor = theme.accentColor;
+      button.style.color = theme.accentColor;
     }
 
     button.addEventListener('click', () => {
       // Update active tab
       tabButtons.forEach(b => {
         b.style.borderBottomColor = 'transparent';
-        b.style.color = theme === 'dark' ? '#b0b0b0' : '#666';
+        b.style.color = theme.mutedColor;
         b.setAttribute('aria-selected', 'false');
       });
-      button.style.borderBottomColor = '#ffdc8b';
-      button.style.color = theme === 'dark' ? '#ffdc8b' : '#ffa500';
+      button.style.borderBottomColor = theme.accentColor;
+      button.style.color = theme.accentColor;
       button.setAttribute('aria-selected', 'true');
 
       // Show corresponding content
@@ -176,7 +199,7 @@ export function createModal(options = {}) {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
-    color: ${theme === 'dark' ? '#e0e0e0' : '#333'};
+    color: ${theme.textColor};
   `;
 
   // Content panes
@@ -271,7 +294,7 @@ export function createModal(options = {}) {
     
     if (top5.length === 0) {
       leaderboardPane.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: ${theme === 'dark' ? '#888' : '#999'};">
+        <div style="text-align: center; padding: 40px; color: ${theme.mutedColor};">
           <div style="font-size: 48px; margin-bottom: 16px;">🏆</div>
           <div style="font-size: 18px; margin-bottom: 8px;">No leaderboard data yet</div>
           <div style="font-size: 14px;">Start playing to see rankings!</div>
@@ -285,7 +308,7 @@ export function createModal(options = {}) {
         <h3 style="
           font-size: 20px;
           margin-bottom: 16px;
-          color: ${theme === 'dark' ? '#ffdc8b' : '#ffa500'};
+          color: ${theme.accentColor};
           display: flex;
           align-items: center;
           gap: 8px;
@@ -304,13 +327,13 @@ export function createModal(options = {}) {
                 padding: ${isFirst ? '20px' : '16px'};
                 background: ${isFirst 
                   ? 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)' 
-                  : (theme === 'dark' ? '#2a2a2a' : '#f5f5f5')};
+                  : theme.cardBg};
                 border-radius: ${isFirst ? '12px' : '8px'};
                 display: flex;
                 align-items: center;
                 gap: 16px;
                 ${isFirst ? 'box-shadow: 0 8px 24px rgba(255, 215, 0, 0.4);' : ''}
-                ${isCurrentPlayer && !isFirst ? `border: 2px solid ${theme === 'dark' ? '#83bfff' : '#2196f3'};` : ''}
+                ${isCurrentPlayer && !isFirst ? `border: 2px solid ${theme.accentColor};` : ''}
               ">
                 <div style="
                   width: ${isFirst ? '56px' : '48px'};
@@ -334,7 +357,7 @@ export function createModal(options = {}) {
                   <div style="
                     font-weight: 600;
                     font-size: ${isFirst ? '18px' : '16px'};
-                    color: ${isFirst ? '#1a1a1a' : (theme === 'dark' ? '#e0e0e0' : '#333')};
+                    color: ${isFirst ? '#1a1a1a' : theme.textColor};
                     margin-bottom: 4px;
                     overflow: hidden;
                     text-overflow: ellipsis;
@@ -345,7 +368,7 @@ export function createModal(options = {}) {
                   </div>
                   <div style="
                     font-size: ${isFirst ? '16px' : '14px'};
-                    color: ${isFirst ? '#333' : (theme === 'dark' ? '#b0b0b0' : '#666')};
+                    color: ${isFirst ? '#333' : theme.mutedColor};
                   ">
                     Level ${player.level || 1}
                   </div>
@@ -354,7 +377,7 @@ export function createModal(options = {}) {
                   text-align: right;
                   font-size: ${isFirst ? '20px' : '18px'};
                   font-weight: 600;
-                  color: ${isFirst ? '#1a1a1a' : (theme === 'dark' ? '#ffdc8b' : '#ffa500')};
+                  color: ${isFirst ? '#1a1a1a' : theme.accentColor};
                 ">
                   ${player.totalXP || 0} XP
                 </div>
@@ -369,12 +392,12 @@ export function createModal(options = {}) {
           <h3 style="
             font-size: 16px;
             margin-bottom: 12px;
-            color: ${theme === 'dark' ? '#83bfff' : '#2196f3'};
+            color: ${theme.accentColor};
           ">Your Rank</h3>
           <div style="
             padding: 16px;
-            background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
-            border: 2px solid ${theme === 'dark' ? '#83bfff' : '#2196f3'};
+            background: ${theme.cardBg};
+            border: 2px solid ${theme.accentColor};
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -383,7 +406,7 @@ export function createModal(options = {}) {
             <div style="
               width: 48px;
               height: 48px;
-              background: linear-gradient(135deg, #83bfff 0%, #2196f3 100%);
+              background: ${theme.accentColor};
               border-radius: 50%;
               display: flex;
               align-items: center;
@@ -397,7 +420,7 @@ export function createModal(options = {}) {
               <div style="
                 font-weight: 600;
                 font-size: 16px;
-                color: ${theme === 'dark' ? '#e0e0e0' : '#333'};
+                color: ${theme.textColor};
                 margin-bottom: 4px;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -405,7 +428,7 @@ export function createModal(options = {}) {
               ">
                 ${currentPlayerData.playerName || currentPlayerData.playerId}
               </div>
-              <div style="font-size: 14px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">
+              <div style="font-size: 14px; color: ${theme.mutedColor};">
                 Level ${currentPlayerData.level || 1}
               </div>
             </div>
@@ -413,7 +436,7 @@ export function createModal(options = {}) {
               text-align: right;
               font-size: 18px;
               font-weight: 600;
-              color: ${theme === 'dark' ? '#83bfff' : '#2196f3'};
+              color: ${theme.accentColor};
             ">
               ${currentPlayerData.totalXP || 0} XP
             </div>
@@ -440,7 +463,7 @@ export function createModal(options = {}) {
           margin-bottom: 12px;
         ">${state.level}</div>
         <div style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">Level ${state.level}</div>
-        <div style="font-size: 18px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">${state.totalXP} XP</div>
+        <div style="font-size: 18px; color: ${theme.mutedColor};">${state.totalXP} XP</div>
       </div>
 
       <div style="margin-bottom: 24px;">
@@ -451,7 +474,7 @@ export function createModal(options = {}) {
         <div style="
           width: 100%;
           height: 12px;
-          background: ${theme === 'dark' ? '#2a2a2a' : '#e0e0e0'};
+          background: ${theme.cardBg};
           border-radius: 6px;
           overflow: hidden;
         ">
@@ -462,7 +485,7 @@ export function createModal(options = {}) {
             transition: width 0.3s ease;
           "></div>
         </div>
-        <div style="margin-top: 8px; font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'};">
+        <div style="margin-top: 8px; font-size: 12px; color: ${theme.mutedColor};">
           ${state.totalXP} / ${state.nextLevelXP} XP
         </div>
       </div>
@@ -475,18 +498,18 @@ export function createModal(options = {}) {
       ">
         <div style="
           padding: 16px;
-          background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+          background: ${theme.cardBg};
           border-radius: 8px;
         ">
-          <div style="font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'}; margin-bottom: 4px;">Total Events</div>
+          <div style="font-size: 12px; color: ${theme.mutedColor}; margin-bottom: 4px;">Total Events</div>
           <div style="font-size: 20px; font-weight: 600;">${state.eventsCount}</div>
         </div>
         <div style="
           padding: 16px;
-          background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+          background: ${theme.cardBg};
           border-radius: 8px;
         ">
-          <div style="font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'}; margin-bottom: 4px;">Next Milestone</div>
+          <div style="font-size: 12px; color: ${theme.mutedColor}; margin-bottom: 4px;">Next Milestone</div>
           <div style="font-size: 20px; font-weight: 600;">${state.nextLevelXP - state.totalXP} XP</div>
         </div>
       </div>
@@ -499,7 +522,7 @@ export function createModal(options = {}) {
 
     if (entries.length === 0) {
       breakdownPane.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: ${theme === 'dark' ? '#888' : '#999'};">
+        <div style="text-align: center; padding: 40px; color: ${theme.mutedColor};">
           No events recorded yet
         </div>
       `;
@@ -507,13 +530,13 @@ export function createModal(options = {}) {
     }
 
     breakdownPane.innerHTML = `
-      <div style="margin-bottom: 16px; font-size: 14px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">
+      <div style="margin-bottom: 16px; font-size: 14px; color: ${theme.mutedColor};">
         XP earned by action type
       </div>
       ${entries.map(([ruleId, data]) => `
         <div style="
           padding: 12px;
-          background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+          background: ${theme.cardBg};
           border-radius: 8px;
           margin-bottom: 8px;
           display: flex;
@@ -522,7 +545,7 @@ export function createModal(options = {}) {
         ">
           <div>
             <div style="font-weight: 600; margin-bottom: 4px;">${data.ruleName}</div>
-            <div style="font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'};">${data.count} time${data.count !== 1 ? 's' : ''}</div>
+            <div style="font-size: 12px; color: ${theme.mutedColor};">${data.count} time${data.count !== 1 ? 's' : ''}</div>
           </div>
           <div style="
             font-size: 18px;
@@ -540,16 +563,16 @@ export function createModal(options = {}) {
 
     unlocksPane.innerHTML = `
       <div style="margin-bottom: 24px;">
-        <h3 style="font-size: 16px; margin-bottom: 12px; color: ${theme === 'dark' ? '#ffdc8b' : '#ffa500'};">
+        <h3 style="font-size: 16px; margin-bottom: 12px; color: ${theme.accentColor};">
           Unlocked Levels (${unlockedLevels.length})
         </h3>
-        <div style="font-size: 14px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">
+        <div style="font-size: 14px; color: ${theme.mutedColor};">
           You've reached Level ${state.level}!
         </div>
       </div>
 
       <div>
-        <h3 style="font-size: 16px; margin-bottom: 12px; color: ${theme === 'dark' ? '#83bfff' : '#2196f3'};">
+        <h3 style="font-size: 16px; margin-bottom: 12px; color: ${theme.accentColor};">
           Upcoming Levels
         </h3>
         ${nextUnlocks.map(t => {
@@ -557,7 +580,7 @@ export function createModal(options = {}) {
           return `
             <div style="
               padding: 12px;
-              background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+              background: ${theme.cardBg};
               border-radius: 8px;
               margin-bottom: 8px;
               display: flex;
@@ -567,9 +590,9 @@ export function createModal(options = {}) {
             ">
               <div>
                 <div style="font-weight: 600; margin-bottom: 4px;">Level ${t.level}</div>
-                <div style="font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'};">${xpNeeded} XP needed</div>
+                <div style="font-size: 12px; color: ${theme.mutedColor};">${xpNeeded} XP needed</div>
               </div>
-              <div style="font-size: 14px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">${t.xpRequired} XP</div>
+              <div style="font-size: 14px; color: ${theme.mutedColor};">${t.xpRequired} XP</div>
             </div>
           `;
         }).join('')}

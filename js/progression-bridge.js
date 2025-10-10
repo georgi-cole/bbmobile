@@ -175,7 +175,6 @@
       
       // Create modal with current state
       const modal = xpModal.createModal({
-        theme: 'dark',
         onClose: () => {
           modal.remove();
         }
