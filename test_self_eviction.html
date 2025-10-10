@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Self-Eviction Logic Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    .test-section h2 { margin-top: 0; color: #333; }
+    .pass { color: green; font-weight: bold; }
+    .fail { color: red; font-weight: bold; }
+    .pending { color: orange; font-weight: bold; }
+    .test-result { margin: 5px 0; padding: 8px; background: #f5f5f5; border-radius: 3px; }
+    button { margin: 5px; padding: 8px 16px; cursor: pointer; }
+    .scenario { background: #e8f4f8; padding: 10px; margin: 10px 0; border-left: 4px solid #2196F3; }
+    .log { background: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Self-Eviction Logic Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Test Setup</h2>
+    <p>This test suite validates the centralized self-eviction logic with phase-aware branching.</p>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Log</h2>
+    <div id="testLog" class="log"></div>
+  </div>
+
+  <script>
+    // Mock global environment
+    window.global = window;
+    
+    // Test utilities
+    const testLog = [];
+    const testResults = [];
+    
+    function log(msg, level = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      testLog.push(`[${timestamp}] [${level}] ${msg}`);
+      updateLogDisplay();
+    }
+    
+    function updateLogDisplay() {
+      const logDiv = document.getElementById('testLog');
+      logDiv.innerHTML = testLog.join('<br>');
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    function addResult(testName, passed, message) {
+      testResults.push({ testName, passed, message });
+      updateResultsDisplay();
+    }
+    
+    function updateResultsDisplay() {
+      const resultsDiv = document.getElementById('testResults');
+      let html = '';
+      
+      const passCount = testResults.filter(r => r.passed).length;
+      const failCount = testResults.filter(r => !r.passed).length;
+      
+      html += `<p><strong>Summary:</strong> ${passCount} passed, ${failCount} failed</p>`;
+      
+      testResults.forEach(result => {
+        const statusClass = result.passed ? 'pass' : 'fail';
+        const statusText = result.passed ? 'PASS' : 'FAIL';
+        html += `<div class="test-result">
+          <span class="${statusClass}">[${statusText}]</span> ${result.testName}<br>
+          <small>${result.message}</small>
+        </div>`;
+      });
+      
+      resultsDiv.innerHTML = html;
+    }
+    
+    function clearResults() {
+      testLog.length = 0;
+      testResults.length = 0;
+      updateLogDisplay();
+      updateResultsDisplay();
+    }
+    
+    // Mock game state
+    function createMockGame(options = {}) {
+      return {
+        cfg: { enableJuryHouse: true, ...options.cfg },
+        week: options.week || 3,
+        phase: options.phase || 'nominations',
+        players: options.players || createMockPlayers(),
+        hohId: options.hohId || 1,
+        vetoHolder: options.vetoHolder || null,
+        nominees: options.nominees || [2, 3],
+        nomsLocked: options.nomsLocked || false,
+        vetoSavedId: options.vetoSavedId || null,
+        juryHouse: options.juryHouse || [],
+        eviction: options.eviction || null,
+        humanId: options.humanId || 1
+      };
+    }
+    
+    function createMockPlayers(count = 10) {
+      const players = [];
+      for (let i = 1; i <= count; i++) {
+        players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          nominated: false,
+          hoh: false,
+          human: i === 1,
+          weekEvicted: null,
+          finalRank: null
+        });
+      }
+      return players;
+    }
+    
+    // Mock global functions
+    window.getP = (id) => {
+      const game = window.game;
+      if (!game || !game.players) return null;
+      return game.players.find(p => p.id === id) || null;
+    };
+    
+    window.alivePlayers = () => {
+      const game = window.game;
+      if (!game || !game.players) return [];
+      return game.players.filter(p => !p.evicted);
+    };
+    
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    
+    window.showCard = (title, lines, type, duration, queue) => {
+      log(`Card shown: ${title} - ${lines.join(', ')}`, 'card');
+    };
+    
+    window.addLog = (msg, type) => {
+      log(`Game log: ${msg}`, type);
+    };
+    
+    window.updateHud = () => {
+      log('HUD updated', 'ui');
+    };
+    
+    window.juryOnEviction = (id) => {
+      log(`Jury integration for player ${id}`, 'jury');
+    };
+    
+    window.syncPlayerBadgeStates = () => {
+      log('Badge states synced', 'ui');
+    };
+    
+    window.showConfirm = async (message, options) => {
+      log(`Confirmation requested: ${message}`, 'ui');
+      return true; // Auto-confirm for tests
+    };
+    
+    // Load self-eviction module
+    const script = document.createElement('script');
+    script.src = 'js/self-eviction.js';
+    script.onload = () => {
+      log('Self-eviction module loaded', 'system');
+    };
+    document.head.appendChild(script);
+    
+    // Test cases
+    async function testBasicSetup() {
+      log('=== Test: Basic Setup ===', 'test');
+      
+      const game = createMockGame();
+      window.game = game;
+      
+      const hasHandler = typeof window.selfEviction?.handle === 'function';
+      const hasRequestHuman = typeof window.selfEviction?.requestHuman === 'function';
+      const hasSafeWindow = typeof window.selfEviction?.isAISafeWindow === 'function';
+      
+      const passed = hasHandler && hasRequestHuman && hasSafeWindow;
+      addResult(
+        'Basic Setup',
+        passed,
+        passed ? 'All required functions are available' : 'Missing required functions'
+      );
+    }
+    
+    async function testAISafeWindow() {
+      log('=== Test: AI Safe Window Detection ===', 'test');
+      
+      // Test safe phases
+      const safePhases = ['intermission', 'lobby'];
+      let passed = true;
+      
+      for (const phase of safePhases) {
+        window.game = createMockGame({ phase });
+        const isSafe = window.selfEviction.isAISafeWindow();
+        if (!isSafe) {
+          passed = false;
+          log(`FAIL: Phase ${phase} should be safe but returned false`, 'error');
+        }
+      }
+      
+      // Test unsafe phases
+      const unsafePhases = ['nominations', 'veto_comp', 'livevote', 'hoh'];
+      for (const phase of unsafePhases) {
+        window.game = createMockGame({ phase });
+        const isSafe = window.selfEviction.isAISafeWindow();
+        if (isSafe) {
+          passed = false;
+          log(`FAIL: Phase ${phase} should be unsafe but returned true`, 'error');
+        }
+      }
+      
+      addResult(
+        'AI Safe Window Detection',
+        passed,
+        passed ? 'Correctly identifies safe/unsafe windows' : 'Failed to identify windows correctly'
+      );
+    }
+    
+    async function testPlayerRoleDetection() {
+      log('=== Test: Player Role Detection ===', 'test');
+      
+      window.game = createMockGame({
+        hohId: 1,
+        vetoHolder: 4,
+        nominees: [2, 3]
+      });
+      
+      const roles = [
+        { id: 1, expected: { isHOH: true, isNominee: false, isPOV: false, isNone: false } },
+        { id: 2, expected: { isHOH: false, isNominee: true, isPOV: false, isNone: false } },
+        { id: 3, expected: { isHOH: false, isNominee: true, isPOV: false, isNone: false } },
+        { id: 4, expected: { isHOH: false, isNominee: false, isPOV: true, isNone: false } },
+        { id: 5, expected: { isHOH: false, isNominee: false, isPOV: false, isNone: true } }
+      ];
+      
+      let passed = true;
+      for (const { id, expected } of roles) {
+        const role = window.selfEviction.getPlayerRole(id);
+        for (const key in expected) {
+          if (role[key] !== expected[key]) {
+            passed = false;
+            log(`FAIL: Player ${id} ${key} expected ${expected[key]}, got ${role[key]}`, 'error');
+          }
+        }
+      }
+      
+      addResult(
+        'Player Role Detection',
+        passed,
+        passed ? 'All roles detected correctly' : 'Role detection failed'
+      );
+    }
+    
+    async function testNomineeSelfEvictionBeforeVeto() {
+      log('=== Test: Nominee Self-Eviction Before Veto ===', 'test');
+      
+      window.game = createMockGame({
+        phase: 'nominations',
+        nominees: [2, 3],
+        hohId: 1,
+        vetoHolder: null,
+        nomsLocked: true
+      });
+      
+      const initialAlive = window.alivePlayers().length;
+      const result = window.selfEviction.handle(2, 'manual');
+      
+      const player = window.getP(2);
+      const newAlive = window.alivePlayers().length;
+      const nomineeRemoved = !window.game.nominees.includes(2);
+      
+      const passed = result && player.evicted && newAlive === initialAlive - 1 && nomineeRemoved;
+      
+      addResult(
+        'Nominee Self-Eviction Before Veto',
+        passed,
+        passed ? 'Nominee correctly evicted and removed from nominations' : 'Failed to process correctly'
+      );
+    }
+    
+    async function testHOHSelfEviction() {
+      log('=== Test: HOH Self-Eviction ===', 'test');
+      
+      window.game = createMockGame({
+        phase: 'nominations',
+        hohId: 1,
+        nominees: [2, 3],
+        nomsLocked: true
+      });
+      
+      const initialAlive = window.alivePlayers().length;
+      const result = window.selfEviction.handle(1, 'manual');
+      
+      const player = window.getP(1);
+      const newAlive = window.alivePlayers().length;
+      const hohCleared = window.game.hohId === null;
+      const nomsCleared = window.game.nominees.length === 0;
+      
+      const passed = result && player.evicted && newAlive === initialAlive - 1 && hohCleared && nomsCleared;
+      
+      addResult(
+        'HOH Self-Eviction',
+        passed,
+        passed ? 'HOH evicted, badges cleared, week cancelled' : 'Failed to process correctly'
+      );
+    }
+    
+    async function testPOVSelfEvictionF4() {
+      log('=== Test: POV Holder Self-Eviction at F4 ===', 'test');
+      
+      const players = createMockPlayers(4);
+      window.game = createMockGame({
+        phase: 'final4_eviction',
+        players: players,
+        hohId: 1,
+        vetoHolder: 2,
+        nominees: [3, 4]
+      });
+      
+      const initialAlive = window.alivePlayers().length;
+      const result = window.selfEviction.handle(2, 'manual');
+      
+      const player = window.getP(2);
+      const newAlive = window.alivePlayers().length;
+      
+      const passed = result && player.evicted && newAlive === 3;
+      
+      addResult(
+        'POV Self-Eviction at F4',
+        passed,
+        passed ? 'POV holder evicted at F4, proceeds to F3' : 'Failed to process correctly'
+      );
+    }
+    
+    async function testIdempotency() {
+      log('=== Test: Idempotency (Duplicate Prevention) ===', 'test');
+      
+      window.game = createMockGame({
+        phase: 'nominations',
+        nominees: [2, 3]
+      });
+      
+      const player = window.getP(2);
+      const result1 = window.selfEviction.handle(2, 'manual');
+      const aliveAfterFirst = window.alivePlayers().length;
+      
+      // Try to evict again
+      const result2 = window.selfEviction.handle(2, 'manual');
+      const aliveAfterSecond = window.alivePlayers().length;
+      
+      const passed = result1 && !result2 && aliveAfterFirst === aliveAfterSecond;
+      
+      addResult(
+        'Idempotency',
+        passed,
+        passed ? 'Duplicate self-eviction correctly prevented' : 'Failed to prevent duplicates'
+      );
+    }
+    
+    async function testAIBlockedInUnsafeWindow() {
+      log('=== Test: AI Self-Eviction Blocked in Unsafe Window ===', 'test');
+      
+      window.game = createMockGame({
+        phase: 'livevote', // Unsafe phase
+        nominees: [2, 3]
+      });
+      
+      const initialAlive = window.alivePlayers().length;
+      const result = window.selfEviction.handle(5, 'ai');
+      
+      const player = window.getP(5);
+      const aliveAfter = window.alivePlayers().length;
+      
+      const passed = !result && !player.evicted && initialAlive === aliveAfter;
+      
+      addResult(
+        'AI Blocked in Unsafe Window',
+        passed,
+        passed ? 'AI self-eviction correctly blocked during unsafe phase' : 'Failed to block AI self-eviction'
+      );
+    }
+    
+    async function testVoteInvalidation() {
+      log('=== Test: Vote Invalidation on Nominee Self-Eviction ===', 'test');
+      
+      window.game = createMockGame({
+        phase: 'livevote',
+        nominees: [2, 3],
+        eviction: {
+          nominees: [2, 3],
+          votes: [{ voter: 4, evict: 2 }, { voter: 5, evict: 2 }],
+          sequenceStarted: true,
+          sequenceDone: false,
+          revealed: false
+        }
+      });
+      
+      const result = window.selfEviction.handle(2, 'manual');
+      
+      const votesCleared = window.game.eviction.votes.length === 0;
+      const sequenceReset = !window.game.eviction.sequenceStarted;
+      
+      const passed = result && votesCleared && sequenceReset;
+      
+      addResult(
+        'Vote Invalidation',
+        passed,
+        passed ? 'Votes correctly invalidated after nominee self-eviction' : 'Failed to invalidate votes'
+      );
+    }
+    
+    // Run all tests
+    async function runAllTests() {
+      clearResults();
+      log('Starting test suite...', 'system');
+      
+      // Wait for script to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await testBasicSetup();
+      await testAISafeWindow();
+      await testPlayerRoleDetection();
+      await testNomineeSelfEvictionBeforeVeto();
+      await testHOHSelfEviction();
+      await testPOVSelfEvictionF4();
+      await testIdempotency();
+      await testAIBlockedInUnsafeWindow();
+      await testVoteInvalidation();
+      
+      log('Test suite complete!', 'system');
+    }
+  </script>
+</body>
+</html>

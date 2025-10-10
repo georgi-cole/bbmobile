@@ -324,6 +324,68 @@
         }
       });
     }
+
+    // Self-Eviction (Exit) button
+    const exitBtn = $('#btnSelfEvict');
+    if(exitBtn && !exitBtn.__exitWired){
+      exitBtn.__exitWired = true;
+      
+      exitBtn.addEventListener('click', async ()=>{
+        const g = global.game;
+        if(!g) return;
+        
+        // Only show for human player when game is active
+        if(g.phase === 'lobby' || g.phase === 'finale'){
+          alert('Self-eviction is only available during active gameplay.');
+          return;
+        }
+        
+        const humanId = g.humanId;
+        if(!humanId){
+          alert('No human player found.');
+          return;
+        }
+        
+        const human = global.getP ? global.getP(humanId) : null;
+        if(!human || human.evicted){
+          alert('You are not an active player.');
+          return;
+        }
+        
+        // Use the centralized self-eviction handler
+        if(typeof global.selfEviction?.requestHuman === 'function'){
+          await global.selfEviction.requestHuman(humanId);
+        } else if(typeof global.handleSelfEviction === 'function'){
+          // Fallback to legacy handler
+          const confirmed = confirm(`Are you sure you want to self-evict? This cannot be undone!`);
+          if(confirmed){
+            global.handleSelfEviction(humanId, 'human');
+          }
+        }
+      });
+    }
+    
+    // Update Exit button visibility based on game state
+    const updateExitBtn = ()=>{
+      const g = global.game;
+      if(!exitBtn) return;
+      
+      const shouldShow = g && 
+                        g.phase !== 'lobby' && 
+                        g.phase !== 'finale' &&
+                        g.humanId &&
+                        global.getP?.(g.humanId) &&
+                        !global.getP(g.humanId).evicted;
+      
+      exitBtn.style.display = shouldShow ? '' : 'none';
+    };
+    
+    updateExitBtn();
+    
+    // Update visibility on game state changes
+    if(!global.__exitBtnUpdater){
+      global.__exitBtnUpdater = setInterval(updateExitBtn, 1000);
+    }
   }
 
   // ---------- Boot ----------

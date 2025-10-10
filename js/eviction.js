@@ -719,10 +719,12 @@
   /* ----- Eviction Finalization & Routing ----- */
   function finalizeEviction(){
     const g=global.game; const evId=g.eviction.evicted;
-    handleSelfEviction(evId,'vote');
+    // Regular vote-based eviction - use legacy handler
+    handleEvictionLegacy(evId,'vote');
   }
 
-  function handleSelfEviction(evId,reason='self'){
+  // Legacy handler for vote-based evictions (not self-eviction)
+  function handleEvictionLegacy(evId,reason='vote'){
     const g=global.game; const ev=global.getP(evId); if(!ev) return;
     ev.evicted=true; ev.weekEvicted=g.week;
     
@@ -758,6 +760,18 @@
     if(!g.__twistMode) global.twists?.afterPhase?.('eviction');
 
     postEvictionRouting();
+  }
+
+  // Main self-eviction handler - delegates to centralized handler if available
+  function handleSelfEviction(evId,reason='self'){
+    // If centralized handler is available, use it for true self-evictions
+    if(reason === 'self' && typeof global.selfEviction?.handle === 'function'){
+      console.info('[eviction] Delegating to centralized self-eviction handler');
+      return global.selfEviction.handle(evId, 'manual');
+    }
+    
+    // Otherwise, use legacy handler
+    return handleEvictionLegacy(evId, reason);
   }
   global.handleSelfEviction=handleSelfEviction;
 
