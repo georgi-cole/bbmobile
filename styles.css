@@ -4083,7 +4083,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 
 /* ========== XP/LEADERBOARD BADGE (removed - now uses .btn in topbar) ========== */
 
-/* Top 5 Leaderboard Panel (TV-docked) */
+/* Top 5 Leaderboard Panel (TV-docked) - Staged Display */
 .leaderboard-panel {
   position: absolute;
   top: var(--tv-safe-top);
@@ -4097,7 +4097,6 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
   animation: slideInFromBottom 0.4s ease;
   max-width: 500px;
-  max-height: calc(100% - var(--tv-safe-top) - var(--tv-safe-bottom) - 20px);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -4115,6 +4114,18 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   flex-shrink: 0;
 }
 
+.leaderboard-list-host {
+  /* Fixed-height container to prevent layout jumps between stages */
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.leaderboard-list-host-fade {
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
 .leaderboard-list {
   list-style: none;
   padding: 0;
@@ -4122,9 +4133,6 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto;
-  flex: 1 1 auto;
-  min-height: 0;
 }
 
 .leaderboard-item {
@@ -4141,6 +4149,24 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 .leaderboard-item:hover {
   background: rgba(18, 29, 42, 0.9);
   border-color: rgba(131, 191, 255, 0.4);
+}
+
+/* Top 1 emphasis styles */
+.leaderboard-item-top1 {
+  padding: 14px 12px;
+  background: linear-gradient(135deg, rgba(255, 220, 139, 0.12), rgba(255, 165, 0, 0.08));
+  border: 1px solid rgba(255, 220, 139, 0.35);
+  box-shadow: 0 0 16px rgba(255, 220, 139, 0.15);
+}
+
+.leaderboard-item-top1:hover {
+  background: linear-gradient(135deg, rgba(255, 220, 139, 0.18), rgba(255, 165, 0, 0.12));
+  border-color: rgba(255, 220, 139, 0.5);
+}
+
+.leaderboard-item-top1 .leaderboard-name {
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 .leaderboard-rank {
@@ -4175,6 +4201,11 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   font-size: 0.9rem;
   font-weight: 700;
   color: #1a1a1a;
+}
+
+.leaderboard-level-top1 {
+  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 50%, #ff6b00 100%);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
 }
 
 @keyframes slideInFromBottom {
