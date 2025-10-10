@@ -56,6 +56,15 @@
   }
 
   /**
+   * Get the display name for a theme
+   * @param {string} themeKey - Theme identifier
+   * @returns {string} Theme display name or the key itself if not found
+   */
+  function getThemeName(themeKey){
+    return (THEMES[themeKey] && THEMES[themeKey].name) ? THEMES[themeKey].name : themeKey;
+  }
+
+  /**
    * Apply a theme to the UI
    * @param {string} themeKey - Theme identifier (midnight, sunset, ocean, neon)
    */
@@ -143,7 +152,7 @@
         
         // Show notification if available
         if(typeof window.showNotification === 'function'){
-          window.showNotification('Theme changed to ' + THEMES[theme].name, 'ok');
+          window.showNotification('Theme changed to ' + getThemeName(theme), 'ok');
         }
       });
     }
@@ -154,6 +163,7 @@
     init: init,
     applyTheme: applyTheme,
     getCurrentTheme: getCurrentTheme,
+    getThemeName: getThemeName,
     getAvailableThemes: getAvailableThemes,
     THEMES: THEMES
   };

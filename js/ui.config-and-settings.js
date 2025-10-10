@@ -1064,7 +1064,7 @@
       const theme = themeSelector.value;
       if(g.ThemeSwitcher){
         g.ThemeSwitcher.applyTheme(theme);
-        const themeName = (g.ThemeSwitcher.THEMES && g.ThemeSwitcher.THEMES[theme] && g.ThemeSwitcher.THEMES[theme].name) ? g.ThemeSwitcher.THEMES[theme].name : theme;
+        const themeName = g.ThemeSwitcher.getThemeName(theme);
         notify('Theme changed to ' + themeName, 'ok');
       }else{
         console.warn('[ui.config-and-settings] ThemeSwitcher not available');

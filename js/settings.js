@@ -552,7 +552,7 @@
       var theme = themeSelector.value;
       if(global.ThemeSwitcher){
         global.ThemeSwitcher.applyTheme(theme);
-        var themeName = (global.ThemeSwitcher.THEMES && global.ThemeSwitcher.THEMES[theme] && global.ThemeSwitcher.THEMES[theme].name) ? global.ThemeSwitcher.THEMES[theme].name : theme;
+        var themeName = global.ThemeSwitcher.getThemeName(theme);
         notify('Theme changed to ' + themeName, 'ok');
       }else{
         console.warn('[settings] ThemeSwitcher not available');
