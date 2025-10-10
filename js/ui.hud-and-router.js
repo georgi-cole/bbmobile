@@ -570,8 +570,36 @@ header.innerHTML = `
       const row=document.createElement('div'); row.className='top-roster-row';
       host.appendChild(row);
 
-      (game.players||[]).forEach(p=>{
+      // Reorder players: active players first (original order), then evicted (by eviction order)
+      const allPlayers = (game.players||[]).slice();
+      const activePlayers = [];
+      const evictedPlayers = [];
+      
+      allPlayers.forEach((p, idx) => {
+        if(!p.__originalIndex) p.__originalIndex = idx; // Store original order
+        if(p.evicted){
+          evictedPlayers.push(p);
+        } else {
+          activePlayers.push(p);
+        }
+      });
+      
+      // Sort evicted by weekEvicted (earliest eviction first)
+      evictedPlayers.sort((a, b) => (a.weekEvicted || 0) - (b.weekEvicted || 0));
+      
+      const orderedPlayers = [...activePlayers, ...evictedPlayers];
+
+      orderedPlayers.forEach((p, displayIndex)=>{
       const tile=document.createElement('div'); tile.className='top-roster-tile';
+      
+      // Add data attributes for tracking
+      tile.dataset.playerId = p.id || '';
+      tile.dataset.originalIndex = String(p.__originalIndex || 0);
+      tile.dataset.evicted = p.evicted ? 'true' : 'false';
+      if(p.evicted && p.weekEvicted != null){
+        tile.dataset.evictedAt = String(p.weekEvicted);
+      }
+      
       if(p.evicted) tile.classList.add('evicted');
       if(game.__returnFlashId === p.id) tile.classList.add('return-flash');
 
@@ -592,13 +620,21 @@ header.innerHTML = `
         wrap.classList.add('nominee-pulse');
       }
       
-      // Evicted overlay with red cross - add only if not already present
+      // Evicted overlay with SVG brush X - add only once (check data-evictAnimated)
       if(p.evicted){
-        // Check if cross already exists to prevent replay
+        const needsAnimation = !p.__evictAnimated;
+        if(needsAnimation) p.__evictAnimated = true; // Mark as animated
+        
+        tile.dataset.evictAnimated = needsAnimation ? 'animating' : 'done';
+        
+        // Check if cross already exists to prevent duplication
         if(!wrap.querySelector('.evicted-cross')){
           const cross=document.createElement('div'); 
-          cross.className='evicted-cross'; 
-          cross.innerHTML='✖';
+          cross.className='evicted-cross' + (needsAnimation ? ' animating' : '');
+          // SVG brush X - theme colored
+          cross.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4 L20 20 M20 4 L4 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>`;
           wrap.appendChild(cross);
         }
       }
@@ -668,6 +704,18 @@ header.innerHTML = `
       tile.appendChild(wrap); tile.appendChild(name);
       row.appendChild(tile);
     });
+
+      // Auto-scroll to first active player on mobile after eviction reorder
+      // Only scroll if there are evicted players (roster was reordered)
+      if(evictedPlayers.length > 0 && activePlayers.length > 0){
+        setTimeout(() => {
+          const firstActiveTile = row.querySelector('.top-roster-tile:not(.evicted)');
+          if(firstActiveTile && row.scrollLeft !== 0){
+            // Only scroll if not already at the beginning
+            firstActiveTile.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+          }
+        }, 100);
+      }
 
       if(!renderTopRoster.__wiredResize){
         renderTopRoster.__wiredResize=true;
