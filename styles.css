@@ -997,6 +997,10 @@ button:focus-visible,.btn:focus-visible{
   .timer-skip-container{
     margin-top:4px;
   }
+  .timer-skip-container .btn{
+    width:auto;
+    max-width:fit-content;
+  }
   .dashboard-timer-label{
     font-size:0.6rem;
   }
