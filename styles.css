@@ -859,33 +859,40 @@ button:focus-visible,.btn:focus-visible{
   display:grid;
   grid-template-columns:1fr auto;
   gap:16px;
-  align-items:start;
+  align-items:center;
 }
 .timer-left-column{
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:2px;
+  justify-content:space-between;
+  min-height:60px;
 }
 .timer-right-column{
   display:flex;
-  flex-direction:column;
-  gap:8px;
-  align-items:flex-end;
+  align-items:center;
+  justify-content:center;
 }
 .timer-skip-container{
   display:flex;
-  justify-content:flex-end;
-  min-height:32px;
+  justify-content:flex-start;
+  margin-top:2px;
+}
+.timer-skip-container .btn{
+  padding:4px 12px;
+  font-size:0.75rem;
+  min-width:auto;
 }
 .dashboard-timer-label{
-  font-size:0.7rem;
+  font-size:0.65rem;
   text-transform:uppercase;
   letter-spacing:0.8px;
   color:var(--muted);
   font-weight:700;
+  line-height:1;
 }
 .dashboard-timer-display{
-  font-size:2rem;
+  font-size:1.8rem;
   font-weight:700;
   letter-spacing:2px;
   color:var(--ink);
@@ -941,22 +948,17 @@ button:focus-visible,.btn:focus-visible{
     grid-template-columns:1fr;
     gap:12px;
   }
-  .timer-right-column{
-    flex-direction:row;
-    align-items:center;
-    justify-content:space-between;
-    width:100%;
-  }
-  .timer-skip-container{
-    order:2;
+  .timer-left-column{
     min-height:auto;
   }
-  .hourglass-container{
-    order:1;
+  .timer-right-column{
     justify-content:flex-start;
   }
+  .timer-skip-container{
+    margin-top:4px;
+  }
   .dashboard-timer-label{
-    font-size:0.65rem;
+    font-size:0.6rem;
   }
   .dashboard-timer-display{
     font-size:1.6rem;

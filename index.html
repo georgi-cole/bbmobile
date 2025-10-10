@@ -90,17 +90,16 @@
         <span id="timerPhaseName" class="timer-phase-name" aria-label="Current phase">Season Premiere</span>
       </div>
       
-      <!-- Two-column layout: left (time), right (skip + hourglass) -->
+      <!-- Two-column layout: left (time/timer/skip stacked), right (hourglass) -->
       <div class="dashboard-timer-content">
         <div class="timer-left-column">
           <span class="dashboard-timer-label" id="timerLabel">TIME:</span>
           <span id="countdown" class="dashboard-timer-display" aria-live="polite" aria-atomic="true" aria-labelledby="timerLabel">00:00</span>
+          <!-- Skip button will be positioned here by script -->
+          <div id="timerSkipContainer" class="timer-skip-container" role="group" aria-label="Timer controls"></div>
         </div>
         
         <div class="timer-right-column">
-          <!-- Skip button will be positioned here by script -->
-          <div id="timerSkipContainer" class="timer-skip-container" role="group" aria-label="Timer controls"></div>
-          
           <!-- HOURGLASS TIMER -->
           <div class="hourglass-container" aria-hidden="true">
             <svg class="hourglass-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
