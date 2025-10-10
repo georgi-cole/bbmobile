@@ -1229,14 +1229,24 @@ header.innerHTML = `
 
     clearInterval(tickHandle); game.pendingAdvance=null;
 
+    // HOURGLASS TIMER: Get hourglass elements (or fallback to old bar for compatibility)
     const bar=document.getElementById('tvProgressFill');
+    const hourglassSandTop=document.getElementById('hourglassSandTop');
+    const hourglassSandBottom=document.getElementById('hourglassSandBottom');
+    const hourglassSandFlow=document.getElementById('hourglassSandFlow');
+    
     function setClock(str){
       const cd=document.getElementById('countdown'); if(cd) cd.textContent=str;
       const tt=document.getElementById('tvTimer'); if(tt) tt.textContent=str;
     }
 
     if(!seconds){
-      setClock('00:00'); if(bar) bar.style.width='0%';
+      setClock('00:00'); 
+      // Reset both old bar and new hourglass
+      if(bar) bar.style.width='0%';
+      if(hourglassSandTop){ hourglassSandTop.setAttribute('height', '0'); hourglassSandTop.setAttribute('y', '12'); }
+      if(hourglassSandBottom){ hourglassSandBottom.setAttribute('height', '0'); }
+      if(hourglassSandFlow){ hourglassSandFlow.style.opacity='0'; }
       try{
         if(typeof onTimeout==='function'){ onTimeout(); }
         else { defaultAdvance(phase); }
@@ -1254,19 +1264,22 @@ header.innerHTML = `
       // Show timer as paused/waiting
       setClock('--:--');
       if(bar) bar.style.width='0%';
+      if(hourglassSandTop){ hourglassSandTop.setAttribute('height', '0'); hourglassSandTop.setAttribute('y', '12'); }
+      if(hourglassSandBottom){ hourglassSandBottom.setAttribute('height', '0'); }
+      if(hourglassSandFlow){ hourglassSandFlow.style.opacity='0'; }
       
       // Wait for human vote, then start timer
       waitForHumanVoteInPhase(phase).then(() => {
         console.info(`[phase] starting timer after human vote phase=${phase}`);
-        startPhaseTimer(phase, seconds, onTimeout, bar, setClock);
+        startPhaseTimer(phase, seconds, onTimeout, bar, setClock, hourglassSandTop, hourglassSandBottom, hourglassSandFlow);
       });
     } else {
       console.info(`[phase] timer start phase=${phase} afterHumanVote=false`);
-      startPhaseTimer(phase, seconds, onTimeout, bar, setClock);
+      startPhaseTimer(phase, seconds, onTimeout, bar, setClock, hourglassSandTop, hourglassSandBottom, hourglassSandFlow);
     }
   }
   
-  function startPhaseTimer(phase, seconds, onTimeout, bar, setClock){
+  function startPhaseTimer(phase, seconds, onTimeout, bar, setClock, hourglassSandTop, hourglassSandBottom, hourglassSandFlow){
     const game = g.game;
     if(!game) return;
     
@@ -1285,7 +1298,12 @@ header.innerHTML = `
       
       const rem=game.endAt-Date.now();
       if(rem<=0){
-        clearInterval(tickHandle); setClock('00:00'); if(bar) bar.style.width='0%';
+        clearInterval(tickHandle); setClock('00:00'); 
+        // Reset both old bar and new hourglass
+        if(bar) bar.style.width='0%';
+        if(hourglassSandTop){ hourglassSandTop.setAttribute('height', '0'); hourglassSandTop.setAttribute('y', '12'); }
+        if(hourglassSandBottom){ hourglassSandBottom.setAttribute('height', '0'); }
+        if(hourglassSandFlow){ hourglassSandFlow.style.opacity='0'; }
         try{
           if(typeof onTimeout==='function'){ onTimeout(); }
           else { defaultAdvance(phase); }
@@ -1295,7 +1313,34 @@ header.innerHTML = `
       }
       const s=Math.ceil(rem/1000), m=Math.floor(s/60), r=s%60;
       setClock(`${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`);
-      if(bar) bar.style.width=((rem/total)*100)+'%';
+      
+      // Update both old bar (for compatibility) and new hourglass
+      const percentRemaining = (rem/total)*100;
+      if(bar) bar.style.width=percentRemaining+'%';
+      
+      // HOURGLASS ANIMATION: Top empties, bottom fills
+      // Top sand starts full (38px max height) and empties
+      const maxTopHeight = 38;
+      const topHeight = (percentRemaining/100) * maxTopHeight;
+      const topY = 12 + (maxTopHeight - topHeight); // Move down as it empties
+      if(hourglassSandTop){
+        hourglassSandTop.setAttribute('height', topHeight.toString());
+        hourglassSandTop.setAttribute('y', topY.toString());
+      }
+      
+      // Bottom sand starts empty and fills (40px max height from y=88)
+      const maxBottomHeight = 40;
+      const bottomHeight = ((100-percentRemaining)/100) * maxBottomHeight;
+      const bottomY = 88 + (maxBottomHeight - bottomHeight); // Fills upward
+      if(hourglassSandBottom){
+        hourglassSandBottom.setAttribute('height', bottomHeight.toString());
+        hourglassSandBottom.setAttribute('y', bottomY.toString());
+      }
+      
+      // Show flow animation when timer is active
+      if(hourglassSandFlow){
+        hourglassSandFlow.style.opacity = percentRemaining > 0 ? '1' : '0';
+      }
     }
     tickHandle=setInterval(tick,200); tick();
   }

@@ -729,8 +729,43 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* Timer progress (outside TV) */
+/* OLD CIRCULAR BAR (commented out - to restore, uncomment these lines and remove .hourglass-container styles)
 .progressbar{ height:10px; background:#112030; border:1px solid #203347; border-radius:8px; overflow:hidden; margin:8px 0 2px; position:relative; }
 .progressbar-fill{ height:100%; width:0%; background:linear-gradient(90deg,#4695ff,#71bfff); box-shadow:0 0 8px -2px #4695ff; transition:width .22s linear; }
+*/
+
+/* HOURGLASS TIMER */
+.hourglass-container{ 
+  height:70px; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+  margin:12px 0 8px; 
+  position:relative; 
+}
+.hourglass-svg{ 
+  width:50px; 
+  height:70px; 
+  filter:drop-shadow(0 2px 8px rgba(70,149,255,0.3)); 
+}
+.hourglass-frame{ 
+  transition:opacity 0.3s ease; 
+}
+.hourglass-sand-top,
+.hourglass-sand-bottom{ 
+  transition:height 0.3s linear; 
+}
+.hourglass-sand-flow{ 
+  animation:sandFlow 1.5s ease-in-out infinite; 
+}
+
+@keyframes sandFlow{
+  0%, 100%{ opacity:0; cy:50; r:2; }
+  20%{ opacity:0.8; cy:48; r:2.5; }
+  50%{ opacity:1; cy:50; r:3; }
+  80%{ opacity:0.8; cy:52; r:2.5; }
+}
+
 .timeReading{ font-size:1.8rem; font-weight:600; letter-spacing:1px; color:#dde9f6; }
 
 /* 08. REVEAL CARDS + BIG ANNOUNCEMENT -------------------------------------- */

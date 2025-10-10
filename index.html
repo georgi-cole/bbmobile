@@ -58,7 +58,39 @@
       <span id="countdown" class="timeReading">00:00</span>
       <!-- Only one Skip will be kept here by the script below -->
     </div>
-    <div class="progressbar"><div id="tvProgressFill" class="progressbar-fill"></div></div>
+    <!-- HOURGLASS TIMER (replaces progressbar) - To revert: restore .progressbar div -->
+    <div class="hourglass-container">
+      <svg class="hourglass-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
+        <!-- Hourglass outline -->
+        <defs>
+          <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4695ff;stop-opacity:0.3" />
+            <stop offset="100%" style="stop-color:#71bfff;stop-opacity:0.5" />
+          </linearGradient>
+          <linearGradient id="sandGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#ffdc8b;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ff9f4a;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <!-- Glass frame -->
+        <path class="hourglass-frame" d="M 20,10 L 80,10 L 80,15 Q 80,20 75,25 L 55,45 Q 50,50 50,50 Q 50,50 45,45 L 25,25 Q 20,20 20,15 Z M 20,130 L 80,130 L 80,125 Q 80,120 75,115 L 55,95 Q 50,90 50,90 Q 50,90 45,95 L 25,115 Q 20,120 20,125 Z" 
+              fill="url(#glassGradient)" stroke="#4695ff" stroke-width="2" opacity="0.4"/>
+        <!-- Sand container (clipped to hourglass shape) -->
+        <clipPath id="hourglassClip">
+          <path d="M 22,12 L 78,12 L 78,15 Q 78,19 74,23 L 54,43 Q 50,47 50,50 Q 50,53 54,57 L 74,77 Q 78,81 78,85 L 78,128 L 22,128 L 22,85 Q 22,81 26,77 L 46,57 Q 50,53 50,50 Q 50,47 46,43 L 26,23 Q 22,19 22,15 Z"/>
+        </clipPath>
+        <!-- Top sand (empties as time passes) -->
+        <g clip-path="url(#hourglassClip)">
+          <rect id="hourglassSandTop" class="hourglass-sand-top" x="22" y="12" width="56" height="0" fill="url(#sandGradient)"/>
+        </g>
+        <!-- Bottom sand (fills as time passes) -->
+        <g clip-path="url(#hourglassClip)">
+          <rect id="hourglassSandBottom" class="hourglass-sand-bottom" x="22" y="88" width="56" height="0" fill="url(#sandGradient)"/>
+        </g>
+        <!-- Center flow animation -->
+        <circle id="hourglassSandFlow" class="hourglass-sand-flow" cx="50" cy="50" r="2" fill="#ffdc8b" opacity="0"/>
+      </svg>
+    </div>
     <!-- Cast header, table, and note intentionally removed -->
   </div>
 
