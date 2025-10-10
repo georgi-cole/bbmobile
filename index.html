@@ -36,37 +36,16 @@
 <div class="wrap">
   <!-- Dashboard (left) — Cast completely removed -->
   <div class="card" id="dashboardCard">
-    <!-- REDESIGNED DASHBOARD: Title moved to timer section below -->
+    <!-- REDESIGNED DASHBOARD: HOH, POV, Nominees removed (shown in roster) -->
     
-    <!-- Row 1: HOH / POV -->
-    <div class="dashboard-row">
-      <div class="dashboard-info-item">
-        <span class="dashboard-label">HOH</span>
-        <span id="hoh" class="dashboard-badge dashboard-badge-hoh">none</span>
-      </div>
-      <div class="dashboard-info-item">
-        <span class="dashboard-label">POV</span>
-        <span id="veto" class="dashboard-badge dashboard-badge-pov">–</span>
-      </div>
-    </div>
-    
-    <!-- Row 2: Nominees -->
+    <!-- Row: Players Remaining (unified alive/evicted with gradient) -->
     <div class="dashboard-row">
       <div class="dashboard-info-item dashboard-info-full">
-        <span class="dashboard-label">Nominees</span>
-        <div id="noms" class="dashboard-nominees">–</div>
-      </div>
-    </div>
-    
-    <!-- Row 3: Alive / Evicted -->
-    <div class="dashboard-row">
-      <div class="dashboard-info-item">
-        <span class="dashboard-label">Alive</span>
-        <span id="alive" class="dashboard-badge dashboard-badge-alive">0</span>
-      </div>
-      <div class="dashboard-info-item">
-        <span class="dashboard-label">Evicted</span>
-        <span id="evicted" class="dashboard-badge dashboard-badge-evicted">0</span>
+        <span class="dashboard-label">Players</span>
+        <div id="playersStatus" class="players-status-bar" title="Alive vs Evicted">
+          <div id="playersStatusFill" class="players-status-fill"></div>
+          <span id="playersStatusText" class="players-status-text">12 / 12</span>
+        </div>
       </div>
     </div>
     
@@ -81,52 +60,36 @@
     
     <div class="sep"></div>
     
-    <!-- Timer Section with Hourglass -->
+    <!-- Timer Section -->
     <div class="dashboard-timer-section" role="region" aria-label="Phase timer and status">
-      <!-- Compact header row: Week + Phase -->
-      <div class="dashboard-timer-compact-header" aria-label="Current game status">
+      <!-- Row 1: Season + Week -->
+      <div class="dashboard-timer-row-1" aria-label="Season and week">
+        <span id="timerSeasonBadge" class="timer-season-badge" aria-label="Current season">Season 1</span>
         <span id="timerWeekBadge" class="timer-week-badge" aria-label="Current week">Week 1</span>
-        <span id="timerPhaseName" class="timer-phase-name">Season Premiere</span>
       </div>
       
-      <!-- Two-column layout: left (time/timer/skip stacked), right (hourglass) -->
+      <!-- Row 2: Phase + Next -->
+      <div class="dashboard-timer-row-2" aria-label="Current and next phase">
+        <span id="timerPhaseName" class="timer-phase-name">Intro</span>
+        <span id="timerNextPhaseBadge" class="timer-next-badge" aria-label="Next phase">HOH</span>
+      </div>
+      
+      <!-- Timer (centered and bigger) -->
       <div class="dashboard-timer-content">
-        <div class="timer-left-column">
-          <span class="dashboard-timer-label" id="timerLabel">TIME:</span>
-          <span id="countdown" class="dashboard-timer-display" aria-live="polite" aria-atomic="true" aria-labelledby="timerLabel">00:00</span>
-          <!-- Skip button will be positioned here by script -->
-          <div id="timerSkipContainer" class="timer-skip-container" role="group" aria-label="Timer controls"></div>
-        </div>
-        
-        <div class="timer-right-column">
-          <!-- HOURGLASS TIMER -->
-          <div class="hourglass-container" aria-hidden="true">
-            <svg class="hourglass-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style="stop-color:#4695ff;stop-opacity:0.3" />
-                  <stop offset="100%" style="stop-color:#71bfff;stop-opacity:0.5" />
-                </linearGradient>
-                <linearGradient id="sandGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" style="stop-color:#ffdc8b;stop-opacity:1" />
-                  <stop offset="100%" style="stop-color:#ff9f4a;stop-opacity:1" />
-                </linearGradient>
-              </defs>
-              <path class="hourglass-frame" d="M 20,10 L 80,10 L 80,15 Q 80,20 75,25 L 55,45 Q 50,50 50,50 Q 50,50 45,45 L 25,25 Q 20,20 20,15 Z M 20,130 L 80,130 L 80,125 Q 80,120 75,115 L 55,95 Q 50,90 50,90 Q 50,90 45,95 L 25,115 Q 20,120 20,125 Z" 
-                    fill="url(#glassGradient)" stroke="#4695ff" stroke-width="2" opacity="0.4"/>
-              <clipPath id="hourglassClip">
-                <path d="M 22,12 L 78,12 L 78,15 Q 78,19 74,23 L 54,43 Q 50,47 50,50 Q 50,53 54,57 L 74,77 Q 78,81 78,85 L 78,128 L 22,128 L 22,85 Q 22,81 26,77 L 46,57 Q 50,53 50,50 Q 50,47 46,43 L 26,23 Q 22,19 22,15 Z"/>
-              </clipPath>
-              <g clip-path="url(#hourglassClip)">
-                <rect id="hourglassSandTop" class="hourglass-sand-top" x="22" y="12" width="56" height="0" fill="url(#sandGradient)"/>
-              </g>
-              <g clip-path="url(#hourglassClip)">
-                <rect id="hourglassSandBottom" class="hourglass-sand-bottom" x="22" y="88" width="56" height="0" fill="url(#sandGradient)"/>
-              </g>
-              <circle id="hourglassSandFlow" class="hourglass-sand-flow" cx="50" cy="50" r="2" fill="#ffdc8b" opacity="0"/>
-            </svg>
-          </div>
-        </div>
+        <span id="countdown" class="dashboard-timer-display" aria-live="polite" aria-atomic="true">00:00</span>
+      </div>
+      
+      <!-- Skip progress bar (full-width, glass effect, depletes right-to-left) -->
+      <div 
+        id="timerSkipProgressBar" 
+        class="timer-skip-progress-bar" 
+        role="button" 
+        tabindex="0"
+        aria-label="Skip to next phase"
+        title="Skip to next phase"
+      >
+        <div id="timerSkipProgressFill" class="timer-skip-progress-fill"></div>
+        <span class="timer-skip-label">Skip &gt;&gt;</span>
       </div>
     </div>
     <!-- Cast header, table, and note intentionally removed -->
@@ -445,44 +408,152 @@
 <!-- Single Skip + roster placement hover (no external deps) -->
 <script>
 (function(){
-  // Hide any Skip inside the TV; keep at most one Skip in the timer row
-  function keepSingleSkip(){
-    document.querySelectorAll('#tv button, #tv .btn').forEach(el=>{
-      if (/^\\s*skip\\s*$/i.test(el.textContent||'')) el.style.display = 'none';
-    });
+  // Skip button handling moved to progress bar - no longer needed
+  
+  // Update timer header with week, phase, and next phase info
+  function updateTimerHeader(){
+    const game = window.game || {};
+    const seasonBadge = document.getElementById('timerSeasonBadge');
+    const weekBadge = document.getElementById('timerWeekBadge');
+    const phaseName = document.getElementById('timerPhaseName');
+    const nextPhaseBadge = document.getElementById('timerNextPhaseBadge');
     
-    // Move skip button to timer skip container
-    const timerSkipContainer = document.querySelector('#timerSkipContainer');
-    const oldBase = document.querySelector('#dashboardCard .row.baseline');
+    // Update season
+    if(seasonBadge){
+      const season = game.season || 1;
+      seasonBadge.textContent = `Season ${season}`;
+    }
     
-    if (timerSkipContainer) {
-      // Find all skip buttons
-      let skipBtn = null;
-      if(oldBase){
-        skipBtn = Array.from(oldBase.querySelectorAll('button, .btn'))
-          .find(el => /^\\s*skip\\s*$/i.test(el.textContent||''));
-      }
-      if(!skipBtn){
-        skipBtn = Array.from(document.querySelectorAll('#dashboardCard button, #dashboardCard .btn'))
-          .find(el => /^\\s*skip\\s*$/i.test(el.textContent||''));
-      }
+    if(weekBadge && phaseName){
+      // Determine week text
+      let aliveCount = 0;
+      try{ aliveCount = (window.alivePlayers?.() || []).length; }catch{}
       
-      // Move to timer skip container if found
-      if(skipBtn){
-        timerSkipContainer.appendChild(skipBtn);
+      let weekText = 'Week 1';
+      if(game.phase && game.phase !== 'lobby'){
+        if(aliveCount <= 2){
+          weekText = 'Final';
+        } else {
+          weekText = `Week ${game.week || 1}`;
+        }
+      }
+      weekBadge.textContent = weekText;
+      
+      // Determine phase name (shortened to 3-4 letters or emojis)
+      let phaseText = '';
+      if(game.phase && game.phase !== 'lobby'){
+        const phaseNames = {
+          'opening': 'Intro',
+          'intermission': 'Strat',
+          'hoh': 'HOH',
+          'nominations': 'Nom',
+          'veto_comp': 'POV',
+          'veto': 'POV',
+          'veto_ceremony': 'Cere',
+          'livevote': 'Vote',
+          'jury': 'Jury',
+          'return_twist': 'Ret',
+          'final3_comp1': 'F3-1',
+          'final3_comp2': 'F3-2',
+          'final3_decision': 'F3 Dec',
+          'social': 'Soc',
+          'social_intermission': 'Soc'
+        };
+        phaseText = phaseNames[game.phase] || game.phase.substring(0, 4).toUpperCase();
+      }
+      phaseName.textContent = phaseText;
+      phaseName.title = getFullPhaseName(game.phase); // Tooltip for full name
+      
+      // Determine next phase (shortened)
+      if(nextPhaseBadge){
+        let nextPhaseText = '';
+        const currentPhase = game.phase;
+        
+        if(currentPhase && currentPhase !== 'lobby'){
+          // Phase progression logic
+          const phaseFlow = {
+            'opening': 'HOH',
+            'intermission': 'HOH',
+            'hoh': 'Nom',
+            'nominations': 'POV',
+            'veto_comp': 'Cere',
+            'veto': 'Cere',
+            'veto_ceremony': 'Vote',
+            'livevote': aliveCount <= 3 ? 'F3' : 'HOH',
+            'jury': 'Vote',
+            'return_twist': 'HOH',
+            'final3_comp1': 'F3-2',
+            'final3_comp2': 'Dec',
+            'final3_decision': 'End',
+            'social': 'HOH',
+            'social_intermission': 'Nom'
+          };
+          
+          nextPhaseText = phaseFlow[currentPhase] || 'Next';
+        } else {
+          nextPhaseText = 'Open';
+        }
+        
+        nextPhaseBadge.textContent = nextPhaseText;
+        nextPhaseBadge.title = `Next: ${nextPhaseText}`;
       }
     }
     
-    // Update timer header with week and phase
-    updateTimerHeader();
+    // Update players status bar
+    updatePlayersStatus();
+    
+    // Also update the main dashboard title header
+    updateDashboardHeader();
   }
   
-  // Update timer header with week and phase info
-  function updateTimerHeader(){
+  // Helper function to get full phase name for tooltip
+  function getFullPhaseName(phase){
+    const fullNames = {
+      'opening': 'Season Premiere',
+      'intermission': 'Strategizing',
+      'hoh': 'HOH Competition',
+      'nominations': 'Nominations',
+      'veto_comp': 'Veto Competition',
+      'veto': 'Veto Competition',
+      'veto_ceremony': 'Veto Ceremony',
+      'livevote': 'Eviction',
+      'jury': 'Jury Deliberation',
+      'return_twist': 'Return Challenge',
+      'final3_comp1': 'Final 3 – Part 1',
+      'final3_comp2': 'Final 3 – Part 2',
+      'final3_decision': 'Final 3 – Decision',
+      'social': 'Social Time',
+      'social_intermission': 'Social Time'
+    };
+    return fullNames[phase] || phase;
+  }
+  
+  // Update players status bar with gradient
+  function updatePlayersStatus(){
     const game = window.game || {};
-    const weekBadge = document.getElementById('timerWeekBadge');
-    const phaseName = document.getElementById('timerPhaseName');
+    const playersStatusFill = document.getElementById('playersStatusFill');
+    const playersStatusText = document.getElementById('playersStatusText');
     
+    if(playersStatusFill && playersStatusText){
+      let aliveCount = 0;
+      let totalCount = 0;
+      
+      try{
+        const players = game.players || [];
+        totalCount = players.length;
+        aliveCount = (window.alivePlayers?.() || []).length;
+      }catch{}
+      
+      const evictedCount = totalCount - aliveCount;
+      const alivePercentage = totalCount > 0 ? (aliveCount / totalCount) * 100 : 100;
+      
+      // Update fill width (represents alive players)
+      playersStatusFill.style.width = `${alivePercentage}%`;
+      
+      // Update text
+      playersStatusText.textContent = `${aliveCount} / ${totalCount}`;
+    }
+  }
     if(weekBadge && phaseName){
       // Determine week text
       let aliveCount = 0;
@@ -647,8 +718,91 @@
     // Insert after Settings button
     settingsBtn.parentNode.insertBefore(rulesBtn, startBtn);
   }
+  
+  // Initialize skip progress bar
+  function initSkipProgressBar(){
+    const progressBar = document.getElementById('timerSkipProgressBar');
+    const progressFill = document.getElementById('timerSkipProgressFill');
+    
+    if(!progressBar) return;
+    
+    // Hide any legacy skip buttons
+    hideLegacySkipButtons();
+    
+    // Handle click on progress bar to skip
+    const handleSkip = () => {
+      // Find the actual skip button if it exists in the game
+      const skipBtn = Array.from(document.querySelectorAll('button, .btn'))
+        .find(el => /^\s*skip\s*$/i.test(el.textContent||'') || /⏩/.test(el.textContent||''));
+      
+      if(skipBtn && !skipBtn.disabled){
+        skipBtn.click();
+      } else {
+        // Fallback: try to advance phase directly
+        if(typeof window.advancePhase === 'function'){
+          window.advancePhase();
+        } else if(typeof window.fastForwardPhase === 'function'){
+          window.fastForwardPhase();
+        } else if(window.game && typeof window.setPhase === 'function'){
+          // Let the game logic handle phase advancement
+          console.log('[Skip Progress Bar] Attempting to skip phase...');
+        }
+      }
+    };
+    
+    // Mouse/touch click
+    progressBar.addEventListener('click', handleSkip);
+    
+    // Keyboard accessibility (Enter or Space)
+    progressBar.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        handleSkip();
+      }
+    });
+    
+    // Update progress bar based on timer
+    // This will be called by the timer update logic
+    window.updateSkipProgress = (elapsed, total) => {
+      if(!progressFill || !total) return;
+      
+      // Progress depletes right-to-left (width decreases as time runs out)
+      const percentage = Math.max(0, Math.min(100, ((total - elapsed) / total) * 100));
+      progressFill.style.width = `${percentage}%`;
+    };
+  }
+  
+  // Hide legacy skip buttons
+  function hideLegacySkipButtons(){
+    // Hide any skip buttons outside the progress bar
+    const legacyButtons = Array.from(document.querySelectorAll('button, .btn'))
+      .filter(el => {
+        const text = el.textContent || '';
+        return (/^\s*skip\s*$/i.test(text) || /⏩/.test(text)) && 
+               el.id !== 'timerSkipProgressBar' &&
+               !el.closest('#timerSkipProgressBar');
+      });
+    
+    legacyButtons.forEach(btn => {
+      btn.style.display = 'none';
+    });
+    
+    // Also hide btnFastForward if it exists
+    const btnFastForward = document.getElementById('btnFastForward');
+    if(btnFastForward){
+      btnFastForward.style.display = 'none';
+    }
+  }
+  
+  // Periodically hide legacy skip buttons (in case they're added dynamically)
+  setInterval(hideLegacySkipButtons, 1000);
 
-  function init(){ keepSingleSkip(); placementsHover(); ensureRulesButton(); }
+  function init(){ 
+    updateTimerHeader(); 
+    initSkipProgressBar(); 
+    placementsHover(); 
+    ensureRulesButton(); 
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true });
   else init();
   
