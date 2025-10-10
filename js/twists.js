@@ -321,7 +321,7 @@
 
     if(winnerId!=null){
       const w=gp(winnerId);
-      if(w){ w.evicted=false; delete w.weekEvicted; }
+      if(w){ w.evicted=false; delete w.weekEvicted; delete w.__evictAnimated; }
       if(Array.isArray(g.juryHouse)) g.juryHouse=g.juryHouse.filter(id=>id!==winnerId);
 
       try{

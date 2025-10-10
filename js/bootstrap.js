@@ -153,6 +153,7 @@
         p.stats = {hohWins:0, vetoWins:0};
         p.threat = global.THREAT_BASE ?? 0.5;
         p.weekEvicted=null; p.winner=false; p.runnerUp=false;
+        delete p.__evictAnimated;  // Clear animation flag on game reset
       });
       global.attachBios?.(g);
       global.initAffinities();
