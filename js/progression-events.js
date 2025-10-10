@@ -212,10 +212,10 @@
    */
   function onEvicted(playerId, placement, totalPlayers) {
     const week = getCurrentWeek();
-    const remainingPlayers = totalPlayers - placement + 1;
     
-    // No penalty for final 5 or later
-    if (remainingPlayers <= 5) {
+    // placement = final placement (1=winner, 2=runner-up, 3=3rd place, etc.)
+    // No penalty for final 5 or later (placement 1-5)
+    if (placement <= 5) {
       return;
     }
     
@@ -228,7 +228,6 @@
     logXP('EVICTED', playerId, { 
       placement, 
       week, 
-      remainingPlayers,
       penalty: adjustedPenalty
     });
   }

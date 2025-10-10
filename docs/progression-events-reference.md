@@ -162,11 +162,11 @@ window.ProgressionEvents.onEvicted(playerId, placement, totalPlayers)
 ```
 - Triggers when a player is evicted from the house
 - `playerId`: Player ID who was evicted
-- `placement`: Final placement (1 = winner, 2 = runner-up, etc.)
+- `placement`: Final placement (1 = winner, 2 = runner-up, 3 = 3rd place, etc.)
 - `totalPlayers`: Total number of players in the season
 
 **Dynamic Penalty Rules:**
-- **No penalty** if evicted at Final 5 or later (remainingPlayers <= 5)
+- **No penalty** if placement is 1-5 (winner, runner-up, 3rd, 4th, or 5th place)
 - Early eviction (Week 1-2): -100 XP
 - Week 3-4: -75 XP
 - Week 5-6: -50 XP
@@ -174,14 +174,17 @@ window.ProgressionEvents.onEvicted(playerId, placement, totalPlayers)
 
 Example:
 ```javascript
-// Player evicted in Week 1, placement 16 of 16 (first out)
+// Player evicted in Week 1 at 16th place (first out)
 window.ProgressionEvents.onEvicted('p1', 16, 16); // ~-100 XP
 
-// Player evicted in Week 5, placement 8 of 16
+// Player evicted in Week 5 at 8th place
 window.ProgressionEvents.onEvicted('p2', 8, 16); // ~-50 XP
 
-// Player evicted at Final 5 (5th place)
+// Player evicted at 5th place (final 5)
 window.ProgressionEvents.onEvicted('p3', 5, 16); // No penalty (0 XP change)
+
+// Player evicted at 4th place (final 4)
+window.ProgressionEvents.onEvicted('p4', 4, 16); // No penalty (0 XP change)
 ```
 
 ### Legacy Events (Still Supported)
