@@ -808,41 +808,98 @@ button:focus-visible,.btn:focus-visible{
 }
 .dashboard-timer-section{
   margin-top:12px;
+  /* Glass effect styling */
+  background:linear-gradient(135deg, var(--card) 0%, var(--card-2) 100%);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:14px;
+  backdrop-filter:blur(8px) brightness(1.05);
+  -webkit-backdrop-filter:blur(8px) brightness(1.05);
+  box-shadow:0 4px 12px -4px rgba(0,0,0,0.3);
 }
-.dashboard-timer-header{
+.dashboard-timer-compact-header{
   display:flex;
-  justify-content:space-between;
+  gap:8px;
   align-items:center;
   margin-bottom:12px;
+  min-height:24px;
 }
-.dashboard-timer-label{
-  font-size:0.85rem;
+.timer-week-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 10px;
+  border-radius:12px;
+  background:linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color:var(--card);
+  font-size:0.7rem;
+  font-weight:700;
   text-transform:uppercase;
   letter-spacing:0.5px;
-  color:var(--muted);
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.timer-phase-name{
+  font-size:0.85rem;
   font-weight:600;
+  color:var(--ink);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  letter-spacing:0.3px;
+  flex:1;
+  min-width:0;
+}
+.dashboard-timer-content{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:16px;
+  align-items:start;
+}
+.timer-left-column{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.timer-right-column{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-end;
+}
+.timer-skip-container{
+  display:flex;
+  justify-content:flex-end;
+  min-height:32px;
+}
+.dashboard-timer-label{
+  font-size:0.7rem;
+  text-transform:uppercase;
+  letter-spacing:0.8px;
+  color:var(--muted);
+  font-weight:700;
 }
 .dashboard-timer-display{
   font-size:2rem;
   font-weight:700;
   letter-spacing:2px;
-  color:#dde9f6;
-  text-shadow:0 2px 8px rgba(70,149,255,0.4);
+  color:var(--ink);
+  text-shadow:0 2px 8px var(--accent);
+  line-height:1;
 }
 
 /* HOURGLASS TIMER */
 .hourglass-container{ 
-  height:70px; 
+  height:60px; 
   display:flex; 
   align-items:center; 
   justify-content:center; 
-  margin:12px 0 8px; 
   position:relative; 
 }
 .hourglass-svg{ 
-  width:50px; 
-  height:70px; 
-  filter:drop-shadow(0 2px 8px rgba(70,149,255,0.3)); 
+  width:45px; 
+  height:60px; 
+  filter:drop-shadow(0 2px 6px var(--accent)); 
 }
 .hourglass-frame{ 
   transition:opacity 0.3s ease; 
@@ -860,6 +917,45 @@ button:focus-visible,.btn:focus-visible{
   20%{ opacity:0.8; cy:48; r:2.5; }
   50%{ opacity:1; cy:50; r:3; }
   80%{ opacity:0.8; cy:52; r:2.5; }
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce){
+  .hourglass-sand-flow{
+    animation:none;
+    opacity:0.6;
+  }
+  .dashboard-timer-display{
+    text-shadow:none;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px){
+  .dashboard-timer-content{
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  .timer-right-column{
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+  }
+  .timer-skip-container{
+    order:2;
+    min-height:auto;
+  }
+  .hourglass-container{
+    order:1;
+    justify-content:flex-start;
+  }
+  .dashboard-timer-label{
+    font-size:0.65rem;
+  }
+  .dashboard-timer-display{
+    font-size:1.6rem;
+  }
 }
 
 .timeReading{ font-size:1.8rem; font-weight:600; letter-spacing:1px; color:#dde9f6; }

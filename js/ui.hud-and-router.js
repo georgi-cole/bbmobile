@@ -826,6 +826,11 @@ header.innerHTML = `
     renderCastRoster();
     renderTopRoster();
     renderJuryHousePanel();
+    
+    // Update timer header with week and phase
+    if(typeof window.updateTimerHeader === 'function'){
+      window.updateTimerHeader();
+    }
   }
   g.updateHud = updateHud;
 
