@@ -426,8 +426,19 @@
     const picks=pool.length?pool:alive;
     const victim=picks[Math.floor((global.rng?.()||Math.random())*picks.length)];
     if(!victim) return;
-    global.addLog?.(`Auto self-eviction (${pct}%): ${victim.name}.`,'warn');
-    try{ global.handleSelfEviction?.(victim.id,'self'); }catch(e){}
+    
+    console.info(`[twists] Auto self-eviction triggered (${pct}%): ${victim.name}`);
+    
+    // Use centralized handler for AI self-eviction with modal
+    if(typeof global.selfEviction?.handle === 'function'){
+      try{ global.selfEviction.handle(victim.id, 'ai'); }catch(e){
+        console.error('[twists] Error in centralized self-eviction:', e);
+      }
+    } else {
+      // Fallback to legacy handler
+      global.addLog?.(`Auto self-eviction (${pct}%): ${victim.name}.`,'warn');
+      try{ global.handleSelfEviction?.(victim.id,'self'); }catch(e){}
+    }
   }
 
   function prepareNominations(){

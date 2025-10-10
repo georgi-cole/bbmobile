@@ -926,7 +926,19 @@
           confirmText: 'Evict',
           tone: 'danger'
         })) return;
-        try{ g.handleSelfEviction?.(id,'self'); }catch(err){ alert('Self-evict failed: '+err); }
+        
+        // Use centralized handler if available
+        if(typeof global.selfEviction?.handle === 'function'){
+          try{ 
+            global.selfEviction.handle(id, 'admin');
+          }catch(err){ 
+            alert('Self-evict failed: '+err); 
+          }
+        } else {
+          // Fallback to legacy handler
+          try{ g.handleSelfEviction?.(id,'self'); }catch(err){ alert('Self-evict failed: '+err); }
+        }
+        
         try{ g.updateHud?.(); }catch(e){}
         closeSettingsModal();
       }
