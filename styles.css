@@ -916,6 +916,10 @@ button:focus-visible,.btn:focus-visible{
   justify-content:flex-start;
   margin-top:2px;
 }
+.timer-skip-container .btn{
+  width:100%;
+  max-width:100%;
+}
 .dashboard-timer-label{
   font-size:0.65rem;
   text-transform:uppercase;
