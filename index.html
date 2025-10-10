@@ -83,26 +83,26 @@
     <div class="sep"></div>
     
     <!-- Timer Section with Hourglass -->
-    <div class="dashboard-timer-section">
+    <div class="dashboard-timer-section" role="region" aria-label="Phase timer and status">
       <!-- Compact header row: Week + Phase -->
       <div class="dashboard-timer-compact-header" aria-label="Current game status">
-        <span id="timerWeekBadge" class="timer-week-badge">Week 1</span>
-        <span id="timerPhaseName" class="timer-phase-name">Season Premiere</span>
+        <span id="timerWeekBadge" class="timer-week-badge" aria-label="Current week">Week 1</span>
+        <span id="timerPhaseName" class="timer-phase-name" aria-label="Current phase">Season Premiere</span>
       </div>
       
       <!-- Two-column layout: left (time), right (skip + hourglass) -->
       <div class="dashboard-timer-content">
         <div class="timer-left-column">
-          <span class="dashboard-timer-label">TIME:</span>
-          <span id="countdown" class="dashboard-timer-display">00:00</span>
+          <span class="dashboard-timer-label" id="timerLabel">TIME:</span>
+          <span id="countdown" class="dashboard-timer-display" aria-live="polite" aria-atomic="true" aria-labelledby="timerLabel">00:00</span>
         </div>
         
         <div class="timer-right-column">
           <!-- Skip button will be positioned here by script -->
-          <div id="timerSkipContainer" class="timer-skip-container"></div>
+          <div id="timerSkipContainer" class="timer-skip-container" role="group" aria-label="Timer controls"></div>
           
           <!-- HOURGLASS TIMER -->
-          <div class="hourglass-container">
+          <div class="hourglass-container" aria-hidden="true">
             <svg class="hourglass-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">

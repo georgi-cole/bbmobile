@@ -729,7 +729,12 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* Timer progress (outside TV) */
-/* OLD CIRCULAR BAR (commented out - to restore, uncomment these lines and remove .hourglass-container styles)
+/* OLD CIRCULAR BAR (preserved for reversibility via timerStyle config flag)
+ * To restore circular progress: 
+ * 1. Set g.cfg.timerStyle = 'circular' in config
+ * 2. Uncomment these styles
+ * 3. Hide .hourglass-container in dashboard-timer-section when timerStyle === 'circular'
+ * 
 .progressbar{ height:10px; background:#112030; border:1px solid #203347; border-radius:8px; overflow:hidden; margin:8px 0 2px; position:relative; }
 .progressbar-fill{ height:100%; width:0%; background:linear-gradient(90deg,#4695ff,#71bfff); box-shadow:0 0 8px -2px #4695ff; transition:width .22s linear; }
 */
