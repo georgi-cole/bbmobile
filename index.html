@@ -70,7 +70,7 @@
       
       <!-- Row 2: Phase + Next -->
       <div class="dashboard-timer-row-2" aria-label="Current and next phase">
-        <span id="timerPhaseName" class="timer-phase-name">Open</span>
+        <span id="timerPhaseName" class="timer-phase-name">Intro</span>
         <span id="timerNextPhaseBadge" class="timer-next-badge" aria-label="Next phase">HOH</span>
       </div>
       
@@ -443,12 +443,12 @@
       let phaseText = '';
       if(game.phase && game.phase !== 'lobby'){
         const phaseNames = {
-          'opening': 'Open',
+          'opening': 'Intro',
           'intermission': 'Strat',
           'hoh': 'HOH',
-          'nominations': 'Noms',
-          'veto_comp': 'Veto',
-          'veto': 'Veto',
+          'nominations': 'Nom',
+          'veto_comp': 'POV',
+          'veto': 'POV',
           'veto_ceremony': 'Cere',
           'livevote': 'Vote',
           'jury': 'Jury',
@@ -474,8 +474,8 @@
           const phaseFlow = {
             'opening': 'HOH',
             'intermission': 'HOH',
-            'hoh': 'Noms',
-            'nominations': 'Veto',
+            'hoh': 'Nom',
+            'nominations': 'POV',
             'veto_comp': 'Cere',
             'veto': 'Cere',
             'veto_ceremony': 'Vote',
@@ -486,7 +486,7 @@
             'final3_comp2': 'Dec',
             'final3_decision': 'End',
             'social': 'HOH',
-            'social_intermission': 'Noms'
+            'social_intermission': 'Nom'
           };
           
           nextPhaseText = phaseFlow[currentPhase] || 'Next';
