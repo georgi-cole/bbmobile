@@ -1359,6 +1359,10 @@ header.innerHTML = `
       if(hourglassSandTop){ hourglassSandTop.setAttribute('height', '0'); hourglassSandTop.setAttribute('y', '12'); }
       if(hourglassSandBottom){ hourglassSandBottom.setAttribute('height', '0'); }
       if(hourglassSandFlow){ hourglassSandFlow.style.opacity='0'; }
+      // Reset skip progress bar
+      if(typeof window.updateSkipProgress === 'function'){
+        window.updateSkipProgress(0, 1);
+      }
       try{
         if(typeof onTimeout==='function'){ onTimeout(); }
         else { defaultAdvance(phase); }
@@ -1379,6 +1383,10 @@ header.innerHTML = `
       if(hourglassSandTop){ hourglassSandTop.setAttribute('height', '0'); hourglassSandTop.setAttribute('y', '12'); }
       if(hourglassSandBottom){ hourglassSandBottom.setAttribute('height', '0'); }
       if(hourglassSandFlow){ hourglassSandFlow.style.opacity='0'; }
+      // Reset skip progress bar
+      if(typeof window.updateSkipProgress === 'function'){
+        window.updateSkipProgress(0, 1);
+      }
       
       // Wait for human vote, then start timer
       waitForHumanVoteInPhase(phase).then(() => {
@@ -1416,6 +1424,10 @@ header.innerHTML = `
         if(hourglassSandTop){ hourglassSandTop.setAttribute('height', '0'); hourglassSandTop.setAttribute('y', '12'); }
         if(hourglassSandBottom){ hourglassSandBottom.setAttribute('height', '0'); }
         if(hourglassSandFlow){ hourglassSandFlow.style.opacity='0'; }
+        // Reset skip progress bar
+        if(typeof window.updateSkipProgress === 'function'){
+          window.updateSkipProgress(total, total);
+        }
         try{
           if(typeof onTimeout==='function'){ onTimeout(); }
           else { defaultAdvance(phase); }
@@ -1429,6 +1441,11 @@ header.innerHTML = `
       // Update both old bar (for compatibility) and new hourglass
       const percentRemaining = (rem/total)*100;
       if(bar) bar.style.width=percentRemaining+'%';
+      
+      // Update skip progress bar (depletes right-to-left)
+      if(typeof window.updateSkipProgress === 'function'){
+        window.updateSkipProgress(total - rem, total);
+      }
       
       // HOURGLASS ANIMATION: Top empties, bottom fills
       // Top sand starts full (38px max height) and empties
