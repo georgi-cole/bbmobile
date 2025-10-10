@@ -14,7 +14,7 @@
 
   /**
    * Check if progression is enabled via feature flag
-   * Priority: window.progression.enabled > localStorage > g.cfg.progressionEnabled > false (default)
+   * Priority: window.progression.enabled > localStorage > g.cfg.progressionEnabled > true (default)
    */
   function isEnabled() {
     // Check window.progression first (allows runtime override)
@@ -37,8 +37,8 @@
       return global.g.cfg.progressionEnabled;
     }
     
-    // Default: disabled
-    return false;
+    // Default: enabled
+    return true;
   }
 
   /**
@@ -164,6 +164,11 @@
     }
 
     try {
+      // Mark profile as created (for tooltip logic)
+      if (!localStorage.getItem('xp-profile-created')) {
+        localStorage.setItem('xp-profile-created', 'true');
+      }
+      
       const state = await progressionCore.getCurrentState();
       const breakdown = await progressionCore.getBreakdown();
       

@@ -3950,36 +3950,8 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   font-size: .68rem;
 }
 
-/* ========== XP/LEADERBOARD BADGE ========== */
-.xp-leaderboard-badge {
-  position: fixed;
-  top: 70px;
-  right: 16px;
-  z-index: 45;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ffdc8b 0%, #ffa500 100%);
-  border: 2px solid rgba(255, 220, 139, 0.4);
-  box-shadow: 0 4px 12px rgba(255, 220, 139, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  transition: all 0.2s ease;
-  padding: 0;
-  line-height: 1;
-}
-
-.xp-leaderboard-badge:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 6px 16px rgba(255, 220, 139, 0.5), 0 3px 6px rgba(0, 0, 0, 0.4);
-}
-
-.xp-leaderboard-badge:active {
-  transform: translateY(0) scale(0.98);
-}
+/* ========== XP/LEADERBOARD BADGE IN TOPBAR ========== */
+/* Badge is now part of topbar and uses .btn class, no special styles needed */
 
 /* Top 5 Leaderboard Panel (TV-docked) */
 .leaderboard-panel {
