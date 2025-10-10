@@ -14,7 +14,7 @@
 
   /**
    * Check if progression is enabled via feature flag
-   * Priority: window.progression.enabled > localStorage > g.cfg.progressionEnabled > false (default)
+   * Priority: window.progression.enabled > localStorage > g.cfg.progressionEnabled > true (default)
    */
   function isEnabled() {
     // Check window.progression first (allows runtime override)
@@ -37,8 +37,8 @@
       return global.g.cfg.progressionEnabled;
     }
     
-    // Default: disabled
-    return false;
+    // Default: enabled
+    return true;
   }
 
   /**
