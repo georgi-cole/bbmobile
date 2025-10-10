@@ -740,6 +740,39 @@ button:focus-visible,.btn:focus-visible{
 */
 
 /* REDESIGNED DASHBOARD */
+.dashboard-title-header{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-bottom:16px;
+  min-height:32px;
+}
+.dashboard-week-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 12px;
+  border-radius:12px;
+  background:linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color:var(--card);
+  font-size:0.75rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.dashboard-phase-name{
+  font-size:1rem;
+  font-weight:600;
+  color:var(--ink);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  letter-spacing:0.4px;
+  flex:1;
+  min-width:0;
+}
 .dashboard-row{
   display:flex;
   gap:12px;
@@ -772,28 +805,28 @@ button:focus-visible,.btn:focus-visible{
   transition:all 0.2s ease;
 }
 .dashboard-badge-hoh{
-  background:linear-gradient(135deg, var(--warn) 0%, rgba(242,206,123,0.8) 100%);
-  color:var(--card);
-  box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  border:1px solid rgba(242,206,123,0.3);
-}
-.dashboard-badge-pov{
-  background:linear-gradient(135deg, var(--good) 0%, rgba(119,213,141,0.8) 100%);
-  color:var(--card);
-  box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  border:1px solid rgba(119,213,141,0.3);
-}
-.dashboard-badge-alive{
-  background:linear-gradient(135deg, var(--good) 0%, rgba(119,213,141,0.8) 100%);
-  color:var(--card);
-  box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  border:1px solid rgba(119,213,141,0.3);
-}
-.dashboard-badge-evicted{
-  background:linear-gradient(135deg, var(--bad) 0%, rgba(255,109,109,0.8) 100%);
+  background:linear-gradient(135deg, var(--warn) 0%, var(--primary-2) 100%);
   color:var(--ink);
   box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  border:1px solid rgba(255,109,109,0.3);
+  border:1px solid var(--line);
+}
+.dashboard-badge-pov{
+  background:linear-gradient(135deg, var(--good) 0%, var(--primary-2) 100%);
+  color:var(--ink);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid var(--line);
+}
+.dashboard-badge-alive{
+  background:linear-gradient(135deg, var(--good) 0%, var(--primary-2) 100%);
+  color:var(--ink);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid var(--line);
+}
+.dashboard-badge-evicted{
+  background:linear-gradient(135deg, var(--bad) 0%, var(--primary-2) 100%);
+  color:var(--ink);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  border:1px solid var(--line);
 }
 .dashboard-nominees{
   display:flex;
@@ -803,12 +836,12 @@ button:focus-visible,.btn:focus-visible{
 .nominee-badge{
   padding:6px 12px;
   border-radius:6px;
-  background:linear-gradient(135deg, var(--warn) 0%, rgba(242,206,123,0.8) 100%);
-  color:var(--card);
+  background:linear-gradient(135deg, var(--warn) 0%, var(--primary-2) 100%);
+  color:var(--ink);
   font-weight:600;
   font-size:0.9rem;
   box-shadow:0 2px 6px rgba(0,0,0,0.2);
-  border:1px solid rgba(242,206,123,0.3);
+  border:1px solid var(--line);
 }
 .dashboard-special-badges{
   display:flex;

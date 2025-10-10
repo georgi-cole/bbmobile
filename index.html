@@ -37,7 +37,10 @@
   <!-- Dashboard (left) — Cast completely removed -->
   <div class="card" id="dashboardCard">
     <!-- REDESIGNED DASHBOARD: Dynamic title with week and phase -->
-    <h1 id="dashboardTitle">House</h1>
+    <div id="dashboardTitle" class="dashboard-title-header">
+      <span id="dashboardWeekBadge" class="dashboard-week-badge">House</span>
+      <span id="dashboardPhaseName" class="dashboard-phase-name"></span>
+    </div>
     
     <!-- Row 1: HOH / POV -->
     <div class="dashboard-row">
@@ -523,7 +526,60 @@
       phaseName.textContent = phaseText;
       phaseName.title = phaseText; // Tooltip for truncated text
     }
+    
+    // Also update the main dashboard title header
+    updateDashboardHeader();
   }
+  
+  // Update main dashboard title header with week and phase info
+  function updateDashboardHeader(){
+    const game = window.game || {};
+    const weekBadge = document.getElementById('dashboardWeekBadge');
+    const phaseName = document.getElementById('dashboardPhaseName');
+    
+    if(weekBadge && phaseName){
+      // Determine week text
+      let aliveCount = 0;
+      try{ aliveCount = (window.alivePlayers?.() || []).length; }catch{}
+      
+      let weekText = 'House';
+      if(game.phase && game.phase !== 'lobby'){
+        if(aliveCount <= 2){
+          weekText = 'Final Week';
+        } else {
+          weekText = `Week ${game.week || 1}`;
+        }
+      }
+      weekBadge.textContent = weekText;
+      
+      // Determine phase name
+      let phaseText = '';
+      if(game.phase && game.phase !== 'lobby'){
+        const phaseNames = {
+          'opening': 'Season Premiere',
+          'intermission': 'Strategizing',
+          'hoh': 'HOH Competition',
+          'nominations': 'Nominations',
+          'veto_comp': 'Veto Competition',
+          'veto': 'Veto Competition',
+          'veto_ceremony': 'Veto Ceremony',
+          'livevote': 'Eviction',
+          'jury': 'Jury Deliberation',
+          'return_twist': 'Return Challenge',
+          'final3_comp1': 'Final 3 – Part 1',
+          'final3_comp2': 'Final 3 – Part 2',
+          'final3_decision': 'Final 3 – Decision',
+          'social': 'Social Time'
+        };
+        phaseText = phaseNames[game.phase] || game.phase.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase());
+      }
+      phaseName.textContent = phaseText;
+      phaseName.title = phaseText; // Tooltip for truncated text
+    }
+  }
+  
+  // Expose to window for external access
+  window.updateDashboardHeader = updateDashboardHeader;
 
   // Hover: Winner/Runner-up/12th... on top roster tiles
   function placementsHover(){
