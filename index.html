@@ -517,7 +517,7 @@
           'final3_decision': 'Final 3 – Decision',
           'social': 'Social Time'
         };
-        phaseText = phaseNames[game.phase] || game.phase.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase());
+        phaseText = phaseNames[game.phase] || game.phase.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       }
       phaseName.textContent = phaseText;
       phaseName.title = phaseText; // Tooltip for truncated text
