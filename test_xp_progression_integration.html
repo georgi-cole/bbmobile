@@ -273,12 +273,16 @@
         return;
       }
 
-      // Test 2: Check all required hooks
+      // Test 2: Check all required hooks (including new ones)
       const requiredHooks = [
         'onHOHWin', 'onNominations', 'onPOVWin', 'onVetoUsedOnSelf',
         'onVetoUsedOnOther', 'onEvictionVotes', 'onSurviveEviction',
         'onCorrectVote', 'onTiebreakerWin', 'onJuryVote',
-        'onFinalWinner', 'onPublicFavorite'
+        'onFinalWinner', 'onPublicFavorite',
+        // New event hooks
+        'onPOVUsed', 'onSurviveNomination', 'onSurviveTie', 'onSavedByVeto',
+        'onComp2ndPlace', 'onComp3rdPlace', 'onWonAllJuryVotes',
+        'onSkipCompetition', 'onLastPlaceComp', 'onEvicted', 'onCleanWeek'
       ];
 
       requiredHooks.forEach(hook => {

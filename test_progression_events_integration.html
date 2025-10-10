@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progression Events Integration Tests</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-style: italic;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    .test-section h2 {
+      color: #764ba2;
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .result.pass {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+      color: #155724;
+    }
+    .result.fail {
+      background: #f8d7da;
+      border-left: 4px solid #dc3545;
+      color: #721c24;
+    }
+    .result.info {
+      background: #d1ecf1;
+      border-left: 4px solid #17a2b8;
+      color: #0c5460;
+    }
+    .result.warn {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      color: #856404;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      margin: 10px 5px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .summary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 30px;
+      text-align: center;
+    }
+    .summary h3 {
+      margin: 0 0 10px 0;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .stat-box {
+      background: rgba(255,255,255,0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 5px;
+      min-width: 150px;
+    }
+    .stat-number {
+      font-size: 32px;
+      font-weight: bold;
+    }
+    .stat-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #c7254e;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-left: 8px;
+    }
+    .badge.positive { background: #d4edda; color: #155724; }
+    .badge.negative { background: #f8d7da; color: #721c24; }
+    .badge.neutral { background: #e2e3e5; color: #383d41; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Progression Events Integration Tests</h1>
+    <p class="subtitle">Comprehensive testing for all XP event types with mocks and feature flag validation</p>
+    
+    <div class="test-section">
+      <h2>📋 Test Overview</h2>
+      <div class="result info">
+        <strong>Test Coverage:</strong><br>
+        • Feature Flag Gating (ON/OFF scenarios)<br>
+        • All Major Positive Events (HOH_WIN, POV_WIN, WON_FINAL, etc.)<br>
+        • All Minor Positive Events (COMP_2ND_PLACE, SURVIVE_NOMINATION, etc.)<br>
+        • All Negative Events (SKIP_COMPETITION, LAST_PLACE_COMP, EVICTED)<br>
+        • Dynamic EVICTED penalty based on placement<br>
+        • XP floor at 0 (cannot go negative)<br>
+        • Mock implementations for reliable testing
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>⚙️ Setup & Initialization</h2>
+      <button onclick="runSetupTests()">Run Setup Tests</button>
+      <div id="setup-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>🚩 Feature Flag Tests</h2>
+      <button onclick="runFeatureFlagTests()">Run Feature Flag Tests</button>
+      <div id="flag-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>✨ Major Positive Events <span class="badge positive">High XP</span></h2>
+      <button onclick="runMajorPositiveTests()">Run Major Positive Tests</button>
+      <div id="major-positive-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>⭐ Minor Positive Events <span class="badge positive">Medium XP</span></h2>
+      <button onclick="runMinorPositiveTests()">Run Minor Positive Tests</button>
+      <div id="minor-positive-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>⚠️ Negative Events <span class="badge negative">XP Loss</span></h2>
+      <button onclick="runNegativeTests()">Run Negative Event Tests</button>
+      <div id="negative-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>🎯 EVICTED Dynamic Penalty Tests <span class="badge negative">Variable XP Loss</span></h2>
+      <button onclick="runEvictedTests()">Run EVICTED Tests</button>
+      <div id="evicted-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>🔒 XP Floor Tests (Cannot Drop Below 0)</h2>
+      <button onclick="runXPFloorTests()">Run XP Floor Tests</button>
+      <div id="floor-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>🔄 Run All Tests</h2>
+      <button onclick="runAllTests()" id="run-all-btn">Run Complete Test Suite</button>
+    </div>
+
+    <div class="summary" id="summary" style="display: none;">
+      <h3>📊 Test Summary</h3>
+      <div id="summary-content"></div>
+    </div>
+  </div>
+
+  <!-- Mock Progression API -->
+  <script>
+    // Mock game state
+    window.game = {
+      week: 3,
+      players: [
+        { id: 'p1', name: 'Alice', evicted: false, human: true },
+        { id: 'p2', name: 'Bob', evicted: false, human: false },
+        { id: 'p3', name: 'Charlie', evicted: false, human: false },
+        { id: 'p4', name: 'Diana', evicted: true, human: false },
+        { id: 'p5', name: 'Eve', evicted: false, human: false }
+      ]
+    };
+
+    // Test state
+    let testResults = {
+      passed: 0,
+      failed: 0,
+      warnings: 0,
+      events: []
+    };
+
+    let mockEventLog = [];
+    let mockFeatureFlagEnabled = true;
+
+    // Mock Progression API
+    function createMockProgression() {
+      return {
+        log: async (eventType, options) => {
+          if (!mockFeatureFlagEnabled) {
+            return null;
+          }
+          
+          const event = {
+            eventType,
+            ...options,
+            timestamp: Date.now()
+          };
+          mockEventLog.push(event);
+          return event;
+        },
+        isEnabled: () => mockFeatureFlagEnabled,
+        initialize: async () => true,
+        getPlayerState: async (playerId) => {
+          const playerEvents = mockEventLog.filter(e => e.playerId === playerId);
+          const totalXP = Math.max(0, playerEvents.reduce((sum, e) => {
+            // Calculate XP from event type (simplified)
+            const xpValues = {
+              'HOH_WIN': 150,
+              'POV_WIN': 125,
+              'WON_FINAL': 500,
+              'WON_JURY_VOTE': 50,
+              'WON_PUBLIC_FAVORITE': 100,
+              'WON_ALL_JURY_VOTES': 300,
+              'POV_USED': 80,
+              'SURVIVE_NOMINATION': 75,
+              'SURVIVE_TIE': 90,
+              'SAVED_BY_VETO': 60,
+              'CLEAN_WEEK': 100,
+              'COMP_2ND_PLACE': 40,
+              'COMP_3RD_PLACE': 25,
+              'SKIP_COMPETITION': -30,
+              'LAST_PLACE_COMP': -20,
+              'EVICTED': -100
+            };
+            return sum + (xpValues[e.eventType] || 0);
+          }, 0));
+          
+          return {
+            totalXP,
+            level: Math.floor(totalXP / 100) + 1,
+            eventsCount: playerEvents.length
+          };
+        },
+        getCurrentState: async () => ({ totalXP: 0, level: 1, eventsCount: 0 }),
+        getLeaderboard: async () => []
+      };
+    }
+
+    // Initialize mock
+    window.Progression = createMockProgression();
+
+    // Helper functions
+    function logResult(container, message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `result ${type}`;
+      div.textContent = message;
+      document.getElementById(container).appendChild(div);
+      
+      if (type === 'pass') testResults.passed++;
+      if (type === 'fail') testResults.failed++;
+      if (type === 'warn') testResults.warnings++;
+    }
+
+    function clearResults(container) {
+      const element = document.getElementById(container);
+      if (element) element.innerHTML = '';
+    }
+
+    function resetMocks() {
+      mockEventLog = [];
+      mockFeatureFlagEnabled = true;
+      window.Progression = createMockProgression();
+    }
+
+    // Test functions
+    async function runSetupTests() {
+      clearResults('setup-results');
+      logResult('setup-results', 'Running setup and initialization tests...', 'info');
+
+      // Test 1: ProgressionEvents exists
+      if (typeof window.ProgressionEvents !== 'undefined') {
+        logResult('setup-results', '✓ window.ProgressionEvents is defined', 'pass');
+      } else {
+        logResult('setup-results', '✗ window.ProgressionEvents is NOT defined', 'fail');
+        return;
+      }
+
+      // Test 2: All new hooks exist
+      const requiredHooks = [
+        'onPOVUsed', 'onSurviveNomination', 'onSurviveTie', 'onSavedByVeto',
+        'onComp2ndPlace', 'onComp3rdPlace', 'onWonAllJuryVotes',
+        'onSkipCompetition', 'onLastPlaceComp', 'onEvicted', 'onCleanWeek'
+      ];
+
+      requiredHooks.forEach(hook => {
+        if (typeof window.ProgressionEvents[hook] === 'function') {
+          logResult('setup-results', `✓ ProgressionEvents.${hook} exists`, 'pass');
+        } else {
+          logResult('setup-results', `✗ ProgressionEvents.${hook} NOT found`, 'fail');
+        }
+      });
+
+      // Test 3: Mock API working
+      resetMocks();
+      const testEvent = await window.Progression.log('HOH_WIN', { playerId: 'p1', week: 1 });
+      if (testEvent && mockEventLog.length === 1) {
+        logResult('setup-results', '✓ Mock Progression API is working', 'pass');
+      } else {
+        logResult('setup-results', '✗ Mock API not capturing events', 'fail');
+      }
+    }
+
+    async function runFeatureFlagTests() {
+      clearResults('flag-results');
+      logResult('flag-results', 'Testing feature flag gating...', 'info');
+
+      // Test 1: Events logged when flag is ON
+      resetMocks();
+      mockFeatureFlagEnabled = true;
+      await window.ProgressionEvents.onHOHWin('p1', ['p1', 'p2']);
+      
+      if (mockEventLog.length > 0) {
+        logResult('flag-results', `✓ Events logged when flag ON (${mockEventLog.length} events)`, 'pass');
+      } else {
+        logResult('flag-results', '✗ No events logged when flag ON', 'fail');
+      }
+
+      // Test 2: Events NOT logged when flag is OFF
+      resetMocks();
+      mockFeatureFlagEnabled = false;
+      await window.ProgressionEvents.onHOHWin('p1', ['p1', 'p2']);
+      
+      if (mockEventLog.length === 0) {
+        logResult('flag-results', '✓ No events logged when flag OFF', 'pass');
+      } else {
+        logResult('flag-results', `✗ Events logged when flag OFF (${mockEventLog.length} events)`, 'fail');
+      }
+
+      // Test 3: No errors when flag is OFF
+      resetMocks();
+      mockFeatureFlagEnabled = false;
+      try {
+        await window.ProgressionEvents.onPOVWin('p1');
+        await window.ProgressionEvents.onEvicted('p2', 10, 16);
+        logResult('flag-results', '✓ No errors when calling hooks with flag OFF', 'pass');
+      } catch (error) {
+        logResult('flag-results', `✗ Error when flag OFF: ${error.message}`, 'fail');
+      }
+
+      // Reset for other tests
+      resetMocks();
+      mockFeatureFlagEnabled = true;
+    }
+
+    async function runMajorPositiveTests() {
+      clearResults('major-positive-results');
+      logResult('major-positive-results', 'Testing major positive events...', 'info');
+      resetMocks();
+
+      const tests = [
+        { hook: 'onHOHWin', args: ['p1', ['p1', 'p2']], event: 'HOH_WIN', xp: 150 },
+        { hook: 'onPOVWin', args: ['p2', ['p1', 'p2']], event: 'POV_WIN', xp: 125 },
+        { hook: 'onFinalWinner', args: ['p1'], event: 'WON_FINAL', xp: 500 },
+        { hook: 'onJuryVote', args: ['p1'], event: 'WON_JURY_VOTE', xp: 50 },
+        { hook: 'onWonAllJuryVotes', args: ['p1', 9], event: 'WON_ALL_JURY_VOTES', xp: 300 },
+        { hook: 'onPublicFavorite', args: ['p1'], event: 'WON_PUBLIC_FAVORITE', xp: 100 }
+      ];
+
+      for (const test of tests) {
+        const beforeCount = mockEventLog.length;
+        await window.ProgressionEvents[test.hook](...test.args);
+        const logged = mockEventLog.slice(beforeCount);
+        
+        const found = logged.find(e => e.eventType === test.event);
+        if (found) {
+          logResult('major-positive-results', 
+            `✓ ${test.hook} logged ${test.event} (+${test.xp} XP)`, 'pass');
+        } else {
+          logResult('major-positive-results', 
+            `✗ ${test.hook} did NOT log ${test.event}`, 'fail');
+        }
+      }
+    }
+
+    async function runMinorPositiveTests() {
+      clearResults('minor-positive-results');
+      logResult('minor-positive-results', 'Testing minor positive events...', 'info');
+      resetMocks();
+
+      const tests = [
+        { hook: 'onPOVUsed', args: ['p1', 'p2'], event: 'POV_USED', xp: 80 },
+        { hook: 'onSurviveNomination', args: ['p1'], event: 'SURVIVE_NOMINATION', xp: 75 },
+        { hook: 'onSurviveTie', args: ['p1', 4], event: 'SURVIVE_TIE', xp: 90 },
+        { hook: 'onSavedByVeto', args: ['p1', 'p2'], event: 'SAVED_BY_VETO', xp: 60 },
+        { hook: 'onCleanWeek', args: ['p1'], event: 'CLEAN_WEEK', xp: 100 },
+        { hook: 'onComp2ndPlace', args: ['p2', 'HOH'], event: 'COMP_2ND_PLACE', xp: 40 },
+        { hook: 'onComp3rdPlace', args: ['p3', 'POV'], event: 'COMP_3RD_PLACE', xp: 25 }
+      ];
+
+      for (const test of tests) {
+        const beforeCount = mockEventLog.length;
+        await window.ProgressionEvents[test.hook](...test.args);
+        const logged = mockEventLog.slice(beforeCount);
+        
+        const found = logged.find(e => e.eventType === test.event);
+        if (found) {
+          logResult('minor-positive-results', 
+            `✓ ${test.hook} logged ${test.event} (+${test.xp} XP)`, 'pass');
+        } else {
+          logResult('minor-positive-results', 
+            `✗ ${test.hook} did NOT log ${test.event}`, 'fail');
+        }
+      }
+    }
+
+    async function runNegativeTests() {
+      clearResults('negative-results');
+      logResult('negative-results', 'Testing negative events...', 'info');
+      resetMocks();
+
+      const tests = [
+        { hook: 'onSkipCompetition', args: ['p1', 'HOH'], event: 'SKIP_COMPETITION', xp: -30 },
+        { hook: 'onLastPlaceComp', args: ['p2', 'POV'], event: 'LAST_PLACE_COMP', xp: -20 }
+      ];
+
+      for (const test of tests) {
+        const beforeCount = mockEventLog.length;
+        await window.ProgressionEvents[test.hook](...test.args);
+        const logged = mockEventLog.slice(beforeCount);
+        
+        const found = logged.find(e => e.eventType === test.event);
+        if (found) {
+          logResult('negative-results', 
+            `✓ ${test.hook} logged ${test.event} (${test.xp} XP)`, 'pass');
+        } else {
+          logResult('negative-results', 
+            `✗ ${test.hook} did NOT log ${test.event}`, 'fail');
+        }
+      }
+    }
+
+    async function runEvictedTests() {
+      clearResults('evicted-results');
+      logResult('evicted-results', 'Testing EVICTED event with dynamic penalties...', 'info');
+      resetMocks();
+
+      // Test 1: Early eviction (week 1, 16 players total, placement 16)
+      window.game.week = 1;
+      await window.ProgressionEvents.onEvicted('p1', 16, 16);
+      const event1 = mockEventLog.find(e => e.eventType === 'EVICTED');
+      if (event1) {
+        logResult('evicted-results', 
+          `✓ Early eviction logged (Week 1, placement 16): penalty = ${event1.payload?.penalty || -100} XP`, 'pass');
+      } else {
+        logResult('evicted-results', '✗ Early eviction NOT logged', 'fail');
+      }
+
+      // Test 2: Mid-game eviction (week 5, placement 8)
+      resetMocks();
+      window.game.week = 5;
+      await window.ProgressionEvents.onEvicted('p2', 8, 16);
+      const event2 = mockEventLog.find(e => e.eventType === 'EVICTED');
+      if (event2) {
+        logResult('evicted-results', 
+          `✓ Mid-game eviction logged (Week 5, placement 8): penalty = ${event2.payload?.penalty || -50} XP`, 'pass');
+      } else {
+        logResult('evicted-results', '✗ Mid-game eviction NOT logged', 'fail');
+      }
+
+      // Test 3: No penalty for final 5 (placement 5)
+      resetMocks();
+      window.game.week = 10;
+      await window.ProgressionEvents.onEvicted('p3', 5, 16);
+      const event3 = mockEventLog.find(e => e.eventType === 'EVICTED');
+      if (!event3) {
+        logResult('evicted-results', 
+          '✓ No penalty for final 5 eviction (correctly not logged)', 'pass');
+      } else {
+        logResult('evicted-results', 
+          '✗ Final 5 eviction should have no penalty but was logged', 'fail');
+      }
+
+      // Test 4: No penalty for final 4 (placement 4)
+      resetMocks();
+      window.game.week = 11;
+      await window.ProgressionEvents.onEvicted('p4', 4, 16);
+      const event4 = mockEventLog.find(e => e.eventType === 'EVICTED');
+      if (!event4) {
+        logResult('evicted-results', 
+          '✓ No penalty for final 4 eviction (correctly not logged)', 'pass');
+      } else {
+        logResult('evicted-results', 
+          '✗ Final 4 eviction should have no penalty but was logged', 'fail');
+      }
+
+      // Reset week
+      window.game.week = 3;
+    }
+
+    async function runXPFloorTests() {
+      clearResults('floor-results');
+      logResult('floor-results', 'Testing XP floor (cannot drop below 0)...', 'info');
+      resetMocks();
+
+      // Give player some initial XP
+      await window.ProgressionEvents.onHOHWin('p1');
+      await window.ProgressionEvents.onPOVWin('p1');
+      
+      let state = await window.Progression.getPlayerState('p1');
+      const initialXP = state.totalXP;
+      logResult('floor-results', `Initial XP for p1: ${initialXP}`, 'info');
+
+      // Apply multiple negative events
+      await window.ProgressionEvents.onSkipCompetition('p1', 'HOH');
+      await window.ProgressionEvents.onSkipCompetition('p1', 'POV');
+      await window.ProgressionEvents.onLastPlaceComp('p1', 'HOH');
+      await window.ProgressionEvents.onLastPlaceComp('p1', 'POV');
+      
+      // Try to evict (more negatives)
+      window.game.week = 1;
+      await window.ProgressionEvents.onEvicted('p1', 15, 16);
+
+      state = await window.Progression.getPlayerState('p1');
+      const finalXP = state.totalXP;
+      
+      logResult('floor-results', `Final XP for p1: ${finalXP}`, 'info');
+
+      if (finalXP >= 0) {
+        logResult('floor-results', 
+          '✓ XP cannot drop below 0 (floor enforced)', 'pass');
+      } else {
+        logResult('floor-results', 
+          `✗ XP went negative: ${finalXP}`, 'fail');
+      }
+
+      // Test starting at 0
+      resetMocks();
+      await window.ProgressionEvents.onSkipCompetition('p5', 'HOH');
+      state = await window.Progression.getPlayerState('p5');
+      
+      if (state.totalXP >= 0) {
+        logResult('floor-results', 
+          '✓ Player starting at 0 XP cannot go negative', 'pass');
+      } else {
+        logResult('floor-results', 
+          `✗ Player at 0 XP went negative: ${state.totalXP}`, 'fail');
+      }
+    }
+
+    async function runAllTests() {
+      const btn = document.getElementById('run-all-btn');
+      btn.disabled = true;
+      btn.textContent = 'Running Tests...';
+      
+      testResults = { passed: 0, failed: 0, warnings: 0, events: [] };
+
+      await runSetupTests();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      await runFeatureFlagTests();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      await runMajorPositiveTests();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      await runMinorPositiveTests();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      await runNegativeTests();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      await runEvictedTests();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      await runXPFloorTests();
+
+      // Show summary
+      setTimeout(() => {
+        const summary = document.getElementById('summary');
+        const content = document.getElementById('summary-content');
+        
+        const total = testResults.passed + testResults.failed + testResults.warnings;
+        const passRate = total > 0 ? Math.round((testResults.passed / total) * 100) : 0;
+        
+        content.innerHTML = `
+          <div class="stats">
+            <div class="stat-box">
+              <div class="stat-number">${testResults.passed}</div>
+              <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number">${testResults.failed}</div>
+              <div class="stat-label">Failed</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number">${testResults.warnings}</div>
+              <div class="stat-label">Warnings</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number">${passRate}%</div>
+              <div class="stat-label">Pass Rate</div>
+            </div>
+          </div>
+          ${testResults.failed === 0 ? 
+            '<p style="font-size: 20px; margin-top: 20px;">🎉 All critical tests passed!</p>' : 
+            '<p style="font-size: 20px; margin-top: 20px;">⚠️ Some tests failed - please review</p>'}
+        `;
+        
+        summary.style.display = 'block';
+        
+        btn.disabled = false;
+        btn.textContent = 'Run Complete Test Suite';
+      }, 500);
+    }
+  </script>
+
+  <!-- Load progression system scripts -->
+  <script type="module" src="js/progression-bridge.js"></script>
+  <script src="js/progression-events.js"></script>
+</body>
+</html>

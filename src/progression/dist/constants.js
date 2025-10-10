@@ -158,6 +158,66 @@ export const DEFAULT_RULES = [
         name: "Won Public's Favorite",
         baseXP: 100,
         description: "Won public's favorite player award"
+    },
+    {
+        id: 'POV_USED',
+        name: 'Used Power of Veto',
+        baseXP: 80,
+        description: 'Used the Power of Veto at ceremony'
+    },
+    {
+        id: 'SURVIVE_NOMINATION',
+        name: 'Survived Nomination',
+        baseXP: 75,
+        description: 'Survived being nominated for eviction'
+    },
+    {
+        id: 'SURVIVE_TIE',
+        name: 'Survived Tiebreaker',
+        baseXP: 90,
+        description: 'Survived a tied eviction vote'
+    },
+    {
+        id: 'SAVED_BY_VETO',
+        name: 'Saved by Veto',
+        baseXP: 60,
+        description: 'Saved from nomination by someone using veto'
+    },
+    {
+        id: 'COMP_2ND_PLACE',
+        name: 'Competition 2nd Place',
+        baseXP: 40,
+        description: 'Placed 2nd in a competition'
+    },
+    {
+        id: 'COMP_3RD_PLACE',
+        name: 'Competition 3rd Place',
+        baseXP: 25,
+        description: 'Placed 3rd in a competition'
+    },
+    {
+        id: 'WON_ALL_JURY_VOTES',
+        name: 'Unanimous Jury Victory',
+        baseXP: 300,
+        description: 'Won with all jury votes (perfect game)'
+    },
+    {
+        id: 'SKIP_COMPETITION',
+        name: 'Skipped Competition',
+        baseXP: -30,
+        description: 'Did not participate in a competition'
+    },
+    {
+        id: 'LAST_PLACE_COMP',
+        name: 'Last Place in Competition',
+        baseXP: -20,
+        description: 'Placed last in a competition'
+    },
+    {
+        id: 'EVICTED',
+        name: 'Evicted',
+        baseXP: -100,
+        description: 'Evicted from the house (dynamic penalty based on placement)'
     }
 ];
 /**
