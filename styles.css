@@ -729,8 +729,139 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* Timer progress (outside TV) */
+/* OLD CIRCULAR BAR (commented out - to restore, uncomment these lines and remove .hourglass-container styles)
 .progressbar{ height:10px; background:#112030; border:1px solid #203347; border-radius:8px; overflow:hidden; margin:8px 0 2px; position:relative; }
 .progressbar-fill{ height:100%; width:0%; background:linear-gradient(90deg,#4695ff,#71bfff); box-shadow:0 0 8px -2px #4695ff; transition:width .22s linear; }
+*/
+
+/* REDESIGNED DASHBOARD */
+.dashboard-row{
+  display:flex;
+  gap:12px;
+  margin-bottom:12px;
+  flex-wrap:wrap;
+}
+.dashboard-info-item{
+  flex:1;
+  min-width:120px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.dashboard-info-full{
+  flex:1 1 100%;
+}
+.dashboard-label{
+  font-size:0.75rem;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  color:var(--muted);
+  font-weight:600;
+}
+.dashboard-badge{
+  padding:8px 14px;
+  border-radius:8px;
+  font-weight:600;
+  font-size:0.95rem;
+  text-align:center;
+  transition:all 0.2s ease;
+}
+.dashboard-badge-hoh{
+  background:linear-gradient(135deg, #f4d03f 0%, #e6a900 100%);
+  color:#1a1a1a;
+  box-shadow:0 2px 8px rgba(244,208,63,0.3);
+}
+.dashboard-badge-pov{
+  background:linear-gradient(135deg, #77d58d 0%, #4fb369 100%);
+  color:#1a1a1a;
+  box-shadow:0 2px 8px rgba(119,213,141,0.3);
+}
+.dashboard-badge-alive{
+  background:linear-gradient(135deg, #77d58d 0%, #4fb369 100%);
+  color:#1a1a1a;
+  box-shadow:0 2px 8px rgba(119,213,141,0.3);
+}
+.dashboard-badge-evicted{
+  background:linear-gradient(135deg, #ff6d6d 0%, #d64545 100%);
+  color:#fff;
+  box-shadow:0 2px 8px rgba(255,109,109,0.3);
+}
+.dashboard-nominees{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.nominee-badge{
+  padding:6px 12px;
+  border-radius:6px;
+  background:linear-gradient(135deg, #f2ce7b 0%, #daa950 100%);
+  color:#1a1a1a;
+  font-weight:600;
+  font-size:0.9rem;
+  box-shadow:0 2px 6px rgba(242,206,123,0.3);
+}
+.dashboard-special-badges{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.dashboard-timer-section{
+  margin-top:12px;
+}
+.dashboard-timer-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+}
+.dashboard-timer-label{
+  font-size:0.85rem;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  color:var(--muted);
+  font-weight:600;
+}
+.dashboard-timer-display{
+  font-size:2rem;
+  font-weight:700;
+  letter-spacing:2px;
+  color:#dde9f6;
+  text-shadow:0 2px 8px rgba(70,149,255,0.4);
+}
+
+/* HOURGLASS TIMER */
+.hourglass-container{ 
+  height:70px; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+  margin:12px 0 8px; 
+  position:relative; 
+}
+.hourglass-svg{ 
+  width:50px; 
+  height:70px; 
+  filter:drop-shadow(0 2px 8px rgba(70,149,255,0.3)); 
+}
+.hourglass-frame{ 
+  transition:opacity 0.3s ease; 
+}
+.hourglass-sand-top,
+.hourglass-sand-bottom{ 
+  transition:height 0.3s linear; 
+}
+.hourglass-sand-flow{ 
+  animation:sandFlow 1.5s ease-in-out infinite; 
+}
+
+@keyframes sandFlow{
+  0%, 100%{ opacity:0; cy:50; r:2; }
+  20%{ opacity:0.8; cy:48; r:2.5; }
+  50%{ opacity:1; cy:50; r:3; }
+  80%{ opacity:0.8; cy:52; r:2.5; }
+}
+
 .timeReading{ font-size:1.8rem; font-weight:600; letter-spacing:1px; color:#dde9f6; }
 
 /* 08. REVEAL CARDS + BIG ANNOUNCEMENT -------------------------------------- */
