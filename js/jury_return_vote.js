@@ -198,7 +198,7 @@
 
       // Update cast: set juror as active
       if(winnerId!=null){
-        const p=global.getP?.(winnerId); if(p){ p.evicted=false; delete p.weekEvicted; }
+        const p=global.getP?.(winnerId); if(p){ p.evicted=false; delete p.weekEvicted; delete p.__evictAnimated; }
         if(Array.isArray(global.game?.juryHouse)) global.game.juryHouse=global.game.juryHouse.filter(x=>x!==winnerId);
 
         // Mark juror as active in UI, flash

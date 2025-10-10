@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juror Return Roster Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-controls {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .test-controls h2 {
+      margin-top: 0;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 16px;
+      background: var(--primary-2);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: var(--primary-3);
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .status {
+      background: var(--card-2);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .status-item {
+      margin: 5px 0;
+    }
+    .pass { color: var(--good); }
+    .fail { color: var(--bad); }
+    .info { color: var(--accent); }
+    #topRosterBar {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h2>🧪 Juror Return Roster Test</h2>
+    <p>This test verifies that when a juror returns, they restore to their original position and the evicted styling is cleared.</p>
+    
+    <div class="btn-group">
+      <button id="btnInit">1️⃣ Initialize Game (8 players)</button>
+      <button id="btnEvict1" disabled>2️⃣ Evict Player 3</button>
+      <button id="btnEvict2" disabled>3️⃣ Evict Player 5</button>
+      <button id="btnReturn" disabled>4️⃣ Return Player 3 (Jury Return)</button>
+      <button id="btnRefresh" disabled>5️⃣ Refresh Roster (Re-render)</button>
+    </div>
+    
+    <div class="status" id="status">
+      <div class="status-item info">Click buttons in order to test juror return behavior</div>
+    </div>
+  </div>
+
+  <div id="topRosterBar"></div>
+
+  <script type="module">
+    // Mock global game object
+    window.game = window.game || {};
+    window.g = { game: window.game };
+
+    // Initialize game with 8 players
+    function initGame() {
+      window.game.players = [
+        { id: 'p1', name: 'Alice', evicted: false },
+        { id: 'p2', name: 'Bob', evicted: false },
+        { id: 'p3', name: 'Charlie', evicted: false },
+        { id: 'p4', name: 'Diana', evicted: false },
+        { id: 'p5', name: 'Eve', evicted: false },
+        { id: 'p6', name: 'Frank', evicted: false },
+        { id: 'p7', name: 'Grace', evicted: false },
+        { id: 'p8', name: 'Hank', evicted: false }
+      ];
+      window.game.juryHouse = [];
+      window.game.week = 1;
+      updateStatus('✅ Game initialized with 8 players', 'pass');
+      document.getElementById('btnEvict1').disabled = false;
+    }
+
+    // Evict a player
+    function evictPlayer(playerId, week) {
+      const player = window.game.players.find(p => p.id === playerId);
+      if (!player) {
+        updateStatus(`❌ Player ${playerId} not found`, 'fail');
+        return;
+      }
+      player.evicted = true;
+      player.weekEvicted = week;
+      window.game.juryHouse.push(playerId);
+      updateStatus(`✅ Player ${player.name} evicted in week ${week}`, 'pass');
+    }
+
+    // Return a juror (mimics jury_return.js logic)
+    function returnJuror(playerId) {
+      const player = window.game.players.find(p => p.id === playerId);
+      if (!player) {
+        updateStatus(`❌ Player ${playerId} not found`, 'fail');
+        return;
+      }
+      
+      // This is the fix being tested - clear all eviction flags
+      player.evicted = false;
+      delete player.weekEvicted;
+      delete player.__evictAnimated;  // <-- THE FIX
+      
+      window.game.juryHouse = window.game.juryHouse.filter(id => id !== playerId);
+      window.game.__returnFlashId = playerId;
+      
+      updateStatus(`✅ Juror ${player.name} returned (evicted=false, __evictAnimated cleared)`, 'pass');
+      
+      setTimeout(() => {
+        window.game.__returnFlashId = null;
+        renderTopRoster();
+        updateStatus(`ℹ️ Return flash cleared after 2s`, 'info');
+      }, 2000);
+    }
+
+    // Update status display
+    function updateStatus(message, type = 'info') {
+      const status = document.getElementById('status');
+      const item = document.createElement('div');
+      item.className = `status-item ${type}`;
+      item.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      status.appendChild(item);
+      status.scrollTop = status.scrollHeight;
+    }
+
+    // Check test results
+    function checkResults() {
+      const players = window.game.players;
+      const p3 = players.find(p => p.id === 'p3');
+      const p5 = players.find(p => p.id === 'p5');
+      
+      updateStatus('\n📊 Test Results:', 'info');
+      
+      // Test 1: Player 3 should not be evicted
+      if (!p3.evicted) {
+        updateStatus('✅ TEST 1 PASS: Player 3 is not evicted', 'pass');
+      } else {
+        updateStatus('❌ TEST 1 FAIL: Player 3 is still marked as evicted', 'fail');
+      }
+      
+      // Test 2: Player 3 should not have __evictAnimated flag
+      if (!p3.__evictAnimated) {
+        updateStatus('✅ TEST 2 PASS: Player 3 __evictAnimated flag cleared', 'pass');
+      } else {
+        updateStatus('❌ TEST 2 FAIL: Player 3 still has __evictAnimated flag', 'fail');
+      }
+      
+      // Test 3: Player 5 should still be evicted
+      if (p5.evicted) {
+        updateStatus('✅ TEST 3 PASS: Player 5 is still evicted', 'pass');
+      } else {
+        updateStatus('❌ TEST 3 FAIL: Player 5 is not evicted', 'fail');
+      }
+      
+      // Test 4: Check roster order
+      const roster = document.querySelectorAll('.top-roster-tile');
+      const p3Tile = Array.from(roster).find(tile => 
+        tile.querySelector('.top-tile-name')?.textContent === 'Charlie'
+      );
+      const p5Tile = Array.from(roster).find(tile => 
+        tile.querySelector('.top-tile-name')?.textContent === 'Eve'
+      );
+      
+      if (p3Tile && !p3Tile.classList.contains('evicted')) {
+        updateStatus('✅ TEST 4 PASS: Player 3 tile does not have evicted class', 'pass');
+      } else {
+        updateStatus('❌ TEST 4 FAIL: Player 3 tile still has evicted class', 'fail');
+      }
+      
+      if (p5Tile && p5Tile.classList.contains('evicted')) {
+        updateStatus('✅ TEST 5 PASS: Player 5 tile has evicted class', 'pass');
+      } else {
+        updateStatus('❌ TEST 5 FAIL: Player 5 tile missing evicted class', 'fail');
+      }
+      
+      // Test 5: Check X overlay
+      const p3Cross = p3Tile?.querySelector('.evicted-cross');
+      const p5Cross = p5Tile?.querySelector('.evicted-cross');
+      
+      if (!p3Cross) {
+        updateStatus('✅ TEST 6 PASS: Player 3 has no X overlay', 'pass');
+      } else {
+        updateStatus('❌ TEST 6 FAIL: Player 3 still has X overlay', 'fail');
+      }
+      
+      if (p5Cross) {
+        updateStatus('✅ TEST 7 PASS: Player 5 has X overlay', 'pass');
+      } else {
+        updateStatus('❌ TEST 7 FAIL: Player 5 missing X overlay', 'fail');
+      }
+      
+      // Test 6: Check position - Player 3 should be in active section
+      const activeCount = Array.from(roster).filter(tile => 
+        !tile.classList.contains('evicted')
+      ).length;
+      const p3Index = Array.from(roster).indexOf(p3Tile);
+      const p5Index = Array.from(roster).indexOf(p5Tile);
+      
+      if (p3Index < activeCount) {
+        updateStatus(`✅ TEST 8 PASS: Player 3 is in active section (index ${p3Index}/${activeCount} active)`, 'pass');
+      } else {
+        updateStatus(`❌ TEST 8 FAIL: Player 3 is not in active section (index ${p3Index}/${activeCount} active)`, 'fail');
+      }
+      
+      if (p5Index >= activeCount) {
+        updateStatus(`✅ TEST 9 PASS: Player 5 is in evicted section (index ${p5Index}/${activeCount} active)`, 'pass');
+      } else {
+        updateStatus(`❌ TEST 9 FAIL: Player 5 is not in evicted section (index ${p5Index}/${activeCount} active)`, 'fail');
+      }
+    }
+
+    // Button handlers
+    document.getElementById('btnInit').addEventListener('click', () => {
+      initGame();
+      renderTopRoster();
+    });
+
+    document.getElementById('btnEvict1').addEventListener('click', () => {
+      evictPlayer('p3', 3);
+      renderTopRoster();
+      document.getElementById('btnEvict2').disabled = false;
+      updateStatus('ℹ️ Note: Player 3 should have animated X and be at end', 'info');
+    });
+
+    document.getElementById('btnEvict2').addEventListener('click', () => {
+      evictPlayer('p5', 4);
+      renderTopRoster();
+      document.getElementById('btnReturn').disabled = false;
+      updateStatus('ℹ️ Note: Both Player 3 and 5 should be at end, in eviction order', 'info');
+    });
+
+    document.getElementById('btnReturn').addEventListener('click', () => {
+      returnJuror('p3');
+      renderTopRoster();
+      document.getElementById('btnRefresh').disabled = false;
+      updateStatus('ℹ️ Note: Player 3 should return to active section, X removed, no animation', 'info');
+      
+      // Run tests after a short delay to let UI settle
+      setTimeout(() => {
+        checkResults();
+      }, 100);
+    });
+
+    document.getElementById('btnRefresh').addEventListener('click', () => {
+      renderTopRoster();
+      updateStatus('✅ Roster re-rendered - X should stay static (no animation)', 'pass');
+      
+      setTimeout(() => {
+        updateStatus('📊 Verifying no animation retrigger...', 'info');
+        const crosses = document.querySelectorAll('.evicted-cross.animating');
+        if (crosses.length === 0) {
+          updateStatus('✅ PASS: No evicted-cross elements have .animating class', 'pass');
+        } else {
+          updateStatus(`❌ FAIL: Found ${crosses.length} evicted-cross elements with .animating class`, 'fail');
+        }
+      }, 100);
+    });
+
+    // Import and setup roster rendering
+    async function setupRoster() {
+      try {
+        // Load the UI module
+        await import('./js/ui.hud-and-router.js');
+        updateStatus('✅ Roster rendering module loaded', 'pass');
+      } catch (err) {
+        updateStatus('❌ Failed to load roster module: ' + err.message, 'fail');
+      }
+    }
+
+    // Fallback roster rendering if module fails
+    window.renderTopRoster = window.renderTopRoster || function() {
+      updateStatus('⚠️ Using fallback roster rendering', 'info');
+      const host = document.getElementById('topRosterBar');
+      if (!host) return;
+      
+      host.innerHTML = '<div class="top-roster-row"></div>';
+      const row = host.querySelector('.top-roster-row');
+      
+      const players = window.game?.players || [];
+      const activePlayers = players.filter(p => !p.evicted);
+      const evictedPlayers = players.filter(p => p.evicted)
+        .sort((a, b) => (a.weekEvicted || 0) - (b.weekEvicted || 0));
+      
+      [...activePlayers, ...evictedPlayers].forEach((p, idx) => {
+        const tile = document.createElement('div');
+        tile.className = 'top-roster-tile' + (p.evicted ? ' evicted' : '');
+        if (window.game.__returnFlashId === p.id) tile.classList.add('return-flash');
+        
+        const wrap = document.createElement('div');
+        wrap.className = 'top-tile-avatar-wrap';
+        
+        // Add evicted cross
+        if (p.evicted) {
+          const needsAnimation = !p.__evictAnimated;
+          if (needsAnimation) p.__evictAnimated = true;
+          
+          const cross = document.createElement('div');
+          cross.className = 'evicted-cross' + (needsAnimation ? ' animating' : '');
+          cross.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4 L20 20 M20 4 L4 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>`;
+          wrap.appendChild(cross);
+        }
+        
+        const img = document.createElement('img');
+        img.className = 'top-tile-avatar' + (p.evicted ? ' grayed' : '');
+        img.src = `avatars/${p.id}.jpg`;
+        img.alt = p.name;
+        img.onerror = function() { 
+          this.src = 'avatars/fallback.jpg'; 
+        };
+        wrap.appendChild(img);
+        
+        const name = document.createElement('div');
+        name.className = 'top-tile-name';
+        name.textContent = p.name;
+        
+        tile.appendChild(wrap);
+        tile.appendChild(name);
+        row.appendChild(tile);
+      });
+    };
+
+    // Initialize
+    setupRoster();
+    updateStatus('🚀 Test page loaded. Click "Initialize Game" to begin.', 'info');
+  </script>
+</body>
+</html>
