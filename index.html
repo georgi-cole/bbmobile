@@ -36,60 +36,87 @@
 <div class="wrap">
   <!-- Dashboard (left) — Cast completely removed -->
   <div class="card" id="dashboardCard">
-    <h1>House</h1>
-    <div class="row tiny wrapline">
-      <div>Phase: <span id="phase" class="pill">lobby</span></div>
-      <div>Week: <span id="week" class="badge">1</span></div>
-      <div>HOH: <span id="hoh" class="badge warn">none</span></div>
-      <div>Noms: <span id="noms" class="badge">–</span></div>
-      <div>Veto: <span id="veto" class="badge">–</span></div>
-      <div>Alive: <span id="alive" class="badge ok">0</span></div>
-      <div><span id="statusBadge" class="badge">lobby</span></div>
-      <div id="doubleBadge" class="badge bad" style="display:none;">DOUBLE</div>
-      <div id="tripleBadge" class="badge bad" style="display:none;">TRIPLE</div>
-      <div id="manualBadge" class="badge acc" style="display:none;">MANUAL</div>
-      <div id="juryHouseBadge" class="badge" style="display:none;">JURY</div>
-      <div id="openingBadge" class="badge" style="display:none;">OPENING</div>
+    <!-- REDESIGNED DASHBOARD: Dynamic title with week and phase -->
+    <h1 id="dashboardTitle">House</h1>
+    
+    <!-- Row 1: HOH / POV -->
+    <div class="dashboard-row">
+      <div class="dashboard-info-item">
+        <span class="dashboard-label">HOH</span>
+        <span id="hoh" class="dashboard-badge dashboard-badge-hoh">none</span>
+      </div>
+      <div class="dashboard-info-item">
+        <span class="dashboard-label">POV</span>
+        <span id="veto" class="dashboard-badge dashboard-badge-pov">–</span>
+      </div>
     </div>
+    
+    <!-- Row 2: Nominees -->
+    <div class="dashboard-row">
+      <div class="dashboard-info-item dashboard-info-full">
+        <span class="dashboard-label">Nominees</span>
+        <div id="noms" class="dashboard-nominees">–</div>
+      </div>
+    </div>
+    
+    <!-- Row 3: Alive / Evicted -->
+    <div class="dashboard-row">
+      <div class="dashboard-info-item">
+        <span class="dashboard-label">Alive</span>
+        <span id="alive" class="dashboard-badge dashboard-badge-alive">0</span>
+      </div>
+      <div class="dashboard-info-item">
+        <span class="dashboard-label">Evicted</span>
+        <span id="evicted" class="dashboard-badge dashboard-badge-evicted">0</span>
+      </div>
+    </div>
+    
+    <!-- Special badges (double, triple, etc.) -->
+    <div class="dashboard-special-badges">
+      <span id="doubleBadge" class="badge bad" style="display:none;">DOUBLE</span>
+      <span id="tripleBadge" class="badge bad" style="display:none;">TRIPLE</span>
+      <span id="manualBadge" class="badge acc" style="display:none;">MANUAL</span>
+      <span id="juryHouseBadge" class="badge" style="display:none;">JURY</span>
+      <span id="openingBadge" class="badge" style="display:none;">OPENING</span>
+    </div>
+    
     <div class="sep"></div>
-    <h2 id="timerHeading" data-fixed="timer">Timer</h2>
-    <div class="row baseline">
-      <span class="tiny muted">Remaining</span>
-      <span id="countdown" class="timeReading">00:00</span>
-      <!-- Only one Skip will be kept here by the script below -->
-    </div>
-    <!-- HOURGLASS TIMER (replaces progressbar) - To revert: restore .progressbar div -->
-    <div class="hourglass-container">
-      <svg class="hourglass-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
-        <!-- Hourglass outline -->
-        <defs>
-          <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#4695ff;stop-opacity:0.3" />
-            <stop offset="100%" style="stop-color:#71bfff;stop-opacity:0.5" />
-          </linearGradient>
-          <linearGradient id="sandGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#ffdc8b;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#ff9f4a;stop-opacity:1" />
-          </linearGradient>
-        </defs>
-        <!-- Glass frame -->
-        <path class="hourglass-frame" d="M 20,10 L 80,10 L 80,15 Q 80,20 75,25 L 55,45 Q 50,50 50,50 Q 50,50 45,45 L 25,25 Q 20,20 20,15 Z M 20,130 L 80,130 L 80,125 Q 80,120 75,115 L 55,95 Q 50,90 50,90 Q 50,90 45,95 L 25,115 Q 20,120 20,125 Z" 
-              fill="url(#glassGradient)" stroke="#4695ff" stroke-width="2" opacity="0.4"/>
-        <!-- Sand container (clipped to hourglass shape) -->
-        <clipPath id="hourglassClip">
-          <path d="M 22,12 L 78,12 L 78,15 Q 78,19 74,23 L 54,43 Q 50,47 50,50 Q 50,53 54,57 L 74,77 Q 78,81 78,85 L 78,128 L 22,128 L 22,85 Q 22,81 26,77 L 46,57 Q 50,53 50,50 Q 50,47 46,43 L 26,23 Q 22,19 22,15 Z"/>
-        </clipPath>
-        <!-- Top sand (empties as time passes) -->
-        <g clip-path="url(#hourglassClip)">
-          <rect id="hourglassSandTop" class="hourglass-sand-top" x="22" y="12" width="56" height="0" fill="url(#sandGradient)"/>
-        </g>
-        <!-- Bottom sand (fills as time passes) -->
-        <g clip-path="url(#hourglassClip)">
-          <rect id="hourglassSandBottom" class="hourglass-sand-bottom" x="22" y="88" width="56" height="0" fill="url(#sandGradient)"/>
-        </g>
-        <!-- Center flow animation -->
-        <circle id="hourglassSandFlow" class="hourglass-sand-flow" cx="50" cy="50" r="2" fill="#ffdc8b" opacity="0"/>
-      </svg>
+    
+    <!-- Timer Section with Hourglass -->
+    <div class="dashboard-timer-section">
+      <div class="dashboard-timer-header">
+        <span class="dashboard-timer-label">Time Remaining</span>
+        <span id="countdown" class="dashboard-timer-display">00:00</span>
+        <!-- Skip button will be positioned here by script -->
+      </div>
+      
+      <!-- HOURGLASS TIMER -->
+      <div class="hourglass-container">
+        <svg class="hourglass-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#4695ff;stop-opacity:0.3" />
+              <stop offset="100%" style="stop-color:#71bfff;stop-opacity:0.5" />
+            </linearGradient>
+            <linearGradient id="sandGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#ffdc8b;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#ff9f4a;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path class="hourglass-frame" d="M 20,10 L 80,10 L 80,15 Q 80,20 75,25 L 55,45 Q 50,50 50,50 Q 50,50 45,45 L 25,25 Q 20,20 20,15 Z M 20,130 L 80,130 L 80,125 Q 80,120 75,115 L 55,95 Q 50,90 50,90 Q 50,90 45,95 L 25,115 Q 20,120 20,125 Z" 
+                fill="url(#glassGradient)" stroke="#4695ff" stroke-width="2" opacity="0.4"/>
+          <clipPath id="hourglassClip">
+            <path d="M 22,12 L 78,12 L 78,15 Q 78,19 74,23 L 54,43 Q 50,47 50,50 Q 50,53 54,57 L 74,77 Q 78,81 78,85 L 78,128 L 22,128 L 22,85 Q 22,81 26,77 L 46,57 Q 50,53 50,50 Q 50,47 46,43 L 26,23 Q 22,19 22,15 Z"/>
+          </clipPath>
+          <g clip-path="url(#hourglassClip)">
+            <rect id="hourglassSandTop" class="hourglass-sand-top" x="22" y="12" width="56" height="0" fill="url(#sandGradient)"/>
+          </g>
+          <g clip-path="url(#hourglassClip)">
+            <rect id="hourglassSandBottom" class="hourglass-sand-bottom" x="22" y="88" width="56" height="0" fill="url(#sandGradient)"/>
+          </g>
+          <circle id="hourglassSandFlow" class="hourglass-sand-flow" cx="50" cy="50" r="2" fill="#ffdc8b" opacity="0"/>
+        </svg>
+      </div>
     </div>
     <!-- Cast header, table, and note intentionally removed -->
   </div>
@@ -412,11 +439,28 @@
     document.querySelectorAll('#tv button, #tv .btn').forEach(el=>{
       if (/^\\s*skip\\s*$/i.test(el.textContent||'')) el.style.display = 'none';
     });
-    const base = document.querySelector('#dashboardCard .row.baseline');
-    if (!base) return;
-    const skips = Array.from(base.querySelectorAll('button, .btn'))
-      .filter(el => /^\\s*skip\\s*$/i.test(el.textContent||''));
-    if (skips.length > 1) skips.slice(1).forEach(el => el.remove());
+    
+    // Move skip button to timer header
+    const timerHeader = document.querySelector('.dashboard-timer-header');
+    const oldBase = document.querySelector('#dashboardCard .row.baseline');
+    
+    if (timerHeader) {
+      // Find all skip buttons
+      let skipBtn = null;
+      if(oldBase){
+        skipBtn = Array.from(oldBase.querySelectorAll('button, .btn'))
+          .find(el => /^\\s*skip\\s*$/i.test(el.textContent||''));
+      }
+      if(!skipBtn){
+        skipBtn = Array.from(document.querySelectorAll('#dashboardCard button, #dashboardCard .btn'))
+          .find(el => /^\\s*skip\\s*$/i.test(el.textContent||''));
+      }
+      
+      // Move to timer header if found
+      if(skipBtn){
+        timerHeader.appendChild(skipBtn);
+      }
+    }
   }
 
   // Hover: Winner/Runner-up/12th... on top roster tiles

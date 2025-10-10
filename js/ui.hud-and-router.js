@@ -66,9 +66,39 @@
     const game = g.game || {};
     let aliveCount = 0;
     try{ aliveCount = (g.alivePlayers?.()||[]).length; }catch{}
+    
+    // Return "House" before game starts
+    if(!game.phase || game.phase === 'lobby') return 'House';
+    
+    // Return "Final Week" at final 2
     if(aliveCount<=2) return 'Final Week';
-    return 'Week ' + (game.week || 1);
+    
+    // Return "Week X – [Phase Name]" during game
+    const week = game.week || 1;
+    const phaseName = getReadablePhaseName(game.phase);
+    return `Week ${week} – ${phaseName}`;
   }
+  
+  function getReadablePhaseName(phase){
+    const phaseNames = {
+      'opening': 'Season Premiere',
+      'intermission': 'Strategizing',
+      'hoh': 'HOH Competition',
+      'nominations': 'Nominations',
+      'veto_comp': 'Veto Competition',
+      'veto': 'Veto Competition',
+      'veto_ceremony': 'Veto Ceremony',
+      'livevote': 'Eviction',
+      'jury': 'Jury Deliberation',
+      'return_twist': 'Return Challenge',
+      'final3_comp1': 'Final 3 – Part 1',
+      'final3_comp2': 'Final 3 – Part 2',
+      'final3_decision': 'Final 3 – Decision',
+      'social': 'Social Time'
+    };
+    return phaseNames[phase] || phase.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+  
   function findDashboardTitleEl(){
     return document.getElementById('dashboardTitle') ||
       document.querySelector('#dashboardCard .card-title') ||
@@ -760,14 +790,30 @@ header.innerHTML = `
       if(el) el.textContent = String(val);
     }
 
-    setText('phase', game.phase);
-    setText('week', game.week);
+    // Update HOH and Veto (POV)
     setText('hoh', game.hohId ? g.safeName(game.hohId) : 'none');
-    setText('noms', (game.nominees && game.nominees.length) ? game.nominees.map(g.safeName).join(', ') : '–');
     setText('veto', game.vetoHolder ? g.safeName(game.vetoHolder) : '–');
 
-    const aliveCount = (typeof g.alivePlayers === 'function') ? (g.alivePlayers().length) : '—';
+    // Update Nominees as badges
+    const nomsEl = document.getElementById('noms');
+    if(nomsEl){
+      if(game.nominees && game.nominees.length){
+        nomsEl.innerHTML = game.nominees.map(nomId => 
+          `<span class="nominee-badge">${g.safeName(nomId)}</span>`
+        ).join('');
+      } else {
+        nomsEl.innerHTML = '–';
+      }
+    }
+
+    // Update Alive count
+    const aliveCount = (typeof g.alivePlayers === 'function') ? (g.alivePlayers().length) : 0;
     setText('alive', aliveCount);
+
+    // Update Evicted count
+    const totalPlayers = (game.players && game.players.length) || 0;
+    const evictedCount = totalPlayers - aliveCount;
+    setText('evicted', evictedCount);
 
     const dbl=document.getElementById('doubleBadge');
     const tpl=document.getElementById('tripleBadge');
