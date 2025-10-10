@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progression Enhancements Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .test-section h2 {
+      color: var(--accent);
+      margin-top: 0;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      background: var(--card-2);
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <!-- Topbar with XP Badge -->
+  <div class="topbar">
+    <button class="btn" id="btnOpenSettings">⚙️ Settings</button>
+    <button class="btn" id="btnStartQuick">▶ Start</button>
+    <!-- XP Badge will be inserted here -->
+    <button class="btn" id="btnMuteToggle" aria-pressed="false" title="Toggle sound">🔊</button>
+  </div>
+
+  <div class="test-container">
+    <h1>Progression System Enhancements Test</h1>
+    <p>This page tests all four enhancements to the progression system.</p>
+
+    <div class="test-section">
+      <h2>✅ Test 1: Progression Enabled by Default</h2>
+      <p>The progression system should be enabled without any configuration.</p>
+      <div class="controls">
+        <button class="btn" onclick="checkProgressionEnabled()">Check Status</button>
+        <button class="btn" onclick="toggleProgression()">Toggle Progression</button>
+      </div>
+      <div id="status-enabled" class="status">Status: Not checked yet</div>
+    </div>
+
+    <div class="test-section">
+      <h2>✅ Test 2: Badge in Topbar</h2>
+      <p>The XP badge should appear in the topbar after Settings button, using the .btn style.</p>
+      <div class="controls">
+        <button class="btn" onclick="checkBadgeLocation()">Check Badge Location</button>
+        <button class="btn" onclick="simulateBadgeClick()">Simulate Badge Click</button>
+      </div>
+      <div id="status-badge" class="status">Status: Not checked yet</div>
+    </div>
+
+    <div class="test-section">
+      <h2>✅ Test 3: Theme-Aware Modal</h2>
+      <p>The modal should adapt colors based on the current theme.</p>
+      <div class="controls">
+        <button class="btn" onclick="showProgressionModal()">Show Modal</button>
+        <button class="btn" onclick="switchTheme('tvstudio')">TV Studio Theme</button>
+        <button class="btn" onclick="switchTheme('modernhouse')">Modern House (Light)</button>
+        <button class="btn" onclick="switchTheme('midnight')">Midnight Theme</button>
+      </div>
+      <div id="status-theme" class="status">Current theme: <span id="current-theme">tvstudio</span></div>
+    </div>
+
+    <div class="test-section">
+      <h2>✅ Test 4: Tooltip Behavior</h2>
+      <p>Hover over the XP badge to see the tooltip. It should auto-show once, then only on hover.</p>
+      <div class="controls">
+        <button class="btn" onclick="resetTooltip()">Reset Tooltip (will auto-show)</button>
+        <button class="btn" onclick="checkTooltipStatus()">Check Tooltip Status</button>
+      </div>
+      <div id="status-tooltip" class="status">Status: Not checked yet</div>
+    </div>
+
+    <div class="test-section">
+      <h2>📊 Test XP System</h2>
+      <p>Test the progression system with sample events.</p>
+      <div class="controls">
+        <button class="btn" onclick="addTestEvent('HOH_WIN')">Add HOH Win</button>
+        <button class="btn" onclick="addTestEvent('POV_WIN')">Add POV Win</button>
+        <button class="btn" onclick="addTestEvent('COMP_WIN')">Add Competition Win</button>
+        <button class="btn" onclick="showCurrentState()">Show Current State</button>
+      </div>
+      <div id="status-xp" class="status">No events yet</div>
+    </div>
+  </div>
+
+  <!-- Load progression system -->
+  <script src="js/progression-bridge.js"></script>
+  <script src="js/progression-ui.js"></script>
+  <script src="js/theme-switcher.js"></script>
+
+  <script>
+    // Initialize mock game object
+    window.game = window.game || {
+      players: [
+        { id: 'player1', name: 'Alice', human: true },
+        { id: 'player2', name: 'Bob', human: false },
+        { id: 'player3', name: 'Charlie', human: false }
+      ]
+    };
+
+    // Test functions
+    function checkProgressionEnabled() {
+      const enabled = window.Progression?.isEnabled();
+      const status = document.getElementById('status-enabled');
+      status.innerHTML = `
+        <strong>Progression Enabled:</strong> ${enabled ? '✅ YES' : '❌ NO'}<br>
+        <small>window.Progression available: ${!!window.Progression}</small><br>
+        <small>localStorage value: ${localStorage.getItem('progression.enabled') || 'not set'}</small>
+      `;
+    }
+
+    function toggleProgression() {
+      const currentValue = localStorage.getItem('progression.enabled');
+      const newValue = currentValue === 'false' ? 'true' : 'false';
+      localStorage.setItem('progression.enabled', newValue);
+      alert(`Progression ${newValue === 'true' ? 'enabled' : 'disabled'}. Reload the page to see changes.`);
+    }
+
+    function checkBadgeLocation() {
+      const badge = document.getElementById('xpLeaderboardBadge');
+      const topbar = document.querySelector('.topbar');
+      const status = document.getElementById('status-badge');
+      
+      if (!badge) {
+        status.innerHTML = '❌ Badge not found in DOM';
+        return;
+      }
+
+      const inTopbar = topbar && topbar.contains(badge);
+      const hasBtn = badge.classList.contains('btn');
+      const position = window.getComputedStyle(badge).position;
+      
+      status.innerHTML = `
+        <strong>Badge Found:</strong> ✅ YES<br>
+        <strong>In Topbar:</strong> ${inTopbar ? '✅ YES' : '❌ NO'}<br>
+        <strong>Has .btn class:</strong> ${hasBtn ? '✅ YES' : '❌ NO'}<br>
+        <strong>Position:</strong> ${position} ${position !== 'fixed' ? '✅ (not fixed)' : '❌ (should not be fixed)'}<br>
+        <strong>Text:</strong> ${badge.textContent}
+      `;
+    }
+
+    function simulateBadgeClick() {
+      const badge = document.getElementById('xpLeaderboardBadge');
+      if (badge) {
+        badge.click();
+      } else {
+        alert('Badge not found!');
+      }
+    }
+
+    async function showProgressionModal() {
+      if (!window.Progression) {
+        alert('Progression system not available');
+        return;
+      }
+
+      try {
+        const seasonId = 1;
+        const playerId = 'player1';
+        await window.Progression.showModal(seasonId, playerId);
+      } catch (error) {
+        console.error('Failed to show modal:', error);
+        alert('Error showing modal: ' + error.message);
+      }
+    }
+
+    function switchTheme(themeKey) {
+      if (window.ThemeSwitcher && window.ThemeSwitcher.applyTheme) {
+        window.ThemeSwitcher.applyTheme(themeKey);
+        document.getElementById('current-theme').textContent = themeKey;
+        document.getElementById('status-theme').innerHTML = `
+          Current theme: <strong>${themeKey}</strong><br>
+          <small>data-theme attribute: ${document.body.getAttribute('data-theme')}</small>
+        `;
+      } else {
+        document.body.setAttribute('data-theme', themeKey);
+        document.getElementById('current-theme').textContent = themeKey;
+      }
+    }
+
+    function resetTooltip() {
+      localStorage.removeItem('xp-badge-tooltip-shown');
+      alert('Tooltip reset! Reload the page to see it auto-show again.');
+    }
+
+    function checkTooltipStatus() {
+      const hasShown = localStorage.getItem('xp-badge-tooltip-shown');
+      const status = document.getElementById('status-tooltip');
+      status.innerHTML = `
+        <strong>Tooltip has been shown:</strong> ${hasShown ? '✅ YES' : '❌ NO'}<br>
+        <small>${hasShown ? 'Tooltip will only show on hover now' : 'Tooltip will auto-show on next page load'}</small>
+      `;
+    }
+
+    async function addTestEvent(eventType) {
+      if (!window.Progression) {
+        alert('Progression system not available');
+        return;
+      }
+
+      try {
+        const result = await window.Progression.log(eventType, {
+          seasonId: 1,
+          week: 1,
+          playerId: 'player1',
+          payload: {}
+        });
+        
+        if (result) {
+          await showCurrentState();
+        } else {
+          alert('Failed to log event');
+        }
+      } catch (error) {
+        console.error('Failed to add event:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+
+    async function showCurrentState() {
+      if (!window.Progression) {
+        alert('Progression system not available');
+        return;
+      }
+
+      try {
+        const state = await window.Progression.getCurrentState();
+        const status = document.getElementById('status-xp');
+        status.innerHTML = `
+          <strong>Level:</strong> ${state.level}<br>
+          <strong>Total XP:</strong> ${state.totalXP}<br>
+          <strong>Progress:</strong> ${state.progressPercent}% to level ${state.level + 1}<br>
+          <strong>Events:</strong> ${state.eventsCount}<br>
+          <strong>Next Level XP:</strong> ${state.nextLevelXP}
+        `;
+      } catch (error) {
+        console.error('Failed to get state:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+
+    // Auto-run checks on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        checkProgressionEnabled();
+        checkBadgeLocation();
+        checkTooltipStatus();
+        document.getElementById('current-theme').textContent = document.body.getAttribute('data-theme') || 'tvstudio';
+      }, 500);
+    });
+  </script>
+</body>
+</html>
