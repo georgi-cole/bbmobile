@@ -130,7 +130,7 @@
   }
 
   /**
-   * Show the Top 5 leaderboard panel in TV area
+   * Show the Top 5 leaderboard panel in TV area (staged display)
    * @param {number} durationMs - How long to show the panel (default 7000ms)
    * @returns {Promise<void>} Resolves after panel is removed
    */
@@ -205,7 +205,7 @@
           return entry;
         });
 
-        // Create leaderboard panel
+        // Get tvOverlay container
         let tvOverlay = document.getElementById('tvOverlay');
         if (!tvOverlay) {
           // Fallback: try to find #tv container
@@ -223,49 +223,85 @@
           console.info('[Progression UI] Created tvOverlay container');
         }
 
+        // Check for reduced motion preference
+        const reducedMotion = global.MinigameAccessibility && typeof global.MinigameAccessibility.prefersReducedMotion === 'function'
+          ? global.MinigameAccessibility.prefersReducedMotion()
+          : window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // Create panel structure with fixed-height container
         const panel = document.createElement('div');
         panel.className = 'leaderboard-panel';
         panel.innerHTML = `
           <h2>🏆 Top 5 Players</h2>
-          <ul class="leaderboard-list">
-            ${leaderboard.map((player, index) => `
-              <li class="leaderboard-item">
-                <div class="leaderboard-rank">${index + 1}</div>
-                <div class="leaderboard-name">${player.playerName}</div>
-                <div class="leaderboard-xp">${player.totalXP} XP</div>
-                <div class="leaderboard-level">${player.level}</div>
-              </li>
-            `).join('')}
-          </ul>
+          <div class="leaderboard-list-host" aria-live="polite"></div>
         `;
 
         tvOverlay.appendChild(panel);
 
-        // Apply dynamic sizing based on available space
-        setTimeout(() => {
-          const tvContainer = document.getElementById('tv') || tvOverlay.parentElement;
-          if (tvContainer) {
-            const tvRect = tvContainer.getBoundingClientRect();
-            const tvSafeTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tv-safe-top')) || 44;
-            const tvSafeBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tv-safe-bottom')) || 42;
-            const availableHeight = tvRect.height - tvSafeTop - tvSafeBottom - 40; // 40px for margins
-            
-            // Set max-height dynamically
-            panel.style.maxHeight = `${availableHeight}px`;
-            console.info('[Progression UI] Applied dynamic max-height:', availableHeight + 'px');
-          }
-        }, 10);
+        const listHost = panel.querySelector('.leaderboard-list-host');
 
-        // Auto-remove after duration and resolve promise
+        // Helper function to render a segment (subset of leaderboard)
+        function renderSegment(indexes) {
+          const items = indexes
+            .filter(i => i < leaderboard.length && leaderboard[i])
+            .map(i => {
+              const player = leaderboard[i];
+              const isTop1 = i === 0;
+              return `
+                <li class="leaderboard-item ${isTop1 ? 'leaderboard-item-top1' : ''}">
+                  <div class="leaderboard-rank">${i + 1}</div>
+                  <div class="leaderboard-name">${player.playerName}</div>
+                  <div class="leaderboard-xp">${player.totalXP} XP</div>
+                  <div class="leaderboard-level ${isTop1 ? 'leaderboard-level-top1' : ''}">${player.level}</div>
+                </li>
+              `;
+            })
+            .join('');
+          
+          return `<ul class="leaderboard-list">${items}</ul>`;
+        }
+
+        // Stage A: show ranks 1, 2, 3
+        const stageAIndexes = [0, 1, 2];
+        // Stage B: show ranks 1, 4, 5
+        const stageBIndexes = [0, 3, 4];
+
+        // Split duration: bound stage A between 2.2s and 3.6s, split approximately 50/50
+        const halfDuration = durationMs / 2;
+        const stageADuration = Math.max(2200, Math.min(3600, halfDuration));
+        const stageBDuration = durationMs - stageADuration - 600; // Reserve 600ms for fade out
+        const fadeOutDuration = 600;
+
+        console.info('[Progression UI] Staged leaderboard: Stage A:', stageADuration, 'ms, Stage B:', stageBDuration, 'ms, FadeOut:', fadeOutDuration, 'ms');
+
+        // Render Stage A
+        listHost.innerHTML = renderSegment(stageAIndexes);
+
+        // Transition to Stage B after stageADuration
         setTimeout(() => {
-          panel.style.animation = 'fadeOut 0.3s ease';
+          if (reducedMotion) {
+            // Instant swap for reduced motion
+            listHost.innerHTML = renderSegment(stageBIndexes);
+          } else {
+            // Crossfade transition
+            listHost.classList.add('leaderboard-list-host-fade');
+            setTimeout(() => {
+              listHost.innerHTML = renderSegment(stageBIndexes);
+              listHost.classList.remove('leaderboard-list-host-fade');
+            }, 150); // Half of crossfade duration
+          }
+        }, stageADuration);
+
+        // Fade out and remove after total duration
+        setTimeout(() => {
+          panel.style.animation = 'fadeOut 0.6s ease';
           setTimeout(() => {
             if (panel.parentNode) {
               panel.remove();
             }
             resolve();
-          }, 300);
-        }, durationMs);
+          }, fadeOutDuration);
+        }, stageADuration + stageBDuration);
 
       } catch (error) {
         console.error('[Progression UI] Failed to show leaderboard:', error);
