@@ -3,6 +3,81 @@
  */
 
 /**
+ * Create and show a tooltip for the XP badge
+ * @param {HTMLElement} badge - The badge element to attach the tooltip to
+ * @param {boolean} autoShow - Whether to show automatically on first visit
+ */
+function createTooltip(badge, autoShow = false) {
+  // Check if tooltip has been shown before
+  const hasSeenTooltip = localStorage.getItem('xp-badge-tooltip-seen') === 'true';
+  
+  // Get theme colors
+  const computedStyle = getComputedStyle(document.body);
+  const bodyTheme = document.body.getAttribute('data-theme') || 'tvstudio';
+  const lightThemes = ['modernhouse', 'miami', 'cabin'];
+  const isDark = !lightThemes.includes(bodyTheme);
+  
+  const bgColor = computedStyle.getPropertyValue('--card-2').trim() || (isDark ? '#182738' : '#f5f5f5');
+  const borderColor = computedStyle.getPropertyValue('--line').trim() || (isDark ? '#2c4662' : '#ddd');
+  const textColor = computedStyle.getPropertyValue('--ink').trim() || (isDark ? '#e3ecf5' : '#333');
+  
+  const tooltip = document.createElement('div');
+  tooltip.className = 'xp-badge-tooltip';
+  tooltip.style.cssText = `
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 8px;
+    background: ${bgColor};
+    border: 1px solid ${borderColor};
+    border-radius: 8px;
+    padding: 12px 16px;
+    width: 240px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    font-size: 0.75rem;
+    color: ${textColor};
+    line-height: 1.4;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  `;
+  tooltip.textContent = 'Here you can check your XP score. The higher your level, the better the prizes you can win!';
+  
+  // Position tooltip relative to badge
+  badge.style.position = 'relative';
+  badge.appendChild(tooltip);
+  
+  // Show tooltip function
+  const showTooltip = () => {
+    tooltip.style.opacity = '1';
+  };
+  
+  // Hide tooltip function
+  const hideTooltip = () => {
+    tooltip.style.opacity = '0';
+  };
+  
+  // Auto-show on first visit
+  if (autoShow && !hasSeenTooltip) {
+    setTimeout(() => {
+      showTooltip();
+      localStorage.setItem('xp-badge-tooltip-seen', 'true');
+      
+      // Auto-hide after 5 seconds
+      setTimeout(hideTooltip, 5000);
+    }, 500);
+  }
+  
+  // Show/hide on hover
+  badge.addEventListener('mouseenter', showTooltip);
+  badge.addEventListener('mouseleave', hideTooltip);
+  
+  return tooltip;
+}
+
+/**
  * Create a topbar badge button that matches the standard button style
  * @param {Object} options - Configuration options
  * @returns {HTMLElement} Badge button element
@@ -10,7 +85,8 @@
 export function createBadgeButton(options = {}) {
   const {
     onClick = null,
-    theme = 'dark'
+    theme = 'dark',
+    showTooltip = true
   } = options;
 
   const button = document.createElement('button');
@@ -37,6 +113,13 @@ export function createBadgeButton(options = {}) {
   } else {
     // Fallback: append to body if topbar not found
     document.body.appendChild(button);
+  }
+  
+  // Add tooltip if enabled
+  if (showTooltip) {
+    // Check if user has created profile (simplified check - assume true after first interaction)
+    const hasCreatedProfile = localStorage.getItem('xp-profile-created') === 'true';
+    createTooltip(button, hasCreatedProfile);
   }
 
   return button;
