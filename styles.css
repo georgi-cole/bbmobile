@@ -897,7 +897,7 @@ button:focus-visible,.btn:focus-visible{
   display:grid;
   grid-template-columns:1fr auto;
   gap:16px;
-  align-items:center;
+  align-items:stretch;
 }
 .timer-left-column{
   display:flex;
@@ -910,6 +910,7 @@ button:focus-visible,.btn:focus-visible{
   display:flex;
   align-items:center;
   justify-content:center;
+  align-self:stretch;
 }
 .timer-skip-container{
   display:flex;
@@ -917,8 +918,9 @@ button:focus-visible,.btn:focus-visible{
   margin-top:2px;
 }
 .timer-skip-container .btn{
-  width:100%;
-  max-width:100%;
+  width:auto;
+  max-width:none;
+  white-space:nowrap;
 }
 .dashboard-timer-label{
   font-size:0.65rem;
@@ -939,7 +941,8 @@ button:focus-visible,.btn:focus-visible{
 
 /* HOURGLASS TIMER */
 .hourglass-container{ 
-  height:60px; 
+  height:100%; 
+  min-height:60px;
   display:flex; 
   align-items:center; 
   justify-content:center; 
