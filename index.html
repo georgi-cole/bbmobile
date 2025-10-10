@@ -89,7 +89,7 @@
         title="Skip to next phase"
       >
         <div id="timerSkipProgressFill" class="timer-skip-progress-fill"></div>
-        <span class="timer-skip-label">Skip &gt;&gt;</span>
+        <span class="timer-skip-label">⏩ Skip</span>
       </div>
     </div>
     <!-- Cast header, table, and note intentionally removed -->
@@ -554,49 +554,6 @@
       playersStatusText.textContent = `${aliveCount} / ${totalCount}`;
     }
   }
-    if(weekBadge && phaseName){
-      // Determine week text
-      let aliveCount = 0;
-      try{ aliveCount = (window.alivePlayers?.() || []).length; }catch{}
-      
-      let weekText = 'House';
-      if(game.phase && game.phase !== 'lobby'){
-        if(aliveCount <= 2){
-          weekText = 'Final Week';
-        } else {
-          weekText = `Week ${game.week || 1}`;
-        }
-      }
-      weekBadge.textContent = weekText;
-      
-      // Determine phase name
-      let phaseText = '';
-      if(game.phase && game.phase !== 'lobby'){
-        const phaseNames = {
-          'opening': 'Season Premiere',
-          'intermission': 'Strategizing',
-          'hoh': 'HOH Competition',
-          'nominations': 'Nominations',
-          'veto_comp': 'Veto Competition',
-          'veto': 'Veto Competition',
-          'veto_ceremony': 'Veto Ceremony',
-          'livevote': 'Eviction',
-          'jury': 'Jury Deliberation',
-          'return_twist': 'Return Challenge',
-          'final3_comp1': 'Final 3 – Part 1',
-          'final3_comp2': 'Final 3 – Part 2',
-          'final3_decision': 'Final 3 – Decision',
-          'social': 'Social Time'
-        };
-        phaseText = phaseNames[game.phase] || game.phase.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      }
-      phaseName.textContent = phaseText;
-      phaseName.title = phaseText; // Tooltip for truncated text
-    }
-    
-    // Also update the main dashboard title header
-    updateDashboardHeader();
-  }
   
   // Update main dashboard title header with week and phase info
   function updateDashboardHeader(){
@@ -731,22 +688,13 @@
     
     // Handle click on progress bar to skip
     const handleSkip = () => {
-      // Find the actual skip button if it exists in the game
-      const skipBtn = Array.from(document.querySelectorAll('button, .btn'))
-        .find(el => /^\s*skip\s*$/i.test(el.textContent||'') || /⏩/.test(el.textContent||''));
-      
-      if(skipBtn && !skipBtn.disabled){
-        skipBtn.click();
+      // Directly call fastForwardPhase if available
+      if(typeof window.fastForwardPhase === 'function'){
+        window.fastForwardPhase();
+      } else if(typeof window.advancePhase === 'function'){
+        window.advancePhase();
       } else {
-        // Fallback: try to advance phase directly
-        if(typeof window.advancePhase === 'function'){
-          window.advancePhase();
-        } else if(typeof window.fastForwardPhase === 'function'){
-          window.fastForwardPhase();
-        } else if(window.game && typeof window.setPhase === 'function'){
-          // Let the game logic handle phase advancement
-          console.log('[Skip Progress Bar] Attempting to skip phase...');
-        }
+        console.warn('[Skip Progress Bar] No skip function available');
       }
     };
     
