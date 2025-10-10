@@ -2,11 +2,37 @@
  * XP Modal Component - displays detailed progression info
  */
 
+/**
+ * Get theme colors from CSS variables based on current theme
+ */
+function getThemeColors() {
+  const computedStyle = getComputedStyle(document.body);
+  const bodyTheme = document.body.getAttribute('data-theme') || 'tvstudio';
+  
+  // Check if theme is light-based
+  const lightThemes = ['modernhouse', 'miami', 'cabin'];
+  const isDark = !lightThemes.includes(bodyTheme);
+  
+  return {
+    isDark,
+    bg: computedStyle.getPropertyValue('--card').trim() || (isDark ? '#1a1a1a' : '#fff'),
+    cardBg: computedStyle.getPropertyValue('--card-2').trim() || (isDark ? '#2a2a2a' : '#f5f5f5'),
+    ink: computedStyle.getPropertyValue('--ink').trim() || (isDark ? '#e0e0e0' : '#333'),
+    muted: computedStyle.getPropertyValue('--muted').trim() || (isDark ? '#b0b0b0' : '#666'),
+    accent: computedStyle.getPropertyValue('--accent').trim() || '#ffdc8b',
+    line: computedStyle.getPropertyValue('--line').trim() || (isDark ? '#333' : '#ddd')
+  };
+}
+
 export function createModal(options = {}) {
   const {
-    theme = 'dark',
+    theme: themeProp = null,
     onClose = null
   } = options;
+
+  // Get theme colors from CSS variables (overrides old theme prop)
+  const themeColors = getThemeColors();
+  const theme = themeProp || (themeColors.isDark ? 'dark' : 'light');
 
   // Backdrop
   const backdrop = document.createElement('div');
@@ -30,7 +56,8 @@ export function createModal(options = {}) {
   const modal = document.createElement('div');
   modal.className = 'xp-modal';
   modal.style.cssText = `
-    background: ${theme === 'dark' ? '#1a1a1a' : '#fff'};
+    background: ${themeColors.bg};
+    border: 2px solid ${themeColors.line};
     border-radius: 12px;
     max-width: 700px;
     width: 100%;
@@ -46,7 +73,7 @@ export function createModal(options = {}) {
   const header = document.createElement('div');
   header.style.cssText = `
     padding: 20px;
-    border-bottom: 2px solid ${theme === 'dark' ? '#ffdc8b' : '#ffa500'};
+    border-bottom: 2px solid ${themeColors.accent};
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -56,7 +83,7 @@ export function createModal(options = {}) {
   title.textContent = 'Progression';
   title.style.cssText = `
     margin: 0;
-    color: ${theme === 'dark' ? '#ffdc8b' : '#333'};
+    color: ${themeColors.accent};
     font-size: 24px;
   `;
 
@@ -66,7 +93,7 @@ export function createModal(options = {}) {
     background: transparent;
     border: none;
     font-size: 28px;
-    color: ${theme === 'dark' ? '#b0b0b0' : '#666'};
+    color: ${themeColors.muted};
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -78,7 +105,7 @@ export function createModal(options = {}) {
     transition: all 0.2s ease;
   `;
   closeButton.addEventListener('mouseenter', () => {
-    closeButton.style.background = theme === 'dark' ? '#2a2a2a' : '#f0f0f0';
+    closeButton.style.background = themeColors.cardBg;
   });
   closeButton.addEventListener('mouseleave', () => {
     closeButton.style.background = 'transparent';
@@ -97,8 +124,8 @@ export function createModal(options = {}) {
     display: flex;
     gap: 0;
     padding: 0 20px;
-    background: ${theme === 'dark' ? '#0f0f0f' : '#f5f5f5'};
-    border-bottom: 1px solid ${theme === 'dark' ? '#333' : '#ddd'};
+    background: ${themeColors.cardBg};
+    border-bottom: 1px solid ${themeColors.line};
   `;
 
   const tabs = ['Overview', 'Breakdown', 'Unlocks'];
@@ -111,7 +138,7 @@ export function createModal(options = {}) {
       background: transparent;
       border: none;
       border-bottom: 3px solid transparent;
-      color: ${theme === 'dark' ? '#b0b0b0' : '#666'};
+      color: ${themeColors.muted};
       cursor: pointer;
       font-size: 14px;
       font-weight: 600;
@@ -119,18 +146,18 @@ export function createModal(options = {}) {
     `;
     
     if (index === 0) {
-      button.style.borderBottomColor = '#ffdc8b';
-      button.style.color = theme === 'dark' ? '#ffdc8b' : '#ffa500';
+      button.style.borderBottomColor = themeColors.accent;
+      button.style.color = themeColors.accent;
     }
 
     button.addEventListener('click', () => {
       // Update active tab
       tabButtons.forEach(b => {
         b.style.borderBottomColor = 'transparent';
-        b.style.color = theme === 'dark' ? '#b0b0b0' : '#666';
+        b.style.color = themeColors.muted;
       });
-      button.style.borderBottomColor = '#ffdc8b';
-      button.style.color = theme === 'dark' ? '#ffdc8b' : '#ffa500';
+      button.style.borderBottomColor = themeColors.accent;
+      button.style.color = themeColors.accent;
 
       // Show corresponding content
       contentPanes.forEach((pane, i) => {
@@ -148,7 +175,7 @@ export function createModal(options = {}) {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
-    color: ${theme === 'dark' ? '#e0e0e0' : '#333'};
+    color: ${themeColors.ink};
   `;
 
   // Content panes
@@ -214,7 +241,7 @@ export function createModal(options = {}) {
           margin-bottom: 12px;
         ">${state.level}</div>
         <div style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">Level ${state.level}</div>
-        <div style="font-size: 18px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">${state.totalXP} XP</div>
+        <div style="font-size: 18px; color: ${themeColors.muted};">${state.totalXP} XP</div>
       </div>
 
       <div style="margin-bottom: 24px;">
@@ -225,7 +252,7 @@ export function createModal(options = {}) {
         <div style="
           width: 100%;
           height: 12px;
-          background: ${theme === 'dark' ? '#2a2a2a' : '#e0e0e0'};
+          background: ${themeColors.cardBg};
           border-radius: 6px;
           overflow: hidden;
         ">
@@ -236,7 +263,7 @@ export function createModal(options = {}) {
             transition: width 0.3s ease;
           "></div>
         </div>
-        <div style="margin-top: 8px; font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'};">
+        <div style="margin-top: 8px; font-size: 12px; color: ${themeColors.muted};">
           ${state.totalXP} / ${state.nextLevelXP} XP
         </div>
       </div>
@@ -249,18 +276,18 @@ export function createModal(options = {}) {
       ">
         <div style="
           padding: 16px;
-          background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+          background: ${themeColors.cardBg};
           border-radius: 8px;
         ">
-          <div style="font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'}; margin-bottom: 4px;">Total Events</div>
+          <div style="font-size: 12px; color: ${themeColors.muted}; margin-bottom: 4px;">Total Events</div>
           <div style="font-size: 20px; font-weight: 600;">${state.eventsCount}</div>
         </div>
         <div style="
           padding: 16px;
-          background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+          background: ${themeColors.cardBg};
           border-radius: 8px;
         ">
-          <div style="font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'}; margin-bottom: 4px;">Next Milestone</div>
+          <div style="font-size: 12px; color: ${themeColors.muted}; margin-bottom: 4px;">Next Milestone</div>
           <div style="font-size: 20px; font-weight: 600;">${state.nextLevelXP - state.totalXP} XP</div>
         </div>
       </div>
@@ -273,7 +300,7 @@ export function createModal(options = {}) {
 
     if (entries.length === 0) {
       breakdownPane.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: ${theme === 'dark' ? '#888' : '#999'};">
+        <div style="text-align: center; padding: 40px; color: ${themeColors.muted};">
           No events recorded yet
         </div>
       `;
@@ -281,13 +308,13 @@ export function createModal(options = {}) {
     }
 
     breakdownPane.innerHTML = `
-      <div style="margin-bottom: 16px; font-size: 14px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">
+      <div style="margin-bottom: 16px; font-size: 14px; color: ${themeColors.muted};">
         XP earned by action type
       </div>
       ${entries.map(([ruleId, data]) => `
         <div style="
           padding: 12px;
-          background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+          background: ${themeColors.cardBg};
           border-radius: 8px;
           margin-bottom: 8px;
           display: flex;
@@ -296,7 +323,7 @@ export function createModal(options = {}) {
         ">
           <div>
             <div style="font-weight: 600; margin-bottom: 4px;">${data.ruleName}</div>
-            <div style="font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'};">${data.count} time${data.count !== 1 ? 's' : ''}</div>
+            <div style="font-size: 12px; color: ${themeColors.muted};">${data.count} time${data.count !== 1 ? 's' : ''}</div>
           </div>
           <div style="
             font-size: 18px;
@@ -314,16 +341,16 @@ export function createModal(options = {}) {
 
     unlocksPane.innerHTML = `
       <div style="margin-bottom: 24px;">
-        <h3 style="font-size: 16px; margin-bottom: 12px; color: ${theme === 'dark' ? '#ffdc8b' : '#ffa500'};">
+        <h3 style="font-size: 16px; margin-bottom: 12px; color: ${themeColors.accent};">
           Unlocked Levels (${unlockedLevels.length})
         </h3>
-        <div style="font-size: 14px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">
+        <div style="font-size: 14px; color: ${themeColors.muted};">
           You've reached Level ${state.level}!
         </div>
       </div>
 
       <div>
-        <h3 style="font-size: 16px; margin-bottom: 12px; color: ${theme === 'dark' ? '#83bfff' : '#2196f3'};">
+        <h3 style="font-size: 16px; margin-bottom: 12px; color: ${themeColors.accent};">
           Upcoming Levels
         </h3>
         ${nextUnlocks.map(t => {
@@ -331,7 +358,7 @@ export function createModal(options = {}) {
           return `
             <div style="
               padding: 12px;
-              background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+              background: ${themeColors.cardBg};
               border-radius: 8px;
               margin-bottom: 8px;
               display: flex;
@@ -341,9 +368,9 @@ export function createModal(options = {}) {
             ">
               <div>
                 <div style="font-weight: 600; margin-bottom: 4px;">Level ${t.level}</div>
-                <div style="font-size: 12px; color: ${theme === 'dark' ? '#888' : '#999'};">${xpNeeded} XP needed</div>
+                <div style="font-size: 12px; color: ${themeColors.muted};">${xpNeeded} XP needed</div>
               </div>
-              <div style="font-size: 14px; color: ${theme === 'dark' ? '#b0b0b0' : '#666'};">${t.xpRequired} XP</div>
+              <div style="font-size: 14px; color: ${themeColors.muted};">${t.xpRequired} XP</div>
             </div>
           `;
         }).join('')}
