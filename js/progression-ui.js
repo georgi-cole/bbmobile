@@ -54,7 +54,7 @@
     // Check if badge already exists in DOM (from index.html)
     let badgeBtn = document.getElementById('xpLeaderboardBadge');
     
-    // If not found, create it dynamically
+    // If not found, create it dynamically and add to topbar
     if (!badgeBtn) {
       // Dynamically import and create badge button
       import('../src/progression/xp-badge.js')
@@ -62,7 +62,18 @@
           badgeBtn = badgeModule.createBadgeButton({
             onClick: handleBadgeClick
           });
-          console.info('[Progression UI] Badge button created dynamically');
+          
+          // Insert into topbar after Settings button
+          const topbar = document.querySelector('.topbar');
+          const settingsBtn = document.getElementById('btnOpenSettings');
+          
+          if (topbar && settingsBtn) {
+            // Insert after Settings button
+            settingsBtn.insertAdjacentElement('afterend', badgeBtn);
+            console.info('[Progression UI] Badge button created and added to topbar');
+          } else {
+            console.warn('[Progression UI] Could not find topbar or Settings button');
+          }
         })
         .catch(error => {
           console.error('[Progression UI] Failed to create badge button:', error);
