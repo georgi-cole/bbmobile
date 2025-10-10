@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Scrollable Leaderboard Panel</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1320;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+    h1 {
+      color: #ffdc8b;
+      margin-bottom: 20px;
+    }
+    .test-controls {
+      margin: 20px 0;
+      padding: 20px;
+      background: #1a1a28;
+      border-radius: 8px;
+    }
+    .test-controls button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: linear-gradient(135deg, #ffdc8b 0%, #ffa500 100%);
+      border: none;
+      border-radius: 6px;
+      color: #1a1a1a;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .test-controls button:hover {
+      opacity: 0.9;
+    }
+    #tv {
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border: 2px solid rgba(131, 191, 255, 0.3);
+      border-radius: 12px;
+      position: relative;
+      margin: 20px auto;
+      overflow: hidden;
+    }
+    .tvViewport {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .size-selector {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .size-selector label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏆 Scrollable Leaderboard Panel Test</h1>
+  
+  <div class="test-controls">
+    <h2>Test Controls</h2>
+    <div>
+      <button onclick="showLeaderboard()">Show Leaderboard (7s)</button>
+      <button onclick="showLeaderboard(3000)">Show Leaderboard (3s)</button>
+      <button onclick="showLeaderboard(15000)">Show Leaderboard (15s)</button>
+    </div>
+    <div class="size-selector">
+      <label>TV Size:</label>
+      <label><input type="radio" name="tvsize" value="normal" checked onchange="resizeTV(this.value)"> Normal</label>
+      <label><input type="radio" name="tvsize" value="small" onchange="resizeTV(this.value)"> Small (Mobile)</label>
+      <label><input type="radio" name="tvsize" value="tiny" onchange="resizeTV(this.value)"> Tiny (Constrained)</label>
+    </div>
+    <p style="margin-top: 10px; color: #95a9c0;">
+      Test the leaderboard panel with different TV sizes. The panel should be scrollable when content exceeds available space.
+    </p>
+  </div>
+
+  <div id="tv">
+    <div class="tvViewport">
+      <div style="color: #95a9c0; text-align: center;">
+        <p>🎬 TV Display Area</p>
+        <p style="font-size: 0.85rem; opacity: 0.7;">Click "Show Leaderboard" to test</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mock game object and progression system -->
+  <script>
+    // Mock game state
+    window.game = {
+      players: [
+        { id: 'p1', name: 'Alice Johnson', human: true },
+        { id: 'p2', name: 'Bob Smith' },
+        { id: 'p3', name: 'Charlie Davis' },
+        { id: 'p4', name: 'Diana Martinez' },
+        { id: 'p5', name: 'Ethan Wilson' }
+      ]
+    };
+
+    // Mock progression system
+    window.Progression = {
+      async getLeaderboard(seasonId) {
+        return [
+          { playerId: 'p1', playerName: 'Alice Johnson', totalXP: 1250, level: 5 },
+          { playerId: 'p2', playerName: 'Bob Smith', totalXP: 980, level: 4 },
+          { playerId: 'p3', playerName: 'Charlie Davis', totalXP: 850, level: 4 },
+          { playerId: 'p4', playerName: 'Diana Martinez', totalXP: 720, level: 3 },
+          { playerId: 'p5', playerName: 'Ethan Wilson', totalXP: 650, level: 3 }
+        ];
+      },
+      async getPlayerState(playerId) {
+        const player = window.game.players.find(p => p.id === playerId);
+        const leaderboard = await this.getLeaderboard(1);
+        return leaderboard.find(entry => entry.playerId === playerId) || 
+               { totalXP: 0, level: 1 };
+      }
+    };
+
+    window.g = window.g || {};
+    window.g.cfg = window.g.cfg || { progressionEnabled: true };
+    window.progression = { enabled: true };
+
+    // Resize TV function
+    function resizeTV(size) {
+      const tv = document.getElementById('tv');
+      if (size === 'small') {
+        tv.style.maxWidth = '400px';
+        tv.style.maxHeight = '300px';
+      } else if (size === 'tiny') {
+        tv.style.maxWidth = '320px';
+        tv.style.maxHeight = '200px';
+      } else {
+        tv.style.maxWidth = '800px';
+        tv.style.maxHeight = '';
+      }
+    }
+  </script>
+
+  <!-- Load progression UI module -->
+  <script src="js/progression-ui.js"></script>
+
+  <script>
+    function showLeaderboard(duration = 7000) {
+      if (window.showTop5Leaderboard) {
+        console.log('Showing leaderboard for', duration, 'ms');
+        window.showTop5Leaderboard(duration);
+      } else if (window.ProgressionUI && window.ProgressionUI.showTop5Leaderboard) {
+        console.log('Showing leaderboard via ProgressionUI for', duration, 'ms');
+        window.ProgressionUI.showTop5Leaderboard(duration);
+      } else {
+        console.error('Leaderboard function not available');
+        alert('Leaderboard function not loaded. Check console for errors.');
+      }
+    }
+  </script>
+</body>
+</html>
