@@ -14,32 +14,92 @@
   }
 
   /**
+   * Check if progression is enabled
+   */
+  function isProgressionEnabled() {
+    // Check window.progression first
+    if (global.progression && typeof global.progression.enabled === 'boolean') {
+      return global.progression.enabled;
+    }
+    
+    // Check localStorage
+    try {
+      const stored = localStorage.getItem('progression.enabled');
+      if (stored !== null) {
+        return stored === 'true';
+      }
+    } catch (e) {
+      // localStorage not available
+    }
+    
+    // Check game config
+    if (global.g && global.g.cfg && typeof global.g.cfg.progressionEnabled === 'boolean') {
+      return global.g.cfg.progressionEnabled;
+    }
+    
+    // Default: disabled
+    return false;
+  }
+
+  /**
    * Initialize the leaderboard badge button
    */
   function initBadgeButton() {
-    const badgeBtn = document.getElementById('xpLeaderboardBadge');
-    if (!badgeBtn) {
-      console.warn('[Progression UI] Badge button not found');
+    // Only initialize if progression is enabled
+    if (!isProgressionEnabled()) {
+      console.log('[Progression UI] Badge button disabled (feature flag off)');
       return;
     }
 
-    badgeBtn.addEventListener('click', async () => {
-      if (global.Progression && typeof global.Progression.showModal === 'function') {
-        try {
-          // Get current season and player
-          const game = global.game || {};
-          const seasonId = 1; // Simplified for now
-          const humanPlayer = (game.players || []).find(p => p.human) || game.players?.[0];
-          const playerId = humanPlayer?.id || 'player1';
+    // Check if badge already exists in DOM (from index.html)
+    let badgeBtn = document.getElementById('xpLeaderboardBadge');
+    
+    // If not found, create it dynamically
+    if (!badgeBtn) {
+      // Dynamically import and create badge button
+      import('../src/progression/xp-badge.js')
+        .then(badgeModule => {
+          badgeBtn = badgeModule.createBadgeButton({
+            onClick: handleBadgeClick
+          });
+          console.info('[Progression UI] Badge button created dynamically');
+        })
+        .catch(error => {
+          console.error('[Progression UI] Failed to create badge button:', error);
+        });
+    } else {
+      // Wire up existing badge button
+      badgeBtn.addEventListener('click', handleBadgeClick);
+      console.info('[Progression UI] Badge button wired from DOM');
+    }
+  }
 
-          await global.Progression.showModal(seasonId, playerId);
-        } catch (error) {
-          console.error('[Progression UI] Failed to show modal:', error);
+  /**
+   * Handle badge button click
+   */
+  async function handleBadgeClick() {
+    if (global.Progression && typeof global.Progression.showModal === 'function') {
+      try {
+        // Get current season and player
+        const game = global.game || {};
+        const seasonId = 1; // Simplified for now
+        const humanPlayer = (game.players || []).find(p => p.human) || game.players?.[0];
+        const playerId = humanPlayer?.id || 'player1';
+
+        // Get leaderboard data
+        let leaderboard = [];
+        if (typeof global.Progression.getLeaderboard === 'function') {
+          leaderboard = await global.Progression.getLeaderboard(seasonId);
         }
-      } else {
-        console.warn('[Progression UI] Progression system not available');
+
+        // Show modal with leaderboard data
+        await global.Progression.showModal(seasonId, playerId, leaderboard);
+      } catch (error) {
+        console.error('[Progression UI] Failed to show modal:', error);
       }
-    });
+    } else {
+      console.warn('[Progression UI] Progression system not available');
+    }
   }
 
   /**
@@ -47,6 +107,12 @@
    * @param {number} durationMs - How long to show the panel (default 7000ms)
    */
   async function showTop5Leaderboard(durationMs = 7000) {
+    // Check feature flag first
+    if (!isProgressionEnabled()) {
+      console.log('[Progression UI] Top 5 leaderboard disabled (feature flag off)');
+      return;
+    }
+
     if (!global.Progression) {
       console.warn('[Progression UI] Progression system not available for leaderboard');
       return;
