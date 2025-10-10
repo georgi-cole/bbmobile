@@ -241,6 +241,21 @@
 
         tvOverlay.appendChild(panel);
 
+        // Apply dynamic sizing based on available space
+        setTimeout(() => {
+          const tvContainer = document.getElementById('tv') || tvOverlay.parentElement;
+          if (tvContainer) {
+            const tvRect = tvContainer.getBoundingClientRect();
+            const tvSafeTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tv-safe-top')) || 44;
+            const tvSafeBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tv-safe-bottom')) || 42;
+            const availableHeight = tvRect.height - tvSafeTop - tvSafeBottom - 40; // 40px for margins
+            
+            // Set max-height dynamically
+            panel.style.maxHeight = `${availableHeight}px`;
+            console.info('[Progression UI] Applied dynamic max-height:', availableHeight + 'px');
+          }
+        }, 10);
+
         // Auto-remove after duration and resolve promise
         setTimeout(() => {
           panel.style.animation = 'fadeOut 0.3s ease';

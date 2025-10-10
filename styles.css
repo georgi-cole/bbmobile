@@ -3966,7 +3966,11 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
   animation: slideInFromBottom 0.4s ease;
   max-width: 500px;
+  max-height: calc(100% - var(--tv-safe-top) - var(--tv-safe-bottom) - 20px);
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .leaderboard-panel h2 {
@@ -3977,6 +3981,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
+  flex-shrink: 0;
 }
 
 .leaderboard-list {
@@ -3986,6 +3991,9 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .leaderboard-item {
@@ -4046,5 +4054,42 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Mobile responsive styles for leaderboard panel */
+@media (max-width: 520px) {
+  .leaderboard-panel {
+    padding: 12px;
+    max-width: calc(100vw - 32px);
+  }
+
+  .leaderboard-panel h2 {
+    font-size: 1rem;
+    margin: 0 0 10px 0;
+  }
+
+  .leaderboard-item {
+    padding: 8px 10px;
+    gap: 10px;
+  }
+
+  .leaderboard-rank {
+    font-size: 1rem;
+    min-width: 24px;
+  }
+
+  .leaderboard-name {
+    font-size: 0.85rem;
+  }
+
+  .leaderboard-xp {
+    font-size: 0.75rem;
+  }
+
+  .leaderboard-level {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
   }
 }
