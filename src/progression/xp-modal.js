@@ -3,16 +3,20 @@
  */
 
 /**
+ * Utility: Determine if a theme is dark based on its name
+ */
+function isDarkTheme(bodyTheme) {
+  const lightThemes = ['modernhouse', 'miami', 'cabin'];
+  return !lightThemes.includes(bodyTheme);
+}
+
+/**
  * Get theme colors from CSS variables based on current theme
  */
 function getThemeColors() {
   const computedStyle = getComputedStyle(document.body);
   const bodyTheme = document.body.getAttribute('data-theme') || 'tvstudio';
-  
-  // Check if theme is light-based
-  const lightThemes = ['modernhouse', 'miami', 'cabin'];
-  const isDark = !lightThemes.includes(bodyTheme);
-  
+  const isDark = isDarkTheme(bodyTheme);
   return {
     isDark,
     bg: computedStyle.getPropertyValue('--card').trim() || (isDark ? '#1a1a1a' : '#fff'),
