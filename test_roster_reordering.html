@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roster Reordering & Eviction Visuals Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .test-info {
+      background: var(--card-2);
+      border-radius: var(--radius-s);
+      padding: 15px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+    .test-info h4 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    #rosterBar {
+      margin-top: 20px;
+    }
+    .log-entry {
+      padding: 8px;
+      margin: 5px 0;
+      background: var(--card-2);
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-family: monospace;
+    }
+    .log-entry.eviction {
+      border-left: 3px solid var(--bad);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 Roster Reordering & Eviction Visuals Test</h1>
+    
+    <div class="test-section">
+      <h3>Test Controls</h3>
+      <div class="test-controls">
+        <button class="btn" onclick="initGame()">1. Initialize Game</button>
+        <button class="btn danger" onclick="evictPlayer(0)">2. Evict Player 1</button>
+        <button class="btn danger" onclick="evictPlayer(1)">3. Evict Player 2</button>
+        <button class="btn danger" onclick="evictPlayer(2)">4. Evict Player 3</button>
+        <button class="btn" onclick="refreshRoster()">🔄 Refresh Roster</button>
+        <button class="btn" onclick="clearLogs()">Clear Logs</button>
+      </div>
+      
+      <div class="test-info">
+        <h4>Expected Behavior:</h4>
+        <ul>
+          <li>✅ Active players appear first in original order</li>
+          <li>✅ Evicted players appended at end in eviction order (earliest first)</li>
+          <li>✅ SVG brush X appears once with animation, then stays static</li>
+          <li>✅ Theme-colored X (uses --bad CSS variable)</li>
+          <li>✅ Evicted avatars show grayscale effect</li>
+          <li>✅ Scroll-snap enabled for smooth swiping (on mobile)</li>
+          <li>✅ Auto-scroll to first active player after eviction</li>
+          <li>✅ Re-rendering does NOT retrigger X animation</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h3>Top Roster</h3>
+      <div id="rosterBar"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test Log</h3>
+      <div id="testLog"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Roster State Debug</h3>
+      <pre id="debugState" style="background: var(--bg); padding: 15px; border-radius: 8px; overflow-x: auto;"></pre>
+    </div>
+  </div>
+
+  <script>
+    // Mock minimal game setup
+    window.game = null;
+    window.UI = { FALLBACK_AVATAR: 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest' };
+
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.insertBefore(entry, logEl.firstChild);
+    }
+
+    function clearLogs() {
+      document.getElementById('testLog').innerHTML = '';
+      log('Logs cleared');
+    }
+
+    function updateDebugState() {
+      if (!window.game) return;
+      const state = {
+        totalPlayers: window.game.players.length,
+        activePlayers: window.game.players.filter(p => !p.evicted).length,
+        evictedPlayers: window.game.players.filter(p => p.evicted).length,
+        players: window.game.players.map((p, i) => ({
+          index: i,
+          name: p.name,
+          evicted: p.evicted || false,
+          weekEvicted: p.weekEvicted || null,
+          __originalIndex: p.__originalIndex,
+          __evictAnimated: p.__evictAnimated || false
+        }))
+      };
+      document.getElementById('debugState').textContent = JSON.stringify(state, null, 2);
+    }
+
+    function initGame() {
+      window.game = {
+        week: 1,
+        players: [
+          { id: 'p1', name: 'Alice', evicted: false },
+          { id: 'p2', name: 'Bob', evicted: false },
+          { id: 'p3', name: 'Charlie', evicted: false },
+          { id: 'p4', name: 'Diana', evicted: false },
+          { id: 'p5', name: 'Eve', evicted: false },
+          { id: 'p6', name: 'Frank', evicted: false },
+          { id: 'p7', name: 'Grace', evicted: false },
+          { id: 'p8', name: 'Henry', evicted: false }
+        ],
+        cfg: { showTopRoster: true }
+      };
+
+      log('Game initialized with 8 players');
+      refreshRoster();
+      updateDebugState();
+    }
+
+    function evictPlayer(index) {
+      if (!window.game) {
+        log('Please initialize game first!', 'error');
+        return;
+      }
+
+      const player = window.game.players[index];
+      if (!player) {
+        log(`Player at index ${index} not found`, 'error');
+        return;
+      }
+
+      if (player.evicted) {
+        log(`${player.name} is already evicted`, 'error');
+        return;
+      }
+
+      player.evicted = true;
+      player.weekEvicted = window.game.week;
+      window.game.week++;
+
+      log(`🚪 ${player.name} evicted in week ${player.weekEvicted}`, 'eviction');
+      
+      // Dispatch eviction event
+      window.dispatchEvent(new CustomEvent('bb:eviction', { detail: { playerId: player.id } }));
+      
+      refreshRoster();
+      updateDebugState();
+    }
+
+    function refreshRoster() {
+      if (!window.game) {
+        log('No game to render', 'error');
+        return;
+      }
+
+      // Call the renderTopRoster function
+      if (window.renderTopRoster) {
+        window.renderTopRoster();
+        log('Roster refreshed');
+      } else {
+        log('renderTopRoster not available - loading scripts...', 'error');
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('load', () => {
+      log('Test page loaded - click "Initialize Game" to start');
+    });
+  </script>
+
+  <!-- Load the actual game scripts -->
+  <script>
+    // Minimal mock for UI utilities that renderTopRoster needs
+    window.g = window.g || {};
+    window.UI = window.UI || {};
+    window.UI.FALLBACK_AVATAR = 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest';
+    window.UI.escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[m]);
+
+    // Mock functions that renderTopRoster depends on
+    function ensureTopRosterHost() {
+      let host = document.getElementById('rosterBar');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'rosterBar';
+        document.body.appendChild(host);
+      }
+      return host;
+    }
+
+    function computeTopTileSize(host, n) {
+      const containerWidth = host.offsetWidth || 800;
+      const gap = 12;
+      const minSize = 80;
+      const maxSize = 120;
+      
+      if (n <= 0) return minSize;
+      
+      const availableWidth = containerWidth - (n - 1) * gap;
+      let tileSize = Math.floor(availableWidth / n);
+      
+      tileSize = Math.max(minSize, Math.min(maxSize, tileSize));
+      return tileSize;
+    }
+
+    function getAvatar(p) {
+      if (p.avatar) return p.avatar;
+      const seed = encodeURIComponent(p.name || 'guest');
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${seed}`;
+    }
+
+    function showProfileFor(p, e) {
+      // Mock - no action
+    }
+
+    function hideProfileTip() {
+      // Mock - no action
+    }
+
+    const FALLBACK = 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest';
+  </script>
+  
+  <script src="js/ui.hud-and-router.js"></script>
+  
+  <script>
+    // After scripts loaded, set up the render function
+    if (window.g && window.g.renderTopRoster) {
+      window.renderTopRoster = window.g.renderTopRoster;
+      log('✅ renderTopRoster function loaded successfully');
+    }
+  </script>
+</body>
+</html>

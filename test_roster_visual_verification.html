@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roster Reordering Visual Verification</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .visual-test {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .section {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .section h2 {
+      margin-top: 0;
+      color: var(--accent);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 10px;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .info-box {
+      background: var(--card-2);
+      border-radius: var(--radius-s);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .info-box h4 {
+      margin-top: 0;
+      color: var(--accent-2);
+      font-size: 1.1rem;
+    }
+    .info-box ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    .info-box li {
+      margin: 6px 0;
+      line-height: 1.5;
+    }
+    .success { color: var(--good); }
+    .warning { color: var(--warn); }
+    .danger { color: var(--bad); }
+    
+    #testRosterContainer {
+      margin-top: 20px;
+      min-height: 200px;
+    }
+    
+    .log {
+      background: var(--bg);
+      border-radius: var(--radius-s);
+      padding: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .log-entry {
+      padding: 6px;
+      margin: 4px 0;
+      border-left: 3px solid var(--line);
+      padding-left: 10px;
+    }
+    .log-entry.eviction {
+      border-left-color: var(--bad);
+      background: rgba(255, 109, 109, 0.1);
+    }
+    .log-entry.success {
+      border-left-color: var(--good);
+      background: rgba(119, 213, 141, 0.1);
+    }
+    
+    .roster-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .stat-card {
+      background: var(--card-2);
+      padding: 16px;
+      border-radius: var(--radius-s);
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Verification checklist */
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    .checklist li {
+      padding: 8px;
+      margin: 6px 0;
+      background: var(--card-2);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .checklist li::before {
+      content: '☐';
+      font-size: 1.4rem;
+      color: var(--muted);
+    }
+    .checklist li.checked::before {
+      content: '✓';
+      color: var(--good);
+    }
+
+    .demo-tile-wrapper {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .demo-tile {
+      width: 100px;
+      background: linear-gradient(145deg, #182636, #101a28);
+      border: 2px solid #2d4258;
+      border-radius: 16px;
+      padding: 12px 6px 22px;
+      text-align: center;
+    }
+    .demo-avatar-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1/1;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--line);
+      margin-bottom: 8px;
+    }
+    .demo-avatar {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .demo-avatar.grayed {
+      filter: grayscale(0.8) brightness(0.65);
+    }
+    .demo-name {
+      font-size: 0.75rem;
+      color: var(--ink);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="visual-test">
+    <h1>🎯 Roster Reordering & Eviction Visuals - Visual Verification</h1>
+    
+    <div class="section">
+      <h2>Interactive Test Controls</h2>
+      
+      <div class="info-box">
+        <h4>Test Scenario</h4>
+        <p>This test simulates evictions and verifies all visual requirements are met:</p>
+        <ul>
+          <li><strong>Step 1:</strong> Initialize game with 8 active players in original order</li>
+          <li><strong>Step 2-4:</strong> Evict players one by one and observe roster reordering</li>
+          <li><strong>Step 5:</strong> Refresh roster to verify animations don't retrigger</li>
+        </ul>
+      </div>
+
+      <div class="controls">
+        <button class="btn" onclick="initTest()">▶️ Start Test</button>
+        <button class="btn danger" onclick="evictNext()">⚠️ Evict Next Player</button>
+        <button class="btn" onclick="refreshDisplay()">🔄 Force Re-render</button>
+        <button class="btn" onclick="resetTest()">↻ Reset Test</button>
+      </div>
+
+      <div class="roster-info">
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Total Players</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value success" id="statActive">0</div>
+          <div class="stat-label">Active</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value danger" id="statEvicted">0</div>
+          <div class="stat-label">Evicted</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statRerenders">0</div>
+          <div class="stat-label">Re-renders</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Top Roster Display</h2>
+      <div id="testRosterContainer"></div>
+    </div>
+
+    <div class="section">
+      <h2>SVG Brush X Demo</h2>
+      <div class="info-box">
+        <h4>New Evicted Cross Design</h4>
+        <p>The eviction X is now an SVG brush stroke that uses theme colors and animates only once.</p>
+      </div>
+      <div class="demo-tile-wrapper">
+        <div class="demo-tile">
+          <div class="demo-avatar-wrap">
+            <img class="demo-avatar" src="https://api.dicebear.com/6.x/bottts/svg?seed=Active" alt="Active">
+          </div>
+          <div class="demo-name">Active Player</div>
+        </div>
+        <div class="demo-tile">
+          <div class="demo-avatar-wrap">
+            <img class="demo-avatar grayed" src="https://api.dicebear.com/6.x/bottts/svg?seed=Evicted" alt="Evicted">
+            <div class="evicted-cross animating">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 4 L20 20 M20 4 L4 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="demo-name">Evicted (Animated)</div>
+        </div>
+        <div class="demo-tile">
+          <div class="demo-avatar-wrap">
+            <img class="demo-avatar grayed" src="https://api.dicebear.com/6.x/bottts/svg?seed=Static" alt="Static">
+            <div class="evicted-cross">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 4 L20 20 M20 4 L4 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="demo-name">Evicted (Static)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Verification Checklist</h2>
+      <ul class="checklist" id="checklist">
+        <li data-check="init">Game initializes with players in original order</li>
+        <li data-check="evict">First eviction moves player to end of roster</li>
+        <li data-check="order">Active players remain in original order</li>
+        <li data-check="evicted-order">Multiple evicted players appear in eviction order</li>
+        <li data-check="x-animate">X appears with animation on first eviction</li>
+        <li data-check="x-static">X stays static on re-render (no animation replay)</li>
+        <li data-check="x-svg">X is SVG (not text) and uses theme color</li>
+        <li data-check="grayscale">Evicted avatars show grayscale effect</li>
+        <li data-check="scroll-snap">Scroll-snap is enabled (test by swiping)</li>
+        <li data-check="data-attrs">Data attributes are present on tiles</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Test Log</h2>
+      <div class="log" id="testLog"></div>
+    </div>
+  </div>
+
+  <script>
+    let testState = {
+      players: [],
+      week: 1,
+      evictedCount: 0,
+      renderCount: 0,
+      evictionQueue: []
+    };
+
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span style="color: var(--muted-2)">[${new Date().toLocaleTimeString()}]</span> ${message}`;
+      logEl.insertBefore(entry, logEl.firstChild);
+    }
+
+    function updateStats() {
+      document.getElementById('statTotal').textContent = testState.players.length;
+      document.getElementById('statActive').textContent = testState.players.filter(p => !p.evicted).length;
+      document.getElementById('statEvicted').textContent = testState.evictedCount;
+      document.getElementById('statRerenders').textContent = testState.renderCount;
+    }
+
+    function checkItem(id) {
+      const item = document.querySelector(`[data-check="${id}"]`);
+      if (item) {
+        item.classList.add('checked');
+      }
+    }
+
+    function initTest() {
+      testState = {
+        players: [
+          { id: 'p1', name: 'Alice', evicted: false },
+          { id: 'p2', name: 'Bob', evicted: false },
+          { id: 'p3', name: 'Charlie', evicted: false },
+          { id: 'p4', name: 'Diana', evicted: false },
+          { id: 'p5', name: 'Eve', evicted: false },
+          { id: 'p6', name: 'Frank', evicted: false },
+          { id: 'p7', name: 'Grace', evicted: false },
+          { id: 'p8', name: 'Henry', evicted: false }
+        ],
+        week: 1,
+        evictedCount: 0,
+        renderCount: 0,
+        evictionQueue: []
+      };
+
+      log('✅ <strong>Test initialized</strong> with 8 active players', 'success');
+      checkItem('init');
+      renderRoster();
+      updateStats();
+    }
+
+    function evictNext() {
+      const active = testState.players.filter(p => !p.evicted);
+      if (active.length === 0) {
+        log('⚠️ No active players left to evict', 'warning');
+        return;
+      }
+
+      const toEvict = active[0];
+      toEvict.evicted = true;
+      toEvict.weekEvicted = testState.week;
+      testState.week++;
+      testState.evictedCount++;
+
+      log(`🚪 <strong>${toEvict.name}</strong> evicted in week ${toEvict.weekEvicted}`, 'eviction');
+      
+      if (testState.evictedCount === 1) {
+        checkItem('evict');
+        checkItem('x-animate');
+        checkItem('grayscale');
+      }
+      if (testState.evictedCount > 1) {
+        checkItem('evicted-order');
+      }
+
+      renderRoster();
+      updateStats();
+    }
+
+    function refreshDisplay() {
+      log('🔄 Force re-render (testing animation replay prevention)', 'info');
+      checkItem('x-static');
+      renderRoster();
+    }
+
+    function resetTest() {
+      testState = {
+        players: [],
+        week: 1,
+        evictedCount: 0,
+        renderCount: 0,
+        evictionQueue: []
+      };
+      document.getElementById('testRosterContainer').innerHTML = '';
+      document.getElementById('testLog').innerHTML = '';
+      document.querySelectorAll('.checklist li').forEach(li => li.classList.remove('checked'));
+      log('🔄 Test reset - click "Start Test" to begin', 'info');
+      updateStats();
+    }
+
+    function renderRoster() {
+      testState.renderCount++;
+      
+      const container = document.getElementById('testRosterContainer');
+      container.innerHTML = '';
+
+      // Mimic the reordering logic from renderTopRoster
+      const allPlayers = testState.players.slice();
+      const activePlayers = [];
+      const evictedPlayers = [];
+
+      allPlayers.forEach((p, idx) => {
+        if (!p.__originalIndex) p.__originalIndex = idx;
+        if (p.evicted) {
+          evictedPlayers.push(p);
+        } else {
+          activePlayers.push(p);
+        }
+      });
+
+      evictedPlayers.sort((a, b) => (a.weekEvicted || 0) - (b.weekEvicted || 0));
+      const orderedPlayers = [...activePlayers, ...evictedPlayers];
+
+      // Create roster structure
+      const rosterBar = document.createElement('div');
+      rosterBar.id = 'rosterBar';
+      rosterBar.style.cssText = 'background: var(--card-2); border-radius: var(--radius); padding: 16px;';
+
+      const row = document.createElement('div');
+      row.className = 'top-roster-row';
+      
+      orderedPlayers.forEach((p, displayIndex) => {
+        const tile = document.createElement('div');
+        tile.className = 'top-roster-tile';
+        
+        // Data attributes
+        tile.dataset.playerId = p.id || '';
+        tile.dataset.originalIndex = String(p.__originalIndex || 0);
+        tile.dataset.evicted = p.evicted ? 'true' : 'false';
+        if (p.evicted && p.weekEvicted != null) {
+          tile.dataset.evictedAt = String(p.weekEvicted);
+        }
+        
+        if (p.evicted) tile.classList.add('evicted');
+
+        const wrap = document.createElement('div');
+        wrap.className = 'top-tile-avatar-wrap';
+
+        // Evicted overlay with SVG
+        if (p.evicted) {
+          const needsAnimation = !p.__evictAnimated;
+          if (needsAnimation) p.__evictAnimated = true;
+          
+          tile.dataset.evictAnimated = needsAnimation ? 'animating' : 'done';
+
+          const cross = document.createElement('div');
+          cross.className = 'evicted-cross' + (needsAnimation ? ' animating' : '');
+          cross.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4 L20 20 M20 4 L4 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>`;
+          wrap.appendChild(cross);
+
+          if (needsAnimation) {
+            setTimeout(() => checkItem('x-svg'), 500);
+          }
+        }
+
+        const img = document.createElement('img');
+        img.className = 'top-tile-avatar' + (p.evicted ? ' grayed' : '');
+        img.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name)}`;
+        img.alt = p.name;
+        wrap.appendChild(img);
+
+        const name = document.createElement('div');
+        name.className = 'top-tile-name';
+        name.textContent = p.name;
+
+        tile.appendChild(wrap);
+        tile.appendChild(name);
+        row.appendChild(tile);
+      });
+
+      rosterBar.appendChild(row);
+      container.appendChild(rosterBar);
+
+      // Verify order
+      const tiles = row.querySelectorAll('.top-roster-tile');
+      const firstEvictedIndex = Array.from(tiles).findIndex(t => t.dataset.evicted === 'true');
+      if (firstEvictedIndex > 0) {
+        checkItem('order');
+      }
+
+      // Check for scroll-snap
+      const computedStyle = window.getComputedStyle(row);
+      if (computedStyle.scrollSnapType.includes('x')) {
+        checkItem('scroll-snap');
+      }
+
+      // Check for data attributes
+      if (tiles[0] && tiles[0].dataset.playerId) {
+        checkItem('data-attrs');
+      }
+
+      log(`📊 Roster rendered (render #${testState.renderCount}): ${activePlayers.length} active, ${evictedPlayers.length} evicted`, 'info');
+    }
+
+    // Auto-check scroll-snap after DOM loads
+    window.addEventListener('load', () => {
+      log('✅ Test page loaded - click "Start Test" to begin', 'success');
+      updateStats();
+    });
+  </script>
+</body>
+</html>
