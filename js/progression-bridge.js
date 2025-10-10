@@ -14,7 +14,7 @@
 
   /**
    * Check if progression is enabled via feature flag
-   * Priority: window.progression.enabled > localStorage > g.cfg.progressionEnabled > false (default)
+   * Priority: window.progression.enabled > localStorage > g.cfg.progressionEnabled > true (default)
    */
   function isEnabled() {
     // Check window.progression first (allows runtime override)
@@ -22,23 +22,23 @@
       return global.progression.enabled;
     }
     
-    // Check localStorage
+    // Check localStorage - explicit false disables it
     try {
       const stored = localStorage.getItem('progression.enabled');
       if (stored !== null) {
-        return stored === 'true';
+        return stored !== 'false'; // Enabled unless explicitly set to 'false'
       }
     } catch (e) {
       // localStorage not available
     }
     
-    // Check game config
+    // Check game config - explicit false disables it
     if (global.g && global.g.cfg && typeof global.g.cfg.progressionEnabled === 'boolean') {
       return global.g.cfg.progressionEnabled;
     }
     
-    // Default: disabled
-    return false;
+    // Default: enabled
+    return true;
   }
 
   /**
@@ -175,7 +175,6 @@
       
       // Create modal with current state
       const modal = xpModal.createModal({
-        theme: 'dark',
         onClose: () => {
           modal.remove();
         }
