@@ -25,7 +25,7 @@ The audit revealed that the Social Maneuvers feature integration was **already i
 ### Feature Integration Points
 
 1. **Module Loading**: ✅ Loaded in `index.html` line 403
-2. **Feature Flag**: ✅ `game.cfg.enableSocialManeuvers` (default: false)
+2. **Feature Flag**: ✅ `game.cfg.enableSocialManeuvers` (default: true)
 3. **Runtime Access**: ✅ `window.USE_SOCIAL_MANEUVERS` property works
 4. **Phase Start Hook**: ✅ `startSocialIntermission()` calls `SocialManeuvers.onSocialPhaseStart()`
 5. **UI Integration**: ✅ `renderSocialPhase()` renders correct UI based on flag

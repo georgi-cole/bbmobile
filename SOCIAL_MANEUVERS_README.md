@@ -13,7 +13,7 @@ The Social Maneuvers system is a new feature-flagged module that enhances the so
 
 ### Modified Files
 1. **js/settings.js**
-   - Added `enableSocialManeuvers: false` to DEFAULT_CFG (line 49)
+   - Added `enableSocialManeuvers: true` to DEFAULT_CFG (line 49) - enabled by default
    - Added checkbox in Gameplay settings tab (line 236)
 2. **index.html**
    - Added script tag for social-maneuvers.js (line 403)
@@ -132,15 +132,20 @@ All 18 automatic tests pass. Interactive tests available via buttons.
 
 ## Enabling the Feature
 
-### For Testing
+The feature is **enabled by default**. Players will automatically see the Social Maneuvers UI during social phases.
+
+### To Disable (Optional)
 1. Open Settings → Gameplay tab
-2. Check "Enable Social Maneuvers system (experimental)"
+2. Uncheck "Enable Social Maneuvers system (experimental)"
 3. Click "Save & Close"
-4. Restart the season
+4. The game will revert to the legacy social phase system
 
 ### For Development
 ```javascript
-// In game initialization or settings
+// Disable the feature
+game.cfg.enableSocialManeuvers = false;
+
+// Re-enable the feature
 game.cfg.enableSocialManeuvers = true;
 ```
 
@@ -176,7 +181,7 @@ game.cfg.enableSocialManeuvers = true;
 ## Architecture Notes
 
 ### Design Principles
-1. **Feature-Flagged**: Disabled by default, opt-in via settings
+1. **Feature-Flagged**: Enabled by default, users can opt-out via settings
 2. **Non-Breaking**: No impact on existing game logic when disabled
 3. **Modular**: Self-contained module with clear API
 4. **Extensible**: Placeholder hooks for future enhancements
