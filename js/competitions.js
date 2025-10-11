@@ -350,18 +350,22 @@
       // Use new competition flow: instructions → fullscreen game → completion
       host.innerHTML = '<div class="tiny muted">Loading competition...</div>';
       
-      // Start AntiCheat session
+      // Get TV viewport as the target for instructions (inside TV, not below it)
+      const tvViewport = document.querySelector('.tvViewport');
+      const instructionsContainer = tvViewport || host;
+      
+      // Start AntiCheat session with minDistinctInputs: 0 to allow low-input games
       let antiCheatSessionId = null;
       if (global.AntiCheat) {
         antiCheatSessionId = global.AntiCheat.startSession({
           container: host,
           gameKey: mg,
-          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 3 }
+          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
         });
       }
 
-      // Run competition flow (pass host container for instructions)
-      global.CompetitionFlow.runCompetitionFlow(mg, host, (base) => {
+      // Run competition flow (pass TV viewport for instructions to appear inside TV)
+      global.CompetitionFlow.runCompetitionFlow(mg, instructionsContainer, (base) => {
         // Validate with AntiCheat
         if (antiCheatSessionId && global.AntiCheat) {
           const v = global.AntiCheat.validate(antiCheatSessionId);
@@ -392,7 +396,7 @@
         antiCheatSessionId = global.AntiCheat.startSession({
           container: host,
           gameKey: mg,
-          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 3 }
+          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
         });
       }
 
@@ -417,6 +421,7 @@
       });
     }
   }
+  global.runHumanMinigameWithGuards = runHumanMinigameWithGuards;
 
   // Reusable tri-slot reveal sequence for competitions
   // Can be used for HOH, Veto, or other top-3 reveals

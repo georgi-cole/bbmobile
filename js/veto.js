@@ -154,15 +154,31 @@
     if(humanIn){
       var mg = (typeof global.pickMinigameType==='function') ? global.pickMinigameType() : 'clicker';
       var hostNode = document.querySelector('#panel .minigame-host');
-      if(hostNode && typeof global.renderMinigame==='function'){
-        var playWrap = document.createElement('div');
-        playWrap.className = 'col';
-        global.renderMinigame(mg, playWrap, function(base){
-          // Use compBeast for human too (no guaranteed wins)
-          var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
-          submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
-        });
-        hostNode.appendChild(playWrap);
+      
+      if(hostNode){
+        // Use new competition flow with guards if available
+        if(typeof global.runHumanMinigameWithGuards === 'function'){
+          global.runHumanMinigameWithGuards({
+            mg: mg,
+            host: hostNode,
+            player: you,
+            label: 'Veto/' + mg,
+            multiplier: (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6),
+            onAfterSubmit: function(){
+              // Callback after submission
+            }
+          });
+        } else if(typeof global.renderMinigame==='function'){
+          // Fallback to legacy rendering
+          var playWrap = document.createElement('div');
+          playWrap.className = 'col';
+          global.renderMinigame(mg, playWrap, function(base){
+            // Use compBeast for human too (no guaranteed wins)
+            var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
+            submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
+          });
+          hostNode.appendChild(playWrap);
+        }
       }
     } else {
       var host2 = document.querySelector('#panel .minigame-host');
