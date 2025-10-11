@@ -4,8 +4,13 @@
 (function(g){
   'use strict';
 
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;max-width:600px;margin:0 auto;';
@@ -54,7 +59,22 @@
         if(userInput[index] !== sequence[index]){
           displayDiv.textContent = '❌ Wrong!';
           setTimeout(() => {
-            const finalScore = Math.min(100, (level - 1) * 25);
+            const rawScore = Math.min(100, (level - 1) * 25);
+            
+            // Determine if player succeeded
+            const playerSucceeded = rawScore >= 60; // 60% threshold for success
+            
+            // Apply win probability logic
+            let finalScore = rawScore;
+            if(g.GameUtils && !debugMode && competitionMode){
+              const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+              if(!shouldWin && playerSucceeded){
+                // Force loss despite success (25% win rate)
+                finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+                console.log('[EchoChamber] Win probability applied: success forced to loss');
+              }
+            }
+            
             if(onComplete) onComplete(finalScore);
           }, 1000);
           return;
@@ -65,7 +85,22 @@
           displayDiv.textContent = `✅ Level ${level}!`;
           setTimeout(() => {
             if(level > 5){
-              if(onComplete) onComplete(100);
+              // Perfect score
+              const rawScore = 100;
+              const playerSucceeded = true;
+              
+              // Apply win probability logic
+              let finalScore = rawScore;
+              if(g.GameUtils && !debugMode && competitionMode){
+                const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+                if(!shouldWin && playerSucceeded){
+                  // Force loss despite success (25% win rate)
+                  finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+                  console.log('[EchoChamber] Win probability applied: success forced to loss');
+                }
+              }
+              
+              if(onComplete) onComplete(finalScore);
             } else {
               nextRound();
             }

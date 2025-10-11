@@ -4,8 +4,13 @@
 (function(g){
   'use strict';
 
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;max-width:600px;margin:0 auto;';
@@ -91,8 +96,23 @@
             if(solved >= 10){
               clearInterval(timerInterval);
               const totalTime = Math.floor((Date.now() - startTime) / 1000);
-              // Under 30s = 100, scale to 60s
-              const finalScore = Math.min(100, Math.max(40, 100 - (totalTime - 30)));
+              // Calculate raw score: Under 30s = 100, scale to 60s
+              const rawScore = Math.min(100, Math.max(40, 100 - (totalTime - 30)));
+              
+              // Determine if player succeeded
+              const playerSucceeded = rawScore >= 60; // 60% threshold for success
+              
+              // Apply win probability logic
+              let finalScore = rawScore;
+              if(g.GameUtils && !debugMode && competitionMode){
+                const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+                if(!shouldWin && playerSucceeded){
+                  // Force loss despite success (25% win rate)
+                  finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+                  console.log('[PuzzleDash] Win probability applied: success forced to loss');
+                }
+              }
+              
               setTimeout(() => {
                 if(onComplete) onComplete(finalScore);
               }, 500);

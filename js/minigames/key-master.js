@@ -4,8 +4,13 @@
 (function(g){
   'use strict';
 
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;max-width:600px;margin:0 auto;';
@@ -63,7 +68,22 @@
               feedbackDiv.textContent = '✅ Unlocked!';
               feedbackDiv.style.color = '#74e48b';
               setTimeout(() => {
-                const finalScore = Math.max(40, 100 - (attempts - 1) * 15);
+                const rawScore = Math.max(40, 100 - (attempts - 1) * 15);
+                
+                // Determine if player succeeded
+                const playerSucceeded = rawScore >= 60; // 60% threshold for success
+                
+                // Apply win probability logic
+                let finalScore = rawScore;
+                if(g.GameUtils && !debugMode && competitionMode){
+                  const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+                  if(!shouldWin && playerSucceeded){
+                    // Force loss despite success (25% win rate)
+                    finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+                    console.log('[KeyMaster] Win probability applied: success forced to loss');
+                  }
+                }
+                
                 if(onComplete) onComplete(finalScore);
               }, 1000);
             } else {
