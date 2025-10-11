@@ -175,19 +175,6 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
     height: 100% !important;
   }
 
-  /* Cast actions - stack and full width on mobile */
-  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-actions {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    margin-top: 12px !important;
-  }
-
-  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-actions .btn {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
   /* Ensure card doesn't overflow on mobile */
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .card {
     padding: 10px 8px !important;

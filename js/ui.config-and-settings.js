@@ -55,7 +55,6 @@
     '.cast-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}',
     '.cast-form .full{grid-column:1 / -1}',
     '.cast-form .cast-age-field input{max-width:80px}',
-    '.cast-actions{display:flex;gap:8px;margin-top:8px;justify-content:flex-start;flex-wrap:wrap}',
     '@media (max-width:900px){ .cast-editor{grid-template-columns:1fr} .cast-preview{align-items:flex-start} .cast-form{grid-template-columns:1fr} }',
     '#cascadeDeck{position:absolute;right:12px;top:56px;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:20;max-width:min(46%, 520px)}',
     '.miniCard{background:rgba(8,12,25,.9);border:1px solid #33407a;border-radius:10px;padding:7px 9px;color:#e6e8ee;font-size:.66rem;box-shadow:0 10px 24px -12px #000, 0 0 0 1px #1d2742}',
@@ -465,11 +464,6 @@
                 <label class="toggleRow full"><span>Motto</span><input type="text" id="castMotto" placeholder="e.g., Play hard, win harder"></label>
               </div>
             </div>
-            <div class="cast-actions">
-              <button class="btn" id="castApply">Apply</button>
-              <button class="btn" id="castCancel">Cancel</button>
-              <button class="btn primary" id="castSaveClose">Save & Close</button>
-            </div>
           </div>
         </div>
       </div>`;
@@ -614,38 +608,6 @@
           markDirty(modal);
         };
         fr.readAsDataURL(f);
-      });
-    }
-    
-    // Wire action buttons
-    const apply = modal.querySelector('#castApply');
-    const cancel = modal.querySelector('#castCancel');
-    const saveClose = modal.querySelector('#castSaveClose');
-    
-    if(apply){
-      apply.addEventListener('click', ()=>{
-        if(saveCurrentCastForm(modal)){
-          renderCastStrip(modal);
-          fillCastForm(modal);
-        }
-      });
-    }
-    
-    if(cancel){
-      cancel.addEventListener('click', async ()=>{
-        if(!await maybeConfirmDiscard(modal)) return;
-        castState(modal).dirty = false;
-        castState(modal).pendingAvatarDataUrl = null;
-        fillCastForm(modal);
-      });
-    }
-    
-    if(saveClose){
-      saveClose.addEventListener('click', ()=>{
-        if(saveCurrentCastForm(modal)){
-          const dim = modal.closest('.modal-backdrop');
-          if(dim) dim.style.display = 'none';
-        }
       });
     }
   }
@@ -821,6 +783,10 @@
       const active = panes.querySelector('.settingsTabPane.active');
       if(active && active.getAttribute('data-pane')==='cast'){
         if(!await maybeConfirmDiscard(modal)) return;
+        // Reset cast form when canceling
+        castState(modal).dirty = false;
+        castState(modal).pendingAvatarDataUrl = null;
+        fillCastForm(modal);
       }
       closeSettingsModal();
     }
@@ -831,7 +797,10 @@
     btnApply.addEventListener('click', ()=>{
       applySettingsFromModal(modal);
       if(panes.querySelector('.settingsTabPane.active')?.getAttribute('data-pane')==='cast'){
-        saveCurrentCastForm(modal);
+        if(saveCurrentCastForm(modal)){
+          renderCastStrip(modal);
+          fillCastForm(modal);
+        }
       }
       notify('Settings applied', 'ok');
     });
