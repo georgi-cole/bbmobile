@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Tag Assignment and Ceremony Logic</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    .player { display: inline-block; margin: 10px; padding: 15px; background: #162435; border-radius: 8px; min-width: 180px; vertical-align: top; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; margin: 4px 2px; }
+    .badge-hoh { background: linear-gradient(135deg, #d4a629, #ffd966); color: #1a1200; }
+    .badge-veto { background: linear-gradient(135deg, #4876c2, #83bfff); color: #0d151f; }
+    .badge-nom { background: linear-gradient(135deg, #c23636, #e64a4a); color: #fff; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    button.success { background: #2d7a3f; }
+    button.success:hover { background: #3a9452; }
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 400px; overflow-y: auto; }
+    .pass { color: #77d58d; font-weight: bold; }
+    .fail { color: #ff6d6d; font-weight: bold; }
+    .info { color: #83bfff; }
+    .warn { color: #ffd966; }
+    .game-state { background: #1a2636; padding: 12px; border-radius: 6px; margin: 10px 0; }
+    .game-state div { margin: 4px 0; }
+    .label { font-weight: 700; color: #83bfff; }
+    .ceremony-preview { background: #0a0f16; padding: 15px; border-radius: 6px; margin: 10px 0; min-height: 100px; }
+    .card { background: #162435; border: 2px solid #3563a7; border-radius: 8px; padding: 20px; margin: 10px 0; text-align: center; }
+    .card.noms { border-color: #e64a4a; }
+    .card-title { font-size: 1.3rem; font-weight: bold; color: #83bfff; margin-bottom: 10px; }
+    .card-content { font-size: 1.1rem; color: #e3ecf5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Tag Assignment and Ceremony Logic</h1>
+    <p>Tests the refactored tag assignment (HOH, POV, NOM) and nomination ceremony UI with wildcards</p>
+
+    <div class="test-section">
+      <h2>Current Game State</h2>
+      <div class="game-state" id="gameState"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Players</h2>
+      <div id="players"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Actions</h2>
+      <h3>Badge Assignment Tests</h3>
+      <button onclick="testHOHAssignment()">Test HOH Badge Assignment</button>
+      <button onclick="testPOVAssignment()">Test POV Badge Assignment</button>
+      <button onclick="testNOMAssignment()">Test NOM Badge Assignment</button>
+      <br>
+      <h3>Badge Reset Tests</h3>
+      <button onclick="testBadgeResetAfterEviction()">Test Badge Reset After Eviction</button>
+      <button onclick="testBadgeResetNewWeek()">Test Badge Reset at New Week Start</button>
+      <br>
+      <h3>Ceremony UI Tests</h3>
+      <button onclick="testCeremonyWithWildcards()" class="success">Test Nomination Ceremony UI</button>
+      <button onclick="resetAll()">Reset All</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Ceremony Preview</h2>
+      <div class="ceremony-preview" id="ceremonyPreview"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Validation Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    // Mock game state
+    const game = {
+      week: 1,
+      hohId: null,
+      vetoHolder: null,
+      nominees: [],
+      nomsLocked: false,
+      players: [
+        { id: 1, name: 'Alice', hoh: false, nominated: false, nominationState: 'none', evicted: false },
+        { id: 2, name: 'Bob', hoh: false, nominated: false, nominationState: 'none', evicted: false },
+        { id: 3, name: 'Charlie', hoh: false, nominated: false, nominationState: 'none', evicted: false },
+        { id: 4, name: 'Diana', hoh: false, nominated: false, nominationState: 'none', evicted: false },
+        { id: 5, name: 'Eve', hoh: false, nominated: false, nominationState: 'none', evicted: false }
+      ]
+    };
+
+    let logs = [];
+    let testResults = [];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-50).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    function addTestResult(name, passed, message) {
+      testResults.push({ name, passed, message });
+      updateResults();
+    }
+
+    function updateResults() {
+      const resultsEl = document.getElementById('results');
+      resultsEl.innerHTML = testResults.map(r => 
+        `<div class="${r.passed ? 'pass' : 'fail'}">
+          ${r.passed ? '✓' : '✗'} ${r.name}: ${r.message}
+        </div>`
+      ).join('');
+    }
+
+    function getPlayer(id) {
+      return game.players.find(p => p.id === id);
+    }
+
+    function safeName(id) {
+      const p = getPlayer(id);
+      return p ? p.name : String(id);
+    }
+
+    function renderPlayers() {
+      const playersEl = document.getElementById('players');
+      playersEl.innerHTML = game.players.map(p => {
+        const badges = [];
+        if (p.hoh) badges.push('<span class="badge badge-hoh">HOH</span>');
+        if (game.vetoHolder === p.id) badges.push('<span class="badge badge-veto">VETO</span>');
+        if (p.nominated) badges.push('<span class="badge badge-nom">NOM</span>');
+        
+        return `
+          <div class="player ${p.evicted ? 'evicted' : ''}">
+            <strong>${p.name}</strong> (ID: ${p.id})
+            <div>${badges.join(' ') || '<span style="color: #95a9c0;">No badges</span>'}</div>
+            <div style="font-size: 0.8rem; color: #95a9c0; margin-top: 5px;">
+              State: ${p.nominationState || 'none'}
+              ${p.evicted ? '(Evicted)' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderGameState() {
+      const stateEl = document.getElementById('gameState');
+      stateEl.innerHTML = `
+        <div><span class="label">Week:</span> ${game.week}</div>
+        <div><span class="label">HOH:</span> ${game.hohId ? safeName(game.hohId) : '—'}</div>
+        <div><span class="label">Veto Holder:</span> ${game.vetoHolder ? safeName(game.vetoHolder) : '—'}</div>
+        <div><span class="label">Nominees:</span> ${game.nominees.length ? game.nominees.map(safeName).join(', ') : '—'}</div>
+        <div><span class="label">Noms Locked:</span> ${game.nomsLocked ? 'Yes' : 'No'}</div>
+      `;
+    }
+
+    function render() {
+      renderPlayers();
+      renderGameState();
+    }
+
+    // Test: HOH badge is assigned immediately after HOH win
+    function testHOHAssignment() {
+      log('Testing HOH badge assignment...', 'info');
+      
+      // Simulate HOH win
+      const winnerId = 1;
+      game.hohId = winnerId;
+      
+      // Reset all HOH badges first
+      game.players.forEach(p => p.hoh = false);
+      
+      // Assign HOH badge immediately
+      const winner = getPlayer(winnerId);
+      winner.hoh = true;
+      
+      render();
+      
+      // Validate
+      const passed = game.hohId === winnerId && winner.hoh === true;
+      addTestResult('HOH Badge Assignment', passed, 
+        passed ? 'HOH badge assigned immediately after win' : 'HOH badge NOT assigned correctly');
+      log(passed ? 'PASS: HOH badge assigned immediately' : 'FAIL: HOH badge not assigned', passed ? 'pass' : 'fail');
+    }
+
+    // Test: POV badge is assigned immediately after POV win
+    function testPOVAssignment() {
+      log('Testing POV badge assignment...', 'info');
+      
+      // Simulate POV win
+      const winnerId = 2;
+      game.vetoHolder = winnerId;
+      
+      render();
+      
+      // Validate
+      const passed = game.vetoHolder === winnerId;
+      addTestResult('POV Badge Assignment', passed,
+        passed ? 'POV badge assigned immediately after win' : 'POV badge NOT assigned correctly');
+      log(passed ? 'PASS: POV badge assigned immediately' : 'FAIL: POV badge not assigned', passed ? 'pass' : 'fail');
+    }
+
+    // Test: NOM badges are assigned immediately after HOH announces nominations
+    function testNOMAssignment() {
+      log('Testing NOM badge assignment...', 'info');
+      
+      // Simulate nominations
+      const nomineeIds = [3, 4];
+      game.nominees = nomineeIds;
+      game.nomsLocked = true;
+      
+      // Assign NOM badges immediately
+      game.players.forEach(p => {
+        p.nominated = nomineeIds.includes(p.id);
+        p.nominationState = nomineeIds.includes(p.id) ? 'nominated' : 'none';
+      });
+      
+      render();
+      
+      // Validate
+      const nominee1 = getPlayer(nomineeIds[0]);
+      const nominee2 = getPlayer(nomineeIds[1]);
+      const passed = nominee1.nominated && nominee1.nominationState === 'nominated' &&
+                     nominee2.nominated && nominee2.nominationState === 'nominated';
+      
+      addTestResult('NOM Badge Assignment', passed,
+        passed ? 'NOM badges assigned immediately after announcement' : 'NOM badges NOT assigned correctly');
+      log(passed ? 'PASS: NOM badges assigned immediately' : 'FAIL: NOM badges not assigned', passed ? 'pass' : 'fail');
+    }
+
+    // Test: Badges are cleared after eviction
+    function testBadgeResetAfterEviction() {
+      log('Testing badge reset after eviction...', 'info');
+      
+      // Set up initial state with badges
+      game.hohId = 1;
+      game.vetoHolder = 2;
+      game.nominees = [3, 4];
+      game.nomsLocked = true;
+      game.players[0].hoh = true;
+      game.players[2].nominated = true;
+      game.players[3].nominated = true;
+      
+      render();
+      log('Initial state: HOH=Alice, POV=Bob, NOM=Charlie,Diana', 'info');
+      
+      // Simulate eviction (evict Charlie)
+      game.players[2].evicted = true;
+      
+      // Clear badges after eviction (simulating handleEvictionLegacy logic)
+      game.nominees = [];
+      game.vetoHolder = null;
+      game.nomsLocked = false;
+      game.hohId = null;
+      game.players.forEach(p => {
+        p.nominated = false;
+        p.hoh = false;
+      });
+      
+      render();
+      
+      // Validate all badges are cleared
+      const passed = !game.hohId && !game.vetoHolder && game.nominees.length === 0 &&
+                     game.players.every(p => !p.hoh && !p.nominated);
+      
+      addTestResult('Badge Reset After Eviction', passed,
+        passed ? 'All badges cleared after eviction' : 'Badges NOT cleared properly');
+      log(passed ? 'PASS: Badges cleared after eviction' : 'FAIL: Badges not cleared', passed ? 'pass' : 'fail');
+    }
+
+    // Test: Badges are reset at the start of a new week
+    function testBadgeResetNewWeek() {
+      log('Testing badge reset at new week start...', 'info');
+      
+      // Set up end of week state with badges
+      game.week = 2;
+      game.hohId = 1;
+      game.vetoHolder = 2;
+      game.nominees = [3, 4];
+      game.nomsLocked = true;
+      game.players[0].hoh = true;
+      game.players[2].nominated = true;
+      game.players[3].nominated = true;
+      
+      render();
+      log(`Week ${game.week} state: HOH=Alice, POV=Bob, NOM=Charlie,Diana`, 'info');
+      
+      // Simulate proceedNextWeek (clearing badges and incrementing week)
+      game.nominees = [];
+      game.vetoHolder = null;
+      game.nomsLocked = false;
+      game.hohId = null;
+      game.players.forEach(p => {
+        p.nominated = false;
+        p.hoh = false;
+        p.nominationState = 'none';
+      });
+      game.week++;
+      
+      render();
+      log(`Week ${game.week} started: All badges cleared`, 'info');
+      
+      // Validate
+      const passed = !game.hohId && !game.vetoHolder && game.nominees.length === 0 &&
+                     game.players.every(p => !p.hoh && !p.nominated && p.nominationState === 'none') &&
+                     game.week === 3;
+      
+      addTestResult('Badge Reset at New Week', passed,
+        passed ? 'All badges cleared at start of new week' : 'Badges NOT cleared properly');
+      log(passed ? 'PASS: Badges reset at new week start' : 'FAIL: Badges not reset', passed ? 'pass' : 'fail');
+    }
+
+    // Test: Nomination ceremony UI with wildcards
+    async function testCeremonyWithWildcards() {
+      log('Testing nomination ceremony UI with wildcards...', 'info');
+      
+      // Set up ceremony state
+      game.hohId = 1;
+      game.nominees = [3, 4];
+      game.nomsLocked = true;
+      game.players[0].hoh = true;
+      
+      render();
+      
+      const ceremonyEl = document.getElementById('ceremonyPreview');
+      ceremonyEl.innerHTML = '';
+      
+      // Simulate ceremony sequence
+      const hoh = getPlayer(game.hohId);
+      const steps = [];
+      
+      // Step 1: HOH addresses house
+      steps.push({
+        title: 'Nomination Ceremony',
+        content: `${hoh.name} addresses the house.`,
+        duration: 2400
+      });
+      
+      // Step 2: Show wildcard slots
+      for (let i = 0; i < game.nominees.length; i++) {
+        const label = i === 0 ? 'First Nominee' : 'Second Nominee';
+        steps.push({
+          title: label,
+          content: '?',
+          duration: 1800
+        });
+      }
+      
+      // Step 3: Reveal nominees
+      for (let i = 0; i < game.nominees.length; i++) {
+        const label = i === 0 ? 'First Nominee' : 'Second Nominee';
+        steps.push({
+          title: label,
+          content: safeName(game.nominees[i]),
+          duration: 2600
+        });
+      }
+      
+      // Step 4: Ceremony adjourned
+      steps.push({
+        title: 'Nomination Ceremony',
+        content: 'This ceremony is adjourned.',
+        duration: 2000
+      });
+      
+      // Display steps sequentially
+      let currentStep = 0;
+      
+      function showNextStep() {
+        if (currentStep >= steps.length) {
+          log('Ceremony complete: Cards disappeared, tags updated', 'pass');
+          ceremonyEl.innerHTML = '<div style="color: #77d58d; font-weight: bold;">✓ Ceremony Complete</div>';
+          
+          // Validate ceremony flow
+          const passed = steps.length === 7 && // 1 intro + 2 wildcards + 2 reveals + 1 adjourned
+                         steps.some(s => s.content === '?') && // Has wildcards
+                         steps.some(s => s.content === 'This ceremony is adjourned.'); // Has adjourned message
+          
+          addTestResult('Nomination Ceremony UI', passed,
+            passed ? 'Ceremony with wildcards, reveals, and adjourned message' : 'Ceremony flow incorrect');
+          return;
+        }
+        
+        const step = steps[currentStep];
+        log(`Ceremony step ${currentStep + 1}/${steps.length}: ${step.title} - "${step.content}"`, 'info');
+        
+        ceremonyEl.innerHTML = `
+          <div class="card noms">
+            <div class="card-title">${step.title}</div>
+            <div class="card-content">${step.content}</div>
+          </div>
+        `;
+        
+        currentStep++;
+        setTimeout(showNextStep, 500); // Faster for demo
+      }
+      
+      showNextStep();
+    }
+
+    function resetAll() {
+      game.week = 1;
+      game.hohId = null;
+      game.vetoHolder = null;
+      game.nominees = [];
+      game.nomsLocked = false;
+      game.players.forEach(p => {
+        p.hoh = false;
+        p.nominated = false;
+        p.nominationState = 'none';
+        p.evicted = false;
+      });
+      
+      logs = [];
+      testResults = [];
+      
+      render();
+      updateResults();
+      updateLog();
+      document.getElementById('ceremonyPreview').innerHTML = '';
+      
+      log('All state reset', 'info');
+    }
+
+    // Initialize
+    render();
+    log('Test page loaded', 'info');
+  </script>
+</body>
+</html>

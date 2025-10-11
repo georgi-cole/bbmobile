@@ -188,18 +188,32 @@
       const hoh=global.getP(g.hohId);
       g.__suppressNomBadges = true; global.updateHud?.();
 
-      // fixed variable name (was "hоh" with a non-ASCII o)
+      // HOH addresses the house
       global.showCard('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
       try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch{}
 
       const ids=(g.nominees||[]).slice();
+      
+      // Show wildcard slots first (Issue: nomination ceremony UI enhancement)
+      for(let i=0;i<ids.length;i++){
+        const label = ids.length>2 ? `Nominee #${i+1}` : (i===0 ? 'First Nominee' : 'Second Nominee');
+        global.showCard(label, ['?'], 'noms', 1800, true);
+        try{ await global.cardQueueWaitIdle?.(); }catch{}
+      }
+      
+      // Reveal each nominee sequentially with their name
       for(let i=0;i<ids.length;i++){
         const label = ids.length>2 ? `Nominee #${i+1}` : (i===0 ? 'First Nominee' : 'Second Nominee');
         global.showCard(label, [global.safeName(ids[i])], 'noms', 2600, true);
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       }
+      
+      // Show ceremony conclusion message
+      global.showCard('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
+      try{ await global.cardQueueWaitIdle?.(); }catch{}
 
+      // TV screen cards disappear, nominee tags update, game advances
       g.__suppressNomBadges = false; global.updateHud?.();
 
       try{
