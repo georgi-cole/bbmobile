@@ -1,5 +1,5 @@
 // MODULE: minigames/flash-flood.js
-// Flash Flood - React to flash patterns quickly (Scaffold)
+// Flash Flood - React to flash patterns quickly
 
 (function(g){
   'use strict';
@@ -8,43 +8,114 @@
     container.innerHTML = '';
     
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px 20px;';
+    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;max-width:600px;margin:0 auto;';
     
     const title = document.createElement('h3');
     title.textContent = 'Flash Flood';
-    title.style.cssText = 'margin:0;font-size:1.3rem;color:#e3ecf5;';
+    title.style.cssText = 'margin:0;font-size:1.2rem;color:#e3ecf5;';
     
-    const subtitle = document.createElement('div');
-    subtitle.textContent = 'Fast Reaction Challenge';
-    subtitle.style.cssText = 'font-size:0.9rem;color:#95a9c0;font-style:italic;';
+    const instructions = document.createElement('p');
+    instructions.textContent = 'Click only the GREEN tiles as fast as you can!';
+    instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
-    const status = document.createElement('div');
-    status.textContent = '🚧 Coming Soon 🚧';
-    status.style.cssText = 'font-size:1.2rem;color:#f7b955;margin:20px 0;';
+    const scoreDiv = document.createElement('div');
+    scoreDiv.textContent = 'Score: 0 | Errors: 0';
+    scoreDiv.style.cssText = 'font-size:1rem;color:#83bfff;';
     
-    const description = document.createElement('p');
-    description.textContent = 'React to flashing patterns as fast as you can!';
-    description.style.cssText = 'margin:0;font-size:0.85rem;color:#95a9c0;text-align:center;max-width:300px;';
+    const gridDiv = document.createElement('div');
+    gridDiv.style.cssText = 'display:grid;grid-template-columns:repeat(4,80px);gap:8px;margin:20px 0;';
     
-    const skipBtn = document.createElement('button');
-    skipBtn.className = 'btn';
-    skipBtn.textContent = 'Skip (Auto-score)';
-    skipBtn.style.cssText = 'margin-top:20px;';
-    
-    skipBtn.addEventListener('click', () => {
-      const score = 40 + Math.random() * 30;
-      onComplete(score);
-    });
+    const startBtn = document.createElement('button');
+    startBtn.className = 'btn primary';
+    startBtn.textContent = 'Start Game';
     
     wrapper.appendChild(title);
-    wrapper.appendChild(subtitle);
-    wrapper.appendChild(status);
-    wrapper.appendChild(description);
-    wrapper.appendChild(skipBtn);
+    wrapper.appendChild(instructions);
+    wrapper.appendChild(scoreDiv);
+    wrapper.appendChild(gridDiv);
+    wrapper.appendChild(startBtn);
     container.appendChild(wrapper);
+    
+    let score = 0;
+    let errors = 0;
+    let gameActive = false;
+    let flashInterval = null;
+    let targetCount = 20;
+    let flashed = 0;
+    
+    for(let i = 0; i < 16; i++){
+      const tile = document.createElement('div');
+      tile.style.cssText = `
+        width:80px;height:80px;
+        background:#2c3a4d;
+        border-radius:8px;
+        cursor:pointer;
+        transition:background 0.1s;
+      `;
+      
+      tile.addEventListener('click', () => {
+        if(!gameActive) return;
+        
+        if(tile.dataset.active === 'true'){
+          score++;
+          tile.style.background = '#74e48b';
+          tile.dataset.active = 'false';
+          setTimeout(() => tile.style.background = '#2c3a4d', 200);
+        } else {
+          errors++;
+          tile.style.background = '#ff6b6b';
+          setTimeout(() => tile.style.background = '#2c3a4d', 200);
+        }
+        
+        scoreDiv.textContent = `Score: ${score} | Errors: ${errors}`;
+      });
+      
+      gridDiv.appendChild(tile);
+    }
+    
+    function flashTile(){
+      if(!gameActive || flashed >= targetCount) return;
+      
+      const tiles = Array.from(gridDiv.children);
+      const tile = tiles[Math.floor(Math.random() * tiles.length)];
+      
+      tile.style.background = '#74e48b';
+      tile.dataset.active = 'true';
+      flashed++;
+      
+      setTimeout(() => {
+        tile.style.background = '#2c3a4d';
+        tile.dataset.active = 'false';
+      }, 800);
+      
+      if(flashed >= targetCount){
+        setTimeout(endGame, 2000);
+      }
+    }
+    
+    function endGame(){
+      gameActive = false;
+      clearInterval(flashInterval);
+      
+      // Score based on hits vs errors
+      const accuracy = score / (score + errors + 1);
+      const finalScore = Math.min(100, Math.round(accuracy * 100));
+      
+      if(onComplete) onComplete(finalScore);
+    }
+    
+    startBtn.addEventListener('click', () => {
+      gameActive = true;
+      score = 0;
+      errors = 0;
+      flashed = 0;
+      startBtn.disabled = true;
+      scoreDiv.textContent = 'Score: 0 | Errors: 0';
+      
+      flashInterval = setInterval(flashTile, 600);
+    });
   }
 
-  // Export
   if(typeof g.MiniGames === 'undefined') g.MiniGames = {};
   g.MiniGames.flashFlood = { render };
 

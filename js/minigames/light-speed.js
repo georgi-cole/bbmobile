@@ -1,5 +1,5 @@
 // MODULE: minigames/light-speed.js
-// Light Speed - Ultra-fast reaction challenge (Scaffold)
+// Light Speed - Ultra-fast reaction challenge
 
 (function(g){
   'use strict';
@@ -8,43 +8,92 @@
     container.innerHTML = '';
     
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px 20px;';
+    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;max-width:600px;margin:0 auto;';
     
     const title = document.createElement('h3');
     title.textContent = 'Light Speed';
-    title.style.cssText = 'margin:0;font-size:1.3rem;color:#e3ecf5;';
+    title.style.cssText = 'margin:0;font-size:1.2rem;color:#e3ecf5;';
     
-    const subtitle = document.createElement('div');
-    subtitle.textContent = 'Ultra-Fast Reaction';
-    subtitle.style.cssText = 'font-size:0.9rem;color:#95a9c0;font-style:italic;';
+    const instructions = document.createElement('p');
+    instructions.textContent = 'Click as soon as the light turns GREEN!';
+    instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
-    const status = document.createElement('div');
-    status.textContent = '🚧 Coming Soon 🚧';
-    status.style.cssText = 'font-size:1.2rem;color:#f7b955;margin:20px 0;';
+    const lightDiv = document.createElement('div');
+    lightDiv.style.cssText = `
+      width:150px;height:150px;
+      background:#2c3a4d;
+      border-radius:50%;
+      margin:20px 0;
+      transition:background 0.1s;
+      border:4px solid #3d5170;
+    `;
     
-    const description = document.createElement('p');
-    description.textContent = 'React at light speed when you see the signal!';
-    description.style.cssText = 'margin:0;font-size:0.85rem;color:#95a9c0;text-align:center;max-width:300px;';
+    const statusDiv = document.createElement('div');
+    statusDiv.textContent = 'Wait for green...';
+    statusDiv.style.cssText = 'font-size:1.2rem;color:#95a9c0;min-height:30px;';
     
-    const skipBtn = document.createElement('button');
-    skipBtn.className = 'btn';
-    skipBtn.textContent = 'Skip (Auto-score)';
-    skipBtn.style.cssText = 'margin-top:20px;';
-    
-    skipBtn.addEventListener('click', () => {
-      const score = 40 + Math.random() * 30;
-      onComplete(score);
-    });
+    const avgDiv = document.createElement('div');
+    avgDiv.textContent = 'Round: 1/5';
+    avgDiv.style.cssText = 'font-size:0.9rem;color:#83bfff;';
     
     wrapper.appendChild(title);
-    wrapper.appendChild(subtitle);
-    wrapper.appendChild(status);
-    wrapper.appendChild(description);
-    wrapper.appendChild(skipBtn);
+    wrapper.appendChild(instructions);
+    wrapper.appendChild(lightDiv);
+    wrapper.appendChild(statusDiv);
+    wrapper.appendChild(avgDiv);
     container.appendChild(wrapper);
+    
+    let round = 0;
+    let times = [];
+    let waitTime = 0;
+    let startTime = 0;
+    let waiting = false;
+    
+    function startRound(){
+      round++;
+      avgDiv.textContent = `Round: ${round}/5`;
+      statusDiv.textContent = 'Wait for green...';
+      lightDiv.style.background = '#ff6b6b';
+      waiting = true;
+      
+      waitTime = 1000 + Math.random() * 3000;
+      setTimeout(() => {
+        if(!waiting) return;
+        lightDiv.style.background = '#74e48b';
+        statusDiv.textContent = 'CLICK NOW!';
+        startTime = Date.now();
+      }, waitTime);
+    }
+    
+    lightDiv.addEventListener('click', () => {
+      if(lightDiv.style.background.includes('74e48b')){
+        const reactionTime = Date.now() - startTime;
+        times.push(reactionTime);
+        waiting = false;
+        
+        statusDiv.textContent = `${reactionTime}ms`;
+        lightDiv.style.background = '#2c3a4d';
+        
+        if(round >= 5){
+          setTimeout(() => {
+            const avgTime = times.reduce((a,b) => a+b, 0) / times.length;
+            // Under 200ms = 100, scale up to 500ms
+            const finalScore = Math.min(100, Math.max(30, 100 - (avgTime - 200) / 5));
+            if(onComplete) onComplete(Math.round(finalScore));
+          }, 1000);
+        } else {
+          setTimeout(startRound, 1000);
+        }
+      } else if(lightDiv.style.background.includes('ff6b6b')){
+        statusDiv.textContent = 'Too early!';
+        waiting = false;
+        setTimeout(startRound, 1000);
+      }
+    });
+    
+    startRound();
   }
 
-  // Export
   if(typeof g.MiniGames === 'undefined') g.MiniGames = {};
   g.MiniGames.lightSpeed = { render };
 
