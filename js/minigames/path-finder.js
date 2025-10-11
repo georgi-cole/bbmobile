@@ -14,8 +14,13 @@
    * @param {HTMLElement} container - Container element for the game UI
    * @param {Function} onComplete - Callback function(score) when game ends
    */
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;';
@@ -101,18 +106,32 @@
       submitBtn.disabled = true;
       inputButtons.forEach(btn => btn.disabled = true);
       
-      // Calculate score based on correct matches
-      let score = 0;
+      // Calculate raw score based on correct matches
+      let rawScore = 0;
       for(let i = 0; i < length; i++){
         if(picks[i] === sequence[i]){
-          score += 16; // Each correct = ~16 points (6 * 16 ≈ 96, rounded to 100 max)
+          rawScore += 16; // Each correct = ~16 points (6 * 16 ≈ 96, rounded to 100 max)
         }
       }
       
       // Cap at 100
-      score = Math.min(100, score);
+      rawScore = Math.min(100, rawScore);
       
-      onComplete(score);
+      // Determine if player succeeded
+      const playerSucceeded = rawScore >= 60; // 60% threshold for success
+      
+      // Apply win probability logic
+      let finalScore = rawScore;
+      if(g.GameUtils && !debugMode && competitionMode){
+        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+        if(!shouldWin && playerSucceeded){
+          // Force loss despite success (25% win rate)
+          finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+          console.log('[PathFinder] Win probability applied: success forced to loss');
+        }
+      }
+      
+      onComplete(finalScore);
     });
     
     // Assemble UI
