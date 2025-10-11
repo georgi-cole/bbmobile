@@ -700,8 +700,7 @@
   });
 
   console.info('[social-maneuvers] Module loaded successfully');
-  console.info('[social-maneuvers] Feature is DISABLED by default - enable via Settings > Social Maneuvers');
-  console.info('[social-maneuvers] To enable: game.cfg.enableSocialManeuvers = true');
+  console.info('[social-maneuvers] Feature is ENABLED by default - disable via Settings > Social Maneuvers if desired');
   console.info('[social-maneuvers] Runtime flag: window.USE_SOCIAL_MANEUVERS (currently:', isEnabled(), ')');
 
 })(window);
