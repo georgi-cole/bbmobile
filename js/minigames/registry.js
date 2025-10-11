@@ -520,6 +520,231 @@
       maxScore: 100,
       retired: false,
       seasons: ['spring', 'summer', 'winter']
+    },
+    
+    bubbleBurst: {
+      key: 'bubbleBurst',
+      name: 'Bubble Burst',
+      description: 'Pop bubbles in the correct sequence',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    cardClash: {
+      key: 'cardClash',
+      name: 'Card Clash',
+      description: 'Match cards in a fast-paced memory game',
+      type: 'memory',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    chainReaction: {
+      key: 'chainReaction',
+      name: 'Chain Reaction',
+      description: 'Create chain reactions to clear the board',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    clockStopper: {
+      key: 'clockStopper',
+      name: 'Clock Stopper',
+      description: 'Stop the clock at the exact moment',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    comboKeys: {
+      key: 'comboKeys',
+      name: 'Combo Keys',
+      description: 'Execute button combinations in sequence',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    diceDash: {
+      key: 'diceDash',
+      name: 'Dice Dash',
+      description: 'Roll dice and match target numbers quickly',
+      type: 'puzzle',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    echoChamber: {
+      key: 'echoChamber',
+      name: 'Echo Chamber',
+      description: 'Repeat audio patterns in sequence',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    flashFlood: {
+      key: 'flashFlood',
+      name: 'Flash Flood',
+      description: 'React quickly to flashing indicators',
+      type: 'reaction',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    gearShift: {
+      key: 'gearShift',
+      name: 'Gear Shift',
+      description: 'Shift gears at the right timing',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    gridLock: {
+      key: 'gridLock',
+      name: 'Grid Lock',
+      description: 'Solve grid-based puzzles',
+      type: 'puzzle',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    iconMatch: {
+      key: 'iconMatch',
+      name: 'Icon Match',
+      description: 'Match icons to their descriptions',
+      type: 'memory',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    jumpRope: {
+      key: 'jumpRope',
+      name: 'Jump Rope',
+      description: 'Time your jumps perfectly',
+      type: 'reaction',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    keyMaster: {
+      key: 'keyMaster',
+      name: 'Key Master',
+      description: 'Match keys to locks in sequence',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    lightSpeed: {
+      key: 'lightSpeed',
+      name: 'Light Speed',
+      description: 'React to light signals as fast as possible',
+      type: 'reaction',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    puzzleDash: {
+      key: 'puzzleDash',
+      name: 'Puzzle Dash',
+      description: 'Solve puzzles against the clock',
+      type: 'puzzle',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'placeholder.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     }
   };
 
