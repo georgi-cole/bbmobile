@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opponent Synthesis Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    h1 { color: #88e6a0; }
+    h2 { color: #96cfff; margin-top: 0; }
+    .pass { color: #88e6a0; }
+    .fail { color: #ff6b9d; }
+    .result {
+      padding: 10px;
+      margin: 10px 0;
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    th {
+      background: rgba(255,255,255,0.05);
+      font-weight: 600;
+    }
+    button {
+      background: #88e6a0;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 5px;
+    }
+    button:hover {
+      background: #96cfff;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Opponent Synthesis Module Test</h1>
+  
+  <div class="test-section">
+    <h2>Module Loading</h2>
+    <div id="module-status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Basic Score Generation</h2>
+    <button onclick="testBasicGeneration()">Run Test</button>
+    <div id="basic-test-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Win Rate Distribution (100 trials)</h2>
+    <button onclick="testWinRateDistribution()">Run Test</button>
+    <div id="winrate-test-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Score Bounds Validation</h2>
+    <button onclick="testScoreBounds()">Run Test</button>
+    <div id="bounds-test-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Persona Effects</h2>
+    <button onclick="testPersonaEffects()">Run Test</button>
+    <div id="persona-test-results"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/bbSeededRng.js"></script>
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/opponent-synth.js"></script>
+
+  <script>
+    // Check module loading
+    function checkModuleStatus() {
+      const status = document.getElementById('module-status');
+      const checks = [
+        { name: 'bbSeededRng', obj: window.bbSeededRng },
+        { name: 'MinigameRegistry', obj: window.MinigameRegistry },
+        { name: 'OpponentSynth', obj: window.OpponentSynth }
+      ];
+      
+      let html = '<div class="result">';
+      let allLoaded = true;
+      checks.forEach(check => {
+        const loaded = !!check.obj;
+        allLoaded = allLoaded && loaded;
+        html += `<div class="${loaded ? 'pass' : 'fail'}">${loaded ? '✓' : '✗'} ${check.name}</div>`;
+      });
+      html += '</div>';
+      
+      if (allLoaded) {
+        html += '<div class="pass">✓ All modules loaded successfully</div>';
+      } else {
+        html += '<div class="fail">✗ Some modules failed to load</div>';
+      }
+      
+      status.innerHTML = html;
+    }
+
+    // Test basic score generation
+    function testBasicGeneration() {
+      const results = document.getElementById('basic-test-results');
+      
+      if (!window.OpponentSynth) {
+        results.innerHTML = '<div class="fail">✗ OpponentSynth module not loaded</div>';
+        return;
+      }
+
+      const humanScore = 75;
+      const opponents = [
+        { id: 1, compBeast: 0.5, persona: { aggr: 0.5, loyalty: 0.5, chaos: 0.3 } },
+        { id: 2, compBeast: 0.7, persona: { aggr: 0.7, loyalty: 0.4, chaos: 0.5 } },
+        { id: 3, compBeast: 0.3, persona: { aggr: 0.3, loyalty: 0.8, chaos: 0.2 } },
+        { id: 4, compBeast: 0.6, persona: { aggr: 0.5, loyalty: 0.6, chaos: 0.7 } }
+      ];
+
+      const scores = window.OpponentSynth.generate({
+        humanScore: humanScore,
+        opponents: opponents,
+        gameKey: 'quickTap',
+        seed: 12345,
+        targetWinRate: 0.20
+      });
+
+      let html = '<div class="result">';
+      html += `<div><strong>Human Score:</strong> ${humanScore}</div>`;
+      html += '<table>';
+      html += '<tr><th>Opponent ID</th><th>CompBeast</th><th>Generated Score</th><th>Result</th></tr>';
+      
+      let humanWins = true;
+      scores.forEach((score, id) => {
+        const opponent = opponents.find(o => o.id === id);
+        const result = score < humanScore ? 'Human wins' : 'Opponent wins';
+        if (score >= humanScore) humanWins = false;
+        html += `<tr>
+          <td>${id}</td>
+          <td>${opponent.compBeast.toFixed(2)}</td>
+          <td>${score.toFixed(1)}</td>
+          <td class="${score < humanScore ? 'pass' : 'fail'}">${result}</td>
+        </tr>`;
+      });
+      html += '</table>';
+      
+      const winRate = window.OpponentSynth.calculateWinRate(humanScore, scores);
+      html += `<div><strong>Win Rate:</strong> ${(winRate * 100).toFixed(1)}%</div>`;
+      html += '</div>';
+      
+      results.innerHTML = html;
+    }
+
+    // Test win rate distribution over many trials
+    function testWinRateDistribution() {
+      const results = document.getElementById('winrate-test-results');
+      
+      if (!window.OpponentSynth) {
+        results.innerHTML = '<div class="fail">✗ OpponentSynth module not loaded</div>';
+        return;
+      }
+
+      const trials = 100;
+      const humanScore = 70;
+      const opponents = [
+        { id: 1, compBeast: 0.5, persona: { aggr: 0.5, loyalty: 0.5, chaos: 0.3 } },
+        { id: 2, compBeast: 0.6, persona: { aggr: 0.6, loyalty: 0.4, chaos: 0.4 } },
+        { id: 3, compBeast: 0.4, persona: { aggr: 0.4, loyalty: 0.6, chaos: 0.3 } },
+        { id: 4, compBeast: 0.7, persona: { aggr: 0.7, loyalty: 0.3, chaos: 0.5 } },
+        { id: 5, compBeast: 0.3, persona: { aggr: 0.3, loyalty: 0.7, chaos: 0.2 } }
+      ];
+
+      let totalWinRate = 0;
+      let humanWinCount = 0;
+      const winRates = [];
+
+      for (let i = 0; i < trials; i++) {
+        const scores = window.OpponentSynth.generate({
+          humanScore: humanScore,
+          opponents: opponents,
+          gameKey: 'quickTap',
+          seed: 1000 + i,
+          targetWinRate: 0.20
+        });
+
+        const winRate = window.OpponentSynth.calculateWinRate(humanScore, scores);
+        winRates.push(winRate);
+        totalWinRate += winRate;
+        
+        // Check if human won (beat all opponents)
+        if (winRate === 1.0) {
+          humanWinCount++;
+        }
+      }
+
+      const avgWinRate = totalWinRate / trials;
+      const sessionWinRate = humanWinCount / trials;
+      
+      // Calculate variance
+      const variance = winRates.reduce((sum, wr) => sum + Math.pow(wr - avgWinRate, 2), 0) / trials;
+      const stdDev = Math.sqrt(variance);
+
+      let html = '<div class="result">';
+      html += `<div><strong>Trials:</strong> ${trials}</div>`;
+      html += `<div><strong>Human Score:</strong> ${humanScore}</div>`;
+      html += `<div><strong>Opponents:</strong> ${opponents.length}</div>`;
+      html += '<br>';
+      html += `<div><strong>Average Beat Rate:</strong> ${(avgWinRate * 100).toFixed(1)}% (per opponent)</div>`;
+      html += `<div><strong>Session Win Rate:</strong> ${(sessionWinRate * 100).toFixed(1)}% (beat all opponents)</div>`;
+      html += `<div><strong>Target Win Rate:</strong> 20%</div>`;
+      html += `<div><strong>Standard Deviation:</strong> ${(stdDev * 100).toFixed(1)}%</div>`;
+      html += '<br>';
+      
+      const withinTarget = Math.abs(sessionWinRate - 0.20) < 0.10; // Within 10% of target
+      html += `<div class="${withinTarget ? 'pass' : 'fail'}">`;
+      html += withinTarget 
+        ? '✓ Win rate within acceptable range (20% ± 10%)' 
+        : `✗ Win rate outside target range: ${(sessionWinRate * 100).toFixed(1)}%`;
+      html += '</div>';
+      html += '</div>';
+      
+      results.innerHTML = html;
+    }
+
+    // Test score bounds (0-100)
+    function testScoreBounds() {
+      const results = document.getElementById('bounds-test-results');
+      
+      if (!window.OpponentSynth) {
+        results.innerHTML = '<div class="fail">✗ OpponentSynth module not loaded</div>';
+        return;
+      }
+
+      const testCases = [
+        { humanScore: 10, label: 'Low Human Score' },
+        { humanScore: 50, label: 'Medium Human Score' },
+        { humanScore: 90, label: 'High Human Score' },
+        { humanScore: 95, label: 'Very High Human Score' }
+      ];
+
+      const opponents = [
+        { id: 1, compBeast: 0.9, persona: { aggr: 0.9, loyalty: 0.3, chaos: 0.8 } },
+        { id: 2, compBeast: 0.1, persona: { aggr: 0.2, loyalty: 0.9, chaos: 0.1 } }
+      ];
+
+      let html = '<div class="result">';
+      let allPassed = true;
+
+      testCases.forEach(testCase => {
+        const scores = window.OpponentSynth.generate({
+          humanScore: testCase.humanScore,
+          opponents: opponents,
+          gameKey: 'quickTap',
+          seed: Math.floor(Math.random() * 10000),
+          targetWinRate: 0.20
+        });
+
+        let casePassed = true;
+        scores.forEach((score) => {
+          if (score < 0 || score > 100) {
+            casePassed = false;
+            allPassed = false;
+          }
+        });
+
+        const scoresList = Array.from(scores.values()).map(s => s.toFixed(1)).join(', ');
+        html += `<div class="${casePassed ? 'pass' : 'fail'}">`;
+        html += `${casePassed ? '✓' : '✗'} ${testCase.label} (${testCase.humanScore}): [${scoresList}]`;
+        html += '</div>';
+      });
+
+      html += '<br>';
+      html += `<div class="${allPassed ? 'pass' : 'fail'}">`;
+      html += allPassed 
+        ? '✓ All scores within bounds (0-100)' 
+        : '✗ Some scores outside bounds';
+      html += '</div>';
+      html += '</div>';
+      
+      results.innerHTML = html;
+    }
+
+    // Test persona effects
+    function testPersonaEffects() {
+      const results = document.getElementById('persona-test-results');
+      
+      if (!window.OpponentSynth) {
+        results.innerHTML = '<div class="fail">✗ OpponentSynth module not loaded</div>';
+        return;
+      }
+
+      const humanScore = 70;
+      const personas = [
+        { id: 1, compBeast: 0.5, persona: { aggr: 0.9, loyalty: 0.3, chaos: 0.2 }, label: 'High Aggression' },
+        { id: 2, compBeast: 0.5, persona: { aggr: 0.3, loyalty: 0.7, chaos: 0.1 }, label: 'Low Chaos' },
+        { id: 3, compBeast: 0.5, persona: { aggr: 0.5, loyalty: 0.5, chaos: 0.9 }, label: 'High Chaos' },
+        { id: 4, compBeast: 0.5, persona: { aggr: 0.5, loyalty: 0.5, chaos: 0.5 }, label: 'Balanced' }
+      ];
+
+      // Test each persona multiple times to see variance
+      const trials = 20;
+      let html = '<div class="result">';
+      html += '<table>';
+      html += '<tr><th>Persona Type</th><th>Avg Score</th><th>Min Score</th><th>Max Score</th><th>Variance</th></tr>';
+
+      personas.forEach(persona => {
+        const scores = [];
+        for (let i = 0; i < trials; i++) {
+          const result = window.OpponentSynth.generate({
+            humanScore: humanScore,
+            opponents: [persona],
+            gameKey: 'quickTap',
+            seed: 2000 + i,
+            targetWinRate: 0.20
+          });
+          scores.push(result.get(persona.id));
+        }
+
+        const avg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+        const min = Math.min(...scores);
+        const max = Math.max(...scores);
+        const variance = scores.reduce((sum, s) => sum + Math.pow(s - avg, 2), 0) / scores.length;
+
+        html += `<tr>
+          <td>${persona.label}</td>
+          <td>${avg.toFixed(1)}</td>
+          <td>${min.toFixed(1)}</td>
+          <td>${max.toFixed(1)}</td>
+          <td>${variance.toFixed(1)}</td>
+        </tr>`;
+      });
+
+      html += '</table>';
+      html += '<div class="pass">✓ Persona effects applied (high chaos should show higher variance)</div>';
+      html += '</div>';
+      
+      results.innerHTML = html;
+    }
+
+    // Run module check on load
+    window.addEventListener('DOMContentLoaded', checkModuleStatus);
+  </script>
+</body>
+</html>
