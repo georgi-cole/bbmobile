@@ -99,7 +99,7 @@
       if(typeof g.playOutroVideo === 'function'){
         try { 
           g.__outroStarted = true;
-          g.playOutroVideo(); 
+          g.playOutroVideo(true); // Pass true to indicate manual replay
         } catch(e){ 
           console.warn('[finale] playOutroVideo error', e); 
           g.__outroStarted = false;
@@ -142,16 +142,19 @@
     const name = g.safeName?.(winnerId) || (g.getP?.(winnerId)?.name ?? 'Winner');
     const nameEl=dim.querySelector('#cinWinName'); if(nameEl) nameEl.textContent=name;
     
-    // Autoplay outro video after 8 seconds unless already started via CREDITS button
-    if(!g.__outroStarted){
+    // Autoplay outro video after 8 seconds only on first call (unless already started via CREDITS button)
+    // Check if outro has already been autoplayed by checking a persistent flag
+    if(!g.__outroStarted && !g.__outroAutoPlayed){
       setTimeout(()=>{
-        if(!g.__outroStarted && typeof g.playOutroVideo === 'function'){
-          console.info('[finale] autoplaying outro video');
+        if(!g.__outroStarted && !g.__outroAutoPlayed && typeof g.playOutroVideo === 'function'){
+          console.info('[finale] autoplaying outro video (first time only)');
           g.__outroStarted = true;
+          g.__outroAutoPlayed = true; // Mark that autoplay has occurred
           try{
-            g.playOutroVideo();
+            g.playOutroVideo(false); // Pass false to indicate automatic first play
           }catch(e){
             console.warn('[finale] autoplay outro error', e);
+            g.__outroStarted = false;
           }
         }
       }, 8000);

@@ -5,9 +5,23 @@
 (function (global) {
   'use strict';
 
+  const RULES_SHOWN_KEY = 'bb.rulesShown'; // Persistent flag to track if rules have been shown once
   let lastFocusEl = null;
   let modalShown = false;
   let introFinishedReceived = false;
+
+  function isRulesShown(){
+    try{ 
+      return sessionStorage.getItem(RULES_SHOWN_KEY) === '1' || g.__bbRulesShown === true; 
+    }catch{ 
+      return !!g.__bbRulesShown; 
+    }
+  }
+  
+  function markRulesShown(){
+    g.__bbRulesShown = true;
+    try{ sessionStorage.setItem(RULES_SHOWN_KEY, '1'); }catch{}
+  }
 
   function ensureModal() {
     let dim = document.querySelector('.rulesDim');
@@ -290,6 +304,9 @@
     dim.classList.remove('open');
     panel.classList.remove('in');
 
+    // Mark rules as shown when user dismisses the modal
+    markRulesShown();
+
     // Small delay for CSS transition, then hide
     setTimeout(() => {
       dim.style.display = 'none';
@@ -319,12 +336,22 @@
       return;
     }
     
+    // Check if rules have already been shown (persistent across sessions)
+    if (isRulesShown()) {
+      console.info('[rules] rules already shown previously — skipping');
+      return;
+    }
+    
     window.addEventListener('bb:intro:finished', function(e) {
       console.info('[rules] bb:intro:finished received');
       introFinishedReceived = true;
-      modalShown = true;
-      // Show modal immediately
-      setTimeout(() => showRulesModal(), 100);
+      
+      // Double-check in case another listener marked it as shown
+      if (!isRulesShown() && !modalShown) {
+        modalShown = true;
+        // Show modal immediately
+        setTimeout(() => showRulesModal(), 100);
+      }
     }, { once: true });
   }
 
@@ -334,6 +361,12 @@
     const cfg = (global.game && global.game.cfg) || {};
     if (!cfg.autoShowRulesOnStart) {
       console.info('[rules] autoShowRulesOnStart is false — skipping fallback');
+      return;
+    }
+    
+    // Check if rules have already been shown
+    if (isRulesShown()) {
+      console.info('[rules] rules already shown previously — skipping fallback');
       return;
     }
     
@@ -354,7 +387,7 @@
 
       // If no custom event arrived within a short delay, show the modal
       setTimeout(() => {
-        if (!introFinishedReceived && !modalShown) {
+        if (!introFinishedReceived && !modalShown && !isRulesShown()) {
           console.info('[rules] fallback: showing rules modal after delay');
           modalShown = true;
           showRulesModal();
