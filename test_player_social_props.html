@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Player Social Maneuvers Properties</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #95a9c0;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      border-left: 4px solid #95a9c0;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #95a9c0;
+      font-size: 1.2rem;
+    }
+    .pass {
+      color: #4ade80;
+      font-weight: bold;
+    }
+    .fail {
+      color: #f87171;
+      font-weight: bold;
+    }
+    .info {
+      color: #60a5fa;
+    }
+    .test-result {
+      margin: 8px 0;
+      padding: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+    }
+    button {
+      background: #95a9c0;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 5px;
+    }
+    button:hover {
+      background: #b4c5d6;
+    }
+    .player-info {
+      background: rgba(255,255,255,0.05);
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .summary {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(149,169,192,0.2);
+      border-radius: 8px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Player Social Maneuvers Properties Test</h1>
+  <div id="output"></div>
+
+  <script src="js/state.js"></script>
+
+  <script>
+    const output = document.getElementById('output');
+    let testsPassed = 0;
+    let testsFailed = 0;
+
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.innerHTML = message;
+      output.appendChild(div);
+    }
+
+    function testSection(title) {
+      const section = document.createElement('div');
+      section.className = 'test-section';
+      section.innerHTML = `<h2>${title}</h2>`;
+      output.appendChild(section);
+      return section;
+    }
+
+    function test(name, condition) {
+      const result = condition();
+      if (result) {
+        testsPassed++;
+        log(`✓ ${name}`, 'pass');
+      } else {
+        testsFailed++;
+        log(`✗ ${name}`, 'fail');
+      }
+      return result;
+    }
+
+    function runTests() {
+      output.innerHTML = '';
+      testsPassed = 0;
+      testsFailed = 0;
+
+      // Test 1: Module loaded
+      testSection('Module Loading');
+      test('state.js loaded successfully', () => {
+        return typeof window.game !== 'undefined' && 
+               typeof window.pushPlayer !== 'undefined';
+      });
+
+      test('SOCIAL_TRAITS constant exists', () => {
+        return Array.isArray(window.SOCIAL_TRAITS) && window.SOCIAL_TRAITS.length > 0;
+      });
+
+      log(`SOCIAL_TRAITS: ${window.SOCIAL_TRAITS.join(', ')}`, 'info');
+
+      // Test 2: Helper functions exported
+      testSection('Helper Functions Export');
+      test('generateSocialTraits exported', () => typeof window.generateSocialTraits === 'function');
+      test('hasTrait exported', () => typeof window.hasTrait === 'function');
+      test('getInfluence exported', () => typeof window.getInfluence === 'function');
+      test('getInformation exported', () => typeof window.getInformation === 'function');
+      test('updateInfluence exported', () => typeof window.updateInfluence === 'function');
+      test('updateInformation exported', () => typeof window.updateInformation === 'function');
+      test('recordEvent exported', () => typeof window.recordEvent === 'function');
+      test('getMemoryLog exported', () => typeof window.getMemoryLog === 'function');
+      test('initSocialManeuversProps exported', () => typeof window.initSocialManeuversProps === 'function');
+
+      // Test 3: Create players with new properties
+      testSection('Player Creation');
+      
+      // Reset game
+      window.game.players = [];
+      window.game.humanId = null;
+      
+      // Create human player
+      window.pushPlayer({ name: 'TestHuman', human: true });
+      const human = window.game.players[0];
+      
+      test('Human player created', () => human !== undefined);
+      test('Human has socialTraits property', () => Array.isArray(human.socialTraits));
+      test('Human has 2-3 traits', () => human.socialTraits.length >= 2 && human.socialTraits.length <= 3);
+      test('Human has influence property', () => typeof human.influence === 'number');
+      test('Human influence is 50', () => human.influence === 50);
+      test('Human has information property', () => typeof human.information === 'number');
+      test('Human information is 50', () => human.information === 50);
+      test('Human has memoryLog property', () => Array.isArray(human.memoryLog));
+      test('Human memoryLog starts empty', () => human.memoryLog.length === 0);
+
+      log(`Human traits: [${human.socialTraits.join(', ')}]`, 'info');
+      log(`Human influence: ${human.influence}, information: ${human.information}`, 'info');
+
+      // Create AI players
+      window.pushPlayer({ name: 'TestAI1', human: false });
+      window.pushPlayer({ name: 'TestAI2', human: false });
+      const ai1 = window.game.players[1];
+      const ai2 = window.game.players[2];
+      
+      test('AI players created', () => ai1 !== undefined && ai2 !== undefined);
+      test('AI1 has socialTraits', () => Array.isArray(ai1.socialTraits) && ai1.socialTraits.length > 0);
+      test('AI2 has socialTraits', () => Array.isArray(ai2.socialTraits) && ai2.socialTraits.length > 0);
+      test('AI1 influence in range 30-70', () => ai1.influence >= 30 && ai1.influence <= 70);
+      test('AI2 influence in range 30-70', () => ai2.influence >= 30 && ai2.influence <= 70);
+      test('AI1 information in range 30-70', () => ai1.information >= 30 && ai1.information <= 70);
+      test('AI2 information in range 30-70', () => ai2.information >= 30 && ai2.information <= 70);
+
+      log(`AI1 traits: [${ai1.socialTraits.join(', ')}], influence: ${ai1.influence}, info: ${ai1.information}`, 'info');
+      log(`AI2 traits: [${ai2.socialTraits.join(', ')}], influence: ${ai2.influence}, info: ${ai2.information}`, 'info');
+
+      // Test 4: hasTrait function
+      testSection('hasTrait Function');
+      const firstTrait = human.socialTraits[0];
+      test(`hasTrait detects existing trait '${firstTrait}'`, () => window.hasTrait(human.id, firstTrait));
+      test('hasTrait returns false for non-existent trait', () => !window.hasTrait(human.id, 'nonexistent_trait_xyz'));
+      test('hasTrait is case-insensitive', () => window.hasTrait(human.id, firstTrait.toUpperCase()));
+
+      // Test 5: getInfluence and getInformation
+      testSection('Get Influence and Information');
+      test('getInfluence returns correct value', () => window.getInfluence(human.id) === 50);
+      test('getInformation returns correct value', () => window.getInformation(human.id) === 50);
+      test('getInfluence defaults to 50 for invalid ID', () => window.getInfluence(999) === 50);
+      test('getInformation defaults to 50 for invalid ID', () => window.getInformation(999) === 50);
+
+      // Test 6: updateInfluence and updateInformation
+      testSection('Update Influence and Information');
+      window.updateInfluence(human.id, 10);
+      test('updateInfluence increases value', () => window.getInfluence(human.id) === 60);
+      window.updateInfluence(human.id, -20);
+      test('updateInfluence decreases value', () => window.getInfluence(human.id) === 40);
+      
+      window.updateInformation(human.id, 30);
+      test('updateInformation increases value', () => window.getInformation(human.id) === 80);
+      window.updateInformation(human.id, -100);
+      test('updateInformation clamps at 0', () => window.getInformation(human.id) === 0);
+      
+      window.updateInfluence(human.id, 200);
+      test('updateInfluence clamps at 100', () => window.getInfluence(human.id) === 100);
+
+      // Test 7: recordEvent and getMemoryLog
+      testSection('Memory Log Functions');
+      
+      window.recordEvent(human.id, 'alliance_formed', ai1.id, { allianceName: 'The Cool Kids' });
+      test('recordEvent adds entry to log', () => human.memoryLog.length === 1);
+      
+      window.recordEvent(human.id, 'conversation', ai2.id, { topic: 'game strategy' });
+      test('recordEvent adds second entry', () => human.memoryLog.length === 2);
+      
+      const allLogs = window.getMemoryLog(human.id);
+      test('getMemoryLog returns all entries', () => allLogs.length === 2);
+      
+      const allianceLogs = window.getMemoryLog(human.id, { event: 'alliance_formed' });
+      test('getMemoryLog filters by event', () => allianceLogs.length === 1 && allianceLogs[0].event === 'alliance_formed');
+      
+      const ai1Logs = window.getMemoryLog(human.id, { targetId: ai1.id });
+      test('getMemoryLog filters by targetId', () => ai1Logs.length === 1 && ai1Logs[0].targetId === ai1.id);
+      
+      test('Memory entry has required fields', () => {
+        const entry = allLogs[0];
+        return entry.week !== undefined && 
+               entry.timestamp !== undefined && 
+               entry.event !== undefined &&
+               entry.details !== undefined;
+      });
+
+      log(`Memory log entry sample: ${JSON.stringify(allLogs[0], null, 2)}`, 'info');
+
+      // Test 8: initSocialManeuversProps (backward compatibility)
+      testSection('Backward Compatibility');
+      
+      // Create a player without social props (simulate old player object)
+      const oldPlayer = {
+        id: 999,
+        name: 'OldPlayer',
+        human: false,
+        evicted: false
+      };
+      window.game.players.push(oldPlayer);
+      
+      window.initSocialManeuversProps();
+      test('initSocialManeuversProps adds missing properties', () => {
+        return Array.isArray(oldPlayer.socialTraits) &&
+               typeof oldPlayer.influence === 'number' &&
+               typeof oldPlayer.information === 'number' &&
+               Array.isArray(oldPlayer.memoryLog);
+      });
+      
+      log(`Old player updated: traits=[${oldPlayer.socialTraits.join(', ')}], influence=${oldPlayer.influence}`, 'info');
+
+      // Test 9: generateSocialTraits
+      testSection('generateSocialTraits Function');
+      const traits1 = window.generateSocialTraits();
+      const traits2 = window.generateSocialTraits();
+      test('generateSocialTraits returns array', () => Array.isArray(traits1));
+      test('generateSocialTraits returns 2-3 traits', () => traits1.length >= 2 && traits1.length <= 3);
+      test('generateSocialTraits traits are from SOCIAL_TRAITS', () => {
+        return traits1.every(t => window.SOCIAL_TRAITS.includes(t));
+      });
+      test('generateSocialTraits produces variety', () => {
+        // Check that multiple calls produce different results (probabilistic test)
+        return traits1.join(',') !== traits2.join(',');
+      });
+
+      // Test 10: Memory log size limit
+      testSection('Memory Log Size Limit');
+      // Add 100 more entries
+      for (let i = 0; i < 100; i++) {
+        window.recordEvent(human.id, `test_event_${i}`, null, {});
+      }
+      test('Memory log capped at 100 entries', () => human.memoryLog.length === 100);
+      test('Old entries removed when exceeding limit', () => {
+        // First entry should have been removed
+        const events = human.memoryLog.map(e => e.event);
+        return !events.includes('alliance_formed');
+      });
+
+      // Summary
+      const summary = document.createElement('div');
+      summary.className = 'summary';
+      const total = testsPassed + testsFailed;
+      const passRate = total > 0 ? Math.round((testsPassed / total) * 100) : 0;
+      summary.innerHTML = `
+        <strong>Test Summary</strong><br>
+        Total Tests: ${total}<br>
+        <span class="pass">Passed: ${testsPassed}</span><br>
+        <span class="fail">Failed: ${testsFailed}</span><br>
+        Pass Rate: ${passRate}%
+      `;
+      output.appendChild(summary);
+
+      if (testsFailed === 0) {
+        log('🎉 All tests passed!', 'pass');
+      } else {
+        log('⚠️ Some tests failed. Please review the failures above.', 'fail');
+      }
+    }
+
+    // Run tests automatically on load
+    window.addEventListener('load', () => {
+      runTests();
+    });
+  </script>
+
+  <div style="margin-top: 20px; text-align: center;">
+    <button onclick="runTests()">Re-run Tests</button>
+  </div>
+</body>
+</html>
