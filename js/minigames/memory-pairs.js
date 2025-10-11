@@ -14,8 +14,13 @@
    * @param {HTMLElement} container - Container element for the game UI
    * @param {Function} onComplete - Callback function(score) when game ends
    */
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;';
@@ -91,12 +96,26 @@
             if(matchedCount === 3){
               const timeElapsed = (Date.now() - startTime) / 1000;
               
-              // Score: 100 for instant, decreases with time
+              // Calculate raw score: 100 for instant, decreases with time
               // 10 seconds = 100, 20 seconds = 50, etc.
-              const score = Math.max(20, 100 - (timeElapsed * 5));
+              const rawScore = Math.max(20, 100 - (timeElapsed * 5));
+              
+              // Determine if player succeeded
+              const playerSucceeded = rawScore >= 60; // 60% threshold for success
+              
+              // Apply win probability logic
+              let finalScore = rawScore;
+              if(g.GameUtils && !debugMode && competitionMode){
+                const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+                if(!shouldWin && playerSucceeded){
+                  // Force loss despite success (25% win rate)
+                  finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+                  console.log('[MemoryPairs] Win probability applied: success forced to loss');
+                }
+              }
               
               setTimeout(() => {
-                onComplete(score);
+                onComplete(finalScore);
               }, 500);
             }
           } else {

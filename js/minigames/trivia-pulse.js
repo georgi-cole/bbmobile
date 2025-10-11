@@ -40,8 +40,13 @@
     { q: 'Who typically cannot compete in HOH?', a: ['Previous HOH', 'Nominees', 'Veto winner', 'Jury'], correct: 0, difficulty: 'easy' },
   ];
 
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:20px;max-width:500px;margin:0 auto;';
@@ -216,21 +221,35 @@
       
       // Normalize to 0-100: Perfect score is 100 (6 questions x 16.67 points each)
       const maxPossibleScore = totalQuestions * 16.67;
-      const normalizedScore = Math.min(100, (totalScore / maxPossibleScore) * 100);
+      const rawScore = Math.min(100, (totalScore / maxPossibleScore) * 100);
+      
+      // Determine if player succeeded
+      const playerSucceeded = rawScore >= 60; // 60% threshold for success
+      
+      // Apply win probability logic
+      let finalScore = rawScore;
+      if(g.GameUtils && !debugMode && competitionMode){
+        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+        if(!shouldWin && playerSucceeded){
+          // Force loss despite success (25% win rate)
+          finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+          console.log('[TriviaPulse] Win probability applied: success forced to loss');
+        }
+      }
       
       scoreDisplay.innerHTML = `
         <div style="font-size:1.1rem;margin:10px 0;">Correct: ${correctCount}/${selectedQuestions.length}</div>
-        <div style="font-size:1.3rem;color:#83bfff;">Final Score: ${Math.round(normalizedScore)}</div>
+        <div style="font-size:1.3rem;color:#83bfff;">Final Score: ${Math.round(finalScore)}</div>
       `;
       
       // Save best score
-      saveScore('triviaPulse', normalizedScore);
+      saveScore('triviaPulse', finalScore);
       
       // Cleanup
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       
       setTimeout(() => {
-        onComplete(normalizedScore);
+        onComplete(finalScore);
       }, 2500);
     }
     

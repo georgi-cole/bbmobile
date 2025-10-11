@@ -10,8 +10,13 @@
 (function(g){
   'use strict';
 
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     // Use accessibility helper if available
     const useAccessibility = !!g.MinigameAccessibility;
@@ -104,12 +109,26 @@
             tapBtn.textContent = 'DONE!';
             tapBtn.style.opacity = '0.5';
             
-            // Calculate score (base on taps, scale to ~20-100 range)
-            const score = Math.min(100, Math.max(10, taps * 3.5));
+            // Calculate raw score (base on taps, scale to ~20-100 range)
+            const rawScore = Math.min(100, Math.max(10, taps * 3.5));
+            
+            // Determine if player succeeded
+            const playerSucceeded = rawScore >= 60; // 60% threshold for success
+            
+            // Apply win probability logic
+            let finalScore = rawScore;
+            if(g.GameUtils && !debugMode && competitionMode){
+              const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+              if(!shouldWin && playerSucceeded){
+                // Force loss despite success (25% win rate)
+                finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+                console.log('[QuickTap] Win probability applied: success forced to loss');
+              }
+            }
             
             // Announce completion to screen readers
             if(useAccessibility && typeof g.MinigameAccessibility.announceToSR === 'function'){
-              g.MinigameAccessibility.announceToSR(`Game complete! You tapped ${taps} times. Score: ${score.toFixed(0)}`, 'assertive');
+              g.MinigameAccessibility.announceToSR(`Game complete! You tapped ${taps} times. Score: ${finalScore.toFixed(0)}`, 'assertive');
             }
             
             // Haptic feedback for completion
@@ -119,7 +138,7 @@
             
             setTimeout(() => {
               if(typeof onComplete === 'function'){
-                onComplete(score);
+                onComplete(finalScore);
               }
             }, 1000);
           }

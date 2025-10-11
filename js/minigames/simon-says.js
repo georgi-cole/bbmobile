@@ -14,8 +14,13 @@
    * @param {HTMLElement} container - Container element for the game UI
    * @param {Function} onComplete - Callback function(score) when game ends
    */
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;';
@@ -81,8 +86,23 @@
           window.removeEventListener('keydown', handleKey);
           status.textContent = 'Perfect! All correct!';
           
+          // Player succeeded with perfect score
+          const rawScore = 100;
+          const playerSucceeded = true;
+          
+          // Apply win probability logic
+          let finalScore = rawScore;
+          if(g.GameUtils && !debugMode && competitionMode){
+            const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+            if(!shouldWin && playerSucceeded){
+              // Force loss despite success (25% win rate)
+              finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+              console.log('[SimonSays] Win probability applied: success forced to loss');
+            }
+          }
+          
           setTimeout(() => {
-            onComplete(100);
+            onComplete(finalScore);
           }, 500);
         }
       } else if(dirs.includes(key)){
@@ -91,11 +111,25 @@
         window.removeEventListener('keydown', handleKey);
         status.textContent = `Incorrect at position ${currentIndex + 1}`;
         
-        // Partial score based on how far they got
-        const score = (currentIndex / length) * 100;
+        // Calculate raw partial score based on how far they got
+        const rawScore = (currentIndex / length) * 100;
+        
+        // Determine if player succeeded
+        const playerSucceeded = rawScore >= 60; // 60% threshold for success
+        
+        // Apply win probability logic
+        let finalScore = rawScore;
+        if(g.GameUtils && !debugMode && competitionMode){
+          const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+          if(!shouldWin && playerSucceeded){
+            // Force loss despite success (25% win rate)
+            finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+            console.log('[SimonSays] Win probability applied: success forced to loss');
+          }
+        }
         
         setTimeout(() => {
-          onComplete(score);
+          onComplete(finalScore);
         }, 1000);
       }
     }

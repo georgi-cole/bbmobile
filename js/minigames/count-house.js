@@ -25,8 +25,13 @@
     }
   }
 
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;';
@@ -171,23 +176,37 @@
       const userCount = parseInt(input.value) || 0;
       const difference = Math.abs(userCount - actualCount);
       
-      // Score: perfect = 100, -5 points per unit off, min 20
-      const score = Math.max(20, 100 - (difference * 5));
+      // Calculate raw score: perfect = 100, -5 points per unit off, min 20
+      const rawScore = Math.max(20, 100 - (difference * 5));
       
-      status.textContent = `Actual: ${actualCount} | Your: ${userCount} | Score: ${Math.round(score)}`;
+      // Determine if player succeeded
+      const playerSucceeded = rawScore >= 60; // 60% threshold for success
+      
+      // Apply win probability logic
+      let finalScore = rawScore;
+      if(g.GameUtils && !debugMode && competitionMode){
+        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+        if(!shouldWin && playerSucceeded){
+          // Force loss despite success (25% win rate)
+          finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+          console.log('[CountHouse] Win probability applied: success forced to loss');
+        }
+      }
+      
+      status.textContent = `Actual: ${actualCount} | Your: ${userCount} | Score: ${Math.round(finalScore)}`;
       
       submitBtn.disabled = true;
       input.disabled = true;
       gameActive = false;
       
       // Save best score
-      saveScore('countHouse', score);
+      saveScore('countHouse', finalScore);
       
       // Cleanup
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       
       setTimeout(() => {
-        onComplete(score);
+        onComplete(finalScore);
       }, 2000);
     });
     

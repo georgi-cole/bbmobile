@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Submission Locks - Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #ffdc8b;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #96cfff;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass {
+      background: rgba(0, 255, 0, 0.1);
+      border-left: 3px solid #0f0;
+    }
+    .fail {
+      background: rgba(255, 0, 0, 0.1);
+      border-left: 3px solid #f00;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button.secondary {
+      background: #2196F3;
+    }
+    button.danger {
+      background: #f44336;
+    }
+    .summary {
+      background: rgba(255,220,139,0.1);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border: 1px solid #ffdc8b;
+    }
+    code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #96cfff;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔒 Weekly Submission Locks - Test Suite</h1>
+  
+  <div class="summary">
+    <h3>Test Summary</h3>
+    <p id="summary">Click "Run All Tests" to validate the implementation</p>
+  </div>
+
+  <div class="test-section">
+    <h2>Module Loading</h2>
+    <p>Verify that comp-locks.js module is loaded correctly.</p>
+    <button onclick="testModuleLoading()">Run Module Tests</button>
+    <div id="module-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Lock/Unlock Functionality</h2>
+    <p>Test basic lock and unlock operations for different scenarios.</p>
+    <button onclick="testLockUnlock()">Run Lock/Unlock Tests</button>
+    <div id="lock-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Persistence Test</h2>
+    <p>Verify that locks persist in localStorage across page reloads.</p>
+    <button onclick="testPersistence()">Test Persistence</button>
+    <button class="secondary" onclick="checkPersistence()">Check After Reload</button>
+    <div id="persist-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Integration Test</h2>
+    <p>Simulate competition flow with submission locks.</p>
+    <button onclick="testIntegration()">Run Integration Test</button>
+    <div id="integration-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Cleanup</h2>
+    <p>Clear all test data from localStorage.</p>
+    <button class="danger" onclick="cleanup()">Clear All Locks</button>
+    <div id="cleanup-results"></div>
+  </div>
+
+  <script src="js/comp-locks.js"></script>
+  <script>
+    const testResults = {
+      module: { total: 0, passed: 0 },
+      lock: { total: 0, passed: 0 },
+      persist: { total: 0, passed: 0 },
+      integration: { total: 0, passed: 0 }
+    };
+
+    function addResult(containerId, message, status) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${status}`;
+      div.textContent = (status === 'pass' ? '✅ ' : '❌ ') + message;
+      container.appendChild(div);
+    }
+
+    function updateSummary() {
+      const total = Object.values(testResults).reduce((sum, r) => sum + r.total, 0);
+      const passed = Object.values(testResults).reduce((sum, r) => sum + r.passed, 0);
+      const summary = document.getElementById('summary');
+      
+      const percentage = total > 0 ? ((passed / total) * 100).toFixed(1) : 0;
+      summary.innerHTML = `
+        <strong>Results:</strong> ${passed}/${total} tests passed (${percentage}%)<br>
+        ${passed === total ? '🎉 All tests passed!' : '⚠️ Some tests failed'}
+      `;
+    }
+
+    function testModuleLoading() {
+      const container = document.getElementById('module-results');
+      container.innerHTML = '';
+      testResults.module = { total: 0, passed: 0 };
+
+      // Test 1: Module exists
+      testResults.module.total++;
+      if (typeof window.CompLocks !== 'undefined') {
+        testResults.module.passed++;
+        addResult('module-results', 'CompLocks module is loaded', 'pass');
+      } else {
+        addResult('module-results', 'CompLocks module not found', 'fail');
+      }
+
+      // Test 2: Has required methods
+      testResults.module.total++;
+      const requiredMethods = ['hasSubmittedThisWeek', 'lockSubmission', 'clearWeekLocks', 'clearAllLocks'];
+      const missingMethods = requiredMethods.filter(m => typeof CompLocks[m] !== 'function');
+      if (missingMethods.length === 0) {
+        testResults.module.passed++;
+        addResult('module-results', 'All required methods present', 'pass');
+      } else {
+        addResult('module-results', `Missing methods: ${missingMethods.join(', ')}`, 'fail');
+      }
+
+      // Test 3: Has private key generator
+      testResults.module.total++;
+      if (typeof CompLocks._getLockKey === 'function') {
+        testResults.module.passed++;
+        addResult('module-results', 'Private _getLockKey method exists', 'pass');
+      } else {
+        addResult('module-results', 'Private _getLockKey method not found', 'fail');
+      }
+
+      updateSummary();
+    }
+
+    function testLockUnlock() {
+      const container = document.getElementById('lock-results');
+      container.innerHTML = '';
+      testResults.lock = { total: 0, passed: 0 };
+
+      // Clear any existing locks first
+      CompLocks.clearAllLocks();
+
+      // Test 1: Initial state should be unlocked
+      testResults.lock.total++;
+      const isLocked1 = CompLocks.hasSubmittedThisWeek(1, 'hoh', 'quickTap', 1);
+      if (!isLocked1) {
+        testResults.lock.passed++;
+        addResult('lock-results', 'Initial state is unlocked', 'pass');
+      } else {
+        addResult('lock-results', 'Initial state should be unlocked', 'fail');
+      }
+
+      // Test 2: Lock a submission
+      testResults.lock.total++;
+      CompLocks.lockSubmission(1, 'hoh', 'quickTap', 1);
+      const isLocked2 = CompLocks.hasSubmittedThisWeek(1, 'hoh', 'quickTap', 1);
+      if (isLocked2) {
+        testResults.lock.passed++;
+        addResult('lock-results', 'Submission locked successfully', 'pass');
+      } else {
+        addResult('lock-results', 'Failed to lock submission', 'fail');
+      }
+
+      // Test 3: Different player should not be locked
+      testResults.lock.total++;
+      const isLocked3 = CompLocks.hasSubmittedThisWeek(1, 'hoh', 'quickTap', 2);
+      if (!isLocked3) {
+        testResults.lock.passed++;
+        addResult('lock-results', 'Different player is not locked', 'pass');
+      } else {
+        addResult('lock-results', 'Lock should be player-specific', 'fail');
+      }
+
+      // Test 4: Different week should not be locked
+      testResults.lock.total++;
+      const isLocked4 = CompLocks.hasSubmittedThisWeek(2, 'hoh', 'quickTap', 1);
+      if (!isLocked4) {
+        testResults.lock.passed++;
+        addResult('lock-results', 'Different week is not locked', 'pass');
+      } else {
+        addResult('lock-results', 'Lock should be week-specific', 'fail');
+      }
+
+      // Test 5: Different phase should not be locked
+      testResults.lock.total++;
+      const isLocked5 = CompLocks.hasSubmittedThisWeek(1, 'final3_comp1', 'quickTap', 1);
+      if (!isLocked5) {
+        testResults.lock.passed++;
+        addResult('lock-results', 'Different phase is not locked', 'pass');
+      } else {
+        addResult('lock-results', 'Lock should be phase-specific', 'fail');
+      }
+
+      // Test 6: Different game should not be locked
+      testResults.lock.total++;
+      const isLocked6 = CompLocks.hasSubmittedThisWeek(1, 'hoh', 'memoryMatch', 1);
+      if (!isLocked6) {
+        testResults.lock.passed++;
+        addResult('lock-results', 'Different game is not locked', 'pass');
+      } else {
+        addResult('lock-results', 'Lock should be game-specific', 'fail');
+      }
+
+      // Test 7: Clear week locks
+      testResults.lock.total++;
+      CompLocks.lockSubmission(1, 'hoh', 'memoryMatch', 1);
+      CompLocks.clearWeekLocks(1);
+      const isLocked7a = CompLocks.hasSubmittedThisWeek(1, 'hoh', 'quickTap', 1);
+      const isLocked7b = CompLocks.hasSubmittedThisWeek(1, 'hoh', 'memoryMatch', 1);
+      if (!isLocked7a && !isLocked7b) {
+        testResults.lock.passed++;
+        addResult('lock-results', 'Week locks cleared successfully', 'pass');
+      } else {
+        addResult('lock-results', 'Failed to clear week locks', 'fail');
+      }
+
+      updateSummary();
+    }
+
+    function testPersistence() {
+      const container = document.getElementById('persist-results');
+      container.innerHTML = '';
+      testResults.persist = { total: 0, passed: 0 };
+
+      // Clear existing locks
+      CompLocks.clearAllLocks();
+
+      // Set up test locks
+      CompLocks.lockSubmission(1, 'hoh', 'quickTap', 1);
+      CompLocks.lockSubmission(2, 'final3_comp1', 'memoryMatch', 2);
+      CompLocks.lockSubmission(3, 'final3_comp2', 'reactionRoyale', 3);
+
+      addResult('persist-results', 'Test locks created. Please reload the page and click "Check After Reload".', 'pass');
+      addResult('persist-results', 'Locks should persist after reload.', 'pass');
+    }
+
+    function checkPersistence() {
+      const container = document.getElementById('persist-results');
+      container.innerHTML = '';
+      testResults.persist = { total: 0, passed: 0 };
+
+      // Check if locks persisted
+      testResults.persist.total++;
+      const lock1 = CompLocks.hasSubmittedThisWeek(1, 'hoh', 'quickTap', 1);
+      if (lock1) {
+        testResults.persist.passed++;
+        addResult('persist-results', 'Lock 1 persisted correctly', 'pass');
+      } else {
+        addResult('persist-results', 'Lock 1 did not persist', 'fail');
+      }
+
+      testResults.persist.total++;
+      const lock2 = CompLocks.hasSubmittedThisWeek(2, 'final3_comp1', 'memoryMatch', 2);
+      if (lock2) {
+        testResults.persist.passed++;
+        addResult('persist-results', 'Lock 2 persisted correctly', 'pass');
+      } else {
+        addResult('persist-results', 'Lock 2 did not persist', 'fail');
+      }
+
+      testResults.persist.total++;
+      const lock3 = CompLocks.hasSubmittedThisWeek(3, 'final3_comp2', 'reactionRoyale', 3);
+      if (lock3) {
+        testResults.persist.passed++;
+        addResult('persist-results', 'Lock 3 persisted correctly', 'pass');
+      } else {
+        addResult('persist-results', 'Lock 3 did not persist', 'fail');
+      }
+
+      updateSummary();
+    }
+
+    function testIntegration() {
+      const container = document.getElementById('integration-results');
+      container.innerHTML = '';
+      testResults.integration = { total: 0, passed: 0 };
+
+      // Clear locks
+      CompLocks.clearAllLocks();
+
+      // Simulate competition flow
+      const week = 1;
+      const phase = 'hoh';
+      const game = 'quickTap';
+      const playerId = 1;
+
+      // Test 1: Player should be able to submit initially
+      testResults.integration.total++;
+      const canSubmit1 = !CompLocks.hasSubmittedThisWeek(week, phase, game, playerId);
+      if (canSubmit1) {
+        testResults.integration.passed++;
+        addResult('integration-results', 'Player can submit initially', 'pass');
+      } else {
+        addResult('integration-results', 'Player should be able to submit initially', 'fail');
+      }
+
+      // Test 2: Lock after submission
+      testResults.integration.total++;
+      CompLocks.lockSubmission(week, phase, game, playerId);
+      const canSubmit2 = !CompLocks.hasSubmittedThisWeek(week, phase, game, playerId);
+      if (!canSubmit2) {
+        testResults.integration.passed++;
+        addResult('integration-results', 'Player locked after submission', 'pass');
+      } else {
+        addResult('integration-results', 'Player should be locked after submission', 'fail');
+      }
+
+      // Test 3: Player can submit in next week
+      testResults.integration.total++;
+      const canSubmit3 = !CompLocks.hasSubmittedThisWeek(week + 1, phase, game, playerId);
+      if (canSubmit3) {
+        testResults.integration.passed++;
+        addResult('integration-results', 'Player can submit in next week', 'pass');
+      } else {
+        addResult('integration-results', 'Player should be able to submit in next week', 'fail');
+      }
+
+      // Test 4: Multiple players in same competition
+      testResults.integration.total++;
+      CompLocks.lockSubmission(week, phase, game, 2);
+      CompLocks.lockSubmission(week, phase, game, 3);
+      const player2Locked = CompLocks.hasSubmittedThisWeek(week, phase, game, 2);
+      const player3Locked = CompLocks.hasSubmittedThisWeek(week, phase, game, 3);
+      const player4CanPlay = !CompLocks.hasSubmittedThisWeek(week, phase, game, 4);
+      if (player2Locked && player3Locked && player4CanPlay) {
+        testResults.integration.passed++;
+        addResult('integration-results', 'Multiple players handled correctly', 'pass');
+      } else {
+        addResult('integration-results', 'Multiple players not handled correctly', 'fail');
+      }
+
+      // Test 5: Final 3 competitions
+      testResults.integration.total++;
+      CompLocks.lockSubmission(5, 'final3_comp1', 'memoryMatch', 1);
+      CompLocks.lockSubmission(5, 'final3_comp2', 'quickTap', 1);
+      CompLocks.lockSubmission(5, 'final3_comp3', 'reactionRoyale', 1);
+      const f3p1Locked = CompLocks.hasSubmittedThisWeek(5, 'final3_comp1', 'memoryMatch', 1);
+      const f3p2Locked = CompLocks.hasSubmittedThisWeek(5, 'final3_comp2', 'quickTap', 1);
+      const f3p3Locked = CompLocks.hasSubmittedThisWeek(5, 'final3_comp3', 'reactionRoyale', 1);
+      if (f3p1Locked && f3p2Locked && f3p3Locked) {
+        testResults.integration.passed++;
+        addResult('integration-results', 'Final 3 competitions tracked separately', 'pass');
+      } else {
+        addResult('integration-results', 'Final 3 competitions not tracked correctly', 'fail');
+      }
+
+      updateSummary();
+    }
+
+    function cleanup() {
+      const container = document.getElementById('cleanup-results');
+      container.innerHTML = '';
+      
+      CompLocks.clearAllLocks();
+      
+      addResult('cleanup-results', 'All competition locks cleared', 'pass');
+      addResult('cleanup-results', 'localStorage cleaned up', 'pass');
+    }
+
+    // Auto-run module loading test on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      testModuleLoading();
+    });
+  </script>
+</body>
+</html>
