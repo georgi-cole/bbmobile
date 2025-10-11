@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anti-Cheat Module Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    .test-section {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .pass {
+      background: rgba(124, 255, 173, 0.2);
+      border: 1px solid #7cffad;
+      color: #7cffad;
+    }
+    .fail {
+      background: rgba(255, 107, 157, 0.2);
+      border: 1px solid #ff6b9d;
+      color: #ff6b9d;
+    }
+    button {
+      background: #0f3460;
+      color: #e3ecf5;
+      border: 1px solid #16213e;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #16213e;
+    }
+    .game-container {
+      background: #0f3460;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 10px 0;
+      min-height: 100px;
+    }
+    pre {
+      background: #0a0a0a;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔒 Anti-Cheat Module Test</h1>
+  <p>Testing the anti-cheat validation system for minigame submissions.</p>
+
+  <!-- Test 1: Basic Session Creation and Validation -->
+  <div class="test-section">
+    <h2>Test 1: Basic Session Creation</h2>
+    <button onclick="runTest1()">Run Test 1</button>
+    <div id="test1-result"></div>
+  </div>
+
+  <!-- Test 2: Minimum Play Time Validation -->
+  <div class="test-section">
+    <h2>Test 2: Minimum Play Time</h2>
+    <button onclick="runTest2()">Run Test 2</button>
+    <div id="test2-result"></div>
+  </div>
+
+  <!-- Test 3: Maximum Duration Validation -->
+  <div class="test-section">
+    <h2>Test 3: Maximum Duration</h2>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div id="test3-result"></div>
+  </div>
+
+  <!-- Test 4: Minimum Input Requirements -->
+  <div class="test-section">
+    <h2>Test 4: Minimum Input Requirements</h2>
+    <p>Click the button, then click inside the game container at least 3 times before validating:</p>
+    <button onclick="runTest4()">Start Test 4</button>
+    <div class="game-container" id="test4-container">
+      <p>Click here multiple times (at least 3 times)...</p>
+    </div>
+    <button onclick="validateTest4()" id="test4-validate" disabled>Validate</button>
+    <div id="test4-result"></div>
+  </div>
+
+  <!-- Test 5: Input Cadence Variability -->
+  <div class="test-section">
+    <h2>Test 5: Input Cadence Variability</h2>
+    <p>This test simulates uniform vs. variable input timing:</p>
+    <button onclick="runTest5()">Run Test 5</button>
+    <div id="test5-result"></div>
+  </div>
+
+  <!-- Test 6: Backgrounding Detection -->
+  <div class="test-section">
+    <h2>Test 6: Backgrounding Detection</h2>
+    <p>Note: This test requires manual backgrounding of the page (switch tabs during the test)</p>
+    <button onclick="runTest6()">Start Test 6 (10 seconds)</button>
+    <div id="test6-result"></div>
+  </div>
+
+  <!-- Test 7: Integration Test -->
+  <div class="test-section">
+    <h2>Test 7: Full Integration Test</h2>
+    <p>Simulates a complete game session with realistic input patterns:</p>
+    <button onclick="runTest7()">Run Test 7</button>
+    <div id="test7-result"></div>
+  </div>
+
+  <!-- Load the anti-cheat module -->
+  <script src="js/anti-cheat.js"></script>
+
+  <script>
+    // Test utilities
+    function log(elementId, message, className = '') {
+      const el = document.getElementById(elementId);
+      const div = document.createElement('div');
+      div.className = `test-result ${className}`;
+      div.innerHTML = message;
+      el.innerHTML = '';
+      el.appendChild(div);
+    }
+
+    function logDetails(elementId, details) {
+      const el = document.getElementById(elementId);
+      const pre = document.createElement('pre');
+      pre.textContent = JSON.stringify(details, null, 2);
+      el.appendChild(pre);
+    }
+
+    // Test 1: Basic session creation and validation
+    function runTest1() {
+      log('test1-result', '⏳ Running test...', '');
+      
+      try {
+        const sessionId = window.AntiCheat.startSession({
+          gameKey: 'test-game-1',
+          thresholds: {
+            minPlayTime: 1000,
+            maxDuration: 60000,
+            minDistinctInputs: 0
+          }
+        });
+
+        if (!sessionId) {
+          log('test1-result', '❌ Failed: Session ID not returned', 'fail');
+          return;
+        }
+
+        // Wait 1.5 seconds
+        setTimeout(() => {
+          const validation = window.AntiCheat.validate(sessionId);
+          
+          if (validation.valid) {
+            log('test1-result', '✅ PASS: Basic session creation and validation works', 'pass');
+            logDetails('test1-result', validation.metadata);
+          } else {
+            log('test1-result', `❌ FAIL: ${validation.reason}`, 'fail');
+            logDetails('test1-result', validation.metadata);
+          }
+
+          window.AntiCheat.cleanup(sessionId);
+        }, 1500);
+
+      } catch (error) {
+        log('test1-result', `❌ FAIL: ${error.message}`, 'fail');
+      }
+    }
+
+    // Test 2: Minimum play time validation
+    function runTest2() {
+      log('test2-result', '⏳ Running test...', '');
+      
+      try {
+        const sessionId = window.AntiCheat.startSession({
+          gameKey: 'test-game-2',
+          thresholds: {
+            minPlayTime: 3000,
+            maxDuration: 60000,
+            minDistinctInputs: 0
+          }
+        });
+
+        // Validate immediately (should fail)
+        setTimeout(() => {
+          const validation = window.AntiCheat.validate(sessionId);
+          
+          if (!validation.valid && validation.reason.includes('too quickly')) {
+            log('test2-result', '✅ PASS: Minimum play time validation works', 'pass');
+            logDetails('test2-result', validation.metadata);
+          } else {
+            log('test2-result', `❌ FAIL: Expected validation to fail for too-fast completion`, 'fail');
+            logDetails('test2-result', validation.metadata);
+          }
+
+          window.AntiCheat.cleanup(sessionId);
+        }, 100);
+
+      } catch (error) {
+        log('test2-result', `❌ FAIL: ${error.message}`, 'fail');
+      }
+    }
+
+    // Test 3: Maximum duration validation
+    function runTest3() {
+      log('test3-result', '⏳ Running test...', '');
+      
+      try {
+        const sessionId = window.AntiCheat.startSession({
+          gameKey: 'test-game-3',
+          thresholds: {
+            minPlayTime: 1000,
+            maxDuration: 2000,
+            minDistinctInputs: 0
+          }
+        });
+
+        // Wait 3 seconds (exceeds max duration)
+        setTimeout(() => {
+          const validation = window.AntiCheat.validate(sessionId);
+          
+          if (!validation.valid && validation.reason.includes('too long')) {
+            log('test3-result', '✅ PASS: Maximum duration validation works', 'pass');
+            logDetails('test3-result', validation.metadata);
+          } else {
+            log('test3-result', `❌ FAIL: Expected validation to fail for too-long completion`, 'fail');
+            logDetails('test3-result', validation.metadata);
+          }
+
+          window.AntiCheat.cleanup(sessionId);
+        }, 3000);
+
+      } catch (error) {
+        log('test3-result', `❌ FAIL: ${error.message}`, 'fail');
+      }
+    }
+
+    // Test 4: Minimum input requirements
+    let test4SessionId = null;
+    function runTest4() {
+      log('test4-result', '⏳ Click inside the game container at least 3 times...', '');
+      
+      const container = document.getElementById('test4-container');
+      test4SessionId = window.AntiCheat.startSession({
+        container: container,
+        gameKey: 'test-game-4',
+        thresholds: {
+          minPlayTime: 1000,
+          maxDuration: 60000,
+          minDistinctInputs: 3
+        }
+      });
+
+      document.getElementById('test4-validate').disabled = false;
+    }
+
+    function validateTest4() {
+      if (!test4SessionId) {
+        log('test4-result', '❌ FAIL: Session not started', 'fail');
+        return;
+      }
+
+      setTimeout(() => {
+        const validation = window.AntiCheat.validate(test4SessionId);
+        
+        if (validation.valid) {
+          log('test4-result', `✅ PASS: Input requirements met (${validation.metadata.distinctInputs} distinct inputs)`, 'pass');
+          logDetails('test4-result', validation.metadata);
+        } else {
+          log('test4-result', `❌ FAIL: ${validation.reason}`, 'fail');
+          logDetails('test4-result', validation.metadata);
+        }
+
+        window.AntiCheat.cleanup(test4SessionId);
+        test4SessionId = null;
+        document.getElementById('test4-validate').disabled = true;
+      }, 1100);
+    }
+
+    // Test 5: Input cadence variability
+    function runTest5() {
+      log('test5-result', '⏳ Running test...', '');
+      
+      // Create two test containers
+      const container1 = document.createElement('div');
+      const container2 = document.createElement('div');
+
+      // Test with uniform timing (should fail)
+      const session1 = window.AntiCheat.startSession({
+        container: container1,
+        gameKey: 'test-uniform',
+        thresholds: {
+          minPlayTime: 1000,
+          maxDuration: 60000,
+          minDistinctInputs: 3,
+          minCadenceVariability: 0.15
+        }
+      });
+
+      // Simulate uniform clicks
+      let uniformTime = Date.now();
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          const event = new MouseEvent('click', { bubbles: true });
+          container1.dispatchEvent(event);
+        }, i * 100); // Exactly 100ms apart
+      }
+
+      setTimeout(() => {
+        const validation1 = window.AntiCheat.validate(session1);
+        
+        // Test with variable timing (should pass)
+        const session2 = window.AntiCheat.startSession({
+          container: container2,
+          gameKey: 'test-variable',
+          thresholds: {
+            minPlayTime: 1000,
+            maxDuration: 60000,
+            minDistinctInputs: 3,
+            minCadenceVariability: 0.15
+          }
+        });
+
+        // Simulate variable clicks
+        const delays = [50, 150, 80, 200, 120];
+        delays.forEach((delay, i) => {
+          setTimeout(() => {
+            const event = new MouseEvent('click', { bubbles: true });
+            container2.dispatchEvent(event);
+          }, delay * (i + 1));
+        });
+
+        setTimeout(() => {
+          const validation2 = window.AntiCheat.validate(session2);
+          
+          let result = '';
+          result += `Uniform timing: ${validation1.valid ? '✅ PASS (unexpected)' : '✅ PASS (correctly rejected)'}<br>`;
+          result += `Variable timing: ${validation2.valid ? '✅ PASS' : '❌ FAIL (should pass)'}<br>`;
+          
+          const allPass = !validation1.valid && validation2.valid;
+          log('test5-result', result, allPass ? 'pass' : 'fail');
+          logDetails('test5-result', { 
+            uniformValidation: validation1.metadata,
+            variableValidation: validation2.metadata
+          });
+
+          window.AntiCheat.cleanup(session1);
+          window.AntiCheat.cleanup(session2);
+        }, 1500);
+      }, 1200);
+    }
+
+    // Test 6: Backgrounding detection
+    function runTest6() {
+      log('test6-result', '⏳ Test running for 10 seconds. Try switching tabs...', '');
+      
+      const container = document.createElement('div');
+      const sessionId = window.AntiCheat.startSession({
+        container: container,
+        gameKey: 'test-backgrounding',
+        thresholds: {
+          minPlayTime: 1000,
+          maxDuration: 60000,
+          minDistinctInputs: 0
+        }
+      });
+
+      setTimeout(() => {
+        const validation = window.AntiCheat.validate(sessionId);
+        
+        if (validation.metadata.wasBackgrounded) {
+          log('test6-result', '✅ PASS: Backgrounding was detected', 'pass');
+        } else {
+          log('test6-result', 'ℹ️ INFO: No backgrounding detected (tab was not switched)', '');
+        }
+        logDetails('test6-result', validation.metadata);
+
+        window.AntiCheat.cleanup(sessionId);
+      }, 10000);
+    }
+
+    // Test 7: Full integration test
+    function runTest7() {
+      log('test7-result', '⏳ Running integration test...', '');
+      
+      const container = document.createElement('div');
+      const sessionId = window.AntiCheat.startSession({
+        container: container,
+        gameKey: 'integration-test',
+        thresholds: {
+          minPlayTime: 2000,
+          maxDuration: 60000,
+          minDistinctInputs: 3,
+          minCadenceVariability: 0.15
+        }
+      });
+
+      // Simulate realistic user inputs with variable timing
+      const delays = [300, 620, 850, 1250, 1680];
+      delays.forEach(delay => {
+        setTimeout(() => {
+          const event = new MouseEvent('click', { bubbles: true });
+          container.dispatchEvent(event);
+        }, delay);
+      });
+
+      // Validate after sufficient time
+      setTimeout(() => {
+        const validation = window.AntiCheat.validate(sessionId);
+        
+        if (validation.valid) {
+          log('test7-result', '✅ PASS: Integration test successful', 'pass');
+        } else {
+          log('test7-result', `❌ FAIL: ${validation.reason}`, 'fail');
+        }
+        logDetails('test7-result', validation.metadata);
+
+        window.AntiCheat.cleanup(sessionId);
+      }, 2500);
+    }
+
+    // Check if module is loaded
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!window.AntiCheat) {
+        document.body.innerHTML = '<h1 style="color: red;">Error: AntiCheat module not loaded!</h1>';
+      }
+    });
+  </script>
+</body>
+</html>
