@@ -520,6 +520,232 @@
       maxScore: 100,
       retired: false,
       seasons: ['spring', 'summer', 'winter']
+    },
+    
+    // Phase 2: New Scaffold Games (15 additional minigames)
+    bubbleBurst: {
+      key: 'bubbleBurst',
+      name: 'Bubble Burst',
+      description: 'Pop bubbles quickly for points',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'bubble-burst.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    cardClash: {
+      key: 'cardClash',
+      name: 'Card Clash',
+      description: 'Memory card matching game',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'card-clash.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    chainReaction: {
+      key: 'chainReaction',
+      name: 'Chain Reaction',
+      description: 'Create chain combos puzzle',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'chain-reaction.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    clockStopper: {
+      key: 'clockStopper',
+      name: 'Clock Stopper',
+      description: 'Stop the clock at exact times',
+      type: 'reaction',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'clock-stopper.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    comboKeys: {
+      key: 'comboKeys',
+      name: 'Combo Keys',
+      description: 'Memorize and repeat key combinations',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'combo-keys.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    diceDash: {
+      key: 'diceDash',
+      name: 'Dice Dash',
+      description: 'Roll and match dice patterns',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'dice-dash.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    echoChamber: {
+      key: 'echoChamber',
+      name: 'Echo Chamber',
+      description: 'Audio memory and recall',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'echo-chamber.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    flashFlood: {
+      key: 'flashFlood',
+      name: 'Flash Flood',
+      description: 'React to flash patterns quickly',
+      type: 'reaction',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'flash-flood.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    gearShift: {
+      key: 'gearShift',
+      name: 'Gear Shift',
+      description: 'Solve mechanical gear puzzles',
+      type: 'puzzle',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'gear-shift.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    gridLock: {
+      key: 'gridLock',
+      name: 'Grid Lock',
+      description: 'Unlock grid patterns puzzle',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'grid-lock.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    iconMatch: {
+      key: 'iconMatch',
+      name: 'Icon Match',
+      description: 'Match icons from memory',
+      type: 'memory',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'icon-match.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    jumpRope: {
+      key: 'jumpRope',
+      name: 'Jump Rope',
+      description: 'Endurance timing challenge',
+      type: 'endurance',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'jump-rope.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    keyMaster: {
+      key: 'keyMaster',
+      name: 'Key Master',
+      description: 'Unlock sequences puzzle',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'key-master.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    lightSpeed: {
+      key: 'lightSpeed',
+      name: 'Light Speed',
+      description: 'Ultra-fast reaction challenge',
+      type: 'reaction',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'light-speed.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    puzzleDash: {
+      key: 'puzzleDash',
+      name: 'Puzzle Dash',
+      description: 'Speed puzzle solving',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'puzzle-dash.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     }
   };
 
