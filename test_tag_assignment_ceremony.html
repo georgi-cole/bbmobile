@@ -387,7 +387,7 @@
           ceremonyEl.innerHTML = '<div style="color: #77d58d; font-weight: bold;">✓ Ceremony Complete</div>';
           
           // Validate ceremony flow
-          const passed = steps.length === 7 && // 1 intro + 2 wildcards + 2 reveals + 1 adjourned
+          const passed = steps.length === 6 && // 1 intro + 2 wildcards + 2 reveals + 1 adjourned
                          steps.some(s => s.content === '?') && // Has wildcards
                          steps.some(s => s.content === 'This ceremony is adjourned.'); // Has adjourned message
           
