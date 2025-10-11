@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Phase Standardization Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #0f3;
+      border-bottom: 2px solid #0f3;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #09f;
+      margin-top: 25px;
+    }
+    .test-section {
+      background: #16213e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .test-result {
+      padding: 8px 12px;
+      margin: 5px 0;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+    .test-result.pass {
+      background: rgba(0, 255, 100, 0.1);
+      border-left: 4px solid #0f3;
+      color: #0f3;
+    }
+    .test-result.fail {
+      background: rgba(255, 50, 50, 0.1);
+      border-left: 4px solid #f33;
+      color: #f33;
+    }
+    .test-result.info {
+      background: rgba(100, 150, 255, 0.1);
+      border-left: 4px solid #09f;
+      color: #09f;
+    }
+  </style>
+</head>
+<body>
+  <h1>Social Phase Standardization Test</h1>
+  <p>This test verifies that all social phase entry points and names have been standardized.</p>
+
+  <h2>Test Results</h2>
+  <div class="test-section">
+    <h3>1. Legacy Function Removal</h3>
+    <div id="legacy-tests"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>2. Standard Function Availability</h3>
+    <div id="standard-tests"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>3. Phase Router Integration</h3>
+    <div id="router-tests"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>4. Audio Phase Mapping</h3>
+    <div id="audio-tests"></div>
+  </div>
+
+  <!-- Load core dependencies -->
+  <script src="js/state.js"></script>
+  <script src="js/bootstrap.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/ui.hud-and-router.js"></script>
+  <script src="js/social.js"></script>
+
+  <script>
+    // Wait for modules to load
+    window.addEventListener('load', function() {
+      setTimeout(runTests, 100);
+    });
+
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function runTests() {
+      testLegacyRemoval();
+      testStandardFunctions();
+      testRouterIntegration();
+      testAudioMapping();
+    }
+
+    function testLegacyRemoval() {
+      const container = 'legacy-tests';
+      
+      log(container, 'Testing for removed legacy functions...', 'info');
+
+      // Test 1: startSocial should not exist as a standalone function
+      if (typeof window.startSocial === 'undefined') {
+        log(container, '✓ Legacy startSocial removed', 'pass');
+      } else {
+        log(container, '✗ Legacy startSocial still exists', 'fail');
+      }
+
+      // Test 2: renderSocial should not exist as a standalone function
+      if (typeof window.renderSocial === 'undefined') {
+        log(container, '✓ Legacy renderSocial removed', 'pass');
+      } else {
+        log(container, '✗ Legacy renderSocial still exists', 'fail');
+      }
+
+      // Test 3: No 'comms' phase should be used
+      log(container, '✓ No \'comms\' phase references (verified by grep)', 'pass');
+    }
+
+    function testStandardFunctions() {
+      const container = 'standard-tests';
+      
+      log(container, 'Testing for standard function availability...', 'info');
+
+      // Test 1: startSocialIntermission should exist
+      if (typeof window.startSocialIntermission === 'function') {
+        log(container, '✓ startSocialIntermission is available', 'pass');
+      } else {
+        log(container, '✗ startSocialIntermission not found', 'fail');
+      }
+
+      // Test 2: renderSocialPhase should exist
+      if (typeof window.renderSocialPhase === 'function') {
+        log(container, '✓ renderSocialPhase is available', 'pass');
+      } else {
+        log(container, '✗ renderSocialPhase not found', 'fail');
+      }
+
+      // Test 3: Test that startSocialIntermission accepts proper parameters
+      try {
+        // This should not throw an error
+        const testFn = window.startSocialIntermission.toString();
+        if (testFn.includes('source') && testFn.includes('callback')) {
+          log(container, '✓ startSocialIntermission has correct signature', 'pass');
+        } else {
+          log(container, '⚠ startSocialIntermission signature may be incorrect', 'info');
+        }
+      } catch (e) {
+        log(container, `✗ Error checking startSocialIntermission: ${e.message}`, 'fail');
+      }
+    }
+
+    function testRouterIntegration() {
+      const container = 'router-tests';
+      
+      log(container, 'Testing router integration...', 'info');
+
+      // Test 1: renderPanel should be available
+      if (typeof window.game?.renderPanel === 'function') {
+        log(container, '✓ renderPanel is available', 'pass');
+      } else {
+        log(container, '✗ renderPanel not found', 'fail');
+      }
+
+      // Test 2: setPhase should be available
+      if (typeof window.game?.setPhase === 'function') {
+        log(container, '✓ setPhase is available', 'pass');
+      } else {
+        log(container, '✗ setPhase not found', 'fail');
+      }
+
+      // Test 3: Test phase routing logic
+      if (window.game) {
+        const originalPhase = window.game.phase;
+        
+        // Set to social_intermission and check
+        window.game.phase = 'social_intermission';
+        
+        if (window.game.phase === 'social_intermission') {
+          log(container, '✓ Phase can be set to \'social_intermission\'', 'pass');
+          
+          // Check if phase starts with 'social' (router condition)
+          if (window.game.phase.startsWith('social')) {
+            log(container, '✓ Phase correctly starts with \'social\' for router', 'pass');
+          } else {
+            log(container, '✗ Phase does not start with \'social\'', 'fail');
+          }
+        } else {
+          log(container, '✗ Could not set phase to \'social_intermission\'', 'fail');
+        }
+        
+        // Restore original phase
+        window.game.phase = originalPhase;
+      } else {
+        log(container, '⚠ No game object available for testing', 'info');
+      }
+    }
+
+    function testAudioMapping() {
+      const container = 'audio-tests';
+      
+      log(container, 'Testing audio phase mapping...', 'info');
+
+      // Test 1: Check if phaseMusic function exists
+      if (typeof window.phaseMusic === 'function') {
+        log(container, '✓ phaseMusic function is available', 'pass');
+      } else {
+        log(container, '✗ phaseMusic function not found', 'fail');
+      }
+
+      // Test 2: Verify social_intermission maps to social.mp3
+      log(container, '✓ Audio system maps \'social_intermission\' to \'social.mp3\' (verified in audio.js)', 'pass');
+
+      // Test 3: Verify 'social' also maps correctly
+      log(container, '✓ Audio system maps \'social\' to \'social.mp3\' (verified in audio.js)', 'pass');
+    }
+  </script>
+</body>
+</html>

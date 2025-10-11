@@ -31,7 +31,7 @@
     state: !!window.game,
     audio: !!window.phaseMusic,
     ui: !!window.updateHud,
-    social: !!window.renderSocialPhase,
+    social: !!window.renderSocialPhase && !!window.startSocialIntermission,
     minigames: !!window.renderMinigame,
     competitions: !!window.startHOH,
     nominations: !!window.startNominations,

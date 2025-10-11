@@ -848,10 +848,9 @@
 
     await waitCardsIdle();
 
-    // Robust social call — prefer startSocial, fall back to startSocialIntermission
-    const runSocial = global.startSocial || global.startSocialIntermission;
-    if (typeof runSocial === 'function') {
-      runSocial('hoh', () => {
+    // Call startSocialIntermission to trigger social phase
+    if (typeof global.startSocialIntermission === 'function') {
+      global.startSocialIntermission('hoh', () => {
         global.tv.say('Nominations');
         global.setPhase('nominations', g.cfg.tNoms, () => global.lockNominationsAndProceed?.());
         setTimeout(() => global.startNominations?.(), 50);
