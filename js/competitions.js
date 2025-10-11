@@ -15,6 +15,16 @@
 (function(global){
   const $=global.$;
   
+  // Defensive loader for CompLocks module
+  // Ensures comp-locks.js is loaded even if not included in index.html
+  if(!global.CompLocks){
+    console.warn('[Competition] CompLocks module not found, loading inline fallback');
+    global.CompLocks = {
+      hasSubmittedThisWeek(){ return false; },
+      lockSubmission(){ /* no-op fallback */ }
+    };
+  }
+  
   // Legacy game list constants kept for backwards compatibility
   // NOTE: These are no longer used for selection - kept for reference only
   // All selection now happens through MinigameSelector (js/minigames/selector.js)
@@ -219,6 +229,12 @@
         phase: g.phase,
         multiplier: mult
       });
+    }
+    
+    // Lock submission for this week/phase/game to prevent replay
+    if(global.CompLocks && label){
+      const gameKey = label.split('/')[1] || 'unknown';
+      global.CompLocks.lockSubmission(g.week, g.phase, gameKey, id);
     }
     
     // Hidden scoring: only log that player completed, not the score
@@ -646,6 +662,14 @@
       const alive=global.alivePlayers(); const blocked=(alive.length!==4 && g.week>1)?g.lastHOHId:null;
       if(you.id!==blocked && !g.lastCompScores?.has(you.id)){
         const mg=pickMinigameType();
+        
+        // Check if player has already submitted this week/phase/game
+        if(global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, you.id)){
+          host.innerHTML='<div class="tiny muted">You have already submitted for this competition.</div>';
+          panel.appendChild(host);
+          return;
+        }
+        
         global.renderMinigame?.(mg,host,(base)=>{
           // Use compBeast for human too (no guaranteed wins)
           const humanMultiplier = (0.75 + (you?.compBeast||0.5) * 0.6);
@@ -921,6 +945,14 @@
     
     if(you && !you.evicted && !g.lastCompScores?.has(you.id)){
       const mg=pickMinigameType();
+      
+      // Check if player has already submitted this week/phase/game
+      if(global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, you.id)){
+        host.innerHTML='<div class="tiny muted">You have already submitted for this competition.</div>';
+        panel.appendChild(host);
+        return;
+      }
+      
       global.renderMinigame?.(mg,host,(base)=> submitScore(you.id, base, (0.8+(you?.skill||0.5)*0.6), `F3-P1/${mg}`));
     } else host.innerHTML='<div class="tiny muted">Waiting for competition to conclude…</div>';
     panel.appendChild(host);
@@ -1052,8 +1084,15 @@
             // Retry after a short delay
             setTimeout(() => {
               if(isMinigameSystemReady()){
-                wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 2.</div>';
                 const mg=pickMinigameType();
+                
+                // Check if player has already submitted this week/phase/game
+                if(global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, p.id)){
+                  wrap.innerHTML='<div class="tiny muted">You have already submitted for this competition.</div>';
+                  return;
+                }
+                
+                wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 2.</div>';
                 global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P2/${mg}`));
               } else {
                 console.error('[Competition] Minigame system failed to load');
@@ -1061,7 +1100,17 @@
               }
             }, 500);
           } else {
-            const mg=pickMinigameType(); const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
+            const mg=pickMinigameType(); 
+            
+            // Check if player has already submitted this week/phase/game
+            if(global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, p.id)){
+              const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
+              wrap.innerHTML='<div class="tiny muted">You have already submitted for this competition.</div>';
+              host.appendChild(wrap);
+              return;
+            }
+            
+            const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
             wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 2.</div>'; host.appendChild(wrap);
             global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P2/${mg}`));
           }
@@ -1136,8 +1185,15 @@
             // Retry after a short delay
             setTimeout(() => {
               if(isMinigameSystemReady()){
-                wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 3.</div>';
                 const mg=pickMinigameType();
+                
+                // Check if player has already submitted this week/phase/game
+                if(global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, p.id)){
+                  wrap.innerHTML='<div class="tiny muted">You have already submitted for this competition.</div>';
+                  return;
+                }
+                
+                wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 3.</div>';
                 global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P3/${mg}`));
               } else {
                 console.error('[Competition] Minigame system failed to load');
@@ -1145,7 +1201,17 @@
               }
             }, 500);
           } else {
-            const mg=pickMinigameType(); const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
+            const mg=pickMinigameType(); 
+            
+            // Check if player has already submitted this week/phase/game
+            if(global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, p.id)){
+              const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
+              wrap.innerHTML='<div class="tiny muted">You have already submitted for this competition.</div>';
+              host.appendChild(wrap);
+              return;
+            }
+            
+            const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
             wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 3.</div>'; host.appendChild(wrap);
             global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P3/${mg}`));
           }
