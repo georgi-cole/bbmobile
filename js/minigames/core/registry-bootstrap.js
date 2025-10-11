@@ -37,7 +37,12 @@
         'patternMatch', 'wordAnagram', 'targetPractice', 'memoryPairs',
         'estimationGame', 'wordTyping', 'reactionTimer', 'sliderPuzzle',
         'pathFinder', 'simonSays', 'oteviator', 'comixSpot', 'holdWall',
-        'slipperyShuttle', 'memoryZipline'
+        'slipperyShuttle', 'memoryZipline', 'swipeMaze', 'patternTrace',
+        'audioMatch', 'balanceBridge', 'colorMix', 'wordLadder', 'rhythmTap',
+        'spotTheDifference', 'logicLocks', 'astroJumper', 'bubbleBurst',
+        'cardClash', 'chainReaction', 'clockStopper', 'comboKeys', 'diceDash',
+        'echoChamber', 'flashFlood', 'gearShift', 'gridLock', 'iconMatch',
+        'jumpRope', 'keyMaster', 'lightSpeed', 'puzzleDash'
       ];
       
       for(const key of fallbackKeys){
