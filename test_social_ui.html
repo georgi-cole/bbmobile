@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers UI Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="overrides-fixes.css">
+  <style>
+    body {
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: rgba(18, 30, 42, 0.8);
+      border-radius: 12px;
+    }
+    h1 {
+      color: #f7b955;
+      margin-bottom: 20px;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    .test-controls {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 20px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(52, 152, 219, 0.1);
+      border-left: 3px solid #3498db;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎭 Social Maneuvers UI Test</h1>
+    
+    <div class="status">
+      <strong>Status:</strong> <span id="status">Initializing...</span>
+    </div>
+
+    <div class="test-controls">
+      <button onclick="enableFeature()">Enable Feature</button>
+      <button onclick="disableFeature()">Disable Feature</button>
+      <button onclick="renderUI()">Render UI</button>
+      <button onclick="showFeedbackTest('positive')">Test Positive Feedback</button>
+      <button onclick="showFeedbackTest('negative')">Test Negative Feedback</button>
+      <button onclick="showFeedbackTest('neutral')">Test Neutral Feedback</button>
+      <button onclick="clearUI()">Clear UI</button>
+    </div>
+
+    <div class="test-section">
+      <h2>UI Container</h2>
+      <div id="ui-container"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Feature Status</h2>
+      <div id="feature-status"></div>
+    </div>
+  </div>
+
+  <script>window.global = window;</script>
+  <script src="js/state.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    // Initialize mock game state AFTER state.js loads
+    function initMockGame() {
+      // Ensure game exists (should be created by state.js)
+      if (!window.game) {
+        console.error('Game state not initialized by state.js');
+        return;
+      }
+
+      // Override config
+      window.game.cfg.enableSocialManeuvers = false;
+      
+      // Set up players (overriding the empty array from state.js)
+      window.game.week = 1;
+      window.game.humanId = 1;
+      window.game.players = [
+        { id: 1, name: 'You', evicted: false, affinity: {} },
+        { id: 2, name: 'Alice', evicted: false, affinity: {} },
+        { id: 3, name: 'Bob', evicted: false, affinity: {} },
+        { id: 4, name: 'Charlie', evicted: false, affinity: {} },
+        { id: 5, name: 'Diana', evicted: false, affinity: {} }
+      ];
+
+      // Mock helper functions
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted);
+      };
+
+      window.getP = function(id) {
+        return window.game.players.find(p => p.id === id);
+      };
+
+      window.safeName = function(id) {
+        const p = window.getP(id);
+        return p ? p.name : `Player ${id}`;
+      };
+
+      window.addLog = function(msg, type) {
+        console.log(`[LOG ${type}]`, msg);
+      };
+
+      window.updateHud = function() {
+        console.log('[HUD] Updated');
+      };
+
+      updateStatus();
+    }
+
+    function updateStatus() {
+      const enabled = window.SocialManeuvers?.isEnabled();
+      document.getElementById('status').textContent = enabled ? 'Enabled ✓' : 'Disabled ✗';
+      
+      const featureStatus = document.getElementById('feature-status');
+      if (window.SocialManeuvers) {
+        const energy = window.SocialManeuvers.getEnergy(1);
+        featureStatus.innerHTML = `
+          <div><strong>Feature Enabled:</strong> ${enabled ? 'Yes' : 'No'}</div>
+          <div><strong>Current Energy:</strong> ${energy}/${window.SocialManeuvers.MAX_ENERGY}</div>
+          <div><strong>Available Actions:</strong> ${window.SocialManeuvers.getAvailableActions(1).length}</div>
+        `;
+      } else {
+        featureStatus.innerHTML = '<div>SocialManeuvers module not loaded</div>';
+      }
+    }
+
+    function enableFeature() {
+      if (window.game) {
+        window.game.cfg.enableSocialManeuvers = true;
+        if (window.SocialManeuvers) {
+          window.SocialManeuvers.onSocialPhaseStart();
+        }
+        updateStatus();
+        console.log('Feature enabled');
+      }
+    }
+
+    function disableFeature() {
+      if (window.game) {
+        window.game.cfg.enableSocialManeuvers = false;
+        updateStatus();
+        console.log('Feature disabled');
+      }
+    }
+
+    function renderUI() {
+      const container = document.getElementById('ui-container');
+      container.innerHTML = '';
+      
+      if (!window.SocialManeuvers) {
+        container.innerHTML = '<div class="social-empty-state">SocialManeuvers module not loaded</div>';
+        return;
+      }
+
+      if (!window.SocialManeuvers.isEnabled()) {
+        container.innerHTML = '<div class="social-empty-state">Feature is disabled. Enable it first.</div>';
+        return;
+      }
+
+      try {
+        window.SocialManeuvers.renderSocialManeuversUI(container, 1);
+        console.log('UI rendered successfully');
+      } catch (e) {
+        console.error('Failed to render UI:', e);
+        container.innerHTML = `<div class="social-empty-state">Error: ${e.message}</div>`;
+      }
+    }
+
+    function showFeedbackTest(type) {
+      // Create a mock feedback panel
+      const panel = document.createElement('div');
+      panel.className = `social-feedback-panel ${type}`;
+      panel.setAttribute('role', 'alert');
+      
+      const title = document.createElement('div');
+      title.className = 'social-feedback-title';
+      title.textContent = type === 'positive' ? 'Success!' : type === 'negative' ? 'Failed' : 'Info';
+      panel.appendChild(title);
+
+      const message = document.createElement('div');
+      message.className = 'social-feedback-message';
+      message.textContent = type === 'positive' 
+        ? 'The action was successful and improved your relationship!'
+        : type === 'negative'
+        ? 'The action failed and may have damaged the relationship.'
+        : 'The action was completed with mixed results.';
+      panel.appendChild(message);
+
+      document.body.appendChild(panel);
+      
+      setTimeout(() => {
+        panel.style.animation = 'slideOutRight 0.4s ease';
+        setTimeout(() => panel.remove(), 400);
+      }, 3000);
+    }
+
+    function clearUI() {
+      document.getElementById('ui-container').innerHTML = '';
+      console.log('UI cleared');
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      initMockGame();
+      console.log('Test page initialized');
+    });
+  </script>
+</body>
+</html>
