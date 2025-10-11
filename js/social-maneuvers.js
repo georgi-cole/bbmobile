@@ -11,7 +11,12 @@
   // ============================================================================
   
   function isEnabled(){
-    return global.game?.cfg?.enableSocialManeuvers === true;
+    const enabled = global.game?.cfg?.enableSocialManeuvers === true;
+    // Log for runtime verification (as per problem statement requirements)
+    if(enabled){
+      console.info('[social-maneuvers] ✓ Feature flag enabled (USE_SOCIAL_MANEUVERS=true)');
+    }
+    return enabled;
   }
 
   // ============================================================================
@@ -313,8 +318,11 @@
   
   function renderSocialManeuversUI(container, playerId){
     if(!isEnabled()){
+      console.info('[social-maneuvers] UI render requested but feature is DISABLED');
       return;
     }
+
+    console.info('[social-maneuvers] ✓ Rendering Social Maneuvers UI for player', playerId);
 
     if(!container){
       console.warn('[social-maneuvers] No container provided for UI');
@@ -613,9 +621,12 @@
   // ============================================================================
   
   function onSocialPhaseStart(){
-    if(!isEnabled()) return;
+    if(!isEnabled()){
+      console.info('[social-maneuvers] Phase start called but feature is DISABLED (USE_SOCIAL_MANEUVERS=false)');
+      return;
+    }
     
-    console.info('[social-maneuvers] Initializing social phase');
+    console.info('[social-maneuvers] ✓ startPhase() triggered - Initializing social phase with energy system');
     initSocialEnergy();
     
     // Reset energy for all players
@@ -623,12 +634,16 @@
     alivePlayers.forEach(p => {
       setEnergy(p.id, DEFAULT_ENERGY);
     });
+    console.info(`[social-maneuvers] Energy initialized for ${alivePlayers.length} players (${DEFAULT_ENERGY} energy each)`);
   }
 
   function onSocialPhaseEnd(){
-    if(!isEnabled()) return;
+    if(!isEnabled()) {
+      console.info('[social-maneuvers] Phase end called but feature is DISABLED');
+      return;
+    }
     
-    console.info('[social-maneuvers] Social phase complete');
+    console.info('[social-maneuvers] ✓ Social phase complete - cleaning up');
     // PLACEHOLDER: Generate summary of actions taken
     // PLACEHOLDER: Update long-term memory structures
   }
@@ -684,6 +699,9 @@
     configurable: true
   });
 
-  console.info('[social-maneuvers] Module loaded (disabled by default, enable via settings)');
+  console.info('[social-maneuvers] Module loaded successfully');
+  console.info('[social-maneuvers] Feature is DISABLED by default - enable via Settings > Social Maneuvers');
+  console.info('[social-maneuvers] To enable: game.cfg.enableSocialManeuvers = true');
+  console.info('[social-maneuvers] Runtime flag: window.USE_SOCIAL_MANEUVERS (currently:', isEnabled(), ')');
 
 })(window);
