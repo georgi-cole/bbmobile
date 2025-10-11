@@ -11,6 +11,7 @@
   const INTRO_FLAG_KEY = 'bb.introPlayed';
 
   let outroPlayed = false;
+  let outroPlayedOnce = false; // Track if outro has played at least once to prevent auto-replay
 
   function isIntroPlayed(){
     try{ return sessionStorage.getItem(INTRO_FLAG_KEY) === '1' || g.__bbIntroPlayed === true; }catch{ return !!g.__bbIntroPlayed; }
@@ -77,7 +78,9 @@
 
     const skip = document.createElement('button');
     skip.textContent = 'Skip';
-    skip.style.cssText = 'position:absolute;top:calc(env(safe-area-inset-top, 0px) + 12px);right:calc(env(safe-area-inset-right, 0px) + 14px);z-index:2;background:#1f344d;color:#d8e6f5;border:1px solid #2b4767;border-radius:10px;padding:8px 14px;font-weight:700;letter-spacing:.6px;cursor:pointer;';
+    skip.style.cssText = 'position:absolute;top:calc(env(safe-area-inset-top, 0px) + 12px);right:calc(env(safe-area-inset-right, 0px) + 14px);z-index:10;background:#1f344d;color:#d8e6f5;border:1px solid #2b4767;border-radius:10px;padding:8px 14px;font-weight:700;letter-spacing:.6px;cursor:pointer;opacity:1;pointer-events:auto;';
+    skip.setAttribute('aria-label', 'Skip video');
+    skip.setAttribute('title', 'Skip video');
 
     const tap = document.createElement('button');
     tap.textContent = 'Tap to Play';
@@ -279,7 +282,7 @@
   }
 
   // Export function to replay outro video manually
-  g.playOutroVideo = async function(){
+  g.playOutroVideo = async function(isManualReplay){
     const url = await pickVideoUrl(OUTRO_URL, OUTRO_URL_MOBILE);
     let hasVideo = true;
     try { const res = await fetch(url, { method: 'HEAD', cache: 'no-store' }); hasVideo = !!res.ok; } catch {}
@@ -292,16 +295,26 @@
       g.__outroStarted = false; // Reset flag on failure
       return;
     }
-    // D) Return to winner panel after outro
+    // Track if outro has been played at least once
+    outroPlayedOnce = true;
+    
+    // Return to winner panel after outro
     playVideo(url, { 
       onEnd: ()=>{ 
-        g.__outroStarted = false; // Reset flag to allow replay
+        // Only reset flag if this was a manual replay (from CREDITS button)
+        // For automatic first play, keep flag set to prevent re-autoplay in showFinaleCinematic
+        if(isManualReplay){
+          g.__outroStarted = false;
+        }
         if(g.__lastWinnerId != null) {
           setTimeout(()=>g.showFinaleCinematic?.(g.__lastWinnerId), 100);
         }
       }, 
       onSkip: ()=>{
-        g.__outroStarted = false; // Reset flag to allow replay
+        // Only reset flag if this was a manual replay
+        if(isManualReplay){
+          g.__outroStarted = false;
+        }
         if(g.__lastWinnerId != null) {
           setTimeout(()=>g.showFinaleCinematic?.(g.__lastWinnerId), 100);
         }
