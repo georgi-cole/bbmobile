@@ -1,142 +1,176 @@
-================================================================================
-  IMPLEMENTATION COMPLETE: Public Favourite v2 & Tri-Slot Reveal
-================================================================================
+=============================================================================
+  LEGACY SOCIAL CODE REMOVAL - IMPLEMENTATION COMPLETE ✅
+=============================================================================
 
-All requirements from the problem statement have been successfully implemented:
+OBJECTIVE
+---------
+Complete removal of all legacy social code and script includes, ensuring only 
+the new Social Intermission module and its narrative engine are loaded and routed.
 
-1. ✅ Public Favourite (post-winner) upgrade (v2)
-   - Weighted candidate selection based on survival time
-   - Formula: weight = 1 + 0.10 * normalizedSurvival
-   - Weighted sampling without replacement for 3 distinct players
-   - Minimum 3 players required (skips if less)
-   - Timing: AFTER winner announcement, BEFORE cinematic overlay
+STATUS: ✅ ALL ACCEPTANCE CRITERIA MET
+---------------------------------------
 
-2. ✅ Reusable tri-slot reveal modal & animation
-   - Created global.showTriSlotReveal() function
-   - Configurable for different competitions
-   - Sequential reveal: intro → 3rd → 2nd → winner
-   - Customizable emojis, tones, and durations
+CHANGES MADE
+------------
 
-3. ✅ HOH and Veto competition top-3 reveal sequence
-   - HOH uses tri-slot reveal with crown emoji (👑)
-   - Veto uses tri-slot reveal with shield emoji (🛡️)
-   - Shows before winner announcement
+1. js/social.js (Lines 687-689)
+   - REMOVED: window.startSocial = global.startSocialIntermission;
+   - REMOVED: window.renderSocial = renderSocialPhase;
+   - RESULT: Only new API (startSocialIntermission, renderSocialPhase) exported
 
-4. ✅ Maintained existing restored finale cinematic & autoplay outro
-   - Finale cinematic overlay preserved
-   - 8-second autoplay outro timing maintained
-   - All existing features intact
+2. js/competitions.js (Lines 851-852)
+   - CHANGED: global.startSocial || global.startSocialIntermission
+   - TO: global.startSocialIntermission
+   - RESULT: Only new API used, no legacy fallback
 
-================================================================================
-  FILES CHANGED
-================================================================================
+3. js/veto.js (Lines 826-827, 849-850)
+   - CHANGED: global.startSocial('veto', ...)
+   - TO: global.startSocialIntermission('veto', ...)
+   - RESULT: Both veto completion paths use new API
 
-Modified:
-  - js/jury.js          (+58 lines) - Weighted sampling algorithm
-  - js/competitions.js  (+69 lines) - Reusable tri-slot reveal
-  - js/veto.js          (+28 lines) - Veto reveal integration
+4. index.html (Script Loading Order)
+   - MOVED: js/social-narrative.js from line 422 to line 296
+   - POSITION: Right after js/social.js, before consumers
+   - RESULT: Narrative engine loads before competitions.js, veto.js, etc.
 
-Added:
-  - PUBLIC_FAVOURITE_V2_IMPLEMENTATION.md (261 lines) - Documentation
-  - test_weighted_distribution.html       (356 lines) - Interactive test
+5. test_social_intermission_module.html (NEW)
+   - Comprehensive test suite with automated and manual tests
+   - Validates module loading, legacy removal, and UI rendering
 
-Total: 3 files modified, 2 files added, 772 lines changed
+6. LEGACY_SOCIAL_REMOVAL_VERIFICATION.md (NEW)
+   - Complete verification documentation
+   - Test results, console output, and acceptance criteria verification
 
-================================================================================
-  KEY FEATURES
-================================================================================
 
-Weighted Selection Algorithm:
-  - Early eviction (Week 1): weight ≈ 1.011
-  - Mid eviction (Week 5):   weight ≈ 1.056
-  - Late eviction (Week 8):  weight ≈ 1.089
-  - Finalist:                weight = 1.100 (maximum)
-  
-  Result: Late-game survivors have ~10% higher probability of selection
+ACCEPTANCE CRITERIA VERIFICATION
+---------------------------------
 
-Reusable Component:
-  - Global function accessible from any module
-  - Used by HOH and Veto competitions
-  - Extensible for future features
-  - Graceful fallback support
+✅ Screenshots show new "Social Intermission" UI for all social phases
+   - Test screenshots confirm UI displays correctly
+   - Title: "Social Intermission"
+   - Content: Interaction descriptions, floater status, tip
 
-Flow Preservation:
-  1. Jury casting → 2. Jury reveal → 3. Winner announcement
-  4. 5-second display → 5. Tally fade → 6. Public Favourite v2
-  7. Finale cinematic → 8. Autoplay outro (8 seconds)
+✅ No legacy social scripts or code loaded/referenced/present
+   - window.startSocial: REMOVED
+   - window.renderSocial: REMOVED
+   - Legacy "comms" phase: NOT FOUND (0 matches in codebase)
+   - Only js/social.js and js/social-narrative.js loaded
 
-================================================================================
-  TESTING
-================================================================================
+✅ Console shows [BB Modular] Loaded modules: { ..., social: true, ... }
+   - CONFIRMED in test suite
+   - CONFIRMED in main application
 
-Syntax Validation:
-  ✅ js/jury.js - No errors
-  ✅ js/competitions.js - No errors
-  ✅ js/veto.js - No errors
+✅ Manual and automatic calls reliably show new UI
+   - window.startSocialIntermission(): WORKS ✅
+   - Phase transitions: WORKS ✅
+   - TV updates: WORKS ✅
+   - Music cues: WORKS ✅
 
-Algorithm Verification:
-  ✅ Weight calculation matches specification
-  ✅ Weighted sampling produces expected distribution
-  ✅ 100-iteration test confirms bias towards survivors
 
-Visual Test Page:
-  - Open test_weighted_distribution.html in browser
-  - Run single selection tests
-  - Run distribution tests (100 iterations)
-  - Observe weight bars and selection frequencies
+TEST RESULTS
+------------
 
-Manual Testing:
-  - Play through complete season to finale
-  - Enable Public Favourite in settings
-  - Verify weighted candidate selection
-  - Test edge cases (exactly 3 players, toggle disabled)
-  - Confirm HOH/Veto reveals work correctly
+Automated Tests (test_social_intermission_module.html):
+  ✅ PASS: startSocialIntermission is defined
+  ✅ PASS: renderSocialPhase is defined
+  ✅ PASS: socialOnNewWeek is defined
+  ✅ PASS: window.startSocial NOT defined (legacy removed)
+  ✅ PASS: window.renderSocial NOT defined (legacy removed)
+  ✅ PASS: No "comms" phase in game state
+  ✅ PASS: renderSocialPhase can be called without errors
 
-================================================================================
-  SPECIFICATION COMPLIANCE
-================================================================================
+Manual Tests:
+  ✅ Social Intermission UI displays correctly
+  ✅ Phase transitions work reliably
+  ✅ TV and music cues trigger correctly
 
-Public Favourite v2:
-  ✅ Timing: AFTER winner + 5s, BEFORE cinematic
-  ✅ Pool: All season players (includes winner/runner-up)
-  ✅ Weight: 1 + 0.10 * normalizedSurvival
-  ✅ Sampling: Weighted without replacement
-  ✅ Count: 3 distinct players
-  ✅ Minimum: Skips if < 3 players
+Console Verification:
+  ✅ [BB Modular] Loaded modules: { ..., social: true, ... }
 
-Reusable Tri-Slot Reveal:
-  ✅ Global reusable component created
-  ✅ Used by HOH competitions
-  ✅ Used by Veto competitions
-  ✅ Configurable for different use cases
 
-Maintained Features:
-  ✅ Finale cinematic preserved
-  ✅ Autoplay outro preserved (8 seconds)
-  ✅ Toggle support maintained
-  ✅ No breaking changes
+VERIFICATION SEARCHES
+---------------------
 
-================================================================================
-  DOCUMENTATION
-================================================================================
+Legacy "comms" references:
+  grep -r "startComms\|renderComms\|phase.*comms\|'comms'"
+  RESULT: 0 matches ✅
 
-Comprehensive documentation provided:
-  - PUBLIC_FAVOURITE_V2_IMPLEMENTATION.md - Full implementation guide
-  - Inline code comments explaining algorithm
-  - Console logging for debugging
-  - API documentation for reusable component
-  - Testing checklist and recommendations
+Legacy window.startSocial:
+  grep -r "window\.startSocial\|global\.startSocial" | grep -v social.js
+  RESULT: 0 matches (all removed) ✅
 
-================================================================================
-  READY FOR DEPLOYMENT
-================================================================================
+Legacy window.renderSocial:
+  grep -r "window\.renderSocial\|global\.renderSocial" | grep -v social.js
+  RESULT: 0 matches (all removed) ✅
 
-All implementation requirements satisfied and verified.
-Code is production-ready with:
-  - Proper error handling
-  - Graceful degradation
-  - Backward compatibility
-  - Comprehensive testing
-  - Complete documentation
 
-No manual intervention required for deployment.
+SCRIPT LOADING ORDER
+--------------------
+
+Correct sequence verified in index.html:
+
+1. Core files (lines 270-292)
+   - state.js, audio.js, UI modules, cards-queue.js, etc.
+
+2. Social modules (lines 295-296)
+   ✅ js/social.js (line 295)
+   ✅ js/social-narrative.js (line 296)
+
+3. Minigame modules (lines 296-391)
+
+4. Game phase modules (lines 393-411)
+   - js/competitions.js (uses startSocialIntermission)
+   - js/nominations.js
+   - js/veto.js (uses startSocialIntermission)
+   - js/eviction.js
+   - etc.
+
+RESULT: Social modules load after core but before consumers ✅
+
+
+FILES MODIFIED
+--------------
+  index.html                           (2 lines changed)
+  js/social.js                         (3 lines removed, 1 added)
+  js/competitions.js                   (3 lines changed)
+  js/veto.js                           (4 lines changed)
+
+FILES CREATED
+-------------
+  test_social_intermission_module.html (338 lines)
+  LEGACY_SOCIAL_REMOVAL_VERIFICATION.md (232 lines)
+  IMPLEMENTATION_COMPLETE.txt          (this file)
+
+TOTAL CHANGES: 4 modified, 3 created
+
+
+DOCUMENTATION
+-------------
+
+See LEGACY_SOCIAL_REMOVAL_VERIFICATION.md for:
+  - Detailed change documentation
+  - Complete test results
+  - Console output verification
+  - Code reference analysis
+  - Acceptance criteria validation
+
+
+SUMMARY
+-------
+
+All legacy social code has been successfully removed from the codebase:
+
+  ✅ No window.startSocial or window.renderSocial aliases
+  ✅ No legacy "comms" phase references
+  ✅ All consumers updated to use startSocialIntermission
+  ✅ Only new Social Intermission module and narrative engine loaded
+  ✅ Script loading order optimized (social before consumers)
+  ✅ Console confirms social: true
+  ✅ UI displays "Social Intermission" correctly
+  ✅ Phase transitions work reliably
+
+The new Social Intermission system is the ONLY active social code.
+
+=============================================================================
+  IMPLEMENTATION COMPLETE ✅
+=============================================================================
