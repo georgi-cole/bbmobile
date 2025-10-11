@@ -6,6 +6,15 @@
 (function(global){
   'use strict';
 
+  // Safe localStorage access
+  const storage = global.localStorage || {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+    get length() { return 0; },
+    key: () => null
+  };
+
   /**
    * CompLocks - Manages weekly submission locks for competition minigames
    * Stores locks in localStorage keyed by week, phase, gameKey, and playerId
@@ -34,7 +43,7 @@
     hasSubmittedThisWeek(week, phase, gameKey, playerId){
       try {
         const key = this._getLockKey(week, phase, gameKey, playerId);
-        const value = localStorage.getItem(key);
+        const value = storage.getItem(key);
         return value === '1';
       } catch(e) {
         console.warn('[CompLocks] Error checking submission lock:', e);
@@ -52,7 +61,7 @@
     lockSubmission(week, phase, gameKey, playerId){
       try {
         const key = this._getLockKey(week, phase, gameKey, playerId);
-        localStorage.setItem(key, '1');
+        storage.setItem(key, '1');
         console.info(`[CompLocks] Locked: Week ${week}, Phase ${phase}, Game ${gameKey}, Player ${playerId}`);
       } catch(e) {
         console.warn('[CompLocks] Error setting submission lock:', e);
@@ -70,15 +79,15 @@
         const keysToRemove = [];
         
         // Find all keys for this week
-        for(let i = 0; i < localStorage.length; i++){
-          const key = localStorage.key(i);
+        for(let i = 0; i < storage.length; i++){
+          const key = storage.key(i);
           if(key && key.startsWith(prefix)){
             keysToRemove.push(key);
           }
         }
         
         // Remove them
-        keysToRemove.forEach(key => localStorage.removeItem(key));
+        keysToRemove.forEach(key => storage.removeItem(key));
         console.info(`[CompLocks] Cleared ${keysToRemove.length} locks for week ${week}`);
       } catch(e) {
         console.warn('[CompLocks] Error clearing week locks:', e);
@@ -94,15 +103,15 @@
         const keysToRemove = [];
         
         // Find all lock keys
-        for(let i = 0; i < localStorage.length; i++){
-          const key = localStorage.key(i);
+        for(let i = 0; i < storage.length; i++){
+          const key = storage.key(i);
           if(key && key.startsWith(prefix)){
             keysToRemove.push(key);
           }
         }
         
         // Remove them
-        keysToRemove.forEach(key => localStorage.removeItem(key));
+        keysToRemove.forEach(key => storage.removeItem(key));
         console.info(`[CompLocks] Cleared all ${keysToRemove.length} competition locks`);
       } catch(e) {
         console.warn('[CompLocks] Error clearing all locks:', e);
