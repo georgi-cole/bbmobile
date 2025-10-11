@@ -35,9 +35,6 @@
     '@media (min-width:740px){ .settingsGrid{grid-template-columns:1fr 1fr} }',
     '.settingsTabPane[data-pane="cast"] .settingsGrid{grid-template-columns:1fr !important}',
     '.cast-wrap{display:flex;flex-direction:column;gap:8px;max-width:100%}',
-    '.cast-filters{display:flex;gap:6px;align-items:center}',
-    '.pill{padding:4px 8px;border-radius:999px;border:1px solid #2c3446;background:#172034;color:#e6e8ee;cursor:pointer;font-size:.68rem}',
-    '.pill.active{background:#1e3653;border-color:#2d8ab4}',
     '.cast-strip{display:flex;gap:8px;overflow:auto;padding:6px 2px;border:1px solid #223049;background:#0e1422;border-radius:10px}',
     '.cast-chip{min-width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}',
     '.chip-ava{position:relative;width:48px;height:48px;border-radius:999px;overflow:hidden;border:1px solid #2b3546;background:#0b0f1a}',
@@ -50,11 +47,16 @@
     '.cast-editor>*{min-width:0}',
     '.cast-preview{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0}',
     '.cast-preview img{width:140px;height:140px;border-radius:8px;border:1px solid #2b3546;object-fit:cover;background:#0b0f1a}',
-    '.cast-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}',
+    '.cast-avatar-upload{position:relative;cursor:pointer}',
+    '.cast-avatar-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);transition:background .2s;border-radius:8px}',
+    '.cast-avatar-upload:hover .cast-avatar-overlay{background:rgba(0,0,0,.4)}',
+    '.cast-avatar-overlay svg{color:#fff;opacity:0;transition:opacity .2s}',
+    '.cast-avatar-upload:hover .cast-avatar-overlay svg{opacity:0.9}',
+    '.cast-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}',
     '.cast-form .full{grid-column:1 / -1}',
-    '@media (max-width:900px){ .cast-editor{grid-template-columns:1fr} .cast-preview{align-items:flex-start} }',
-    '.cast-nav{display:flex;align-items:center;justify-content:space-between;margin-top:6px}',
-    '.cast-nav .btn{min-width:88px}',
+    '.cast-form .cast-age-field input{max-width:80px}',
+    '.cast-actions{display:flex;gap:8px;margin-top:8px;justify-content:flex-start;flex-wrap:wrap}',
+    '@media (max-width:900px){ .cast-editor{grid-template-columns:1fr} .cast-preview{align-items:flex-start} .cast-form{grid-template-columns:1fr} }',
     '#cascadeDeck{position:absolute;right:12px;top:56px;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:20;max-width:min(46%, 520px)}',
     '.miniCard{background:rgba(8,12,25,.9);border:1px solid #33407a;border-radius:10px;padding:7px 9px;color:#e6e8ee;font-size:.66rem;box-shadow:0 10px 24px -12px #000, 0 0 0 1px #1d2742}',
     '.miniCard h4{margin:0 0 3px;font-size:.62rem;letter-spacing:.6px;color:#9fb5ff;text-transform:uppercase}',
@@ -312,8 +314,7 @@
       '<div class="settingsGrid">',
         group('Interface', [
           checkbox('fxCards','Card reveal popups (FX cards)'),
-          checkbox('showTopRoster','Show top roster above TV'),
-          checkbox('enableJuryHouse','Enable Jury House')
+          checkbox('showTopRoster','Show top roster above TV')
         ].join('')),
         group('Quality of life', [
           checkbox('colorblindMode','Colorblind/high-contrast mode')
@@ -325,7 +326,8 @@
     return [
       '<div class="settingsGrid">',
         group('Features', [
-          checkbox('enablePublicFav','Public\'s favourite player - this is a new module!')
+          checkbox('enableJuryHouse','Enable Jury House'),
+          checkbox('enablePublicFav','Fans\' favourite mode')
         ].join('')),
         group('Week twists', [
           number('doubleChance','Double eviction chance (%)',0,100,1),
@@ -387,9 +389,6 @@
             '<div class="tiny muted" style="margin-top:6px;">Choose from 9 unique themes with distinct colors, textures, and aesthetics. Your preference is saved automatically.</div>',
           '</div>'
         ].join('')),
-        group('Badges & effects', [
-          checkbox('useRibbon','Use EVICTED ribbon overlay')
-        ].join('')),
       '</div>'
     ].join('');
   }
@@ -399,6 +398,24 @@
         group('Audio', [
           checkbox('musicOn','Music'),
           checkbox('sfxOn','Sound effects')
+        ].join('')),
+        group('Music / Audio Controls', [
+          '<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px">',
+            '<select id="musicTrack" style="flex:1;min-width:180px">',
+              '<option value="none">No track</option>',
+              '<option value="theme_opening">Opening Theme</option>',
+              '<option value="hoh_comp">HOH Comp</option>',
+              '<option value="veto_comp">Veto Comp</option>',
+              '<option value="nominations">Nominations</option>',
+              '<option value="live_vote">Live Vote</option>',
+              '<option value="eviction">Eviction</option>',
+              '<option value="victory">Victory Theme</option>',
+            '</select>',
+            '<button class="btn small" id="btnPlayMusic">Play</button>',
+            '<button class="btn small" id="btnStopMusic">Stop</button>',
+          '</div>',
+          '<label class="toggleRow"><span>Volume</span><input type="range" id="musicVol" min="0" max="1" step="0.01" value="0.4" style="flex:1"/></label>',
+          '<label class="toggleRow"><input type="checkbox" id="autoMusic" checked/><span>Auto music</span></label>',
         ].join('')),
       '</div>'
     ].join('');
@@ -416,22 +433,26 @@
           <h3>Cast Editor</h3>
           <div class="sep"></div>
           <div class="cast-wrap">
-            <div class="cast-filters">
-              <span class="pill active" data-filter="all">All</span>
-              <span class="pill" data-filter="alive">Alive</span>
-              <span class="pill" data-filter="evicted">Evicted</span>
-              <span class="tiny muted" style="margin-left:auto" id="castProgress">0/0</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span class="tiny muted" id="castProgress">0/0</span>
             </div>
             <div class="cast-strip" id="castRosterStrip"></div>
             <div class="cast-editor">
               <div class="cast-preview">
-                <img id="castPreviewImg" src="${fallback}" alt="preview">
-                <input type="file" id="castPhotoFile" accept="image/*" style="width:100%">
-                <div class="tiny muted" style="text-align:center">Upload a local image (stored as data URL)</div>
+                <div class="cast-avatar-upload" id="castAvatarUpload" style="position:relative;cursor:pointer;">
+                  <img id="castPreviewImg" src="${fallback}" alt="preview">
+                  <div class="cast-avatar-overlay">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                      <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                  </div>
+                </div>
+                <input type="file" id="castPhotoFile" accept="image/*" style="display:none">
               </div>
               <div class="cast-form">
                 <label class="toggleRow"><span>Name</span><input type="text" id="castName"></label>
-                <label class="toggleRow"><span>Age</span><input type="number" id="castAge" min="0" max="120" step="1"></label>
+                <label class="toggleRow cast-age-field"><span>Age</span><input type="number" id="castAge" min="0" max="120" step="1"></label>
                 <label class="toggleRow"><span>Sex</span>
                   <select id="castSex">
                     <option value="">—</option>
@@ -442,19 +463,13 @@
                 </label>
                 <label class="toggleRow full"><span>Occupation</span><input type="text" id="castOcc" placeholder="e.g., Student, Engineer"></label>
                 <label class="toggleRow full"><span>Motto</span><input type="text" id="castMotto" placeholder="e.g., Play hard, win harder"></label>
-                <label class="toggleRow full"><span>Photo URL</span><input type="text" id="castAvatarUrl" placeholder="https://..."></label>
               </div>
             </div>
-            <div class="cast-nav">
-              <div class="row">
-                <button class="btn" id="castPrev">Prev</button>
-                <button class="btn" id="castNext">Next</button>
-              </div>
-              <div class="row">
-                <button class="btn primary" id="castSaveNext">Save & Next</button>
-              </div>
+            <div class="cast-actions">
+              <button class="btn" id="castApply">Apply</button>
+              <button class="btn" id="castCancel">Cancel</button>
+              <button class="btn primary" id="castSaveClose">Save & Close</button>
             </div>
-            <div class="tiny muted">Shortcuts: ←/→ navigate • Enter: Save & Next</div>
           </div>
         </div>
       </div>`;
@@ -534,7 +549,6 @@
     const sex = modal.querySelector('#castSex');
     const occ = modal.querySelector('#castOcc');
     const motto = modal.querySelector('#castMotto');
-    const url = modal.querySelector('#castAvatarUrl');
 
     if(preview){
       try{
@@ -547,7 +561,7 @@
 
     if(!p){
       if(preview) preview.src = FALLBACK_AVATAR;
-      [name,age,sex,occ,motto,url].forEach(el=>{ if(el){ if(el.tagName==='SELECT') el.value=''; else el.value=''; } });
+      [name,age,sex,occ,motto].forEach(el=>{ if(el){ if(el.tagName==='SELECT') el.value=''; else el.value=''; } });
       return;
     }
     const meta = p.meta || {};
@@ -556,7 +570,6 @@
     sex.value = meta.sex || '';
     occ.value = meta.occupation || '';
     motto.value = meta.motto || '';
-    url.value = p.avatar || '';
 
     const imgSrc = (window.Game||window).resolveAvatar?.(p) || p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
     if(preview) preview.src = imgSrc;
@@ -575,36 +588,21 @@
   }
   function wireCastEditor(modal){
     const state = castState(modal);
-    modal.querySelectorAll('.cast-filters .pill').forEach(pill=>{
-      pill.addEventListener('click', async ()=>{
-        if(!await maybeConfirmDiscard(modal)) return;
-        modal.querySelectorAll('.cast-filters .pill').forEach(x=>x.classList.remove('active'));
-        pill.classList.add('active');
-        state.filter = pill.getAttribute('data-filter') || 'all';
-        state.idx = 0;
-        state.pendingAvatarDataUrl = null;
-        state.dirty = false;
-        renderCastStrip(modal);
-        fillCastForm(modal);
-      });
-    });
-    ['#castName','#castAge','#castSex','#castOcc','#castMotto','#castAvatarUrl'].forEach(sel=>{
+    // Wire form fields
+    ['#castName','#castAge','#castSex','#castOcc','#castMotto'].forEach(sel=>{
       const el = modal.querySelector(sel);
       if(!el) return;
-      el.addEventListener('input', ()=>{
-        markDirty(modal);
-        if(sel==='#castAvatarUrl'){
-          const prev = modal.querySelector('#castPreviewImg');
-          const v = el.value.trim();
-          if(prev) prev.src = v || FALLBACK_AVATAR;
-        }
-      });
+      el.addEventListener('input', ()=>markDirty(modal));
       if(el.tagName==='SELECT'){
         el.addEventListener('change', ()=>markDirty(modal));
       }
     });
+    
+    // Wire avatar upload (click image/overlay to trigger file picker)
     const file = modal.querySelector('#castPhotoFile');
-    if(file){
+    const avatarUpload = modal.querySelector('#castAvatarUpload');
+    if(file && avatarUpload){
+      avatarUpload.addEventListener('click', ()=>file.click());
       file.addEventListener('change', ()=>{
         const f = file.files && file.files[0];
         if(!f) return;
@@ -618,38 +616,38 @@
         fr.readAsDataURL(f);
       });
     }
-    const prev = modal.querySelector('#castPrev');
-    const next = modal.querySelector('#castNext');
-    const saveNext = modal.querySelector('#castSaveNext');
-
-    prev.addEventListener('click', async ()=>{
-      if(!await maybeConfirmDiscard(modal)) return;
-      const st = castState(modal);
-      st.idx = Math.max(0, st.idx-1);
-      st.pendingAvatarDataUrl = null; st.dirty=false;
-      renderCastStrip(modal); fillCastForm(modal);
-    });
-    next.addEventListener('click', async ()=>{
-      if(!await maybeConfirmDiscard(modal)) return;
-      const st = castState(modal);
-      st.idx = Math.min(st.order.length-1, st.idx+1);
-      st.pendingAvatarDataUrl = null; st.dirty=false;
-      renderCastStrip(modal); fillCastForm(modal);
-    });
-    saveNext.addEventListener('click', ()=>{
-      if(saveCurrentCastForm(modal)){
-        const st=castState(modal);
-        st.idx = Math.min(st.order.length-1, st.idx+1);
-        renderCastStrip(modal); fillCastForm(modal);
-      }
-    });
-    modal.addEventListener('keydown', async (e)=>{
-      const mac = navigator.platform.toUpperCase().includes('MAC');
-      const modKey = mac ? e.metaKey : e.ctrlKey;
-      if(e.key==='Enter'){ e.preventDefault(); if(saveCurrentCastForm(modal)){ const st=castState(modal); st.idx=Math.min(st.order.length-1, st.idx+1); renderCastStrip(modal); fillCastForm(modal);} }
-      else if(e.key==='ArrowLeft'){ e.preventDefault(); const st=castState(modal); if(!await maybeConfirmDiscard(modal)) return; st.idx=Math.max(0, st.idx-1); st.dirty=false; st.pendingAvatarDataUrl=null; renderCastStrip(modal); fillCastForm(modal); }
-      else if(e.key==='ArrowRight'){ e.preventDefault(); const st=castState(modal); if(!await maybeConfirmDiscard(modal)) return; st.idx=Math.min(st.order.length-1, st.idx+1); st.dirty=false; st.pendingAvatarDataUrl=null; renderCastStrip(modal); fillCastForm(modal); }
-    }, {capture:true});
+    
+    // Wire action buttons
+    const apply = modal.querySelector('#castApply');
+    const cancel = modal.querySelector('#castCancel');
+    const saveClose = modal.querySelector('#castSaveClose');
+    
+    if(apply){
+      apply.addEventListener('click', ()=>{
+        if(saveCurrentCastForm(modal)){
+          renderCastStrip(modal);
+          fillCastForm(modal);
+        }
+      });
+    }
+    
+    if(cancel){
+      cancel.addEventListener('click', async ()=>{
+        if(!await maybeConfirmDiscard(modal)) return;
+        castState(modal).dirty = false;
+        castState(modal).pendingAvatarDataUrl = null;
+        fillCastForm(modal);
+      });
+    }
+    
+    if(saveClose){
+      saveClose.addEventListener('click', ()=>{
+        if(saveCurrentCastForm(modal)){
+          const dim = modal.closest('.modal-backdrop');
+          if(dim) dim.style.display = 'none';
+        }
+      });
+    }
   }
   function saveCurrentCastForm(modal){
     const p = currentPlayer(modal);
@@ -659,7 +657,6 @@
     const sex = modal.querySelector('#castSex').value;
     const occ = modal.querySelector('#castOcc').value.trim();
     const motto = modal.querySelector('#castMotto').value.trim();
-    const url = modal.querySelector('#castAvatarUrl').value.trim();
     const upDataUrl = castState(modal).pendingAvatarDataUrl;
 
     if(!name){ alert('Name is required.'); return false; }
@@ -673,7 +670,6 @@
     if(motto) p.meta.motto = motto; else delete p.meta.motto;
 
     if(upDataUrl){ p.avatar = upDataUrl; p.img = upDataUrl; p.photo = upDataUrl; }
-    else if(url){ p.avatar = url; p.img = url; p.photo = url; }
 
     try{ g.updateHud?.(); }catch(e){}
     try{ g.saveGame?.(); }catch(e){}
@@ -716,24 +712,6 @@
   function buildDebugPaneHTML(){
     return [
       '<div class="settingsGrid">',
-        group('Music / Audio', [
-          '<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px">',
-            '<select id="musicTrack" style="flex:1;min-width:180px">',
-              '<option value="none">No track</option>',
-              '<option value="theme_opening">Opening Theme</option>',
-              '<option value="hoh_comp">HOH Comp</option>',
-              '<option value="veto_comp">Veto Comp</option>',
-              '<option value="nominations">Nominations</option>',
-              '<option value="live_vote">Live Vote</option>',
-              '<option value="eviction">Eviction</option>',
-              '<option value="victory">Victory Theme</option>',
-            '</select>',
-            '<button class="btn small" id="btnPlayMusic">Play</button>',
-            '<button class="btn small" id="btnStopMusic">Stop</button>',
-          '</div>',
-          '<label class="toggleRow"><span>Volume</span><input type="range" id="musicVol" min="0" max="1" step="0.01" value="0.4" style="flex:1"/></label>',
-          '<label class="toggleRow"><input type="checkbox" id="autoMusic" checked/><span>Auto music</span></label>',
-        ].join('')),
         group('Quick Actions', [
           '<div class="row" style="gap:8px;flex-wrap:wrap">',
             '<button class="btn small" id="btnNextWeek">Force Week ▶</button>',
