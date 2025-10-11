@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Integration Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .test-section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #444;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass {
+      background: #1a4d1a;
+      border: 1px solid #2d8f2d;
+    }
+    .fail {
+      background: #4d1a1a;
+      border: 1px solid #8f2d2d;
+    }
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #357abd;
+    }
+    .info {
+      background: #1a3a4d;
+      border: 1px solid #2d6d8f;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    h1 { color: #4a90e2; }
+    h2 { color: #6ab0ff; }
+    code {
+      background: #1a1a1a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #ffa500;
+    }
+  </style>
+</head>
+<body>
+  <h1>Social Maneuvers Integration Test</h1>
+  <p>This page tests the integration of the Social Maneuvers module with the main game loop.</p>
+
+  <div class="test-section">
+    <h2>Module Loading Tests</h2>
+    <div id="moduleTests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Backward Compatibility Tests</h2>
+    <div id="compatTests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Integration State Tests</h2>
+    <button onclick="testWithFlagDisabled()">Test with Flag DISABLED</button>
+    <button onclick="testWithFlagEnabled()">Test with Flag ENABLED</button>
+    <div id="integrationTests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Phase Hook Tests</h2>
+    <button onclick="testPhaseHooks()">Test Phase Hooks</button>
+    <div id="phaseTests"></div>
+  </div>
+
+  <!-- Load the modules -->
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    // Helper function to display test results
+    function displayTest(containerId, testName, passed, details) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      div.innerHTML = `
+        <strong>${passed ? '✅' : '❌'} ${testName}</strong>
+        ${details ? `<br><small>${details}</small>` : ''}
+      `;
+      container.appendChild(div);
+      return passed;
+    }
+
+    // Module Loading Tests
+    function runModuleTests() {
+      const container = document.getElementById('moduleTests');
+      container.innerHTML = '';
+
+      displayTest('moduleTests', 'SocialManeuvers module exists', 
+        typeof window.SocialManeuvers === 'object',
+        'window.SocialManeuvers: ' + typeof window.SocialManeuvers);
+
+      displayTest('moduleTests', 'SocialManeuvers.isEnabled exists',
+        typeof window.SocialManeuvers?.isEnabled === 'function',
+        'Type: ' + typeof window.SocialManeuvers?.isEnabled);
+
+      displayTest('moduleTests', 'SocialManeuvers.onSocialPhaseStart exists',
+        typeof window.SocialManeuvers?.onSocialPhaseStart === 'function',
+        'Type: ' + typeof window.SocialManeuvers?.onSocialPhaseStart);
+
+      displayTest('moduleTests', 'SocialManeuvers.onSocialPhaseEnd exists',
+        typeof window.SocialManeuvers?.onSocialPhaseEnd === 'function',
+        'Type: ' + typeof window.SocialManeuvers?.onSocialPhaseEnd);
+    }
+
+    // Backward Compatibility Tests
+    function runCompatTests() {
+      const container = document.getElementById('compatTests');
+      container.innerHTML = '';
+
+      // Test SocialManager alias
+      displayTest('compatTests', 'SocialManager alias exists',
+        typeof window.SocialManager === 'object',
+        'window.SocialManager points to SocialManeuvers: ' + (window.SocialManager === window.SocialManeuvers));
+
+      displayTest('compatTests', 'SocialManager === SocialManeuvers',
+        window.SocialManager === window.SocialManeuvers,
+        'Both point to the same object');
+
+      // Test startPhase/endPhase aliases
+      displayTest('compatTests', 'SocialManager.startPhase exists',
+        typeof window.SocialManager?.startPhase === 'function',
+        'Type: ' + typeof window.SocialManager?.startPhase);
+
+      displayTest('compatTests', 'SocialManager.endPhase exists',
+        typeof window.SocialManager?.endPhase === 'function',
+        'Type: ' + typeof window.SocialManager?.endPhase);
+
+      displayTest('compatTests', 'startPhase === onSocialPhaseStart',
+        window.SocialManager?.startPhase === window.SocialManager?.onSocialPhaseStart,
+        'Alias points to correct method');
+
+      // Test USE_SOCIAL_MANEUVERS flag
+      displayTest('compatTests', 'USE_SOCIAL_MANEUVERS property exists',
+        'USE_SOCIAL_MANEUVERS' in window,
+        'Property defined on window object');
+
+      displayTest('compatTests', 'USE_SOCIAL_MANEUVERS returns boolean',
+        typeof window.USE_SOCIAL_MANEUVERS === 'boolean',
+        'Value: ' + window.USE_SOCIAL_MANEUVERS);
+    }
+
+    // Integration State Tests
+    function testWithFlagDisabled() {
+      const container = document.getElementById('integrationTests');
+      container.innerHTML = '<div class="info">Testing with flag DISABLED...</div>';
+
+      // Create mock game state with flag disabled
+      window.game = {
+        cfg: {
+          enableSocialManeuvers: false
+        }
+      };
+
+      const isEnabled = window.SocialManeuvers.isEnabled();
+      displayTest('integrationTests', 'Flag disabled - isEnabled returns false',
+        isEnabled === false,
+        'isEnabled(): ' + isEnabled);
+
+      displayTest('integrationTests', 'Flag disabled - USE_SOCIAL_MANEUVERS is false',
+        window.USE_SOCIAL_MANEUVERS === false,
+        'USE_SOCIAL_MANEUVERS: ' + window.USE_SOCIAL_MANEUVERS);
+    }
+
+    function testWithFlagEnabled() {
+      const container = document.getElementById('integrationTests');
+      container.innerHTML = '<div class="info">Testing with flag ENABLED...</div>';
+
+      // Create mock game state with flag enabled
+      window.game = {
+        cfg: {
+          enableSocialManeuvers: true
+        }
+      };
+
+      const isEnabled = window.SocialManeuvers.isEnabled();
+      displayTest('integrationTests', 'Flag enabled - isEnabled returns true',
+        isEnabled === true,
+        'isEnabled(): ' + isEnabled);
+
+      displayTest('integrationTests', 'Flag enabled - USE_SOCIAL_MANEUVERS is true',
+        window.USE_SOCIAL_MANEUVERS === true,
+        'USE_SOCIAL_MANEUVERS: ' + window.USE_SOCIAL_MANEUVERS);
+    }
+
+    // Phase Hook Tests
+    function testPhaseHooks() {
+      const container = document.getElementById('phaseTests');
+      container.innerHTML = '<div class="info">Testing phase hooks...</div>';
+
+      // Setup mock game state
+      window.game = {
+        cfg: { enableSocialManeuvers: true },
+        __socialEnergy: null,
+        players: []
+      };
+
+      // Mock helper functions
+      window.alivePlayers = () => [
+        { id: 1, name: 'Player 1' },
+        { id: 2, name: 'Player 2' }
+      ];
+
+      try {
+        // Test startPhase
+        window.SocialManager.startPhase();
+        displayTest('phaseTests', 'startPhase() executes without error', true,
+          'Energy map initialized: ' + (window.game.__socialEnergy instanceof Map));
+
+        displayTest('phaseTests', 'Energy initialized for players',
+          window.game.__socialEnergy.size > 0,
+          'Players with energy: ' + window.game.__socialEnergy.size);
+
+        // Test endPhase
+        window.SocialManager.endPhase();
+        displayTest('phaseTests', 'endPhase() executes without error', true,
+          'Phase cleanup completed');
+
+      } catch (e) {
+        displayTest('phaseTests', 'Phase hooks execution', false,
+          'Error: ' + e.message);
+      }
+    }
+
+    // Run automatic tests on load
+    window.addEventListener('DOMContentLoaded', () => {
+      runModuleTests();
+      runCompatTests();
+    });
+
+    // Run tests immediately if DOM already loaded
+    if (document.readyState === 'loading') {
+      // Do nothing, wait for DOMContentLoaded
+    } else {
+      runModuleTests();
+      runCompatTests();
+    }
+  </script>
+</body>
+</html>
