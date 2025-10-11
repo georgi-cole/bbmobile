@@ -37,7 +37,12 @@
         'patternMatch', 'wordAnagram', 'targetPractice', 'memoryPairs',
         'estimationGame', 'wordTyping', 'reactionTimer', 'sliderPuzzle',
         'pathFinder', 'simonSays', 'oteviator', 'comixSpot', 'holdWall',
-        'slipperyShuttle', 'memoryZipline'
+        'slipperyShuttle', 'memoryZipline',
+        // Phase 2: New Minigames (15 additional games)
+        'bubbleBurst', 'cardClash', 'chainReaction', 'clockStopper',
+        'comboKeys', 'diceDash', 'echoChamber', 'flashFlood',
+        'gearShift', 'gridLock', 'iconMatch', 'jumpRope',
+        'keyMaster', 'lightSpeed', 'puzzleDash'
       ];
       
       for(const key of fallbackKeys){
@@ -108,7 +113,38 @@
       'reaction-royale': 'reactionRoyale',
       'reactionroyale': 'reactionRoyale',
       'trivia-pulse': 'triviaPulse',
-      'triviapulse': 'triviaPulse'
+      'triviapulse': 'triviaPulse',
+      // Phase 2: New Minigame Aliases
+      'bubble-burst': 'bubbleBurst',
+      'bubbleburst': 'bubbleBurst',
+      'card-clash': 'cardClash',
+      'cardclash': 'cardClash',
+      'chain-reaction': 'chainReaction',
+      'chainreaction': 'chainReaction',
+      'clock-stopper': 'clockStopper',
+      'clockstopper': 'clockStopper',
+      'combo-keys': 'comboKeys',
+      'combokeys': 'comboKeys',
+      'dice-dash': 'diceDash',
+      'dicedash': 'diceDash',
+      'echo-chamber': 'echoChamber',
+      'echochamber': 'echoChamber',
+      'flash-flood': 'flashFlood',
+      'flashflood': 'flashFlood',
+      'gear-shift': 'gearShift',
+      'gearshift': 'gearShift',
+      'grid-lock': 'gridLock',
+      'gridlock': 'gridLock',
+      'icon-match': 'iconMatch',
+      'iconmatch': 'iconMatch',
+      'jump-rope': 'jumpRope',
+      'jumprope': 'jumpRope',
+      'key-master': 'keyMaster',
+      'keymaster': 'keyMaster',
+      'light-speed': 'lightSpeed',
+      'lightspeed': 'lightSpeed',
+      'puzzle-dash': 'puzzleDash',
+      'puzzledash': 'puzzleDash'
     };
 
     console.info('Registering', Object.keys(descriptiveAliases).length, 'descriptive aliases');

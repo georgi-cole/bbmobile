@@ -173,7 +173,68 @@
     'logiclocks': 'placeholder',
     'astroJumper': 'placeholder',
     'astro-jumper': 'placeholder',
-    'astrojumper': 'placeholder'
+    'astrojumper': 'placeholder',
+    
+    // Phase 2: New Minigames (15 additional games)
+    'bubbleBurst': 'bubbleBurst',
+    'bubble-burst': 'bubbleBurst',
+    'bubbleburst': 'bubbleBurst',
+    
+    'cardClash': 'cardClash',
+    'card-clash': 'cardClash',
+    'cardclash': 'cardClash',
+    
+    'chainReaction': 'chainReaction',
+    'chain-reaction': 'chainReaction',
+    'chainreaction': 'chainReaction',
+    
+    'clockStopper': 'clockStopper',
+    'clock-stopper': 'clockStopper',
+    'clockstopper': 'clockStopper',
+    
+    'comboKeys': 'comboKeys',
+    'combo-keys': 'comboKeys',
+    'combokeys': 'comboKeys',
+    
+    'diceDash': 'diceDash',
+    'dice-dash': 'diceDash',
+    'dicedash': 'diceDash',
+    
+    'echoChamber': 'echoChamber',
+    'echo-chamber': 'echoChamber',
+    'echochamber': 'echoChamber',
+    
+    'flashFlood': 'flashFlood',
+    'flash-flood': 'flashFlood',
+    'flashflood': 'flashFlood',
+    
+    'gearShift': 'gearShift',
+    'gear-shift': 'gearShift',
+    'gearshift': 'gearShift',
+    
+    'gridLock': 'gridLock',
+    'grid-lock': 'gridLock',
+    'gridlock': 'gridLock',
+    
+    'iconMatch': 'iconMatch',
+    'icon-match': 'iconMatch',
+    'iconmatch': 'iconMatch',
+    
+    'jumpRope': 'jumpRope',
+    'jump-rope': 'jumpRope',
+    'jumprope': 'jumpRope',
+    
+    'keyMaster': 'keyMaster',
+    'key-master': 'keyMaster',
+    'keymaster': 'keyMaster',
+    
+    'lightSpeed': 'lightSpeed',
+    'light-speed': 'lightSpeed',
+    'lightspeed': 'lightSpeed',
+    
+    'puzzleDash': 'puzzleDash',
+    'puzzle-dash': 'puzzleDash',
+    'puzzledash': 'puzzleDash'
   };
 
   /**
