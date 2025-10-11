@@ -664,11 +664,25 @@
     onSocialPhaseStart,
     onSocialPhaseEnd,
     
+    // Backward-compatible aliases (for problem statement requirements)
+    startPhase: onSocialPhaseStart,
+    endPhase: onSocialPhaseEnd,
+    
     // Constants (for external reference)
     DEFAULT_ENERGY,
     MAX_ENERGY,
     SOCIAL_ACTIONS
   };
+  
+  // Backward-compatible alias: SocialManager -> SocialManeuvers
+  global.SocialManager = global.SocialManeuvers;
+  
+  // Backward-compatible flag getter: USE_SOCIAL_MANEUVERS
+  Object.defineProperty(global, 'USE_SOCIAL_MANEUVERS', {
+    get: function() { return isEnabled(); },
+    enumerable: true,
+    configurable: true
+  });
 
   console.info('[social-maneuvers] Module loaded (disabled by default, enable via settings)');
 

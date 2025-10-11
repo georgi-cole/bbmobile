@@ -500,7 +500,11 @@
     ensureSocialState();
     g.__socialLogBudget = 6;
 
-    simulateHouseSocial();
+    // Run old passive simulation only if Social Maneuvers is NOT enabled
+    // When Social Maneuvers is active, player actions drive social dynamics instead
+    if(!global.SocialManeuvers?.isEnabled()){
+      simulateHouseSocial();
+    }
 
     const fWrap=document.createElement('div'); fWrap.className='tiny';
     const floaters=[...g.__floatersWeek].map(id=>global.safeName(id));
@@ -711,15 +715,6 @@
             console.error('[social] Failed to clean up Social Maneuvers:', e);
           }
         }
-      }catch(e){ console.error(e); }
-      
-      if(typeof callback === 'function'){
-        try{ callback(); }catch(e){ console.error(e); }
-      } else {
-        const startNoms = resolveStartNominations();
-        try{ startNoms(); }catch(e){ console.error(e); }
-      }
-    };
       }catch(e){ console.error(e); }
       
       if(typeof callback === 'function'){
