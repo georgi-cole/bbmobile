@@ -67,6 +67,9 @@
   /**
    * Generate synthetic opponent scores for a competition
    * Uses Beta distribution to control win probability
+   * To achieve ~20% session win rate (beating ALL opponents), we need to consider
+   * that if there are N opponents, and we want P(beat all) = 0.20, then
+   * P(beat one) ≈ 0.20^(1/N)
    * 
    * @param {Object} options - Configuration options
    * @param {number} options.humanScore - Human player's score (0-100)
@@ -98,41 +101,51 @@
     const minScore = gameMetadata.minScore;
     const maxScore = gameMetadata.maxScore;
 
-    // Calculate Beta distribution parameters
-    // For 20% win rate: Beta(2, 8) gives mean = 2/(2+8) = 0.2
-    // We'll shift and scale this to create opponent scores relative to human
-    const betaAlpha = targetWinRate * 10;
-    const betaBeta = (1 - targetWinRate) * 10;
+    // Calculate per-opponent beat probability to achieve target session win rate
+    // If we want P(beat all N opponents) = targetWinRate, then:
+    // P(beat one opponent) = targetWinRate^(1/N)
+    const numOpponents = opponents.length;
+    const perOpponentBeatProb = Math.pow(targetWinRate, 1 / numOpponents);
+    
+    // Add a conservative adjustment to account for variance and persona effects
+    // This brings us closer to the target
+    const adjustedBeatProb = perOpponentBeatProb * 0.90; // 10% more conservative
+    
+    // For Beta distribution: we want mean = perOpponentBeatProb
+    // Use Beta(alpha, beta) where mean = alpha/(alpha+beta)
+    // Choose alpha = 2 for some variance, then solve for beta
+    const betaAlpha = 2;
+    const betaBeta = (betaAlpha / perOpponentBeatProb) - betaAlpha;
 
     const scores = new Map();
 
     for(const opponent of opponents){
-      // Generate base win probability for this opponent using Beta distribution
-      const winProb = betaRandom(betaAlpha, betaBeta, random);
+      // Generate random value to decide if human beats this opponent
+      // We want this to be true with probability adjustedBeatProb
+      const randValue = random();
+      const humanBeatsOpponent = randValue < adjustedBeatProb;
       
-      // Convert win probability to score relative to human
-      // If winProb is high, opponent should score higher than human
-      // Add some variance based on opponent's compBeast stat
+      // Base score calculation with compBeast factor
       const compBeastFactor = opponent.compBeast || 0.5;
-      const variance = (random() - 0.5) * 0.15; // ±7.5% variance
       
-      // Calculate opponent score based on win probability
+      // Calculate opponent score relative to human
       let opponentScore;
-      if(winProb > 0.5){
-        // Opponent should beat human
-        const margin = 5 + random() * 15; // 5-20 point margin
-        opponentScore = humanScore + margin;
+      if(humanBeatsOpponent){
+        // Human wins: opponent scores below human
+        const marginPct = 0.08 + random() * 0.12; // 8-20% below human
+        opponentScore = humanScore * (1 - marginPct);
       } else {
-        // Opponent should lose to human
-        const margin = 5 + random() * 15; // 5-20 point margin
-        opponentScore = humanScore - margin;
+        // Opponent wins: opponent scores above human
+        const marginPct = 0.05 + random() * 0.15; // 5-20% above human
+        opponentScore = humanScore * (1 + marginPct);
       }
       
-      // Apply compBeast multiplier (0.2 - 0.9 range)
-      const compMultiplier = 0.85 + compBeastFactor * 0.3 + variance;
+      // Apply compBeast multiplier with variance
+      const variance = (random() - 0.5) * 0.08; // ±4% variance
+      const compMultiplier = 0.92 + compBeastFactor * 0.16 + variance;
       opponentScore *= compMultiplier;
       
-      // Apply persona adjustments
+      // Apply persona adjustments (smaller impact)
       opponentScore = applyPersonaAdjustment(opponentScore, opponent.persona, random);
       
       // Clamp to valid game bounds
