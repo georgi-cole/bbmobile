@@ -787,7 +787,26 @@
 
   function proceedNextWeek(){
     const g=global.game;
-    if(Array.isArray(g.players)) g.players.forEach(p=>p.nominated=false);
+    
+    // Clear all badges at the start of a new week (Issue: tag reset)
+    g.nominees = [];
+    g.vetoHolder = null;
+    g.nomsLocked = false;
+    g.hohId = null;
+    
+    if(Array.isArray(g.players)){
+      g.players.forEach(p => {
+        p.nominated = false;
+        p.hoh = false;
+        p.nominationState = 'none';
+      });
+    }
+    
+    console.info('[eviction] All badges cleared at start of new week');
+    
+    // Sync player badge states after clearing
+    if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
+    
     g.__nomsCommitInProgress=false;
     g.__nomsCommitted=false;
     g._pendingNoms=null;
