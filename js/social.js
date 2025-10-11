@@ -684,8 +684,7 @@
     const panel=document.getElementById('panel'); if(panel) renderSocialPhase(panel);
   };
 
-  // Back-compat alias used by competitions.js
-  global.startSocial = global.startSocialIntermission;
-  global.renderSocial = renderSocialPhase;
+  // Export main function for global access
+  global.renderSocialPhase = renderSocialPhase;
 
 })(window);
