@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test All 15 New Minigames</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0f1923;
+      color: #e3ecf5;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .game-card {
+      background: #1d2734;
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid #2c3a4d;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .game-card:hover {
+      border-color: #6fd3ff;
+      transform: translateY(-2px);
+    }
+    .game-card.loaded {
+      border-color: #74e48b;
+    }
+    .game-card.error {
+      border-color: #ff6b6b;
+    }
+    .game-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #6fd3ff;
+    }
+    .game-status {
+      font-size: 0.85rem;
+      color: #95a9c0;
+    }
+    #game-container {
+      background: #1d2734;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      min-height: 400px;
+    }
+    #results {
+      background: #2c3a4d;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .btn {
+      background: #2c3a4d;
+      color: #e3ecf5;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .btn.primary {
+      background: #6fd3ff;
+      color: #0f1923;
+    }
+    .summary {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 20px 0;
+      font-size: 1.1rem;
+    }
+    .summary div {
+      padding: 10px 20px;
+      background: #2c3a4d;
+      border-radius: 4px;
+    }
+    .stat-good { color: #74e48b; }
+    .stat-warn { color: #f7b955; }
+    .stat-bad { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1 style="text-align:center;">Test All 15 New Minigames</h1>
+    
+    <div class="summary">
+      <div>Total: <span id="total">15</span></div>
+      <div class="stat-good">Loaded: <span id="loaded">0</span></div>
+      <div class="stat-bad">Failed: <span id="failed">0</span></div>
+    </div>
+    
+    <div style="text-align:center;margin:20px 0;">
+      <button id="testAllBtn" class="btn primary">Test All Games</button>
+      <button id="resetBtn" class="btn">Reset</button>
+    </div>
+    
+    <h3>Click a game to test it individually:</h3>
+    <div class="game-grid" id="gameGrid"></div>
+    
+    <div id="game-container"></div>
+    <div id="results"></div>
+  </div>
+  
+  <!-- Load all minigame modules -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/bubble-burst.js"></script>
+  <script src="js/minigames/card-clash.js"></script>
+  <script src="js/minigames/chain-reaction.js"></script>
+  <script src="js/minigames/clock-stopper.js"></script>
+  <script src="js/minigames/combo-keys.js"></script>
+  <script src="js/minigames/dice-dash.js"></script>
+  <script src="js/minigames/echo-chamber.js"></script>
+  <script src="js/minigames/flash-flood.js"></script>
+  <script src="js/minigames/gear-shift.js"></script>
+  <script src="js/minigames/grid-lock.js"></script>
+  <script src="js/minigames/icon-match.js"></script>
+  <script src="js/minigames/jump-rope.js"></script>
+  <script src="js/minigames/key-master.js"></script>
+  <script src="js/minigames/light-speed.js"></script>
+  <script src="js/minigames/puzzle-dash.js"></script>
+  
+  <script>
+    const games = [
+      { key: 'bubbleBurst', name: 'Bubble Burst', type: 'reaction' },
+      { key: 'cardClash', name: 'Card Clash', type: 'memory' },
+      { key: 'chainReaction', name: 'Chain Reaction', type: 'puzzle' },
+      { key: 'clockStopper', name: 'Clock Stopper', type: 'reaction' },
+      { key: 'comboKeys', name: 'Combo Keys', type: 'memory' },
+      { key: 'diceDash', name: 'Dice Dash', type: 'reaction' },
+      { key: 'echoChamber', name: 'Echo Chamber', type: 'memory' },
+      { key: 'flashFlood', name: 'Flash Flood', type: 'reaction' },
+      { key: 'gearShift', name: 'Gear Shift', type: 'puzzle' },
+      { key: 'gridLock', name: 'Grid Lock', type: 'puzzle' },
+      { key: 'iconMatch', name: 'Icon Match', type: 'memory' },
+      { key: 'jumpRope', name: 'Jump Rope', type: 'endurance' },
+      { key: 'keyMaster', name: 'Key Master', type: 'puzzle' },
+      { key: 'lightSpeed', name: 'Light Speed', type: 'reaction' },
+      { key: 'puzzleDash', name: 'Puzzle Dash', type: 'puzzle' }
+    ];
+    
+    const gameGrid = document.getElementById('gameGrid');
+    const gameContainer = document.getElementById('game-container');
+    const results = document.getElementById('results');
+    const testAllBtn = document.getElementById('testAllBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    
+    let loadedCount = 0;
+    let failedCount = 0;
+    
+    function updateStats(){
+      document.getElementById('loaded').textContent = loadedCount;
+      document.getElementById('failed').textContent = failedCount;
+    }
+    
+    function createGameCard(game){
+      const card = document.createElement('div');
+      card.className = 'game-card';
+      card.innerHTML = `
+        <div class="game-title">${game.name}</div>
+        <div class="game-status">Type: ${game.type}</div>
+        <div class="game-status" id="status-${game.key}">Checking...</div>
+      `;
+      
+      // Check if game is loaded
+      setTimeout(() => {
+        const statusDiv = document.getElementById(`status-${game.key}`);
+        if(window.MiniGames && window.MiniGames[game.key]){
+          statusDiv.textContent = '✓ Loaded';
+          statusDiv.style.color = '#74e48b';
+          card.classList.add('loaded');
+          loadedCount++;
+        } else {
+          statusDiv.textContent = '✗ Failed';
+          statusDiv.style.color = '#ff6b6b';
+          card.classList.add('error');
+          failedCount++;
+        }
+        updateStats();
+      }, 100);
+      
+      card.addEventListener('click', () => {
+        if(!window.MiniGames || !window.MiniGames[game.key]){
+          results.innerHTML = `<p style="color:#ff6b6b;">Error: ${game.name} not loaded!</p>`;
+          return;
+        }
+        
+        gameContainer.innerHTML = '';
+        results.innerHTML = `<p>Testing ${game.name}... Complete the game to see your score.</p>`;
+        
+        try {
+          window.MiniGames[game.key].render(gameContainer, (score) => {
+            results.innerHTML = `
+              <h3>✅ ${game.name} Complete!</h3>
+              <p>Score: <strong>${Math.round(score)}</strong>/100</p>
+              <p>Game passed the test!</p>
+            `;
+          });
+        } catch(error){
+          results.innerHTML = `
+            <h3 style="color:#ff6b6b;">❌ ${game.name} Error!</h3>
+            <p>${error.message}</p>
+          `;
+          console.error(`Error loading ${game.name}:`, error);
+        }
+      });
+      
+      return card;
+    }
+    
+    // Populate grid
+    games.forEach(game => {
+      gameGrid.appendChild(createGameCard(game));
+    });
+    
+    testAllBtn.addEventListener('click', () => {
+      results.innerHTML = '<h3>Running Tests...</h3>';
+      const testResults = [];
+      
+      games.forEach(game => {
+        const exists = window.MiniGames && window.MiniGames[game.key];
+        const hasRender = exists && typeof window.MiniGames[game.key].render === 'function';
+        
+        testResults.push({
+          game: game.name,
+          key: game.key,
+          exists,
+          hasRender,
+          pass: exists && hasRender
+        });
+      });
+      
+      const passed = testResults.filter(r => r.pass).length;
+      const failed = testResults.filter(r => !r.pass).length;
+      
+      let html = `
+        <h3>Test Results</h3>
+        <p><strong>${passed}/15</strong> games passed all checks</p>
+      `;
+      
+      if(failed > 0){
+        html += '<h4 style="color:#ff6b6b;">Failed Tests:</h4><ul>';
+        testResults.filter(r => !r.pass).forEach(r => {
+          html += `<li>${r.game} (${r.key}): ${!r.exists ? 'Not loaded' : 'Missing render()'}</li>`;
+        });
+        html += '</ul>';
+      } else {
+        html += '<p style="color:#74e48b;">All games passed! ✅</p>';
+      }
+      
+      // Check registry integration
+      if(window.MinigameRegistry){
+        const implemented = window.MinigameRegistry.getImplementedGames();
+        html += `<p>Registry reports <strong>${implemented.length}</strong> implemented games</p>`;
+        
+        const ourGames = games.filter(g => implemented.includes(g.key));
+        html += `<p><strong>${ourGames.length}/15</strong> of our new games are in registry as implemented</p>`;
+      }
+      
+      results.innerHTML = html;
+    });
+    
+    resetBtn.addEventListener('click', () => {
+      gameContainer.innerHTML = '';
+      results.innerHTML = '';
+    });
+    
+    // Auto-run test on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if(loadedCount === 15){
+          console.log('✅ All 15 games loaded successfully!');
+        } else {
+          console.warn(`⚠️ Only ${loadedCount}/15 games loaded`);
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>
