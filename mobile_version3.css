@@ -146,11 +146,11 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-strip {
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    padding: 8px 6px !important;
+    padding: 8px !important;
     -webkit-overflow-scrolling: touch;
-    margin: 0 -8px !important; /* Extend to card edges */
-    width: calc(100% + 16px) !important;
     border-radius: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-chip {
