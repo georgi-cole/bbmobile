@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Integration Verification</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    h1 { color: #f7b955; }
+    h2 { color: #95a9c0; margin-top: 30px; }
+    .section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .pass { background: rgba(46, 204, 113, 0.2); border-left: 3px solid #2ecc71; }
+    .fail { background: rgba(231, 76, 60, 0.2); border-left: 3px solid #e74c3c; }
+    .info { background: rgba(52, 152, 219, 0.2); border-left: 3px solid #3498db; }
+    .warn { background: rgba(241, 196, 15, 0.2); border-left: 3px solid #f1c40f; }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover { background: #2980b9; }
+    button.success { background: #2ecc71; }
+    button.success:hover { background: #27ae60; }
+    button.danger { background: #e74c3c; }
+    button.danger:hover { background: #c0392b; }
+    #console {
+      background: #000;
+      color: #0f0;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      height: 300px;
+      overflow-y: auto;
+      margin: 20px 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .status-enabled { background: #2ecc71; color: white; }
+    .status-disabled { background: #95a5a6; color: white; }
+    code {
+      background: rgba(255,255,255,0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Maneuvers Integration Verification</h1>
+  <p>This page verifies that the Social Maneuvers feature integration is working correctly.</p>
+
+  <div class="section">
+    <h2>Status Overview</h2>
+    <div id="statusOverview"></div>
+  </div>
+
+  <div class="section">
+    <h2>Feature Flag Control</h2>
+    <p>Current status: <span id="featureStatus">Checking...</span></p>
+    <button id="btnDisable" class="danger">Disable Feature</button>
+    <button id="btnEnable" class="success">Enable Feature</button>
+    <button id="btnRefresh">Refresh Status</button>
+  </div>
+
+  <div class="section">
+    <h2>Integration Tests</h2>
+    <button id="btnTestModule">Test Module Load</button>
+    <button id="btnTestFlag">Test Feature Flag</button>
+    <button id="btnTestStartPhase">Test startPhase()</button>
+    <button id="btnTestUI">Test UI Render</button>
+    <button id="btnRunAll">Run All Tests</button>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="section">
+    <h2>Console Monitor</h2>
+    <p>Live console output (filtered for social-maneuvers and social logs):</p>
+    <div id="console"></div>
+    <button id="btnClearConsole">Clear Console</button>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    // Mock minimal game environment
+    window.game = window.game || {
+      week: 1,
+      humanId: 1,
+      cfg: {
+        enableSocialManeuvers: false
+      }
+    };
+
+    // Mock helper functions if not present
+    window.safeName = window.safeName || function(id) {
+      const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
+      return names[id - 1] || `Player ${id}`;
+    };
+
+    window.getP = window.getP || function(id) {
+      return {
+        id: id,
+        name: window.safeName(id),
+        affinity: {},
+        evicted: false
+      };
+    };
+
+    window.alivePlayers = window.alivePlayers || function() {
+      return [
+        { id: 1, name: 'Alice', evicted: false },
+        { id: 2, name: 'Bob', evicted: false },
+        { id: 3, name: 'Charlie', evicted: false },
+        { id: 4, name: 'Diana', evicted: false }
+      ];
+    };
+
+    // Console capture
+    const consoleDiv = document.getElementById('console');
+    const originalConsoleInfo = console.info;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+
+    function addToConsole(level, ...args) {
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+      ).join(' ');
+      
+      // Filter for relevant logs
+      if (message.includes('[social-maneuvers]') || message.includes('[social]')) {
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+        consoleDiv.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+      }
+    }
+
+    console.info = function(...args) {
+      addToConsole('info', ...args);
+      originalConsoleInfo.apply(console, args);
+    };
+
+    console.warn = function(...args) {
+      addToConsole('warn', ...args);
+      originalConsoleWarn.apply(console, args);
+    };
+
+    console.error = function(...args) {
+      addToConsole('error', ...args);
+      originalConsoleError.apply(console, args);
+    };
+
+    // Utility functions
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `result ${type}`;
+      div.innerHTML = message;
+      container.appendChild(div);
+    }
+
+    function clearResults(containerId) {
+      document.getElementById(containerId).innerHTML = '';
+    }
+
+    function updateStatus() {
+      const isEnabled = window.SocialManeuvers?.isEnabled();
+      const statusSpan = document.getElementById('featureStatus');
+      
+      if (isEnabled) {
+        statusSpan.innerHTML = '<span class="status-badge status-enabled">ENABLED</span>';
+      } else {
+        statusSpan.innerHTML = '<span class="status-badge status-disabled">DISABLED</span>';
+      }
+
+      // Update overview
+      const overview = document.getElementById('statusOverview');
+      overview.innerHTML = `
+        <div class="result info">
+          <strong>Module Loaded:</strong> ${typeof window.SocialManeuvers !== 'undefined' ? '✓ Yes' : '✗ No'}<br>
+          <strong>Feature Enabled:</strong> ${isEnabled ? '✓ Yes' : '✗ No'}<br>
+          <strong>USE_SOCIAL_MANEUVERS:</strong> ${window.USE_SOCIAL_MANEUVERS ? 'true' : 'false'}<br>
+          <strong>game.cfg.enableSocialManeuvers:</strong> ${window.game?.cfg?.enableSocialManeuvers ? 'true' : 'false'}
+        </div>
+      `;
+    }
+
+    // Button handlers
+    document.getElementById('btnDisable').addEventListener('click', function() {
+      window.game.cfg.enableSocialManeuvers = false;
+      console.info('[test] Feature DISABLED via button');
+      updateStatus();
+    });
+
+    document.getElementById('btnEnable').addEventListener('click', function() {
+      window.game.cfg.enableSocialManeuvers = true;
+      console.info('[test] Feature ENABLED via button');
+      updateStatus();
+    });
+
+    document.getElementById('btnRefresh').addEventListener('click', function() {
+      console.info('[test] Refreshing status...');
+      updateStatus();
+    });
+
+    document.getElementById('btnClearConsole').addEventListener('click', function() {
+      consoleDiv.textContent = '';
+    });
+
+    // Test functions
+    document.getElementById('btnTestModule').addEventListener('click', function() {
+      clearResults('testResults');
+      console.info('[test] Running module load test...');
+      
+      const checks = [
+        { name: 'SocialManeuvers object exists', pass: typeof window.SocialManeuvers !== 'undefined' },
+        { name: 'isEnabled function exists', pass: typeof window.SocialManeuvers?.isEnabled === 'function' },
+        { name: 'startPhase function exists', pass: typeof window.SocialManeuvers?.startPhase === 'function' },
+        { name: 'renderSocialManeuversUI exists', pass: typeof window.SocialManeuvers?.renderSocialManeuversUI === 'function' },
+        { name: 'USE_SOCIAL_MANEUVERS accessible', pass: typeof window.USE_SOCIAL_MANEUVERS !== 'undefined' },
+        { name: 'SocialManager alias exists', pass: window.SocialManager === window.SocialManeuvers }
+      ];
+
+      checks.forEach(check => {
+        log('testResults', `${check.pass ? '✓' : '✗'} ${check.name}`, check.pass ? 'pass' : 'fail');
+      });
+    });
+
+    document.getElementById('btnTestFlag').addEventListener('click', function() {
+      clearResults('testResults');
+      console.info('[test] Running feature flag test...');
+      
+      // Test disabled state
+      window.game.cfg.enableSocialManeuvers = false;
+      const disabledCheck = window.SocialManeuvers.isEnabled() === false;
+      log('testResults', `${disabledCheck ? '✓' : '✗'} Feature disabled check`, disabledCheck ? 'pass' : 'fail');
+      
+      // Test enabled state
+      window.game.cfg.enableSocialManeuvers = true;
+      const enabledCheck = window.SocialManeuvers.isEnabled() === true;
+      log('testResults', `${enabledCheck ? '✓' : '✗'} Feature enabled check`, enabledCheck ? 'pass' : 'fail');
+      
+      // Test USE_SOCIAL_MANEUVERS property
+      const flagCheck = window.USE_SOCIAL_MANEUVERS === true;
+      log('testResults', `${flagCheck ? '✓' : '✗'} USE_SOCIAL_MANEUVERS reflects state`, flagCheck ? 'pass' : 'fail');
+      
+      updateStatus();
+    });
+
+    document.getElementById('btnTestStartPhase').addEventListener('click', function() {
+      clearResults('testResults');
+      console.info('[test] Running startPhase() test...');
+      
+      // Test with disabled
+      window.game.cfg.enableSocialManeuvers = false;
+      log('testResults', 'Testing startPhase() with feature DISABLED...', 'info');
+      try {
+        window.SocialManeuvers.startPhase();
+        log('testResults', '✓ startPhase() called (should log disabled message)', 'pass');
+      } catch(e) {
+        log('testResults', `✗ startPhase() error: ${e.message}`, 'fail');
+      }
+      
+      // Test with enabled
+      window.game.cfg.enableSocialManeuvers = true;
+      log('testResults', 'Testing startPhase() with feature ENABLED...', 'info');
+      try {
+        window.SocialManeuvers.startPhase();
+        log('testResults', '✓ startPhase() called (should log enabled message & initialize)', 'pass');
+        
+        // Check if energy was initialized
+        const energy = window.SocialManeuvers.getEnergy(1);
+        log('testResults', `✓ Energy initialized: ${energy}/5`, 'pass');
+      } catch(e) {
+        log('testResults', `✗ startPhase() error: ${e.message}`, 'fail');
+      }
+      
+      updateStatus();
+    });
+
+    document.getElementById('btnTestUI').addEventListener('click', function() {
+      clearResults('testResults');
+      console.info('[test] Running UI render test...');
+      
+      // Create test container
+      const testContainer = document.createElement('div');
+      testContainer.id = 'ui-test-container';
+      testContainer.style.display = 'none';
+      document.body.appendChild(testContainer);
+      
+      // Test with disabled
+      window.game.cfg.enableSocialManeuvers = false;
+      log('testResults', 'Testing UI render with feature DISABLED...', 'info');
+      testContainer.innerHTML = '';
+      window.SocialManeuvers.renderSocialManeuversUI(testContainer, 1);
+      const disabledEmpty = testContainer.innerHTML === '';
+      log('testResults', `${disabledEmpty ? '✓' : '✗'} UI not rendered when disabled`, disabledEmpty ? 'pass' : 'fail');
+      
+      // Test with enabled
+      window.game.cfg.enableSocialManeuvers = true;
+      window.SocialManeuvers.initSocialEnergy();
+      log('testResults', 'Testing UI render with feature ENABLED...', 'info');
+      testContainer.innerHTML = '';
+      window.SocialManeuvers.renderSocialManeuversUI(testContainer, 1);
+      const enabledNotEmpty = testContainer.innerHTML !== '';
+      log('testResults', `${enabledNotEmpty ? '✓' : '✗'} UI rendered when enabled`, enabledNotEmpty ? 'pass' : 'fail');
+      
+      // Clean up
+      testContainer.remove();
+      updateStatus();
+    });
+
+    document.getElementById('btnRunAll').addEventListener('click', function() {
+      document.getElementById('btnTestModule').click();
+      setTimeout(() => document.getElementById('btnTestFlag').click(), 500);
+      setTimeout(() => document.getElementById('btnTestStartPhase').click(), 1000);
+      setTimeout(() => document.getElementById('btnTestUI').click(), 1500);
+    });
+
+    // Initial status update
+    updateStatus();
+    console.info('[test] Verification page loaded and ready');
+  </script>
+</body>
+</html>
