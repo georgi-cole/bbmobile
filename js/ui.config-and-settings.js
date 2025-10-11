@@ -526,6 +526,8 @@
       const chip = document.createElement('div');
       chip.className = 'cast-chip'+(i===state.idx?' active':'');
       chip.setAttribute('data-idx', String(i));
+      chip.setAttribute('role', 'listitem');
+      chip.setAttribute('tabindex', i===state.idx ? '0' : '-1');
       const imgSrc = (window.Game||window).resolveAvatar?.(p) || p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
       const fallbackSrc = (window.Game||window).getAvatarFallback?.(p.name||'guest') || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
       chip.innerHTML = `
@@ -535,16 +537,47 @@
         </div>
         <div class="nm">${UI.escapeHtml(p.name||'')}</div>
       `;
-      chip.addEventListener('click', async ()=>{
+      const selectChip = async ()=>{
         if(!await maybeConfirmDiscard(modal)) return;
         state.idx = i;
         state.pendingAvatarDataUrl = null;
         state.dirty = false;
         renderCastStrip(modal);
         fillCastForm(modal);
+        // Scroll active chip into view
+        const activeChip = strip.querySelector('.cast-chip.active');
+        if(activeChip) activeChip.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+      };
+      chip.addEventListener('click', selectChip);
+      chip.addEventListener('keydown', (e)=>{
+        if(e.key==='Enter' || e.key===' '){
+          e.preventDefault();
+          selectChip();
+        }
       });
       strip.appendChild(chip);
     });
+    
+    // Add keyboard navigation for roster strip
+    strip.addEventListener('keydown', (e)=>{
+      const activeChip = strip.querySelector('.cast-chip.active');
+      if(!activeChip) return;
+      
+      if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
+        e.preventDefault();
+        const direction = e.key==='ArrowLeft' ? -1 : 1;
+        const newIdx = Math.max(0, Math.min(state.order.length-1, state.idx + direction));
+        if(newIdx !== state.idx){
+          state.idx = newIdx;
+          renderCastStrip(modal);
+          fillCastForm(modal);
+          // Focus the new active chip
+          const newActiveChip = strip.querySelector('.cast-chip.active');
+          if(newActiveChip) newActiveChip.focus();
+        }
+      }
+    });
+    
     const prog = modal.querySelector('#castProgress');
     if(prog) prog.textContent = `${state.order.length ? (state.idx+1) : 0}/${state.order.length}`;
   }
@@ -616,6 +649,13 @@
     const avatarUpload = modal.querySelector('#castAvatarUpload');
     if(file && avatarUpload){
       avatarUpload.addEventListener('click', ()=>file.click());
+      // Keyboard support for avatar upload button
+      avatarUpload.addEventListener('keydown', (e)=>{
+        if(e.key==='Enter' || e.key===' '){
+          e.preventDefault();
+          file.click();
+        }
+      });
       file.addEventListener('change', ()=>{
         const f = file.files && file.files[0];
         if(!f) return;
