@@ -34,28 +34,32 @@
     '.warn{color:#f2c862}',
     '@media (min-width:740px){ .settingsGrid{grid-template-columns:1fr 1fr} }',
     '.settingsTabPane[data-pane="cast"] .settingsGrid{grid-template-columns:1fr !important}',
-    '.cast-wrap{display:flex;flex-direction:column;gap:8px;max-width:100%}',
-    '.cast-strip{display:flex;gap:8px;overflow:auto;padding:6px 2px;border:1px solid #223049;background:#0e1422;border-radius:10px}',
-    '.cast-chip{min-width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}',
+    '.cast-wrap{display:flex;flex-direction:column;gap:8px;max-width:100%;overflow:hidden}',
+    '.cast-strip{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding:6px 2px;border:1px solid #223049;background:#0e1422;border-radius:10px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}',
+    '.cast-chip{min-width:56px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;scroll-snap-align:start;touch-action:manipulation}',
     '.chip-ava{position:relative;width:48px;height:48px;border-radius:999px;overflow:hidden;border:1px solid #2b3546;background:#0b0f1a}',
     '.chip-ava img{width:100%;height:100%;object-fit:cover;display:block}',
     '.chip-badges{position:absolute;bottom:-3px;right:-3px;display:flex;gap:2px}',
     '.chip-badge{font-size:.55rem;background:#24304a;border:1px solid #2b3b5c;border-radius:6px;padding:1px 3px;color:#cfe2ff}',
     '.cast-chip .nm{max-width:72px;font-size:.66rem;color:#c9d3e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.cast-chip.active .chip-ava{outline:2px solid #2d8ab4}',
-    '.cast-editor{display:grid;grid-template-columns:160px minmax(340px,1fr);gap:12px;align-items:start;max-width:100%}',
+    '.cast-chip.active .chip-ava{outline:2px solid #2d8ab4;outline-offset:1px}',
+    '.cast-editor{display:grid;grid-template-columns:160px minmax(340px,1fr);gap:12px;align-items:start;max-width:100%;overflow:hidden}',
     '.cast-editor>*{min-width:0}',
     '.cast-preview{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0}',
     '.cast-preview img{width:140px;height:140px;border-radius:8px;border:1px solid #2b3546;object-fit:cover;background:#0b0f1a}',
-    '.cast-avatar-upload{position:relative;cursor:pointer}',
+    '.cast-avatar-upload{position:relative;cursor:pointer;touch-action:manipulation}',
     '.cast-avatar-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);transition:background .2s;border-radius:8px}',
-    '.cast-avatar-upload:hover .cast-avatar-overlay{background:rgba(0,0,0,.4)}',
+    '.cast-avatar-upload:hover .cast-avatar-overlay,.cast-avatar-upload:active .cast-avatar-overlay{background:rgba(0,0,0,.4)}',
     '.cast-avatar-overlay svg{color:#fff;opacity:0;transition:opacity .2s}',
-    '.cast-avatar-upload:hover .cast-avatar-overlay svg{opacity:0.9}',
+    '.cast-avatar-upload:hover .cast-avatar-overlay svg,.cast-avatar-upload:active .cast-avatar-overlay svg{opacity:0.9}',
     '.cast-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}',
     '.cast-form .full{grid-column:1 / -1}',
     '.cast-form .cast-age-field input{max-width:80px}',
-    '@media (max-width:900px){ .cast-editor{grid-template-columns:1fr} .cast-preview{align-items:flex-start} .cast-form{grid-template-columns:1fr} }',
+    '.cast-form label{display:flex;flex-direction:column;align-items:flex-start;gap:4px}',
+    '.cast-form label span{font-size:.7rem;color:#9aa3b2}',
+    '.cast-form input,.cast-form select{min-height:40px;touch-action:manipulation}',
+    '@media (max-width:900px){ .cast-editor{grid-template-columns:1fr} .cast-preview{align-items:center;margin-bottom:8px} .cast-preview img{width:100px;height:100px} .cast-form{grid-template-columns:1fr} }',
+    '@media (max-width:540px){ .settingsTabPane[data-pane="cast"] .card{padding:10px 8px;max-width:100%;overflow-x:hidden;box-sizing:border-box} .settingsTabPane[data-pane="cast"] .cast-wrap{max-width:100%;overflow:hidden} .settingsTabPane[data-pane="cast"] .cast-strip{padding:8px;width:100%;box-sizing:border-box} .settingsTabPane[data-pane="cast"] .cast-form{gap:6px} .settingsTabPane[data-pane="cast"] .cast-form label{font-size:.75rem} .settingsTabPane[data-pane="cast"] .cast-form input, .settingsTabPane[data-pane="cast"] .cast-form select{font-size:14px;padding:8px 10px} }',
     '#cascadeDeck{position:absolute;right:12px;top:56px;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:20;max-width:min(46%, 520px)}',
     '.miniCard{background:rgba(8,12,25,.9);border:1px solid #33407a;border-radius:10px;padding:7px 9px;color:#e6e8ee;font-size:.66rem;box-shadow:0 10px 24px -12px #000, 0 0 0 1px #1d2742}',
     '.miniCard h4{margin:0 0 3px;font-size:.62rem;letter-spacing:.6px;color:#9fb5ff;text-transform:uppercase}',
@@ -425,6 +429,8 @@
     const pane = document.createElement('div');
     pane.className = 'settingsTabPane';
     pane.setAttribute('data-pane','cast');
+    pane.setAttribute('role', 'tabpanel');
+    pane.setAttribute('aria-label', 'Cast Editor');
     const fallback = FALLBACK_AVATAR;
     pane.innerHTML = `
       <div class="settingsGrid">
@@ -433,35 +439,48 @@
           <div class="sep"></div>
           <div class="cast-wrap">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <span class="tiny muted" id="castProgress">0/0</span>
+              <span class="tiny muted" id="castProgress" role="status" aria-live="polite">0/0</span>
             </div>
-            <div class="cast-strip" id="castRosterStrip"></div>
+            <div class="cast-strip" id="castRosterStrip" role="list" aria-label="Cast roster" tabindex="0"></div>
             <div class="cast-editor">
               <div class="cast-preview">
-                <div class="cast-avatar-upload" id="castAvatarUpload" style="position:relative;cursor:pointer;">
-                  <img id="castPreviewImg" src="${fallback}" alt="preview">
-                  <div class="cast-avatar-overlay">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div class="cast-avatar-upload" id="castAvatarUpload" style="position:relative;cursor:pointer;" role="button" aria-label="Upload avatar photo" tabindex="0">
+                  <img id="castPreviewImg" src="${fallback}" alt="Cast member avatar preview">
+                  <div class="cast-avatar-overlay" aria-hidden="true">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                       <circle cx="12" cy="13" r="4"></circle>
                     </svg>
                   </div>
                 </div>
-                <input type="file" id="castPhotoFile" accept="image/*" style="display:none">
+                <input type="file" id="castPhotoFile" accept="image/*" style="display:none" aria-label="Select avatar image file">
               </div>
-              <div class="cast-form">
-                <label class="toggleRow"><span>Name</span><input type="text" id="castName"></label>
-                <label class="toggleRow cast-age-field"><span>Age</span><input type="number" id="castAge" min="0" max="120" step="1"></label>
-                <label class="toggleRow"><span>Sex</span>
-                  <select id="castSex">
+              <div class="cast-form" role="form" aria-label="Cast member details">
+                <label class="toggleRow">
+                  <span>Name</span>
+                  <input type="text" id="castName" aria-label="Cast member name" autocomplete="off" inputmode="text">
+                </label>
+                <label class="toggleRow cast-age-field">
+                  <span>Age</span>
+                  <input type="number" id="castAge" min="0" max="120" step="1" aria-label="Cast member age" inputmode="numeric">
+                </label>
+                <label class="toggleRow">
+                  <span>Sex</span>
+                  <select id="castSex" aria-label="Cast member sex">
                     <option value="">—</option>
                     <option>Male</option>
                     <option>Female</option>
                     <option>Other</option>
                   </select>
                 </label>
-                <label class="toggleRow full"><span>Occupation</span><input type="text" id="castOcc" placeholder="e.g., Student, Engineer"></label>
-                <label class="toggleRow full"><span>Motto</span><input type="text" id="castMotto" placeholder="e.g., Play hard, win harder"></label>
+                <label class="toggleRow full">
+                  <span>Occupation</span>
+                  <input type="text" id="castOcc" placeholder="e.g., Student, Engineer" aria-label="Cast member occupation" autocomplete="off" inputmode="text">
+                </label>
+                <label class="toggleRow full">
+                  <span>Motto</span>
+                  <input type="text" id="castMotto" placeholder="e.g., Play hard, win harder" aria-label="Cast member motto" autocomplete="off" inputmode="text">
+                </label>
               </div>
             </div>
           </div>

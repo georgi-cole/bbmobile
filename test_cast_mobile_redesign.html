@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cast Tab Mobile Redesign Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0f1320;
+      color: #e6e8ee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 20px;
+      background: #2877a0;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      min-height: 44px;
+    }
+    button:hover {
+      background: #1a4a63;
+    }
+    .info {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .info h2 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    .checklist li {
+      padding: 8px 0;
+      border-bottom: 1px solid #2a3448;
+    }
+    .checklist li:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Cast Tab Mobile Redesign Test</h1>
+  
+  <div class="info">
+    <h2>Test Checklist:</h2>
+    <ul class="checklist">
+      <li>✓ Open Settings → Cast and verify the modal displays without overflow</li>
+      <li>✓ Roster scrolls horizontally and snaps; active chip is outlined</li>
+      <li>✓ Avatar preview is compact and does not overflow</li>
+      <li>✓ All form fields align on a neat grid and do not cause horizontal scrolling</li>
+      <li>✓ On small screens, fields stack vertically; on wider screens, Age/Sex are side by side</li>
+      <li>✓ Touch targets are at least 40px in height</li>
+      <li>✓ ARIA labels and roles are present for accessibility</li>
+    </ul>
+  </div>
+
+  <div class="test-controls">
+    <button onclick="openSettings()">Open Settings Modal</button>
+    <button onclick="simulateMobile()">Simulate Mobile (375px)</button>
+    <button onclick="simulateTablet()">Simulate Tablet (768px)</button>
+    <button onclick="simulateDesktop()">Reset to Desktop</button>
+  </div>
+
+  <div id="testOutput"></div>
+
+  <!-- Load Game JS -->
+  <script src="js/ui.config-and-settings.js"></script>
+  
+  <script>
+    // Mock game environment
+    window.Game = {
+      players: [
+        { name: 'Alice', meta: { age: 25, sex: 'Female', occupation: 'Engineer', motto: 'Code hard, play harder' }, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+        { name: 'Bob', meta: { age: 28, sex: 'Male', occupation: 'Designer', motto: 'Design is everything' }, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+        { name: 'Charlie', meta: { age: 22, sex: 'Other', occupation: 'Student', motto: 'Learn and grow' }, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+        { name: 'Diana', meta: { age: 30, sex: 'Female', occupation: 'Manager', motto: 'Lead by example' }, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
+        { name: 'Eve', meta: { age: 26, sex: 'Female', occupation: 'Writer', motto: 'Words matter' }, avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' }
+      ],
+      resolveAvatar: function(p) {
+        return p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
+      }
+    };
+
+    function openSettings() {
+      if (!window.UI || !window.UI.openSettingsModal) {
+        // Create a simple settings modal for testing
+        const backdrop = document.createElement('div');
+        backdrop.id = 'settingsBackdrop';
+        backdrop.className = 'modal-backdrop';
+        backdrop.style.display = 'flex';
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <button class="closeX" onclick="closeSettings()">✕</button>
+          <h2>Settings</h2>
+          <div class="tabBar">
+            <button class="tab-btn active" data-tab="cast">Cast</button>
+            <button class="tab-btn" data-tab="gameplay">Gameplay</button>
+          </div>
+          <div id="settingsPanes"></div>
+        `;
+        
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        
+        // Build and append Cast pane
+        if (window.UI && window.UI.buildCastPaneNode) {
+          const panes = modal.querySelector('#settingsPanes');
+          const castPane = window.UI.buildCastPaneNode();
+          castPane.classList.add('active');
+          panes.appendChild(castPane);
+          
+          // Populate cast roster (simplified)
+          const strip = castPane.querySelector('#castRosterStrip');
+          if (strip && window.Game && window.Game.players) {
+            window.Game.players.forEach((p, i) => {
+              const chip = document.createElement('div');
+              chip.className = 'cast-chip' + (i === 0 ? ' active' : '');
+              chip.setAttribute('role', 'listitem');
+              chip.innerHTML = `
+                <div class="chip-ava">
+                  <img src="${window.Game.resolveAvatar(p)}" alt="${p.name}">
+                </div>
+                <span class="nm">${p.name}</span>
+              `;
+              strip.appendChild(chip);
+            });
+          }
+          
+          log('✓ Settings modal opened with Cast tab');
+        }
+      }
+    }
+
+    function closeSettings() {
+      const backdrop = document.getElementById('settingsBackdrop');
+      if (backdrop) {
+        backdrop.remove();
+        log('✓ Settings modal closed');
+      }
+    }
+
+    function simulateMobile() {
+      document.body.style.maxWidth = '375px';
+      document.body.style.margin = '0 auto';
+      log('📱 Simulating mobile viewport (375px)');
+    }
+
+    function simulateTablet() {
+      document.body.style.maxWidth = '768px';
+      document.body.style.margin = '0 auto';
+      log('📱 Simulating tablet viewport (768px)');
+    }
+
+    function simulateDesktop() {
+      document.body.style.maxWidth = '';
+      document.body.style.margin = '';
+      log('🖥️ Reset to desktop viewport');
+    }
+
+    function log(message) {
+      const output = document.getElementById('testOutput');
+      const div = document.createElement('div');
+      div.style.cssText = 'padding: 8px; margin: 4px 0; background: #141a23; border-radius: 6px; border-left: 3px solid #2877a0;';
+      div.textContent = message;
+      output.insertBefore(div, output.firstChild);
+    }
+
+    // Auto-test on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('✓ Test page loaded');
+      log('✓ UI.INJECTED_CSS length: ' + (window.UI?.INJECTED_CSS?.length || 0) + ' characters');
+      
+      // Check for accessibility improvements
+      setTimeout(() => {
+        openSettings();
+        setTimeout(() => {
+          const castPane = document.querySelector('[data-pane="cast"]');
+          if (castPane) {
+            const hasRole = castPane.hasAttribute('role');
+            const hasAriaLabel = castPane.hasAttribute('aria-label');
+            const rosterHasRole = castPane.querySelector('#castRosterStrip')?.hasAttribute('role');
+            const inputsHaveLabels = Array.from(castPane.querySelectorAll('input')).every(inp => 
+              inp.hasAttribute('aria-label') || inp.id && document.querySelector(`label[for="${inp.id}"]`)
+            );
+            
+            log(hasRole ? '✓ Cast pane has role attribute' : '✗ Missing role attribute');
+            log(hasAriaLabel ? '✓ Cast pane has aria-label' : '✗ Missing aria-label');
+            log(rosterHasRole ? '✓ Roster strip has role attribute' : '✗ Missing role on roster');
+            log(inputsHaveLabels ? '✓ All inputs have proper labels' : '✗ Some inputs missing labels');
+          }
+        }, 100);
+      }, 500);
+    });
+  </script>
+</body>
+</html>
