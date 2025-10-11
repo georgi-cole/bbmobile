@@ -710,9 +710,6 @@
     
     if(!progressBar) return;
     
-    // Hide any legacy skip buttons
-    hideLegacySkipButtons();
-    
     // Handle click on progress bar to skip
     const handleSkip = () => {
       // Directly call fastForwardPhase if available
@@ -747,31 +744,6 @@
     };
   }
   
-  // Hide legacy skip buttons
-  function hideLegacySkipButtons(){
-    // Hide any skip buttons outside the progress bar
-    const legacyButtons = Array.from(document.querySelectorAll('button, .btn'))
-      .filter(el => {
-        const text = el.textContent || '';
-        return (/^\s*skip\s*$/i.test(text) || /⏩/.test(text)) && 
-               el.id !== 'timerSkipProgressBar' &&
-               !el.closest('#timerSkipProgressBar');
-      });
-    
-    legacyButtons.forEach(btn => {
-      btn.style.display = 'none';
-    });
-    
-    // Also hide btnFastForward if it exists
-    const btnFastForward = document.getElementById('btnFastForward');
-    if(btnFastForward){
-      btnFastForward.style.display = 'none';
-    }
-  }
-  
-  // Periodically hide legacy skip buttons (in case they're added dynamically)
-  setInterval(hideLegacySkipButtons, 1000);
-
   function init(){ 
     updateTimerHeader(); 
     initSkipProgressBar(); 

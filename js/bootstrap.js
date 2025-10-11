@@ -191,18 +191,6 @@
     }
   }
 
-  function ensureSkipTimerButton(){
-    // Legacy skip button disabled - using progress bar instead
-    const c=document.getElementById('countdown'); if(!c) return;
-    if(document.getElementById('btnFastForward')) return;
-    const btn=document.createElement('button');
-    btn.id='btnFastForward'; btn.className='btn small'; btn.textContent='⏩ Skip';
-    btn.style.marginLeft='8px';
-    btn.style.display='none'; // Hide legacy skip button
-    c.parentElement && c.parentElement.appendChild(btn);
-    btn.addEventListener('click',()=>global.fastForwardPhase?.());
-  }
-
   function updateStartButtonUI(){
     const btn = document.getElementById('btnStartQuick');
     if(!btn) return;
@@ -410,7 +398,6 @@
       wireSettingsTabs();
       (function keepAlive(){
         wireButtons();
-        ensureSkipTimerButton();
         updateStartButtonUI();   // Keep label in sync with phase
         setTimeout(keepAlive, 1500);
       })();
