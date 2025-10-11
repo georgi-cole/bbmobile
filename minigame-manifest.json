@@ -1,8 +1,8 @@
 {
-  "generated": "2025-10-05T22:48:01.959Z",
+  "generated": "2025-10-11T12:22:03.354Z",
   "version": "1.0.0",
-  "gamesScanned": 34,
-  "registryGames": 23,
+  "gamesScanned": 53,
+  "registryGames": 48,
   "games": [
     {
       "key": "balanceGame",
@@ -13,12 +13,52 @@
       "fileSize": 1209
     },
     {
+      "key": "bubbleBurst",
+      "name": "Bubble Burst",
+      "module": "bubble-burst.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4633
+    },
+    {
+      "key": "cardClash",
+      "name": "Card Clash",
+      "module": "card-clash.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4667
+    },
+    {
+      "key": "chainReaction",
+      "name": "Chain Reaction",
+      "module": "chain-reaction.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 5194
+    },
+    {
+      "key": "clockStopper",
+      "name": "Clock Stopper",
+      "module": "clock-stopper.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3813
+    },
+    {
       "key": "colorMatch",
       "name": "Color Match",
       "module": "color-match.js",
       "hasRender": true,
       "hasComplete": true,
       "fileSize": 1228
+    },
+    {
+      "key": "comboKeys",
+      "name": "Combo Keys",
+      "module": "combo-keys.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4307
     },
     {
       "key": "comixSpot",
@@ -37,12 +77,68 @@
       "fileSize": 6940
     },
     {
+      "key": "diceDash",
+      "name": "Dice Dash",
+      "module": "dice-dash.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3199
+    },
+    {
+      "key": "echoChamber",
+      "name": "Echo Chamber",
+      "module": "echo-chamber.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4171
+    },
+    {
       "key": "estimationGame",
       "name": "Estimation Game",
       "module": "estimation-game.js",
       "hasRender": true,
       "hasComplete": true,
       "fileSize": 3407
+    },
+    {
+      "key": "flashFlood",
+      "name": "Flash Flood",
+      "module": "flash-flood.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3740
+    },
+    {
+      "key": "GameConfig",
+      "name": "GameConfig",
+      "module": "GameConfig.js",
+      "hasRender": false,
+      "hasComplete": false,
+      "fileSize": 5012
+    },
+    {
+      "key": "gameUtils",
+      "name": "GameUtils",
+      "module": "gameUtils.js",
+      "hasRender": false,
+      "hasComplete": false,
+      "fileSize": 5297
+    },
+    {
+      "key": "gearShift",
+      "name": "Gear Shift",
+      "module": "gear-shift.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3452
+    },
+    {
+      "key": "gridLock",
+      "name": "Grid Lock",
+      "module": "grid-lock.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3044
     },
     {
       "key": "guessNumber",
@@ -69,6 +165,38 @@
       "fileSize": 1813
     },
     {
+      "key": "iconMatch",
+      "name": "Icon Match",
+      "module": "icon-match.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3137
+    },
+    {
+      "key": "jumpRope",
+      "name": "Jump Rope",
+      "module": "jump-rope.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3363
+    },
+    {
+      "key": "keyMaster",
+      "name": "Key Master",
+      "module": "key-master.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3809
+    },
+    {
+      "key": "lightSpeed",
+      "name": "Light Speed",
+      "module": "light-speed.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 3262
+    },
+    {
       "key": "mathBlitz",
       "name": "Math Blitz",
       "module": "math-blitz.js",
@@ -82,7 +210,7 @@
       "module": "memory-match.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 5482
+      "fileSize": 11889
     },
     {
       "key": "memoryPairs",
@@ -109,6 +237,14 @@
       "fileSize": 1197
     },
     {
+      "key": "opponentSynth",
+      "name": "Opponent Synth",
+      "module": "opponent-synth.js",
+      "hasRender": false,
+      "hasComplete": false,
+      "fileSize": 8195
+    },
+    {
       "key": "oteviator",
       "name": "Oteviator",
       "module": "oteviator.js",
@@ -130,7 +266,23 @@
       "module": "pattern-match.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 3986
+      "fileSize": 9622
+    },
+    {
+      "key": "placeholder",
+      "name": "Placeholder",
+      "module": "placeholder.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 1209
+    },
+    {
+      "key": "puzzleDash",
+      "name": "Puzzle Dash",
+      "module": "puzzle-dash.js",
+      "hasRender": true,
+      "hasComplete": true,
+      "fileSize": 4046
     },
     {
       "key": "quickTap",
@@ -138,7 +290,7 @@
       "module": "quick-tap.js",
       "hasRender": true,
       "hasComplete": true,
-      "fileSize": 4930
+      "fileSize": 5813
     },
     {
       "key": "reactionRoyale",
