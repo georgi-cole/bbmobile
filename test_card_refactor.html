@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Refactor Test - Overflow Failsafe</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <style>
+    body { 
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      flex-direction: column;
+      gap: 20px;
+    }
+    #tv {
+      width: clamp(320px, 90vw, 800px);
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1a2937, #0e1a28);
+      position: relative;
+      border-radius: 12px;
+      border: 2px solid #284058;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      padding: 10px 20px;
+      background: #2d4b6a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #3f6385;
+    }
+    .info {
+      color: #c4d9ec;
+      font-size: 14px;
+      text-align: center;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+  <div class="info">
+    <strong>Card Refactor Test - Overflow Failsafe</strong><br>
+    Test that all card types handle overflow properly and don't get cut off on mobile.
+  </div>
+  
+  <div id="tv">
+    <div id="tvOverlay"></div>
+  </div>
+
+  <div class="controls">
+    <button onclick="showStandardCard()">Standard Card (HOH/POV)</button>
+    <button onclick="showDiaryRoomCard()">Diary Room Card</button>
+    <button onclick="showBigAnnounce()">Big Announcement (Twist)</button>
+    <button onclick="showLongCard()">Long Content Card (Test Overflow)</button>
+    <button onclick="clearModal()">Clear</button>
+  </div>
+
+  <script>
+    function showStandardCard() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'HOH Competition Winner';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.textContent = 'Alice has won the Head of Household competition!';
+      card.appendChild(message);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+    }
+
+    function showDiaryRoomCard() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      const title = document.createElement('div');
+      title.textContent = 'Diary Room';
+      title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
+      card.appendChild(title);
+      
+      const avatarRow = document.createElement('div');
+      avatarRow.style.cssText = 'display: flex; justify-content: center; align-items: center; margin-bottom: 18px; gap: 16px;';
+      
+      const voterImg = document.createElement('img');
+      voterImg.src = 'https://api.dicebear.com/6.x/bottts/svg?seed=Player1';
+      voterImg.style.cssText = 'width: clamp(64px, 16vw, 88px); height: clamp(64px, 16vw, 88px); border-radius: 50%; border: 3px solid #7cffad; object-fit: cover; box-shadow: 0 6px 16px rgba(124,255,173,0.4), 0 0 0 1px rgba(124,255,173,0.2);';
+      
+      const arrow = document.createElement('div');
+      arrow.textContent = '→';
+      arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
+      
+      const targetImg = document.createElement('img');
+      targetImg.src = 'https://api.dicebear.com/6.x/bottts/svg?seed=Player2';
+      targetImg.style.cssText = 'width: clamp(64px, 16vw, 88px); height: clamp(64px, 16vw, 88px); border-radius: 50%; border: 3px solid #ff6b6b; object-fit: cover; box-shadow: 0 6px 16px rgba(255,107,107,0.4), 0 0 0 1px rgba(255,107,107,0.2);';
+      
+      avatarRow.appendChild(voterImg);
+      avatarRow.appendChild(arrow);
+      avatarRow.appendChild(targetImg);
+      card.appendChild(avatarRow);
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = 'Player1: I vote to evict Player2.';
+      messageDiv.style.cssText = 'font-size: clamp(0.9rem, 2.2vw, 1.05rem); color: #e8f4ff; line-height: 1.5; font-weight: 500;';
+      card.appendChild(messageDiv);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+    }
+
+    function showBigAnnounce() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard bigAnnounce';
+      
+      const title = document.createElement('h3');
+      title.textContent = '🌟 SPECIAL TWIST ANNOUNCEMENT 🌟';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.textContent = 'A major game-changing twist is about to shake up the house!';
+      card.appendChild(message);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+    }
+
+    function showLongCard() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Overflow Test Card';
+      card.appendChild(title);
+      
+      const longText = `
+This is a test card with very long content to verify the overflow failsafe works correctly.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+
+Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+
+This card should be scrollable if the content exceeds the viewport height!
+      `.trim();
+      
+      longText.split('\n\n').forEach(para => {
+        const p = document.createElement('div');
+        p.style.marginBottom = '12px';
+        p.textContent = para;
+        card.appendChild(p);
+      });
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+    }
+
+    function clearModal() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      tvOverlay.innerHTML = '';
+    }
+
+    function testMobile() {
+      const tv = document.getElementById('tv');
+      tv.style.width = '375px';
+      tv.style.maxWidth = '375px';
+    }
+
+    function testDesktop() {
+      const tv = document.getElementById('tv');
+      tv.style.width = 'clamp(320px, 90vw, 800px)';
+      tv.style.maxWidth = '800px';
+    }
+  </script>
+</body>
+</html>
