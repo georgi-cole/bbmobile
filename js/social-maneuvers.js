@@ -322,59 +322,290 @@
     }
 
     const energy = getEnergy(playerId);
-    const availableActions = getAvailableActions(playerId);
+    const alivePlayers = global.alivePlayers?.() || [];
+    const otherPlayers = alivePlayers.filter(p => p.id !== playerId);
+
+    // State for UI interactions
+    let selectedPlayer = null;
+    let selectedAction = null;
 
     const wrapper = document.createElement('div');
     wrapper.className = 'social-maneuvers-panel';
-    wrapper.style.cssText = 'margin-top:12px;padding:12px;background:rgba(0,0,0,0.3);border-radius:8px;';
+    wrapper.setAttribute('role', 'region');
+    wrapper.setAttribute('aria-label', 'Social Maneuvers Interface');
 
     // Energy display
-    const energyBar = document.createElement('div');
-    energyBar.className = 'energy-display';
-    energyBar.style.cssText = 'margin-bottom:8px;font-size:0.9rem;color:#95a9c0;';
-    energyBar.innerHTML = `<strong>Social Energy:</strong> ${energy}/${MAX_ENERGY}`;
+    const energyBar = createEnergyDisplay(energy);
     wrapper.appendChild(energyBar);
 
-    // Action menu
-    const actionsTitle = document.createElement('div');
-    actionsTitle.textContent = 'Available Actions:';
-    actionsTitle.style.cssText = 'margin-bottom:6px;font-size:0.85rem;color:#e3ecf5;font-weight:bold;';
-    wrapper.appendChild(actionsTitle);
+    // Player selection
+    if(otherPlayers.length > 0){
+      const playerSection = createPlayerSelection(otherPlayers, (player) => {
+        selectedPlayer = player;
+        updateActionsList();
+      });
+      wrapper.appendChild(playerSection);
+    }
 
-    if(availableActions.length === 0){
-      const noActions = document.createElement('div');
-      noActions.textContent = 'No energy remaining for actions';
-      noActions.style.cssText = 'font-size:0.8rem;color:#f7b955;font-style:italic;';
-      wrapper.appendChild(noActions);
-    } else {
-      const actionsList = document.createElement('div');
-      actionsList.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    // Action menu
+    const actionsSection = document.createElement('div');
+    actionsSection.className = 'social-action-select';
+    const actionsTitle = document.createElement('div');
+    actionsTitle.className = 'social-section-title';
+    actionsTitle.textContent = 'Select Action';
+    actionsSection.appendChild(actionsTitle);
+
+    const actionsList = document.createElement('div');
+    actionsList.className = 'social-actions-list';
+    actionsSection.appendChild(actionsList);
+
+    wrapper.appendChild(actionsSection);
+
+    // Execute button
+    const executeBtn = document.createElement('button');
+    executeBtn.className = 'social-action-button';
+    executeBtn.textContent = 'Execute Action';
+    executeBtn.disabled = true;
+    executeBtn.setAttribute('aria-label', 'Execute selected social action');
+    executeBtn.onclick = () => {
+      if(selectedPlayer && selectedAction){
+        const result = executeAction(playerId, selectedPlayer.id, selectedAction.id);
+        showFeedback(result);
+        
+        // Refresh UI after action
+        setTimeout(() => {
+          container.innerHTML = '';
+          renderSocialManeuversUI(container, playerId);
+        }, 2500);
+      }
+    };
+    wrapper.appendChild(executeBtn);
+
+    // Update actions list based on selection
+    function updateActionsList(){
+      actionsList.innerHTML = '';
+      
+      if(!selectedPlayer){
+        const emptyState = document.createElement('div');
+        emptyState.className = 'social-empty-state';
+        emptyState.textContent = 'Select a player to see available actions';
+        actionsList.appendChild(emptyState);
+        executeBtn.disabled = true;
+        return;
+      }
+
+      const availableActions = getAvailableActions(playerId);
+      
+      if(availableActions.length === 0){
+        const emptyState = document.createElement('div');
+        emptyState.className = 'social-empty-state';
+        emptyState.textContent = 'No energy remaining for actions';
+        actionsList.appendChild(emptyState);
+        executeBtn.disabled = true;
+        return;
+      }
 
       availableActions.forEach(action => {
-        const actionItem = document.createElement('div');
-        actionItem.style.cssText = 'padding:6px 8px;background:rgba(255,255,255,0.05);border-radius:4px;cursor:pointer;transition:background 0.2s;';
-        actionItem.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:0.85rem;color:#e3ecf5;">${action.label}</span>
-            <span style="font-size:0.75rem;color:#95a9c0;">Cost: ${action.cost}</span>
-          </div>
-          <div style="font-size:0.75rem;color:#95a9c0;margin-top:2px;">${action.description}</div>
-        `;
-        
-        actionItem.addEventListener('mouseenter', () => {
-          actionItem.style.background = 'rgba(255,255,255,0.1)';
+        const actionItem = createActionItem(action, energy, (selected) => {
+          selectedAction = selected;
+          
+          // Update visual selection
+          actionsList.querySelectorAll('.social-action-item').forEach(item => {
+            item.classList.remove('selected');
+          });
+          actionItem.classList.add('selected');
+          
+          executeBtn.disabled = false;
         });
-        actionItem.addEventListener('mouseleave', () => {
-          actionItem.style.background = 'rgba(255,255,255,0.05)';
-        });
-
         actionsList.appendChild(actionItem);
       });
-
-      wrapper.appendChild(actionsList);
     }
 
     container.appendChild(wrapper);
+    updateActionsList();
+  }
+
+  function createEnergyDisplay(energy){
+    const container = document.createElement('div');
+    container.className = 'social-energy-bar';
+    container.setAttribute('role', 'status');
+    container.setAttribute('aria-live', 'polite');
+
+    const label = document.createElement('div');
+    label.className = 'social-energy-label';
+    label.innerHTML = `
+      <strong>Social Energy</strong>
+      <span class="social-energy-value">${energy}/${MAX_ENERGY}</span>
+    `;
+    container.appendChild(label);
+
+    // Energy dots visualization
+    const dots = document.createElement('div');
+    dots.className = 'social-energy-dots';
+    dots.setAttribute('aria-hidden', 'true');
+    
+    for(let i = 0; i < MAX_ENERGY; i++){
+      const dot = document.createElement('div');
+      dot.className = 'social-energy-dot';
+      if(i < energy){
+        dot.classList.add('filled');
+      }
+      dots.appendChild(dot);
+    }
+    container.appendChild(dots);
+
+    return container;
+  }
+
+  function createPlayerSelection(players, onSelect){
+    const container = document.createElement('div');
+    container.className = 'social-player-select';
+
+    const title = document.createElement('div');
+    title.className = 'social-section-title';
+    title.textContent = 'Select Target';
+    container.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'social-player-grid';
+    grid.setAttribute('role', 'radiogroup');
+    grid.setAttribute('aria-label', 'Select target player');
+
+    players.forEach(player => {
+      const card = document.createElement('div');
+      card.className = 'social-player-card';
+      card.textContent = player.name || `Player ${player.id}`;
+      card.setAttribute('role', 'radio');
+      card.setAttribute('aria-checked', 'false');
+      card.setAttribute('tabindex', '0');
+      
+      card.onclick = () => {
+        // Clear other selections
+        grid.querySelectorAll('.social-player-card').forEach(c => {
+          c.classList.remove('selected');
+          c.setAttribute('aria-checked', 'false');
+        });
+        
+        // Select this card
+        card.classList.add('selected');
+        card.setAttribute('aria-checked', 'true');
+        onSelect(player);
+      };
+      
+      // Keyboard accessibility
+      card.addEventListener('keypress', (e) => {
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          card.onclick();
+        }
+      });
+
+      grid.appendChild(card);
+    });
+
+    container.appendChild(grid);
+    return container;
+  }
+
+  function createActionItem(action, currentEnergy, onSelect){
+    const item = document.createElement('div');
+    item.className = 'social-action-item';
+    item.setAttribute('role', 'button');
+    item.setAttribute('tabindex', '0');
+    
+    const canAfford = currentEnergy >= action.cost;
+    if(!canAfford){
+      item.classList.add('disabled');
+      item.setAttribute('aria-disabled', 'true');
+    }
+
+    const header = document.createElement('div');
+    header.className = 'social-action-header';
+    
+    const name = document.createElement('div');
+    name.className = 'social-action-name';
+    name.textContent = action.label;
+    header.appendChild(name);
+
+    const cost = document.createElement('div');
+    cost.className = 'social-action-cost';
+    cost.classList.add(canAfford ? 'affordable' : 'expensive');
+    cost.textContent = `⚡ ${action.cost}`;
+    header.appendChild(cost);
+
+    item.appendChild(header);
+
+    const desc = document.createElement('div');
+    desc.className = 'social-action-description';
+    desc.textContent = action.description;
+    item.appendChild(desc);
+
+    const category = document.createElement('span');
+    category.className = `social-action-category ${action.category}`;
+    category.textContent = action.category;
+    item.appendChild(category);
+
+    if(canAfford){
+      item.onclick = () => onSelect(action);
+      
+      // Keyboard accessibility
+      item.addEventListener('keypress', (e) => {
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          onSelect(action);
+        }
+      });
+    }
+
+    return item;
+  }
+
+  function showFeedback(result){
+    // Remove any existing feedback
+    const existing = document.querySelector('.social-feedback-panel');
+    if(existing){
+      existing.remove();
+    }
+
+    if(!result.success){
+      const panel = createFeedbackPanel('negative', 'Action Failed', result.message || result.reason);
+      document.body.appendChild(panel);
+      setTimeout(() => panel.remove(), 3000);
+      return;
+    }
+
+    const outcome = result.outcome;
+    const panel = createFeedbackPanel(
+      outcome.type, 
+      result.action.label,
+      outcome.message
+    );
+    document.body.appendChild(panel);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      panel.style.animation = 'slideOutRight 0.4s ease';
+      setTimeout(() => panel.remove(), 400);
+    }, 3000);
+  }
+
+  function createFeedbackPanel(type, title, message){
+    const panel = document.createElement('div');
+    panel.className = `social-feedback-panel ${type}`;
+    panel.setAttribute('role', 'alert');
+    panel.setAttribute('aria-live', 'assertive');
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'social-feedback-title';
+    titleEl.textContent = title;
+    panel.appendChild(titleEl);
+
+    const messageEl = document.createElement('div');
+    messageEl.className = 'social-feedback-message';
+    messageEl.textContent = message;
+    panel.appendChild(messageEl);
+
+    return panel;
   }
 
   // ============================================================================

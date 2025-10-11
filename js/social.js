@@ -509,37 +509,24 @@
 
     const you=global.getP?.(g.humanId);
     if(you && !you.evicted){
-      const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
-      const sel=document.createElement('select');
-      const alive=global.alivePlayers?.()||[];
-      alive.filter(p=>p.id!==you.id).forEach(p=>{
-        const opt=document.createElement('option'); opt.value=p.id; opt.textContent=p.name; sel.appendChild(opt);
-      });
-
-      // Action selector with expanded interactions
-      const act=document.createElement('select');
-      const actions = [
-        {val:'alliance', label:'Alliance'},
-        {val:'apologize', label:'Apologize'},
-        {val:'gift', label:'Gift'},
-        {val:'flirt', label:'Flirt'},
-        {val:'prank', label:'Prank'},
-        {val:'strategychat', label:'Strategy Chat'},
-        {val:'workout', label:'Workout Together'},
-        {val:'cook', label:'Cook Meal'},
-        {val:'latenighttalk', label:'Late Night Talk'},
-        {val:'taunt', label:'Taunt'},
-        {val:'confront', label:'Confront'}
-      ];
-      actions.forEach(({val, label})=>{
-        const o=document.createElement('option'); o.value=val; o.textContent=label; act.appendChild(o);
-      });
-
-      const bDo=document.createElement('button'); bDo.className='btn small'; bDo.textContent='Do Action';
-      bDo.onclick=()=>{ const tid=+sel.value; const a=act.value; applyAction(you.id, tid, a); };
-
-      row.append(sel, act, bDo);
-      box.appendChild(row);
+      // Check if Social Maneuvers system is enabled
+      if(global.SocialManeuvers?.isEnabled()){
+        // Render enhanced Social Maneuvers UI
+        const maneuversContainer = document.createElement('div');
+        maneuversContainer.id = 'social-maneuvers-container';
+        box.appendChild(maneuversContainer);
+        
+        try{
+          global.SocialManeuvers.renderSocialManeuversUI(maneuversContainer, you.id);
+        }catch(e){
+          console.error('[social] Failed to render Social Maneuvers UI:', e);
+          // Fallback to basic UI
+          renderBasicSocialUI(box, you);
+        }
+      } else {
+        // Render basic social UI
+        renderBasicSocialUI(box, you);
+      }
 
       buildSocialDecisions();
     }
@@ -547,6 +534,41 @@
     const hint=document.createElement('div'); hint.className='tiny muted'; hint.style.marginTop='6px';
     hint.textContent='Tip: Allies and enemies shift with interactions; nominations naturally follow relations.';
     box.appendChild(hint);
+  }
+  
+  function renderBasicSocialUI(box, you){
+    const g=global.game;
+    const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+    const sel=document.createElement('select');
+    const alive=global.alivePlayers?.()||[];
+    alive.filter(p=>p.id!==you.id).forEach(p=>{
+      const opt=document.createElement('option'); opt.value=p.id; opt.textContent=p.name; sel.appendChild(opt);
+    });
+
+    // Action selector with expanded interactions
+    const act=document.createElement('select');
+    const actions = [
+      {val:'alliance', label:'Alliance'},
+      {val:'apologize', label:'Apologize'},
+      {val:'gift', label:'Gift'},
+      {val:'flirt', label:'Flirt'},
+      {val:'prank', label:'Prank'},
+      {val:'strategychat', label:'Strategy Chat'},
+      {val:'workout', label:'Workout Together'},
+      {val:'cook', label:'Cook Meal'},
+      {val:'latenighttalk', label:'Late Night Talk'},
+      {val:'taunt', label:'Taunt'},
+      {val:'confront', label:'Confront'}
+    ];
+    actions.forEach(({val, label})=>{
+      const o=document.createElement('option'); o.value=val; o.textContent=label; act.appendChild(o);
+    });
+
+    const bDo=document.createElement('button'); bDo.className='btn small'; bDo.textContent='Do Action';
+    bDo.onclick=()=>{ const tid=+sel.value; const a=act.value; applyAction(you.id, tid, a); };
+
+    row.append(sel, act, bDo);
+    box.appendChild(row);
   }
   global.renderSocialPhase = renderSocialPhase;
 
@@ -663,6 +685,15 @@
 
     // Ensure prior reveal cards have finished before starting prompts
     try{ await global.cardQueueWaitIdle?.(); }catch{}
+    
+    // Initialize Social Maneuvers if enabled
+    if(global.SocialManeuvers?.isEnabled()){
+      try{
+        global.SocialManeuvers.onSocialPhaseStart();
+      }catch(e){
+        console.error('[social] Failed to initialize Social Maneuvers:', e);
+      }
+    }
 
     const onDone = async ()=>{
       try{ 
@@ -670,7 +701,25 @@
         await global.cardQueueWaitIdle?.();
         generateSocialSummary();
         await global.cardQueueWaitIdle?.();
-        endSocialPhaseCleanup(); 
+        endSocialPhaseCleanup();
+        
+        // Clean up Social Maneuvers if enabled
+        if(global.SocialManeuvers?.isEnabled()){
+          try{
+            global.SocialManeuvers.onSocialPhaseEnd();
+          }catch(e){
+            console.error('[social] Failed to clean up Social Maneuvers:', e);
+          }
+        }
+      }catch(e){ console.error(e); }
+      
+      if(typeof callback === 'function'){
+        try{ callback(); }catch(e){ console.error(e); }
+      } else {
+        const startNoms = resolveStartNominations();
+        try{ startNoms(); }catch(e){ console.error(e); }
+      }
+    };
       }catch(e){ console.error(e); }
       
       if(typeof callback === 'function'){
