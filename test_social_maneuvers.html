@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers System Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    h1 { color: #f7b955; }
+    h2 { color: #95a9c0; margin-top: 30px; }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass { background: rgba(46, 204, 113, 0.2); border-left: 3px solid #2ecc71; }
+    .fail { background: rgba(231, 76, 60, 0.2); border-left: 3px solid #e74c3c; }
+    .info { background: rgba(52, 152, 219, 0.2); border-left: 3px solid #3498db; }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #2980b9; }
+    button:disabled {
+      background: #95a9c0;
+      cursor: not-allowed;
+    }
+    #testContainer {
+      min-height: 200px;
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .player-card {
+      display: inline-block;
+      padding: 8px 15px;
+      margin: 5px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Maneuvers System Test</h1>
+  <p>Testing the new Social Maneuvers module for Big Brother Mobile</p>
+
+  <div class="test-section">
+    <h2>Test 1: Module Loading</h2>
+    <div id="test1"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Feature Flag (Disabled by Default)</h2>
+    <div id="test2"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Energy System</h2>
+    <div id="test3"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Action Definitions</h2>
+    <div id="test4"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: UI Rendering</h2>
+    <button id="btnRenderUI">Render UI (Feature Disabled)</button>
+    <button id="btnEnableAndRender">Enable Feature & Render UI</button>
+    <div id="testContainer"></div>
+    <div id="test5"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: Action Execution</h2>
+    <button id="btnExecuteDisabled">Execute Action (Disabled)</button>
+    <button id="btnExecuteEnabled">Execute Action (Enabled)</button>
+    <div id="test6"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Summary</h2>
+    <div id="summary"></div>
+  </div>
+
+  <!-- Load the module -->
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    // Mock global game object
+    window.game = {
+      week: 3,
+      humanId: 1,
+      cfg: {
+        enableSocialManeuvers: false // Start disabled
+      }
+    };
+
+    // Mock helper functions
+    window.safeName = function(id) {
+      const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
+      return names[id - 1] || `Player ${id}`;
+    };
+
+    window.getP = function(id) {
+      return {
+        id: id,
+        name: window.safeName(id),
+        affinity: {}
+      };
+    };
+
+    window.alivePlayers = function() {
+      return [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+        { id: 3, name: 'Charlie' },
+        { id: 4, name: 'Diana' }
+      ];
+    };
+
+    let testsPassed = 0;
+    let testsFailed = 0;
+
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function assert(condition, message, containerId) {
+      if (condition) {
+        log(containerId, '✓ PASS: ' + message, 'pass');
+        testsPassed++;
+      } else {
+        log(containerId, '✗ FAIL: ' + message, 'fail');
+        testsFailed++;
+      }
+    }
+
+    // Test 1: Module Loading
+    (function() {
+      assert(typeof window.SocialManeuvers !== 'undefined', 'SocialManeuvers object exists', 'test1');
+      assert(typeof window.SocialManeuvers.isEnabled === 'function', 'isEnabled function exists', 'test1');
+      assert(typeof window.SocialManeuvers.getEnergy === 'function', 'getEnergy function exists', 'test1');
+      assert(typeof window.SocialManeuvers.executeAction === 'function', 'executeAction function exists', 'test1');
+      assert(Array.isArray(window.SocialManeuvers.SOCIAL_ACTIONS), 'SOCIAL_ACTIONS array exists', 'test1');
+    })();
+
+    // Test 2: Feature Flag
+    (function() {
+      assert(window.SocialManeuvers.isEnabled() === false, 'Feature is disabled by default', 'test2');
+      
+      // Enable it temporarily
+      window.game.cfg.enableSocialManeuvers = true;
+      assert(window.SocialManeuvers.isEnabled() === true, 'Feature can be enabled', 'test2');
+      
+      // Disable it again
+      window.game.cfg.enableSocialManeuvers = false;
+      assert(window.SocialManeuvers.isEnabled() === false, 'Feature can be disabled', 'test2');
+    })();
+
+    // Test 3: Energy System
+    (function() {
+      window.SocialManeuvers.initSocialEnergy();
+      
+      const energy = window.SocialManeuvers.getEnergy(1);
+      assert(energy === 3, `Default energy is 3 (got ${energy})`, 'test3');
+      
+      window.SocialManeuvers.setEnergy(1, 5);
+      assert(window.SocialManeuvers.getEnergy(1) === 5, 'Can set energy to 5', 'test3');
+      
+      const spent = window.SocialManeuvers.spendEnergy(1, 2);
+      assert(spent === true, 'Can spend energy', 'test3');
+      assert(window.SocialManeuvers.getEnergy(1) === 3, 'Energy decreases after spending', 'test3');
+      
+      const cannotSpend = window.SocialManeuvers.spendEnergy(1, 10);
+      assert(cannotSpend === false, 'Cannot spend more energy than available', 'test3');
+      
+      window.SocialManeuvers.restoreEnergy(1, 2);
+      assert(window.SocialManeuvers.getEnergy(1) === 5, 'Can restore energy', 'test3');
+    })();
+
+    // Test 4: Action Definitions
+    (function() {
+      const actions = window.SocialManeuvers.SOCIAL_ACTIONS;
+      assert(actions.length > 0, `Found ${actions.length} action definitions`, 'test4');
+      
+      const smalltalk = window.SocialManeuvers.getActionById('smalltalk');
+      assert(smalltalk !== undefined, 'Can retrieve smalltalk action', 'test4');
+      assert(smalltalk.cost === 1, 'Smalltalk costs 1 energy', 'test4');
+      
+      window.SocialManeuvers.setEnergy(1, 2);
+      const available = window.SocialManeuvers.getAvailableActions(1);
+      assert(available.every(a => a.cost <= 2), 'getAvailableActions filters by energy', 'test4');
+      
+      log('test4', `Available actions with 2 energy: ${available.map(a => a.label).join(', ')}`, 'info');
+    })();
+
+    // Test 5: UI Rendering (button handlers)
+    document.getElementById('btnRenderUI').addEventListener('click', function() {
+      document.getElementById('testContainer').innerHTML = '';
+      window.SocialManeuvers.renderSocialManeuversUI(
+        document.getElementById('testContainer'),
+        1
+      );
+      log('test5', 'UI render attempted with feature disabled (should show nothing)', 'info');
+    });
+
+    document.getElementById('btnEnableAndRender').addEventListener('click', function() {
+      window.game.cfg.enableSocialManeuvers = true;
+      window.SocialManeuvers.initSocialEnergy();
+      window.SocialManeuvers.setEnergy(1, 3);
+      
+      document.getElementById('testContainer').innerHTML = '';
+      window.SocialManeuvers.renderSocialManeuversUI(
+        document.getElementById('testContainer'),
+        1
+      );
+      
+      log('test5', '✓ UI rendered with feature enabled', 'pass');
+      testsPassed++;
+    });
+
+    // Test 6: Action Execution (button handlers)
+    document.getElementById('btnExecuteDisabled').addEventListener('click', function() {
+      window.game.cfg.enableSocialManeuvers = false;
+      const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk');
+      
+      assert(result.success === false, 'Action fails when feature is disabled', 'test6');
+      assert(result.reason === 'disabled', 'Reason is "disabled"', 'test6');
+    });
+
+    document.getElementById('btnExecuteEnabled').addEventListener('click', function() {
+      window.game.cfg.enableSocialManeuvers = true;
+      window.SocialManeuvers.initSocialEnergy();
+      window.SocialManeuvers.setEnergy(1, 3);
+      
+      const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk');
+      
+      assert(result.success === true, 'Action succeeds when feature is enabled', 'test6');
+      assert(result.energyRemaining === 2, 'Energy decreased by action cost', 'test6');
+      assert(result.outcome !== undefined, 'Action produces an outcome', 'test6');
+      
+      log('test6', `Action result: ${JSON.stringify(result.outcome)}`, 'info');
+    });
+
+    // Summary
+    setTimeout(function() {
+      const summary = document.getElementById('summary');
+      const total = testsPassed + testsFailed;
+      summary.innerHTML = `
+        <div class="test-result ${testsFailed === 0 ? 'pass' : 'fail'}">
+          <strong>Tests Completed:</strong> ${total}<br>
+          <strong>Passed:</strong> ${testsPassed}<br>
+          <strong>Failed:</strong> ${testsFailed}
+        </div>
+      `;
+      
+      if (testsFailed === 0) {
+        summary.innerHTML += '<div class="test-result pass"><strong>✓ All automatic tests passed!</strong><br>Click the buttons above to test interactive features.</div>';
+      }
+    }, 100);
+
+    console.log('[test] Social Maneuvers test page loaded');
+  </script>
+</body>
+</html>
