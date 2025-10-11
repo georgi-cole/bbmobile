@@ -216,6 +216,17 @@
     const final = Math.max(0, Math.min(150, normalizedBase * mult));
 
     g.lastCompScores.set(id, final);
+    
+    // Track game key for opponent synthesis
+    if (label && label.includes('/')) {
+      const gameKey = label.split('/')[1];
+      if (gameKey && gameKey !== 'AI') {
+        if (g.phase === 'hoh') g.__hohGameKey = gameKey;
+        else if (g.phase === 'final3_comp1') g.__f3p1GameKey = gameKey;
+        else if (g.phase === 'final3_comp2') g.__f3p2GameKey = gameKey;
+        else if (g.phase === 'final3_comp3') g.__f3p3GameKey = gameKey;
+      }
+    }
 
     // Log completion to telemetry
     if (global.MinigameTelemetry && label) {
@@ -238,7 +249,77 @@
 
     // Hidden scoring: only log that player completed, not the score
     global.addLog(`${global.safeName(id)} completed the ${g.phase === 'hoh' ? 'HOH' : 'competition'}.`, 'tiny');
+    
+    // NEW: Generate synthetic opponent scores after human submission
+    const player = global.getP(id);
+    if (player && player.human && global.OpponentSynth) {
+      generateSyntheticOpponents(id, final);
+    }
+    
     return true;
+  }
+
+  /**
+   * Generate synthetic opponent scores after human submission
+   * Uses OpponentSynth module to create plausible AI scores
+   * Targets ~20% human win rate per session
+   */
+  function generateSyntheticOpponents(humanId, humanScore) {
+    const g = global.game;
+    if (!global.OpponentSynth) return;
+
+    // Determine which phase we're in and get eligible opponents
+    let eligibleOpponents = [];
+    let gameKey = 'unknown';
+    
+    if (g.phase === 'hoh') {
+      const alive = global.alivePlayers();
+      const blocked = (alive.length !== 4 && g.week > 1) ? g.lastHOHId : null;
+      eligibleOpponents = alive.filter(p => !p.human && p.id !== blocked);
+      gameKey = g.__hohGameKey || 'unknown';
+    } else if (g.phase === 'final3_comp1') {
+      eligibleOpponents = global.alivePlayers().filter(p => !p.human);
+      gameKey = g.__f3p1GameKey || 'unknown';
+    } else if (g.phase === 'final3_comp2') {
+      const duo = g.__f3_duo || [];
+      eligibleOpponents = duo.map(id => global.getP(id)).filter(p => p && !p.human);
+      gameKey = g.__f3p2GameKey || 'unknown';
+    } else if (g.phase === 'final3_comp3') {
+      const finalists = g.__f3_finalists || [];
+      eligibleOpponents = finalists.map(id => global.getP(id)).filter(p => p && !p.human);
+      gameKey = g.__f3p3GameKey || 'unknown';
+    }
+
+    if (eligibleOpponents.length === 0) {
+      return; // No opponents to generate for
+    }
+
+    // Prepare opponent data
+    const opponents = eligibleOpponents.map(p => ({
+      id: p.id,
+      compBeast: p.compBeast || 0.5,
+      persona: p.persona || { aggr: 0.5, loyalty: 0.5, chaos: 0.5 }
+    }));
+
+    // Generate synthetic scores using seeded RNG
+    const seed = g.rngSeed + g.week * 1000 + humanId;
+    const syntheticScores = global.OpponentSynth.generate({
+      humanScore: humanScore,
+      opponents: opponents,
+      gameKey: gameKey,
+      seed: seed,
+      targetWinRate: 0.20 // 20% win rate
+    });
+
+    // Apply synthetic scores to competition
+    for (const [opponentId, score] of syntheticScores) {
+      if (!g.lastCompScores.has(opponentId)) {
+        g.lastCompScores.set(opponentId, score);
+      }
+    }
+
+    // Trigger finish check
+    maybeFinishComp();
   }
 
   function maybeFinishComp() {
@@ -698,21 +779,27 @@
     g.lastCompScores = new Map(); g.hohOrder = [];
     g.__hohResolved = false;
     g.__compRunning = true; // Mark competition as running
+    g.__hohGameKey = null; // Track which game was played
     global.markCompPlayed?.('hoh'); // Mark HOH as played
     global.tv.say('HOH Competition'); global.phaseMusic?.('hoh');
     global.setPhase('hoh', g.cfg.tHOH, finishCompPhase);
     const alive = global.alivePlayers(); const blocked = (alive.length !== 4 && g.week > 1) ? g.lastHOHId : null;
     const diffMult = getAIDifficultyMultiplier();
-    for (const p of alive) {
-      if (p.id === blocked || p.human) continue;
-      setTimeout(() => {
-        if (g.phase !== 'hoh') return;
-        const baseScore = 8 + (global.rng?.() || Math.random()) * 20;
-        const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.6) * diffMult;
-        submitScore(p.id, baseScore, aiMultiplier, 'HOH/AI');
-        maybeFinishComp();
-      }, 300 + (global.rng?.() || Math.random()) * (g.cfg.tHOH * 620));
+    
+    // Legacy fallback: generate AI scores immediately if OpponentSynth not available
+    if (!global.OpponentSynth) {
+      for (const p of alive) {
+        if (p.id === blocked || p.human) continue;
+        setTimeout(() => {
+          if (g.phase !== 'hoh') return;
+          const baseScore = 8 + (global.rng?.() || Math.random()) * 20;
+          const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.6) * diffMult;
+          submitScore(p.id, baseScore, aiMultiplier, 'HOH/AI');
+          maybeFinishComp();
+        }, 300 + (global.rng?.() || Math.random()) * (g.cfg.tHOH * 620));
+      }
     }
+    // New system: Wait for human submission, then generate synthetic opponents
   }
   global.startHOH = startHOH;
 
@@ -982,19 +1069,25 @@
   function beginF3P1Competition() {
     const g = global.game;
     g.lastCompScores = new Map();
+    g.__f3p1GameKey = null; // Track game key
     global.tv.say('Final 3 — Part 1');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp1', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P1);
     const diffMult = getAIDifficultyMultiplier();
-    for (const p of global.alivePlayers()) {
-      if (p.human) continue;
-      setTimeout(() => {
-        if (g.phase !== 'final3_comp1') return;
-        const baseScore = 10 + (global.rng?.() || Math.random()) * 25;
-        const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.65) * diffMult;
-        submitScore(p.id, baseScore, aiMultiplier, 'F3-P1/AI');
-      }, 300 + (global.rng?.() || Math.random()) * (g.cfg.tHOH * 520));
+    
+    // Legacy fallback: generate AI scores immediately if OpponentSynth not available
+    if (!global.OpponentSynth) {
+      for (const p of global.alivePlayers()) {
+        if (p.human) continue;
+        setTimeout(() => {
+          if (g.phase !== 'final3_comp1') return;
+          const baseScore = 10 + (global.rng?.() || Math.random()) * 25;
+          const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.65) * diffMult;
+          submitScore(p.id, baseScore, aiMultiplier, 'F3-P1/AI');
+        }, 300 + (global.rng?.() || Math.random()) * (g.cfg.tHOH * 520));
+      }
     }
+    // New system: Wait for human submission, then generate synthetic opponents
   }
 
   function finishF3P1() {
@@ -1063,6 +1156,7 @@
     const g = global.game;
     g.__f3_duo = duo.slice();
     g.lastCompScores = new Map();
+    g.__f3p2GameKey = null; // Track game key
     global.tv.say('Final 3 — Part 2');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp2', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P2);
@@ -1106,12 +1200,16 @@
           }
         }
       } else {
-        setTimeout(() => {
-          if (g.phase !== 'final3_comp2') return;
-          const baseScore = 10 + (global.rng?.() || Math.random()) * 25;
-          const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.65) * diffMult;
-          submitScore(p.id, baseScore, aiMultiplier, 'F3-P2/AI');
-        }, 300 + (global.rng?.() || Math.random()) * (g.cfg.tHOH * 520));
+        // Legacy fallback: generate AI scores immediately if OpponentSynth not available
+        if (!global.OpponentSynth) {
+          setTimeout(() => {
+            if (g.phase !== 'final3_comp2') return;
+            const baseScore = 10 + (global.rng?.() || Math.random()) * 25;
+            const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.65) * diffMult;
+            submitScore(p.id, baseScore, aiMultiplier, 'F3-P2/AI');
+          }, 300 + (global.rng?.() || Math.random()) * (g.cfg.tHOH * 520));
+        }
+        // New system: Wait for human submission, then generate synthetic opponents
       }
     }
   }
@@ -1158,6 +1256,7 @@
     g.lastCompScores = new Map();
     const finalists = [g.__f3p1Winner, g.__f3p2Winner];
     g.__f3_finalists = finalists.slice();
+    g.__f3p3GameKey = null; // Track game key
     global.tv.say('Final 3 — Part 3');
     global.phaseMusic?.('hoh');
     global.setPhase('final3_comp3', Math.max(18, Math.floor(g.cfg.tHOH * 0.7)), finishF3P3);
@@ -1200,12 +1299,16 @@
           }
         }
       } else {
-        setTimeout(() => {
-          if (g.phase !== 'final3_comp3') return;
-          const baseScore = 10 + (global.rng?.() || Math.random()) * 25;
-          const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.65) * diffMult;
-          submitScore(p.id, baseScore, aiMultiplier, 'F3-P3/AI');
-        }, 300 + (global.rng?.() || Math.random()) * (g.cfg.tHOH * 520));
+        // Legacy fallback: generate AI scores immediately if OpponentSynth not available
+        if (!global.OpponentSynth) {
+          setTimeout(() => {
+            if (g.phase !== 'final3_comp3') return;
+            const baseScore = 10 + (global.rng?.() || Math.random()) * 25;
+            const aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.65) * diffMult;
+            submitScore(p.id, baseScore, aiMultiplier, 'F3-P3/AI');
+          }, 300 + (global.rng?.() || Math.random()) * (g.cfg.tHOH * 520));
+        }
+        // New system: Wait for human submission, then generate synthetic opponents
       }
     }
   }
