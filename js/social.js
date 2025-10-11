@@ -490,6 +490,8 @@
   function renderSocialPhase(panel){
     const g=global.game; if(!panel || !g) return;
 
+    console.info('[social] Rendering social phase UI');
+    
     panel.innerHTML='';
     const box=document.createElement('div'); box.className='minigame-host';
     box.innerHTML=`<h3>Social Intermission</h3>
@@ -503,7 +505,10 @@
     // Run old passive simulation only if Social Maneuvers is NOT enabled
     // When Social Maneuvers is active, player actions drive social dynamics instead
     if(!global.SocialManeuvers?.isEnabled()){
+      console.info('[social] Using legacy social simulation (Social Maneuvers disabled)');
       simulateHouseSocial();
+    } else {
+      console.info('[social] Social Maneuvers enabled - skipping legacy simulation');
     }
 
     const fWrap=document.createElement('div'); fWrap.className='tiny';
@@ -515,6 +520,7 @@
     if(you && !you.evicted){
       // Check if Social Maneuvers system is enabled
       if(global.SocialManeuvers?.isEnabled()){
+        console.info('[social] ✓ Rendering enhanced Social Maneuvers UI');
         // Render enhanced Social Maneuvers UI
         const maneuversContainer = document.createElement('div');
         maneuversContainer.id = 'social-maneuvers-container';
@@ -525,9 +531,11 @@
         }catch(e){
           console.error('[social] Failed to render Social Maneuvers UI:', e);
           // Fallback to basic UI
+          console.info('[social] Falling back to basic social UI');
           renderBasicSocialUI(box, you);
         }
       } else {
+        console.info('[social] Rendering basic social UI (Social Maneuvers disabled)');
         // Render basic social UI
         renderBasicSocialUI(box, you);
       }
@@ -691,12 +699,16 @@
     try{ await global.cardQueueWaitIdle?.(); }catch{}
     
     // Initialize Social Maneuvers if enabled
+    console.info('[social] Checking Social Maneuvers feature flag...');
     if(global.SocialManeuvers?.isEnabled()){
+      console.info('[social] ✓ Social Maneuvers ENABLED - triggering SocialManeuvers.startPhase()');
       try{
         global.SocialManeuvers.onSocialPhaseStart();
       }catch(e){
         console.error('[social] Failed to initialize Social Maneuvers:', e);
       }
+    } else {
+      console.info('[social] Social Maneuvers DISABLED - using legacy social system');
     }
 
     const onDone = async ()=>{
