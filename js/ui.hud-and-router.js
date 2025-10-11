@@ -929,20 +929,6 @@ header.innerHTML = `
   g.fastForwardPhase = fastForwardPhase;
 
   // ------------ Opening Sequence (unchanged core) ------------
-  function ensureSkipIntroButton(){
-    let btn=document.getElementById('btnSkipIntro');
-    if(btn) return btn;
-    const tv=document.getElementById('tv'); if(!tv) return null;
-    btn=document.createElement('button');
-    btn.id='btnSkipIntro'; btn.className='btn small';
-    btn.textContent='Skip';
-    btn.title='Fast-forward this phase';
-    btn.style.cssText='position:absolute;top:10px;right:12px;z-index:11;pointer-events:auto;';
-    tv.appendChild(btn);
-    btn.onclick=()=>fastForwardPhase();
-    return btn;
-  }
-  function removeSkipIntroButton(){ const b=document.getElementById('btnSkipIntro'); if(b) b.remove(); }
   function clearIntroDeck(){ const deck=document.getElementById('introDeck'); if(deck) deck.remove(); }
   function buildProfileCard(p){
     const avatar = getAvatar(p);
@@ -1047,7 +1033,6 @@ header.innerHTML = `
       game.__introPairsTotal = pairs.length;
       game.__introPairsShown = 0;
       game.__introEarlyFinished = false;
-      ensureSkipIntroButton();
       pairs.forEach((pair,idx)=>{
         const id=setTimeout(()=>{
           try{ 
@@ -1085,7 +1070,6 @@ header.innerHTML = `
       game.__introHandles=[];
     }
     clearIntroDeck();
-    removeSkipIntroButton();
     if(userTriggered) g.finishOpening();
   }
   g.skipIntro = skipIntro;
