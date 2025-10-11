@@ -345,35 +345,77 @@
       return;
     }
 
-    // 2) Start AntiCheat session if available
-    let antiCheatSessionId = null;
-    if (global.AntiCheat) {
-      antiCheatSessionId = global.AntiCheat.startSession({
-        container: host,
-        gameKey: mg,
-        thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 3 }
+    // 2) Check if CompetitionFlow is available for new flow
+    if (global.CompetitionFlow && typeof global.CompetitionFlow.runCompetitionFlow === 'function') {
+      // Use new competition flow: instructions → fullscreen game → completion
+      host.innerHTML = '<div class="tiny muted">Loading competition...</div>';
+      
+      // Start AntiCheat session
+      let antiCheatSessionId = null;
+      if (global.AntiCheat) {
+        antiCheatSessionId = global.AntiCheat.startSession({
+          container: host,
+          gameKey: mg,
+          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 3 }
+        });
+      }
+
+      // Run competition flow (pass host container for instructions)
+      global.CompetitionFlow.runCompetitionFlow(mg, host, (base) => {
+        // Validate with AntiCheat
+        if (antiCheatSessionId && global.AntiCheat) {
+          const v = global.AntiCheat.validate(antiCheatSessionId);
+          if (!v.valid) {
+            console.warn('[Competition] Anti-cheat validation failed:', v.reason);
+            host.innerHTML = `<div class="tiny" style="color:#ff6b9d;">⚠️ Submission blocked: ${v.reason}</div>`;
+            global.AntiCheat.cleanup(antiCheatSessionId);
+            return;
+          }
+          global.AntiCheat.cleanup(antiCheatSessionId);
+        }
+
+        // Submit score
+        if (submitScore(player.id, base, multiplier, label)) {
+          host.innerHTML = '<div class="tiny muted">Submission received. Waiting for others…</div>';
+          if (typeof onAfterSubmit === 'function') onAfterSubmit();
+          maybeFinishComp();
+        }
+      });
+      
+    } else {
+      // Fallback to legacy inline rendering
+      console.warn('[Competition] CompetitionFlow not available, using legacy rendering');
+      
+      // Start AntiCheat session
+      let antiCheatSessionId = null;
+      if (global.AntiCheat) {
+        antiCheatSessionId = global.AntiCheat.startSession({
+          container: host,
+          gameKey: mg,
+          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 3 }
+        });
+      }
+
+      // Render game inline & validate
+      global.renderMinigame?.(mg, host, (base) => {
+        if (antiCheatSessionId && global.AntiCheat) {
+          const v = global.AntiCheat.validate(antiCheatSessionId);
+          if (!v.valid) {
+            console.warn('[Competition] Anti-cheat validation failed:', v.reason);
+            host.innerHTML = `<div class="tiny" style="color:#ff6b9d;">⚠️ Submission blocked: ${v.reason}</div>`;
+            global.AntiCheat.cleanup(antiCheatSessionId);
+            return;
+          }
+          global.AntiCheat.cleanup(antiCheatSessionId);
+        }
+
+        if (submitScore(player.id, base, multiplier, label)) {
+          host.innerHTML = '<div class="tiny muted">Submission received. Waiting for others…</div>';
+          if (typeof onAfterSubmit === 'function') onAfterSubmit();
+          maybeFinishComp();
+        }
       });
     }
-
-    // 3) Render game & validate
-    global.renderMinigame?.(mg, host, (base) => {
-      if (antiCheatSessionId && global.AntiCheat) {
-        const v = global.AntiCheat.validate(antiCheatSessionId);
-        if (!v.valid) {
-          console.warn('[Competition] Anti-cheat validation failed:', v.reason);
-          host.innerHTML = `<div class="tiny" style="color:#ff6b9d;">⚠️ Submission blocked: ${v.reason}</div>`;
-          global.AntiCheat.cleanup(antiCheatSessionId);
-          return;
-        }
-        global.AntiCheat.cleanup(antiCheatSessionId);
-      }
-
-      if (submitScore(player.id, base, multiplier, label)) {
-        host.innerHTML = '<div class="tiny muted">Submission received. Waiting for others…</div>';
-        if (typeof onAfterSubmit === 'function') onAfterSubmit();
-        maybeFinishComp();
-      }
-    });
   }
 
   // Reusable tri-slot reveal sequence for competitions
