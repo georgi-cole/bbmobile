@@ -16,6 +16,9 @@
     'No risk, no reward.','Silent but deadly.','Float till it matters.','All about loyalty.'
   ];
 
+  /* ===== Social Maneuvers Traits ===== */
+  const SOCIAL_TRAITS=['loyal','deceptive','gullible','persuasive','observant','charismatic','manipulative','trustworthy','skeptical','empathetic'];
+
   /* ===== Game State ===== */
   const game={
     cfg:{
@@ -126,6 +129,150 @@
   function alivePlayers(){ return game.players.filter(p=>!p.evicted); }
   function fmtList(ids){ return ids.map(safeName).join(', '); }
 
+  /* ===== Social Maneuvers Helpers ===== */
+  
+  /**
+   * Generate random social traits for a player
+   * @returns {Array<string>} Array of 2-3 random traits
+   */
+  function generateSocialTraits(){
+    const numTraits = 2 + Math.floor(rng() * 2); // 2-3 traits per player
+    const shuffled = SOCIAL_TRAITS.slice().sort(() => rng() - 0.5);
+    return shuffled.slice(0, numTraits);
+  }
+  
+  /**
+   * Check if a player has a specific trait
+   * @param {number} playerId - Player ID
+   * @param {string} trait - Trait to check (case-insensitive)
+   * @returns {boolean}
+   */
+  function hasTrait(playerId, trait){
+    const p = getP(playerId);
+    if(!p || !p.socialTraits) return false;
+    const lowerTrait = trait.toLowerCase();
+    return p.socialTraits.some(t => t.toLowerCase() === lowerTrait);
+  }
+  
+  /**
+   * Get a player's influence value
+   * @param {number} playerId - Player ID
+   * @returns {number} Influence value (0-100)
+   */
+  function getInfluence(playerId){
+    const p = getP(playerId);
+    return p?.influence ?? 50;
+  }
+  
+  /**
+   * Get a player's information value
+   * @param {number} playerId - Player ID
+   * @returns {number} Information value (0-100)
+   */
+  function getInformation(playerId){
+    const p = getP(playerId);
+    return p?.information ?? 50;
+  }
+  
+  /**
+   * Update a player's influence value
+   * @param {number} playerId - Player ID
+   * @param {number} delta - Amount to change influence by
+   */
+  function updateInfluence(playerId, delta){
+    const p = getP(playerId);
+    if(!p) return;
+    p.influence = Math.max(0, Math.min(100, (p.influence || 50) + delta));
+  }
+  
+  /**
+   * Update a player's information value
+   * @param {number} playerId - Player ID
+   * @param {number} delta - Amount to change information by
+   */
+  function updateInformation(playerId, delta){
+    const p = getP(playerId);
+    if(!p) return;
+    p.information = Math.max(0, Math.min(100, (p.information || 50) + delta));
+  }
+  
+  /**
+   * Record an event in a player's memory log
+   * @param {number} playerId - Player ID
+   * @param {string} event - Type of event (e.g., 'alliance_formed', 'betrayal', 'conversation')
+   * @param {number|null} targetId - Optional target player ID
+   * @param {object} details - Additional details about the event
+   */
+  function recordEvent(playerId, event, targetId = null, details = {}){
+    const p = getP(playerId);
+    if(!p) return;
+    
+    if(!p.memoryLog){
+      p.memoryLog = [];
+    }
+    
+    const entry = {
+      week: game.week || 1,
+      timestamp: Date.now(),
+      event,
+      targetId,
+      details
+    };
+    
+    p.memoryLog.push(entry);
+    
+    // Keep memory log from growing too large (max 100 entries per player)
+    if(p.memoryLog.length > 100){
+      p.memoryLog.shift();
+    }
+  }
+  
+  /**
+   * Get a player's memory log, optionally filtered
+   * @param {number} playerId - Player ID
+   * @param {object} filters - Optional filters {event, targetId, week}
+   * @returns {Array} Array of memory entries
+   */
+  function getMemoryLog(playerId, filters = {}){
+    const p = getP(playerId);
+    if(!p || !p.memoryLog) return [];
+    
+    let log = p.memoryLog;
+    
+    if(filters.event){
+      log = log.filter(entry => entry.event === filters.event);
+    }
+    if(filters.targetId !== undefined){
+      log = log.filter(entry => entry.targetId === filters.targetId);
+    }
+    if(filters.week !== undefined){
+      log = log.filter(entry => entry.week === filters.week);
+    }
+    
+    return log;
+  }
+  
+  /**
+   * Initialize social maneuvers properties for existing players (for backward compatibility)
+   * @param {boolean} force - If true, regenerate even if properties exist
+   */
+  function initSocialManeuversProps(force = false){
+    for(const p of game.players){
+      if(force || typeof p.influence !== 'number'){
+        p.influence = p.human ? 50 : Math.floor(30 + rng() * 40);
+      }
+      if(force || typeof p.information !== 'number'){
+        p.information = p.human ? 50 : Math.floor(30 + rng() * 40);
+      }
+      if(force || !Array.isArray(p.socialTraits)){
+        p.socialTraits = generateSocialTraits();
+      }
+      if(force || !Array.isArray(p.memoryLog)){
+        p.memoryLog = [];
+      }
+    }
+  }
+
   /* ===== Player Creation ===== */
   function pushPlayer({name,human=false}){
     const id=(game.players.length?Math.max(...game.players.map(p=>p.id))+1:1);
@@ -162,12 +309,24 @@
     if(human) compBeast = 0.5;
     
     const wins={hoh:0,veto:0};
+    
+    // Social Maneuvers properties
+    const socialTraits = generateSocialTraits();
+    const influence = human ? 50 : Math.floor(30 + rng() * 40); // 30-70 for AI, 50 for human
+    const information = human ? 50 : Math.floor(30 + rng() * 40); // 30-70 for AI, 50 for human
+    const memoryLog = []; // Will store {week, event, targetId, details}
+    
     const p={ id,name,human,evicted:false,nominated:false,hoh:false,
       persona,skill,compBeast,affinity:{},stats:{hohWins:0,vetoWins:0},wins,
       threat:THREAT_BASE,weekEvicted:null,winner:false,runnerUp:false,
       avatar,meta,
       nominationState:'none', // State machine: none, nominated, pendingSave, saved, replacement
-      showFinalLabel:null // Final labels: WINNER, RUNNER-UP (overrides other labels)
+      showFinalLabel:null, // Final labels: WINNER, RUNNER-UP (overrides other labels)
+      // Social Maneuvers System properties
+      socialTraits, // Array of traits: ['loyal', 'observant', etc.]
+      influence, // 0-100 scale, affects persuasion success
+      information, // 0-100 scale, knowledge of house dynamics
+      memoryLog // Array of recorded events for social interactions
     };
     game.players.push(p);
     if(human) game.humanId=id;
@@ -294,6 +453,7 @@
   /* ===== Exports ===== */
   global.game=game;
   global.TRAITS=TRAITS;
+  global.SOCIAL_TRAITS=SOCIAL_TRAITS;
   global.rng=rng;
   global.clamp=clamp;
   global.pushPlayer=pushPlayer;
@@ -311,6 +471,17 @@
   global.avgAffinity=avgAffinity;
   global.updatePlayerThreat=updatePlayerThreat;
   global.syncPlayerBadgeStates=syncPlayerBadgeStates;
+  
+  // Social Maneuvers exports
+  global.generateSocialTraits=generateSocialTraits;
+  global.hasTrait=hasTrait;
+  global.getInfluence=getInfluence;
+  global.getInformation=getInformation;
+  global.updateInfluence=updateInfluence;
+  global.updateInformation=updateInformation;
+  global.recordEvent=recordEvent;
+  global.getMemoryLog=getMemoryLog;
+  global.initSocialManeuversProps=initSocialManeuversProps;
 
   global.ALLY_T=ALLY_T;
   global.ENEMY_T=ENEMY_T;
