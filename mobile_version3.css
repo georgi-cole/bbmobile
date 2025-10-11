@@ -110,11 +110,12 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
   /* Cast pane specific - compact everything */
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-editor {
     grid-template-columns: 1fr !important;
-    gap: 10px !important;
+    gap: 12px !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-preview {
     align-items: center !important;
+    margin-bottom: 8px !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-preview img {
@@ -141,40 +142,79 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
     min-width: 0 !important;
   }
 
-  /* Cast strip - horizontal scroll for roster */
+  /* Cast strip - horizontal scroll for roster with proper container */
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-strip {
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    padding: 6px !important;
+    padding: 8px 6px !important;
     -webkit-overflow-scrolling: touch;
+    margin: 0 -8px !important; /* Extend to card edges */
+    width: calc(100% + 16px) !important;
+    border-radius: 10px !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-chip {
-    min-width: 52px !important;
+    min-width: 56px !important;
+    flex-shrink: 0 !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .chip-ava {
-    width: 44px !important;
-    height: 44px !important;
+    width: 48px !important;
+    height: 48px !important;
   }
 
-  /* Cast navigation buttons - ensure wrapping, no horizontal overflow */
-  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-nav {
+  /* Cast preview image - smaller on mobile */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-avatar-upload {
+    width: 100px !important;
+    height: 100px !important;
+    margin: 0 auto !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-avatar-upload img {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Cast actions - stack and full width on mobile */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-actions {
     display: flex !important;
-    flex-wrap: wrap !important;
+    flex-direction: column !important;
     gap: 8px !important;
-    justify-content: space-between !important;
+    margin-top: 12px !important;
   }
 
-  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-nav .row {
-    flex-wrap: wrap !important;
-    gap: 6px !important;
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-actions .btn {
+    width: 100% !important;
+    min-width: 0 !important;
   }
 
-  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-nav .btn {
-    min-width: 70px !important;
-    padding: 6px 10px !important;
-    font-size: 0.8rem !important;
+  /* Ensure card doesn't overflow on mobile */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .card {
+    padding: 10px 8px !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    margin-bottom: 12px !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-wrap {
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* Cast Editor title spacing */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] h3 {
+    font-size: 0.9rem !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* Progress indicator spacing */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] #castProgress {
+    font-size: 0.7rem !important;
+  }
+
+  /* Reduce vertical spacing in Cast Editor */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .sep {
+    margin: 4px 0 !important;
   }
 
   /* Settings and Cast table improvements */
