@@ -646,7 +646,39 @@
       const alive=global.alivePlayers(); const blocked=(alive.length!==4 && g.week>1)?g.lastHOHId:null;
       if(you.id!==blocked && !g.lastCompScores?.has(you.id)){
         const mg=pickMinigameType();
+        
+        // Start anti-cheat session if module is loaded
+        let antiCheatSessionId = null;
+        if(global.AntiCheat){
+          antiCheatSessionId = global.AntiCheat.startSession({
+            container: host,
+            gameKey: mg,
+            thresholds: {
+              minPlayTime: 3000,
+              maxDuration: 300000,
+              minDistinctInputs: 3
+            }
+          });
+        }
+        
         global.renderMinigame?.(mg,host,(base)=>{
+          // Validate anti-cheat session before submitting
+          if(antiCheatSessionId && global.AntiCheat){
+            const validation = global.AntiCheat.validate(antiCheatSessionId);
+            
+            if(!validation.valid){
+              console.warn('[Competition] Anti-cheat validation failed:', validation.reason);
+              host.innerHTML=`<div class="tiny" style="color:#ff6b9d;">⚠️ Submission blocked: ${validation.reason}</div>`;
+              
+              // Clean up session
+              global.AntiCheat.cleanup(antiCheatSessionId);
+              return;
+            }
+            
+            // Clean up session after successful validation
+            global.AntiCheat.cleanup(antiCheatSessionId);
+          }
+          
           // Use compBeast for human too (no guaranteed wins)
           const humanMultiplier = (0.75 + (you?.compBeast||0.5) * 0.6);
           if(submitScore(you.id, base, humanMultiplier, `HOH/${mg}`)){
@@ -921,7 +953,41 @@
     
     if(you && !you.evicted && !g.lastCompScores?.has(you.id)){
       const mg=pickMinigameType();
-      global.renderMinigame?.(mg,host,(base)=> submitScore(you.id, base, (0.8+(you?.skill||0.5)*0.6), `F3-P1/${mg}`));
+      
+      // Start anti-cheat session if module is loaded
+      let antiCheatSessionId = null;
+      if(global.AntiCheat){
+        antiCheatSessionId = global.AntiCheat.startSession({
+          container: host,
+          gameKey: mg,
+          thresholds: {
+            minPlayTime: 3000,
+            maxDuration: 300000,
+            minDistinctInputs: 3
+          }
+        });
+      }
+      
+      global.renderMinigame?.(mg,host,(base)=>{
+        // Validate anti-cheat session before submitting
+        if(antiCheatSessionId && global.AntiCheat){
+          const validation = global.AntiCheat.validate(antiCheatSessionId);
+          
+          if(!validation.valid){
+            console.warn('[Competition] Anti-cheat validation failed:', validation.reason);
+            host.innerHTML=`<div class="tiny" style="color:#ff6b9d;">⚠️ Submission blocked: ${validation.reason}</div>`;
+            
+            // Clean up session
+            global.AntiCheat.cleanup(antiCheatSessionId);
+            return;
+          }
+          
+          // Clean up session after successful validation
+          global.AntiCheat.cleanup(antiCheatSessionId);
+        }
+        
+        submitScore(you.id, base, (0.8+(you?.skill||0.5)*0.6), `F3-P1/${mg}`);
+      });
     } else host.innerHTML='<div class="tiny muted">Waiting for competition to conclude…</div>';
     panel.appendChild(host);
   }
@@ -1054,7 +1120,41 @@
               if(isMinigameSystemReady()){
                 wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 2.</div>';
                 const mg=pickMinigameType();
-                global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P2/${mg}`));
+                
+                // Start anti-cheat session if module is loaded
+                let antiCheatSessionId = null;
+                if(global.AntiCheat){
+                  antiCheatSessionId = global.AntiCheat.startSession({
+                    container: wrap,
+                    gameKey: mg,
+                    thresholds: {
+                      minPlayTime: 3000,
+                      maxDuration: 300000,
+                      minDistinctInputs: 3
+                    }
+                  });
+                }
+                
+                global.renderMinigame?.(mg,wrap,(base)=>{
+                  // Validate anti-cheat session before submitting
+                  if(antiCheatSessionId && global.AntiCheat){
+                    const validation = global.AntiCheat.validate(antiCheatSessionId);
+                    
+                    if(!validation.valid){
+                      console.warn('[Competition] Anti-cheat validation failed:', validation.reason);
+                      wrap.innerHTML=`<div class="tiny" style="color:#ff6b9d;">⚠️ Submission blocked: ${validation.reason}</div>`;
+                      
+                      // Clean up session
+                      global.AntiCheat.cleanup(antiCheatSessionId);
+                      return;
+                    }
+                    
+                    // Clean up session after successful validation
+                    global.AntiCheat.cleanup(antiCheatSessionId);
+                  }
+                  
+                  submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P2/${mg}`);
+                });
               } else {
                 console.error('[Competition] Minigame system failed to load');
                 wrap.innerHTML='<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
@@ -1063,7 +1163,41 @@
           } else {
             const mg=pickMinigameType(); const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
             wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 2.</div>'; host.appendChild(wrap);
-            global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P2/${mg}`));
+            
+            // Start anti-cheat session if module is loaded
+            let antiCheatSessionId = null;
+            if(global.AntiCheat){
+              antiCheatSessionId = global.AntiCheat.startSession({
+                container: wrap,
+                gameKey: mg,
+                thresholds: {
+                  minPlayTime: 3000,
+                  maxDuration: 300000,
+                  minDistinctInputs: 3
+                }
+              });
+            }
+            
+            global.renderMinigame?.(mg,wrap,(base)=>{
+              // Validate anti-cheat session before submitting
+              if(antiCheatSessionId && global.AntiCheat){
+                const validation = global.AntiCheat.validate(antiCheatSessionId);
+                
+                if(!validation.valid){
+                  console.warn('[Competition] Anti-cheat validation failed:', validation.reason);
+                  wrap.innerHTML=`<div class="tiny" style="color:#ff6b9d;">⚠️ Submission blocked: ${validation.reason}</div>`;
+                  
+                  // Clean up session
+                  global.AntiCheat.cleanup(antiCheatSessionId);
+                  return;
+                }
+                
+                // Clean up session after successful validation
+                global.AntiCheat.cleanup(antiCheatSessionId);
+              }
+              
+              submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P2/${mg}`);
+            });
           }
         }
       } else {
@@ -1138,7 +1272,41 @@
               if(isMinigameSystemReady()){
                 wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 3.</div>';
                 const mg=pickMinigameType();
-                global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P3/${mg}`));
+                
+                // Start anti-cheat session if module is loaded
+                let antiCheatSessionId = null;
+                if(global.AntiCheat){
+                  antiCheatSessionId = global.AntiCheat.startSession({
+                    container: wrap,
+                    gameKey: mg,
+                    thresholds: {
+                      minPlayTime: 3000,
+                      maxDuration: 300000,
+                      minDistinctInputs: 3
+                    }
+                  });
+                }
+                
+                global.renderMinigame?.(mg,wrap,(base)=>{
+                  // Validate anti-cheat session before submitting
+                  if(antiCheatSessionId && global.AntiCheat){
+                    const validation = global.AntiCheat.validate(antiCheatSessionId);
+                    
+                    if(!validation.valid){
+                      console.warn('[Competition] Anti-cheat validation failed:', validation.reason);
+                      wrap.innerHTML=`<div class="tiny" style="color:#ff6b9d;">⚠️ Submission blocked: ${validation.reason}</div>`;
+                      
+                      // Clean up session
+                      global.AntiCheat.cleanup(antiCheatSessionId);
+                      return;
+                    }
+                    
+                    // Clean up session after successful validation
+                    global.AntiCheat.cleanup(antiCheatSessionId);
+                  }
+                  
+                  submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P3/${mg}`);
+                });
               } else {
                 console.error('[Competition] Minigame system failed to load');
                 wrap.innerHTML='<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
@@ -1147,7 +1315,41 @@
           } else {
             const mg=pickMinigameType(); const wrap=document.createElement('div'); wrap.className='minigame-host'; wrap.style.marginTop='8px';
             wrap.innerHTML='<div class="tiny muted">You are in Final 3 — Part 3.</div>'; host.appendChild(wrap);
-            global.renderMinigame?.(mg,wrap,(base)=> submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P3/${mg}`));
+            
+            // Start anti-cheat session if module is loaded
+            let antiCheatSessionId = null;
+            if(global.AntiCheat){
+              antiCheatSessionId = global.AntiCheat.startSession({
+                container: wrap,
+                gameKey: mg,
+                thresholds: {
+                  minPlayTime: 3000,
+                  maxDuration: 300000,
+                  minDistinctInputs: 3
+                }
+              });
+            }
+            
+            global.renderMinigame?.(mg,wrap,(base)=>{
+              // Validate anti-cheat session before submitting
+              if(antiCheatSessionId && global.AntiCheat){
+                const validation = global.AntiCheat.validate(antiCheatSessionId);
+                
+                if(!validation.valid){
+                  console.warn('[Competition] Anti-cheat validation failed:', validation.reason);
+                  wrap.innerHTML=`<div class="tiny" style="color:#ff6b9d;">⚠️ Submission blocked: ${validation.reason}</div>`;
+                  
+                  // Clean up session
+                  global.AntiCheat.cleanup(antiCheatSessionId);
+                  return;
+                }
+                
+                // Clean up session after successful validation
+                global.AntiCheat.cleanup(antiCheatSessionId);
+              }
+              
+              submitScore(p.id, base, (0.8+(p?.skill||0.5)*0.6), `F3-P3/${mg}`);
+            });
           }
         }
       } else {
