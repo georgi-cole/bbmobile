@@ -1,7 +1,7 @@
 // MODULE: social.js
 // Social intermission: queued single-card decisions, ambient interactions,
 // alliance accept updates allies immediately, and robust progression to nominations
-// or callback continuation (legacy startSocial('src', cb) support).
+// or callback continuation via startSocialIntermission('src', cb).
 // Enhanced: human‑sounding logs, strictly 3 prompts per intermission, throttle ambient logs,
 // and pacing guards so reveal cards never overlap social decision cards.
 
