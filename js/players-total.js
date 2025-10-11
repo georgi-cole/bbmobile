@@ -129,9 +129,6 @@
         Players total
         <input id="numPlayersCast" type="number" min="6" max="22" value="12" style="width:100%"/>
       </label>
-      <div class="row" style="margin-top:8px;gap:8px;align-items:center">
-        <button class="btn small" id="btnApplyPlayersCast">Apply</button>
-      </div>
     `;
 
     if(anchor){
@@ -156,10 +153,7 @@
       c.numPlayers = clamp(input.value, 6, 22);
       writeCfg(c);
       log('saved numPlayers =', c.numPlayers);
-    });
-
-    wrap.querySelector('#btnApplyPlayersCast').addEventListener('click', ()=>{
-      applyPlayers(+input.value || cur);
+      applyPlayers(c.numPlayers);
     });
 
     // Mark injected for this modal instance
