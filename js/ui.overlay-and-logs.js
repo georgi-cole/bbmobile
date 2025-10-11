@@ -207,7 +207,12 @@
       const host=uiEnsureTvOverlay(); if(!host) return;
       host.style.visibility='';
       const card=document.createElement('div');
-      card.className='revealCard'+((tone==='big'||tone==='announce')?' bigAnnounce':'');
+      // Apply bigAnnounce for announcement tone, otherwise use diaryRoomCard for standard events
+      if(tone==='big'||tone==='announce'){
+        card.className='revealCard bigAnnounce';
+      } else {
+        card.className='revealCard diaryRoomCard';
+      }
       const h=document.createElement('h3'); h.textContent=title; card.appendChild(h);
       (lines||[]).forEach((txt,i)=>{
         const d=document.createElement('div'); if(i===0) d.className='big';
@@ -343,7 +348,12 @@
       const host=uiEnsureTvOverlay(); if(!host) return;
       host.style.visibility='';
       const card=document.createElement('div');
-      card.className='revealCard'+((tone==='big'||tone==='announce')?' bigAnnounce':'');
+      // Apply bigAnnounce for announcement tone, otherwise use diaryRoomCard for standard events
+      if(tone==='big'||tone==='announce'){
+        card.className='revealCard bigAnnounce';
+      } else {
+        card.className='revealCard diaryRoomCard';
+      }
       const h=document.createElement('h3'); h.textContent=title; card.appendChild(h);
       (lines||[]).forEach((txt,i)=>{
         const d=document.createElement('div'); if(!uniform && i===0) d.className='big';
