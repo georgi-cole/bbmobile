@@ -199,23 +199,22 @@
     
     let adjusted = baseScore;
     
-    // High aggression = higher risk/reward (more variance)
-    if(persona.aggr > 0.7){
-      const swing = (random() - 0.5) * 20; // ±10 point swing
-      adjusted += swing;
-    }
-    
-    // Low chaos = more consistent (less variance)
-    if(persona.chaos < 0.3){
-      // Pull towards mean, reducing variance
-      const mean = 50;
-      adjusted = adjusted * 0.9 + mean * 0.1;
-    }
-    
-    // High chaos = more unpredictable
+    // High chaos = more unpredictable (±5 point swing)
     if(persona.chaos > 0.7){
-      const wildSwing = (random() - 0.5) * 30; // ±15 point swing
+      const wildSwing = (random() - 0.5) * 10; // ±5 points
       adjusted += wildSwing;
+    }
+    
+    // Low chaos = more consistent (pull toward mean slightly)
+    if(persona.chaos < 0.3){
+      const mean = 50;
+      adjusted = adjusted * 0.95 + mean * 0.05;
+    }
+    
+    // High aggression = slight increase in variability (±3 point swing)
+    if(persona.aggr > 0.7){
+      const swing = (random() - 0.5) * 6; // ±3 points
+      adjusted += swing;
     }
     
     return adjusted;
