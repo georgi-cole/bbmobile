@@ -12,14 +12,14 @@
 
   function isRulesShown(){
     try{ 
-      return sessionStorage.getItem(RULES_SHOWN_KEY) === '1' || g.__bbRulesShown === true; 
+      return sessionStorage.getItem(RULES_SHOWN_KEY) === '1' || global.__bbRulesShown === true; 
     }catch{ 
-      return !!g.__bbRulesShown; 
+      return !!global.__bbRulesShown; 
     }
   }
   
   function markRulesShown(){
-    g.__bbRulesShown = true;
+    global.__bbRulesShown = true;
     try{ sessionStorage.setItem(RULES_SHOWN_KEY, '1'); }catch{}
   }
 
