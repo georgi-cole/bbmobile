@@ -14,8 +14,13 @@
    * @param {HTMLElement} container - Container element for the game UI
    * @param {Function} onComplete - Callback function(score) when game ends
    */
-  function render(container, onComplete){
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
+    
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;';
@@ -62,13 +67,27 @@
       const value = parseInt(slider.value);
       const difference = Math.abs(target - value);
       
-      // Score: perfect = 100, decreases 5 points per unit difference
-      const score = Math.max(0, 100 - (difference * 5));
+      // Calculate raw score: perfect = 100, decreases 5 points per unit difference
+      const rawScore = Math.max(0, 100 - (difference * 5));
+      
+      // Determine if player succeeded
+      const playerSucceeded = rawScore >= 60; // 60% threshold for success
+      
+      // Apply win probability logic
+      let finalScore = rawScore;
+      if(g.GameUtils && !debugMode && competitionMode){
+        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+        if(!shouldWin && playerSucceeded){
+          // Force loss despite success (25% win rate)
+          finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
+          console.log('[SliderPuzzle] Win probability applied: success forced to loss');
+        }
+      }
       
       submitBtn.disabled = true;
       slider.disabled = true;
       
-      onComplete(score);
+      onComplete(finalScore);
     });
     
     // Assemble UI
