@@ -7,7 +7,7 @@ This document details the audit results for the Social Maneuvers feature integra
 
 ### ✅ Feature Flag Implementation
 - **Location**: `js/settings.js` line 49
-- **Default value**: `false` (disabled by default)
+- **Default value**: `true` (enabled by default)
 - **Configuration path**: `game.cfg.enableSocialManeuvers`
 - **Backward-compatible flag**: `window.USE_SOCIAL_MANEUVERS` (read-only property)
 
@@ -40,23 +40,42 @@ All console logs use prefixes for easy filtering:
 Open the browser console and verify:
 ```
 [social-maneuvers] Module loaded successfully
-[social-maneuvers] Feature is DISABLED by default - enable via Settings > Social Maneuvers
-[social-maneuvers] To enable: game.cfg.enableSocialManeuvers = true
-[social-maneuvers] Runtime flag: window.USE_SOCIAL_MANEUVERS (currently: false)
+[social-maneuvers] Feature is ENABLED by default - disable via Settings > Social Maneuvers if desired
+[social-maneuvers] Runtime flag: window.USE_SOCIAL_MANEUVERS (currently: true)
 ```
 
 ### Step 2: Check Runtime Flag Access
 In browser console, type:
 ```javascript
 window.USE_SOCIAL_MANEUVERS
-// Should return: false (if disabled)
+// Should return: true (if enabled by default)
 
 window.SocialManeuvers.isEnabled()
-// Should return: false (if disabled)
+// Should return: true (if enabled by default)
 ```
 
-### Step 3: Verify Disabled Behavior
+### Step 3: Verify Enabled Behavior (Default)
 Start a game and advance to the social phase. Console should show:
+```
+[social-maneuvers] ✓ Feature flag enabled (USE_SOCIAL_MANEUVERS=true)
+[social] Checking Social Maneuvers feature flag...
+[social] ✓ Social Maneuvers ENABLED - triggering SocialManeuvers.startPhase()
+[social-maneuvers] ✓ startPhase() triggered - Initializing social phase with energy system
+[social-maneuvers] Energy initialized for N players (3 energy each)
+[social] Rendering social phase UI
+[social] Social Maneuvers enabled - skipping legacy simulation
+[social] ✓ Rendering enhanced Social Maneuvers UI
+[social-maneuvers] ✓ Rendering Social Maneuvers UI for player X
+```
+
+### Step 4: Disable Feature (Optional)
+Users can disable the feature via Settings UI or console:
+```javascript
+game.cfg.enableSocialManeuvers = false
+```
+
+### Step 5: Verify Disabled Behavior
+If disabled, console should show:
 ```
 [social] Checking Social Maneuvers feature flag...
 [social] Social Maneuvers DISABLED - using legacy social system
@@ -68,28 +87,6 @@ Start a game and advance to the social phase. Console should show:
 Additionally, if SocialManeuvers hooks are called:
 ```
 [social-maneuvers] Phase start called but feature is DISABLED (USE_SOCIAL_MANEUVERS=false)
-```
-
-### Step 4: Enable Feature Flag
-In browser console or Settings UI, enable the feature:
-```javascript
-game.cfg.enableSocialManeuvers = true
-```
-
-Or via Settings modal (if implemented).
-
-### Step 5: Verify Enabled Behavior
-Advance to the next social phase. Console should show:
-```
-[social-maneuvers] ✓ Feature flag enabled (USE_SOCIAL_MANEUVERS=true)
-[social] Checking Social Maneuvers feature flag...
-[social] ✓ Social Maneuvers ENABLED - triggering SocialManeuvers.startPhase()
-[social-maneuvers] ✓ startPhase() triggered - Initializing social phase with energy system
-[social-maneuvers] Energy initialized for N players (3 energy each)
-[social] Rendering social phase UI
-[social] Social Maneuvers enabled - skipping legacy simulation
-[social] ✓ Rendering enhanced Social Maneuvers UI
-[social-maneuvers] ✓ Rendering Social Maneuvers UI for player X
 ```
 
 ### Step 6: Verify UI Rendering

@@ -45,8 +45,8 @@
     enableMinigameTelemetryPanel: false,  // Dev debug panel (Ctrl+Shift+D when enabled)
     // Progression system (feature-flagged, off by default)
     progressionEnabled: false,  // Enable XP and leveling system
-    // Social Maneuvers system (feature-flagged, off by default)
-    enableSocialManeuvers: false  // Enable enhanced social phase with energy and action system
+    // Social Maneuvers system (on by default)
+    enableSocialManeuvers: true  // Enable enhanced social phase with energy and action system
   };
 
   // Load/save helpers
