@@ -370,7 +370,7 @@
     deck.innerHTML='';
 
     const card=document.createElement('div');
-    card.className='revealCard decisionCard';
+    card.className='revealCard diaryRoomCard decisionCard';
     const h=document.createElement('h3'); h.textContent=next.title; card.appendChild(h);
     for(const l of next.lines){ const d=document.createElement('div'); d.textContent=l; card.appendChild(d); }
 
@@ -684,8 +684,7 @@
     const panel=document.getElementById('panel'); if(panel) renderSocialPhase(panel);
   };
 
-  // Back-compat alias used by competitions.js
-  global.startSocial = global.startSocialIntermission;
-  global.renderSocial = renderSocialPhase;
+  // Export main function for global access
+  global.renderSocialPhase = renderSocialPhase;
 
 })(window);

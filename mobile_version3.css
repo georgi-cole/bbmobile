@@ -110,11 +110,12 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
   /* Cast pane specific - compact everything */
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-editor {
     grid-template-columns: 1fr !important;
-    gap: 10px !important;
+    gap: 12px !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-preview {
     align-items: center !important;
+    margin-bottom: 8px !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-preview img {
@@ -126,10 +127,20 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form {
     grid-template-columns: 1fr !important;
     gap: 6px !important;
+    max-width: 100% !important;
+    width: 100% !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form label {
     font-size: 0.75rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form label span {
+    font-size: 0.7rem !important;
+    color: #9aa3b2 !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form input,
@@ -137,44 +148,87 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
     width: 100% !important;
     box-sizing: border-box !important;
     font-size: 14px !important;
-    padding: 6px 8px !important;
+    padding: 8px 10px !important;
     min-width: 0 !important;
+    max-width: 100% !important;
   }
 
-  /* Cast strip - horizontal scroll for roster */
+  /* Specific sizing for age field - smaller since it's just 2-3 digits */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-age-field input {
+    max-width: 80px !important;
+  }
+
+  /* Cast strip - horizontal scroll for roster with proper container */
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-strip {
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    padding: 6px !important;
+    padding: 8px !important;
     -webkit-overflow-scrolling: touch;
+    border-radius: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-chip {
-    min-width: 52px !important;
+    min-width: 56px !important;
+    flex-shrink: 0 !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .chip-ava {
-    width: 44px !important;
-    height: 44px !important;
+    width: 48px !important;
+    height: 48px !important;
   }
 
-  /* Cast navigation buttons - ensure wrapping, no horizontal overflow */
-  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-nav {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    justify-content: space-between !important;
+  /* Cast preview image - smaller on mobile */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-avatar-upload {
+    width: 100px !important;
+    height: 100px !important;
+    margin: 0 auto !important;
   }
 
-  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-nav .row {
-    flex-wrap: wrap !important;
-    gap: 6px !important;
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-avatar-upload img {
+    width: 100% !important;
+    height: 100% !important;
   }
 
-  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-nav .btn {
-    min-width: 70px !important;
-    padding: 6px 10px !important;
-    font-size: 0.8rem !important;
+  /* Ensure card doesn't overflow on mobile */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .card {
+    padding: 10px 8px !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    margin-bottom: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-wrap {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-editor {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Cast Editor title spacing */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] h3 {
+    font-size: 0.9rem !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* Progress indicator spacing */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] #castProgress {
+    font-size: 0.7rem !important;
+  }
+
+  /* Reduce vertical spacing in Cast Editor */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .sep {
+    margin: 4px 0 !important;
   }
 
   /* Settings and Cast table improvements */
@@ -218,5 +272,33 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
 
   .settings-modal label {
     font-size: 0.85rem !important;
+  }
+}
+
+/* Medium screens (tablets) - optimize Cast form layout */
+@media (min-width: 901px) and (max-width: 1100px) {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form .full {
+    grid-column: 1 / -1 !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form label {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form input,
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form select {
+    max-width: 100% !important;
+  }
+
+  /* Age field should be smaller on tablets too */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-age-field input {
+    max-width: 100px !important;
   }
 }

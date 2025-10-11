@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Integration Test - Real Game Scenarios</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <style>
+    body { 
+      margin: 0;
+      padding: 20px;
+      background: var(--bg, #0d151f);
+      color: var(--ink, #e3ecf5);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #83bfff;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(131, 191, 255, 0.05);
+      border: 1px solid rgba(131, 191, 255, 0.2);
+      border-radius: 12px;
+    }
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    #tv {
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1a2937, #0e1a28);
+      position: relative;
+      border-radius: 12px;
+      border: 2px solid #284058;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+      margin: 20px auto;
+    }
+    #tvOverlay {
+      position: absolute;
+      inset: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 15px 0;
+    }
+    button {
+      padding: 10px 18px;
+      background: #2d4b6a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #3f6385;
+    }
+    .results {
+      margin-top: 15px;
+      padding: 12px;
+      background: rgba(119, 213, 141, 0.1);
+      border: 1px solid rgba(119, 213, 141, 0.3);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .results.error {
+      background: rgba(255, 109, 109, 0.1);
+      border-color: rgba(255, 109, 109, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Card Integration Test - Real Game Scenarios</h1>
+    
+    <div class="test-section">
+      <h2>Standard Game Events (Should use .diaryRoomCard)</h2>
+      <p>These are the typical game events that players see during gameplay.</p>
+      <div class="controls">
+        <button onclick="testHOHWin()">HOH Win</button>
+        <button onclick="testPOVWin()">POV Win</button>
+        <button onclick="testNominations()">Nominations</button>
+        <button onclick="testEviction()">Eviction</button>
+        <button onclick="testSocialInteraction()">Social Event</button>
+      </div>
+      <div id="standardResults" class="results" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Special Announcements (Should use .bigAnnounce)</h2>
+      <p>These are special moments that deserve distinct, dramatic styling.</p>
+      <div class="controls">
+        <button onclick="testTwistAnnouncement()">Twist Reveal</button>
+        <button onclick="testCompetitionStart()">Competition Alert</button>
+        <button onclick="testJuryReturn()">Jury Return</button>
+        <button onclick="testMajorityClinched()">Majority Clinched</button>
+      </div>
+      <div id="specialResults" class="results" style="display:none;"></div>
+    </div>
+
+    <div id="tv">
+      <div id="tvOverlay"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div class="controls">
+        <button onclick="clearCard()">Clear Card</button>
+        <button onclick="runAllTests()">Run All Tests</button>
+      </div>
+      <div id="testSummary" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+
+  <script src="js/ui.overlay-and-logs.js"></script>
+  <script>
+    // Initialize minimal game state for testing
+    window.game = window.game || {};
+    window.game.cfg = window.game.cfg || {};
+    window.game.cfg.fxCards = true;
+
+    let testResults = [];
+
+    function showResult(elementId, message, isError = false) {
+      const el = document.getElementById(elementId);
+      el.innerHTML = message;
+      el.style.display = 'block';
+      el.className = 'results' + (isError ? ' error' : '');
+    }
+
+    function checkCard(expectedClass, excludedClass) {
+      setTimeout(() => {
+        const card = document.querySelector('#tvOverlay .revealCard');
+        if (!card) {
+          return { pass: false, message: '❌ No card found' };
+        }
+
+        const hasExpected = card.classList.contains(expectedClass);
+        const hasExcluded = excludedClass && card.classList.contains(excludedClass);
+
+        if (hasExpected && !hasExcluded) {
+          return { 
+            pass: true, 
+            message: `✅ Card has .${expectedClass} class` + (excludedClass ? ` and does NOT have .${excludedClass}` : ''),
+            classes: card.className
+          };
+        } else {
+          return { 
+            pass: false, 
+            message: `❌ Card class mismatch. Expected: ${expectedClass}${excludedClass ? ', NOT ' + excludedClass : ''}. Got: ${card.className}`,
+            classes: card.className
+          };
+        }
+      }, 100);
+    }
+
+    // Standard event tests
+    function testHOHWin() {
+      if (typeof window.showCard === 'function') {
+        window.showCard('HOH Winner', ['Alice has won Head of Household!'], 'neutral', 3000);
+        setTimeout(() => {
+          const result = checkCard('diaryRoomCard', 'bigAnnounce');
+          showResult('standardResults', `HOH Win: ${result.message}`);
+          testResults.push({ test: 'HOH Win', ...result });
+        }, 150);
+      } else {
+        showResult('standardResults', '❌ showCard function not available', true);
+      }
+    }
+
+    function testPOVWin() {
+      if (typeof window.showCard === 'function') {
+        window.showCard('POV Winner', ['Bob has won the Power of Veto!'], 'veto', 3000);
+        setTimeout(() => {
+          const result = checkCard('diaryRoomCard', 'bigAnnounce');
+          showResult('standardResults', `POV Win: ${result.message}`);
+          testResults.push({ test: 'POV Win', ...result });
+        }, 150);
+      }
+    }
+
+    function testNominations() {
+      if (typeof window.showCard === 'function') {
+        window.showCard('Nominations', ['Charlie', 'Diana'], 'neutral', 3000);
+        setTimeout(() => {
+          const result = checkCard('diaryRoomCard', 'bigAnnounce');
+          showResult('standardResults', `Nominations: ${result.message}`);
+          testResults.push({ test: 'Nominations', ...result });
+        }, 150);
+      }
+    }
+
+    function testEviction() {
+      if (typeof window.showCard === 'function') {
+        window.showCard('Eviction Result', ['By a vote of 5-2, Charlie has been evicted.'], 'evict', 3000);
+        setTimeout(() => {
+          const result = checkCard('diaryRoomCard', 'bigAnnounce');
+          showResult('standardResults', `Eviction: ${result.message}`);
+          testResults.push({ test: 'Eviction', ...result });
+        }, 150);
+      }
+    }
+
+    function testSocialInteraction() {
+      if (typeof window.showCard === 'function') {
+        window.showCard('Social Update', ['Alice and Bob formed an alliance.'], 'social', 3000);
+        setTimeout(() => {
+          const result = checkCard('diaryRoomCard', 'bigAnnounce');
+          showResult('standardResults', `Social Event: ${result.message}`);
+          testResults.push({ test: 'Social Event', ...result });
+        }, 150);
+      }
+    }
+
+    // Special announcement tests
+    function testTwistAnnouncement() {
+      if (typeof window.showBigCard === 'function') {
+        window.showBigCard('🌟 TWIST REVEAL 🌟', ['A game-changing twist is here!'], 2600);
+        setTimeout(() => {
+          const result = checkCard('bigAnnounce', 'diaryRoomCard');
+          showResult('specialResults', `Twist: ${result.message}`);
+          testResults.push({ test: 'Twist', ...result });
+        }, 150);
+      } else {
+        showResult('specialResults', '❌ showBigCard function not available', true);
+      }
+    }
+
+    function testCompetitionStart() {
+      if (typeof window.showBigCard === 'function') {
+        window.showBigCard('⚡ COMPETITION ALERT ⚡', ['The next HOH competition begins now!'], 2600);
+        setTimeout(() => {
+          const result = checkCard('bigAnnounce', 'diaryRoomCard');
+          showResult('specialResults', `Competition: ${result.message}`);
+          testResults.push({ test: 'Competition', ...result });
+        }, 150);
+      }
+    }
+
+    function testJuryReturn() {
+      if (typeof window.showBigCard === 'function') {
+        window.showBigCard('JURY RETURN', ['The juror coming back is…'], 2800);
+        setTimeout(() => {
+          const result = checkCard('bigAnnounce', 'diaryRoomCard');
+          showResult('specialResults', `Jury Return: ${result.message}`);
+          testResults.push({ test: 'Jury Return', ...result });
+        }, 150);
+      }
+    }
+
+    function testMajorityClinched() {
+      if (typeof window.showBigCard === 'function') {
+        window.showBigCard('Majority Clinched', ['Alice has secured the majority!'], 2200);
+        setTimeout(() => {
+          const result = checkCard('bigAnnounce', 'diaryRoomCard');
+          showResult('specialResults', `Majority: ${result.message}`);
+          testResults.push({ test: 'Majority', ...result });
+        }, 150);
+      }
+    }
+
+    function clearCard() {
+      document.getElementById('tvOverlay').innerHTML = '';
+      document.getElementById('standardResults').style.display = 'none';
+      document.getElementById('specialResults').style.display = 'none';
+    }
+
+    async function runAllTests() {
+      testResults = [];
+      const summary = document.getElementById('testSummary');
+      summary.innerHTML = '🧪 Running tests...';
+
+      // Run standard tests
+      testHOHWin();
+      await new Promise(r => setTimeout(r, 500));
+      testPOVWin();
+      await new Promise(r => setTimeout(r, 500));
+      testNominations();
+      await new Promise(r => setTimeout(r, 500));
+      testEviction();
+      await new Promise(r => setTimeout(r, 500));
+      testSocialInteraction();
+      await new Promise(r => setTimeout(r, 500));
+
+      // Run special tests
+      testTwistAnnouncement();
+      await new Promise(r => setTimeout(r, 500));
+      testCompetitionStart();
+      await new Promise(r => setTimeout(r, 500));
+      testJuryReturn();
+      await new Promise(r => setTimeout(r, 500));
+      testMajorityClinched();
+
+      // Show summary after all tests
+      setTimeout(() => {
+        const passed = testResults.filter(r => r.pass).length;
+        const total = testResults.length;
+        const allPassed = passed === total;
+        
+        summary.innerHTML = `
+          <div style="padding: 15px; background: ${allPassed ? 'rgba(119,213,141,0.1)' : 'rgba(255,109,109,0.1)'}; 
+                      border: 1px solid ${allPassed ? 'rgba(119,213,141,0.3)' : 'rgba(255,109,109,0.3)'}; 
+                      border-radius: 8px;">
+            <strong>Test Summary:</strong> ${passed}/${total} tests passed ${allPassed ? '✅' : '❌'}
+            <br><br>
+            ${testResults.map(r => `${r.pass ? '✅' : '❌'} ${r.test}: ${r.message}`).join('<br>')}
+          </div>
+        `;
+      }, 5000);
+    }
+
+    // Show ready message
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('testSummary').innerHTML = 
+        '<p style="text-align:center; color: #83bfff;">Ready to test! Click individual buttons or "Run All Tests".</p>';
+    });
+  </script>
+</body>
+</html>

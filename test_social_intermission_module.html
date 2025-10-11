@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Intermission Module Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    .test-section {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #64b5f6;
+    }
+    .pass {
+      color: #4caf50;
+      font-weight: bold;
+    }
+    .fail {
+      color: #f44336;
+      font-weight: bold;
+    }
+    .warn {
+      color: #ff9800;
+      font-weight: bold;
+    }
+    .test-item {
+      padding: 8px;
+      margin: 4px 0;
+      background: #0f3460;
+      border-radius: 4px;
+    }
+    #testPanel {
+      min-height: 200px;
+      background: #0a1929;
+      border: 2px solid #64b5f6;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    button {
+      background: #64b5f6;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 8px 4px;
+    }
+    button:hover {
+      background: #42a5f5;
+    }
+    button:disabled {
+      background: #424242;
+      color: #757575;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Social Intermission Module Test</h1>
+  <p>This test verifies that all legacy social code has been removed and only the new Social Intermission module is loaded.</p>
+
+  <div class="test-section">
+    <h2>Module Loading Tests</h2>
+    <div id="moduleTests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Legacy Code Removal Tests</h2>
+    <div id="legacyTests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Module Integrity Tests</h2>
+    <div id="integrityTests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Manual Test: Start Social Intermission</h2>
+    <p>Click the button below to manually trigger the Social Intermission and verify the UI displays correctly.</p>
+    <button id="btnTestSocial">Start Social Intermission</button>
+    <button id="btnClearPanel">Clear Panel</button>
+    <div id="testPanel"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Output</h2>
+    <p>Check the browser console for [BB Modular] output and social module initialization messages.</p>
+    <div id="consoleOutput" style="font-family: monospace; background: #0a1929; padding: 12px; border-radius: 4px; max-height: 300px; overflow-y: auto;"></div>
+  </div>
+
+  <!-- Load core dependencies first -->
+  <script>window.global = window;</script>
+  <script src="js/state.js"></script>
+  
+  <!-- Mock minimal game state -->
+  <script>
+    if (!window.game) {
+      window.game = {
+        players: [
+          { id: 1, name: 'Alice', state: 'alive', affinity: {}, history: [], allies: [] },
+          { id: 2, name: 'Bob', state: 'alive', affinity: {}, history: [], allies: [] },
+          { id: 3, name: 'Charlie', state: 'alive', affinity: {}, history: [], allies: [] },
+          { id: 4, name: 'Diana', state: 'alive', affinity: {}, history: [], allies: [] }
+        ],
+        week: 1,
+        phase: 'social_intermission',
+        cfg: {
+          tComms: 30
+        }
+      };
+    }
+
+    // Mock functions
+    window.tv = {
+      say: (msg) => {
+        console.log('[TV] ' + msg);
+        appendConsole('[TV] ' + msg);
+      }
+    };
+    
+    window.setPhase = (phase, duration, callback) => {
+      console.log(`[setPhase] phase=${phase} duration=${duration}`);
+      appendConsole(`[setPhase] phase=${phase} duration=${duration}`);
+      if (typeof callback === 'function') {
+        setTimeout(callback, 1000); // Quick callback for testing
+      }
+    };
+
+    window.showCard = (title, lines, tone, dur, uniform) => {
+      console.log(`[showCard] title="${title}" lines=${JSON.stringify(lines)} tone=${tone}`);
+      appendConsole(`[showCard] title="${title}" tone=${tone}`);
+    };
+
+    window.phaseMusic = (phase) => {
+      console.log(`[phaseMusic] phase=${phase}`);
+      appendConsole(`[phaseMusic] phase=${phase}`);
+    };
+
+    window.cardQueueWaitIdle = async () => {
+      console.log('[cardQueueWaitIdle] waiting...');
+      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('[cardQueueWaitIdle] complete');
+    };
+
+    window.alivePlayers = () => window.game.players.filter(p => p.state === 'alive');
+
+    function appendConsole(msg) {
+      const output = document.getElementById('consoleOutput');
+      if (output) {
+        const line = document.createElement('div');
+        line.textContent = new Date().toISOString().split('T')[1].slice(0, 12) + ' ' + msg;
+        output.appendChild(line);
+        output.scrollTop = output.scrollHeight;
+      }
+    }
+
+    // Capture console.log
+    const originalLog = console.log;
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      appendConsole(args.join(' '));
+    };
+  </script>
+
+  <!-- Load social modules -->
+  <script src="js/social.js"></script>
+  <script defer src="js/social-narrative.js"></script>
+
+  <!-- Test script -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      runTests();
+      setupManualTests();
+    });
+
+    function runTests() {
+      // Module Loading Tests
+      const moduleTests = document.getElementById('moduleTests');
+      
+      addTest(moduleTests, 'startSocialIntermission is defined', 
+        typeof window.startSocialIntermission === 'function');
+      
+      addTest(moduleTests, 'renderSocialPhase is defined', 
+        typeof window.renderSocialPhase === 'function');
+      
+      addTest(moduleTests, 'socialOnNewWeek is defined', 
+        typeof window.socialOnNewWeek === 'function');
+
+      // Legacy Code Removal Tests
+      const legacyTests = document.getElementById('legacyTests');
+      
+      addTest(legacyTests, 'window.startSocial should NOT be defined (legacy removed)', 
+        typeof window.startSocial === 'undefined', false);
+      
+      addTest(legacyTests, 'window.renderSocial should NOT be defined (legacy removed)', 
+        typeof window.renderSocial === 'undefined', false);
+      
+      // Check for legacy phase names
+      addTest(legacyTests, 'No "comms" phase in game state', 
+        window.game.phase !== 'comms');
+
+      // Module Integrity Tests
+      const integrityTests = document.getElementById('integrityTests');
+      
+      // Check [BB Modular] output
+      if (window.MODULES_LOADED) {
+        addTest(integrityTests, '[BB Modular] Loaded modules check', 
+          window.MODULES_LOADED.social === true);
+      } else {
+        addTest(integrityTests, '[BB Modular] Loaded modules (deferred check)', 
+          true, null, 'warn', 'Module integrity check will run after all scripts load');
+      }
+
+      // Test social state initialization
+      try {
+        const testPanel = document.createElement('div');
+        testPanel.id = 'testPanelTemp';
+        document.body.appendChild(testPanel);
+        
+        window.renderSocialPhase(testPanel);
+        
+        addTest(integrityTests, 'renderSocialPhase can be called without errors', true);
+        
+        testPanel.remove();
+      } catch (e) {
+        addTest(integrityTests, 'renderSocialPhase can be called without errors', false);
+        console.error('renderSocialPhase test failed:', e);
+      }
+
+      // Final summary
+      setTimeout(() => {
+        console.log('=== Test Summary ===');
+        console.log('All tests completed. Check results above.');
+        
+        // Check if modules loaded
+        if (window.MODULES_LOADED) {
+          console.log('[BB Modular] Loaded modules:', JSON.stringify(window.MODULES_LOADED, null, 2));
+        } else {
+          console.warn('[BB Modular] Module integrity check not available yet');
+        }
+      }, 500);
+    }
+
+    function addTest(container, description, passed, invert = false, status = null, details = null) {
+      const testItem = document.createElement('div');
+      testItem.className = 'test-item';
+      
+      let statusClass = 'pass';
+      let statusText = '✓ PASS';
+      
+      if (status === 'warn') {
+        statusClass = 'warn';
+        statusText = '⚠ WARN';
+      } else {
+        const testResult = invert ? !passed : passed;
+        if (!testResult) {
+          statusClass = 'fail';
+          statusText = '✗ FAIL';
+        }
+      }
+      
+      testItem.innerHTML = `
+        <span class="${statusClass}">${statusText}</span> ${description}
+        ${details ? '<br><small style="color: #95a9c0;">' + details + '</small>' : ''}
+      `;
+      
+      container.appendChild(testItem);
+    }
+
+    function setupManualTests() {
+      const btnTestSocial = document.getElementById('btnTestSocial');
+      const btnClearPanel = document.getElementById('btnClearPanel');
+      const testPanel = document.getElementById('testPanel');
+
+      btnTestSocial.addEventListener('click', async () => {
+        btnTestSocial.disabled = true;
+        testPanel.innerHTML = '<p>Starting Social Intermission...</p>';
+        
+        try {
+          // Call startSocialIntermission
+          await window.startSocialIntermission('test', () => {
+            console.log('[Test] Social Intermission completed');
+            appendConsole('[Test] Social Intermission completed');
+            testPanel.innerHTML += '<p style="color: #4caf50;">✓ Social Intermission completed successfully!</p>';
+            btnTestSocial.disabled = false;
+          });
+          
+          // Render social phase UI
+          window.renderSocialPhase(testPanel);
+          
+          appendConsole('[Test] Social Intermission UI rendered');
+          
+        } catch (e) {
+          console.error('[Test] Error:', e);
+          testPanel.innerHTML += `<p style="color: #f44336;">✗ Error: ${e.message}</p>`;
+          btnTestSocial.disabled = false;
+        }
+      });
+
+      btnClearPanel.addEventListener('click', () => {
+        testPanel.innerHTML = '';
+        btnTestSocial.disabled = false;
+      });
+    }
+
+    // Wait for all deferred scripts to load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.log('=== All Scripts Loaded ===');
+        
+        // Re-check module integrity
+        if (window.MODULES_LOADED) {
+          console.log('[BB Modular] Final check - Loaded modules:', JSON.stringify(window.MODULES_LOADED, null, 2));
+          
+          if (window.MODULES_LOADED.social) {
+            console.log('✓ Social module loaded successfully');
+          } else {
+            console.warn('⚠ Social module not detected in MODULES_LOADED');
+          }
+        }
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

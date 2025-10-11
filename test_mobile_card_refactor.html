@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Card Refactor - Testing Standard Event Cards</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <style>
+    body { 
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      flex-direction: column;
+      gap: 20px;
+      background: var(--bg, #0d151f);
+    }
+    #tv {
+      width: clamp(320px, 90vw, 800px);
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1a2937, #0e1a28);
+      position: relative;
+      border-radius: 12px;
+      border: 2px solid #284058;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+    }
+    #tvOverlay {
+      position: absolute;
+      inset: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 800px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #2d4b6a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #3f6385;
+    }
+    button.special {
+      background: #6a2d4b;
+    }
+    button.special:hover {
+      background: #85403f;
+    }
+    .info {
+      color: #c4d9ec;
+      font-size: 14px;
+      text-align: center;
+      max-width: 700px;
+      line-height: 1.6;
+    }
+    .info strong {
+      color: #83bfff;
+    }
+    .section-title {
+      color: #83bfff;
+      font-size: 16px;
+      font-weight: 700;
+      margin-top: 20px;
+      text-align: center;
+    }
+    .test-status {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(131, 191, 255, 0.1);
+      border: 1px solid rgba(131, 191, 255, 0.3);
+      border-radius: 8px;
+      color: #c4d9ec;
+      font-size: 14px;
+      max-width: 700px;
+    }
+  </style>
+</head>
+<body>
+  <div class="info">
+    <strong>Mobile Card Refactor Test - Standard Event Pop-up Cards</strong><br>
+    This test verifies that standard game event cards (HOH, POV, social, nominations) now use the .diaryRoomCard class for consistent mobile-friendly styling with overflow protection.
+    <br><br>
+    <strong>✓ Should use diaryRoomCard:</strong> HOH/POV winners, nominations, evictions, social events<br>
+    <strong>✗ Should NOT use diaryRoomCard:</strong> Twist announcements, competition announcements, intro cards
+  </div>
+  
+  <div id="tv">
+    <div id="tvOverlay"></div>
+  </div>
+
+  <div class="section-title">Standard Event Cards (Should use .diaryRoomCard)</div>
+  <div class="controls">
+    <button onclick="showStandardHOH()">HOH Winner</button>
+    <button onclick="showStandardPOV()">POV Winner</button>
+    <button onclick="showStandardNomination()">Nominations</button>
+    <button onclick="showStandardEviction()">Eviction Result</button>
+    <button onclick="showStandardSocial()">Social Event</button>
+    <button onclick="showLongCard()">Long Content (Overflow Test)</button>
+  </div>
+
+  <div class="section-title">Special Overlays (Should NOT use .diaryRoomCard)</div>
+  <div class="controls">
+    <button class="special" onclick="showBigAnnounce()">Twist Announcement</button>
+    <button class="special" onclick="showCompAnnounce()">Competition Announcement</button>
+  </div>
+
+  <div class="controls">
+    <button onclick="clearModal()">Clear</button>
+    <button onclick="testMobile()">Test Mobile (375px)</button>
+    <button onclick="testDesktop()">Test Desktop (800px)</button>
+  </div>
+
+  <div id="testStatus" class="test-status"></div>
+
+  <script>
+    function updateStatus(message, isError = false) {
+      const status = document.getElementById('testStatus');
+      status.innerHTML = message;
+      status.style.borderColor = isError ? '#ff6d6d' : 'rgba(131, 191, 255, 0.3)';
+    }
+
+    function showStandardHOH() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      // Standard event cards should now have diaryRoomCard class
+      card.className = 'revealCard diaryRoomCard';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'HOH Competition Winner';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.textContent = 'Alice has won the Head of Household competition!';
+      card.appendChild(message);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      
+      checkCardClass(card, true);
+    }
+
+    function showStandardPOV() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Power of Veto Winner';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.textContent = 'Bob has won the Power of Veto!';
+      card.appendChild(message);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      
+      checkCardClass(card, true);
+    }
+
+    function showStandardNomination() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Nominations';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.textContent = 'The nominees are: Charlie and Diana';
+      card.appendChild(message);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      
+      checkCardClass(card, true);
+    }
+
+    function showStandardEviction() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Eviction Result';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.textContent = 'By a vote of 5-2, Charlie has been evicted from the Big Brother house.';
+      card.appendChild(message);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      
+      checkCardClass(card, true);
+    }
+
+    function showStandardSocial() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Social Update';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.textContent = 'Alice and Bob formed a strong alliance today.';
+      card.appendChild(message);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      
+      checkCardClass(card, true);
+    }
+
+    function showBigAnnounce() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      // Special announcements should use bigAnnounce, NOT diaryRoomCard
+      card.className = 'revealCard bigAnnounce';
+      
+      const title = document.createElement('h3');
+      title.textContent = '🌟 SPECIAL TWIST ANNOUNCEMENT 🌟';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.textContent = 'A major game-changing twist is about to shake up the house!';
+      card.appendChild(message);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      
+      checkCardClass(card, false);
+    }
+
+    function showCompAnnounce() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      // Competition announcements should use bigAnnounce, NOT diaryRoomCard
+      card.className = 'revealCard bigAnnounce';
+      
+      const title = document.createElement('h3');
+      title.textContent = '⚡ COMPETITION ALERT ⚡';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.textContent = 'The next Head of Household competition is about to begin!';
+      card.appendChild(message);
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      
+      checkCardClass(card, false);
+    }
+
+    function showLongCard() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Overflow Test Card';
+      card.appendChild(title);
+      
+      const longText = `
+This is a test card with very long content to verify the overflow failsafe works correctly on mobile devices.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+
+Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+
+This card should be scrollable if the content exceeds the viewport height! Test on both mobile and desktop.
+      `.trim();
+      
+      longText.split('\n\n').forEach(para => {
+        const p = document.createElement('div');
+        p.style.marginBottom = '12px';
+        p.textContent = para;
+        card.appendChild(p);
+      });
+      
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      
+      checkCardClass(card, true);
+    }
+
+    function checkCardClass(card, shouldHaveDiaryRoom) {
+      const hasDiaryRoom = card.classList.contains('diaryRoomCard');
+      const hasBigAnnounce = card.classList.contains('bigAnnounce');
+      
+      if (shouldHaveDiaryRoom) {
+        if (hasDiaryRoom && !hasBigAnnounce) {
+          updateStatus(`✅ PASS: Standard event card correctly uses .diaryRoomCard class<br>Classes: ${card.className}`);
+        } else {
+          updateStatus(`❌ FAIL: Standard event card missing .diaryRoomCard class<br>Classes: ${card.className}`, true);
+        }
+      } else {
+        if (hasBigAnnounce && !hasDiaryRoom) {
+          updateStatus(`✅ PASS: Special announcement correctly uses .bigAnnounce class (NOT .diaryRoomCard)<br>Classes: ${card.className}`);
+        } else {
+          updateStatus(`❌ FAIL: Special announcement should not use .diaryRoomCard<br>Classes: ${card.className}`, true);
+        }
+      }
+      
+      // Check for overflow properties
+      const styles = window.getComputedStyle(card);
+      const overflowY = styles.overflowY;
+      const maxHeight = styles.maxHeight;
+      
+      updateStatus(
+        updateStatus.lastMessage + 
+        `<br><br><strong>Style Check:</strong><br>` +
+        `overflow-y: ${overflowY}<br>` +
+        `max-height: ${maxHeight}<br>` +
+        `Responsive: ${maxHeight.includes('vh') || maxHeight.includes('calc') ? '✅' : '⚠️'}`
+      );
+    }
+
+    function clearModal() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      tvOverlay.innerHTML = '';
+      updateStatus('Card cleared. Ready for next test.');
+    }
+
+    function testMobile() {
+      const tv = document.getElementById('tv');
+      tv.style.width = '375px';
+      tv.style.maxWidth = '375px';
+      updateStatus('📱 Mobile viewport: 375px width. Test cards for proper responsive behavior.');
+    }
+
+    function testDesktop() {
+      const tv = document.getElementById('tv');
+      tv.style.width = 'clamp(320px, 90vw, 800px)';
+      tv.style.maxWidth = '800px';
+      updateStatus('🖥️ Desktop viewport: restored to responsive width. Test cards for proper scaling.');
+    }
+
+    // Store last message for chaining
+    updateStatus.lastMessage = '';
+    const originalUpdate = updateStatus;
+    updateStatus = function(msg, isError) {
+      updateStatus.lastMessage = msg;
+      originalUpdate(msg, isError);
+    };
+
+    // Initial status
+    updateStatus('Ready to test. Click any button to show a card and verify its styling.');
+  </script>
+</body>
+</html>

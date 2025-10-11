@@ -823,8 +823,8 @@
         g.__vetoCeremonyResolved = true;
         g.__vetoDecisionInProgress = false;
         setTimeout(function(){
-          if(typeof global.startSocial==='function'){
-            global.startSocial('veto', function(){
+          if(typeof global.startSocialIntermission==='function'){
+            global.startSocialIntermission('veto', function(){
               if(typeof global.startLiveVote==='function') global.startLiveVote();
             });
           } else if(typeof global.startLiveVote==='function'){
@@ -846,8 +846,8 @@
       g.__vetoCeremonyResolved = true;
       g.__vetoDecisionInProgress = false;
       setTimeout(function(){
-        if(typeof global.startSocial==='function'){
-          global.startSocial('veto', function(){
+        if(typeof global.startSocialIntermission==='function'){
+          global.startSocialIntermission('veto', function(){
             if(typeof global.startLiveVote==='function') global.startLiveVote();
           });
         } else if(typeof global.startLiveVote==='function'){
