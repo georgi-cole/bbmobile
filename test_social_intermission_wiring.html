@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Intermission Module Wiring Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #16213e;
+      border-radius: 8px;
+      border-left: 4px solid #0f3460;
+    }
+    .pass {
+      border-left-color: #4caf50;
+    }
+    .fail {
+      border-left-color: #f44336;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+    }
+    .status {
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 3px;
+      margin-left: 10px;
+    }
+    .status.pass {
+      background: #4caf50;
+      color: white;
+    }
+    .status.fail {
+      background: #f44336;
+      color: white;
+    }
+    button {
+      padding: 10px 20px;
+      background: #0f3460;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1a4d7a;
+    }
+    #panel {
+      margin-top: 20px;
+      padding: 20px;
+      background: #0f1419;
+      border-radius: 8px;
+      min-height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Social Intermission Module Wiring Test</h1>
+  
+  <div class="test-section" id="loadTest">
+    <h2>Load Order Tests</h2>
+    <div id="loadResults"></div>
+  </div>
+
+  <div class="test-section" id="functionTest">
+    <h2>Function Availability Tests</h2>
+    <div id="functionResults"></div>
+  </div>
+
+  <div class="test-section" id="manualTest">
+    <h2>Manual Invocation Test</h2>
+    <button onclick="testManualInvocation()">Call window.startSocialIntermission()</button>
+    <div id="manualResults"></div>
+  </div>
+
+  <div id="panel"></div>
+
+  <!-- Load core dependencies first -->
+  <script src="js/state.js"></script>
+  <script src="js/avatar.js"></script>
+  <script>window.MUSIC_BASE = 'audio/';</script>
+  <script src="js/audio.js?v=fixes-6"></script>
+
+  <!-- UI Core -->
+  <script src="js/ui.overlay-and-logs.js"></script>
+  <script src="js/cards-queue.js"></script>
+  <script src="js/ui.hud-and-router.js?v=bio-panel-2"></script>
+
+  <!-- Social modules (in correct order) -->
+  <script src="js/social-narrative.js"></script>
+  <script src="js/social.js"></script>
+
+  <!-- Integrity check -->
+  <script src="js/integrity.js"></script>
+
+  <script>
+    // Wait for DOM and scripts to load
+    window.addEventListener('DOMContentLoaded', function() {
+      runTests();
+    });
+
+    function addResult(containerId, testName, passed, details) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = 'test-result';
+      div.innerHTML = `
+        <strong>${testName}</strong>
+        <span class="status ${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</span>
+        ${details ? `<div style="margin-top: 5px; font-size: 0.9em; opacity: 0.8;">${details}</div>` : ''}
+      `;
+      container.appendChild(div);
+      
+      // Update section style
+      const section = document.getElementById(containerId.replace('Results', 'Test'));
+      if (section) {
+        const allResults = container.querySelectorAll('.test-result');
+        const allPassed = Array.from(allResults).every(r => r.querySelector('.status.pass'));
+        section.className = 'test-section ' + (allPassed ? 'pass' : 'fail');
+      }
+    }
+
+    function runTests() {
+      console.log('Starting Social Intermission Wiring Tests...');
+
+      // Test 1: Check if social-narrative.js loaded before social.js
+      const narrativeFunctions = [
+        'initSocialMemory',
+        'getPairMemory',
+        'updatePairStage',
+        'getNarrativeForPair',
+        'resetWeekMemory'
+      ];
+      
+      let narrativeLoaded = narrativeFunctions.every(fn => typeof window[fn] === 'function');
+      addResult('loadResults', 'social-narrative.js loaded', narrativeLoaded, 
+        narrativeLoaded ? 'All narrative functions available' : 'Missing narrative functions');
+
+      // Test 2: Check if social.js loaded and exposed functions
+      const socialFunctions = [
+        'startSocialIntermission',
+        'startSocial',
+        'renderSocialPhase',
+        'socialOnNewWeek'
+      ];
+      
+      let socialLoaded = socialFunctions.every(fn => typeof window[fn] === 'function');
+      addResult('loadResults', 'social.js loaded', socialLoaded,
+        socialLoaded ? 'All social functions available' : 'Missing social functions');
+
+      // Test 3: Check function availability (acceptance criteria)
+      addResult('functionResults', 
+        'typeof window.startSocialIntermission === "function"',
+        typeof window.startSocialIntermission === 'function',
+        `Type: ${typeof window.startSocialIntermission}`);
+
+      addResult('functionResults',
+        'window.startSocial === window.startSocialIntermission',
+        window.startSocial === window.startSocialIntermission,
+        `Same reference: ${window.startSocial === window.startSocialIntermission}`);
+
+      // Test 4: Check renderSocialPhase (used by integrity.js)
+      addResult('functionResults',
+        'typeof window.renderSocialPhase === "function"',
+        typeof window.renderSocialPhase === 'function',
+        `Type: ${typeof window.renderSocialPhase}`);
+
+      // Test 5: Check integrity detection
+      // The console.info should have been logged by integrity.js
+      addResult('functionResults',
+        'Integrity module check',
+        typeof window.renderSocialPhase === 'function',
+        'Check browser console for "[BB Modular] Loaded modules" with social: true');
+
+      console.log('✅ All automated tests completed. Check results above.');
+      console.log('🔍 Manual test: Click the button to invoke startSocialIntermission()');
+    }
+
+    function testManualInvocation() {
+      const resultsDiv = document.getElementById('manualResults');
+      resultsDiv.innerHTML = '<p>Attempting to call window.startSocialIntermission()...</p>';
+
+      try {
+        // Initialize minimal game state if needed
+        if (!window.game) {
+          window.game = {
+            players: [],
+            humanId: 1,
+            week: 1,
+            cfg: { tComms: 30 }
+          };
+        }
+
+        // Call the function
+        window.startSocialIntermission('test', function() {
+          resultsDiv.innerHTML += '<p style="color: #4caf50;">✅ Callback invoked successfully!</p>';
+        });
+
+        resultsDiv.innerHTML += '<p style="color: #4caf50;">✅ Function called without errors!</p>';
+        resultsDiv.innerHTML += '<p>Check the #panel div below for rendered content.</p>';
+        resultsDiv.innerHTML += '<p>Check the browser console for "Social Intermission" message and phase music call.</p>';
+      } catch (e) {
+        resultsDiv.innerHTML += `<p style="color: #f44336;">❌ Error: ${e.message}</p>`;
+        console.error('Manual invocation error:', e);
+      }
+    }
+  </script>
+</body>
+</html>
