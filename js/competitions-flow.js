@@ -6,37 +6,25 @@
   'use strict';
 
   /**
-   * Show instructions popup with Play button
+   * Show instructions inside TV viewport with Play button
    * When Play is pressed, launches the minigame in fullscreen overlay
    * 
    * @param {string} gameKey - The minigame key
+   * @param {HTMLElement} container - Container element (typically the panel div)
    * @param {Function} onPlay - Callback when Play button is clicked
-   * @param {Function} onSkip - Optional callback for skip button
-   * @returns {HTMLElement} The popup element
+   * @returns {HTMLElement} The instructions card element
    */
-  function showInstructionsPopup(gameKey, onPlay, onSkip = null){
+  function showInstructionsInTV(gameKey, container, onPlay){
     // Get instructions from MinigameInstructions module
     let instructions = { title: 'Competition', description: 'Play the minigame to compete!', steps: [] };
     if(g.MinigameInstructions && typeof g.MinigameInstructions.getInstructions === 'function'){
       instructions = g.MinigameInstructions.getInstructions(gameKey);
     }
 
-    // Create overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'competition-instructions-overlay';
-    overlay.style.cssText = `
-      position: fixed;
-      inset: 0;
-      z-index: 9998;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(3px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.3s ease;
-    `;
+    // Clear container
+    container.innerHTML = '';
 
-    // Create popup card
+    // Create instructions card (no full-page overlay, just the card in the TV area)
     const card = document.createElement('div');
     card.className = 'competition-instructions-card';
     card.style.cssText = `
@@ -45,10 +33,11 @@
       border-radius: 16px;
       padding: 24px 20px;
       box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.9);
-      max-width: min(420px, 90vw);
+      max-width: 100%;
       width: 100%;
       animation: slideInUp 0.4s ease;
       text-align: center;
+      margin: 0 auto;
     `;
 
     // Title
@@ -128,41 +117,10 @@
       playButton.style.boxShadow = '0 4px 12px rgba(53, 99, 167, 0.3)';
     });
     playButton.addEventListener('click', () => {
-      overlay.remove();
       if(typeof onPlay === 'function'){
         onPlay();
       }
     });
-
-    // Skip button (optional)
-    let skipButton = null;
-    if(onSkip){
-      skipButton = document.createElement('button');
-      skipButton.className = 'btn';
-      skipButton.textContent = 'Skip';
-      skipButton.style.cssText = `
-        padding: 12px 24px;
-        font-size: 1rem;
-        background: rgba(200, 200, 200, 0.1);
-        border: 1px solid rgba(200, 200, 200, 0.3);
-        border-radius: 8px;
-        color: #c5d9ed;
-        cursor: pointer;
-        transition: all 0.2s;
-      `;
-      skipButton.addEventListener('mouseenter', () => {
-        skipButton.style.background = 'rgba(200, 200, 200, 0.2)';
-      });
-      skipButton.addEventListener('mouseleave', () => {
-        skipButton.style.background = 'rgba(200, 200, 200, 0.1)';
-      });
-      skipButton.addEventListener('click', () => {
-        overlay.remove();
-        if(typeof onSkip === 'function'){
-          onSkip();
-        }
-      });
-    }
 
     // Assemble card
     card.appendChild(title);
@@ -171,34 +129,10 @@
       card.appendChild(stepsContainer);
     }
     buttonsContainer.appendChild(playButton);
-    if(skipButton){
-      buttonsContainer.appendChild(skipButton);
-    }
     card.appendChild(buttonsContainer);
-    overlay.appendChild(card);
+    container.appendChild(card);
 
-    // Add animations
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      @keyframes slideInUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    `;
-    document.head.appendChild(style);
-
-    document.body.appendChild(overlay);
-    return overlay;
+    return card;
   }
 
   /**
@@ -317,31 +251,47 @@
   }
 
   /**
-   * Run complete competition flow: instructions → fullscreen game → completion
+   * Run complete competition flow: instructions in TV → fullscreen game → completion
    * This is the main entry point for competition minigames
    * 
    * @param {string} gameKey - The minigame key
+   * @param {HTMLElement} container - Container element (typically the panel div below TV)
    * @param {Function} onComplete - Callback when game completes with score
    * @param {Object} options - Additional options
    * @returns {void}
    */
-  function runCompetitionFlow(gameKey, onComplete, options = {}){
-    // Step 1: Show instructions popup
-    showInstructionsPopup(
+  function runCompetitionFlow(gameKey, container, onComplete, options = {}){
+    // Step 1: Show instructions in TV area
+    showInstructionsInTV(
       gameKey,
+      container,
       // On Play button click
       () => {
         // Step 2: Launch fullscreen minigame
         launchFullscreenMinigame(gameKey, onComplete, options);
-      },
-      // Skip is not available in competition mode
-      null
+      }
     );
   }
 
+  // Add animation styles to document
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
   // Expose to global
   g.CompetitionFlow = {
-    showInstructionsPopup: showInstructionsPopup,
+    showInstructionsInTV: showInstructionsInTV,
     launchFullscreenMinigame: launchFullscreenMinigame,
     runCompetitionFlow: runCompetitionFlow
   };

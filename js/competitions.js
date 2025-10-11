@@ -360,8 +360,8 @@
         });
       }
 
-      // Run competition flow
-      global.CompetitionFlow.runCompetitionFlow(mg, (base) => {
+      // Run competition flow (pass host container for instructions)
+      global.CompetitionFlow.runCompetitionFlow(mg, host, (base) => {
         // Validate with AntiCheat
         if (antiCheatSessionId && global.AntiCheat) {
           const v = global.AntiCheat.validate(antiCheatSessionId);
