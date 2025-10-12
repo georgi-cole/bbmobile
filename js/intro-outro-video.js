@@ -178,6 +178,8 @@
     g.startOpeningSequence = async function wrappedOpening() {
       console.info('[intro-outro] startOpeningSequence intercepted');
       if (isIntroPlayed()){
+        // Intro already played - mark game started and proceed with opening sequence
+        markGameStarted();
         return origStart.call(g);
       }
       const url = await pickVideoUrl(INTRO_URL, INTRO_URL_MOBILE);
@@ -188,11 +190,15 @@
           onEnd: () => { 
             markIntroPlayed(); 
             dispatchIntroFinished();
+            // Mark game started after intro completes (for new users)
+            markGameStarted();
             try { origStart.call(g); } catch { origStart(); } 
           },
           onSkip: () => { 
             markIntroPlayed(); 
             dispatchIntroFinished();
+            // Mark game started after intro skipped (for new users)
+            markGameStarted();
             try { origStart.call(g); } catch { origStart(); } 
           },
           onFail: () => { try { origStart.call(g); } catch { origStart(); } }
@@ -202,6 +208,17 @@
       return origStart.call(g);
     };
   })();
+
+  // Helper function to mark game started (used by bootstrap.js)
+  function markGameStarted() {
+    g.__bbGameStarted = true;
+    try {
+      // Use localStorage instead of sessionStorage so it persists across page reloads
+      localStorage.setItem('bb.gameStarted', '1');
+      console.info('[intro-outro] marked game as started for returning user detection');
+    } catch {}
+  }
+  g.markGameStarted = markGameStarted;
 
   // Wrap showFinaleCinematic so we can replace credits entirely with our video.
   function wrapFinale(){
