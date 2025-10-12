@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Popup Telemetry Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: var(--primary-1);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 20px;
+      background: var(--primary-3);
+      color: var(--ink);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: var(--accent);
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      background: var(--primary-2);
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: var(--primary-2);
+      padding: 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px;
+      border-left: 3px solid var(--accent);
+      padding-left: 8px;
+    }
+    .log-shown { border-color: var(--good); }
+    .log-decision { border-color: var(--accent); }
+    .log-dismissed { border-color: var(--muted); }
+    .log-queue { border-color: var(--live); }
+  </style>
+</head>
+<body>
+  <div id="popup-root"></div>
+
+  <h1>🔬 Popup Telemetry Test Suite</h1>
+
+  <div class="test-section">
+    <h2>Configuration</h2>
+    <div class="controls">
+      <label>
+        <input type="checkbox" id="toggleRefresh" checked>
+        popup_refresh_enabled
+      </label>
+      <label>
+        <input type="checkbox" id="toggleTelemetry" checked>
+        enablePopupTelemetryPanel
+      </label>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Basic Tests</h2>
+    <div class="controls">
+      <button onclick="testSimplePopup()">Simple Info Popup</button>
+      <button onclick="testAutoClose()">Auto-Close Popup (3s)</button>
+      <button onclick="testDecisionPopup()">Decision Popup</button>
+      <button onclick="testCompetitionResult()">Competition Result</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Telemetry Tests</h2>
+    <div class="controls">
+      <button onclick="showTelemetryStats()">Show Stats</button>
+      <button onclick="showRecentEvents()">Recent Events</button>
+      <button onclick="exportTelemetry()">Export Data</button>
+      <button onclick="clearTelemetry()">Clear Telemetry</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Queue Tests</h2>
+    <div class="controls">
+      <button onclick="testQueue(3)">Queue 3 Popups</button>
+      <button onclick="testQueue(5)">Queue 5 Popups</button>
+      <button onclick="testRapidQueue()">Rapid Queue (10)</button>
+      <button onclick="clearQueue()">Clear Queue</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <div class="log" id="eventLog"></div>
+  </div>
+
+  <!-- Load scripts -->
+  <script src="js/popup/BasePopup.js"></script>
+  <script src="js/popup/PopupManager.js"></script>
+  <script src="js/popup/PopupTelemetry.js"></script>
+  <script src="js/popup/PopupMigrationHelpers.js"></script>
+
+  <script>
+    // Initialize config
+    window.game = {
+      cfg: {
+        popup_refresh_enabled: true,
+        enablePopupTelemetryPanel: true
+      }
+    };
+
+    // Event logger
+    function logEvent(message, type = '') {
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry log-' + type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Update status
+    function updateStatus() {
+      const status = document.getElementById('status');
+      status.textContent = `popup_refresh_enabled: ${game.cfg.popup_refresh_enabled}, ` +
+                          `enablePopupTelemetryPanel: ${game.cfg.enablePopupTelemetryPanel}, ` +
+                          `queue: ${PopupManager.getQueueLength()}`;
+    }
+
+    // Listen to telemetry events
+    if (!window.bbGameBus) {
+      window.bbGameBus = {
+        listeners: {},
+        on(event, callback) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(callback);
+        },
+        emit(event, data) {
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(cb => cb(data));
+          }
+        }
+      };
+    }
+
+    bbGameBus.on('popup:telemetry', (event) => {
+      logEvent(`${event.type}: ${JSON.stringify(event.data)}`, event.type.replace('popup_', ''));
+      updateStatus();
+    });
+
+    // Toggle handlers
+    document.getElementById('toggleRefresh').addEventListener('change', (e) => {
+      game.cfg.popup_refresh_enabled = e.target.checked;
+      updateStatus();
+    });
+
+    document.getElementById('toggleTelemetry').addEventListener('change', (e) => {
+      game.cfg.enablePopupTelemetryPanel = e.target.checked;
+      updateStatus();
+    });
+
+    // Test functions
+    function testSimplePopup() {
+      logEvent('Testing: Simple Info Popup', 'info');
+      PopupManager.enqueue(() => {
+        return createBasePopup({
+          headerText: 'Test Popup',
+          bodyContent: '<p>This is a simple test popup.</p>',
+          footerContent: '<button class="btn" onclick="PopupManager.close()">OK</button>'
+        });
+      }, {
+        popupType: 'test_simple',
+        id: 'test-simple-' + Date.now()
+      });
+    }
+
+    function testAutoClose() {
+      logEvent('Testing: Auto-Close Popup (3s)', 'info');
+      PopupManager.enqueue(() => {
+        const popup = createBasePopup({
+          headerText: 'Auto-Close Test',
+          bodyContent: '<p>This popup will auto-close in 3 seconds...</p>',
+          footerContent: '',
+          showCloseButton: false
+        });
+        
+        setTimeout(() => {
+          if (popup.__closePopup) {
+            popup.__closePopup('auto');
+          }
+        }, 3000);
+        
+        return popup;
+      }, {
+        popupType: 'test_auto_close'
+      });
+    }
+
+    function testDecisionPopup() {
+      logEvent('Testing: Decision Popup', 'info');
+      PopupManager.enqueue(() => {
+        return PopupMigrationHelpers.createDecisionPopup({
+          title: 'Decision Test',
+          message: 'Choose an option to test telemetry tracking:',
+          actions: [
+            {
+              label: 'Accept',
+              theme: 'accept',
+              callback: () => logEvent('User chose: Accept', 'decision')
+            },
+            {
+              label: 'Decline',
+              theme: 'refuse',
+              callback: () => logEvent('User chose: Decline', 'decision')
+            },
+            {
+              label: 'Neutral',
+              theme: 'neutral',
+              callback: () => logEvent('User chose: Neutral', 'decision')
+            }
+          ],
+          popupType: 'test_decision'
+        });
+      }, {
+        popupType: 'test_decision'
+      });
+    }
+
+    function testCompetitionResult() {
+      logEvent('Testing: Competition Result', 'info');
+      PopupMigrationHelpers.migratedShowCard(
+        'Competition Winner 🏆',
+        ['Congratulations!', 'You won Head of Household!'],
+        'good',
+        4000,
+        false,
+        { popupType: 'test_competition_result' }
+      );
+    }
+
+    function testQueue(count) {
+      logEvent(`Testing: Queue ${count} popups`, 'info');
+      for (let i = 0; i < count; i++) {
+        PopupManager.enqueue(() => {
+          return createBasePopup({
+            headerText: `Queued Popup ${i + 1}/${count}`,
+            bodyContent: `<p>This is popup ${i + 1} of ${count}</p>`,
+            footerContent: '<button class="btn" onclick="PopupManager.close()">Next</button>'
+          });
+        }, {
+          popupType: 'test_queue',
+          id: 'queue-' + i
+        });
+      }
+    }
+
+    function testRapidQueue() {
+      logEvent('Testing: Rapid Queue (10 popups)', 'warn');
+      for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+          PopupManager.enqueue(() => {
+            return createBasePopup({
+              headerText: `Rapid ${i + 1}/10`,
+              bodyContent: `<p>Popup ${i + 1}</p>`,
+              footerContent: '<button class="btn" onclick="PopupManager.close()">OK</button>'
+            });
+          }, {
+            popupType: 'test_rapid'
+          });
+        }, i * 50);
+      }
+    }
+
+    function clearQueue() {
+      PopupManager.clearQueue();
+      logEvent('Queue cleared', 'warn');
+      updateStatus();
+    }
+
+    function showTelemetryStats() {
+      const stats = PopupTelemetry.getStats();
+      alert(JSON.stringify(stats, null, 2));
+    }
+
+    function showRecentEvents() {
+      const events = PopupTelemetry.getRecentEvents(10);
+      alert(JSON.stringify(events, null, 2));
+    }
+
+    function exportTelemetry() {
+      const data = PopupTelemetry.exportData();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'popup-telemetry-' + Date.now() + '.json';
+      a.click();
+      logEvent('Telemetry exported', 'info');
+    }
+
+    function clearTelemetry() {
+      PopupTelemetry.clearTelemetry();
+      logEvent('Telemetry cleared', 'warn');
+      document.getElementById('eventLog').innerHTML = '';
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      updateStatus();
+      logEvent('Test page loaded', 'info');
+      logEvent('PopupManager available: ' + (typeof PopupManager !== 'undefined'), 'info');
+      logEvent('PopupTelemetry available: ' + (typeof PopupTelemetry !== 'undefined'), 'info');
+    });
+  </script>
+</body>
+</html>

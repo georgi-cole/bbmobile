@@ -112,6 +112,30 @@ When `false`, code should fall back to the legacy `showCard()` function. When `t
 
 ## Migration Steps
 
+### Using PopupMigrationHelpers (Easiest)
+
+The simplest way to migrate is using the `PopupMigrationHelpers` utility, which provides drop-in replacements:
+
+**Before (Legacy):**
+```javascript
+showCard('Competition Winner', ['You won HOH!'], 'good', 3000);
+```
+
+**After (Using Helper):**
+```javascript
+// Simple one-line replacement
+PopupMigrationHelpers.migratedShowCard(
+  'Competition Winner', 
+  ['You won HOH!'], 
+  'good', 
+  3000, 
+  false,  // uniform parameter (legacy, ignored)
+  { popupType: 'competition_result' }  // For telemetry
+);
+```
+
+This helper automatically checks the feature flag and falls back to legacy if disabled!
+
 ### For Simple Informational Popups
 
 **Before (Legacy):**
@@ -119,7 +143,7 @@ When `false`, code should fall back to the legacy `showCard()` function. When `t
 showCard('Title', ['Line 1', 'Line 2'], 'neutral', 3000);
 ```
 
-**After (New System):**
+**After (Manual Migration):**
 ```javascript
 function showMyPopup() {
   const cfg = game?.cfg || {};
@@ -131,13 +155,93 @@ function showMyPopup() {
     return;
   }
   
-  // Use new system
+  // Use new system with telemetry
   PopupManager.enqueue(() => {
     return createBasePopup({
       headerText: 'Title',
       bodyContent: '<p>Line 1</p><p>Line 2</p>',
       footerContent: '<button class="btn" onclick="PopupManager.close()">OK</button>'
     });
+  }, {
+    popupType: 'info_message',  // For telemetry tracking
+    id: 'my-popup-id'           // Optional unique ID
+  });
+}
+```
+
+### For Auto-Dismissing Popups
+
+**Before (Legacy):**
+```javascript
+showCard('Quick Message', ['This will auto-close'], 'neutral', 2000);
+```
+
+**After (New System):**
+```javascript
+if (!game.cfg.popup_refresh_enabled) {
+  showCard('Quick Message', ['This will auto-close'], 'neutral', 2000);
+} else {
+  PopupManager.enqueue(() => {
+    const popup = createBasePopup({
+      headerText: 'Quick Message',
+      bodyContent: '<p>This will auto-close</p>',
+      footerContent: '',  // No footer for auto-dismiss
+      showCloseButton: false
+    });
+    
+    // Auto-close after 2 seconds
+    setTimeout(() => {
+      if (popup.__closePopup) {
+        popup.__closePopup('auto');
+      }
+    }, 2000);
+    
+    return popup;
+  }, {
+    popupType: 'auto_message'
+  });
+}
+```
+
+### For Decision Popups
+
+**Before (Legacy - often done with multiple showCard calls):**
+```javascript
+showCard('Confirm Action', ['Are you sure?'], 'warn', 5000);
+// User had to remember to respond, no real decision flow
+```
+
+**After (New System with Decision Buttons):**
+```javascript
+if (!game.cfg.popup_refresh_enabled) {
+  showCard('Confirm Action', ['Are you sure?'], 'warn', 5000);
+} else {
+  PopupManager.enqueue(() => {
+    return PopupMigrationHelpers.createDecisionPopup({
+      title: 'Confirm Action',
+      message: 'Are you sure you want to proceed?',
+      actions: [
+        {
+          label: 'Yes, Continue',
+          theme: 'accept',
+          callback: () => {
+            // Handle acceptance
+            console.log('User confirmed');
+          }
+        },
+        {
+          label: 'Cancel',
+          theme: 'refuse',
+          callback: () => {
+            // Handle cancellation
+            console.log('User cancelled');
+          }
+        }
+      ],
+      popupType: 'confirmation_dialog'
+    });
+  }, {
+    popupType: 'confirmation_dialog'
   });
 }
 ```
@@ -183,8 +287,75 @@ PopupManager.enqueue(() => {
   }, 100);
   
   return popup;
+}, {
+  popupType: 'settings_dialog',  // For telemetry tracking
+  id: 'settings-popup'
 });
 ```
+
+## Telemetry Integration
+
+All popups should include a `popupType` for telemetry tracking. This enables analytics and debugging.
+
+### Popup Types
+
+Use descriptive popup types:
+- `competition_result` - Competition winner/results
+- `competition_reveal_intro` - "Revealing top 3..." intro
+- `competition_result_3rd` - 3rd place reveal
+- `competition_result_2nd` - 2nd place reveal
+- `competition_result_winner` - Winner reveal
+- `diary_room_vote_prompt` - "Cast your vote" prompt
+- `nomination_ceremony` - Nomination announcements
+- `veto_ceremony` - Veto usage decisions
+- `social_decision` - Social gameplay decisions
+- `twist_reveal` - Twist/special event reveals
+- `info_message` - Generic information
+- `confirmation_dialog` - User confirmation prompts
+- `error_message` - Error notifications
+
+### Tracking Events
+
+Telemetry automatically tracks:
+- **popup_shown** - When popup displays
+- **popup_decision** - When user clicks a decision button
+- **popup_dismissed** - When popup closes (with method: auto, button, esc, backdrop)
+- **popup_queue_depth** - When popup is enqueued (tracks queue size)
+
+### Accessing Telemetry Data
+
+```javascript
+// Get recent events
+const recent = PopupTelemetry.getRecentEvents(10);
+
+// Get statistics
+const stats = PopupTelemetry.getStats();
+console.log(`Total popups shown: ${stats.totalShown}`);
+console.log(`Decision rate: ${stats.totalDecisions / stats.totalShown}`);
+
+// Get stats for specific type
+const compStats = PopupTelemetry.getTypeStats('competition_result');
+console.log(`Competition popups: ${compStats.shown}`);
+
+// Export data
+const json = PopupTelemetry.exportData();
+// Download or send to analytics service
+```
+
+### Console Helpers
+
+```javascript
+// Get telemetry in console
+__getPopupTelemetry();
+
+// Export telemetry
+__exportPopupTelemetry();
+
+// Clear telemetry
+__clearPopupTelemetry();
+```
+
+See `docs/popup-a11y-telemetry.md` for full telemetry documentation.
 
 ## Accessibility Guidelines
 

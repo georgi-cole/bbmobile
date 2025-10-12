@@ -1162,6 +1162,15 @@ button:focus-visible,.btn:focus-visible{
   .dashboard-timer-display{
     text-shadow:none;
   }
+  /* Popup system: reduce animations */
+  :root {
+    --popup-transition-duration: 0.1s;
+    --popup-inter-delay: 100ms;
+  }
+  .base-popup-backdrop,
+  .base-popup {
+    animation-duration: 0.1s !important;
+  }
 }
 
 /* Mobile responsiveness */

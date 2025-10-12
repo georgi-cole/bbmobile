@@ -112,13 +112,33 @@
       // Store current popup
       PopupQueue.currentPopup = popupElement;
       
-      // Store custom delay if provided
+      // Store custom delay and metadata
       PopupQueue.currentPopup.__customDelay = options.interPopupDelay;
+      PopupQueue.currentPopup.__popupType = options.popupType || 'unknown';
+      PopupQueue.currentPopup.__shownAt = Date.now();
+
+      // Log telemetry: popup_shown
+      if(global.PopupTelemetry){
+        global.PopupTelemetry.logPopupShown(options.popupType || 'unknown', {
+          queueLength: PopupQueue.queue.length,
+          id: options.id || popupElement.id
+        });
+      }
 
       // Wrap the original close function
       const originalClose = popupElement.__closePopup;
       if(originalClose){
-        popupElement.__closePopup = function(){
+        popupElement.__closePopup = function(dismissMethod){
+          const timeShownMs = Date.now() - (PopupQueue.currentPopup?.__shownAt || Date.now());
+          const popupType = PopupQueue.currentPopup?.__popupType || 'unknown';
+          
+          // Log telemetry: popup_dismissed
+          if(global.PopupTelemetry){
+            global.PopupTelemetry.logPopupDismissed(popupType, dismissMethod || 'programmatic', {
+              timeShownMs
+            });
+          }
+          
           // Call original close
           originalClose();
           
@@ -172,8 +192,19 @@
 
     PopupQueue.queue.push({
       fn: popupFn,
-      interPopupDelay: options.interPopupDelay
+      interPopupDelay: options.interPopupDelay,
+      popupType: options.popupType || 'unknown',
+      id: options.id
     });
+    
+    // Log telemetry: popup_queue_depth
+    if(global.PopupTelemetry){
+      global.PopupTelemetry.logQueueDepth(PopupQueue.queue.length, {
+        popupType: options.popupType || 'unknown',
+        id: options.id
+      });
+    }
+    
     processNextPopup();
   }
 
