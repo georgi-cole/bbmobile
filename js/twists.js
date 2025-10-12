@@ -515,7 +515,7 @@
     const host=document.createElement('div'); host.className='returnTwistHost';
     host.innerHTML=`
       <h3 class="rtHeader">America's Vote — Juror Return</h3>
-      <div class="tiny muted" id="rtCountdown" role="timer" aria-live="polite" aria-atomic="true">Time: ${Math.ceil(st.durationMs/1000)}s</div>
+      <div class="tiny muted" id="rtCountdown" role="timer" aria-live="assertive" aria-atomic="true">Time: ${Math.ceil(st.durationMs/1000)}s</div>
       <div class="rtGrid" id="rtGrid" role="list" aria-label="Juror vote standings"></div>
       <div class="tiny muted rtNote">Leader highlighted • Live % updates • Use Skip to finish instantly.</div>
       <div id="rtLiveRegion" role="status" aria-live="polite" aria-atomic="true" style="position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;"></div>
