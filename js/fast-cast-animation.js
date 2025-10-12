@@ -1,6 +1,6 @@
 // MODULE: fast-cast-animation.js
-// Fast cast introduction animation for returning users
-// Shows all contestant photos at once inside the TV screen for under 5 seconds
+// House circle animation for returning users
+// Shows all contestant photos arranged in a rotating circle inside a house frame for under 5 seconds
 
 (function(global) {
   'use strict';
@@ -8,120 +8,151 @@
   let isPlaying = false;
 
   /**
-   * Play fast cast animation showing all contestants at once
+   * Play house circle animation showing all contestants rotating in a circle
    * @param {Array} players - Array of player objects
    * @param {Function} onComplete - Callback when animation completes
    */
   function playFastCastAnimation(players, onComplete) {
     if (!players || players.length === 0) {
-      console.warn('[fast-cast] No players provided');
+      console.warn('[house-circle] No players provided');
       if (onComplete) onComplete();
       return;
     }
 
     if (isPlaying) {
-      console.warn('[fast-cast] Animation already playing');
+      console.warn('[house-circle] Animation already playing');
       return;
     }
 
     isPlaying = true;
-    console.info('[fast-cast] Starting fast cast animation for', players.length, 'contestants');
+    console.info('[house-circle] Starting house circle animation for', players.length, 'contestants');
 
-    // Hide everything except the TV section
-    const elementsToHide = [
-      document.querySelector('.topbar'),
-      document.getElementById('dashboardCard'),
-      document.getElementById('sideCard'),
-      document.querySelector('#actionCard h1'),
-      document.getElementById('rosterBar'),
-      document.getElementById('panel')
-    ];
-
-    elementsToHide.forEach(el => {
-      if (el) {
-        el.__originalDisplay = el.style.display;
-        el.style.display = 'none';
-      }
-    });
-
-    // Hide TV overlay elements
-    const tvNow = document.getElementById('tvNow');
-    const tvOverlay = document.getElementById('tvOverlay');
-    if (tvNow) {
-      tvNow.__originalDisplay = tvNow.style.display;
-      tvNow.style.display = 'none';
-    }
-    if (tvOverlay) {
-      tvOverlay.__originalDisplay = tvOverlay.style.display;
-      tvOverlay.style.display = 'none';
-    }
-
-    // Create fullscreen overlay for TV section
-    const tvSection = document.getElementById('actionCard');
-    if (tvSection) {
-      tvSection.style.position = 'fixed';
-      tvSection.style.top = '0';
-      tvSection.style.left = '0';
-      tvSection.style.width = '100vw';
-      tvSection.style.height = '100vh';
-      tvSection.style.zIndex = '999999';
-      tvSection.style.background = '#000';
-      tvSection.style.margin = '0';
-      tvSection.style.padding = '0';
-      tvSection.style.display = 'flex';
-      tvSection.style.alignItems = 'center';
-      tvSection.style.justifyContent = 'center';
-    }
-
-    // Create container for cast grid
-    const viewport = document.querySelector('.tvViewport');
-    if (!viewport) {
-      console.error('[fast-cast] TV viewport not found');
-      cleanup();
-      if (onComplete) onComplete();
-      return;
-    }
-
-    const castGrid = document.createElement('div');
-    castGrid.id = 'fastCastGrid';
-    castGrid.style.cssText = `
-      position: absolute;
+    // Create fullscreen overlay container
+    const overlay = document.createElement('div');
+    overlay.id = 'houseCircleOverlay';
+    overlay.style.cssText = `
+      position: fixed;
       inset: 0;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 12px;
-      padding: 20px;
+      z-index: 999999;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2533 50%, #0a0f16 100%);
+      display: flex;
       align-items: center;
-      justify-items: center;
-      overflow: auto;
-      z-index: 10;
+      justify-content: center;
+      overflow: hidden;
     `;
 
-    // Create cast member cards
+    // Create house frame container
+    const houseFrame = document.createElement('div');
+    houseFrame.id = 'houseFrame';
+    houseFrame.style.cssText = `
+      position: relative;
+      width: min(90vw, 90vh);
+      height: min(90vw, 90vh);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+
+    // Try to load house background image, fallback to SVG
+    const houseBackground = document.createElement('div');
+    houseBackground.style.cssText = `
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    `;
+
+    // Try to load house image
+    const houseImg = new Image();
+    houseImg.onload = function() {
+      houseBackground.style.backgroundImage = `
+        linear-gradient(rgba(10, 15, 22, 0.3), rgba(10, 15, 22, 0.5)),
+        url('${houseImg.src}')
+      `;
+      houseBackground.style.backgroundSize = 'cover';
+      houseBackground.style.backgroundPosition = 'center';
+    };
+    houseImg.onerror = function() {
+      // Fallback to SVG house frame
+      houseBackground.innerHTML = `
+        <svg width="100%" height="100%" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="houseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#1a2f44;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#0e1730;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <!-- House structure -->
+          <path d="M 200 50 L 350 150 L 350 350 L 50 350 L 50 150 Z" fill="url(#houseGrad)" stroke="#3d5a75" stroke-width="4"/>
+          <!-- Roof -->
+          <path d="M 200 30 L 360 140 L 40 140 Z" fill="#2a3f54" stroke="#3d5a75" stroke-width="4"/>
+          <!-- Door -->
+          <rect x="170" y="280" width="60" height="70" rx="5" fill="#1a2533" stroke="#3d5a75" stroke-width="2"/>
+          <!-- Windows -->
+          <rect x="90" y="200" width="50" height="50" rx="3" fill="#78d2ff" fill-opacity="0.3" stroke="#3d5a75" stroke-width="2"/>
+          <rect x="260" y="200" width="50" height="50" rx="3" fill="#78d2ff" fill-opacity="0.3" stroke="#3d5a75" stroke-width="2"/>
+          <circle cx="200" cy="100" r="15" fill="#ffd700" opacity="0.8"/>
+        </svg>
+      `;
+      houseBackground.style.display = 'flex';
+      houseBackground.style.alignItems = 'center';
+      houseBackground.style.justifyContent = 'center';
+    };
+    
+    // Try multiple possible paths for house image
+    houseImg.src = '/img/studio_bg.jpg';
+    setTimeout(() => {
+      if (!houseImg.complete) {
+        houseImg.src = '/avatars/tvstudio.jpg';
+      }
+    }, 100);
+
+    // Create rotating circle container
+    const circleContainer = document.createElement('div');
+    circleContainer.id = 'circleContainer';
+    circleContainer.style.cssText = `
+      position: relative;
+      width: 70%;
+      height: 70%;
+      animation: rotateCircle 4.5s linear infinite;
+    `;
+
+    // Calculate circle positions for contestants
+    const radius = 45; // percentage from center
+    const angleStep = (2 * Math.PI) / players.length;
+
     players.forEach((player, index) => {
+      const angle = index * angleStep;
+      const x = 50 + radius * Math.cos(angle - Math.PI / 2);
+      const y = 50 + radius * Math.sin(angle - Math.PI / 2);
+
       const card = document.createElement('div');
-      card.className = 'fast-cast-card';
+      card.className = 'circle-contestant-card';
       card.style.cssText = `
+        position: absolute;
+        left: ${x}%;
+        top: ${y}%;
+        transform: translate(-50%, -50%);
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 8px;
+        gap: 4px;
         opacity: 0;
-        transform: scale(0.5);
-        animation: fastCastFadeIn 0.4s ease-out forwards;
-        animation-delay: ${index * 0.05}s;
+        animation: fadeInContestant 0.6s ease-out forwards;
+        animation-delay: ${index * 0.08}s;
       `;
 
       // Avatar
       const avatarWrapper = document.createElement('div');
       avatarWrapper.style.cssText = `
-        width: 100px;
-        height: 100px;
+        width: clamp(50px, 8vw, 80px);
+        height: clamp(50px, 8vw, 80px);
         border-radius: 50%;
         overflow: hidden;
         border: 3px solid #3d5a75;
         background: #1a2f44;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
       `;
 
       const avatar = document.createElement('img');
@@ -142,88 +173,80 @@
       // Name
       const name = document.createElement('div');
       name.style.cssText = `
-        font-size: 0.9rem;
+        font-size: clamp(0.6rem, 1.5vw, 0.85rem);
         font-weight: 600;
         color: #ffffff;
         text-align: center;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-        max-width: 120px;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+        max-width: clamp(60px, 10vw, 100px);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        background: rgba(10, 15, 22, 0.7);
+        padding: 2px 6px;
+        border-radius: 4px;
       `;
       name.textContent = player.name || 'Guest';
 
       card.appendChild(avatarWrapper);
       card.appendChild(name);
-      castGrid.appendChild(card);
+      circleContainer.appendChild(card);
     });
 
-    viewport.appendChild(castGrid);
+    // Assemble the animation
+    houseFrame.appendChild(houseBackground);
+    houseFrame.appendChild(circleContainer);
+    overlay.appendChild(houseFrame);
 
-    // Add CSS animation
-    if (!document.getElementById('fastCastStyles')) {
+    // Add CSS animations
+    if (!document.getElementById('houseCircleStyles')) {
       const style = document.createElement('style');
-      style.id = 'fastCastStyles';
+      style.id = 'houseCircleStyles';
       style.textContent = `
-        @keyframes fastCastFadeIn {
+        @keyframes rotateCircle {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        @keyframes fadeInContestant {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.3);
+          }
           to {
             opacity: 1;
-            transform: scale(1);
+            transform: translate(-50%, -50%) scale(1);
           }
         }
       `;
       document.head.appendChild(style);
     }
 
-    // Cleanup and complete after 4 seconds
+    // Add to page
+    document.body.appendChild(overlay);
+
+    // Cleanup and complete after 4.8 seconds
     setTimeout(() => {
       cleanup();
       if (onComplete) onComplete();
-    }, 4000);
+    }, 4800);
 
     function cleanup() {
       isPlaying = false;
 
-      // Remove cast grid
-      const grid = document.getElementById('fastCastGrid');
-      if (grid) grid.remove();
-
-      // Restore hidden elements
-      elementsToHide.forEach(el => {
-        if (el && el.__originalDisplay !== undefined) {
-          el.style.display = el.__originalDisplay;
-          delete el.__originalDisplay;
-        }
-      });
-
-      // Restore TV overlay elements
-      if (tvNow && tvNow.__originalDisplay !== undefined) {
-        tvNow.style.display = tvNow.__originalDisplay;
-        delete tvNow.__originalDisplay;
-      }
-      if (tvOverlay && tvOverlay.__originalDisplay !== undefined) {
-        tvOverlay.style.display = tvOverlay.__originalDisplay;
-        delete tvOverlay.__originalDisplay;
+      // Remove overlay
+      const overlayEl = document.getElementById('houseCircleOverlay');
+      if (overlayEl) {
+        overlayEl.style.opacity = '0';
+        overlayEl.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => overlayEl.remove(), 300);
       }
 
-      // Restore TV section positioning
-      if (tvSection) {
-        tvSection.style.position = '';
-        tvSection.style.top = '';
-        tvSection.style.left = '';
-        tvSection.style.width = '';
-        tvSection.style.height = '';
-        tvSection.style.zIndex = '';
-        tvSection.style.background = '';
-        tvSection.style.margin = '';
-        tvSection.style.padding = '';
-        tvSection.style.display = '';
-        tvSection.style.alignItems = '';
-        tvSection.style.justifyContent = '';
-      }
-
-      console.info('[fast-cast] Animation complete, cleanup done');
+      console.info('[house-circle] Animation complete, cleanup done');
     }
   }
 
@@ -291,10 +314,10 @@
    */
   function stop() {
     if (!isPlaying) return;
-    console.info('[fast-cast] Stopping animation');
+    console.info('[house-circle] Stopping animation');
     
-    const grid = document.getElementById('fastCastGrid');
-    if (grid) grid.remove();
+    const overlay = document.getElementById('houseCircleOverlay');
+    if (overlay) overlay.remove();
     
     isPlaying = false;
   }
@@ -306,6 +329,6 @@
     stop: stop
   };
 
-  console.info('[fast-cast] Fast cast animation module loaded');
+  console.info('[house-circle] House circle animation module loaded');
 
 })(window);

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>House Circle Animation Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0f16;
+      color: #fff;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a2533;
+      border-radius: 12px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background: #3575c2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    button:hover {
+      background: #4a8dd9;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 12px;
+      background: #0e1730;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏠 House Circle Animation Test</h1>
+    <p>Test the new rotating circle animation for returning users.</p>
+    
+    <div class="status">
+      <strong>Status:</strong> <span id="status">Ready</span>
+    </div>
+    
+    <button onclick="testAnimation()">▶ Test Animation</button>
+    <button onclick="testWithManyPlayers()">▶ Test with 16 Players</button>
+    <button onclick="stopAnimation()">⏹ Stop Animation</button>
+    
+    <div style="margin-top: 20px;">
+      <h3>Expected Behavior:</h3>
+      <ul>
+        <li>Fullscreen overlay appears with house frame</li>
+        <li>Contestant photos arranged in a circle</li>
+        <li>Circle smoothly rotates for ~4.8 seconds</li>
+        <li>No other UI visible during animation</li>
+        <li>Animation completes and overlay fades out</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="js/fast-cast-animation.js"></script>
+  <script>
+    function updateStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    function testAnimation() {
+      updateStatus('Running animation...');
+      
+      // Create test players
+      const players = [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Charlie' },
+        { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Diana' },
+        { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Eve' },
+        { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Frank' },
+        { id: 7, name: 'Grace', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Grace' },
+        { id: 8, name: 'Henry', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Henry' },
+        { id: 9, name: 'Iris', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Iris' },
+        { id: 10, name: 'Jack', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Jack' },
+        { id: 11, name: 'Kate', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Kate' },
+        { id: 12, name: 'Leo', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Leo' }
+      ];
+      
+      if (window.FastCastAnimation && window.FastCastAnimation.play) {
+        window.FastCastAnimation.play(players, () => {
+          updateStatus('Animation completed!');
+          console.log('Animation completed');
+        });
+      } else {
+        updateStatus('ERROR: Animation module not loaded');
+      }
+    }
+
+    function testWithManyPlayers() {
+      updateStatus('Running animation with 16 players...');
+      
+      const players = [];
+      const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 
+                     'Iris', 'Jack', 'Kate', 'Leo', 'Maya', 'Noah', 'Olivia', 'Peter'];
+      
+      names.forEach((name, i) => {
+        players.push({
+          id: i + 1,
+          name: name,
+          avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=${name}`
+        });
+      });
+      
+      if (window.FastCastAnimation && window.FastCastAnimation.play) {
+        window.FastCastAnimation.play(players, () => {
+          updateStatus('Animation completed!');
+          console.log('Animation completed');
+        });
+      } else {
+        updateStatus('ERROR: Animation module not loaded');
+      }
+    }
+
+    function stopAnimation() {
+      if (window.FastCastAnimation && window.FastCastAnimation.stop) {
+        window.FastCastAnimation.stop();
+        updateStatus('Animation stopped');
+      }
+    }
+
+    // Initial status check
+    setTimeout(() => {
+      if (window.FastCastAnimation) {
+        updateStatus('Ready - Module loaded ✓');
+      } else {
+        updateStatus('ERROR: Module not loaded');
+      }
+    }, 100);
+  </script>
+</body>
+</html>
