@@ -3,9 +3,9 @@
 ## Problem Statement
 Replace the cast intro animation logic to:
 - Show a Big Brother eye-themed loading bar while preloading all contestant avatar images from /avatars/
-- Wait up to 6 seconds for all images to load
+- Wait indefinitely for all images to load (NO timeout)
 - If all images load, run the cast photo pulse-in/disappear animation
-- If any image fails to load (in 6s), skip the animation and go straight to the game (no error message)
+- If any image fails to load, skip the animation and go straight to the game (no error message)
 - No fallback avatars, no error display
 
 ## Solution Implemented
@@ -16,24 +16,24 @@ Replace the cast intro animation logic to:
 ### New Functions Added
 
 #### 1. `preloadAvatars(players, onProgress)`
-Preloads all contestant avatars with timeout handling.
+Preloads all contestant avatars without timeout.
 
 **Features:**
 - Maps all player objects to avatar URLs using `global.resolveAvatar()`
 - Preloads images in parallel using browser Image() API
 - Tracks progress with callback: `onProgress(loaded, total)`
-- 6-second timeout enforced
+- NO timeout - waits indefinitely until all images complete
 - Returns Promise<boolean>:
   - `true` if all images loaded successfully
-  - `false` if any image fails or timeout occurs
+  - `false` if any image fails to load
 
 **Implementation Details:**
 ```javascript
 - Creates Image objects for each avatar URL
 - Attaches onload/onerror handlers
 - Counts loaded images (success or failure)
-- Clears timeout when complete
 - Prevents race conditions with 'completed' flag
+- Loading bar remains visible until all images finish
 ```
 
 #### 2. `createLoadingBar()`
@@ -91,9 +91,9 @@ Now orchestrates the loading and animation flow:
 1. Validate inputs (players array)
 2. Create and show loading bar
 3. Start preloading avatars with progress updates
-4. Wait for preload result:
+4. Wait for preload result (no timeout):
    - **Success** → Remove loading bar, run cast animation
-   - **Failure/Timeout** → Remove loading bar, skip to game
+   - **Failure** → Remove loading bar, skip to game
 5. Set `isPlaying = false` when complete
 
 ## Animation Flow Diagram
@@ -105,14 +105,13 @@ playFastCastAnimation() called
     ↓
 Creates loading bar with Big Brother eye
     ↓
-Starts preloading all avatars (6s timeout)
+Starts preloading all avatars (NO timeout)
     ↓
 Loading bar updates as images load
     ↓
 ┌─────────────────┴─────────────────┐
 │                                   │
-All images loaded            Any image fails/timeout
-(within 6 seconds)           (or exceeds 6 seconds)
+All images loaded              Any image fails to load
     ↓                                ↓
 Remove loading bar          Remove loading bar
     ↓                                ↓
@@ -135,7 +134,7 @@ Go to game (Week 1 modal)
 |-------------|--------|----------------|
 | Show Big Brother eye loading bar | ✅ | SVG eye with pulsing animation and red theme |
 | Preload all avatars from /avatars/ | ✅ | Uses `global.resolveAvatar()` for all players |
-| Wait up to 6 seconds max | ✅ | `setTimeout(6000)` with cleanup |
+| Wait indefinitely for all images | ✅ | NO timeout - waits until all complete |
 | Show animation if all loaded | ✅ | Calls `showCastAnimation()` on success |
 | Skip animation if any fail | ✅ | Directly calls `onComplete()` on failure |
 | No error message | ✅ | Silent failure, no UI feedback |
@@ -168,7 +167,7 @@ Go to game (Week 1 modal)
 **Result:**
 - ✅ Loading bar appears
 - ✅ 404 errors for missing images
-- ✅ Loading bar disappears
+- ✅ Loading bar disappears immediately after all load attempts complete
 - ✅ Animation skipped
 - ✅ Callback fires immediately
 
@@ -180,23 +179,23 @@ Go to game (Week 1 modal)
 [fast-cast] Failed to preload avatar: ./avatars/NonExistent3.png
 [fast-cast] Failed to preload avatar: ./avatars/NonExistent4.png
 [fast-cast] Some avatars failed to load - skipping animation
-[fast-cast] Skipping animation due to failed/timeout preload
+[fast-cast] Skipping animation due to failed preload
 ```
 
-#### Scenario 3: Timeout (6 seconds)
-**Setup:** Avatars that take longer than 6s to load (simulated with slow connection)
+#### Scenario 3: Slow Loading (No Timeout)
+**Setup:** Avatars that take a long time to load (simulated with slow connection)
 **Result:**
 - ✅ Loading bar appears
-- ✅ Waits for 6 seconds
-- ✅ Timeout triggers
-- ✅ Animation skipped
-- ✅ Callback fires
+- ✅ Waits indefinitely for all images to complete
+- ✅ Loading bar stays visible until all images finish
+- ✅ Animation runs if all eventually succeed
+- ✅ Animation skipped if any fail
 
 **Console Output:**
 ```
 [fast-cast] Starting avatar preload for X contestants
-[fast-cast] Avatar preload timeout - skipping animation
-[fast-cast] Skipping animation due to failed/timeout preload
+[fast-cast] All avatars preloaded successfully
+[fast-cast] Starting cast animation
 ```
 
 ## Integration Points
@@ -237,10 +236,16 @@ Week 1 HOH modal appears
 - Total time: 4-5 seconds (includes animation)
 
 ### Worst Case (All Fail)
-- Preload time: Varies (immediate on 404, or 6s timeout)
-- Loading bar visible: Until failure/timeout
-- Total time: <1s (404s) or 6s (timeout)
+- Preload time: Varies (immediate on 404 errors)
+- Loading bar visible: Until all load attempts complete
+- Total time: <1s (404s) or longer for slow connections
 - Animation skipped
+
+### Slow Connection Case
+- Preload time: Could take many seconds (no timeout)
+- Loading bar visible: Until all images complete (success or failure)
+- Total time: Variable, depends on connection speed
+- Animation runs if all eventually succeed
 
 ### Resource Usage
 - Memory: ~12 Image objects (one per contestant)
@@ -279,26 +284,26 @@ Week 1 HOH modal appears
 ### Graceful Degradation
 - If `global.resolveAvatar` unavailable → uses fallback `getPlayerAvatar()`
 - If preload fails → skip animation, proceed to game
-- If timeout occurs → skip animation, proceed to game
+- NO timeout - waits indefinitely for all images to complete
 
 ## Future Enhancements (Optional)
 
-1. **Configurable Timeout**
-   - Allow custom timeout duration via parameter
-   - Default remains 6 seconds
-
-2. **Retry Logic**
+1. **Retry Logic**
    - Retry failed avatars once before skipping
    - Could reduce false negatives from transient network issues
 
-3. **Partial Animation**
+2. **Partial Animation**
    - Show animation with only successfully loaded avatars
    - Current: all-or-nothing approach
 
-4. **Analytics**
+3. **Analytics**
    - Track preload success/failure rates
    - Monitor typical load times
    - Identify problematic avatars
+
+4. **Optional Timeout**
+   - Add optional timeout parameter for edge cases
+   - Would need to be explicitly enabled by caller
 
 ## Documentation Updated
 
