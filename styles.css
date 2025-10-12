@@ -62,6 +62,20 @@
   /* Theme texture overlays (optional, can be overridden by themes) */
   --texture-overlay:none;
   --texture-opacity:0.15;
+
+  /* Popup/Modal tokens - extracted from reveal card system */
+  --popup-bg-start:rgba(28,43,62,.94);
+  --popup-bg-end:rgba(12,22,36,.90);
+  --popup-border:rgba(110,160,220,.25);
+  --popup-radius:24px;
+  --popup-shadow:0 12px 36px -16px rgba(0,0,0,.8), 0 6px 20px -8px rgba(0,0,0,.6), 0 0 0 1px rgba(120,180,255,.15);
+  --popup-shadow-inset:0 0 32px -10px var(--accent) inset;
+  --popup-backdrop-blur:16px;
+  --popup-backdrop-opacity:0.9;
+  --popup-max-width:min(780px, 92vw);
+  --popup-padding:22px 26px 24px;
+  --popup-transition-duration:0.3s;
+  --popup-inter-delay:800ms; /* delay between popups */
 }
 
 /* THEME DEFINITIONS --------------------------------------------------------- */
@@ -95,6 +109,11 @@ body:not([data-theme]){
   --roster-border:#00d9ff;
   --roster-glow:0 0 20px rgba(0,217,255,0.4);
   --roster-hover-glow:0 0 30px rgba(0,217,255,0.6), 0 0 60px rgba(0,217,255,0.3);
+  /* Theme-specific popup styling */
+  --popup-bg-start:rgba(26,26,47,.96);
+  --popup-bg-end:rgba(16,16,32,.92);
+  --popup-border:rgba(0,217,255,.35);
+  --popup-shadow:0 12px 36px -16px rgba(0,0,0,.9), 0 6px 20px -8px rgba(0,0,0,.7), 0 0 0 1px rgba(0,217,255,.2);
 }
 
 /* Modern Big Brother House Theme (Light with glassmorphism and soft accents) */
@@ -124,6 +143,12 @@ body[data-theme="modernhouse"]{
   --roster-border:#85a5ff;
   --roster-glow:0 0 15px rgba(107,143,255,0.3);
   --roster-hover-glow:0 0 25px rgba(107,143,255,0.5), 0 0 50px rgba(107,143,255,0.2);
+  /* Theme-specific popup styling */
+  --popup-bg-start:rgba(255,255,255,.98);
+  --popup-bg-end:rgba(248,248,252,.96);
+  --popup-border:rgba(107,143,255,.4);
+  --popup-shadow:0 12px 36px -16px rgba(0,0,0,.15), 0 6px 20px -8px rgba(0,0,0,.1), 0 0 0 1px rgba(107,143,255,.2);
+  --popup-backdrop-opacity:0.85;
 }
 
 /* Midnight Glass Theme (Original - Dark glassmorphism with blue/purple gradients) */
@@ -2005,6 +2030,27 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
 
 /* NEW: Gradient animation for enhanced text effects */
 @keyframes gradientShift{
+  0%, 100%{ background-position:0% 50%; }
+  50%{ background-position:100% 50%; }
+}
+
+/* NEW: Popup system animations */
+@keyframes popupBackdropFadeIn{
+  from{ opacity:0; }
+  to{ opacity:1; }
+}
+@keyframes popupBackdropFadeOut{
+  from{ opacity:1; }
+  to{ opacity:0; }
+}
+@keyframes popupSlideUp{
+  from{ opacity:0; transform:translateY(40px) scale(0.95); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes popupSlideDown{
+  from{ opacity:1; transform:translateY(0) scale(1); }
+  to{ opacity:0; transform:translateY(40px) scale(0.95); }
+}
   0%, 100%{ background-position:0% 50%; }
   50%{ background-position:100% 50%; }
 }

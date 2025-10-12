@@ -63,7 +63,10 @@
     enableMinigameTelemetryPanel: false,  // Dev debug panel (Ctrl+Shift+D when enabled)
     
     // Progression system (feature-flagged, off by default)
-    progressionEnabled: false  // Enable XP and leveling system
+    progressionEnabled: false,  // Enable XP and leveling system
+    
+    // Popup system refresh (feature-flagged, off by default)
+    popup_refresh_enabled: false  // Enable new BasePopup/PopupManager system
   };
 
   // Load configuration from localStorage
