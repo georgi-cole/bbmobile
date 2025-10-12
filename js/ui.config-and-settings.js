@@ -994,6 +994,10 @@
       tabBar.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b===btn));
       panes.querySelectorAll('.settingsTabPane').forEach(p=>p.classList.toggle('active', p.getAttribute('data-pane')===to));
       if(to==='cast'){ initCastTab(modal); }
+      if(to==='debug'){
+        populateDebugMinigameDropdown(modal);
+        wireDebugMinigameLauncher(modal);
+      }
     });
     panes.querySelector('.settingsTabPane[data-pane="general"]').classList.add('active');
 
@@ -1250,6 +1254,122 @@
       }
     });
   }
+  
+  /**
+   * Populate the debug minigame dropdown with available games
+   */
+  function populateDebugMinigameDropdown(modal){
+    if(modal.__debugMinigameDropdownPopulated) return;
+    modal.__debugMinigameDropdownPopulated = true;
+    
+    const select = modal.querySelector('#debugMinigameSelect');
+    if(!select) return;
+    
+    // Clear existing options (except the first default one)
+    while(select.options.length > 1){
+      select.remove(1);
+    }
+    
+    // Get available games from MinigameRegistry (all implemented games)
+    if(!g.MinigameRegistry){
+      console.warn('[ui.config-and-settings] MinigameRegistry not available');
+      return;
+    }
+    
+    const gameKeys = g.MinigameRegistry.getImplementedGames(true); // excludeRetired = true
+    const games = [];
+    
+    // Build game list with metadata
+    gameKeys.forEach(key => {
+      const game = g.MinigameRegistry.getGame(key);
+      if(game){
+        games.push({
+          key: game.key,
+          name: game.name,
+          description: game.description,
+          type: game.type
+        });
+      }
+    });
+    
+    // Group games by type
+    const gamesByType = {};
+    games.forEach(game => {
+      if(!gamesByType[game.type]){
+        gamesByType[game.type] = [];
+      }
+      gamesByType[game.type].push(game);
+    });
+    
+    // Add games organized by type
+    Object.keys(gamesByType).sort().forEach(type => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = type.charAt(0).toUpperCase() + type.slice(1) + ' Games';
+      
+      gamesByType[type].forEach(game => {
+        const option = document.createElement('option');
+        option.value = game.key;
+        option.textContent = game.name + ' - ' + game.description;
+        optgroup.appendChild(option);
+      });
+      
+      select.appendChild(optgroup);
+    });
+    
+    console.info('[ui.config-and-settings] Populated debug minigame dropdown with', games.length, 'games');
+  }
+  
+  /**
+   * Wire the launch minigame button
+   */
+  function wireLaunchMinigameButton(modal){
+    if(modal.__launchMinigameWired) return;
+    modal.__launchMinigameWired = true;
+    
+    const btn = modal.querySelector('#btnLaunchMinigame');
+    const select = modal.querySelector('#debugMinigameSelect');
+    
+    if(!btn || !select) return;
+    
+    // Disable button initially
+    btn.disabled = true;
+    
+    // Enable button when a game is selected
+    select.addEventListener('change', () => {
+      btn.disabled = !select.value;
+    });
+    
+    // Launch game when button is clicked
+    btn.addEventListener('click', () => {
+      const gameKey = select.value;
+      if(!gameKey){
+        notify('Please select a minigame', 'warn');
+        return;
+      }
+      
+      // Close settings modal
+      closeSettingsModal();
+      
+      // Launch minigame in debug mode using CompetitionFlow
+      if(g.CompetitionFlow && typeof g.CompetitionFlow.launchFullscreenMinigame === 'function'){
+        console.info('[ui.config-and-settings] Launching minigame in debug mode:', gameKey);
+        
+        g.CompetitionFlow.launchFullscreenMinigame(gameKey, (score) => {
+          console.info('[ui.config-and-settings] Debug minigame completed with score:', score);
+          notify('Debug minigame completed: ' + score.toFixed(1), 'ok');
+        }, {
+          timeLimit: 60,
+          debugMode: true
+        });
+      } else {
+        notify('CompetitionFlow not available', 'warn');
+        console.warn('[ui.config-and-settings] CompetitionFlow.launchFullscreenMinigame not available');
+      }
+    });
+    
+    console.info('[ui.config-and-settings] Wired launch minigame button');
+  }
+  
   function openSettingsModal(){
     ensureGameCfg();
     const dim = ensureSettingsModal();
@@ -1258,6 +1378,10 @@
     wireThemeSelector(modal);
     const activePane = modal.querySelector('.settingsTabPane.active');
     if(activePane && activePane.getAttribute('data-pane')==='cast'){ initCastTab(modal); }
+    if(activePane && activePane.getAttribute('data-pane')==='debug'){
+      populateDebugMinigameDropdown(modal);
+      wireLaunchMinigameButton(modal);
+    }
     dim.style.display = 'flex';
     setTimeout(()=>{
       const target = modal.querySelector('.settingsTabPane.active #castName') || modal.querySelector('.settingsTabPane.active input, .settingsTabPane.active select');
@@ -1295,5 +1419,6 @@
 
   // Optional global for convenience
   g.openSettingsModal = openSettingsModal;
+  g.populateDebugMinigameDropdown = populateDebugMinigameDropdown;
 
 })(window);
