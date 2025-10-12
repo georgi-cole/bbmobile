@@ -7,6 +7,40 @@ import { FALLBACK_AVATAR } from './constants.js';
 const global = window;
 const UI = global.UI || {};
 
+// Storage key for player customizations
+const PLAYER_CUSTOMIZATIONS_KEY = 'bb_player_customizations';
+
+// Load player customizations from localStorage
+function loadPlayerCustomizations(){
+  try{
+    const raw = localStorage.getItem(PLAYER_CUSTOMIZATIONS_KEY);
+    if(!raw) return {};
+    const data = JSON.parse(raw);
+    return (data && typeof data === 'object') ? data : {};
+  }catch(e){
+    console.warn('[cast-tab] loadPlayerCustomizations failed', e);
+    return {};
+  }
+}
+
+// Save player customizations to localStorage
+function savePlayerCustomizations(customizations){
+  try{
+    localStorage.setItem(PLAYER_CUSTOMIZATIONS_KEY, JSON.stringify(customizations || {}));
+  }catch(e){
+    console.warn('[cast-tab] savePlayerCustomizations failed', e);
+  }
+}
+
+// Clear player customizations from localStorage
+function clearPlayerCustomizations(){
+  try{
+    localStorage.removeItem(PLAYER_CUSTOMIZATIONS_KEY);
+  }catch(e){
+    console.warn('[cast-tab] clearPlayerCustomizations failed', e);
+  }
+}
+
 // Cast tab state management
 function castState(modal){
   modal.__cast = modal.__cast || {
@@ -278,6 +312,22 @@ function saveCurrentCastForm(modal){
     p.photo = upDataUrl;
   }
 
+  // Persist player customizations to localStorage
+  const customizations = loadPlayerCustomizations();
+  customizations[p.id] = {
+    name: p.name,
+    avatar: p.avatar || null,
+    img: p.img || null,
+    photo: p.photo || null,
+    meta: {
+      age: p.meta.age,
+      sex: p.meta.sex,
+      occupation: p.meta.occupation,
+      motto: p.meta.motto
+    }
+  };
+  savePlayerCustomizations(customizations);
+
   try{
     global.updateHud?.();
   }catch(e){}
@@ -303,6 +353,7 @@ function buildCastPaneHTML(){
         '<div class="cast-wrap">',
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">',
             '<span class="tiny muted" id="castProgress" role="status" aria-live="polite">0/0</span>',
+            '<button class="btn danger small" id="btnResetCast" style="font-size:0.7rem;padding:4px 8px;" title="Reset all player customizations to defaults">Reset Cast</button>',
           '</div>',
           '<div class="cast-strip" id="castRosterStrip" role="list" aria-label="Cast roster" tabindex="0"></div>',
           '<div class="cast-editor">',
@@ -367,6 +418,37 @@ function initCastTab(modal){
   if(!pane.__cast_initialized){
     pane.__cast_initialized = true;
     wireCastEditor(modal);
+    
+    // Wire Reset Cast button
+    const resetBtn = modal.querySelector('#btnResetCast');
+    if(resetBtn && !resetBtn.__wired){
+      resetBtn.__wired = true;
+      resetBtn.addEventListener('click', async function(){
+        // Confirm before resetting
+        const confirmed = typeof global.showConfirm === 'function' 
+          ? await global.showConfirm('Reset all player customizations (names, avatars, bios) to defaults? This will affect the next season restart.', {
+              title: 'Reset Cast',
+              confirmText: 'Reset',
+              tone: 'danger'
+            })
+          : window.confirm('Reset all player customizations (names, avatars, bios) to defaults? This will affect the next season restart.');
+        
+        if(!confirmed) return;
+        
+        // Clear stored customizations
+        clearPlayerCustomizations();
+        
+        // Reload the game cast to apply defaults
+        if(typeof global.buildCast === 'function'){
+          global.buildCast();
+          global.addLog?.('Cast reset to defaults. All customizations cleared.', 'warn');
+        }
+        
+        // Refresh the cast editor UI
+        renderCastStrip(modal);
+        fillCastForm(modal);
+      });
+    }
   }
   
   renderCastStrip(modal);
@@ -380,7 +462,10 @@ export {
   renderCastStrip,
   fillCastForm,
   saveCurrentCastForm,
-  wireCastEditor
+  wireCastEditor,
+  loadPlayerCustomizations,
+  savePlayerCustomizations,
+  clearPlayerCustomizations
 };
 
 // Attach all APIs to window for registry/legacy hooks
@@ -390,3 +475,6 @@ global.renderCastStrip = renderCastStrip;
 global.fillCastForm = fillCastForm;
 global.saveCurrentCastForm = saveCurrentCastForm;
 global.wireCastEditor = wireCastEditor;
+global.loadPlayerCustomizations = loadPlayerCustomizations;
+global.savePlayerCustomizations = savePlayerCustomizations;
+global.clearPlayerCustomizations = clearPlayerCustomizations;

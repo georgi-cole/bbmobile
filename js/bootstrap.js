@@ -133,6 +133,31 @@
     global.attachBios?.(g);
     global.initAffinities();
     global.initRelationships();
+    
+    // Apply saved player customizations from localStorage
+    if(typeof global.loadPlayerCustomizations === 'function'){
+      const customizations = global.loadPlayerCustomizations();
+      if(customizations && typeof customizations === 'object'){
+        g.players.forEach(function(p){
+          const custom = customizations[p.id];
+          if(custom){
+            // Apply saved name, avatar, and meta data
+            if(custom.name) p.name = custom.name;
+            if(custom.avatar) p.avatar = custom.avatar;
+            if(custom.img) p.img = custom.img;
+            if(custom.photo) p.photo = custom.photo;
+            if(custom.meta){
+              p.meta = p.meta || {};
+              if(custom.meta.age != null) p.meta.age = custom.meta.age;
+              if(custom.meta.sex) p.meta.sex = custom.meta.sex;
+              if(custom.meta.occupation) p.meta.occupation = custom.meta.occupation;
+              if(custom.meta.motto) p.meta.motto = custom.meta.motto;
+            }
+          }
+        });
+      }
+    }
+    
     resetRoundState();
     // Reset public favourite flag for new season
     global.__publicFavDone = false;
@@ -153,12 +178,15 @@
     const g=global.game;
 
     if(preservePlayers && Array.isArray(g.players) && g.players.length){
+      // Preserve existing player customizations (names, avatars, meta)
       g.players.forEach(p=>{
+        // Reset game state but preserve identity and customizations
         p.evicted=false; p.nominated=false; p.hoh=false;
         p.wins = {hoh:0, veto:0};
         p.stats = {hohWins:0, vetoWins:0};
         p.threat = global.THREAT_BASE ?? 0.5;
         p.weekEvicted=null; p.winner=false; p.runnerUp=false;
+        // Note: p.name, p.avatar, p.meta are preserved
       });
       global.attachBios?.(g);
       global.initAffinities();
