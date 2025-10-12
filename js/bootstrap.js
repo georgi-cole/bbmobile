@@ -152,6 +152,13 @@
               if(custom.meta.sex) p.meta.sex = custom.meta.sex;
               if(custom.meta.occupation) p.meta.occupation = custom.meta.occupation;
               if(custom.meta.motto) p.meta.motto = custom.meta.motto;
+              
+              // Sync p.bio with p.meta to ensure display consistency
+              if(!p.bio) p.bio = {};
+              if(custom.meta.age != null) p.bio.age = custom.meta.age;
+              if(custom.meta.sex) p.bio.gender = custom.meta.sex;
+              if(custom.meta.occupation) p.bio.occupation = custom.meta.occupation;
+              if(custom.meta.motto) p.bio.motto = custom.meta.motto;
             }
           }
         });
@@ -187,6 +194,14 @@
         p.threat = global.THREAT_BASE ?? 0.5;
         p.weekEvicted=null; p.winner=false; p.runnerUp=false;
         // Note: p.name, p.avatar, p.meta are preserved
+        
+        // Sync p.bio with p.meta to ensure display consistency after rebuild
+        if(p.meta && p.bio){
+          if(p.meta.age != null) p.bio.age = p.meta.age;
+          if(p.meta.sex) p.bio.gender = p.meta.sex;
+          if(p.meta.occupation) p.bio.occupation = p.meta.occupation;
+          if(p.meta.motto) p.bio.motto = p.meta.motto;
+        }
       });
       global.attachBios?.(g);
       global.initAffinities();
