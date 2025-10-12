@@ -162,101 +162,7 @@
   </div>
 </div>
 
-<!-- Settings Modal -->
-<div id="settingsModal" class="modal-backdrop" aria-modal="true" role="dialog">
-  <div class="modal">
-    <button class="closeX" id="btnCloseSettings">✕</button>
-    <h2>Settings</h2>
-    <div class="modalTabs">
-      <button class="tab-btn active" data-tab="tabTimers">Room & Timers</button>
-      <button class="tab-btn" data-tab="tabFeatures">Features</button>
-      <button class="tab-btn" data-tab="tabTwists">Twists</button>
-      <button class="tab-btn" data-tab="tabManage">Manage</button>
-    </div>
-    <div class="settingsTabPane active" id="tabTimers">
-      <h3>Room & Timers</h3>
-      <div class="settingsGrid">
-        <label>Human name<input id="humanName" value="You"/></label>
-        <label>Players total<input id="numPlayers" type="number" min="6" max="22" value="12"/></label>
-        <label>TV Background Image URL<input id="tvBgUrl" type="url" placeholder="https://...image.jpg"/></label>
-        <label>HOH seconds<input id="tHOH" type="number" min="10" value="35"/></label>
-        <label>Noms seconds<input id="tNoms" type="number" min="10" value="25"/></label>
-        <label>Veto seconds<input id="tVeto" type="number" min="10" value="30"/></label>
-        <label>Veto decision<input id="tVetoDec" type="number" min="10" value="20"/></label>
-        <label>Comms seconds<input id="tComms" type="number" min="10" value="30"/></label>
-        <label>Live vote seconds<input id="tVote" type="number" min="10" value="25"/></label>
-        <label>Jury seconds<input id="tJury" type="number" min="10" value="42"/></label>
-        <label>Juror return vote seconds<input id="tJuryReturnVote" type="number" min="8" value="12"/></label>
-      </div>
-    </div>
-    <div class="settingsTabPane" id="tabFeatures">
-      <h3>Features</h3>
-      <div class="toggleRow">
-        <label class="inline"><input id="fxCards" type="checkbox" checked/> Reveal cards</label>
-        <label class="inline"><input id="fxSound" type="checkbox" checked/> Sound FX</label>
-        <label class="inline"><input id="fxAnim" type="checkbox" checked/> Extra animations</label>
-        <label class="inline"><input id="manualMode" type="checkbox"/> Manual mode</label>
-        <label class="inline"><input id="enableJuryHouse" type="checkbox" checked/> Jury house</label>
-        <label class="inline"><input id="autoMusicSetting" type="checkbox" checked/> Auto music</label>
-        <label class="inline"><input id="enablePublicFav" type="checkbox"/> Public's Favourite Player at finale</label>
-        <label class="inline">Card style:
-          <select id="fxStyle">
-            <option value="fade">Fade</option>
-            <option value="slide">Slide</option>
-            <option value="flip">Flip</option>
-            <option value="zoom">Zoom</option>
-          </select>
-        </label>
-        <label class="inline">Minigames:
-          <select id="miniMode">
-            <option value="random">Random</option>
-            <option value="clicker">Clicker only</option>
-            <option value="cycle">Cycle</option>
-          </select>
-        </label>
-        <label class="inline" style="width:100%;flex-basis:100%;">House Theme:
-          <select id="themeSelector" style="margin-left:8px;">
-            <option value="classic">Classic - Original Big Brother</option>
-            <option value="wooden">Wooden House - Cozy Cabin</option>
-            <option value="studio">TV Studio - Broadcast Pro</option>
-            <option value="modern">Modern House - Sleek Minimalist</option>
-          </select>
-        </label>
-      </div>
-      <div class="tiny muted" style="margin-top:6px;">Select a house theme to change colors and atmosphere. Your preference is saved automatically.</div>
-    </div>
-    <div class="settingsTabPane" id="tabTwists">
-      <h3>Twists</h3>
-      <div class="toggleRow">
-        <label class="inline">Double eviction % <input id="doubleChance" type="number" min="0" max="100" value="10" style="max-width:80px"/></label>
-        <label class="inline">Triple eviction % <input id="tripleChance" type="number" min="0" max="100" value="3" style="max-width:80px"/></label>
-        <label class="inline">Return twist % <input id="returnChance" type="number" min="1" max="100" value="50" style="max-width:80px"/></label>
-        <label class="inline">Auto-eviction % <input id="selfEvictChance" type="number" min="0" max="2" step="0.1" value="0" style="max-width:80px"/></label>
-      </div>
-      <div class="tiny muted">Juror return can trigger before HOH when enough jurors are in the Jury House.</div>
-    </div>
-    <div class="settingsTabPane" id="tabManage">
-      <h3>Cast Edit (Lobby Only)</h3>
-      <div class="row">
-        <button id="btnEditCast" class="btn small">Toggle Edit Mode</button>
-        <button id="btnRebuildGame" class="btn small">Rebuild Game</button>
-      </div>
-      <div class="sep"></div>
-      <h3>Game Control</h3>
-      <div class="row">
-        <button id="btnStart" class="btn primary small">Restart Season</button>
-        <button id="btnReset" class="btn danger small">Reset to default</button>
-      </div>
-      <div class="sep"></div>
-      <h3>Data</h3>
-      <div class="row">
-        <button id="btnExport2" class="btn small">Export Save</button>
-        <button id="btnImport2" class="btn small">Import Save</button>
-      </div>
-      <div class="tiny muted" style="margin-top:6px">Esc or ✕ closes and auto‑saves.</div>
-    </div>
-  </div>
-</div>
+<!-- Settings Modal - Now dynamically generated from js/settings/registry.js -->
 
 <!-- Finale Overlay -->
 <div id="finaleDim">
@@ -275,14 +181,18 @@
 <script src="js/avatar.js"></script>
 <script>window.MUSIC_BASE = 'audio/';</script> <script src="js/audio.js?v=fixes-6"></script>
 
-<!-- Settings & UI -->
+<!-- Settings & UI (NEW: Centralized Settings System) -->
+<script defer src="js/config/defaults.js"></script>
+<script defer src="js/settings/effects.js"></script>
+<script defer src="js/settings/registry.js"></script>
+<script defer src="js/settings/cast-tab.js"></script>
+<script defer src="js/settings/render.js"></script>
 <script defer src="js/ui.config-and-settings.js"></script>
 <script defer src="js/theme-switcher.js"></script>
 
 <!-- NEW: TV screen upload (image/video) -->
 <script defer src="js/ui.tv-media.js"></script>
 <script defer src="js/tv.js"></script>
-<script defer src="js/settings.js"></script>
 <script defer src="js/players-total.js?v=5"></script>
 <script defer src="js/ui.overlay-and-logs.js"></script>
 <script defer src="js/cards-queue.js"></script>
