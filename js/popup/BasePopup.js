@@ -159,7 +159,7 @@
         closeBtn.style.color = 'var(--muted)';
       });
       closeBtn.addEventListener('click', () => {
-        closePopup();
+        closePopup('button');
       });
       header.appendChild(closeBtn);
     }
@@ -215,8 +215,8 @@
     // Focus trap cleanup function
     let releaseFocusTrap = null;
 
-    // Close function
-    function closePopup(){
+    // Close function (accepts optional dismissMethod for telemetry)
+    function closePopup(dismissMethod = 'programmatic'){
       // Cleanup focus trap
       if(releaseFocusTrap){
         releaseFocusTrap();
@@ -232,9 +232,9 @@
           backdrop.parentNode.removeChild(backdrop);
         }
         
-        // Call onClose callback
+        // Call onClose callback with dismiss method
         if(typeof onClose === 'function'){
-          onClose();
+          onClose(dismissMethod);
         }
       }, 300);
     }
@@ -243,7 +243,7 @@
     if(closeOnBackdrop){
       backdrop.addEventListener('click', (e) => {
         if(e.target === backdrop){
-          closePopup();
+          closePopup('backdrop');
         }
       });
     }
@@ -252,7 +252,7 @@
     if(closeOnEsc){
       const escHandler = (e) => {
         if(e.key === 'Escape'){
-          closePopup();
+          closePopup('esc');
           document.removeEventListener('keydown', escHandler);
         }
       };
