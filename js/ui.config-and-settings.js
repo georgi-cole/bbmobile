@@ -1547,6 +1547,7 @@
 
   // Optional global for convenience
   g.openSettingsModal = openSettingsModal;
+  g.ensureGameCfg = ensureGameCfg;
   g.populateDebugMinigameDropdown = populateDebugMinigameDropdown;
 
 })(window);
