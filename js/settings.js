@@ -1,11 +1,14 @@
 // MODULE: settings.js
-// Restores and upgrades the Settings modal.
+// **DEPRECATED** - This file is no longer used. The settings system has been centralized.
+// See: js/config/defaults.js, js/settings/registry.js, js/settings/render.js
+// 
+// Old functionality:
 // - Re-wires the Settings button (creates one if missing).
 // - Tabbed modal with grouped settings.
 // - Persists settings to localStorage and applies to game config (g.cfg).
 // - Adds useful toggles and tools (export/import/reset).
 //
-// Usage: include after ui.js (and before bootstrap.js). See scripts.html snippet.
+// This file is kept for reference only and is no longer loaded in index.html.
 
 (function(global){
   'use strict';
