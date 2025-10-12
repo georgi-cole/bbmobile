@@ -1031,6 +1031,30 @@ header.innerHTML = `
     g.tv?.say?.('Season Premiere');
     try{ g.setMusic?.('theme_opening', true); }catch{}
     g.setPhase('opening', game.cfg?.tOpening || 90, g.finishOpening);
+    
+    // Check if reality-TV style intro is enabled and available
+    const useRealityIntro = game.cfg?.useRealityIntro !== false && 
+                            typeof g.IntroShow !== 'undefined' && 
+                            g.IntroShow.hasGsap();
+    
+    if (useRealityIntro) {
+      console.info('[opening] Using reality-TV style intro sequence');
+      try {
+        const players = [...(game.players || [])];
+        g.IntroShow.play(players, () => {
+          console.info('[opening] Reality-TV intro completed');
+          if (game.phase === 'opening') {
+            g.finishOpening();
+          }
+        });
+        return;
+      } catch (e) {
+        console.warn('[opening] Reality-TV intro failed, falling back to classic:', e);
+      }
+    }
+    
+    // Classic dual-card intro sequence (fallback)
+    console.info('[opening] Using classic dual-card intro sequence');
     try{
       const players=[...(game.players||[])];
       const pairs=[]; for(let i=0;i<players.length;i+=2){ pairs.push([players[i], players[i+1]]); }
@@ -1071,6 +1095,13 @@ header.innerHTML = `
   g.startOpeningSequence = startOpeningSequence;
   function skipIntro(userTriggered){
     const game=g.game||{};
+    
+    // Stop reality-TV intro if active
+    if (typeof g.IntroShow !== 'undefined' && g.IntroShow.isActive()) {
+      g.IntroShow.stop();
+    }
+    
+    // Clear classic intro handles
     if(Array.isArray(game.__introHandles)){
       game.__introHandles.forEach(h=>clearTimeout(h));
       game.__introHandles=[];

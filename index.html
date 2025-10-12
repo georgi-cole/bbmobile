@@ -13,9 +13,13 @@
   <!-- After fonts in <head> -->
 <link rel="stylesheet" href="styles.css?v=fixes-5">
 <link rel="stylesheet" href="overrides-fixes.css?v=fixes-5">
+<link rel="stylesheet" href="styles-intro-show.css">
 
 <!-- Global shim for resilience against stray global references -->
 <script>window.global = window;</script>
+
+<!-- GSAP Animation Library (for intro show) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <!-- Top Controls -->
@@ -199,6 +203,7 @@
         <label class="inline"><input id="enableJuryHouse" type="checkbox" checked/> Jury house</label>
         <label class="inline"><input id="autoMusicSetting" type="checkbox" checked/> Auto music</label>
         <label class="inline"><input id="enablePublicFav" type="checkbox"/> Public's Favourite Player at finale</label>
+        <label class="inline"><input id="useRealityIntro" type="checkbox" checked/> Reality-TV Intro (GSAP)</label>
         <label class="inline">Card style:
           <select id="fxStyle">
             <option value="fade">Fade</option>
@@ -286,6 +291,7 @@
 <script defer src="js/players-total.js?v=5"></script>
 <script defer src="js/ui.overlay-and-logs.js"></script>
 <script defer src="js/cards-queue.js"></script>
+<script defer src="js/introShow.js"></script>
 <script defer src="js/ui.hud-and-router.js?v=bio-panel-2"></script>
 
 <script defer src="js/ui.rules.js?v=fixes-5"></script>
