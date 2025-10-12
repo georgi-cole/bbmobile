@@ -229,6 +229,14 @@
             html('<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn small" id="btnNextWeek">Force Week ▶</button><button class="btn small" id="btnClearLog">Clear Log</button><button class="btn small" id="btnDebugExport">Export Save</button><button class="btn small" id="btnDebugImport">Import</button></div>'),
             html('<input id="debugImportFile" type="file" accept="application/json" style="display:none"/>')
           ]
+        },
+        {
+          title: 'Minigame Testing',
+          fields: [
+            html('<div class="toggleRow"><label style="display:block;margin-bottom:8px;">Select Minigame</label><select id="debugMinigameSelect" style="width:100%;padding:6px 10px;border-radius:6px;background:var(--card-2);border:1px solid var(--line);color:var(--ink);font-size:.9rem;"><option value="">-- Select a minigame --</option></select></div>'),
+            html('<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn primary" id="btnLaunchMinigame">🚀 Launch Minigame</button></div>'),
+            html('<div class="tiny muted" style="margin-top:6px;">Launch any implemented minigame in a debug sandbox for manual testing. The game will run independently without affecting game flow.</div>')
+          ]
         }
       ]
     }
