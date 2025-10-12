@@ -40,6 +40,17 @@
 
   function safeShowCard(title, lines = [], tone = 'neutral', dur = 4200, uniform = false) {
     try {
+      const cfg = global.game?.cfg || {};
+      
+      // Check if new popup system is enabled
+      if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
+        global.PopupMigrationHelpers.migratedShowCard(title, lines, tone, dur, uniform, {
+          popupType: 'competition_info'
+        });
+        return;
+      }
+      
+      // Legacy fallback
       if (typeof global.showCard === 'function') {
         return global.showCard(title, lines, tone, dur, uniform);
       }
@@ -693,8 +704,17 @@
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
     try {
-      if (showIntro && typeof global.showCard === 'function') {
-        global.showCard(title, ['Revealing top 3...'], 'neutral', introDuration);
+      const cfg = global.game?.cfg || {};
+      
+      if (showIntro) {
+        if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
+          global.PopupMigrationHelpers.migratedShowCard(title, ['Revealing top 3...'], 'neutral', introDuration, false, {
+            popupType: 'competition_reveal_intro'
+          });
+        } else if (typeof global.showCard === 'function') {
+          global.showCard(title, ['Revealing top 3...'], 'neutral', introDuration);
+        }
+        
         if (typeof global.cardQueueWaitIdle === 'function') {
           await global.cardQueueWaitIdle();
         }
@@ -702,35 +722,53 @@
       }
 
       if (topThree[2]) {
-        if (typeof global.showCard === 'function') {
-          const lines = [topThree[2].name || topThree[2]];
+        const lines = [topThree[2].name || topThree[2]];
+        
+        if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
+          global.PopupMigrationHelpers.migratedShowCard('3rd Place', lines, 'neutral', placeDuration, false, {
+            popupType: 'competition_result_3rd'
+          });
+        } else if (typeof global.showCard === 'function') {
           global.showCard('3rd Place', lines, 'neutral', placeDuration);
-          if (typeof global.cardQueueWaitIdle === 'function') {
-            await global.cardQueueWaitIdle();
-          }
-          await sleep(1200);
         }
+        
+        if (typeof global.cardQueueWaitIdle === 'function') {
+          await global.cardQueueWaitIdle();
+        }
+        await sleep(1200);
       }
 
       if (topThree[1]) {
-        if (typeof global.showCard === 'function') {
-          const lines = [topThree[1].name || topThree[1]];
+        const lines = [topThree[1].name || topThree[1]];
+        
+        if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
+          global.PopupMigrationHelpers.migratedShowCard('2nd Place', lines, 'neutral', placeDuration, false, {
+            popupType: 'competition_result_2nd'
+          });
+        } else if (typeof global.showCard === 'function') {
           global.showCard('2nd Place', lines, 'neutral', placeDuration);
-          if (typeof global.cardQueueWaitIdle === 'function') {
-            await global.cardQueueWaitIdle();
-          }
-          await sleep(1200);
         }
+        
+        if (typeof global.cardQueueWaitIdle === 'function') {
+          await global.cardQueueWaitIdle();
+        }
+        await sleep(1200);
       }
 
       if (topThree[0]) {
-        if (typeof global.showCard === 'function') {
-          const winnerTitle = `${title} Winner ${winnerEmoji}`;
-          const lines = [topThree[0].name || topThree[0]];
+        const winnerTitle = `${title} Winner ${winnerEmoji}`;
+        const lines = [topThree[0].name || topThree[0]];
+        
+        if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
+          global.PopupMigrationHelpers.migratedShowCard(winnerTitle, lines, winnerTone, winnerDuration, false, {
+            popupType: 'competition_result_winner'
+          });
+        } else if (typeof global.showCard === 'function') {
           global.showCard(winnerTitle, lines, winnerTone, winnerDuration);
-          if (typeof global.cardQueueWaitIdle === 'function') {
-            await global.cardQueueWaitIdle();
-          }
+        }
+        
+        if (typeof global.cardQueueWaitIdle === 'function') {
+          await global.cardQueueWaitIdle();
         }
       }
     } catch (e) {

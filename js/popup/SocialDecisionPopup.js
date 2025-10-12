@@ -116,19 +116,19 @@
     button.setAttribute('type', 'button');
 
     // Theme-based styling with token inheritance
-    let bgColor, hoverColor, textColor;
+    let bgColor, hoverBrightness, textColor;
     
     if(theme === 'accept'){
       bgColor = 'var(--good)';
-      hoverColor = '#5ec276';
+      hoverBrightness = '1.1';  // Slightly brighter on hover
       textColor = '#0d151f';
     } else if(theme === 'refuse'){
       bgColor = 'var(--bad)';
-      hoverColor = '#ff5555';
+      hoverBrightness = '1.1';
       textColor = '#fff';
     } else {
       bgColor = 'var(--primary-3)';
-      hoverColor = 'var(--accent)';
+      hoverBrightness = '1.15';
       textColor = 'var(--ink)';
     }
 
@@ -147,13 +147,13 @@
     `;
 
     button.addEventListener('mouseenter', () => {
-      button.style.background = hoverColor;
+      button.style.filter = `brightness(${hoverBrightness})`;
       button.style.transform = 'translateY(-2px)';
       button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
     });
 
     button.addEventListener('mouseleave', () => {
-      button.style.background = bgColor;
+      button.style.filter = 'brightness(1)';
       button.style.transform = 'translateY(0)';
       button.style.boxShadow = 'none';
     });
