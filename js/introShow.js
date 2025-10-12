@@ -85,12 +85,19 @@
     }
   }
 
+  // Resolve avatar for a player with fallback chain
+  function resolveAvatarForPlayer(player) {
+    return g.resolveAvatar?.(player) ||
+           player.avatar ||
+           'https://api.dicebear.com/6.x/bottts/svg?seed=' + (player.name || 'Guest');
+  }
+
   // Build a contestant card
   function buildContestantCard(player) {
     const card = document.createElement('div');
     card.className = 'intro-contestant-card';
     
-    const avatar = g.resolveAvatar?.(player) || player.avatar || 'https://api.dicebear.com/6.x/bottts/svg?seed=' + (player.name || 'Guest');
+    const avatar = resolveAvatarForPlayer(player);
     
     card.innerHTML = `
       <div class="intro-card-bg"></div>
