@@ -220,6 +220,8 @@
     g.__twistPlannedEvictions=1;
     g.__twistNomSlots=2;
     g.__twistDecidedWeek=g.week;
+    // Reset badge flag to prevent badge from appearing before announcement modal
+    g.__twistBadgeShown=false;
 
     tryMaybeAutoSelfEvict();
 
@@ -642,6 +644,8 @@
     g.__twistEvictedThisNight=0;
     g.__twistNomSlots=2;
     g.__twistNomineeSnapshot=null;
+    // Clear badge flag when twist ends
+    g.__twistBadgeShown=false;
     global.updateHud?.();
   }
 
