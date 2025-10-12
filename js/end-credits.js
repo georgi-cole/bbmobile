@@ -17,6 +17,11 @@
 
   const VERSION = 'bb-credits-split-r3';
 
+  // Import centralized avatar constants
+  const getDicebearUrl = g.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Houseguest')}`;
+  };
+
   // Config
   const DEFAULT_YT_ID    = 'J9c-KrYjy44'; // prior credits ID
   const DEFAULT_VOLUME   = 55;            // 0..100
@@ -275,7 +280,7 @@ No copyright infringement intended.` }
 
     // Start montage
     const frames = normalizeFrames(images && images.length ? images : playersImages());
-    const finalFrames = frames.length ? frames : [{ url:`https://api.dicebear.com/6.x/bottts/svg?seed=Houseguest`, caption:'Houseguest' }];
+    const finalFrames = frames.length ? frames : [{ url:getDicebearUrl('Houseguest'), caption:'Houseguest' }];
     imageTimer = startMontage(montage, caption, finalFrames, perImageMs);
 
     // Play credit slides to totalMs, then stop cleanly

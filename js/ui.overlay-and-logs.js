@@ -2,6 +2,11 @@
   'use strict';
   const UI = g.UI || (g.UI = {});
 
+  // Import centralized avatar constants
+  const getDicebearUrl = g.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+  };
+
   function ensureCfg(){
     g.game = g.game || {};
     g.game.cfg = g.game.cfg || {};
@@ -169,7 +174,7 @@
         img.className='rc-face'+(size?(' '+size):'');
         img.alt=p?.name||'Player';
         const resolveAvatar = (window.Game||window).resolveAvatar;
-        img.src=resolveAvatar?.(p||id) || p?.avatar||p?.img||p?.photo||`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p?.name||String(id))}`;
+        img.src=resolveAvatar?.(p||id) || p?.avatar||p?.img||p?.photo||getDicebearUrl(p?.name||String(id));
         return img;
       };
       if(opts.arrow && ids.length===2){
@@ -232,7 +237,7 @@
           actorImg.alt=ap?.name||'Actor';
           const resolveAvatar = (window.Game||window).resolveAvatar;
           actorImg.src=resolveAvatar?.(ap||actorId) || ap?.avatar||ap?.img||ap?.photo||
-            `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(ap?.name||String(actorId))}`;
+            getDicebearUrl(ap?.name||String(actorId));
           row.appendChild(actorImg);
           
           const arrow=document.createElement('div'); arrow.className='rc-arrow'; arrow.textContent='→';
@@ -245,7 +250,7 @@
             tImg.className='rc-face'+(size?(' '+size):'');
             tImg.alt=tp?.name||'Target';
             tImg.src=resolveAvatar?.(tp||tid) || tp?.avatar||tp?.img||tp?.photo||
-              `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(tp?.name||String(tid))}`;
+              getDicebearUrl(tp?.name||String(tid));
             row.appendChild(tImg);
           });
           
@@ -265,7 +270,7 @@
             img.alt=p?.name||'Player';
             const resolveAvatar = (window.Game||window).resolveAvatar;
             img.src=resolveAvatar?.(p||id) || p?.avatar||p?.img||p?.photo||
-              `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p?.name||String(id))}`;
+              getDicebearUrl(p?.name||String(id));
             row.appendChild(img);
           });
         }

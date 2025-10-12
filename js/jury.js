@@ -7,6 +7,11 @@
   // Browser global alias for modules that expect window.global
   if (!g.global) g.global = g;
 
+  // Import centralized avatar constants
+  const getDicebearUrl = g.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+  };
+
   // ===== Utilities =====
   function ap(){ return (g.alivePlayers?.()||[]).slice(); }
   function gp(id){ return g.getP?.(id); }
@@ -31,7 +36,7 @@
     const player = gp(playerId);
     if (!player) {
       console.warn(`[jury] avatar: player not found id=${playerId}`);
-      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(String(playerId))}`;
+      return getDicebearUrl(String(playerId));
     }
     
     const name = player.name || String(playerId);
@@ -51,7 +56,7 @@
     if (g.getAvatarFallback) {
       return g.getAvatarFallback(name, failedUrl);
     }
-    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name || 'player')}`;
+    return getDicebearUrl(name || 'player');
   }
 
   function finalists(){

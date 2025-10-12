@@ -2,10 +2,15 @@
   'use strict';
   const UI = g.UI || (g.UI = {});
 
+  // Import centralized avatar constants
+  const getDicebearUrl = g.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Guest')}`;
+  };
+
   // Constants and storage
   const SETTINGS_STORE_KEY = 'bb_cfg_v2';
   const INJECTED_CSS_ID = 'ui_injected_styles_v2';
-  const FALLBACK_AVATAR = 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest';
+  const FALLBACK_AVATAR = getDicebearUrl('Guest');
   UI.FALLBACK_AVATAR = FALLBACK_AVATAR;
 
   // Name shortening utility
@@ -585,8 +590,8 @@
       chip.setAttribute('data-idx', String(i));
       chip.setAttribute('role', 'listitem');
       chip.setAttribute('tabindex', i===state.idx ? '0' : '-1');
-      const imgSrc = (window.Game||window).resolveAvatar?.(p) || p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
-      const fallbackSrc = (window.Game||window).getAvatarFallback?.(p.name||'guest') || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
+      const imgSrc = (window.Game||window).resolveAvatar?.(p) || p.avatar || p.img || p.photo || getDicebearUrl(p.name||'guest');
+      const fallbackSrc = (window.Game||window).getAvatarFallback?.(p.name||'guest') || getDicebearUrl(p.name||'guest');
       const displayName = shortenName(p.name || '', 15); // Shorten for roster chip display
       chip.innerHTML = `
         <div class="chip-ava">
@@ -686,7 +691,7 @@
     occ.value = meta.occupation || '';
     motto.value = meta.motto || '';
 
-    const imgSrc = (window.Game||window).resolveAvatar?.(p) || p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
+    const imgSrc = (window.Game||window).resolveAvatar?.(p) || p.avatar || p.img || p.photo || getDicebearUrl(p.name||'guest');
     if(preview) preview.src = imgSrc;
 
     castState(modal).dirty = false;
