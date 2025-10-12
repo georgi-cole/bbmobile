@@ -762,6 +762,11 @@
     g.hohId=null;
     console.info('[eviction] badges cleared after eviction reveal');
 
+    // Update PlayerService with current alive players after eviction
+    if(typeof global.PlayerService?.setAlivePlayers === 'function' && g.players){
+      global.PlayerService.setAlivePlayers(g.players);
+    }
+
     if(!g.__twistMode) global.twists?.afterPhase?.('eviction');
 
     postEvictionRouting();

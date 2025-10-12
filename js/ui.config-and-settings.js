@@ -1200,6 +1200,11 @@
             g.game = obj;
             notify('Save imported', 'ok');
             if(typeof g.updateHud === 'function') g.updateHud();
+            
+            // Update PlayerService after loading game state
+            if(typeof window.PlayerService?.setAlivePlayers === 'function' && g.game?.players){
+              window.PlayerService.setAlivePlayers(g.game.players);
+            }
           }catch(err){ notify('Import failed: '+err, 'warn'); }
         };
         fr.readAsText(file);
@@ -1431,16 +1436,51 @@
   }
   
   /**
+   * Wait for PlayerService to become available with brief polling
+   * Handles race condition where modal opens before PlayerService script loads
+   * @param {number} maxAttempts - Maximum polling attempts (default: 10)
+   * @param {number} interval - Polling interval in ms (default: 50)
+   * @returns {Promise<boolean>} True if PlayerService became available
+   */
+  function waitForPlayerService(maxAttempts = 10, interval = 50){
+    return new Promise((resolve) => {
+      let attempts = 0;
+      
+      const check = () => {
+        if(typeof window.PlayerService?.subscribe === 'function'){
+          console.info('[ui.config-and-settings] PlayerService detected');
+          resolve(true);
+          return;
+        }
+        
+        attempts++;
+        if(attempts >= maxAttempts){
+          console.info('[ui.config-and-settings] PlayerService not available after polling');
+          resolve(false);
+          return;
+        }
+        
+        setTimeout(check, interval);
+      };
+      
+      check();
+    });
+  }
+  
+  /**
    * Set up PlayerService subscription for live updates while modal is open
    * Uses MutationObserver to clean up when modal is removed from DOM
+   * Polls briefly for PlayerService to handle script load race conditions
    */
-  function setupPlayerServiceSubscription(modal){
+  async function setupPlayerServiceSubscription(modal){
     // Only set up once per modal instance
     if(modal.__playerServiceWired) return;
     modal.__playerServiceWired = true;
     
-    // Check if PlayerService is available
-    if(typeof window.PlayerService?.subscribe !== 'function'){
+    // Wait briefly for PlayerService to load (handles race conditions)
+    const available = await waitForPlayerService();
+    
+    if(!available){
       console.info('[ui.config-and-settings] PlayerService not available, skipping live updates');
       return;
     }

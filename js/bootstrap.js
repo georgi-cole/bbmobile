@@ -136,6 +136,12 @@
     resetRoundState();
     // Reset public favourite flag for new season
     global.__publicFavDone = false;
+    
+    // Update PlayerService with initial alive players
+    if(typeof global.PlayerService?.setAlivePlayers === 'function'){
+      global.PlayerService.setAlivePlayers(g.players || []);
+    }
+    
     global.addLog?.('Game created. Waiting to start…','muted');
     global.tv?.say?.('Game created. Waiting to start…');
     global.updateHud?.();
@@ -160,6 +166,11 @@
       resetRoundState();
       // Reset public favourite flag for new season
       global.__publicFavDone = false;
+      
+      // Update PlayerService with rebuilt players
+      if(typeof global.PlayerService?.setAlivePlayers === 'function'){
+        global.PlayerService.setAlivePlayers(g.players || []);
+      }
     } else {
       buildCast();
     }
