@@ -180,18 +180,55 @@ test('Backwards compatibility: fails gracefully', () => {
   const originalGetItem = global.localStorage.getItem;
   global.localStorage.getItem = () => { throw new Error('Storage error'); };
   
-  // Should return false (fail open) on error
-  const result = global.CompLocks.hasSubmittedThisWeek(1, 'hoh', 'quickTap', 99);
+  // Should return false (fail open) when storage fails
+  const isLocked = global.CompLocks.hasSubmittedThisWeek(1, 'hoh', 'quickTap', 1);
+  if (isLocked) throw new Error('Should fail open when storage unavailable');
   
-  // Restore
+  // Restore original
   global.localStorage.getItem = originalGetItem;
-  
-  if (result !== false) {
-    throw new Error('Should fail open (return false) on localStorage error');
+});
+
+console.log('\nMobile Stale Lock Tests:');
+
+test('clearStaleWeek1Locks method exists', () => {
+  if (typeof global.CompLocks.clearStaleWeek1Locks !== 'function') {
+    throw new Error('clearStaleWeek1Locks not a function');
   }
 });
 
-// Summary
+test('clearStaleWeek1Locks only clears week 1 locks', () => {
+  global.CompLocks.clearAllLocks();
+  
+  // Set up locks for week 1, 2, and 3
+  global.CompLocks.lockSubmission(1, 'hoh', 'quickTap', 1);
+  global.CompLocks.lockSubmission(1, 'hoh', 'memoryMatch', 2);
+  global.CompLocks.lockSubmission(2, 'hoh', 'quickTap', 1);
+  global.CompLocks.lockSubmission(3, 'hoh', 'quickTap', 1);
+  
+  // Clear only week 1
+  global.CompLocks.clearStaleWeek1Locks();
+  
+  // Verify week 1 locks are cleared
+  const w1p1 = global.CompLocks.hasSubmittedThisWeek(1, 'hoh', 'quickTap', 1);
+  const w1p2 = global.CompLocks.hasSubmittedThisWeek(1, 'hoh', 'memoryMatch', 2);
+  if (w1p1 || w1p2) {
+    throw new Error('Week 1 locks should be cleared');
+  }
+  
+  // Verify other weeks remain locked
+  const w2 = global.CompLocks.hasSubmittedThisWeek(2, 'hoh', 'quickTap', 1);
+  const w3 = global.CompLocks.hasSubmittedThisWeek(3, 'hoh', 'quickTap', 1);
+  if (!w2 || !w3) {
+    throw new Error('Week 2 and 3 locks should remain');
+  }
+});
+
+test('clearStaleWeek1Locks handles empty storage gracefully', () => {
+  global.CompLocks.clearAllLocks();
+  // Should not throw when there are no locks to clear
+  global.CompLocks.clearStaleWeek1Locks();
+});
+
 console.log('\n' + '='.repeat(50));
 console.log(`Test Results: ${passed} passed, ${failed} failed`);
 console.log('='.repeat(50));

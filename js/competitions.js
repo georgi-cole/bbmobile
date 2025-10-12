@@ -247,6 +247,8 @@
     }
 
     // Lock submission for this week/phase/game to prevent replay
+    // NOTE: Lock is only set here after successful score validation and submission
+    // If game is abandoned or incomplete, this code is never reached and no lock is set
     if (global.CompLocks && label) {
       const gameKey = label.split('/')[1] || 'unknown';
       global.CompLocks.lockSubmission(g.week, g.phase, gameKey, id);

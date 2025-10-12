@@ -16,6 +16,19 @@
   };
 
   /**
+   * Detect if device is mobile (iOS, Android, etc.)
+   * @returns {boolean} True if running on mobile device
+   */
+  function isMobileDevice(){
+    return (
+      'ontouchstart' in global ||
+      (global.navigator && global.navigator.maxTouchPoints > 0) ||
+      (global.navigator && global.navigator.msMaxTouchPoints > 0) ||
+      (global.navigator && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(global.navigator.userAgent))
+    );
+  }
+
+  /**
    * CompLocks - Manages weekly submission locks for competition minigames
    * Stores locks in localStorage keyed by week, phase, gameKey, and playerId
    */
@@ -116,11 +129,48 @@
       } catch(e) {
         console.warn('[CompLocks] Error clearing all locks:', e);
       }
+    },
+
+    /**
+     * Clear stale week 1 locks (called automatically on mobile devices)
+     * Prevents users from being blocked on first launch due to leftover locks
+     */
+    clearStaleWeek1Locks(){
+      try {
+        const prefix = 'bb_comp_lock_w1_';
+        const keysToRemove = [];
+        
+        // Find all week 1 lock keys
+        for(let i = 0; i < storage.length; i++){
+          const key = storage.key(i);
+          if(key && key.startsWith(prefix)){
+            keysToRemove.push(key);
+          }
+        }
+        
+        // Remove them
+        if(keysToRemove.length > 0){
+          keysToRemove.forEach(key => storage.removeItem(key));
+          console.info(`[CompLocks] Auto-cleared ${keysToRemove.length} stale week 1 locks on mobile device`);
+        }
+      } catch(e) {
+        console.warn('[CompLocks] Error clearing stale week 1 locks:', e);
+      }
     }
   };
 
   // Export to global scope
   global.CompLocks = CompLocks;
+
+  // Auto-clear stale week 1 locks on mobile devices
+  // This prevents users from being blocked on first launch
+  if(isMobileDevice()){
+    try {
+      CompLocks.clearStaleWeek1Locks();
+    } catch(e) {
+      console.warn('[CompLocks] Failed to auto-clear stale locks:', e);
+    }
+  }
 
   console.info('[CompLocks] Module loaded');
 
