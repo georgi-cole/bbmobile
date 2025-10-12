@@ -1,7 +1,7 @@
-# House Circle Animation
+# Fast Cast Animation
 
 ## Overview
-The house circle animation is a rotating contestant showcase that appears when returning users press the Start button. It replaces the previous grid-based fast cast animation with a more thematic house-centered presentation.
+The fast cast animation is a contestant showcase that appears when returning users press the Start button. It displays all contestant photos simultaneously with a pulse-in effect, then fades out after 3 seconds.
 
 ## Features
 
@@ -13,10 +13,11 @@ The house circle animation is a rotating contestant showcase that appears when r
 
 ### Animation Behavior
 - **Circular Layout**: All contestant photos are arranged in a perfect circle
-- **Smooth Rotation**: The entire circle rotates continuously at 360° over 4.5 seconds
-- **Staggered Fade-in**: Each contestant card fades in sequentially (0.08s delay between each)
-- **Duration**: Total animation duration is 4.8 seconds
+- **Pulse-In Effect**: All photos appear simultaneously with a pulse effect (scale from 0.5 to 1.1 to 1.0 over 0.6s)
+- **Fade-Out Effect**: After 2.5 seconds, photos shrink and fade out (scale to 0.3, opacity to 0 over 0.5s)
+- **Duration**: Total animation duration is 3 seconds
 - **Fullscreen Overlay**: Creates a dedicated fullscreen overlay, hiding all other UI elements
+- **Real Avatars**: Uses centralized avatar resolver to load actual contestant photos from `/avatars/` folder
 
 ### Contestant Cards
 - Circular avatar frames with themed borders
@@ -56,7 +57,7 @@ window.FastCastAnimation.stop();
 
 ### Returning Users
 1. Click Start button
-2. **House circle animation plays** (4.8 seconds)
+2. **Fast cast animation plays** (3 seconds)
 3. Week 1 intro modal appears
 4. Click to dismiss modal
 5. HOH competition begins
@@ -64,8 +65,8 @@ window.FastCastAnimation.stop();
 ## Technical Details
 
 ### CSS Animations
-- `@keyframes rotateCircle`: 360° rotation over 4.5s (linear, infinite)
-- `@keyframes fadeInContestant`: Fade and scale from 0.3 to 1.0 over 0.6s
+- `@keyframes pulseInContestant`: Pulse-in effect - scale from 0.5 to 1.1 to 1.0 with fade over 0.6s
+- `@keyframes fadeOutContestant`: Fade-out effect - scale from 1.0 to 0.3 with fade over 0.5s
 
 ### Positioning
 - Uses trigonometric calculations to position contestants in a perfect circle
@@ -74,7 +75,9 @@ window.FastCastAnimation.stop();
 
 ### Fallback Handling
 - House image: SVG → studio_bg.jpg → tvstudio.jpg → SVG fallback
-- Avatar images: player.avatar → getAvatar() → UI.getAvatar() → Dicebear fallback
+- Avatar images: Uses centralized `global.resolveAvatar()` → `global.getAvatarFallback()` → Dicebear fallback
+  - Loads from `/avatars/{Name}.png` (e.g., Aria.png, Ash.png, etc.)
+  - Falls back to placeholder only if avatar file not found
 
 ## Asset Requirements
 
@@ -91,6 +94,14 @@ If neither image is available, the system automatically uses a styled SVG house 
 
 ## Performance
 - Lightweight: No external dependencies
-- Smooth 60fps rotation
+- Smooth 60fps animations
 - Automatic cleanup after completion
 - No memory leaks (properly removes DOM elements)
+- Fast load time (3 seconds total)
+
+## Testing
+A test page is available at `test_fast_cast_animation.html` to verify:
+- Avatar loading from `/avatars/` folder
+- Pulse-in animation behavior
+- Fade-out animation timing
+- Different player counts (5, 12, 16 players)
