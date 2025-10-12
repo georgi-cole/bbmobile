@@ -168,12 +168,15 @@
     const isDouble = game.__twistMode === 'double' || game.doubleEvictionWeek === true;
     const isTriple = game.__twistMode === 'triple' || game.tripleEvictionWeek === true;
     
-    if(isTriple){
+    // Only show badge if twist is active AND badge has been shown (modal completed)
+    const badgeAllowed = game.__twistBadgeShown === true;
+    
+    if(isTriple && badgeAllowed){
       setTwistBadge('triple', true);
-    } else if(isDouble){
+    } else if(isDouble && badgeAllowed){
       setTwistBadge('double', true);
     } else if(twistBadgeVisible){
-      // Clear badge if no twist is active
+      // Clear badge if no twist is active or badge not allowed yet
       setTwistBadge(null, false);
     }
   }

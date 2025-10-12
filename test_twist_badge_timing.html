@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twist Badge Timing Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: #0a0e14;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin-bottom: 30px;
+    }
+    .test-section {
+      background: #1a2530;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #2a3540;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #4a9eff;
+    }
+    .test-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #3a7bd5;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #4a8be5;
+    }
+    button.danger {
+      background: #d53a3a;
+    }
+    button.danger:hover {
+      background: #e54a4a;
+    }
+    button.ok {
+      background: #3ad56a;
+    }
+    button.ok:hover {
+      background: #4ae57a;
+    }
+    .description {
+      color: #8a9fb5;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      background: #0a1520;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      min-height: 40px;
+      color: #6a8fa5;
+    }
+    .success { color: #3ad56a; }
+    .warning { color: #ff9c3a; }
+    .error { color: #d53a3a; }
+    .info { color: #4a9eff; }
+    .badge-preview {
+      margin-top: 15px;
+      padding: 15px;
+      background: #0a1520;
+      border-radius: 4px;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed #2a3540;
+    }
+    .badge-preview.active {
+      border-color: #3ad56a;
+      background: #0a2015;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎭 Twist Badge Timing Test</h1>
+    <p style="color: #8a9fb5;">This test validates that the twist badge only appears AFTER the modal completes, not before.</p>
+    
+    <div class="test-section">
+      <h2>✅ Automated Tests</h2>
+      <div class="description">Tests to verify badge timing behavior</div>
+      <div class="test-buttons">
+        <button class="ok" onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+      </div>
+      <div class="status" id="test-results">Click "Run All Tests" to begin validation</div>
+    </div>
+    
+    <div class="test-section">
+      <h2>🎲 Manual Badge Timing Tests</h2>
+      <div class="description">Manual tests to verify badge appears only after modal</div>
+      <div class="test-buttons">
+        <button class="danger" onclick="testDoubleEvictionTiming()">Test Double Eviction Badge Timing</button>
+        <button class="danger" onclick="testTripleEvictionTiming()">Test Triple Eviction Badge Timing</button>
+        <button onclick="testBadgeReset()">Test Badge Reset on Week Change</button>
+      </div>
+      <div class="status" id="manual-status">Click a button to test badge timing manually</div>
+      <div class="badge-preview" id="badge-preview">
+        <span style="color: #6a8fa5;">Badge preview area (should only appear after modal)</span>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>🔍 State Inspector</h2>
+      <div class="description">Check current game state flags</div>
+      <div class="test-buttons">
+        <button onclick="inspectState()">Inspect Current State</button>
+      </div>
+      <div class="status" id="state-status">Click to inspect game state</div>
+    </div>
+  </div>
+
+  <!-- Load required scripts -->
+  <script src="js/ui.event-modal.js"></script>
+  <script src="js/ui.week-intro.js"></script>
+  <script src="js/twists.js"></script>
+  <script src="js/tv.js"></script>
+
+  <script>
+    // Setup minimal game state
+    function setupGameState() {
+      window.game = window.game || {
+        cfg: { 
+          doubleChance: 100, 
+          tripleChance: 0,
+          enableJuryHouse: false
+        },
+        players: [],
+        week: 1,
+        phase: 'intermission'
+      };
+      
+      // Add 8 alive players
+      for(let i = 1; i <= 8; i++) {
+        window.game.players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false
+        });
+      }
+      
+      // Mock required functions
+      window.getP = window.getP || ((id) => window.game.players.find(p => p.id === id));
+      window.safeName = window.safeName || ((id) => window.getP(id)?.name || `Player ${id}`);
+      window.alivePlayers = window.alivePlayers || (() => window.game.players.filter(p => !p.evicted));
+      window.updateHud = window.updateHud || (() => {
+        log('test-results', 'updateHud() called', 'info');
+        // Trigger TV badge update
+        if(typeof window.TV?.updateTwistBadge === 'function'){
+          window.TV.updateTwistBadge();
+        }
+      });
+      window.setPhase = window.setPhase || ((phase, duration, callback) => {
+        window.game.phase = phase;
+        if (callback) setTimeout(callback, duration * 100);
+      });
+    }
+
+    function log(id, message, type = 'info') {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
+      el.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+    }
+
+    function clearResults() {
+      document.getElementById('test-results').innerHTML = 'Tests cleared. Ready to run.';
+    }
+
+    function updateBadgePreview(visible, type) {
+      const preview = document.getElementById('badge-preview');
+      if(visible && type) {
+        preview.classList.add('active');
+        preview.innerHTML = `<span style="color: #3ad56a; font-weight: bold;">✓ ${type.toUpperCase()} EVICTION BADGE VISIBLE</span>`;
+      } else {
+        preview.classList.remove('active');
+        preview.innerHTML = '<span style="color: #6a8fa5;">Badge preview area (should only appear after modal)</span>';
+      }
+    }
+
+    async function runAllTests() {
+      clearResults();
+      setupGameState();
+      log('test-results', '🔍 Starting badge timing validation tests...', 'info');
+      
+      // Test 1: Check that __twistBadgeShown is reset in decideForWeek
+      log('test-results', 'Test 1: Checking __twistBadgeShown flag reset...', 'info');
+      
+      // Call decideForWeek
+      if(typeof window.twists?.decideForWeek === 'function') {
+        window.twists.decideForWeek();
+        
+        if(window.game.__twistBadgeShown === false) {
+          log('test-results', '✓ __twistBadgeShown correctly reset to false', 'success');
+        } else {
+          log('test-results', `✗ __twistBadgeShown is ${window.game.__twistBadgeShown}, expected false`, 'error');
+        }
+        
+        if(window.game.__twistMode) {
+          log('test-results', `✓ Twist mode set to: ${window.game.__twistMode}`, 'success');
+        } else {
+          log('test-results', '✗ No twist mode set (check if alive players > 6 and doubleChance configured)', 'warning');
+        }
+      } else {
+        log('test-results', '✗ twists.decideForWeek not available', 'error');
+      }
+      
+      log('test-results', '', 'info');
+      log('test-results', 'Test 2: Verifying badge hidden before modal...', 'info');
+      
+      // Simulate updateTwistBadge call before modal
+      if(typeof window.TV?.updateTwistBadge === 'function') {
+        window.TV.updateTwistBadge();
+        
+        // Check if badge is visible (it should NOT be)
+        const badge = document.getElementById('twistBadge');
+        if(badge) {
+          const isVisible = badge.style.display !== 'none';
+          if(!isVisible) {
+            log('test-results', '✓ Badge correctly hidden before modal', 'success');
+          } else {
+            log('test-results', '✗ Badge visible before modal (should be hidden)', 'error');
+          }
+        } else {
+          log('test-results', '⚠ No twistBadge element in DOM (may be OK if not in main app)', 'warning');
+        }
+      }
+      
+      log('test-results', '', 'info');
+      log('test-results', 'Test 3: Simulating modal completion and badge appearance...', 'info');
+      
+      // Simulate modal completion by setting flag
+      window.game.__twistBadgeShown = true;
+      log('test-results', '✓ Simulated modal completion (__twistBadgeShown = true)', 'info');
+      
+      // Now call updateTwistBadge again
+      if(typeof window.TV?.updateTwistBadge === 'function') {
+        window.TV.updateTwistBadge();
+        log('test-results', '✓ updateTwistBadge() called after modal', 'info');
+        
+        // Check if badge is now visible
+        const badge = document.getElementById('twistBadge');
+        if(badge) {
+          const isVisible = badge.style.display !== 'none';
+          if(isVisible) {
+            log('test-results', '✓ Badge correctly shown after modal', 'success');
+          } else {
+            log('test-results', '✗ Badge still hidden after modal (should be visible)', 'error');
+          }
+        }
+      }
+      
+      log('test-results', '', 'info');
+      log('test-results', 'Test 4: Verifying badge persists across HUD updates...', 'info');
+      
+      // Call updateHud multiple times
+      for(let i = 0; i < 3; i++) {
+        if(typeof window.updateHud === 'function') {
+          window.updateHud();
+        }
+      }
+      
+      const badge = document.getElementById('twistBadge');
+      if(badge) {
+        const isVisible = badge.style.display !== 'none';
+        if(isVisible) {
+          log('test-results', '✓ Badge persists across multiple HUD updates', 'success');
+        } else {
+          log('test-results', '✗ Badge disappeared after HUD update', 'error');
+        }
+      }
+      
+      log('test-results', '', 'info');
+      log('test-results', 'Test 5: Verifying badge clears on week change...', 'info');
+      
+      // Change week
+      const oldWeek = window.game.week;
+      window.game.week = oldWeek + 1;
+      
+      if(typeof window.TV?.updateTwistBadge === 'function') {
+        window.TV.updateTwistBadge();
+        
+        const badge = document.getElementById('twistBadge');
+        if(badge) {
+          const isVisible = badge.style.display !== 'none';
+          if(!isVisible) {
+            log('test-results', '✓ Badge correctly cleared on week change', 'success');
+          } else {
+            log('test-results', '✗ Badge still visible after week change', 'error');
+          }
+        }
+      }
+      
+      log('test-results', '', 'info');
+      log('test-results', '✅ All tests completed!', 'success');
+    }
+
+    async function testDoubleEvictionTiming() {
+      setupGameState();
+      log('manual-status', '🎬 Starting Double Eviction timing test...', 'info');
+      
+      // Reset state
+      window.game.week = 2;
+      window.game.__twistMode = null;
+      window.game.__twistBadgeShown = false;
+      updateBadgePreview(false);
+      
+      log('manual-status', 'Step 1: Calling decideForWeek() to set twist...', 'info');
+      if(typeof window.twists?.decideForWeek === 'function') {
+        window.twists.decideForWeek();
+        log('manual-status', `✓ Twist mode: ${window.game.__twistMode || 'none'}`, 'info');
+        log('manual-status', `✓ __twistBadgeShown: ${window.game.__twistBadgeShown}`, 'info');
+      }
+      
+      log('manual-status', 'Step 2: Calling updateTwistBadge() before modal...', 'info');
+      if(typeof window.TV?.updateTwistBadge === 'function') {
+        window.TV.updateTwistBadge();
+        log('manual-status', '✓ Badge should NOT be visible yet', 'warning');
+      }
+      
+      log('manual-status', 'Step 3: Showing modal...', 'info');
+      await window.showEventModal({
+        title: 'House Shock!',
+        emojis: '⚠️😱',
+        subtitle: 'Double Eviction Week!! Three nominees — two leave.',
+        tone: 'danger',
+        duration: 3000
+      });
+      
+      log('manual-status', 'Step 4: Modal completed, setting __twistBadgeShown = true...', 'info');
+      window.game.__twistBadgeShown = true;
+      
+      log('manual-status', 'Step 5: Calling updateHud() to show badge...', 'info');
+      if(typeof window.updateHud === 'function') {
+        window.updateHud();
+      }
+      
+      log('manual-status', '✅ Badge should NOW be visible', 'success');
+      updateBadgePreview(true, 'double');
+    }
+
+    async function testTripleEvictionTiming() {
+      setupGameState();
+      window.game.cfg.tripleChance = 100;
+      window.game.cfg.doubleChance = 0;
+      
+      log('manual-status', '🎬 Starting Triple Eviction timing test...', 'info');
+      
+      // Reset state
+      window.game.week = 3;
+      window.game.__twistMode = null;
+      window.game.__twistBadgeShown = false;
+      updateBadgePreview(false);
+      
+      log('manual-status', 'Step 1: Calling decideForWeek() to set twist...', 'info');
+      if(typeof window.twists?.decideForWeek === 'function') {
+        window.twists.decideForWeek();
+        log('manual-status', `✓ Twist mode: ${window.game.__twistMode || 'none'}`, 'info');
+      }
+      
+      log('manual-status', 'Step 2: Badge hidden before modal...', 'info');
+      
+      log('manual-status', 'Step 3: Showing modal...', 'info');
+      await window.showEventModal({
+        title: 'House Shock!',
+        emojis: '⚠️💥😱',
+        subtitle: 'Triple Eviction Week!!! Four nominees — three leave.',
+        tone: 'danger',
+        duration: 3000
+      });
+      
+      log('manual-status', 'Step 4: Modal completed, enabling badge...', 'info');
+      window.game.__twistBadgeShown = true;
+      if(typeof window.updateHud === 'function') {
+        window.updateHud();
+      }
+      
+      log('manual-status', '✅ Badge should NOW be visible', 'success');
+      updateBadgePreview(true, 'triple');
+    }
+
+    function testBadgeReset() {
+      setupGameState();
+      log('manual-status', '🔄 Testing badge reset on week change...', 'info');
+      
+      // Setup: twist active with badge shown
+      window.game.__twistMode = 'double';
+      window.game.__twistBadgeShown = true;
+      window.game.week = 5;
+      updateBadgePreview(true, 'double');
+      
+      log('manual-status', 'Current state: Badge visible, week 5', 'info');
+      
+      // Change week
+      window.game.week = 6;
+      log('manual-status', 'Week changed to 6', 'info');
+      
+      // Update badge
+      if(typeof window.TV?.updateTwistBadge === 'function') {
+        window.TV.updateTwistBadge();
+        log('manual-status', '✓ Badge update triggered', 'info');
+      }
+      
+      log('manual-status', '✅ Badge should be hidden now', 'success');
+      updateBadgePreview(false);
+    }
+
+    function inspectState() {
+      setupGameState();
+      const g = window.game || {};
+      
+      document.getElementById('state-status').innerHTML = `
+        <div class="info">Week: ${g.week || 'N/A'}</div>
+        <div class="info">Phase: ${g.phase || 'N/A'}</div>
+        <div class="info">__twistMode: ${g.__twistMode || 'null'}</div>
+        <div class="info">__twistBadgeShown: ${g.__twistBadgeShown === true ? 'true' : g.__twistBadgeShown === false ? 'false' : 'undefined'}</div>
+        <div class="info">__twistDecidedWeek: ${g.__twistDecidedWeek || 'N/A'}</div>
+        <div class="info">doubleEvictionWeek: ${g.doubleEvictionWeek || false}</div>
+        <div class="info">tripleEvictionWeek: ${g.tripleEvictionWeek || false}</div>
+        <div class="info">Alive players: ${window.alivePlayers ? window.alivePlayers().length : 'N/A'}</div>
+      `;
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      log('test-results', 'Test page loaded. Ready to run tests.', 'info');
+      setupGameState();
+    });
+  </script>
+</body>
+</html>

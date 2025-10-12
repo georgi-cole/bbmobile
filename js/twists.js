@@ -220,6 +220,7 @@
     g.__twistPlannedEvictions=1;
     g.__twistNomSlots=2;
     g.__twistDecidedWeek=g.week;
+    g.__twistBadgeShown=false;
 
     tryMaybeAutoSelfEvict();
 

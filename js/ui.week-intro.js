@@ -205,12 +205,22 @@
       try {
         await global.showEventModal(twistConfig);
         
-        // After modal, update the twist badge in TV area
-        if(typeof global.TV?.updateTwistBadge === 'function'){
-          global.TV.updateTwistBadge();
+        // After modal completes, enable badge display
+        const g = global.game || {};
+        g.__twistBadgeShown = true;
+        
+        // Update HUD to trigger badge display
+        if(typeof global.updateHud === 'function'){
+          global.updateHud();
         }
       } catch (e) {
         console.error('[ui.week-intro] Error showing twist modal:', e);
+        // Still enable badge even if modal throws
+        const g = global.game || {};
+        g.__twistBadgeShown = true;
+        if(typeof global.updateHud === 'function'){
+          global.updateHud();
+        }
       }
     }
 
