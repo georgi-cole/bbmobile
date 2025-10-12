@@ -1192,25 +1192,23 @@ button:focus-visible,.btn:focus-visible{
 
 /* 08. REVEAL CARDS + BIG ANNOUNCEMENT -------------------------------------- */
 .revealCard{
-  /* Enhanced glassmorphism with gradient */
-  background:linear-gradient(145deg, rgba(28,43,62,.94), rgba(12,22,36,.90));
-  backdrop-filter:blur(16px) saturate(1.4);
-  -webkit-backdrop-filter:blur(16px) saturate(1.4);
-  border:1px solid rgba(110,160,220,.25);
+  /* Enhanced glassmorphism with gradient - now using tokens */
+  background:linear-gradient(145deg, var(--popup-bg-start, rgba(28,43,62,.94)), var(--popup-bg-end, rgba(12,22,36,.90)));
+  backdrop-filter:blur(var(--popup-backdrop-blur, 16px)) saturate(1.4);
+  -webkit-backdrop-filter:blur(var(--popup-backdrop-blur, 16px)) saturate(1.4);
+  border:1px solid var(--popup-border, rgba(110,160,220,.25));
   position:relative;
   overflow:hidden;
   text-align:center;
   font-size:.82rem;
   line-height:1.5;
-  padding:22px 26px 24px;
-  border-radius:24px; /* More rounded */
-  /* Enhanced shadow with glow */
-  box-shadow:0 12px 36px -16px rgba(0,0,0,.8),
-             0 6px 20px -8px rgba(0,0,0,.6),
-             0 0 0 1px rgba(120,180,255,.15),
-             0 0 32px -10px var(--accent) inset;
+  padding:var(--popup-padding, 22px 26px 24px);
+  border-radius:var(--popup-radius, 24px); /* More rounded */
+  /* Enhanced shadow with glow - using tokens */
+  box-shadow:var(--popup-shadow, 0 12px 36px -16px rgba(0,0,0,.8)),
+             var(--popup-shadow-inset, 0 0 32px -10px var(--accent) inset);
   animation:cardFloatIn .65s cubic-bezier(.25,.9,.25,1) forwards;
-  max-width:min(780px, 92vw);
+  max-width:var(--popup-max-width, min(780px, 92vw));
   /* Failsafe: prevent cards from being cut off */
   max-height:calc(100vh - 120px);
   overflow-y:auto;
