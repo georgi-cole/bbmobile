@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cast Editor Camera Badge - Visual Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="js/ui.config-and-settings.js"></script>
+  <style>
+    body {
+      padding: 40px 20px;
+      background: #0b0f1a;
+      color: #e6e8ee;
+    }
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .demo-section {
+      background: #0f1320;
+      border: 1px solid #273041;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .demo-item {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 15px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+      color: #e6e8ee;
+    }
+    h2 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      color: #9fb5ff;
+    }
+    h3 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: #c9d3e8;
+    }
+    .info {
+      background: #1a2535;
+      border-left: 3px solid #2d8ab4;
+      padding: 12px;
+      margin: 15px 0;
+      font-size: 0.9rem;
+      color: #9aa3b2;
+    }
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+    .checklist li {
+      padding: 8px 0;
+      border-bottom: 1px solid #2a3448;
+    }
+    .checklist li:before {
+      content: "✓";
+      color: #79d19a;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .badge-demo {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1>Cast Editor Camera Badge - Implementation Demo</h1>
+    
+    <div class="info">
+      <strong>Implementation Summary:</strong> This page demonstrates the new camera badge overlay on the cast avatar preview, improved styling, and responsive layout enhancements.
+    </div>
+
+    <div class="demo-section">
+      <h2>✓ Completed Features</h2>
+      <ul class="checklist">
+        <li>Camera badge overlay (36px circular) on lower-right corner of avatar</li>
+        <li>Badge shows on hover/tap with ripple effect</li>
+        <li>High-contrast badge design (dark background, white border, camera icon)</li>
+        <li>Badge positioned inside .cast-avatar-upload without affecting layout</li>
+        <li>Click on badge or avatar triggers #castPhotoFile input</li>
+        <li>Badge visible for all avatars to allow custom photo uploads</li>
+        <li>Name input maxlength=32 with shortenName algorithm applied</li>
+        <li>Tooltip with full name on roster chip (title attribute)</li>
+        <li>Age input: numeric only, two-digit max, displays ∞ for >99</li>
+        <li>Age >99 stores Infinity in p.meta.age</li>
+        <li>Improved input styling: min-height 44px, better padding, border radius</li>
+        <li>Focus rings on inputs (blue glow on focus)</li>
+        <li>Inner shadows for depth on inputs</li>
+        <li>Name/Age/Sex row layout: single row on wide screens (>700px)</li>
+        <li>Responsive stacking on narrow screens (≤700px)</li>
+      </ul>
+    </div>
+
+    <div class="demo-section">
+      <h2>📋 CSS Additions</h2>
+      <div class="demo-grid">
+        <div class="demo-item">
+          <h3>Camera Badge Styles</h3>
+          <pre style="font-size: 0.75rem; overflow-x: auto; color: #9aa3b2;">
+.cast-camera-badge {
+  position: absolute;
+  bottom: 4px; right: 4px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.75);
+  border: 2px solid rgba(255,255,255,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .2s;
+  z-index: 2;
+}
+
+.cast-camera-badge:hover {
+  background: rgba(0,0,0,0.9);
+  border-color: rgba(255,255,255,1);
+  transform: scale(1.05);
+}
+
+.cast-camera-badge::before {
+  /* Ripple effect */
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(...);
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.cast-camera-badge:hover::before {
+  opacity: 1;
+}
+          </pre>
+        </div>
+        
+        <div class="demo-item">
+          <h3>Enhanced Input Styles</h3>
+          <pre style="font-size: 0.75rem; overflow-x: auto; color: #9aa3b2;">
+.cast-form input,
+.cast-form select {
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.cast-form input:focus,
+.cast-form select:focus {
+  outline: none;
+  border-color: #2d8ab4;
+  box-shadow: 
+    inset 0 1px 3px rgba(0,0,0,0.2),
+    0 0 0 3px rgba(45,138,180,0.25);
+}
+          </pre>
+        </div>
+        
+        <div class="demo-item">
+          <h3>Responsive Layout</h3>
+          <pre style="font-size: 0.75rem; overflow-x: auto; color: #9aa3b2;">
+.cast-form-row-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 8px;
+  align-items: end;
+}
+
+@media (max-width: 700px) {
+  .cast-form-row-1 {
+    grid-template-columns: 1fr !important;
+    gap: 6px;
+  }
+}
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>🔧 JavaScript Updates</h2>
+      <div class="demo-item">
+        <h3>Key Functions Modified</h3>
+        <ul style="color: #9aa3b2; line-height: 1.8;">
+          <li><strong>fillCastForm:</strong> Added cameraBadge visibility logic, shows badge for all avatars</li>
+          <li><strong>wireCastEditor:</strong> Wire camera badge click to open file picker, prevent double-trigger</li>
+          <li><strong>renderCastStrip:</strong> Added title attribute with full name for tooltip</li>
+          <li><strong>buildCastPaneNode:</strong> Added camera badge HTML structure</li>
+          <li><strong>shortenName:</strong> Already existing, used for roster chip display</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>🧪 Smoke Tests</h2>
+      <div class="info">
+        <strong>To test manually:</strong>
+        <ol style="margin: 10px 0; padding-left: 20px;">
+          <li>Open the main game page (index.html)</li>
+          <li>Open Settings → Cast tab</li>
+          <li>Verify camera badge appears on avatar (lower-right corner, circular, 36px)</li>
+          <li>Click badge or avatar → file picker should open</li>
+          <li>Hover over badge → should show hover effect (darker background, slight scale)</li>
+          <li>Test on desktop (>700px width) → Name, Age, Sex should be in one row</li>
+          <li>Test on mobile (≤700px width) → Name, Age, Sex should stack vertically</li>
+          <li>Enter a long name (>32 chars) → should be truncated</li>
+          <li>Hover over roster chip → tooltip should show full name</li>
+          <li>Enter age >99 → should display as ∞ symbol</li>
+          <li>Click on inputs → should show blue focus ring</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>📸 Visual Reference</h2>
+      <p style="color: #9aa3b2; margin-bottom: 15px;">
+        The camera badge appears as a small circular button on the lower-right corner of the avatar preview.
+        It features a camera icon, dark semi-transparent background, and white border for high contrast.
+      </p>
+      
+      <div style="text-align: center; margin: 20px 0;">
+        <div style="display: inline-block; position: relative; width: 140px; height: 140px; background: #1a2535; border-radius: 8px; border: 1px solid #2b3546;">
+          <!-- Simulated avatar -->
+          <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #9aa3b2;">
+            Avatar Preview
+          </div>
+          <!-- Simulated badge -->
+          <div style="position: absolute; bottom: 4px; right: 4px; width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.75); border: 2px solid rgba(255,255,255,0.85); display: flex; align-items: center; justify-content: center;">
+            <svg style="width: 18px; height: 18px; color: rgba(255,255,255,0.95);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>✅ Changes Localized</h2>
+      <p style="color: #9aa3b2;">
+        All changes are contained within <strong>js/ui.config-and-settings.js</strong>:
+      </p>
+      <ul style="color: #9aa3b2; line-height: 1.8;">
+        <li>Updated UI.INJECTED_CSS array with new styles</li>
+        <li>Modified buildCastPaneNode() to add badge HTML</li>
+        <li>Updated fillCastForm() for badge visibility</li>
+        <li>Enhanced wireCastEditor() for badge click handling</li>
+        <li>Updated renderCastStrip() for name tooltips</li>
+        <li>All existing IDs and logic hooks preserved</li>
+        <li>No changes to other modules</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Log CSS verification
+    console.log('UI module loaded:', typeof window.UI !== 'undefined');
+    if (window.UI && window.UI.INJECTED_CSS) {
+      console.log('Camera badge CSS present:', window.UI.INJECTED_CSS.includes('cast-camera-badge'));
+      console.log('Enhanced input styles present:', window.UI.INJECTED_CSS.includes('min-height:44px'));
+      console.log('Responsive layout present:', window.UI.INJECTED_CSS.includes('@media (max-width:700px)'));
+    }
+  </script>
+</body>
+</html>
