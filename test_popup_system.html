@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Popup System Test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body {
+    padding: 40px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+  .test-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  h1 {
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+  .test-section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .test-section h2 {
+    color: var(--accent);
+    font-size: 1.1rem;
+    margin-top: 0;
+  }
+  .test-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .btn {
+    padding: 10px 20px;
+    background: var(--accent);
+    color: var(--card);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .btn.secondary {
+    background: var(--card-2);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .status {
+    margin-top: 20px;
+    padding: 12px;
+    background: var(--card-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+  .theme-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .theme-btn {
+    padding: 8px 16px;
+    background: var(--card-2);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .theme-btn.active {
+    background: var(--accent);
+    color: var(--card);
+    border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<div class="test-container">
+  <h1>🧪 Popup System Test</h1>
+  
+  <div class="theme-selector">
+    <button class="theme-btn active" onclick="setTheme('')">Default</button>
+    <button class="theme-btn" onclick="setTheme('tvstudio')">TV Studio</button>
+    <button class="theme-btn" onclick="setTheme('modernhouse')">Modern House</button>
+    <button class="theme-btn" onclick="setTheme('midnight')">Midnight</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Feature Flag Control</h2>
+    <p>Toggle the new popup system on/off to test fallback behavior.</p>
+    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+      <input type="checkbox" id="flagToggle" onchange="toggleFlag()">
+      <span>Enable new popup system (<code>popup_refresh_enabled</code>)</span>
+    </label>
+    <div class="status" id="flagStatus"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Basic Popup Tests</h2>
+    <div class="test-buttons">
+      <button class="btn" onclick="testBasicPopup()">Basic Popup</button>
+      <button class="btn" onclick="testWelcomePopup()">Welcome Popup</button>
+      <button class="btn" onclick="testInstructionsPopup()">Instructions Popup</button>
+      <button class="btn secondary" onclick="testNoCloseButton()">No Close Button</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Queue Tests</h2>
+    <div class="test-buttons">
+      <button class="btn" onclick="testQueue()">Queue 3 Popups</button>
+      <button class="btn" onclick="testQueueMany()">Queue 5 Popups</button>
+      <button class="btn secondary" onclick="clearQueue()">Clear Queue</button>
+    </div>
+    <div class="status" id="queueStatus"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Accessibility Tests</h2>
+    <div class="test-buttons">
+      <button class="btn" onclick="testFocusTrap()">Focus Trap Test</button>
+      <button class="btn" onclick="testEscKey()">ESC Key Test</button>
+      <button class="btn" onclick="testBackdropClick()">Backdrop Click Test</button>
+      <button class="btn secondary" onclick="testNoBackdropClose()">No Backdrop Close</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Content Tests</h2>
+    <div class="test-buttons">
+      <button class="btn" onclick="testLongContent()">Long Scrollable Content</button>
+      <button class="btn" onclick="testFormContent()">Form Content</button>
+      <button class="btn" onclick="testCustomFooter()">Custom Footer</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Edge Cases</h2>
+    <div class="test-buttons">
+      <button class="btn" onclick="testMinimalPopup()">Minimal (no footer)</button>
+      <button class="btn" onclick="testNoHeader()">No Header Text</button>
+      <button class="btn secondary" onclick="testReducedMotion()">Reduced Motion</button>
+    </div>
+  </div>
+
+  <div class="status" style="margin-top: 20px;">
+    <strong>Test Info:</strong><br>
+    • Popups should queue and display one at a time<br>
+    • Press ESC to close (if enabled)<br>
+    • Click backdrop to close (if enabled)<br>
+    • Tab/Shift+Tab should cycle through elements<br>
+    • Body scroll should be locked when popup is shown<br>
+    • Themes should style popups differently
+  </div>
+</div>
+
+<!-- Popup Portal Root -->
+<div id="popup-root"></div>
+
+<!-- Scripts -->
+<script src="js/config/defaults.js"></script>
+<script src="js/popup/BasePopup.js"></script>
+<script src="js/popup/PopupManager.js"></script>
+<script src="js/popup/ExampleInfoPopup.js"></script>
+
+<script>
+  // Initialize game config
+  window.game = window.game || {};
+  window.game.cfg = window.game.cfg || {};
+  window.game.cfg.popup_refresh_enabled = false;
+
+  // Update flag status
+  function updateFlagStatus() {
+    const enabled = window.game.cfg.popup_refresh_enabled;
+    const status = document.getElementById('flagStatus');
+    const toggle = document.getElementById('flagToggle');
+    
+    toggle.checked = enabled;
+    status.innerHTML = enabled 
+      ? '<strong style="color: var(--good);">✓ New system enabled</strong> - Using BasePopup and PopupManager'
+      : '<strong style="color: var(--warn);">⚠ Legacy mode</strong> - Would fall back to showCard() in real app';
+    
+    updateQueueStatus();
+  }
+
+  function toggleFlag() {
+    window.game.cfg.popup_refresh_enabled = !window.game.cfg.popup_refresh_enabled;
+    updateFlagStatus();
+  }
+
+  function updateQueueStatus() {
+    if (window.PopupManager) {
+      const count = window.PopupManager.getQueueLength();
+      const shown = window.PopupManager.isPopupShown();
+      document.getElementById('queueStatus').innerHTML = 
+        `Queue: ${count} popup(s) | Current: ${shown ? 'Showing' : 'None'}`;
+    }
+  }
+
+  // Set theme
+  function setTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+  }
+
+  // Basic popup test
+  function testBasicPopup() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        id: 'test-basic',
+        headerText: 'Basic Popup',
+        bodyContent: '<p style="text-align: center;">This is a basic popup with default options.</p>',
+        footerContent: '<button class="btn" onclick="PopupManager.close()">Close</button>'
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // Welcome popup
+  function testWelcomePopup() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.showWelcomePopup();
+    updateQueueStatus();
+  }
+
+  // Instructions popup
+  function testInstructionsPopup() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.showInstructionsPopup();
+    updateQueueStatus();
+  }
+
+  // No close button
+  function testNoCloseButton() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        headerText: 'No Close Button',
+        bodyContent: '<p>This popup has no close button. You can only close it by pressing ESC or clicking the backdrop.</p>',
+        showCloseButton: false
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // Queue test
+  function testQueue() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    for (let i = 1; i <= 3; i++) {
+      window.PopupManager.enqueue(() => {
+        return window.createBasePopup({
+          headerText: `Queued Popup ${i}`,
+          bodyContent: `<p style="text-align: center;">This is popup ${i} of 3.<br>The next popup will show after you close this one.</p>`,
+          footerContent: '<button class="btn" onclick="PopupManager.close()">Next</button>'
+        });
+      });
+    }
+    
+    updateQueueStatus();
+  }
+
+  // Queue many
+  function testQueueMany() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    for (let i = 1; i <= 5; i++) {
+      window.PopupManager.enqueue(() => {
+        return window.createBasePopup({
+          headerText: `Popup ${i} of 5`,
+          bodyContent: `<p>Queue test: ${i}/5</p>`,
+          footerContent: '<button class="btn" onclick="PopupManager.close()">Next</button>'
+        });
+      });
+    }
+    
+    updateQueueStatus();
+  }
+
+  // Clear queue
+  function clearQueue() {
+    if (window.PopupManager) {
+      window.PopupManager.clearQueue();
+      updateQueueStatus();
+      alert('Queue cleared!');
+    }
+  }
+
+  // Focus trap test
+  function testFocusTrap() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        headerText: 'Focus Trap Test',
+        bodyContent: `
+          <p>Use Tab and Shift+Tab to cycle through these elements:</p>
+          <button class="btn" style="margin: 8px;">Button 1</button>
+          <button class="btn" style="margin: 8px;">Button 2</button>
+          <input type="text" placeholder="Text input" style="margin: 8px; padding: 8px;">
+          <button class="btn" style="margin: 8px;">Button 3</button>
+        `,
+        footerContent: '<button class="btn" onclick="PopupManager.close()">Done</button>'
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // ESC key test
+  function testEscKey() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        headerText: 'ESC Key Test',
+        bodyContent: '<p style="text-align: center;">Press <strong>ESC</strong> to close this popup.</p>',
+        closeOnEsc: true
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // Backdrop click test
+  function testBackdropClick() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        headerText: 'Backdrop Click Test',
+        bodyContent: '<p style="text-align: center;">Click outside this popup (on the dark backdrop) to close it.</p>',
+        closeOnBackdrop: true
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // No backdrop close
+  function testNoBackdropClose() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        headerText: 'No Backdrop Close',
+        bodyContent: '<p>Clicking the backdrop will NOT close this popup. Use the close button or ESC.</p>',
+        closeOnBackdrop: false,
+        footerContent: '<button class="btn" onclick="PopupManager.close()">Close</button>'
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // Long content
+  function testLongContent() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    const content = '<h3 style="margin-top: 0;">Long Scrollable Content</h3>' + 
+      '<p>This popup has a lot of content that should scroll within the popup.</p>'.repeat(20);
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        headerText: 'Scrollable Content',
+        bodyContent: content,
+        footerContent: '<button class="btn" onclick="PopupManager.close()">Close</button>'
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // Form content
+  function testFormContent() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      const popup = window.createBasePopup({
+        headerText: 'Form Example',
+        bodyContent: `
+          <form id="testForm">
+            <div style="margin-bottom: 12px;">
+              <label>Name: <input type="text" id="nameInput" style="padding: 6px; width: 100%;"></label>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <label>Email: <input type="email" id="emailInput" style="padding: 6px; width: 100%;"></label>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <label>
+                <input type="checkbox" id="agreeCheck"> I agree to the terms
+              </label>
+            </div>
+          </form>
+        `,
+        footerContent: `
+          <button class="btn secondary" id="cancelFormBtn">Cancel</button>
+          <button class="btn" id="submitFormBtn">Submit</button>
+        `
+      });
+      
+      setTimeout(() => {
+        document.getElementById('submitFormBtn')?.addEventListener('click', () => {
+          alert('Form submitted!');
+          window.PopupManager.close();
+        });
+        document.getElementById('cancelFormBtn')?.addEventListener('click', () => {
+          window.PopupManager.close();
+        });
+      }, 100);
+      
+      return popup;
+    });
+    
+    updateQueueStatus();
+  }
+
+  // Custom footer
+  function testCustomFooter() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        headerText: 'Custom Footer',
+        bodyContent: '<p>This popup has multiple footer buttons with different styles.</p>',
+        footerContent: `
+          <button class="btn secondary" onclick="alert('Help clicked')">Help</button>
+          <button class="btn secondary" onclick="PopupManager.close()">Cancel</button>
+          <button class="btn" onclick="alert('Saved!'); PopupManager.close()">Save</button>
+        `
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // Minimal popup
+  function testMinimalPopup() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        headerText: 'Minimal',
+        bodyContent: '<p style="text-align: center;">Just a message, no footer.</p>'
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // No header
+  function testNoHeader() {
+    if (!window.game.cfg.popup_refresh_enabled) {
+      alert('Enable the new popup system first!');
+      return;
+    }
+    
+    window.PopupManager.enqueue(() => {
+      return window.createBasePopup({
+        headerText: '',
+        bodyContent: '<p style="text-align: center;">This popup has no header text (but still has the header container).</p>',
+        footerContent: '<button class="btn" onclick="PopupManager.close()">Close</button>'
+      });
+    });
+    
+    updateQueueStatus();
+  }
+
+  // Reduced motion
+  function testReducedMotion() {
+    alert('To test reduced motion:\n\n1. Enable "Reduce motion" in your OS settings\n2. Or use browser DevTools to emulate prefers-reduced-motion\n3. Then test popups - inter-popup delay will be 100ms instead of 800ms');
+  }
+
+  // Initialize
+  updateFlagStatus();
+  setInterval(updateQueueStatus, 1000);
+</script>
+
+</body>
+</html>
