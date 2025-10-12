@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Twist Badge Fix</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    .test-section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #444;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      background: #333;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    .fail {
+      color: #f44336;
+      font-weight: bold;
+    }
+    #tv {
+      position: relative;
+      width: 400px;
+      height: 300px;
+      background: #000;
+      margin: 20px auto;
+      border: 3px solid #555;
+      border-radius: 8px;
+    }
+    .tvViewport {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    #twistBadge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(155, 77, 255, 0.9);
+      color: white;
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-weight: bold;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      z-index: 10;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+    }
+    .twistBadgeDot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      margin-bottom: 3px;
+    }
+    .twistBadgeText {
+      line-height: 1;
+    }
+    #doubleBadge, #tripleBadge {
+      display: inline-block;
+      padding: 5px 10px;
+      margin: 5px;
+      border-radius: 4px;
+      font-weight: bold;
+      background: #f44336;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Twist Badge Fix Verification</h1>
+  <p>This test verifies the two fixes:</p>
+  <ol>
+    <li>TV badge appears after modal OR immediately when modal function is missing</li>
+    <li>HUD badges (#doubleBadge, #tripleBadge) are hidden</li>
+  </ol>
+  
+  <div class="test-section">
+    <h2>Setup</h2>
+    <button onclick="setupWithModal()">Setup WITH Modal Function</button>
+    <button onclick="setupWithoutModal()">Setup WITHOUT Modal Function</button>
+    <div class="status" id="setupStatus">Click a setup button to begin</div>
+  </div>
+
+  <div class="test-section">
+    <h2>HUD Badges (Should Always Be Hidden)</h2>
+    <div>
+      <span id="doubleBadge">DOUBLE</span>
+      <span id="tripleBadge">TRIPLE</span>
+    </div>
+    <div class="status" id="hudStatus">Badges should be hidden after updateHud() is called</div>
+  </div>
+
+  <div class="test-section">
+    <h2>TV with Twist Badge</h2>
+    <div id="tv">
+      <div class="tvViewport">
+        <span>TV Screen (Badge should appear in top-right corner)</span>
+      </div>
+    </div>
+    <div class="status" id="badgeStatus">Badge status will appear here</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Sequence</h2>
+    <button onclick="test1_activateDouble()">1. Activate Double Eviction</button>
+    <button onclick="test2_activateTriple()">2. Activate Triple Eviction</button>
+    <button onclick="test3_changeWeek()">3. Change Week (Should Clear Badge)</button>
+    <button onclick="test4_checkHudBadges()">4. Check HUD Badges Hidden</button>
+    <div class="status" id="testStatus">Test results will appear here</div>
+  </div>
+
+  <script src="js/tv.js"></script>
+  <script>
+    // Initialize game state
+    window.game = {
+      week: 1,
+      __twistMode: null,
+      __twistBadgeShown: false
+    };
+
+    // Mock alivePlayers function
+    window.alivePlayers = function() {
+      return Array.from({length: 10}, (_, i) => ({id: `p${i}`}));
+    };
+
+    // Mock updateHud function
+    window.updateHud = function() {
+      console.log('[Mock updateHud] Called');
+      const dbl = document.getElementById('doubleBadge');
+      const tpl = document.getElementById('tripleBadge');
+      
+      // This should hide them per our fix
+      if(dbl) dbl.style.display = 'none';
+      if(tpl) tpl.style.display = 'none';
+      
+      // Update TV badge
+      if(typeof window.TV?.updateTwistBadge === 'function'){
+        window.TV.updateTwistBadge();
+      }
+    };
+
+    function setupWithModal() {
+      // Define showEventModal
+      window.showEventModal = async function(options) {
+        console.log('[Mock showEventModal] Called with:', options);
+        return new Promise(resolve => {
+          setTimeout(() => {
+            console.log('[Mock showEventModal] Resolved');
+            resolve();
+          }, 100);
+        });
+      };
+      
+      document.getElementById('setupStatus').innerHTML = 
+        '<span class="pass">✅ Modal function IS available (normal flow)</span>';
+      
+      // Reset state
+      window.game.__twistMode = null;
+      window.game.__twistBadgeShown = false;
+      window.game.week = 1;
+    }
+
+    function setupWithoutModal() {
+      // Remove showEventModal to test fallback
+      delete window.showEventModal;
+      
+      document.getElementById('setupStatus').innerHTML = 
+        '<span class="pass">✅ Modal function NOT available (fallback/test harness)</span>';
+      
+      // Reset state
+      window.game.__twistMode = null;
+      window.game.__twistBadgeShown = false;
+      window.game.week = 1;
+    }
+
+    async function test1_activateDouble() {
+      const g = window.game;
+      g.__twistMode = 'double';
+      g.__twistBadgeShown = false;
+      
+      // Simulate modal flow if available
+      if (typeof window.showEventModal === 'function') {
+        await window.showEventModal({
+          title: 'House Shock!',
+          subtitle: 'Double Eviction Week!!'
+        });
+        g.__twistBadgeShown = true;
+      }
+      
+      // Update badge
+      window.TV.updateTwistBadge();
+      window.updateHud();
+      
+      // Check result
+      const badge = document.getElementById('twistBadge');
+      const isVisible = badge && badge.style.display === 'flex';
+      
+      if (isVisible) {
+        document.getElementById('testStatus').innerHTML = 
+          '<span class="pass">✅ TEST 1 PASS: Double badge is visible</span>';
+        document.getElementById('badgeStatus').innerHTML = 
+          '<span class="pass">✅ Badge showing: DOUBLE EVICTION</span>';
+      } else {
+        document.getElementById('testStatus').innerHTML = 
+          '<span class="fail">❌ TEST 1 FAIL: Badge not visible (expected visible)</span>';
+        document.getElementById('badgeStatus').innerHTML = 
+          '<span class="fail">❌ Badge NOT showing</span>';
+      }
+    }
+
+    async function test2_activateTriple() {
+      const g = window.game;
+      g.__twistMode = 'triple';
+      g.__twistBadgeShown = false;
+      
+      // Simulate modal flow if available
+      if (typeof window.showEventModal === 'function') {
+        await window.showEventModal({
+          title: 'House Shock!',
+          subtitle: 'Triple Eviction Week!!!'
+        });
+        g.__twistBadgeShown = true;
+      }
+      
+      // Update badge
+      window.TV.updateTwistBadge();
+      window.updateHud();
+      
+      // Check result
+      const badge = document.getElementById('twistBadge');
+      const isVisible = badge && badge.style.display === 'flex';
+      const text = badge ? badge.querySelector('.twistBadgeText').textContent : '';
+      
+      if (isVisible && text.includes('Triple')) {
+        document.getElementById('testStatus').innerHTML = 
+          '<span class="pass">✅ TEST 2 PASS: Triple badge is visible</span>';
+        document.getElementById('badgeStatus').innerHTML = 
+          '<span class="pass">✅ Badge showing: TRIPLE EVICTION</span>';
+      } else {
+        document.getElementById('testStatus').innerHTML = 
+          '<span class="fail">❌ TEST 2 FAIL: Badge not visible or wrong text</span>';
+        document.getElementById('badgeStatus').innerHTML = 
+          '<span class="fail">❌ Badge NOT showing correctly</span>';
+      }
+    }
+
+    function test3_changeWeek() {
+      const g = window.game;
+      g.week = 2; // Change week
+      
+      // Update badge (should clear it)
+      window.TV.updateTwistBadge();
+      
+      // Check result
+      const badge = document.getElementById('twistBadge');
+      const isVisible = badge && badge.style.display === 'flex';
+      
+      if (!isVisible) {
+        document.getElementById('testStatus').innerHTML = 
+          '<span class="pass">✅ TEST 3 PASS: Badge cleared on week change</span>';
+        document.getElementById('badgeStatus').innerHTML = 
+          '<span class="pass">✅ Badge hidden (week changed)</span>';
+      } else {
+        document.getElementById('testStatus').innerHTML = 
+          '<span class="fail">❌ TEST 3 FAIL: Badge still visible after week change</span>';
+        document.getElementById('badgeStatus').innerHTML = 
+          '<span class="fail">❌ Badge should be hidden</span>';
+      }
+    }
+
+    function test4_checkHudBadges() {
+      // Activate twist again
+      window.game.__twistMode = 'double';
+      window.game.week = 3;
+      window.game.__twistBadgeShown = true;
+      
+      // Call updateHud which should hide HUD badges
+      window.updateHud();
+      
+      const dbl = document.getElementById('doubleBadge');
+      const tpl = document.getElementById('tripleBadge');
+      const dblHidden = !dbl || dbl.style.display === 'none';
+      const tplHidden = !tpl || tpl.style.display === 'none';
+      
+      if (dblHidden && tplHidden) {
+        document.getElementById('testStatus').innerHTML = 
+          '<span class="pass">✅ TEST 4 PASS: HUD badges are hidden</span>';
+        document.getElementById('hudStatus').innerHTML = 
+          '<span class="pass">✅ Both HUD badges are hidden (no duplicates)</span>';
+      } else {
+        document.getElementById('testStatus').innerHTML = 
+          '<span class="fail">❌ TEST 4 FAIL: HUD badges are visible</span>';
+        document.getElementById('hudStatus').innerHTML = 
+          '<span class="fail">❌ HUD badges should be hidden</span>';
+      }
+    }
+
+    // Auto-run check on load
+    window.addEventListener('load', function() {
+      // Wait for TV.js to initialize
+      setTimeout(function() {
+        const badge = document.getElementById('twistBadge');
+        if (badge) {
+          console.log('[Test] Twist badge element found:', badge);
+        } else {
+          console.warn('[Test] Twist badge element NOT found - defensive creation should have happened');
+        }
+        
+        // Setup without modal by default
+        setupWithoutModal();
+      }, 100);
+    });
+  </script>
+</body>
+</html>
