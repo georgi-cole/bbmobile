@@ -996,7 +996,7 @@
       if(to==='cast'){ initCastTab(modal); }
       if(to==='debug'){
         populateDebugMinigameDropdown(modal);
-        wireLaunchMinigameButton(modal);
+        wireDebugMinigameLauncher(modal);
       }
     });
     panes.querySelector('.settingsTabPane[data-pane="general"]').classList.add('active');
