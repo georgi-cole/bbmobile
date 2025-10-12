@@ -66,7 +66,11 @@
     progressionEnabled: false,  // Enable XP and leveling system
     
     // Popup system refresh (feature-flagged, off by default)
-    popup_refresh_enabled: false  // Enable new BasePopup/PopupManager system
+    popup_refresh_enabled: false,  // Enable new BasePopup/PopupManager system
+    
+    // Social Logic v2 (feature-flagged, off by default)
+    social_logic_v2_enabled: false,  // Enable context-aware weighted social popup selection
+    social_inter_delay: 800  // Inter-popup delay for social decisions (ms)
   };
 
   // Load configuration from localStorage
