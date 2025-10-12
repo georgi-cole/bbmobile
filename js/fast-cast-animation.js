@@ -8,6 +8,183 @@
   let isPlaying = false;
 
   /**
+   * Preload all contestant avatars from /avatars/ folder
+   * @param {Array} players - Array of player objects
+   * @param {Function} onProgress - Callback with (loaded, total)
+   * @returns {Promise<boolean>} True if all images loaded, false if any failed or timeout
+   */
+  function preloadAvatars(players, onProgress) {
+    return new Promise((resolve) => {
+      const avatarUrls = players.map(player => 
+        global.resolveAvatar ? global.resolveAvatar(player) : getPlayerAvatar(player)
+      );
+      
+      let loaded = 0;
+      const total = avatarUrls.length;
+      let completed = false;
+      
+      // 6 second timeout
+      const timeout = setTimeout(() => {
+        if (!completed) {
+          completed = true;
+          console.warn('[fast-cast] Avatar preload timeout - skipping animation');
+          resolve(false);
+        }
+      }, 6000);
+      
+      const images = [];
+      let allSuccess = true;
+      
+      avatarUrls.forEach((url, index) => {
+        const img = new Image();
+        
+        img.onload = () => {
+          if (completed) return;
+          loaded++;
+          if (onProgress) onProgress(loaded, total);
+          
+          if (loaded === total) {
+            completed = true;
+            clearTimeout(timeout);
+            console.info('[fast-cast] All avatars preloaded successfully');
+            resolve(allSuccess);
+          }
+        };
+        
+        img.onerror = () => {
+          if (completed) return;
+          allSuccess = false;
+          loaded++;
+          if (onProgress) onProgress(loaded, total);
+          console.warn('[fast-cast] Failed to preload avatar:', url);
+          
+          if (loaded === total) {
+            completed = true;
+            clearTimeout(timeout);
+            console.warn('[fast-cast] Some avatars failed to load - skipping animation');
+            resolve(false);
+          }
+        };
+        
+        img.src = url;
+        images.push(img);
+      });
+    });
+  }
+
+  /**
+   * Create Big Brother eye-themed loading bar
+   * @returns {Object} Object with element, update, and remove methods
+   */
+  function createLoadingBar() {
+    const overlay = document.createElement('div');
+    overlay.id = 'bbLoadingOverlay';
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2533 50%, #0a0f16 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 30px;
+    `;
+    
+    // Big Brother Eye SVG
+    const eyeContainer = document.createElement('div');
+    eyeContainer.innerHTML = `
+      <svg width="120" height="80" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:0.8" />
+            <stop offset="100%" style="stop-color:#ff0000;stop-opacity:0" />
+          </radialGradient>
+        </defs>
+        <!-- Eye shape -->
+        <ellipse cx="60" cy="40" rx="55" ry="35" fill="#1a2533" stroke="#ff6b6b" stroke-width="2"/>
+        <!-- Iris -->
+        <circle cx="60" cy="40" r="20" fill="#ff6b6b"/>
+        <!-- Pupil with glow -->
+        <circle cx="60" cy="40" r="20" fill="url(#eyeGlow)"/>
+        <circle cx="60" cy="40" r="12" fill="#000000"/>
+        <!-- Highlight -->
+        <ellipse cx="65" cy="35" rx="5" ry="7" fill="#ffffff" opacity="0.6"/>
+      </svg>
+    `;
+    eyeContainer.style.cssText = `
+      animation: eyePulse 2s ease-in-out infinite;
+    `;
+    
+    // Loading bar container
+    const barContainer = document.createElement('div');
+    barContainer.style.cssText = `
+      width: min(400px, 80vw);
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    `;
+    
+    // Loading bar fill
+    const barFill = document.createElement('div');
+    barFill.style.cssText = `
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff6b6b 0%, #ff0000 100%);
+      border-radius: 4px;
+      transition: width 0.3s ease-out;
+      box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+    `;
+    
+    barContainer.appendChild(barFill);
+    
+    // Loading text
+    const loadingText = document.createElement('div');
+    loadingText.textContent = 'Loading Cast...';
+    loadingText.style.cssText = `
+      font-size: 18px;
+      font-weight: 600;
+      color: #ff6b6b;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+    `;
+    
+    overlay.appendChild(eyeContainer);
+    overlay.appendChild(loadingText);
+    overlay.appendChild(barContainer);
+    
+    // Add eye pulse animation
+    if (!document.getElementById('bbLoadingStyles')) {
+      const style = document.createElement('style');
+      style.id = 'bbLoadingStyles';
+      style.textContent = `
+        @keyframes eyePulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.05); opacity: 0.9; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(overlay);
+    
+    return {
+      element: overlay,
+      update: (progress) => {
+        barFill.style.width = `${progress * 100}%`;
+      },
+      remove: () => {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => overlay.remove(), 300);
+      }
+    };
+  }
+
+  /**
    * Play house circle animation showing all contestants with pulse-in effect
    * @param {Array} players - Array of player objects
    * @param {Function} onComplete - Callback when animation completes
@@ -25,8 +202,38 @@
     }
 
     isPlaying = true;
-    console.info('[fast-cast] Starting fast cast animation for', players.length, 'contestants');
+    console.info('[fast-cast] Starting avatar preload for', players.length, 'contestants');
+    
+    // Show loading bar
+    const loadingBar = createLoadingBar();
+    
+    // Preload avatars
+    preloadAvatars(players, (loaded, total) => {
+      loadingBar.update(loaded / total);
+    }).then((allLoaded) => {
+      // Remove loading bar
+      loadingBar.remove();
+      
+      if (!allLoaded) {
+        // Skip animation, go straight to game
+        console.info('[fast-cast] Skipping animation due to failed/timeout preload');
+        isPlaying = false;
+        if (onComplete) onComplete();
+        return;
+      }
+      
+      // All images loaded successfully, show animation
+      console.info('[fast-cast] Starting cast animation');
+      showCastAnimation(players, onComplete);
+    });
+  }
 
+  /**
+   * Show the cast photo pulse-in/disappear animation
+   * @param {Array} players - Array of player objects
+   * @param {Function} onComplete - Callback when animation completes
+   */
+  function showCastAnimation(players, onComplete) {
     // Create fullscreen overlay container
     const overlay = document.createElement('div');
     overlay.id = 'houseCircleOverlay';
