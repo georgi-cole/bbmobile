@@ -850,15 +850,256 @@
     });
   }
 
-  // Export API
+  // ============================================================================
+  // RUNTIME HELPERS (PR1: Non-breaking additions for dynamic loading)
+  // ============================================================================
+
+  /**
+   * Register a game at runtime
+   * Allows modules to register themselves dynamically
+   * @param {Object} meta - Game metadata (must include 'key' field)
+   * @returns {boolean} True if registration succeeded
+   */
+  function registerGame(meta){
+    try {
+      if(!meta || !meta.key){
+        console.error('[MinigameRegistry] registerGame: metadata must include "key" field');
+        return false;
+      }
+
+      const key = meta.key;
+
+      // Check if already registered
+      if(REGISTRY[key]){
+        console.warn(`[MinigameRegistry] Game "${key}" is already registered, skipping`);
+        return false;
+      }
+
+      // Add to registry with defaults
+      REGISTRY[key] = {
+        key: key,
+        name: meta.name || key,
+        description: meta.description || '',
+        type: meta.type || 'puzzle',
+        scoring: meta.scoring || 'accuracy',
+        mobileFriendly: meta.mobileFriendly !== false,
+        implemented: meta.implemented !== false,
+        module: meta.module || `${key}.js`,
+        minScore: meta.minScore || 0,
+        maxScore: meta.maxScore || 100,
+        retired: meta.retired || false,
+        seasons: meta.seasons || ['spring', 'summer', 'autumn', 'winter']
+      };
+
+      console.info(`[MinigameRegistry] Registered game: ${key}`);
+      return true;
+    } catch(error){
+      console.error('[MinigameRegistry] registerGame error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if a module is loaded in window.MiniGames
+   * @param {string} key - Game key
+   * @returns {boolean} True if module is loaded
+   */
+  function isModuleLoaded(key){
+    try {
+      return !!(g.MiniGames && g.MiniGames[key] && typeof g.MiniGames[key].render === 'function');
+    } catch(error){
+      console.error(`[MinigameRegistry] isModuleLoaded error for "${key}":`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Load a module dynamically (with script-tag fallback)
+   * @param {string} key - Game key
+   * @returns {Promise<boolean>} Resolves to true if loaded successfully
+   */
+  function loadModule(key){
+    return new Promise((resolve) => {
+      try {
+        const entry = REGISTRY[key];
+        if(!entry){
+          console.warn(`[MinigameRegistry] loadModule: "${key}" not in registry`);
+          resolve(false);
+          return;
+        }
+
+        // Already loaded?
+        if(isModuleLoaded(key)){
+          console.info(`[MinigameRegistry] Module "${key}" already loaded`);
+          resolve(true);
+          return;
+        }
+
+        // Try dynamic import first
+        const modulePath = `js/minigames/${entry.module}`;
+        
+        import(modulePath)
+          .then(() => {
+            // Check if loaded successfully
+            if(isModuleLoaded(key)){
+              console.info(`[MinigameRegistry] Module "${key}" loaded via import`);
+              resolve(true);
+            } else {
+              console.warn(`[MinigameRegistry] Module "${key}" imported but not registered`);
+              resolve(false);
+            }
+          })
+          .catch((importError) => {
+            console.warn(`[MinigameRegistry] Dynamic import failed for "${key}", trying script tag:`, importError.message);
+            
+            // Fallback: script tag injection
+            const script = document.createElement('script');
+            script.src = modulePath;
+            script.onload = () => {
+              if(isModuleLoaded(key)){
+                console.info(`[MinigameRegistry] Module "${key}" loaded via script tag`);
+                resolve(true);
+              } else {
+                console.error(`[MinigameRegistry] Module "${key}" script loaded but not registered`);
+                resolve(false);
+              }
+            };
+            script.onerror = (scriptError) => {
+              console.error(`[MinigameRegistry] Failed to load "${key}" via script tag:`, scriptError);
+              resolve(false);
+            };
+            document.head.appendChild(script);
+          });
+      } catch(error){
+        console.error(`[MinigameRegistry] loadModule error for "${key}":`, error);
+        resolve(false);
+      }
+    });
+  }
+
+  /**
+   * Unified render API - renders a minigame by key
+   * Invokes MinigameLifecycle hooks if available
+   * Delegates to module implementations (window.MiniGames or window.MinigameModules)
+   * @param {string} key - Game key
+   * @param {HTMLElement} host - Container element
+   * @param {Function} onComplete - Completion callback function(score)
+   * @param {Object} options - Optional game options (debugMode, competitionMode, etc.)
+   */
+  function render(key, host, onComplete, options = {}){
+    try {
+      const entry = REGISTRY[key];
+
+      // Check if game exists in registry
+      if(!entry){
+        console.error(`[MinigameRegistry] render: Game "${key}" not in registry`);
+        host.innerHTML = `<div style="padding:20px;text-align:center;"><p style="color:#ff6b9d;">Error: Unknown minigame "${key}"</p><p style="color:#95a9c0;font-size:0.9rem;">Please refresh the page or contact support.</p></div>`;
+        
+        // Auto-fail after a delay
+        setTimeout(() => {
+          if(typeof onComplete === 'function'){
+            onComplete(0);
+          }
+        }, 3000);
+        return;
+      }
+
+      // Invoke lifecycle: beforeRender
+      if(g.MinigameLifecycle && typeof g.MinigameLifecycle.beforeRender === 'function'){
+        try {
+          g.MinigameLifecycle.beforeRender(key, host, options);
+        } catch(lifecycleError){
+          console.warn('[MinigameRegistry] MinigameLifecycle.beforeRender error:', lifecycleError);
+        }
+      }
+
+      // Try window.MinigameModules first (new standard)
+      if(g.MinigameModules && g.MinigameModules[key] && typeof g.MinigameModules[key].render === 'function'){
+        console.info(`[MinigameRegistry] Rendering "${key}" via MinigameModules`);
+        
+        // Wrap onComplete to invoke lifecycle
+        const wrappedOnComplete = (score) => {
+          if(g.MinigameLifecycle && typeof g.MinigameLifecycle.afterRender === 'function'){
+            try {
+              g.MinigameLifecycle.afterRender(key, host, score, options);
+            } catch(lifecycleError){
+              console.warn('[MinigameRegistry] MinigameLifecycle.afterRender error:', lifecycleError);
+            }
+          }
+          
+          if(typeof onComplete === 'function'){
+            onComplete(score);
+          }
+        };
+        
+        g.MinigameModules[key].render(host, wrappedOnComplete, options);
+        return;
+      }
+
+      // Fallback to window.MiniGames (legacy standard)
+      if(g.MiniGames && g.MiniGames[key] && typeof g.MiniGames[key].render === 'function'){
+        console.info(`[MinigameRegistry] Rendering "${key}" via MiniGames (legacy)`);
+        
+        // Wrap onComplete to invoke lifecycle
+        const wrappedOnComplete = (score) => {
+          if(g.MinigameLifecycle && typeof g.MinigameLifecycle.afterRender === 'function'){
+            try {
+              g.MinigameLifecycle.afterRender(key, host, score, options);
+            } catch(lifecycleError){
+              console.warn('[MinigameRegistry] MinigameLifecycle.afterRender error:', lifecycleError);
+            }
+          }
+          
+          if(typeof onComplete === 'function'){
+            onComplete(score);
+          }
+        };
+        
+        g.MiniGames[key].render(host, wrappedOnComplete, options);
+        return;
+      }
+
+      // Module not loaded
+      console.error(`[MinigameRegistry] render: Module "${key}" not loaded (not in MiniGames or MinigameModules)`);
+      host.innerHTML = `<div style="padding:20px;text-align:center;">
+        <p style="color:#ff6b9d;margin-bottom:12px;">Error: Minigame "${entry.name}" not loaded</p>
+        <p style="color:#95a9c0;font-size:0.9rem;">The game module failed to load. Please refresh the page.</p>
+      </div>`;
+      
+      // Auto-fail after a delay
+      setTimeout(() => {
+        if(typeof onComplete === 'function'){
+          onComplete(0);
+        }
+      }, 3000);
+    } catch(error){
+      console.error(`[MinigameRegistry] render error for "${key}":`, error);
+      host.innerHTML = `<div style="padding:20px;text-align:center;"><p style="color:#ff6b9d;">Error: Failed to render minigame</p></div>`;
+      
+      setTimeout(() => {
+        if(typeof onComplete === 'function'){
+          onComplete(0);
+        }
+      }, 3000);
+    }
+  }
+
+  // Export API (existing + new runtime helpers)
   g.MinigameRegistry = {
+    // Existing API (unchanged)
     getRegistry,
     getGame,
     getAllKeys,
     getGamesByFilter,
     getImplementedGames,
     getMobileFriendlyGames,
-    getGamesByType
+    getGamesByType,
+    
+    // New runtime helpers (PR1)
+    registerGame,
+    isModuleLoaded,
+    loadModule,
+    render
   };
 
 })(window);

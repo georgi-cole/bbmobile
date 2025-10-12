@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Minigame Registry Runtime Helpers</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #1a2332;
+      color: #e3ecf5;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: #2c3a4d;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #3a4a5d;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .pass {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid #22c55e;
+      color: #22c55e;
+    }
+    .fail {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid #ef4444;
+      color: #ef4444;
+    }
+    .info {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid #3b82f6;
+      color: #3b82f6;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    #game-container {
+      min-height: 300px;
+      background: #1a2332;
+      border: 2px solid #3a4a5d;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    pre {
+      background: #1a2332;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Minigame Registry Runtime Helpers Test</h1>
+  <p>Testing PR1: Runtime helpers for dynamic loading and rendering</p>
+
+  <!-- Test 1: Module Loading -->
+  <div class="test-section">
+    <h2>Test 1: Module Loading Check</h2>
+    <div id="test1-results"></div>
+    <button onclick="runTest1()">Run Test 1</button>
+  </div>
+
+  <!-- Test 2: Runtime Registration -->
+  <div class="test-section">
+    <h2>Test 2: Runtime Registration</h2>
+    <div id="test2-results"></div>
+    <button onclick="runTest2()">Run Test 2</button>
+  </div>
+
+  <!-- Test 3: Render API -->
+  <div class="test-section">
+    <h2>Test 3: Unified Render API</h2>
+    <div id="test3-results"></div>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div id="game-container"></div>
+  </div>
+
+  <!-- Test 4: Audit Script -->
+  <div class="test-section">
+    <h2>Test 4: Audit Script</h2>
+    <div id="test4-results"></div>
+    <button onclick="runTest4()">Run Test 4</button>
+    <pre id="audit-json" style="display:none;"></pre>
+  </div>
+
+  <!-- Test 5: Backwards Compatibility -->
+  <div class="test-section">
+    <h2>Test 5: Backwards Compatibility (renderMinigame)</h2>
+    <div id="test5-results"></div>
+    <button onclick="runTest5()">Run Test 5</button>
+  </div>
+
+  <!-- Load required scripts -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/loader.js"></script>
+  <script src="js/minigames.js"></script>
+  <script src="scripts/minigames-audit.js"></script>
+  
+  <!-- Load a sample minigame for testing -->
+  <script src="js/minigames/quick-tap.js"></script>
+
+  <script>
+    // Test 1: Check module loading functions
+    function runTest1() {
+      const results = document.getElementById('test1-results');
+      results.innerHTML = '<div class="info">Running Test 1...</div>';
+      
+      let html = '';
+      let passed = 0;
+      let failed = 0;
+
+      // Check if MinigameRegistry exists
+      if(window.MinigameRegistry) {
+        html += '<div class="pass">✓ MinigameRegistry is loaded</div>';
+        passed++;
+      } else {
+        html += '<div class="fail">✗ MinigameRegistry not loaded</div>';
+        failed++;
+      }
+
+      // Check if new functions exist
+      const newFunctions = ['registerGame', 'isModuleLoaded', 'loadModule', 'render'];
+      newFunctions.forEach(fn => {
+        if(typeof window.MinigameRegistry[fn] === 'function') {
+          html += `<div class="pass">✓ MinigameRegistry.${fn}() exists</div>`;
+          passed++;
+        } else {
+          html += `<div class="fail">✗ MinigameRegistry.${fn}() missing</div>`;
+          failed++;
+        }
+      });
+
+      // Check if existing functions still exist
+      const existingFunctions = ['getRegistry', 'getGame', 'getAllKeys', 'getImplementedGames'];
+      existingFunctions.forEach(fn => {
+        if(typeof window.MinigameRegistry[fn] === 'function') {
+          html += `<div class="pass">✓ MinigameRegistry.${fn}() still exists (backwards compatible)</div>`;
+          passed++;
+        } else {
+          html += `<div class="fail">✗ MinigameRegistry.${fn}() missing</div>`;
+          failed++;
+        }
+      });
+
+      // Test isModuleLoaded
+      const quickTapLoaded = window.MinigameRegistry.isModuleLoaded('quickTap');
+      if(quickTapLoaded) {
+        html += '<div class="pass">✓ isModuleLoaded("quickTap") returns true</div>';
+        passed++;
+      } else {
+        html += '<div class="fail">✗ isModuleLoaded("quickTap") returns false</div>';
+        failed++;
+      }
+
+      html += `<div class="info">Test 1 Complete: ${passed} passed, ${failed} failed</div>`;
+      results.innerHTML = html;
+    }
+
+    // Test 2: Runtime registration
+    function runTest2() {
+      const results = document.getElementById('test2-results');
+      results.innerHTML = '<div class="info">Running Test 2...</div>';
+      
+      let html = '';
+      let passed = 0;
+      let failed = 0;
+
+      // Check if MinigameModules exists
+      if(window.MinigameModules) {
+        html += '<div class="pass">✓ MinigameModules namespace exists</div>';
+        passed++;
+      } else {
+        html += '<div class="fail">✗ MinigameModules not loaded</div>';
+        failed++;
+        results.innerHTML = html;
+        return;
+      }
+
+      // Check if register function exists
+      if(typeof window.MinigameModules.register === 'function') {
+        html += '<div class="pass">✓ MinigameModules.register() exists</div>';
+        passed++;
+      } else {
+        html += '<div class="fail">✗ MinigameModules.register() missing</div>';
+        failed++;
+      }
+
+      // Try registering a test game
+      const testGame = {
+        render: (container, onComplete) => {
+          container.innerHTML = '<div style="padding:20px;text-align:center;"><p>Test game rendered!</p></div>';
+          setTimeout(() => onComplete(100), 1000);
+        }
+      };
+
+      const testMeta = {
+        key: 'testRuntimeGame',
+        name: 'Test Runtime Game',
+        description: 'A test game registered at runtime',
+        type: 'puzzle',
+        scoring: 'accuracy',
+        implemented: true,
+        module: 'test.js'
+      };
+
+      const registered = window.MinigameModules.register('testRuntimeGame', testGame, testMeta);
+      if(registered) {
+        html += '<div class="pass">✓ Successfully registered test game</div>';
+        passed++;
+      } else {
+        html += '<div class="fail">✗ Failed to register test game</div>';
+        failed++;
+      }
+
+      // Check if it's now in MinigameModules
+      if(window.MinigameModules.isRegistered('testRuntimeGame')) {
+        html += '<div class="pass">✓ Test game found in MinigameModules</div>';
+        passed++;
+      } else {
+        html += '<div class="fail">✗ Test game not in MinigameModules</div>';
+        failed++;
+      }
+
+      // Check if it's also in MiniGames (backwards compat)
+      if(window.MiniGames && window.MiniGames.testRuntimeGame) {
+        html += '<div class="pass">✓ Test game also in MiniGames (backwards compatible)</div>';
+        passed++;
+      } else {
+        html += '<div class="fail">✗ Test game not in MiniGames</div>';
+        failed++;
+      }
+
+      html += `<div class="info">Test 2 Complete: ${passed} passed, ${failed} failed</div>`;
+      results.innerHTML = html;
+    }
+
+    // Test 3: Render API
+    function runTest3() {
+      const results = document.getElementById('test3-results');
+      const container = document.getElementById('game-container');
+      
+      results.innerHTML = '<div class="info">Running Test 3...</div>';
+      container.innerHTML = '';
+      
+      let html = '';
+
+      // Test rendering quickTap
+      try {
+        window.MinigameRegistry.render('quickTap', container, (score) => {
+          html += `<div class="pass">✓ Game completed with score: ${score}</div>`;
+          results.innerHTML += html;
+        });
+        
+        html += '<div class="pass">✓ MinigameRegistry.render() called successfully</div>';
+        html += '<div class="info">Game rendered below. Play it to complete the test.</div>';
+      } catch(error) {
+        html += `<div class="fail">✗ Error rendering game: ${error.message}</div>`;
+      }
+
+      results.innerHTML = html;
+    }
+
+    // Test 4: Audit script
+    async function runTest4() {
+      const results = document.getElementById('test4-results');
+      const jsonPre = document.getElementById('audit-json');
+      
+      results.innerHTML = '<div class="info">Running Test 4...</div>';
+      
+      let html = '';
+      let passed = 0;
+      let failed = 0;
+
+      // Check if MinigameAudit exists
+      if(window.MinigameAudit) {
+        html += '<div class="pass">✓ MinigameAudit loaded</div>';
+        passed++;
+      } else {
+        html += '<div class="fail">✗ MinigameAudit not loaded</div>';
+        failed++;
+        results.innerHTML = html;
+        return;
+      }
+
+      // Run audit
+      try {
+        const auditResult = await window.MinigameAudit.run();
+        html += '<div class="pass">✓ Audit completed successfully</div>';
+        html += `<div class="info">Found ${auditResult.summary.totalRegistered} games, ${auditResult.summary.totalImplemented} implemented, ${auditResult.summary.totalLoaded} loaded</div>`;
+        passed++;
+
+        // Get JSON
+        const json = window.MinigameAudit.getJSON();
+        jsonPre.textContent = json;
+        jsonPre.style.display = 'block';
+        html += '<div class="pass">✓ JSON export works</div>';
+        passed++;
+
+      } catch(error) {
+        html += `<div class="fail">✗ Audit failed: ${error.message}</div>`;
+        failed++;
+      }
+
+      html += `<div class="info">Test 4 Complete: ${passed} passed, ${failed} failed</div>`;
+      results.innerHTML = html;
+    }
+
+    // Test 5: Backwards compatibility
+    function runTest5() {
+      const results = document.getElementById('test5-results');
+      results.innerHTML = '<div class="info">Running Test 5...</div>';
+      
+      let html = '';
+      let passed = 0;
+      let failed = 0;
+
+      // Check if renderMinigame exists
+      if(typeof window.renderMinigame === 'function') {
+        html += '<div class="pass">✓ renderMinigame() exists</div>';
+        passed++;
+      } else {
+        html += '<div class="fail">✗ renderMinigame() missing</div>';
+        failed++;
+      }
+
+      // Try calling renderMinigame with a legacy key
+      const testContainer = document.createElement('div');
+      try {
+        window.renderMinigame('clicker', testContainer, (score) => {
+          // Success callback
+        });
+        
+        if(testContainer.innerHTML) {
+          html += '<div class="pass">✓ renderMinigame("clicker") works (mapped to quickTap)</div>';
+          passed++;
+        } else {
+          html += '<div class="fail">✗ renderMinigame("clicker") produced no output</div>';
+          failed++;
+        }
+      } catch(error) {
+        html += `<div class="fail">✗ renderMinigame() error: ${error.message}</div>`;
+        failed++;
+      }
+
+      html += `<div class="info">Test 5 Complete: ${passed} passed, ${failed} failed</div>`;
+      results.innerHTML = html;
+    }
+
+    // Auto-run Test 1 on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        runTest1();
+      }, 100);
+    });
+  </script>
+</body>
+</html>
