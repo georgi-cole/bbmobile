@@ -6,6 +6,72 @@
   'use strict';
 
   /**
+   * Get theme colors from current theme
+   * Returns CSS variable values that adapt to the active theme
+   */
+  function getThemeColors(){
+    // Get computed values from CSS variables
+    const computedStyle = getComputedStyle(document.body);
+    
+    // Helper to convert CSS color to rgba with custom opacity
+    function getRgbaFromCssVar(varName, opacity = 1) {
+      const color = computedStyle.getPropertyValue(varName).trim();
+      
+      // If already rgba, extract rgb and apply new opacity
+      if (color.startsWith('rgba')) {
+        const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (rgbMatch) {
+          return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${opacity})`;
+        }
+      }
+      
+      // If rgb, convert to rgba
+      if (color.startsWith('rgb')) {
+        const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+        if (rgbMatch) {
+          return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${opacity})`;
+        }
+      }
+      
+      // If hex color, convert to rgba
+      if (color.startsWith('#')) {
+        const hex = color.replace('#', '');
+        let r, g, b;
+        
+        if (hex.length === 3) {
+          r = parseInt(hex[0] + hex[0], 16);
+          g = parseInt(hex[1] + hex[1], 16);
+          b = parseInt(hex[2] + hex[2], 16);
+        } else if (hex.length === 6) {
+          r = parseInt(hex.substring(0, 2), 16);
+          g = parseInt(hex.substring(2, 4), 16);
+          b = parseInt(hex.substring(4, 6), 16);
+        } else {
+          // Fallback
+          return `rgba(22, 43, 64, ${opacity})`;
+        }
+        
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      }
+      
+      // Fallback for named colors or unsupported formats
+      return `rgba(22, 43, 64, ${opacity})`;
+    }
+    
+    return {
+      // Backgrounds with 30% opacity (70% transparent)
+      cardBgTransparent: getRgbaFromCssVar('--card', 0.3),
+      cardBg2Transparent: getRgbaFromCssVar('--card-2', 0.3),
+      // Full opacity for text
+      textColor: computedStyle.getPropertyValue('--ink').trim(),
+      mutedColor: computedStyle.getPropertyValue('--muted').trim(),
+      accentColor: computedStyle.getPropertyValue('--accent').trim(),
+      borderColor: computedStyle.getPropertyValue('--line').trim(),
+      primaryColor: computedStyle.getPropertyValue('--primary-2').trim() || computedStyle.getPropertyValue('--card-2').trim()
+    };
+  }
+
+  /**
    * Show instructions inside TV viewport with Play button
    * When Play is pressed, launches the minigame in fullscreen overlay
    * 
@@ -21,16 +87,19 @@
       instructions = g.MinigameInstructions.getInstructions(gameKey);
     }
 
+    // Get theme colors
+    const theme = getThemeColors();
+
     // Clear container
     container.innerHTML = '';
 
     // Create instructions card (no full-page overlay, just the card in the TV area)
-    // Style matches jury vote popup: transparent, compact, subtle
+    // Style: ~70% transparent so TV background is visible, theme-aware colors
     const card = document.createElement('div');
     card.className = 'competition-instructions-card';
     card.style.cssText = `
-      background: rgba(22, 43, 64, 0.95);
-      border: 1px solid #274765;
+      background: ${theme.cardBgTransparent};
+      border: 1px solid ${theme.borderColor};
       border-radius: 12px;
       padding: 10px 12px;
       box-shadow: 0 8px 20px -14px rgba(0, 0, 0, 0.7);
@@ -41,27 +110,27 @@
       margin: 0 auto;
     `;
 
-    // Title - more compact
+    // Title - more compact, theme-aware
     const title = document.createElement('h2');
     title.textContent = instructions.title;
     title.style.cssText = `
       margin: 0 0 8px 0;
       font-size: 1.1rem;
-      color: #83bfff;
+      color: ${theme.accentColor};
       font-weight: bold;
     `;
 
-    // Description - more compact
+    // Description - more compact, theme-aware
     const description = document.createElement('p');
     description.textContent = instructions.description;
     description.style.cssText = `
       margin: 0 0 10px 0;
       font-size: 0.9rem;
-      color: #c5d9ed;
+      color: ${theme.textColor};
       line-height: 1.4;
     `;
 
-    // Steps (if any) - more compact
+    // Steps (if any) - more compact, theme-aware
     let stepsContainer = null;
     if(instructions.steps && instructions.steps.length > 0){
       stepsContainer = document.createElement('ul');
@@ -70,7 +139,7 @@
         padding: 0;
         list-style: none;
         text-align: left;
-        color: #b0c8e0;
+        color: ${theme.mutedColor};
         font-size: 0.85rem;
       `;
       instructions.steps.forEach((step, idx) => {
@@ -93,7 +162,7 @@
       margin-top: 12px;
     `;
 
-    // Play button - more compact
+    // Play button - more compact, theme-aware
     const playButton = document.createElement('button');
     playButton.className = 'btn primary';
     playButton.textContent = '▶ Play';
@@ -101,21 +170,21 @@
       padding: 8px 24px;
       font-size: 1rem;
       font-weight: bold;
-      background: linear-gradient(135deg, #3563a7, #2a4d87);
-      border: 1px solid #4a7dc4;
+      background: ${theme.accentColor};
+      border: 1px solid ${theme.accentColor};
       border-radius: 8px;
-      color: #eaf4ff;
+      color: ${theme.textColor};
       cursor: pointer;
       transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(53, 99, 167, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     `;
     playButton.addEventListener('mouseenter', () => {
-      playButton.style.background = 'linear-gradient(135deg, #4574b8, #3a5e98)';
-      playButton.style.boxShadow = '0 6px 16px rgba(53, 99, 167, 0.5)';
+      playButton.style.opacity = '0.8';
+      playButton.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.5)';
     });
     playButton.addEventListener('mouseleave', () => {
-      playButton.style.background = 'linear-gradient(135deg, #3563a7, #2a4d87)';
-      playButton.style.boxShadow = '0 4px 12px rgba(53, 99, 167, 0.3)';
+      playButton.style.opacity = '1';
+      playButton.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
     });
     playButton.addEventListener('click', () => {
       if(typeof onPlay === 'function'){
@@ -149,6 +218,9 @@
     // Get time limit from options, default to 60 seconds
     const timeLimit = options.timeLimit ?? 60;
     
+    // Get theme colors
+    const theme = getThemeColors();
+    
     // Create fullscreen overlay
     const overlay = document.createElement('div');
     overlay.id = 'competition-minigame-overlay';
@@ -165,15 +237,15 @@
       animation: fadeIn 0.3s ease;
     `;
 
-    // Timer/Progress tracker
+    // Timer/Progress tracker - theme-aware with transparency
     const timerContainer = document.createElement('div');
     timerContainer.style.cssText = `
       position: absolute;
       top: calc(env(safe-area-inset-top, 0px) + 12px);
       left: calc(env(safe-area-inset-left, 0px) + 14px);
       z-index: 10001;
-      background: rgba(22, 43, 64, 0.95);
-      border: 1px solid #274765;
+      background: ${theme.cardBgTransparent};
+      border: 1px solid ${theme.borderColor};
       border-radius: 8px;
       padding: 8px 12px;
       display: flex;
@@ -188,7 +260,7 @@
 
     const timerText = document.createElement('span');
     timerText.style.cssText = `
-      color: #83bfff;
+      color: ${theme.accentColor};
       font-weight: bold;
       font-size: 0.95rem;
       font-family: monospace;
@@ -209,7 +281,7 @@
     const progressFill = document.createElement('div');
     progressFill.style.cssText = `
       height: 100%;
-      background: linear-gradient(90deg, #4a7dc4, #3563a7);
+      background: ${theme.accentColor};
       transition: all 0.1s linear;
       width: 100%;
     `;
