@@ -690,7 +690,7 @@
       if(!hasCompleted){
         const confirm = window.confirm('Are you sure you want to exit? Your score will not be submitted.');
         if(!confirm) return;
-        hasCompleted = true; // Prevent auto-submit
+        hasCompleted = true; // Prevent double completion
       }
       close(true); // Skip animation when manually closed
     });
