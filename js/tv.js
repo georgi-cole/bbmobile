@@ -107,6 +107,77 @@
     }
   }
 
+  // Set twist badge state
+  let currentTwistWeek = null;
+  let twistBadgeVisible = false;
+  
+  function setTwistBadge(twistType, visible){
+    const badge = document.getElementById('twistBadge');
+    if(!badge) return;
+    
+    const textEl = badge.querySelector('.twistBadgeText');
+    
+    if(visible && twistType){
+      // Get full twist name
+      const twistNames = {
+        'double': 'Double Eviction',
+        'triple': 'Triple Eviction'
+      };
+      const twistName = twistNames[twistType] || twistType;
+      
+      if(textEl) textEl.textContent = twistName;
+      
+      // Add tooltip with more info
+      let tooltip = badge.querySelector('.twistTooltip');
+      if(!tooltip){
+        tooltip = document.createElement('div');
+        tooltip.className = 'twistTooltip';
+        badge.appendChild(tooltip);
+      }
+      
+      const tooltipTexts = {
+        'double': 'Two houseguests will be evicted this week',
+        'triple': 'Three houseguests will be evicted this week'
+      };
+      tooltip.textContent = tooltipTexts[twistType] || 'Special twist is active';
+      
+      badge.style.display = 'flex';
+      twistBadgeVisible = true;
+      
+      // Store current week for tracking
+      const game = window.game || {};
+      currentTwistWeek = game.week;
+    } else {
+      badge.style.display = 'none';
+      twistBadgeVisible = false;
+      currentTwistWeek = null;
+    }
+  }
+  
+  // Check if twist badge should be shown (called on phase changes and HUD updates)
+  function updateTwistBadge(){
+    const game = window.game || {};
+    
+    // Hide badge if week changed
+    if(currentTwistWeek !== null && game.week !== currentTwistWeek){
+      setTwistBadge(null, false);
+      return;
+    }
+    
+    // Check for active twist
+    const isDouble = game.__twistMode === 'double' || game.doubleEvictionWeek === true;
+    const isTriple = game.__twistMode === 'triple' || game.tripleEvictionWeek === true;
+    
+    if(isTriple){
+      setTwistBadge('triple', true);
+    } else if(isDouble){
+      setTwistBadge('double', true);
+    } else if(twistBadgeVisible){
+      // Clear badge if no twist is active
+      setTwistBadge(null, false);
+    }
+  }
+
   // Debounced resize handler for orientation changes
   function setupResizeHandler(){
     const debouncedResize = () => {
@@ -144,6 +215,8 @@
   TV.initFit = initFit;
   TV.resize = resize;
   TV.setLiveBadge = setLiveBadge;
+  TV.setTwistBadge = setTwistBadge;
+  TV.updateTwistBadge = updateTwistBadge;
   TV.fitInViewport = fitInViewport;
   TV.fitCard = fitInViewport; // Alias
   g.TV = TV;

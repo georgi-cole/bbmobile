@@ -204,6 +204,11 @@
       console.info('[ui.week-intro] Showing twist announcement:', twistConfig.subtitle);
       try {
         await global.showEventModal(twistConfig);
+        
+        // After modal, update the twist badge in TV area
+        if(typeof global.TV?.updateTwistBadge === 'function'){
+          global.TV.updateTwistBadge();
+        }
       } catch (e) {
         console.error('[ui.week-intro] Error showing twist modal:', e);
       }

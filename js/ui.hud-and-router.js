@@ -884,6 +884,11 @@ header.innerHTML = `
     if(dbl) dbl.style.display = (isDouble && !isTriple) ? '' : 'none';
     if(tpl) tpl.style.display = isTriple ? '' : 'none';
 
+    // Update twist badge in TV area
+    if(typeof g.TV?.updateTwistBadge === 'function'){
+      g.TV.updateTwistBadge();
+    }
+
     updateDashboardTitleText();
     renderCastRoster();
     renderTopRoster();

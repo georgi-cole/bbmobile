@@ -708,6 +708,90 @@ button:focus-visible,.btn:focus-visible{
                    inset 0 1px 2px rgba(255,255,255,.45), inset 0 -1px 2px rgba(0,0,0,.25); }
 }
 
+/* Twist Badge (inside TV viewport, bottom-right) */
+.twistBadge{
+  position:absolute; bottom:12px; right:12px; z-index:15;
+  padding:7px 14px 8px; border-radius:999px; font-size:.7rem; font-weight:700;
+  letter-spacing:1px; text-transform:uppercase; color:#fff;
+  background:linear-gradient(135deg, #9b4dff 0%, #c46fff 50%, #9b4dff 100%);
+  box-shadow:0 0 0 2px rgba(155,77,255,.3), 0 4px 12px -4px rgba(155,77,255,.8), 
+             inset 0 1px 2px rgba(255,255,255,.35), inset 0 -1px 2px rgba(0,0,0,.25);
+  text-shadow:0 1px 2px rgba(0,0,0,.4);
+  pointer-events:auto;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  animation:twistBadgePopIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  transition:all 0.3s ease;
+}
+.twistBadge:hover{
+  transform:scale(1.05);
+  box-shadow:0 0 0 2px rgba(155,77,255,.5), 0 6px 18px -2px rgba(155,77,255,1), 
+             0 0 24px -6px rgba(155,77,255,.9),
+             inset 0 1px 2px rgba(255,255,255,.45), inset 0 -1px 2px rgba(0,0,0,.25);
+}
+@keyframes twistBadgePopIn{
+  0%{
+    opacity:0;
+    transform:scale(0.5) translateY(20px);
+  }
+  60%{
+    transform:scale(1.1) translateY(-5px);
+  }
+  100%{
+    opacity:1;
+    transform:scale(1) translateY(0);
+  }
+}
+
+/* Blinking dot indicator */
+.twistBadgeDot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#fff;
+  animation:twistDotBlink 1.5s ease-in-out infinite;
+  box-shadow:0 0 4px rgba(255,255,255,.8);
+}
+@keyframes twistDotBlink{
+  0%, 100%{ opacity:1; box-shadow:0 0 4px rgba(255,255,255,.8); }
+  50%{ opacity:0.3; box-shadow:0 0 2px rgba(255,255,255,.4); }
+}
+
+.twistBadgeText{
+  line-height:1;
+}
+
+/* Twist tooltip overlay */
+.twistTooltip{
+  position:absolute;
+  bottom:100%;
+  right:0;
+  margin-bottom:8px;
+  padding:10px 14px;
+  background:rgba(15,15,25,.95);
+  border:1px solid rgba(155,77,255,.4);
+  border-radius:8px;
+  color:#e8e8ff;
+  font-size:.65rem;
+  font-weight:600;
+  line-height:1.4;
+  letter-spacing:0.3px;
+  text-transform:none;
+  white-space:nowrap;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.2s ease, transform 0.2s ease;
+  transform:translateY(4px);
+  box-shadow:0 4px 16px -4px rgba(0,0,0,.6);
+  z-index:20;
+}
+.twistBadge:hover .twistTooltip{
+  opacity:1;
+  transform:translateY(0);
+}
+
 #tvOverlay{
   position:absolute; z-index:12;
   inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
