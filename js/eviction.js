@@ -8,6 +8,11 @@
 (function(global){
   const JURY_START_AT=9;
 
+  // Import centralized avatar constants
+  const getDicebearUrl = global.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+  };
+
   function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
   // Eviction result phrase variants
@@ -273,9 +278,9 @@
 
     // Get avatars with fallback
     const voterAvatar = global.resolveAvatar?.(voter) || voter.avatar || 
-      `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(voter.name)}`;
+      getDicebearUrl(voter.name);
     const targetAvatar = global.resolveAvatar?.(target) || target.avatar || 
-      `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(target.name)}`;
+      getDicebearUrl(target.name);
 
     // Get or create TV overlay container
     let tvOverlay = document.getElementById('tvOverlay');
@@ -325,7 +330,7 @@
     voterImg.onerror = function(){
       console.warn(`[avatar] failed to load url=${this.src} player=${voter.name}`);
       this.onerror=null;
-      this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(voter.name)}`;
+      this.src=getDicebearUrl(voter.name);
     };
     voterImg.style.cssText = `
       width: clamp(64px, 16vw, 88px); 
@@ -346,7 +351,7 @@
     targetImg.onerror = function(){
       console.warn(`[avatar] failed to load url=${this.src} player=${target.name}`);
       this.onerror=null;
-      this.src=`https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(target.name)}`;
+      this.src=getDicebearUrl(target.name);
     };
     targetImg.style.cssText = `
       width: clamp(64px, 16vw, 88px); 

@@ -5,6 +5,12 @@
 (function(g){
   'use strict';
 
+  // Import centralized avatar constants
+  const AVATAR_DEFAULTS = g.AVATAR_DEFAULTS || {};
+  const getDicebearUrl = g.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+  };
+
   // Negative cache: tracks failed avatar attempts to prevent 404 storms
   const failedAvatars = new Set();
   
@@ -137,9 +143,9 @@
     if (cfg.strictAvatars) {
       stats.strictMiss++;
       console.log(`[avatar] strict-miss player=${playerId || playerName}`);
-      // Return local generic silhouette (data URI for now)
+      // Return local generic silhouette (data URI from centralized config)
       stats.fallback++;
-      return 'data:image/svg+xml,' + encodeURIComponent(
+      return AVATAR_DEFAULTS.LOCAL_SILHOUETTE || 'data:image/svg+xml,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">' +
         '<rect fill="#2d3f56" width="100" height="100"/>' +
         '<circle cx="50" cy="35" r="15" fill="#4a5f7f"/>' +
@@ -148,7 +154,7 @@
       );
     } else {
       stats.fallback++;
-      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(playerName)}`;
+      return getDicebearUrl(playerName);
     }
   }
 
@@ -170,8 +176,8 @@
     const cfg = g.game?.cfg || g.cfg || {};
     if (cfg.strictAvatars) {
       console.log(`[avatar] strict-miss player=${name}`);
-      // Return local generic silhouette
-      return 'data:image/svg+xml,' + encodeURIComponent(
+      // Return local generic silhouette (from centralized config)
+      return AVATAR_DEFAULTS.LOCAL_SILHOUETTE || 'data:image/svg+xml,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">' +
         '<rect fill="#2d3f56" width="100" height="100"/>' +
         '<circle cx="50" cy="35" r="15" fill="#4a5f7f"/>' +
@@ -179,7 +185,7 @@
         '</svg>'
       );
     } else {
-      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name || 'player')}`;
+      return getDicebearUrl(name || 'player');
     }
   }
 

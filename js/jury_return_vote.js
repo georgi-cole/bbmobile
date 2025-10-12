@@ -2,6 +2,11 @@
 (function(global){
   'use strict';
 
+  // Import centralized avatar constants
+  const getDicebearUrl = global.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+  };
+
   // Helper for avatar images - uses global resolver
   function getAvatar(id) {
     // Use global resolver if available
@@ -13,7 +18,7 @@
     const p = global.getP?.(id);
     if (!p) {
       console.warn(`[jury_return_vote] avatar: player not found id=${id}`);
-      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(String(id))}`;
+      return getDicebearUrl(String(id));
     }
     
     // Priority: player.avatar > player.img > player.photo > dicebear
@@ -21,7 +26,7 @@
     if (p.img) return p.img;
     if (p.photo) return p.photo;
     
-    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name || String(id))}`;
+    return getDicebearUrl(p.name || String(id));
   }
   
   // Standard onerror handler for avatars
@@ -30,7 +35,7 @@
     if (global.getAvatarFallback) {
       return global.getAvatarFallback(name, failedUrl);
     }
-    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name || 'player')}`;
+    return getDicebearUrl(name || 'player');
   }
 
   // Full screen flash effect

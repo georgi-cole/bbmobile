@@ -15,6 +15,11 @@
 (function (global) {
   const $ = global.$;
 
+  // Import centralized avatar constants
+  const getDicebearUrl = global.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Player')}`;
+  };
+
   // Defensive loader for CompLocks module
   // Ensures comp-locks.js is loaded even if not included in index.html
   if (!global.CompLocks) {
@@ -458,7 +463,7 @@
 
         let avatarUrl = player?.avatar || player?.img || player?.photo;
         if (!avatarUrl) {
-          avatarUrl = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+          avatarUrl = getDicebearUrl(name);
         }
 
         return { name, score, avatarUrl };
@@ -523,7 +528,7 @@
           winnerAvatar.onerror = function () {
             console.warn(`[avatar] failed to load url=${this.src} player=${winner.name}`);
             this.onerror = null;
-            this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(winner.name)}`;
+            this.src = getDicebearUrl(winner.name);
           };
           winnerAvatar.style.cssText = `
             width: 110px;
@@ -590,7 +595,7 @@
             runnerAvatar.onerror = function () {
               console.warn(`[avatar] failed to load url=${this.src} player=${player.name}`);
               this.onerror = null;
-              this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name)}`;
+              this.src = getDicebearUrl(player.name);
             };
             runnerAvatar.style.cssText = `
               width: 65px;

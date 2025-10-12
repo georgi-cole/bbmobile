@@ -11,7 +11,12 @@
     (g.game = g.game || {}).cfg = (g.game && g.game.cfg) || {};
     return g.game.cfg;
   };
-  const FALLBACK = UI.FALLBACK_AVATAR || 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest';
+  
+  // Import centralized avatar constants
+  const getDicebearUrl = g.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Guest')}`;
+  };
+  const FALLBACK = UI.FALLBACK_AVATAR || getDicebearUrl('Guest');
 
   // ------------ Jury Consistency & alivePlayers Patch ------------
   function ensureAlivePlayersPatched(){
@@ -128,7 +133,7 @@
   // ------------ Roster Rendering ------------
   function getAvatar(p){
     return g.resolveAvatar?.(p) || p.avatar || p.img || p.photo ||
-      `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
+      getDicebearUrl(p.name||'guest');
   }
   function ensureDashboardRosterHost(){
     // Remove any existing dashboard roster element

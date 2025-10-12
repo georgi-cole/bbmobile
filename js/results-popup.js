@@ -4,6 +4,11 @@
 (function(global){
   'use strict';
 
+  // Import centralized avatar constants
+  const getDicebearUrl = global.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+  };
+
   // Central score formatting helper (1 decimal)
   function formatCompetitionScore(value){
     if(value == null || value === '') return '';
@@ -90,7 +95,7 @@
       } else {
         // Fallback if resolveAvatar not available
         avatarUrl = player?.avatar || player?.img || player?.photo || 
-          `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+          getDicebearUrl(name);
         console.info(`[results-popup] avatar url=${avatarUrl} player=${id || name} (no resolver)`);
       }
       
@@ -228,7 +233,7 @@
         if(global.getAvatarFallback){
           this.src = global.getAvatarFallback(winnerData.name, this.src);
         } else {
-          this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(winnerData.name)}`;
+          this.src = getDicebearUrl(winnerData.name);
         }
       };
       winnerSection.appendChild(winnerAvatarEl);
@@ -310,7 +315,7 @@
             if(global.getAvatarFallback){
               this.src = global.getAvatarFallback(player.name, this.src);
             } else {
-              this.src = `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name)}`;
+              this.src = getDicebearUrl(player.name);
             }
           };
           runnerUp.appendChild(runnerAvatar);
