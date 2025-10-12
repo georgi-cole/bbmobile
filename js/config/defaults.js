@@ -1,38 +1,106 @@
 // MODULE: config/defaults.js
-// Centralized configuration constants for the application
-// This module provides default values and constants used across multiple files
+// Central configuration defaults and storage helpers.
+// All game settings are defined here and persisted to localStorage.
 
-(function(g){
+(function(global){
   'use strict';
 
-  // Avatar fallback constants
-  const AVATAR_DEFAULTS = {
-    // External API fallback URL pattern (without seed parameter)
-    DICEBEAR_API_BASE: 'https://api.dicebear.com/6.x/bottts/svg',
+  const STORAGE_KEY = 'bb_cfg_v2';
+
+  // Master config defaults - consolidated from settings.js and ui.config-and-settings.js
+  const DEFAULT_CFG = {
+    // Visual/UX
+    fxCards: true,
+    showTopRoster: true,
+    colorblindMode: false,
+    strictAvatars: false, // When true, use local silhouette instead of external fallback
+    autoShowRulesOnStart: true, // When true, shows rules modal automatically after intro
+    useRibbon: true,
     
-    // Local SVG silhouette for strict mode (data URI)
-    LOCAL_SILHOUETTE: 'data:image/svg+xml,' + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">' +
-      '<rect fill="#2d3f56" width="100" height="100"/>' +
-      '<circle cx="50" cy="35" r="15" fill="#4a5f7f"/>' +
-      '<ellipse cx="50" cy="70" rx="20" ry="25" fill="#4a5f7f"/>' +
-      '</svg>'
-    )
+    // Core game mechanics
+    enableJuryHouse: true,
+    doubleChance: 18,   // %
+    tripleChance: 7,    // %
+    returnChance: 10,   // % chance a juror returns (mid-season)
+    selfEvictChance: 1, // % tiny chance of auto self-eviction
+    enablePublicFav: true, // Public's Favourite Player feature at finale (default ON)
+    
+    // Timing (seconds) - comprehensive timer list
+    timerStyle: 'hourglass', // 'hourglass' | 'circular'
+    tOpening: 90,
+    tIntermission: 4,
+    tHOH: 40,
+    tNoms: 25,
+    tVeto: 40,
+    tVetoDec: 25,
+    tSocial: 25,
+    tLiveVote: 30,
+    tJury: 35,
+    tFinal3Comp1: 35,
+    tFinal3Comp2: 35,
+    tFinal3Decision: 25,
+    tJuryReturn: 30,
+    
+    // Card animation settings
+    cardHoldMs: 3000,
+    cardGapMs: 2000,
+    skipCascadeEnabled: true,
+    skipTurboWindowMs: 4500,
+    skipTurboHoldMs: 450,
+    skipTurboGapMs: 100,
+    
+    // Audio
+    musicOn: true,
+    sfxOn: true,
+    
+    // Minigame mode
+    miniMode: 'random',  // 'random' | 'clicker' | 'cycle'
+    
+    // Minigame system (Phase 1-8 unified system)
+    useNewMinigames: true,  // When true, use new Phase 1 minigame system with non-repeating pools
+    useUnifiedMinigames: true,  // Master switch for unified minigame system (Phases 0-8)
+    enableMinigameBridge: true,  // Compatibility bridge for legacy keys (temporary, can disable after migration)
+    enableMinigameTelemetryPanel: false,  // Dev debug panel (Ctrl+Shift+D when enabled)
+    
+    // Progression system (feature-flagged, off by default)
+    progressionEnabled: false  // Enable XP and leveling system
   };
 
-  // Helper function to generate Dicebear URL with seed
-  function getDicebearUrl(seed) {
-    return `${AVATAR_DEFAULTS.DICEBEAR_API_BASE}?seed=${encodeURIComponent(seed || 'player')}`;
+  // Load configuration from localStorage
+  function loadStoredCfg(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return {};
+      const data = JSON.parse(raw);
+      return (data && typeof data === 'object') ? data : {};
+    }catch(e){
+      console.warn('[config/defaults] loadStoredCfg failed', e);
+      return {};
+    }
+  }
+
+  // Save configuration to localStorage
+  function saveStoredCfg(cfg){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg || {}));
+    }catch(e){
+      console.warn('[config/defaults] saveStoredCfg failed', e);
+    }
+  }
+
+  // Initialize game config with defaults and stored settings
+  function ensureGameCfg(){
+    const g = global.game = global.game || {};
+    g.cfg = Object.assign({}, DEFAULT_CFG, g.cfg || {}, loadStoredCfg());
+    return g.cfg;
   }
 
   // Export to global namespace
-  g.AVATAR_DEFAULTS = AVATAR_DEFAULTS;
-  g.getDicebearUrl = getDicebearUrl;
+  const Config = global.Config = global.Config || {};
+  Config.DEFAULT_CFG = DEFAULT_CFG;
+  Config.STORAGE_KEY = STORAGE_KEY;
+  Config.loadStoredCfg = loadStoredCfg;
+  Config.saveStoredCfg = saveStoredCfg;
+  Config.ensureGameCfg = ensureGameCfg;
 
-  // Also export to Game namespace if it exists
-  if (g.Game) {
-    g.Game.AVATAR_DEFAULTS = AVATAR_DEFAULTS;
-    g.Game.getDicebearUrl = getDicebearUrl;
-  }
-
-})(window.Game || window);
+})(window);

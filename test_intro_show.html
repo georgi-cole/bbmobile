@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reality-TV Intro Show - Test Demo</title>
+  <link rel="stylesheet" href="styles-intro-show.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d151f;
+      color: #e3ecf5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    
+    .test-controls {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      z-index: 10000;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: rgba(13, 21, 31, 0.95);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #24364b;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+    
+    .test-btn {
+      background: linear-gradient(135deg, #3563a7, #284866);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .test-btn:hover {
+      background: linear-gradient(135deg, #4573b7, #385876);
+      box-shadow: 0 4px 12px rgba(53, 99, 167, 0.4);
+      transform: translateY(-1px);
+    }
+    
+    .test-btn:active {
+      transform: translateY(0);
+    }
+    
+    .test-btn.success {
+      background: linear-gradient(135deg, #77d58d, #5aa86d);
+    }
+    
+    .test-btn.danger {
+      background: linear-gradient(135deg, #ff6d6d, #e05555);
+    }
+    
+    .test-info {
+      width: 100%;
+      font-size: 12px;
+      color: #95a9c0;
+      margin-top: 10px;
+    }
+    
+    .test-status {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      z-index: 10000;
+      background: rgba(13, 21, 31, 0.95);
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #24364b;
+      backdrop-filter: blur(10px);
+      font-size: 13px;
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    
+    .status-label {
+      color: #95a9c0;
+    }
+    
+    .status-value {
+      color: #83bfff;
+      font-weight: 600;
+    }
+    
+    .status-value.ok {
+      color: #77d58d;
+    }
+    
+    .status-value.error {
+      color: #ff6d6d;
+    }
+    
+    @media (max-width: 640px) {
+      .test-controls {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        padding: 15px;
+      }
+      
+      .test-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+      
+      .test-status {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+      }
+    }
+  </style>
+  
+  <!-- GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+  <div class="test-controls">
+    <button id="testSmall" class="test-btn">Test (3 Players)</button>
+    <button id="testMedium" class="test-btn">Test (6 Players)</button>
+    <button id="testLarge" class="test-btn">Test (12 Players)</button>
+    <button id="testCustom" class="test-btn success">Custom Test</button>
+    <button id="stopBtn" class="test-btn danger">Stop Intro</button>
+    <div class="test-info">
+      Click any button above to test the reality-TV intro sequence with different numbers of contestants.
+      The intro will automatically play music (if available) and show animated cards with reactions.
+    </div>
+  </div>
+  
+  <div class="test-status">
+    <div class="status-item">
+      <span class="status-label">GSAP Status:</span>
+      <span class="status-value" id="gsapStatus">—</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">IntroShow Module:</span>
+      <span class="status-value" id="moduleStatus">—</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Intro Active:</span>
+      <span class="status-value" id="activeStatus">—</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Last Test:</span>
+      <span class="status-value" id="lastTest">—</span>
+    </div>
+  </div>
+  
+  <!-- Mock avatar resolver -->
+  <script>
+    window.resolveAvatar = function(player) {
+      return player.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name || 'Guest')}`;
+    };
+  </script>
+  
+  <!-- Load IntroShow module -->
+  <script src="js/introShow.js"></script>
+  
+  <script>
+    // Mock players generator
+    const firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack', 'Kate', 'Leo'];
+    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez'];
+    const locations = ['New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Houston, TX', 'Phoenix, AZ', 'Philadelphia, PA', 'San Antonio, TX', 'San Diego, CA', 'Dallas, TX', 'San Jose, CA'];
+    const occupations = ['Designer', 'Developer', 'Teacher', 'Doctor', 'Engineer', 'Artist', 'Chef', 'Writer', 'Musician', 'Nurse', 'Accountant', 'Lawyer'];
+    
+    function generateMockPlayers(count) {
+      const players = [];
+      for (let i = 0; i < count; i++) {
+        const firstName = firstNames[i % firstNames.length];
+        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+        const name = `${firstName} ${lastName}`;
+        
+        players.push({
+          name: name,
+          age: String(20 + Math.floor(Math.random() * 15)),
+          location: locations[Math.floor(Math.random() * locations.length)],
+          occupation: occupations[Math.floor(Math.random() * occupations.length)],
+          avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=${name}`
+        });
+      }
+      return players;
+    }
+    
+    // Status updater
+    function updateStatus() {
+      const gsapOk = typeof gsap !== 'undefined';
+      const moduleOk = typeof window.IntroShow !== 'undefined';
+      const isActive = moduleOk && window.IntroShow.isActive();
+      
+      document.getElementById('gsapStatus').textContent = gsapOk ? 'Loaded ✓' : 'Not loaded ✗';
+      document.getElementById('gsapStatus').className = gsapOk ? 'status-value ok' : 'status-value error';
+      
+      document.getElementById('moduleStatus').textContent = moduleOk ? 'Ready ✓' : 'Not loaded ✗';
+      document.getElementById('moduleStatus').className = moduleOk ? 'status-value ok' : 'status-value error';
+      
+      document.getElementById('activeStatus').textContent = isActive ? 'Yes' : 'No';
+      document.getElementById('activeStatus').className = isActive ? 'status-value ok' : 'status-value';
+    }
+    
+    // Test function
+    function runTest(count) {
+      const players = generateMockPlayers(count);
+      console.log(`[test] Running intro with ${count} players:`, players);
+      
+      if (typeof window.IntroShow === 'undefined') {
+        alert('IntroShow module not loaded!');
+        return;
+      }
+      
+      if (!window.IntroShow.hasGsap()) {
+        alert('GSAP not available! Animations will be limited.');
+      }
+      
+      window.IntroShow.play(players, () => {
+        console.log('[test] Intro sequence completed!');
+        document.getElementById('lastTest').textContent = `${count} players - Completed`;
+        updateStatus();
+      });
+      
+      document.getElementById('lastTest').textContent = `${count} players - Playing...`;
+      updateStatus();
+    }
+    
+    // Event handlers
+    document.getElementById('testSmall').addEventListener('click', () => runTest(3));
+    document.getElementById('testMedium').addEventListener('click', () => runTest(6));
+    document.getElementById('testLarge').addEventListener('click', () => runTest(12));
+    
+    document.getElementById('testCustom').addEventListener('click', () => {
+      const count = prompt('Enter number of players (1-20):', '5');
+      if (count && !isNaN(count)) {
+        runTest(Math.max(1, Math.min(20, parseInt(count))));
+      }
+    });
+    
+    document.getElementById('stopBtn').addEventListener('click', () => {
+      if (typeof window.IntroShow !== 'undefined') {
+        window.IntroShow.stop();
+        console.log('[test] Intro stopped by user');
+        document.getElementById('lastTest').textContent = 'Stopped by user';
+      }
+      updateStatus();
+    });
+    
+    // Update status on load and periodically
+    updateStatus();
+    setInterval(updateStatus, 1000);
+    
+    // Log module info
+    console.log('=== Reality-TV Intro Show - Test Page ===');
+    console.log('GSAP loaded:', typeof gsap !== 'undefined');
+    console.log('IntroShow loaded:', typeof window.IntroShow !== 'undefined');
+    if (typeof window.IntroShow !== 'undefined') {
+      console.log('IntroShow.hasGsap():', window.IntroShow.hasGsap());
+    }
+    console.log('=========================================');
+  </script>
+</body>
+</html>
