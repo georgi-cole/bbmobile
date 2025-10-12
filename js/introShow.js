@@ -104,15 +104,14 @@
       <div class="intro-card-content">
         <div class="intro-card-avatar-wrapper">
           <div class="intro-card-avatar-glow"></div>
-          <img src="${avatar}" alt="${player.name}" class="intro-card-avatar" onerror="this.src='https://api.dicebear.com/6.x/bottts/svg?seed=${player.name}'">
         </div>
         <div class="intro-card-info">
-          <div class="intro-card-name">${player.name || 'Guest'}</div>
+          <div class="intro-card-name"></div>
           <div class="intro-card-meta">
             <span class="intro-card-age">${player.age || '?'}</span>
-            ${player.location ? `<span class="intro-card-location">${player.location}</span>` : ''}
+            ${player.location ? `<span class="intro-card-location"></span>` : ''}
           </div>
-          ${player.occupation ? `<div class="intro-card-occupation">${player.occupation}</div>` : ''}
+          ${player.occupation ? `<div class="intro-card-occupation"></div>` : ''}
         </div>
       </div>
       <div class="intro-card-spotlight"></div>
