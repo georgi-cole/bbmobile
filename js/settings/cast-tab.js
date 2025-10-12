@@ -2,10 +2,9 @@
 // Cast editor tab mount and functionality.
 // Extracted from ui.config-and-settings.js to support registry-driven settings.
 
+const { FALLBACK_AVATAR } = require('./constants');
 (function(global){
   'use strict';
-
-  const FALLBACK_AVATAR = 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest';
   const UI = global.UI || {};
 
   // Cast tab state management
