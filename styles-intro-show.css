@@ -40,7 +40,7 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.4;
+  opacity: 0.6;
   z-index: 0;
   /* Fallback: LED gradient if tvstudio.jpg is missing */
   background-color: transparent;

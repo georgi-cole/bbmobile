@@ -47,6 +47,16 @@
     '{name} is THAT contestant!',
     'Watch out for {name}! ⚠️',
     '{name}\'s gonna shake things up! 💥',
+    '{name} is the moment! 💫',
+    'The way {name} just walked in! 🚶',
+    '{name} is main character energy! ⭐',
+    'Did {name} just do that?! 😱',
+    '{name} is living rent free in my head! 🧠',
+    'Nobody\'s doing it like {name}! 💯',
+    '{name} woke up and chose violence! ⚔️',
+    'The audacity of {name}! 😤',
+    '{name} is absolutely unhinged! 🤪',
+    'We need to talk about {name}! 🗣️',
     
     // Location-based templates
     '{location} represent! 🌍',
@@ -54,12 +64,16 @@
     '{location} vibes only! ✨',
     'Putting {location} on the map! 📍',
     '{location} energy is unmatched! 💯',
+    '{location}? That explains everything! 😏',
+    'Of course they\'re from {location}! 🙌',
     
     // Age-based templates
     '{age} and thriving! 💪',
     '{age} years of ICONIC! ⭐',
     '{age} never looked so good! 😍',
     'At {age}, {name} is unstoppable!',
+    '{age}?! Living their best life! 🎉',
+    '{age} and already legendary! 👑',
     
     // Occupation-based templates
     'A {occupation}? We stan! 👑',
@@ -67,6 +81,8 @@
     'This {occupation} came to WIN! 💯',
     '{occupation} excellence! ⚡',
     'Not a {occupation} dominating! 💅',
+    'A {occupation} with THAT energy?! 🤯',
+    'The {occupation} we didn\'t know we needed! 🙏',
     
     // Motto-based templates
     '"{motto}" - we believe it! ✨',
@@ -74,13 +90,20 @@
     '"{motto}" is the energy we need! 💪',
     'That motto hits different! 👀',
     '"{motto}" - ICONIC! ⭐',
+    'The way "{motto}" describes them perfectly! 💯',
+    '"{motto}" and they mean it! 😤',
     
     // Multi-attribute templates
     '{age} from {location}? Icon behavior! 👑',
     '{occupation} from {location} bringing IT! 🔥',
     '{name}, {age}, {occupation} - the whole package! 💯',
     'A {occupation} with that motto? CHEF\'S KISS! 😘',
-    '{location} + {occupation} = TV GOLD! 📺'
+    '{location} + {occupation} = TV GOLD! 📺',
+    '{age}-year-old {occupation}? We love to see it! 🎊',
+    '{name} from {location} is about to DOMINATE! 💪',
+    'A {occupation} living by "{motto}"? PERFECT! ✨',
+    '{age}, {occupation}, and FIERCE! 🔥',
+    '{location} sent us their best with {name}! 👏'
   ];
 
   let currentSequence = null;

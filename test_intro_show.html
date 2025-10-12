@@ -184,6 +184,7 @@
     const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez'];
     const locations = ['New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Houston, TX', 'Phoenix, AZ', 'Philadelphia, PA', 'San Antonio, TX', 'San Diego, CA', 'Dallas, TX', 'San Jose, CA'];
     const occupations = ['Designer', 'Developer', 'Teacher', 'Doctor', 'Engineer', 'Artist', 'Chef', 'Writer', 'Musician', 'Nurse', 'Accountant', 'Lawyer'];
+    const mottos = ['Dream big', 'Never give up', 'Stay true', 'Live boldly', 'Ride the waves', 'Chase the sun', 'Break boundaries', 'Create magic', 'Think different', 'Be fearless', 'Trust the process', 'Embrace chaos'];
     
     function generateMockPlayers(count) {
       const players = [];
@@ -197,6 +198,7 @@
           age: String(20 + Math.floor(Math.random() * 15)),
           location: locations[Math.floor(Math.random() * locations.length)],
           occupation: occupations[Math.floor(Math.random() * occupations.length)],
+          motto: mottos[Math.floor(Math.random() * mottos.length)],
           avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=${name}`
         });
       }
