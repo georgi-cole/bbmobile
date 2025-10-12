@@ -181,13 +181,102 @@
         })) return;
         rebuildGame(false);
       }
-      global.startOpeningSequence?.();
+
+      // Check if this is a returning user (intro played in this session)
+      const isReturningUser = checkIsReturningUser();
+      
+      if (isReturningUser) {
+        console.info('[Start] Returning user detected - using fast cast animation');
+        startFastCastFlow();
+      } else {
+        console.info('[Start] New user detected - using full onboarding flow');
+        global.startOpeningSequence?.();
+      }
     }catch(e){
       console.error('[Start] error:', e);
       try{
         global.tv?.say?.('HOH Competition');
         global.setPhase?.('intermission', 3, ()=>global.startHOH?.());
       }catch(e2){ console.error('[Start fallback] failed:', e2); }
+    }
+  }
+
+  /**
+   * Check if user has seen intro before (returning user)
+   */
+  function checkIsReturningUser() {
+    try {
+      return sessionStorage.getItem('bb.introPlayed') === '1' || global.__bbIntroPlayed === true;
+    } catch {
+      return !!global.__bbIntroPlayed;
+    }
+  }
+
+  /**
+   * Start fast cast animation flow for returning users
+   * Skips onboarding (intro video, rules, profile, season intro cards)
+   * Shows fast cast animation, then goes directly to Week 1 modal
+   */
+  function startFastCastFlow() {
+    const game = global.game;
+    if (!game) return;
+
+    // Skip modal flow (profile, rules)
+    if (typeof global.skipModalFlow === 'function') {
+      global.skipModalFlow();
+    }
+
+    // Mark intro as played to prevent video from showing
+    if (!global.__bbIntroPlayed) {
+      global.__bbIntroPlayed = true;
+      try {
+        sessionStorage.setItem('bb.introPlayed', '1');
+      } catch {}
+    }
+
+    // Check if fast cast animation is available
+    if (typeof global.FastCastAnimation === 'undefined' || 
+        typeof global.FastCastAnimation.play !== 'function') {
+      console.warn('[Start] FastCastAnimation not available, falling back to normal flow');
+      skipToWeek1();
+      return;
+    }
+
+    const players = [...(game.players || [])];
+    
+    // Play fast cast animation
+    global.FastCastAnimation.play(players, () => {
+      console.info('[Start] Fast cast animation complete, showing Week 1 modal');
+      skipToWeek1();
+    });
+  }
+
+  /**
+   * Skip directly to Week 1 HOH with week intro modal
+   */
+  function skipToWeek1() {
+    const game = global.game;
+    if (!game) return;
+
+    // Set game to intermission phase (before HOH)
+    game.phase = 'intermission';
+    game.week = 1;
+    
+    // Update UI
+    global.updateHud?.();
+    global.renderPanel?.();
+    global.tv?.say?.('Week 1');
+
+    // Show Week 1 intro modal, then start HOH
+    if (typeof global.showWeekIntroModal === 'function') {
+      global.showWeekIntroModal(1, () => {
+        console.info('[Start] Week 1 modal dismissed, starting HOH');
+        global.startHOH?.();
+      });
+    } else {
+      // Fallback if week intro modal not available
+      console.warn('[Start] Week intro modal not available, starting HOH directly');
+      global.setPhase?.('intermission', 3, () => global.startHOH?.());
     }
   }
 
