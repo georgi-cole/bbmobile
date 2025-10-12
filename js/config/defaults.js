@@ -35,7 +35,6 @@
     tVetoDec: 25,
     tSocial: 25,
     tLiveVote: 30,
-    tVote: 30, // alias for tLiveVote
     tJury: 35,
     tFinal3Comp1: 35,
     tFinal3Comp2: 35,
