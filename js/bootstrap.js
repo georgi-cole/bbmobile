@@ -211,7 +211,8 @@
    */
   function checkIsReturningUser() {
     try {
-      // Check localStorage (persists across page reloads) instead of sessionStorage
+      // Check localStorage (chosen over sessionStorage because it persists across browser sessions,
+      // ensuring returning users are detected even after closing and reopening the browser)
       return localStorage.getItem('bb.gameStarted') === '1' || global.__bbGameStarted === true;
     } catch {
       return !!global.__bbGameStarted;
