@@ -178,6 +178,8 @@
     g.startOpeningSequence = async function wrappedOpening() {
       console.info('[intro-outro] startOpeningSequence intercepted');
       if (isIntroPlayed()){
+        // Intro already played - mark game started and proceed with opening sequence
+        markGameStarted();
         return origStart.call(g);
       }
       const url = await pickVideoUrl(INTRO_URL, INTRO_URL_MOBILE);
