@@ -19,8 +19,9 @@
   // Emoji pool for reactions
   const EMOJI_POOL = ['🔥', '❤️', '👏', '😍', '🎉', '⭐', '💯', '👑', '🎊', '✨', '💪', '🙌'];
   
-  // Comment templates for live reactions (expanded with spicy/funny lines)
+  // Comment templates for live reactions (personalized with contestant info)
   const COMMENT_TEMPLATES = [
+    // Name-only templates
     'OMG {name}!',
     '{name} is amazing!',
     'Love {name}!',
@@ -31,7 +32,6 @@
     '{name} is my fav!',
     'Rooting for {name}!',
     '{name} looks fierce!',
-    // Spicy/funny additions
     '{name} came to SLAY! 🔥',
     'Not {name} serving looks! 💅',
     '{name} said what now? 👀',
@@ -46,7 +46,41 @@
     'Not ready for {name}\'s chaos 🌪️',
     '{name} is THAT contestant!',
     'Watch out for {name}! ⚠️',
-    '{name}\'s gonna shake things up! 💥'
+    '{name}\'s gonna shake things up! 💥',
+    
+    // Location-based templates
+    '{location} represent! 🌍',
+    'Straight outta {location}! 🔥',
+    '{location} vibes only! ✨',
+    'Putting {location} on the map! 📍',
+    '{location} energy is unmatched! 💯',
+    
+    // Age-based templates
+    '{age} and thriving! 💪',
+    '{age} years of ICONIC! ⭐',
+    '{age} never looked so good! 😍',
+    'At {age}, {name} is unstoppable!',
+    
+    // Occupation-based templates
+    'A {occupation}? We stan! 👑',
+    '{occupation} bringing the heat! 🔥',
+    'This {occupation} came to WIN! 💯',
+    '{occupation} excellence! ⚡',
+    'Not a {occupation} dominating! 💅',
+    
+    // Motto-based templates
+    '"{motto}" - we believe it! ✨',
+    'Living by "{motto}" and SERVING! 🔥',
+    '"{motto}" is the energy we need! 💪',
+    'That motto hits different! 👀',
+    '"{motto}" - ICONIC! ⭐',
+    
+    // Multi-attribute templates
+    '{age} from {location}? Icon behavior! 👑',
+    '{occupation} from {location} bringing IT! 🔥',
+    '{name}, {age}, {occupation} - the whole package! 💯',
+    'A {occupation} with that motto? CHEF\'S KISS! 😘',
+    '{location} + {occupation} = TV GOLD! 📺'
   ];
 
   let currentSequence = null;
@@ -136,10 +170,11 @@
         <div class="intro-card-info">
           <div class="intro-card-name">${player.name || 'Contestant'}</div>
           <div class="intro-card-meta">
-            <span class="intro-card-age">${player.age || '?'}</span>
+            ${player.age ? `<span class="intro-card-age">${player.age}</span>` : ''}
             ${player.location ? `<span class="intro-card-location">${player.location}</span>` : ''}
           </div>
           ${player.occupation ? `<div class="intro-card-occupation">${player.occupation}</div>` : ''}
+          ${player.motto ? `<div class="intro-card-motto">"${player.motto}"</div>` : ''}
         </div>
       </div>
       <div class="intro-card-spotlight"></div>
@@ -233,6 +268,43 @@
     if (!CONFIG.enableReactions) return;
 
     const name = player.name || 'them';
+    const age = player.age || null;
+    const location = player.location || null;
+    const occupation = player.occupation || null;
+    const motto = player.motto || null;
+    
+    // Helper function to fill template with player data
+    function fillTemplate(template) {
+      let comment = template.replace(/{name}/g, name);
+      
+      // Only use templates that require attributes if player has them
+      if (template.includes('{age}') && !age) return null;
+      if (template.includes('{location}') && !location) return null;
+      if (template.includes('{occupation}') && !occupation) return null;
+      if (template.includes('{motto}') && !motto) return null;
+      
+      // Replace all placeholders
+      if (age) comment = comment.replace(/{age}/g, age);
+      if (location) comment = comment.replace(/{location}/g, location);
+      if (occupation) comment = comment.replace(/{occupation}/g, occupation);
+      if (motto) comment = comment.replace(/{motto}/g, motto);
+      
+      return comment;
+    }
+    
+    // Build a pool of valid comments for this player
+    const validComments = [];
+    for (const template of COMMENT_TEMPLATES) {
+      const filled = fillTemplate(template);
+      if (filled) {
+        validComments.push(filled);
+      }
+    }
+    
+    // Fallback if no valid comments (shouldn't happen with name-only templates)
+    if (validComments.length === 0) {
+      validComments.push(`Go ${name}!`, `${name} is amazing!`);
+    }
     
     // Schedule emoji bursts
     for (let i = 0; i < CONFIG.reactionsPerCard; i++) {
@@ -246,8 +318,7 @@
     const numComments = 2 + Math.floor(Math.random() * 3); // 2-4 comments
     for (let i = 0; i < numComments; i++) {
       setTimeout(() => {
-        const template = COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)];
-        const comment = template.replace('{name}', name);
+        const comment = validComments[Math.floor(Math.random() * validComments.length)];
         spawnComment(container, comment);
       }, (i + 1) * (CONFIG.cardDuration / (numComments + 1)));
     }
