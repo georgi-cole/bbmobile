@@ -878,8 +878,9 @@ header.innerHTML = `
 
     const dbl=document.getElementById('doubleBadge');
     const tpl=document.getElementById('tripleBadge');
-    const isDouble = game.__twistMode==='double' || game.doubleEvictionWeek===true;
-    const isTriple = game.__twistMode==='triple' || game.tripleEvictionWeek===true;
+    // Use only __twistMode for twist detection (legacy flags kept for backward compat but not checked)
+    const isDouble = game.__twistMode==='double';
+    const isTriple = game.__twistMode==='triple';
     if(dbl) dbl.style.display = (isDouble && !isTriple) ? '' : 'none';
     if(tpl) tpl.style.display = isTriple ? '' : 'none';
 

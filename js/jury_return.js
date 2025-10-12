@@ -207,7 +207,18 @@
 (function(global){
   if(global.__legacyJuryReturnShim) return;
   global.__legacyJuryReturnShim=true;
+  
+  // Feature flag for legacy shims (default: enabled for backward compatibility)
+  const ENABLE_LEGACY_SHIMS = global.game?.cfg?.enableLegacyJuryReturnShims !== false;
+  
   global.startJuryReturnTwist=function(){
+    if(!ENABLE_LEGACY_SHIMS){
+      console.warn('[jury_return] Legacy shim called but feature flag disabled. Use triggerReturnTwistUnified instead.');
+      return false;
+    }
+    
+    console.warn('[jury_return] DEPRECATED: startJuryReturnTwist called via legacy shim. Consider using triggerReturnTwistUnified or startAmericaReturnVote.');
+    
     if(global.game?.__americaReturnDone) return false;
     return global.triggerReturnTwistUnified?.();
   };

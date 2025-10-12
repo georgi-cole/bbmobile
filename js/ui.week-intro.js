@@ -147,8 +147,8 @@
 
     let twistConfig = null;
 
-    // Check for double eviction
-    if (g.doubleEvictionWeek || g.__twistMode === 'double') {
+    // Check for double eviction - use only __twistMode
+    if (g.__twistMode === 'double') {
       twistConfig = {
         title: 'House Shock!',
         emojis: '⚠️😱',
@@ -157,8 +157,8 @@
         duration: 4000
       };
     }
-    // Check for triple eviction
-    else if (g.tripleEvictionWeek || g.__twistMode === 'triple') {
+    // Check for triple eviction - use only __twistMode
+    else if (g.__twistMode === 'triple') {
       twistConfig = {
         title: 'House Shock!',
         emojis: '⚠️💥😱',
