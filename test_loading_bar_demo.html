@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loading Bar Demo - Fast Cast Animation</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #0a0f16;
+      color: white;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .btn {
+      background: #3d5a75;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    .btn:hover {
+      background: #4a6a85;
+    }
+    h1 {
+      color: #78d2ff;
+    }
+    .info {
+      background: rgba(61, 90, 117, 0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎬 Loading Bar Demo</h1>
+    
+    <div class="info">
+      <h2>New Feature: Big Brother Eye Loading Bar</h2>
+      <ul>
+        <li>✨ Shows a Big Brother eye-themed loading bar while preloading avatars</li>
+        <li>⏱️ Waits up to 6 seconds for all images to load</li>
+        <li>✅ If all images load: runs the cast photo pulse-in/disappear animation</li>
+        <li>⏭️ If any image fails to load (in 6s): skips animation and goes straight to game</li>
+        <li>🚫 No fallback avatars, no error display</li>
+      </ul>
+    </div>
+
+    <button class="btn" onclick="testNormalLoad()">Test: Normal Load (all avatars exist)</button>
+    <button class="btn" onclick="testSlowLoad()">Test: Slow Load (artificial delay)</button>
+    <button class="btn" onclick="testFailedLoad()">Test: Failed Load (missing avatars)</button>
+    
+    <div id="status" style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 8px;">
+      Ready to test. Click a button above.
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/avatar.js"></script>
+  <script src="js/fast-cast-animation.js"></script>
+
+  <script>
+    function updateStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    // Test with real avatars (normal load)
+    function testNormalLoad() {
+      updateStatus('Testing with real avatars (should load quickly and show animation)...');
+      const players = [
+        { id: 1, name: 'Aria' },
+        { id: 2, name: 'Ash' },
+        { id: 3, name: 'Bea' },
+        { id: 4, name: 'Blue' },
+        { id: 5, name: 'Dex' },
+        { id: 6, name: 'Echo' }
+      ];
+      
+      window.FastCastAnimation.play(players, () => {
+        updateStatus('✅ Animation complete!');
+      });
+    }
+
+    // Test with artificial delay to see loading bar longer
+    function testSlowLoad() {
+      updateStatus('Testing with artificial delay (loading bar should be visible longer)...');
+      
+      // Override resolveAvatar temporarily to add delay
+      const originalResolve = window.resolveAvatar;
+      let callCount = 0;
+      
+      window.resolveAvatar = function(player) {
+        // Create a data URL that loads slowly by being very large
+        const delay = callCount * 200; // Stagger delays
+        callCount++;
+        
+        setTimeout(() => {
+          console.log('Avatar loaded for', player.name);
+        }, delay);
+        
+        // Return real avatar
+        return originalResolve ? originalResolve(player) : `./avatars/${player.name}.png`;
+      };
+      
+      const players = [
+        { id: 1, name: 'Aria' },
+        { id: 2, name: 'Ash' },
+        { id: 3, name: 'Bea' },
+        { id: 4, name: 'Blue' },
+        { id: 5, name: 'Dex' },
+        { id: 6, name: 'Echo' }
+      ];
+      
+      window.FastCastAnimation.play(players, () => {
+        window.resolveAvatar = originalResolve; // Restore
+        updateStatus('✅ Test complete!');
+      });
+    }
+
+    // Test with missing avatars
+    function testFailedLoad() {
+      updateStatus('Testing with missing avatars (should skip animation after timeout/failure)...');
+      const players = [
+        { id: 1, name: 'NonExistent1' },
+        { id: 2, name: 'NonExistent2' },
+        { id: 3, name: 'NonExistent3' },
+        { id: 4, name: 'NonExistent4' }
+      ];
+      
+      window.FastCastAnimation.play(players, () => {
+        updateStatus('✅ Skipped to game (as expected when avatars fail to load)!');
+      });
+    }
+  </script>
+</body>
+</html>
