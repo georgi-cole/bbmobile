@@ -175,7 +175,8 @@
     musicOn: true,
     sfxOn: true,
     useRibbon: true,
-    useRealityIntro: true  // Enable reality-TV intro by default
+    useRealityIntro: true,  // Enable reality-TV intro by default
+    minigameDuration: 180,  // Default minigame challenge timer (seconds) - 3 minutes
   };
 
   function injectUiCssOnce(){

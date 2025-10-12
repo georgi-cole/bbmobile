@@ -99,6 +99,8 @@
               {value: 'cycle', label: 'Cycle through all'}
             ]),
             html('<div class="tiny muted">Choose how minigames are selected during competitions.</div>'),
+            number('minigameDuration', 'Challenge timer duration (seconds)', 30, 600, 10),
+            html('<div class="tiny muted">Duration for minigame challenge timer when launched (default: 180s = 3 minutes). Phase timer takes precedence if available.</div>'),
             checkbox('useNewMinigames', 'Use new minigame system (Phase 1) - non-repeating pools'),
             checkbox('useUnifiedMinigames', 'Use unified minigame system (Phases 0-8)'),
             checkbox('enableMinigameBridge', 'Enable minigame compatibility bridge'),

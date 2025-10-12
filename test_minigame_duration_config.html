@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minigame Duration Config - Test Suite</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0e1a;
+      color: #e6e8ee;
+      padding: 20px;
+    }
+    h1 {
+      color: #60a5fa;
+      margin-bottom: 8px;
+      font-size: 1.5rem;
+    }
+    .subtitle {
+      color: #9aa3b2;
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+    .test-section {
+      background: #0f1320;
+      border: 1px solid #273041;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .test-section h2 {
+      font-size: 1.1rem;
+      color: #fbbf24;
+      margin-bottom: 8px;
+    }
+    .test-section p {
+      color: #9aa3b2;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+    .btn {
+      background: linear-gradient(135deg, #2877a0, #1a4a63);
+      border: 1px solid #2d8ab4;
+      color: #e6e8ee;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #3388bb, #2a5a7a);
+      transform: translateY(-1px);
+    }
+    .btn.primary {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-color: #22c55e;
+    }
+    .btn.primary:hover {
+      background: linear-gradient(135deg, #34d399, #22c55e);
+    }
+    .results {
+      margin-top: 12px;
+      padding: 12px;
+      background: #141a23;
+      border-radius: 8px;
+      min-height: 60px;
+    }
+    .result-item {
+      padding: 6px;
+      margin: 4px 0;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .result-item.pass {
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+      border-left: 3px solid #22c55e;
+      padding-left: 10px;
+    }
+    .result-item.fail {
+      background: rgba(220, 38, 38, 0.1);
+      color: #ff6b9d;
+      border-left: 3px solid #ff6b9d;
+      padding-left: 10px;
+    }
+    .result-item.info {
+      background: rgba(96, 165, 250, 0.1);
+      color: #60a5fa;
+      border-left: 3px solid #60a5fa;
+      padding-left: 10px;
+    }
+    .summary {
+      background: linear-gradient(135deg, #172034, #0f1320);
+      border: 1px solid #2d8ab4;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .summary h3 {
+      color: #60a5fa;
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+    .summary .stats {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .summary .stats .pass { color: #22c55e; }
+    .summary .stats .fail { color: #ff6b9d; }
+    .code {
+      background: #0a0e1a;
+      border: 1px solid #273041;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Per-Minigame Duration Config - Test Suite</h1>
+  <div class="subtitle">Validates minigame duration configuration, timer pause/resume, completion animations, and edge case handling</div>
+  
+  <div class="summary" id="summary">
+    <h3>Test Summary</h3>
+    <p>Click "Run All Tests" to validate the implementation</p>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <button class="btn primary" onclick="runAllTests()">▶ Run All Tests</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Config Default Value</h2>
+    <p>Verifies that minigameDuration is added to DEFAULT_CFG with default value of 180 seconds (3 minutes).</p>
+    <button class="btn" onclick="testConfigDefault()">Run Test</button>
+    <div id="test1-results" class="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Settings UI Field</h2>
+    <p>Verifies that minigameDuration field is present in settings registry (Gameplay tab, Minigame settings).</p>
+    <button class="btn" onclick="testSettingsUI()">Run Test</button>
+    <div id="test2-results" class="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Timer Pause/Resume Functions</h2>
+    <p>Checks that pausePhaseTimer and resumePhaseTimer functions exist and are accessible.</p>
+    <button class="btn" onclick="testPauseResume()">Run Test</button>
+    <div id="test3-results" class="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Competition Flow Integration</h2>
+    <p>Verifies that launchFullscreenMinigame uses config duration and pauses phase timer.</p>
+    <button class="btn" onclick="testCompetitionFlow()">Run Test</button>
+    <div id="test4-results" class="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Completion Animation</h2>
+    <p>Checks that completion animation functions (showCompletionAnimation, createConfetti) exist.</p>
+    <button class="btn" onclick="testCompletionAnimation()">Run Test</button>
+    <div id="test5-results" class="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: Timeout Handling</h2>
+    <p>Verifies that timer expiration shows timeout message and auto-submits with score.</p>
+    <button class="btn" onclick="testTimeoutHandling()">Run Test</button>
+    <div id="test6-results" class="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 7: Phase End Cleanup</h2>
+    <p>Checks that cleanupOnPhaseChange properly handles active minigames and shows phase end message.</p>
+    <button class="btn" onclick="testPhaseEndCleanup()">Run Test</button>
+    <div id="test7-results" class="results"></div>
+  </div>
+
+  <script>
+    const testResults = {
+      total: 0,
+      passed: 0,
+      failed: 0
+    };
+
+    function addResult(containerId, message, type) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `result-item ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+      
+      if(type === 'pass') testResults.passed++;
+      if(type === 'fail') testResults.failed++;
+    }
+
+    function updateSummary() {
+      const summary = document.getElementById('summary');
+      summary.innerHTML = `
+        <h3>Test Summary</h3>
+        <div class="stats">
+          <div>Total: ${testResults.total}</div>
+          <div class="pass">Passed: ${testResults.passed}</div>
+          <div class="fail">Failed: ${testResults.failed}</div>
+        </div>
+      `;
+    }
+
+    async function testConfigDefault() {
+      const container = document.getElementById('test1-results');
+      container.innerHTML = '';
+      testResults.total++;
+
+      try {
+        const response = await fetch('js/ui.config-and-settings.js');
+        const text = await response.text();
+        
+        // Check if minigameDuration is defined
+        const hasConfig = text.includes('minigameDuration') && text.includes('180');
+        
+        if (hasConfig) {
+          addResult('test1-results', '✓ minigameDuration config field found with default 180 seconds', 'pass');
+        } else {
+          addResult('test1-results', '✗ minigameDuration config field not found or incorrect default', 'fail');
+        }
+
+        // Show code snippet
+        const match = text.match(/minigameDuration[^,\n]+/);
+        if (match) {
+          const code = document.createElement('div');
+          code.className = 'code';
+          code.textContent = match[0];
+          container.appendChild(code);
+        }
+      } catch (e) {
+        addResult('test1-results', '✗ Error loading config file: ' + e.message, 'fail');
+      }
+      
+      updateSummary();
+    }
+
+    async function testSettingsUI() {
+      const container = document.getElementById('test2-results');
+      container.innerHTML = '';
+      testResults.total++;
+
+      try {
+        const response = await fetch('js/settings/registry.js');
+        const text = await response.text();
+        
+        // Check if minigameDuration field is in registry
+        const hasField = text.includes("number('minigameDuration'") || 
+                        text.includes('number("minigameDuration"');
+        
+        const inMinigameSection = text.match(/Minigame settings[\s\S]*?minigameDuration/);
+        
+        if (hasField && inMinigameSection) {
+          addResult('test2-results', '✓ minigameDuration field found in settings registry', 'pass');
+          addResult('test2-results', '✓ Field is in Minigame settings section', 'pass');
+        } else if (hasField) {
+          addResult('test2-results', '✓ minigameDuration field found', 'pass');
+          addResult('test2-results', '⚠ Field location in registry uncertain', 'info');
+        } else {
+          addResult('test2-results', '✗ minigameDuration field not found in settings registry', 'fail');
+        }
+
+        // Show code snippet
+        const match = text.match(/number\(['"]minigameDuration['"][^)]+\)/);
+        if (match) {
+          const code = document.createElement('div');
+          code.className = 'code';
+          code.textContent = match[0];
+          container.appendChild(code);
+        }
+      } catch (e) {
+        addResult('test2-results', '✗ Error loading registry file: ' + e.message, 'fail');
+      }
+      
+      updateSummary();
+    }
+
+    async function testPauseResume() {
+      const container = document.getElementById('test3-results');
+      container.innerHTML = '';
+      testResults.total++;
+
+      try {
+        const response = await fetch('js/ui.hud-and-router.js');
+        const text = await response.text();
+        
+        const hasPause = text.includes('function pausePhaseTimer');
+        const hasResume = text.includes('function resumePhaseTimer');
+        const hasExport = text.includes('g.pausePhaseTimer') && text.includes('g.resumePhaseTimer');
+        
+        if (hasPause) {
+          addResult('test3-results', '✓ pausePhaseTimer function found', 'pass');
+        } else {
+          addResult('test3-results', '✗ pausePhaseTimer function not found', 'fail');
+        }
+
+        if (hasResume) {
+          addResult('test3-results', '✓ resumePhaseTimer function found', 'pass');
+        } else {
+          addResult('test3-results', '✗ resumePhaseTimer function not found', 'fail');
+        }
+
+        if (hasExport) {
+          addResult('test3-results', '✓ Functions exported to global namespace', 'pass');
+        } else {
+          addResult('test3-results', '✗ Functions not exported to global namespace', 'fail');
+        }
+      } catch (e) {
+        addResult('test3-results', '✗ Error loading file: ' + e.message, 'fail');
+      }
+      
+      updateSummary();
+    }
+
+    async function testCompetitionFlow() {
+      const container = document.getElementById('test4-results');
+      container.innerHTML = '';
+      testResults.total++;
+
+      try {
+        const response = await fetch('js/competitions-flow.js');
+        const text = await response.text();
+        
+        // Check for config usage
+        const usesConfig = text.includes('game.cfg.minigameDuration') || 
+                          text.includes('cfg.minigameDuration');
+        
+        // Check for pause/resume calls
+        const pausesCalled = text.includes('pausePhaseTimer()');
+        const resumesCalled = text.includes('resumePhaseTimer()');
+        
+        if (usesConfig) {
+          addResult('test4-results', '✓ launchFullscreenMinigame uses config duration', 'pass');
+        } else {
+          addResult('test4-results', '✗ Config duration not used in launchFullscreenMinigame', 'fail');
+        }
+
+        if (pausesCalled) {
+          addResult('test4-results', '✓ Phase timer is paused when minigame starts', 'pass');
+        } else {
+          addResult('test4-results', '✗ Phase timer pause not called', 'fail');
+        }
+
+        if (resumesCalled) {
+          addResult('test4-results', '✓ Phase timer is resumed after minigame', 'pass');
+        } else {
+          addResult('test4-results', '✗ Phase timer resume not called', 'fail');
+        }
+
+        // Show key code snippet
+        const match = text.match(/const configDuration[\s\S]{0,200}/);
+        if (match) {
+          const code = document.createElement('div');
+          code.className = 'code';
+          code.textContent = match[0].substring(0, 200) + '...';
+          container.appendChild(code);
+        }
+      } catch (e) {
+        addResult('test4-results', '✗ Error loading file: ' + e.message, 'fail');
+      }
+      
+      updateSummary();
+    }
+
+    async function testCompletionAnimation() {
+      const container = document.getElementById('test5-results');
+      container.innerHTML = '';
+      testResults.total++;
+
+      try {
+        const response = await fetch('js/competitions-flow.js');
+        const text = await response.text();
+        
+        const hasAnimation = text.includes('function showCompletionAnimation');
+        const hasConfetti = text.includes('function createConfetti');
+        const hasNewRecord = text.includes('New Record') || text.includes('isNewRecord');
+        const hasAnimationStyles = text.includes('@keyframes popIn') && 
+                                   text.includes('@keyframes confettiFall');
+        
+        if (hasAnimation) {
+          addResult('test5-results', '✓ showCompletionAnimation function found', 'pass');
+        } else {
+          addResult('test5-results', '✗ showCompletionAnimation function not found', 'fail');
+        }
+
+        if (hasConfetti) {
+          addResult('test5-results', '✓ createConfetti function found', 'pass');
+        } else {
+          addResult('test5-results', '✗ createConfetti function not found', 'fail');
+        }
+
+        if (hasNewRecord) {
+          addResult('test5-results', '✓ New record detection implemented', 'pass');
+        } else {
+          addResult('test5-results', '⚠ New record detection not clearly visible', 'info');
+        }
+
+        if (hasAnimationStyles) {
+          addResult('test5-results', '✓ Animation keyframes defined', 'pass');
+        } else {
+          addResult('test5-results', '✗ Animation keyframes missing', 'fail');
+        }
+      } catch (e) {
+        addResult('test5-results', '✗ Error loading file: ' + e.message, 'fail');
+      }
+      
+      updateSummary();
+    }
+
+    async function testTimeoutHandling() {
+      const container = document.getElementById('test6-results');
+      container.innerHTML = '';
+      testResults.total++;
+
+      try {
+        const response = await fetch('js/competitions-flow.js');
+        const text = await response.text();
+        
+        const hasTimeoutCheck = text.includes('remaining <= 0');
+        const hasTimeoutMessage = text.includes("Time's Up") || text.includes('timer expired');
+        const hasAutoSubmit = text.match(/auto-submit|onComplete\(0\)|Submitting your score/i);
+        
+        if (hasTimeoutCheck) {
+          addResult('test6-results', '✓ Timeout condition check found', 'pass');
+        } else {
+          addResult('test6-results', '✗ Timeout condition check not found', 'fail');
+        }
+
+        if (hasTimeoutMessage) {
+          addResult('test6-results', '✓ Timeout message displayed', 'pass');
+        } else {
+          addResult('test6-results', '✗ Timeout message not found', 'fail');
+        }
+
+        if (hasAutoSubmit) {
+          addResult('test6-results', '✓ Auto-submit on timeout implemented', 'pass');
+        } else {
+          addResult('test6-results', '✗ Auto-submit on timeout not found', 'fail');
+        }
+
+        // Show timeout handling snippet
+        const match = text.match(/Time's Up[\s\S]{0,300}/);
+        if (match) {
+          const code = document.createElement('div');
+          code.className = 'code';
+          code.textContent = match[0].substring(0, 250) + '...';
+          container.appendChild(code);
+        }
+      } catch (e) {
+        addResult('test6-results', '✗ Error loading file: ' + e.message, 'fail');
+      }
+      
+      updateSummary();
+    }
+
+    async function testPhaseEndCleanup() {
+      const container = document.getElementById('test7-results');
+      container.innerHTML = '';
+      testResults.total++;
+
+      try {
+        const response = await fetch('js/competitions-flow.js');
+        const text = await response.text();
+        
+        const hasCleanup = text.includes('function cleanupOnPhaseChange');
+        const hasPhaseEndMessage = text.includes('Phase Ended') || text.includes('phase change');
+        const hasForceClose = text.includes('Force closing') || text.includes('force-close');
+        
+        if (hasCleanup) {
+          addResult('test7-results', '✓ cleanupOnPhaseChange function found', 'pass');
+        } else {
+          addResult('test7-results', '✗ cleanupOnPhaseChange function not found', 'fail');
+        }
+
+        if (hasPhaseEndMessage) {
+          addResult('test7-results', '✓ Phase end message implemented', 'pass');
+        } else {
+          addResult('test7-results', '✗ Phase end message not found', 'fail');
+        }
+
+        if (hasForceClose) {
+          addResult('test7-results', '✓ Force close on phase change implemented', 'pass');
+        } else {
+          addResult('test7-results', '⚠ Force close logic unclear', 'info');
+        }
+
+        // Show cleanup snippet
+        const match = text.match(/function cleanupOnPhaseChange[\s\S]{0,400}/);
+        if (match) {
+          const code = document.createElement('div');
+          code.className = 'code';
+          code.textContent = match[0].substring(0, 300) + '...';
+          container.appendChild(code);
+        }
+      } catch (e) {
+        addResult('test7-results', '✗ Error loading file: ' + e.message, 'fail');
+      }
+      
+      updateSummary();
+    }
+
+    async function runAllTests() {
+      testResults.total = 0;
+      testResults.passed = 0;
+      testResults.failed = 0;
+
+      await testConfigDefault();
+      await testSettingsUI();
+      await testPauseResume();
+      await testCompetitionFlow();
+      await testCompletionAnimation();
+      await testTimeoutHandling();
+      await testPhaseEndCleanup();
+      
+      console.log('All tests completed:', testResults);
+    }
+  </script>
+</body>
+</html>

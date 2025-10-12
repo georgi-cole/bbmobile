@@ -23,10 +23,54 @@
       activeInstructionsCard = null;
     }
     
-    // Force close active minigame overlay
+    // Force close active minigame overlay (auto-cancel, no score submission)
     if(activeMinigameCleanup && typeof activeMinigameCleanup === 'function'){
-      activeMinigameCleanup();
-      activeMinigameCleanup = null;
+      console.warn('[CompetitionFlow] Force closing minigame due to phase change');
+      // Show brief message before closing
+      if(activeMinigameOverlay && activeMinigameOverlay.parentNode){
+        const phaseEndMsg = document.createElement('div');
+        phaseEndMsg.style.cssText = `
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10003;
+          background: rgba(0, 0, 0, 0.7);
+          pointer-events: none;
+        `;
+        
+        const msgBox = document.createElement('div');
+        msgBox.style.cssText = `
+          background: linear-gradient(135deg, rgba(249, 115, 22, 0.95), rgba(234, 88, 12, 0.95));
+          border: 2px solid #f97316;
+          border-radius: 16px;
+          padding: 24px 32px;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+          text-align: center;
+        `;
+        
+        msgBox.innerHTML = `
+          <div style="font-size: 1.6rem; font-weight: bold; color: white; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);">
+            ⚠️ Phase Ended
+          </div>
+          <div style="font-size: 1rem; color: rgba(255, 255, 255, 0.9); margin-top: 8px;">
+            Challenge canceled
+          </div>
+        `;
+        
+        phaseEndMsg.appendChild(msgBox);
+        activeMinigameOverlay.appendChild(phaseEndMsg);
+        
+        // Close after brief display
+        setTimeout(() => {
+          activeMinigameCleanup();
+          activeMinigameCleanup = null;
+        }, 1200);
+      } else {
+        activeMinigameCleanup();
+        activeMinigameCleanup = null;
+      }
     }
     
     activeMinigameOverlay = null;
@@ -236,6 +280,106 @@
   }
 
   /**
+   * Show completion animation with confetti and message
+   * @param {HTMLElement} overlay - The overlay element
+   * @param {number} score - The achieved score
+   * @param {number} previousBest - Previous best score (optional)
+   */
+  function showCompletionAnimation(overlay, score, previousBest){
+    const isNewRecord = previousBest !== undefined && score > previousBest;
+    
+    // Create animation container
+    const animContainer = document.createElement('div');
+    animContainer.style.cssText = `
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10002;
+      pointer-events: none;
+      animation: fadeIn 0.3s ease;
+    `;
+    
+    // Create message
+    const message = document.createElement('div');
+    message.style.cssText = `
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(22, 163, 74, 0.95));
+      border: 2px solid #22c55e;
+      border-radius: 16px;
+      padding: 24px 32px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    `;
+    
+    const title = document.createElement('div');
+    title.textContent = isNewRecord ? '🎉 New Record!' : '✅ Challenge Complete!';
+    title.style.cssText = `
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    `;
+    
+    const scoreText = document.createElement('div');
+    scoreText.textContent = `Score: ${score}`;
+    scoreText.style.cssText = `
+      font-size: 1.3rem;
+      color: rgba(255, 255, 255, 0.95);
+      font-weight: 600;
+    `;
+    
+    message.appendChild(title);
+    message.appendChild(scoreText);
+    animContainer.appendChild(message);
+    
+    // Add confetti if new record
+    if(isNewRecord){
+      createConfetti(animContainer);
+    }
+    
+    overlay.appendChild(animContainer);
+    
+    // Fade out after delay
+    setTimeout(() => {
+      animContainer.style.animation = 'fadeOut 0.5s ease';
+    }, 1800);
+  }
+  
+  /**
+   * Create confetti animation
+   * @param {HTMLElement} container - Container for confetti
+   */
+  function createConfetti(container){
+    const colors = ['#ff6b9d', '#fbbf24', '#60a5fa', '#34d399', '#a78bfa', '#fb923c'];
+    const confettiCount = 40;
+    
+    for(let i = 0; i < confettiCount; i++){
+      const confetti = document.createElement('div');
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const left = Math.random() * 100;
+      const delay = Math.random() * 0.5;
+      const duration = 1 + Math.random() * 1;
+      
+      confetti.style.cssText = `
+        position: absolute;
+        left: ${left}%;
+        top: -10%;
+        width: 10px;
+        height: 10px;
+        background: ${color};
+        opacity: 0.8;
+        animation: confettiFall ${duration}s linear ${delay}s forwards;
+        transform-origin: center;
+      `;
+      
+      container.appendChild(confetti);
+    }
+  }
+
+  /**
    * Launch minigame in fullscreen overlay
    * Shows close button and handles completion
    * 
@@ -245,19 +389,40 @@
    * @returns {Object} Overlay controls { close, overlay }
    */
   function launchFullscreenMinigame(gameKey, onComplete, options = {}){
-    // Sync with phase timer if available, otherwise use default timeLimit
     const game = g.game;
-    let timeLimit = options.timeLimit ?? 60;
+    
+    // Get configured duration from settings
+    const configDuration = (game && game.cfg && game.cfg.minigameDuration) || 180;
+    
+    // Pause phase timer when starting minigame
+    let phaseTimerWasPaused = false;
+    if(game && !game.timerPaused && g.pausePhaseTimer){
+      console.info('[CompetitionFlow] Pausing phase timer for minigame challenge');
+      g.pausePhaseTimer();
+      phaseTimerWasPaused = true;
+    }
+    
+    // Determine time limit
+    let timeLimit = options.timeLimit ?? configDuration;
     let usePhaseTimer = false;
     
-    // Try to sync with phase timer
-    if(game && game.phaseEndsAt){
+    // Check if we should sync with phase timer instead
+    // (Only if phase timer exists and is longer than config duration)
+    if(game && game.phaseEndsAt && !game.timerPaused){
       const remainingMs = game.phaseEndsAt - Date.now();
       if(remainingMs > 0){
-        timeLimit = Math.ceil(remainingMs / 1000);
-        usePhaseTimer = true;
-        console.info('[CompetitionFlow] Syncing minigame timer with phase timer:', timeLimit, 'seconds');
+        const phaseTimeRemaining = Math.ceil(remainingMs / 1000);
+        // Use phase time if it's available and wasn't paused by us
+        if(!phaseTimerWasPaused){
+          timeLimit = phaseTimeRemaining;
+          usePhaseTimer = true;
+          console.info('[CompetitionFlow] Syncing minigame timer with phase timer:', timeLimit, 'seconds');
+        }
       }
+    }
+    
+    if(!usePhaseTimer){
+      console.info('[CompetitionFlow] Using configured minigame duration:', timeLimit, 'seconds');
     }
     
     // Get theme colors
@@ -430,11 +595,53 @@
         // Force completion after brief delay
         setTimeout(() => {
           if(!hasCompleted){
-            console.warn('[CompetitionFlow] Phase time expired, forcing completion');
+            console.warn('[CompetitionFlow] Challenge timer expired, auto-submitting');
             hasCompleted = true;
-            close();
-            // Call onComplete with 0 score or don't call it at all (cancel)
-            // For now, we'll close without submitting
+            
+            // Show timeout message (no confetti)
+            const timeoutMsg = document.createElement('div');
+            timeoutMsg.style.cssText = `
+              position: absolute;
+              inset: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 10002;
+              pointer-events: none;
+              animation: fadeIn 0.3s ease;
+            `;
+            
+            const msgBox = document.createElement('div');
+            msgBox.style.cssText = `
+              background: linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(185, 28, 28, 0.95));
+              border: 2px solid #dc2626;
+              border-radius: 16px;
+              padding: 24px 32px;
+              box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+              text-align: center;
+            `;
+            
+            msgBox.innerHTML = `
+              <div style="font-size: 1.8rem; font-weight: bold; color: white; margin-bottom: 8px; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);">
+                ⏱️ Time's Up!
+              </div>
+              <div style="font-size: 1.1rem; color: rgba(255, 255, 255, 0.9);">
+                Submitting your score...
+              </div>
+            `;
+            
+            timeoutMsg.appendChild(msgBox);
+            overlay.appendChild(timeoutMsg);
+            
+            // Close and submit after brief display
+            setTimeout(() => {
+              close(false);
+              // Call onComplete with current score or 0
+              // The minigame should have tracked the score internally
+              if(typeof onComplete === 'function'){
+                onComplete(0); // Auto-submit with 0 score on timeout
+              }
+            }, 1500);
           }
         }, 1000);
       }
@@ -444,12 +651,28 @@
     timerInterval = setInterval(updateTimer, 1000);
 
     // Close function
-    function close(){
+    function close(skipAnimation){
       if(timerInterval){
         clearInterval(timerInterval);
       }
+      
+      // Resume phase timer if we paused it
+      if(phaseTimerWasPaused && g.resumePhaseTimer){
+        console.info('[CompetitionFlow] Resuming phase timer after minigame');
+        g.resumePhaseTimer();
+      }
+      
       if(overlay.parentNode){
-        overlay.remove();
+        if(skipAnimation){
+          overlay.remove();
+        } else {
+          overlay.style.animation = 'fadeOut 0.3s ease';
+          setTimeout(() => {
+            if(overlay.parentNode){
+              overlay.remove();
+            }
+          }, 300);
+        }
       }
       // Clear active references
       if(activeMinigameOverlay === overlay){
@@ -467,8 +690,9 @@
       if(!hasCompleted){
         const confirm = window.confirm('Are you sure you want to exit? Your score will not be submitted.');
         if(!confirm) return;
+        hasCompleted = true; // Prevent double completion
       }
-      close();
+      close(true); // Skip animation when manually closed
     });
 
     // Render the minigame
@@ -480,14 +704,19 @@
       };
 
       g.renderMinigame(gameKey, gameContainer, (score) => {
+        if(hasCompleted) return; // Prevent double completion
         hasCompleted = true;
-        // Delay closing slightly to show final state
+        
+        // Show completion animation
+        showCompletionAnimation(overlay, score, options.previousBest);
+        
+        // Close overlay and call completion callback after animation
         setTimeout(() => {
-          close();
+          close(false); // Use fade out animation
           if(typeof onComplete === 'function'){
             onComplete(score);
           }
-        }, 500);
+        }, 2500); // Wait for animation to complete
       }, gameOptions);
     } else {
       console.error('[CompetitionFlow] renderMinigame function not available');
@@ -541,6 +770,37 @@
       to {
         opacity: 1;
         transform: translateY(0);
+      }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @keyframes popIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    @keyframes confettiFall {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0.8;
+      }
+      100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
       }
     }
   `;
