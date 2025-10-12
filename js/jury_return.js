@@ -152,33 +152,9 @@
     try{ global.tv?.say?.('Intermission'); }catch{}
     g.week=(g.week||0)+1;
     
-    // Show week intro modal before starting HOH if not already shown
-    const currentWeek = g.week;
-    const alivePlayers = (typeof global.alivePlayers === 'function') ? global.alivePlayers() : [];
-    const shouldShow = alivePlayers.length > 2 && 
-                      (!g.phase || !['jury', 'finale'].includes(g.phase));
-    
-    if (shouldShow && g.__weekIntroShownFor !== currentWeek && typeof global.showWeekIntroModal === 'function') {
-      g.__weekIntroShownFor = currentWeek;
-      console.info(`[jury_return] Showing week intro for week ${currentWeek}`);
-      
-      global.showWeekIntroModal(currentWeek, () => {
-        // After week intro, show twist announcement if juror return is pending
-        if (typeof global.showTwistAnnouncementIfNeeded === 'function') {
-          global.showTwistAnnouncementIfNeeded(() => {
-            global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
-            global.updateHud?.();
-          });
-        } else {
-          global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
-          global.updateHud?.();
-        }
-      });
-    } else {
-      // No week intro needed, proceed normally
-      global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
-      global.updateHud?.();
-    }
+    // Week intro modal and twist announcement are handled by the startHOH wrapper in ui.week-intro.js
+    global.setPhase?.('intermission', g.cfg?.tIntermission || 4, ()=>global.startHOH?.());
+    global.updateHud?.();
   }
 
   async function startJuryReturnTwist(){

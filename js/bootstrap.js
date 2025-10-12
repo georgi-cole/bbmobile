@@ -333,7 +333,8 @@
   }
 
   /**
-   * Skip directly to Week 1 HOH with week intro modal
+   * Skip directly to Week 1 HOH
+   * Week intro modal is handled by the startHOH wrapper in ui.week-intro.js
    */
   function skipToWeek1() {
     const game = global.game;
@@ -348,17 +349,8 @@
     global.renderPanel?.();
     global.tv?.say?.('Week 1');
 
-    // Show Week 1 intro modal, then start HOH
-    if (typeof global.showWeekIntroModal === 'function') {
-      global.showWeekIntroModal(1, () => {
-        console.info('[Start] Week 1 modal dismissed, starting HOH');
-        global.startHOH?.();
-      });
-    } else {
-      // Fallback if week intro modal not available
-      console.warn('[Start] Week intro modal not available, starting HOH directly');
-      global.setPhase?.('intermission', 3, () => global.startHOH?.());
-    }
+    // Start HOH - the week intro modal will be shown by the startHOH wrapper
+    global.setPhase?.('intermission', 3, () => global.startHOH?.());
   }
 
   function updateStartButtonUI(){
