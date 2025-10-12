@@ -1237,6 +1237,15 @@
     try{
       let alive = [];
       
+      // Check if game state is initialized
+      if(!g || !g.game){
+        console.warn('[ui.config-and-settings] Missing game state (window.g or window.g.game) when populating self-evict dropdown');
+      }
+      
+      if(!g?.game?.players && !g?.players){
+        console.warn('[ui.config-and-settings] Missing player data (window.g.game.players or window.g.players) when populating self-evict dropdown');
+      }
+      
       // Try PlayerService first (preferred)
       if(typeof window.PlayerService?.getAlivePlayers === 'function'){
         alive = window.PlayerService.getAlivePlayers();
@@ -1520,6 +1529,18 @@
   }
   
   function openSettingsModal(){
+    // Ensure window.g is initialized
+    if(!g.game){
+      console.warn('[ui.config-and-settings] window.g.game was not initialized, creating empty structure');
+    }
+    
+    // Ensure window.g.game.players exists
+    if(!g.game?.players){
+      console.warn('[ui.config-and-settings] window.g.game.players was not initialized, creating empty array');
+      if(!g.game) g.game = {};
+      if(!g.game.players) g.game.players = [];
+    }
+    
     ensureGameCfg();
     const dim = ensureSettingsModal();
     const modal = dim.querySelector('.modal');
@@ -1591,5 +1612,8 @@
   g.openSettingsModal = openSettingsModal;
   g.ensureGameCfg = ensureGameCfg;
   g.populateDebugMinigameDropdown = populateDebugMinigameDropdown;
+  
+  // Expose populateSelfEvictDropdown for debugging purposes
+  g.populateSelfEvictDropdown = populateSelfEvictDropdown;
 
 })(window);
