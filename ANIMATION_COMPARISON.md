@@ -22,7 +22,7 @@ Replace the current phone frame and scroller animation shown after pressing the 
 - No circular motion
 - No house theme or frame
 
-## After: House Circle Rotation Animation
+## After: Fast Cast Animation (Updated)
 
 ### Layout
 - **Circular arrangement**: Perfect circle using trigonometric positioning
@@ -31,10 +31,11 @@ Replace the current phone frame and scroller animation shown after pressing the 
 - **Responsive sizing**: CSS clamp for cross-device support
 
 ### Animation
-- **Circular rotation**: 360° continuous rotation (4.5s per revolution)
-- **Staggered fade-in**: 0.08s delay per contestant
-- **Smooth entry**: Scale from 0.3 to 1.0 with fade (0.6s)
-- **4.8 second total duration**
+- **No rotation**: Photos remain static in circular positions
+- **Simultaneous pulse-in**: All photos appear at once with pulse effect (0.6s)
+- **Smooth entry**: Scale from 0.5 to 1.1 to 1.0 with fade
+- **Fade-out exit**: Scale from 1.0 to 0.3 with fade starting at 2.5s (0.5s duration)
+- **3 second total duration**
 
 ### Visual Design
 - House-themed SVG with roof, door, windows
@@ -42,40 +43,42 @@ Replace the current phone frame and scroller animation shown after pressing the 
 - Golden decorative light element
 - Semi-transparent name labels
 - Gradient background overlay
+- **Real contestant photos** loaded from `/avatars/` folder using centralized resolver
 
-## Key Improvements
+## Key Improvements (Updated)
 
-### 1. Thematic Coherence
-✅ **Before**: Generic TV frame
-✅ **After**: House-themed design matching Big Brother concept
+### 1. Real Avatars
+✅ **Before**: Placeholder/fallback avatars (Dicebear)
+✅ **After**: Real contestant photos from `/avatars/` folder using centralized resolver
 
-### 2. Visual Interest
-✅ **Before**: Static grid layout
-✅ **After**: Dynamic rotating circle with smooth animation
+### 2. Animation Style
+✅ **Before**: Rotating circle
+✅ **After**: Pulse-in effect with fade-out (no rotation)
 
-### 3. User Experience
-✅ **Before**: Awkward TV viewport manipulation
-✅ **After**: Clean fullscreen overlay
+### 3. Duration
+✅ **Before**: 4.8 seconds
+✅ **After**: 3.0 seconds (faster)
 
-### 4. Code Quality
-✅ **Before**: Complex DOM manipulation to hide/restore elements
-✅ **After**: Simple overlay creation/removal
+### 4. Visual Interest
+✅ **Before**: Staggered fade-in with rotation
+✅ **After**: Simultaneous pulse-in with smooth fade-out
 
-### 5. Performance
-✅ **Before**: Multiple element style changes
-✅ **After**: Single overlay with isolated styles
+### 5. Code Quality
+✅ **Before**: Custom avatar loading logic
+✅ **After**: Centralized avatar resolver for consistency
 
-## Technical Comparison
+## Technical Comparison (Updated)
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| Layout | CSS Grid | Circular (trigonometry) |
-| Container | TV viewport | Fullscreen overlay |
-| Animation | Fade + scale | Fade + scale + rotation |
-| Duration | 4.0 seconds | 4.8 seconds |
-| Theme | Generic | House-themed |
-| Cleanup | Restore multiple elements | Remove single overlay |
-| DOM Changes | ~8 elements modified | 1 element added/removed |
+| Aspect | Before | After (Current) |
+|--------|--------|---------|
+| Layout | Circular (trigonometry) | Circular (trigonometry) |
+| Container | Fullscreen overlay | Fullscreen overlay |
+| Animation | Fade + scale + rotation | Pulse-in + fade-out (no rotation) |
+| Duration | 4.8 seconds | 3.0 seconds |
+| Theme | House-themed | House-themed |
+| Avatar Source | Custom logic | Centralized `global.resolveAvatar()` |
+| Entry Effect | Staggered fade-in | Simultaneous pulse-in |
+| Exit Effect | None (sudden) | Fade-out and shrink |
 
 ## Visual Elements
 
@@ -108,17 +111,19 @@ Replace the current phone frame and scroller animation shown after pressing the 
 ### Modified File
 - `js/fast-cast-animation.js` (major rewrite)
 
-### Lines Changed
-- Removed: ~200 lines (grid + element manipulation)
-- Added: ~265 lines (circular layout + house SVG)
-- Net change: +65 lines
+### Lines Changed (Updated)
+- Removed: Rotation animation and staggered delays
+- Added: Pulse-in effect, fade-out effect, centralized avatar resolver
+- Modified: Duration (4.8s → 3.0s), animation timing, avatar loading
+- Net change: ~40 lines modified
 
-### New Features
-- Trigonometric circle positioning
-- SVG house frame with fallback to images
-- CSS keyframe animations for rotation
-- Responsive sizing with clamp()
-- Gradient background overlay
+### New Features (Updated)
+- Centralized avatar resolution using `global.resolveAvatar()`
+- Pulse-in animation with scale peak at 1.1
+- Fade-out animation starting at 2.5 seconds
+- Real contestant photos from `/avatars/` folder
+- Simultaneous appearance of all photos (no staggered delays)
+- Faster total duration (3 seconds)
 
 ## Asset Support
 
@@ -131,10 +136,14 @@ This ensures the animation works even without additional assets.
 
 ## Conclusion
 
-The new house circle animation provides:
+The updated fast cast animation provides:
+- ✅ Real contestant photos from `/avatars/` folder (not placeholders)
+- ✅ No rotation - clean pulse-in effect
+- ✅ All photos appear simultaneously
+- ✅ Faster duration (3 seconds)
+- ✅ Smooth fade-out transition
 - ✅ Better thematic alignment with Big Brother concept
-- ✅ More engaging visual experience with rotation
-- ✅ Cleaner implementation with fullscreen overlay
+- ✅ Cleaner implementation with centralized avatar system
 - ✅ Improved code maintainability
 - ✅ Automatic fallback system for assets
 - ✅ Same integration with returning user flow
