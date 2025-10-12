@@ -12,6 +12,7 @@
 
   /**
    * Clean up any active minigames and instructions on phase change
+   * Called by forceClearPhaseUI in ui.hud-and-router.js
    */
   function cleanupOnPhaseChange(){
     console.info('[CompetitionFlow] Phase changed, cleaning up active minigames/instructions');
@@ -30,27 +31,6 @@
     
     activeMinigameOverlay = null;
   }
-
-  /**
-   * Register phase change listener
-   */
-  function registerPhaseChangeListener(){
-    // Hook into phase change system
-    if(!g._competitionFlowPhaseHook){
-      const originalSetPhase = g.setPhase;
-      if(originalSetPhase){
-        g.setPhase = function(...args){
-          cleanupOnPhaseChange();
-          return originalSetPhase.apply(this, args);
-        };
-        g._competitionFlowPhaseHook = true;
-        console.info('[CompetitionFlow] Phase change listener registered');
-      }
-    }
-  }
-
-  // Register phase change listener when module loads
-  registerPhaseChangeListener();
 
   /**
    * Get theme colors from current theme
@@ -570,7 +550,8 @@
   g.CompetitionFlow = {
     showInstructionsInTV: showInstructionsInTV,
     launchFullscreenMinigame: launchFullscreenMinigame,
-    runCompetitionFlow: runCompetitionFlow
+    runCompetitionFlow: runCompetitionFlow,
+    cleanupOnPhaseChange: cleanupOnPhaseChange
   };
 
 })(window);

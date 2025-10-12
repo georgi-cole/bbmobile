@@ -1102,6 +1102,11 @@ header.innerHTML = `
         });
       }
       
+      // Clean up any active minigames and instructions
+      if(typeof g.CompetitionFlow?.cleanupOnPhaseChange === 'function'){
+        g.CompetitionFlow.cleanupOnPhaseChange();
+      }
+      
       console.info(`[phase] forceClearCards phase=${newPhase}`);
     }catch(e){
       console.warn('[phase] forceClearCards error', e);
