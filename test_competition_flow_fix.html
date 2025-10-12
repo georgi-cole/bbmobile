@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Competition Flow Fix Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #4a9eff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      border: 1px solid #444;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background: #1a4d1a;
+      border: 1px solid #2d7d2d;
+      color: #90ee90;
+    }
+    .test-result.fail {
+      background: #4d1a1a;
+      border: 1px solid #7d2d2d;
+      color: #ff9090;
+    }
+    .container {
+      min-height: 200px;
+      background: #0a0a0a;
+      border: 2px solid #333;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #3a7edf;
+    }
+    #results {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Competition Flow: instructionsCard Reference Fix Test</h1>
+  
+  <div class="test-section">
+    <h2>Issue Description</h2>
+    <p>
+      The issue was that if a variable is assigned the return value of <code>showInstructionsInTV</code>, 
+      and that variable is referenced in the callback, it would be undefined because the callback 
+      is defined before the assignment completes.
+    </p>
+    <p>
+      <strong>Fix:</strong> The callback now receives the card element as a parameter, 
+      avoiding the need to reference an outer variable that hasn't been assigned yet.
+    </p>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Card Parameter in Callback</h2>
+    <p>Verify that the callback receives the card element as a parameter.</p>
+    <button onclick="runTest1()">Run Test 1</button>
+    <div id="test1-container" class="container"></div>
+    <div id="test1-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: No Reference Error Pattern</h2>
+    <p>Simulate the problematic pattern to ensure it's fixed.</p>
+    <button onclick="runTest2()">Run Test 2</button>
+    <div id="test2-container" class="container"></div>
+    <div id="test2-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Backward Compatibility</h2>
+    <p>Verify existing code without parameter still works.</p>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div id="test3-container" class="container"></div>
+    <div id="test3-result"></div>
+  </div>
+
+  <div id="results"></div>
+
+  <!-- Load the dependencies -->
+  <script src="js/minigames/instructions.js"></script>
+  <script src="js/competitions-flow.js"></script>
+
+  <script>
+    function showResult(testId, passed, message) {
+      const resultDiv = document.getElementById(testId + '-result');
+      resultDiv.className = 'test-result ' + (passed ? 'pass' : 'fail');
+      resultDiv.textContent = (passed ? '✓ PASS: ' : '✗ FAIL: ') + message;
+    }
+
+    function runTest1() {
+      const container = document.getElementById('test1-container');
+      container.innerHTML = '';
+      
+      let cardFromCallback = null;
+      let callbackInvoked = false;
+
+      try {
+        // Show instructions with callback that captures the card parameter
+        const returnedCard = window.CompetitionFlow.showInstructionsInTV(
+          'quickTap',
+          container,
+          (card) => {
+            callbackInvoked = true;
+            cardFromCallback = card;
+          }
+        );
+
+        // Simulate button click
+        const playButton = container.querySelector('button');
+        if (playButton) {
+          playButton.click();
+          
+          // Check if callback received the card
+          if (callbackInvoked && cardFromCallback && cardFromCallback === returnedCard) {
+            showResult('test1', true, 'Callback correctly received card element as parameter');
+          } else if (!callbackInvoked) {
+            showResult('test1', false, 'Callback was not invoked when play button clicked');
+          } else if (!cardFromCallback) {
+            showResult('test1', false, 'Callback did not receive card parameter');
+          } else {
+            showResult('test1', false, 'Card from callback does not match returned card');
+          }
+        } else {
+          showResult('test1', false, 'Play button not found in container');
+        }
+      } catch (error) {
+        showResult('test1', false, 'Error: ' + error.message);
+      }
+    }
+
+    function runTest2() {
+      const container = document.getElementById('test2-container');
+      container.innerHTML = '';
+      
+      try {
+        // Simulate the problematic pattern that would fail without the fix
+        // With the fix, we can safely use the card parameter instead of outer variable
+        let wasCardAvailable = false;
+        
+        const instructionsCard = window.CompetitionFlow.showInstructionsInTV(
+          'quickTap',
+          container,
+          (card) => {
+            // With fix: card is available as parameter
+            // Without fix: would need to reference instructionsCard which isn't assigned yet
+            wasCardAvailable = (card instanceof HTMLElement);
+          }
+        );
+
+        // Simulate button click
+        const playButton = container.querySelector('button');
+        if (playButton) {
+          playButton.click();
+          
+          if (wasCardAvailable) {
+            showResult('test2', true, 'Card was available in callback via parameter (fix working)');
+          } else {
+            showResult('test2', false, 'Card was not available in callback');
+          }
+        } else {
+          showResult('test2', false, 'Play button not found');
+        }
+      } catch (error) {
+        showResult('test2', false, 'Error: ' + error.message);
+      }
+    }
+
+    function runTest3() {
+      const container = document.getElementById('test3-container');
+      container.innerHTML = '';
+      
+      try {
+        let callbackWorked = false;
+        
+        // Old style callback without parameter (backward compatibility)
+        window.CompetitionFlow.showInstructionsInTV(
+          'quickTap',
+          container,
+          () => {
+            // Callback doesn't use the card parameter
+            callbackWorked = true;
+          }
+        );
+
+        // Simulate button click
+        const playButton = container.querySelector('button');
+        if (playButton) {
+          playButton.click();
+          
+          if (callbackWorked) {
+            showResult('test3', true, 'Backward compatible - callback without parameter works');
+          } else {
+            showResult('test3', false, 'Callback was not invoked');
+          }
+        } else {
+          showResult('test3', false, 'Play button not found');
+        }
+      } catch (error) {
+        showResult('test3', false, 'Error: ' + error.message);
+      }
+    }
+  </script>
+
+  <script>
+    // Auto-run all tests on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.log('Running all tests...');
+        runTest1();
+        setTimeout(() => runTest2(), 500);
+        setTimeout(() => runTest3(), 1000);
+      }, 500);
+    });
+  </script>
+</body>
+</html>

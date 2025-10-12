@@ -11,7 +11,7 @@
    * 
    * @param {string} gameKey - The minigame key
    * @param {HTMLElement} container - Container element (typically the panel div)
-   * @param {Function} onPlay - Callback when Play button is clicked
+   * @param {Function} onPlay - Callback when Play button is clicked, receives card element as parameter
    * @returns {HTMLElement} The instructions card element
    */
   function showInstructionsInTV(gameKey, container, onPlay){
@@ -118,7 +118,7 @@
     });
     playButton.addEventListener('click', () => {
       if(typeof onPlay === 'function'){
-        onPlay();
+        onPlay(card);
       }
     });
 
@@ -265,8 +265,8 @@
     showInstructionsInTV(
       gameKey,
       container,
-      // On Play button click
-      () => {
+      // On Play button click - card parameter available if needed
+      (card) => {
         // Step 2: Launch fullscreen minigame
         launchFullscreenMinigame(gameKey, onComplete, options);
       }
