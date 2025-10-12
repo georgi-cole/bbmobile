@@ -1,6 +1,6 @@
 // MODULE: fast-cast-animation.js
-// House circle animation for returning users
-// Shows all contestant photos arranged in a rotating circle inside a house frame for under 5 seconds
+// Fast cast animation for returning users
+// Shows all contestant photos with pulse-in effect, then fades out after 3 seconds
 
 (function(global) {
   'use strict';
@@ -8,24 +8,24 @@
   let isPlaying = false;
 
   /**
-   * Play house circle animation showing all contestants rotating in a circle
+   * Play house circle animation showing all contestants with pulse-in effect
    * @param {Array} players - Array of player objects
    * @param {Function} onComplete - Callback when animation completes
    */
   function playFastCastAnimation(players, onComplete) {
     if (!players || players.length === 0) {
-      console.warn('[house-circle] No players provided');
+      console.warn('[fast-cast] No players provided');
       if (onComplete) onComplete();
       return;
     }
 
     if (isPlaying) {
-      console.warn('[house-circle] Animation already playing');
+      console.warn('[fast-cast] Animation already playing');
       return;
     }
 
     isPlaying = true;
-    console.info('[house-circle] Starting house circle animation for', players.length, 'contestants');
+    console.info('[fast-cast] Starting fast cast animation for', players.length, 'contestants');
 
     // Create fullscreen overlay container
     const overlay = document.createElement('div');
@@ -108,14 +108,13 @@
       }
     }, 100);
 
-    // Create rotating circle container
+    // Create circle container (no rotation)
     const circleContainer = document.createElement('div');
     circleContainer.id = 'circleContainer';
     circleContainer.style.cssText = `
       position: relative;
       width: 70%;
       height: 70%;
-      animation: rotateCircle 4.5s linear infinite;
     `;
 
     // Calculate circle positions for contestants
@@ -139,8 +138,8 @@
         align-items: center;
         gap: 4px;
         opacity: 0;
-        animation: fadeInContestant 0.6s ease-out forwards;
-        animation-delay: ${index * 0.08}s;
+        animation: pulseInContestant 0.6s ease-out forwards, fadeOutContestant 0.5s ease-in forwards;
+        animation-delay: 0s, 2.5s;
       `;
 
       // Avatar
@@ -161,11 +160,15 @@
         height: 100%;
         object-fit: cover;
       `;
-      avatar.src = getPlayerAvatar(player);
+      // Use centralized avatar resolver
+      avatar.src = global.resolveAvatar ? global.resolveAvatar(player) : getPlayerAvatar(player);
       avatar.alt = player.name || 'Contestant';
       avatar.onerror = function() {
         this.onerror = null;
-        this.src = getAvatarFallback(player);
+        const fallbackUrl = global.getAvatarFallback ? 
+          global.getAvatarFallback(player.name || player.id, this.src) : 
+          getAvatarFallback(player);
+        this.src = fallbackUrl;
       };
 
       avatarWrapper.appendChild(avatar);
@@ -203,23 +206,28 @@
       const style = document.createElement('style');
       style.id = 'houseCircleStyles';
       style.textContent = `
-        @keyframes rotateCircle {
-          from {
-            transform: rotate(0deg);
+        @keyframes pulseInContestant {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.5);
           }
-          to {
-            transform: rotate(360deg);
+          50% {
+            transform: translate(-50%, -50%) scale(1.1);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
           }
         }
         
-        @keyframes fadeInContestant {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(0.3);
-          }
-          to {
+        @keyframes fadeOutContestant {
+          0% {
             opacity: 1;
             transform: translate(-50%, -50%) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.3);
           }
         }
       `;
@@ -229,11 +237,11 @@
     // Add to page
     document.body.appendChild(overlay);
 
-    // Cleanup and complete after 4.8 seconds
+    // Cleanup and complete after 3 seconds
     setTimeout(() => {
       cleanup();
       if (onComplete) onComplete();
-    }, 4800);
+    }, 3000);
 
     function cleanup() {
       isPlaying = false;
@@ -246,7 +254,7 @@
         setTimeout(() => overlayEl.remove(), 300);
       }
 
-      console.info('[house-circle] Animation complete, cleanup done');
+      console.info('[fast-cast] Animation complete, cleanup done');
     }
   }
 
@@ -329,6 +337,6 @@
     stop: stop
   };
 
-  console.info('[house-circle] House circle animation module loaded');
+  console.info('[fast-cast] Fast cast animation module loaded');
 
 })(window);

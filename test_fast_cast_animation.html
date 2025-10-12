@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fast Cast Animation Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #0a0f16;
+      color: white;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .btn {
+      background: #3d5a75;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    .btn:hover {
+      background: #4a6a85;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+    }
+    h1 {
+      color: #78d2ff;
+    }
+    h2 {
+      color: #8a9fb5;
+      font-size: 18px;
+    }
+    .test-info {
+      background: rgba(61, 90, 117, 0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .test-info ul {
+      margin: 10px 0;
+      padding-left: 25px;
+    }
+    .test-info li {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Fast Cast Animation Test</h1>
+    
+    <div class="test-info">
+      <h2>What to expect:</h2>
+      <ul>
+        <li>All contestant photos appear at once in a circle</li>
+        <li>Photos have a pulse-in effect (scale from 0.5 to 1.1 to 1.0)</li>
+        <li>House frame is visible in the background</li>
+        <li>After 2.5 seconds, photos fade out and shrink</li>
+        <li>Total animation duration: 3 seconds</li>
+        <li>Week 1 modal appears after animation completes</li>
+        <li>Real contestant photos loaded from /avatars/ folder</li>
+      </ul>
+    </div>
+
+    <button class="btn" onclick="runTest()">Test Fast Cast Animation</button>
+    <button class="btn" onclick="testWithFewPlayers()">Test with 5 Players</button>
+    <button class="btn" onclick="testWithManyPlayers()">Test with 16 Players</button>
+    
+    <div class="status" id="status">
+      Ready to test. Click a button above.
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/avatar.js"></script>
+  <script src="js/fast-cast-animation.js"></script>
+
+  <script>
+    // Mock player data with names matching avatars folder
+    const mockPlayers = [
+      { id: 1, name: 'Aria' },
+      { id: 2, name: 'Ash' },
+      { id: 3, name: 'Bea' },
+      { id: 4, name: 'Blue' },
+      { id: 5, name: 'Dex' },
+      { id: 6, name: 'Echo' },
+      { id: 7, name: 'Finn' },
+      { id: 8, name: 'Ivy' },
+      { id: 9, name: 'Jax' },
+      { id: 10, name: 'Kai' },
+      { id: 11, name: 'Lux' },
+      { id: 12, name: 'Mimi' },
+      { id: 13, name: 'Nico' },
+      { id: 14, name: 'Nova' },
+      { id: 15, name: 'Quinn' },
+      { id: 16, name: 'Rae' },
+      { id: 17, name: 'Remy' },
+      { id: 18, name: 'Rune' },
+      { id: 19, name: 'Sol' },
+      { id: 20, name: 'Vee' },
+      { id: 21, name: 'Zed' }
+    ];
+
+    function updateStatus(message) {
+      document.getElementById('status').innerHTML = message;
+    }
+
+    function runTest() {
+      updateStatus('Starting animation with 12 players...');
+      
+      const players = mockPlayers.slice(0, 12);
+      
+      if (typeof window.FastCastAnimation === 'undefined') {
+        updateStatus('ERROR: FastCastAnimation not loaded!');
+        return;
+      }
+
+      window.FastCastAnimation.play(players, () => {
+        updateStatus('Animation completed! Week 1 modal would appear here.');
+        console.log('Animation complete callback fired');
+      });
+    }
+
+    function testWithFewPlayers() {
+      updateStatus('Starting animation with 5 players...');
+      const players = mockPlayers.slice(0, 5);
+      
+      window.FastCastAnimation.play(players, () => {
+        updateStatus('Animation completed (5 players)! Week 1 modal would appear here.');
+      });
+    }
+
+    function testWithManyPlayers() {
+      updateStatus('Starting animation with 16 players...');
+      const players = mockPlayers.slice(0, 16);
+      
+      window.FastCastAnimation.play(players, () => {
+        updateStatus('Animation completed (16 players)! Week 1 modal would appear here.');
+      });
+    }
+
+    // Log when modules load
+    console.log('Test page loaded');
+    console.log('FastCastAnimation available:', typeof window.FastCastAnimation !== 'undefined');
+    console.log('resolveAvatar available:', typeof window.resolveAvatar !== 'undefined');
+  </script>
+</body>
+</html>
