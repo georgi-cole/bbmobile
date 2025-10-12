@@ -5,6 +5,53 @@
 (function(g){
   'use strict';
 
+  // Track active minigame overlays and instructions for cleanup on phase change
+  let activeMinigameOverlay = null;
+  let activeInstructionsCard = null;
+  let activeMinigameCleanup = null;
+
+  /**
+   * Clean up any active minigames and instructions on phase change
+   */
+  function cleanupOnPhaseChange(){
+    console.info('[CompetitionFlow] Phase changed, cleaning up active minigames/instructions');
+    
+    // Close active instructions card
+    if(activeInstructionsCard && activeInstructionsCard.parentNode){
+      activeInstructionsCard.remove();
+      activeInstructionsCard = null;
+    }
+    
+    // Force close active minigame overlay
+    if(activeMinigameCleanup && typeof activeMinigameCleanup === 'function'){
+      activeMinigameCleanup();
+      activeMinigameCleanup = null;
+    }
+    
+    activeMinigameOverlay = null;
+  }
+
+  /**
+   * Register phase change listener
+   */
+  function registerPhaseChangeListener(){
+    // Hook into phase change system
+    if(!g._competitionFlowPhaseHook){
+      const originalSetPhase = g.setPhase;
+      if(originalSetPhase){
+        g.setPhase = function(...args){
+          cleanupOnPhaseChange();
+          return originalSetPhase.apply(this, args);
+        };
+        g._competitionFlowPhaseHook = true;
+        console.info('[CompetitionFlow] Phase change listener registered');
+      }
+    }
+  }
+
+  // Register phase change listener when module loads
+  registerPhaseChangeListener();
+
   /**
    * Get theme colors from current theme
    * Returns CSS variable values that adapt to the active theme
@@ -202,6 +249,9 @@
     card.appendChild(buttonsContainer);
     container.appendChild(card);
 
+    // Register as active instructions card for cleanup on phase change
+    activeInstructionsCard = card;
+
     return card;
   }
 
@@ -215,8 +265,20 @@
    * @returns {Object} Overlay controls { close, overlay }
    */
   function launchFullscreenMinigame(gameKey, onComplete, options = {}){
-    // Get time limit from options, default to 60 seconds
-    const timeLimit = options.timeLimit ?? 60;
+    // Sync with phase timer if available, otherwise use default timeLimit
+    const game = g.game;
+    let timeLimit = options.timeLimit ?? 60;
+    let usePhaseTimer = false;
+    
+    // Try to sync with phase timer
+    if(game && game.phaseEndsAt){
+      const remainingMs = game.phaseEndsAt - Date.now();
+      if(remainingMs > 0){
+        timeLimit = Math.ceil(remainingMs / 1000);
+        usePhaseTimer = true;
+        console.info('[CompetitionFlow] Syncing minigame timer with phase timer:', timeLimit, 'seconds');
+      }
+    }
     
     // Get theme colors
     const theme = getThemeColors();
@@ -340,11 +402,20 @@
     let hasCompleted = false;
     let timerInterval = null;
     let startTime = Date.now();
+    let isDisabled = false; // Track if interaction should be disabled
 
-    // Start timer countdown
+    // Start timer countdown - sync with phase timer if enabled
     function updateTimer(){
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const remaining = Math.max(0, timeLimit - elapsed);
+      // If using phase timer, recalculate remaining time from game.phaseEndsAt
+      let remaining;
+      if(usePhaseTimer && game && game.phaseEndsAt){
+        const remainingMs = game.phaseEndsAt - Date.now();
+        remaining = Math.max(0, Math.ceil(remainingMs / 1000));
+      } else {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        remaining = Math.max(0, timeLimit - elapsed);
+      }
+      
       const minutes = Math.floor(remaining / 60);
       const seconds = remaining % 60;
       
@@ -363,12 +434,29 @@
         timerText.style.color = '#fbbf24';
       }
       
-      // Time's up
+      // Time's up - force completion
       if(remaining <= 0 && !hasCompleted){
         clearInterval(timerInterval);
         timerText.textContent = '0:00';
         timerText.style.color = '#ff6b9d';
-        // Don't auto-close, let the game handle completion
+        isDisabled = true;
+        
+        // Disable minigame interaction
+        if(gameContainer){
+          gameContainer.style.pointerEvents = 'none';
+          gameContainer.style.opacity = '0.6';
+        }
+        
+        // Force completion after brief delay
+        setTimeout(() => {
+          if(!hasCompleted){
+            console.warn('[CompetitionFlow] Phase time expired, forcing completion');
+            hasCompleted = true;
+            close();
+            // Call onComplete with 0 score or don't call it at all (cancel)
+            // For now, we'll close without submitting
+          }
+        }, 1000);
       }
     }
 
@@ -383,7 +471,16 @@
       if(overlay.parentNode){
         overlay.remove();
       }
+      // Clear active references
+      if(activeMinigameOverlay === overlay){
+        activeMinigameOverlay = null;
+        activeMinigameCleanup = null;
+      }
     }
+
+    // Register overlay and cleanup function
+    activeMinigameOverlay = overlay;
+    activeMinigameCleanup = close;
 
     // Close button handler - warn if game not completed
     closeBtn.addEventListener('click', () => {
@@ -440,6 +537,11 @@
         // Remove instructions card when Play is pressed
         if(instructionsCard && instructionsCard.parentNode){
           instructionsCard.remove();
+        }
+        
+        // Clear active instructions reference
+        if(activeInstructionsCard === instructionsCard){
+          activeInstructionsCard = null;
         }
         
         // Step 2: Launch fullscreen minigame
