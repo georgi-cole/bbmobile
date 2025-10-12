@@ -168,8 +168,12 @@
     const isDouble = game.__twistMode === 'double' || game.doubleEvictionWeek === true;
     const isTriple = game.__twistMode === 'triple' || game.tripleEvictionWeek === true;
     
-    // Only show badge if twist is active AND badge has been shown (modal dismissed)
-    const shouldShowBadge = game.__twistBadgeShown === true;
+    // Show badge if twist is active AND:
+    // - EITHER the modal flow completed (badge flag is true)
+    // - OR the modal implementation is not available (fallback for test/harness flows)
+    const modalAvailable = typeof window.showEventModal === 'function';
+    const badgeShownViaModal = game.__twistBadgeShown === true;
+    const shouldShowBadge = badgeShownViaModal || (!modalAvailable && (isDouble || isTriple));
     
     if(isTriple && shouldShowBadge){
       setTwistBadge('triple', true);
@@ -204,6 +208,44 @@
     if(tv){
       initFit(tv);
       setupResizeHandler();
+      
+      // Ensure twist badge element exists (defensive creation if missing from DOM)
+      ensureTwistBadgeElement();
+    }
+  }
+  
+  // Defensively create twist badge element if it doesn't exist in the DOM
+  function ensureTwistBadgeElement(){
+    const tv = document.getElementById('tv');
+    if(!tv) return;
+    
+    let badge = document.getElementById('twistBadge');
+    if(!badge){
+      console.info('[TV] Creating missing twist badge element');
+      const viewport = tv.querySelector('.tvViewport');
+      if(!viewport){
+        console.warn('[TV] Cannot create twist badge: .tvViewport not found');
+        return;
+      }
+      
+      // Create badge structure matching index.html
+      badge = document.createElement('div');
+      badge.id = 'twistBadge';
+      badge.className = 'twistBadge';
+      badge.setAttribute('aria-live', 'polite');
+      badge.setAttribute('aria-label', 'Active twist');
+      badge.style.display = 'none';
+      
+      const dot = document.createElement('span');
+      dot.className = 'twistBadgeDot';
+      
+      const text = document.createElement('span');
+      text.className = 'twistBadgeText';
+      text.textContent = 'Triple Eviction';
+      
+      badge.appendChild(dot);
+      badge.appendChild(text);
+      viewport.appendChild(badge);
     }
   }
 
