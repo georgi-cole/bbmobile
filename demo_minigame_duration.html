@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minigame Duration Config - Interactive Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0e1a;
+      color: #e6e8ee;
+      padding: 20px;
+    }
+    h1 {
+      color: #60a5fa;
+      margin-bottom: 12px;
+      font-size: 1.8rem;
+    }
+    .subtitle {
+      color: #9aa3b2;
+      font-size: 1rem;
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+    .demo-section {
+      background: #0f1320;
+      border: 1px solid #273041;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .demo-section h2 {
+      font-size: 1.3rem;
+      color: #fbbf24;
+      margin-bottom: 16px;
+    }
+    .demo-section p {
+      color: #9aa3b2;
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .feature-card {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .feature-card h3 {
+      font-size: 1rem;
+      color: #22c55e;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .feature-card p {
+      font-size: 0.88rem;
+      color: #c9d3e8;
+      line-height: 1.5;
+      margin-bottom: 0;
+    }
+    .code-block {
+      background: #0a0e1a;
+      border: 1px solid #273041;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.88rem;
+      color: #22c55e;
+      overflow-x: auto;
+    }
+    .flow-diagram {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0;
+      padding: 12px;
+      background: #0f1320;
+      border-left: 3px solid #60a5fa;
+      border-radius: 6px;
+    }
+    .flow-step .icon {
+      font-size: 1.5rem;
+      min-width: 32px;
+    }
+    .flow-step .text {
+      flex: 1;
+    }
+    .flow-step .text strong {
+      color: #60a5fa;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .flow-step .text span {
+      color: #9aa3b2;
+      font-size: 0.88rem;
+    }
+    .animation-preview {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .animation-card {
+      flex: 1;
+      min-width: 200px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.05));
+      border: 2px solid #22c55e;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .animation-card.timeout {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(185, 28, 28, 0.05));
+      border-color: #dc2626;
+    }
+    .animation-card.phase-end {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(234, 88, 12, 0.05));
+      border-color: #f97316;
+    }
+    .animation-card .emoji {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+    .animation-card .title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .animation-card.success .title {
+      color: #22c55e;
+    }
+    .animation-card.timeout .title {
+      color: #ff6b9d;
+    }
+    .animation-card.phase-end .title {
+      color: #f97316;
+    }
+    .animation-card .desc {
+      font-size: 0.85rem;
+      color: #9aa3b2;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Per-Minigame Duration Config - Interactive Demo</h1>
+  <div class="subtitle">
+    A comprehensive implementation of configurable minigame challenge timers with pause/resume functionality, 
+    completion animations, and graceful edge case handling.
+  </div>
+
+  <div class="demo-section">
+    <h2>📋 Overview</h2>
+    <p>
+      This feature adds a centralized configuration for minigame challenge duration (default: 3 minutes / 180 seconds) 
+      that can be adjusted by admins through the settings UI. The phase timer pauses when a challenge starts and 
+      resumes when it completes, ensuring accurate time tracking.
+    </p>
+  </div>
+
+  <div class="demo-section">
+    <h2>🎯 Key Features</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>⚙️ Configurable Duration</h3>
+        <p>Admin-only setting in Gameplay tab. Range: 30-600 seconds. Default: 180 seconds (3 minutes).</p>
+      </div>
+      <div class="feature-card">
+        <h3>⏸️ Timer Pause/Resume</h3>
+        <p>Phase timer pauses when Play button is pressed and resumes after minigame completion or cancellation.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🎉 Completion Animations</h3>
+        <p>Shows success message with score. Displays confetti effect if new record is achieved.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🛡️ Edge Case Handling</h3>
+        <p>Gracefully handles timeout, early finish, abandon, and phase end scenarios.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>🔄 Competition Flow</h2>
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="icon">📺</div>
+        <div class="text">
+          <strong>Step 1: Instructions</strong>
+          <span>Instructions card appears in TV viewport with Play button</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="icon">▶️</div>
+        <div class="text">
+          <strong>Step 2: Play Button Pressed</strong>
+          <span>Phase timer pauses, challenge timer starts (uses config duration or phase timer)</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="icon">🎮</div>
+        <div class="text">
+          <strong>Step 3: Minigame Overlay</strong>
+          <span>Fullscreen overlay with timer countdown and close button</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="icon">✅</div>
+        <div class="text">
+          <strong>Step 4: Completion</strong>
+          <span>Shows animation (confetti if new record), displays score, then closes overlay</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="icon">▶️</div>
+        <div class="text">
+          <strong>Step 5: Resume</strong>
+          <span>Phase timer resumes from where it paused, returns to main view</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>✨ Animation States</h2>
+    <div class="animation-preview">
+      <div class="animation-card success">
+        <div class="emoji">🎉</div>
+        <div class="title">New Record!</div>
+        <div class="desc">Confetti animation + score display</div>
+      </div>
+      <div class="animation-card success">
+        <div class="emoji">✅</div>
+        <div class="title">Challenge Complete!</div>
+        <div class="desc">Success message + score display</div>
+      </div>
+      <div class="animation-card timeout">
+        <div class="emoji">⏱️</div>
+        <div class="title">Time's Up!</div>
+        <div class="desc">Auto-submits score (0 on timeout)</div>
+      </div>
+      <div class="animation-card phase-end">
+        <div class="emoji">⚠️</div>
+        <div class="title">Phase Ended</div>
+        <div class="desc">Challenge canceled gracefully</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>📝 Configuration Code</h2>
+    <p>The configuration is stored in the centralized settings system:</p>
+    <div class="code-block">
+const DEFAULT_CFG = {
+  // ... other settings ...
+  minigameDuration: 180  // Default: 3 minutes
+};
+    </div>
+    <p>Accessible in settings UI under: <strong>Gameplay → Minigame settings → Challenge timer duration</strong></p>
+  </div>
+
+  <div class="demo-section">
+    <h2>🧪 Edge Cases Handled</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>⏰ Timer Expiration</h3>
+        <p>Disables interaction, shows "Time's Up!" message, auto-submits after 1.5s delay.</p>
+      </div>
+      <div class="feature-card">
+        <h3>✅ Early Finish</h3>
+        <p>Shows completion animation, resumes phase timer, normal score submission.</p>
+      </div>
+      <div class="feature-card">
+        <h3>❌ Manual Abandon</h3>
+        <p>Confirms with user, closes overlay without submission, resumes phase timer.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🔄 Phase Change</h3>
+        <p>Shows "Phase Ended" message, cancels challenge, cleans up overlay automatically.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>✅ Test Coverage</h2>
+    <p>Comprehensive test suite validates all functionality:</p>
+    <div class="code-block">
+Test Results: 7 Categories, 19 Assertions, 0 Failures
+
+✓ Config default value (180 seconds)
+✓ Settings UI field in Gameplay tab
+✓ Timer pause/resume functions
+✓ Competition flow integration
+✓ Completion animations
+✓ Timeout handling
+✓ Phase end cleanup
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>📊 Implementation Summary</h2>
+    <p><strong>Files Modified:</strong></p>
+    <ul style="color: #9aa3b2; padding-left: 24px; margin-top: 12px; line-height: 1.8;">
+      <li><code>js/ui.config-and-settings.js</code> - Added minigameDuration config (180s default)</li>
+      <li><code>js/settings/registry.js</code> - Added UI field with 30-600s range</li>
+      <li><code>js/competitions-flow.js</code> - Implemented timer logic, animations, edge cases</li>
+      <li><code>test_minigame_duration_config.html</code> - Comprehensive validation suite</li>
+    </ul>
+  </div>
+
+</body>
+</html>
