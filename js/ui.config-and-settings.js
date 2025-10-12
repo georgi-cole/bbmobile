@@ -8,6 +8,52 @@
   const FALLBACK_AVATAR = 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest';
   UI.FALLBACK_AVATAR = FALLBACK_AVATAR;
 
+  // Name shortening utility
+  function shortenName(name, maxLength = 32) {
+    if (!name) return '';
+    name = name.trim();
+    if (name.length <= maxLength) return name;
+    
+    // If name exceeds maxLength, shorten it intelligently
+    const words = name.split(/\s+/);
+    if (words.length === 1) {
+      // Single word: just truncate with ellipsis
+      return name.substring(0, maxLength - 1) + '…';
+    }
+    
+    // Multiple words: keep first word, abbreviate rest
+    let result = words[0];
+    for (let i = 1; i < words.length; i++) {
+      const abbrev = ' ' + words[i].charAt(0).toUpperCase();
+      if ((result + abbrev).length <= maxLength) {
+        result += abbrev;
+      } else {
+        break;
+      }
+    }
+    return result;
+  }
+
+  // Sex display mapping
+  function getSexDisplay(sex) {
+    if (!sex) return '';
+    const lower = sex.toLowerCase();
+    if (lower === 'male') return 'M';
+    if (lower === 'female') return 'F';
+    if (lower === 'n/a') return 'N';
+    return sex.charAt(0).toUpperCase(); // fallback
+  }
+
+  // Sex value mapping (for dropdown)
+  function getSexValue(display) {
+    if (!display) return '';
+    const upper = display.toUpperCase();
+    if (upper === 'M') return 'Male';
+    if (upper === 'F') return 'Female';
+    if (upper === 'N') return 'N/A';
+    return display;
+  }
+
   // Injected UI CSS (settings, cast editor, cascade deck). Keep here to stay centralized.
   UI.INJECTED_CSS = [
     '.modal-backdrop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:80}',
@@ -52,11 +98,13 @@
     '.cast-avatar-upload:hover .cast-avatar-overlay,.cast-avatar-upload:active .cast-avatar-overlay{background:rgba(0,0,0,.4)}',
     '.cast-avatar-overlay svg{color:#fff;opacity:0;transition:opacity .2s}',
     '.cast-avatar-upload:hover .cast-avatar-overlay svg,.cast-avatar-upload:active .cast-avatar-overlay svg{opacity:0.9}',
-    '.cast-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}',
+    '.cast-form{display:grid;grid-template-columns:1fr;gap:8px;min-width:0}',
+    '.cast-form-row-1{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;align-items:end}',
     '.cast-form .full{grid-column:1 / -1}',
-    '.cast-form .cast-age-field input{max-width:80px}',
+    '.cast-form .cast-age-field input{width:100%;max-width:none;text-align:center}',
+    '.cast-form .cast-sex-field select{width:100%;max-width:none;text-align:center}',
     '.cast-form label{display:flex;flex-direction:column;align-items:flex-start;gap:4px}',
-    '.cast-form label span{font-size:.7rem;color:#9aa3b2}',
+    '.cast-form label span{font-size:.7rem;color:#9aa3b2;text-transform:uppercase;letter-spacing:.5px}',
     '.cast-form input,.cast-form select{min-height:40px;touch-action:manipulation}',
     '@media (max-width:900px){ .cast-editor{grid-template-columns:1fr} .cast-preview{align-items:center;margin-bottom:8px} .cast-preview img{width:100px;height:100px} .cast-form{grid-template-columns:1fr} }',
     '@media (max-width:540px){',
@@ -463,28 +511,30 @@
                 <input type="file" id="castPhotoFile" accept="image/*" style="display:none" aria-label="Select avatar image file">
               </div>
               <div class="cast-form" role="form" aria-label="Cast member details">
-                <label class="toggleRow">
-                  <span>Name</span>
-                  <input type="text" id="castName" aria-label="Cast member name" autocomplete="off" inputmode="text">
-                </label>
-                <label class="toggleRow cast-age-field">
-                  <span>Age</span>
-                  <input type="number" id="castAge" min="0" max="120" step="1" aria-label="Cast member age" inputmode="numeric">
-                </label>
-                <label class="toggleRow">
-                  <span>Sex</span>
-                  <select id="castSex" aria-label="Cast member sex">
-                    <option value="">—</option>
-                    <option>Male</option>
-                    <option>Female</option>
-                    <option>Other</option>
-                  </select>
-                </label>
-                <label class="toggleRow full">
+                <div class="cast-form-row-1">
+                  <label>
+                    <span>Name</span>
+                    <input type="text" id="castName" maxlength="32" aria-label="Cast member name" autocomplete="off" inputmode="text">
+                  </label>
+                  <label class="cast-age-field">
+                    <span>Age</span>
+                    <input type="text" id="castAge" maxlength="3" aria-label="Cast member age" inputmode="numeric" pattern="[0-9∞]*">
+                  </label>
+                  <label class="cast-sex-field">
+                    <span>Sex</span>
+                    <select id="castSex" aria-label="Cast member sex">
+                      <option value="">—</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="N/A">N/A</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="full">
                   <span>Occupation</span>
                   <input type="text" id="castOcc" placeholder="e.g., Student, Engineer" aria-label="Cast member occupation" autocomplete="off" inputmode="text">
                 </label>
-                <label class="toggleRow full">
+                <label class="full">
                   <span>Motto</span>
                   <input type="text" id="castMotto" placeholder="e.g., Play hard, win harder" aria-label="Cast member motto" autocomplete="off" inputmode="text">
                 </label>
@@ -537,12 +587,13 @@
       chip.setAttribute('tabindex', i===state.idx ? '0' : '-1');
       const imgSrc = (window.Game||window).resolveAvatar?.(p) || p.avatar || p.img || p.photo || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
       const fallbackSrc = (window.Game||window).getAvatarFallback?.(p.name||'guest') || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p.name||'guest')}`;
+      const displayName = shortenName(p.name || '', 15); // Shorten for roster chip display
       chip.innerHTML = `
         <div class="chip-ava">
           <img src="${imgSrc}" alt="${UI.escapeHtml(p.name||'player')}" onerror="this.onerror=null;this.src='${fallbackSrc}'">
           ${chipBadgesHtml(p,game)}
         </div>
-        <div class="nm">${UI.escapeHtml(p.name||'')}</div>
+        <div class="nm">${UI.escapeHtml(displayName)}</div>
       `;
       const selectChip = async ()=>{
         if(!await maybeConfirmDiscard(modal)) return;
@@ -619,8 +670,19 @@
     }
     const meta = p.meta || {};
     name.value = p.name || '';
-    age.value = (meta.age!=null)? String(meta.age) : '';
+    
+    // Handle age display: show ∞ if age is Infinity or >99
+    if (meta.age === Infinity || meta.age > 99) {
+      age.value = '∞';
+    } else if (meta.age != null) {
+      age.value = String(meta.age);
+    } else {
+      age.value = '';
+    }
+    
+    // Set sex value (not display)
     sex.value = meta.sex || '';
+    
     occ.value = meta.occupation || '';
     motto.value = meta.motto || '';
 
@@ -651,6 +713,29 @@
       }
     });
     
+    // Special handler for age field: convert >99 to ∞
+    const ageField = modal.querySelector('#castAge');
+    if (ageField) {
+      ageField.addEventListener('blur', () => {
+        const val = ageField.value.trim();
+        if (val && val !== '∞') {
+          const num = parseInt(val, 10);
+          if (!isNaN(num) && num > 99) {
+            ageField.value = '∞';
+            markDirty(modal);
+          }
+        }
+      });
+      // Allow only digits and ∞
+      ageField.addEventListener('input', (e) => {
+        const val = ageField.value;
+        // Allow ∞ or digits only
+        if (val && val !== '∞' && !/^\d*$/.test(val)) {
+          ageField.value = val.replace(/[^\d∞]/g, '');
+        }
+      });
+    }
+    
     // Wire avatar upload (click image/overlay to trigger file picker)
     const file = modal.querySelector('#castPhotoFile');
     const avatarUpload = modal.querySelector('#castAvatarUpload');
@@ -680,19 +765,34 @@
   function saveCurrentCastForm(modal){
     const p = currentPlayer(modal);
     if(!p) return false;
-    const name = modal.querySelector('#castName').value.trim();
+    const nameVal = modal.querySelector('#castName').value.trim();
     const ageVal = modal.querySelector('#castAge').value.trim();
     const sex = modal.querySelector('#castSex').value;
     const occ = modal.querySelector('#castOcc').value.trim();
     const motto = modal.querySelector('#castMotto').value.trim();
     const upDataUrl = castState(modal).pendingAvatarDataUrl;
 
-    if(!name){ alert('Name is required.'); return false; }
+    if(!nameVal){ alert('Name is required.'); return false; }
+    
+    // Enforce max length on name
+    const name = nameVal.length > 32 ? nameVal.substring(0, 32) : nameVal;
 
     p.name = name;
     p.meta = p.meta || {};
-    const age = parseInt(ageVal,10);
-    if(!Number.isNaN(age)) p.meta.age = age; else delete p.meta.age;
+    
+    // Handle age: if ∞ symbol, store as Infinity
+    if (ageVal === '∞' || ageVal === 'Infinity' || ageVal === '∞') {
+      p.meta.age = Infinity;
+    } else {
+      const age = parseInt(ageVal, 10);
+      if (!Number.isNaN(age)) {
+        // If age > 99, store as Infinity
+        p.meta.age = age > 99 ? Infinity : age;
+      } else {
+        delete p.meta.age;
+      }
+    }
+    
     p.meta.sex = sex || '';
     if(occ) p.meta.occupation = occ; else delete p.meta.occupation;
     if(motto) p.meta.motto = motto; else delete p.meta.motto;
