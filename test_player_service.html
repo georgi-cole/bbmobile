@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayerService Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0f1320;
+      color: #e6e8ee;
+    }
+    h1 { color: #2d8ab4; }
+    h2 { color: #4aa5d4; margin-top: 30px; }
+    .test-section {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    button {
+      background: #2877a0;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #3090c0; }
+    button.danger { background: #c94747; }
+    button.danger:hover { background: #e05757; }
+    .log {
+      background: #0a0e18;
+      border: 1px solid #1a2030;
+      padding: 10px;
+      margin: 10px 0;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid #1a2030;
+    }
+    .log-entry.info { color: #79d19a; }
+    .log-entry.warn { color: #f2c862; }
+    .log-entry.error { color: #ff6b6b; }
+    select {
+      background: #10151d;
+      color: #e6e8ee;
+      border: 1px solid #2c3446;
+      padding: 8px;
+      border-radius: 6px;
+      margin: 5px;
+      min-width: 200px;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+    }
+    .status.ok { background: #1a4d2e; border: 1px solid #2d7a4a; }
+    .status.error { background: #4d1a1a; border: 1px solid #7a2d2d; }
+  </style>
+</head>
+<body>
+  <h1>PlayerService Test Suite</h1>
+  <p>This page tests the PlayerService module and its integration with the Settings modal.</p>
+
+  <div class="test-section">
+    <h2>1. Module Loading</h2>
+    <div id="moduleStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Mock Game Data</h2>
+    <button onclick="createMockPlayers(10)">Create 10 Mock Players</button>
+    <button onclick="createMockPlayers(5)">Create 5 Mock Players</button>
+    <button onclick="clearPlayers()">Clear All Players</button>
+    <div id="playerCount" style="margin-top: 10px;"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. PlayerService API Tests</h2>
+    <button onclick="testGetPlayers()">Get Players</button>
+    <button onclick="testSetPlayers()">Set Players (Update)</button>
+    <button onclick="testSubscribe()">Test Subscribe</button>
+    <button onclick="testUnsubscribe()">Test Unsubscribe</button>
+    <button onclick="testOneTime()">Test One-Time</button>
+    <div class="log" id="apiLog"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Self-Evict Dropdown Test</h2>
+    <p>Open Settings → Advanced to see the self-evict dropdown</p>
+    <button onclick="openSettings()">Open Settings Modal</button>
+    <button onclick="simulateEviction()">Simulate Eviction (remove player)</button>
+    <button onclick="simulateReturn()">Simulate Return (add player back)</button>
+    <div class="log" id="uiLog"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Event Log</h2>
+    <button onclick="clearLog()">Clear Log</button>
+    <div class="log" id="eventLog"></div>
+  </div>
+
+  <!-- Load required scripts -->
+  <script src="js/player/PlayerService.js"></script>
+  <script>
+    // Test state
+    let testSubscription = null;
+    let mockPlayers = [];
+    let nextId = 1;
+
+    // Logging
+    function log(message, type = 'info', target = 'eventLog') {
+      const logEl = document.getElementById(target);
+      if (!logEl) return;
+      
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('eventLog').innerHTML = '';
+      document.getElementById('apiLog').innerHTML = '';
+      document.getElementById('uiLog').innerHTML = '';
+    }
+
+    // Module loading check
+    function checkModuleLoaded() {
+      const statusEl = document.getElementById('moduleStatus');
+      if (typeof window.PlayerService !== 'undefined') {
+        statusEl.className = 'status ok';
+        statusEl.innerHTML = '✓ PlayerService module loaded successfully';
+        log('PlayerService module available', 'info');
+        
+        // Check API methods
+        const methods = ['getAlivePlayers', 'setAlivePlayers', 'subscribe', 'onNextChange'];
+        methods.forEach(m => {
+          if (typeof PlayerService[m] === 'function') {
+            log(`  ✓ ${m}() method available`, 'info');
+          } else {
+            log(`  ✗ ${m}() method missing`, 'error');
+          }
+        });
+      } else {
+        statusEl.className = 'status error';
+        statusEl.innerHTML = '✗ PlayerService module not loaded';
+        log('PlayerService module NOT available', 'error');
+      }
+    }
+
+    // Mock player creation
+    function createMockPlayers(count) {
+      mockPlayers = [];
+      nextId = 1;
+      
+      for (let i = 0; i < count; i++) {
+        mockPlayers.push({
+          id: nextId++,
+          name: `Player ${nextId - 1}`,
+          evicted: false,
+          hoh: i === 0,
+          nominated: i === 1 || i === 2,
+          human: i === 0
+        });
+      }
+
+      // Set up global helpers
+      window.g = window.g || {};
+      window.g.game = window.g.game || {};
+      window.g.game.players = mockPlayers.slice();
+      window.g.alivePlayers = function() {
+        return mockPlayers.filter(p => !p.evicted);
+      };
+      window.g.safeName = function(id) {
+        const p = mockPlayers.find(p => p.id === id);
+        return p ? p.name : `Player ${id}`;
+      };
+
+      // Update PlayerService
+      if (window.PlayerService) {
+        PlayerService.setAlivePlayers(mockPlayers);
+      }
+
+      updatePlayerCount();
+      log(`Created ${count} mock players`, 'info');
+    }
+
+    function clearPlayers() {
+      mockPlayers = [];
+      if (window.g?.game) window.g.game.players = [];
+      if (window.PlayerService) {
+        PlayerService.setAlivePlayers([]);
+      }
+      updatePlayerCount();
+      log('Cleared all players', 'warn');
+    }
+
+    function updatePlayerCount() {
+      const alive = mockPlayers.filter(p => !p.evicted).length;
+      const total = mockPlayers.length;
+      document.getElementById('playerCount').innerHTML = 
+        `<strong>Players:</strong> ${alive} alive / ${total} total`;
+    }
+
+    // API Tests
+    function testGetPlayers() {
+      if (!window.PlayerService) {
+        log('PlayerService not available', 'error', 'apiLog');
+        return;
+      }
+      const players = PlayerService.getAlivePlayers();
+      log(`getAlivePlayers() returned ${players.length} players`, 'info', 'apiLog');
+      players.forEach(p => {
+        log(`  - ${p.name} (ID: ${p.id})`, 'info', 'apiLog');
+      });
+    }
+
+    function testSetPlayers() {
+      if (!window.PlayerService) {
+        log('PlayerService not available', 'error', 'apiLog');
+        return;
+      }
+      
+      // Add a new player
+      const newPlayer = {
+        id: nextId++,
+        name: `New Player ${nextId - 1}`,
+        evicted: false
+      };
+      mockPlayers.push(newPlayer);
+      
+      PlayerService.setAlivePlayers(mockPlayers);
+      log(`setAlivePlayers() called with ${mockPlayers.length} players`, 'info', 'apiLog');
+      updatePlayerCount();
+    }
+
+    function testSubscribe() {
+      if (!window.PlayerService) {
+        log('PlayerService not available', 'error', 'apiLog');
+        return;
+      }
+      
+      if (testSubscription) {
+        log('Already subscribed', 'warn', 'apiLog');
+        return;
+      }
+      
+      testSubscription = PlayerService.subscribe((players) => {
+        log(`Subscription callback fired! ${players.length} players`, 'info', 'apiLog');
+      });
+      
+      log('Subscribed to PlayerService. Try setting players to see callback.', 'info', 'apiLog');
+    }
+
+    function testUnsubscribe() {
+      if (!testSubscription) {
+        log('Not currently subscribed', 'warn', 'apiLog');
+        return;
+      }
+      
+      testSubscription();
+      testSubscription = null;
+      log('Unsubscribed from PlayerService', 'info', 'apiLog');
+    }
+
+    function testOneTime() {
+      if (!window.PlayerService) {
+        log('PlayerService not available', 'error', 'apiLog');
+        return;
+      }
+      
+      PlayerService.onNextChange((players) => {
+        log(`One-time callback fired! ${players.length} players`, 'info', 'apiLog');
+      });
+      
+      log('Set up one-time listener. Try setting players to trigger it.', 'info', 'apiLog');
+    }
+
+    // UI Tests
+    function openSettings() {
+      if (typeof window.g?.openSettingsModal === 'function') {
+        window.g.openSettingsModal();
+        log('Opened settings modal', 'info', 'uiLog');
+      } else {
+        log('openSettingsModal not available, creating minimal UI...', 'warn', 'uiLog');
+        
+        // Create minimal settings UI for testing
+        if (document.getElementById('settingsBackdrop')) {
+          document.getElementById('settingsBackdrop').style.display = 'flex';
+          return;
+        }
+        
+        const backdrop = document.createElement('div');
+        backdrop.id = 'settingsBackdrop';
+        backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:1000';
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.cssText = 'background:#0f1320;padding:20px;border-radius:10px;min-width:400px';
+        
+        modal.innerHTML = `
+          <h2>Settings - Advanced</h2>
+          <div style="margin: 20px 0;">
+            <label>Self-evict player:</label>
+            <select id="qaSelfEvictSelect" style="width:100%;margin-top:10px"></select>
+          </div>
+          <button onclick="closeTestModal()">Close</button>
+        `;
+        
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        
+        // Manually populate dropdown
+        const sel = modal.querySelector('#qaSelfEvictSelect');
+        if (sel && window.PlayerService) {
+          const players = PlayerService.getAlivePlayers();
+          sel.innerHTML = '';
+          if (players.length === 0) {
+            sel.innerHTML = '<option disabled>(No players available)</option>';
+          } else {
+            players.forEach(p => {
+              const opt = document.createElement('option');
+              opt.value = p.id;
+              opt.textContent = p.name;
+              sel.appendChild(opt);
+            });
+          }
+          
+          // Subscribe to updates
+          PlayerService.subscribe((players) => {
+            log('Dropdown updated via PlayerService', 'info', 'uiLog');
+            sel.innerHTML = '';
+            if (players.length === 0) {
+              sel.innerHTML = '<option disabled>(No players available)</option>';
+            } else {
+              players.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                sel.appendChild(opt);
+              });
+            }
+          });
+        }
+        
+        log('Created test modal with self-evict dropdown', 'info', 'uiLog');
+      }
+    }
+
+    function closeTestModal() {
+      const backdrop = document.getElementById('settingsBackdrop');
+      if (backdrop) backdrop.style.display = 'none';
+      log('Closed settings modal', 'info', 'uiLog');
+    }
+
+    function simulateEviction() {
+      if (mockPlayers.length === 0) {
+        log('No players to evict', 'warn', 'uiLog');
+        return;
+      }
+      
+      const aliveIdx = mockPlayers.findIndex(p => !p.evicted);
+      if (aliveIdx === -1) {
+        log('No alive players to evict', 'warn', 'uiLog');
+        return;
+      }
+      
+      mockPlayers[aliveIdx].evicted = true;
+      const evictedName = mockPlayers[aliveIdx].name;
+      
+      if (window.PlayerService) {
+        PlayerService.setAlivePlayers(mockPlayers);
+      }
+      
+      updatePlayerCount();
+      log(`Evicted ${evictedName}`, 'warn', 'uiLog');
+    }
+
+    function simulateReturn() {
+      const evictedIdx = mockPlayers.findIndex(p => p.evicted);
+      if (evictedIdx === -1) {
+        log('No evicted players to return', 'warn', 'uiLog');
+        return;
+      }
+      
+      mockPlayers[evictedIdx].evicted = false;
+      const returnedName = mockPlayers[evictedIdx].name;
+      
+      if (window.PlayerService) {
+        PlayerService.setAlivePlayers(mockPlayers);
+      }
+      
+      updatePlayerCount();
+      log(`${returnedName} returned to the game`, 'info', 'uiLog');
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      checkModuleLoaded();
+      createMockPlayers(10);
+    });
+  </script>
+</body>
+</html>
