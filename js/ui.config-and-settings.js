@@ -68,6 +68,8 @@
     '.settingsGrid{display:grid;grid-template-columns:1fr;gap:8px}',
     '.settingsGrid .card{background:#141a23;border:1px solid #2b3546;border-radius:10px;padding:10px;overflow:visible}',
     '.settingsGrid h3{margin:0 0 6px;font-size:.92rem;letter-spacing:.4px}',
+    '.settingsTabPane[data-pane="cast"] #numPlayersCast{width:60px !important;text-align:center;padding:6px 8px !important;min-height:36px !important}',
+    '.settingsTabPane[data-pane="cast"] label:has(#numPlayersCast){display:flex !important;flex-direction:row !important;align-items:center !important;gap:10px !important;max-width:none !important}',
     '.toggleRow{display:flex;align-items:center;gap:10px;justify-content:space-between;margin:4px 0}',
     '.toggleRow input[type="checkbox"]{transform:scale(1.05)}',
     '.toggleRow input[type="number"],.toggleRow input[type="text"],.toggleRow select{background:#10151d;color:#e6e8ee;border:1px solid #2c3446;border-radius:10px;padding:6px 8px;font-size:.7rem;width:100%;box-sizing:border-box}',
@@ -89,7 +91,7 @@
     '.chip-badge{font-size:.55rem;background:#24304a;border:1px solid #2b3b5c;border-radius:6px;padding:1px 3px;color:#cfe2ff}',
     '.cast-chip .nm{max-width:72px;font-size:.66rem;color:#c9d3e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.cast-chip.active .chip-ava{outline:2px solid #2d8ab4;outline-offset:1px}',
-    '.cast-editor{display:grid;grid-template-columns:160px minmax(340px,1fr);gap:12px;align-items:start;max-width:100%;overflow:hidden}',
+    '.cast-editor{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:100%;overflow:hidden}',
     '.cast-editor>*{min-width:0}',
     '.cast-preview{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0}',
     '.cast-preview img{width:140px;height:140px;border-radius:8px;border:1px solid #2b3546;object-fit:cover;background:#0b0f1a}',
@@ -103,8 +105,9 @@
     '.cast-camera-badge svg{width:18px;height:18px;color:rgba(255,255,255,0.95)}',
     '.cast-camera-badge::before{content:"";position:absolute;inset:-4px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.2) 0%,transparent 70%);opacity:0;transition:opacity .2s}',
     '.cast-camera-badge:hover::before,.cast-camera-badge:active::before{opacity:1}',
-    '.cast-form{display:grid;grid-template-columns:1fr;gap:8px;min-width:0}',
+    '.cast-form{display:grid;grid-template-columns:1fr;gap:8px;min-width:0;max-width:500px;width:100%}',
     '.cast-form-row-1{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;align-items:end}',
+    '.cast-form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}',
     '.cast-form .full{grid-column:1 / -1}',
     '.cast-form .cast-age-field input{width:100%;max-width:none;text-align:center}',
     '.cast-form .cast-sex-field select{width:100%;max-width:none;text-align:center}',
@@ -115,8 +118,8 @@
     '.cast-form input[type="text"]{max-width:100%}',
     '.cast-form .cast-age-field input{padding:10px 8px}',
     '.cast-form .cast-sex-field select{padding:10px 8px}',
-    '@media (max-width:900px){ .cast-editor{grid-template-columns:1fr} .cast-preview{align-items:center;margin-bottom:8px} .cast-preview img{width:100px;height:100px} .cast-form{grid-template-columns:1fr} }',
-    '@media (max-width:700px){ .cast-form-row-1{grid-template-columns:1fr !important;gap:6px} }',
+    '@media (max-width:900px){ .cast-editor{flex-direction:column} .cast-preview{align-items:center;margin-bottom:8px} .cast-preview img{width:100px;height:100px} .cast-form{grid-template-columns:1fr;max-width:100%} }',
+    '@media (max-width:700px){ .cast-form-row-1{grid-template-columns:1fr !important;gap:6px} .cast-form-row-2{grid-template-columns:1fr !important;gap:6px} }',
     '@media (max-width:540px){',
     '  .settingsTabPane[data-pane="cast"] .card{padding:10px 8px;max-width:100%;overflow-x:hidden;box-sizing:border-box}',
     '  .settingsTabPane[data-pane="cast"] .cast-wrap{max-width:100%;overflow:hidden}',
@@ -532,6 +535,8 @@
                     <span>Name</span>
                     <input type="text" id="castName" maxlength="32" aria-label="Cast member name" autocomplete="off" inputmode="text">
                   </label>
+                </div>
+                <div class="cast-form-row-2">
                   <label class="cast-age-field">
                     <span>Age</span>
                     <input type="text" id="castAge" maxlength="3" aria-label="Cast member age" inputmode="numeric" pattern="[0-9∞]*">
