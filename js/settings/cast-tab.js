@@ -190,10 +190,15 @@ const { FALLBACK_AVATAR } = require('./constants');
   async function maybeConfirmDiscard(modal){
     const st = castState(modal);
     if(!st.dirty) return true;
-    return await global.showConfirm('You have unsaved changes. Discard them?', {
-      title: 'Unsaved Changes',
-      tone: 'warn'
-    });
+    if (typeof global.showConfirm === 'function') {
+      return await global.showConfirm('You have unsaved changes. Discard them?', {
+        title: 'Unsaved Changes',
+        tone: 'warn'
+      });
+    } else {
+      // Fallback to window.confirm if showConfirm is not available
+      return window.confirm('You have unsaved changes. Discard them?');
+    }
   }
 
   // Wire cast editor form
