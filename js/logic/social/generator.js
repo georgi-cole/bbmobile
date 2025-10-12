@@ -174,11 +174,14 @@
 
     isOnCooldown(id1, id2, type, currentWeek, pairWeeks, typeWeeks) {
       const pairKey = this.getPairKey(id1, id2, type);
-      const pairLastWeek = this.pairCooldowns.get(pairKey) || 0;
-      const typeLastWeek = this.typeCooldowns.get(type) || 0;
+      const pairLastWeek = this.pairCooldowns.get(pairKey);
+      const typeLastWeek = this.typeCooldowns.get(type);
 
-      return (currentWeek - pairLastWeek < pairWeeks) || 
-             (currentWeek - typeLastWeek < typeWeeks);
+      // If never used, not on cooldown
+      const pairCooldown = pairLastWeek ? (currentWeek - pairLastWeek < pairWeeks) : false;
+      const typeCooldown = typeLastWeek ? (currentWeek - typeLastWeek < typeWeeks) : false;
+
+      return pairCooldown || typeCooldown;
     }
 
     recordInteraction(id1, id2, type, currentWeek) {
