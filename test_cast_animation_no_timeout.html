@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cast Animation - No Timeout Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #0a0f16;
+      color: white;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .btn {
+      background: #3d5a75;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    .btn:hover {
+      background: #4a6a85;
+    }
+    .btn.success {
+      background: #28a745;
+    }
+    .btn.danger {
+      background: #dc3545;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    h1 {
+      color: #78d2ff;
+    }
+    h2 {
+      color: #8a9fb5;
+      font-size: 18px;
+      margin-top: 30px;
+    }
+    .test-info {
+      background: rgba(61, 90, 117, 0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .test-info ul {
+      margin: 10px 0;
+      padding-left: 25px;
+    }
+    .test-info li {
+      margin: 5px 0;
+    }
+    .console-output {
+      background: #000;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .console-line {
+      color: #0f0;
+      font-family: monospace;
+      font-size: 12px;
+      margin: 2px 0;
+    }
+    .console-warn {
+      color: #ff0;
+    }
+    .console-error {
+      color: #f00;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Cast Animation - No Timeout Test</h1>
+    
+    <div class="test-info">
+      <h2>✅ New Behavior (No Timeout):</h2>
+      <ul>
+        <li><strong>Loading bar appears</strong> with Big Brother eye animation</li>
+        <li><strong>Waits indefinitely</strong> for ALL images to load (no 6-second timeout)</li>
+        <li><strong>If all images load successfully:</strong> Show full cast animation (3 seconds)</li>
+        <li><strong>If ANY image fails:</strong> Skip animation immediately, go to game</li>
+        <li>Progress bar updates as images load (0-100%)</li>
+      </ul>
+    </div>
+
+    <h2>Test Scenarios</h2>
+    
+    <div style="margin: 20px 0;">
+      <button class="btn success" onclick="testAllSuccess()">
+        Test 1: All Avatars Load ✅
+      </button>
+      <p style="margin-left: 20px; color: #aaa;">Should show loading bar, then animation runs for 3 seconds.</p>
+    </div>
+
+    <div style="margin: 20px 0;">
+      <button class="btn danger" onclick="testSomeFail()">
+        Test 2: Some Avatars Fail ❌
+      </button>
+      <p style="margin-left: 20px; color: #aaa;">Should show loading bar, then skip animation immediately on failure.</p>
+    </div>
+
+    <div style="margin: 20px 0;">
+      <button class="btn" onclick="testSlowLoad()">
+        Test 3: Slow Loading (No Timeout) 🐌
+      </button>
+      <p style="margin-left: 20px; color: #aaa;">Simulates slow network. Loading bar stays visible until all images finish (no 6s cutoff).</p>
+    </div>
+
+    <div class="status" id="status">
+      Ready to test. Click a button above.
+    </div>
+
+    <div class="console-output" id="console">
+      <div class="console-line">Console output will appear here...</div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/avatar.js"></script>
+  <script src="js/fast-cast-animation.js"></script>
+
+  <script>
+    // Intercept console messages
+    const consoleDiv = document.getElementById('console');
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    function addConsoleOutput(message, type = 'log') {
+      const line = document.createElement('div');
+      line.className = `console-line ${type === 'warn' ? 'console-warn' : type === 'error' ? 'console-error' : ''}`;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      consoleDiv.appendChild(line);
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addConsoleOutput(args.join(' '), 'log');
+    };
+
+    console.info = function(...args) {
+      originalInfo.apply(console, args);
+      addConsoleOutput(args.join(' '), 'log');
+    };
+
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addConsoleOutput(args.join(' '), 'warn');
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addConsoleOutput(args.join(' '), 'error');
+    };
+
+    // Valid mock players with names matching avatars folder
+    const validPlayers = [
+      { id: 1, name: 'Aria' },
+      { id: 2, name: 'Ash' },
+      { id: 3, name: 'Bea' },
+      { id: 4, name: 'Blue' },
+      { id: 5, name: 'Dex' },
+      { id: 6, name: 'Echo' },
+      { id: 7, name: 'Finn' },
+      { id: 8, name: 'Ivy' },
+      { id: 9, name: 'Jax' },
+      { id: 10, name: 'Kai' },
+      { id: 11, name: 'Lux' },
+      { id: 12, name: 'Mimi' }
+    ];
+
+    // Invalid mock players (will trigger 404s)
+    const invalidPlayers = [
+      { id: 1, name: 'NonExistent1' },
+      { id: 2, name: 'NonExistent2' },
+      { id: 3, name: 'NonExistent3' },
+      { id: 4, name: 'NonExistent4' }
+    ];
+
+    function updateStatus(message) {
+      document.getElementById('status').innerHTML = message;
+    }
+
+    function clearConsole() {
+      consoleDiv.innerHTML = '<div class="console-line">--- Test Started ---</div>';
+    }
+
+    function testAllSuccess() {
+      clearConsole();
+      updateStatus('TEST 1: Starting with valid avatars...');
+      
+      const startTime = Date.now();
+      
+      window.FastCastAnimation.play(validPlayers.slice(0, 8), () => {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        updateStatus(`✅ TEST 1 PASSED: Animation completed after ${elapsed}s (includes loading + 3s animation)`);
+        console.info(`✅ Test completed in ${elapsed}s`);
+      });
+    }
+
+    function testSomeFail() {
+      clearConsole();
+      updateStatus('TEST 2: Starting with invalid avatars (will fail)...');
+      
+      const startTime = Date.now();
+      
+      window.FastCastAnimation.play(invalidPlayers, () => {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        updateStatus(`✅ TEST 2 PASSED: Animation skipped, completed after ${elapsed}s (should be <1s for 404s)`);
+        console.info(`✅ Test completed in ${elapsed}s - animation was correctly skipped`);
+      });
+    }
+
+    function testSlowLoad() {
+      clearConsole();
+      updateStatus('TEST 3: Simulating slow network (delayed image loading)...');
+      
+      // This test demonstrates that there's NO timeout
+      // We'll use a mix of valid avatars but the loading will be at network speed
+      const startTime = Date.now();
+      
+      console.info('This test will take as long as needed to load all images (no 6s cutoff)');
+      console.info('Watch the loading bar - it will stay visible until all images complete');
+      
+      window.FastCastAnimation.play(validPlayers.slice(0, 12), () => {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        updateStatus(`✅ TEST 3 COMPLETE: Finished after ${elapsed}s (no timeout enforced)`);
+        console.info(`✅ Test completed in ${elapsed}s - loading bar waited for all images`);
+      });
+    }
+
+    // Log when modules load
+    console.log('Test page loaded');
+    console.log('FastCastAnimation available:', typeof window.FastCastAnimation !== 'undefined');
+    console.log('resolveAvatar available:', typeof window.resolveAvatar !== 'undefined');
+    console.log('');
+    console.log('=== KEY CHANGES ===');
+    console.log('✅ REMOVED: 6-second timeout');
+    console.log('✅ NEW: Loading bar waits indefinitely for all images');
+    console.log('✅ NEW: Animation only runs if ALL images load successfully');
+    console.log('✅ NEW: If ANY image fails, skip animation immediately');
+  </script>
+</body>
+</html>

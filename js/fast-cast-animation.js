@@ -11,7 +11,7 @@
    * Preload all contestant avatars from /avatars/ folder
    * @param {Array} players - Array of player objects
    * @param {Function} onProgress - Callback with (loaded, total)
-   * @returns {Promise<boolean>} True if all images loaded, false if any failed or timeout
+   * @returns {Promise<boolean>} True if all images loaded, false if any failed
    */
   function preloadAvatars(players, onProgress) {
     return new Promise((resolve) => {
@@ -22,15 +22,6 @@
       let loaded = 0;
       const total = avatarUrls.length;
       let completed = false;
-      
-      // 6 second timeout
-      const timeout = setTimeout(() => {
-        if (!completed) {
-          completed = true;
-          console.warn('[fast-cast] Avatar preload timeout - skipping animation');
-          resolve(false);
-        }
-      }, 6000);
       
       const images = [];
       let allSuccess = true;
@@ -45,7 +36,6 @@
           
           if (loaded === total) {
             completed = true;
-            clearTimeout(timeout);
             console.info('[fast-cast] All avatars preloaded successfully');
             resolve(allSuccess);
           }
@@ -60,7 +50,6 @@
           
           if (loaded === total) {
             completed = true;
-            clearTimeout(timeout);
             console.warn('[fast-cast] Some avatars failed to load - skipping animation');
             resolve(false);
           }
@@ -216,7 +205,7 @@
       
       if (!allLoaded) {
         // Skip animation, go straight to game
-        console.info('[fast-cast] Skipping animation due to failed/timeout preload');
+        console.info('[fast-cast] Skipping animation due to failed preload');
         isPlaying = false;
         if (onComplete) onComplete();
         return;
