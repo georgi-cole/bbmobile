@@ -853,6 +853,14 @@
 
     if(upDataUrl){ p.avatar = upDataUrl; p.img = upDataUrl; p.photo = upDataUrl; }
 
+    // Sync p.bio with p.meta changes for immediate display updates
+    // This ensures hover cards, bios, and profile displays show current data
+    if(!p.bio) p.bio = {};
+    if(p.meta.age != null) p.bio.age = p.meta.age;
+    if(p.meta.sex) p.bio.gender = p.meta.sex;
+    if(p.meta.occupation) p.bio.occupation = p.meta.occupation;
+    if(p.meta.motto) p.bio.motto = p.meta.motto;
+
     try{ g.updateHud?.(); }catch(e){}
     try{ g.saveGame?.(); }catch(e){}
     castState(modal).dirty = false;
