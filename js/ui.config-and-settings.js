@@ -133,7 +133,10 @@
     '.miniCard h4{margin:0 0 3px;font-size:.62rem;letter-spacing:.6px;color:#9fb5ff;text-transform:uppercase}',
     '.miniCard .ln{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.miniCard.pop{animation: miniIn .18s ease-out forwards}',
-    '@keyframes miniIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}'
+    '@keyframes miniIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}',
+    '#debugGameHost{border:1px solid #2d8ab4;border-radius:8px;background:#0a0f1a;padding:12px;margin-top:8px;max-height:500px;overflow:auto;position:relative}',
+    '#debugGameHost .debug-game-controls{position:absolute;top:8px;right:8px;z-index:10}',
+    '#debugGameHost .debug-game-controls button{background:#232a39;color:#e6e8ee;border:1px solid #2c3446;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.7rem}'
   ].join('\n');
 
   // Default configuration
@@ -903,6 +906,15 @@
             '<button class="btn small" id="btnSkipPhaseDbg">Skip Phase</button>',
           '</div>',
         ].join('')),
+        group('Force Game (Testing)', [
+          '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">',
+            '<select id="debugForceGameSelect" style="flex:1;min-width:200px">',
+              '<option value="">Select a minigame...</option>',
+            '</select>',
+            '<button class="btn small" id="btnForceGame">Force Game</button>',
+          '</div>',
+          '<div id="debugGameHost" style="display:none"></div>',
+        ].join('')),
       '</div>'
     ].join('');
   }
@@ -1173,6 +1185,60 @@
             notify('Phase skipped', 'ok');
           } else notify('Skip phase not available', 'warn');
         }catch(err){ notify('Failed: '+err, 'warn'); }
+      } else if(btn.id === 'btnForceGame'){
+        try{
+          const select = modal.querySelector('#debugForceGameSelect');
+          const host = modal.querySelector('#debugGameHost');
+          const selectedKey = select?.value;
+          
+          if(!selectedKey){
+            notify('Select a minigame first', 'warn');
+            return;
+          }
+          
+          if(!host){
+            notify('Game host container not found', 'warn');
+            return;
+          }
+          
+          // Clear previous content
+          host.innerHTML = '';
+          host.style.display = 'block';
+          
+          // Add stop/close control
+          const controls = document.createElement('div');
+          controls.className = 'debug-game-controls';
+          const stopBtn = document.createElement('button');
+          stopBtn.textContent = 'Stop';
+          stopBtn.addEventListener('click', ()=>{
+            host.innerHTML = '';
+            host.style.display = 'none';
+            notify('Game stopped', 'ok');
+          });
+          controls.appendChild(stopBtn);
+          host.appendChild(controls);
+          
+          // Create game container
+          const gameContainer = document.createElement('div');
+          gameContainer.style.marginTop = '32px';
+          host.appendChild(gameContainer);
+          
+          // Render the minigame
+          if(typeof g.renderMinigame === 'function'){
+            g.renderMinigame(selectedKey, gameContainer, (score)=>{
+              console.log('[Force Game Debug] Game completed with score:', score);
+              notify('Game completed! Score: ' + (score||0), 'ok');
+              // Note: We don't alter game state, this is just for testing
+            });
+            notify('Launching ' + selectedKey + '...', 'ok');
+          } else {
+            host.innerHTML = '<div style="padding:20px;text-align:center;color:#ff6b9d;">renderMinigame function not available</div>';
+            notify('Minigame system not loaded', 'warn');
+          }
+        }catch(err){
+          console.error('[Force Game Debug] Error:', err);
+          notify('Failed to launch game: '+err, 'warn');
+        }
       }
     });
 
@@ -1213,6 +1279,33 @@
           const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; sel.appendChild(o);
         });
       }catch(e){}
+    }
+    // Populate Force Game dropdown
+    const gameSelect = modal.querySelector('#debugForceGameSelect');
+    if(gameSelect){
+      gameSelect.innerHTML = '<option value="">Select a minigame...</option>';
+      try{
+        if(g.MinigameRegistry && typeof g.MinigameRegistry.getImplementedGames === 'function'){
+          const games = g.MinigameRegistry.getImplementedGames(true);
+          games.forEach(key=>{
+            const game = g.MinigameRegistry.getGame(key);
+            if(game){
+              const opt = document.createElement('option');
+              opt.value = key;
+              opt.textContent = game.name + (game.description ? ' - ' + game.description : '');
+              gameSelect.appendChild(opt);
+            }
+          });
+        } else {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'No games available';
+          opt.disabled = true;
+          gameSelect.appendChild(opt);
+        }
+      }catch(e){
+        console.error('[fillSettingsModalValues] Failed to populate Force Game dropdown:', e);
+      }
     }
   }
   function initCastTab(modal){
