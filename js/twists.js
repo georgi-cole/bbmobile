@@ -135,10 +135,82 @@
   global.isJurorReturnEligible = isJurorReturnEligible;
   global.decideJurorReturnThisWeek = decideJurorReturnThisWeek;
 
+  // ======= TWIST STATE HELPERS =======
+  
+  /**
+   * Check if a twist is currently active
+   * @param {object} g - Game state object
+   * @returns {boolean} True if any twist is active
+   */
+  function isTwist(g){
+    return !!(g && g.__twistMode);
+  }
+
+  /**
+   * Get number of nomination slots for current twist
+   * @param {object} g - Game state object
+   * @returns {number} Number of nomination slots (2, 3, or 4)
+   */
+  function getTwistNomSlots(g){
+    if(!g) return 2;
+    if(g.__twistMode === 'triple') return 4;
+    if(g.__twistMode === 'double') return 3;
+    return 2;
+  }
+
+  /**
+   * Get planned number of evictions for current twist
+   * @param {object} g - Game state object
+   * @returns {number} Planned evictions (1, 2, or 3)
+   */
+  function getPlannedEvictions(g){
+    if(!g) return 1;
+    if(g.__twistMode === 'triple') return 3;
+    if(g.__twistMode === 'double') return 2;
+    return 1;
+  }
+
+  // Expose twist helpers on global
+  global.isTwist = isTwist;
+  global.getTwistNomSlots = getTwistNomSlots;
+  global.getPlannedEvictions = getPlannedEvictions;
+
+  /**
+   * Pick weekly twist based on config probabilities
+   * Triple eviction takes priority over double when both are possible
+   * @param {object} g - Game state object
+   * @returns {string|null} 'triple', 'double', or null
+   */
+  function pickWeeklyTwist(g){
+    if(!g) return null;
+    if(ap().length <= 6) return null;
+    
+    const dc = Number(g.cfg?.doubleChance || 0);
+    const tc = Number(g.cfg?.tripleChance || 0);
+    
+    // No twists configured
+    if(dc <= 0 && tc <= 0) return null;
+    
+    const roll = rand() * 100;
+    
+    // Triple takes priority: if roll < tc, activate triple
+    if(tc > 0 && roll < tc){
+      return 'triple';
+    }
+    
+    // Double: if roll < dc, activate double
+    if(dc > 0 && roll < dc){
+      return 'double';
+    }
+    
+    return null;
+  }
+
   function decideForWeek(){
     const g=global.game; if(!g) return;
     if(g.__twistDecidedWeek===g.week) return;
 
+    // Reset twist state
     g.doubleEvictionWeek=false;
     g.tripleEvictionWeek=false;
     g.__twistMode=null;
@@ -148,24 +220,23 @@
 
     tryMaybeAutoSelfEvict();
 
-    if(ap().length<=6) return;
-    const dc=Number(g.cfg?.doubleChance||0);
-    const tc=Number(g.cfg?.tripleChance||0);
-    const r=rand()*100;
-
-    if(tc>0 && r<tc){
+    // Use centralized twist selection logic
+    const twist = pickWeeklyTwist(g);
+    
+    if(twist === 'triple'){
       g.tripleEvictionWeek=true;
       g.__twistMode='triple';
       g.__twistPlannedEvictions=3;
       g.__twistNomSlots=4;
       // Twist announcement now handled by showTwistAnnouncementIfNeeded modal
-    }else if(dc>0 && r<dc){
+    } else if(twist === 'double'){
       g.doubleEvictionWeek=true;
       g.__twistMode='double';
       g.__twistPlannedEvictions=2;
       g.__twistNomSlots=3;
       // Twist announcement now handled by showTwistAnnouncementIfNeeded modal
     }
+    
     global.updateHud?.();
   }
 
@@ -178,7 +249,13 @@
     }
 
     // ======= TWIST ACTIVATED - SET FLAGS =======
-    // Set both flags to prevent twist from running again this season
+    // Mark as activated immediately to prevent re-triggering
+    // Note: __jurorReturnDone is set to 'activated' here, 'done' in finalize
+    // This allows future competitive return paths to check activation vs completion
+    g.__americaReturnActivated=true;
+    g.__jurorReturnActivated=true;
+    
+    // Set legacy flags for backward compatibility
     g.__americaReturnDone=true;
     g.__jurorReturnDone=true;
 
@@ -212,6 +289,7 @@
       _heartbeat:null,
       _lastUpdate:0,
       _seeded:false,
+      _domCache:null,
     };
 
     global.setPhase?.('return_twist', 16, ()=>{
@@ -267,47 +345,107 @@
 
   function updateReturnTwistCards(){
     const g=global.game; const st=g.__returnTwist; if(!st) return;
-    const grid=document.querySelector('#panel #rtGrid'); if(!grid) return;
-
+    
+    // Use cached DOM references if available, fallback to querySelector
+    const useCached = st._domCache && Object.keys(st._domCache).length > 0;
+    
     let total=0, max=-Infinity, leader=null;
     st.counts.forEach(v=>{ total+=v; if(v>max) max=v; });
     if(total<=0) total=1;
 
-    grid.querySelectorAll('.rtCard').forEach(card=>{
-      const id=+card.dataset.id;
+    st.jurors.forEach(id=>{
       const c=st.counts.get(id)||0;
       const pctNum=(c/total)*100;
       const pct=Math.max(0,Math.min(100,Math.round(pctNum)));
-      const bar=card.querySelector('.rtBarFill');
-      const pctSpan=card.querySelector('.rtPct');
-      if(bar) bar.style.width=pct+'%';
-      if(pctSpan) pctSpan.textContent=pct+'%';
       const isLead=(c===max && max>0);
-      card.classList.toggle('leader',isLead);
-      if(isLead && leader==null) leader=id;
-      const scale=0.96+Math.min(0.3,pct/320);
-      card.style.setProperty('--rtScale',scale.toFixed(3));
+      
+      if(useCached && st._domCache[id]){
+        // Use cached references for performance
+        const cache = st._domCache[id];
+        if(cache.bar) cache.bar.style.width=pct+'%';
+        if(cache.pct) cache.pct.textContent=pct+'%';
+        if(cache.card){
+          cache.card.classList.toggle('leader',isLead);
+          const scale=0.96+Math.min(0.3,pct/320);
+          cache.card.style.setProperty('--rtScale',scale.toFixed(3));
+        }
+        if(isLead && leader==null) leader=id;
+      } else {
+        // Fallback to querySelector (for compatibility)
+        const grid=document.querySelector('#panel #rtGrid'); if(!grid) return;
+        const card=grid.querySelector(`.rtCard[data-id="${id}"]`);
+        if(!card) return;
+        const bar=card.querySelector('.rtBarFill');
+        const pctSpan=card.querySelector('.rtPct');
+        if(bar) bar.style.width=pct+'%';
+        if(pctSpan) pctSpan.textContent=pct+'%';
+        card.classList.toggle('leader',isLead);
+        if(isLead && leader==null) leader=id;
+        const scale=0.96+Math.min(0.3,pct/320);
+        card.style.setProperty('--rtScale',scale.toFixed(3));
+      }
     });
 
+    // ARIA live update for leader change
     if(st.lastLeader!==leader && leader!=null){
       st.lastLeader=leader;
-      const lc=grid.querySelector(`.rtCard[data-id="${leader}"]`);
-      if(lc){ lc.classList.add('flash'); setTimeout(()=>lc.classList.remove('flash'),1100); }
+      const leaderName = global.safeName?.(leader) || 'Juror';
+      
+      if(useCached && st._domCache[leader]?.card){
+        const lc = st._domCache[leader].card;
+        lc.classList.add('flash');
+        setTimeout(()=>lc.classList.remove('flash'),1100);
+      } else {
+        const grid=document.querySelector('#panel #rtGrid');
+        if(grid){
+          const lc=grid.querySelector(`.rtCard[data-id="${leader}"]`);
+          if(lc){ lc.classList.add('flash'); setTimeout(()=>lc.classList.remove('flash'),1100); }
+        }
+      }
+      
+      // Announce leader change to screen readers
+      if(useCached && st._domCache.liveRegion){
+        st._domCache.liveRegion.textContent = `${leaderName} is now in the lead`;
+      } else {
+        const liveRegion = document.getElementById('rtLiveRegion');
+        if(liveRegion) liveRegion.textContent = `${leaderName} is now in the lead`;
+      }
     }
 
-    const cd=document.getElementById('rtCountdown');
-    if(cd){
-      const remain=Math.max(0,Math.ceil((st.durationMs - (Date.now()-st.started))/1000));
-      cd.textContent=`Time: ${remain}s`;
+    // Update countdown timer with cached reference
+    const remain=Math.max(0,Math.ceil((st.durationMs - (Date.now()-st.started))/1000));
+    const countdownText = `Time: ${remain}s`;
+    
+    if(useCached && st._domCache.countdown){
+      st._domCache.countdown.textContent = countdownText;
+    } else {
+      const cd=document.getElementById('rtCountdown');
+      if(cd) cd.textContent = countdownText;
     }
   }
 
   async function finalizeAmericaReturnVote(){
     const g=global.game; const st=g.__returnTwist;
+    
+    // Idempotency guard - prevent double finalization
     if(!st || st.finished) return;
+    
+    // Mark as finished immediately to prevent re-entry
     st.finished=true;
-    if(st._tick) clearInterval(st._tick);
-    if(st._heartbeat) clearInterval(st._heartbeat);
+    
+    // Mark twist as fully completed (vs just activated)
+    g.__americaReturnCompleted=true;
+    g.__jurorReturnCompleted=true;
+    
+    // Clean up intervals exactly once
+    if(st._tick){
+      clearInterval(st._tick);
+      st._tick = null;
+    }
+    if(st._heartbeat){
+      clearInterval(st._heartbeat);
+      st._heartbeat = null;
+    }
 
     const values=[...st.counts.values()];
     if(values.length && values.every(v=>Math.abs(v-values[0])<0.001)){
@@ -375,12 +513,17 @@
     const host=document.createElement('div'); host.className='returnTwistHost';
     host.innerHTML=`
       <h3 class="rtHeader">America's Vote — Juror Return</h3>
-      <div class="tiny muted" id="rtCountdown">Time: ${Math.ceil(st.durationMs/1000)}s</div>
+      <div class="tiny muted" id="rtCountdown" role="timer" aria-live="polite" aria-atomic="true">Time: ${Math.ceil(st.durationMs/1000)}s</div>
       <div class="rtGrid" id="rtGrid" role="list" aria-label="Juror vote standings"></div>
       <div class="tiny muted rtNote">Leader highlighted • Live % updates • Use Skip to finish instantly.</div>
+      <div id="rtLiveRegion" role="status" aria-live="polite" aria-atomic="true" style="position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;"></div>
     `;
     panel.appendChild(host);
     const grid=host.querySelector('#rtGrid');
+    
+    // Cache DOM references for performance
+    if(!st._domCache) st._domCache = {};
+    
     st.jurors.forEach(id=>{
       const p=gp(id);
       const jurorName = global.safeName?.(id) || 'Juror';
@@ -406,7 +549,19 @@
         <div class="rtPct tiny">0%</div>
       `;
       grid.appendChild(card);
+      
+      // Cache DOM references for this card
+      st._domCache[id] = {
+        card: card,
+        bar: card.querySelector('.rtBarFill'),
+        pct: card.querySelector('.rtPct')
+      };
     });
+    
+    // Cache countdown and live region
+    st._domCache.countdown = host.querySelector('#rtCountdown');
+    st._domCache.liveRegion = host.querySelector('#rtLiveRegion');
+    
     updateReturnTwistCards();
   }
 
