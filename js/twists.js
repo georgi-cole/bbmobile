@@ -183,7 +183,9 @@
    */
   function pickWeeklyTwist(g){
     if(!g) return null;
-    if(ap().length <= 6) return null;
+    // Determine alive players directly from game state
+    const aliveCount = Array.isArray(g.cast) ? g.cast.filter(p => !p.evicted).length : 0;
+    if(aliveCount <= 6) return null;
     
     const dc = Number(g.cfg?.doubleChance || 0);
     const tc = Number(g.cfg?.tripleChance || 0);
