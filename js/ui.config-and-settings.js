@@ -995,6 +995,7 @@
       tabBar.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b===btn));
       panes.querySelectorAll('.settingsTabPane').forEach(p=>p.classList.toggle('active', p.getAttribute('data-pane')===to));
       if(to==='cast'){ initCastTab(modal); }
+      if(to==='advanced'){ populateSelfEvictDropdown(modal); }
       if(to==='debug'){
         populateDebugMinigameDropdown(modal);
         wireDebugMinigameLauncher(modal);
