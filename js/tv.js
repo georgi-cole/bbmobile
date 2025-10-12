@@ -127,7 +127,19 @@
       
       if(textEl) textEl.textContent = twistName;
       
+      // Ensure badge is visible with appropriate z-index for desktop visibility
       badge.style.display = 'flex';
+      badge.style.zIndex = '20'; // Raise z-index to ensure visibility above other TV elements
+      
+      // Update tooltip if present
+      let tooltip = badge.querySelector('.twistTooltip');
+      if(!tooltip){
+        tooltip = document.createElement('div');
+        tooltip.className = 'twistTooltip';
+        badge.appendChild(tooltip);
+      }
+      tooltip.textContent = `${twistName} active this week`;
+      
       twistBadgeVisible = true;
       
       // Store current week for tracking
@@ -208,9 +220,16 @@
     let badge = document.getElementById('twistBadge');
     if(!badge){
       console.info('[TV] Creating missing twist badge element');
-      const viewport = tv.querySelector('.tvViewport');
-      if(!viewport){
-        console.warn('[TV] Cannot create twist badge: .tvViewport not found');
+      
+      // Prefer tvOverlay container if present (prevents clipping on desktop)
+      let container = document.getElementById('tvOverlay');
+      if(!container){
+        // Fallback to tvViewport
+        container = tv.querySelector('.tvViewport');
+      }
+      
+      if(!container){
+        console.warn('[TV] Cannot create twist badge: no suitable container found');
         return;
       }
       
@@ -231,7 +250,9 @@
       
       badge.appendChild(dot);
       badge.appendChild(text);
-      viewport.appendChild(badge);
+      container.appendChild(badge);
+      
+      console.info('[TV] Twist badge created in container:', container.id);
     }
   }
 

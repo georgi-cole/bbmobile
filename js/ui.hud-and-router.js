@@ -884,6 +884,7 @@ header.innerHTML = `
     const dbl=document.getElementById('doubleBadge');
     const tpl=document.getElementById('tripleBadge');
     // Legacy HUD badges are now hidden - TV area badge is the canonical display.
+    // This prevents duplicate indicators (one in HUD upper-left, one in TV bottom-left).
     // Keep DOM elements present for possible future re-enable, but force hidden.
     if(dbl) dbl.style.display = 'none';
     if(tpl) tpl.style.display = 'none';
