@@ -31,7 +31,7 @@
     // Fallback: count current roster (alive + evicted + jury)
     const alive = ap().length;
     const jurors = Array.isArray(g.juryHouse) ? g.juryHouse.length : 0;
-    const evicted = (g.cast || []).filter(p => p.evicted && !g.juryHouse?.includes(p.id)).length;
+    const evicted = (g.players || []).filter(p => p.evicted && !g.juryHouse?.includes(p.id)).length;
     const total = alive + jurors + evicted;
     g.__initialPlayers = Math.max(total, 12); // Default to 12 if calculation fails
     return g.__initialPlayers;
@@ -183,8 +183,9 @@
    */
   function pickWeeklyTwist(g){
     if(!g) return null;
-    // Determine alive players directly from game state
-    const aliveCount = Array.isArray(g.cast) ? g.cast.filter(p => !p.evicted).length : 0;
+    // Determine alive players using ap() helper or fallback to g.players
+    const aliveCount = (typeof ap === 'function' ? ap().length : 0)
+      || (Array.isArray(g.players) ? g.players.filter(p => !p.evicted).length : 0);
     if(aliveCount <= 6) return null;
     
     const dc = Number(g.cfg?.doubleChance || 0);
@@ -219,6 +220,8 @@
     g.__twistPlannedEvictions=1;
     g.__twistNomSlots=2;
     g.__twistDecidedWeek=g.week;
+    // Reset badge flag to prevent badge from appearing before announcement modal
+    g.__twistBadgeShown=false;
 
     tryMaybeAutoSelfEvict();
 
@@ -641,6 +644,8 @@
     g.__twistEvictedThisNight=0;
     g.__twistNomSlots=2;
     g.__twistNomineeSnapshot=null;
+    // Clear badge flag when twist ends
+    g.__twistBadgeShown=false;
     global.updateHud?.();
   }
 

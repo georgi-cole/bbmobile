@@ -205,12 +205,28 @@
       try {
         await global.showEventModal(twistConfig);
         
+        // Set badge flag after modal resolves, then update HUD to show badge
+        g.__twistBadgeShown = true;
+        
         // After modal, update the twist badge in TV area
         if(typeof global.TV?.updateTwistBadge === 'function'){
           global.TV.updateTwistBadge();
         }
+        
+        // Update HUD to reflect badge state
+        if(typeof global.updateHud === 'function'){
+          global.updateHud();
+        }
       } catch (e) {
         console.error('[ui.week-intro] Error showing twist modal:', e);
+        // Still show badge even if modal throws
+        g.__twistBadgeShown = true;
+        if(typeof global.TV?.updateTwistBadge === 'function'){
+          global.TV.updateTwistBadge();
+        }
+        if(typeof global.updateHud === 'function'){
+          global.updateHud();
+        }
       }
     }
 

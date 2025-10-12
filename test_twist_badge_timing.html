@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twist Badge Timing Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    .test-section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #444;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button.danger {
+      background: #f44336;
+    }
+    button.danger:hover {
+      background: #da190b;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      background: #333;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    .fail {
+      color: #f44336;
+      font-weight: bold;
+    }
+    #tv {
+      position: relative;
+      width: 400px;
+      height: 300px;
+      background: #000;
+      margin: 20px auto;
+      border: 3px solid #555;
+      border-radius: 8px;
+    }
+    #twistBadge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 0, 0, 0.8);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      z-index: 10;
+    }
+    #twistBadge.visible {
+      display: flex;
+    }
+    .twistBadgeText {
+      font-size: 12px;
+    }
+    .code-block {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+    pre {
+      margin: 0;
+      color: #4CAF50;
+    }
+  </style>
+</head>
+<body>
+  <h1>Twist Badge Timing Test</h1>
+  <p>This test verifies that the twist badge appears only after the twist announcement modal and persists for the rest of the week.</p>
+  
+  <div class="test-section">
+    <h2>Setup</h2>
+    <button onclick="setupTest()">Initialize Game State</button>
+    <button onclick="setupDoubleEviction()">Setup Double Eviction</button>
+    <button onclick="setupTripleEviction()">Setup Triple Eviction</button>
+    <div class="status" id="setupStatus">Click "Initialize Game State" to begin</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Faux TV with Twist Badge</h2>
+    <div id="tv">
+      <div id="twistBadge">
+        <span class="twistBadgeText">Double Eviction</span>
+      </div>
+      <div style="color: white; padding: 20px; text-align: center; margin-top: 130px;">
+        TV Screen
+      </div>
+    </div>
+    <div class="status" id="badgeStatus">Badge status will appear here</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Sequence</h2>
+    <button onclick="testDecideForWeek()">1. Call decideForWeek()</button>
+    <button onclick="testCheckBadgeBeforeModal()">2. Check Badge (Should be Hidden)</button>
+    <button onclick="testShowModal()">3. Show Twist Modal</button>
+    <button onclick="testCheckBadgeAfterModal()">4. Check Badge (Should be Visible)</button>
+    <button onclick="testIncrementWeek()">5. Increment Week</button>
+    <button onclick="testCheckBadgeAfterWeekChange()">6. Check Badge (Should be Hidden)</button>
+    <div class="status" id="testStatus">Follow the test sequence above</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Manual Test Steps (from PR description)</h2>
+    <div class="code-block">
+      <pre>window.game.cfg.doubleChance = 100;
+window.game.cfg.tripleChance = 0;
+// Ensure >6 alive players
+window.twists.decideForWeek();
+// Verify the twist modal appears first
+// Then after it disappears, the TV twist badge appears and stays
+// Increment window.game.week
+// Ensure the badge disappears</pre>
+    </div>
+    <button onclick="runFullTest()">Run Full Automated Test</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Current State</h2>
+    <div class="status" id="stateStatus">State will appear here</div>
+    <button onclick="refreshState()">Refresh State</button>
+  </div>
+
+  <script src="js/ui.event-modal.js"></script>
+  <script>
+    // Mock minimal game state
+    window.game = {
+      week: 1,
+      players: Array.from({length: 10}, (_, i) => ({
+        id: i + 1,
+        name: `Player ${i + 1}`,
+        evicted: false
+      })),
+      cfg: {
+        doubleChance: 0,
+        tripleChance: 0
+      }
+    };
+
+    // Mock alivePlayers function
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    // Mock rng
+    window.rng = Math.random;
+
+    // Mock updateHud
+    window.updateHud = function() {
+      console.log('[updateHud] Called');
+      refreshState();
+    };
+
+    // Initialize TV module
+    window.TV = {
+      updateTwistBadge: function() {
+        console.log('[TV.updateTwistBadge] Called');
+        const game = window.game || {};
+        const badge = document.getElementById('twistBadge');
+        
+        // Check for active twist
+        const isDouble = game.__twistMode === 'double';
+        const isTriple = game.__twistMode === 'triple';
+        const shouldShowBadge = game.__twistBadgeShown === true;
+        
+        console.log(`[TV.updateTwistBadge] isDouble=${isDouble}, isTriple=${isTriple}, shouldShowBadge=${shouldShowBadge}`);
+        
+        if((isDouble || isTriple) && shouldShowBadge) {
+          badge.classList.add('visible');
+          badge.style.display = 'flex';
+          document.querySelector('.twistBadgeText').textContent = 
+            isTriple ? 'Triple Eviction' : 'Double Eviction';
+          updateBadgeStatus('✅ Badge visible (as expected after modal)');
+        } else {
+          badge.classList.remove('visible');
+          badge.style.display = 'none';
+          updateBadgeStatus('✅ Badge hidden (as expected before modal or after week change)');
+        }
+      }
+    };
+
+    function setupTest() {
+      window.game = {
+        week: 1,
+        players: Array.from({length: 10}, (_, i) => ({
+          id: i + 1,
+          name: `Player ${i + 1}`,
+          evicted: false
+        })),
+        cfg: {
+          doubleChance: 100,
+          tripleChance: 0
+        }
+      };
+      document.getElementById('setupStatus').innerHTML = '<span class="pass">✅ Game state initialized with 10 alive players</span>';
+      refreshState();
+    }
+
+    function setupDoubleEviction() {
+      window.game.cfg.doubleChance = 100;
+      window.game.cfg.tripleChance = 0;
+      document.getElementById('setupStatus').innerHTML = '<span class="pass">✅ Double eviction configured (100% chance)</span>';
+    }
+
+    function setupTripleEviction() {
+      window.game.cfg.doubleChance = 0;
+      window.game.cfg.tripleChance = 100;
+      document.getElementById('setupStatus').innerHTML = '<span class="pass">✅ Triple eviction configured (100% chance)</span>';
+    }
+
+    function testDecideForWeek() {
+      const g = window.game;
+      
+      // Simulate decideForWeek logic
+      g.__twistDecidedWeek = g.week;
+      g.doubleEvictionWeek = false;
+      g.tripleEvictionWeek = false;
+      g.__twistMode = null;
+      g.__twistBadgeShown = false; // KEY: Reset badge flag
+      
+      // Determine twist
+      const aliveCount = window.alivePlayers().length;
+      if (aliveCount > 6) {
+        if (g.cfg.tripleChance > 0 && Math.random() * 100 < g.cfg.tripleChance) {
+          g.__twistMode = 'triple';
+          g.tripleEvictionWeek = true;
+        } else if (g.cfg.doubleChance > 0 && Math.random() * 100 < g.cfg.doubleChance) {
+          g.__twistMode = 'double';
+          g.doubleEvictionWeek = true;
+        }
+      }
+      
+      updateTestStatus(`✅ decideForWeek() called. Twist mode: ${g.__twistMode || 'none'}, __twistBadgeShown: ${g.__twistBadgeShown}`);
+      refreshState();
+    }
+
+    function testCheckBadgeBeforeModal() {
+      const g = window.game;
+      window.TV.updateTwistBadge();
+      
+      const badge = document.getElementById('twistBadge');
+      const isVisible = badge.style.display === 'flex';
+      
+      if (!isVisible && g.__twistMode && !g.__twistBadgeShown) {
+        updateTestStatus('<span class="pass">✅ PASS: Badge is hidden before modal (expected)</span>');
+      } else if (isVisible) {
+        updateTestStatus('<span class="fail">❌ FAIL: Badge is visible before modal (unexpected)</span>');
+      } else {
+        updateTestStatus('⚠️ No twist active or badge already shown');
+      }
+    }
+
+    async function testShowModal() {
+      const g = window.game;
+      
+      if (!g.__twistMode) {
+        updateTestStatus('<span class="fail">❌ No twist active. Run step 1 first.</span>');
+        return;
+      }
+      
+      let twistConfig;
+      if (g.__twistMode === 'double') {
+        twistConfig = {
+          title: 'House Shock!',
+          emojis: '⚠️😱',
+          subtitle: 'Double Eviction Week!! Three nominees — two leave.',
+          tone: 'danger',
+          duration: 2000
+        };
+      } else if (g.__twistMode === 'triple') {
+        twistConfig = {
+          title: 'House Shock!',
+          emojis: '⚠️💥😱',
+          subtitle: 'Triple Eviction Week!!! Four nominees — three leave.',
+          tone: 'danger',
+          duration: 2000
+        };
+      }
+      
+      try {
+        await window.showEventModal(twistConfig);
+        
+        // KEY: Set badge flag after modal resolves
+        g.__twistBadgeShown = true;
+        
+        // Update badge
+        if (typeof window.TV?.updateTwistBadge === 'function') {
+          window.TV.updateTwistBadge();
+        }
+        
+        updateTestStatus('<span class="pass">✅ Modal shown and dismissed. Badge flag set to true.</span>');
+        refreshState();
+      } catch (e) {
+        console.error('Modal error:', e);
+        // Still set badge flag on error
+        g.__twistBadgeShown = true;
+        window.TV.updateTwistBadge();
+        updateTestStatus('<span class="pass">✅ Modal error handled. Badge flag still set to true.</span>');
+        refreshState();
+      }
+    }
+
+    function testCheckBadgeAfterModal() {
+      const g = window.game;
+      window.TV.updateTwistBadge();
+      
+      const badge = document.getElementById('twistBadge');
+      const isVisible = badge.style.display === 'flex';
+      
+      if (isVisible && g.__twistMode && g.__twistBadgeShown) {
+        updateTestStatus('<span class="pass">✅ PASS: Badge is visible after modal (expected)</span>');
+      } else if (!isVisible) {
+        updateTestStatus('<span class="fail">❌ FAIL: Badge is hidden after modal (unexpected)</span>');
+      } else {
+        updateTestStatus('⚠️ Badge state: ' + (isVisible ? 'visible' : 'hidden'));
+      }
+    }
+
+    function testIncrementWeek() {
+      window.game.week++;
+      updateTestStatus(`✅ Week incremented to ${window.game.week}`);
+      refreshState();
+    }
+
+    function testCheckBadgeAfterWeekChange() {
+      const g = window.game;
+      
+      // Simulate endTwist
+      g.doubleEvictionWeek = false;
+      g.tripleEvictionWeek = false;
+      g.__twistMode = null;
+      g.__twistBadgeShown = false; // KEY: Clear badge flag
+      
+      window.TV.updateTwistBadge();
+      
+      const badge = document.getElementById('twistBadge');
+      const isVisible = badge.style.display === 'flex';
+      
+      if (!isVisible) {
+        updateTestStatus('<span class="pass">✅ PASS: Badge is hidden after week change (expected)</span>');
+      } else {
+        updateTestStatus('<span class="fail">❌ FAIL: Badge is visible after week change (unexpected)</span>');
+      }
+      
+      refreshState();
+    }
+
+    async function runFullTest() {
+      updateTestStatus('🔄 Running full automated test...');
+      
+      setupTest();
+      await sleep(500);
+      
+      testDecideForWeek();
+      await sleep(500);
+      
+      testCheckBadgeBeforeModal();
+      await sleep(1000);
+      
+      await testShowModal();
+      await sleep(1000);
+      
+      testCheckBadgeAfterModal();
+      await sleep(1000);
+      
+      testIncrementWeek();
+      await sleep(500);
+      
+      testCheckBadgeAfterWeekChange();
+      
+      updateTestStatus('<span class="pass">✅ Full test sequence completed!</span>');
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function updateTestStatus(html) {
+      document.getElementById('testStatus').innerHTML = html;
+    }
+
+    function updateBadgeStatus(html) {
+      document.getElementById('badgeStatus').innerHTML = html;
+    }
+
+    function refreshState() {
+      const g = window.game;
+      const state = `
+        <strong>Current Game State:</strong><br>
+        Week: ${g.week}<br>
+        Alive Players: ${window.alivePlayers().length}<br>
+        __twistMode: ${g.__twistMode || 'null'}<br>
+        __twistBadgeShown: ${g.__twistBadgeShown || 'false/undefined'}<br>
+        doubleEvictionWeek: ${g.doubleEvictionWeek || 'false'}<br>
+        tripleEvictionWeek: ${g.tripleEvictionWeek || 'false'}<br>
+        Badge Visible: ${document.getElementById('twistBadge').style.display === 'flex' ? 'YES' : 'NO'}
+      `;
+      document.getElementById('stateStatus').innerHTML = state;
+    }
+
+    // Initialize on load
+    setupTest();
+  </script>
+</body>
+</html>

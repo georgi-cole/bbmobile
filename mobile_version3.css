@@ -125,10 +125,18 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
 
   /* Cast form - ensure inputs fit and stack properly */
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form {
+    display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 6px !important;
     max-width: 100% !important;
     width: 100% !important;
+  }
+
+  /* On mobile, stack Name/Age/Sex row */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form-row-1 {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form label {
@@ -141,6 +149,8 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form label span {
     font-size: 0.7rem !important;
     color: #9aa3b2 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form input,
@@ -153,9 +163,11 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
     max-width: 100% !important;
   }
 
-  /* Specific sizing for age field - smaller since it's just 2-3 digits */
-  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-age-field input {
-    max-width: 80px !important;
+  /* Age and Sex fields should be full width on mobile */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-age-field input,
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-sex-field select {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   /* Cast strip - horizontal scroll for roster with proper container */
@@ -276,10 +288,18 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
 }
 
 /* Medium screens (tablets) - optimize Cast form layout */
-@media (min-width: 901px) and (max-width: 1100px) {
+@media (min-width: 541px) and (max-width: 1100px) {
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 10px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Show Name/Age/Sex in one row on tablets */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form-row-1 {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr 1fr !important;
+    gap: 8px !important;
   }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form .full {
@@ -294,11 +314,43 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
 
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form input,
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form select {
+    width: 100% !important;
     max-width: 100% !important;
   }
 
-  /* Age field should be smaller on tablets too */
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-age-field input {
-    max-width: 100px !important;
+    text-align: center !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-sex-field select {
+    text-align: center !important;
+  }
+}
+
+/* Large screens - maintain Name/Age/Sex in one row */
+@media (min-width: 1101px) {
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Show Name/Age/Sex in one row on desktop */
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form-row-1 {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form .full {
+    grid-column: 1 / -1 !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-age-field input {
+    text-align: center !important;
+  }
+
+  #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-sex-field select {
+    text-align: center !important;
   }
 }
