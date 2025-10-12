@@ -211,8 +211,8 @@
    */
   function checkIsReturningUser() {
     try {
-      // Check if user has started a game before (not just watched intro)
-      return sessionStorage.getItem('bb.gameStarted') === '1' || global.__bbGameStarted === true;
+      // Check localStorage (persists across page reloads) instead of sessionStorage
+      return localStorage.getItem('bb.gameStarted') === '1' || global.__bbGameStarted === true;
     } catch {
       return !!global.__bbGameStarted;
     }
@@ -228,10 +228,10 @@
       return;
     }
     
-    // Fallback implementation
+    // Fallback implementation - use localStorage to persist across reloads
     global.__bbGameStarted = true;
     try {
-      sessionStorage.setItem('bb.gameStarted', '1');
+      localStorage.setItem('bb.gameStarted', '1');
     } catch {}
   }
 

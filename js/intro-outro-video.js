@@ -211,7 +211,8 @@
   function markGameStarted() {
     g.__bbGameStarted = true;
     try {
-      sessionStorage.setItem('bb.gameStarted', '1');
+      // Use localStorage instead of sessionStorage so it persists across page reloads
+      localStorage.setItem('bb.gameStarted', '1');
       console.info('[intro-outro] marked game as started for returning user detection');
     } catch {}
   }
