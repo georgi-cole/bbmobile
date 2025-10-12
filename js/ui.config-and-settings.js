@@ -994,6 +994,10 @@
       tabBar.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b===btn));
       panes.querySelectorAll('.settingsTabPane').forEach(p=>p.classList.toggle('active', p.getAttribute('data-pane')===to));
       if(to==='cast'){ initCastTab(modal); }
+      if(to==='debug'){
+        populateDebugMinigameDropdown(modal);
+        wireDebugMinigameLauncher(modal);
+      }
     });
     panes.querySelector('.settingsTabPane[data-pane="general"]').classList.add('active');
 
@@ -1210,15 +1214,74 @@
       if(inp.type==='checkbox') inp.checked = !!cfg[k];
       else inp.value = (cfg[k] != null ? cfg[k] : '');
     });
+    populateSelfEvictDropdown(modal);
+  }
+  
+  /**
+   * Populate the self-evict dropdown with current alive players
+   * Uses PlayerService when available, falls back to global helpers
+   */
+  function populateSelfEvictDropdown(modal){
     const sel = modal.querySelector('#qaSelfEvictSelect');
-    if(sel){
-      sel.innerHTML = '';
-      try{
-        const alive = g.alivePlayers?.() || [];
+    if(!sel) return;
+    
+    sel.innerHTML = '';
+    
+    try{
+      let alive = [];
+      
+      // Try PlayerService first (preferred)
+      if(typeof window.PlayerService?.getAlivePlayers === 'function'){
+        alive = window.PlayerService.getAlivePlayers();
+        if(alive.length > 0){
+          console.info('[ui.config-and-settings] Using PlayerService for self-evict dropdown');
+        }
+      }
+      
+      // Fallback to global helpers
+      if(!alive || alive.length === 0){
+        if(typeof g.alivePlayers === 'function'){
+          alive = g.alivePlayers() || [];
+          if(alive.length > 0){
+            console.info('[ui.config-and-settings] Using g.alivePlayers() for self-evict dropdown');
+          }
+        } else if(g.game?.players){
+          alive = (g.game.players || []).filter(p => !p.evicted);
+          if(alive.length > 0){
+            console.info('[ui.config-and-settings] Using g.game.players for self-evict dropdown');
+          }
+        } else if(g.players){
+          alive = (g.players || []).filter(p => !p.evicted);
+          if(alive.length > 0){
+            console.info('[ui.config-and-settings] Using g.players for self-evict dropdown');
+          }
+        }
+      }
+      
+      // Populate dropdown
+      if(alive.length === 0){
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '(No players available)';
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        sel.appendChild(placeholder);
+        console.warn('[ui.config-and-settings] No alive players found for self-evict dropdown');
+      } else {
         alive.forEach(p=>{
-          const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; sel.appendChild(o);
+          const o = document.createElement('option');
+          o.value = p.id;
+          o.textContent = p.name || p.nm || `Player ${p.id}`;
+          sel.appendChild(o);
         });
-      }catch(e){}
+      }
+    }catch(err){
+      console.warn('[ui.config-and-settings] Error populating self-evict dropdown:', err);
+      const errOption = document.createElement('option');
+      errOption.value = '';
+      errOption.textContent = '(Error loading players)';
+      errOption.disabled = true;
+      sel.appendChild(errOption);
     }
   }
   function initCastTab(modal){
@@ -1250,6 +1313,170 @@
       }
     });
   }
+  
+  /**
+   * Populate the debug minigame dropdown with available games
+   */
+  function populateDebugMinigameDropdown(modal){
+    if(modal.__debugMinigameDropdownPopulated) return;
+    modal.__debugMinigameDropdownPopulated = true;
+    
+    const select = modal.querySelector('#debugMinigameSelect');
+    if(!select) return;
+    
+    // Clear existing options (except the first default one)
+    while(select.options.length > 1){
+      select.remove(1);
+    }
+    
+    // Get available games from MinigameRegistry (all implemented games)
+    if(!g.MinigameRegistry){
+      console.warn('[ui.config-and-settings] MinigameRegistry not available');
+      return;
+    }
+    
+    const gameKeys = g.MinigameRegistry.getImplementedGames(true); // excludeRetired = true
+    const games = [];
+    
+    // Build game list with metadata
+    gameKeys.forEach(key => {
+      const game = g.MinigameRegistry.getGame(key);
+      if(game){
+        games.push({
+          key: game.key,
+          name: game.name,
+          description: game.description,
+          type: game.type
+        });
+      }
+    });
+    
+    // Group games by type
+    const gamesByType = {};
+    games.forEach(game => {
+      if(!gamesByType[game.type]){
+        gamesByType[game.type] = [];
+      }
+      gamesByType[game.type].push(game);
+    });
+    
+    // Add games organized by type
+    Object.keys(gamesByType).sort().forEach(type => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = type.charAt(0).toUpperCase() + type.slice(1) + ' Games';
+      
+      gamesByType[type].forEach(game => {
+        const option = document.createElement('option');
+        option.value = game.key;
+        option.textContent = game.name + ' - ' + game.description;
+        optgroup.appendChild(option);
+      });
+      
+      select.appendChild(optgroup);
+    });
+    
+    console.info('[ui.config-and-settings] Populated debug minigame dropdown with', games.length, 'games');
+  }
+  
+  /**
+   * Wire the launch minigame button
+   */
+  function wireLaunchMinigameButton(modal){
+    if(modal.__launchMinigameWired) return;
+    modal.__launchMinigameWired = true;
+    
+    const btn = modal.querySelector('#btnLaunchMinigame');
+    const select = modal.querySelector('#debugMinigameSelect');
+    
+    if(!btn || !select) return;
+    
+    // Disable button initially
+    btn.disabled = true;
+    
+    // Enable button when a game is selected
+    select.addEventListener('change', () => {
+      btn.disabled = !select.value;
+    });
+    
+    // Launch game when button is clicked
+    btn.addEventListener('click', () => {
+      const gameKey = select.value;
+      if(!gameKey){
+        notify('Please select a minigame', 'warn');
+        return;
+      }
+      
+      // Close settings modal
+      closeSettingsModal();
+      
+      // Launch minigame in debug mode using CompetitionFlow
+      if(g.CompetitionFlow && typeof g.CompetitionFlow.launchFullscreenMinigame === 'function'){
+        console.info('[ui.config-and-settings] Launching minigame in debug mode:', gameKey);
+        
+        g.CompetitionFlow.launchFullscreenMinigame(gameKey, (score) => {
+          console.info('[ui.config-and-settings] Debug minigame completed with score:', score);
+          notify('Debug minigame completed: ' + score.toFixed(1), 'ok');
+        }, {
+          timeLimit: 60,
+          debugMode: true
+        });
+      } else {
+        notify('CompetitionFlow not available', 'warn');
+        console.warn('[ui.config-and-settings] CompetitionFlow.launchFullscreenMinigame not available');
+      }
+    });
+    
+    console.info('[ui.config-and-settings] Wired launch minigame button');
+  }
+  
+  /**
+   * Set up PlayerService subscription for live updates while modal is open
+   * Uses MutationObserver to clean up when modal is removed from DOM
+   */
+  function setupPlayerServiceSubscription(modal){
+    // Only set up once per modal instance
+    if(modal.__playerServiceWired) return;
+    modal.__playerServiceWired = true;
+    
+    // Check if PlayerService is available
+    if(typeof window.PlayerService?.subscribe !== 'function'){
+      console.info('[ui.config-and-settings] PlayerService not available, skipping live updates');
+      return;
+    }
+    
+    // Subscribe to player changes
+    const unsubscribe = window.PlayerService.subscribe((players) => {
+      console.info('[ui.config-and-settings] PlayerService update received:', players.length, 'players');
+      populateSelfEvictDropdown(modal);
+    });
+    
+    // Store unsubscribe function on modal
+    modal.__playerServiceUnsub = unsubscribe;
+    
+    // Set up MutationObserver to clean up when modal is removed
+    const dim = document.getElementById('settingsBackdrop');
+    if(dim){
+      const observer = new MutationObserver((mutations) => {
+        // Check if modal backdrop is removed from body
+        if(!document.body.contains(dim)){
+          console.info('[ui.config-and-settings] Modal removed, cleaning up PlayerService subscription');
+          if(modal.__playerServiceUnsub){
+            modal.__playerServiceUnsub();
+            modal.__playerServiceUnsub = null;
+          }
+          modal.__playerServiceWired = false;
+          observer.disconnect();
+        }
+      });
+      
+      // Observe body for child removals
+      observer.observe(document.body, { childList: true });
+      
+      // Store observer to disconnect on manual close
+      modal.__playerServiceObserver = observer;
+    }
+  }
+  
   function openSettingsModal(){
     ensureGameCfg();
     const dim = ensureSettingsModal();
@@ -1258,6 +1485,14 @@
     wireThemeSelector(modal);
     const activePane = modal.querySelector('.settingsTabPane.active');
     if(activePane && activePane.getAttribute('data-pane')==='cast'){ initCastTab(modal); }
+    if(activePane && activePane.getAttribute('data-pane')==='debug'){
+      populateDebugMinigameDropdown(modal);
+      wireLaunchMinigameButton(modal);
+    }
+    
+    // Subscribe to PlayerService for live updates while modal is open
+    setupPlayerServiceSubscription(modal);
+    
     dim.style.display = 'flex';
     setTimeout(()=>{
       const target = modal.querySelector('.settingsTabPane.active #castName') || modal.querySelector('.settingsTabPane.active input, .settingsTabPane.active select');
@@ -1266,7 +1501,24 @@
   }
   function closeSettingsModal(){
     const dim = document.getElementById('settingsBackdrop');
-    if(dim) dim.style.display = 'none';
+    if(dim){
+      const modal = dim.querySelector('.modal');
+      
+      // Clean up PlayerService subscription
+      if(modal?.__playerServiceUnsub){
+        modal.__playerServiceUnsub();
+        modal.__playerServiceUnsub = null;
+      }
+      
+      // Disconnect observer
+      if(modal?.__playerServiceObserver){
+        modal.__playerServiceObserver.disconnect();
+        modal.__playerServiceObserver = null;
+      }
+      
+      modal.__playerServiceWired = false;
+      dim.style.display = 'none';
+    }
   }
   function applySettingsFromModal(modal){
     const game=g.game = g.game || {};
@@ -1296,5 +1548,6 @@
   // Optional global for convenience
   g.openSettingsModal = openSettingsModal;
   g.ensureGameCfg = ensureGameCfg;
+  g.populateDebugMinigameDropdown = populateDebugMinigameDropdown;
 
 })(window);

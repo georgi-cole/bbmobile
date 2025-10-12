@@ -202,7 +202,20 @@
       // Special handling for Cast tab
       const activePane = panes.querySelector('.settingsTabPane.active');
       if(activePane && activePane.getAttribute('data-pane') === 'cast'){
-        if(typeof global.initCastTab === 'function'){
+        // Dynamically import cast-tab.js if not already loaded
+        if(typeof global.initCastTab !== 'function'){
+          import('./settings/cast-tab.js').then(function(){
+            if(typeof global.initCastTab === 'function'){
+              try{
+                global.initCastTab(modal);
+              }catch(e){
+                console.warn('[settings/render] initCastTab failed after dynamic import', e);
+              }
+            }
+          }).catch(function(err){
+            console.error('[settings/render] Failed to dynamically import cast-tab.js', err);
+          });
+        } else {
           try{
             global.initCastTab(modal);
           }catch(e){
@@ -217,6 +230,19 @@
             );
           }
         }
+      }
+      
+      // Special handling for Debug tab - populate minigame dropdown
+      if(activePane && activePane.getAttribute('data-pane') === 'debug'){
+        if(typeof global.populateDebugMinigameDropdown === 'function'){
+          try{
+            global.populateDebugMinigameDropdown(modal);
+          }catch(e){
+            console.warn('[settings/render] populateDebugMinigameDropdown failed', e);
+          }
+        }
+        // Wire the launch button
+        wireDebugMinigameLauncher(modal);
       }
     });
 
@@ -262,8 +288,56 @@
 
     // Wire advanced actions (export, import, reset, etc.)
     wireAdvancedActions(modal);
+    
+    // Wire debug tab minigame launcher
 
     return dim;
+  }
+  
+  // Wire debug minigame launcher
+  function wireDebugMinigameLauncher(modal){
+    const btn = modal.querySelector('#btnLaunchMinigame');
+    const select = modal.querySelector('#debugMinigameSelect');
+    
+    if(!btn || !select) return;
+    
+    // Disable button initially if no game selected
+    btn.disabled = !select.value;
+    
+    // Enable/disable button based on selection
+    select.addEventListener('change', function(){
+      btn.disabled = !select.value;
+    });
+    
+    // Launch minigame when button is clicked
+    btn.addEventListener('click', function(){
+      const gameKey = select.value;
+      if(!gameKey){
+        notify('Please select a minigame', 'warn');
+        return;
+      }
+      
+      // Close settings modal
+      closeSettingsModal();
+      
+      // Launch minigame in debug mode
+      if(global.CompetitionFlow && typeof global.CompetitionFlow.launchFullscreenMinigame === 'function'){
+        console.info('[settings/render] Launching minigame in debug mode:', gameKey);
+        
+        global.CompetitionFlow.launchFullscreenMinigame(gameKey, function(score){
+          console.info('[settings/render] Debug minigame completed with score:', score);
+          notify('Debug minigame completed: ' + score.toFixed(1), 'ok');
+        }, {
+          timeLimit: 60,
+          debugMode: true
+        });
+      } else {
+        notify('CompetitionFlow not available', 'warn');
+        console.warn('[settings/render] CompetitionFlow.launchFullscreenMinigame not available');
+      }
+    });
+    
+    console.info('[settings/render] Wired debug minigame launcher');
   }
 
   // Apply settings from modal form to config
@@ -436,13 +510,39 @@
     // Check if Cast tab is active and initialize
     const activePane = modal.querySelector('.settingsTabPane.active');
     if(activePane && activePane.getAttribute('data-pane') === 'cast'){
-      if(typeof global.initCastTab === 'function'){
+      // Dynamically import cast-tab.js if not already loaded
+      if(typeof global.initCastTab !== 'function'){
+        import('./cast-tab.js').then(function(){
+          if(typeof global.initCastTab === 'function'){
+            try{
+              global.initCastTab(modal);
+            }catch(e){
+              console.warn('[settings/render] initCastTab failed after dynamic import', e);
+            }
+          }
+        }).catch(function(err){
+          console.error('[settings/render] Failed to dynamically import cast-tab.js', err);
+        });
+      } else {
         try{
           global.initCastTab(modal);
         }catch(e){
           console.warn('[settings/render] initCastTab failed', e);
         }
       }
+    }
+    
+    // Check if Debug tab is active and populate minigame dropdown
+    if(activePane && activePane.getAttribute('data-pane') === 'debug'){
+      if(typeof global.populateDebugMinigameDropdown === 'function'){
+        try{
+          global.populateDebugMinigameDropdown(modal);
+        }catch(e){
+          console.warn('[settings/render] populateDebugMinigameDropdown failed', e);
+        }
+      }
+      // Wire the launch button
+      wireDebugMinigameLauncher(modal);
     }
     
     dim.style.display = 'flex';

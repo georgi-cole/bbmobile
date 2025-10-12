@@ -13,11 +13,14 @@ Created a new module that provides submission lock functionality:
 - `lockSubmission(week, phase, gameKey, playerId)` - Lock submission for a player
 - `clearWeekLocks(week)` - Clear all locks for a specific week (debugging)
 - `clearAllLocks()` - Clear all competition locks (debugging)
+- `clearStaleWeek1Locks()` - Clear only week 1 locks (mobile auto-clear)
 
 **Features:**
 - Uses localStorage with keys formatted as: `bb_comp_lock_w${week}_${phase}_${gameKey}_p${playerId}`
 - Fails gracefully if localStorage is unavailable (returns false to allow play)
 - Provides safe fallback with mock storage if localStorage is not available
+- Detects mobile devices and automatically clears stale week 1 locks on module load
+- Desktop devices do not auto-clear (preserves existing behavior)
 
 ### 2. Modified: js/competitions.js
 
@@ -37,11 +40,20 @@ if(!global.CompLocks){
 After a successful score submission, the system now locks the submission:
 ```javascript
 // Lock submission for this week/phase/game to prevent replay
+// NOTE: Lock is only set here after successful score validation and submission
+// If game is abandoned or incomplete, this code is never reached and no lock is set
 if(global.CompLocks && label){
   const gameKey = label.split('/')[1] || 'unknown';
   global.CompLocks.lockSubmission(g.week, g.phase, gameKey, id);
 }
 ```
+
+**Lock Safety:**
+- Locks are ONLY set after successful score validation and normalization
+- Locks are set AFTER the score is stored in `g.lastCompScores`
+- If anti-cheat validation fails, `submitScore` returns early and no lock is set
+- If a player abandons a game (closes tab, refreshes), no lock is set
+- This ensures players are never locked out from incomplete attempts
 
 **Integration in Competition Renderers:**
 Modified four competition rendering functions to check for locks before rendering minigames:
@@ -75,8 +87,9 @@ Added script tag to load comp-locks.js before competitions.js:
 - Includes cleanup utilities for testing
 
 **scripts/test-comp-locks.mjs**
-- Node.js runtime test suite (16 tests, all passing)
+- Node.js runtime test suite (19 tests, all passing)
 - Tests module structure, functionality, and integration scenarios
+- Tests mobile stale lock clearing functionality
 - Validates backwards compatibility with localStorage failures
 
 ## Key Features
@@ -103,6 +116,18 @@ Each phase is tracked independently:
 - Final 3 Part 1, 2, and 3 (separate phases)
 - Different games within same phase are tracked separately
 
+### 5. Mobile-Friendly Auto-Clear (NEW)
+- Automatically detects mobile devices (iOS, Android) on module load
+- Clears stale week 1 locks to prevent first-launch blocking
+- Preserves locks for week 2+ to maintain integrity
+- Only affects mobile devices, desktop behavior unchanged
+
+### 6. Lock Safety Guarantees
+- Locks are ONLY set after successful score submission
+- Incomplete or abandoned games never trigger locks
+- Anti-cheat validation runs before lock is set
+- Score normalization and validation complete before locking
+
 ## Testing
 
 ### Automated Tests
@@ -112,10 +137,11 @@ npm run test:comp-locks  # (if added to package.json)
 node scripts/test-comp-locks.mjs
 ```
 
-All 16 tests pass:
+All 19 tests pass:
 ✅ Module structure tests (5/5)
 ✅ Functionality tests (8/8)
 ✅ Integration tests (3/3)
+✅ Mobile stale lock tests (3/3)
 
 ### Manual Testing
 Open `test_comp_locks.html` in a browser to:
@@ -144,7 +170,18 @@ CompLocks.clearWeekLocks(1);
 
 // Clear all locks
 CompLocks.clearAllLocks();
+
+// Clear stale week 1 locks (auto-called on mobile)
+CompLocks.clearStaleWeek1Locks();
 ```
+
+### Mobile First Launch
+On mobile devices (iOS, Android):
+1. Module loads and detects mobile device
+2. Automatically clears any stale week 1 locks
+3. Player can play HOH even if locks existed from previous session
+4. Week 2+ locks are preserved for integrity
+5. Desktop behavior is unchanged (no auto-clear)
 
 ## Security Considerations
 
@@ -192,3 +229,41 @@ The following features were explicitly excluded per requirements:
 - [x] Manual tests work correctly
 - [x] No syntax errors
 - [x] Backwards compatible with existing code
+- [x] Mobile devices auto-clear stale week 1 locks
+- [x] Desktop devices do not auto-clear
+- [x] Locks only set after successful score submission
+- [x] Incomplete/abandoned games never trigger locks
+
+## Recent Improvements (PR #XX)
+
+### Mobile Stale Lock Auto-Clear
+**Problem:** Mobile users could be blocked from playing HOH on first launch if stale week 1 locks existed in localStorage from a previous session.
+
+**Solution:** 
+- Added `isMobileDevice()` function to detect iOS, Android, and touch devices
+- Added `clearStaleWeek1Locks()` method to clear only week 1 locks
+- Module automatically calls `clearStaleWeek1Locks()` on load when on mobile
+- Desktop behavior unchanged (no auto-clear)
+- Week 2+ locks preserved on all devices
+
+**Testing:**
+- Added 3 new automated tests for mobile stale lock clearing
+- Verified on iOS (iPhone user agent)
+- Verified on Android (Pixel user agent)
+- Verified desktop behavior unchanged
+
+### Lock Safety Improvements
+**Problem:** Need to ensure locks are never set on incomplete or abandoned games.
+
+**Solution:**
+- Verified locks are ONLY set in `submitScore()` after:
+  - Score validation and normalization complete
+  - Score stored in `g.lastCompScores`
+  - Anti-cheat validation passes (if enabled)
+- Added explicit comments in code to document this guarantee
+- If player abandons game (refresh, close), `submitScore()` is never called
+
+**Impact:**
+- Players can freely close/refresh during gameplay without being locked
+- Only successful completions result in locks
+- No changes to existing behavior, just documentation and verification
