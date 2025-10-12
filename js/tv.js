@@ -227,7 +227,7 @@
       
       const text = document.createElement('span');
       text.className = 'twistBadgeText';
-      text.textContent = 'Triple Eviction';
+      text.textContent = '';
       
       badge.appendChild(dot);
       badge.appendChild(text);
