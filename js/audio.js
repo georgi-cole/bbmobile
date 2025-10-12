@@ -34,7 +34,10 @@
     livevote: 'live vote.mp3',
     'live vote': 'live vote.mp3',
     jury: null,
-    finale: null
+    finale: null,
+    // Special intro music track
+    theme_opening: 'intro.mp3',
+    premiere: 'premiere.mp4' // Main theatrical intro music (video file audio track)
   };
 
   // Event mapping
@@ -61,8 +64,8 @@
   function resolveToFile(nameOrFilename){
     if (!nameOrFilename) return null;
     const s = String(nameOrFilename).trim();
-    // Raw filename support
-    if (/\.mp3(\?.*)?$/i.test(s)) return s;
+    // Raw filename support (mp3, mp4, ogg, etc.)
+    if (/\.(mp3|mp4|ogg|wav|m4a)(\?.*)?$/i.test(s)) return s;
     // Try phase mapping
     const p = mapPhase(s);
     if (p) return p;
@@ -79,7 +82,9 @@
   try{
     const stored = localStorage.getItem('bb_soundMuted');
     if(stored === '1' || stored === 'true') isMuted = true;
-  }catch{}
+  } catch(e) {
+    // Ignore localStorage errors
+  }
   
   function ensureEl(){
     if (el) return el;
@@ -187,12 +192,23 @@
           try { 
             await audio.play(); 
             console.info(`[audio] successfully started after gesture, file=${file}`);
-          }
-          catch (err) { console.warn('[audio] play retry failed:', err); }
+          } catch (err) { console.warn('[audio] play retry failed:', err); }
         };
         document.addEventListener('pointerdown', retry, { once:true, passive:true });
         document.addEventListener('keydown', retry, { once:true });
         return;
+      }
+      // Fallback if premiere.mp4 missing: try intro.mp3
+      if (/premiere\.mp4$/i.test(file)) {
+        try {
+          currentSrc = srcFor('intro.mp3');
+          audio.src = currentSrc;
+          await audio.play();
+          console.warn('[audio] premiere.mp4 failed; fell back to intro.mp3');
+          return;
+        } catch (fallbackErr) {
+          console.warn('[audio] fallback to intro.mp3 failed:', fallbackErr);
+        }
       }
       // Fallback if veto.mp3 missing: try competition.mp3
       if (/veto\.mp3$/i.test(file)) {
@@ -202,7 +218,9 @@
           await audio.play();
           console.warn('[audio] veto.mp3 failed; fell back to competition.mp3');
           return;
-        } catch {}
+        } catch (fallbackErr) {
+          console.warn('[audio] fallback to competition.mp3 failed:', fallbackErr);
+        }
       }
       console.warn('[audio] play failed:', e);
     }
@@ -220,7 +238,7 @@
   (function wrapSetPhase(){
     const sp = g.setPhase;
     if (typeof sp !== 'function' || sp.__musicWrapped) return;
-    function wrapped(phase, seconds, onTimeout){
+    function wrapped(phase, _seconds, _onTimeout){
       const r = sp.apply(this, arguments);
       try { playMusicForPhase(phase); } catch(e){ console.warn('[audio] phase hook error', e); }
       return r;
@@ -263,7 +281,11 @@
       const fn = host && host[key];
       if (typeof fn === 'function' && !fn.__musicWrapped){
         host[key] = function(title){
-          try { tryCardCue(title); } catch {}
+          try { 
+            tryCardCue(title); 
+          } catch (e) {
+            // Ignore card cue errors
+          }
           return fn.apply(this, arguments);
         };
         host[key].__musicWrapped = true;
@@ -299,7 +321,9 @@
     // Persist to localStorage
     try{
       localStorage.setItem('bb_soundMuted', isMuted ? '1' : '0');
-    }catch{}
+    } catch(e) {
+      // Ignore localStorage errors
+    }
     console.info(`[audio] muted=${isMuted}`);
     return isMuted;
   }
@@ -313,13 +337,13 @@
   }
   
   // Fade out helper
-  async function fadeOut(duration = 1000){
-    if(!el || !el.src) return;
+  function fadeOut(duration = 1000){
+    if(!el || !el.src) return Promise.resolve();
     console.info(`[audio] fading out over ${duration}ms`);
     const startVol = el.volume;
     const startTime = Date.now();
     
-    return new Promise(async resolve => {
+    return new Promise(resolve => {
       const interval = setInterval(() => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(1, elapsed / duration);

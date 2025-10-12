@@ -19,7 +19,7 @@
   // Emoji pool for reactions
   const EMOJI_POOL = ['🔥', '❤️', '👏', '😍', '🎉', '⭐', '💯', '👑', '🎊', '✨', '💪', '🙌'];
   
-  // Comment templates for live reactions
+  // Comment templates for live reactions (expanded with spicy/funny lines)
   const COMMENT_TEMPLATES = [
     'OMG {name}!',
     '{name} is amazing!',
@@ -30,7 +30,23 @@
     'Yaaas {name}!',
     '{name} is my fav!',
     'Rooting for {name}!',
-    '{name} looks fierce!'
+    '{name} looks fierce!',
+    // Spicy/funny additions
+    '{name} came to SLAY! 🔥',
+    'Not {name} serving looks! 💅',
+    '{name} said what now? 👀',
+    'The DRAMA with {name}! 🍿',
+    '{name} is ICONIC already!',
+    'I can\'t with {name}! 😂',
+    '{name} is pure chaos energy',
+    'OBSESSED with {name}! 😍',
+    '{name} understood the assignment ✨',
+    'All eyes on {name}! 👁️',
+    '{name} is TV GOLD! 📺',
+    'Not ready for {name}\'s chaos 🌪️',
+    '{name} is THAT contestant!',
+    'Watch out for {name}! ⚠️',
+    '{name}\'s gonna shake things up! 💥'
   ];
 
   let currentSequence = null;
@@ -52,6 +68,7 @@
     overlay.className = 'intro-show-overlay';
     overlay.innerHTML = `
       <div class="intro-show-background">
+        <div class="intro-studio-bg"></div>
         <div class="intro-bg-layer intro-bg-layer-1"></div>
         <div class="intro-bg-layer intro-bg-layer-2"></div>
         <div class="intro-bg-layer intro-bg-layer-3"></div>
@@ -85,11 +102,22 @@
     }
   }
 
-  // Resolve avatar for a player with fallback chain
+  // Resolve avatar for a player with fallback chain (uses global avatar resolver)
   function resolveAvatarForPlayer(player) {
-    return g.resolveAvatar?.(player) ||
-           player.avatar ||
-           'https://api.dicebear.com/6.x/bottts/svg?seed=' + (player.name || 'Guest');
+    // Priority: global resolver > player.avatar > player.img > player.photo > dicebear
+    if (g.resolveAvatar) {
+      return g.resolveAvatar(player);
+    }
+    return player.avatar ||
+           player.img ||
+           player.photo ||
+           'https://api.dicebear.com/6.x/bottts/svg?seed=' + encodeURIComponent(player.name || 'Guest');
+  }
+  
+  // Get avatar fallback for onerror handlers
+  function getAvatarFallback(player) {
+    const name = player?.name || 'Guest';
+    return 'https://api.dicebear.com/6.x/bottts/svg?seed=' + encodeURIComponent(name);
   }
 
   // Build a contestant card
@@ -97,7 +125,7 @@
     const card = document.createElement('div');
     card.className = 'intro-contestant-card';
     
-    const avatar = resolveAvatarForPlayer(player);
+    const avatarUrl = resolveAvatarForPlayer(player);
     
     card.innerHTML = `
       <div class="intro-card-bg"></div>
@@ -106,16 +134,32 @@
           <div class="intro-card-avatar-glow"></div>
         </div>
         <div class="intro-card-info">
-          <div class="intro-card-name"></div>
+          <div class="intro-card-name">${player.name || 'Contestant'}</div>
           <div class="intro-card-meta">
             <span class="intro-card-age">${player.age || '?'}</span>
-            ${player.location ? `<span class="intro-card-location"></span>` : ''}
+            ${player.location ? `<span class="intro-card-location">${player.location}</span>` : ''}
           </div>
-          ${player.occupation ? `<div class="intro-card-occupation"></div>` : ''}
+          ${player.occupation ? `<div class="intro-card-occupation">${player.occupation}</div>` : ''}
         </div>
       </div>
       <div class="intro-card-spotlight"></div>
     `;
+    
+    // Create and insert avatar image with robust error handling
+    const avatarWrapper = card.querySelector('.intro-card-avatar-wrapper');
+    const avatarImg = document.createElement('img');
+    avatarImg.className = 'intro-card-avatar';
+    avatarImg.alt = player.name || 'Contestant';
+    avatarImg.src = avatarUrl;
+    
+    // Robust onerror handler - ensures avatar always displays
+    avatarImg.onerror = function() {
+      console.info('[introShow] avatar fallback for', player.name || player);
+      this.onerror = null; // Prevent infinite loop
+      this.src = getAvatarFallback(player);
+    };
+    
+    avatarWrapper.appendChild(avatarImg);
 
     return card;
   }
@@ -355,7 +399,6 @@
     const overlay = createOverlay();
     overlay.style.display = 'flex';
 
-    const stage = overlay.querySelector('.intro-show-stage');
     const cardContainer = overlay.querySelector('.intro-card-container');
     const reactionsLayer = overlay.querySelector('.intro-reactions-layer');
 
@@ -363,10 +406,15 @@
     animateBackground(overlay);
     animateLighting(overlay);
 
-    // Start music
+    // Start music (premiere.mp4 for intro, falls back to theme_opening)
+    // Audio requirement: Place premiere.mp4 in /audio/ directory for full intro experience
+    // If premiere.mp4 is missing, will gracefully fall back to theme_opening track
     try {
       if (typeof g.playMusicForPhase === 'function') {
-        g.playMusicForPhase(CONFIG.musicKey);
+        // Try premiere.mp4 first (video file audio track)
+        g.playMusicForPhase('premiere.mp4');
+      } else if (typeof g.playMusic === 'function') {
+        g.playMusic('premiere.mp4');
       } else if (typeof g.setMusic === 'function') {
         g.setMusic(CONFIG.musicKey, true);
       }
@@ -379,10 +427,12 @@
       if (typeof g.playSFX === 'function') {
         g.playSFX('intro_whoosh');
       }
-    } catch (e) {}
+    } catch (e) {
+      // Ignore SFX errors
+    }
 
     let currentIndex = 0;
-    let timeouts = [];
+    const timeouts = [];
 
     // Setup skip callback
     skipCallback = () => {
@@ -419,13 +469,16 @@
         if (typeof g.playSFX === 'function') {
           g.playSFX('card_whoosh');
         }
-      } catch (e) {}
+      } catch (e) {
+        // Ignore SFX errors
+      }
 
       currentIndex++;
 
       // Schedule next card
       const nextDelay = isLast ? CONFIG.cardDuration : CONFIG.cardDuration + CONFIG.transitionDuration;
       const tid = setTimeout(showNextCard, nextDelay);
+      const timeouts = currentSequence ? currentSequence.timeouts : [];
       timeouts.push(tid);
     }
 
@@ -453,6 +506,17 @@
     }
     isActive = false;
     skipCallback = null;
+    
+    // Fade out music when intro completes or is skipped
+    try {
+      if (typeof g.fadeOutMusic === 'function') {
+        g.fadeOutMusic(800); // 800ms fade out
+      } else if (typeof g.stopMusic === 'function') {
+        g.stopMusic();
+      }
+    } catch (e) {
+      console.warn('[introShow] Failed to fade out music:', e);
+    }
   }
 
   // Stop/skip the current sequence

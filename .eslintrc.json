@@ -14,6 +14,7 @@
     "console": "readonly",
     "$": "readonly",
     "global": "writable",
+    "gsap": "readonly",
     "MiniGames": "readonly",
     "MiniGamesRegistry": "readonly",
     "MinigameSelector": "readonly",
