@@ -26,15 +26,39 @@
    * The actual routing is handled by js/minigames/index.js bridge which
    * overrides this function when it loads.
    * 
-   * @deprecated Use MiniGamesRegistry.render() directly for new code
+   * Now forwards to MinigameRegistry.render() if available (PR1 enhancement)
+   * 
+   * @deprecated Use MinigameRegistry.render() directly for new code
    * @param {string} type - Legacy game type key
    * @param {HTMLElement} host - Container element
    * @param {Function} onSubmit - Callback function(score)
    */
   function renderMinigame(type, host, onSubmit){
-    // Fallback: try to use new system directly
-    if(global.MiniGamesRegistry && typeof global.MiniGamesRegistry.render === 'function'){
+    // PR1: Try MinigameRegistry.render first (new unified API)
+    if(global.MinigameRegistry && typeof global.MinigameRegistry.render === 'function'){
       // Map legacy key to new key
+      const legacyMap = {
+        'clicker': 'quickTap',
+        'memory': 'memoryMatch',
+        'math': 'mathBlitz',
+        'bar': 'timingBar',
+        'typing': 'wordTyping',
+        'reaction': 'reactionTimer',
+        'numseq': 'sequenceMemory',
+        'pattern': 'patternMatch',
+        'slider': 'sliderPuzzle',
+        'anagram': 'wordAnagram',
+        'path': 'pathFinder',
+        'target': 'targetPractice',
+        'pairs': 'memoryPairs',
+        'simon': 'simonSays',
+        'estimate': 'estimationGame'
+      };
+      
+      const newKey = legacyMap[type] || type;
+      global.MinigameRegistry.render(newKey, host, onSubmit);
+    } else if(global.MiniGamesRegistry && typeof global.MiniGamesRegistry.render === 'function'){
+      // Fallback: typo in old docs (MiniGamesRegistry vs MinigameRegistry)
       const legacyMap = {
         'clicker': 'quickTap',
         'memory': 'memoryMatch',
