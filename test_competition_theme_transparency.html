@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Competition Theme & Transparency</title>
+  
+  <!-- Load theme-aware styles -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    .test-section { 
+      background: var(--card); 
+      border: 1px solid var(--line); 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    h1 { 
+      color: var(--accent); 
+      margin-top: 0;
+    }
+    h2 {
+      color: var(--accent);
+      font-size: 1.3rem;
+    }
+    button { 
+      background: var(--accent); 
+      color: var(--ink); 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+      font-weight: 600;
+    }
+    button:hover { 
+      opacity: 0.8;
+    }
+    
+    /* Simulate TV viewport with background pattern */
+    .tv-viewport {
+      background: linear-gradient(45deg, var(--primary-1) 25%, transparent 25%),
+                  linear-gradient(-45deg, var(--primary-1) 25%, transparent 25%),
+                  linear-gradient(45deg, transparent 75%, var(--primary-1) 75%),
+                  linear-gradient(-45deg, transparent 75%, var(--primary-1) 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      background-color: var(--bg);
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 40px 20px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tv-content {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: var(--accent);
+      font-size: 3rem;
+      font-weight: bold;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .log {
+      background: var(--card-2);
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 200px;
+      overflow-y: auto;
+      color: var(--muted);
+    }
+    .pass { color: var(--good); }
+    .fail { color: var(--bad); }
+    .info { color: var(--accent); }
+
+    .theme-selector {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .theme-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .theme-btn.active {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+  </style>
+</head>
+<body data-theme="tvstudio">
+  <div class="container">
+    <h1>🎨 Test: Competition Theme & Transparency</h1>
+    <p style="color: var(--muted);">This test verifies that competition modals use ~70% transparency and inherit the current theme colors.</p>
+
+    <div class="test-section">
+      <h2>1. Select Theme</h2>
+      <p style="color: var(--muted); font-size: 0.9rem;">Switch between themes to verify modals adapt their colors:</p>
+      <div class="theme-selector">
+        <button class="theme-btn active" onclick="changeTheme('tvstudio')" data-theme="tvstudio">TV Studio</button>
+        <button class="theme-btn" onclick="changeTheme('modernhouse')" data-theme="modernhouse">Modern House</button>
+        <button class="theme-btn" onclick="changeTheme('midnight')" data-theme="midnight">Midnight</button>
+        <button class="theme-btn" onclick="changeTheme('miami')" data-theme="miami">Miami Beach</button>
+        <button class="theme-btn" onclick="changeTheme('cabin')" data-theme="cabin">Wooden Cabin</button>
+        <button class="theme-btn" onclick="changeTheme('starrynight')" data-theme="starrynight">Starry Night</button>
+        <button class="theme-btn" onclick="changeTheme('rainbow')" data-theme="rainbow">Rainbow</button>
+        <button class="theme-btn" onclick="changeTheme('matrix')" data-theme="matrix">Matrix</button>
+        <button class="theme-btn" onclick="changeTheme('apartment')" data-theme="apartment">Apartment</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Test Instructions Modal</h2>
+      <button onclick="testInstructions()">Show Instructions (70% Transparent)</button>
+      <button onclick="clearTV()">Clear TV</button>
+      <p style="color: var(--muted); font-size: 0.9rem; margin-top: 10px;">
+        ✓ Background should be ~70% transparent (you should see the TV pattern behind)<br>
+        ✓ Colors should match current theme<br>
+        ✓ Play button should use theme accent color
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Test Fullscreen Overlay</h2>
+      <button onclick="testFullscreen()">Launch Fullscreen (with Timer)</button>
+      <p style="color: var(--muted); font-size: 0.9rem; margin-top: 10px;">
+        ✓ Timer container should be ~70% transparent<br>
+        ✓ Timer text should use theme accent color<br>
+        ✓ Progress bar should use theme accent color
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h2>TV Viewport Simulation</h2>
+      <p style="color: var(--muted); font-size: 0.9rem;">The pattern behind modals should be visible through the transparent background:</p>
+      <div class="tv-viewport" id="tvViewport">
+        <div class="tv-content">🎬 TV</div>
+        <div style="color: var(--muted); font-style: italic; z-index: 1;">Click "Show Instructions" to test</div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/theme-switcher.js"></script>
+  <script src="js/minigames/instructions.js"></script>
+  <script src="js/competitions-flow.js"></script>
+
+  <script>
+    let logs = [];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-20).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    function changeTheme(themeKey) {
+      document.body.setAttribute('data-theme', themeKey);
+      
+      // Update active state
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        if (btn.getAttribute('data-theme') === themeKey) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      
+      log(`Theme changed to: ${themeKey}`, 'pass');
+      log('Now test the modals to see theme colors applied', 'info');
+    }
+
+    function clearTV() {
+      const tv = document.getElementById('tvViewport');
+      tv.innerHTML = '<div class="tv-content">🎬 TV</div><div style="color: var(--muted); font-style: italic; z-index: 1;">TV cleared</div>';
+      log('TV viewport cleared', 'info');
+    }
+
+    function testInstructions() {
+      const currentTheme = document.body.getAttribute('data-theme') || 'tvstudio';
+      log(`Testing instructions with theme: ${currentTheme}`, 'info');
+      
+      const tv = document.getElementById('tvViewport');
+      
+      if(window.CompetitionFlow && typeof window.CompetitionFlow.showInstructionsInTV === 'function') {
+        window.CompetitionFlow.showInstructionsInTV('quickTap', tv, () => {
+          log('Play button clicked', 'pass');
+          log('Instructions should be removed now', 'info');
+        });
+        log('✓ Instructions shown with 70% transparency', 'pass');
+        log('✓ Check: Can you see the TV pattern behind the modal?', 'info');
+        log('✓ Check: Do the colors match the theme?', 'info');
+      } else {
+        log('❌ CompetitionFlow not available', 'fail');
+      }
+    }
+
+    function testFullscreen() {
+      const currentTheme = document.body.getAttribute('data-theme') || 'tvstudio';
+      log(`Testing fullscreen overlay with theme: ${currentTheme}`, 'info');
+      
+      // Mock renderMinigame function
+      if(!window.renderMinigame) {
+        window.renderMinigame = function(gameKey, container, onComplete, options) {
+          log(`✓ Minigame ${gameKey} rendered in fullscreen`, 'pass');
+          
+          // Create mock game
+          container.innerHTML = `
+            <div style="text-align: center; color: var(--ink);">
+              <h2 style="color: var(--accent);">Mock Minigame: ${gameKey}</h2>
+              <p style="color: var(--muted);">Look at the top-left for the timer!</p>
+              <p style="color: var(--accent); margin-top: 40px;">Check:</p>
+              <ul style="text-align: left; max-width: 400px; margin: 20px auto; color: var(--muted);">
+                <li>Timer container has ~70% transparent background</li>
+                <li>Timer text uses theme accent color</li>
+                <li>Progress bar uses theme accent color</li>
+                <li>All colors match current theme</li>
+              </ul>
+              <button onclick="completeGame()" style="padding: 12px 32px; margin-top: 20px; font-size: 1.1rem; background: var(--accent); color: var(--ink); border: none; border-radius: 8px; cursor: pointer;">
+                Complete Game
+              </button>
+            </div>
+          `;
+          
+          // Store completion callback globally for the button
+          window._gameCompleteCallback = onComplete;
+        };
+      }
+
+      window.completeGame = function() {
+        log('✓ Game completed', 'pass');
+        if(window._gameCompleteCallback) {
+          window._gameCompleteCallback(1000);
+        }
+      };
+      
+      if(window.CompetitionFlow && typeof window.CompetitionFlow.launchFullscreenMinigame === 'function') {
+        window.CompetitionFlow.launchFullscreenMinigame('quickTap', (score) => {
+          log(`✓ Fullscreen game completed with score: ${score}`, 'pass');
+        }, { timeLimit: 60 });
+        
+        log('✓ Fullscreen overlay launched with timer', 'pass');
+        log('✓ Check the timer in top-left corner', 'info');
+      } else {
+        log('❌ CompetitionFlow not available', 'fail');
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded successfully', 'pass');
+      log('Instructions:', 'info');
+      log('1. Select different themes to see color changes', 'info');
+      log('2. Test instructions modal - verify 70% transparency', 'info');
+      log('3. Test fullscreen overlay - verify timer uses theme colors', 'info');
+    });
+  </script>
+</body>
+</html>

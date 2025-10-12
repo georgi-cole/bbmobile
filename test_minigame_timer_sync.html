@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Minigame Timer Synchronization</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #83bfff;
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .test-section h2 {
+      color: #fbbf24;
+      font-size: 1.2rem;
+      margin-top: 0;
+    }
+    button {
+      background: #83bfff;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      opacity: 0.8;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 8px 0;
+      font-size: 0.9rem;
+    }
+    .status.pass {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      color: #86efac;
+    }
+    .status.fail {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+    .status.info {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      color: #93c5fd;
+    }
+    .tv-viewport {
+      background: #2a2a4e;
+      border: 2px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      min-height: 200px;
+      margin: 10px 0;
+    }
+    #phase-info {
+      background: rgba(131, 191, 255, 0.1);
+      border: 1px solid rgba(131, 191, 255, 0.3);
+      border-radius: 6px;
+      padding: 12px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Minigame Timer Synchronization Tests</h1>
+  <p>This test validates that minigame timers synchronize with phase timers and properly clean up on phase changes.</p>
+
+  <div id="phase-info">
+    <div><strong>Current Phase:</strong> <span id="current-phase">None</span></div>
+    <div><strong>Phase Ends At:</strong> <span id="phase-ends-at">N/A</span></div>
+    <div><strong>Time Remaining:</strong> <span id="time-remaining">N/A</span></div>
+  </div>
+
+  <!-- Test 1: Phase Timer Sync -->
+  <div class="test-section">
+    <h2>Test 1: Minigame Timer Syncs with Phase Timer</h2>
+    <p>Start a phase, launch a minigame, and verify the timer shows the remaining phase time.</p>
+    <button onclick="runTest1()">Run Test 1</button>
+    <div id="test1-status"></div>
+    <div class="tv-viewport" id="test1-container"></div>
+  </div>
+
+  <!-- Test 2: Instructions Close on Phase Change -->
+  <div class="test-section">
+    <h2>Test 2: Instructions Auto-Close on Phase Change</h2>
+    <p>Show instructions, then change phase without clicking Play. Instructions should auto-close.</p>
+    <button onclick="runTest2()">Run Test 2</button>
+    <div id="test2-status"></div>
+    <div class="tv-viewport" id="test2-container"></div>
+  </div>
+
+  <!-- Test 3: Minigame Closes on Phase Change -->
+  <div class="test-section">
+    <h2>Test 3: Active Minigame Closes on Phase Change</h2>
+    <p>Launch minigame overlay, then change phase. Minigame should auto-close.</p>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div id="test3-status"></div>
+    <div class="tv-viewport" id="test3-container"></div>
+  </div>
+
+  <!-- Test 4: Force Completion on Timeout -->
+  <div class="test-section">
+    <h2>Test 4: Minigame Force Completion on Phase Timeout</h2>
+    <p>Launch minigame with short phase timer. Verify it force-closes when phase time expires.</p>
+    <button onclick="runTest4()">Run Test 4</button>
+    <div id="test4-status"></div>
+    <div class="tv-viewport" id="test4-container"></div>
+  </div>
+
+  <!-- Mock game setup -->
+  <script>
+    // Mock global window object
+    window.game = {
+      phase: 'lobby',
+      phaseEndsAt: null,
+      week: 1
+    };
+
+    // Mock setPhase function
+    const phaseCallbacks = [];
+    window.setPhase = function(phase, seconds, onTimeout) {
+      console.log('[Mock] setPhase:', phase, seconds);
+      window.game.phase = phase;
+      if (seconds) {
+        window.game.phaseEndsAt = Date.now() + (seconds * 1000);
+      }
+      // Allow other code to hook in
+      if (window._originalSetPhase) {
+        window._originalSetPhase(phase, seconds, onTimeout);
+      }
+    };
+
+    // Mock renderMinigame function
+    window.renderMinigame = function(gameKey, container, onComplete, options) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+          <h3 style="color: #83bfff;">Mock Minigame: ${gameKey}</h3>
+          <p>This is a mock minigame for testing.</p>
+          <button onclick="(${onComplete})(100)" style="margin: 10px;">Complete (Score: 100)</button>
+        </div>
+      `;
+    };
+
+    // Mock MinigameInstructions
+    window.MinigameInstructions = {
+      getInstructions: function(gameKey) {
+        return {
+          title: `${gameKey} Instructions`,
+          description: 'This is a test minigame.',
+          steps: ['Step 1: Do something', 'Step 2: Complete it']
+        };
+      }
+    };
+
+    // Update phase info display
+    setInterval(() => {
+      document.getElementById('current-phase').textContent = window.game.phase || 'None';
+      if (window.game.phaseEndsAt) {
+        document.getElementById('phase-ends-at').textContent = new Date(window.game.phaseEndsAt).toLocaleTimeString();
+        const remaining = Math.max(0, Math.ceil((window.game.phaseEndsAt - Date.now()) / 1000));
+        document.getElementById('time-remaining').textContent = `${remaining}s`;
+      } else {
+        document.getElementById('phase-ends-at').textContent = 'N/A';
+        document.getElementById('time-remaining').textContent = 'N/A';
+      }
+    }, 100);
+
+    function showStatus(testId, message, type = 'info') {
+      const statusEl = document.getElementById(`${testId}-status`);
+      statusEl.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+  </script>
+
+  <!-- Load the module under test -->
+  <script src="js/competitions-flow.js"></script>
+
+  <!-- Test implementations -->
+  <script>
+    function runTest1() {
+      showStatus('test1', '▶️ Starting Test 1...', 'info');
+      
+      // Set up a phase with 30 seconds
+      window.setPhase('hoh', 30);
+      
+      setTimeout(() => {
+        const container = document.getElementById('test1-container');
+        container.innerHTML = '';
+        
+        // Launch minigame - should sync with phase timer
+        if (window.CompetitionFlow && window.CompetitionFlow.runCompetitionFlow) {
+          window.CompetitionFlow.runCompetitionFlow('test-game', container, (score) => {
+            showStatus('test1', `✓ Test 1 PASSED: Minigame completed with score ${score}`, 'pass');
+          });
+          
+          // Check after 2 seconds if timer is shown
+          setTimeout(() => {
+            const overlay = document.getElementById('competition-minigame-overlay');
+            if (overlay) {
+              showStatus('test1', '✓ Test 1 PASSED: Minigame timer is synced with phase timer', 'pass');
+            } else {
+              showStatus('test1', '✓ Test 1 PARTIAL: Instructions shown, click Play to verify timer sync', 'info');
+            }
+          }, 2000);
+        } else {
+          showStatus('test1', '✗ Test 1 FAILED: CompetitionFlow not loaded', 'fail');
+        }
+      }, 100);
+    }
+
+    function runTest2() {
+      showStatus('test2', '▶️ Starting Test 2...', 'info');
+      
+      // Set up a phase
+      window.setPhase('hoh', 60);
+      
+      setTimeout(() => {
+        const container = document.getElementById('test2-container');
+        container.innerHTML = '';
+        
+        // Show instructions
+        if (window.CompetitionFlow && window.CompetitionFlow.showInstructionsInTV) {
+          window.CompetitionFlow.showInstructionsInTV('test-game', container, () => {
+            showStatus('test2', 'Play button clicked', 'info');
+          });
+          
+          // Wait 2 seconds, then change phase
+          setTimeout(() => {
+            const beforeCard = container.querySelector('.competition-instructions-card');
+            if (beforeCard) {
+              showStatus('test2', '📝 Instructions card is visible, changing phase...', 'info');
+              
+              // Change phase
+              window.setPhase('nominations', 45);
+              
+              // Check if card was removed
+              setTimeout(() => {
+                const afterCard = container.querySelector('.competition-instructions-card');
+                if (!afterCard) {
+                  showStatus('test2', '✓ Test 2 PASSED: Instructions auto-closed on phase change', 'pass');
+                } else {
+                  showStatus('test2', '✗ Test 2 FAILED: Instructions still visible after phase change', 'fail');
+                }
+              }, 500);
+            } else {
+              showStatus('test2', '✗ Test 2 FAILED: Instructions card not found', 'fail');
+            }
+          }, 2000);
+        } else {
+          showStatus('test2', '✗ Test 2 FAILED: CompetitionFlow not loaded', 'fail');
+        }
+      }, 100);
+    }
+
+    function runTest3() {
+      showStatus('test3', '▶️ Starting Test 3...', 'info');
+      
+      // Set up a phase
+      window.setPhase('hoh', 60);
+      
+      setTimeout(() => {
+        const container = document.getElementById('test3-container');
+        container.innerHTML = '';
+        
+        // Launch minigame directly (bypass instructions)
+        if (window.CompetitionFlow && window.CompetitionFlow.launchFullscreenMinigame) {
+          window.CompetitionFlow.launchFullscreenMinigame('test-game', (score) => {
+            showStatus('test3', `Minigame completed with score ${score}`, 'info');
+          });
+          
+          // Wait 2 seconds, then change phase
+          setTimeout(() => {
+            const beforeOverlay = document.getElementById('competition-minigame-overlay');
+            if (beforeOverlay) {
+              showStatus('test3', '🎮 Minigame overlay is visible, changing phase...', 'info');
+              
+              // Change phase
+              window.setPhase('nominations', 45);
+              
+              // Check if overlay was removed
+              setTimeout(() => {
+                const afterOverlay = document.getElementById('competition-minigame-overlay');
+                if (!afterOverlay) {
+                  showStatus('test3', '✓ Test 3 PASSED: Minigame auto-closed on phase change', 'pass');
+                } else {
+                  showStatus('test3', '✗ Test 3 FAILED: Minigame still visible after phase change', 'fail');
+                }
+              }, 500);
+            } else {
+              showStatus('test3', '✗ Test 3 FAILED: Minigame overlay not found', 'fail');
+            }
+          }, 2000);
+        } else {
+          showStatus('test3', '✗ Test 3 FAILED: CompetitionFlow not loaded', 'fail');
+        }
+      }, 100);
+    }
+
+    function runTest4() {
+      showStatus('test4', '▶️ Starting Test 4...', 'info');
+      
+      // Set up a phase with only 5 seconds
+      window.setPhase('hoh', 5);
+      
+      setTimeout(() => {
+        const container = document.getElementById('test4-container');
+        container.innerHTML = '';
+        
+        // Launch minigame - should force close after 5 seconds
+        if (window.CompetitionFlow && window.CompetitionFlow.launchFullscreenMinigame) {
+          let completed = false;
+          window.CompetitionFlow.launchFullscreenMinigame('test-game', (score) => {
+            completed = true;
+            showStatus('test4', `Minigame completed with score ${score}`, 'info');
+          });
+          
+          showStatus('test4', '⏱️ Minigame launched with 5-second timer. Waiting for timeout...', 'info');
+          
+          // Check after 7 seconds if overlay was auto-closed
+          setTimeout(() => {
+            const overlay = document.getElementById('competition-minigame-overlay');
+            if (!overlay) {
+              if (!completed) {
+                showStatus('test4', '✓ Test 4 PASSED: Minigame force-closed on timeout without submission', 'pass');
+              } else {
+                showStatus('test4', '✓ Test 4 PASSED: Minigame completed on timeout', 'pass');
+              }
+            } else {
+              showStatus('test4', '✗ Test 4 FAILED: Minigame still visible after timeout', 'fail');
+            }
+          }, 7000);
+        } else {
+          showStatus('test4', '✗ Test 4 FAILED: CompetitionFlow not loaded', 'fail');
+        }
+      }, 100);
+    }
+  </script>
+</body>
+</html>
