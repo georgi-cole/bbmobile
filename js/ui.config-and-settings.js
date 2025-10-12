@@ -169,7 +169,8 @@
     skipTurboGapMs: 100,
     musicOn: true,
     sfxOn: true,
-    useRibbon: true
+    useRibbon: true,
+    useRealityIntro: true  // Enable reality-TV intro by default
   };
 
   function injectUiCssOnce(){

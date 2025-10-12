@@ -1,0 +1,453 @@
+/* ============================================================================
+   INTRO SHOW - Reality TV Style Animated Contestant Introduction
+   ============================================================================ */
+
+/* Main overlay container */
+.intro-show-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a15 100%);
+  overflow: hidden;
+}
+
+/* Animated background layers (parallax) */
+.intro-show-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.intro-bg-layer {
+  position: absolute;
+  width: 200%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.3;
+}
+
+.intro-bg-layer-1 {
+  background: linear-gradient(45deg, 
+    rgba(0, 217, 255, 0.1) 0%, 
+    transparent 50%, 
+    rgba(255, 51, 102, 0.1) 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+.intro-bg-layer-2 {
+  background: radial-gradient(circle at 20% 50%, 
+    rgba(0, 255, 136, 0.15) 0%, 
+    transparent 40%
+  ),
+  radial-gradient(circle at 80% 50%, 
+    rgba(255, 170, 0, 0.15) 0%, 
+    transparent 40%
+  );
+  animation: pulseLayer 8s ease-in-out infinite alternate;
+}
+
+.intro-bg-layer-3 {
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 50px,
+    rgba(255, 255, 255, 0.02) 50px,
+    rgba(255, 255, 255, 0.02) 100px
+  );
+}
+
+/* Lighting sweep effect */
+.intro-lighting-sweep {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* Stage area where cards appear */
+.intro-show-stage {
+  position: relative;
+  width: 90%;
+  max-width: 600px;
+  height: 70vh;
+  max-height: 700px;
+  perspective: 1000px;
+  z-index: 2;
+}
+
+.intro-card-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Contestant card */
+.intro-contestant-card {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  background: linear-gradient(135deg, 
+    rgba(20, 20, 31, 0.95) 0%, 
+    rgba(26, 26, 40, 0.95) 100%
+  );
+  border-radius: 24px;
+  padding: 40px 30px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  transform-style: preserve-3d;
+  overflow: hidden;
+}
+
+.intro-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg,
+    rgba(0, 217, 255, 0.05) 0%,
+    transparent 50%,
+    rgba(255, 51, 102, 0.05) 100%
+  );
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.intro-card-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  z-index: 1;
+}
+
+/* Avatar section */
+.intro-card-avatar-wrapper {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+.intro-card-avatar-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, 
+    rgba(0, 217, 255, 0.4) 0%, 
+    transparent 70%
+  );
+  filter: blur(20px);
+  opacity: 0;
+}
+
+.intro-card-avatar {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    0 0 0 8px rgba(0, 217, 255, 0.1);
+  z-index: 1;
+}
+
+/* Card info */
+.intro-card-info {
+  text-align: center;
+  color: #f0f0ff;
+}
+
+.intro-card-name {
+  font-size: 2.5rem;
+  font-weight: 800;
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, #fff 0%, #00d9ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.intro-card-meta {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: #a0a0c8;
+  margin-bottom: 6px;
+}
+
+.intro-card-age::before {
+  content: '🎂 ';
+}
+
+.intro-card-location::before {
+  content: '📍 ';
+}
+
+.intro-card-occupation {
+  font-size: 1rem;
+  color: #c0c0e0;
+  font-style: italic;
+}
+
+/* Spotlight effect */
+.intro-card-spotlight {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150%;
+  height: 150%;
+  background: radial-gradient(circle, 
+    rgba(255, 255, 255, 0.2) 0%, 
+    transparent 60%
+  );
+  pointer-events: none;
+  opacity: 0;
+  z-index: 0;
+}
+
+/* Reactions layer */
+.intro-reactions-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+}
+
+.intro-reaction-emoji {
+  position: absolute;
+  font-size: 2rem;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  z-index: 10;
+}
+
+.intro-reaction-comment {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  white-space: nowrap;
+  border: 1px solid rgba(0, 217, 255, 0.3);
+}
+
+/* Skip button */
+.intro-skip-btn {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  background: linear-gradient(135deg, 
+    rgba(0, 217, 255, 0.2) 0%, 
+    rgba(0, 136, 255, 0.2) 100%
+  );
+  color: #fff;
+  border: 2px solid rgba(0, 217, 255, 0.5);
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.intro-skip-btn:hover {
+  background: linear-gradient(135deg, 
+    rgba(0, 217, 255, 0.4) 0%, 
+    rgba(0, 136, 255, 0.4) 100%
+  );
+  border-color: rgba(0, 217, 255, 0.8);
+  transform: scale(1.05);
+  box-shadow: 
+    0 4px 20px rgba(0, 217, 255, 0.4),
+    0 0 30px rgba(0, 217, 255, 0.2);
+}
+
+.intro-skip-btn:active {
+  transform: scale(0.98);
+}
+
+/* Animations */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulseLayer {
+  0% { opacity: 0.2; transform: scale(1); }
+  100% { opacity: 0.4; transform: scale(1.1); }
+}
+
+@keyframes floatUp {
+  0% { 
+    bottom: -50px; 
+    opacity: 1; 
+    transform: scale(1) rotate(0deg); 
+  }
+  100% { 
+    bottom: 110%; 
+    opacity: 0; 
+    transform: scale(0.5) rotate(30deg); 
+  }
+}
+
+@keyframes fadeInOut {
+  0% { 
+    opacity: 0; 
+    transform: scale(0.5) translateY(20px); 
+  }
+  20% { 
+    opacity: 1; 
+    transform: scale(1) translateY(0); 
+  }
+  80% { 
+    opacity: 1; 
+    transform: scale(1) translateY(0); 
+  }
+  100% { 
+    opacity: 0; 
+    transform: scale(0.8) translateY(-20px); 
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .intro-show-stage {
+    width: 95%;
+    height: 60vh;
+  }
+
+  .intro-contestant-card {
+    padding: 30px 20px;
+  }
+
+  .intro-card-avatar-wrapper {
+    width: 150px;
+    height: 150px;
+  }
+
+  .intro-card-avatar-glow {
+    width: 170px;
+    height: 170px;
+  }
+
+  .intro-card-name {
+    font-size: 1.8rem;
+  }
+
+  .intro-card-meta {
+    font-size: 0.9rem;
+    gap: 12px;
+  }
+
+  .intro-card-occupation {
+    font-size: 0.85rem;
+  }
+
+  .intro-reaction-emoji {
+    font-size: 1.5rem;
+  }
+
+  .intro-reaction-comment {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+
+  .intro-skip-btn {
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .intro-show-stage {
+    max-width: 500px;
+    height: 65vh;
+  }
+
+  .intro-card-avatar-wrapper {
+    width: 180px;
+    height: 180px;
+  }
+
+  .intro-card-name {
+    font-size: 2.2rem;
+  }
+}
+
+/* High-resolution displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .intro-card-avatar {
+    image-rendering: -webkit-optimize-contrast;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .intro-bg-layer,
+  .intro-lighting-sweep,
+  .intro-card-avatar-glow,
+  .intro-card-spotlight {
+    animation: none !important;
+  }
+  
+  .intro-reaction-emoji,
+  .intro-reaction-comment {
+    animation-duration: 1s !important;
+  }
+}
