@@ -263,7 +263,7 @@
    * Get fallback avatar URL
    */
   function getAvatarFallback(player) {
-    const seed = player?.name || player?.id || 'Guest';
+    const seed = player?.name ?? player?.id ?? 'Guest';
     
     // Try global getDicebearUrl
     if (typeof global.getDicebearUrl === 'function') {
