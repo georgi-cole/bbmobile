@@ -35,7 +35,7 @@
     '@media (min-width:740px){ .settingsGrid{grid-template-columns:1fr 1fr} }',
     '.settingsTabPane[data-pane="cast"] .settingsGrid{grid-template-columns:1fr !important}',
     '.cast-wrap{display:flex;flex-direction:column;gap:8px;max-width:100%;overflow:hidden}',
-    '.cast-strip{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding:6px 2px;border:1px solid #223049;background:#0e1422;border-radius:10px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}',
+    '.cast-strip{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding:6px 2px;border:1px solid #223049;background:#0e1422;border-radius:10px;scroll-snap-type:x mandatory}',
     '.cast-chip{min-width:56px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;scroll-snap-align:start;touch-action:manipulation}',
     '.chip-ava{position:relative;width:48px;height:48px;border-radius:999px;overflow:hidden;border:1px solid #2b3546;background:#0b0f1a}',
     '.chip-ava img{width:100%;height:100%;object-fit:cover;display:block}',
