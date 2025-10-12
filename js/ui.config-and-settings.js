@@ -1270,8 +1270,27 @@
       select.remove(1);
     }
     
-    // Get available games from GameConfig
-    const games = g.GameConfig ? g.GameConfig.getAllGames({ supportsDebugMode: true }) : [];
+    // Get available games from MinigameRegistry (all implemented games)
+    if(!g.MinigameRegistry){
+      console.warn('[ui.config-and-settings] MinigameRegistry not available');
+      return;
+    }
+    
+    const gameKeys = g.MinigameRegistry.getImplementedGames(true); // excludeRetired = true
+    const games = [];
+    
+    // Build game list with metadata
+    gameKeys.forEach(key => {
+      const game = g.MinigameRegistry.getGame(key);
+      if(game){
+        games.push({
+          key: game.key,
+          name: game.name,
+          description: game.description,
+          type: game.type
+        });
+      }
+    });
     
     // Group games by type
     const gamesByType = {};
