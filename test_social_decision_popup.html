@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: SocialDecisionPopup System</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="js/popup/SocialDecisionPopup.css">
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: var(--bg); 
+      color: var(--ink); 
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: var(--accent); 
+      margin-bottom: 10px;
+    }
+    .test-section { 
+      background: var(--card); 
+      border: 1px solid var(--line); 
+      border-radius: var(--radius); 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    .test-section h2 {
+      color: var(--accent-2);
+      margin-top: 0;
+    }
+    button { 
+      background: var(--primary-3); 
+      color: var(--ink); 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+    button:hover { 
+      background: var(--accent); 
+      transform: translateY(-2px);
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    .status {
+      background: var(--card-2);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .status.success { border-left: 4px solid var(--good); }
+    .status.error { border-left: 4px solid var(--bad); }
+    .status.info { border-left: 4px solid var(--accent); }
+    .log { 
+      background: var(--card-2); 
+      padding: 10px; 
+      border-radius: 6px; 
+      margin-top: 10px; 
+      font-family: monospace; 
+      font-size: 0.85rem; 
+      max-height: 300px; 
+      overflow-y: auto; 
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    .feature-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: var(--primary-1);
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .feature-toggle input {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    .feature-toggle label {
+      cursor: pointer;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 SocialDecisionPopup System Test</h1>
+    <p style="color: var(--muted);">Test the new social decision popup system with transitions and cadence.</p>
+
+    <div class="test-section">
+      <h2>Configuration</h2>
+      
+      <div class="feature-toggle">
+        <input type="checkbox" id="toggleCadence" checked>
+        <label for="toggleCadence">Enable social_cadence_enabled (new system)</label>
+      </div>
+      
+      <div class="feature-toggle">
+        <input type="number" id="delayInput" value="800" min="100" max="2000" step="100" 
+               style="width: 100px; padding: 5px; border-radius: 4px; border: 1px solid var(--line);">
+        <label for="delayInput">Inter-popup delay (ms)</label>
+      </div>
+
+      <div class="status info">
+        <strong>Status:</strong> <span id="systemStatus">Loading...</span>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Single Popup Tests</h2>
+      <div class="controls">
+        <button onclick="testAllianceOffer()">Alliance Offer</button>
+        <button onclick="testTargetTalk()">Target Talk</button>
+        <button onclick="testFlipPlan()">Flip Plan</button>
+        <button onclick="testNoAvatar()">No Avatar</button>
+        <button onclick="testLongText()">Long Text</button>
+        <button onclick="testFailedAvatar()">Failed Avatar</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Sequence Tests</h2>
+      <div class="controls">
+        <button onclick="testSequence(3)">3 Popups</button>
+        <button onclick="testSequence(4)">4 Popups</button>
+        <button onclick="testFullSocialPhase()">Full Social Phase</button>
+        <button onclick="testRapidFire()">Rapid Fire (stress test)</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Accessibility Tests</h2>
+      <div class="controls">
+        <button onclick="testKeyboardNav()">Keyboard Navigation Info</button>
+        <button onclick="testReducedMotion()">Toggle Reduced Motion</button>
+        <button onclick="testFocusTrap()">Test Focus Trap</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Edge Cases</h2>
+      <div class="controls">
+        <button onclick="testMobileView()">Mobile View Test</button>
+        <button onclick="testQueueClear()">Clear Queue</button>
+        <button onclick="testLegacyFallback()">Test Legacy Fallback</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Event Log</h2>
+      <div class="log" id="eventLog"></div>
+    </div>
+  </div>
+
+  <!-- Load required scripts -->
+  <script src="js/avatar.js"></script>
+  <script src="js/popup/BasePopup.js"></script>
+  <script src="js/popup/PopupManager.js"></script>
+  <script src="js/popup/SocialDecisionPopup.js"></script>
+
+  <script>
+    // Mock game state
+    window.game = {
+      cfg: {
+        social_cadence_enabled: true,
+        social_inter_delay: 800
+      },
+      humanId: 'player1',
+      players: [
+        { id: 'player1', name: 'You', avatar: null },
+        { id: 'player2', name: 'Alice Johnson', avatar: './avatars/alice.png' },
+        { id: 'player3', name: 'Bob Smith', avatar: './avatars/bob.png' },
+        { id: 'player4', name: 'Carol White', avatar: null },
+        { id: 'player5', name: 'Dave Brown', avatar: 'invalid-url.jpg' }
+      ]
+    };
+
+    // Mock helper functions
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.addLog = (msg, type) => logEvent(`[Game Log] ${msg}`, type || 'info');
+
+    // Event logging
+    function logEvent(message, type = 'info') {
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.style.color = type === 'ok' ? 'var(--good)' : 
+                          type === 'danger' ? 'var(--bad)' : 
+                          type === 'warn' ? 'var(--warn)' : 
+                          'var(--muted-2)';
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      log.insertBefore(entry, log.firstChild);
+      
+      // Keep only last 50 entries
+      while(log.children.length > 50) {
+        log.removeChild(log.lastChild);
+      }
+    }
+
+    // Feature toggle
+    document.getElementById('toggleCadence').addEventListener('change', (e) => {
+      window.game.cfg.social_cadence_enabled = e.target.checked;
+      updateStatus();
+      logEvent(`Feature flag ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
+    });
+
+    document.getElementById('delayInput').addEventListener('change', (e) => {
+      window.game.cfg.social_inter_delay = parseInt(e.target.value);
+      logEvent(`Inter-popup delay set to ${e.target.value}ms`, 'info');
+    });
+
+    // Update status display
+    function updateStatus() {
+      const status = document.getElementById('systemStatus');
+      const enabled = window.game.cfg.social_cadence_enabled;
+      const hasPopup = typeof createSocialDecisionPopup !== 'undefined';
+      const hasManager = typeof PopupManager !== 'undefined';
+      
+      if(enabled && hasPopup && hasManager) {
+        status.textContent = '✓ New popup system active';
+        status.style.color = 'var(--good)';
+      } else if(!enabled) {
+        status.textContent = '○ Feature flag disabled (legacy mode)';
+        status.style.color = 'var(--warn)';
+      } else {
+        status.textContent = '✗ Required scripts not loaded';
+        status.style.color = 'var(--bad)';
+      }
+    }
+
+    // Test functions
+    function testAllianceOffer() {
+      logEvent('Testing: Alliance Offer', 'info');
+      const player = window.getP('player2');
+      
+      PopupManager.enqueue(() => {
+        return createSocialDecisionPopup({
+          player: player,
+          title: 'Alliance Offer',
+          bodyText: [
+            `${player.name} wants an alliance with you.`,
+            'Do you accept?'
+          ],
+          actions: [
+            {
+              label: 'Accept',
+              theme: 'accept',
+              onChoose: () => {
+                logEvent(`Accepted alliance with ${player.name}`, 'ok');
+                PopupManager.showConfirmationToast('Decision recorded ✓');
+              }
+            },
+            {
+              label: 'Decline',
+              theme: 'refuse',
+              onChoose: () => {
+                logEvent(`Declined alliance with ${player.name}`, 'danger');
+                PopupManager.showConfirmationToast('Choice noted');
+              }
+            }
+          ]
+        });
+      }, { interPopupDelay: window.game.cfg.social_inter_delay });
+    }
+
+    function testTargetTalk() {
+      logEvent('Testing: Target Talk', 'info');
+      const player = window.getP('player3');
+      
+      PopupManager.enqueue(() => {
+        return createSocialDecisionPopup({
+          player: player,
+          title: 'Target Talk',
+          bodyText: [
+            `${player.name} suggests targeting Carol this week.`,
+            'Do you agree?'
+          ],
+          actions: [
+            {
+              label: 'Agree',
+              theme: 'accept',
+              onChoose: () => {
+                logEvent('Agreed to target', 'warn');
+                PopupManager.showConfirmationToast('Agreement noted');
+              }
+            },
+            {
+              label: 'Refuse',
+              theme: 'refuse',
+              onChoose: () => {
+                logEvent('Refused to target', 'ok');
+                PopupManager.showConfirmationToast('Declined');
+              }
+            }
+          ]
+        });
+      });
+    }
+
+    function testFlipPlan() {
+      logEvent('Testing: Flip Plan', 'info');
+      const player = window.getP('player4');
+      
+      PopupManager.enqueue(() => {
+        return createSocialDecisionPopup({
+          player: player,
+          title: 'Flip Plan',
+          bodyText: [
+            `${player.name} asks you to consider flipping a vote later.`,
+            'How do you respond?'
+          ],
+          actions: [
+            {
+              label: 'Promise',
+              theme: 'accept',
+              onChoose: () => {
+                logEvent('Promised to flip', 'warn');
+                PopupManager.showConfirmationToast('Promise made');
+              }
+            },
+            {
+              label: 'Reject',
+              theme: 'refuse',
+              onChoose: () => {
+                logEvent('Rejected flip plan', 'ok');
+                PopupManager.showConfirmationToast('Rejected');
+              }
+            }
+          ]
+        });
+      });
+    }
+
+    function testNoAvatar() {
+      logEvent('Testing: No Avatar (Initials)', 'info');
+      const player = window.getP('player4');
+      
+      PopupManager.enqueue(() => {
+        return createSocialDecisionPopup({
+          player: player,
+          title: 'Test: Initials Fallback',
+          bodyText: 'This player has no avatar. Initials should appear.',
+          actions: [
+            { label: 'OK', theme: 'neutral', onChoose: () => logEvent('OK clicked') }
+          ]
+        });
+      });
+    }
+
+    function testFailedAvatar() {
+      logEvent('Testing: Failed Avatar Load', 'info');
+      const player = window.getP('player5');
+      
+      PopupManager.enqueue(() => {
+        return createSocialDecisionPopup({
+          player: player,
+          title: 'Test: Failed Avatar',
+          bodyText: 'This player has an invalid avatar URL. Should fallback to initials.',
+          actions: [
+            { label: 'OK', theme: 'neutral', onChoose: () => logEvent('OK clicked') }
+          ]
+        });
+      });
+    }
+
+    function testLongText() {
+      logEvent('Testing: Long Text Content', 'info');
+      const player = window.getP('player2');
+      
+      PopupManager.enqueue(() => {
+        return createSocialDecisionPopup({
+          player: player,
+          title: 'Complex Strategic Discussion',
+          bodyText: [
+            'Alice has proposed a multi-week plan that involves targeting several players.',
+            'She wants to form a final four alliance with you, Bob, and Carol.',
+            'This would require flipping on your current allies.',
+            'The plan seems risky but could pay off in the long run.',
+            'What do you think?'
+          ],
+          actions: [
+            { label: 'Accept Plan', theme: 'accept', onChoose: () => logEvent('Accepted complex plan', 'warn') },
+            { label: 'Decline', theme: 'refuse', onChoose: () => logEvent('Declined complex plan', 'ok') },
+            { label: 'Ask More', theme: 'neutral', onChoose: () => logEvent('Asked for more info') }
+          ]
+        });
+      });
+    }
+
+    function testSequence(count) {
+      logEvent(`Testing: Sequence of ${count} popups`, 'info');
+      const players = ['player2', 'player3', 'player4', 'player5'];
+      
+      for(let i = 0; i < count; i++) {
+        const player = window.getP(players[i % players.length]);
+        const titles = ['Alliance Offer', 'Target Talk', 'Flip Plan', 'Strategy Chat'];
+        
+        PopupManager.enqueue(() => {
+          return createSocialDecisionPopup({
+            player: player,
+            title: titles[i % titles.length],
+            bodyText: `This is popup ${i + 1} of ${count}`,
+            actions: [
+              { label: 'Accept', theme: 'accept', onChoose: () => logEvent(`Popup ${i + 1} accepted`, 'ok') },
+              { label: 'Decline', theme: 'refuse', onChoose: () => logEvent(`Popup ${i + 1} declined`, 'danger') }
+            ]
+          });
+        });
+      }
+    }
+
+    function testFullSocialPhase() {
+      logEvent('Testing: Full Social Phase', 'info');
+      testAllianceOffer();
+      setTimeout(() => testTargetTalk(), 100);
+      setTimeout(() => testFlipPlan(), 200);
+    }
+
+    function testRapidFire() {
+      logEvent('Testing: Rapid Fire (10 popups)', 'warn');
+      testSequence(10);
+    }
+
+    function testKeyboardNav() {
+      alert('Keyboard Navigation:\n\n' +
+            '• TAB: Move between buttons\n' +
+            '• ENTER/SPACE: Activate button\n' +
+            '• ESC: Close popup\n' +
+            '• Focus is trapped within popup\n\n' +
+            'Open a popup and try it!');
+    }
+
+    function testReducedMotion() {
+      const current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      alert('Current reduced motion: ' + (current ? 'ON' : 'OFF') + '\n\n' +
+            'To test:\n' +
+            '1. Open browser settings\n' +
+            '2. Enable "Reduce motion" in accessibility\n' +
+            '3. Reload page\n' +
+            '4. Popups should have minimal animations');
+    }
+
+    function testFocusTrap() {
+      logEvent('Testing: Focus Trap', 'info');
+      alert('Open a popup and try:\n\n' +
+            '1. Press TAB repeatedly\n' +
+            '2. Focus should cycle through buttons\n' +
+            '3. Cannot TAB out of popup\n' +
+            '4. Press ESC to close');
+      testAllianceOffer();
+    }
+
+    function testMobileView() {
+      logEvent('Testing: Mobile View', 'info');
+      alert('To test mobile:\n\n' +
+            '1. Open DevTools (F12)\n' +
+            '2. Toggle device toolbar (Ctrl+Shift+M)\n' +
+            '3. Select mobile device\n' +
+            '4. Open popup\n' +
+            '5. Buttons should stack vertically');
+      testAllianceOffer();
+    }
+
+    function testQueueClear() {
+      logEvent('Clearing popup queue', 'warn');
+      PopupManager.clearQueue();
+      logEvent('Queue cleared', 'ok');
+    }
+
+    function testLegacyFallback() {
+      const currentState = window.game.cfg.social_cadence_enabled;
+      window.game.cfg.social_cadence_enabled = false;
+      document.getElementById('toggleCadence').checked = false;
+      updateStatus();
+      
+      logEvent('Legacy fallback mode enabled', 'warn');
+      alert('Legacy mode enabled.\n\n' +
+            'Note: This test page only demonstrates the new popup system.\n' +
+            'In the real game, legacy mode would show card-based decisions.\n\n' +
+            'Re-enable the feature flag to continue testing.');
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      updateStatus();
+      logEvent('Test page loaded', 'ok');
+      logEvent('SocialDecisionPopup system ready', 'ok');
+      
+      // Log system info
+      logEvent(`PopupManager available: ${typeof PopupManager !== 'undefined'}`, 'info');
+      logEvent(`createSocialDecisionPopup available: ${typeof createSocialDecisionPopup !== 'undefined'}`, 'info');
+      logEvent(`resolveAvatar available: ${typeof resolveAvatar !== 'undefined'}`, 'info');
+    });
+  </script>
+</body>
+</html>

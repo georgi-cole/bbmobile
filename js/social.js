@@ -364,39 +364,92 @@
     try{ await global.cardQueueWaitIdle?.(); }catch{}
 
     g.__decisionActive = true;
-    maskRevealOverlay(true);
+    
+    // Check if new popup system should be used
+    const cfg = g.cfg || {};
+    const useSocialPopup = cfg.social_cadence_enabled && 
+                           typeof global.createSocialDecisionPopup === 'function' &&
+                           typeof global.PopupManager !== 'undefined';
+    
+    if(useSocialPopup){
+      // New system: Use SocialDecisionPopup with PopupManager
+      const you=global.getP?.(g.humanId);
+      const targetPlayer = next.targetPlayer || null; // Player associated with decision
+      
+      // Enqueue popup with proper delay
+      global.PopupManager.enqueue(() => {
+        return global.createSocialDecisionPopup({
+          player: targetPlayer,
+          title: next.title,
+          bodyText: next.lines,
+          actions: next.actions.map(act => ({
+            label: act.label,
+            theme: act.theme || (act.label === 'Accept' || act.label === 'Agree' || act.label === 'Promise' ? 'accept' : 'refuse'),
+            onChoose: () => {
+              try{ 
+                act.onChoose?.(); 
+                
+                // Show micro-confirmation
+                if(global.PopupManager.showConfirmationToast){
+                  const confirmMsg = act.label === 'Accept' || act.label === 'Agree' || act.label === 'Promise'
+                    ? 'Decision recorded ✓'
+                    : 'Choice noted';
+                  global.PopupManager.showConfirmationToast(confirmMsg, 1800);
+                }
+              }catch(e){ console.error(e); }
+              
+              g.__decisionActive = false;
+              
+              // Process next decision after short delay
+              if(g.__decisionQueue.length){
+                // Delay handled by PopupManager inter-popup delay
+                setTimeout(()=>showNextDecision(), 200);
+              } else {
+                maskRevealOverlay(false);
+              }
+            }
+          })),
+          onClose: () => {
+            g.__decisionActive = false;
+          }
+        });
+      }, { interPopupDelay: cfg.social_inter_delay || 800 });
+      
+    } else {
+      // Legacy system: Use original card-based UI
+      maskRevealOverlay(true);
+      const deck=ensureDecisionDeck();
+      deck.innerHTML='';
 
-    const deck=ensureDecisionDeck();
-    deck.innerHTML='';
+      const card=document.createElement('div');
+      card.className='revealCard diaryRoomCard decisionCard';
+      const h=document.createElement('h3'); h.textContent=next.title; card.appendChild(h);
+      for(const l of next.lines){ const d=document.createElement('div'); d.textContent=l; card.appendChild(d); }
 
-    const card=document.createElement('div');
-    card.className='revealCard diaryRoomCard decisionCard';
-    const h=document.createElement('h3'); h.textContent=next.title; card.appendChild(h);
-    for(const l of next.lines){ const d=document.createElement('div'); d.textContent=l; card.appendChild(d); }
+      const bar=document.createElement('div'); bar.className='decisionActions';
+      next.actions.forEach(act=>{
+        const b=document.createElement('button'); b.className='btn small'; b.textContent=act.label;
+        b.onclick=()=>{
+          try{ act.onChoose?.(); }catch(e){ console.error(e); }
+          card.remove();
+          g.__decisionActive = false;
+          // Small pause between prompts to keep pacing humane
+          if(g.__decisionQueue.length){
+            setTimeout(()=>showNextDecision(), 420);
+          } else {
+            clearDecisionDeck(); maskRevealOverlay(false);
+          }
+        };
+        bar.appendChild(b);
+      });
+      card.appendChild(bar);
 
-    const bar=document.createElement('div'); bar.className='decisionActions';
-    next.actions.forEach(act=>{
-      const b=document.createElement('button'); b.className='btn small'; b.textContent=act.label;
-      b.onclick=()=>{
-        try{ act.onChoose?.(); }catch(e){ console.error(e); }
-        card.remove();
-        g.__decisionActive = false;
-        // Small pause between prompts to keep pacing humane
-        if(g.__decisionQueue.length){
-          setTimeout(()=>showNextDecision(), 420);
-        } else {
-          clearDecisionDeck(); maskRevealOverlay(false);
-        }
-      };
-      bar.appendChild(b);
-    });
-    card.appendChild(bar);
+      // Allow card to be interactive
+      card.style.pointerEvents = 'auto';
+      deck.appendChild(card);
 
-    // Allow card to be interactive
-    card.style.pointerEvents = 'auto';
-    deck.appendChild(card);
-
-    card.style.animation='popIn .45s ease forwards';
+      card.style.animation='popIn .45s ease forwards';
+    }
   }
 
   function buildSocialDecisions(){
@@ -416,6 +469,7 @@
     if(g.__socialShown<3){
       queueDecision({
         title: 'Alliance Offer',
+        targetPlayer: allyTarget, // Add player reference for avatar
         lines: [
           `${allyTarget.name} wants an alliance with you.`,
           'Do you accept?'
@@ -449,6 +503,7 @@
     if(g.__socialShown<3){
       queueDecision({
         title: 'Target Talk',
+        targetPlayer: instigator, // Add player reference for avatar
         lines: [
           `${instigator.name} suggests targeting ${tgt?.name||'someone'}.`,
           'Do you agree to target them this week?'
@@ -472,6 +527,7 @@
       const press = pick(others);
       queueDecision({
         title: 'Flip Plan',
+        targetPlayer: press, // Add player reference for avatar
         lines: [
           `${press.name} asks you to consider flipping a vote later.`,
           'How do you respond?'
