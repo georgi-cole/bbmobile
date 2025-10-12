@@ -182,7 +182,9 @@
         rebuildGame(false);
       }
 
-      // Check if this is a returning user (intro played in this session)
+      // Check if this is a returning user (user clicking Start button directly, not first load)
+      // New users will have intro video auto-play via intro-outro-video.js hook
+      // Returning users are clicking Start button explicitly after intro already played
       const isReturningUser = checkIsReturningUser();
       
       if (isReturningUser) {
@@ -202,14 +204,35 @@
   }
 
   /**
-   * Check if user has seen intro before (returning user)
+   * Check if user has seen game start before (returning user)
+   * Uses a separate flag from intro video playback to distinguish:
+   * - First game start ever: new user (shows full onboarding)
+   * - Subsequent game starts: returning user (shows fast cast)
    */
   function checkIsReturningUser() {
     try {
-      return sessionStorage.getItem('bb.introPlayed') === '1' || global.__bbIntroPlayed === true;
+      // Check if user has started a game before (not just watched intro)
+      return sessionStorage.getItem('bb.gameStarted') === '1' || global.__bbGameStarted === true;
     } catch {
-      return !!global.__bbIntroPlayed;
+      return !!global.__bbGameStarted;
     }
+  }
+
+  /**
+   * Mark that user has started a game (for returning user detection)
+   */
+  function markGameStarted() {
+    // Use the global function if available (exposed by intro-outro-video.js)
+    if (typeof global.markGameStarted === 'function') {
+      global.markGameStarted();
+      return;
+    }
+    
+    // Fallback implementation
+    global.__bbGameStarted = true;
+    try {
+      sessionStorage.setItem('bb.gameStarted', '1');
+    } catch {}
   }
 
   /**
@@ -220,6 +243,9 @@
   function startFastCastFlow() {
     const game = global.game;
     if (!game) return;
+
+    // Mark game as started for future returning user detection
+    markGameStarted();
 
     // Skip modal flow (profile, rules)
     if (typeof global.skipModalFlow === 'function') {

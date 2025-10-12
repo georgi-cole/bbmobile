@@ -188,11 +188,15 @@
           onEnd: () => { 
             markIntroPlayed(); 
             dispatchIntroFinished();
+            // Mark game started after intro completes (for new users)
+            markGameStarted();
             try { origStart.call(g); } catch { origStart(); } 
           },
           onSkip: () => { 
             markIntroPlayed(); 
             dispatchIntroFinished();
+            // Mark game started after intro skipped (for new users)
+            markGameStarted();
             try { origStart.call(g); } catch { origStart(); } 
           },
           onFail: () => { try { origStart.call(g); } catch { origStart(); } }
@@ -202,6 +206,16 @@
       return origStart.call(g);
     };
   })();
+
+  // Helper function to mark game started (used by bootstrap.js)
+  function markGameStarted() {
+    g.__bbGameStarted = true;
+    try {
+      sessionStorage.setItem('bb.gameStarted', '1');
+      console.info('[intro-outro] marked game as started for returning user detection');
+    } catch {}
+  }
+  g.markGameStarted = markGameStarted;
 
   // Wrap showFinaleCinematic so we can replace credits entirely with our video.
   function wrapFinale(){
