@@ -118,7 +118,7 @@
     const textEl = badge.querySelector('.twistBadgeText');
     
     if(visible && twistType){
-      // Get full twist name
+      // Set simple one-liner badge text
       const twistNames = {
         'double': 'Double Eviction',
         'triple': 'Triple Eviction'
@@ -126,20 +126,6 @@
       const twistName = twistNames[twistType] || twistType;
       
       if(textEl) textEl.textContent = twistName;
-      
-      // Add tooltip with more info
-      let tooltip = badge.querySelector('.twistTooltip');
-      if(!tooltip){
-        tooltip = document.createElement('div');
-        tooltip.className = 'twistTooltip';
-        badge.appendChild(tooltip);
-      }
-      
-      const tooltipTexts = {
-        'double': 'Two houseguests will be evicted this week',
-        'triple': 'Three houseguests will be evicted this week'
-      };
-      tooltip.textContent = tooltipTexts[twistType] || 'Special twist is active';
       
       badge.style.display = 'flex';
       twistBadgeVisible = true;
