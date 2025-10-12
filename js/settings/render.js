@@ -202,7 +202,20 @@
       // Special handling for Cast tab
       const activePane = panes.querySelector('.settingsTabPane.active');
       if(activePane && activePane.getAttribute('data-pane') === 'cast'){
-        if(typeof global.initCastTab === 'function'){
+        // Dynamically import cast-tab.js if not already loaded
+        if(typeof global.initCastTab !== 'function'){
+          import('./settings/cast-tab.js').then(function(){
+            if(typeof global.initCastTab === 'function'){
+              try{
+                global.initCastTab(modal);
+              }catch(e){
+                console.warn('[settings/render] initCastTab failed after dynamic import', e);
+              }
+            }
+          }).catch(function(err){
+            console.error('[settings/render] Failed to dynamically import cast-tab.js', err);
+          });
+        } else {
           try{
             global.initCastTab(modal);
           }catch(e){
@@ -497,7 +510,20 @@
     // Check if Cast tab is active and initialize
     const activePane = modal.querySelector('.settingsTabPane.active');
     if(activePane && activePane.getAttribute('data-pane') === 'cast'){
-      if(typeof global.initCastTab === 'function'){
+      // Dynamically import cast-tab.js if not already loaded
+      if(typeof global.initCastTab !== 'function'){
+        import('./cast-tab.js').then(function(){
+          if(typeof global.initCastTab === 'function'){
+            try{
+              global.initCastTab(modal);
+            }catch(e){
+              console.warn('[settings/render] initCastTab failed after dynamic import', e);
+            }
+          }
+        }).catch(function(err){
+          console.error('[settings/render] Failed to dynamically import cast-tab.js', err);
+        });
+      } else {
         try{
           global.initCastTab(modal);
         }catch(e){

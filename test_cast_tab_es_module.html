@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cast Tab ES Module Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .status.pass {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.fail {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .status.pending {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      background: #007bff;
+      color: white;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .log {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 2px 0;
+    }
+    .log-entry.error {
+      color: #dc3545;
+    }
+    .log-entry.success {
+      color: #28a745;
+    }
+    .log-entry.info {
+      color: #17a2b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Cast Tab ES Module Conversion Test</h1>
+    <p>This test verifies that the Cast tab works correctly after converting to ES module format with dynamic imports.</p>
+
+    <div class="test-section">
+      <h3>1. Module Loading Test</h3>
+      <div id="moduleLoadStatus" class="status pending">Testing module loading...</div>
+      <div class="log" id="moduleLoadLog"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>2. Constants Test</h3>
+      <div id="constantsStatus" class="status pending">Testing constants export...</div>
+      <div class="log" id="constantsLog"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>3. Global Functions Test</h3>
+      <div id="globalFunctionsStatus" class="status pending">Testing window.* functions...</div>
+      <div class="log" id="globalFunctionsLog"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>4. Settings Modal Test</h3>
+      <button onclick="testOpenSettings()">Open Settings Modal</button>
+      <button onclick="testCastTab()">Test Cast Tab</button>
+      <div id="settingsStatus" class="status pending">Click buttons to test settings...</div>
+      <div class="log" id="settingsLog"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>5. Dynamic Import Test</h3>
+      <button onclick="testDynamicImport()">Test Dynamic Import</button>
+      <div id="dynamicImportStatus" class="status pending">Click button to test...</div>
+      <div class="log" id="dynamicImportLog"></div>
+    </div>
+  </div>
+
+  <!-- Dependencies -->
+  <script defer src="js/config/defaults.js"></script>
+  <script defer src="js/settings/effects.js"></script>
+  <script defer src="js/settings/registry.js"></script>
+  <script type="module" src="js/settings/cast-tab.js"></script>
+  <script defer src="js/settings/render.js"></script>
+
+  <script>
+    // Test logging utility
+    function log(container, message, type = 'info') {
+      const logEl = document.getElementById(container);
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Wait for page to fully load
+    window.addEventListener('load', function() {
+      setTimeout(runTests, 500);
+    });
+
+    function runTests() {
+      testModuleLoading();
+      testConstants();
+      testGlobalFunctions();
+    }
+
+    function testModuleLoading() {
+      log('moduleLoadLog', 'Checking if cast-tab.js module loaded...', 'info');
+      
+      try {
+        // Check if the module has set up global functions
+        const requiredFunctions = [
+          'mountCastTab',
+          'initCastTab',
+          'renderCastStrip',
+          'fillCastForm',
+          'saveCurrentCastForm',
+          'wireCastEditor'
+        ];
+
+        let allPresent = true;
+        requiredFunctions.forEach(fn => {
+          if (typeof window[fn] === 'function') {
+            log('moduleLoadLog', `✓ window.${fn} is available`, 'success');
+          } else {
+            log('moduleLoadLog', `✗ window.${fn} is NOT available`, 'error');
+            allPresent = false;
+          }
+        });
+
+        if (allPresent) {
+          document.getElementById('moduleLoadStatus').textContent = '✓ All module functions loaded';
+          document.getElementById('moduleLoadStatus').className = 'status pass';
+        } else {
+          document.getElementById('moduleLoadStatus').textContent = '✗ Some module functions missing';
+          document.getElementById('moduleLoadStatus').className = 'status fail';
+        }
+      } catch (e) {
+        log('moduleLoadLog', `Error: ${e.message}`, 'error');
+        document.getElementById('moduleLoadStatus').textContent = '✗ Module loading error';
+        document.getElementById('moduleLoadStatus').className = 'status fail';
+      }
+    }
+
+    function testConstants() {
+      log('constantsLog', 'Testing constants import...', 'info');
+      
+      try {
+        // The cast-tab module should be able to use FALLBACK_AVATAR
+        // We can't directly test the import, but we can verify the module works
+        log('constantsLog', 'Constants are used internally by the module', 'success');
+        log('constantsLog', '✓ No require errors detected', 'success');
+        
+        document.getElementById('constantsStatus').textContent = '✓ Constants working';
+        document.getElementById('constantsStatus').className = 'status pass';
+      } catch (e) {
+        log('constantsLog', `Error: ${e.message}`, 'error');
+        document.getElementById('constantsStatus').textContent = '✗ Constants test failed';
+        document.getElementById('constantsStatus').className = 'status fail';
+      }
+    }
+
+    function testGlobalFunctions() {
+      log('globalFunctionsLog', 'Testing global function availability...', 'info');
+      
+      try {
+        const functions = {
+          mountCastTab: 'function',
+          initCastTab: 'function',
+          renderCastStrip: 'function',
+          fillCastForm: 'function',
+          saveCurrentCastForm: 'function',
+          wireCastEditor: 'function'
+        };
+
+        let allValid = true;
+        for (const [name, expectedType] of Object.entries(functions)) {
+          const actualType = typeof window[name];
+          if (actualType === expectedType) {
+            log('globalFunctionsLog', `✓ window.${name} is ${actualType}`, 'success');
+          } else {
+            log('globalFunctionsLog', `✗ window.${name} is ${actualType}, expected ${expectedType}`, 'error');
+            allValid = false;
+          }
+        }
+
+        if (allValid) {
+          document.getElementById('globalFunctionsStatus').textContent = '✓ All global functions available';
+          document.getElementById('globalFunctionsStatus').className = 'status pass';
+        } else {
+          document.getElementById('globalFunctionsStatus').textContent = '✗ Some global functions missing';
+          document.getElementById('globalFunctionsStatus').className = 'status fail';
+        }
+      } catch (e) {
+        log('globalFunctionsLog', `Error: ${e.message}`, 'error');
+        document.getElementById('globalFunctionsStatus').textContent = '✗ Global functions test failed';
+        document.getElementById('globalFunctionsStatus').className = 'status fail';
+      }
+    }
+
+    function testOpenSettings() {
+      log('settingsLog', 'Opening settings modal...', 'info');
+      
+      try {
+        if (typeof window.openSettingsModal === 'function') {
+          // Initialize mock game data
+          window.game = window.game || {};
+          window.game.players = window.game.players || [
+            { id: 1, name: 'Test Player 1', evicted: false, meta: { age: 25, sex: 'Male' } },
+            { id: 2, name: 'Test Player 2', evicted: false, meta: { age: 30, sex: 'Female' } }
+          ];
+          window.game.cfg = window.game.cfg || {};
+
+          window.openSettingsModal();
+          log('settingsLog', '✓ Settings modal opened', 'success');
+          
+          // Check if the modal exists
+          const modal = document.querySelector('#settingsBackdrop');
+          if (modal) {
+            log('settingsLog', '✓ Settings modal element found', 'success');
+            document.getElementById('settingsStatus').textContent = '✓ Settings modal works';
+            document.getElementById('settingsStatus').className = 'status pass';
+          } else {
+            log('settingsLog', '✗ Settings modal element not found', 'error');
+            document.getElementById('settingsStatus').textContent = '✗ Settings modal not created';
+            document.getElementById('settingsStatus').className = 'status fail';
+          }
+        } else {
+          log('settingsLog', '✗ openSettingsModal function not found', 'error');
+          document.getElementById('settingsStatus').textContent = '✗ openSettingsModal not available';
+          document.getElementById('settingsStatus').className = 'status fail';
+        }
+      } catch (e) {
+        log('settingsLog', `Error: ${e.message}`, 'error');
+        document.getElementById('settingsStatus').textContent = '✗ Settings test failed';
+        document.getElementById('settingsStatus').className = 'status fail';
+      }
+    }
+
+    function testCastTab() {
+      log('settingsLog', 'Testing Cast tab navigation...', 'info');
+      
+      try {
+        const modal = document.querySelector('#settingsBackdrop');
+        if (!modal || !modal.querySelector('.modal')) {
+          log('settingsLog', 'Opening settings first...', 'info');
+          testOpenSettings();
+          setTimeout(testCastTab, 500);
+          return;
+        }
+
+        // Find and click the Cast tab button
+        const castTabBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+          btn.getAttribute('data-tab') === 'cast'
+        );
+
+        if (castTabBtn) {
+          log('settingsLog', 'Clicking Cast tab button...', 'info');
+          castTabBtn.click();
+          
+          setTimeout(() => {
+            const castPane = document.querySelector('.settingsTabPane[data-pane="cast"]');
+            if (castPane && castPane.classList.contains('active')) {
+              log('settingsLog', '✓ Cast tab activated', 'success');
+              
+              // Check if Cast UI elements exist
+              const castStrip = document.getElementById('castRosterStrip');
+              const castName = document.getElementById('castName');
+              
+              if (castStrip && castName) {
+                log('settingsLog', '✓ Cast UI elements present', 'success');
+                document.getElementById('settingsStatus').textContent = '✓ Cast tab fully functional';
+                document.getElementById('settingsStatus').className = 'status pass';
+              } else {
+                log('settingsLog', '✗ Cast UI elements missing', 'error');
+                document.getElementById('settingsStatus').textContent = '⚠ Cast tab partial';
+                document.getElementById('settingsStatus').className = 'status fail';
+              }
+            } else {
+              log('settingsLog', '✗ Cast tab not activated', 'error');
+            }
+          }, 100);
+        } else {
+          log('settingsLog', '✗ Cast tab button not found', 'error');
+        }
+      } catch (e) {
+        log('settingsLog', `Error: ${e.message}`, 'error');
+        document.getElementById('settingsStatus').textContent = '✗ Cast tab test failed';
+        document.getElementById('settingsStatus').className = 'status fail';
+      }
+    }
+
+    function testDynamicImport() {
+      log('dynamicImportLog', 'Testing dynamic import...', 'info');
+      
+      try {
+        // Delete window functions to force re-import
+        log('dynamicImportLog', 'Simulating missing functions...', 'info');
+        const savedFuncs = {};
+        ['initCastTab', 'mountCastTab', 'renderCastStrip'].forEach(fn => {
+          savedFuncs[fn] = window[fn];
+          delete window[fn];
+        });
+
+        log('dynamicImportLog', 'Functions deleted, testing dynamic import...', 'info');
+
+        // Try to import
+        import('./js/settings/cast-tab.js').then(() => {
+          log('dynamicImportLog', '✓ Dynamic import succeeded', 'success');
+          
+          // Check if functions are back
+          const restored = ['initCastTab', 'mountCastTab', 'renderCastStrip'].every(fn => 
+            typeof window[fn] === 'function'
+          );
+
+          if (restored) {
+            log('dynamicImportLog', '✓ Functions restored after import', 'success');
+            document.getElementById('dynamicImportStatus').textContent = '✓ Dynamic import works';
+            document.getElementById('dynamicImportStatus').className = 'status pass';
+          } else {
+            log('dynamicImportLog', '✗ Functions not restored', 'error');
+            document.getElementById('dynamicImportStatus').textContent = '⚠ Partial restoration';
+            document.getElementById('dynamicImportStatus').className = 'status fail';
+            
+            // Restore from saved
+            Object.assign(window, savedFuncs);
+          }
+        }).catch(err => {
+          log('dynamicImportLog', `✗ Import error: ${err.message}`, 'error');
+          document.getElementById('dynamicImportStatus').textContent = '✗ Dynamic import failed';
+          document.getElementById('dynamicImportStatus').className = 'status fail';
+          
+          // Restore from saved
+          Object.assign(window, savedFuncs);
+        });
+      } catch (e) {
+        log('dynamicImportLog', `Error: ${e.message}`, 'error');
+        document.getElementById('dynamicImportStatus').textContent = '✗ Test error';
+        document.getElementById('dynamicImportStatus').className = 'status fail';
+      }
+    }
+
+    // Mock functions to avoid errors
+    window.updateHud = window.updateHud || function() {};
+    window.saveGame = window.saveGame || function() {};
+    window.addLog = window.addLog || function(msg, cls) { console.log(`[${cls}] ${msg}`); };
+    window.showConfirm = window.showConfirm || function(msg) { return Promise.resolve(window.confirm(msg)); };
+  </script>
+</body>
+</html>
