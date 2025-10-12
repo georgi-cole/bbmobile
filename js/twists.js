@@ -482,6 +482,11 @@
       g.__returnFlashId=winnerId;
       setTimeout(()=>{ g.__returnFlashId=null; global.updateHud?.(); },6500);
       // Flags already set at eligibility check
+      
+      // Update PlayerService after player returns
+      if(typeof global.PlayerService?.setAlivePlayers === 'function' && g.players){
+        global.PlayerService.setAlivePlayers(g.players);
+      }
     } else {
       try{ global.showCard?.('No Returnee',['Vote produced no clear winner.'],'jury',3200,true); }catch(e){}
     }

@@ -454,6 +454,11 @@
       global.addLog(`Self-eviction: <b>${player.name}</b> has left the game.`, 'danger');
     }
 
+    // Update PlayerService with current alive players after self-eviction
+    if(typeof global.PlayerService?.setAlivePlayers === 'function' && g.players){
+      global.PlayerService.setAlivePlayers(g.players);
+    }
+
     // Update UI
     if(typeof global.updateHud === 'function'){
       global.updateHud();

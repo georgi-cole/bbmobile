@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayerService Integration Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0f1320;
+      color: #e6e8ee;
+    }
+    h1 { color: #2d8ab4; }
+    h2 { color: #4aa5d4; margin-top: 30px; }
+    .test-section {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    button {
+      background: #2877a0;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #3090c0; }
+    button.success { background: #2d7a4a; }
+    button.success:hover { background: #3d9a5a; }
+    button.danger { background: #c94747; }
+    button.danger:hover { background: #e05757; }
+    .log {
+      background: #0a0e18;
+      border: 1px solid #1a2030;
+      padding: 10px;
+      margin: 10px 0;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #1a2030;
+    }
+    .log-entry.info { color: #79d19a; }
+    .log-entry.warn { color: #f2c862; }
+    .log-entry.error { color: #ff6b6b; }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    .status.ok { background: #1a4d2e; border: 1px solid #2d7a4a; color: #79d19a; }
+    .status.error { background: #4d1a1a; border: 1px solid #7a2d2d; color: #ff6b6b; }
+    .player-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .player-card {
+      background: #1a2030;
+      border: 1px solid #2c3446;
+      border-radius: 6px;
+      padding: 10px;
+      min-width: 120px;
+    }
+    .player-card.evicted {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 PlayerService Integration Test</h1>
+  <p>Testing PlayerService integration with core game logic and UI updates.</p>
+
+  <div class="test-section">
+    <h2>1. Module Status</h2>
+    <div id="moduleStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Game Initialization</h2>
+    <button onclick="testGameInit()">Initialize Game (buildCast)</button>
+    <button onclick="testRebuildGame()">Rebuild Game</button>
+    <div id="initLog" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Player State</h2>
+    <div id="playerDisplay"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Eviction Test</h2>
+    <button onclick="testEviction()">Simulate Eviction</button>
+    <button onclick="testSelfEviction()">Simulate Self-Eviction</button>
+    <div id="evictionLog" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Return Twist Test</h2>
+    <button onclick="testReturnTwist()">Simulate Player Return</button>
+    <div id="returnLog" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>6. Save/Load Test</h2>
+    <button onclick="testSaveLoad()">Simulate Load Game</button>
+    <div id="saveLoadLog" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>7. PlayerService Subscription Test</h2>
+    <button onclick="startSubscription()">Subscribe to Changes</button>
+    <button onclick="stopSubscription()">Unsubscribe</button>
+    <div id="subscriptionLog" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>8. Console Output</h2>
+    <div class="log" id="consoleLog"></div>
+    <button onclick="clearConsoleLog()">Clear Console</button>
+  </div>
+
+  <!-- Load PlayerService -->
+  <script src="js/player/PlayerService.js"></script>
+  
+  <!-- Test Script -->
+  <script>
+    // Set up logging
+    const originalConsole = {
+      log: console.log.bind(console),
+      info: console.info.bind(console),
+      warn: console.warn.bind(console),
+      error: console.error.bind(console)
+    };
+
+    function logToUI(level, ...args) {
+      const consoleLog = document.getElementById('consoleLog');
+      if (consoleLog) {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${level}`;
+        entry.textContent = `[${level.toUpperCase()}] ${args.join(' ')}`;
+        consoleLog.appendChild(entry);
+        consoleLog.scrollTop = consoleLog.scrollHeight;
+      }
+      originalConsole[level](...args);
+    }
+
+    console.log = (...args) => logToUI('info', ...args);
+    console.info = (...args) => logToUI('info', ...args);
+    console.warn = (...args) => logToUI('warn', ...args);
+    console.error = (...args) => logToUI('error', ...args);
+
+    function clearConsoleLog() {
+      document.getElementById('consoleLog').innerHTML = '';
+    }
+
+    function logToSection(sectionId, message, type = 'info') {
+      const log = document.getElementById(sectionId);
+      if (log) {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+      }
+    }
+
+    // Check module status
+    function checkModuleStatus() {
+      const status = document.getElementById('moduleStatus');
+      if (typeof window.PlayerService !== 'undefined') {
+        status.className = 'status ok';
+        status.textContent = '✓ PlayerService loaded successfully';
+      } else {
+        status.className = 'status error';
+        status.textContent = '✗ PlayerService not loaded';
+      }
+    }
+
+    // Mock game setup
+    function setupMockGame() {
+      window.game = {
+        cfg: { numPlayers: 12, enableJuryHouse: true },
+        week: 1,
+        phase: 'lobby',
+        players: [],
+        nominees: [],
+        hohId: null,
+        vetoHolder: null,
+        juryHouse: []
+      };
+
+      window.g = { game: window.game };
+      window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.safeName = (id) => window.getP(id)?.name || 'Unknown';
+    }
+
+    function createMockPlayers(count = 12) {
+      const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack', 'Kate', 'Leo'];
+      window.game.players = [];
+      for (let i = 0; i < count; i++) {
+        window.game.players.push({
+          id: i + 1,
+          name: names[i] || `Player ${i + 1}`,
+          evicted: false,
+          human: i === 0,
+          hoh: false,
+          nominated: false
+        });
+      }
+      updatePlayerDisplay();
+    }
+
+    function updatePlayerDisplay() {
+      const display = document.getElementById('playerDisplay');
+      const alive = window.alivePlayers();
+      display.innerHTML = `
+        <div style="margin-bottom: 10px;">
+          <strong>Total Players:</strong> ${window.game.players.length} |
+          <strong>Alive:</strong> ${alive.length} |
+          <strong>Evicted:</strong> ${window.game.players.length - alive.length}
+        </div>
+        <div class="player-list">
+          ${window.game.players.map(p => `
+            <div class="player-card ${p.evicted ? 'evicted' : ''}">
+              <strong>${p.name}</strong><br>
+              <small>ID: ${p.id}</small><br>
+              <small>${p.evicted ? '❌ Evicted' : '✓ Alive'}</small>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Test functions
+    function testGameInit() {
+      logToSection('initLog', 'Testing game initialization...', 'info');
+      setupMockGame();
+      createMockPlayers(12);
+      
+      // Simulate what buildCast does
+      if (typeof window.PlayerService?.setAlivePlayers === 'function') {
+        window.PlayerService.setAlivePlayers(window.game.players);
+        logToSection('initLog', '✓ PlayerService.setAlivePlayers() called after buildCast', 'info');
+      } else {
+        logToSection('initLog', '✗ PlayerService.setAlivePlayers() not available', 'error');
+      }
+      
+      const alive = window.PlayerService.getAlivePlayers();
+      logToSection('initLog', `✓ PlayerService has ${alive.length} alive players`, 'info');
+      updatePlayerDisplay();
+    }
+
+    function testRebuildGame() {
+      logToSection('initLog', 'Testing rebuild game...', 'info');
+      
+      // Reset all players to alive
+      window.game.players.forEach(p => {
+        p.evicted = false;
+        p.hoh = false;
+        p.nominated = false;
+      });
+      
+      // Simulate what rebuildGame does
+      if (typeof window.PlayerService?.setAlivePlayers === 'function') {
+        window.PlayerService.setAlivePlayers(window.game.players);
+        logToSection('initLog', '✓ PlayerService.setAlivePlayers() called after rebuildGame', 'info');
+      } else {
+        logToSection('initLog', '✗ PlayerService.setAlivePlayers() not available', 'error');
+      }
+      
+      const alive = window.PlayerService.getAlivePlayers();
+      logToSection('initLog', `✓ PlayerService has ${alive.length} alive players`, 'info');
+      updatePlayerDisplay();
+    }
+
+    function testEviction() {
+      logToSection('evictionLog', 'Testing eviction...', 'info');
+      
+      const alive = window.alivePlayers();
+      if (alive.length === 0) {
+        logToSection('evictionLog', '✗ No players to evict', 'error');
+        return;
+      }
+      
+      const victim = alive[0];
+      victim.evicted = true;
+      victim.weekEvicted = window.game.week;
+      
+      // Simulate what handleEvictionLegacy does
+      if (typeof window.PlayerService?.setAlivePlayers === 'function') {
+        window.PlayerService.setAlivePlayers(window.game.players);
+        logToSection('evictionLog', `✓ PlayerService.setAlivePlayers() called after evicting ${victim.name}`, 'info');
+      } else {
+        logToSection('evictionLog', '✗ PlayerService.setAlivePlayers() not available', 'error');
+      }
+      
+      const newAlive = window.PlayerService.getAlivePlayers();
+      logToSection('evictionLog', `✓ PlayerService now has ${newAlive.length} alive players`, 'info');
+      updatePlayerDisplay();
+    }
+
+    function testSelfEviction() {
+      logToSection('evictionLog', 'Testing self-eviction...', 'info');
+      
+      const alive = window.alivePlayers();
+      if (alive.length === 0) {
+        logToSection('evictionLog', '✗ No players to self-evict', 'error');
+        return;
+      }
+      
+      const victim = alive[1] || alive[0];
+      victim.evicted = true;
+      victim.weekEvicted = window.game.week;
+      
+      // Simulate what processEviction in self-eviction.js does
+      if (typeof window.PlayerService?.setAlivePlayers === 'function') {
+        window.PlayerService.setAlivePlayers(window.game.players);
+        logToSection('evictionLog', `✓ PlayerService.setAlivePlayers() called after ${victim.name} self-evicted`, 'info');
+      } else {
+        logToSection('evictionLog', '✗ PlayerService.setAlivePlayers() not available', 'error');
+      }
+      
+      const newAlive = window.PlayerService.getAlivePlayers();
+      logToSection('evictionLog', `✓ PlayerService now has ${newAlive.length} alive players`, 'info');
+      updatePlayerDisplay();
+    }
+
+    function testReturnTwist() {
+      logToSection('returnLog', 'Testing return twist...', 'info');
+      
+      const evicted = window.game.players.filter(p => p.evicted);
+      if (evicted.length === 0) {
+        logToSection('returnLog', '✗ No evicted players to return', 'error');
+        return;
+      }
+      
+      const returnee = evicted[0];
+      returnee.evicted = false;
+      delete returnee.weekEvicted;
+      
+      // Simulate what finalizeAmericaReturnVote does
+      if (typeof window.PlayerService?.setAlivePlayers === 'function') {
+        window.PlayerService.setAlivePlayers(window.game.players);
+        logToSection('returnLog', `✓ PlayerService.setAlivePlayers() called after ${returnee.name} returned`, 'info');
+      } else {
+        logToSection('returnLog', '✗ PlayerService.setAlivePlayers() not available', 'error');
+      }
+      
+      const alive = window.PlayerService.getAlivePlayers();
+      logToSection('returnLog', `✓ PlayerService now has ${alive.length} alive players`, 'info');
+      updatePlayerDisplay();
+    }
+
+    function testSaveLoad() {
+      logToSection('saveLoadLog', 'Testing save/load...', 'info');
+      
+      // Simulate loading a game state
+      const mockSave = JSON.parse(JSON.stringify(window.game));
+      window.game = mockSave;
+      window.g.game = mockSave;
+      
+      // Simulate what the import handler does
+      if (typeof window.PlayerService?.setAlivePlayers === 'function') {
+        window.PlayerService.setAlivePlayers(window.game.players);
+        logToSection('saveLoadLog', '✓ PlayerService.setAlivePlayers() called after loading game', 'info');
+      } else {
+        logToSection('saveLoadLog', '✗ PlayerService.setAlivePlayers() not available', 'error');
+      }
+      
+      const alive = window.PlayerService.getAlivePlayers();
+      logToSection('saveLoadLog', `✓ PlayerService has ${alive.length} alive players after load`, 'info');
+    }
+
+    let subscription = null;
+    function startSubscription() {
+      if (subscription) {
+        logToSection('subscriptionLog', '⚠ Already subscribed', 'warn');
+        return;
+      }
+      
+      logToSection('subscriptionLog', 'Starting subscription...', 'info');
+      subscription = window.PlayerService.subscribe((players) => {
+        logToSection('subscriptionLog', `📢 Subscription callback: ${players.length} alive players`, 'info');
+      });
+      logToSection('subscriptionLog', '✓ Subscribed to PlayerService', 'info');
+    }
+
+    function stopSubscription() {
+      if (!subscription) {
+        logToSection('subscriptionLog', '⚠ Not subscribed', 'warn');
+        return;
+      }
+      
+      subscription();
+      subscription = null;
+      logToSection('subscriptionLog', '✓ Unsubscribed from PlayerService', 'info');
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        checkModuleStatus();
+        testGameInit();
+      }, 100);
+    });
+  </script>
+</body>
+</html>
