@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Self-Evict Dropdown Fix Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0f1320;
+      color: #e6e8ee;
+    }
+    h1 { color: #2d8ab4; }
+    .test-section {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    button {
+      background: #2877a0;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #3090c0; }
+    .log {
+      background: #0a0e18;
+      border: 1px solid #1a2030;
+      padding: 10px;
+      margin: 10px 0;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid #1a2030;
+    }
+    .log-entry.info { color: #79d19a; }
+    .log-entry.warn { color: #f2c862; }
+    .log-entry.error { color: #ff6b6b; }
+    select {
+      background: #10151d;
+      color: #e6e8ee;
+      border: 1px solid #2c3446;
+      padding: 8px;
+      border-radius: 6px;
+      margin: 5px;
+      min-width: 200px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Self-Evict Dropdown Fix Test</h1>
+  <p>This test verifies that the self-evict dropdown is populated when switching to the Advanced tab.</p>
+
+  <div class="test-section">
+    <h2>Test Setup</h2>
+    <button onclick="setupMockGame()">Setup Mock Game (12 players)</button>
+    <div id="gameStatus"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test: Open Settings → Advanced Tab</h2>
+    <p><strong>Expected:</strong> When you click "Open Advanced Tab", the self-evict dropdown should be populated with 12 players.</p>
+    <button onclick="testAdvancedTab()">Open Advanced Tab</button>
+    <div id="dropdownStatus"></div>
+    <div style="margin-top: 10px">
+      <label>Self-evict player:</label>
+      <select id="qaSelfEvictSelect"></select>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Log</h2>
+    <div class="log" id="testLog"></div>
+  </div>
+
+  <script src="js/player/PlayerService.js"></script>
+  <script>
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      document.getElementById('testLog').appendChild(entry);
+      document.getElementById('testLog').scrollTop = document.getElementById('testLog').scrollHeight;
+    }
+
+    function setupMockGame() {
+      // Create mock game with 12 players
+      const mockPlayers = [];
+      const names = ['You', 'Finn', 'Mimi', 'Rae', 'Nova', 'Kai', 'Zed', 'Ivy', 'Ash', 'Lux', 'Remy', 'Blue'];
+      
+      for (let i = 0; i < 12; i++) {
+        mockPlayers.push({
+          id: i + 1,
+          name: names[i],
+          evicted: false,
+          hoh: false,
+          nominated: false
+        });
+      }
+
+      // Set up global game object
+      window.g = window.g || {};
+      window.g.game = window.g.game || {};
+      window.g.game.players = mockPlayers;
+
+      // Update PlayerService
+      if (typeof window.PlayerService?.setAlivePlayers === 'function') {
+        window.PlayerService.setAlivePlayers(mockPlayers);
+        log('✓ PlayerService initialized with 12 players', 'info');
+      } else {
+        log('✗ PlayerService not available', 'error');
+      }
+
+      document.getElementById('gameStatus').innerHTML = 
+        `<strong>Game Status:</strong> 12 players alive`;
+      log('Mock game setup complete', 'info');
+    }
+
+    function testAdvancedTab() {
+      log('Testing Advanced tab self-evict dropdown...', 'info');
+      
+      const select = document.getElementById('qaSelfEvictSelect');
+      if (!select) {
+        log('✗ Dropdown element not found', 'error');
+        return;
+      }
+
+      // Create a mock modal element
+      const modal = document.body;
+      
+      // Call the populate function (simulating what happens when switching tabs)
+      populateSelfEvictDropdown(modal);
+      
+      // Check results
+      const optionCount = select.options.length;
+      if (optionCount === 12) {
+        log(`✓ SUCCESS: Dropdown populated with ${optionCount} players`, 'info');
+        document.getElementById('dropdownStatus').innerHTML = 
+          `<strong style="color: #79d19a">✓ Test Passed:</strong> Dropdown has ${optionCount} options`;
+      } else if (optionCount === 0) {
+        log(`✗ FAILED: Dropdown is empty`, 'error');
+        document.getElementById('dropdownStatus').innerHTML = 
+          `<strong style="color: #ff6b6b">✗ Test Failed:</strong> Dropdown is empty`;
+      } else {
+        log(`⚠ PARTIAL: Dropdown has ${optionCount} options (expected 12)`, 'warn');
+        document.getElementById('dropdownStatus').innerHTML = 
+          `<strong style="color: #f2c862">⚠ Test Partial:</strong> Dropdown has ${optionCount} options`;
+      }
+    }
+
+    // Copied from ui.config-and-settings.js - populateSelfEvictDropdown function
+    function populateSelfEvictDropdown(modal){
+      const sel = modal.querySelector('#qaSelfEvictSelect');
+      if(!sel) return;
+      
+      sel.innerHTML = '';
+      
+      try{
+        let alive = [];
+        
+        // Try PlayerService first (preferred)
+        if(typeof window.PlayerService?.getAlivePlayers === 'function'){
+          alive = window.PlayerService.getAlivePlayers();
+          if(alive.length > 0){
+            console.info('[ui.config-and-settings] Using PlayerService for self-evict dropdown');
+          }
+        }
+        
+        // Fallback to global helpers
+        if(!alive || alive.length === 0){
+          if(typeof g.alivePlayers === 'function'){
+            alive = g.alivePlayers() || [];
+            if(alive.length > 0){
+              console.info('[ui.config-and-settings] Using g.alivePlayers() for self-evict dropdown');
+            }
+          } else if(g.game?.players){
+            alive = (g.game.players || []).filter(p => !p.evicted);
+            if(alive.length > 0){
+              console.info('[ui.config-and-settings] Using g.game.players for self-evict dropdown');
+            }
+          } else if(g.players){
+            alive = (g.players || []).filter(p => !p.evicted);
+            if(alive.length > 0){
+              console.info('[ui.config-and-settings] Using g.players for self-evict dropdown');
+            }
+          }
+        }
+        
+        // Populate dropdown
+        if(alive.length === 0){
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = '(No players available)';
+          placeholder.disabled = true;
+          placeholder.selected = true;
+          sel.appendChild(placeholder);
+          console.warn('[ui.config-and-settings] No alive players found for self-evict dropdown');
+        } else {
+          alive.forEach(p=>{
+            const o = document.createElement('option');
+            o.value = p.id;
+            o.textContent = p.name || p.nm || `Player ${p.id}`;
+            sel.appendChild(o);
+          });
+        }
+      }catch(err){
+        console.warn('[ui.config-and-settings] Error populating self-evict dropdown:', err);
+        const errOption = document.createElement('option');
+        errOption.value = '';
+        errOption.textContent = '(Error loading players)';
+        errOption.disabled = true;
+        sel.appendChild(errOption);
+      }
+    }
+
+    // Auto-setup on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded', 'info');
+      setupMockGame();
+    });
+  </script>
+</body>
+</html>
