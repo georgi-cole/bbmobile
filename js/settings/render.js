@@ -277,7 +277,6 @@
     wireAdvancedActions(modal);
     
     // Wire debug tab minigame launcher
-    wireDebugMinigameLauncher(modal);
 
     return dim;
   }
