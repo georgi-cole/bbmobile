@@ -206,7 +206,15 @@
           try{
             global.initCastTab(modal);
           }catch(e){
-            console.warn('[settings/render] initCastTab failed', e);
+            console.warn(
+              '[settings/render] initCastTab failed for modal:',
+              {
+                modalTag: modal && modal.tagName,
+                modalClass: modal && modal.className,
+                modalId: modal && modal.id
+              },
+              'Error:', e
+            );
           }
         }
       }
