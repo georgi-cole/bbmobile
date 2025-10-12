@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Logic v2 Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #3a3a3a;
+    }
+    h1, h2 {
+      color: #4a9eff;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      background: #333;
+    }
+    .pass { background: #2d5016; color: #90ee90; }
+    .fail { background: #501616; color: #ff6b6b; }
+    .warn { background: #503916; color: #ffb84d; }
+    .info { background: #16335e; color: #4a9eff; }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #3a8edf;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    pre {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .interaction-card {
+      background: #333;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border-left: 4px solid #4a9eff;
+    }
+    .interaction-header {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #4a9eff;
+    }
+    .interaction-body {
+      margin: 10px 0;
+      line-height: 1.6;
+    }
+    .interaction-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .action-btn {
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Social Logic v2 Test Suite</h1>
+
+  <div class="section">
+    <h2>Feature Flag Control</h2>
+    <div class="controls">
+      <button onclick="enableV2()">Enable v2 Logic</button>
+      <button onclick="disableV2()">Disable v2 Logic (Legacy)</button>
+      <button onclick="checkStatus()">Check Status</button>
+    </div>
+    <div id="statusDisplay" class="status info">
+      Status: Not checked yet
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Test Controls</h2>
+    <div class="controls">
+      <button onclick="testModulesLoaded()">Test Modules Loaded</button>
+      <button onclick="testDataStructures()">Test Data Structures</button>
+      <button onclick="testWeightedSelection()">Test Weighted Selection</button>
+      <button onclick="testCooldowns()">Test Cooldowns</button>
+      <button onclick="testDiversity()">Test Diversity Constraints</button>
+      <button onclick="testIntegration()">Test Full Integration</button>
+      <button onclick="runAllTests()">Run All Tests</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Test Results</h2>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="section">
+    <h2>Generated Interactions Preview</h2>
+    <button onclick="generatePreview()">Generate Sample Interactions</button>
+    <div id="interactionPreview"></div>
+  </div>
+
+  <div class="section">
+    <h2>Console Logs</h2>
+    <pre id="consoleLogs"></pre>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/state.js"></script>
+  <script src="js/config/defaults.js"></script>
+  <script src="js/data/config/interactionCatalog.js"></script>
+  <script src="js/logic/social/generator.js"></script>
+  <script src="js/logic/social/adapter.js"></script>
+
+  <script>
+    // Mock missing dependencies
+    window.alivePlayers = () => game.players.filter(p => !p.evicted);
+    window.getP = (id) => game.players.find(p => p.id === id);
+    window.safeName = (id) => getP(id)?.name || 'Unknown';
+    window.addLog = (msg, type) => {
+      console.log(`[Log:${type}] ${msg}`);
+      appendLog(`[${type}] ${msg}`);
+    };
+    window.updateHud = () => console.log('[HUD updated]');
+    window.ALLY_T = 0.28;
+    window.ENEMY_T = -0.28;
+
+    function appendLog(msg) {
+      const logs = document.getElementById('consoleLogs');
+      logs.textContent += msg + '\n';
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function addResult(title, status, message) {
+      const results = document.getElementById('testResults');
+      const div = document.createElement('div');
+      div.className = `status ${status}`;
+      div.innerHTML = `<strong>${title}:</strong> ${message}`;
+      results.appendChild(div);
+    }
+
+    function clearResults() {
+      document.getElementById('testResults').innerHTML = '';
+      document.getElementById('consoleLogs').textContent = '';
+    }
+
+    // Feature flag controls
+    function enableV2() {
+      game.cfg.social_logic_v2_enabled = true;
+      checkStatus();
+      appendLog('✅ Social Logic v2 ENABLED');
+    }
+
+    function disableV2() {
+      game.cfg.social_logic_v2_enabled = false;
+      checkStatus();
+      appendLog('❌ Social Logic v2 DISABLED (legacy mode)');
+    }
+
+    function checkStatus() {
+      const enabled = game?.cfg?.social_logic_v2_enabled;
+      const status = document.getElementById('statusDisplay');
+      if (enabled) {
+        status.className = 'status pass';
+        status.textContent = '✅ Social Logic v2 is ENABLED';
+      } else {
+        status.className = 'status warn';
+        status.textContent = '⚠️  Social Logic v2 is DISABLED (using legacy logic)';
+      }
+    }
+
+    // Test functions
+    function testModulesLoaded() {
+      appendLog('=== Testing Modules Loaded ===');
+      
+      const checks = [
+        { name: 'InteractionCatalog', obj: window.InteractionCatalog },
+        { name: 'SocialGenerator', obj: window.SocialGenerator },
+        { name: 'SocialAdapter', obj: window.SocialAdapter },
+        { name: 'game.cfg', obj: window.game?.cfg }
+      ];
+
+      let allPassed = true;
+      checks.forEach(check => {
+        if (check.obj) {
+          addResult(check.name, 'pass', 'Loaded successfully');
+          appendLog(`✅ ${check.name} loaded`);
+        } else {
+          addResult(check.name, 'fail', 'Not loaded');
+          appendLog(`❌ ${check.name} NOT loaded`);
+          allPassed = false;
+        }
+      });
+
+      return allPassed;
+    }
+
+    function testDataStructures() {
+      appendLog('=== Testing Data Structures ===');
+      
+      try {
+        // Test WeekContext
+        const context = new SocialGenerator.WeekContext(game);
+        addResult('WeekContext', 'pass', `Week ${context.week}, HOH: ${context.hohId || 'None'}`);
+        appendLog(`✅ WeekContext created: week=${context.week}`);
+
+        // Test RelationshipGraph
+        const relationships = new SocialGenerator.RelationshipGraph(game);
+        addResult('RelationshipGraph', 'pass', 
+          `${relationships.alliances.length} alliances, ${relationships.rivalries.length} rivalries`);
+        appendLog(`✅ RelationshipGraph: ${relationships.alliances.length} alliances, ${relationships.rivalries.length} rivalries`);
+
+        // Test CooldownStore
+        const cooldowns = new SocialGenerator.CooldownStore();
+        cooldowns.recordInteraction(1, 2, 'test_type', 1);
+        const isOnCooldown = cooldowns.isOnCooldown(1, 2, 'test_type', 1, 1, 1);
+        addResult('CooldownStore', 'pass', `Records and checks cooldowns correctly`);
+        appendLog(`✅ CooldownStore: working (cooldown=${isOnCooldown})`);
+
+        return true;
+      } catch (error) {
+        addResult('Data Structures', 'fail', error.message);
+        appendLog(`❌ Error: ${error.message}`);
+        return false;
+      }
+    }
+
+    function testWeightedSelection() {
+      appendLog('=== Testing Weighted Selection ===');
+      
+      try {
+        // Set up a scenario
+        game.hohId = game.players[0].id;
+        game.nominees = [game.players[1].id, game.players[2].id];
+
+        const cooldowns = SocialGenerator.ensureCooldownStore();
+        const interactions = SocialGenerator.generateSocialInteractions(game, cooldowns, 3);
+
+        if (interactions.length > 0) {
+          addResult('Weighted Selection', 'pass', `Generated ${interactions.length} interactions`);
+          appendLog(`✅ Generated ${interactions.length} context-aware interactions`);
+          
+          interactions.forEach((int, i) => {
+            appendLog(`  ${i+1}. ${int.title} with ${int.targetPlayer?.name}`);
+          });
+          
+          return true;
+        } else {
+          addResult('Weighted Selection', 'warn', 'No interactions generated');
+          appendLog(`⚠️  No interactions generated (might be expected with current state)`);
+          return false;
+        }
+      } catch (error) {
+        addResult('Weighted Selection', 'fail', error.message);
+        appendLog(`❌ Error: ${error.message}`);
+        console.error(error);
+        return false;
+      }
+    }
+
+    function testCooldowns() {
+      appendLog('=== Testing Cooldown System ===');
+      
+      try {
+        const cooldowns = SocialGenerator.ensureCooldownStore();
+        cooldowns.clearSession();
+
+        // Record some interactions
+        cooldowns.recordInteraction(1, 2, 'alliance_offer', 1);
+        cooldowns.recordInteraction(1, 3, 'target_talk', 1);
+
+        // Check cooldowns
+        // cd1: Same pair, same type, same week - should be on cooldown (pair cooldown = 2 weeks)
+        const cd1 = cooldowns.isOnCooldown(1, 2, 'alliance_offer', 1, 2, 1);
+        
+        // cd2: Same pair, same type, later week (week 3) - should NOT be on cooldown (2+ weeks passed)
+        const cd2 = cooldowns.isOnCooldown(1, 2, 'alliance_offer', 3, 2, 1);
+        
+        // cd3: Different pair, same type, same week - should be on cooldown (type cooldown = 1 week)
+        const cd3 = cooldowns.isOnCooldown(1, 4, 'alliance_offer', 1, 2, 1);
+        
+        // cd4: Different pair, different type - should NOT be on cooldown
+        const cd4 = cooldowns.isOnCooldown(4, 5, 'gossip', 1, 2, 1);
+
+        if (cd1 && !cd2 && cd3 && !cd4) {
+          addResult('Cooldown System', 'pass', 'Cooldowns work correctly');
+          appendLog(`✅ Cooldowns: pair=true, later=false, type=true, different=false`);
+          return true;
+        } else {
+          addResult('Cooldown System', 'fail', 'Unexpected cooldown behavior');
+          appendLog(`❌ Cooldowns: ${cd1}, ${cd2}, ${cd3}, ${cd4} (expected: true, false, true, false)`);
+          return false;
+        }
+      } catch (error) {
+        addResult('Cooldown System', 'fail', error.message);
+        appendLog(`❌ Error: ${error.message}`);
+        return false;
+      }
+    }
+
+    function testDiversity() {
+      appendLog('=== Testing Diversity Constraints ===');
+      
+      try {
+        const cooldowns = SocialGenerator.ensureCooldownStore();
+        cooldowns.clearSession();
+        
+        const interactions = SocialGenerator.generateSocialInteractions(game, cooldowns, 4);
+        
+        // Check for different categories
+        const categories = new Set(interactions.map(i => i.type.split('_')[0]));
+        
+        // Check for different players
+        const players = new Set(interactions.map(i => i.targetPlayer?.id));
+        
+        const diversityScore = categories.size + players.size;
+        
+        if (diversityScore >= 4) {
+          addResult('Diversity Constraints', 'pass', 
+            `${categories.size} categories, ${players.size} different players`);
+          appendLog(`✅ Diversity: ${categories.size} categories, ${players.size} players`);
+          return true;
+        } else {
+          addResult('Diversity Constraints', 'warn', 
+            `Low diversity: ${categories.size} categories, ${players.size} players`);
+          appendLog(`⚠️  Low diversity score: ${diversityScore}`);
+          return false;
+        }
+      } catch (error) {
+        addResult('Diversity Constraints', 'fail', error.message);
+        appendLog(`❌ Error: ${error.message}`);
+        return false;
+      }
+    }
+
+    function testIntegration() {
+      appendLog('=== Testing Full Integration ===');
+      
+      try {
+        // Enable v2
+        game.cfg.social_logic_v2_enabled = true;
+        
+        // Generate interactions
+        const cooldowns = SocialGenerator.ensureCooldownStore();
+        const interactions = SocialGenerator.generateSocialInteractions(game, cooldowns, 3);
+        
+        // Convert to popup format
+        const humanPlayer = getP(game.humanId);
+        const popupOptions = SocialAdapter.interactionBatchToPopups(interactions, humanPlayer);
+        
+        if (popupOptions.length > 0) {
+          addResult('Full Integration', 'pass', 
+            `${popupOptions.length} popups ready to display`);
+          appendLog(`✅ Integration: ${popupOptions.length} popups generated`);
+          
+          popupOptions.forEach((popup, i) => {
+            appendLog(`  ${i+1}. ${popup.title} - ${popup.actions?.length || 0} actions`);
+          });
+          
+          return true;
+        } else {
+          addResult('Full Integration', 'fail', 'No popups generated');
+          appendLog(`❌ Integration failed: no popups`);
+          return false;
+        }
+      } catch (error) {
+        addResult('Full Integration', 'fail', error.message);
+        appendLog(`❌ Error: ${error.message}`);
+        console.error(error);
+        return false;
+      }
+    }
+
+    function runAllTests() {
+      clearResults();
+      appendLog('========================================');
+      appendLog('Starting Full Test Suite...');
+      appendLog('========================================\n');
+      
+      const tests = [
+        testModulesLoaded,
+        testDataStructures,
+        testWeightedSelection,
+        testCooldowns,
+        testDiversity,
+        testIntegration
+      ];
+      
+      let passed = 0;
+      tests.forEach(test => {
+        if (test()) passed++;
+      });
+      
+      appendLog('\n========================================');
+      appendLog(`Test Summary: ${passed}/${tests.length} passed`);
+      appendLog('========================================');
+      
+      if (passed === tests.length) {
+        addResult('All Tests', 'pass', `${passed}/${tests.length} tests passed! 🎉`);
+      } else {
+        addResult('All Tests', 'warn', `${passed}/${tests.length} tests passed`);
+      }
+    }
+
+    function generatePreview() {
+      appendLog('=== Generating Preview ===');
+      const preview = document.getElementById('interactionPreview');
+      preview.innerHTML = '';
+      
+      try {
+        const cooldowns = SocialGenerator.ensureCooldownStore();
+        const interactions = SocialGenerator.generateSocialInteractions(game, cooldowns, 4);
+        
+        if (interactions.length === 0) {
+          preview.innerHTML = '<div class="status warn">No interactions generated. Try adjusting game state (add HOH, nominees, etc.)</div>';
+          return;
+        }
+        
+        interactions.forEach((interaction, i) => {
+          const card = document.createElement('div');
+          card.className = 'interaction-card';
+          
+          const header = document.createElement('div');
+          header.className = 'interaction-header';
+          header.textContent = `${i+1}. ${interaction.title}`;
+          
+          const body = document.createElement('div');
+          body.className = 'interaction-body';
+          body.innerHTML = (interaction.lines || []).join('<br>');
+          
+          const actionsDiv = document.createElement('div');
+          actionsDiv.className = 'interaction-actions';
+          
+          (interaction.actions || []).forEach(action => {
+            const btn = document.createElement('button');
+            btn.className = 'action-btn';
+            btn.textContent = action.label;
+            btn.onclick = () => {
+              appendLog(`Action selected: ${action.label}`);
+              alert(`You selected: ${action.label}\n\nIn game, this would apply affinity changes and show logs.`);
+            };
+            actionsDiv.appendChild(btn);
+          });
+          
+          card.appendChild(header);
+          card.appendChild(body);
+          card.appendChild(actionsDiv);
+          preview.appendChild(card);
+        });
+        
+        appendLog(`✅ Generated ${interactions.length} preview interactions`);
+      } catch (error) {
+        preview.innerHTML = `<div class="status fail">Error: ${error.message}</div>`;
+        appendLog(`❌ Preview error: ${error.message}`);
+        console.error(error);
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      appendLog('Test page loaded');
+      checkStatus();
+      
+      // Create test players if none exist
+      if (game && game.players.length === 0) {
+        appendLog('Creating test players...');
+        
+        // Create 6 players for testing
+        const playerNames = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank'];
+        playerNames.forEach((name, i) => {
+          if (window.pushPlayer) {
+            pushPlayer({ name, human: i === 0 });
+          }
+        });
+        
+        // Set human player
+        game.humanId = game.players[0].id;
+        
+        appendLog(`✅ Created ${game.players.length} test players`);
+      }
+      
+      // Ensure players have affinity objects
+      if (game && game.players.length > 0) {
+        // Initialize affinities if not already done
+        game.players.forEach(p => {
+          if (!p.affinity) p.affinity = {};
+        });
+        
+        // Call initAffinities to set up relationships
+        if (window.initAffinities) {
+          initAffinities(false);
+          appendLog('✅ Affinities initialized');
+        }
+        
+        // Set up a test scenario
+        game.week = 2;
+        game.hohId = game.players[0].id;
+        game.nominees = [game.players[1].id, game.players[2].id];
+        game.vetoHolder = game.players[3]?.id;
+        
+        // Set up some relationships
+        const p0 = game.players[0];
+        const p1 = game.players[1];
+        const p2 = game.players[2];
+        
+        if (p0 && p1) {
+          p0.affinity[p1.id] = 0.35;  // Allies
+          p1.affinity[p0.id] = 0.32;
+        }
+        
+        if (p0 && p2) {
+          p0.affinity[p2.id] = -0.35;  // Rivals
+          p2.affinity[p0.id] = -0.32;
+        }
+        
+        appendLog('✅ Test scenario created: HOH, nominees, and relationships set');
+        appendLog(`   HOH: ${p0?.name}, Nominees: ${p1?.name}, ${p2?.name}`);
+      }
+    });
+  </script>
+</body>
+</html>

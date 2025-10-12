@@ -465,6 +465,15 @@
     const others=alive.filter(p=>p.id!==you.id);
     if(!others.length) return;
 
+    // Check if Social Logic v2 is enabled
+    const cfg = g.cfg || {};
+    if(cfg.social_logic_v2_enabled && global.SocialGenerator && global.SocialAdapter) {
+      buildSocialDecisionsV2();
+      return;
+    }
+
+    // Legacy random logic continues below
+
     const allyTarget = pick(others);
     if(g.__socialShown<3){
       queueDecision({
@@ -528,6 +537,140 @@
       queueDecision({
         title: 'Flip Plan',
         targetPlayer: press, // Add player reference for avatar
+        lines: [
+          `${press.name} asks you to consider flipping a vote later.`,
+          'How do you respond?'
+        ],
+        actions: [
+          { label:'Promise', onChoose:()=>{ applyInteraction(you.id, press.id, 'positive'); }},
+          { label:'Reject', onChoose:()=>{ applyInteraction(you.id, press.id, 'negative'); }},
+        ]
+      });
+      g.__socialShown++;
+    }
+
+    showNextDecision();
+  }
+
+  // ===== Social Logic v2 =====
+  
+  function buildSocialDecisionsV2(){
+    ensureSocialState();
+    const g=global.game; if(!g) return;
+    const you=global.getP?.(g.humanId);
+    if(!you || you.evicted) return;
+
+    // Clear session at start
+    global.SocialGenerator.resetCooldownSession();
+    g.__socialShown = 0;
+
+    // Generate interactions using context-aware logic
+    const cooldowns = global.SocialGenerator.ensureCooldownStore();
+    const interactions = global.SocialGenerator.generateSocialInteractions(g, cooldowns, 3);
+
+    if(!interactions || interactions.length === 0) {
+      console.warn('[Social v2] No interactions generated, falling back to legacy');
+      buildSocialDecisionsLegacy();
+      return;
+    }
+
+    // Convert interactions to popup format and queue
+    const popupOptions = global.SocialAdapter.interactionBatchToPopups(interactions, you);
+    
+    for(const options of popupOptions) {
+      if(g.__socialShown < 3) {
+        queueDecision({
+          title: options.title,
+          targetPlayer: options.player,
+          lines: options.bodyText,
+          actions: options.actions.map(action => ({
+            label: action.label,
+            onChoose: action.onClick
+          }))
+        });
+        g.__socialShown++;
+      }
+    }
+
+    console.info(`[Social v2] Generated ${interactions.length} context-aware interactions`);
+    showNextDecision();
+  }
+
+  function buildSocialDecisionsLegacy(){
+    // Legacy logic extracted for fallback
+    ensureSocialState();
+    const g=global.game; if(!g) return;
+    const alive=global.alivePlayers?.()||[];
+    const you=global.getP?.(g.humanId);
+    if(!you || you.evicted) return;
+
+    g.__socialShown = 0;
+    const others=alive.filter(p=>p.id!==you.id);
+    if(!others.length) return;
+
+    const allyTarget = pick(others);
+    if(g.__socialShown<3){
+      queueDecision({
+        title: 'Alliance Offer',
+        targetPlayer: allyTarget,
+        lines: [
+          `${allyTarget.name} wants an alliance with you.`,
+          'Do you accept?'
+        ],
+        actions: [
+          { label:'Accept', onChoose:()=>{
+            const AL = (global.ALLY_T ?? 0.28);
+            const curY = you.affinity?.[allyTarget.id]??0;
+            const curT = allyTarget.affinity?.[you.id]??0;
+            const bumpY = Math.max(AL+0.07 - curY, 0.18);
+            const bumpT = Math.max(AL+0.05 - curT, 0.14);
+            you.affinity[allyTarget.id] = curY + bumpY;
+            allyTarget.affinity[you.id] = curT + bumpT;
+            global.addLog?.(`You and ${allyTarget.name} made a safety pact.`, 'ok');
+            global.updateHud?.();
+          }},
+          { label:'Decline', onChoose:()=>{
+            you.affinity[allyTarget.id]=(you.affinity?.[allyTarget.id]??0)-0.06;
+            allyTarget.affinity[you.id]=(allyTarget.affinity?.[you.id]??0)-0.10;
+            global.addLog?.(`You turned down an alliance with ${allyTarget.name}.`,'muted');
+            global.updateHud?.();
+          }},
+        ]
+      });
+      g.__socialShown++;
+    }
+
+    const instigator = pick(others);
+    const possibleTargets = others.filter(p=>p.id!==instigator.id);
+    const tgt = possibleTargets.length ? pick(possibleTargets) : null;
+    if(g.__socialShown<3){
+      queueDecision({
+        title: 'Target Talk',
+        targetPlayer: instigator,
+        lines: [
+          `${instigator.name} suggests targeting ${tgt?.name||'someone'}.`,
+          'Do you agree to target them this week?'
+        ],
+        actions: [
+          { label:'Agree', onChoose:()=>{
+            applyInteraction(you.id, instigator.id, 'positive');
+            if(tgt){
+              you.affinity[tgt.id]=(you.affinity?.[tgt.id]??0)-0.12;
+              global.addLog?.(`You quietly agreed to push ${tgt.name}.`,'warn');
+              global.updateHud?.();
+            }
+          }},
+          { label:'Refuse', onChoose:()=>{ applyInteraction(you.id, instigator.id, 'negative'); }},
+        ]
+      });
+      g.__socialShown++;
+    }
+
+    if(others.length>=3 && Math.random()<0.6 && g.__socialShown<3){
+      const press = pick(others);
+      queueDecision({
+        title: 'Flip Plan',
+        targetPlayer: press,
         lines: [
           `${press.name} asks you to consider flipping a vote later.`,
           'How do you respond?'
