@@ -72,10 +72,9 @@
         <span id="timerWeekBadge" class="timer-week-badge" aria-label="Current week">Week 1</span>
       </div>
       
-      <!-- Row 2: Phase + Next -->
-      <div class="dashboard-timer-row-2" aria-label="Current and next phase">
+      <!-- Row 2: Current Phase (full name) -->
+      <div class="dashboard-timer-row-2" aria-label="Current phase">
         <span id="timerPhaseName" class="timer-phase-name">Intro</span>
-        <span id="timerNextPhaseBadge" class="timer-next-badge" aria-label="Next phase">HOH</span>
       </div>
       
       <!-- Timer (centered and bigger) -->
@@ -117,6 +116,11 @@
             <canvas id="confetti"></canvas>
             <!-- Live badge for voting phases (INSIDE viewport) -->
             <div class="liveBadge" id="liveBadge" aria-live="polite" aria-label="Live voting in progress" style="display:none;">LIVE</div>
+            <!-- Twist badge for active twists (INSIDE viewport, bottom-right) -->
+            <div class="twistBadge" id="twistBadge" aria-live="polite" aria-label="Active twist" style="display:none;">
+              <span class="twistBadgeDot"></span>
+              <span class="twistBadgeText">Triple Eviction</span>
+            </div>
           </div>
         </div>
       </div>
@@ -443,7 +447,6 @@
     const seasonBadge = document.getElementById('timerSeasonBadge');
     const weekBadge = document.getElementById('timerWeekBadge');
     const phaseName = document.getElementById('timerPhaseName');
-    const nextPhaseBadge = document.getElementById('timerNextPhaseBadge');
     
     // Update season
     if(seasonBadge){
@@ -466,64 +469,12 @@
       }
       weekBadge.textContent = weekText;
       
-      // Determine phase name (shortened to 3-4 letters or emojis)
+      // Determine phase name (full name instead of abbreviation)
       let phaseText = '';
       if(game.phase && game.phase !== 'lobby'){
-        const phaseNames = {
-          'opening': 'Intro',
-          'intermission': 'Strat',
-          'hoh': 'HOH',
-          'nominations': 'Nom',
-          'veto_comp': 'POV',
-          'veto': 'POV',
-          'veto_ceremony': 'Cere',
-          'livevote': 'Vote',
-          'jury': 'Jury',
-          'return_twist': 'Ret',
-          'final3_comp1': 'F3-1',
-          'final3_comp2': 'F3-2',
-          'final3_decision': 'F3 Dec',
-          'social': 'Soc',
-          'social_intermission': 'Soc'
-        };
-        phaseText = phaseNames[game.phase] || game.phase.substring(0, 4).toUpperCase();
+        phaseText = getFullPhaseName(game.phase);
       }
       phaseName.textContent = phaseText;
-      phaseName.title = getFullPhaseName(game.phase); // Tooltip for full name
-      
-      // Determine next phase (shortened)
-      if(nextPhaseBadge){
-        let nextPhaseText = '';
-        const currentPhase = game.phase;
-        
-        if(currentPhase && currentPhase !== 'lobby'){
-          // Phase progression logic
-          const phaseFlow = {
-            'opening': 'HOH',
-            'intermission': 'HOH',
-            'hoh': 'Nom',
-            'nominations': 'POV',
-            'veto_comp': 'Cere',
-            'veto': 'Cere',
-            'veto_ceremony': 'Vote',
-            'livevote': aliveCount <= 3 ? 'F3' : 'HOH',
-            'jury': 'Vote',
-            'return_twist': 'HOH',
-            'final3_comp1': 'F3-2',
-            'final3_comp2': 'Dec',
-            'final3_decision': 'End',
-            'social': 'HOH',
-            'social_intermission': 'Nom'
-          };
-          
-          nextPhaseText = phaseFlow[currentPhase] || 'Next';
-        } else {
-          nextPhaseText = 'Open';
-        }
-        
-        nextPhaseBadge.textContent = nextPhaseText;
-        nextPhaseBadge.title = `Next: ${nextPhaseText}`;
-      }
     }
     
     // Update players status bar
