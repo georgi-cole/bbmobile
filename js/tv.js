@@ -164,16 +164,19 @@
       return;
     }
     
-    // Check for active twist
+    // Check for active twist (supporting legacy flags for backward compatibility)
     const isDouble = game.__twistMode === 'double' || game.doubleEvictionWeek === true;
     const isTriple = game.__twistMode === 'triple' || game.tripleEvictionWeek === true;
     
-    if(isTriple){
+    // Only show badge if twist is active AND badge has been shown (modal dismissed)
+    const shouldShowBadge = game.__twistBadgeShown === true;
+    
+    if(isTriple && shouldShowBadge){
       setTwistBadge('triple', true);
-    } else if(isDouble){
+    } else if(isDouble && shouldShowBadge){
       setTwistBadge('double', true);
     } else if(twistBadgeVisible){
-      // Clear badge if no twist is active
+      // Clear badge if no twist is active or badge not yet shown
       setTwistBadge(null, false);
     }
   }
