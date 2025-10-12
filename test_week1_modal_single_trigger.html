@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Week 1 Modal - Single Trigger Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d151f;
+      color: #e3ecf5;
+      min-height: 100vh;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px;
+      background: rgba(26, 47, 68, 0.6);
+      border-radius: 12px;
+      border: 1px solid #3d5a75;
+    }
+    
+    h1 {
+      color: #ffffff;
+      margin-bottom: 20px;
+    }
+    
+    .test-description {
+      background: rgba(13, 21, 31, 0.7);
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #3563a7;
+      margin-bottom: 30px;
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .test-btn {
+      background: linear-gradient(135deg, #3563a7, #284866);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 15px 25px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    
+    .test-btn:hover {
+      background: linear-gradient(135deg, #4574b8, #335577);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(53, 99, 167, 0.4);
+    }
+    
+    .test-btn:active {
+      transform: translateY(0);
+    }
+    
+    .status-log {
+      background: #0a0f15;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #1a2f44;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .log-entry {
+      margin-bottom: 8px;
+      padding: 5px;
+      border-radius: 4px;
+    }
+    
+    .log-success {
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+    }
+    
+    .log-warning {
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.1);
+    }
+    
+    .log-error {
+      color: #f87171;
+      background: rgba(248, 113, 113, 0.1);
+    }
+    
+    .log-info {
+      color: #60a5fa;
+      background: rgba(96, 165, 250, 0.1);
+    }
+    
+    .modal-count {
+      font-size: 24px;
+      font-weight: bold;
+      padding: 20px;
+      background: rgba(13, 21, 31, 0.9);
+      border-radius: 8px;
+      text-align: center;
+      margin-top: 20px;
+    }
+    
+    .modal-count.success {
+      border: 2px solid #4ade80;
+      color: #4ade80;
+    }
+    
+    .modal-count.error {
+      border: 2px solid #f87171;
+      color: #f87171;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 Week 1 Modal - Single Trigger Test</h1>
+    
+    <div class="test-description">
+      <strong>Test Purpose:</strong> Verify that the Week 1 modal appears only once when transitioning from opening to HOH competition.
+      <br><br>
+      <strong>Expected Result:</strong> Modal count should be exactly 1 after triggering game start.
+      <br><br>
+      <strong>How to Test:</strong> Click the test buttons below and observe the modal count.
+    </div>
+    
+    <div class="test-controls">
+      <button class="test-btn" onclick="testSkipToWeek1()">
+        🚀 Test 1: Bootstrap skipToWeek1() Flow
+        <br>
+        <small style="opacity: 0.7;">Simulates quick start to Week 1</small>
+      </button>
+      
+      <button class="test-btn" onclick="testFinishOpening()">
+        🎬 Test 2: FinishOpening() Flow  
+        <br>
+        <small style="opacity: 0.7;">Simulates intro completion to Week 1</small>
+      </button>
+      
+      <button class="test-btn" onclick="testProceedToHOH()">
+        🔄 Test 3: JuryReturn proceedToHOH() Flow
+        <br>
+        <small style="opacity: 0.7;">Simulates week transition after juror return</small>
+      </button>
+      
+      <button class="test-btn" onclick="resetTest()">
+        🔄 Reset Test
+      </button>
+    </div>
+    
+    <div id="modalCount" class="modal-count">
+      Modal shown: <span id="countValue">0</span> time(s)
+    </div>
+    
+    <h3>Test Log:</h3>
+    <div id="statusLog" class="status-log"></div>
+  </div>
+
+  <!-- Load game scripts -->
+  <script src="js/ui.week-intro.js"></script>
+  
+  <script>
+    // Mock minimal game environment
+    let modalShownCount = 0;
+    let testLog = [];
+    
+    // Track original function
+    const originalShowWeekIntroModal = window.showWeekIntroModal;
+    
+    // Wrap the modal function to count calls
+    window.showWeekIntroModal = function(weekNumber, callback) {
+      modalShownCount++;
+      updateModalCount();
+      log(`Week ${weekNumber} modal triggered!`, 'info');
+      
+      // Call original to show the actual modal
+      if (originalShowWeekIntroModal) {
+        originalShowWeekIntroModal.call(this, weekNumber, callback);
+      } else if (callback) {
+        setTimeout(callback, 100);
+      }
+    };
+    
+    // Mock game object
+    window.game = {
+      phase: 'opening',
+      week: 1,
+      cfg: {
+        tIntermission: 4
+      },
+      players: []
+    };
+    
+    // Mock minimal required functions
+    window.updateHud = function() {
+      log('updateHud() called', 'info');
+    };
+    
+    window.renderPanel = function() {
+      log('renderPanel() called', 'info');
+    };
+    
+    window.tv = {
+      say: function(msg) {
+        log(`TV: ${msg}`, 'info');
+      }
+    };
+    
+    window.setPhase = function(phase, duration, callback) {
+      log(`setPhase('${phase}', ${duration}) called`, 'info');
+      window.game.phase = phase;
+      if (callback) {
+        setTimeout(callback, 100);
+      }
+    };
+    
+    // Mock startHOH (will be wrapped by ui.week-intro.js)
+    window.startHOH = function() {
+      log('startHOH() called', 'success');
+    };
+    
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+    
+    // Test functions
+    function testSkipToWeek1() {
+      log('=== Test 1: Bootstrap skipToWeek1() ===', 'warning');
+      resetGameState();
+      
+      // Simulate bootstrap.js skipToWeek1
+      const game = window.game;
+      game.phase = 'intermission';
+      game.week = 1;
+      
+      window.updateHud?.();
+      window.renderPanel?.();
+      window.tv?.say?.('Week 1');
+      
+      // This should trigger startHOH which is wrapped to show modal
+      window.setPhase?.('intermission', 3, () => window.startHOH?.());
+      
+      log('Test 1 complete - Check modal count above', 'success');
+    }
+    
+    function testFinishOpening() {
+      log('=== Test 2: FinishOpening() ===', 'warning');
+      resetGameState();
+      
+      // Simulate ui.hud-and-router.js finishOpening
+      const game = window.game;
+      
+      window.tv?.say?.('HOH Competition soon…');
+      window.setPhase('intermission', game.cfg?.tIntermission || 4, () => {
+        window.tv?.say?.('HOH Competition');
+        window.startHOH?.();
+      });
+      
+      log('Test 2 complete - Check modal count above', 'success');
+    }
+    
+    function testProceedToHOH() {
+      log('=== Test 3: JuryReturn proceedToHOH() ===', 'warning');
+      resetGameState();
+      
+      // Simulate jury_return.js proceedToHOH
+      const g = window.game || {};
+      window.tv?.say?.('Intermission');
+      g.week = (g.week || 0) + 1;
+      
+      // After our fix, this should NOT call showWeekIntroModal directly
+      window.setPhase?.('intermission', g.cfg?.tIntermission || 4, () => window.startHOH?.());
+      window.updateHud?.();
+      
+      log('Test 3 complete - Check modal count above', 'success');
+    }
+    
+    function resetGameState() {
+      window.game.__weekIntroShownFor = null;
+      window.game.week = 1;
+      window.game.phase = 'opening';
+    }
+    
+    function resetTest() {
+      modalShownCount = 0;
+      testLog = [];
+      resetGameState();
+      updateModalCount();
+      document.getElementById('statusLog').innerHTML = '';
+      log('Test environment reset', 'success');
+    }
+    
+    function updateModalCount() {
+      const countEl = document.getElementById('countValue');
+      const containerEl = document.getElementById('modalCount');
+      
+      countEl.textContent = modalShownCount;
+      
+      // Update styling based on count
+      containerEl.className = 'modal-count';
+      if (modalShownCount === 1) {
+        containerEl.classList.add('success');
+      } else if (modalShownCount > 1) {
+        containerEl.classList.add('error');
+      }
+    }
+    
+    function log(message, type = 'info') {
+      testLog.push({ message, type, time: new Date().toISOString().split('T')[1].split('.')[0] });
+      
+      const logEl = document.getElementById('statusLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${testLog[testLog.length - 1].time}] ${message}`;
+      
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    // Initial log
+    log('Test environment initialized', 'success');
+    log('Week intro wrapper will be applied when startHOH is defined', 'info');
+    
+    // Wait for wrapper to be applied
+    setTimeout(() => {
+      if (window.startHOH.__wrappedForWeekIntro) {
+        log('✓ startHOH successfully wrapped for week intro modal', 'success');
+      } else {
+        log('⚠ startHOH not wrapped yet - wrapper may still be pending', 'warning');
+      }
+    }, 500);
+  </script>
+</body>
+</html>
