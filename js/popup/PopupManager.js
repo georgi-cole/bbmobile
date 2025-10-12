@@ -31,13 +31,18 @@
   }
 
   // Get inter-popup delay with reduced-motion support
-  function getInterPopupDelay(){
+  function getInterPopupDelay(customDelay){
     const defaultDelay = 800;
     
     // Check if user prefers reduced motion
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(prefersReducedMotion){
       return 100; // Minimal delay for reduced motion
+    }
+    
+    // Use custom delay if provided
+    if(typeof customDelay === 'number' && customDelay >= 0){
+      return customDelay;
     }
     
     // Get delay from CSS variable or use default
@@ -77,7 +82,11 @@
     }
 
     PopupQueue.isProcessing = true;
-    const popupFn = PopupQueue.queue.shift();
+    const queueItem = PopupQueue.queue.shift();
+    
+    // Support both function-only and object with options
+    const popupFn = typeof queueItem === 'function' ? queueItem : queueItem.fn;
+    const options = typeof queueItem === 'object' ? queueItem : {};
 
     try {
       // Lock scroll
@@ -102,6 +111,9 @@
 
       // Store current popup
       PopupQueue.currentPopup = popupElement;
+      
+      // Store custom delay if provided
+      PopupQueue.currentPopup.__customDelay = options.interPopupDelay;
 
       // Wrap the original close function
       const originalClose = popupElement.__closePopup;
@@ -113,6 +125,9 @@
           // Unlock scroll
           unlockScroll();
           
+          // Get custom delay from current popup
+          const customDelay = PopupQueue.currentPopup?.__customDelay;
+          
           // Clear current popup
           PopupQueue.currentPopup = null;
           
@@ -120,7 +135,7 @@
           setTimeout(() => {
             PopupQueue.isProcessing = false;
             processNextPopup();
-          }, getInterPopupDelay());
+          }, getInterPopupDelay(customDelay));
         };
       } else {
         console.warn('[PopupManager] Popup element missing __closePopup function');
@@ -135,14 +150,30 @@
     }
   }
 
-  // Enqueue a popup (accepts a function that returns a popup element)
-  function enqueuePopup(popupFn){
+  // Enqueue a popup (accepts a function that returns a popup element, or options object)
+  function enqueuePopup(popupFnOrOptions, optionsArg){
+    let popupFn, options = {};
+    
+    // Support both legacy (fn, options) and new (options with fn) signatures
+    if(typeof popupFnOrOptions === 'function'){
+      popupFn = popupFnOrOptions;
+      if(typeof optionsArg === 'object' && optionsArg !== null){
+        options = optionsArg;
+      }
+    } else if(typeof popupFnOrOptions === 'object' && popupFnOrOptions !== null){
+      popupFn = popupFnOrOptions.fn;
+      options = popupFnOrOptions;
+    }
+    
     if(typeof popupFn !== 'function'){
       console.error('[PopupManager] enqueuePopup requires a function');
       return;
     }
 
-    PopupQueue.queue.push(popupFn);
+    PopupQueue.queue.push({
+      fn: popupFn,
+      interPopupDelay: options.interPopupDelay
+    });
     processNextPopup();
   }
 
@@ -168,13 +199,31 @@
     return PopupQueue.currentPopup !== null;
   }
 
+  // Show micro-confirmation toast
+  function showConfirmationToast(message, duration = 2000){
+    const toast = document.createElement('div');
+    toast.className = 'social-confirmation-toast';
+    toast.textContent = message;
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      if(toast.parentNode){
+        toast.parentNode.removeChild(toast);
+      }
+    }, duration);
+  }
+
   // Context API for enqueue/close
   const PopupManagerContext = {
     enqueue: enqueuePopup,
     close: closeCurrentPopup,
     clearQueue: clearQueue,
     getQueueLength: getQueueLength,
-    isPopupShown: isPopupShown
+    isPopupShown: isPopupShown,
+    showConfirmationToast: showConfirmationToast
   };
 
   // Export to global
