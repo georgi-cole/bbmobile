@@ -147,7 +147,7 @@
    */
   function launchFullscreenMinigame(gameKey, onComplete, options = {}){
     // Get time limit from options, default to 60 seconds
-    const timeLimit = options.timeLimit || 60;
+    const timeLimit = options.timeLimit ?? 60;
     
     // Create fullscreen overlay
     const overlay = document.createElement('div');
