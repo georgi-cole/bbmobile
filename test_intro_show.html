@@ -171,7 +171,7 @@
   <!-- Mock avatar resolver -->
   <script>
     window.resolveAvatar = function(player) {
-      return player.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${player.name || 'Guest'}`;
+      return player.avatar || `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name || 'Guest')}`;
     };
   </script>
   
