@@ -5,6 +5,11 @@
 
 (function(global){
 
+  // Import centralized avatar constants
+  const getDicebearUrl = global.getDicebearUrl || function(seed) {
+    return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'juror')}`;
+  };
+
   function ap(){ return (global.alivePlayers?.()||[]).slice(); }
   function gp(id){ return global.getP?.(id); }
   function rand(){ return (global.rng?.() ?? Math.random()); }
@@ -540,13 +545,13 @@
       // Use global avatar resolver
       const avatarUrl = (global.resolveAvatar?.(id)) || 
                        (p?.avatar) || (p?.img) || (p?.photo) || 
-                       `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(p?.name||'juror')}`;
+                       getDicebearUrl(p?.name||'juror');
       
       card.innerHTML=`
         <div class="rtAvatarWrap">
           <img src="${avatarUrl}"
                class="rtAvatar" alt="${jurorName}"
-               onerror="console.info('[twists] avatar fallback for juror=${id} url='+this.src); this.onerror=null; this.src=(window.Game||window).getAvatarFallback?.('${jurorName}', this.src) || 'https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(jurorName)}';"/>
+               onerror="console.info('[twists] avatar fallback for juror=${id} url='+this.src); this.onerror=null; this.src=(window.Game||window).getAvatarFallback?.('${jurorName}', this.src) || '${getDicebearUrl(jurorName)}';"/>
           <div class="rtAvatarRing"></div>
         </div>
         <div class="rtName tiny" title="${jurorName}">${jurorName}</div>
