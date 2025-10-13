@@ -315,7 +315,7 @@
       scoring: 'time',
       mobileFriendly: true,
       implemented: false,
-      module: 'placeholder.js',
+      module: 'swipe-maze.js',
       minScore: 0,
       maxScore: 100,
       retired: false,
@@ -365,6 +365,21 @@
       maxScore: 100,
       retired: false,
       seasons: ['spring', 'summer', 'autumn']
+    },
+    
+    colorMatch: {
+      key: 'colorMatch',
+      name: 'Color Match',
+      description: 'Match colors quickly and accurately',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'color-match.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     colorMix: {
@@ -427,6 +442,21 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
+    socialStrings: {
+      key: 'socialStrings',
+      name: 'Social Strings',
+      description: 'Connect players with social relationships',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'social-strings.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
     logicLocks: {
       key: 'logicLocks',
       name: 'Logic Locks',
@@ -435,11 +465,26 @@
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: false,
-      module: 'placeholder.js',
+      module: 'logic-locks.js',
       minScore: 0,
       maxScore: 100,
       retired: false,
       seasons: ['autumn', 'winter']
+    },
+    
+    snake: {
+      key: 'snake',
+      name: 'Snake',
+      description: 'Classic snake game - eat food and grow',
+      type: 'reaction',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'snake.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     astroJumper: {

@@ -113,12 +113,6 @@
     },
     
     // New Phase 1 Games
-    bubbleBurst: {
-      title: 'Bubble Burst',
-      description: 'Pop as many bubbles as you can in 10 seconds!',
-      steps: []
-    },
-    
     cardClash: {
       title: 'Card Clash',
       description: 'Match cards quickly to score points!',
@@ -137,39 +131,9 @@
       steps: []
     },
     
-    colorMatch: {
-      title: 'Color Match',
-      description: 'Match the color combinations as fast as you can!',
-      steps: []
-    },
-    
-    comboKeys: {
-      title: 'Combo Keys',
-      description: 'Press the key combinations shown on screen!',
-      steps: []
-    },
-    
-    diceDash: {
-      title: 'Dice Dash',
-      description: 'Match the target dice sum! Roll until you get it right.',
-      steps: []
-    },
-    
-    echoChamber: {
-      title: 'Echo Chamber',
-      description: 'Remember the sequence of sounds, then play them back!',
-      steps: []
-    },
-    
     flashFlood: {
       title: 'Flash Flood',
       description: 'Click only the GREEN tiles as fast as you can!',
-      steps: []
-    },
-    
-    gearShift: {
-      title: 'Gear Shift',
-      description: 'Rotate gears to match the target pattern!',
       steps: []
     },
     
@@ -179,27 +143,9 @@
       steps: []
     },
     
-    iconMatch: {
-      title: 'Icon Match',
-      description: 'Match the icons shown as quickly as possible!',
-      steps: []
-    },
-    
-    jumpRope: {
-      title: 'Jump Rope',
-      description: 'Click when the rope is at the bottom! Time your jumps.',
-      steps: []
-    },
-    
     keyMaster: {
       title: 'Key Master',
-      description: 'Guess the 4-digit code to unlock! Use the clues.',
-      steps: []
-    },
-    
-    lightSpeed: {
-      title: 'Light Speed',
-      description: 'Click as soon as the light turns GREEN! React fast.',
+      description: 'Guess the 4-digit code using bulls and cows clues!',
       steps: []
     },
     
@@ -212,12 +158,6 @@
     miniMaze: {
       title: 'Mini Maze',
       description: 'Navigate the maze to reach the goal!',
-      steps: []
-    },
-    
-    puzzleDash: {
-      title: 'Puzzle Dash',
-      description: 'Solve the puzzle pieces as fast as you can!',
       steps: []
     },
     
@@ -248,6 +188,48 @@
     wordBuilder: {
       title: 'Word Builder',
       description: 'Make words from the letters shown!',
+      steps: []
+    },
+    
+    comixSpot: {
+      title: 'Comix Spot',
+      description: 'Find all the differences between two comic panels! 1 round, 6 differences.',
+      steps: []
+    },
+    
+    holdWall: {
+      title: 'Hold Wall',
+      description: 'Hold your finger on the wall as long as possible without moving!',
+      steps: []
+    },
+    
+    slipperyShuttle: {
+      title: 'Slippery Shuttle',
+      description: 'Navigate slippery platforms to reach the goal without falling!',
+      steps: []
+    },
+    
+    socialStrings: {
+      title: 'Social Strings',
+      description: 'Connect players with the correct social relationships!',
+      steps: []
+    },
+    
+    oteviator: {
+      title: 'Oteviator',
+      description: 'Press at the perfect moment when the elevator reaches the target floor!',
+      steps: []
+    },
+    
+    logicLocks: {
+      title: 'Logic Locks',
+      description: 'Solve logic puzzles using deduction to crack the code!',
+      steps: []
+    },
+    
+    snake: {
+      title: 'Snake',
+      description: 'Control the snake to eat food and grow without hitting walls or yourself!',
       steps: []
     },
     
