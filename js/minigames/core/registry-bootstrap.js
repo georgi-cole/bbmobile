@@ -32,17 +32,17 @@
       
       // Fallback: hardcoded list of canonical keys
       const fallbackKeys = [
-        'countHouse', 'reactionRoyale', 'triviaPulse', 'quickTap',
-        'memoryMatch', 'mathBlitz', 'timingBar', 'sequenceMemory',
-        'patternMatch', 'wordAnagram', 'targetPractice', 'memoryPairs',
-        'estimationGame', 'wordTyping', 'reactionTimer', 'sliderPuzzle',
+        'countHouse', 'triviaPulse', 'quickTap',
+        'memoryMatch', 'timingBar',
+        'patternMatch', 'wordAnagram', 'targetPractice',
+        'estimationGame', 'wordTyping', 'sliderPuzzle',
         'pathFinder', 'simonSays', 'oteviator', 'comixSpot', 'holdWall',
-        'slipperyShuttle', 'memoryZipline', 'swipeMaze', 'patternTrace',
+        'slipperyShuttle', 'memoryZipline', 'socialStrings', 'swipeMaze', 'patternTrace',
         'audioMatch', 'balanceBridge', 'colorMix', 'wordLadder', 'rhythmTap',
-        'spotTheDifference', 'logicLocks', 'astroJumper', 'bubbleBurst',
-        'cardClash', 'chainReaction', 'clockStopper', 'comboKeys', 'diceDash',
-        'echoChamber', 'flashFlood', 'gearShift', 'gridLock', 'iconMatch',
-        'jumpRope', 'keyMaster', 'lightSpeed', 'puzzleDash'
+        'spotTheDifference', 'logicLocks', 'snake', 'astroJumper',
+        'cardClash', 'chainReaction', 'clockStopper',
+        'flashFlood', 'gridLock',
+        'keyMaster', 'colorMatch'
       ];
       
       for(const key of fallbackKeys){
@@ -55,17 +55,13 @@
     const legacyAliases = {
       'clicker': 'quickTap',
       'memory': 'memoryMatch',
-      'math': 'mathBlitz',
       'bar': 'timingBar',
       'typing': 'wordTyping',
-      'reaction': 'reactionTimer',
-      'numseq': 'sequenceMemory',
       'pattern': 'patternMatch',
       'slider': 'sliderPuzzle',
       'anagram': 'wordAnagram',
       'path': 'pathFinder',
       'target': 'targetPractice',
-      'pairs': 'memoryPairs',
       'simon': 'simonSays',
       'estimate': 'estimationGame'
     };
@@ -82,26 +78,18 @@
       'quicktap': 'quickTap',
       'memory-match': 'memoryMatch',
       'memorymatch': 'memoryMatch',
-      'math-blitz': 'mathBlitz',
-      'mathblitz': 'mathBlitz',
       'timing-bar': 'timingBar',
       'timingbar': 'timingBar',
-      'sequence-memory': 'sequenceMemory',
-      'sequencememory': 'sequenceMemory',
       'pattern-match': 'patternMatch',
       'patternmatch': 'patternMatch',
       'word-anagram': 'wordAnagram',
       'wordanagram': 'wordAnagram',
       'target-practice': 'targetPractice',
       'targetpractice': 'targetPractice',
-      'memory-pairs': 'memoryPairs',
-      'memorypairs': 'memoryPairs',
       'estimation-game': 'estimationGame',
       'estimationgame': 'estimationGame',
       'word-typing': 'wordTyping',
       'wordtyping': 'wordTyping',
-      'reaction-timer': 'reactionTimer',
-      'reactiontimer': 'reactionTimer',
       'slider-puzzle': 'sliderPuzzle',
       'sliderpuzzle': 'sliderPuzzle',
       'path-finder': 'pathFinder',
@@ -110,10 +98,12 @@
       'simonsays': 'simonSays',
       'count-house': 'countHouse',
       'counthouse': 'countHouse',
-      'reaction-royale': 'reactionRoyale',
-      'reactionroyale': 'reactionRoyale',
       'trivia-pulse': 'triviaPulse',
-      'triviapulse': 'triviaPulse'
+      'triviapulse': 'triviaPulse',
+      'social-strings': 'socialStrings',
+      'socialstrings': 'socialStrings',
+      'color-match': 'colorMatch',
+      'colormatch': 'colorMatch'
     };
 
     console.info('Registering', Object.keys(descriptiveAliases).length, 'descriptive aliases');
