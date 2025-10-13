@@ -31,3 +31,8 @@ build/
 
 # Test coverage
 coverage/
+
+# Playwright artifacts
+test-results/
+playwright-report/
+test-screenshots/
