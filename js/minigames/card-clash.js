@@ -37,13 +37,13 @@
     const movesSpan = document.createElement('span');
     movesSpan.textContent = 'Moves: 0';
     const matchesSpan = document.createElement('span');
-    matchesSpan.textContent = 'Matches: 0/6';
+    matchesSpan.textContent = 'Matches: 0/10';
     
     statsDiv.appendChild(movesSpan);
     statsDiv.appendChild(matchesSpan);
     
     const gridDiv = document.createElement('div');
-    gridDiv.style.cssText = 'display:grid;grid-template-columns:repeat(4,80px);gap:10px;margin:20px 0;';
+    gridDiv.style.cssText = 'display:grid;grid-template-columns:repeat(5,75px);gap:10px;margin:20px 0;';
     
     wrapper.appendChild(title);
     wrapper.appendChild(instructions);
@@ -51,8 +51,8 @@
     wrapper.appendChild(gridDiv);
     container.appendChild(wrapper);
     
-    // Game state
-    const symbols = ['🌟', '❤️', '🎭', '🎨', '🎵', '⚡'];
+    // Game state (5x4 = 20 cards, 10 pairs)
+    const symbols = ['🌟', '❤️', '🎭', '🎨', '🎵', '⚡', '🎯', '🎪', '🎬', '🎮'];
     const cards = [...symbols, ...symbols].sort(() => Math.random() - 0.5);
     let flipped = [];
     let matched = 0;
@@ -64,8 +64,8 @@
     cards.forEach((symbol, index) => {
       const card = document.createElement('div');
       card.style.cssText = `
-        width:80px;
-        height:100px;
+        width:75px;
+        height:95px;
         background:#2c3a4d;
         border-radius:8px;
         display:flex;
@@ -97,7 +97,7 @@
           if(flipped[0].dataset.symbol === flipped[1].dataset.symbol){
             // Match!
             matched++;
-            matchesSpan.textContent = `Matches: ${matched}/6`;
+            matchesSpan.textContent = `Matches: ${matched}/10`;
             flipped[0].dataset.matched = 'true';
             flipped[1].dataset.matched = 'true';
             flipped[0].style.background = '#74e48b';
@@ -106,7 +106,7 @@
             canFlip = true;
             
             // Check win
-            if(matched === 6){
+            if(matched === 10){
               setTimeout(() => {
                 const timeTaken = (Date.now() - startTime) / 1000;
                 // Calculate raw score: Perfect: 6 moves (100), Good: 10 moves (80), scale down

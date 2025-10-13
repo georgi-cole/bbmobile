@@ -12,17 +12,13 @@
   const LEGACY_KEY_MAP = {
     'clicker': 'quickTap',
     'memory': 'memoryMatch',
-    'math': 'mathBlitz',
     'bar': 'timingBar',
     'typing': 'wordTyping',
-    'reaction': 'reactionTimer',
-    'numseq': 'sequenceMemory',
     'pattern': 'patternMatch',
     'slider': 'sliderPuzzle',
     'anagram': 'wordAnagram',
     'path': 'pathFinder',
     'target': 'targetPractice',
-    'pairs': 'memoryPairs',
     'simon': 'simonSays',
     'estimate': 'estimationGame'
   };
@@ -47,10 +43,6 @@
     'count-house': 'countHouse',
     'counthouse': 'countHouse',
     
-    'reactionRoyale': 'reactionRoyale',
-    'reaction-royale': 'reactionRoyale',
-    'reactionroyale': 'reactionRoyale',
-    
     'triviaPulse': 'triviaPulse',
     'trivia-pulse': 'triviaPulse',
     'triviapulse': 'triviaPulse',
@@ -66,20 +58,10 @@
     'memorymatch': 'memoryMatch',
     'memory': 'memoryMatch',  // Legacy alias
     
-    'mathBlitz': 'mathBlitz',
-    'math-blitz': 'mathBlitz',
-    'mathblitz': 'mathBlitz',
-    'math': 'mathBlitz',  // Legacy alias
-    
     'timingBar': 'timingBar',
     'timing-bar': 'timingBar',
     'timingbar': 'timingBar',
     'bar': 'timingBar',  // Legacy alias
-    
-    'sequenceMemory': 'sequenceMemory',
-    'sequence-memory': 'sequenceMemory',
-    'sequencememory': 'sequenceMemory',
-    'numseq': 'sequenceMemory',  // Legacy alias
     
     'patternMatch': 'patternMatch',
     'pattern-match': 'patternMatch',
@@ -96,20 +78,10 @@
     'targetpractice': 'targetPractice',
     'target': 'targetPractice',  // Legacy alias
     
-    'memoryPairs': 'memoryPairs',
-    'memory-pairs': 'memoryPairs',
-    'memorypairs': 'memoryPairs',
-    'pairs': 'memoryPairs',  // Legacy alias
-    
     'estimationGame': 'estimationGame',
     'estimation-game': 'estimationGame',
     'estimationgame': 'estimationGame',
     'estimate': 'estimationGame',  // Legacy alias
-    
-    'reactionTimer': 'reactionTimer',
-    'reaction-timer': 'reactionTimer',
-    'reactiontimer': 'reactionTimer',
-    'reaction': 'reactionTimer',  // Legacy alias
     
     // Retired Legacy Games (still playable if needed)
     'wordTyping': 'wordTyping',
@@ -168,57 +140,37 @@
     'spotTheDifference': 'placeholder',
     'spot-the-difference': 'placeholder',
     'spotthedifference': 'placeholder',
-    'logicLocks': 'placeholder',
-    'logic-locks': 'placeholder',
-    'logiclocks': 'placeholder',
+    'logicLocks': 'logicLocks',
+    'logic-locks': 'logicLocks',
+    'logiclocks': 'logicLocks',
+    'snake': 'snake',
+    'socialStrings': 'socialStrings',
+    'social-strings': 'socialStrings',
+    'socialstrings': 'socialStrings',
+    'colorMatch': 'colorMatch',
+    'color-match': 'colorMatch',
+    'colormatch': 'colorMatch',
     'astroJumper': 'placeholder',
     'astro-jumper': 'placeholder',
     'astrojumper': 'placeholder',
-    'bubbleBurst': 'placeholder',
-    'bubble-burst': 'placeholder',
-    'bubbleburst': 'placeholder',
-    'cardClash': 'placeholder',
-    'card-clash': 'placeholder',
-    'cardclash': 'placeholder',
-    'chainReaction': 'placeholder',
-    'chain-reaction': 'placeholder',
-    'chainreaction': 'placeholder',
-    'clockStopper': 'placeholder',
-    'clock-stopper': 'placeholder',
-    'clockstopper': 'placeholder',
-    'comboKeys': 'placeholder',
-    'combo-keys': 'placeholder',
-    'combokeys': 'placeholder',
-    'diceDash': 'placeholder',
-    'dice-dash': 'placeholder',
-    'dicedash': 'placeholder',
-    'echoChamber': 'placeholder',
-    'echo-chamber': 'placeholder',
-    'echochamber': 'placeholder',
-    'flashFlood': 'placeholder',
-    'flash-flood': 'placeholder',
-    'flashflood': 'placeholder',
-    'gearShift': 'placeholder',
-    'gear-shift': 'placeholder',
-    'gearshift': 'placeholder',
-    'gridLock': 'placeholder',
-    'grid-lock': 'placeholder',
-    'gridlock': 'placeholder',
-    'iconMatch': 'placeholder',
-    'icon-match': 'placeholder',
-    'iconmatch': 'placeholder',
-    'jumpRope': 'placeholder',
-    'jump-rope': 'placeholder',
-    'jumprope': 'placeholder',
-    'keyMaster': 'placeholder',
-    'key-master': 'placeholder',
-    'keymaster': 'placeholder',
-    'lightSpeed': 'placeholder',
-    'light-speed': 'placeholder',
-    'lightspeed': 'placeholder',
-    'puzzleDash': 'placeholder',
-    'puzzle-dash': 'placeholder',
-    'puzzledash': 'placeholder'
+    'cardClash': 'cardClash',
+    'card-clash': 'cardClash',
+    'cardclash': 'cardClash',
+    'chainReaction': 'chainReaction',
+    'chain-reaction': 'chainReaction',
+    'chainreaction': 'chainReaction',
+    'clockStopper': 'clockStopper',
+    'clock-stopper': 'clockStopper',
+    'clockstopper': 'clockStopper',
+    'flashFlood': 'flashFlood',
+    'flash-flood': 'flashFlood',
+    'flashflood': 'flashFlood',
+    'gridLock': 'gridLock',
+    'grid-lock': 'gridLock',
+    'gridlock': 'gridLock',
+    'keyMaster': 'keyMaster',
+    'key-master': 'keyMaster',
+    'keymaster': 'keyMaster'
   };
 
   /**

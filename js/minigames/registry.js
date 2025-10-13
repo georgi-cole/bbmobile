@@ -38,20 +38,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    reactionRoyale: {
-      key: 'reactionRoyale',
-      name: 'Reaction Royale',
-      description: 'Multi-round reaction time challenge with increasing difficulty',
-      type: 'reaction',
-      scoring: 'time',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'reaction-royale.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
     triviaPulse: {
       key: 'triviaPulse',
@@ -99,20 +86,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    mathBlitz: {
-      key: 'mathBlitz',
-      name: 'Math Blitz',
-      description: 'Solve math problems quickly',
-      type: 'puzzle',
-      scoring: 'hybrid',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'math-blitz.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
     timingBar: {
       key: 'timingBar',
@@ -129,20 +103,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    sequenceMemory: {
-      key: 'sequenceMemory',
-      name: 'Number Sequence',
-      description: 'Memorize and repeat number sequences',
-      type: 'memory',
-      scoring: 'accuracy',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'sequence-memory.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
     patternMatch: {
       key: 'patternMatch',
@@ -189,20 +150,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    memoryPairs: {
-      key: 'memoryPairs',
-      name: 'Memory Pairs',
-      description: 'Find matching pairs of cards',
-      type: 'memory',
-      scoring: 'time',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'memory-pairs.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
     estimationGame: {
       key: 'estimationGame',
@@ -235,20 +183,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    reactionTimer: {
-      key: 'reactionTimer',
-      name: 'Reaction Timer',
-      description: 'React as fast as you can when the signal appears',
-      type: 'reaction',
-      scoring: 'time',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'reaction-timer.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
     sliderPuzzle: {
       key: 'sliderPuzzle',
@@ -380,7 +315,7 @@
       scoring: 'time',
       mobileFriendly: true,
       implemented: false,
-      module: 'placeholder.js',
+      module: 'swipe-maze.js',
       minScore: 0,
       maxScore: 100,
       retired: false,
@@ -430,6 +365,21 @@
       maxScore: 100,
       retired: false,
       seasons: ['spring', 'summer', 'autumn']
+    },
+    
+    colorMatch: {
+      key: 'colorMatch',
+      name: 'Color Match',
+      description: 'Match colors quickly and accurately',
+      type: 'reaction',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'color-match.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     colorMix: {
@@ -492,6 +442,21 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
+    socialStrings: {
+      key: 'socialStrings',
+      name: 'Social Strings',
+      description: 'Connect players with social relationships',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'social-strings.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
     logicLocks: {
       key: 'logicLocks',
       name: 'Logic Locks',
@@ -500,11 +465,26 @@
       scoring: 'accuracy',
       mobileFriendly: true,
       implemented: false,
-      module: 'placeholder.js',
+      module: 'logic-locks.js',
       minScore: 0,
       maxScore: 100,
       retired: false,
       seasons: ['autumn', 'winter']
+    },
+    
+    snake: {
+      key: 'snake',
+      name: 'Snake',
+      description: 'Classic snake game - eat food and grow',
+      type: 'reaction',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'snake.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
     astroJumper: {
@@ -522,21 +502,7 @@
       seasons: ['spring', 'summer', 'winter']
     },
     
-    // Phase 2: New Scaffold Games (15 additional minigames)
-    bubbleBurst: {
-      key: 'bubbleBurst',
-      name: 'Bubble Burst',
-      description: 'Pop bubbles quickly for points',
-      type: 'reaction',
-      scoring: 'accuracy',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'bubble-burst.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
     cardClash: {
       key: 'cardClash',
@@ -583,50 +549,11 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    comboKeys: {
-      key: 'comboKeys',
-      name: 'Combo Keys',
-      description: 'Memorize and repeat key combinations',
-      type: 'memory',
-      scoring: 'accuracy',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'combo-keys.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
-    diceDash: {
-      key: 'diceDash',
-      name: 'Dice Dash',
-      description: 'Roll and match dice patterns',
-      type: 'reaction',
-      scoring: 'accuracy',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'dice-dash.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
-    echoChamber: {
-      key: 'echoChamber',
-      name: 'Echo Chamber',
-      description: 'Audio memory and recall',
-      type: 'memory',
-      scoring: 'accuracy',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'echo-chamber.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
     flashFlood: {
       key: 'flashFlood',
@@ -643,20 +570,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    gearShift: {
-      key: 'gearShift',
-      name: 'Gear Shift',
-      description: 'Solve mechanical gear puzzles',
-      type: 'puzzle',
-      scoring: 'time',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'gear-shift.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
     gridLock: {
       key: 'gridLock',
@@ -673,35 +587,9 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    iconMatch: {
-      key: 'iconMatch',
-      name: 'Icon Match',
-      description: 'Match icons from memory',
-      type: 'memory',
-      scoring: 'accuracy',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'icon-match.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
-    jumpRope: {
-      key: 'jumpRope',
-      name: 'Jump Rope',
-      description: 'Endurance timing challenge',
-      type: 'endurance',
-      scoring: 'endurance',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'jump-rope.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
     keyMaster: {
       key: 'keyMaster',
@@ -718,35 +606,9 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    lightSpeed: {
-      key: 'lightSpeed',
-      name: 'Light Speed',
-      description: 'Ultra-fast reaction challenge',
-      type: 'reaction',
-      scoring: 'time',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'light-speed.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
+
     
-    puzzleDash: {
-      key: 'puzzleDash',
-      name: 'Puzzle Dash',
-      description: 'Speed puzzle solving',
-      type: 'puzzle',
-      scoring: 'hybrid',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'puzzle-dash.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    }
+
   };
 
   /**

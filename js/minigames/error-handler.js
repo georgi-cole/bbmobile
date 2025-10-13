@@ -113,7 +113,7 @@
     }
 
     // Prefer simple, reliable games as fallbacks
-    const preferredFallbacks = ['quickTap', 'timingBar', 'reactionTimer'];
+    const preferredFallbacks = ['quickTap', 'timingBar', 'memoryMatch'];
     for(const preferred of preferredFallbacks){
       if(availableGames.includes(preferred)){
         return preferred;
