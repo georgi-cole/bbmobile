@@ -243,7 +243,7 @@
     footerContent.style.cssText = `
       display: flex;
       justify-content: flex-end;
-      gap: 12px;
+      gap: var(--popup-button-gap, 12px);
       flex-wrap: wrap;
     `;
 
