@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minigame Refactor QA Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1a2332;
+      color: #e3ecf5;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { color: #83bfff; }
+    h2 { color: #a8c7e7; margin-top: 30px; }
+    .test-section {
+      background: #2c3a4d;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass { background: rgba(76, 175, 80, 0.2); color: #76ff7a; }
+    .fail { background: rgba(244, 67, 54, 0.2); color: #ff6b6b; }
+    .info { background: rgba(33, 150, 243, 0.2); color: #83bfff; }
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .btn:hover { background: #a8c7e7; }
+    .game-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .game-card {
+      background: #1a2332;
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid #3d4f64;
+    }
+    .game-card.implemented { border-color: #76ff7a; }
+    .game-card.retired { border-color: #ff6b6b; opacity: 0.6; }
+    .game-name { font-weight: bold; color: #83bfff; margin-bottom: 5px; }
+    .game-type { font-size: 0.85rem; color: #95a9c0; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Minigame Refactor QA Test</h1>
+  <p>Testing the minigame refactor: purged games removed, new skeletons added, system updates.</p>
+
+  <div class="test-section">
+    <h2>Test 1: Purged Games Removed</h2>
+    <p>Verify that all 14 purged games are gone from registry and modules.</p>
+    <button class="btn" onclick="testPurgedGames()">Run Test</button>
+    <div id="test-purged"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: New Skeletons Added</h2>
+    <p>Verify that 10 new game skeletons exist in registry.</p>
+    <button class="btn" onclick="testNewSkeletons()">Run Test</button>
+    <div id="test-skeletons"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Registry Integrity</h2>
+    <p>Check that all registered games have valid metadata and modules.</p>
+    <button class="btn" onclick="testRegistryIntegrity()">Run Test</button>
+    <div id="test-registry"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Selector Only Picks Implemented</h2>
+    <p>Verify selector only returns implemented, non-retired games.</p>
+    <button class="btn" onclick="testSelectorLogic()">Run Test</button>
+    <div id="test-selector"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Instructions Coverage</h2>
+    <p>Verify all games have instructions.</p>
+    <button class="btn" onclick="testInstructions()">Run Test</button>
+    <div id="test-instructions"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Registry Overview</h2>
+    <button class="btn" onclick="showRegistry()">Show All Games</button>
+    <div id="registry-overview"></div>
+  </div>
+
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/minigames/index.js"></script>
+  <script src="js/minigames/instructions.js"></script>
+
+  <script>
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function testPurgedGames() {
+      const container = document.getElementById('test-purged');
+      container.innerHTML = '';
+      
+      const purgedGames = [
+        'jumpRope', 'sequenceMemory', 'memoryPairs', 'comboKeys', 
+        'echoChamber', 'iconMatch', 'gearShift', 'puzzleDash',
+        'reactionRoyale', 'reactionTimer', 'bubbleBurst', 'diceDash',
+        'lightSpeed', 'mathBlitz'
+      ];
+      
+      const registry = window.MinigameRegistry;
+      if (!registry) {
+        log('test-purged', '✗ Registry not loaded', 'fail');
+        return;
+      }
+      
+      let allPurged = true;
+      purgedGames.forEach(key => {
+        const game = registry.getGame(key);
+        if (game) {
+          log('test-purged', `✗ ${key} still in registry`, 'fail');
+          allPurged = false;
+        }
+      });
+      
+      if (allPurged) {
+        log('test-purged', `✓ All ${purgedGames.length} purged games removed from registry`, 'pass');
+      }
+    }
+
+    function testNewSkeletons() {
+      const container = document.getElementById('test-skeletons');
+      container.innerHTML = '';
+      
+      const newGames = [
+        'comixSpot', 'holdWall', 'slipperyShuttle', 'memoryZipline',
+        'socialStrings', 'swipeMaze', 'oteviator', 'colorMatch',
+        'logicLocks', 'snake'
+      ];
+      
+      const registry = window.MinigameRegistry;
+      if (!registry) {
+        log('test-skeletons', '✗ Registry not loaded', 'fail');
+        return;
+      }
+      
+      let allFound = true;
+      newGames.forEach(key => {
+        const game = registry.getGame(key);
+        if (!game) {
+          log('test-skeletons', `✗ ${key} missing from registry`, 'fail');
+          allFound = false;
+        } else {
+          log('test-skeletons', `✓ ${key} found (implemented: ${game.implemented})`, 'pass');
+        }
+      });
+      
+      if (allFound) {
+        log('test-skeletons', `✓ All ${newGames.length} new games in registry`, 'pass');
+      }
+    }
+
+    function testRegistryIntegrity() {
+      const container = document.getElementById('test-registry');
+      container.innerHTML = '';
+      
+      const registry = window.MinigameRegistry;
+      if (!registry) {
+        log('test-registry', '✗ Registry not loaded', 'fail');
+        return;
+      }
+      
+      const allKeys = registry.getAllKeys();
+      log('test-registry', `Total games in registry: ${allKeys.length}`, 'info');
+      
+      const implemented = registry.getImplementedGames(true);
+      log('test-registry', `Implemented (non-retired): ${implemented.length}`, 'info');
+      
+      // Check each game has required fields
+      let errors = 0;
+      allKeys.forEach(key => {
+        const game = registry.getGame(key);
+        if (!game.key || !game.name || !game.type || !game.module) {
+          log('test-registry', `✗ ${key} missing required fields`, 'fail');
+          errors++;
+        }
+      });
+      
+      if (errors === 0) {
+        log('test-registry', '✓ All games have valid metadata', 'pass');
+      } else {
+        log('test-registry', `✗ ${errors} games have invalid metadata`, 'fail');
+      }
+    }
+
+    function testSelectorLogic() {
+      const container = document.getElementById('test-selector');
+      container.innerHTML = '';
+      
+      const registry = window.MinigameRegistry;
+      if (!registry) {
+        log('test-selector', '✗ Registry not loaded', 'fail');
+        return;
+      }
+      
+      const implementedGames = registry.getImplementedGames(true);
+      log('test-selector', `Selector pool: ${implementedGames.length} games`, 'info');
+      
+      // Check that no retired games are included
+      let hasRetired = false;
+      implementedGames.forEach(key => {
+        const game = registry.getGame(key);
+        if (game.retired) {
+          log('test-selector', `✗ Retired game ${key} in pool`, 'fail');
+          hasRetired = true;
+        }
+      });
+      
+      if (!hasRetired) {
+        log('test-selector', '✓ No retired games in selector pool', 'pass');
+      }
+      
+      // Check that all are implemented
+      let hasUnimplemented = false;
+      implementedGames.forEach(key => {
+        const game = registry.getGame(key);
+        if (!game.implemented) {
+          log('test-selector', `✗ Unimplemented game ${key} in pool`, 'fail');
+          hasUnimplemented = true;
+        }
+      });
+      
+      if (!hasUnimplemented) {
+        log('test-selector', '✓ All games in pool are implemented', 'pass');
+      }
+    }
+
+    function testInstructions() {
+      const container = document.getElementById('test-instructions');
+      container.innerHTML = '';
+      
+      const registry = window.MinigameRegistry;
+      const instructions = window.MinigameInstructions;
+      
+      if (!registry || !instructions) {
+        log('test-instructions', '✗ Registry or Instructions not loaded', 'fail');
+        return;
+      }
+      
+      const implementedGames = registry.getImplementedGames(false);
+      let missing = 0;
+      
+      implementedGames.forEach(key => {
+        const instr = instructions.getInstructions(key);
+        if (!instr || !instr.title) {
+          log('test-instructions', `✗ ${key} missing instructions`, 'fail');
+          missing++;
+        }
+      });
+      
+      if (missing === 0) {
+        log('test-instructions', `✓ All ${implementedGames.length} implemented games have instructions`, 'pass');
+      } else {
+        log('test-instructions', `✗ ${missing} games missing instructions`, 'fail');
+      }
+    }
+
+    function showRegistry() {
+      const container = document.getElementById('registry-overview');
+      container.innerHTML = '';
+      
+      const registry = window.MinigameRegistry;
+      if (!registry) {
+        container.innerHTML = '<p>Registry not loaded</p>';
+        return;
+      }
+      
+      const allKeys = registry.getAllKeys();
+      const grid = document.createElement('div');
+      grid.className = 'game-list';
+      
+      allKeys.forEach(key => {
+        const game = registry.getGame(key);
+        const card = document.createElement('div');
+        card.className = 'game-card';
+        if (game.implemented) card.classList.add('implemented');
+        if (game.retired) card.classList.add('retired');
+        
+        card.innerHTML = `
+          <div class="game-name">${game.name}</div>
+          <div class="game-type">${game.type} • ${game.scoring}</div>
+          <div class="game-type">${game.implemented ? '✓ Implemented' : '○ Skeleton'}</div>
+          ${game.retired ? '<div class="game-type">⚠ Retired</div>' : ''}
+        `;
+        
+        grid.appendChild(card);
+      });
+      
+      container.appendChild(grid);
+    }
+  </script>
+</body>
+</html>
