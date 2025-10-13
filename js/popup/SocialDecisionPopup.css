@@ -26,6 +26,7 @@
 /* Body content spacing */
 .social-popup-body {
   padding: 4px 0;
+  margin-bottom: var(--popup-content-gap, 16px);
 }
 
 .social-popup-body p {
@@ -33,9 +34,18 @@
   line-height: 1.7;
 }
 
+.social-popup-body p:last-child {
+  margin-bottom: 0;
+}
+
 /* Footer button container */
 .social-popup-footer {
   padding-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--popup-button-gap, 12px);
+  justify-content: center;
+  align-items: center;
 }
 
 /* Themed decision buttons */
@@ -43,6 +53,8 @@
   font-family: inherit;
   letter-spacing: 0.3px;
   box-sizing: border-box;
+  min-width: 120px;
+  flex: 0 1 auto;
 }
 
 .social-decision-btn:focus {
@@ -64,6 +76,7 @@
   .social-popup-footer {
     flex-direction: column-reverse;
     align-items: stretch;
+    gap: var(--popup-button-gap, 12px);
   }
   
   .social-decision-btn {

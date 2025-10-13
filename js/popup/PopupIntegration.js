@@ -4,91 +4,6 @@
 (function(global){
   'use strict';
 
-  // Show welcome popup on game start (if feature enabled)
-  function showGameStartWelcome(){
-    const cfg = global.game?.cfg || {};
-    
-    if(!cfg.popup_refresh_enabled){
-      return; // Feature disabled, don't show
-    }
-
-    if(!global.createBasePopup || !global.PopupManager){
-      console.warn('[PopupIntegration] Popup system not loaded');
-      return;
-    }
-
-    // Check if already shown this session
-    if(sessionStorage.getItem('bb_welcome_shown')){
-      return;
-    }
-
-    // Mark as shown
-    sessionStorage.setItem('bb_welcome_shown', 'true');
-
-    // Show welcome popup after a short delay
-    setTimeout(() => {
-      global.PopupManager.enqueue(() => {
-        return global.createBasePopup({
-          id: 'game-welcome',
-          headerText: '🎉 Welcome to Big Brother Mobile',
-          bodyContent: `
-            <div style="text-align: center;">
-              <p style="font-size: 1.1rem; margin-bottom: 16px;">
-                Ready to compete for the grand prize?
-              </p>
-              <p style="margin-bottom: 12px;">
-                • Win competitions as Head of Household<br>
-                • Strategize nominations and Power of Veto<br>
-                • Navigate social dynamics and alliances<br>
-                • Vote to evict and survive to the end
-              </p>
-              <p style="color: var(--muted); font-size: 0.85rem; margin-top: 16px;">
-                Tip: You can customize game settings, timers, and visuals in the Settings panel.
-              </p>
-            </div>
-          `,
-          footerContent: `
-            <button class="btn" id="welcomeStartBtn" style="min-width: 120px;">Let's Play!</button>
-          `,
-          onClose: () => {
-            console.log('[PopupIntegration] Welcome popup closed');
-          }
-        });
-      });
-
-      // Add click handler for start button
-      setTimeout(() => {
-        const startBtn = document.getElementById('welcomeStartBtn');
-        if(startBtn){
-          startBtn.addEventListener('click', () => {
-            global.PopupManager.close();
-          });
-        }
-      }, 100);
-    }, 500);
-  }
-
-  // Hook into game start
-  function hookGameStart(){
-    const startBtn = document.getElementById('btnStartQuick');
-    if(startBtn && !startBtn.__popupHooked){
-      startBtn.__popupHooked = true;
-      
-      // Store original handler
-      const originalHandler = startBtn.onclick;
-      
-      // Wrap with welcome popup
-      startBtn.onclick = function(e){
-        showGameStartWelcome();
-        
-        // Call original handler
-        if(originalHandler){
-          originalHandler.call(this, e);
-        }
-      };
-    }
-  }
-
   // Show info popup (can be called from anywhere)
   function showInfoPopup(title, message){
     const cfg = global.game?.cfg || {};
@@ -165,13 +80,6 @@
 
       return popup;
     });
-  }
-
-  // Initialize on DOM ready
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', hookGameStart);
-  } else {
-    hookGameStart();
   }
 
   // Export functions
