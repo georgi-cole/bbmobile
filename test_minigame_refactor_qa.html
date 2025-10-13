@@ -121,12 +121,7 @@
       const container = document.getElementById('test-purged');
       container.innerHTML = '';
       
-      const purgedGames = [
-        'jumpRope', 'sequenceMemory', 'memoryPairs', 'comboKeys', 
-        'echoChamber', 'iconMatch', 'gearShift', 'puzzleDash',
-        'reactionRoyale', 'reactionTimer', 'bubbleBurst', 'diceDash',
-        'lightSpeed', 'mathBlitz'
-      ];
+      const purgedGames = window.PURGED_GAMES;
       
       const registry = window.MinigameRegistry;
       if (!registry) {
