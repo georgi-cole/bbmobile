@@ -197,7 +197,7 @@
         border-top: 1px solid var(--line);
         display: flex;
         justify-content: flex-end;
-        gap: 12px;
+        gap: var(--popup-button-gap, 12px);
         flex-shrink: 0;
       `;
       

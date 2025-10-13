@@ -64,18 +64,20 @@
   --texture-opacity:0.15;
 
   /* Popup/Modal tokens - extracted from reveal card system */
-  --popup-bg-start:rgba(28,43,62,.94);
-  --popup-bg-end:rgba(12,22,36,.90);
+  --popup-bg-start:rgba(28,43,62,.75);
+  --popup-bg-end:rgba(12,22,36,.72);
   --popup-border:rgba(110,160,220,.25);
   --popup-radius:24px;
   --popup-shadow:0 12px 36px -16px rgba(0,0,0,.8), 0 6px 20px -8px rgba(0,0,0,.6), 0 0 0 1px rgba(120,180,255,.15);
   --popup-shadow-inset:0 0 32px -10px var(--accent) inset;
-  --popup-backdrop-blur:16px;
-  --popup-backdrop-opacity:0.9;
+  --popup-backdrop-blur:18px;
+  --popup-backdrop-opacity:0.75;
   --popup-max-width:min(780px, 92vw);
   --popup-padding:22px 26px 24px;
   --popup-transition-duration:0.3s;
   --popup-inter-delay:800ms; /* delay between popups */
+  --popup-content-gap:16px; /* spacing between body content and footer buttons */
+  --popup-button-gap:12px; /* spacing between buttons */
 }
 
 /* THEME DEFINITIONS --------------------------------------------------------- */
@@ -110,8 +112,8 @@ body:not([data-theme]){
   --roster-glow:0 0 20px rgba(0,217,255,0.4);
   --roster-hover-glow:0 0 30px rgba(0,217,255,0.6), 0 0 60px rgba(0,217,255,0.3);
   /* Theme-specific popup styling */
-  --popup-bg-start:rgba(26,26,47,.96);
-  --popup-bg-end:rgba(16,16,32,.92);
+  --popup-bg-start:rgba(26,26,47,.78);
+  --popup-bg-end:rgba(16,16,32,.74);
   --popup-border:rgba(0,217,255,.35);
   --popup-shadow:0 12px 36px -16px rgba(0,0,0,.9), 0 6px 20px -8px rgba(0,0,0,.7), 0 0 0 1px rgba(0,217,255,.2);
 }
@@ -144,8 +146,8 @@ body[data-theme="modernhouse"]{
   --roster-glow:0 0 15px rgba(107,143,255,0.3);
   --roster-hover-glow:0 0 25px rgba(107,143,255,0.5), 0 0 50px rgba(107,143,255,0.2);
   /* Theme-specific popup styling */
-  --popup-bg-start:rgba(255,255,255,.98);
-  --popup-bg-end:rgba(248,248,252,.96);
+  --popup-bg-start:rgba(255,255,255,.85);
+  --popup-bg-end:rgba(248,248,252,.82);
   --popup-border:rgba(107,143,255,.4);
   --popup-shadow:0 12px 36px -16px rgba(0,0,0,.15), 0 6px 20px -8px rgba(0,0,0,.1), 0 0 0 1px rgba(107,143,255,.2);
   --popup-backdrop-opacity:0.85;
