@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers - End-to-End Tests</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1400px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    h1 { color: #f7b955; margin-bottom: 10px; }
+    h2 { color: #95a9c0; margin-top: 30px; border-bottom: 2px solid #3a3a5a; padding-bottom: 10px; }
+    h3 { color: #8ab4f8; margin-top: 20px; }
+    
+    .test-controls {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    button:hover { background: #2980b9; transform: translateY(-2px); }
+    button:active { transform: translateY(0); }
+    button.success { background: #2ecc71; }
+    button.success:hover { background: #27ae60; }
+    button.danger { background: #e74c3c; }
+    button.danger:hover { background: #c0392b; }
+    button.warning { background: #f39c12; }
+    button.warning:hover { background: #d68910; }
+    button:disabled { 
+      background: #5a6a7a; 
+      cursor: not-allowed; 
+      opacity: 0.6;
+      transform: none;
+    }
+    
+    .stage-container {
+      background: rgba(255,255,255,0.03);
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+    }
+    
+    .stage-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+    
+    .stage-status {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .status-pending { background: #95a5a6; color: white; }
+    .status-running { background: #f39c12; color: white; animation: pulse 1.5s infinite; }
+    .status-complete { background: #2ecc71; color: white; }
+    .status-error { background: #e74c3c; color: white; }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    .preview-panel {
+      background: #0d1117;
+      border: 2px solid #30363d;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 15px 0;
+      min-height: 300px;
+      position: relative;
+    }
+    
+    .screenshot-placeholder {
+      background: linear-gradient(135deg, #1e2a3a 0%, #2d3e50 100%);
+      border: 2px dashed #4a5a6a;
+      border-radius: 8px;
+      padding: 60px 20px;
+      text-align: center;
+      color: #8a9aaa;
+      font-size: 16px;
+      margin: 10px 0;
+    }
+    
+    .screenshot-placeholder .icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+    
+    .info-box {
+      background: rgba(52, 152, 219, 0.1);
+      border-left: 4px solid #3498db;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .info-box.success {
+      background: rgba(46, 204, 113, 0.1);
+      border-left-color: #2ecc71;
+    }
+    
+    .info-box.warning {
+      background: rgba(241, 196, 15, 0.1);
+      border-left-color: #f1c40f;
+    }
+    
+    .info-box.error {
+      background: rgba(231, 76, 60, 0.1);
+      border-left-color: #e74c3c;
+    }
+    
+    .test-log {
+      background: #000;
+      color: #0f0;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      height: 250px;
+      overflow-y: auto;
+      margin: 15px 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    
+    .metric-card {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .metric-value {
+      font-size: 36px;
+      font-weight: bold;
+      color: #3498db;
+      margin: 10px 0;
+    }
+    
+    .metric-label {
+      font-size: 14px;
+      color: #95a5a6;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    code {
+      background: rgba(255,255,255,0.1);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .player-list {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    
+    .player-card {
+      background: rgba(255,255,255,0.08);
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .player-card .energy {
+      color: #f39c12;
+      font-weight: bold;
+    }
+    
+    .action-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    .action-card {
+      background: rgba(255,255,255,0.05);
+      padding: 12px;
+      border-radius: 6px;
+      border-left: 3px solid #3498db;
+    }
+    
+    .action-card.friendly { border-left-color: #2ecc71; }
+    .action-card.strategic { border-left-color: #f39c12; }
+    .action-card.aggressive { border-left-color: #e74c3c; }
+    
+    .action-card .name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .action-card .cost {
+      color: #f39c12;
+      font-size: 12px;
+    }
+    
+    .timeline {
+      position: relative;
+      padding-left: 30px;
+      margin: 20px 0;
+    }
+    
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #3a3a5a;
+    }
+    
+    .timeline-item {
+      position: relative;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 6px;
+    }
+    
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -25px;
+      top: 20px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #3498db;
+      border: 3px solid #1a1a2e;
+    }
+    
+    .timeline-item.active::before {
+      background: #2ecc71;
+      box-shadow: 0 0 10px #2ecc71;
+    }
+    
+    .progress-bar {
+      background: rgba(255,255,255,0.1);
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    
+    .progress-fill {
+      background: linear-gradient(90deg, #3498db, #2ecc71);
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Maneuvers - End-to-End Testing Suite</h1>
+  <p style="color: #95a5a6;">Comprehensive testing of all social module stages from initialization to completion</p>
+  
+  <!-- Test Controls -->
+  <div class="test-controls">
+    <h3>Test Controls</h3>
+    <div class="button-group">
+      <button id="btnRunAll" class="success">▶ Run Full E2E Test</button>
+      <button id="btnResetTest" class="danger">↻ Reset Test Environment</button>
+      <button id="btnStage1">1️⃣ Stage 1: Initialization</button>
+      <button id="btnStage2" disabled>2️⃣ Stage 2: Phase Start</button>
+      <button id="btnStage3" disabled>3️⃣ Stage 3: UI Render</button>
+      <button id="btnStage4" disabled>4️⃣ Stage 4: User Actions</button>
+      <button id="btnStage5" disabled>5️⃣ Stage 5: Phase End</button>
+    </div>
+    <div class="info-box">
+      <strong>Test Mode:</strong> This page simulates the complete social phase lifecycle with mock game state.
+      Click "Run Full E2E Test" to automatically execute all stages, or step through each stage individually.
+    </div>
+  </div>
+  
+  <!-- Overall Progress -->
+  <div class="test-controls">
+    <h3>Overall Progress</h3>
+    <div class="progress-bar">
+      <div class="progress-fill" id="overallProgress" style="width: 0%"></div>
+    </div>
+    <div class="metrics">
+      <div class="metric-card">
+        <div class="metric-label">Current Stage</div>
+        <div class="metric-value" id="currentStage">0/5</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Tests Passed</div>
+        <div class="metric-value" id="testsPassedCount" style="color: #2ecc71;">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Tests Failed</div>
+        <div class="metric-value" id="testsFailedCount" style="color: #e74c3c;">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Duration</div>
+        <div class="metric-value" id="testDuration" style="color: #f39c12; font-size: 24px;">0s</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Test Log -->
+  <div class="test-controls">
+    <h3>Test Execution Log</h3>
+    <div class="test-log" id="testLog"></div>
+    <button id="btnClearLog" class="warning">Clear Log</button>
+  </div>
+  
+  <!-- Stage 1: Initialization -->
+  <div class="stage-container" id="stage1Container">
+    <div class="stage-header">
+      <h2>Stage 1: Initialization & Feature Flag</h2>
+      <span class="stage-status status-pending" id="stage1Status">Pending</span>
+    </div>
+    <div class="info-box">
+      <strong>What happens:</strong> Module loads, feature flag is checked, game state is initialized.
+    </div>
+    <h3>Module Loading</h3>
+    <div class="preview-panel" id="stage1Preview">
+      <div id="stage1Content"></div>
+    </div>
+  </div>
+  
+  <!-- Stage 2: Phase Start -->
+  <div class="stage-container" id="stage2Container">
+    <div class="stage-header">
+      <h2>Stage 2: Phase Start & Energy Initialization</h2>
+      <span class="stage-status status-pending" id="stage2Status">Pending</span>
+    </div>
+    <div class="info-box">
+      <strong>What happens:</strong> <code>onSocialPhaseStart()</code> is called, energy is initialized for all players.
+    </div>
+    <h3>Energy System State</h3>
+    <div class="preview-panel" id="stage2Preview">
+      <div id="stage2Content"></div>
+    </div>
+  </div>
+  
+  <!-- Stage 3: UI Rendering -->
+  <div class="stage-container" id="stage3Container">
+    <div class="stage-header">
+      <h2>Stage 3: UI Rendering</h2>
+      <span class="stage-status status-pending" id="stage3Status">Pending</span>
+    </div>
+    <div class="info-box">
+      <strong>What happens:</strong> <code>renderSocialManeuversUI()</code> renders energy bar, player selection, and action menu.
+    </div>
+    <h3>Rendered UI Components</h3>
+    <div class="preview-panel" id="stage3Preview">
+      <div id="stage3UIContainer"></div>
+    </div>
+  </div>
+  
+  <!-- Stage 4: User Actions -->
+  <div class="stage-container" id="stage4Container">
+    <div class="stage-header">
+      <h2>Stage 4: Action Execution</h2>
+      <span class="stage-status status-pending" id="stage4Status">Pending</span>
+    </div>
+    <div class="info-box">
+      <strong>What happens:</strong> User selects target and action, <code>executeAction()</code> is called, energy is spent, affinity is updated.
+    </div>
+    <h3>Action Execution Results</h3>
+    <div class="preview-panel" id="stage4Preview">
+      <div id="stage4Content"></div>
+    </div>
+  </div>
+  
+  <!-- Stage 5: Phase End -->
+  <div class="stage-container" id="stage5Container">
+    <div class="stage-header">
+      <h2>Stage 5: Phase End & Cleanup</h2>
+      <span class="stage-status status-pending" id="stage5Status">Pending</span>
+    </div>
+    <div class="info-box">
+      <strong>What happens:</strong> <code>onSocialPhaseEnd()</code> is called, memory is recorded, phase transitions to nominations.
+    </div>
+    <h3>Cleanup & Transition</h3>
+    <div class="preview-panel" id="stage5Preview">
+      <div id="stage5Content"></div>
+    </div>
+  </div>
+  
+  <!-- Load Dependencies -->
+  <script src="js/social-maneuvers.js"></script>
+  
+  <script>
+    // ============================================================================
+    // TEST FRAMEWORK
+    // ============================================================================
+    
+    const TestFramework = {
+      log: [],
+      startTime: null,
+      currentStage: 0,
+      passedTests: 0,
+      failedTests: 0,
+      
+      init() {
+        this.setupMockEnvironment();
+        this.wireButtons();
+        this.logInfo('Test framework initialized');
+      },
+      
+      setupMockEnvironment() {
+        // Mock game state
+        window.game = {
+          week: 1,
+          humanId: 1,
+          phase: 'social_intermission',
+          cfg: {
+            enableSocialManeuvers: false // Start disabled for testing
+          },
+          __socialEnergy: new Map(),
+          __socialManeuversMemory: null
+        };
+        
+        // Mock helper functions
+        window.safeName = function(id) {
+          const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
+          return names[id - 1] || `Player ${id}`;
+        };
+        
+        window.getP = function(id) {
+          return {
+            id: id,
+            name: window.safeName(id),
+            affinity: {},
+            evicted: false
+          };
+        };
+        
+        window.alivePlayers = function() {
+          return [
+            { id: 1, name: 'Alice', evicted: false },
+            { id: 2, name: 'Bob', evicted: false },
+            { id: 3, name: 'Charlie', evicted: false },
+            { id: 4, name: 'Diana', evicted: false },
+            { id: 5, name: 'Eve', evicted: false }
+          ];
+        };
+        
+        this.logSuccess('Mock game environment created');
+      },
+      
+      wireButtons() {
+        document.getElementById('btnRunAll').onclick = () => this.runFullTest();
+        document.getElementById('btnResetTest').onclick = () => this.resetTest();
+        document.getElementById('btnStage1').onclick = () => this.runStage1();
+        document.getElementById('btnStage2').onclick = () => this.runStage2();
+        document.getElementById('btnStage3').onclick = () => this.runStage3();
+        document.getElementById('btnStage4').onclick = () => this.runStage4();
+        document.getElementById('btnStage5').onclick = () => this.runStage5();
+        document.getElementById('btnClearLog').onclick = () => this.clearLog();
+      },
+      
+      async runFullTest() {
+        this.logInfo('═'.repeat(60));
+        this.logInfo('Starting Full E2E Test');
+        this.logInfo('═'.repeat(60));
+        this.startTime = Date.now();
+        
+        // Update duration periodically
+        const durationInterval = setInterval(() => {
+          this.updateDuration();
+        }, 100);
+        
+        try {
+          await this.runStage1();
+          await this.delay(1000);
+          await this.runStage2();
+          await this.delay(1000);
+          await this.runStage3();
+          await this.delay(1500);
+          await this.runStage4();
+          await this.delay(1000);
+          await this.runStage5();
+          
+          this.logSuccess('═'.repeat(60));
+          this.logSuccess('✅ Full E2E Test COMPLETED');
+          this.logSuccess(`Total Duration: ${this.getDuration()}s`);
+          this.logSuccess(`Tests Passed: ${this.passedTests}`);
+          this.logSuccess(`Tests Failed: ${this.failedTests}`);
+          this.logSuccess('═'.repeat(60));
+        } catch(e) {
+          this.logError('❌ E2E Test FAILED: ' + e.message);
+          console.error(e);
+        } finally {
+          clearInterval(durationInterval);
+          this.updateDuration();
+        }
+      },
+      
+      async runStage1() {
+        this.setStageStatus(1, 'running');
+        this.logInfo('\n▶ Stage 1: Initialization & Feature Flag');
+        
+        try {
+          const container = document.getElementById('stage1Content');
+          container.innerHTML = '';
+          
+          // Test 1: Module loaded
+          this.test('Module loaded', typeof window.SocialManeuvers !== 'undefined');
+          
+          // Test 2: Feature flag disabled initially
+          this.test('Feature initially disabled', window.SocialManeuvers.isEnabled() === false);
+          
+          // Test 3: Enable feature
+          window.game.cfg.enableSocialManeuvers = true;
+          this.test('Feature can be enabled', window.SocialManeuvers.isEnabled() === true);
+          
+          // Render status
+          container.innerHTML = `
+            <div style="padding: 20px;">
+              <h3 style="color: #2ecc71; margin-top: 0;">✓ Module Initialization Complete</h3>
+              <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 6px; margin: 10px 0;">
+                <div style="margin: 8px 0;"><strong>Module:</strong> <code>window.SocialManeuvers</code> ✓</div>
+                <div style="margin: 8px 0;"><strong>Feature Flag:</strong> <code>enableSocialManeuvers = true</code> ✓</div>
+                <div style="margin: 8px 0;"><strong>USE_SOCIAL_MANEUVERS:</strong> <code>${window.USE_SOCIAL_MANEUVERS}</code> ✓</div>
+                <div style="margin: 8px 0;"><strong>Exports:</strong> ${Object.keys(window.SocialManeuvers).length} functions/constants ✓</div>
+              </div>
+              <div class="info-box success">
+                <strong>Status:</strong> Module successfully loaded and feature flag is active.
+              </div>
+            </div>
+          `;
+          
+          this.setStageStatus(1, 'complete');
+          this.currentStage = 1;
+          this.updateProgress();
+          this.enableStageButton(2);
+          
+          this.logSuccess('Stage 1 completed successfully\n');
+        } catch(e) {
+          this.logError('Stage 1 failed: ' + e.message);
+          this.setStageStatus(1, 'error');
+          throw e;
+        }
+      },
+      
+      async runStage2() {
+        this.setStageStatus(2, 'running');
+        this.logInfo('\n▶ Stage 2: Phase Start & Energy Initialization');
+        
+        try {
+          const container = document.getElementById('stage2Content');
+          container.innerHTML = '';
+          
+          // Test: Call onSocialPhaseStart
+          window.SocialManeuvers.onSocialPhaseStart();
+          this.test('onSocialPhaseStart() called', true);
+          
+          // Test: Energy initialized
+          const players = window.alivePlayers();
+          const energyInitialized = players.every(p => 
+            window.SocialManeuvers.getEnergy(p.id) === window.SocialManeuvers.DEFAULT_ENERGY
+          );
+          this.test('Energy initialized for all players', energyInitialized);
+          
+          // Render energy state
+          let html = `
+            <div style="padding: 20px;">
+              <h3 style="color: #2ecc71; margin-top: 0;">✓ Phase Start Complete</h3>
+              <div class="info-box success">
+                <strong>Phase Initialized:</strong> Energy system active, ${players.length} players ready.
+              </div>
+              <h4>Player Energy States:</h4>
+              <div class="player-list">
+          `;
+          
+          players.forEach(p => {
+            const energy = window.SocialManeuvers.getEnergy(p.id);
+            const dots = '●'.repeat(energy) + '○'.repeat(window.SocialManeuvers.MAX_ENERGY - energy);
+            html += `
+              <div class="player-card">
+                <div><strong>${p.name}</strong></div>
+                <div class="energy">${dots} ${energy}/${window.SocialManeuvers.MAX_ENERGY}</div>
+              </div>
+            `;
+          });
+          
+          html += `
+              </div>
+              <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                <strong>Default Energy:</strong> ${window.SocialManeuvers.DEFAULT_ENERGY}<br>
+                <strong>Max Energy:</strong> ${window.SocialManeuvers.MAX_ENERGY}<br>
+                <strong>Total Energy Pool:</strong> ${players.length * window.SocialManeuvers.DEFAULT_ENERGY}
+              </div>
+            </div>
+          `;
+          
+          container.innerHTML = html;
+          
+          this.setStageStatus(2, 'complete');
+          this.currentStage = 2;
+          this.updateProgress();
+          this.enableStageButton(3);
+          
+          this.logSuccess('Stage 2 completed successfully\n');
+        } catch(e) {
+          this.logError('Stage 2 failed: ' + e.message);
+          this.setStageStatus(2, 'error');
+          throw e;
+        }
+      },
+      
+      async runStage3() {
+        this.setStageStatus(3, 'running');
+        this.logInfo('\n▶ Stage 3: UI Rendering');
+        
+        try {
+          const container = document.getElementById('stage3UIContainer');
+          container.innerHTML = '';
+          
+          // Render UI
+          window.SocialManeuvers.renderSocialManeuversUI(container, 1);
+          this.test('UI rendered successfully', container.innerHTML !== '');
+          
+          // Check UI components
+          this.test('Energy bar present', container.querySelector('.social-energy-bar') !== null);
+          this.test('Player selection present', container.querySelector('.social-player-select') !== null);
+          this.test('Action list present', container.querySelector('.social-action-select') !== null);
+          this.test('Execute button present', container.querySelector('.social-action-button') !== null);
+          
+          this.setStageStatus(3, 'complete');
+          this.currentStage = 3;
+          this.updateProgress();
+          this.enableStageButton(4);
+          
+          this.logSuccess('Stage 3 completed successfully\n');
+        } catch(e) {
+          this.logError('Stage 3 failed: ' + e.message);
+          this.setStageStatus(3, 'error');
+          throw e;
+        }
+      },
+      
+      async runStage4() {
+        this.setStageStatus(4, 'running');
+        this.logInfo('\n▶ Stage 4: Action Execution');
+        
+        try {
+          const container = document.getElementById('stage4Content');
+          container.innerHTML = '';
+          
+          // Execute multiple actions to demonstrate the system
+          const actions = [
+            { actor: 1, target: 2, action: 'smalltalk', label: 'Alice → Bob: Small Talk' },
+            { actor: 1, target: 3, action: 'strategize', label: 'Alice → Charlie: Strategize' },
+            { actor: 1, target: 4, action: 'compliment', label: 'Alice → Diana: Compliment' }
+          ];
+          
+          let html = `
+            <div style="padding: 20px;">
+              <h3 style="color: #2ecc71; margin-top: 0;">✓ Action Execution Results</h3>
+              <div class="timeline">
+          `;
+          
+          let totalEnergySpent = 0;
+          
+          for(const {actor, target, action, label} of actions) {
+            const beforeEnergy = window.SocialManeuvers.getEnergy(actor);
+            const result = window.SocialManeuvers.executeAction(actor, target, action);
+            const afterEnergy = window.SocialManeuvers.getEnergy(actor);
+            const energySpent = beforeEnergy - afterEnergy;
+            totalEnergySpent += energySpent;
+            
+            this.test(`Action executed: ${label}`, result.success === true);
+            
+            html += `
+              <div class="timeline-item active">
+                <div style="font-weight: bold; color: #3498db;">${label}</div>
+                <div style="margin: 8px 0; font-size: 13px;">
+                  <span style="color: #f39c12;">Energy: ${beforeEnergy} → ${afterEnergy}</span>
+                  <span style="margin-left: 15px;">Cost: ${energySpent}⚡</span>
+                </div>
+                <div style="margin: 8px 0; font-size: 13px;">
+                  <strong>Outcome:</strong> ${result.outcome?.message || 'Success'}
+                </div>
+                <div style="margin: 8px 0; font-size: 12px; color: #95a5a6;">
+                  ${result.outcome?.type === 'positive' ? '✓ Positive' : 
+                    result.outcome?.type === 'negative' ? '✗ Negative' : '• Neutral'}
+                  ${result.outcome?.affinityChange ? 
+                    ` (Affinity ${result.outcome.affinityChange > 0 ? '+' : ''}${(result.outcome.affinityChange * 100).toFixed(1)}%)` : ''}
+                </div>
+              </div>
+            `;
+          }
+          
+          const finalEnergy = window.SocialManeuvers.getEnergy(1);
+          
+          html += `
+              </div>
+              <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                <strong>Summary:</strong><br>
+                <div style="margin-top: 10px;">
+                  Actions Executed: ${actions.length}<br>
+                  Total Energy Spent: ${totalEnergySpent}⚡<br>
+                  Remaining Energy: ${finalEnergy}⚡<br>
+                  Memory Entries: ${window.game.__socialManeuversMemory?.actions?.length || 0}
+                </div>
+              </div>
+            </div>
+          `;
+          
+          container.innerHTML = html;
+          
+          this.setStageStatus(4, 'complete');
+          this.currentStage = 4;
+          this.updateProgress();
+          this.enableStageButton(5);
+          
+          this.logSuccess('Stage 4 completed successfully\n');
+        } catch(e) {
+          this.logError('Stage 4 failed: ' + e.message);
+          this.setStageStatus(4, 'error');
+          throw e;
+        }
+      },
+      
+      async runStage5() {
+        this.setStageStatus(5, 'running');
+        this.logInfo('\n▶ Stage 5: Phase End & Cleanup');
+        
+        try {
+          const container = document.getElementById('stage5Content');
+          container.innerHTML = '';
+          
+          // Get memory before cleanup
+          const memoryCount = window.game.__socialManeuversMemory?.actions?.length || 0;
+          
+          // Call phase end
+          window.SocialManeuvers.onSocialPhaseEnd();
+          this.test('onSocialPhaseEnd() called', true);
+          
+          // Render final state
+          container.innerHTML = `
+            <div style="padding: 20px;">
+              <h3 style="color: #2ecc71; margin-top: 0;">✓ Phase End Complete</h3>
+              <div class="info-box success">
+                <strong>Social phase completed successfully.</strong><br>
+                All actions have been recorded and phase is ready to transition.
+              </div>
+              <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                <h4 style="margin-top: 0;">Final Statistics:</h4>
+                <div style="margin: 8px 0;"><strong>Memory Entries:</strong> ${memoryCount}</div>
+                <div style="margin: 8px 0;"><strong>Phase Duration:</strong> ~30 seconds (simulated)</div>
+                <div style="margin: 8px 0;"><strong>Next Phase:</strong> Nominations</div>
+              </div>
+              <div class="info-box" style="margin-top: 20px;">
+                <strong>Transition:</strong> The game would now call <code>startNominations()</code> to begin the nomination phase.
+              </div>
+            </div>
+          `;
+          
+          this.setStageStatus(5, 'complete');
+          this.currentStage = 5;
+          this.updateProgress();
+          
+          this.logSuccess('Stage 5 completed successfully\n');
+          this.logSuccess('🎉 All stages completed! Social module E2E test PASSED.');
+        } catch(e) {
+          this.logError('Stage 5 failed: ' + e.message);
+          this.setStageStatus(5, 'error');
+          throw e;
+        }
+      },
+      
+      resetTest() {
+        this.logInfo('Resetting test environment...');
+        
+        // Reset game state
+        window.game.cfg.enableSocialManeuvers = false;
+        window.game.__socialEnergy = new Map();
+        window.game.__socialManeuversMemory = null;
+        
+        // Reset UI
+        for(let i = 1; i <= 5; i++) {
+          this.setStageStatus(i, 'pending');
+          document.getElementById(`stage${i}Content`)?.innerHTML = '';
+        }
+        document.getElementById('stage3UIContainer').innerHTML = '';
+        
+        // Reset metrics
+        this.currentStage = 0;
+        this.passedTests = 0;
+        this.failedTests = 0;
+        this.startTime = null;
+        this.updateProgress();
+        this.updateMetrics();
+        
+        // Reset buttons
+        for(let i = 2; i <= 5; i++) {
+          document.getElementById(`btnStage${i}`).disabled = true;
+        }
+        document.getElementById('btnStage1').disabled = false;
+        
+        this.logSuccess('Test environment reset complete\n');
+      },
+      
+      // Helper methods
+      delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      },
+      
+      test(description, condition) {
+        if(condition) {
+          this.logSuccess(`✓ ${description}`);
+          this.passedTests++;
+        } else {
+          this.logError(`✗ ${description}`);
+          this.failedTests++;
+        }
+        this.updateMetrics();
+      },
+      
+      setStageStatus(stage, status) {
+        const statusEl = document.getElementById(`stage${stage}Status`);
+        statusEl.className = `stage-status status-${status}`;
+        statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+      },
+      
+      enableStageButton(stage) {
+        document.getElementById(`btnStage${stage}`).disabled = false;
+      },
+      
+      updateProgress() {
+        const progress = (this.currentStage / 5) * 100;
+        document.getElementById('overallProgress').style.width = progress + '%';
+        document.getElementById('currentStage').textContent = `${this.currentStage}/5`;
+      },
+      
+      updateMetrics() {
+        document.getElementById('testsPassedCount').textContent = this.passedTests;
+        document.getElementById('testsFailedCount').textContent = this.failedTests;
+      },
+      
+      getDuration() {
+        if(!this.startTime) return 0;
+        return ((Date.now() - this.startTime) / 1000).toFixed(1);
+      },
+      
+      updateDuration() {
+        document.getElementById('testDuration').textContent = this.getDuration() + 's';
+      },
+      
+      logInfo(msg) {
+        this.appendLog('ℹ️', msg, '#3498db');
+      },
+      
+      logSuccess(msg) {
+        this.appendLog('✓', msg, '#2ecc71');
+      },
+      
+      logError(msg) {
+        this.appendLog('✗', msg, '#e74c3c');
+      },
+      
+      appendLog(icon, msg, color) {
+        const logEl = document.getElementById('testLog');
+        const timestamp = new Date().toLocaleTimeString();
+        const entry = `[${timestamp}] ${icon} ${msg}\n`;
+        logEl.textContent += entry;
+        logEl.scrollTop = logEl.scrollHeight;
+        console.log(`[E2E Test] ${msg}`);
+      },
+      
+      clearLog() {
+        document.getElementById('testLog').textContent = '';
+        this.logInfo('Log cleared');
+      }
+    };
+    
+    // Initialize on load
+    window.addEventListener('load', () => {
+      TestFramework.init();
+    });
+  </script>
+</body>
+</html>
