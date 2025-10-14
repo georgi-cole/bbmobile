@@ -36,7 +36,7 @@
 <body>
   <div class="container">
     <h1>🧪 Test: Tag Assignment and Ceremony Logic</h1>
-    <p>Tests the refactored tag assignment (HOH, POV, NOM) and nomination ceremony UI with wildcards</p>
+    <p>Tests the refactored tag assignment (HOH, POV, NOM) and nomination ceremony UI with animated reveals, nominee reactions, and HOH avatar speech</p>
 
     <div class="test-section">
       <h2>Current Game State</h2>
@@ -325,9 +325,9 @@
       log(passed ? 'PASS: Badges reset at new week start' : 'FAIL: Badges not reset', passed ? 'pass' : 'fail');
     }
 
-    // Test: Nomination ceremony UI with wildcards
+    // Test: Nomination ceremony UI with animated reveals and reactions
     async function testCeremonyWithWildcards() {
-      log('Testing nomination ceremony UI with wildcards...', 'info');
+      log('Testing nomination ceremony UI with animated reveals and reactions...', 'info');
       
       // Set up ceremony state
       game.hohId = 1;
@@ -344,36 +344,47 @@
       const hoh = getPlayer(game.hohId);
       const steps = [];
       
-      // Step 1: HOH addresses house
+      // Step 1: HOH addresses house with avatar
       steps.push({
         title: 'Nomination Ceremony',
+        type: 'hoh-speech',
         content: `${hoh.name} addresses the house.`,
+        avatar: hoh,
         duration: 2400
       });
       
-      // Step 2: Show wildcard slots
+      // Step 2: Animated nominee reveals with avatars (NO MORE "?" wildcards)
       for (let i = 0; i < game.nominees.length; i++) {
-        const label = i === 0 ? 'First Nominee' : 'Second Nominee';
+        const nominee = getPlayer(game.nominees[i]);
         steps.push({
-          title: label,
-          content: '?',
-          duration: 1800
+          title: 'Nominated',
+          type: 'nominee-reveal',
+          content: nominee.name,
+          avatar: nominee,
+          duration: 2200,
+          animated: true
         });
       }
       
-      // Step 3: Reveal nominees
+      // Step 3: Nominee reactions with quotes
+      const reactionQuotes = [
+        'I am shocked, but I am ready to fight for my place here.',
+        'I respect the decision, but I am not giving up.'
+      ];
       for (let i = 0; i < game.nominees.length; i++) {
-        const label = i === 0 ? 'First Nominee' : 'Second Nominee';
+        const nominee = getPlayer(game.nominees[i]);
         steps.push({
-          title: label,
-          content: safeName(game.nominees[i]),
-          duration: 2600
+          title: nominee.name,
+          type: 'nominee-reaction',
+          content: `"${reactionQuotes[i]}"`,
+          duration: 2800
         });
       }
       
       // Step 4: Ceremony adjourned
       steps.push({
         title: 'Nomination Ceremony',
+        type: 'conclusion',
         content: 'This ceremony is adjourned.',
         duration: 2000
       });
@@ -386,28 +397,85 @@
           log('Ceremony complete: Cards disappeared, tags updated', 'pass');
           ceremonyEl.innerHTML = '<div style="color: #77d58d; font-weight: bold;">✓ Ceremony Complete</div>';
           
-          // Validate ceremony flow
-          const passed = steps.length === 6 && // 1 intro + 2 wildcards + 2 reveals + 1 adjourned
-                         steps.some(s => s.content === '?') && // Has wildcards
-                         steps.some(s => s.content === 'This ceremony is adjourned.'); // Has adjourned message
+          // Validate NEW ceremony flow
+          const hasHOHSpeech = steps.some(s => s.type === 'hoh-speech');
+          const hasAnimatedReveals = steps.some(s => s.type === 'nominee-reveal' && s.animated);
+          const hasReactions = steps.some(s => s.type === 'nominee-reaction');
+          const hasConclusion = steps.some(s => s.type === 'conclusion');
+          const noWildcards = !steps.some(s => s.content === '?');
+          
+          const passed = hasHOHSpeech && hasAnimatedReveals && hasReactions && hasConclusion && noWildcards;
           
           addTestResult('Nomination Ceremony UI', passed,
-            passed ? 'Ceremony with wildcards, reveals, and adjourned message' : 'Ceremony flow incorrect');
+            passed ? 'Ceremony with HOH avatar, animated reveals, reactions, and no wildcards' : 'Ceremony flow incorrect');
+          
+          // Log detailed validation
+          if (!passed) {
+            log(`Validation failed: HOH=${hasHOHSpeech}, Reveals=${hasAnimatedReveals}, Reactions=${hasReactions}, Conclusion=${hasConclusion}, NoWildcards=${noWildcards}`, 'fail');
+          }
           return;
         }
         
         const step = steps[currentStep];
-        log(`Ceremony step ${currentStep + 1}/${steps.length}: ${step.title} - "${step.content}"`, 'info');
+        log(`Ceremony step ${currentStep + 1}/${steps.length}: ${step.title} [${step.type}] - "${step.content}"`, 'info');
         
-        ceremonyEl.innerHTML = `
-          <div class="card noms">
-            <div class="card-title">${step.title}</div>
-            <div class="card-content">${step.content}</div>
-          </div>
-        `;
+        // Render different card styles based on type
+        let cardHTML = '';
+        if (step.type === 'hoh-speech' && step.avatar) {
+          cardHTML = `
+            <div class="card noms" style="display: flex; flex-direction: column; align-items: center;">
+              <div class="card-title">${step.title}</div>
+              <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #d4a629, #ffd966); display: flex; align-items: center; justify-content: center; margin: 15px 0; font-weight: bold; font-size: 2rem; color: #1a1200;">${step.avatar.name[0]}</div>
+              <div class="card-content">${step.content}</div>
+            </div>
+          `;
+        } else if (step.type === 'nominee-reveal' && step.animated && step.avatar) {
+          cardHTML = `
+            <div class="card noms" style="display: flex; flex-direction: column; align-items: center;">
+              <div class="card-title">${step.title}</div>
+              <div style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #c23636, #e64a4a); display: flex; align-items: center; justify-content: center; margin: 15px 0; font-weight: bold; font-size: 2.5rem; color: #fff; animation: revealGrow 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);">${step.avatar.name[0]}</div>
+              <div class="card-content" style="font-size: 1.3rem; font-weight: bold;">${step.content}</div>
+            </div>
+          `;
+        } else if (step.type === 'nominee-reaction') {
+          cardHTML = `
+            <div class="card noms">
+              <div class="card-title">${step.title}</div>
+              <div class="card-content" style="font-style: italic;">${step.content}</div>
+            </div>
+          `;
+        } else {
+          cardHTML = `
+            <div class="card noms">
+              <div class="card-title">${step.title}</div>
+              <div class="card-content">${step.content}</div>
+            </div>
+          `;
+        }
+        
+        ceremonyEl.innerHTML = cardHTML;
         
         currentStep++;
-        setTimeout(showNextStep, 500); // Faster for demo
+        setTimeout(showNextStep, 600); // Slightly longer for animation viewing
+      }
+      
+      // Add animation CSS if not present
+      if (!document.getElementById('ceremony-animations')) {
+        const style = document.createElement('style');
+        style.id = 'ceremony-animations';
+        style.textContent = `
+          @keyframes revealGrow {
+            from {
+              opacity: 0;
+              transform: scale(0.5);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
+        `;
+        document.head.appendChild(style);
       }
       
       showNextStep();
