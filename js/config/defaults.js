@@ -65,13 +65,13 @@
     // Progression system (feature-flagged, off by default)
     progressionEnabled: false,  // Enable XP and leveling system
     
-    // Popup system refresh (feature-flagged, off by default)
-    popup_refresh_enabled: false,  // Enable new BasePopup/PopupManager system
+    // Popup system refresh (feature-flagged, on by default)
+    popup_refresh_enabled: true,  // Enable new BasePopup/PopupManager system
     enablePopupTelemetryPanel: false,  // Dev debug panel for popup telemetry
     
-    // Social Logic v2 (feature-flagged, off by default)
-    social_logic_v2_enabled: false,  // Enable context-aware weighted social popup selection
-    social_cadence_enabled: false,  // Enable social decision popup cadence system
+    // Social Logic v2 (feature-flagged, on by default)
+    social_logic_v2_enabled: true,  // Enable context-aware weighted social popup selection
+    social_cadence_enabled: true,  // Enable social decision popup cadence system
     social_inter_delay: 800  // Inter-popup delay for social decisions (ms)
   };
 
