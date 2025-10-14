@@ -107,7 +107,16 @@
       console.warn('[self-eviction] AI self-eviction blocked - not in safe window');
       
       // Show modal for AI random event (not manual/admin)
-      if(typeof global.showCard === 'function'){
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Self-Eviction Blocked',
+          lines: [`${player.name} attempted to self-evict but was prevented (wrong timing).`],
+          tone: 'info',
+          duration: 3000
+        });
+      } else if(typeof global.showCard === 'function'){
         global.showCard(
           'Self-Eviction Blocked',
           [`${player.name} attempted to self-evict but was prevented (wrong timing).`],
@@ -133,14 +142,25 @@
       });
 
       // Show modal for AI random events
-      if(origin === 'ai' && typeof global.showCard === 'function'){
-        global.showCard(
-          'Breaking News',
-          [`${player.name} has decided to self-evict from the Big Brother house.`],
-          'warn',
-          4000,
-          true
-        );
+      if(origin === 'ai'){
+        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+          global.PopupManager.show({
+            type: 'info',
+            variant: null,
+            title: 'Breaking News',
+            lines: [`${player.name} has decided to self-evict from the Big Brother house.`],
+            tone: 'warn',
+            duration: 4000
+          });
+        } else if(typeof global.showCard === 'function'){
+          global.showCard(
+            'Breaking News',
+            [`${player.name} has decided to self-evict from the Big Brother house.`],
+            'warn',
+            4000,
+            true
+          );
+        }
       }
 
       // Branch based on role and phase
@@ -184,7 +204,16 @@
       
       // If we need more nominees, prompt HOH to renominate
       if(g.nominees.length < 2 && !context.isEndgame){
-        if(typeof global.showCard === 'function'){
+        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+          global.PopupManager.show({
+            type: 'nominations',
+            variant: 'nominations',
+            title: 'Renomination Required',
+            lines: ['The HOH must name a replacement nominee.'],
+            tone: 'warn',
+            duration: 3500
+          });
+        } else if(typeof global.showCard === 'function'){
           global.showCard(
             'Renomination Required',
             ['The HOH must name a replacement nominee.'],
@@ -229,7 +258,16 @@
       clearAllBadges();
       
       // Null eviction - week ends
-      if(typeof global.showCard === 'function'){
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Week Ends',
+          lines: ['Due to self-eviction, the week concludes with no vote.'],
+          tone: 'info',
+          duration: 3500
+        });
+      } else if(typeof global.showCard === 'function'){
         global.showCard(
           'Week Ends',
           ['Due to self-eviction, the week concludes with no vote.'],
@@ -280,7 +318,16 @@
     clearAllBadges();
     
     // Show message
-    if(typeof global.showCard === 'function'){
+    if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+      global.PopupManager.show({
+        type: 'info',
+        variant: null,
+        title: 'Week Cancelled',
+        lines: ['The HOH has self-evicted. The week ends, and no one else is evicted.'],
+        tone: 'info',
+        duration: 4000
+      });
+    } else if(typeof global.showCard === 'function'){
       global.showCard(
         'Week Cancelled',
         ['The HOH has self-evicted. The week ends, and no one else is evicted.'],
@@ -312,7 +359,16 @@
       processEviction(playerId, 'self');
       
       // At F4, POV holder self-evicting skips the week and proceeds to F3
-      if(typeof global.showCard === 'function'){
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Final 4 → Final 3',
+          lines: ['POV holder self-evicted. Proceeding directly to Final 3.'],
+          tone: 'info',
+          duration: 4000
+        });
+      } else if(typeof global.showCard === 'function'){
         global.showCard(
           'Final 4 → Final 3',
           ['POV holder self-evicted. Proceeding directly to Final 3.'],
@@ -342,7 +398,16 @@
       
       g.vetoHolder = null;
       
-      if(typeof global.showCard === 'function'){
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'pov',
+          variant: 'pov',
+          title: 'Veto Ceremony Skipped',
+          lines: ['POV holder self-evicted before ceremony. Proceeding to eviction.'],
+          tone: 'info',
+          duration: 3500
+        });
+      } else if(typeof global.showCard === 'function'){
         global.showCard(
           'Veto Ceremony Skipped',
           ['POV holder self-evicted before ceremony. Proceeding to eviction.'],
@@ -366,7 +431,16 @@
       
       g.vetoHolder = null;
       
-      if(typeof global.showCard === 'function'){
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Week Continues',
+          lines: ['POV holder self-evicted. The week continues as scheduled.'],
+          tone: 'info',
+          duration: 3000
+        });
+      } else if(typeof global.showCard === 'function'){
         global.showCard(
           'Week Continues',
           ['POV holder self-evicted. The week continues as scheduled.'],
@@ -394,7 +468,17 @@
 
     processEviction(playerId, 'self');
     
-    if(typeof global.showCard === 'function'){
+    if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+      const player = global.getP ? global.getP(playerId) : null;
+      global.PopupManager.show({
+        type: 'eviction',
+        variant: 'eviction',
+        title: 'Self-Evicted',
+        lines: [player ? player.name : 'Houseguest'],
+        tone: 'evict',
+        duration: 3800
+      });
+    } else if(typeof global.showCard === 'function'){
       const player = global.getP ? global.getP(playerId) : null;
       global.showCard(
         'Self-Evicted',

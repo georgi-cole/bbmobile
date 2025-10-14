@@ -272,7 +272,18 @@
     const voter = global.getP?.(voterId);
     const target = global.getP?.(targetId);
     if(!voter || !target) {
-      global.showCard?.('Diary Room', [message], 'live', duration, true);
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'live-vote',
+          variant: 'live-vote',
+          title: 'Diary Room',
+          lines: [message],
+          tone: 'live',
+          duration: duration
+        });
+      } else {
+        global.showCard?.('Diary Room', [message], 'live', duration, true);
+      }
       return;
     }
 
@@ -288,7 +299,18 @@
       const tv = document.getElementById('tv');
       if(!tv) {
         console.warn('[DiaryRoom] TV element not found, falling back to showCard');
-        global.showCard?.('Diary Room', [message], 'live', duration, true);
+        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+          global.PopupManager.show({
+            type: 'live-vote',
+            variant: 'live-vote',
+            title: 'Diary Room',
+            lines: [message],
+            tone: 'live',
+            duration: duration
+          });
+        } else {
+          global.showCard?.('Diary Room', [message], 'live', duration, true);
+        }
         return;
       }
       tvOverlay = document.createElement('div');
@@ -467,7 +489,18 @@
   /* ----- Tie Break (2 noms) ----- */
   async function tieBreakTwo([a,b],ca,cb){
     const hoh=global.getP(global.game.hohId);
-    global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
+    if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+      global.PopupManager.show({
+        type: 'eviction',
+        variant: 'eviction',
+        title: 'Tiebreak',
+        lines: ['We have a tie! The HOH must break it.'],
+        tone: 'live',
+        duration: 3000
+      });
+    } else {
+      global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
+    }
     try{ await global.cardQueueWaitIdle?.(); }catch{}
     
     // Hook: Log XP for tiebreaker
@@ -478,13 +511,35 @@
     if(hoh?.human){
       const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict');
       if(pick===a) ca++; else cb++;
-      global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],'live',3000,true);
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'eviction',
+          variant: 'eviction',
+          title: 'HOH',
+          lines: [`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],
+          tone: 'live',
+          duration: 3000
+        });
+      } else {
+        global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],'live',3000,true);
+      }
       try{ await global.cardQueueWaitIdle?.(); }catch{}
       return {evId:pick,ca,cb};
     }
     const ha=(hoh.affinity[a]??0), hb=(hoh.affinity[b]??0);
     const evId = ha < hb ? a : b;
-    global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],'live',3000,true);
+    if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+      global.PopupManager.show({
+        type: 'eviction',
+        variant: 'eviction',
+        title: 'HOH',
+        lines: [`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],
+        tone: 'live',
+        duration: 3000
+      });
+    } else {
+      global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],'live',3000,true);
+    }
     try{ await global.cardQueueWaitIdle?.(); }catch{}
     if(evId===a) ca++; else cb++;
     return {evId,ca,cb};
@@ -549,7 +604,18 @@
       } else evId = (ca>cb? a : b);
 
       const evName=global.safeName(evId);
-      global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'eviction',
+          variant: 'eviction',
+          title: 'Eviction Result',
+          lines: [`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],
+          tone: 'evict',
+          duration: 3800
+        });
+      } else {
+        global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
+      }
       try{ await global.cardQueueWaitIdle?.(); }catch{}
       global.addLog?.(`Evicted: ${evName} (${finalA}–${finalB}).`,'danger');
       g.eviction.revealed=true; g.eviction.revealing=false; g.eviction.evicted=evId;
@@ -617,7 +683,18 @@
           }
         } else evId=topIds[0];
         const parts=noms.map(id=>`${global.safeName(id)} ${counts.get(id)||0}`).join(' — ');
-        global.showCard('Eviction Result',[`Votes: ${parts}`,`${global.safeName(evId)}, ${pickEvictionPhrase()}`],'evict',3800,true);
+        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+          global.PopupManager.show({
+            type: 'eviction',
+            variant: 'eviction',
+            title: 'Eviction Result',
+            lines: [`Votes: ${parts}`, `${global.safeName(evId)}, ${pickEvictionPhrase()}`],
+            tone: 'evict',
+            duration: 3800
+          });
+        } else {
+          global.showCard('Eviction Result',[`Votes: ${parts}`,`${global.safeName(evId)}, ${pickEvictionPhrase()}`],'evict',3800,true);
+        }
         try{ await global.cardQueueWaitIdle?.(); }catch{}
         global.addLog?.(`Evicted: ${global.safeName(evId)}. Votes — ${parts}`,'danger');
         g.eviction.revealed=true; g.eviction.revealing=false; g.eviction.evicted=evId;
@@ -731,7 +808,18 @@
 
     const parts=[...counts.keys()].map(id=>`${global.safeName(id)} ${counts.get(id)||0}`).join(' — ');
     const names=evictedIds.map(global.safeName).join(', ');
-    global.showCard('Eviction Results',[`${modeLabel}: ${names}`,`Final votes: ${parts}`],'evict',4200,true);
+    if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+      global.PopupManager.show({
+        type: 'eviction',
+        variant: 'eviction',
+        title: 'Eviction Results',
+        lines: [`${modeLabel}: ${names}`, `Final votes: ${parts}`],
+        tone: 'evict',
+        duration: 4200
+      });
+    } else {
+      global.showCard('Eviction Results',[`${modeLabel}: ${names}`,`Final votes: ${parts}`],'evict',4200,true);
+    }
     try{ await global.cardQueueWaitIdle?.(); }catch{}
     global.addLog?.(`${modeLabel}: ${names}. Votes — ${parts}`,'danger');
 
@@ -761,10 +849,32 @@
     console.info(`[eviction] assigned finalRank=${ev.finalRank} to ${ev.name}`);
 
     if(reason==='self'){
-      global.showCard('Self-Evicted',[ev.name],'evict',3800,true);
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'eviction',
+          variant: 'eviction',
+          title: 'Self-Evicted',
+          lines: [ev.name],
+          tone: 'evict',
+          duration: 3800
+        });
+      } else {
+        global.showCard('Self-Evicted',[ev.name],'evict',3800,true);
+      }
       global.addLog?.(`Self-eviction: <b>${ev.name}</b> has left the game.`,'danger');
     } else {
-      global.showCard('Evicted',[ev.name],'evict',3600,true);
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'eviction',
+          variant: 'eviction',
+          title: 'Evicted',
+          lines: [ev.name],
+          tone: 'evict',
+          duration: 3600
+        });
+      } else {
+        global.showCard('Evicted',[ev.name],'evict',3600,true);
+      }
       global.addLog?.(`Evicted: <b>${ev.name}</b>.`,'danger');
     }
 

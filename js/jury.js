@@ -1481,7 +1481,18 @@
       // No jurors: default winner
       const [A,B]=finalists();
       const winner = rng()<0.5?A:B;
-      g.showCard?.('Winner',['By default decision, '+safeName(winner)],'jury',2600,true);
+      if(global.PopupManager && g.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Winner',
+          lines: ['By default decision, '+safeName(winner)],
+          tone: 'jury',
+          duration: 2600
+        });
+      } else {
+        g.showCard?.('Winner',['By default decision, '+safeName(winner)],'jury',2600,true);
+      }
       setTimeout(()=>g.showFinaleCinematic?.(winner), 1200);
       return;
     }
@@ -1518,13 +1529,35 @@
     // Intro cards before reveal (tripled durations)
     // Intro card 1: 6.0s (was 2.0s)
     try {
-      await g.showCard?.('Jury Votes', ['The jury has deliberated...'], 'jury', 6000, true);
+      if(global.PopupManager && g.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Jury Votes',
+          lines: ['The jury has deliberated...'],
+          tone: 'jury',
+          duration: 6000
+        });
+      } else {
+        await g.showCard?.('Jury Votes', ['The jury has deliberated...'], 'jury', 6000, true);
+      }
       await g.cardQueueWaitIdle?.();
     } catch(e) {}
     
     // Intro card 2: 4.5s (was 1.5s)
     try {
-      await g.showCard?.('Time to Reveal', ['Let\'s reveal the votes one by one'], 'jury', 4500, true);
+      if(global.PopupManager && g.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Time to Reveal',
+          lines: ['Let\'s reveal the votes one by one'],
+          tone: 'jury',
+          duration: 4500
+        });
+      } else {
+        await g.showCard?.('Time to Reveal', ['Let\'s reveal the votes one by one'], 'jury', 4500, true);
+      }
       await g.cardQueueWaitIdle?.();
     } catch(e) {}
     
