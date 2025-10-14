@@ -77,11 +77,16 @@
     let gameStarted = false;
     let protectCleanup = null;
     let revealTimeout = null;
+    let distractorInterval = null;
     
     // Display area for sequence
     const displayDiv = document.createElement('div');
     displayDiv.style.cssText = 'font-size:2rem;margin:20px 0;min-height:60px;display:flex;gap:10px;justify-content:center;align-items:center;padding:15px;background:rgba(13,21,31,0.5);border-radius:8px;border:2px solid #2c3a4d;';
     displayDiv.textContent = 'Press Start to begin';
+    
+    // Distractor div (shows random shapes during recall phase)
+    const distractorDiv = document.createElement('div');
+    distractorDiv.style.cssText = 'font-size:1.5rem;color:rgba(149,169,192,0.3);min-height:30px;text-align:center;';
     
     // Timer display
     const timerDiv = document.createElement('div');
@@ -205,6 +210,15 @@
       inputDiv.style.display = 'flex';
       submitBtn.style.display = 'inline-block';
       submitBtn.disabled = false;
+      
+      // Start distractors (random shapes to add complexity)
+      distractorDiv.textContent = '';
+      distractorInterval = setInterval(() => {
+        const randomShapes = Array.from({length: 6}, () => 
+          shapes[Math.floor(Math.random() * shapes.length)]
+        ).join(' ');
+        distractorDiv.textContent = randomShapes;
+      }, 800);
     }
     
     /**
@@ -225,6 +239,12 @@
      */
     submitBtn.addEventListener('click', () => {
       submitBtn.disabled = true;
+      
+      // Stop distractors
+      if(distractorInterval){
+        clearInterval(distractorInterval);
+        distractorDiv.textContent = '';
+      }
       
       // Stop anti-cheat monitoring
       if(antiCheat){
@@ -269,6 +289,7 @@
     wrapper.appendChild(title);
     wrapper.appendChild(instructions);
     wrapper.appendChild(displayDiv);
+    wrapper.appendChild(distractorDiv);
     wrapper.appendChild(timerDiv);
     wrapper.appendChild(startBtn);
     wrapper.appendChild(inputDiv);

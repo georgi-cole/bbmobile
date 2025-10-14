@@ -28,7 +28,7 @@
     scoreDiv.style.cssText = 'font-size:1rem;color:#83bfff;';
     
     const gridDiv = document.createElement('div');
-    gridDiv.style.cssText = 'display:grid;grid-template-columns:repeat(4,80px);gap:8px;margin:20px 0;';
+    gridDiv.style.cssText = 'display:grid;grid-template-columns:repeat(5,70px);gap:8px;margin:20px 0;';
     
     const startBtn = document.createElement('button');
     startBtn.className = 'btn primary';
@@ -45,13 +45,13 @@
     let errors = 0;
     let gameActive = false;
     let flashInterval = null;
-    let targetCount = 20;
+    let targetCount = 25; // Increased for bigger grid
     let flashed = 0;
     
-    for(let i = 0; i < 16; i++){
+    for(let i = 0; i < 25; i++){ // 5x5 = 25 tiles
       const tile = document.createElement('div');
       tile.style.cssText = `
-        width:80px;height:80px;
+        width:70px;height:70px;
         background:#2c3a4d;
         border-radius:8px;
         cursor:pointer;

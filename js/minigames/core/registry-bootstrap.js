@@ -43,7 +43,8 @@
         'astroJumper', 'bubbleBurst', 'cardClash', 'chainReaction',
         'clockStopper', 'comboKeys', 'diceDash', 'echoChamber',
         'flashFlood', 'gearShift', 'gridLock', 'iconMatch',
-        'jumpRope', 'keyMaster', 'lightSpeed', 'puzzleDash'
+        'jumpRope', 'keyMaster', 'lightSpeed', 'puzzleDash',
+        'colorMatch', 'socialStrings', 'snake'
       ];
       
       for(const key of fallbackKeys){

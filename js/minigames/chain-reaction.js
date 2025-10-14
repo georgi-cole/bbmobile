@@ -135,7 +135,17 @@
           const remaining = grid.filter(t => t.dataset.removed === 'false').length;
           if(remaining === 0 || remaining < 2){
             if(currentRound < 5){
-              nextBtn.style.display = 'block';
+              // Auto-advance to next round (no stall)
+              currentRound++;
+              roundDiv.textContent = `Round: ${currentRound}/5`;
+              instructions.textContent = 'Round complete!';
+              instructions.style.color = '#74e48b';
+              
+              setTimeout(() => {
+                instructions.textContent = 'Click tiles of the same color to create chains! (5 rounds)';
+                instructions.style.color = '#95a9c0';
+                createGrid();
+              }, 1200);
             } else {
               endGame();
             }
