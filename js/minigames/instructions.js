@@ -193,43 +193,49 @@
     
     comixSpot: {
       title: 'Comix Spot',
-      description: 'Find all the differences between two comic panels! 1 round, 6 differences.',
+      description: 'Find all the differences between two comic panels! 3 rounds, 5 differences per round (7 in hard mode).',
       steps: []
     },
     
     holdWall: {
       title: 'Hold Wall',
-      description: 'Hold your finger on the wall as long as possible without moving!',
+      description: 'Hold your finger on the wall as long as possible without moving! Try to last 15+ seconds.',
       steps: []
     },
     
     slipperyShuttle: {
       title: 'Slippery Shuttle',
-      description: 'Navigate slippery platforms to reach the goal without falling!',
+      description: 'Navigate slippery platforms with momentum physics to reach the goal! Use arrow keys or buttons.',
       steps: []
     },
     
     socialStrings: {
       title: 'Social Strings',
-      description: 'Connect players with the correct social relationships!',
+      description: 'Match pairs of houseguests who have alliances! 3 rounds with increasing difficulty.',
       steps: []
     },
     
     oteviator: {
       title: 'Oteviator',
-      description: 'Press at the perfect moment when the elevator reaches the target floor!',
+      description: 'Press at the perfect moment when the elevator reaches the target floor! 5 floors to master.',
+      steps: []
+    },
+    
+    colorMatch: {
+      title: 'Color Match',
+      description: 'Mix RGB values to match the target color! 4 rounds. Slider mode available for precision.',
       steps: []
     },
     
     logicLocks: {
       title: 'Logic Locks',
-      description: 'Solve logic puzzles using deduction to crack the code!',
+      description: 'Crack the 4-digit code using bulls (correct position) and cows (correct digit, wrong position)! Code revealed after 6 attempts.',
       steps: []
     },
     
     snake: {
       title: 'Snake',
-      description: 'Control the snake to eat food and grow without hitting walls or yourself!',
+      description: 'Control the snake to eat food and grow! Portal mode available for edge-wrapping gameplay.',
       steps: []
     },
     

@@ -1,0 +1,310 @@
+{
+  "questions": [
+    {
+      "question": "What does HOH stand for in Big Brother?",
+      "options": ["Head of House", "House of Honor", "Head of Household", "Hero of the House"],
+      "correct": 2,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What competition gives the power to save a nominee?",
+      "options": ["HOH", "POV", "Battle Back", "Roadkill"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "How many houseguests are typically nominated each week?",
+      "options": ["1", "2", "3", "4"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is the POV ceremony?",
+      "options": ["Nomination ceremony", "Veto meeting", "Eviction vote", "HOH competition"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "Who usually casts the tie-breaking vote?",
+      "options": ["America", "Previous evictee", "HOH", "Oldest houseguest"],
+      "correct": 2,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is a 'backdoor' strategy?",
+      "options": ["Secret alliance", "Nominating someone after veto", "Lying to HOH", "Breaking promises"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "How many jury members typically vote for the winner?",
+      "options": ["5", "7", "9", "11"],
+      "correct": 2,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is the final part of the season called?",
+      "options": ["Finale", "Final Two", "Jury Vote", "Grand Finale"],
+      "correct": 0,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What happens if the POV is used?",
+      "options": ["Nothing", "HOH nominates replacement", "Week ends", "Eviction cancelled"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is a 'floater' strategy?",
+      "options": ["Swimming", "Avoiding sides", "Floating votes", "Being lazy"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "Who can compete in the POV competition?",
+      "options": ["Everyone", "HOH, nominees, 3 picks", "Just nominees", "Just HOH"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is jury management?",
+      "options": ["Controlling jury", "Maintaining relationships", "Bribing jury", "Avoiding jury"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is a showmance?",
+      "options": ["TV show", "Romance in house", "Performance", "Drama"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is the Diary Room used for?",
+      "options": ["Sleeping", "Private confessionals", "Storage", "Competitions"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is an alliance?",
+      "options": ["Marriage", "Group working together", "Competition team", "Vote bloc"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is a 'pawn' in Big Brother strategy?",
+      "options": ["Chess piece", "Fake nominee", "Weak player", "Sacrifice"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What does it mean to 'throw' a competition?",
+      "options": ["Give up", "Lose on purpose", "Throw something", "Get angry"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is the 'Block'?",
+      "options": ["Punishment", "Nomination chairs", "Voting area", "Time limit"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is a unanimous vote?",
+      "options": ["Close vote", "Everyone agrees", "Tie vote", "No vote"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is a 'blindside'?",
+      "options": ["Surprise eviction", "Closed eyes", "Darkness", "Betrayal"],
+      "correct": 0,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is the Jury House?",
+      "options": ["Final house", "Evictee residence", "Courthouse", "Voting booth"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is a 'bitter jury'?",
+      "options": ["Angry jurors", "Bad losers", "Voting based on anger", "All of these"],
+      "correct": 3,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is 'blood on your hands'?",
+      "options": ["Injury", "Responsibility for evictions", "Guilt", "Violence"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is a 'comp beast'?",
+      "options": ["Animal", "Competition winner", "Strong player", "Frequent comp winner"],
+      "correct": 3,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is the 'Final 2'?",
+      "options": ["Last two players", "Final competition", "Last vote", "Finale episode"],
+      "correct": 0,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What happens on eviction night?",
+      "options": ["Competition", "Someone leaves", "Party", "Nothing"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is a 'target'?",
+      "options": ["Goal", "Person to evict", "Competition prize", "Bullseye"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is 'campaigning'?",
+      "options": ["Running", "Asking for votes", "Competing", "Arguing"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is a 'mastermind'?",
+      "options": ["Smart player", "Strategic leader", "Competition winner", "Manipulator"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is 'flipping the house'?",
+      "options": ["Renovating", "Changing votes", "Evicting HOH", "Winning comps"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What does 'laying low' mean?",
+      "options": ["Sleeping", "Avoiding attention", "Losing", "Quitting"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is a 'power alliance'?",
+      "options": ["Electric group", "Dominant alliance", "HOH team", "Winners"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is 'making deals'?",
+      "options": ["Shopping", "Negotiating safety", "Trading items", "Card games"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is 'jury votes'?",
+      "options": ["Legal votes", "Winner decision", "Eviction votes", "America votes"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is the 'prize money'?",
+      "options": ["$100K", "$250K", "$500K", "$1M"],
+      "correct": 2,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is a 'twist'?",
+      "options": ["Dance move", "Unexpected rule", "Turn", "Strategy"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is 'America's Vote'?",
+      "options": ["Election", "Viewers influence game", "HOH comp", "Jury vote"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What are 'Have-Nots'?",
+      "options": ["Losers", "Limited food players", "Nominees", "Jury"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is the 'Battle Back'?",
+      "options": ["Fight", "Return competition", "Revenge", "Backstab"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is 'pre-jury'?",
+      "options": ["Before game", "Before jury phase", "Early eviction", "First week"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is the 'Jury Roundtable'?",
+      "options": ["Table shape", "Jury discussion", "Voting area", "Final comp"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What day are evictions typically?",
+      "options": ["Monday", "Wednesday", "Thursday", "Sunday"],
+      "correct": 2,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is 'cutting someone'?",
+      "options": ["Injury", "Evicting ally", "Nomination", "Betrayal"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is a 'goat'?",
+      "options": ["Animal", "Easy final 2 opponent", "Winner", "Villain"],
+      "correct": 1,
+      "difficulty": "hard"
+    },
+    {
+      "question": "What is 'sitting pretty'?",
+      "options": ["Posing", "Safe position", "Winning", "Relaxing"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is the 'Jury Phase'?",
+      "options": ["Trial", "When jury forms", "Final weeks", "Voting period"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is a 'vote flip'?",
+      "options": ["Coin toss", "Changing planned vote", "Gymnastics", "Betrayal"],
+      "correct": 1,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is 'throwing under bus'?",
+      "options": ["Violence", "Blaming someone", "Accident", "Strategy"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is the 'Final HOH'?",
+      "options": ["Last competition", "3-part comp", "Winner chooses final 2", "All of these"],
+      "correct": 3,
+      "difficulty": "medium"
+    },
+    {
+      "question": "What is 'social game'?",
+      "options": ["Parties", "Building relationships", "Competitions", "Strategy"],
+      "correct": 1,
+      "difficulty": "easy"
+    },
+    {
+      "question": "What is 'making jury'?",
+      "options": ["Creating jury", "Lasting to jury", "Joining jury", "All of these"],
+      "correct": 2,
+      "difficulty": "medium"
+    }
+  ]
+}
