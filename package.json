@@ -11,9 +11,15 @@
     "test:runtime": "node scripts/test-runtime-validation.mjs",
     "test:e2e": "node scripts/test-e2e-competitions.mjs",
     "test:jurors": "node scripts/test-jurors-return-challenge.mjs",
+    "test:playwright": "playwright test",
+    "test:playwright:ui": "playwright test --ui",
+    "test:playwright:headed": "playwright test --headed",
+    "test:playwright:debug": "playwright test --debug",
+    "test:social": "playwright test test_game_progression_social_automated.spec.js",
     "test:all": "npm run test:minigames && npm run test:e2e",
     "build:progression": "cd src/progression && tsc",
-    "typecheck:progression": "cd src/progression && tsc --noEmit"
+    "typecheck:progression": "cd src/progression && tsc --noEmit",
+    "playwright:install": "playwright install chromium"
   },
   "repository": {
     "type": "git",
@@ -22,6 +28,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@playwright/test": "^1.56.0",
     "typescript": "^5.3.3"
   }
 }
