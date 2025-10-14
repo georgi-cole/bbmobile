@@ -206,25 +206,34 @@
         border-bottom: 1px solid rgba(120,180,240,0.25);
       `;
       
-      const winnerAvatarEl = document.createElement('img');
-      winnerAvatarEl.src = winnerAvatar;
-      winnerAvatarEl.alt = winnerData.name;
-      // Always start with shimmer, remove when image loads
-      winnerAvatarEl.style.cssText = `
+      // Winner avatar with container div for proper aspect ratio handling
+      const winnerAvatarContainer = document.createElement('div');
+      winnerAvatarContainer.style.cssText = `
         width: 120px;
         height: 120px;
         border-radius: 50%;
         border: 3px solid #ffd96b;
         box-shadow: 0 4px 24px rgba(255,217,107,0.5);
-        object-fit: cover;
+        overflow: hidden;
         background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%);
         background-size: 200% 100%;
         animation: skeleton-shimmer 1.5s infinite;
+        flex-shrink: 0;
+      `;
+      
+      const winnerAvatarEl = document.createElement('img');
+      winnerAvatarEl.src = winnerAvatar;
+      winnerAvatarEl.alt = winnerData.name;
+      winnerAvatarEl.style.cssText = `
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
       `;
       // Remove shimmer when image loads
       winnerAvatarEl.onload = () => {
-        winnerAvatarEl.style.background = '';
-        winnerAvatarEl.style.animation = '';
+        winnerAvatarContainer.style.background = '';
+        winnerAvatarContainer.style.animation = '';
       };
       // Handle avatar load failure
       winnerAvatarEl.onerror = function(){
@@ -236,7 +245,8 @@
           this.src = getDicebearUrl(winnerData.name);
         }
       };
-      winnerSection.appendChild(winnerAvatarEl);
+      winnerAvatarContainer.appendChild(winnerAvatarEl);
+      winnerSection.appendChild(winnerAvatarContainer);
       
       const winnerName = document.createElement('div');
       winnerName.textContent = winnerData.name;
@@ -288,25 +298,34 @@
             flex: 0 0 auto;
           `;
           
-          const runnerAvatar = document.createElement('img');
-          runnerAvatar.src = avatarUrl;
-          runnerAvatar.alt = player.name;
-          // Always start with shimmer, remove when image loads
-          runnerAvatar.style.cssText = `
+          // Runner-up avatar with container div for proper aspect ratio handling
+          const runnerAvatarContainer = document.createElement('div');
+          runnerAvatarContainer.style.cssText = `
             width: 70px;
             height: 70px;
             border-radius: 50%;
             border: 2px solid #7cffad;
             box-shadow: 0 2px 14px rgba(124,255,173,0.35);
-            object-fit: cover;
+            overflow: hidden;
             background: linear-gradient(90deg, #2a3f54 0%, #1a2f44 50%, #2a3f54 100%);
             background-size: 200% 100%;
             animation: skeleton-shimmer 1.5s infinite;
+            flex-shrink: 0;
+          `;
+          
+          const runnerAvatar = document.createElement('img');
+          runnerAvatar.src = avatarUrl;
+          runnerAvatar.alt = player.name;
+          runnerAvatar.style.cssText = `
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
           `;
           // Remove shimmer when image loads
           runnerAvatar.onload = () => {
-            runnerAvatar.style.background = '';
-            runnerAvatar.style.animation = '';
+            runnerAvatarContainer.style.background = '';
+            runnerAvatarContainer.style.animation = '';
           };
           // Handle avatar load failure
           runnerAvatar.onerror = function(){
@@ -318,7 +337,8 @@
               this.src = getDicebearUrl(player.name);
             }
           };
-          runnerUp.appendChild(runnerAvatar);
+          runnerAvatarContainer.appendChild(runnerAvatar);
+          runnerUp.appendChild(runnerAvatarContainer);
           
           const runnerPlace = document.createElement('div');
           runnerPlace.textContent = place;

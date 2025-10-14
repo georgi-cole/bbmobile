@@ -324,6 +324,18 @@
     const avatarRow = document.createElement('div');
     avatarRow.style.cssText = 'display: flex; justify-content: center; align-items: center; margin-bottom: 18px; gap: 16px;';
 
+    // Voter avatar with container div for proper aspect ratio handling
+    const voterContainer = document.createElement('div');
+    voterContainer.style.cssText = `
+      width: clamp(64px, 16vw, 88px); 
+      height: clamp(64px, 16vw, 88px); 
+      border-radius: 50%; 
+      border: 3px solid #7cffad; 
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(124,255,173,0.4), 0 0 0 1px rgba(124,255,173,0.2);
+      flex-shrink: 0;
+    `;
+    
     const voterImg = document.createElement('img');
     voterImg.src = voterAvatar;
     voterImg.alt = voter.name;
@@ -333,18 +345,29 @@
       this.src=getDicebearUrl(voter.name);
     };
     voterImg.style.cssText = `
-      width: clamp(64px, 16vw, 88px); 
-      height: clamp(64px, 16vw, 88px); 
-      border-radius: 50%; 
-      border: 3px solid #7cffad; 
+      width: 100%; 
+      height: 100%; 
       object-fit: cover;
-      box-shadow: 0 6px 16px rgba(124,255,173,0.4), 0 0 0 1px rgba(124,255,173,0.2);
+      display: block;
     `;
+    voterContainer.appendChild(voterImg);
 
     const arrow = document.createElement('div');
     arrow.textContent = '→';
     arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
 
+    // Target avatar with container div for proper aspect ratio handling
+    const targetContainer = document.createElement('div');
+    targetContainer.style.cssText = `
+      width: clamp(64px, 16vw, 88px); 
+      height: clamp(64px, 16vw, 88px); 
+      border-radius: 50%; 
+      border: 3px solid #ff6b6b; 
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(255,107,107,0.4), 0 0 0 1px rgba(255,107,107,0.2);
+      flex-shrink: 0;
+    `;
+    
     const targetImg = document.createElement('img');
     targetImg.src = targetAvatar;
     targetImg.alt = target.name;
@@ -354,17 +377,16 @@
       this.src=getDicebearUrl(target.name);
     };
     targetImg.style.cssText = `
-      width: clamp(64px, 16vw, 88px); 
-      height: clamp(64px, 16vw, 88px); 
-      border-radius: 50%; 
-      border: 3px solid #ff6b6b; 
+      width: 100%; 
+      height: 100%; 
       object-fit: cover;
-      box-shadow: 0 6px 16px rgba(255,107,107,0.4), 0 0 0 1px rgba(255,107,107,0.2);
+      display: block;
     `;
+    targetContainer.appendChild(targetImg);
 
-    avatarRow.appendChild(voterImg);
+    avatarRow.appendChild(voterContainer);
     avatarRow.appendChild(arrow);
-    avatarRow.appendChild(targetImg);
+    avatarRow.appendChild(targetContainer);
     card.appendChild(avatarRow);
 
     const messageDiv = document.createElement('div');

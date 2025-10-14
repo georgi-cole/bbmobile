@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Aspect Ratio Test - Live Voting Popup</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+      min-height: 100vh;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .test-header {
+      text-align: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #1a2937 0%, #0f1a28 100%);
+      border: 1px solid rgba(120,180,240,0.35);
+      border-radius: 20px;
+      margin-bottom: 30px;
+    }
+    .test-header h1 {
+      color: #ffd96b;
+      font-size: 2rem;
+      margin: 0 0 10px 0;
+    }
+    .test-header p {
+      color: #96cfff;
+      margin: 5px 0;
+    }
+    .test-section {
+      background: #1a2937;
+      border: 1px solid #2b4767;
+      border-radius: 16px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    .test-section h2 {
+      color: #83bfff;
+      font-size: 1.3rem;
+      margin: 0 0 20px 0;
+    }
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .comparison-item {
+      background: #0e1a28;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(120,180,240,0.2);
+    }
+    .comparison-item h3 {
+      color: #ffd96b;
+      font-size: 1rem;
+      margin: 0 0 12px 0;
+      text-align: center;
+    }
+    .avatar-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    /* Old approach - direct border-radius on img */
+    .avatar-old {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 3px solid #7cffad;
+      object-fit: cover;
+      box-shadow: 0 6px 16px rgba(124,255,173,0.4);
+    }
+    /* New approach - container with overflow hidden */
+    .avatar-new-container {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 3px solid #7cffad;
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(124,255,173,0.4);
+      flex-shrink: 0;
+    }
+    .avatar-new-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .arrow {
+      font-size: 2rem;
+      color: #ff6b6b;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .test-images {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .test-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(120,180,240,0.05);
+      border-radius: 8px;
+    }
+    .test-row label {
+      color: #96cfff;
+      flex: 1;
+      font-size: 0.9rem;
+    }
+    button {
+      background: linear-gradient(135deg, #3563a7 0%, #2a5090 100%);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(53,99,167,0.3);
+      margin: 8px;
+    }
+    button:hover {
+      background: linear-gradient(135deg, #4876c2 0%, #3563a7 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(53,99,167,0.4);
+    }
+    .info-box {
+      background: rgba(124,255,173,0.1);
+      border: 1px solid rgba(124,255,173,0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      color: #b8ffe0;
+    }
+    .info-box strong {
+      color: #7cffad;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>Photo Aspect Ratio Test</h1>
+      <p>Testing the fix for squashed photos in live voting popup</p>
+      <p style="font-size: 0.85rem; color: #88aad0;">This test demonstrates the difference between the old and new approaches</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Images with Various Aspect Ratios</h2>
+      <div class="info-box">
+        <strong>Key Difference:</strong> The new approach uses a container div with <code>overflow: hidden</code> and <code>border-radius: 50%</code>, 
+        then places the image inside with <code>width: 100%</code>, <code>height: 100%</code>, and <code>object-fit: cover</code>.
+        This ensures proper circular clipping and prevents squashing.
+      </div>
+
+      <div class="comparison-grid">
+        <!-- Old Approach -->
+        <div class="comparison-item">
+          <h3>❌ Old Approach</h3>
+          <p style="font-size: 0.85rem; color: #88aad0; text-align: center; margin-bottom: 12px;">
+            border-radius on &lt;img&gt; directly
+          </p>
+          
+          <div class="test-images">
+            <div class="test-row">
+              <label>Square (1:1)</label>
+              <img class="avatar-old" 
+                   src="https://picsum.photos/200/200?random=1" 
+                   alt="Square">
+            </div>
+            
+            <div class="test-row">
+              <label>Portrait (3:4)</label>
+              <img class="avatar-old" 
+                   src="https://picsum.photos/300/400?random=2" 
+                   alt="Portrait">
+            </div>
+            
+            <div class="test-row">
+              <label>Landscape (4:3)</label>
+              <img class="avatar-old" 
+                   src="https://picsum.photos/400/300?random=3" 
+                   alt="Landscape">
+            </div>
+            
+            <div class="test-row">
+              <label>Wide (16:9)</label>
+              <img class="avatar-old" 
+                   src="https://picsum.photos/1600/900?random=4" 
+                   alt="Wide">
+            </div>
+          </div>
+        </div>
+
+        <!-- New Approach -->
+        <div class="comparison-item">
+          <h3>✅ New Approach</h3>
+          <p style="font-size: 0.85rem; color: #88aad0; text-align: center; margin-bottom: 12px;">
+            Container div with overflow: hidden
+          </p>
+          
+          <div class="test-images">
+            <div class="test-row">
+              <label>Square (1:1)</label>
+              <div class="avatar-new-container">
+                <img src="https://picsum.photos/200/200?random=1" alt="Square">
+              </div>
+            </div>
+            
+            <div class="test-row">
+              <label>Portrait (3:4)</label>
+              <div class="avatar-new-container">
+                <img src="https://picsum.photos/300/400?random=2" alt="Portrait">
+              </div>
+            </div>
+            
+            <div class="test-row">
+              <label>Landscape (4:3)</label>
+              <div class="avatar-new-container">
+                <img src="https://picsum.photos/400/300?random=3" alt="Landscape">
+              </div>
+            </div>
+            
+            <div class="test-row">
+              <label>Wide (16:9)</label>
+              <div class="avatar-new-container">
+                <img src="https://picsum.photos/1600/900?random=4" alt="Wide">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Live Voting Popup Simulation</h2>
+      <div class="info-box">
+        <strong>Simulated Diary Room Card:</strong> This is how the avatars appear in the actual live voting popup.
+      </div>
+
+      <div class="comparison-grid">
+        <!-- Old Approach Example -->
+        <div class="comparison-item">
+          <h3>❌ Old Approach</h3>
+          <div style="background: linear-gradient(135deg, #1c2b3e, #0e1a28); border: 2px solid rgba(120,180,240,0.5); border-radius: 20px; padding: 24px; text-align: center;">
+            <div style="font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px;">Diary Room</div>
+            <div class="avatar-row">
+              <img class="avatar-old" 
+                   src="https://picsum.photos/300/400?random=5" 
+                   alt="Voter">
+              <div class="arrow">→</div>
+              <img class="avatar-old" 
+                   src="https://picsum.photos/400/300?random=6" 
+                   alt="Target" 
+                   style="border-color: #ff6b6b; box-shadow: 0 6px 16px rgba(255,107,107,0.4);">
+            </div>
+            <div style="font-size: 1rem; color: #e8f4ff; margin-top: 12px;">
+              Alice: I vote to evict Bob.
+            </div>
+          </div>
+        </div>
+
+        <!-- New Approach Example -->
+        <div class="comparison-item">
+          <h3>✅ New Approach</h3>
+          <div style="background: linear-gradient(135deg, #1c2b3e, #0e1a28); border: 2px solid rgba(120,180,240,0.5); border-radius: 20px; padding: 24px; text-align: center;">
+            <div style="font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px;">Diary Room</div>
+            <div class="avatar-row">
+              <div class="avatar-new-container">
+                <img src="https://picsum.photos/300/400?random=5" alt="Voter">
+              </div>
+              <div class="arrow">→</div>
+              <div class="avatar-new-container" style="border-color: #ff6b6b; box-shadow: 0 6px 16px rgba(255,107,107,0.4);">
+                <img src="https://picsum.photos/400/300?random=6" alt="Target">
+              </div>
+            </div>
+            <div style="font-size: 1rem; color: #e8f4ff; margin-top: 12px;">
+              Alice: I vote to evict Bob.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Technical Summary</h2>
+      <div style="background: rgba(120,180,240,0.05); padding: 16px; border-radius: 8px; line-height: 1.6;">
+        <h3 style="color: #ffd96b; margin-top: 0;">What Changed?</h3>
+        <ul style="color: #96cfff;">
+          <li><strong>Before:</strong> Images had <code>border-radius: 50%</code> applied directly</li>
+          <li><strong>After:</strong> Images are wrapped in container divs with <code>overflow: hidden</code> and <code>border-radius: 50%</code></li>
+          <li><strong>Result:</strong> Proper circular clipping regardless of source image aspect ratio</li>
+        </ul>
+        
+        <h3 style="color: #ffd96b; margin-top: 16px;">Files Modified:</h3>
+        <ul style="color: #96cfff;">
+          <li><code>js/eviction.js</code> - showDiaryRoomWithAvatars function (lines 324-388)</li>
+          <li><code>js/results-popup.js</code> - Winner and runner-up avatar rendering (lines 198-320)</li>
+        </ul>
+        
+        <h3 style="color: #ffd96b; margin-top: 16px;">CSS Properties Used:</h3>
+        <pre style="background: #0e1a28; padding: 12px; border-radius: 6px; overflow-x: auto; color: #b8ffe0;"><code>/* Container */
+.avatar-container {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  overflow: hidden;  /* Key property! */
+  border: 3px solid #7cffad;
+  flex-shrink: 0;
+}
+
+/* Image inside */
+.avatar-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    console.log('[Test] Photo aspect ratio test loaded');
+    console.log('[Test] This test demonstrates the fix for squashed photos in circular avatars');
+    
+    // Add error handling for images
+    document.querySelectorAll('img').forEach(img => {
+      img.onerror = function() {
+        console.warn('[Test] Image failed to load:', this.src);
+        // Use a solid color fallback
+        this.style.display = 'none';
+        const parent = this.parentElement;
+        if (parent) {
+          parent.style.background = 'linear-gradient(135deg, #2a3f54, #1a2f44)';
+        }
+      };
+    });
+  </script>
+</body>
+</html>
