@@ -189,18 +189,7 @@
       g.__suppressNomBadges = true; global.updateHud?.();
 
       // HOH addresses the house
-      if(global.PopupManager && g.cfg?.popup_refresh_enabled){
-        global.PopupManager.show({
-          type: 'nominations',
-          variant: 'nominations',
-          title: 'Nomination Ceremony',
-          lines: [`${hoh?.name || 'HOH'} addresses the house.`],
-          tone: 'noms',
-          duration: 2400
-        });
-      } else {
-        global.showCard('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
-      }
+      global.showCard('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
       try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch{}
 
@@ -209,52 +198,19 @@
       // Show wildcard slots first (Issue: nomination ceremony UI enhancement)
       for(let i=0;i<ids.length;i++){
         const label = ids.length>2 ? `Nominee #${i+1}` : (i===0 ? 'First Nominee' : 'Second Nominee');
-        if(global.PopupManager && g.cfg?.popup_refresh_enabled){
-          global.PopupManager.show({
-            type: 'nominations',
-            variant: 'nominations',
-            title: label,
-            lines: ['?'],
-            tone: 'noms',
-            duration: 1800
-          });
-        } else {
-          global.showCard(label, ['?'], 'noms', 1800, true);
-        }
+        global.showCard(label, ['?'], 'noms', 1800, true);
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       }
       
       // Reveal each nominee sequentially with their name
       for(let i=0;i<ids.length;i++){
         const label = ids.length>2 ? `Nominee #${i+1}` : (i===0 ? 'First Nominee' : 'Second Nominee');
-        if(global.PopupManager && g.cfg?.popup_refresh_enabled){
-          global.PopupManager.show({
-            type: 'nominations',
-            variant: 'nominations',
-            title: label,
-            lines: [global.safeName(ids[i])],
-            tone: 'noms',
-            duration: 2600
-          });
-        } else {
-          global.showCard(label, [global.safeName(ids[i])], 'noms', 2600, true);
-        }
+        global.showCard(label, [global.safeName(ids[i])], 'noms', 2600, true);
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       }
       
       // Show ceremony conclusion message
-      if(global.PopupManager && g.cfg?.popup_refresh_enabled){
-        global.PopupManager.show({
-          type: 'nominations',
-          variant: 'nominations',
-          title: 'Nomination Ceremony',
-          lines: ['This ceremony is adjourned.'],
-          tone: 'noms',
-          duration: 2000
-        });
-      } else {
-        global.showCard('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
-      }
+      global.showCard('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
 
       // TV screen cards disappear, nominee tags update, game advances

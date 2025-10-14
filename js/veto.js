@@ -255,16 +255,7 @@
     
     try{
       // Show 3 '?' cards first
-      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-        global.PopupManager.show({
-          type: 'pov',
-          variant: 'pov',
-          title: 'Veto Results',
-          lines: ['Revealing top 3...'],
-          tone: 'veto',
-          duration: 2000
-        });
-      } else if(typeof global.showCard==='function'){
+      if(typeof global.showCard==='function'){
         global.showCard('Veto Results', ['Revealing top 3...'], 'veto', 2000);
       }
       if(typeof global.cardQueueWaitIdle==='function'){
@@ -274,16 +265,7 @@
       
       // Reveal 3rd place
       if(top3[2]){
-        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-          global.PopupManager.show({
-            type: 'pov',
-            variant: 'pov',
-            title: '3rd Place',
-            lines: [safeName(top3[2][0])],
-            tone: 'neutral',
-            duration: 2000
-          });
-        } else if(typeof global.showCard==='function'){
+        if(typeof global.showCard==='function'){
           global.showCard('3rd Place', [safeName(top3[2][0])], 'neutral', 2000);
         }
         if(typeof global.cardQueueWaitIdle==='function'){
@@ -294,16 +276,7 @@
       
       // Reveal 2nd place
       if(top3[1]){
-        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-          global.PopupManager.show({
-            type: 'pov',
-            variant: 'pov',
-            title: '2nd Place',
-            lines: [safeName(top3[1][0])],
-            tone: 'neutral',
-            duration: 2000
-          });
-        } else if(typeof global.showCard==='function'){
+        if(typeof global.showCard==='function'){
           global.showCard('2nd Place', [safeName(top3[1][0])], 'neutral', 2000);
         }
         if(typeof global.cardQueueWaitIdle==='function'){
@@ -314,16 +287,7 @@
       
       // Reveal winner with veto badge
       if(top3[0]){
-        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-          global.PopupManager.show({
-            type: 'pov',
-            variant: 'pov',
-            title: 'Veto Winner 🛡️',
-            lines: [safeName(top3[0][0])],
-            tone: 'veto',
-            duration: 3200
-          });
-        } else if(typeof global.showCard==='function'){
+        if(typeof global.showCard==='function'){
           global.showCard('Veto Winner 🛡️', [safeName(top3[0][0])], 'veto', 3200);
         }
         if(typeof global.cardQueueWaitIdle==='function'){
@@ -432,18 +396,8 @@
     
     // Show explanatory card with longer duration for readability
     try{ 
-      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-        global.PopupManager.show({
-          type: 'pov',
-          variant: 'pov',
-          title: 'Final 4',
-          lines: ['As the veto holder, you are the sole vote to evict.'],
-          tone: 'warn',
-          duration: 4000
-        });
-      } else if(typeof global.showCard === 'function'){
-        global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 4000, true);
-      }
+      if(typeof global.showCard === 'function') 
+        global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 4000, true); 
     }catch(e){}
     
     (function waitCards(){
@@ -569,18 +523,8 @@
     
     // Show eviction card with generous duration
     try{ 
-      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-        global.PopupManager.show({
-          type: 'eviction',
-          variant: 'eviction',
-          title: 'Evicted',
-          lines: [evictee.name + ' has been evicted.', 'Three remain.'],
-          tone: 'evict',
-          duration: 4500
-        });
-      } else if(typeof global.showCard === 'function'){
-        global.showCard('Evicted', [evictee.name + ' has been evicted.', 'Three remain.'], 'evict', 4500, true);
-      }
+      if(typeof global.showCard === 'function') 
+        global.showCard('Evicted', [evictee.name + ' has been evicted.', 'Three remain.'], 'evict', 4500, true); 
     }catch(e){}
     
     // Add to jury if enabled
@@ -656,20 +600,7 @@
 
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Ceremony');
     if(typeof global.phaseMusic==='function') global.phaseMusic('nominations');
-    try{ 
-      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-        global.PopupManager.show({
-          type: 'pov',
-          variant: 'pov',
-          title: 'Veto Ceremony',
-          lines: ['The holder will make a decision…'],
-          tone: 'veto',
-          duration: 3600
-        });
-      } else if(typeof global.showCard==='function'){
-        global.showCard('Veto Ceremony', ['The holder will make a decision…'],'veto', 3600, true);
-      }
-    }catch(e){}
+    try{ if(typeof global.showCard==='function') global.showCard('Veto Ceremony', ['The holder will make a decision…'],'veto', 3600, true); }catch(e){}
     (function waitCards(){
       if(typeof global.cardQueueWaitIdle==='function'){
         try{ global.cardQueueWaitIdle().then(function(){ afterWait(); }); return; }catch(e){}
@@ -838,37 +769,11 @@
       }
 
       if(!g.__vetoNarrativeShown){
-        try{ 
-          if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-            global.PopupManager.show({
-              type: 'pov',
-              variant: 'pov',
-              title: 'Veto Decision',
-              lines: [pickPhrase(VETO_USE_PHRASES)],
-              tone: 'veto',
-              duration: 3200
-            });
-          } else if(typeof global.showCard==='function'){
-            global.showCard('Veto Decision', [pickPhrase(VETO_USE_PHRASES)], 'veto', 3200, true);
-          }
-        }catch(e){}
+        try{ if(typeof global.showCard==='function') global.showCard('Veto Decision', [pickPhrase(VETO_USE_PHRASES)], 'veto', 3200, true); }catch(e){}
         if(typeof global.cardQueueWaitIdle==='function'){ try{ global.cardQueueWaitIdle().then(function(){ thenSaved(); }); return; }catch(e){} }
         thenSaved();
         function thenSaved(){
-          try{ 
-            if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-              global.PopupManager.show({
-                type: 'pov',
-                variant: 'pov',
-                title: 'Saved',
-                lines: [savedName+' is saved.'],
-                tone: 'veto',
-                duration: 3200
-              });
-            } else if(typeof global.showCard==='function'){
-              global.showCard('Saved', [savedName+' is saved.'], 'veto', 3200, true);
-            }
-          }catch(e){}
+          try{ if(typeof global.showCard==='function') global.showCard('Saved', [savedName+' is saved.'], 'veto', 3200, true); }catch(e){}
           if(typeof global.cardQueueWaitIdle==='function'){ try{ global.cardQueueWaitIdle().then(function(){ afterNarr(); }); return; }catch(e){} }
           afterNarr();
         }
@@ -889,20 +794,7 @@
             try{ if(typeof global.syncPlayerBadgeStates==='function') global.syncPlayerBadgeStates(); }catch(e){}
             try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
           }
-          try{ 
-            if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-              global.PopupManager.show({
-                type: 'pov',
-                variant: 'pov',
-                title: 'Final 4',
-                lines: ['As the veto holder, you are the sole vote to evict.'],
-                tone: 'warn',
-                duration: 3200
-              });
-            } else if(typeof global.showCard==='function'){
-              global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 3200, true);
-            }
-          }catch(e){}
+          try{ if(typeof global.showCard==='function') global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 3200, true); }catch(e){}
           if(typeof global.cardQueueWaitIdle==='function'){
             try{ global.cardQueueWaitIdle().then(function(){ endCerAndVote(); }); return; }catch(e){}
           }
@@ -911,20 +803,7 @@
         }
 
         var hoh = getP(g.hohId);
-        try{ 
-          if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-            global.PopupManager.show({
-              type: 'nominations',
-              variant: 'nominations',
-              title: 'HOH',
-              lines: ['As I have vetoed one of your nominations, you must now select a replacement.'],
-              tone: 'noms',
-              duration: 3200
-            });
-          } else if(typeof global.showCard==='function'){
-            global.showCard('HOH', ['As I have vetoed one of your nominations, you must now select a replacement.'],'noms', 3200, true);
-          }
-        }catch(e){}
+        try{ if(typeof global.showCard==='function') global.showCard('HOH', ['As I have vetoed one of your nominations, you must now select a replacement.'],'noms', 3200, true); }catch(e){}
         if(typeof global.cardQueueWaitIdle==='function'){
           try{ global.cardQueueWaitIdle().then(function(){ afterHoHCard(); }); return; }catch(e){}
         }
@@ -949,20 +828,7 @@
       }
     } else {
       try{ if(global.addLog) global.addLog('Veto not used.','muted'); }catch(e){}
-      try{ 
-        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-          global.PopupManager.show({
-            type: 'pov',
-            variant: 'pov',
-            title: 'Veto Not Used',
-            lines: [pickPhrase(VETO_NOT_USE_PHRASES)],
-            tone: 'veto',
-            duration: 3600
-          });
-        } else if(typeof global.showCard==='function'){
-          global.showCard('Veto Not Used',[pickPhrase(VETO_NOT_USE_PHRASES)],'veto',3600,true);
-        }
-      }catch(e){}
+      try{ if(typeof global.showCard==='function') global.showCard('Veto Not Used',[pickPhrase(VETO_NOT_USE_PHRASES)],'veto',3600,true); }catch(e){}
       if(typeof global.cardQueueWaitIdle==='function'){
         try{ global.cardQueueWaitIdle().then(function(){ finishNoUse(); }); return; }catch(e){}
       }
@@ -1051,37 +917,11 @@
 
       var hoh = getP(g.hohId);
       var announce = (hoh ? hoh.name : 'HOH')+': I name '+safeName(replacementId)+' as the replacement nominee.';
-      try{ 
-        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-          global.PopupManager.show({
-            type: 'nominations',
-            variant: 'nominations',
-            title: 'HOH Announcement',
-            lines: [announce],
-            tone: 'noms',
-            duration: 3400
-          });
-        } else if(typeof global.showCard==='function'){
-          global.showCard('HOH Announcement',[announce],'noms',3400,true);
-        }
-      }catch(e){}
+      try{ if(typeof global.showCard==='function') global.showCard('HOH Announcement',[announce],'noms',3400,true); }catch(e){}
 
       function afterAnnouncement(){
         try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by HOH).','warn'); }catch(e){}
-        try{ 
-          if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-            global.PopupManager.show({
-              type: 'nominations',
-              variant: 'nominations',
-              title: 'Replacement',
-              lines: [safeName(replacementId)],
-              tone: 'replace',
-              duration: 3600
-            });
-          } else if(typeof global.showCard==='function'){
-            global.showCard('Replacement',[safeName(replacementId)],'replace',3600,true);
-          }
-        }catch(e){}
+        try{ if(typeof global.showCard==='function') global.showCard('Replacement',[safeName(replacementId)],'replace',3600,true); }catch(e){}
 
         function afterReplacementCard(){
           try{ g.__twistNomineeSnapshot = g.nominees.slice(); }catch(e){}
