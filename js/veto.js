@@ -255,7 +255,16 @@
     
     try{
       // Show 3 '?' cards first
-      if(typeof global.showCard==='function'){
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'pov',
+          variant: 'pov',
+          title: 'Veto Results',
+          lines: ['Revealing top 3...'],
+          tone: 'veto',
+          duration: 2000
+        });
+      } else if(typeof global.showCard==='function'){
         global.showCard('Veto Results', ['Revealing top 3...'], 'veto', 2000);
       }
       if(typeof global.cardQueueWaitIdle==='function'){
@@ -265,7 +274,16 @@
       
       // Reveal 3rd place
       if(top3[2]){
-        if(typeof global.showCard==='function'){
+        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+          global.PopupManager.show({
+            type: 'pov',
+            variant: 'pov',
+            title: '3rd Place',
+            lines: [safeName(top3[2][0])],
+            tone: 'neutral',
+            duration: 2000
+          });
+        } else if(typeof global.showCard==='function'){
           global.showCard('3rd Place', [safeName(top3[2][0])], 'neutral', 2000);
         }
         if(typeof global.cardQueueWaitIdle==='function'){
@@ -276,7 +294,16 @@
       
       // Reveal 2nd place
       if(top3[1]){
-        if(typeof global.showCard==='function'){
+        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+          global.PopupManager.show({
+            type: 'pov',
+            variant: 'pov',
+            title: '2nd Place',
+            lines: [safeName(top3[1][0])],
+            tone: 'neutral',
+            duration: 2000
+          });
+        } else if(typeof global.showCard==='function'){
           global.showCard('2nd Place', [safeName(top3[1][0])], 'neutral', 2000);
         }
         if(typeof global.cardQueueWaitIdle==='function'){
@@ -287,7 +314,16 @@
       
       // Reveal winner with veto badge
       if(top3[0]){
-        if(typeof global.showCard==='function'){
+        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+          global.PopupManager.show({
+            type: 'pov',
+            variant: 'pov',
+            title: 'Veto Winner 🛡️',
+            lines: [safeName(top3[0][0])],
+            tone: 'veto',
+            duration: 3200
+          });
+        } else if(typeof global.showCard==='function'){
           global.showCard('Veto Winner 🛡️', [safeName(top3[0][0])], 'veto', 3200);
         }
         if(typeof global.cardQueueWaitIdle==='function'){

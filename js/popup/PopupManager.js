@@ -247,6 +247,128 @@
     }, duration);
   }
 
+  /**
+   * Centralized PopupManager.show(config) for standard game popups
+   * 
+   * Supports unified CardConfig structure:
+   * {
+   *   type: 'hoh'|'pov'|'nominations'|'eviction'|'social'|'live-vote'|'info',
+   *   title: 'Card Title',
+   *   lines: ['Line 1', 'Line 2'],
+   *   duration: 3000,  // Auto-close duration (0 = manual close)
+   *   tone: 'neutral'|'good'|'bad'|'live'|'noms'|'veto'|'evict',
+   *   variant: 'hoh'|'pov'|'nominations'|etc (for CSS class),
+   *   closeOnBackdrop: true,
+   *   closeOnEsc: true,
+   *   showCloseButton: true,
+   *   onClose: callback
+   * }
+   */
+  function showStandardPopup(config = {}){
+    const {
+      type = 'info',
+      title = 'Notification',
+      lines = [],
+      duration = 0,
+      tone = 'neutral',
+      variant = null,
+      closeOnBackdrop = true,
+      closeOnEsc = true,
+      showCloseButton = duration === 0,
+      onClose = null
+    } = config;
+
+    // Check feature flag
+    const cfg = global.game?.cfg || {};
+    if(!cfg.popup_refresh_enabled){
+      // Fall back to legacy showCard
+      if(typeof global.showCard === 'function'){
+        global.showCard(title, lines, tone, duration || 4200, false);
+      }
+      return;
+    }
+
+    // Enqueue the popup
+    enqueuePopup(() => {
+      // Build body content from lines
+      const bodyContent = lines.map(line => {
+        const escapedLine = String(line)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+        return `<p style="margin: 0.5em 0;">${escapedLine}</p>`;
+      }).join('');
+      
+      // Determine header styling based on tone
+      let headerStyle = '';
+      let themeClass = '';
+      if(tone === 'good' || tone === 'winner'){
+        headerStyle = 'background: var(--good); color: #0d151f;';
+        themeClass = 'popup-theme-good';
+      } else if(tone === 'bad' || tone === 'danger'){
+        headerStyle = 'background: var(--bad); color: #fff;';
+        themeClass = 'popup-theme-bad';
+      } else if(tone === 'live'){
+        headerStyle = 'background: var(--live); color: #fff;';
+        themeClass = 'popup-theme-live';
+      } else if(tone === 'noms'){
+        headerStyle = 'background: var(--accent); color: #0d151f;';
+        themeClass = 'popup-theme-noms';
+      } else if(tone === 'veto'){
+        headerStyle = 'background: var(--veto); color: #fff;';
+        themeClass = 'popup-theme-veto';
+      } else if(tone === 'evict'){
+        headerStyle = 'background: var(--bad); color: #fff;';
+        themeClass = 'popup-theme-evict';
+      }
+      
+      // Build CSS class names: base + variant + theme
+      let popupClass = 'popupCard';
+      if(variant){
+        popupClass += ' popupCard--' + variant;
+      }
+      if(themeClass){
+        popupClass += ' ' + themeClass;
+      }
+      
+      // Create popup
+      const popup = global.createBasePopup({
+        id: 'popup-' + type + '-' + Date.now(),
+        headerText: title,
+        bodyContent: bodyContent,
+        footerContent: duration > 0 ? '' : '<button class="btn" onclick="PopupManager.close()">OK</button>',
+        closeOnBackdrop: closeOnBackdrop,
+        closeOnEsc: closeOnEsc,
+        showCloseButton: showCloseButton,
+        onClose: onClose,
+        className: popupClass
+      });
+      
+      // Apply custom header styling if tone specified
+      if(headerStyle){
+        const header = popup.querySelector('.base-popup-header');
+        if(header){
+          header.style.cssText += headerStyle;
+        }
+      }
+      
+      // Auto-close after duration
+      if(duration > 0){
+        setTimeout(() => {
+          if(popup.__closePopup){
+            popup.__closePopup('auto');
+          }
+        }, duration);
+      }
+      
+      return popup;
+    }, {
+      popupType: type,
+      id: 'popup-' + type + '-' + Date.now()
+    });
+  }
+
   // Context API for enqueue/close
   const PopupManagerContext = {
     enqueue: enqueuePopup,
@@ -254,7 +376,8 @@
     clearQueue: clearQueue,
     getQueueLength: getQueueLength,
     isPopupShown: isPopupShown,
-    showConfirmationToast: showConfirmationToast
+    showConfirmationToast: showConfirmationToast,
+    show: showStandardPopup  // New centralized show method
   };
 
   // Export to global

@@ -445,7 +445,18 @@
   /* ----- Tie Break (2 noms) ----- */
   async function tieBreakTwo([a,b],ca,cb){
     const hoh=global.getP(global.game.hohId);
-    global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
+    if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+      global.PopupManager.show({
+        type: 'eviction',
+        variant: 'eviction',
+        title: 'Tiebreak',
+        lines: ['We have a tie! The HOH must break it.'],
+        tone: 'live',
+        duration: 3000
+      });
+    } else {
+      global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
+    }
     try{ await global.cardQueueWaitIdle?.(); }catch{}
     
     // Hook: Log XP for tiebreaker
@@ -456,13 +467,35 @@
     if(hoh?.human){
       const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict');
       if(pick===a) ca++; else cb++;
-      global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],'live',3000,true);
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'eviction',
+          variant: 'eviction',
+          title: 'HOH',
+          lines: [`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],
+          tone: 'live',
+          duration: 3000
+        });
+      } else {
+        global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],'live',3000,true);
+      }
       try{ await global.cardQueueWaitIdle?.(); }catch{}
       return {evId:pick,ca,cb};
     }
     const ha=(hoh.affinity[a]??0), hb=(hoh.affinity[b]??0);
     const evId = ha < hb ? a : b;
-    global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],'live',3000,true);
+    if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+      global.PopupManager.show({
+        type: 'eviction',
+        variant: 'eviction',
+        title: 'HOH',
+        lines: [`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],
+        tone: 'live',
+        duration: 3000
+      });
+    } else {
+      global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],'live',3000,true);
+    }
     try{ await global.cardQueueWaitIdle?.(); }catch{}
     if(evId===a) ca++; else cb++;
     return {evId,ca,cb};
