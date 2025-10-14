@@ -1,47 +1,272 @@
 // MODULE: minigames/slippery-shuttle.js
-// Slippery Shuttle - Navigate slippery platforms (Scaffold)
+// Slippery Shuttle - Navigate slippery platforms with momentum
 
 (function(g){
   'use strict';
 
-  function render(container, onComplete){
+  /**
+   * Slippery Shuttle minigame
+   * Navigate platforms with slippery physics (momentum continues)
+   * Reach the goal platform as fast as possible
+   * 
+   * @param {HTMLElement} container - Container element for the game UI
+   * @param {Function} onComplete - Callback function(score) when game ends
+   * @param {Object} options - Configuration options
+   */
+  function render(container, onComplete, options = {}){
     container.innerHTML = '';
     
+    const { 
+      debugMode = false, 
+      competitionMode = false
+    } = options;
+    
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px 20px;';
+    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;';
     
     const title = document.createElement('h3');
     title.textContent = 'Slippery Shuttle';
     title.style.cssText = 'margin:0;font-size:1.3rem;color:#e3ecf5;';
     
-    const subtitle = document.createElement('div');
-    subtitle.textContent = 'Slippery Platform Navigation';
-    subtitle.style.cssText = 'font-size:0.9rem;color:#95a9c0;font-style:italic;';
+    const instructions = document.createElement('p');
+    instructions.textContent = 'Navigate slippery platforms to reach the goal!';
+    instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
-    const status = document.createElement('div');
-    status.textContent = '🚧 Coming Soon 🚧';
-    status.style.cssText = 'font-size:1.2rem;color:#f7b955;margin:20px 0;';
+    const timerDiv = document.createElement('div');
+    timerDiv.textContent = 'Time: 0.0s';
+    timerDiv.style.cssText = 'font-size:1.2rem;font-weight:bold;color:#83bfff;';
     
-    const description = document.createElement('p');
-    description.textContent = 'Navigate your character across slippery platforms to reach the goal!';
-    description.style.cssText = 'margin:0;font-size:0.85rem;color:#95a9c0;text-align:center;max-width:300px;';
+    // Canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    canvas.style.cssText = 'border:3px solid #3d4f64;background:#1a2332;border-radius:4px;';
+    const ctx = canvas.getContext('2d');
     
-    const skipBtn = document.createElement('button');
-    skipBtn.className = 'btn';
-    skipBtn.textContent = 'Skip (Auto-score)';
-    skipBtn.style.cssText = 'margin-top:20px;';
+    // Control buttons
+    const controlsDiv = document.createElement('div');
+    controlsDiv.style.cssText = 'display:grid;grid-template-columns:repeat(3,60px);gap:5px;';
     
-    skipBtn.addEventListener('click', () => {
-      const score = 40 + Math.random() * 30;
-      onComplete(score);
-    });
+    const btnUp = createBtn('▲');
+    const btnLeft = createBtn('◀');
+    const btnDown = createBtn('▼');
+    const btnRight = createBtn('▶');
+    
+    controlsDiv.appendChild(document.createElement('div'));
+    controlsDiv.appendChild(btnUp);
+    controlsDiv.appendChild(document.createElement('div'));
+    controlsDiv.appendChild(btnLeft);
+    controlsDiv.appendChild(btnDown);
+    controlsDiv.appendChild(btnRight);
+    
+    function createBtn(text){
+      const btn = document.createElement('button');
+      btn.textContent = text;
+      btn.className = 'btn';
+      btn.style.cssText = 'width:60px;height:60px;font-size:1.5rem;padding:0;';
+      return btn;
+    }
     
     wrapper.appendChild(title);
-    wrapper.appendChild(subtitle);
-    wrapper.appendChild(status);
-    wrapper.appendChild(description);
-    wrapper.appendChild(skipBtn);
+    wrapper.appendChild(instructions);
+    wrapper.appendChild(timerDiv);
+    wrapper.appendChild(canvas);
+    wrapper.appendChild(controlsDiv);
     container.appendChild(wrapper);
+    
+    // Game state
+    const player = {x: 50, y: 350, vx: 0, vy: 0, size: 20};
+    const goal = {x: 350, y: 50, size: 25};
+    
+    const platforms = [
+      {x: 20, y: 330, w: 80, h: 60}, // Start platform
+      {x: 150, y: 280, w: 100, h: 20},
+      {x: 280, y: 230, w: 80, h: 20},
+      {x: 180, y: 150, w: 100, h: 20},
+      {x: 300, y: 80, w: 100, h: 20}, // Goal platform
+    ];
+    
+    const friction = 0.92;
+    const acceleration = 0.8;
+    const gravity = 0.5;
+    let onGround = false;
+    let startTime = Date.now();
+    let gameOver = false;
+    let timerInterval = null;
+    let gameLoop = null;
+    
+    function update(){
+      if(gameOver) return;
+      
+      // Apply velocity
+      player.x += player.vx;
+      player.y += player.vy;
+      
+      // Apply friction when on ground
+      if(onGround){
+        player.vx *= friction;
+        player.vy = 0;
+      } else {
+        // Gravity when in air
+        player.vy += gravity;
+      }
+      
+      // Check platform collisions
+      onGround = false;
+      for(const plat of platforms){
+        // Simple AABB collision
+        if(player.x + player.size > plat.x &&
+           player.x < plat.x + plat.w &&
+           player.y + player.size > plat.y &&
+           player.y < plat.y + plat.h){
+          
+          // Land on top of platform
+          if(player.vy > 0 && player.y < plat.y + 10){
+            player.y = plat.y - player.size;
+            player.vy = 0;
+            onGround = true;
+          }
+        }
+      }
+      
+      // Bounds
+      if(player.x < 0) player.x = 0;
+      if(player.x > canvas.width - player.size) player.x = canvas.width - player.size;
+      if(player.y > canvas.height){
+        // Fell off
+        lose();
+        return;
+      }
+      
+      // Check goal
+      const dist = Math.sqrt(
+        Math.pow(player.x - goal.x, 2) + 
+        Math.pow(player.y - goal.y, 2)
+      );
+      if(dist < player.size + goal.size){
+        win();
+      }
+      
+      draw();
+    }
+    
+    function draw(){
+      // Clear
+      ctx.fillStyle = '#1a2332';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Platforms
+      ctx.fillStyle = '#2c3a4d';
+      platforms.forEach(plat => {
+        ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+      });
+      
+      // Goal
+      ctx.fillStyle = '#74e48b';
+      ctx.beginPath();
+      ctx.arc(goal.x, goal.y, goal.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Player
+      ctx.fillStyle = '#83bfff';
+      ctx.beginPath();
+      ctx.arc(player.x + player.size/2, player.y + player.size/2, player.size/2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    function applyForce(fx, fy){
+      if(gameOver) return;
+      player.vx += fx;
+      player.vy += fy;
+    }
+    
+    function win(){
+      gameOver = true;
+      clearInterval(timerInterval);
+      cancelAnimationFrame(gameLoop);
+      
+      const elapsed = (Date.now() - startTime) / 1000;
+      
+      // Score: faster = better (target ~10s)
+      let rawScore;
+      if(elapsed <= 8){
+        rawScore = 100;
+      } else if(elapsed <= 15){
+        rawScore = 90 - (elapsed - 8) * 4;
+      } else if(elapsed <= 25){
+        rawScore = 62 - (elapsed - 15) * 2;
+      } else {
+        rawScore = Math.max(30, 42 - (elapsed - 25));
+      }
+      
+      rawScore = Math.round(rawScore);
+      
+      instructions.textContent = `Goal reached! Time: ${elapsed.toFixed(1)}s`;
+      instructions.style.color = '#74e48b';
+      
+      const playerSucceeded = rawScore >= 60;
+      
+      // Apply win probability logic
+      let finalScore = rawScore;
+      if(g.GameUtils && !debugMode && competitionMode){
+        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
+        if(!shouldWin && playerSucceeded){
+          finalScore = Math.round(30 + Math.random() * 25);
+        }
+      }
+      
+      setTimeout(() => onComplete(finalScore), 1500);
+    }
+    
+    function lose(){
+      gameOver = true;
+      clearInterval(timerInterval);
+      cancelAnimationFrame(gameLoop);
+      
+      instructions.textContent = 'Fell off! Try again next time.';
+      instructions.style.color = '#ff6b6b';
+      
+      setTimeout(() => onComplete(25), 1500);
+    }
+    
+    // Controls
+    document.addEventListener('keydown', (e) => {
+      if(gameOver) return;
+      
+      if(e.key === 'ArrowLeft' || e.key === 'a'){
+        e.preventDefault();
+        applyForce(-acceleration, 0);
+      } else if(e.key === 'ArrowRight' || e.key === 'd'){
+        e.preventDefault();
+        applyForce(acceleration, 0);
+      } else if(e.key === 'ArrowUp' || e.key === 'w'){
+        e.preventDefault();
+        if(onGround){
+          applyForce(0, -12); // Jump
+        }
+      }
+    });
+    
+    btnLeft.addEventListener('click', () => applyForce(-acceleration, 0));
+    btnRight.addEventListener('click', () => applyForce(acceleration, 0));
+    btnUp.addEventListener('click', () => {
+      if(onGround) applyForce(0, -12);
+    });
+    
+    // Timer
+    timerInterval = setInterval(() => {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      timerDiv.textContent = `Time: ${elapsed}s`;
+    }, 100);
+    
+    // Game loop
+    function loop(){
+      update();
+      gameLoop = requestAnimationFrame(loop);
+    }
+    
+    draw();
+    loop();
   }
 
   // Export
