@@ -80,6 +80,11 @@
       object-fit: cover;
       box-shadow: 0 6px 16px rgba(124,255,173,0.4);
     }
+    /* SVG fix for old approach */
+    .avatar-old svg {
+      width: 100%;
+      height: 100%;
+    }
     /* New approach - container with overflow hidden */
     .avatar-new-container {
       width: 88px;
@@ -90,7 +95,8 @@
       box-shadow: 0 6px 16px rgba(124,255,173,0.4);
       flex-shrink: 0;
     }
-    .avatar-new-container img {
+    .avatar-new-container img,
+    .avatar-new-container svg {
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -179,30 +185,38 @@
           <div class="test-images">
             <div class="test-row">
               <label>Square (1:1)</label>
-              <img class="avatar-old" 
-                   src="https://picsum.photos/200/200?random=1" 
-                   alt="Square">
+              <svg class="avatar-old" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="200" fill="#3563a7"/>
+                <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="16">SQUARE</text>
+                <text x="50%" y="65%" text-anchor="middle" dy=".3em" fill="white" font-size="12">200x200</text>
+              </svg>
             </div>
             
             <div class="test-row">
               <label>Portrait (3:4)</label>
-              <img class="avatar-old" 
-                   src="https://picsum.photos/300/400?random=2" 
-                   alt="Portrait">
+              <svg class="avatar-old" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                <rect width="300" height="400" fill="#7c4dff"/>
+                <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="18">PORTRAIT</text>
+                <text x="50%" y="60%" text-anchor="middle" dy=".3em" fill="white" font-size="14">300x400</text>
+              </svg>
             </div>
             
             <div class="test-row">
               <label>Landscape (4:3)</label>
-              <img class="avatar-old" 
-                   src="https://picsum.photos/400/300?random=3" 
-                   alt="Landscape">
+              <svg class="avatar-old" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                <rect width="400" height="300" fill="#ff6b6b"/>
+                <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="18">LANDSCAPE</text>
+                <text x="50%" y="65%" text-anchor="middle" dy=".3em" fill="white" font-size="14">400x300</text>
+              </svg>
             </div>
             
             <div class="test-row">
               <label>Wide (16:9)</label>
-              <img class="avatar-old" 
-                   src="https://picsum.photos/1600/900?random=4" 
-                   alt="Wide">
+              <svg class="avatar-old" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                <rect width="1600" height="900" fill="#ffd96b"/>
+                <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#333" font-size="80">WIDE</text>
+                <text x="50%" y="60%" text-anchor="middle" dy=".3em" fill="#333" font-size="60">1600x900</text>
+              </svg>
             </div>
           </div>
         </div>
@@ -218,28 +232,44 @@
             <div class="test-row">
               <label>Square (1:1)</label>
               <div class="avatar-new-container">
-                <img src="https://picsum.photos/200/200?random=1" alt="Square">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="200" height="200" fill="#3563a7"/>
+                  <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="16">SQUARE</text>
+                  <text x="50%" y="65%" text-anchor="middle" dy=".3em" fill="white" font-size="12">200x200</text>
+                </svg>
               </div>
             </div>
             
             <div class="test-row">
               <label>Portrait (3:4)</label>
               <div class="avatar-new-container">
-                <img src="https://picsum.photos/300/400?random=2" alt="Portrait">
+                <svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                  <rect width="300" height="400" fill="#7c4dff"/>
+                  <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="18">PORTRAIT</text>
+                  <text x="50%" y="60%" text-anchor="middle" dy=".3em" fill="white" font-size="14">300x400</text>
+                </svg>
               </div>
             </div>
             
             <div class="test-row">
               <label>Landscape (4:3)</label>
               <div class="avatar-new-container">
-                <img src="https://picsum.photos/400/300?random=3" alt="Landscape">
+                <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                  <rect width="400" height="300" fill="#ff6b6b"/>
+                  <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="18">LANDSCAPE</text>
+                  <text x="50%" y="65%" text-anchor="middle" dy=".3em" fill="white" font-size="14">400x300</text>
+                </svg>
               </div>
             </div>
             
             <div class="test-row">
               <label>Wide (16:9)</label>
               <div class="avatar-new-container">
-                <img src="https://picsum.photos/1600/900?random=4" alt="Wide">
+                <svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                  <rect width="1600" height="900" fill="#ffd96b"/>
+                  <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#333" font-size="80">WIDE</text>
+                  <text x="50%" y="60%" text-anchor="middle" dy=".3em" fill="#333" font-size="60">1600x900</text>
+                </svg>
               </div>
             </div>
           </div>
@@ -260,14 +290,17 @@
           <div style="background: linear-gradient(135deg, #1c2b3e, #0e1a28); border: 2px solid rgba(120,180,240,0.5); border-radius: 20px; padding: 24px; text-align: center;">
             <div style="font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px;">Diary Room</div>
             <div class="avatar-row">
-              <img class="avatar-old" 
-                   src="https://picsum.photos/300/400?random=5" 
-                   alt="Voter">
+              <svg class="avatar-old" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                <rect width="300" height="400" fill="#2a5090"/>
+                <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="18">VOTER</text>
+                <text x="50%" y="60%" text-anchor="middle" dy=".3em" fill="white" font-size="14">Portrait</text>
+              </svg>
               <div class="arrow">→</div>
-              <img class="avatar-old" 
-                   src="https://picsum.photos/400/300?random=6" 
-                   alt="Target" 
-                   style="border-color: #ff6b6b; box-shadow: 0 6px 16px rgba(255,107,107,0.4);">
+              <svg class="avatar-old" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style="border-color: #ff6b6b; box-shadow: 0 6px 16px rgba(255,107,107,0.4);">
+                <rect width="400" height="300" fill="#c24040"/>
+                <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="18">TARGET</text>
+                <text x="50%" y="65%" text-anchor="middle" dy=".3em" fill="white" font-size="14">Landscape</text>
+              </svg>
             </div>
             <div style="font-size: 1rem; color: #e8f4ff; margin-top: 12px;">
               Alice: I vote to evict Bob.
@@ -282,11 +315,19 @@
             <div style="font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px;">Diary Room</div>
             <div class="avatar-row">
               <div class="avatar-new-container">
-                <img src="https://picsum.photos/300/400?random=5" alt="Voter">
+                <svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                  <rect width="300" height="400" fill="#2a5090"/>
+                  <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="18">VOTER</text>
+                  <text x="50%" y="60%" text-anchor="middle" dy=".3em" fill="white" font-size="14">Portrait</text>
+                </svg>
               </div>
               <div class="arrow">→</div>
               <div class="avatar-new-container" style="border-color: #ff6b6b; box-shadow: 0 6px 16px rgba(255,107,107,0.4);">
-                <img src="https://picsum.photos/400/300?random=6" alt="Target">
+                <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                  <rect width="400" height="300" fill="#c24040"/>
+                  <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="18">TARGET</text>
+                  <text x="50%" y="65%" text-anchor="middle" dy=".3em" fill="white" font-size="14">Landscape</text>
+                </svg>
               </div>
             </div>
             <div style="font-size: 1rem; color: #e8f4ff; margin-top: 12px;">
