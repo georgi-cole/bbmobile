@@ -1,7 +1,6 @@
 // MODULE: competitions.js
 // HOH eligibility, minigames, scoreboards, Final 3 flow, TV updates.
-// Enhanced: wait for reveal cards to finish; show Strategize card before Social;
-// increment HOH win stats.
+// Enhanced: wait for reveal cards to finish; increment HOH win stats.
 // New: guard to ensure HOH selection and winner card happen only once.
 // Hardened: safe fallbacks if social module name differs.
 //
@@ -933,10 +932,6 @@
 
     // Hook: Log XP for HOH win
     if (global.ProgressionEvents?.onHOHWin) global.ProgressionEvents.onHOHWin(winner, elig);
-
-    await waitCardsIdle();
-
-    safeShowCard('Strategize', ['It’s time to strategize before the Nomination Ceremony.'], 'social', 4200, true);
 
     await waitCardsIdle();
 
