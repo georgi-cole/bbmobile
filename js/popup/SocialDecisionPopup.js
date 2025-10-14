@@ -208,7 +208,7 @@
       letter-spacing: 0.5px;
       flex: 1;
       /* Match HOH Challenge popup header styling */
-      background: linear-gradient(135deg, #f0f8ff 0%, var(--accent-2) 50%, #f0f8ff 100%);
+      background: linear-gradient(135deg, var(--text-gradient-start) 0%, var(--accent-2) 50%, var(--text-gradient-start) 100%);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
