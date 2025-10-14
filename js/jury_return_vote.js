@@ -196,10 +196,24 @@
     });
 
     setTimeout(async ()=>{
-      await global.showBigCard?.('America Has Voted!', [
-        `The returning juror is…`,
-        `${global.safeName?.(winnerId)||winnerId}`
-      ], 2600);
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'America Has Voted!',
+          lines: [
+            `The returning juror is…`,
+            `${global.safeName?.(winnerId)||winnerId}`
+          ],
+          tone: 'return',
+          duration: 2600
+        });
+      } else {
+        await global.showBigCard?.('America Has Voted!', [
+          `The returning juror is…`,
+          `${global.safeName?.(winnerId)||winnerId}`
+        ], 2600);
+      }
 
       // Update cast: set juror as active
       if(winnerId!=null){

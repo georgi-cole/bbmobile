@@ -117,8 +117,32 @@
     st.finished=true;
 
     try{
-      await global.showBigCard?.('JURY RETURN', ['The juror coming back is…'], 2800);
-    }catch(e){ global.showCard?.('Jury Return',['The returning juror is…'],'jury',2600,true); }
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'JURY RETURN',
+          lines: ['The juror coming back is…'],
+          tone: 'jury',
+          duration: 2800
+        });
+      } else {
+        await global.showBigCard?.('JURY RETURN', ['The juror coming back is…'], 2800);
+      }
+    }catch(e){ 
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Jury Return',
+          lines: ['The returning juror is…'],
+          tone: 'jury',
+          duration: 2600
+        });
+      } else {
+        global.showCard?.('Jury Return',['The returning juror is…'],'jury',2600,true);
+      }
+    }
 
     if(winnerId==null){ proceedToHOH(); return; }
 
@@ -132,7 +156,18 @@
     try{
       global.addJuryLog?.('<b>'+safeName(winnerId)+'</b> wins the Juror Return and re-enters!','ok');
       global.setMusic?.('victory',true);
-      global.showCard?.('Returns!',[safeName(winnerId)],'return',4400,true);
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Returns!',
+          lines: [safeName(winnerId)],
+          tone: 'return',
+          duration: 4400
+        });
+      } else {
+        global.showCard?.('Returns!',[safeName(winnerId)],'return',4400,true);
+      }
       await global.cardQueueWaitIdle?.();
       // Confetti removed per spec
     }catch{}
@@ -172,7 +207,22 @@
 
     const totalMs=Math.max(9000, (g.cfg?.tJuryReturn || 45)*1000);
     const suspenseAt=Math.max(3000, totalMs-4200);
-    setTimeout(()=>{ try{ global.showCard?.('Final Moments',['Scores locking in…'],'jury',2800,true); }catch{} }, suspenseAt);
+    setTimeout(()=>{ 
+      try{ 
+        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+          global.PopupManager.show({
+            type: 'info',
+            variant: null,
+            title: 'Final Moments',
+            lines: ['Scores locking in…'],
+            tone: 'jury',
+            duration: 2800
+          });
+        } else {
+          global.showCard?.('Final Moments',['Scores locking in…'],'jury',2800,true);
+        }
+      }catch{} 
+    }, suspenseAt);
     setTimeout(()=>{ const st=ensureState(); if(!st.finished) finalize(); }, totalMs);
   }
   global.startJuryReturnTwist=startJuryReturnTwist;

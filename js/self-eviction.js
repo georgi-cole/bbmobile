@@ -107,7 +107,16 @@
       console.warn('[self-eviction] AI self-eviction blocked - not in safe window');
       
       // Show modal for AI random event (not manual/admin)
-      if(typeof global.showCard === 'function'){
+      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+        global.PopupManager.show({
+          type: 'info',
+          variant: null,
+          title: 'Self-Eviction Blocked',
+          lines: [`${player.name} attempted to self-evict but was prevented (wrong timing).`],
+          tone: 'info',
+          duration: 3000
+        });
+      } else if(typeof global.showCard === 'function'){
         global.showCard(
           'Self-Eviction Blocked',
           [`${player.name} attempted to self-evict but was prevented (wrong timing).`],
@@ -133,14 +142,25 @@
       });
 
       // Show modal for AI random events
-      if(origin === 'ai' && typeof global.showCard === 'function'){
-        global.showCard(
-          'Breaking News',
-          [`${player.name} has decided to self-evict from the Big Brother house.`],
-          'warn',
-          4000,
-          true
-        );
+      if(origin === 'ai'){
+        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
+          global.PopupManager.show({
+            type: 'info',
+            variant: null,
+            title: 'Breaking News',
+            lines: [`${player.name} has decided to self-evict from the Big Brother house.`],
+            tone: 'warn',
+            duration: 4000
+          });
+        } else if(typeof global.showCard === 'function'){
+          global.showCard(
+            'Breaking News',
+            [`${player.name} has decided to self-evict from the Big Brother house.`],
+            'warn',
+            4000,
+            true
+          );
+        }
       }
 
       // Branch based on role and phase
