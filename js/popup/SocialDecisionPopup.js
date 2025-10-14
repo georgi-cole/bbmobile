@@ -213,7 +213,6 @@
       background-clip: text;
       color: transparent;
       text-shadow: 0 0 28px var(--accent);
-      filter: drop-shadow(0 2px 8px rgba(140,200,255,0.4));
     `;
     headerContent.appendChild(titleElement);
 
