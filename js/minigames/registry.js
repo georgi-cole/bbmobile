@@ -230,7 +230,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    // Phase 1: Scaffolds (coming soon)
+    // Phase 1: Scaffolds (now implemented!)
     oteviator: {
       key: 'oteviator',
       name: 'Oteviator',
@@ -238,7 +238,7 @@
       type: 'reaction',
       scoring: 'accuracy',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'oteviator.js',
       minScore: 0,
       maxScore: 100,
@@ -253,7 +253,7 @@
       type: 'puzzle',
       scoring: 'hybrid',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'comix-spot.js',
       minScore: 0,
       maxScore: 100,
@@ -268,7 +268,7 @@
       type: 'endurance',
       scoring: 'endurance',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'hold-wall.js',
       minScore: 0,
       maxScore: 100,
@@ -283,7 +283,7 @@
       type: 'puzzle',
       scoring: 'time',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'slippery-shuttle.js',
       minScore: 0,
       maxScore: 100,
@@ -298,7 +298,7 @@
       type: 'memory',
       scoring: 'accuracy',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'memory-zipline.js',
       minScore: 0,
       maxScore: 100,
@@ -306,7 +306,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    // New Mobile-Friendly Games (placeholders)
+    // New Mobile-Friendly Games (now implemented!)
     swipeMaze: {
       key: 'swipeMaze',
       name: 'Swipe Maze',
@@ -314,7 +314,7 @@
       type: 'puzzle',
       scoring: 'time',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'swipe-maze.js',
       minScore: 0,
       maxScore: 100,
@@ -374,7 +374,7 @@
       type: 'reaction',
       scoring: 'accuracy',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'color-match.js',
       minScore: 0,
       maxScore: 100,
@@ -449,7 +449,7 @@
       type: 'puzzle',
       scoring: 'accuracy',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'social-strings.js',
       minScore: 0,
       maxScore: 100,
@@ -464,7 +464,7 @@
       type: 'puzzle',
       scoring: 'accuracy',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'logic-locks.js',
       minScore: 0,
       maxScore: 100,
@@ -479,7 +479,7 @@
       type: 'reaction',
       scoring: 'endurance',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'snake.js',
       minScore: 0,
       maxScore: 100,
