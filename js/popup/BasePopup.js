@@ -80,13 +80,13 @@
       position: fixed;
       inset: 0;
       z-index: 999999;
-      background: rgba(0, 0, 0, var(--popup-backdrop-opacity, 0.9));
-      backdrop-filter: blur(var(--popup-backdrop-blur, 16px));
-      -webkit-backdrop-filter: blur(var(--popup-backdrop-blur, 16px));
+      background: rgba(0, 0, 0, var(--popup-backdrop-opacity, 0.75));
+      backdrop-filter: blur(var(--popup-backdrop-blur, 20px));
+      -webkit-backdrop-filter: blur(var(--popup-backdrop-blur, 20px));
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: var(--tv-safe-top, 44px) var(--tv-safe-x, 16px) var(--tv-safe-bottom, 42px);
       animation: popupBackdropFadeIn var(--popup-transition-duration, 0.3s) ease;
     `;
 
@@ -100,12 +100,14 @@
     popup.setAttribute('aria-describedby', id + '-body');
     popup.style.cssText = `
       background: linear-gradient(145deg, var(--popup-bg-start), var(--popup-bg-end));
+      backdrop-filter: blur(var(--popup-backdrop-blur, 20px)) saturate(1.4);
+      -webkit-backdrop-filter: blur(var(--popup-backdrop-blur, 20px)) saturate(1.4);
       border: 1px solid var(--popup-border);
       border-radius: var(--popup-radius, 24px);
       box-shadow: var(--popup-shadow), var(--popup-shadow-inset);
       max-width: var(--popup-max-width);
       width: 100%;
-      max-height: calc(100vh - 120px);
+      max-height: calc(100vh - var(--tv-safe-top, 44px) - var(--tv-safe-bottom, 42px) - 40px);
       display: flex;
       flex-direction: column;
       overflow: hidden;

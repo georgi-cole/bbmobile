@@ -203,11 +203,17 @@
     titleElement.textContent = title;
     titleElement.style.cssText = `
       margin: 0;
-      font-size: 1.5rem;
+      font-size: 1.15rem;
       font-weight: 700;
-      color: var(--accent);
       letter-spacing: 0.5px;
       flex: 1;
+      /* Match HOH Challenge popup header styling */
+      background: linear-gradient(135deg, #f0f8ff 0%, var(--accent-2) 50%, #f0f8ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 28px var(--accent);
+      filter: drop-shadow(0 2px 8px rgba(140,200,255,0.4));
     `;
     headerContent.appendChild(titleElement);
 
@@ -221,8 +227,9 @@
         p.textContent = text;
         p.style.cssText = `
           margin: 0 0 12px 0;
-          line-height: 1.6;
+          line-height: 1.7;
           color: var(--ink);
+          font-size: 0.95rem;
         `;
         bodyContent.appendChild(p);
       });
@@ -231,8 +238,9 @@
       p.textContent = bodyText;
       p.style.cssText = `
         margin: 0;
-        line-height: 1.6;
+        line-height: 1.7;
         color: var(--ink);
+        font-size: 0.95rem;
       `;
       bodyContent.appendChild(p);
     }
@@ -242,9 +250,10 @@
     footerContent.className = 'social-popup-footer';
     footerContent.style.cssText = `
       display: flex;
-      justify-content: flex-end;
-      gap: var(--popup-button-gap, 12px);
+      justify-content: center;
+      gap: var(--popup-button-gap, 14px);
       flex-wrap: wrap;
+      margin-top: var(--popup-content-gap, 18px);
     `;
 
     // Add action buttons
