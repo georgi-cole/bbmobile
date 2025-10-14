@@ -5,8 +5,12 @@
 
 /* Base popup customization for social decisions */
 .social-decision-popup {
-  /* Match Challenge Announcement spec */
+  /* Match HOH Challenge popup spec - contained within faux TV safe area */
   --popup-max-width: min(720px, 90vw);
+  /* Glass effect matching HOH Challenge popups: alpha ~0.72-0.78, blur ~20px */
+  --popup-bg-start: rgba(28, 43, 62, 0.75);
+  --popup-bg-end: rgba(12, 22, 36, 0.72);
+  --popup-backdrop-blur: 20px;
 }
 
 /* Avatar container */
@@ -23,27 +27,28 @@
   height: 100%;
 }
 
-/* Body content spacing */
+/* Body content spacing - match HOH Challenge popup */
 .social-popup-body {
   padding: 4px 0;
-  margin-bottom: var(--popup-content-gap, 16px);
+  margin-bottom: var(--popup-content-gap, 18px); /* 18px minimum from body to footer */
 }
 
 .social-popup-body p {
   font-size: 1rem;
-  line-height: 1.7;
+  line-height: 1.7; /* Match HOH Challenge popup line height */
+  color: var(--ink);
 }
 
 .social-popup-body p:last-child {
   margin-bottom: 0;
 }
 
-/* Footer button container */
+/* Footer button container - match HOH Challenge popup specs */
 .social-popup-footer {
   padding-top: 4px;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--popup-button-gap, 12px);
+  gap: var(--popup-button-gap, 14px); /* 14px minimum gap between buttons */
   justify-content: center;
   align-items: center;
 }
@@ -71,16 +76,16 @@
   min-height: 48px;
 }
 
-/* Ensure buttons don't overlap on small screens */
-@media (max-width: 480px) {
+/* Ensure buttons don't overlap on small screens - stack at <=500px */
+@media (max-width: 500px) {
   .social-popup-footer {
     flex-direction: column-reverse;
     align-items: stretch;
-    gap: var(--popup-button-gap, 12px);
+    gap: var(--popup-button-gap, 14px);
   }
   
   .social-decision-btn {
-    width: 100%;
+    width: 100%; /* Fill width on mobile */
     min-width: unset;
   }
 }

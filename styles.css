@@ -70,14 +70,14 @@
   --popup-radius:24px;
   --popup-shadow:0 12px 36px -16px rgba(0,0,0,.8), 0 6px 20px -8px rgba(0,0,0,.6), 0 0 0 1px rgba(120,180,255,.15);
   --popup-shadow-inset:0 0 32px -10px var(--accent) inset;
-  --popup-backdrop-blur:18px;
+  --popup-backdrop-blur:20px; /* Match HOH Challenge popup blur */
   --popup-backdrop-opacity:0.75;
   --popup-max-width:min(780px, 92vw);
   --popup-padding:22px 26px 24px;
   --popup-transition-duration:0.3s;
   --popup-inter-delay:800ms; /* delay between popups */
-  --popup-content-gap:16px; /* spacing between body content and footer buttons */
-  --popup-button-gap:12px; /* spacing between buttons */
+  --popup-content-gap:18px; /* spacing between body content and footer buttons - match HOH specs */
+  --popup-button-gap:14px; /* spacing between buttons - match HOH specs */
 }
 
 /* THEME DEFINITIONS --------------------------------------------------------- */
