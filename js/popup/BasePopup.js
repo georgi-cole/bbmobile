@@ -100,8 +100,6 @@
     popup.setAttribute('aria-describedby', id + '-body');
     popup.style.cssText = `
       background: linear-gradient(145deg, var(--popup-bg-start), var(--popup-bg-end));
-      backdrop-filter: blur(var(--popup-backdrop-blur, 20px)) saturate(1.4);
-      -webkit-backdrop-filter: blur(var(--popup-backdrop-blur, 20px)) saturate(1.4);
       border: 1px solid var(--popup-border);
       border-radius: var(--popup-radius, 24px);
       box-shadow: var(--popup-shadow), var(--popup-shadow-inset);
