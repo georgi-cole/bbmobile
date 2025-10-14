@@ -248,21 +248,20 @@
   }
 
   /**
-   * Centralized PopupManager.show(config) for standard game popups
-   * 
-   * Supports unified CardConfig structure:
-   * {
-   *   type: 'hoh'|'pov'|'nominations'|'eviction'|'social'|'live-vote'|'info',
-   *   title: 'Card Title',
-   *   lines: ['Line 1', 'Line 2'],
-   *   duration: 3000,  // Auto-close duration (0 = manual close)
-   *   tone: 'neutral'|'good'|'bad'|'live'|'noms'|'veto'|'evict',
-   *   variant: 'hoh'|'pov'|'nominations'|etc (for CSS class),
-   *   closeOnBackdrop: true,
-   *   closeOnEsc: true,
-   *   showCloseButton: true,
-   *   onClose: callback
-   * }
+   * Centralized PopupManager.show(config) for standard game popups.
+   *
+   * @param {Object} config - Configuration object for the popup.
+   * @param {'hoh'|'pov'|'nominations'|'eviction'|'social'|'live-vote'|'info'} [config.type='info'] - Type of popup.
+   * @param {string} [config.title='Notification'] - Title of the popup card.
+   * @param {string[]} [config.lines=[]] - Array of lines to display in the popup.
+   * @param {number} [config.duration=0] - Auto-close duration in milliseconds (0 = manual close).
+   * @param {'neutral'|'good'|'bad'|'live'|'noms'|'veto'|'evict'} [config.tone='neutral'] - Tone of the popup.
+   * @param {string|null} [config.variant=null] - Variant for CSS class (e.g., 'hoh', 'pov', etc).
+   * @param {boolean} [config.closeOnBackdrop=true] - Whether clicking the backdrop closes the popup.
+   * @param {boolean} [config.closeOnEsc=true] - Whether pressing Escape closes the popup.
+   * @param {boolean} [config.showCloseButton] - Whether to show a close button (default: true if duration is 0).
+   * @param {function|null} [config.onClose=null] - Callback function to call when popup closes.
+   * @returns {void}
    */
   function showStandardPopup(config = {}){
     const {
