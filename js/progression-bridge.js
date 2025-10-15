@@ -173,6 +173,23 @@
         leaderboard = await getLeaderboard(seasonId);
       }
       
+      // Debug: Log state for verification
+      console.log('[Progression Bridge] Overview state:', {
+        totalXP: state.totalXP,
+        level: state.level,
+        progressPercent: state.progressPercent
+      });
+      if (leaderboard.length > 0) {
+        const currentPlayer = leaderboard.find(p => p.playerId === playerId);
+        if (currentPlayer) {
+          console.log('[Progression Bridge] Leaderboard player:', {
+            playerId: currentPlayer.playerId,
+            totalXP: currentPlayer.totalXP,
+            level: currentPlayer.level
+          });
+        }
+      }
+      
       // Create modal with current state
       const modal = xpModal.createModal({
         onClose: () => {
