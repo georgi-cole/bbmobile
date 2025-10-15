@@ -267,6 +267,45 @@
 <audio id="bgm" preload="auto" loop></audio>
 
 <!-- SCRIPT LOAD ORDER -->
+<!-- Boot-time assertions and service worker cleanup -->
+<script>
+(function() {
+  'use strict';
+  
+  // Unregister any service workers at boot
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      registrations.forEach(function(registration) {
+        registration.unregister();
+        console.info('[Boot] Service worker unregistered');
+      });
+    }).catch(function(err) {
+      console.warn('[Boot] Failed to unregister service workers:', err);
+    });
+  }
+  
+  // Boot-time assertion for Social Maneuvers build flag
+  window.__SM_BUILD = window.__SM_BUILD || 'sm1';
+  console.info('[Boot] Social Maneuvers build version:', window.__SM_BUILD);
+  
+  // Ensure enableSocialManeuvers is true by default
+  window.addEventListener('DOMContentLoaded', function() {
+    if (!window.game) {
+      window.game = { cfg: {} };
+    }
+    if (!window.game.cfg) {
+      window.game.cfg = {};
+    }
+    if (window.game.cfg.enableSocialManeuvers === undefined) {
+      window.game.cfg.enableSocialManeuvers = true;
+      console.info('[Boot] ✓ Defaulted enableSocialManeuvers to TRUE');
+    } else {
+      console.info('[Boot] ✓ enableSocialManeuvers already set:', window.game.cfg.enableSocialManeuvers);
+    }
+  });
+})();
+</script>
+
 <script src="js/state.js"></script>
 <script src="js/avatar.js"></script>
 <script>window.MUSIC_BASE = 'audio/';</script> <script src="js/audio.js?v=fixes-6"></script>
@@ -293,9 +332,39 @@
 
 <!-- Game flows -->
 <!-- Social Maneuvers system (loaded before social.js to ensure availability) -->
-<script src="js/social-narrative.js"></script>
-<script src="js/social-maneuvers.js"></script>
-<script src="js/social.js"></script>
+<script src="js/social-narrative.js?v=sm1"></script>
+<script src="js/social-maneuvers.js?v=sm1"></script>
+<script src="js/social.js?v=sm1"></script>
+
+<!-- Fallback loader: verify SocialManeuvers is defined after load -->
+<script>
+(function() {
+  'use strict';
+  
+  // Wait for DOMContentLoaded to ensure all scripts have loaded
+  window.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      // Check if SocialManeuvers is defined
+      if (typeof window.SocialManeuvers === 'undefined') {
+        console.warn('[Boot] ⚠️ SocialManeuvers not found - attempting fallback load');
+        
+        // Try to reload the script
+        var script = document.createElement('script');
+        script.src = 'js/social-maneuvers.js?v=sm1&fallback=1';
+        script.onload = function() {
+          console.info('[Boot] ✓ SocialManeuvers fallback loaded successfully');
+        };
+        script.onerror = function() {
+          console.error('[Boot] ❌ Failed to load SocialManeuvers fallback');
+        };
+        document.head.appendChild(script);
+      } else {
+        console.info('[Boot] ✓ SocialManeuvers module verified present');
+      }
+    }, 100);
+  });
+})();
+</script>
 
 <script src="js/minigames.js"></script><!-- Legacy stub - see docs/minigames.md -->
 
