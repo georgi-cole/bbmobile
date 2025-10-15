@@ -273,7 +273,7 @@
       else if(action.category === 'friendly'){ successBonus -= 0.1; }
     }
     if(hasTrait(actorId, 'stubborn')){
-      if(action.category === 'strategic'){ successBonus -= 0.2; }
+      if(action.category === 'strategic'){ successBonus -= 0.2; appliedTraits.push('stubborn'); }
       else if(action.category === 'aggressive'){ successBonus += 0.1; appliedTraits.push('stubborn'); }
     }
     if(hasTrait(targetId, 'gullible') && action.category === 'strategic'){
