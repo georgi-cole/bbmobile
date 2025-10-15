@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Dynamic Action Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    h1 { color: #f7b955; }
+    h2 { color: #95a9c0; margin-top: 30px; }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+    .pass { background: rgba(46, 204, 113, 0.2); border-left: 3px solid #2ecc71; }
+    .fail { background: rgba(231, 76, 60, 0.2); border-left: 3px solid #e74c3c; }
+    .info { background: rgba(52, 152, 219, 0.2); border-left: 3px solid #3498db; }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #2980b9; }
+    #testContainer {
+      min-height: 300px;
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    pre {
+      background: rgba(0,0,0,0.3);
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Maneuvers Dynamic Action System Test</h1>
+  <p>Testing the new dynamic action menu with gating, modifiers, and visual states</p>
+
+  <div class="test-section">
+    <h2>Test 1: Configuration System Loading</h2>
+    <div id="test1"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Gating Conditions</h2>
+    <button id="btnTestGating">Run Gating Tests</button>
+    <div id="test2"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Modifier Calculations</h2>
+    <button id="btnTestModifiers">Run Modifier Tests</button>
+    <div id="test3"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Chance Calculations</h2>
+    <button id="btnTestChance">Run Chance Tests</button>
+    <div id="test4"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Visual States</h2>
+    <button id="btnTestStates">Run State Tests</button>
+    <div id="test5"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: Full Action Evaluation</h2>
+    <button id="btnTestEvaluation">Run Full Evaluation</button>
+    <div id="test6"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 7: UI Integration Test</h2>
+    <button id="btnRenderUI">Render Social Maneuvers UI</button>
+    <div id="testContainer"></div>
+    <div id="test7"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 8: Telemetry Logging</h2>
+    <button id="btnTestTelemetry">Execute Action & Check Telemetry</button>
+    <div id="test8"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/social-narrative.js"></script>
+  <script src="js/social-action-config.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    // Test utilities
+    function pass(msg) {
+      return `<div class="test-result pass">✓ PASS: ${msg}</div>`;
+    }
+    function fail(msg) {
+      return `<div class="test-result fail">✗ FAIL: ${msg}</div>`;
+    }
+    function info(msg) {
+      return `<div class="test-result info">ℹ INFO: ${msg}</div>`;
+    }
+
+    // Initialize game state
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      week: 1,
+      humanId: 1,
+      players: [
+        { 
+          id: 1, 
+          name: 'Alice', 
+          evicted: false,
+          socialTraits: ['charismatic', 'loyal'],
+          affinity: { 2: 0.40, 3: -0.20, 4: 0.10 }
+        },
+        { 
+          id: 2, 
+          name: 'Bob', 
+          evicted: false,
+          socialTraits: ['gullible', 'empathetic'],
+          affinity: { 1: 0.35, 3: 0.15, 4: -0.10 }
+        },
+        { 
+          id: 3, 
+          name: 'Charlie', 
+          evicted: false,
+          socialTraits: ['skeptical', 'observant'],
+          affinity: { 1: -0.15, 2: 0.20, 4: 0.30 }
+        },
+        { 
+          id: 4, 
+          name: 'Diana', 
+          evicted: false,
+          socialTraits: ['persuasive', 'manipulative'],
+          affinity: { 1: 0.05, 2: -0.08, 3: 0.25 }
+        }
+      ]
+    };
+
+    window.ALLY_T = 0.28;
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+
+    // Test 1: Configuration Loading
+    document.addEventListener('DOMContentLoaded', () => {
+      const test1 = document.getElementById('test1');
+      let results = '';
+
+      if (typeof window.SocialActionConfig !== 'undefined') {
+        results += pass('SocialActionConfig module loaded');
+        
+        if (window.SocialActionConfig.ACTION_CONFIGS) {
+          results += pass('ACTION_CONFIGS available');
+          const configCount = Object.keys(window.SocialActionConfig.ACTION_CONFIGS).length;
+          results += info(`${configCount} action configurations found`);
+        } else {
+          results += fail('ACTION_CONFIGS not found');
+        }
+
+        if (window.SocialActionConfig.GATING_CONDITIONS) {
+          results += pass('GATING_CONDITIONS available');
+        }
+
+        if (window.SocialActionConfig.MODIFIER_CALCULATORS) {
+          results += pass('MODIFIER_CALCULATORS available');
+        }
+      } else {
+        results += fail('SocialActionConfig module not loaded');
+      }
+
+      test1.innerHTML = results;
+    });
+
+    // Test 2: Gating
+    document.getElementById('btnTestGating').onclick = () => {
+      const test2 = document.getElementById('test2');
+      let results = '';
+
+      const alice = window.getP(1);
+      const bob = window.getP(2);
+      const charlie = window.getP(3);
+
+      // Test minAffinity gate
+      const stratConfig = window.SocialActionConfig.getActionConfig('strategize');
+      const gateResult1 = window.SocialActionConfig.evaluateGates(alice, bob, stratConfig.gates);
+      results += gateResult1.passed ? 
+        pass('Alice can strategize with Bob (affinity 0.40 > 0.12)') :
+        fail('Alice should be able to strategize with Bob');
+
+      const gateResult2 = window.SocialActionConfig.evaluateGates(alice, charlie, stratConfig.gates);
+      results += !gateResult2.passed ?
+        pass('Alice cannot strategize with Charlie (affinity -0.20 < 0.12)') :
+        fail('Alice should not be able to strategize with Charlie');
+
+      // Test areAllies gate
+      const confideConfig = window.SocialActionConfig.getActionConfig('confide');
+      const gateResult3 = window.SocialActionConfig.evaluateGates(alice, bob, confideConfig.gates);
+      results += gateResult3.passed ?
+        pass('Alice can confide in Bob (affinity 0.40 >= 0.28)') :
+        fail('Alice should be able to confide in Bob');
+
+      test2.innerHTML = results;
+    };
+
+    // Test 3: Modifiers
+    document.getElementById('btnTestModifiers').onclick = () => {
+      const test3 = document.getElementById('test3');
+      let results = '';
+
+      const alice = window.getP(1);
+      const bob = window.getP(2);
+      const charlie = window.getP(3);
+
+      // Test trustBonus
+      const mods1 = window.SocialActionConfig.calculateModifiers(
+        alice, bob, ['trustBonus'], 'friendly'
+      );
+      results += mods1.length > 0 ?
+        pass(`Trust bonus applied: +${(mods1[0].value * 100).toFixed(0)}%`) :
+        fail('Trust bonus should apply');
+
+      // Test hostilityPenalty
+      const mods2 = window.SocialActionConfig.calculateModifiers(
+        alice, charlie, ['hostilityPenalty'], 'friendly'
+      );
+      results += mods2.length > 0 ?
+        pass(`Hostility penalty applied: ${(mods2[0].value * 100).toFixed(0)}%`) :
+        fail('Hostility penalty should apply');
+
+      // Test charismaticBonus (Alice has charismatic trait)
+      const mods3 = window.SocialActionConfig.calculateModifiers(
+        alice, bob, ['charismaticBonus'], 'friendly'
+      );
+      results += mods3.length > 0 ?
+        pass(`Charismatic bonus applied: +${(mods3[0].value * 100).toFixed(0)}%`) :
+        fail('Charismatic bonus should apply');
+
+      // Test gullibleBonus (Bob has gullible trait)
+      const mods4 = window.SocialActionConfig.calculateModifiers(
+        alice, bob, ['gullibleBonus'], 'friendly'
+      );
+      results += mods4.length > 0 ?
+        pass(`Gullible target bonus: +${(mods4[0].value * 100).toFixed(0)}%`) :
+        fail('Gullible bonus should apply');
+
+      test3.innerHTML = results;
+    };
+
+    // Test 4: Chance Calculation
+    document.getElementById('btnTestChance').onclick = () => {
+      const test4 = document.getElementById('test4');
+      let results = '';
+
+      // Test basic chance calculation
+      const baseChance = 0.50;
+      const modifiers = [
+        { value: 0.15, label: 'Trust', type: 'additive' },
+        { value: -0.10, label: 'Penalty', type: 'additive' },
+        { value: 0.05, label: 'Bonus', type: 'additive' }
+      ];
+
+      const finalChance = window.SocialActionConfig.calculateChance(baseChance, modifiers);
+      const expected = 0.50 + 0.15 - 0.10 + 0.05; // 0.60
+
+      results += Math.abs(finalChance - expected) < 0.01 ?
+        pass(`Chance calculation correct: ${(finalChance * 100).toFixed(0)}%`) :
+        fail(`Expected ${(expected * 100).toFixed(0)}%, got ${(finalChance * 100).toFixed(0)}%`);
+
+      // Test clamping to 0-100%
+      const modifiersHigh = [{ value: 1.0, label: 'Huge', type: 'additive' }];
+      const clampedHigh = window.SocialActionConfig.calculateChance(0.50, modifiersHigh);
+      results += clampedHigh === 1.0 ?
+        pass('Chance correctly clamped to 100%') :
+        fail(`Should clamp to 100%, got ${(clampedHigh * 100).toFixed(0)}%`);
+
+      const modifiersLow = [{ value: -1.0, label: 'Huge penalty', type: 'additive' }];
+      const clampedLow = window.SocialActionConfig.calculateChance(0.50, modifiersLow);
+      results += clampedLow === 0.0 ?
+        pass('Chance correctly clamped to 0%') :
+        fail(`Should clamp to 0%, got ${(clampedLow * 100).toFixed(0)}%`);
+
+      test4.innerHTML = results;
+    };
+
+    // Test 5: Visual States
+    document.getElementById('btnTestStates').onclick = () => {
+      const test5 = document.getElementById('test5');
+      let results = '';
+
+      const alice = window.getP(1);
+      const bob = window.getP(2);
+      const charlie = window.getP(3);
+
+      // Test locked state (strategize with Charlie - low affinity)
+      const eval1 = window.SocialActionConfig.getActionEvaluation(
+        'strategize', alice, charlie, { category: 'strategic' }
+      );
+      results += eval1.states.locked ?
+        pass('Strategize is locked for low affinity target') :
+        fail('Strategize should be locked');
+
+      // Test boosted state (smalltalk with charismatic trait)
+      const eval2 = window.SocialActionConfig.getActionEvaluation(
+        'smalltalk', alice, bob, { category: 'friendly' }
+      );
+      results += eval2.states.boosted ?
+        pass('Smalltalk is boosted (Alice is charismatic)') :
+        info('Boosted state depends on affinity threshold');
+
+      // Test risky state (interrogate with ally)
+      const eval3 = window.SocialActionConfig.getActionEvaluation(
+        'interrogate', alice, bob, { category: 'aggressive' }
+      );
+      results += eval3.states.risky ?
+        pass('Interrogate is risky (target is ally)') :
+        info('Risky state depends on relationship');
+
+      test5.innerHTML = results;
+    };
+
+    // Test 6: Full Evaluation
+    document.getElementById('btnTestEvaluation').onclick = () => {
+      const test6 = document.getElementById('test6');
+      let results = '';
+
+      const alice = window.getP(1);
+      const bob = window.getP(2);
+
+      // Full evaluation of confide action
+      const evaluation = window.SocialActionConfig.getActionEvaluation(
+        'confide', alice, bob, { category: 'friendly' }
+      );
+
+      results += info('Full evaluation for Alice -> Bob: Confide');
+      results += info(`Available: ${evaluation.available}`);
+      results += info(`Base Chance: ${(evaluation.baseChance * 100).toFixed(0)}%`);
+      results += info(`Modifiers: ${evaluation.modifiers.length}`);
+      
+      evaluation.modifiers.forEach(mod => {
+        results += info(`  - ${mod.label}: ${mod.value >= 0 ? '+' : ''}${(mod.value * 100).toFixed(0)}%`);
+      });
+
+      results += info(`Final Chance: ${(evaluation.finalChance * 100).toFixed(0)}%`);
+      results += info(`States: locked=${evaluation.states.locked}, boosted=${evaluation.states.boosted}, risky=${evaluation.states.risky}`);
+
+      results += evaluation.finalChance > evaluation.baseChance ?
+        pass('Modifiers increased success chance') :
+        info('Success chance affected by modifiers');
+
+      test6.innerHTML = results;
+    };
+
+    // Test 7: UI Integration
+    document.getElementById('btnRenderUI').onclick = () => {
+      const container = document.getElementById('testContainer');
+      const test7 = document.getElementById('test7');
+      
+      container.innerHTML = '';
+      let results = '';
+
+      try {
+        window.SocialManeuvers.renderSocialManeuversUI(container, 1);
+        results += pass('UI rendered successfully');
+        results += info('Check the container above for rendered UI');
+        
+        // Check for key UI elements
+        setTimeout(() => {
+          const energyBar = container.querySelector('.social-energy-bar');
+          const playerGrid = container.querySelector('.social-player-grid');
+          const actionsList = container.querySelector('.social-actions-list');
+          
+          if (energyBar) results += pass('Energy bar rendered');
+          if (playerGrid) results += pass('Player selection rendered');
+          if (actionsList) results += pass('Actions list rendered');
+          
+          test7.innerHTML = results;
+        }, 100);
+      } catch (e) {
+        results += fail(`UI rendering failed: ${e.message}`);
+        test7.innerHTML = results;
+      }
+    };
+
+    // Test 8: Telemetry
+    document.getElementById('btnTestTelemetry').onclick = () => {
+      const test8 = document.getElementById('test8');
+      let results = '';
+
+      // Initialize energy
+      window.SocialManeuvers.initSocialEnergy();
+      window.SocialManeuvers.setEnergy(1, 3);
+
+      // Execute an action
+      const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk');
+
+      if (result.success) {
+        results += pass('Action executed successfully');
+        
+        if (result.telemetry) {
+          results += pass('Telemetry data captured');
+          results += info(`Action: ${result.telemetry.actionLabel}`);
+          results += info(`Base Chance: ${(result.telemetry.baseChance * 100).toFixed(0)}%`);
+          results += info(`Final Chance: ${(result.telemetry.finalChance * 100).toFixed(0)}%`);
+          results += info(`Roll: ${(result.telemetry.chanceRoll * 100).toFixed(0)}%`);
+          results += info(`Result: ${result.telemetry.succeeded ? 'SUCCESS' : 'FAILED'}`);
+          results += info(`Modifiers applied: ${result.telemetry.modifiers.length}`);
+
+          // Show telemetry storage
+          if (window.game.__socialManeuversTelemetry) {
+            results += pass(`Telemetry stored (${window.game.__socialManeuversTelemetry.length} entries)`);
+            results += '<pre>' + JSON.stringify(result.telemetry, null, 2) + '</pre>';
+          }
+        } else {
+          results += fail('No telemetry data');
+        }
+      } else {
+        results += fail(`Action failed: ${result.reason || result.message}`);
+      }
+
+      test8.innerHTML = results;
+    };
+  </script>
+</body>
+</html>

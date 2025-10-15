@@ -4561,6 +4561,80 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   color: #95a9c0;
   font-size: 0.85rem;
   margin-bottom: 8px;
+   SOCIAL RESOURCES HUD - Energy, Influence, Information
+   ============================================================================ */
+
+.social-resources-hud {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.social-resource-display {
+  flex: 1;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  position: relative;
+  cursor: help;
+  transition: all 0.3s ease;
+}
+
+.social-resource-display:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.social-resource-display[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.95);
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  max-width: 280px;
+  z-index: 1000;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.social-resource-energy {
+  border-top: 3px solid #ffdc8b;
+}
+
+.social-resource-influence {
+  border-top: 3px solid #9b59b6;
+}
+
+.social-resource-information {
+  border-top: 3px solid #3498db;
+}
+
+.social-resource-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.social-resource-icon {
+  font-size: 1.3rem;
+}
+
+.social-resource-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e3ecf5;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -4692,3 +4766,168 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
     padding: 3px 8px;
   }
 }
+.social-resource-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.social-resource-value .current {
+  color: #ffdc8b;
+}
+
+.social-resource-value .max {
+  color: #95a9c0;
+  font-size: 1.1rem;
+}
+
+.social-resource-progress {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.social-resource-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffdc8b 0%, #ffa500 100%);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.social-resource-energy .social-resource-progress-fill {
+  background: linear-gradient(90deg, #ffdc8b 0%, #ffa500 100%);
+}
+
+.social-resource-influence .social-resource-progress-fill {
+  background: linear-gradient(90deg, #9b59b6 0%, #e91e63 100%);
+}
+
+.social-resource-information .social-resource-progress-fill {
+  background: linear-gradient(90deg, #3498db 0%, #2ecc71 100%);
+}
+
+/* Action Item Updates for Multiple Resources */
+.social-action-costs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.social-cost-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.social-cost-badge.affordable {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.social-cost-badge.expensive {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.social-action-rewards {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(46, 204, 113, 0.1);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.2);
+}
+
+.social-action-rewards .rewards-label {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.social-action-item[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: rgba(231, 76, 60, 0.95);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Feedback Panel Updates */
+.social-feedback-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  min-width: 300px;
+  max-width: 400px;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+  animation: slideInRight 0.4s ease;
+}
+
+.feedback-resources {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+}
+
+.feedback-resources small {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .social-resources-hud {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .social-feedback-panel {
+    right: 10px;
+    left: 10px;
+    min-width: auto;
+  }
+}
+
