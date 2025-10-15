@@ -305,7 +305,7 @@
     const negativeCount = promisesBroken + betrayals + rumorsExposed + confrontations;
     affinityBonus += positiveCount * 0.005;
     affinityBonus -= negativeCount * 0.01;
-    affinityBonus = Math.max(-0.05, Math.min(0.05, affinityBonus));
+    affinityBonus = clamp(affinityBonus, -0.05, 0.05);
     if(positiveCount > 0) relevantMemories.push(`${positiveCount} positive`);
     if(negativeCount > 0) relevantMemories.push(`${negativeCount} negative`);
     return { affinityBonus, positiveCount, negativeCount, relevantMemories };
