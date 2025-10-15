@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>High-Impact Social Actions Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    h1 { color: #f7b955; }
+    h2 { color: #95a9c0; margin-top: 30px; }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass { background: rgba(46, 204, 113, 0.2); border-left: 3px solid #2ecc71; }
+    .fail { background: rgba(231, 76, 60, 0.2); border-left: 3px solid #e74c3c; }
+    .info { background: rgba(52, 152, 219, 0.2); border-left: 3px solid #3498db; }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #2980b9; }
+    button:disabled {
+      background: #95a9c0;
+      cursor: not-allowed;
+    }
+    #testContainer {
+      min-height: 200px;
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .summary {
+      font-size: 1.2rem;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    .summary.success {
+      background: rgba(46, 204, 113, 0.2);
+      border: 2px solid #2ecc71;
+    }
+    .summary.partial {
+      background: rgba(241, 196, 15, 0.2);
+      border: 2px solid #f1c40f;
+    }
+    .summary.failure {
+      background: rgba(231, 76, 60, 0.2);
+      border: 2px solid #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 High-Impact Social Actions Test Suite</h1>
+  <p>Testing new actions: Spread Rumor, Expose Secret, Group Hangout, Form Alliance</p>
+
+  <div class="test-section">
+    <h2>Test 1: Information Resource System</h2>
+    <div id="test1"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: New Actions Registration</h2>
+    <div id="test2"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Spread Rumor Action</h2>
+    <div id="test3"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Expose Secret Action</h2>
+    <div id="test4"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Group Hangout (Multi-target)</h2>
+    <div id="test5"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: Form Alliance Action</h2>
+    <div id="test6"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 7: Information Cost Enforcement</h2>
+    <div id="test7"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 8: Memory System</h2>
+    <div id="test8"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 9: Telemetry Recording</h2>
+    <div id="test9"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Summary</h2>
+    <div id="summary"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/state.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    // Mock global game object
+    if(!window.game){
+      window.game = {
+        week: 3,
+        humanId: 1,
+        cfg: {
+          enableSocialManeuvers: true // Enable for tests
+        },
+        players: [],
+        alliances: []
+      };
+    }
+
+    // Initialize players with information values
+    if(!window.game.players || window.game.players.length === 0){
+      window.game.players = [
+        { id: 1, name: 'Alice', affinity: {}, information: 60, socialTraits: ['charismatic', 'loyal'], memoryLog: [] },
+        { id: 2, name: 'Bob', affinity: {}, information: 50, socialTraits: ['observant'], memoryLog: [] },
+        { id: 3, name: 'Charlie', affinity: {}, information: 40, socialTraits: ['deceptive'], memoryLog: [] },
+        { id: 4, name: 'Diana', affinity: {}, information: 70, socialTraits: ['persuasive'], memoryLog: [] },
+        { id: 5, name: 'Eve', affinity: {}, information: 30, socialTraits: ['gullible'], memoryLog: [] }
+      ];
+    }
+
+    // Mock helper functions if not available
+    if(!window.safeName){
+      window.safeName = function(id) {
+        const p = window.game.players.find(p => p.id === id);
+        return p ? p.name : `Player ${id}`;
+      };
+    }
+
+    if(!window.getP){
+      window.getP = function(id) {
+        return window.game.players.find(p => p.id === id);
+      };
+    }
+
+    if(!window.alivePlayers){
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted);
+      };
+    }
+
+    if(!window.addLog){
+      window.addLog = function(msg, type) {
+        console.log(`[${type}] ${msg}`);
+      };
+    }
+
+    if(!window.formAlliance){
+      window.formAlliance = function(memberIds) {
+        const alliance = {
+          id: Date.now(),
+          members: memberIds,
+          cohesion: 50
+        };
+        window.game.alliances.push(alliance);
+        console.log('Alliance formed:', memberIds);
+      };
+    }
+
+    if(!window.inSameAlliance){
+      window.inSameAlliance = function(id1, id2) {
+        return window.game.alliances.some(al => 
+          al.members.includes(id1) && al.members.includes(id2)
+        );
+      };
+    }
+
+    let testsPassed = 0;
+    let testsFailed = 0;
+
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function assert(condition, message, containerId) {
+      if (condition) {
+        log(containerId, '✓ PASS: ' + message, 'pass');
+        testsPassed++;
+      } else {
+        log(containerId, '✗ FAIL: ' + message, 'fail');
+        testsFailed++;
+      }
+    }
+
+    // Test 1: Information Resource System
+    (function() {
+      const info = window.getInformation(1);
+      assert(typeof info === 'number', 'getInformation returns a number', 'test1');
+      assert(info === 60, `Alice has 60 information (got ${info})`, 'test1');
+      
+      const info2 = window.getInformation(2);
+      assert(info2 === 50, `Bob has 50 information (got ${info2})`, 'test1');
+      
+      // Test updateInformation
+      window.updateInformation(1, -10);
+      const newInfo = window.getInformation(1);
+      assert(newInfo === 50, `After spending 10, Alice has 50 (got ${newInfo})`, 'test1');
+      
+      // Restore for other tests
+      window.updateInformation(1, 10);
+    })();
+
+    // Test 2: New Actions Registration
+    (function() {
+      const actions = window.SocialManeuvers.SOCIAL_ACTIONS;
+      
+      const spreadRumor = actions.find(a => a.id === 'spread_rumor');
+      assert(spreadRumor !== undefined, 'Spread Rumor action exists', 'test2');
+      assert(spreadRumor.infoCost === 15, `Spread Rumor costs 15 info (got ${spreadRumor?.infoCost})`, 'test2');
+      assert(spreadRumor.tag === 'AGGRESSIVE', `Spread Rumor has AGGRESSIVE tag (got ${spreadRumor?.tag})`, 'test2');
+      
+      const exposeSecret = actions.find(a => a.id === 'expose_secret');
+      assert(exposeSecret !== undefined, 'Expose Secret action exists', 'test2');
+      assert(exposeSecret.infoCost === 25, `Expose Secret costs 25 info (got ${exposeSecret?.infoCost})`, 'test2');
+      
+      const groupHangout = actions.find(a => a.id === 'group_hangout');
+      assert(groupHangout !== undefined, 'Group Hangout action exists', 'test2');
+      assert(groupHangout.multiTarget === true, 'Group Hangout is multi-target', 'test2');
+      assert(groupHangout.minTargets === 2, `Group Hangout min 2 targets (got ${groupHangout?.minTargets})`, 'test2');
+      
+      const formAlliance = actions.find(a => a.id === 'form_alliance');
+      assert(formAlliance !== undefined, 'Form Alliance action exists', 'test2');
+      assert(formAlliance.infoCost === 10, `Form Alliance costs 10 info (got ${formAlliance?.infoCost})`, 'test2');
+    })();
+
+    // Test 3: Spread Rumor Action
+    (function() {
+      window.SocialManeuvers.initSocialEnergy();
+      window.SocialManeuvers.setEnergy(1, 5);
+      
+      const initialInfo = window.getInformation(1);
+      const initialAffinity = window.getP(1).affinity[2] || 0;
+      
+      // Execute spread rumor
+      const result = window.SocialManeuvers.executeAction(1, 2, 'spread_rumor');
+      
+      assert(result.success === true, 'Spread Rumor executed successfully', 'test3');
+      assert(result.action.id === 'spread_rumor', 'Correct action executed', 'test3');
+      
+      const finalInfo = window.getInformation(1);
+      assert(finalInfo === initialInfo - 15, `Information decreased by 15 (${initialInfo} → ${finalInfo})`, 'test3');
+      
+      const finalEnergy = window.SocialManeuvers.getEnergy(1);
+      assert(finalEnergy === 4, `Energy decreased by 1 (got ${finalEnergy})`, 'test3');
+      
+      assert(result.outcome.type === 'success' || result.outcome.type === 'backlash', 
+        'Outcome is either success or backlash', 'test3');
+      
+      if(result.outcome.caught){
+        log('test3', 'ℹ Rumor attempt was caught (backlash occurred)', 'info');
+      } else {
+        log('test3', 'ℹ Rumor spread successfully (no backlash)', 'info');
+      }
+    })();
+
+    // Test 4: Expose Secret Action
+    (function() {
+      window.SocialManeuvers.setEnergy(4, 5);
+      window.updateInformation(4, 10); // Ensure Diana has enough info
+      
+      const initialInfo = window.getInformation(4);
+      const result = window.SocialManeuvers.executeAction(4, 3, 'expose_secret');
+      
+      assert(result.success === true, 'Expose Secret executed successfully', 'test4');
+      
+      const finalInfo = window.getInformation(4);
+      assert(finalInfo === initialInfo - 25, `Information decreased by 25 (${initialInfo} → ${finalInfo})`, 'test4');
+      
+      const finalEnergy = window.SocialManeuvers.getEnergy(4);
+      assert(finalEnergy === 3, `Energy decreased by 2 (got ${finalEnergy})`, 'test4');
+      
+      // Check that it affected Charlie's relationships
+      const charlie = window.getP(3);
+      const affinityValues = Object.values(charlie.affinity || {});
+      const hasNegativeAffinity = affinityValues.some(v => v < 0);
+      assert(hasNegativeAffinity, "Charlie's affinity with others decreased", 'test4');
+      
+      if(result.outcome.backlash){
+        log('test4', 'ℹ Expose Secret resulted in backlash', 'info');
+      }
+    })();
+
+    // Test 5: Group Hangout (Multi-target)
+    (function() {
+      window.SocialManeuvers.setEnergy(1, 5);
+      
+      // Set initial affinities to track changes
+      const alice = window.getP(1);
+      alice.affinity[2] = 0.1;
+      alice.affinity[3] = 0.1;
+      
+      const bob = window.getP(2);
+      bob.affinity[1] = 0.1;
+      bob.affinity[3] = 0.1;
+      
+      const charlie = window.getP(3);
+      charlie.affinity[1] = 0.1;
+      charlie.affinity[2] = 0.1;
+      
+      // Execute group hangout with 2 extra targets
+      const result = window.SocialManeuvers.executeAction(1, 2, 'group_hangout', [3]);
+      
+      assert(result.success === true, 'Group Hangout executed successfully', 'test5');
+      assert(result.outcome.multiTarget === true, 'Outcome marked as multi-target', 'test5');
+      assert(result.outcome.participants.length === 3, 
+        `3 participants involved (got ${result.outcome.participants.length})`, 'test5');
+      
+      // Check affinity boost between all pairs
+      const aliceBobNew = alice.affinity[2];
+      assert(aliceBobNew > 0.1, `Alice-Bob affinity increased (${aliceBobNew})`, 'test5');
+      
+      const bobCharlieNew = bob.affinity[3];
+      assert(bobCharlieNew > 0.1, `Bob-Charlie affinity increased (${bobCharlieNew})`, 'test5');
+      
+      log('test5', `ℹ Participants: ${result.outcome.participants.map(id => window.safeName(id)).join(', ')}`, 'info');
+    })();
+
+    // Test 6: Form Alliance Action
+    (function() {
+      window.SocialManeuvers.setEnergy(1, 5);
+      window.updateInformation(1, 20); // Ensure Alice has enough info
+      
+      // Set good affinity for alliance to succeed
+      const alice = window.getP(1);
+      const diana = window.getP(4);
+      alice.affinity[4] = 0.3; // Above success threshold
+      diana.affinity[1] = 0.3;
+      
+      const initialAllianceCount = window.game.alliances.length;
+      const initialInfo = window.getInformation(1);
+      
+      const result = window.SocialManeuvers.executeAction(1, 4, 'form_alliance');
+      
+      assert(result.success === true, 'Form Alliance executed successfully', 'test6');
+      
+      const finalInfo = window.getInformation(1);
+      assert(finalInfo === initialInfo - 10, `Information decreased by 10 (${initialInfo} → ${finalInfo})`, 'test6');
+      
+      if(result.outcome.allianceFormed){
+        log('test6', '✓ Alliance successfully formed', 'pass');
+        const finalAllianceCount = window.game.alliances.length;
+        assert(finalAllianceCount > initialAllianceCount, 
+          'Alliance count increased', 'test6');
+      } else if(result.outcome.betrayalRisk){
+        log('test6', 'ℹ Alliance proposal rejected (BetrayalRisk memory created)', 'info');
+        assert(result.outcome.type === 'failure', 'Outcome type is failure', 'test6');
+      }
+    })();
+
+    // Test 7: Information Cost Enforcement
+    (function() {
+      window.SocialManeuvers.setEnergy(5, 5);
+      window.updateInformation(5, -20); // Eve now has only 10 info
+      
+      const initialInfo = window.getInformation(5);
+      assert(initialInfo === 10, `Eve has 10 information (got ${initialInfo})`, 'test7');
+      
+      // Try to spread rumor (costs 15, but Eve only has 10)
+      const result = window.SocialManeuvers.executeAction(5, 2, 'spread_rumor');
+      
+      assert(result.success === false, 'Action failed due to insufficient information', 'test7');
+      assert(result.reason === 'insufficient_information', 
+        `Correct failure reason (got ${result.reason})`, 'test7');
+      
+      // Energy should be refunded
+      const finalEnergy = window.SocialManeuvers.getEnergy(5);
+      assert(finalEnergy === 5, 'Energy was refunded after failure', 'test7');
+      
+      // Information should not be spent
+      const finalInfo = window.getInformation(5);
+      assert(finalInfo === initialInfo, 'Information was not spent', 'test7');
+    })();
+
+    // Test 8: Memory System
+    (function() {
+      // Check that memories were created
+      const game = window.game;
+      
+      assert(game.__socialManeuversMemory !== undefined, 'Social maneuvers memory exists', 'test8');
+      assert(game.__socialManeuversMemory.actions.length > 0, 
+        `Action memory recorded (${game.__socialManeuversMemory.actions.length} entries)`, 'test8');
+      
+      // Check for backlash memories
+      if(game.__backlashMemories){
+        log('test8', `ℹ ${game.__backlashMemories.length} backlash memories recorded`, 'info');
+      }
+      
+      // Check for betrayal risk memories
+      if(game.__betrayalRisks){
+        log('test8', `ℹ ${game.__betrayalRisks.length} betrayal risk memories recorded`, 'info');
+      }
+      
+      // Check player memory logs
+      const alice = window.getP(1);
+      if(alice.memoryLog && alice.memoryLog.length > 0){
+        log('test8', `ℹ Alice has ${alice.memoryLog.length} entries in memory log`, 'info');
+      }
+    })();
+
+    // Test 9: Telemetry Recording
+    (function() {
+      const game = window.game;
+      
+      assert(game.__socialTelemetry !== undefined, 'Telemetry system exists', 'test9');
+      assert(game.__socialTelemetry.length > 0, 
+        `Telemetry recorded (${game.__socialTelemetry.length} entries)`, 'test9');
+      
+      // Check telemetry structure
+      const lastEntry = game.__socialTelemetry[game.__socialTelemetry.length - 1];
+      assert(lastEntry.week !== undefined, 'Telemetry includes week', 'test9');
+      assert(lastEntry.actorId !== undefined, 'Telemetry includes actorId', 'test9');
+      assert(lastEntry.actionId !== undefined, 'Telemetry includes actionId', 'test9');
+      assert(lastEntry.participants !== undefined, 'Telemetry includes participants', 'test9');
+      
+      // Check for deltas
+      const entriesWithDeltas = game.__socialTelemetry.filter(e => 
+        e.deltas && Object.keys(e.deltas).length > 0
+      );
+      assert(entriesWithDeltas.length > 0, 
+        `Relationship deltas recorded (${entriesWithDeltas.length} entries)`, 'test9');
+      
+      log('test9', `ℹ Total telemetry entries: ${game.__socialTelemetry.length}`, 'info');
+    })();
+
+    // Display Summary
+    (function() {
+      const total = testsPassed + testsFailed;
+      const percentage = total > 0 ? Math.round((testsPassed / total) * 100) : 0;
+      
+      const summaryDiv = document.getElementById('summary');
+      const summaryEl = document.createElement('div');
+      
+      if(testsFailed === 0){
+        summaryEl.className = 'summary success';
+        summaryEl.innerHTML = `
+          <strong>🎉 All Tests Passed!</strong><br>
+          ${testsPassed} / ${total} tests passed (${percentage}%)
+        `;
+      } else if(testsPassed > testsFailed){
+        summaryEl.className = 'summary partial';
+        summaryEl.innerHTML = `
+          <strong>⚠️ Most Tests Passed</strong><br>
+          ${testsPassed} / ${total} tests passed (${percentage}%)<br>
+          ${testsFailed} tests failed
+        `;
+      } else {
+        summaryEl.className = 'summary failure';
+        summaryEl.innerHTML = `
+          <strong>❌ Tests Failed</strong><br>
+          ${testsPassed} / ${total} tests passed (${percentage}%)<br>
+          ${testsFailed} tests failed
+        `;
+      }
+      
+      summaryDiv.appendChild(summaryEl);
+    })();
+  </script>
+</body>
+</html>

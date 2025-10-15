@@ -434,6 +434,9 @@
         description: `${actorName} was caught spreading rumors about ${targetName}`
       });
 
+      // Record in action memory
+      recordActionInMemory(actor.id, targetId, action, 'backlash');
+
       global.addLog?.(`${actorName} was caught spreading rumors about ${targetName}!`, 'danger');
 
       return {
@@ -459,6 +462,9 @@
           affectedIds.push(other.id);
         }
       });
+
+      // Record in action memory
+      recordActionInMemory(actor.id, targetId, action, 'success');
 
       global.addLog?.(`${actorName} spread rumors about ${targetName}.`, 'muted');
 
@@ -521,6 +527,9 @@
         description: `${actorName} exposed secrets about ${targetName}, but faced backlash`
       });
 
+      // Record in action memory
+      recordActionInMemory(actor.id, targetId, action, 'backlash');
+
       global.addLog?.(`${actorName} exposed ${targetName}'s secrets! Both reputations damaged.`, 'danger');
 
       return {
@@ -532,6 +541,9 @@
         participants: [actor.id, targetId, ...affected.map(p => p.id)]
       };
     } else {
+      // Record in action memory
+      recordActionInMemory(actor.id, targetId, action, 'success');
+
       global.addLog?.(`${actorName} exposed damaging information about ${targetName}!`, 'warning');
 
       return {
@@ -571,6 +583,9 @@
         }
       }
     }
+
+    // Record in action memory (use first target as representative)
+    recordActionInMemory(actor.id, targetIds[0], action, 'positive');
 
     global.addLog?.(`${actorName} organized a group hangout with ${targetIds.length} others.`, 'ok');
 
@@ -613,6 +628,9 @@
           target.affinity[actor.id] = (target.affinity[actor.id] ?? 0) + boostDelta;
         }
 
+        // Record in action memory
+        recordActionInMemory(actor.id, targetId, action, 'success');
+
         global.addLog?.(`${actorName} and ${targetName} formed an alliance!`, 'success');
 
         return {
@@ -624,6 +642,8 @@
         };
       } else {
         // Alliance system rejected (maybe already in alliance)
+        recordActionInMemory(actor.id, targetId, action, 'neutral');
+
         return {
           type: 'neutral',
           message: `Proposal accepted but alliance couldn't be formalized.`,
@@ -645,6 +665,9 @@
         reason: 'proposal_rejected',
         description: `${targetName} rejected ${actorName}'s alliance proposal`
       });
+
+      // Record in action memory
+      recordActionInMemory(actor.id, targetId, action, 'failure');
 
       global.addLog?.(`${targetName} rejected ${actorName}'s alliance proposal.`, 'warning');
 
@@ -1036,19 +1059,6 @@
         const instruction = playerSection.querySelector('.selection-instruction');
         if(instruction) instruction.remove();
       }
-    }
-
-    container.appendChild(wrapper);
-    updateActionsList();
-  }
-            item.classList.remove('selected');
-          });
-          actionItem.classList.add('selected');
-          
-          executeBtn.disabled = false;
-        });
-        actionsList.appendChild(actionItem);
-      });
     }
 
     container.appendChild(wrapper);
