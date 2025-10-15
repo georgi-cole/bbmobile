@@ -78,9 +78,7 @@
           fields: [
             checkbox('enableJuryHouse', 'Enable Jury House'),
             checkbox('enablePublicFav', 'Fans\' favourite mode'),
-            checkbox('progressionEnabled', 'Enable XP and leveling system (experimental)'),
-            checkbox('popup_refresh_enabled', 'Use new popup system (BasePopup/Queue) - experimental'),
-            html('<div class="tiny muted">Enable the new popup system with improved accessibility, theming, and queue management. Disable to use legacy reveal cards.</div>')
+            checkbox('progressionEnabled', 'Enable XP and leveling system (experimental)')
           ]
         },
         {
