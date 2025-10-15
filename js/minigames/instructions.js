@@ -121,7 +121,7 @@
     
     chainReaction: {
       title: 'Chain Reaction',
-      description: 'Click tiles of the same color to create chains! 5 rounds.',
+      description: 'Click tiles of the same color to create chains! 3 rounds.',
       steps: []
     },
     
