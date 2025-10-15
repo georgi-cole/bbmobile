@@ -28,7 +28,7 @@
     title.style.cssText = 'margin:0;font-size:1.2rem;color:#e3ecf5;';
     
     const instructions = document.createElement('p');
-    instructions.textContent = 'Click tiles of the same color to create chains! (5 rounds)';
+    instructions.textContent = 'Click tiles of the same color to create chains! (3 rounds)';
     instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
     
     const scoreDiv = document.createElement('div');
@@ -36,7 +36,7 @@
     scoreDiv.style.cssText = 'font-size:1.5rem;font-weight:bold;color:#83bfff;';
     
     const roundDiv = document.createElement('div');
-    roundDiv.textContent = 'Round: 1/5';
+    roundDiv.textContent = 'Round: 1/3';
     roundDiv.style.cssText = 'font-size:0.9rem;color:#95a9c0;';
     
     const gridDiv = document.createElement('div');
@@ -90,6 +90,57 @@
       chainSize = 0;
     }
     
+    function hasValidMoves(){
+      // Check if there are any 2+ connected tiles of the same color
+      const checked = new Set();
+      
+      for(let i = 0; i < grid.length; i++){
+        if(grid[i].dataset.removed === 'true') continue;
+        if(checked.has(i)) continue;
+        
+        const color = grid[i].dataset.color;
+        const connected = [];
+        
+        // Find connected tiles of same color using BFS
+        function findConnectedBFS(startIdx){
+          const queue = [startIdx];
+          const visited = new Set();
+          const result = [];
+          
+          while(queue.length > 0){
+            const idx = queue.shift();
+            if(visited.has(idx)) continue;
+            if(idx < 0 || idx >= 36) continue;
+            
+            const t = grid[idx];
+            if(t.dataset.removed === 'true' || t.dataset.color !== color) continue;
+            
+            visited.add(idx);
+            result.push(idx);
+            
+            const row = Math.floor(idx / 6);
+            const col = idx % 6;
+            
+            if(row > 0) queue.push(idx - 6); // up
+            if(row < 5) queue.push(idx + 6); // down
+            if(col > 0) queue.push(idx - 1); // left
+            if(col < 5) queue.push(idx + 1); // right
+          }
+          
+          return result;
+        }
+        
+        const connectedTiles = findConnectedBFS(i);
+        connectedTiles.forEach(idx => checked.add(idx));
+        
+        if(connectedTiles.length >= 2){
+          return true; // Found a valid move
+        }
+      }
+      
+      return false; // No valid moves
+    }
+    
     function handleTileClick(tile){
       if(tile.dataset.removed === 'true') return;
       
@@ -133,16 +184,18 @@
         // Check if round complete
         setTimeout(() => {
           const remaining = grid.filter(t => t.dataset.removed === 'false').length;
-          if(remaining === 0 || remaining < 2){
-            if(currentRound < 5){
+          const movesAvailable = hasValidMoves();
+          
+          if(remaining === 0 || !movesAvailable){
+            if(currentRound < 3){
               // Auto-advance to next round (no stall)
               currentRound++;
-              roundDiv.textContent = `Round: ${currentRound}/5`;
+              roundDiv.textContent = `Round: ${currentRound}/3`;
               instructions.textContent = 'Round complete!';
               instructions.style.color = '#74e48b';
               
               setTimeout(() => {
-                instructions.textContent = 'Click tiles of the same color to create chains! (5 rounds)';
+                instructions.textContent = 'Click tiles of the same color to create chains! (3 rounds)';
                 instructions.style.color = '#95a9c0';
                 createGrid();
               }, 1200);
@@ -156,7 +209,7 @@
     
     nextBtn.addEventListener('click', () => {
       currentRound++;
-      roundDiv.textContent = `Round: ${currentRound}/5`;
+      roundDiv.textContent = `Round: ${currentRound}/3`;
       nextBtn.style.display = 'none';
       createGrid();
     });
