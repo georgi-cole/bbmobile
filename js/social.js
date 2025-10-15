@@ -537,7 +537,14 @@
           const errorMsg = document.createElement('div');
           errorMsg.className = 'social-error-message';
           errorMsg.style.cssText = 'padding:12px;background:#2a1a1a;border:1px solid #663333;border-radius:8px;color:#ff9999;margin:8px 0;';
-          errorMsg.innerHTML = `<strong>⚠️ Social Maneuvers UI Error</strong><br><span class="tiny">Check console for details. Phase continues.</span>`;
+          const strong = document.createElement('strong');
+          strong.textContent = '⚠️ Social Maneuvers UI Error';
+          errorMsg.appendChild(strong);
+          errorMsg.appendChild(document.createElement('br'));
+          const span = document.createElement('span');
+          span.className = 'tiny';
+          span.textContent = 'Check console for details. Phase continues.';
+          errorMsg.appendChild(span);
           maneuversContainer.appendChild(errorMsg);
         }
       } else {
