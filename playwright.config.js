@@ -1,4 +1,4 @@
-const { defineConfig, devices } = require('@playwright/test');
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Playwright Test Configuration
@@ -7,7 +7,7 @@ const { defineConfig, devices } = require('@playwright/test');
  * particularly the Social Maneuvers module and phase progressions.
  */
 
-module.exports = defineConfig({
+export default defineConfig({
   // Look for test files in the root directory
   testDir: './',
   
