@@ -834,19 +834,8 @@
     }
 
     // Show summary card if we have content
-    if(summary.length > 0){
-      if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-        global.PopupManager.show({
-          type: 'social',
-          variant: 'social',
-          title: 'Social Update',
-          lines: summary,
-          tone: 'social',
-          duration: 4500
-        });
-      } else if(typeof global.showCard === 'function'){
-        global.showCard('Social Update', summary, 'social', 4500, true);
-      }
+    if(summary.length > 0 && typeof global.showCard === 'function'){
+      global.showCard('Social Update', summary, 'social', 4500, true);
     }
   }
 

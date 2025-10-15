@@ -475,18 +475,7 @@
       try{
         global.addJuryLog?.(`<b>${global.safeName(winnerId)}</b> wins America's Vote and returns!`,'ok');
         global.setMusic?.('victory',true);
-        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-          global.PopupManager.show({
-            type: 'info',
-            variant: null,
-            title: 'They\'re Back!',
-            lines: [`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],
-            tone: 'return',
-            duration: 5600
-          });
-        } else {
-          global.showCard?.('They\'re Back!',[`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],'return',5600,true);
-        }
+        global.showCard?.('They\'re Back!',[`${global.safeName(winnerId)} re-enters the house.`,'They are eligible for HOH.'],'return',5600,true);
         await global.cardQueueWaitIdle?.();
         // Confetti removed per spec
       }catch(e){}
@@ -499,20 +488,7 @@
         global.PlayerService.setAlivePlayers(g.players);
       }
     } else {
-      try{ 
-        if(global.PopupManager && global.game?.cfg?.popup_refresh_enabled){
-          global.PopupManager.show({
-            type: 'info',
-            variant: null,
-            title: 'No Returnee',
-            lines: ['Vote produced no clear winner.'],
-            tone: 'jury',
-            duration: 3200
-          });
-        } else {
-          global.showCard?.('No Returnee',['Vote produced no clear winner.'],'jury',3200,true);
-        }
-      }catch(e){}
+      try{ global.showCard?.('No Returnee',['Vote produced no clear winner.'],'jury',3200,true); }catch(e){}
     }
 
     cleanupReturnPanel();
