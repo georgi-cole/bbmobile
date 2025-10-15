@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Default Enablement Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #00d4ff;
+    }
+    .pass {
+      color: #2ecc71;
+      font-weight: bold;
+    }
+    .fail {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    .log-output {
+      background: #0a0e1a;
+      border: 1px solid #1a2332;
+      border-radius: 4px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      margin-top: 8px;
+    }
+    .test-result {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .test-result.pass {
+      background: rgba(46, 204, 113, 0.1);
+      border: 1px solid rgba(46, 204, 113, 0.3);
+    }
+    .test-result.fail {
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid rgba(231, 76, 60, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <h1>Social Maneuvers Default Enablement Test</h1>
+  <p>This test validates that Social Maneuvers is enabled by default and configured correctly.</p>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="test-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Logs</h2>
+    <div id="console-logs" class="log-output"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Manual Controls</h2>
+    <button onclick="testToggle()">Toggle Social Maneuvers</button>
+    <button onclick="logState()">Log Current State</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+  </div>
+
+  <!-- Load scripts in the same order as index.html -->
+  <script>
+    // Capture console logs
+    const logs = [];
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    function captureLog(level, ...args) {
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+      logs.push(`[${level}] ${msg}`);
+      updateLogDisplay();
+    }
+
+    console.log = (...args) => { captureLog('LOG', ...args); originalLog.apply(console, args); };
+    console.info = (...args) => { captureLog('INFO', ...args); originalInfo.apply(console, args); };
+    console.warn = (...args) => { captureLog('WARN', ...args); originalWarn.apply(console, args); };
+    console.error = (...args) => { captureLog('ERROR', ...args); originalError.apply(console, args); };
+
+    function updateLogDisplay() {
+      const logDiv = document.getElementById('console-logs');
+      logDiv.textContent = logs.join('\n');
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearLogs() {
+      logs.length = 0;
+      updateLogDisplay();
+    }
+  </script>
+
+  <!-- Global shim -->
+  <script>window.global = window;</script>
+
+  <!-- Load Social Maneuvers modules in correct order -->
+  <script src="js/social-narrative.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+
+  <!-- Run tests after modules load -->
+  <script>
+    const results = [];
+
+    function addResult(testName, passed, message) {
+      results.push({ testName, passed, message });
+      displayResults();
+    }
+
+    function displayResults() {
+      const container = document.getElementById('test-results');
+      container.innerHTML = results.map(r => `
+        <div class="test-result ${r.passed ? 'pass' : 'fail'}">
+          <strong>${r.passed ? '✓' : '✗'}</strong> ${r.testName}
+          ${r.message ? `<br><span style="font-size: 0.9em; opacity: 0.8;">${r.message}</span>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // Wait a bit for modules to initialize
+    setTimeout(() => {
+      runTests();
+    }, 100);
+
+    function runTests() {
+      console.info('=== Running Social Maneuvers Default Enablement Tests ===');
+
+      // Test 1: Module is loaded
+      const moduleLoaded = typeof window.SocialManeuvers !== 'undefined';
+      addResult(
+        'Module Loaded',
+        moduleLoaded,
+        moduleLoaded ? 'SocialManeuvers object exists' : 'SocialManeuvers object not found'
+      );
+
+      if (!moduleLoaded) {
+        console.error('Cannot continue tests - module not loaded');
+        return;
+      }
+
+      // Test 2: game.cfg.enableSocialManeuvers is initialized
+      const flagInitialized = window.game?.cfg?.enableSocialManeuvers !== undefined;
+      addResult(
+        'Flag Initialized',
+        flagInitialized,
+        `game.cfg.enableSocialManeuvers = ${window.game?.cfg?.enableSocialManeuvers}`
+      );
+
+      // Test 3: Default value is true
+      const defaultIsTrue = window.game?.cfg?.enableSocialManeuvers === true;
+      addResult(
+        'Default Value is TRUE',
+        defaultIsTrue,
+        `Expected: true, Got: ${window.game?.cfg?.enableSocialManeuvers}`
+      );
+
+      // Test 4: isEnabled() returns true
+      const isEnabledTrue = window.SocialManeuvers.isEnabled() === true;
+      addResult(
+        'isEnabled() Returns TRUE',
+        isEnabledTrue,
+        `SocialManeuvers.isEnabled() = ${window.SocialManeuvers.isEnabled()}`
+      );
+
+      // Test 5: USE_SOCIAL_MANEUVERS getter works
+      const getterWorks = window.USE_SOCIAL_MANEUVERS === true;
+      addResult(
+        'USE_SOCIAL_MANEUVERS Getter Works',
+        getterWorks,
+        `window.USE_SOCIAL_MANEUVERS = ${window.USE_SOCIAL_MANEUVERS}`
+      );
+
+      // Test 6: Setter is writable
+      try {
+        const originalValue = window.USE_SOCIAL_MANEUVERS;
+        window.USE_SOCIAL_MANEUVERS = false;
+        const setToFalse = window.USE_SOCIAL_MANEUVERS === false;
+        window.USE_SOCIAL_MANEUVERS = true;
+        const setBackToTrue = window.USE_SOCIAL_MANEUVERS === true;
+        const setterWorks = setToFalse && setBackToTrue;
+        addResult(
+          'USE_SOCIAL_MANEUVERS Setter Works',
+          setterWorks,
+          setterWorks ? 'Can toggle between true and false' : 'Setter not working properly'
+        );
+      } catch(e) {
+        addResult('USE_SOCIAL_MANEUVERS Setter Works', false, `Error: ${e.message}`);
+      }
+
+      // Test 7: Module functions exist
+      const functionsExist = [
+        'onSocialPhaseStart',
+        'onSocialPhaseEnd', 
+        'renderSocialManeuversUI',
+        'getEnergy',
+        'executeAction'
+      ].every(fn => typeof window.SocialManeuvers[fn] === 'function');
+      addResult(
+        'Required Functions Exist',
+        functionsExist,
+        functionsExist ? 'All expected functions found' : 'Some functions missing'
+      );
+
+      // Test 8: Log messages contain expected content
+      const hasModuleLoadLog = logs.some(l => l.includes('[social-maneuvers]') && l.includes('Module loaded'));
+      const hasEnabledLog = logs.some(l => l.includes('[social-maneuvers]') && l.includes('Enabled by default'));
+      const logsCorrect = hasModuleLoadLog && hasEnabledLog;
+      addResult(
+        'Console Logs Correct',
+        logsCorrect,
+        logsCorrect ? 'Expected log messages found' : 'Expected log messages not found'
+      );
+
+      console.info('=== Tests Complete ===');
+      console.info(`Passed: ${results.filter(r => r.passed).length}/${results.length}`);
+    }
+
+    function testToggle() {
+      console.info('--- Manual Toggle Test ---');
+      console.info('Current:', window.USE_SOCIAL_MANEUVERS);
+      window.USE_SOCIAL_MANEUVERS = !window.USE_SOCIAL_MANEUVERS;
+      console.info('After toggle:', window.USE_SOCIAL_MANEUVERS);
+    }
+
+    function logState() {
+      console.info('--- Current State ---');
+      console.info('window.USE_SOCIAL_MANEUVERS:', window.USE_SOCIAL_MANEUVERS);
+      console.info('game.cfg.enableSocialManeuvers:', window.game?.cfg?.enableSocialManeuvers);
+      console.info('SocialManeuvers.isEnabled():', window.SocialManeuvers?.isEnabled());
+    }
+  </script>
+</body>
+</html>
