@@ -1117,10 +1117,6 @@
     SOCIAL_ACTIONS,
     RESOURCE_CONFIG
   };
-    DEFAULT_ENERGY,
-    MAX_ENERGY,
-    SOCIAL_ACTIONS
-  };
   
   // Backward-compatible alias: SocialManager -> SocialManeuvers
   global.SocialManager = global.SocialManeuvers;
