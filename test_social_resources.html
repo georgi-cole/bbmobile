@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Resources HUD Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    h1 { color: #f7b955; }
+    h2 { color: #95a9c0; margin-top: 30px; }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .pass { background: rgba(46, 204, 113, 0.2); border-left: 3px solid #2ecc71; }
+    .fail { background: rgba(231, 76, 60, 0.2); border-left: 3px solid #e74c3c; }
+    .info { background: rgba(52, 152, 219, 0.2); border-left: 3px solid #3498db; }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    button:hover { background: #2980b9; }
+    button:disabled {
+      background: #95a9c0;
+      cursor: not-allowed;
+    }
+    #testContainer {
+      min-height: 300px;
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Social Resources HUD Test</h1>
+  <p>Testing the new Energy, Influence, and Information resource system</p>
+
+  <div class="test-section">
+    <h2>Test 1: Module Loading & API Availability</h2>
+    <div id="test1"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Resource Initialization</h2>
+    <div id="test2"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Resource Get/Set Operations</h2>
+    <div id="test3"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Spend/Earn Operations</h2>
+    <div id="test4"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Weekly Reset Logic</h2>
+    <div id="test5"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: Action Resource Costs</h2>
+    <div id="test6"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 7: Resource Constraint Validation</h2>
+    <div id="test7"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 8: Telemetry Logging</h2>
+    <div id="test8"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 9: Interactive HUD Display</h2>
+    <div class="controls">
+      <button id="btnRenderHUD">Render HUD</button>
+      <button id="btnModifyResources">Modify Resources</button>
+      <button id="btnResetResources">Reset Resources</button>
+      <button id="btnSimulateWeek">Simulate Week Change</button>
+    </div>
+    <div id="testContainer"></div>
+    <div id="test9"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 10: Action Execution with Resources</h2>
+    <button id="btnExecuteAction">Execute Test Action</button>
+    <div id="test10"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Setup minimal game environment
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      week: 1,
+      phase: 'social'
+    };
+    
+    // Mock alivePlayers function
+    window.alivePlayers = function() {
+      return [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+        { id: 3, name: 'Charlie' }
+      ];
+    };
+    
+    // Mock safeName function
+    window.safeName = function(id) {
+      const players = window.alivePlayers();
+      const player = players.find(p => p.id === id);
+      return player ? player.name : `Player ${id}`;
+    };
+    
+    // Mock getP function
+    window.getP = function(id) {
+      const players = window.alivePlayers();
+      return players.find(p => p.id === id);
+    };
+  </script>
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    // Test runner
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function assert(condition, message, containerId) {
+      if (condition) {
+        log(containerId, `✓ PASS: ${message}`, 'pass');
+        return true;
+      } else {
+        log(containerId, `✗ FAIL: ${message}`, 'fail');
+        return false;
+      }
+    }
+
+    // Test 1: Module Loading
+    function test1() {
+      const container = 'test1';
+      assert(typeof window.SocialManeuvers !== 'undefined', 'SocialManeuvers module loaded', container);
+      assert(typeof window.SocialManeuvers.SocialResources !== 'undefined', 'SocialResources service available', container);
+      assert(window.SocialManeuvers.isEnabled(), 'Feature is enabled', container);
+      
+      const resources = window.SocialManeuvers.SocialResources;
+      assert(typeof resources.init === 'function', 'init method exists', container);
+      assert(typeof resources.get === 'function', 'get method exists', container);
+      assert(typeof resources.set === 'function', 'set method exists', container);
+      assert(typeof resources.spend === 'function', 'spend method exists', container);
+      assert(typeof resources.earn === 'function', 'earn method exists', container);
+      assert(typeof resources.resetWeekly === 'function', 'resetWeekly method exists', container);
+      assert(typeof resources.canAfford === 'function', 'canAfford method exists', container);
+    }
+
+    // Test 2: Resource Initialization
+    function test2() {
+      const container = 'test2';
+      const resources = window.SocialManeuvers.SocialResources;
+      const playerId = 1;
+      
+      resources.init(playerId);
+      
+      const energy = resources.get(playerId, 'energy');
+      const influence = resources.get(playerId, 'influence');
+      const information = resources.get(playerId, 'information');
+      
+      assert(energy === 3, `Energy initialized to 3 (got ${energy})`, container);
+      assert(influence === 2, `Influence initialized to 2 (got ${influence})`, container);
+      assert(information === 1, `Information initialized to 1 (got ${information})`, container);
+      
+      const all = resources.getAll(playerId);
+      assert(all.energy === 3 && all.influence === 2 && all.information === 1, 
+        'getAll returns all resources', container);
+    }
+
+    // Test 3: Get/Set Operations
+    function test3() {
+      const container = 'test3';
+      const resources = window.SocialManeuvers.SocialResources;
+      const playerId = 1;
+      
+      // Set energy
+      resources.set(playerId, 'energy', 5);
+      assert(resources.get(playerId, 'energy') === 5, 'Energy set to 5', container);
+      
+      // Test capping at max
+      resources.set(playerId, 'energy', 10);
+      assert(resources.get(playerId, 'energy') === 5, 'Energy capped at max (5)', container);
+      
+      // Test flooring at 0
+      resources.set(playerId, 'energy', -5);
+      assert(resources.get(playerId, 'energy') === 0, 'Energy floored at 0', container);
+      
+      // Test influence max
+      resources.set(playerId, 'influence', 15);
+      assert(resources.get(playerId, 'influence') === 10, 'Influence capped at max (10)', container);
+      
+      // Test information max
+      resources.set(playerId, 'information', 12);
+      assert(resources.get(playerId, 'information') === 8, 'Information capped at max (8)', container);
+    }
+
+    // Test 4: Spend/Earn Operations
+    function test4() {
+      const container = 'test4';
+      const resources = window.SocialManeuvers.SocialResources;
+      const playerId = 2;
+      
+      resources.init(playerId);
+      
+      // Test spend success
+      const spendResult1 = resources.spend(playerId, { energy: 1, influence: 1 });
+      assert(spendResult1.success === true, 'Spend successful with sufficient resources', container);
+      assert(resources.get(playerId, 'energy') === 2, 'Energy decreased by 1', container);
+      assert(resources.get(playerId, 'influence') === 1, 'Influence decreased by 1', container);
+      
+      // Test spend failure
+      const spendResult2 = resources.spend(playerId, { energy: 5 });
+      assert(spendResult2.success === false, 'Spend failed with insufficient resources', container);
+      assert(spendResult2.insufficient === 'energy', 'Correctly identified insufficient resource', container);
+      
+      // Test earn
+      resources.earn(playerId, { influence: 2, information: 1 });
+      assert(resources.get(playerId, 'influence') === 3, 'Influence increased by 2', container);
+      assert(resources.get(playerId, 'information') === 2, 'Information increased by 1', container);
+    }
+
+    // Test 5: Weekly Reset Logic
+    function test5() {
+      const container = 'test5';
+      const resources = window.SocialManeuvers.SocialResources;
+      const playerId = 3;
+      
+      resources.init(playerId);
+      
+      // Modify resources
+      resources.set(playerId, 'energy', 1);
+      resources.set(playerId, 'influence', 8);
+      resources.set(playerId, 'information', 5);
+      
+      log(container, `Before reset: E=${resources.get(playerId, 'energy')}, I=${resources.get(playerId, 'influence')}, Info=${resources.get(playerId, 'information')}`, 'info');
+      
+      // Simulate week change
+      window.game.week = 2;
+      resources.resetWeekly(playerId);
+      
+      log(container, `After reset: E=${resources.get(playerId, 'energy')}, I=${resources.get(playerId, 'influence')}, Info=${resources.get(playerId, 'information')}`, 'info');
+      
+      assert(resources.get(playerId, 'energy') === 3, 'Energy reset to default (3)', container);
+      assert(resources.get(playerId, 'influence') === 8, 'Influence persisted (no reset)', container);
+      assert(resources.get(playerId, 'information') === 5, 'Information persisted (no reset)', container);
+      
+      // Test that it doesn't reset again in the same week
+      resources.set(playerId, 'energy', 1);
+      resources.resetWeekly(playerId);
+      assert(resources.get(playerId, 'energy') === 1, 'No double reset in same week', container);
+    }
+
+    // Test 6: Action Resource Costs
+    function test6() {
+      const container = 'test6';
+      const actions = window.SocialManeuvers.SOCIAL_ACTIONS;
+      
+      assert(actions.length > 0, 'Actions are defined', container);
+      
+      // Check that all actions have costs
+      let allHaveCosts = true;
+      actions.forEach(action => {
+        if (!action.costs || typeof action.costs !== 'object') {
+          allHaveCosts = false;
+        }
+      });
+      assert(allHaveCosts, 'All actions have costs object', container);
+      
+      // Check specific action
+      const strategize = actions.find(a => a.id === 'strategize');
+      assert(strategize !== undefined, 'Strategize action exists', container);
+      assert(strategize.costs.energy === 2, 'Strategize costs 2 energy', container);
+      assert(strategize.costs.influence === 1, 'Strategize costs 1 influence', container);
+      
+      // Check rewards
+      assert(strategize.rewards && strategize.rewards.information === 1, 
+        'Strategize rewards 1 information', container);
+    }
+
+    // Test 7: Resource Constraint Validation
+    function test7() {
+      const container = 'test7';
+      const resources = window.SocialManeuvers.SocialResources;
+      const playerId = 1;
+      
+      // Reset player resources
+      resources.init(playerId);
+      resources.set(playerId, 'energy', 3);
+      resources.set(playerId, 'influence', 0);
+      resources.set(playerId, 'information', 1);
+      
+      // Test canAfford
+      const smalltalkCosts = { energy: 1, influence: 0, information: 0 };
+      assert(resources.canAfford(playerId, smalltalkCosts) === true, 
+        'Can afford small talk', container);
+      
+      const strategizeCosts = { energy: 2, influence: 1, information: 0 };
+      assert(resources.canAfford(playerId, strategizeCosts) === false, 
+        'Cannot afford strategize (insufficient influence)', container);
+      
+      // Test getAvailableActions
+      const available = window.SocialManeuvers.getAvailableActions(playerId);
+      log(container, `Available actions: ${available.length}`, 'info');
+      
+      const unavailableActions = available.filter(a => a.costs.influence > 0);
+      assert(unavailableActions.length === 0, 
+        'No actions requiring influence are available', container);
+      
+      // Test getDisabledActions
+      const disabled = window.SocialManeuvers.getDisabledActions(playerId);
+      log(container, `Disabled actions: ${disabled.length}`, 'info');
+      assert(disabled.length > 0, 'Some actions are disabled', container);
+    }
+
+    // Test 8: Telemetry Logging
+    function test8() {
+      const container = 'test8';
+      const resources = window.SocialManeuvers.SocialResources;
+      const playerId = 1;
+      
+      // Clear telemetry
+      window.game.__socialResourcesTelemetry = [];
+      
+      // Perform operations
+      resources.set(playerId, 'energy', 5);
+      resources.spend(playerId, { energy: 1 });
+      resources.earn(playerId, { influence: 1 });
+      
+      const telemetry = window.game.__socialResourcesTelemetry;
+      assert(telemetry.length >= 3, `Telemetry recorded (${telemetry.length} entries)`, container);
+      
+      // Check telemetry structure
+      const entry = telemetry[0];
+      assert(entry.timestamp !== undefined, 'Telemetry has timestamp', container);
+      assert(entry.week !== undefined, 'Telemetry has week', container);
+      assert(entry.playerId !== undefined, 'Telemetry has playerId', container);
+      assert(entry.operation !== undefined, 'Telemetry has operation', container);
+      assert(entry.balance !== undefined, 'Telemetry has balance snapshot', container);
+      
+      log(container, `Sample telemetry: ${JSON.stringify(entry, null, 2)}`, 'info');
+    }
+
+    // Test 9: Interactive HUD
+    let testPlayerId = 1;
+    
+    document.getElementById('btnRenderHUD').addEventListener('click', () => {
+      const container = document.getElementById('testContainer');
+      container.innerHTML = '';
+      
+      const resources = window.SocialManeuvers.SocialResources;
+      resources.init(testPlayerId);
+      
+      window.SocialManeuvers.renderSocialManeuversUI(container, testPlayerId);
+      log('test9', 'HUD rendered successfully', 'pass');
+    });
+    
+    document.getElementById('btnModifyResources').addEventListener('click', () => {
+      const resources = window.SocialManeuvers.SocialResources;
+      resources.set(testPlayerId, 'energy', Math.floor(Math.random() * 5));
+      resources.set(testPlayerId, 'influence', Math.floor(Math.random() * 10));
+      resources.set(testPlayerId, 'information', Math.floor(Math.random() * 8));
+      
+      const container = document.getElementById('testContainer');
+      container.innerHTML = '';
+      window.SocialManeuvers.renderSocialManeuversUI(container, testPlayerId);
+      log('test9', 'Resources modified and HUD refreshed', 'info');
+    });
+    
+    document.getElementById('btnResetResources').addEventListener('click', () => {
+      const resources = window.SocialManeuvers.SocialResources;
+      resources.set(testPlayerId, 'energy', 3);
+      resources.set(testPlayerId, 'influence', 2);
+      resources.set(testPlayerId, 'information', 1);
+      
+      const container = document.getElementById('testContainer');
+      container.innerHTML = '';
+      window.SocialManeuvers.renderSocialManeuversUI(container, testPlayerId);
+      log('test9', 'Resources reset to defaults', 'info');
+    });
+    
+    document.getElementById('btnSimulateWeek').addEventListener('click', () => {
+      window.game.week++;
+      const resources = window.SocialManeuvers.SocialResources;
+      resources.resetWeekly(testPlayerId);
+      
+      const container = document.getElementById('testContainer');
+      container.innerHTML = '';
+      window.SocialManeuvers.renderSocialManeuversUI(container, testPlayerId);
+      log('test9', `Week changed to ${window.game.week}, weekly reset applied`, 'info');
+    });
+
+    // Test 10: Action Execution
+    document.getElementById('btnExecuteAction').addEventListener('click', () => {
+      const container = 'test10';
+      const resources = window.SocialManeuvers.SocialResources;
+      const actorId = 1;
+      const targetId = 2;
+      
+      // Reset resources
+      resources.init(actorId);
+      resources.set(actorId, 'energy', 3);
+      resources.set(actorId, 'influence', 2);
+      resources.set(actorId, 'information', 1);
+      
+      log(container, `Before action: ${JSON.stringify(resources.getAll(actorId))}`, 'info');
+      
+      // Execute action
+      const result = window.SocialManeuvers.executeAction(actorId, targetId, 'strategize');
+      
+      log(container, `After action: ${JSON.stringify(resources.getAll(actorId))}`, 'info');
+      
+      assert(result.success === true, 'Action executed successfully', container);
+      assert(result.resources !== undefined, 'Result includes resource state', container);
+      
+      // Check that resources were spent
+      assert(resources.get(actorId, 'energy') === 1, 'Energy spent (3 - 2 = 1)', container);
+      assert(resources.get(actorId, 'influence') === 1, 'Influence spent (2 - 1 = 1)', container);
+      
+      // Check that rewards were earned (if positive outcome)
+      if (result.outcome.type !== 'negative') {
+        log(container, 'Positive outcome - rewards should be granted', 'info');
+      }
+    });
+
+    // Run all tests on load
+    window.addEventListener('load', () => {
+      console.log('Running Social Resources Tests...');
+      test1();
+      test2();
+      test3();
+      test4();
+      test5();
+      test6();
+      test7();
+      test8();
+      console.log('Tests complete!');
+    });
+  </script>
+</body>
+</html>
