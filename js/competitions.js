@@ -39,17 +39,7 @@
 
   function safeShowCard(title, lines = [], tone = 'neutral', dur = 4200, uniform = false) {
     try {
-      const cfg = global.game?.cfg || {};
-      
-      // Check if new popup system is enabled
-      if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
-        global.PopupMigrationHelpers.migratedShowCard(title, lines, tone, dur, uniform, {
-          popupType: 'competition_info'
-        });
-        return;
-      }
-      
-      // Legacy fallback
+      // Use faux TV showCard
       if (typeof global.showCard === 'function') {
         return global.showCard(title, lines, tone, dur, uniform);
       }
@@ -706,11 +696,7 @@
       const cfg = global.game?.cfg || {};
       
       if (showIntro) {
-        if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
-          global.PopupMigrationHelpers.migratedShowCard(title, ['Revealing top 3...'], 'neutral', introDuration, false, {
-            popupType: 'competition_reveal_intro'
-          });
-        } else if (typeof global.showCard === 'function') {
+        if (typeof global.showCard === 'function') {
           global.showCard(title, ['Revealing top 3...'], 'neutral', introDuration);
         }
         
@@ -723,11 +709,7 @@
       if (topThree[2]) {
         const lines = [topThree[2].name || topThree[2]];
         
-        if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
-          global.PopupMigrationHelpers.migratedShowCard('3rd Place', lines, 'neutral', placeDuration, false, {
-            popupType: 'competition_result_3rd'
-          });
-        } else if (typeof global.showCard === 'function') {
+        if (typeof global.showCard === 'function') {
           global.showCard('3rd Place', lines, 'neutral', placeDuration);
         }
         
@@ -740,11 +722,7 @@
       if (topThree[1]) {
         const lines = [topThree[1].name || topThree[1]];
         
-        if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
-          global.PopupMigrationHelpers.migratedShowCard('2nd Place', lines, 'neutral', placeDuration, false, {
-            popupType: 'competition_result_2nd'
-          });
-        } else if (typeof global.showCard === 'function') {
+        if (typeof global.showCard === 'function') {
           global.showCard('2nd Place', lines, 'neutral', placeDuration);
         }
         
@@ -758,11 +736,7 @@
         const winnerTitle = `${title} Winner ${winnerEmoji}`;
         const lines = [topThree[0].name || topThree[0]];
         
-        if(cfg.popup_refresh_enabled && global.PopupMigrationHelpers){
-          global.PopupMigrationHelpers.migratedShowCard(winnerTitle, lines, winnerTone, winnerDuration, false, {
-            popupType: 'competition_result_winner'
-          });
-        } else if (typeof global.showCard === 'function') {
+        if (typeof global.showCard === 'function') {
           global.showCard(winnerTitle, lines, winnerTone, winnerDuration);
         }
         
