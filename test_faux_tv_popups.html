@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faux TV Popup Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .test-section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .test-section h2 {
+      color: var(--accent);
+      font-size: 1.1rem;
+      margin-top: 0;
+    }
+    .test-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn {
+      padding: 10px 20px;
+      background: var(--accent);
+      color: var(--card);
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .status {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .status.success {
+      background: rgba(46, 204, 113, 0.1);
+      border: 1px solid #2ecc71;
+      color: #2ecc71;
+    }
+    .status.error {
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid #e74c3c;
+      color: #e74c3c;
+    }
+    .log-container {
+      margin-top: 20px;
+      padding: 12px;
+      background: var(--primary-1);
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid var(--line);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎬 Faux TV Popup System Test</h1>
+    
+    <div class="test-section">
+      <h2>System Check</h2>
+      <div id="systemStatus" class="status">Checking system...</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Popup Tests</h2>
+      <div class="test-buttons">
+        <button class="btn" onclick="testNominationCeremony()">Test Nomination Ceremony</button>
+        <button class="btn" onclick="testSocialDecision()">Test Social Decision</button>
+        <button class="btn" onclick="testCompetitionResult()">Test Competition Result</button>
+        <button class="btn" onclick="testVetoCeremony()">Test Veto Ceremony</button>
+      </div>
+      <div class="log-container" id="logContainer"></div>
+    </div>
+
+    <!-- TV Frame (minimal for testing) -->
+    <div id="tv" style="position: relative; width: 100%; max-width: 600px; margin: 40px auto; background: var(--primary-1); border-radius: 12px; padding: 20px;">
+      <div id="tvOverlay" style="position: absolute; inset: 0; pointer-events: none;"></div>
+      <div id="tvNow" style="text-align: center; padding: 40px; color: var(--ink); font-size: 1.2rem;">TV Screen Ready</div>
+    </div>
+  </div>
+
+  <!-- Load necessary scripts -->
+  <script src="js/state.js"></script>
+  <script src="js/config/defaults.js"></script>
+  <script src="js/ui.overlay-and-logs.js"></script>
+  <script src="js/cards-queue.js"></script>
+
+  <script>
+    // Initialize game object
+    if (!window.game) {
+      window.game = {
+        cfg: window.initGameConfig ? window.initGameConfig() : {},
+        players: [],
+        humanId: 0,
+        hohId: 1,
+        nominees: [2, 3]
+      };
+    }
+
+    // Test helper functions
+    function log(message, type = 'info') {
+      const container = document.getElementById('logContainer');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const time = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span style="color: var(--muted)">[${time}]</span> ${message}`;
+      container.appendChild(entry);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function checkSystem() {
+      const status = document.getElementById('systemStatus');
+      const checks = [];
+
+      // Check for PopupManager (should NOT exist)
+      if (typeof window.PopupManager !== 'undefined') {
+        checks.push('❌ PopupManager found (should be removed)');
+      } else {
+        checks.push('✅ PopupManager removed');
+      }
+
+      // Check for createBasePopup (should NOT exist)
+      if (typeof window.createBasePopup !== 'undefined') {
+        checks.push('❌ createBasePopup found (should be removed)');
+      } else {
+        checks.push('✅ createBasePopup removed');
+      }
+
+      // Check for showCard (should exist)
+      if (typeof window.showCard === 'function') {
+        checks.push('✅ showCard available (faux TV)');
+      } else {
+        checks.push('❌ showCard not found');
+      }
+
+      // Check for popup_refresh_enabled flag (should NOT exist in config)
+      if (window.game?.cfg?.popup_refresh_enabled !== undefined) {
+        checks.push('❌ popup_refresh_enabled flag still in config');
+      } else {
+        checks.push('✅ popup_refresh_enabled flag removed');
+      }
+
+      const allPassed = !checks.some(c => c.startsWith('❌'));
+      status.className = 'status ' + (allPassed ? 'success' : 'error');
+      status.innerHTML = checks.join('<br>');
+
+      log('System check complete: ' + (allPassed ? 'All passed' : 'Some failures'), allPassed ? 'success' : 'error');
+    }
+
+    function testNominationCeremony() {
+      log('Testing nomination ceremony popup...');
+      if (typeof window.showCard === 'function') {
+        window.showCard('Nomination Ceremony', ['HOH addresses the house.'], 'noms', 2400, true);
+        setTimeout(() => {
+          window.showCard('First Nominee', ['Player 3'], 'noms', 2200, true);
+          setTimeout(() => {
+            window.showCard('Second Nominee', ['Player 4'], 'noms', 2200, true);
+            setTimeout(() => {
+              window.showCard('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
+              log('✅ Nomination ceremony sequence completed');
+            }, 2300);
+          }, 2300);
+        }, 2500);
+      } else {
+        log('❌ showCard function not available', 'error');
+      }
+    }
+
+    function testSocialDecision() {
+      log('Testing social decision (should use faux TV card)...');
+      if (typeof window.showCard === 'function') {
+        window.showCard('Alliance Offer', ['Player 5 wants an alliance with you.', 'Do you accept?'], 'social', 3000, true);
+        log('✅ Social decision card shown');
+      } else {
+        log('❌ showCard function not available', 'error');
+      }
+    }
+
+    function testCompetitionResult() {
+      log('Testing competition result popup...');
+      if (typeof window.showCard === 'function') {
+        window.showCard('HOH Competition', ['Revealing top 3...'], 'neutral', 2000, true);
+        setTimeout(() => {
+          window.showCard('3rd Place', ['Player 1'], 'neutral', 2000, true);
+          setTimeout(() => {
+            window.showCard('2nd Place', ['Player 2'], 'neutral', 2000, true);
+            setTimeout(() => {
+              window.showCard('HOH Winner 👑', ['Player 3'], 'good', 3200, true);
+              log('✅ Competition result sequence completed');
+            }, 2100);
+          }, 2100);
+        }, 2100);
+      } else {
+        log('❌ showCard function not available', 'error');
+      }
+    }
+
+    function testVetoCeremony() {
+      log('Testing veto ceremony popup...');
+      if (typeof window.showCard === 'function') {
+        window.showCard('Veto Ceremony', ['The holder will make a decision...'], 'veto', 3600, true);
+        setTimeout(() => {
+          window.showCard('Veto Decision', ['I have decided to use the Power of Veto.'], 'veto', 3200, true);
+          setTimeout(() => {
+            window.showCard('Saved', ['Player 3 is saved.'], 'veto', 3200, true);
+            log('✅ Veto ceremony sequence completed');
+          }, 3300);
+        }, 3700);
+      } else {
+        log('❌ showCard function not available', 'error');
+      }
+    }
+
+    // Run system check on load
+    window.addEventListener('load', () => {
+      setTimeout(checkSystem, 500);
+    });
+  </script>
+</body>
+</html>
