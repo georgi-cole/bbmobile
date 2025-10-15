@@ -208,6 +208,9 @@
       succeeded = chanceRoll < (evaluation.finalChance ?? 0.5);
     }
 
+    // Track affinity before action (for PR #266 session summary)
+    const affinityBefore = actor?.affinity?.[targetId] ?? 0;
+
     // Spend resources (energy, influence, information via unified API)
     const spendResult = SocialResources.spend(actorId, action.costs);
     if(!spendResult.success){
@@ -257,7 +260,52 @@
       succeeded = (t === 'success' || t === 'positive');
     }
 
-    return { success: true, action, outcome, evaluation, succeeded, telemetry, resources: SocialResources.getAll(actorId) };
+    // Track affinity after action (for PR #266 session summary)
+    const affinityAfter = actor?.affinity?.[targetId] ?? 0;
+    const affinityDelta = affinityAfter - affinityBefore;
+
+    // Record action in phase session (PR #266 session tracking for end-of-phase summary)
+    const g = global.game;
+    if(g?.__socialManeuversSession){
+      g.__socialManeuversSession.actionsThisPhase.push({
+        timestamp: Date.now(),
+        actorId,
+        actorName,
+        targetId,
+        targetName,
+        actionId: action.id,
+        actionLabel: action.label,
+        actionCategory: action.category,
+        energyCost: action.costs?.energy || action.cost || 0,
+        informationCost: action.costs?.information || 0,
+        outcome: outcome.type,
+        affinityBefore,
+        affinityAfter,
+        affinityDelta,
+        participants: allTargets, // Multi-target support (PR #265)
+        succeeded
+      });
+
+      // Track energy spent
+      const energySpent = action.costs?.energy || action.cost || 0;
+      const spent = g.__socialManeuversSession.energySpent.get(actorId) || 0;
+      g.__socialManeuversSession.energySpent.set(actorId, spent + energySpent);
+
+      // Track information spent (PR #265 integration)
+      const infoSpent = action.costs?.information || 0;
+      if(!g.__socialManeuversSession.informationSpent){
+        g.__socialManeuversSession.informationSpent = new Map();
+      }
+      const infoTotal = g.__socialManeuversSession.informationSpent.get(actorId) || 0;
+      g.__socialManeuversSession.informationSpent.set(actorId, infoTotal + infoSpent);
+
+      // Track relationship delta
+      const key = `${actorId}-${targetId}`;
+      const currentDelta = g.__socialManeuversSession.relationshipDeltas.get(key) || 0;
+      g.__socialManeuversSession.relationshipDeltas.set(key, currentDelta + affinityDelta);
+    }
+
+    return { success: true, action, outcome, evaluation, succeeded, telemetry, resources: SocialResources.getAll(actorId), affinityDelta };
   }
 
   // ============================================================================
@@ -1018,10 +1066,559 @@
     const alivePlayers = global.alivePlayers?.() || [];
     alivePlayers.forEach(p => { SocialResources.init(p.id); SocialResources.resetWeekly(p.id); });
     console.info(`[social-maneuvers] Resources initialized for ${alivePlayers.length} players`);
+
+    // Initialize phase session tracking (PR #266)
+    const g = global.game;
+    if(!g.__socialManeuversSession){
+      g.__socialManeuversSession = {
+        startTime: Date.now(),
+        week: g.week || 1,
+        actionsThisPhase: [],
+        energySpent: new Map(),
+        informationSpent: new Map(),
+        relationshipDeltas: new Map()
+      };
+    } else {
+      // Reset for new phase
+      g.__socialManeuversSession.startTime = Date.now();
+      g.__socialManeuversSession.week = g.week || 1;
+      g.__socialManeuversSession.actionsThisPhase = [];
+      g.__socialManeuversSession.energySpent.clear();
+      g.__socialManeuversSession.informationSpent.clear();
+      g.__socialManeuversSession.relationshipDeltas.clear();
+    }
+
+    // Initialize energy spent tracking
+    alivePlayers.forEach(p => {
+      g.__socialManeuversSession.energySpent.set(p.id, 0);
+      g.__socialManeuversSession.informationSpent.set(p.id, 0);
+    });
+    console.info(`[social-maneuvers] Session tracking initialized for end-of-phase summary`);
   }
+  
   function onSocialPhaseEnd(){
     if(!isEnabled()) { console.info('[social-maneuvers] Phase end called but feature is DISABLED'); return; }
-    console.info('[social-maneuvers] ✓ Social phase complete');
+    console.info('[social-maneuvers] ✓ Social phase complete - generating summary');
+    
+    // Generate summary data (PR #266)
+    const summary = generatePhaseSummary();
+    
+    // Export to session log
+    exportSessionLog(summary);
+    
+    // Log to DevTools console
+    logToConsole(summary);
+    
+    // Show UI summary panel
+    showSummaryPanel(summary);
+  }
+
+  // ============================================================================
+  // SUMMARY & TELEMETRY (PR #266)
+  // ============================================================================
+
+  function generatePhaseSummary(){
+    const g = global.game;
+    const session = g?.__socialManeuversSession;
+    
+    if(!session){
+      console.warn('[social-maneuvers] No session data to summarize');
+      return null;
+    }
+
+    const alivePlayers = global.alivePlayers?.() || [];
+    const summary = {
+      metadata: {
+        week: session.week,
+        startTime: session.startTime,
+        endTime: Date.now(),
+        duration: Date.now() - session.startTime,
+        playersCount: alivePlayers.length
+      },
+      resources: {
+        energySpent: {},
+        energyRemaining: {},
+        informationSpent: {} // PR #265 integration
+      },
+      actions: {
+        total: session.actionsThisPhase.length,
+        byPlayer: {},
+        byCategory: {},
+        list: session.actionsThisPhase
+      },
+      relationships: {
+        changes: [],
+        newAlliances: [],
+        newRivalries: []
+      },
+      memories: {
+        created: session.actionsThisPhase.length,
+        total: g.__socialManeuversMemory?.actions?.length || 0
+      }
+    };
+
+    // Aggregate energy and information data
+    alivePlayers.forEach(p => {
+      const energySpent = session.energySpent.get(p.id) || 0;
+      const infoSpent = session.informationSpent.get(p.id) || 0;
+      const energyRemaining = SocialResources.get(p.id, 'energy');
+      const infoRemaining = SocialResources.get(p.id, 'information');
+      
+      summary.resources.energySpent[p.name || p.id] = energySpent;
+      summary.resources.energyRemaining[p.name || p.id] = energyRemaining;
+      summary.resources.informationSpent[p.name || p.id] = infoSpent;
+    });
+
+    // Aggregate actions by player and category
+    session.actionsThisPhase.forEach(action => {
+      // By player
+      if(!summary.actions.byPlayer[action.actorName]){
+        summary.actions.byPlayer[action.actorName] = 0;
+      }
+      summary.actions.byPlayer[action.actorName]++;
+
+      // By category
+      if(!summary.actions.byCategory[action.actionCategory]){
+        summary.actions.byCategory[action.actionCategory] = 0;
+      }
+      summary.actions.byCategory[action.actionCategory]++;
+    });
+
+    // Analyze relationship changes
+    session.relationshipDeltas.forEach((delta, key) => {
+      const [actorId, targetId] = key.split('-').map(Number);
+      const actor = global.getP?.(actorId);
+      const target = global.getP?.(targetId);
+      
+      if(actor && target){
+        const change = {
+          actor: actor.name || actorId,
+          target: target.name || targetId,
+          delta: delta,
+          newAffinity: actor.affinity?.[targetId] ?? 0,
+          state: getRelationshipState(actor.affinity?.[targetId] ?? 0)
+        };
+        
+        summary.relationships.changes.push(change);
+
+        // Check for new alliances (crossed threshold)
+        const newAffinity = actor.affinity?.[targetId] ?? 0;
+        if(newAffinity >= 0.28 && (newAffinity - delta) < 0.28){
+          summary.relationships.newAlliances.push({
+            player1: actor.name || actorId,
+            player2: target.name || targetId,
+            affinity: newAffinity
+          });
+        }
+
+        // Check for new rivalries
+        if(newAffinity <= -0.28 && (newAffinity - delta) > -0.28){
+          summary.relationships.newRivalries.push({
+            player1: actor.name || actorId,
+            player2: target.name || targetId,
+            affinity: newAffinity
+          });
+        }
+      }
+    });
+
+    return summary;
+  }
+
+  function getRelationshipState(affinity){
+    const a = affinity ?? 0;
+    if(a >= 0.65) return 'Romance/Bromance';
+    if(a >= 0.48) return 'Ride or Die';
+    if(a >= 0.28) return 'Allies';
+    if(a >= 0.12) return 'Friendly';
+    if(a >= -0.12) return 'Neutral';
+    if(a >= -0.28) return 'Strained';
+    if(a >= -0.48) return 'Enemies';
+    return 'Arch Enemies';
+  }
+
+  function exportSessionLog(summary){
+    if(!summary) return;
+
+    const g = global.game;
+    if(!g.__socialManeuversSessionLogs){
+      g.__socialManeuversSessionLogs = [];
+    }
+
+    // Add to session logs
+    g.__socialManeuversSessionLogs.push(summary);
+
+    // Keep only last 20 sessions to prevent memory bloat
+    if(g.__socialManeuversSessionLogs.length > 20){
+      g.__socialManeuversSessionLogs.shift();
+    }
+
+    // Export to JSON for download (optional)
+    try {
+      const jsonStr = JSON.stringify(summary, null, 2);
+      console.info('[social-maneuvers] Session log exported (available in game.__socialManeuversSessionLogs)');
+      
+      // Store latest summary for easy access
+      g.__latestSocialSummary = summary;
+      g.__latestSocialSummaryJSON = jsonStr;
+    } catch(e) {
+      console.error('[social-maneuvers] Failed to serialize summary:', e);
+    }
+  }
+
+  function logToConsole(summary){
+    if(!summary) return;
+
+    console.group('🎭 Social Maneuvers Phase Summary');
+    
+    // Metadata
+    console.log('%c📊 Phase Overview', 'font-weight: bold; color: #3498db');
+    console.table({
+      Week: summary.metadata.week,
+      Duration: `${(summary.metadata.duration / 1000).toFixed(1)}s`,
+      Players: summary.metadata.playersCount,
+      'Total Actions': summary.actions.total,
+      'Memories Created': summary.memories.created
+    });
+
+    // Resources
+    if(Object.keys(summary.resources.energySpent).length > 0){
+      console.log('%c⚡ Energy Report', 'font-weight: bold; color: #f39c12');
+      console.table(summary.resources.energySpent);
+      
+      // Also show information if any was spent (PR #265 integration)
+      const totalInfoSpent = Object.values(summary.resources.informationSpent || {}).reduce((a,b) => a+b, 0);
+      if(totalInfoSpent > 0){
+        console.log('%c🔍 Information Report', 'font-weight: bold; color: #9b59b6');
+        console.table(summary.resources.informationSpent);
+      }
+    }
+
+    // Actions by category
+    if(Object.keys(summary.actions.byCategory).length > 0){
+      console.log('%c🎯 Actions by Category', 'font-weight: bold; color: #9b59b6');
+      console.table(summary.actions.byCategory);
+    }
+
+    // Actions by player
+    if(Object.keys(summary.actions.byPlayer).length > 0){
+      console.log('%c👥 Actions by Player', 'font-weight: bold; color: #2ecc71');
+      console.table(summary.actions.byPlayer);
+    }
+
+    // Relationship changes
+    if(summary.relationships.changes.length > 0){
+      console.log('%c💕 Relationship Changes', 'font-weight: bold; color: #e74c3c');
+      console.table(summary.relationships.changes.map(c => ({
+        'From': c.actor,
+        'To': c.target,
+        'Delta': c.delta.toFixed(3),
+        'New Affinity': c.newAffinity.toFixed(3),
+        'Status': c.state
+      })));
+    }
+
+    // New alliances
+    if(summary.relationships.newAlliances.length > 0){
+      console.log('%c🤝 New Alliances Formed', 'font-weight: bold; color: #27ae60');
+      console.table(summary.relationships.newAlliances);
+    }
+
+    // New rivalries
+    if(summary.relationships.newRivalries.length > 0){
+      console.log('%c⚔️ New Rivalries Formed', 'font-weight: bold; color: #c0392b');
+      console.table(summary.relationships.newRivalries);
+    }
+
+    // Action details
+    if(summary.actions.list.length > 0){
+      console.log('%c📝 Action Details', 'font-weight: bold; color: #16a085');
+      console.table(summary.actions.list.map(a => ({
+        Time: new Date(a.timestamp).toLocaleTimeString(),
+        Actor: a.actorName,
+        Action: a.actionLabel,
+        Target: a.targetName,
+        Category: a.actionCategory,
+        'Energy Cost': a.energyCost,
+        'Info Cost': a.informationCost || 0,
+        Outcome: a.outcome,
+        'Affinity Δ': a.affinityDelta?.toFixed(3) || '0.000'
+      })));
+    }
+
+    console.log('%c💾 Access full data:', 'font-weight: bold; color: #95a5a6');
+    console.log('  game.__latestSocialSummary (object)');
+    console.log('  game.__latestSocialSummaryJSON (JSON string)');
+    console.log('  game.__socialManeuversSessionLogs (all sessions)');
+    
+    console.groupEnd();
+  }
+
+  function showSummaryPanel(summary){
+    if(!summary) return;
+
+    // Create summary card UI
+    const deck = document.getElementById('decisionDeck') || createSummaryDeck();
+    
+    const card = document.createElement('div');
+    card.className = 'revealCard social-summary-card';
+    card.style.cssText = 'max-width: 680px; pointer-events: auto;';
+
+    const header = document.createElement('h3');
+    header.textContent = '🎭 Social Phase Complete';
+    header.style.cssText = 'margin: 0 0 1em; text-align: center;';
+    card.appendChild(header);
+
+    // Summary content
+    const content = document.createElement('div');
+    content.className = 'social-summary-content';
+    content.style.cssText = 'font-size: 0.9rem; line-height: 1.6;';
+
+    // Energy spent
+    const totalEnergySpent = Object.values(summary.resources.energySpent).reduce((a,b) => a+b, 0);
+    const totalInfoSpent = Object.values(summary.resources.informationSpent || {}).reduce((a,b) => a+b, 0);
+    
+    if(totalEnergySpent > 0 || totalInfoSpent > 0){
+      const energyLine = document.createElement('div');
+      let resourceText = `<strong>⚡ Energy:</strong> ${totalEnergySpent} spent`;
+      if(totalInfoSpent > 0){
+        resourceText += ` | <strong>🔍 Information:</strong> ${totalInfoSpent} spent`;
+      }
+      resourceText += ` across ${summary.actions.total} action${summary.actions.total !== 1 ? 's' : ''}`;
+      energyLine.innerHTML = resourceText;
+      content.appendChild(energyLine);
+    }
+
+    // Actions summary
+    if(summary.actions.total > 0){
+      const actionsLine = document.createElement('div');
+      actionsLine.style.marginTop = '0.5em';
+      const categories = Object.entries(summary.actions.byCategory)
+        .map(([cat, count]) => `${count} ${cat}`)
+        .join(', ');
+      actionsLine.innerHTML = `<strong>🎯 Actions:</strong> ${categories}`;
+      content.appendChild(actionsLine);
+    }
+
+    // Relationship changes
+    if(summary.relationships.changes.length > 0){
+      const relLine = document.createElement('div');
+      relLine.style.marginTop = '0.5em';
+      const significantChanges = summary.relationships.changes.filter(c => Math.abs(c.delta) > 0.1);
+      relLine.innerHTML = `<strong>💕 Relationships:</strong> ${significantChanges.length} significant change${significantChanges.length !== 1 ? 's' : ''}`;
+      content.appendChild(relLine);
+    }
+
+    // New alliances
+    if(summary.relationships.newAlliances.length > 0){
+      const allianceLine = document.createElement('div');
+      allianceLine.style.cssText = 'margin-top: 0.5em; color: #27ae60; font-weight: 600;';
+      const allianceNames = summary.relationships.newAlliances.map(a => 
+        `${a.player1} & ${a.player2}`
+      ).join(', ');
+      allianceLine.innerHTML = `<strong>🤝 New Alliance${summary.relationships.newAlliances.length !== 1 ? 's' : ''}:</strong> ${allianceNames}`;
+      content.appendChild(allianceLine);
+    }
+
+    // New rivalries
+    if(summary.relationships.newRivalries.length > 0){
+      const rivalryLine = document.createElement('div');
+      rivalryLine.style.cssText = 'margin-top: 0.5em; color: #e74c3c; font-weight: 600;';
+      const rivalryNames = summary.relationships.newRivalries.map(r => 
+        `${r.player1} vs ${r.player2}`
+      ).join(', ');
+      rivalryLine.innerHTML = `<strong>⚔️ New Rivalry${summary.relationships.newRivalries.length !== 1 ? 's' : ''}:</strong> ${rivalryNames}`;
+      content.appendChild(rivalryLine);
+    }
+
+    // Memories
+    const memoryLine = document.createElement('div');
+    memoryLine.style.marginTop = '0.5em';
+    memoryLine.innerHTML = `<strong>💭 Memories:</strong> ${summary.memories.created} new, ${summary.memories.total} total`;
+    content.appendChild(memoryLine);
+
+    card.appendChild(content);
+
+    // Buttons
+    const buttonBar = document.createElement('div');
+    buttonBar.style.cssText = 'display: flex; gap: 8px; margin-top: 1.5em; justify-content: center; flex-wrap: wrap;';
+
+    // Details button
+    const detailsBtn = document.createElement('button');
+    detailsBtn.className = 'btn small';
+    detailsBtn.textContent = 'View Details';
+    detailsBtn.onclick = () => showDetailedSummary(summary);
+    buttonBar.appendChild(detailsBtn);
+
+    // Copy JSON button
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn small';
+    copyBtn.textContent = 'Copy JSON';
+    copyBtn.onclick = () => {
+      const jsonStr = global.game?.__latestSocialSummaryJSON;
+      if(jsonStr){
+        navigator.clipboard.writeText(jsonStr).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy JSON'; }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          // Fallback: create textarea
+          const textarea = document.createElement('textarea');
+          textarea.value = jsonStr;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy JSON'; }, 2000);
+        });
+      }
+    };
+    buttonBar.appendChild(copyBtn);
+
+    // Continue button
+    const continueBtn = document.createElement('button');
+    continueBtn.className = 'btn small';
+    continueBtn.textContent = 'Continue';
+    continueBtn.style.cssText = 'background: var(--accent, #3498db);';
+    continueBtn.onclick = () => {
+      card.style.animation = 'popOut 0.4s ease forwards';
+      setTimeout(() => {
+        card.remove();
+        if(deck && deck.childElementCount === 0){
+          deck.remove();
+        }
+      }, 400);
+    };
+    buttonBar.appendChild(continueBtn);
+
+    card.appendChild(buttonBar);
+
+    // Clear deck and add card
+    deck.innerHTML = '';
+    deck.appendChild(card);
+    card.style.animation = 'popIn 0.45s ease forwards';
+  }
+
+  function createSummaryDeck(){
+    let deck = document.getElementById('decisionDeck');
+    if(deck) return deck;
+    
+    const tv = document.getElementById('tv') || document.querySelector('.tv') || document.body;
+    deck = document.createElement('div');
+    deck.id = 'decisionDeck';
+    deck.style.cssText = 'position:absolute;inset:var(--tv-safe-top,10%) var(--tv-safe-x,5%) var(--tv-safe-bottom,10%) var(--tv-safe-x,5%);display:grid;place-items:center;gap:8px;z-index:12;pointer-events:none;';
+    tv.appendChild(deck);
+    return deck;
+  }
+
+  function showDetailedSummary(summary){
+    // Create detailed modal
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);';
+    
+    const panel = document.createElement('div');
+    panel.className = 'revealCard';
+    panel.style.cssText = 'max-width:800px;max-height:80vh;overflow-y:auto;width:100%;';
+
+    const header = document.createElement('h3');
+    header.textContent = '📊 Detailed Social Phase Report';
+    header.style.textAlign = 'center';
+    panel.appendChild(header);
+
+    const detailContent = document.createElement('div');
+    detailContent.style.cssText = 'font-size:0.85rem;line-height:1.5;';
+
+    // Build detailed content (with PR #265 integration - information costs)
+    const totalInfoSpent = Object.values(summary.resources.informationSpent || {}).reduce((a,b) => a+b, 0);
+    
+    detailContent.innerHTML = `
+      <div style="margin-bottom:1.5em;">
+        <h4 style="color:#3498db;margin:0.5em 0;">Phase Overview</h4>
+        <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:4px;">
+          <div><strong>Week:</strong> ${summary.metadata.week}</div>
+          <div><strong>Duration:</strong> ${(summary.metadata.duration/1000).toFixed(1)}s</div>
+          <div><strong>Players:</strong> ${summary.metadata.playersCount}</div>
+          <div><strong>Total Actions:</strong> ${summary.actions.total}</div>
+        </div>
+      </div>
+
+      ${Object.keys(summary.resources.energySpent).length > 0 ? `
+      <div style="margin-bottom:1.5em;">
+        <h4 style="color:#f39c12;margin:0.5em 0;">⚡ Energy Spent</h4>
+        <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:4px;">
+          ${Object.entries(summary.resources.energySpent).map(([name, spent]) => 
+            `<div><strong>${name}:</strong> ${spent} (${summary.resources.energyRemaining[name]} remaining)</div>`
+          ).join('')}
+        </div>
+      </div>` : ''}
+
+      ${totalInfoSpent > 0 ? `
+      <div style="margin-bottom:1.5em;">
+        <h4 style="color:#9b59b6;margin:0.5em 0;">🔍 Information Spent</h4>
+        <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:4px;">
+          ${Object.entries(summary.resources.informationSpent).filter(([_,v]) => v > 0).map(([name, spent]) => 
+            `<div><strong>${name}:</strong> ${spent}</div>`
+          ).join('')}
+        </div>
+      </div>` : ''}
+
+      ${summary.relationships.changes.length > 0 ? `
+      <div style="margin-bottom:1.5em;">
+        <h4 style="color:#e74c3c;margin:0.5em 0;">💕 Relationship Changes</h4>
+        <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:4px;">
+          ${summary.relationships.changes.map(c => 
+            `<div style="margin:4px 0;">
+              <strong>${c.actor} → ${c.target}:</strong> 
+              ${c.delta >= 0 ? '+' : ''}${c.delta.toFixed(3)} 
+              (${c.state}, ${c.newAffinity.toFixed(3)})
+            </div>`
+          ).join('')}
+        </div>
+      </div>` : ''}
+
+      ${summary.actions.list.length > 0 ? `
+      <div style="margin-bottom:1.5em;">
+        <h4 style="color:#16a085;margin:0.5em 0;">📝 Action Log</h4>
+        <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:4px;max-height:300px;overflow-y:auto;">
+          ${summary.actions.list.map(a => 
+            `<div style="margin:6px 0;padding:6px;background:rgba(0,0,0,0.2);border-radius:3px;font-size:0.8rem;">
+              <div><strong>${new Date(a.timestamp).toLocaleTimeString()}</strong> - ${a.actorName} → ${a.targetName}</div>
+              <div style="color:#95a5a6;margin-top:2px;">
+                ${a.actionLabel} (${a.actionCategory}, ⚡${a.energyCost}${a.informationCost ? ` 🔍${a.informationCost}` : ''}) 
+                → ${a.outcome} 
+                (Δ ${a.affinityDelta >= 0 ? '+' : ''}${(a.affinityDelta || 0).toFixed(3)})
+              </div>
+            </div>`
+          ).join('')}
+        </div>
+      </div>` : ''}
+
+      <div style="margin-top:1em;padding:10px;background:rgba(52,152,219,0.2);border-radius:4px;font-size:0.75rem;color:#95a5a6;">
+        <strong>💾 Developer Access:</strong><br>
+        • <code>game.__latestSocialSummary</code> (object)<br>
+        • <code>game.__latestSocialSummaryJSON</code> (JSON string)<br>
+        • <code>game.__socialManeuversSessionLogs</code> (history)<br>
+        • <code>game.__socialManeuversTelemetry</code> (PR #265 telemetry)
+      </div>
+    `;
+
+    panel.appendChild(detailContent);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'btn small';
+    closeBtn.textContent = 'Close';
+    closeBtn.style.cssText = 'display:block;margin:1em auto 0;';
+    closeBtn.onclick = () => modal.remove();
+    panel.appendChild(closeBtn);
+
+    modal.appendChild(panel);
+    document.body.appendChild(modal);
+
+    // Close on backdrop click
+    modal.onclick = (e) => {
+      if(e.target === modal) modal.remove();
+    };
   }
 
   // ============================================================================

@@ -1887,6 +1887,18 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   100%{ opacity:1; transform:translateY(0) scale(1); }
 }
 
+/* NEW: Pop animations for social maneuvers summary */
+@keyframes popIn{
+  0%{ opacity:0; transform:scale(0.85) translateY(20px); }
+  60%{ opacity:1; transform:scale(1.02) translateY(-4px); }
+  100%{ opacity:1; transform:scale(1) translateY(0); }
+}
+
+@keyframes popOut{
+  0%{ opacity:1; transform:scale(1); }
+  100%{ opacity:0; transform:scale(0.88) translateY(20px); }
+}
+
 /* NEW: Gradient animation for enhanced text effects */
 @keyframes gradientShift{
   0%, 100%{ background-position:0% 50%; }

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Summary Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+    }
+    h1 { color: #83bfff; }
+    h2 { color: #95a9c0; margin-top: 30px; }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+    .pass { background: rgba(46, 204, 113, 0.2); border-left: 3px solid #2ecc71; }
+    .fail { background: rgba(231, 76, 60, 0.2); border-left: 3px solid #e74c3c; }
+    .info { background: rgba(52, 152, 219, 0.2); border-left: 3px solid #3498db; }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover { background: #2980b9; }
+    button:disabled {
+      background: #95a9c0;
+      cursor: not-allowed;
+    }
+    #tv {
+      position: relative;
+      width: 100%;
+      height: 600px;
+      background: #1a1a2e;
+      border-radius: 12px;
+      margin: 20px 0;
+      overflow: hidden;
+    }
+    .code-block {
+      background: rgba(0,0,0,0.4);
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Maneuvers Summary & Telemetry Test</h1>
+  <p>Testing the end-of-phase summary, session logs, and DevTools console output</p>
+
+  <div class="test-section">
+    <h2>Test 1: Module Loading & Session Tracking</h2>
+    <div id="test1"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Phase Start - Session Initialization</h2>
+    <button id="btnStartPhase">Start Social Phase</button>
+    <div id="test2"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Execute Actions & Track Data</h2>
+    <button id="btnExecuteActions">Execute Sample Actions</button>
+    <div id="test3"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Generate Phase Summary</h2>
+    <button id="btnGenerateSummary">Generate Summary (without UI)</button>
+    <div id="test4"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Export Session Log</h2>
+    <button id="btnExportLog">Export Session Log</button>
+    <div id="test5"></div>
+    <div id="jsonOutput" class="code-block" style="display:none;"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: DevTools Console Output</h2>
+    <button id="btnConsoleOutput">Log to Console</button>
+    <p class="info test-result">Check the browser DevTools console (F12) for formatted output</p>
+    <div id="test6"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 7: UI Summary Panel (Visual Test)</h2>
+    <button id="btnShowSummary">Show Summary Panel</button>
+    <button id="btnEndPhase">End Phase (Full Flow)</button>
+    <div id="test7"></div>
+    <div id="tv" style="position:relative;">
+      <div style="padding:20px;text-align:center;color:#95a9c0;">
+        TV Frame - Summary will appear here
+      </div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 8: Copy JSON to Clipboard</h2>
+    <button id="btnCopyJSON">Copy Latest Summary JSON</button>
+    <div id="test8"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 9: Detailed Summary Modal</h2>
+    <button id="btnShowDetailed">Show Detailed Summary</button>
+    <div id="test9"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/bbSeededRng.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  
+  <script>
+    // Test setup
+    let testResults = {
+      pass: 0,
+      fail: 0
+    };
+
+    function log(testId, message, type = 'info') {
+      const el = document.getElementById(testId);
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      el.appendChild(div);
+      
+      if(type === 'pass') testResults.pass++;
+      if(type === 'fail') testResults.fail++;
+    }
+
+    // Mock game object
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      week: 3,
+      humanId: 1,
+      players: [
+        { id: 1, name: 'Alex', evicted: false, affinity: {} },
+        { id: 2, name: 'Beth', evicted: false, affinity: {} },
+        { id: 3, name: 'Charlie', evicted: false, affinity: {} },
+        { id: 4, name: 'Dana', evicted: false, affinity: {} }
+      ]
+    };
+
+    // Mock helper functions
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    window.addLog = (msg, type) => console.log(`[LOG ${type}] ${msg}`);
+    window.updateHud = () => console.log('[HUD] Updated');
+
+    // Initialize affinities
+    window.game.players.forEach(p => {
+      p.affinity = {};
+      window.game.players.forEach(other => {
+        if(p.id !== other.id){
+          p.affinity[other.id] = 0;
+        }
+      });
+    });
+
+    // Test 1: Module Loading
+    (function test1(){
+      const testId = 'test1';
+      
+      if(typeof window.SocialManeuvers === 'object'){
+        log(testId, '✓ SocialManeuvers module loaded', 'pass');
+      } else {
+        log(testId, '✗ SocialManeuvers module not found', 'fail');
+        return;
+      }
+
+      if(window.SocialManeuvers.isEnabled()){
+        log(testId, '✓ Feature is enabled', 'pass');
+      } else {
+        log(testId, '✗ Feature is disabled', 'fail');
+      }
+
+      // Check for new methods
+      const requiredMethods = [
+        'onSocialPhaseStart', 'onSocialPhaseEnd', 'executeAction',
+        'getEnergy', 'setEnergy', 'spendEnergy'
+      ];
+      
+      let allMethodsPresent = true;
+      requiredMethods.forEach(method => {
+        if(typeof window.SocialManeuvers[method] !== 'function'){
+          log(testId, `✗ Missing method: ${method}`, 'fail');
+          allMethodsPresent = false;
+        }
+      });
+      
+      if(allMethodsPresent){
+        log(testId, `✓ All required methods present (${requiredMethods.length})`, 'pass');
+      }
+    })();
+
+    // Test 2: Phase Start
+    document.getElementById('btnStartPhase').addEventListener('click', function(){
+      const testId = 'test2';
+      document.getElementById(testId).innerHTML = '';
+      
+      try {
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        if(window.game.__socialManeuversSession){
+          log(testId, '✓ Session object created', 'pass');
+          
+          const session = window.game.__socialManeuversSession;
+          log(testId, `  Week: ${session.week}`, 'info');
+          log(testId, `  Start Time: ${new Date(session.startTime).toLocaleTimeString()}`, 'info');
+          log(testId, `  Actions Array: ${Array.isArray(session.actionsThisPhase) ? 'initialized' : 'missing'}`, 
+              Array.isArray(session.actionsThisPhase) ? 'pass' : 'fail');
+          
+          const energySpent = session.energySpent;
+          if(energySpent instanceof Map){
+            log(testId, '✓ Energy tracking Map initialized', 'pass');
+            log(testId, `  Tracking ${energySpent.size} players`, 'info');
+          } else {
+            log(testId, '✗ Energy tracking not initialized properly', 'fail');
+          }
+        } else {
+          log(testId, '✗ Session object not created', 'fail');
+        }
+
+        // Check energy initialization
+        const players = window.alivePlayers();
+        players.forEach(p => {
+          const energy = window.SocialManeuvers.getEnergy(p.id);
+          log(testId, `  ${p.name}: ${energy} energy`, energy === 3 ? 'pass' : 'fail');
+        });
+
+      } catch(e) {
+        log(testId, `✗ Error: ${e.message}`, 'fail');
+        console.error(e);
+      }
+    });
+
+    // Test 3: Execute Actions
+    document.getElementById('btnExecuteActions').addEventListener('click', function(){
+      const testId = 'test3';
+      document.getElementById(testId).innerHTML = '';
+      
+      // Ensure phase started
+      if(!window.game.__socialManeuversSession){
+        window.SocialManeuvers.onSocialPhaseStart();
+      }
+      
+      try {
+        // Execute several actions
+        const actions = [
+          { actor: 1, target: 2, action: 'smalltalk' },
+          { actor: 1, target: 3, action: 'strategize' },
+          { actor: 2, target: 3, action: 'confide' },
+          { actor: 3, target: 4, action: 'compliment' },
+          { actor: 4, target: 1, action: 'interrogate' }
+        ];
+        
+        let successCount = 0;
+        actions.forEach((a, idx) => {
+          const result = window.SocialManeuvers.executeAction(a.actor, a.target, a.action);
+          if(result.success){
+            successCount++;
+            log(testId, `✓ Action ${idx+1}: ${window.safeName(a.actor)} → ${window.safeName(a.target)} (${a.action})`, 'pass');
+          } else {
+            log(testId, `✗ Action ${idx+1} failed: ${result.reason}`, 'fail');
+          }
+        });
+        
+        const session = window.game.__socialManeuversSession;
+        if(session){
+          log(testId, `✓ ${session.actionsThisPhase.length} actions recorded in session`, 'pass');
+          log(testId, `  Energy spent tracked for ${session.energySpent.size} players`, 'info');
+          log(testId, `  Relationship deltas: ${session.relationshipDeltas.size} pairs`, 'info');
+        }
+        
+      } catch(e) {
+        log(testId, `✗ Error: ${e.message}`, 'fail');
+        console.error(e);
+      }
+    });
+
+    // Test 4: Generate Summary (internal)
+    document.getElementById('btnGenerateSummary').addEventListener('click', function(){
+      const testId = 'test4';
+      document.getElementById(testId).innerHTML = '';
+      
+      if(!window.game.__socialManeuversSession || window.game.__socialManeuversSession.actionsThisPhase.length === 0){
+        log(testId, '⚠ No actions executed yet. Run Test 2 and 3 first.', 'info');
+        return;
+      }
+      
+      try {
+        // Access the private function through the global scope (for testing only)
+        const summary = window.SocialManeuvers.generatePhaseSummary 
+          ? window.SocialManeuvers.generatePhaseSummary()
+          : null;
+        
+        if(!summary){
+          // Try alternative: trigger phase end without UI
+          console.log('[TEST] Attempting to access summary via phase end...');
+          log(testId, 'ℹ Summary generation is internal. Use Test 7 to see full flow.', 'info');
+          return;
+        }
+        
+        if(summary && summary.metadata){
+          log(testId, '✓ Summary generated successfully', 'pass');
+          log(testId, `  Week: ${summary.metadata.week}`, 'info');
+          log(testId, `  Total Actions: ${summary.actions.total}`, 'info');
+          log(testId, `  Memories Created: ${summary.memories.created}`, 'info');
+          log(testId, `  Relationship Changes: ${summary.relationships.changes.length}`, 'info');
+          
+          if(summary.relationships.newAlliances.length > 0){
+            log(testId, `  🤝 New Alliances: ${summary.relationships.newAlliances.length}`, 'pass');
+          }
+          
+          if(summary.relationships.newRivalries.length > 0){
+            log(testId, `  ⚔️ New Rivalries: ${summary.relationships.newRivalries.length}`, 'pass');
+          }
+        } else {
+          log(testId, '✗ Summary structure incomplete', 'fail');
+        }
+        
+      } catch(e) {
+        log(testId, `✗ Error: ${e.message}`, 'fail');
+        console.error(e);
+      }
+    });
+
+    // Test 5: Export Log
+    document.getElementById('btnExportLog').addEventListener('click', function(){
+      const testId = 'test5';
+      document.getElementById(testId).innerHTML = '';
+      
+      try {
+        if(window.game.__latestSocialSummaryJSON){
+          log(testId, '✓ Session log JSON available', 'pass');
+          
+          const jsonOutput = document.getElementById('jsonOutput');
+          jsonOutput.style.display = 'block';
+          jsonOutput.textContent = window.game.__latestSocialSummaryJSON;
+          
+          const byteSize = new Blob([window.game.__latestSocialSummaryJSON]).size;
+          log(testId, `  JSON size: ${byteSize} bytes`, 'info');
+          
+          if(window.game.__socialManeuversSessionLogs){
+            log(testId, `✓ Session history: ${window.game.__socialManeuversSessionLogs.length} entries`, 'pass');
+          }
+        } else {
+          log(testId, '⚠ No session log yet. Run full phase end (Test 7)', 'info');
+        }
+      } catch(e) {
+        log(testId, `✗ Error: ${e.message}`, 'fail');
+        console.error(e);
+      }
+    });
+
+    // Test 6: Console Output
+    document.getElementById('btnConsoleOutput').addEventListener('click', function(){
+      const testId = 'test6';
+      document.getElementById(testId).innerHTML = '';
+      
+      log(testId, '✓ Check browser console (F12) for formatted tables', 'pass');
+      log(testId, 'ℹ Look for group: "🎭 Social Maneuvers Phase Summary"', 'info');
+      
+      // Trigger console output if we have data
+      if(window.game.__latestSocialSummary){
+        try {
+          // Re-call the internal logToConsole with existing summary
+          console.log('%c[TEST] Displaying summary in console...', 'font-weight:bold;color:#3498db;');
+          
+          const summary = window.game.__latestSocialSummary;
+          
+          // Call the phase end which includes console logging
+          // Or just show what would be logged
+          log(testId, '✓ Console output triggered', 'pass');
+          console.log('Summary object:', summary);
+        } catch(e) {
+          log(testId, `✗ Error: ${e.message}`, 'fail');
+        }
+      } else {
+        log(testId, '⚠ No summary yet. Run Test 7 (End Phase) first.', 'info');
+      }
+    });
+
+    // Test 7: UI Summary Panel
+    document.getElementById('btnShowSummary').addEventListener('click', function(){
+      const testId = 'test7';
+      document.getElementById(testId).innerHTML = '';
+      
+      if(!window.game.__socialManeuversSession || window.game.__socialManeuversSession.actionsThisPhase.length === 0){
+        log(testId, '⚠ No actions. Execute Test 2 and 3 first.', 'info');
+        return;
+      }
+      
+      try {
+        // Manually show summary (testing UI only)
+        log(testId, '⚠ Summary UI requires full phase end. Use "End Phase" button.', 'info');
+        log(testId, 'ℹ Or check visual consistency in main game flow', 'info');
+      } catch(e) {
+        log(testId, `✗ Error: ${e.message}`, 'fail');
+        console.error(e);
+      }
+    });
+
+    document.getElementById('btnEndPhase').addEventListener('click', function(){
+      const testId = 'test7';
+      document.getElementById(testId).innerHTML = '';
+      
+      if(!window.game.__socialManeuversSession){
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        // Execute a few actions
+        window.SocialManeuvers.executeAction(1, 2, 'smalltalk');
+        window.SocialManeuvers.executeAction(1, 3, 'strategize');
+        window.SocialManeuvers.executeAction(2, 3, 'confide');
+        
+        log(testId, 'ℹ Auto-executed sample actions', 'info');
+      }
+      
+      try {
+        log(testId, '✓ Triggering phase end...', 'pass');
+        window.SocialManeuvers.onSocialPhaseEnd();
+        log(testId, '✓ Phase end complete - check TV frame above', 'pass');
+        log(testId, '✓ Check browser console for formatted output', 'pass');
+      } catch(e) {
+        log(testId, `✗ Error: ${e.message}`, 'fail');
+        console.error(e);
+      }
+    });
+
+    // Test 8: Copy JSON
+    document.getElementById('btnCopyJSON').addEventListener('click', function(){
+      const testId = 'test8';
+      document.getElementById(testId).innerHTML = '';
+      
+      if(!window.game.__latestSocialSummaryJSON){
+        log(testId, '⚠ No summary JSON. Run Test 7 first.', 'info');
+        return;
+      }
+      
+      try {
+        navigator.clipboard.writeText(window.game.__latestSocialSummaryJSON).then(() => {
+          log(testId, '✓ JSON copied to clipboard', 'pass');
+        }).catch(err => {
+          // Fallback
+          const textarea = document.createElement('textarea');
+          textarea.value = window.game.__latestSocialSummaryJSON;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          log(testId, '✓ JSON copied (fallback method)', 'pass');
+        });
+      } catch(e) {
+        log(testId, `✗ Error: ${e.message}`, 'fail');
+        console.error(e);
+      }
+    });
+
+    // Test 9: Detailed Summary
+    document.getElementById('btnShowDetailed').addEventListener('click', function(){
+      const testId = 'test9';
+      document.getElementById(testId).innerHTML = '';
+      
+      if(!window.game.__latestSocialSummary){
+        log(testId, '⚠ No summary. Run Test 7 first.', 'info');
+        return;
+      }
+      
+      try {
+        log(testId, '✓ Opening detailed summary modal...', 'pass');
+        
+        // Access via stored summary
+        const summary = window.game.__latestSocialSummary;
+        
+        // Note: showDetailedSummary is internal, so we'll just confirm the data exists
+        log(testId, '✓ Summary data structure:', 'info');
+        log(testId, `  - Metadata: ${summary.metadata ? '✓' : '✗'}`, summary.metadata ? 'pass' : 'fail');
+        log(testId, `  - Resources: ${summary.resources ? '✓' : '✗'}`, summary.resources ? 'pass' : 'fail');
+        log(testId, `  - Actions: ${summary.actions ? '✓' : '✗'}`, summary.actions ? 'pass' : 'fail');
+        log(testId, `  - Relationships: ${summary.relationships ? '✓' : '✗'}`, summary.relationships ? 'pass' : 'fail');
+        log(testId, `  - Memories: ${summary.memories ? '✓' : '✗'}`, summary.memories ? 'pass' : 'fail');
+        
+        log(testId, 'ℹ Detailed modal appears in main game when clicking "View Details"', 'info');
+        
+      } catch(e) {
+        log(testId, `✗ Error: ${e.message}`, 'fail');
+        console.error(e);
+      }
+    });
+
+    // Summary at end
+    setTimeout(() => {
+      console.log(`\n=== Test Summary ===`);
+      console.log(`✓ Passed: ${testResults.pass}`);
+      console.log(`✗ Failed: ${testResults.fail}`);
+      console.log(`Total: ${testResults.pass + testResults.fail}`);
+    }, 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Summary - Integration Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #testInfo {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      z-index: 9999;
+      font-family: monospace;
+      font-size: 12px;
+      max-width: 300px;
+    }
+    #testInfo h3 {
+      margin: 0 0 10px 0;
+      color: #83bfff;
+      font-size: 14px;
+    }
+    #testInfo .status {
+      padding: 5px;
+      margin: 5px 0;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+    }
+    #testInfo .pass { background: rgba(46, 204, 113, 0.3); }
+    #testInfo .fail { background: rgba(231, 76, 60, 0.3); }
+    #testInfo button {
+      margin-top: 10px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="testInfo">
+    <h3>🎭 Integration Test</h3>
+    <div id="testStatus"></div>
+    <button id="startTest" class="btn small">Start Social Phase</button>
+    <button id="checkSummary" class="btn small" disabled>Check Summary Data</button>
+    <button id="viewConsole" class="btn small">View Console</button>
+  </div>
+
+  <!-- Main game container -->
+  <div id="tv" class="tv">
+    <div id="panel"></div>
+    <div id="tvOverlay" class="tvOverlay"></div>
+  </div>
+
+  <!-- Load all required scripts in order -->
+  <script src="js/bbSeededRng.js"></script>
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/logs-helper.js"></script>
+  <script src="js/logs.js"></script>
+  <script src="js/cards-queue.js"></script>
+  <script src="js/social-narrative.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social.js"></script>
+
+  <script>
+    // Minimal game setup for testing
+    window.game = {
+      cfg: { 
+        enableSocialManeuvers: true,
+        tComms: 10 // Short duration for testing
+      },
+      week: 1,
+      humanId: 1,
+      players: [
+        { id: 1, name: 'You', evicted: false, affinity: {}, floater: false },
+        { id: 2, name: 'Alice', evicted: false, affinity: {}, floater: false },
+        { id: 3, name: 'Bob', evicted: false, affinity: {}, floater: false },
+        { id: 4, name: 'Carol', evicted: false, affinity: {}, floater: false }
+      ]
+    };
+
+    // Initialize affinities
+    window.game.players.forEach(p => {
+      p.affinity = {};
+      window.game.players.forEach(other => {
+        if(p.id !== other.id) p.affinity[other.id] = 0;
+      });
+    });
+
+    // Mock required globals
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+
+    // Mock TV/panel functions
+    window.tv = {
+      say: (msg) => {
+        console.log(`[TV] ${msg}`);
+        const panel = document.getElementById('panel');
+        if(panel) {
+          const div = document.createElement('div');
+          div.style.cssText = 'text-align:center;padding:20px;color:#83bfff;font-size:1.5rem;';
+          div.textContent = msg;
+          panel.innerHTML = '';
+          panel.appendChild(div);
+        }
+      }
+    };
+
+    window.setPhase = (phase, duration, callback) => {
+      console.log(`[PHASE] ${phase} for ${duration}s`);
+      updateStatus(`Phase: ${phase} (${duration}s)`, 'pass');
+      
+      // Auto-end phase after duration for testing
+      setTimeout(() => {
+        updateStatus('Phase ending...', 'pass');
+        if(callback) callback();
+      }, duration * 1000);
+    };
+
+    window.renderPanel = () => {
+      console.log('[RENDER] Panel rendered');
+    };
+
+    window.updateHud = () => {
+      console.log('[HUD] Updated');
+    };
+
+    window.addLog = (msg, type = 'info') => {
+      console.log(`[LOG ${type}] ${msg}`);
+    };
+
+    window.cardQueueWaitIdle = async () => {
+      return new Promise(resolve => setTimeout(resolve, 100));
+    };
+
+    window.showCard = (title, lines, type, duration, important) => {
+      console.log(`[CARD] ${title}:`, lines);
+    };
+
+    // Test status display
+    function updateStatus(msg, type = 'info') {
+      const status = document.getElementById('testStatus');
+      const div = document.createElement('div');
+      div.className = `status ${type}`;
+      div.textContent = msg;
+      status.appendChild(div);
+      
+      // Keep only last 10 messages
+      while(status.children.length > 10) {
+        status.removeChild(status.firstChild);
+      }
+    }
+
+    // Test button handlers
+    document.getElementById('startTest').addEventListener('click', function() {
+      updateStatus('Starting social phase...', 'pass');
+      this.disabled = true;
+      
+      try {
+        // Simulate some actions before ending
+        setTimeout(() => {
+          if(window.SocialManeuvers?.isEnabled()) {
+            updateStatus('Executing sample actions...', 'pass');
+            
+            // Execute a few actions
+            window.SocialManeuvers.executeAction(1, 2, 'smalltalk');
+            window.SocialManeuvers.executeAction(1, 3, 'strategize');
+            window.SocialManeuvers.executeAction(2, 3, 'confide');
+            
+            updateStatus('Actions complete', 'pass');
+          }
+        }, 2000);
+        
+        // Start the social phase
+        window.startSocialIntermission('test', () => {
+          updateStatus('✓ Social phase complete!', 'pass');
+          updateStatus('✓ Summary should be visible', 'pass');
+          document.getElementById('checkSummary').disabled = false;
+        });
+      } catch(e) {
+        updateStatus(`✗ Error: ${e.message}`, 'fail');
+        console.error(e);
+      }
+    });
+
+    document.getElementById('checkSummary').addEventListener('click', function() {
+      updateStatus('Checking summary data...', 'pass');
+      
+      if(window.game.__latestSocialSummary) {
+        const summary = window.game.__latestSocialSummary;
+        updateStatus(`✓ Summary exists`, 'pass');
+        updateStatus(`  Actions: ${summary.actions.total}`, 'pass');
+        updateStatus(`  Memories: ${summary.memories.created}`, 'pass');
+        updateStatus(`  Changes: ${summary.relationships.changes.length}`, 'pass');
+        
+        // Log full data
+        console.log('=== SUMMARY DATA ===');
+        console.log(summary);
+        console.log('=== JSON ===');
+        console.log(window.game.__latestSocialSummaryJSON);
+      } else {
+        updateStatus('✗ No summary data found', 'fail');
+      }
+    });
+
+    document.getElementById('viewConsole').addEventListener('click', function() {
+      updateStatus('Open DevTools (F12) to view console', 'pass');
+      console.log('%c=== INTEGRATION TEST CONSOLE ===', 'font-weight:bold;color:#83bfff;font-size:16px;');
+      console.log('SocialManeuvers enabled:', window.SocialManeuvers?.isEnabled());
+      console.log('Session data:', window.game.__socialManeuversSession);
+      console.log('Latest summary:', window.game.__latestSocialSummary);
+      console.log('Session history:', window.game.__socialManeuversSessionLogs);
+    });
+
+    // Initial status
+    updateStatus('Ready to test', 'pass');
+    console.log('%c🎭 Social Maneuvers Integration Test', 'font-weight:bold;color:#83bfff;font-size:18px;');
+    console.log('Click "Start Social Phase" to begin test');
+  </script>
+</body>
+</html>
