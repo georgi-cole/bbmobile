@@ -52,3 +52,4 @@ export declare function reset(): Promise<void>;
 export declare function close(): void;
 export * from './types.js';
 export * from './constants.js';
+export { computeLevel } from './reducer.js';

@@ -66,7 +66,7 @@ export function reduceEvents(events, rules, options = {}) {
 /**
  * Compute level from total XP
  */
-function computeLevel(totalXP, thresholds) {
+export function computeLevel(totalXP, thresholds) {
     if (!Array.isArray(thresholds) || thresholds.length === 0) {
         throw new Error("Level thresholds must be a non-empty array.");
     }
