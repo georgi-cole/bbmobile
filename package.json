@@ -16,6 +16,7 @@
     "test:playwright:headed": "playwright test --headed",
     "test:playwright:debug": "playwright test --debug",
     "test:social": "playwright test test_game_progression_social_automated.spec.js",
+    "test:social-guards": "playwright test test_social_phase_guards.spec.js",
     "test:all": "npm run test:minigames && npm run test:e2e",
     "build:progression": "cd src/progression && tsc",
     "typecheck:progression": "cd src/progression && tsc --noEmit",
