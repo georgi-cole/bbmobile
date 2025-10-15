@@ -17,7 +17,7 @@
   ];
 
   /* ===== Social Maneuvers Traits ===== */
-  const SOCIAL_TRAITS=['loyal','deceptive','gullible','stubborn','charismatic','paranoid'];
+  const SOCIAL_TRAITS = ['loyal', 'deceptive', 'gullible', 'stubborn', 'charismatic', 'paranoid'];
   
   /* ===== Canonical Memory Events ===== */
   const MEMORY_EVENTS = {
