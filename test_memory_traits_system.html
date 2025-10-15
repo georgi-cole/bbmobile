@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory & Traits System Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    h1 { color: #f7b955; }
+    h2 { color: #95a9c0; margin-top: 30px; }
+    .test-section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .test-result.pass {
+      background: rgba(76, 175, 80, 0.2);
+      border-left: 4px solid #4caf50;
+      color: #4caf50;
+    }
+    .test-result.fail {
+      background: rgba(244, 67, 54, 0.2);
+      border-left: 4px solid #f44336;
+      color: #f44336;
+    }
+    .test-result.info {
+      background: rgba(33, 150, 243, 0.2);
+      border-left: 4px solid #2196f3;
+      color: #2196f3;
+    }
+    button {
+      background: #f7b955;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #ffc76a;
+      transform: translateY(-2px);
+    }
+    .demo-container {
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+    }
+  </style>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Memory & Traits System Test</h1>
+  
+  <div class="test-section">
+    <h2>Automated Tests</h2>
+    <div id="test-results"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Interactive Demos</h2>
+    <button onclick="testTraitModifiers()">Test Trait Modifiers</button>
+    <button onclick="testMemoryModifiers()">Test Memory Modifiers</button>
+    <button onclick="testHistoryUI()">Test History UI</button>
+    <button onclick="testFullInteraction()">Test Full Interaction</button>
+    <div id="demo-output" class="demo-container"></div>
+  </div>
+
+  <!-- Load game scripts in order -->
+  <script src="js/bbSeededRng.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/social-narrative.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  
+  <script>
+    const resultsDiv = document.getElementById('test-results');
+    const demoDiv = document.getElementById('demo-output');
+    
+    function logResult(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      resultsDiv.appendChild(div);
+      console.log(`[${type}] ${message}`);
+    }
+    
+    function clearDemo() {
+      demoDiv.innerHTML = '';
+    }
+    
+    function logDemo(message, data = null) {
+      const div = document.createElement('div');
+      div.style.margin = '10px 0';
+      div.style.padding = '10px';
+      div.style.background = 'rgba(255,255,255,0.05)';
+      div.style.borderRadius = '6px';
+      
+      const text = document.createElement('div');
+      text.textContent = message;
+      text.style.fontWeight = '600';
+      text.style.marginBottom = '5px';
+      div.appendChild(text);
+      
+      if (data) {
+        const pre = document.createElement('pre');
+        pre.textContent = JSON.stringify(data, null, 2);
+        pre.style.fontSize = '0.85rem';
+        pre.style.color = '#95a9c0';
+        pre.style.margin = '0';
+        div.appendChild(pre);
+      }
+      
+      demoDiv.appendChild(div);
+    }
+    
+    // Run automated tests
+    function runTests() {
+      logResult('=== Memory & Traits System Tests ===', 'info');
+      
+      // Test 1: MEMORY_EVENTS constant exists
+      try {
+        if (window.MEMORY_EVENTS) {
+          const events = Object.keys(window.MEMORY_EVENTS);
+          logResult(`✓ MEMORY_EVENTS defined with ${events.length} events`, 'pass');
+          
+          // Check for required events
+          const required = ['PROMISE_MADE', 'PROMISE_BROKEN', 'ALLIANCE_FORMED', 'ALLIANCE_BETRAYED', 
+                          'RUMOR_BELIEVED', 'RUMOR_EXPOSED', 'SECRET_SHARED', 'CONFLICT_RESOLVED',
+                          'PUBLIC_CONFRONTATION', 'MEDIATION_SUCCESS'];
+          const missing = required.filter(e => !window.MEMORY_EVENTS[e]);
+          if (missing.length === 0) {
+            logResult('✓ All 10 canonical memory events defined', 'pass');
+          } else {
+            logResult(`✗ Missing events: ${missing.join(', ')}`, 'fail');
+          }
+        } else {
+          logResult('✗ MEMORY_EVENTS not defined', 'fail');
+        }
+      } catch (e) {
+        logResult(`✗ Error checking MEMORY_EVENTS: ${e.message}`, 'fail');
+      }
+      
+      // Test 2: SOCIAL_TRAITS updated
+      try {
+        if (window.SOCIAL_TRAITS) {
+          logResult(`✓ SOCIAL_TRAITS defined: ${window.SOCIAL_TRAITS.join(', ')}`, 'pass');
+          
+          const required = ['loyal', 'deceptive', 'gullible', 'stubborn', 'charismatic', 'paranoid'];
+          const hasAll = required.every(t => window.SOCIAL_TRAITS.includes(t));
+          if (hasAll) {
+            logResult('✓ All 6 required traits present: loyal, deceptive, gullible, stubborn, charismatic, paranoid', 'pass');
+          } else {
+            const missing = required.filter(t => !window.SOCIAL_TRAITS.includes(t));
+            logResult(`✗ Missing traits: ${missing.join(', ')}`, 'fail');
+          }
+        } else {
+          logResult('✗ SOCIAL_TRAITS not defined', 'fail');
+        }
+      } catch (e) {
+        logResult(`✗ Error checking SOCIAL_TRAITS: ${e.message}`, 'fail');
+      }
+      
+      // Test 3: Player trait generation
+      try {
+        window.pushPlayer({ name: 'TestPlayer', human: false });
+        const player = window.game.players[window.game.players.length - 1];
+        
+        if (player.socialTraits && Array.isArray(player.socialTraits)) {
+          logResult(`✓ Player has socialTraits: [${player.socialTraits.join(', ')}]`, 'pass');
+        } else {
+          logResult('✗ Player missing socialTraits', 'fail');
+        }
+        
+        if (typeof player.influence === 'number') {
+          logResult(`✓ Player has influence: ${player.influence}`, 'pass');
+        } else {
+          logResult('✗ Player missing influence', 'fail');
+        }
+        
+        if (Array.isArray(player.memoryLog)) {
+          logResult('✓ Player has memoryLog array', 'pass');
+        } else {
+          logResult('✗ Player missing memoryLog', 'fail');
+        }
+      } catch (e) {
+        logResult(`✗ Error checking player traits: ${e.message}`, 'fail');
+      }
+      
+      // Test 4: Trait modifier functions
+      try {
+        if (window.SocialManeuvers && typeof window.SocialManeuvers.calculateTraitModifiers === 'function') {
+          logResult('✓ calculateTraitModifiers function exists', 'pass');
+        } else {
+          logResult('✗ calculateTraitModifiers not found', 'fail');
+        }
+        
+        if (window.SocialManeuvers && typeof window.SocialManeuvers.calculateMemoryModifiers === 'function') {
+          logResult('✓ calculateMemoryModifiers function exists', 'pass');
+        } else {
+          logResult('✗ calculateMemoryModifiers not found', 'fail');
+        }
+      } catch (e) {
+        logResult(`✗ Error checking modifier functions: ${e.message}`, 'fail');
+      }
+      
+      // Test 5: History UI function
+      try {
+        if (window.SocialManeuvers && typeof window.SocialManeuvers.createHistoryUI === 'function') {
+          logResult('✓ createHistoryUI function exists', 'pass');
+        } else {
+          logResult('✗ createHistoryUI not found', 'fail');
+        }
+      } catch (e) {
+        logResult(`✗ Error checking history UI: ${e.message}`, 'fail');
+      }
+      
+      // Test 6: recordMemoryEvent function
+      try {
+        if (window.SocialManeuvers && typeof window.SocialManeuvers.recordMemoryEvent === 'function') {
+          logResult('✓ recordMemoryEvent function exists', 'pass');
+          
+          // Test recording an event
+          const testPlayerId = window.game.players[0]?.id;
+          const testTargetId = window.game.players[1]?.id;
+          if (testPlayerId && testTargetId) {
+            window.SocialManeuvers.recordMemoryEvent(
+              testPlayerId, 
+              testTargetId, 
+              window.MEMORY_EVENTS.ALLIANCE_FORMED,
+              { test: true }
+            );
+            
+            const memories = window.getMemoryLog(testPlayerId, { targetId: testTargetId });
+            if (memories.length > 0) {
+              logResult('✓ recordMemoryEvent successfully recorded event', 'pass');
+            } else {
+              logResult('✗ recordMemoryEvent did not record event', 'fail');
+            }
+          }
+        } else {
+          logResult('✗ recordMemoryEvent not found', 'fail');
+        }
+      } catch (e) {
+        logResult(`✗ Error testing recordMemoryEvent: ${e.message}`, 'fail');
+      }
+      
+      logResult('=== Tests Complete ===', 'info');
+    }
+    
+    // Interactive test functions
+    function testTraitModifiers() {
+      clearDemo();
+      logDemo('Testing Trait Modifiers...');
+      
+      // Create test players with specific traits
+      window.game.players = [];
+      window.pushPlayer({ name: 'Charismatic Player', human: false });
+      window.pushPlayer({ name: 'Gullible Target', human: false });
+      
+      const actor = window.game.players[0];
+      const target = window.game.players[1];
+      
+      // Manually set traits
+      actor.socialTraits = ['charismatic', 'loyal'];
+      target.socialTraits = ['gullible', 'stubborn'];
+      
+      actor.affinity = { [target.id]: 0.3 };
+      
+      logDemo('Actor Traits:', actor.socialTraits);
+      logDemo('Target Traits:', target.socialTraits);
+      
+      // Test with friendly action
+      const friendlyAction = { id: 'compliment', category: 'friendly', label: 'Compliment' };
+      const friendlyMods = window.SocialManeuvers.calculateTraitModifiers(actor.id, target.id, friendlyAction);
+      logDemo('Friendly Action Modifiers:', friendlyMods);
+      
+      // Test with strategic action
+      const strategicAction = { id: 'strategize', category: 'strategic', label: 'Strategize' };
+      const strategicMods = window.SocialManeuvers.calculateTraitModifiers(actor.id, target.id, strategicAction);
+      logDemo('Strategic Action Modifiers:', strategicMods);
+      
+      // Test with aggressive action
+      const aggressiveAction = { id: 'confront', category: 'aggressive', label: 'Confront' };
+      const aggressiveMods = window.SocialManeuvers.calculateTraitModifiers(actor.id, target.id, aggressiveAction);
+      logDemo('Aggressive Action Modifiers:', aggressiveMods);
+    }
+    
+    function testMemoryModifiers() {
+      clearDemo();
+      logDemo('Testing Memory Modifiers...');
+      
+      window.game.players = [];
+      window.pushPlayer({ name: 'Player A', human: false });
+      window.pushPlayer({ name: 'Player B', human: false });
+      
+      const playerA = window.game.players[0];
+      const playerB = window.game.players[1];
+      
+      // Record various memory events
+      logDemo('Recording positive events...');
+      window.recordEvent(playerA.id, window.MEMORY_EVENTS.ALLIANCE_FORMED, playerB.id, {});
+      window.recordEvent(playerA.id, window.MEMORY_EVENTS.PROMISE_MADE, playerB.id, {});
+      window.recordEvent(playerA.id, window.MEMORY_EVENTS.SECRET_SHARED, playerB.id, {});
+      
+      logDemo('Recording negative events...');
+      window.recordEvent(playerA.id, window.MEMORY_EVENTS.PROMISE_BROKEN, playerB.id, {});
+      
+      // Calculate modifiers
+      const modifiers = window.SocialManeuvers.calculateMemoryModifiers(playerA.id, playerB.id);
+      logDemo('Memory Modifiers:', modifiers);
+      
+      const memories = window.getMemoryLog(playerA.id, { targetId: playerB.id });
+      logDemo(`Total Memories Recorded: ${memories.length}`, memories);
+    }
+    
+    function testHistoryUI() {
+      clearDemo();
+      logDemo('Testing History UI...');
+      
+      // Setup test scenario
+      window.game.players = [];
+      window.pushPlayer({ name: 'You', human: true });
+      window.pushPlayer({ name: 'Alice', human: false });
+      
+      const you = window.game.players[0];
+      const alice = window.game.players[1];
+      
+      // Record some events
+      window.recordEvent(you.id, window.MEMORY_EVENTS.ALLIANCE_FORMED, alice.id, {});
+      window.recordEvent(you.id, window.MEMORY_EVENTS.PROMISE_MADE, alice.id, {});
+      window.recordEvent(you.id, window.MEMORY_EVENTS.CONFLICT_RESOLVED, alice.id, {});
+      window.recordEvent(you.id, window.MEMORY_EVENTS.PROMISE_BROKEN, alice.id, {});
+      
+      // Record some social actions
+      if (!window.game.__socialManeuversMemory) {
+        window.game.__socialManeuversMemory = { actions: [] };
+      }
+      window.game.__socialManeuversMemory.actions.push(
+        { week: 1, actorId: you.id, targetId: alice.id, action: 'smalltalk', outcome: 'positive' },
+        { week: 1, actorId: you.id, targetId: alice.id, action: 'strategize', outcome: 'positive' },
+        { week: 2, actorId: you.id, targetId: alice.id, action: 'confide', outcome: 'neutral' },
+        { week: 3, actorId: you.id, targetId: alice.id, action: 'confront', outcome: 'negative' }
+      );
+      
+      logDemo('Creating History UI...');
+      const historyUI = window.SocialManeuvers.createHistoryUI(you.id, alice.id);
+      demoDiv.appendChild(historyUI);
+      
+      logDemo('✓ History UI rendered. Try clicking the header to expand/collapse.');
+    }
+    
+    function testFullInteraction() {
+      clearDemo();
+      logDemo('Testing Full Interaction with Traits and Memory...');
+      
+      // Setup
+      window.game.players = [];
+      window.game.week = 3;
+      window.pushPlayer({ name: 'You', human: true });
+      window.pushPlayer({ name: 'Bob', human: false });
+      
+      const you = window.game.players[0];
+      const bob = window.game.players[1];
+      
+      you.socialTraits = ['charismatic', 'loyal'];
+      bob.socialTraits = ['gullible', 'paranoid'];
+      you.affinity = { [bob.id]: 0.4 };
+      
+      // Record past positive history
+      window.recordEvent(you.id, window.MEMORY_EVENTS.ALLIANCE_FORMED, bob.id, {});
+      window.recordEvent(you.id, window.MEMORY_EVENTS.SECRET_SHARED, bob.id, {});
+      
+      logDemo('Initial State:', {
+        yourTraits: you.socialTraits,
+        bobTraits: bob.socialTraits,
+        affinity: you.affinity[bob.id]
+      });
+      
+      // Initialize energy
+      window.SocialManeuvers.initSocialEnergy();
+      window.SocialManeuvers.setEnergy(you.id, 5);
+      
+      // Execute a friendly action
+      const result = window.SocialManeuvers.executeAction(you.id, bob.id, 'compliment');
+      
+      logDemo('Action Result:', result);
+      logDemo('Final Affinity:', you.affinity[bob.id]);
+      
+      if (result.outcome) {
+        logDemo('Trait Modifiers Applied:', result.outcome.traitModifiers);
+        logDemo('Memory Modifiers Applied:', result.outcome.memoryModifiers);
+      }
+    }
+    
+    // Run tests on load
+    window.addEventListener('DOMContentLoaded', runTests);
+    runTests();
+  </script>
+</body>
+</html>

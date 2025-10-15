@@ -17,7 +17,21 @@
   ];
 
   /* ===== Social Maneuvers Traits ===== */
-  const SOCIAL_TRAITS=['loyal','deceptive','gullible','persuasive','observant','charismatic','manipulative','trustworthy','skeptical','empathetic'];
+  const SOCIAL_TRAITS=['loyal','deceptive','gullible','stubborn','charismatic','paranoid'];
+  
+  /* ===== Canonical Memory Events ===== */
+  const MEMORY_EVENTS = {
+    PROMISE_MADE: 'PromiseMade',
+    PROMISE_BROKEN: 'PromiseBroken',
+    ALLIANCE_FORMED: 'AllianceFormed',
+    ALLIANCE_BETRAYED: 'AllianceBetrayed',
+    RUMOR_BELIEVED: 'RumorBelieved',
+    RUMOR_EXPOSED: 'RumorExposed',
+    SECRET_SHARED: 'SecretShared',
+    CONFLICT_RESOLVED: 'ConflictResolved',
+    PUBLIC_CONFRONTATION: 'PublicConfrontation',
+    MEDIATION_SUCCESS: 'MediationSuccess'
+  };
 
   /* ===== Game State ===== */
   const game={
@@ -454,6 +468,7 @@
   global.game=game;
   global.TRAITS=TRAITS;
   global.SOCIAL_TRAITS=SOCIAL_TRAITS;
+  global.MEMORY_EVENTS=MEMORY_EVENTS;
   global.rng=rng;
   global.clamp=clamp;
   global.pushPlayer=pushPlayer;

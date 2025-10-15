@@ -197,13 +197,10 @@
   }
 
   // ============================================================================
-  // OUTCOME PROCESSING (PLACEHOLDER)
+  // OUTCOME PROCESSING
   // ============================================================================
   
   function processActionOutcome(actorId, targetId, action){
-    // PLACEHOLDER: This will integrate with existing social systems
-    // For now, basic affinity adjustments
-    
     const actor = global.getP?.(actorId);
     const target = global.getP?.(targetId);
     
@@ -211,7 +208,7 @@
       return { type: 'error', message: 'Player not found' };
     }
 
-    // Basic affinity changes based on action category
+    // Base affinity changes based on action category
     let affinityChange = 0;
     let outcomeType = 'neutral';
     let message = '';
@@ -237,33 +234,170 @@
         message = `${action.label} completed.`;
     }
 
+    // Apply trait-based modifiers
+    const traitModifiers = calculateTraitModifiers(actorId, targetId, action);
+    affinityChange += traitModifiers.affinityBonus;
+    
+    // Apply memory-based modifiers
+    const memoryModifiers = calculateMemoryModifiers(actorId, targetId);
+    affinityChange += memoryModifiers.affinityBonus;
+    
+    // Update outcome type based on final affinity change
+    if(affinityChange > 0.05) outcomeType = 'positive';
+    else if(affinityChange < -0.05) outcomeType = 'negative';
+    else outcomeType = 'neutral';
+
     // Apply affinity change (integrate with existing system)
     if(actor.affinity && typeof actor.affinity === 'object'){
       const current = actor.affinity[targetId] ?? 0;
       actor.affinity[targetId] = current + affinityChange;
     }
 
-    // PLACEHOLDER: Hook for memory system
+    // Record action in memory system
     recordActionInMemory(actorId, targetId, action, outcomeType);
 
-    // PLACEHOLDER: Hook for trait effects
-    applyTraitEffects(actorId, targetId, action);
+    // Update player stats based on outcome
+    if(outcomeType === 'positive'){
+      global.updateInfluence?.(actorId, 1);
+    } else if(outcomeType === 'negative'){
+      global.updateInfluence?.(actorId, -1);
+    }
 
     return {
       type: outcomeType,
       message: message,
-      affinityChange: affinityChange
+      affinityChange: affinityChange,
+      traitModifiers: traitModifiers,
+      memoryModifiers: memoryModifiers
+    };
+  }
+  
+  /**
+   * Calculate trait-based modifiers for action outcomes
+   */
+  function calculateTraitModifiers(actorId, targetId, action){
+    const actor = global.getP?.(actorId);
+    const target = global.getP?.(targetId);
+    
+    let affinityBonus = 0;
+    let successBonus = 0;
+    const appliedTraits = [];
+    
+    if(!actor || !target) return { affinityBonus, successBonus, appliedTraits };
+    
+    const hasTrait = global.hasTrait || (() => false);
+    
+    // Charismatic: +20% to friendly actions
+    if(hasTrait(actorId, 'charismatic') && action.category === 'friendly'){
+      affinityBonus += 0.02;
+      successBonus += 0.2;
+      appliedTraits.push('charismatic');
+    }
+    
+    // Loyal: Bonus when interacting with allies (positive affinity)
+    if(hasTrait(actorId, 'loyal')){
+      const currentAffinity = actor.affinity?.[targetId] ?? 0;
+      if(currentAffinity > 0.2){
+        affinityBonus += 0.015;
+        appliedTraits.push('loyal');
+      }
+    }
+    
+    // Deceptive: +15% to aggressive actions, -10% to friendly
+    if(hasTrait(actorId, 'deceptive')){
+      if(action.category === 'aggressive'){
+        successBonus += 0.15;
+        appliedTraits.push('deceptive');
+      } else if(action.category === 'friendly'){
+        successBonus -= 0.1;
+      }
+    }
+    
+    // Stubborn: -20% to strategic actions but +10% to aggressive
+    if(hasTrait(actorId, 'stubborn')){
+      if(action.category === 'strategic'){
+        successBonus -= 0.2;
+      } else if(action.category === 'aggressive'){
+        successBonus += 0.1;
+        appliedTraits.push('stubborn');
+      }
+    }
+    
+    // Gullible (target): Makes actor's strategic actions more effective
+    if(hasTrait(targetId, 'gullible') && action.category === 'strategic'){
+      affinityBonus += 0.02;
+      successBonus += 0.15;
+      appliedTraits.push('gullible-target');
+    }
+    
+    // Paranoid (target): Reduces effectiveness of all actions
+    if(hasTrait(targetId, 'paranoid')){
+      affinityBonus -= 0.01;
+      successBonus -= 0.1;
+      appliedTraits.push('paranoid-target');
+    }
+    
+    return { affinityBonus, successBonus, appliedTraits };
+  }
+  
+  /**
+   * Calculate memory-based modifiers from past interactions
+   */
+  function calculateMemoryModifiers(actorId, targetId){
+    let affinityBonus = 0;
+    const relevantMemories = [];
+    
+    const getMemoryLog = global.getMemoryLog || (() => []);
+    const MEMORY_EVENTS = global.MEMORY_EVENTS || {};
+    
+    // Get memories between these two players
+    const actorMemories = getMemoryLog(actorId, { targetId: targetId });
+    const targetMemories = getMemoryLog(targetId, { targetId: actorId });
+    
+    // Count specific memory types and apply modifiers
+    const countMemory = (memories, eventType) => 
+      memories.filter(m => m.event === eventType).length;
+    
+    // Positive memories
+    const promisesMade = countMemory(actorMemories, MEMORY_EVENTS.PROMISE_MADE);
+    const alliancesFormed = countMemory(actorMemories, MEMORY_EVENTS.ALLIANCE_FORMED);
+    const secretsShared = countMemory(actorMemories, MEMORY_EVENTS.SECRET_SHARED);
+    const conflictsResolved = countMemory(actorMemories, MEMORY_EVENTS.CONFLICT_RESOLVED);
+    const mediationSuccesses = countMemory(actorMemories, MEMORY_EVENTS.MEDIATION_SUCCESS);
+    
+    // Negative memories
+    const promisesBroken = countMemory(actorMemories, MEMORY_EVENTS.PROMISE_BROKEN);
+    const betrayals = countMemory(actorMemories, MEMORY_EVENTS.ALLIANCE_BETRAYED);
+    const rumorsExposed = countMemory(actorMemories, MEMORY_EVENTS.RUMOR_EXPOSED);
+    const confrontations = countMemory(actorMemories, MEMORY_EVENTS.PUBLIC_CONFRONTATION);
+    
+    // Calculate net positive history
+    const positiveCount = promisesMade + alliancesFormed + secretsShared + conflictsResolved + mediationSuccesses;
+    const negativeCount = promisesBroken + betrayals + rumorsExposed + confrontations;
+    
+    // Each positive memory adds +0.005 affinity, negative memories subtract -0.01
+    affinityBonus += positiveCount * 0.005;
+    affinityBonus -= negativeCount * 0.01;
+    
+    // Cap the memory bonus/penalty
+    affinityBonus = Math.max(-0.05, Math.min(0.05, affinityBonus));
+    
+    if(positiveCount > 0) relevantMemories.push(`${positiveCount} positive`);
+    if(negativeCount > 0) relevantMemories.push(`${negativeCount} negative`);
+    
+    return { 
+      affinityBonus, 
+      positiveCount, 
+      negativeCount,
+      relevantMemories 
     };
   }
 
   // ============================================================================
-  // MEMORY SYSTEM INTEGRATION (PLACEHOLDER)
+  // MEMORY SYSTEM INTEGRATION
   // ============================================================================
   
   function recordActionInMemory(actorId, targetId, action, outcome){
-    // PLACEHOLDER: Integrate with social-narrative.js or create new memory structure
-    // This will track player actions across phases for deeper narrative
-    
     const g = global.game;
     if(!g) return;
 
@@ -292,7 +426,6 @@
   }
 
   function getPlayerMemory(actorId, targetId){
-    // PLACEHOLDER: Retrieve action history between two players
     const g = global.game;
     if(!g?.__socialManeuversMemory) return [];
 
@@ -301,27 +434,19 @@
            (a.actorId === targetId && a.targetId === actorId)
     );
   }
-
-  // ============================================================================
-  // TRAIT EFFECTS (PLACEHOLDER)
-  // ============================================================================
   
-  function applyTraitEffects(actorId, targetId, action){
-    // PLACEHOLDER: Apply player personality traits to modify action outcomes
-    // Examples:
-    // - Charismatic players get bonus to friendly actions
-    // - Strategic players get bonus to strategize actions
-    // - Hot-headed players have penalties to confide actions
+  /**
+   * Helper function to record canonical memory events
+   */
+  function recordMemoryEvent(playerId, targetId, eventType, details = {}){
+    if(!global.recordEvent) return;
     
-    const actor = global.getP?.(actorId);
-    if(!actor) return;
-
-    // PLACEHOLDER: Check for traits when trait system is implemented
-    // if(actor.traits?.includes('charismatic') && action.category === 'friendly'){
-    //   // Apply bonus
-    // }
-
-    console.info('[social-maneuvers] Trait effects would apply here');
+    global.recordEvent(playerId, eventType, targetId, {
+      ...details,
+      source: 'social-maneuvers'
+    });
+    
+    console.info(`[social-maneuvers] Memory event: ${playerId} -> ${targetId}: ${eventType}`);
   }
 
   // ============================================================================
@@ -363,8 +488,29 @@
       const playerSection = createPlayerSelection(otherPlayers, (player) => {
         selectedPlayer = player;
         updateActionsList();
+        updateHistorySection(); // Update history when player is selected
       });
       wrapper.appendChild(playerSection);
+    }
+    
+    // History section (collapsible)
+    const historySection = document.createElement('div');
+    historySection.className = 'social-history-section';
+    historySection.style.display = 'none'; // Hidden until player is selected
+    wrapper.appendChild(historySection);
+    
+    // Function to update history section
+    function updateHistorySection(){
+      historySection.innerHTML = '';
+      
+      if(!selectedPlayer){
+        historySection.style.display = 'none';
+        return;
+      }
+      
+      historySection.style.display = 'block';
+      const historyContent = createHistoryUI(playerId, selectedPlayer.id);
+      historySection.appendChild(historyContent);
     }
 
     // Action menu
@@ -628,6 +774,178 @@
     return panel;
   }
 
+  /**
+   * Create a collapsible history UI showing past interactions with a player
+   */
+  function createHistoryUI(playerId, targetId){
+    const container = document.createElement('div');
+    container.className = 'social-history-container';
+    
+    // Header with collapse toggle
+    const header = document.createElement('div');
+    header.className = 'social-history-header';
+    header.setAttribute('role', 'button');
+    header.setAttribute('tabindex', '0');
+    header.setAttribute('aria-expanded', 'false');
+    
+    const title = document.createElement('div');
+    title.className = 'social-history-title';
+    const targetName = global.safeName?.(targetId) || `Player ${targetId}`;
+    title.textContent = `History with ${targetName}`;
+    header.appendChild(title);
+    
+    const toggle = document.createElement('div');
+    toggle.className = 'social-history-toggle';
+    toggle.textContent = '▼';
+    header.appendChild(toggle);
+    
+    container.appendChild(header);
+    
+    // Content (initially collapsed)
+    const content = document.createElement('div');
+    content.className = 'social-history-content collapsed';
+    content.setAttribute('aria-hidden', 'true');
+    
+    // Get memory log
+    const getMemoryLog = global.getMemoryLog || (() => []);
+    const MEMORY_EVENTS = global.MEMORY_EVENTS || {};
+    
+    const memories = getMemoryLog(playerId, { targetId: targetId });
+    const recentActions = getPlayerMemory(playerId, targetId);
+    
+    // Summary section
+    const summary = document.createElement('div');
+    summary.className = 'social-history-summary';
+    
+    // Count memory events
+    const eventCounts = {};
+    const eventOrder = [
+      'AllianceFormed', 'PromiseMade', 'SecretShared', 'ConflictResolved', 'MediationSuccess',
+      'AllianceBetrayed', 'PromiseBroken', 'RumorExposed', 'PublicConfrontation', 'RumorBelieved'
+    ];
+    
+    memories.forEach(m => {
+      eventCounts[m.event] = (eventCounts[m.event] || 0) + 1;
+    });
+    
+    if(Object.keys(eventCounts).length === 0 && recentActions.length === 0){
+      summary.innerHTML = '<p class="social-history-empty">No significant history yet.</p>';
+    } else {
+      const summaryTitle = document.createElement('div');
+      summaryTitle.className = 'social-history-section-title';
+      summaryTitle.textContent = 'Key Events';
+      summary.appendChild(summaryTitle);
+      
+      const eventList = document.createElement('ul');
+      eventList.className = 'social-history-event-list';
+      
+      eventOrder.forEach(eventType => {
+        const count = eventCounts[eventType];
+        if(count){
+          const item = document.createElement('li');
+          item.className = 'social-history-event-item';
+          
+          // Determine if positive or negative event
+          const isPositive = ['AllianceFormed', 'PromiseMade', 'SecretShared', 'ConflictResolved', 'MediationSuccess'].includes(eventType);
+          item.classList.add(isPositive ? 'positive-event' : 'negative-event');
+          
+          const eventLabel = eventType.replace(/([A-Z])/g, ' $1').trim();
+          item.textContent = `${eventLabel} (${count}x)`;
+          eventList.appendChild(item);
+        }
+      });
+      
+      if(eventList.children.length > 0){
+        summary.appendChild(eventList);
+      }
+    }
+    
+    content.appendChild(summary);
+    
+    // Recent actions section
+    if(recentActions.length > 0){
+      const actionsSection = document.createElement('div');
+      actionsSection.className = 'social-history-actions';
+      
+      const actionsTitle = document.createElement('div');
+      actionsTitle.className = 'social-history-section-title';
+      actionsTitle.textContent = 'Recent Interactions';
+      actionsSection.appendChild(actionsTitle);
+      
+      const actionsList = document.createElement('ul');
+      actionsList.className = 'social-history-action-list';
+      
+      // Show last 5 actions
+      const recent = recentActions.slice(-5).reverse();
+      recent.forEach(action => {
+        const item = document.createElement('li');
+        item.className = 'social-history-action-item';
+        
+        const actionLabel = getActionById(action.action)?.label || action.action;
+        const weekLabel = `Week ${action.week}`;
+        const outcomeClass = action.outcome === 'positive' ? 'positive' : 
+                            action.outcome === 'negative' ? 'negative' : 'neutral';
+        
+        item.innerHTML = `
+          <span class="action-week">${weekLabel}:</span>
+          <span class="action-name">${actionLabel}</span>
+          <span class="action-outcome ${outcomeClass}">${action.outcome}</span>
+        `;
+        actionsList.appendChild(item);
+      });
+      
+      actionsSection.appendChild(actionsList);
+      content.appendChild(actionsSection);
+    }
+    
+    // Player traits section (for reference)
+    const targetPlayer = global.getP?.(targetId);
+    if(targetPlayer && targetPlayer.socialTraits){
+      const traitsSection = document.createElement('div');
+      traitsSection.className = 'social-history-traits';
+      
+      const traitsTitle = document.createElement('div');
+      traitsTitle.className = 'social-history-section-title';
+      traitsTitle.textContent = 'Known Traits';
+      traitsSection.appendChild(traitsTitle);
+      
+      const traitsList = document.createElement('div');
+      traitsList.className = 'social-trait-tags';
+      
+      targetPlayer.socialTraits.forEach(trait => {
+        const tag = document.createElement('span');
+        tag.className = 'social-trait-tag';
+        tag.textContent = trait;
+        traitsList.appendChild(tag);
+      });
+      
+      traitsSection.appendChild(traitsList);
+      content.appendChild(traitsSection);
+    }
+    
+    container.appendChild(content);
+    
+    // Toggle functionality
+    let isExpanded = false;
+    const toggleHistory = () => {
+      isExpanded = !isExpanded;
+      content.classList.toggle('collapsed');
+      header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+      content.setAttribute('aria-hidden', isExpanded ? 'false' : 'true');
+      toggle.textContent = isExpanded ? '▲' : '▼';
+    };
+    
+    header.onclick = toggleHistory;
+    header.addEventListener('keypress', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        toggleHistory();
+      }
+    });
+    
+    return container;
+  }
+
   // ============================================================================
   // PHASE INTEGRATION
   // ============================================================================
@@ -682,14 +1000,20 @@
     
     // Memory
     recordActionInMemory,
+    recordMemoryEvent,
     getPlayerMemory,
     
     // UI
     renderSocialManeuversUI,
+    createHistoryUI,
     
     // Phase hooks
     onSocialPhaseStart,
     onSocialPhaseEnd,
+    
+    // Modifiers
+    calculateTraitModifiers,
+    calculateMemoryModifiers,
     
     // Backward-compatible aliases (for problem statement requirements)
     startPhase: onSocialPhaseStart,
