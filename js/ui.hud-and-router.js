@@ -899,6 +899,13 @@ header.innerHTML = `
   function fastForwardPhase(){
     const game=g.game; if(!game) return;
     
+    // Anti fast-forward guard for social_intermission phase
+    if(game.phase === 'social_intermission' || game.phase === 'social'){
+      console.warn('[ff] ⚠️ Fast-forward blocked during social_intermission phase to prevent accidental skips');
+      console.trace('[ff] Stack trace for social phase fast-forward attempt:');
+      return;
+    }
+    
     // Log fast-forward activation
     console.info(`[ff] activate phase=${game.phase}`);
     

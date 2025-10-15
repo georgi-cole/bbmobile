@@ -10,12 +10,24 @@
   // CONFIGURATION & FEATURE FLAG
   // ============================================================================
   
-  function isEnabled(){
-    const enabled = global.game?.cfg?.enableSocialManeuvers === true;
-    // Log for runtime verification (as per problem statement requirements)
-    if(enabled){
-      console.info('[social-maneuvers] ✓ Feature flag enabled (USE_SOCIAL_MANEUVERS=true)');
+  // Initialize default enablement
+  function initDefaultFlag(){
+    if(!global.game) {
+      global.game = { cfg: {} };
     }
+    if(!global.game.cfg) {
+      global.game.cfg = {};
+    }
+    // Default to true if undefined
+    if(global.game.cfg.enableSocialManeuvers === undefined){
+      global.game.cfg.enableSocialManeuvers = true;
+      console.info('[social-maneuvers] ✓ Defaulted enableSocialManeuvers to TRUE (preloaded and enabled by default)');
+    }
+  }
+  
+  function isEnabled(){
+    initDefaultFlag(); // Ensure flag is initialized
+    const enabled = global.game?.cfg?.enableSocialManeuvers === true;
     return enabled;
   }
 
@@ -692,15 +704,28 @@
   // Backward-compatible alias: SocialManager -> SocialManeuvers
   global.SocialManager = global.SocialManeuvers;
   
-  // Backward-compatible flag getter: USE_SOCIAL_MANEUVERS
+  // Backward-compatible flag getter/setter: USE_SOCIAL_MANEUVERS
   Object.defineProperty(global, 'USE_SOCIAL_MANEUVERS', {
-    get: function() { return isEnabled(); },
+    get: function() { 
+      return isEnabled(); 
+    },
+    set: function(value) {
+      initDefaultFlag();
+      const oldValue = global.game.cfg.enableSocialManeuvers;
+      global.game.cfg.enableSocialManeuvers = !!value;
+      const newValue = global.game.cfg.enableSocialManeuvers;
+      console.info(`[social-maneuvers] Flag changed: ${oldValue} → ${newValue} (USE_SOCIAL_MANEUVERS=${newValue})`);
+    },
     enumerable: true,
     configurable: true
   });
 
-  console.info('[social-maneuvers] Module loaded successfully');
-  console.info('[social-maneuvers] Feature is ENABLED by default - disable via Settings > Social Maneuvers if desired');
-  console.info('[social-maneuvers] Runtime flag: window.USE_SOCIAL_MANEUVERS (currently:', isEnabled(), ')');
+  // Initialize on load
+  initDefaultFlag();
+  
+  console.info('[social-maneuvers] ✓ Module loaded successfully');
+  console.info('[social-maneuvers] ✓ Enabled by default (enableSocialManeuvers=true)');
+  console.info('[social-maneuvers] Runtime control: window.USE_SOCIAL_MANEUVERS = true/false');
+  console.info('[social-maneuvers] Current state: USE_SOCIAL_MANEUVERS =', isEnabled());
 
 })(window);

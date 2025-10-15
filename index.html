@@ -292,6 +292,9 @@
 <script src="js/ui.confirm-modal.js"></script>
 
 <!-- Game flows -->
+<!-- Social Maneuvers system (loaded before social.js to ensure availability) -->
+<script src="js/social-narrative.js"></script>
+<script src="js/social-maneuvers.js"></script>
 <script src="js/social.js"></script>
 <script src="js/minigames.js"></script><!-- Legacy stub - see docs/minigames.md -->
 
@@ -399,8 +402,7 @@
 
 <!-- Comprehensive Enhancement PR Scripts -->
 <script defer src="js/results-popup.js"></script>
-<script defer src="js/social-narrative.js"></script>
-<script defer src="js/social-maneuvers.js"></script>
+<!-- social-narrative.js and social-maneuvers.js moved earlier in load order (see Game flows section) -->
 
 <!-- Debug tools for competition fairness testing -->
 <script defer src="js/debug-tools.js"></script>

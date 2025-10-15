@@ -520,7 +520,7 @@
     if(you && !you.evicted){
       // Check if Social Maneuvers system is enabled
       if(global.SocialManeuvers?.isEnabled()){
-        console.info('[social] ✓ Rendering enhanced Social Maneuvers UI');
+        console.info('[social] ✓ Rendering Social Maneuvers UI (human present)');
         // Render enhanced Social Maneuvers UI
         const maneuversContainer = document.createElement('div');
         maneuversContainer.id = 'social-maneuvers-container';
@@ -528,11 +528,24 @@
         
         try{
           global.SocialManeuvers.renderSocialManeuversUI(maneuversContainer, you.id);
+          console.info('[social-maneuvers] ✓ Rendering Social Maneuvers UI completed');
         }catch(e){
-          console.error('[social] Failed to render Social Maneuvers UI:', e);
-          // Fallback to basic UI
-          console.info('[social] Falling back to basic social UI');
-          renderBasicSocialUI(box, you);
+          console.error('[social] ❌ Failed to render Social Maneuvers UI:', e);
+          console.error('[social] Error details:', e.stack);
+          console.info('[social] Maintaining social phase UI (no fallback to legacy)');
+          // Display error message in UI instead of falling back
+          const errorMsg = document.createElement('div');
+          errorMsg.className = 'social-error-message';
+          errorMsg.style.cssText = 'padding:12px;background:#2a1a1a;border:1px solid #663333;border-radius:8px;color:#ff9999;margin:8px 0;';
+          const strong = document.createElement('strong');
+          strong.textContent = '⚠️ Social Maneuvers UI Error';
+          errorMsg.appendChild(strong);
+          errorMsg.appendChild(document.createElement('br'));
+          const span = document.createElement('span');
+          span.className = 'tiny';
+          span.textContent = 'Check console for details. Phase continues.';
+          errorMsg.appendChild(span);
+          maneuversContainer.appendChild(errorMsg);
         }
       } else {
         console.info('[social] Rendering basic social UI (Social Maneuvers disabled)');
@@ -540,7 +553,12 @@
         renderBasicSocialUI(box, you);
       }
 
-      buildSocialDecisions();
+      // Only build legacy decision cards if Social Maneuvers is disabled
+      if(!global.SocialManeuvers?.isEnabled()){
+        buildSocialDecisions();
+      } else {
+        console.info('[social] Skipping legacy buildSocialDecisions() (using Social Maneuvers)');
+      }
     }
 
     const hint=document.createElement('div'); hint.className='tiny muted'; hint.style.marginTop='6px';
@@ -690,6 +708,7 @@
     g.__socialShown = 0;        // reset per intermission (max 3 prompts)
     g.__socialLogBudget = 6;    // reset ambient budget
 
+    console.info('[social] ✓ Entering social_intermission phase');
     global.tv?.say?.('Social Intermission');
     
     // Trigger social music
@@ -701,14 +720,16 @@
     // Initialize Social Maneuvers if enabled
     console.info('[social] Checking Social Maneuvers feature flag...');
     if(global.SocialManeuvers?.isEnabled()){
-      console.info('[social] ✓ Social Maneuvers ENABLED - triggering SocialManeuvers.startPhase()');
+      console.info('[social] ✓ Social Maneuvers path - Using new Social Maneuvers system');
       try{
         global.SocialManeuvers.onSocialPhaseStart();
+        console.info('[social-maneuvers] ✓ startPhase() triggered successfully');
       }catch(e){
-        console.error('[social] Failed to initialize Social Maneuvers:', e);
+        console.error('[social] ❌ Failed to initialize Social Maneuvers:', e);
+        console.error('[social] Maintaining social phase despite error (no fallback to legacy)');
       }
     } else {
-      console.info('[social] Social Maneuvers DISABLED - using legacy social system');
+      console.info('[social] Using legacy social simulation (Social Maneuvers disabled)');
     }
 
     const onDone = async ()=>{
