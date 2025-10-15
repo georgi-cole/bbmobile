@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Level Consistency Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #ffdc8b;
+      padding-bottom: 10px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 4px;
+      background: #2a2a2a;
+    }
+    .test-result.pass {
+      border-left: 4px solid #4caf50;
+    }
+    .test-result.fail {
+      border-left: 4px solid #f44336;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: linear-gradient(135deg, #ffdc8b 0%, #ffa500 100%);
+      border: none;
+      border-radius: 6px;
+      color: #1a1a1a;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 220, 139, 0.4);
+    }
+    .info-box {
+      padding: 15px;
+      margin: 20px 0;
+      background: #2a2a2a;
+      border-radius: 6px;
+      border-left: 4px solid #83bfff;
+    }
+    code {
+      background: #1a1a1a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #ffdc8b;
+    }
+  </style>
+</head>
+<body>
+  <h1>Level Consistency Test</h1>
+  <p>This test verifies that level calculations are consistent between the Leaderboard and Overview tabs.</p>
+
+  <div class="info-box">
+    <strong>Test Scenario:</strong> Create XP events and verify that both the fallback player state calculation 
+    and the main state calculation return the same level and XP values using the shared level thresholds.
+  </div>
+
+  <button onclick="runTests()">Run Tests</button>
+  <button onclick="clearData()">Clear Data</button>
+
+  <div id="results"></div>
+
+  <script type="module">
+    import * as progressionCore from './src/progression/dist/core.js';
+
+    window.progressionCore = progressionCore;
+
+    window.clearData = async function() {
+      try {
+        await progressionCore.reset();
+        document.getElementById('results').innerHTML = '<div class="test-result pass">✓ Data cleared successfully</div>';
+      } catch (error) {
+        document.getElementById('results').innerHTML = `<div class="test-result fail">✗ Error clearing data: ${error.message}</div>`;
+      }
+    };
+
+    window.runTests = async function() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="test-result">Running tests...</div>';
+      
+      const results = [];
+      
+      try {
+        // Initialize
+        await progressionCore.reset();
+        await progressionCore.initialize();
+        
+        // Test 1: Verify computeLevel is exported
+        results.push({
+          name: 'computeLevel function is exported',
+          pass: typeof progressionCore.computeLevel === 'function',
+          message: typeof progressionCore.computeLevel === 'function' 
+            ? 'computeLevel function is available' 
+            : 'computeLevel function is NOT available'
+        });
+        
+        // Test 2: Verify DEFAULT_LEVEL_THRESHOLDS is exported
+        results.push({
+          name: 'DEFAULT_LEVEL_THRESHOLDS is exported',
+          pass: Array.isArray(progressionCore.DEFAULT_LEVEL_THRESHOLDS),
+          message: Array.isArray(progressionCore.DEFAULT_LEVEL_THRESHOLDS)
+            ? `Level thresholds array has ${progressionCore.DEFAULT_LEVEL_THRESHOLDS.length} entries`
+            : 'DEFAULT_LEVEL_THRESHOLDS is NOT available'
+        });
+        
+        // Test 3: Create events for a test player
+        const testPlayerId = 'test-player-1';
+        
+        // Record multiple events to get meaningful XP
+        await progressionCore.recordEvent('HOH_WIN', 150, { playerId: testPlayerId, season: 1, week: 1 });
+        await progressionCore.recordEvent('POV_WIN', 125, { playerId: testPlayerId, season: 1, week: 2 });
+        await progressionCore.recordEvent('COMP_WIN', 100, { playerId: testPlayerId, season: 1, week: 3 });
+        
+        // Test 4: Get aggregate state (Overview tab method)
+        const aggregateState = await progressionCore.getCurrentState();
+        
+        results.push({
+          name: 'Aggregate state calculation',
+          pass: true,
+          message: `Total XP: ${aggregateState.totalXP}, Level: ${aggregateState.level}, Progress: ${aggregateState.progressPercent}%`
+        });
+        
+        // Test 5: Calculate player state using fallback method (Leaderboard method)
+        const allEvents = await progressionCore.getEvents();
+        const playerEvents = allEvents.filter(e => e.meta?.playerId === testPlayerId);
+        const totalXP = playerEvents.reduce((sum, e) => sum + (e.amount || 0), 0);
+        
+        let fallbackState;
+        if (progressionCore.computeLevel) {
+          const { level, nextLevelXP, currentLevelXP } = progressionCore.computeLevel(
+            totalXP, 
+            progressionCore.DEFAULT_LEVEL_THRESHOLDS
+          );
+          const progressPercent = currentLevelXP > 0 
+            ? Math.round(((totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100)
+            : 0;
+          
+          fallbackState = { totalXP, level, nextLevelXP, currentLevelXP, progressPercent };
+        } else {
+          fallbackState = { totalXP, level: 0, nextLevelXP: 0, currentLevelXP: 0, progressPercent: 0 };
+        }
+        
+        results.push({
+          name: 'Fallback player state calculation',
+          pass: true,
+          message: `Total XP: ${fallbackState.totalXP}, Level: ${fallbackState.level}, Progress: ${fallbackState.progressPercent}%`
+        });
+        
+        // Test 6: Verify consistency
+        const levelsMatch = aggregateState.level === fallbackState.level;
+        const xpMatches = aggregateState.totalXP === fallbackState.totalXP;
+        const progressMatches = Math.abs(aggregateState.progressPercent - fallbackState.progressPercent) <= 1; // Allow 1% rounding difference
+        
+        results.push({
+          name: 'Level consistency check',
+          pass: levelsMatch,
+          message: levelsMatch 
+            ? `✓ Levels match: ${aggregateState.level}` 
+            : `✗ Levels DO NOT match: Aggregate=${aggregateState.level}, Fallback=${fallbackState.level}`
+        });
+        
+        results.push({
+          name: 'XP consistency check',
+          pass: xpMatches,
+          message: xpMatches 
+            ? `✓ XP matches: ${aggregateState.totalXP}` 
+            : `✗ XP does NOT match: Aggregate=${aggregateState.totalXP}, Fallback=${fallbackState.totalXP}`
+        });
+        
+        results.push({
+          name: 'Progress consistency check',
+          pass: progressMatches,
+          message: progressMatches 
+            ? `✓ Progress matches: ~${aggregateState.progressPercent}%` 
+            : `✗ Progress does NOT match: Aggregate=${aggregateState.progressPercent}%, Fallback=${fallbackState.progressPercent}%`
+        });
+        
+        // Test 7: Test with different XP amounts to verify threshold calculations
+        const testCases = [
+          { xp: 0, expectedLevel: 1 },
+          { xp: 100, expectedLevel: 2 },
+          { xp: 250, expectedLevel: 3 },
+          { xp: 500, expectedLevel: 4 },
+          { xp: 850, expectedLevel: 5 },
+          { xp: 1300, expectedLevel: 6 },
+        ];
+        
+        for (const testCase of testCases) {
+          if (progressionCore.computeLevel) {
+            const { level } = progressionCore.computeLevel(testCase.xp, progressionCore.DEFAULT_LEVEL_THRESHOLDS);
+            const pass = level === testCase.expectedLevel;
+            results.push({
+              name: `Level threshold test: ${testCase.xp} XP`,
+              pass,
+              message: pass 
+                ? `✓ ${testCase.xp} XP = Level ${level}` 
+                : `✗ ${testCase.xp} XP: Expected Level ${testCase.expectedLevel}, Got Level ${level}`
+            });
+          }
+        }
+        
+      } catch (error) {
+        results.push({
+          name: 'Test execution',
+          pass: false,
+          message: `Error: ${error.message}\n${error.stack}`
+        });
+      }
+      
+      // Display results
+      const html = results.map(r => `
+        <div class="test-result ${r.pass ? 'pass' : 'fail'}">
+          <strong>${r.pass ? '✓' : '✗'} ${r.name}</strong>
+          <div style="margin-top: 5px; font-size: 14px;">${r.message}</div>
+        </div>
+      `).join('');
+      
+      resultsDiv.innerHTML = html;
+      
+      // Summary
+      const passed = results.filter(r => r.pass).length;
+      const total = results.length;
+      const summaryClass = passed === total ? 'pass' : 'fail';
+      
+      resultsDiv.innerHTML += `
+        <div class="test-result ${summaryClass}" style="margin-top: 20px; font-size: 18px;">
+          <strong>Summary: ${passed}/${total} tests passed</strong>
+        </div>
+      `;
+    };
+  </script>
+</body>
+</html>

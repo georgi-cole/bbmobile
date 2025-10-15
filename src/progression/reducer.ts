@@ -82,7 +82,7 @@ export function reduceEvents(
 /**
  * Compute level from total XP
  */
-function computeLevel(
+export function computeLevel(
   totalXP: number,
   thresholds: LevelThreshold[]
 ): { level: number; nextLevelXP: number; currentLevelXP: number } {

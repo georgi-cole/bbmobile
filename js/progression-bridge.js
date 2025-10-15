@@ -323,11 +323,15 @@
         const totalXP = playerEvents.reduce((sum, e) => sum + (e.amount || 0), 0);
         const eventsCount = playerEvents.length;
         
-        // Simple level calculation (100 XP per level)
-        const level = Math.floor(totalXP / 100) + 1;
-        const currentLevelXP = totalXP % 100;
-        const nextLevelXP = 100;
-        const progressPercent = Math.round((currentLevelXP / nextLevelXP) * 100);
+        // Use proper level calculation with thresholds (same as reducer)
+        const levelThresholds = progressionCore.DEFAULT_LEVEL_THRESHOLDS || [];
+        const { level, nextLevelXP, currentLevelXP } = progressionCore.computeLevel 
+          ? progressionCore.computeLevel(totalXP, levelThresholds)
+          : { level: 1, nextLevelXP: 100, currentLevelXP: 0 };
+        
+        const progressPercent = currentLevelXP > 0 
+          ? Math.round(((totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100)
+          : 0;
         
         return {
           totalXP,
