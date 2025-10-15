@@ -1203,8 +1203,8 @@ button:focus-visible,.btn:focus-visible{
 
 /* 08. REVEAL CARDS + BIG ANNOUNCEMENT -------------------------------------- */
 .revealCard{
-  /* Enhanced glassmorphism with gradient - now using tokens - updated to 65% opacity */
-  background:linear-gradient(145deg, var(--popup-bg-start, rgba(28,43,62,.65)), var(--popup-bg-end, rgba(12,22,36,.65)));
+  /* Enhanced glassmorphism with gradient - now using tokens - updated to 75% opacity */
+  background:linear-gradient(145deg, var(--popup-bg-start, rgba(28,43,62,.75)), var(--popup-bg-end, rgba(12,22,36,.75)));
   backdrop-filter:blur(var(--popup-backdrop-blur, 16px)) saturate(1.4);
   -webkit-backdrop-filter:blur(var(--popup-backdrop-blur, 16px)) saturate(1.4);
   border:1px solid var(--popup-border, rgba(110,160,220,.25));

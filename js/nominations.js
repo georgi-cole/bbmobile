@@ -209,7 +209,7 @@
   }
 
   /**
-   * Show all nominee reaction popups simultaneously in a column layout
+   * Show all nominee reaction popups simultaneously in a grid layout (2x2 for 3-4 nominees, 1 row for 2)
    * @param {Array<number>} nomineeIds - Array of nominee player IDs
    * @returns {Promise} Resolves when all popups are closed
    */
@@ -220,7 +220,7 @@
         return;
       }
 
-      // Create container for stacked reactions
+      // Create container for reactions
       const host = document.getElementById('tvOverlay');
       if(!host){
         resolve();
@@ -230,20 +230,37 @@
       // Clear existing content
       host.innerHTML = '';
 
-      // Create column container
-      const column = document.createElement('div');
-      column.className = 'nominee-reactions-column';
-      column.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-        padding: 20px;
-        box-sizing: border-box;
-      `;
+      // Determine layout: 2 nominees = 1 row, 3-4 nominees = 2x2 grid
+      const isGrid = nomineeIds.length >= 3;
+      
+      // Create grid or row container
+      const container = document.createElement('div');
+      container.className = 'nominee-reactions-container';
+      container.style.cssText = isGrid 
+        ? `
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          max-width: 92%;
+          padding: 16px;
+          box-sizing: border-box;
+          margin: 0 auto;
+        `
+        : `
+          display: flex;
+          flex-direction: row;
+          gap: 12px;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          max-width: 92%;
+          padding: 16px;
+          box-sizing: border-box;
+          margin: 0 auto;
+        `;
 
       // Create reaction card for each nominee
       nomineeIds.forEach((playerId) => {
@@ -257,33 +274,38 @@
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard nominee-reaction-card';
         card.style.cssText = `
-          width: 90%;
-          max-width: 400px;
+          width: 100%;
+          max-width: ${isGrid ? '100%' : '45%'};
           margin: 0;
-          padding: 14px 18px;
+          padding: 12px 16px;
           animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         `;
 
         // Title with nominee name
         const title = document.createElement('h3');
         title.textContent = player.name;
-        title.style.marginBottom = '10px';
+        title.style.marginBottom = '8px';
+        title.style.fontSize = isGrid ? '0.95rem' : '1.05rem';
         card.appendChild(title);
 
         // Quote
         const quoteDiv = document.createElement('div');
         quoteDiv.className = 'big';
         quoteDiv.textContent = `"${quote}"`;
-        quoteDiv.style.fontSize = '0.85rem';
+        quoteDiv.style.fontSize = isGrid ? '0.75rem' : '0.85rem';
+        quoteDiv.style.lineHeight = '1.4';
         card.appendChild(quoteDiv);
 
         // Avatar
         const avatarRow = document.createElement('div');
         avatarRow.className = 'rc-face-row';
-        avatarRow.style.marginTop = '12px';
+        avatarRow.style.marginTop = '10px';
         
         const img = document.createElement('img');
-        img.className = 'rc-face';
+        img.className = isGrid ? 'rc-face small' : 'rc-face';
         img.alt = player.name;
         const resolveAvatar = (global.Game || global).resolveAvatar;
         const getDicebearUrl = global.getDicebearUrl || function(seed) {
@@ -293,10 +315,10 @@
         avatarRow.appendChild(img);
         card.appendChild(avatarRow);
 
-        column.appendChild(card);
+        container.appendChild(card);
       });
 
-      host.appendChild(column);
+      host.appendChild(container);
       document.getElementById('tv')?.classList.add('tvTall');
 
       // Remove after duration
@@ -331,24 +353,34 @@
       g.__suppressNomBadges = true; global.updateHud?.();
 
       // Step 1: HOH addresses the house (faux TV) - only show HOH avatar
+      // This must appear first and complete before any nominee popups
       if(global.buildCardWithAvatars){
         // Use buildCardWithAvatars to explicitly show only HOH avatar
         const hohName = hoh?.name || 'HOH';
-        const speech = hohSpeech(hoh, g.nominees);
-        global.buildCardWithAvatars({
-          title: 'Nomination Ceremony',
-          lines: [`${hohName} addresses the house.`],
-          tone: 'noms',
-          duration: 2400,
-          actorId: hoh?.id,
-          targetIds: [], // No nominee avatars in initial popup
-          type: 'hohSpeech'
+        await new Promise((resolve) => {
+          const card = global.buildCardWithAvatars({
+            title: 'Nomination Ceremony',
+            lines: [`${hohName} addresses the house.`],
+            tone: 'noms',
+            duration: 2400,
+            actorId: hoh?.id,
+            targetIds: [], // No nominee avatars in initial popup
+            type: 'hohSpeech'
+          });
+          
+          // Manually remove card after duration
+          setTimeout(() => {
+            const host = document.getElementById('tvOverlay');
+            if(host) host.innerHTML = '';
+            document.getElementById('tv')?.classList.remove('tvTall');
+            resolve();
+          }, 2400);
         });
       } else {
         // Fallback to regular showCard
         global.showCard?.('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
+        try{ await global.cardQueueWaitIdle?.(); }catch{}
       }
-      try{ await global.cardQueueWaitIdle?.(); }catch{}
       
       try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch{}
 
@@ -359,14 +391,53 @@
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       }
 
-      // Step 3: Show nominee reaction popups simultaneously in a column
+      // Step 3: Show nominee reaction popups simultaneously (2x2 grid for 3-4, row for 2)
       if(ids.length > 0){
         await showNomineeReactionsSimultaneously(ids);
       }
       
-      // Step 4: Show ceremony conclusion message (faux TV)
-      global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
-      try{ await global.cardQueueWaitIdle?.(); }catch{}
+      // Step 4: Show ceremony conclusion message (faux TV styled like nominee cards)
+      await new Promise((resolve) => {
+        const host = document.getElementById('tvOverlay');
+        if(host){
+          host.innerHTML = '';
+          
+          const card = document.createElement('div');
+          card.className = 'revealCard diaryRoomCard';
+          card.style.cssText = `
+            width: 90%;
+            max-width: 450px;
+            margin: 0 auto;
+            padding: 20px 24px;
+            text-align: center;
+            animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+          `;
+          
+          const title = document.createElement('h3');
+          title.textContent = 'Nomination Ceremony';
+          title.style.marginBottom = '12px';
+          card.appendChild(title);
+          
+          const message = document.createElement('div');
+          message.className = 'big';
+          message.textContent = 'This ceremony is adjourned.';
+          message.style.fontSize = '0.9rem';
+          card.appendChild(message);
+          
+          host.appendChild(card);
+          document.getElementById('tv')?.classList.add('tvTall');
+          
+          setTimeout(() => {
+            host.innerHTML = '';
+            document.getElementById('tv')?.classList.remove('tvTall');
+            resolve();
+          }, 2000);
+        } else {
+          // Fallback
+          global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
+          setTimeout(resolve, 2000);
+        }
+      });
 
       // TV screen cards disappear, nominee tags update, game advances
       g.__suppressNomBadges = false; global.updateHud?.();

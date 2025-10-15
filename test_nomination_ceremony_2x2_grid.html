@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Nomination Ceremony 2x2 Grid Layout</title>
+  <link rel="stylesheet" href="styles.css?v=test">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a0f16;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+    }
+    .test-controls {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(20, 30, 45, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(110, 160, 220, 0.25);
+      max-width: 250px;
+    }
+    .test-controls h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      color: #4CAF50;
+    }
+    .test-controls button {
+      display: block;
+      margin: 8px 0;
+      padding: 10px 15px;
+      background: #2a4766;
+      color: #e0e0e0;
+      border: 1px solid #356089;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 14px;
+    }
+    .test-controls button:hover {
+      background: #356089;
+    }
+    .test-info {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(28, 43, 62, 0.5);
+      border-radius: 12px;
+      border-left: 4px solid #4CAF50;
+      max-width: 900px;
+    }
+    .test-info h2 {
+      margin-top: 0;
+      color: #4CAF50;
+    }
+    .test-info ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .test-info li {
+      margin: 8px 0;
+      line-height: 1.6;
+    }
+    #tv {
+      margin: 20px auto;
+      max-width: 900px;
+      position: relative;
+      background: linear-gradient(135deg, #0e1a28, #1a2b3f);
+      border: 3px solid #356089;
+      border-radius: 24px;
+      padding: 40px 30px;
+      min-height: 500px;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+    }
+    #tv.tvTall {
+      min-height: 600px;
+    }
+    #tvOverlay {
+      position: absolute;
+      inset: 40px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h3>🧪 Test Controls</h3>
+    <button id="testHohSpeech">HOH Speech</button>
+    <button id="test2Nominees">2 Nominees (Row)</button>
+    <button id="test3Nominees">3 Nominees (Grid)</button>
+    <button id="test4Nominees">4 Nominees (Grid)</button>
+    <button id="testCeremonyEnd">Ceremony End</button>
+    <button id="testFullCeremony">Full Ceremony</button>
+    <button id="clearPopups">Clear Popups</button>
+  </div>
+
+  <div class="test-info">
+    <h2>🧪 Nomination Ceremony - 2x2 Grid Layout Test</h2>
+    <p><strong>Expected Behavior (from issue #1-4):</strong></p>
+    <ul>
+      <li>✅ HOH speech popup shows only HOH avatar (not nominee avatars)</li>
+      <li>✅ 2 nominees: displayed in single row layout</li>
+      <li>✅ 3-4 nominees: displayed in 2x2 grid layout (NOT column)</li>
+      <li>✅ Each nominee reaction shows: avatar, name, and unique quote</li>
+      <li>✅ All popups have 75% opacity background (updated from 65%)</li>
+      <li>✅ "Ceremony is adjourned" popup styled like nominee cards</li>
+      <li>✅ All popups are contained within the faux TV frame</li>
+    </ul>
+  </div>
+
+  <div id="tv">
+    <div id="tvOverlay"></div>
+  </div>
+
+  <script src="js/ui.overlay-and-logs.js"></script>
+  <script>
+    // Mock game data
+    window.game = {
+      cfg: { fxCards: true },
+      hohId: 1,
+      nominees: [2, 3],
+      players: [
+        { id: 1, name: 'Alice', avatar: null, evicted: false },
+        { id: 2, name: 'Bob', avatar: null, evicted: false },
+        { id: 3, name: 'Charlie', avatar: null, evicted: false },
+        { id: 4, name: 'Diana', avatar: null, evicted: false },
+        { id: 5, name: 'Eve', avatar: null, evicted: false }
+      ]
+    };
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.getDicebearUrl = function(seed) {
+      return 'https://api.dicebear.com/6.x/bottts/svg?seed=' + encodeURIComponent(seed || 'player');
+    };
+
+    window.resolveAvatar = function(playerOrId) {
+      const player = typeof playerOrId === 'object' ? playerOrId : window.getP(playerOrId);
+      return player && player.avatar || window.getDicebearUrl((player && player.name) || 'player');
+    };
+
+    // Nominee reaction quotes (from nominations.js)
+    const NOMINEE_REACTIONS = [
+      'I am shocked, but I am ready to fight for my place here.',
+      'I did not see this coming at all.',
+      'I have a lot of game left to play — this is not over.',
+      'I respect the decision, but I am not giving up.',
+      'I am going to prove why I deserve to stay.',
+      'This nomination just lit a fire under me.',
+      'I will show everyone what I am made of this week.',
+      'I am disappointed, but I know I can win the veto.',
+      'This is a wake-up call — time to step up my game.',
+      'I will use this as motivation to keep fighting.'
+    ];
+
+    // Test HOH speech
+    function testHohSpeech() {
+      const hoh = window.getP(1);
+      if (window.buildCardWithAvatars) {
+        const card = window.buildCardWithAvatars({
+          title: 'Nomination Ceremony',
+          lines: [hoh.name + ' addresses the house.'],
+          tone: 'noms',
+          duration: 2400,
+          actorId: hoh.id,
+          targetIds: [], // No nominee avatars
+          type: 'hohSpeech'
+        });
+        setTimeout(function() {
+          const host = document.getElementById('tvOverlay');
+          if(host) host.innerHTML = '';
+          var tv = document.getElementById('tv');
+          if(tv) tv.classList.remove('tvTall');
+        }, 2400);
+      }
+      console.log('✅ HOH speech displayed');
+    }
+
+    // Test nominee reactions in grid or row
+    function testNomineeReactions(nomineeIds) {
+      const host = document.getElementById('tvOverlay');
+      host.innerHTML = '';
+
+      const isGrid = nomineeIds.length >= 3;
+      console.log('Testing ' + nomineeIds.length + ' nominees in ' + (isGrid ? 'grid' : 'row') + ' layout');
+
+      const container = document.createElement('div');
+      container.className = 'nominee-reactions-container';
+      container.style.cssText = isGrid 
+        ? 'display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 92%; padding: 16px; box-sizing: border-box; margin: 0 auto;'
+        : 'display: flex; flex-direction: row; gap: 12px; width: 100%; max-width: 92%; padding: 16px; box-sizing: border-box; margin: 0 auto;';
+
+      nomineeIds.forEach(function(playerId) {
+        const player = window.getP(playerId);
+        if(!player) return;
+
+        const quote = NOMINEE_REACTIONS[Math.floor(Math.random() * NOMINEE_REACTIONS.length)];
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard nominee-reaction-card';
+        card.style.cssText = 'width: 100%; max-width: ' + (isGrid ? '100%' : '45%') + '; margin: 0; padding: 12px 16px; animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards; display: flex; flex-direction: column; align-items: center;';
+
+        const title = document.createElement('h3');
+        title.textContent = player.name;
+        title.style.marginBottom = '8px';
+        title.style.fontSize = isGrid ? '0.95rem' : '1.05rem';
+        card.appendChild(title);
+
+        const quoteDiv = document.createElement('div');
+        quoteDiv.className = 'big';
+        quoteDiv.textContent = '"' + quote + '"';
+        quoteDiv.style.fontSize = isGrid ? '0.75rem' : '0.85rem';
+        quoteDiv.style.lineHeight = '1.4';
+        card.appendChild(quoteDiv);
+
+        const avatarRow = document.createElement('div');
+        avatarRow.className = 'rc-face-row';
+        avatarRow.style.marginTop = '10px';
+        
+        const img = document.createElement('img');
+        img.className = isGrid ? 'rc-face small' : 'rc-face';
+        img.alt = player.name;
+        img.src = window.resolveAvatar(player);
+        avatarRow.appendChild(img);
+        card.appendChild(avatarRow);
+
+        container.appendChild(card);
+      });
+
+      host.appendChild(container);
+      document.getElementById('tv').classList.add('tvTall');
+      console.log('✅ ' + nomineeIds.length + ' nominees displayed in ' + (isGrid ? '2x2 grid' : 'row'));
+    }
+
+    // Test ceremony end
+    function testCeremonyEnd() {
+      const host = document.getElementById('tvOverlay');
+      host.innerHTML = '';
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = 'width: 90%; max-width: 450px; margin: 0 auto; padding: 20px 24px; text-align: center; animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Nomination Ceremony';
+      title.style.marginBottom = '12px';
+      card.appendChild(title);
+      
+      const message = document.createElement('div');
+      message.className = 'big';
+      message.textContent = 'This ceremony is adjourned.';
+      message.style.fontSize = '0.9rem';
+      card.appendChild(message);
+      
+      host.appendChild(card);
+      document.getElementById('tv').classList.add('tvTall');
+      console.log('✅ Ceremony end message displayed');
+    }
+
+    // Full ceremony test
+    async function testFullCeremony() {
+      console.log('🎬 Starting full ceremony test...');
+      testHohSpeech();
+      await new Promise(function(r) { setTimeout(r, 2400); });
+      testNomineeReactions([2, 3, 4, 5]);
+      await new Promise(function(r) { setTimeout(r, 3500); });
+      testCeremonyEnd();
+      await new Promise(function(r) { setTimeout(r, 2000); });
+      clearPopups();
+      console.log('✅ Full ceremony test complete');
+    }
+
+    // Clear popups
+    function clearPopups() {
+      document.getElementById('tvOverlay').innerHTML = '';
+      document.getElementById('tv').classList.remove('tvTall');
+      console.log('🧹 Cleared');
+    }
+
+    // Wire buttons
+    document.getElementById('testHohSpeech').onclick = testHohSpeech;
+    document.getElementById('test2Nominees').onclick = function() { testNomineeReactions([2, 3]); };
+    document.getElementById('test3Nominees').onclick = function() { testNomineeReactions([2, 3, 4]); };
+    document.getElementById('test4Nominees').onclick = function() { testNomineeReactions([2, 3, 4, 5]); };
+    document.getElementById('testCeremonyEnd').onclick = testCeremonyEnd;
+    document.getElementById('testFullCeremony').onclick = testFullCeremony;
+    document.getElementById('clearPopups').onclick = clearPopups;
+
+    console.log('✓ Test page ready');
+  </script>
+</body>
+</html>
