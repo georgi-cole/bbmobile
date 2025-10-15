@@ -128,12 +128,32 @@
 
     function displayResults() {
       const container = document.getElementById('test-results');
-      container.innerHTML = results.map(r => `
-        <div class="test-result ${r.passed ? 'pass' : 'fail'}">
-          <strong>${r.passed ? '✓' : '✗'}</strong> ${r.testName}
-          ${r.message ? `<br><span style="font-size: 0.9em; opacity: 0.8;">${r.message}</span>` : ''}
-        </div>
-      `).join('');
+      container.innerHTML = ''; // Clear previous results
+      results.forEach(r => {
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'test-result ' + (r.passed ? 'pass' : 'fail');
+
+        const icon = document.createElement('strong');
+        icon.textContent = r.passed ? '✓' : '✗';
+        resultDiv.appendChild(icon);
+
+        // Add test name
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = ' ' + r.testName;
+        resultDiv.appendChild(nameSpan);
+
+        // Add message if present
+        if (r.message) {
+          resultDiv.appendChild(document.createElement('br'));
+          const msgSpan = document.createElement('span');
+          msgSpan.style.fontSize = '0.9em';
+          msgSpan.style.opacity = '0.8';
+          msgSpan.textContent = r.message;
+          resultDiv.appendChild(msgSpan);
+        }
+
+        container.appendChild(resultDiv);
+      });
     }
 
     // Wait a bit for modules to initialize
