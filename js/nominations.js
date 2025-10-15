@@ -208,6 +208,107 @@
     });
   }
 
+  /**
+   * Show all nominee reaction popups simultaneously in a column layout
+   * @param {Array<number>} nomineeIds - Array of nominee player IDs
+   * @returns {Promise} Resolves when all popups are closed
+   */
+  function showNomineeReactionsSimultaneously(nomineeIds){
+    return new Promise((resolve) => {
+      if(!nomineeIds || nomineeIds.length === 0){
+        resolve();
+        return;
+      }
+
+      // Create container for stacked reactions
+      const host = document.getElementById('tvOverlay');
+      if(!host){
+        resolve();
+        return;
+      }
+
+      // Clear existing content
+      host.innerHTML = '';
+
+      // Create column container
+      const column = document.createElement('div');
+      column.className = 'nominee-reactions-column';
+      column.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+      `;
+
+      // Create reaction card for each nominee
+      nomineeIds.forEach((playerId) => {
+        const player = global.getP(playerId);
+        if(!player) return;
+
+        // Pick a unique random reaction quote
+        const quote = NOMINEE_REACTIONS[Math.floor((global.rng?.()||Math.random())*NOMINEE_REACTIONS.length)];
+
+        // Create reaction card
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard nominee-reaction-card';
+        card.style.cssText = `
+          width: 90%;
+          max-width: 400px;
+          margin: 0;
+          padding: 14px 18px;
+          animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+        `;
+
+        // Title with nominee name
+        const title = document.createElement('h3');
+        title.textContent = player.name;
+        title.style.marginBottom = '10px';
+        card.appendChild(title);
+
+        // Quote
+        const quoteDiv = document.createElement('div');
+        quoteDiv.className = 'big';
+        quoteDiv.textContent = `"${quote}"`;
+        quoteDiv.style.fontSize = '0.85rem';
+        card.appendChild(quoteDiv);
+
+        // Avatar
+        const avatarRow = document.createElement('div');
+        avatarRow.className = 'rc-face-row';
+        avatarRow.style.marginTop = '12px';
+        
+        const img = document.createElement('img');
+        img.className = 'rc-face';
+        img.alt = player.name;
+        const resolveAvatar = (global.Game || global).resolveAvatar;
+        const getDicebearUrl = global.getDicebearUrl || function(seed) {
+          return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+        };
+        img.src = resolveAvatar?.(player || playerId) || player?.avatar || player?.img || player?.photo || getDicebearUrl(player?.name || String(playerId));
+        avatarRow.appendChild(img);
+        card.appendChild(avatarRow);
+
+        column.appendChild(card);
+      });
+
+      host.appendChild(column);
+      document.getElementById('tv')?.classList.add('tvTall');
+
+      // Remove after duration
+      const duration = 3500;
+      setTimeout(() => {
+        host.innerHTML = '';
+        document.getElementById('tv')?.classList.remove('tvTall');
+        resolve();
+      }, duration);
+    });
+  }
+
   async function finalizeNoms(){
     const g=global.game;
     if(g.nomsLocked || g.__nomsCommitted) return; // already locked
@@ -229,8 +330,24 @@
       const ids=(g.nominees||[]).slice();
       g.__suppressNomBadges = true; global.updateHud?.();
 
-      // Step 1: HOH addresses the house (faux TV)
-      global.showCard?.('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
+      // Step 1: HOH addresses the house (faux TV) - only show HOH avatar
+      if(global.buildCardWithAvatars){
+        // Use buildCardWithAvatars to explicitly show only HOH avatar
+        const hohName = hoh?.name || 'HOH';
+        const speech = hohSpeech(hoh, g.nominees);
+        global.buildCardWithAvatars({
+          title: 'Nomination Ceremony',
+          lines: [`${hohName} addresses the house.`],
+          tone: 'noms',
+          duration: 2400,
+          actorId: hoh?.id,
+          targetIds: [], // No nominee avatars in initial popup
+          type: 'hohSpeech'
+        });
+      } else {
+        // Fallback to regular showCard
+        global.showCard?.('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
+      }
       try{ await global.cardQueueWaitIdle?.(); }catch{}
       
       try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch{}
@@ -242,13 +359,9 @@
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       }
 
-      // Step 3: Show nominee reaction popups with quotes
-      for(let i=0; i<ids.length; i++){
-        await showNomineeReaction(ids[i]);
-        // Small delay between reactions
-        if(i < ids.length - 1){
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
+      // Step 3: Show nominee reaction popups simultaneously in a column
+      if(ids.length > 0){
+        await showNomineeReactionsSimultaneously(ids);
       }
       
       // Step 4: Show ceremony conclusion message (faux TV)
