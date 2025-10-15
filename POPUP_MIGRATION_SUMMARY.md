@@ -1,8 +1,16 @@
-# PR D: Popup System Refresh - Implementation Summary
+# PR D: Popup System Refresh - Implementation Summary [DEPRECATED]
 
-## Overview
+## ⚠️ SYSTEM REMOVED
 
-This PR implements a comprehensive popup system refresh for the Big Brother Mobile game, introducing modern accessibility features, telemetry tracking, and a staged rollout strategy. The implementation follows a zero-risk migration approach with feature flags enabling/disabling the new system.
+**This popup system has been removed and replaced with legacy faux TV (global.showCard) approach.**
+
+The PopupManager, BasePopup, and related popup system code introduced regression where popups became full modals instead of staying contained within the faux TV frame. All popups now use the original `global.showCard()` implementation which properly constrains content within the TV screen and wraps text as needed.
+
+---
+
+## Original Overview (Historical)
+
+This PR implemented a comprehensive popup system refresh for the Big Brother Mobile game, introducing modern accessibility features, telemetry tracking, and a staged rollout strategy. The implementation followed a zero-risk migration approach with feature flags enabling/disabling the new system.
 
 ## What Was Delivered
 
