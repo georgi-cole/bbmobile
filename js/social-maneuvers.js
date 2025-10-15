@@ -32,54 +32,239 @@
   }
 
   // ============================================================================
-  // SOCIAL ENERGY SYSTEM
+  // SOCIAL RESOURCES SYSTEM (Energy, Influence, Information)
   // ============================================================================
   
-  const DEFAULT_ENERGY = 3; // Default energy points per social phase
-  const MAX_ENERGY = 5;
-
-  function initSocialEnergy(){
-    const g = global.game;
-    if(!g) return;
-    
-    if(!g.__socialEnergy){
-      g.__socialEnergy = new Map();
+  // Resource configuration with defaults
+  const RESOURCE_CONFIG = {
+    energy: {
+      default: 3,
+      max: 5,
+      weeklyReset: true,      // Resets to default at week start
+      carryover: false,       // Does not carry over between weeks
+      description: 'Energy represents your social stamina and ability to take actions during the social phase.',
+      examples: 'Used for conversations, strategizing, and building relationships.'
+    },
+    influence: {
+      default: 2,
+      max: 10,
+      weeklyReset: false,     // Persists between weeks
+      carryover: true,        // Carries over with cap
+      description: 'Influence represents your social capital and ability to sway others.',
+      examples: 'Earned through successful actions, used for high-impact maneuvers.'
+    },
+    information: {
+      default: 1,
+      max: 8,
+      weeklyReset: false,     // Persists between weeks
+      carryover: true,        // Carries over with cap
+      description: 'Information represents intelligence gathered about other players.',
+      examples: 'Earned through observation and interrogation, used for strategic planning.'
     }
-    
-    // Initialize energy for all alive players at start of social phase
-    const alivePlayers = global.alivePlayers?.() || [];
-    alivePlayers.forEach(p => {
-      if(!g.__socialEnergy.has(p.id)){
-        g.__socialEnergy.set(p.id, DEFAULT_ENERGY);
+  };
+
+  // Legacy constants for backward compatibility
+  const DEFAULT_ENERGY = RESOURCE_CONFIG.energy.default;
+  const MAX_ENERGY = RESOURCE_CONFIG.energy.max;
+
+  // ============================================================================
+  // SOCIAL RESOURCES SERVICE
+  // ============================================================================
+  
+  const SocialResources = {
+    // Initialize resources for a player
+    init(playerId) {
+      const g = global.game;
+      if(!g) return;
+      
+      if(!g.__socialResources){
+        g.__socialResources = new Map();
       }
-    });
+      
+      if(!g.__socialResources.has(playerId)){
+        g.__socialResources.set(playerId, {
+          energy: RESOURCE_CONFIG.energy.default,
+          influence: RESOURCE_CONFIG.influence.default,
+          information: RESOURCE_CONFIG.information.default,
+          lastWeekReset: g.week || 1
+        });
+      }
+    },
+    
+    // Get a specific resource value
+    get(playerId, resourceType) {
+      const g = global.game;
+      if(!g?.__socialResources) {
+        this.init(playerId);
+      }
+      
+      const resources = g.__socialResources.get(playerId);
+      if(!resources) {
+        this.init(playerId);
+        return RESOURCE_CONFIG[resourceType]?.default || 0;
+      }
+      
+      return resources[resourceType] ?? RESOURCE_CONFIG[resourceType]?.default ?? 0;
+    },
+    
+    // Get all resources for a player
+    getAll(playerId) {
+      return {
+        energy: this.get(playerId, 'energy'),
+        influence: this.get(playerId, 'influence'),
+        information: this.get(playerId, 'information')
+      };
+    },
+    
+    // Set a specific resource value (with capping)
+    set(playerId, resourceType, amount) {
+      const g = global.game;
+      if(!g) return false;
+      
+      this.init(playerId);
+      const config = RESOURCE_CONFIG[resourceType];
+      if(!config) return false;
+      
+      const resources = g.__socialResources.get(playerId);
+      const capped = Math.max(0, Math.min(config.max, amount));
+      resources[resourceType] = capped;
+      
+      // Log telemetry
+      this._logTelemetry(playerId, resourceType, 'set', capped);
+      
+      return true;
+    },
+    
+    // Spend resources (returns true if successful)
+    spend(playerId, costs) {
+      // Check if player has sufficient resources
+      for(const [resourceType, cost] of Object.entries(costs)) {
+        if(cost > 0 && this.get(playerId, resourceType) < cost) {
+          return { success: false, insufficient: resourceType };
+        }
+      }
+      
+      // Deduct resources
+      for(const [resourceType, cost] of Object.entries(costs)) {
+        if(cost > 0) {
+          const current = this.get(playerId, resourceType);
+          this.set(playerId, resourceType, current - cost);
+        }
+      }
+      
+      // Log telemetry
+      this._logTelemetry(playerId, 'multiple', 'spend', costs);
+      
+      return { success: true };
+    },
+    
+    // Earn resources
+    earn(playerId, gains) {
+      for(const [resourceType, amount] of Object.entries(gains)) {
+        if(amount > 0) {
+          const current = this.get(playerId, resourceType);
+          this.set(playerId, resourceType, current + amount);
+        }
+      }
+      
+      // Log telemetry
+      this._logTelemetry(playerId, 'multiple', 'earn', gains);
+      
+      return { success: true };
+    },
+    
+    // Reset resources at week start (respects carryover rules)
+    resetWeekly(playerId) {
+      const g = global.game;
+      if(!g) return;
+      
+      this.init(playerId);
+      const resources = g.__socialResources.get(playerId);
+      const currentWeek = g.week || 1;
+      
+      // Only reset if we're in a new week
+      if(resources.lastWeekReset >= currentWeek) {
+        return;
+      }
+      
+      for(const [resourceType, config] of Object.entries(RESOURCE_CONFIG)) {
+        if(config.weeklyReset) {
+          // Reset to default
+          resources[resourceType] = config.default;
+        } else if(config.carryover) {
+          // Cap at max (carryover with ceiling)
+          resources[resourceType] = Math.min(resources[resourceType], config.max);
+        }
+      }
+      
+      resources.lastWeekReset = currentWeek;
+      
+      console.info(`[social-resources] Weekly reset for player ${playerId} at week ${currentWeek}`);
+      this._logTelemetry(playerId, 'all', 'reset', resources);
+    },
+    
+    // Check if player can afford an action
+    canAfford(playerId, costs) {
+      for(const [resourceType, cost] of Object.entries(costs)) {
+        if(cost > 0 && this.get(playerId, resourceType) < cost) {
+          return false;
+        }
+      }
+      return true;
+    },
+    
+    // Telemetry logging
+    _logTelemetry(playerId, resourceType, operation, value) {
+      const g = global.game;
+      if(!g) return;
+      
+      if(!g.__socialResourcesTelemetry) {
+        g.__socialResourcesTelemetry = [];
+      }
+      
+      const entry = {
+        timestamp: Date.now(),
+        week: g.week || 1,
+        phase: g.phase || 'unknown',
+        playerId,
+        resourceType,
+        operation,
+        value,
+        balance: this.getAll(playerId)
+      };
+      
+      g.__socialResourcesTelemetry.push(entry);
+      
+      // Keep only last 100 entries
+      if(g.__socialResourcesTelemetry.length > 100) {
+        g.__socialResourcesTelemetry.shift();
+      }
+      
+      console.info('[social-resources] Telemetry:', operation, resourceType, value, 'Balance:', entry.balance);
+    }
+  };
+
+  // Legacy functions for backward compatibility
+  function initSocialEnergy(){
+    const alivePlayers = global.alivePlayers?.() || [];
+    alivePlayers.forEach(p => SocialResources.init(p.id));
   }
 
   function getEnergy(playerId){
-    const g = global.game;
-    if(!g?.__socialEnergy) return DEFAULT_ENERGY;
-    return g.__socialEnergy.get(playerId) ?? DEFAULT_ENERGY;
+    return SocialResources.get(playerId, 'energy');
   }
 
   function setEnergy(playerId, amount){
-    const g = global.game;
-    if(!g) return;
-    initSocialEnergy();
-    g.__socialEnergy.set(playerId, Math.max(0, Math.min(MAX_ENERGY, amount)));
+    SocialResources.set(playerId, 'energy', amount);
   }
 
   function spendEnergy(playerId, cost){
-    const current = getEnergy(playerId);
-    if(current < cost){
-      return false; // Not enough energy
-    }
-    setEnergy(playerId, current - cost);
-    return true;
+    const result = SocialResources.spend(playerId, { energy: cost });
+    return result.success;
   }
 
   function restoreEnergy(playerId, amount){
-    const current = getEnergy(playerId);
-    setEnergy(playerId, current + amount);
+    SocialResources.earn(playerId, { energy: amount });
   }
 
   // ============================================================================
@@ -90,7 +275,9 @@
     {
       id: 'smalltalk',
       label: 'Small Talk',
-      cost: 1,
+      cost: 1, // Legacy field for backward compatibility
+      costs: { energy: 1, influence: 0, information: 0 },
+      rewards: { influence: 0.5 }, // Small influence gain on success
       description: 'Light conversation to build rapport',
       category: 'friendly'
     },
@@ -98,6 +285,8 @@
       id: 'strategize',
       label: 'Strategize',
       cost: 2,
+      costs: { energy: 2, influence: 1, information: 0 },
+      rewards: { information: 1 }, // Gain information
       description: 'Discuss game plans and alliances',
       category: 'strategic'
     },
@@ -105,6 +294,8 @@
       id: 'confide',
       label: 'Confide',
       cost: 2,
+      costs: { energy: 2, influence: 0, information: 0 },
+      rewards: { influence: 1 }, // Build influence through trust
       description: 'Share personal thoughts and build trust',
       category: 'friendly'
     },
@@ -112,6 +303,8 @@
       id: 'interrogate',
       label: 'Interrogate',
       cost: 2,
+      costs: { energy: 2, influence: 1, information: 0 },
+      rewards: { information: 2 }, // High information gain
       description: 'Press for information about plans',
       category: 'aggressive'
     },
@@ -119,6 +312,8 @@
       id: 'compliment',
       label: 'Compliment',
       cost: 1,
+      costs: { energy: 1, influence: 0, information: 0 },
+      rewards: { influence: 0.5 }, // Small influence gain
       description: 'Give genuine praise',
       category: 'friendly'
     },
@@ -126,6 +321,8 @@
       id: 'confront',
       label: 'Confront',
       cost: 3,
+      costs: { energy: 3, influence: 2, information: 0 },
+      rewards: { information: 1 }, // May reveal information
       description: 'Address conflicts directly',
       category: 'aggressive'
     },
@@ -133,6 +330,8 @@
       id: 'mediate',
       label: 'Mediate',
       cost: 2,
+      costs: { energy: 2, influence: 1, information: 1 },
+      rewards: { influence: 2 }, // High influence gain
       description: 'Help resolve tensions between others',
       category: 'strategic'
     },
@@ -140,6 +339,8 @@
       id: 'observe',
       label: 'Observe',
       cost: 1,
+      costs: { energy: 1, influence: 0, information: 0 },
+      rewards: { information: 1 }, // Gather information passively
       description: 'Watch and listen quietly',
       category: 'strategic'
     }
@@ -150,8 +351,28 @@
   }
 
   function getAvailableActions(playerId){
-    const energy = getEnergy(playerId);
-    return SOCIAL_ACTIONS.filter(action => action.cost <= energy);
+    return SOCIAL_ACTIONS.filter(action => {
+      return SocialResources.canAfford(playerId, action.costs);
+    });
+  }
+
+  // Get actions that are disabled (insufficient resources) with reason
+  function getDisabledActions(playerId){
+    return SOCIAL_ACTIONS.filter(action => {
+      return !SocialResources.canAfford(playerId, action.costs);
+    }).map(action => {
+      const resources = SocialResources.getAll(playerId);
+      const missing = [];
+      for(const [type, cost] of Object.entries(action.costs)){
+        if(cost > 0 && resources[type] < cost){
+          missing.push(`${type}: ${resources[type]}/${cost}`);
+        }
+      }
+      return {
+        ...action,
+        missingResources: missing
+      };
+    });
   }
 
   // ============================================================================
@@ -170,29 +391,35 @@
       return { success: false, reason: 'unknown_action' };
     }
 
-    // Check energy
-    const hasEnergy = spendEnergy(actorId, action.cost);
-    if(!hasEnergy){
+    // Check and spend resources
+    const spendResult = SocialResources.spend(actorId, action.costs);
+    if(!spendResult.success){
       return { 
         success: false, 
-        reason: 'insufficient_energy',
-        message: `Not enough energy (need ${action.cost})` 
+        reason: 'insufficient_resources',
+        insufficient: spendResult.insufficient,
+        message: `Not enough ${spendResult.insufficient}` 
       };
     }
 
     // Log the action
     const actorName = global.safeName?.(actorId) || `Player ${actorId}`;
     const targetName = global.safeName?.(targetId) || `Player ${targetId}`;
-    console.info(`[social-maneuvers] ${actorName} -> ${targetName}: ${action.label} (cost: ${action.cost})`);
+    console.info(`[social-maneuvers] ${actorName} -> ${targetName}: ${action.label}`, action.costs);
 
     // Process outcome
     const outcome = processActionOutcome(actorId, targetId, action);
+    
+    // Award resources on success
+    if(outcome.type !== 'negative' && action.rewards){
+      SocialResources.earn(actorId, action.rewards);
+    }
 
     return {
       success: true,
       action: action,
       outcome: outcome,
-      energyRemaining: getEnergy(actorId)
+      resources: SocialResources.getAll(actorId)
     };
   }
 
@@ -341,7 +568,7 @@
       return;
     }
 
-    const energy = getEnergy(playerId);
+    const resources = SocialResources.getAll(playerId);
     const alivePlayers = global.alivePlayers?.() || [];
     const otherPlayers = alivePlayers.filter(p => p.id !== playerId);
 
@@ -354,9 +581,9 @@
     wrapper.setAttribute('role', 'region');
     wrapper.setAttribute('aria-label', 'Social Maneuvers Interface');
 
-    // Energy display
-    const energyBar = createEnergyDisplay(energy);
-    wrapper.appendChild(energyBar);
+    // Resources HUD (Energy, Influence, Information)
+    const resourcesHUD = createResourcesHUD(resources);
+    wrapper.appendChild(resourcesHUD);
 
     // Player selection
     if(otherPlayers.length > 0){
@@ -390,7 +617,7 @@
     executeBtn.onclick = () => {
       if(selectedPlayer && selectedAction){
         const result = executeAction(playerId, selectedPlayer.id, selectedAction.id);
-        showFeedback(result);
+        showFeedback(result, playerId);
         
         // Refresh UI after action
         setTimeout(() => {
@@ -415,18 +642,20 @@
       }
 
       const availableActions = getAvailableActions(playerId);
+      const disabledActions = getDisabledActions(playerId);
       
-      if(availableActions.length === 0){
+      if(availableActions.length === 0 && disabledActions.length === 0){
         const emptyState = document.createElement('div');
         emptyState.className = 'social-empty-state';
-        emptyState.textContent = 'No energy remaining for actions';
+        emptyState.textContent = 'No actions available';
         actionsList.appendChild(emptyState);
         executeBtn.disabled = true;
         return;
       }
 
+      // Show available actions
       availableActions.forEach(action => {
-        const actionItem = createActionItem(action, energy, (selected) => {
+        const actionItem = createActionItem(action, resources, (selected) => {
           selectedAction = selected;
           
           // Update visual selection
@@ -439,12 +668,100 @@
         });
         actionsList.appendChild(actionItem);
       });
+      
+      // Show disabled actions with tooltips
+      disabledActions.forEach(action => {
+        const actionItem = createActionItem(action, resources, null, true);
+        actionsList.appendChild(actionItem);
+      });
     }
 
     container.appendChild(wrapper);
     updateActionsList();
   }
 
+  // Create the Resources HUD (Energy, Influence, Information)
+  function createResourcesHUD(resources){
+    const hud = document.createElement('div');
+    hud.className = 'social-resources-hud';
+    hud.setAttribute('role', 'status');
+    hud.setAttribute('aria-live', 'polite');
+
+    // Energy resource
+    const energyDisplay = createResourceDisplay(
+      'energy',
+      resources.energy,
+      RESOURCE_CONFIG.energy.max,
+      RESOURCE_CONFIG.energy.description,
+      RESOURCE_CONFIG.energy.examples,
+      '⚡'
+    );
+    hud.appendChild(energyDisplay);
+
+    // Influence resource
+    const influenceDisplay = createResourceDisplay(
+      'influence',
+      resources.influence,
+      RESOURCE_CONFIG.influence.max,
+      RESOURCE_CONFIG.influence.description,
+      RESOURCE_CONFIG.influence.examples,
+      '🎭'
+    );
+    hud.appendChild(influenceDisplay);
+
+    // Information resource
+    const infoDisplay = createResourceDisplay(
+      'information',
+      resources.information,
+      RESOURCE_CONFIG.information.max,
+      RESOURCE_CONFIG.information.description,
+      RESOURCE_CONFIG.information.examples,
+      '🔍'
+    );
+    hud.appendChild(infoDisplay);
+
+    return hud;
+  }
+
+  // Create individual resource display with tooltip
+  function createResourceDisplay(type, current, max, description, examples, icon){
+    const container = document.createElement('div');
+    container.className = `social-resource-display social-resource-${type}`;
+    container.setAttribute('data-tooltip', `${description}\n\nExamples: ${examples}`);
+
+    const header = document.createElement('div');
+    header.className = 'social-resource-header';
+    
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'social-resource-icon';
+    iconSpan.textContent = icon;
+    header.appendChild(iconSpan);
+
+    const label = document.createElement('span');
+    label.className = 'social-resource-label';
+    label.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+    header.appendChild(label);
+
+    container.appendChild(header);
+
+    const valueDisplay = document.createElement('div');
+    valueDisplay.className = 'social-resource-value';
+    valueDisplay.innerHTML = `<span class="current">${current}</span>/<span class="max">${max}</span>`;
+    container.appendChild(valueDisplay);
+
+    // Progress bar
+    const progressBar = document.createElement('div');
+    progressBar.className = 'social-resource-progress';
+    const progressFill = document.createElement('div');
+    progressFill.className = 'social-resource-progress-fill';
+    progressFill.style.width = `${(current / max) * 100}%`;
+    progressBar.appendChild(progressFill);
+    container.appendChild(progressBar);
+
+    return container;
+  }
+
+  // Legacy energy display for backward compatibility
   function createEnergyDisplay(energy){
     const container = document.createElement('div');
     container.className = 'social-energy-bar';
@@ -527,14 +844,14 @@
     return container;
   }
 
-  function createActionItem(action, currentEnergy, onSelect){
+  function createActionItem(action, currentResources, onSelect, isDisabled = false){
     const item = document.createElement('div');
     item.className = 'social-action-item';
     item.setAttribute('role', 'button');
     item.setAttribute('tabindex', '0');
     
-    const canAfford = currentEnergy >= action.cost;
-    if(!canAfford){
+    const canAfford = !isDisabled && SocialResources.canAfford(0, action.costs); // Note: playerId not needed for check
+    if(!canAfford || isDisabled){
       item.classList.add('disabled');
       item.setAttribute('aria-disabled', 'true');
     }
@@ -547,12 +864,35 @@
     name.textContent = action.label;
     header.appendChild(name);
 
-    const cost = document.createElement('div');
-    cost.className = 'social-action-cost';
-    cost.classList.add(canAfford ? 'affordable' : 'expensive');
-    cost.textContent = `⚡ ${action.cost}`;
-    header.appendChild(cost);
-
+    // Display all resource costs
+    const costsContainer = document.createElement('div');
+    costsContainer.className = 'social-action-costs';
+    
+    if(action.costs.energy > 0){
+      const energyCost = document.createElement('span');
+      energyCost.className = 'social-cost-badge energy';
+      energyCost.classList.add(currentResources.energy >= action.costs.energy ? 'affordable' : 'expensive');
+      energyCost.textContent = `⚡${action.costs.energy}`;
+      costsContainer.appendChild(energyCost);
+    }
+    
+    if(action.costs.influence > 0){
+      const influenceCost = document.createElement('span');
+      influenceCost.className = 'social-cost-badge influence';
+      influenceCost.classList.add(currentResources.influence >= action.costs.influence ? 'affordable' : 'expensive');
+      influenceCost.textContent = `🎭${action.costs.influence}`;
+      costsContainer.appendChild(influenceCost);
+    }
+    
+    if(action.costs.information > 0){
+      const infoCost = document.createElement('span');
+      infoCost.className = 'social-cost-badge information';
+      infoCost.classList.add(currentResources.information >= action.costs.information ? 'affordable' : 'expensive');
+      infoCost.textContent = `🔍${action.costs.information}`;
+      costsContainer.appendChild(infoCost);
+    }
+    
+    header.appendChild(costsContainer);
     item.appendChild(header);
 
     const desc = document.createElement('div');
@@ -560,12 +900,32 @@
     desc.textContent = action.description;
     item.appendChild(desc);
 
+    // Show rewards if any
+    if(action.rewards && Object.values(action.rewards).some(v => v > 0)){
+      const rewardsContainer = document.createElement('div');
+      rewardsContainer.className = 'social-action-rewards';
+      rewardsContainer.innerHTML = '<span class="rewards-label">Rewards:</span> ';
+      
+      const rewardBadges = [];
+      if(action.rewards.energy) rewardBadges.push(`⚡+${action.rewards.energy}`);
+      if(action.rewards.influence) rewardBadges.push(`🎭+${action.rewards.influence}`);
+      if(action.rewards.information) rewardBadges.push(`🔍+${action.rewards.information}`);
+      
+      rewardsContainer.innerHTML += rewardBadges.join(' ');
+      item.appendChild(rewardsContainer);
+    }
+
     const category = document.createElement('span');
     category.className = `social-action-category ${action.category}`;
     category.textContent = action.category;
     item.appendChild(category);
 
-    if(canAfford){
+    // Add tooltip for disabled actions
+    if(isDisabled && action.missingResources){
+      item.setAttribute('data-tooltip', `Insufficient resources: ${action.missingResources.join(', ')}`);
+    }
+
+    if(canAfford && !isDisabled && onSelect){
       item.onclick = () => onSelect(action);
       
       // Keyboard accessibility
@@ -580,7 +940,7 @@
     return item;
   }
 
-  function showFeedback(result){
+  function showFeedback(result, playerId){
     // Remove any existing feedback
     const existing = document.querySelector('.social-feedback-panel');
     if(existing){
@@ -595,18 +955,68 @@
     }
 
     const outcome = result.outcome;
+    const action = result.action;
+    
+    // Build resource change message
+    let resourceChanges = [];
+    
+    // Show costs
+    for(const [type, cost] of Object.entries(action.costs)){
+      if(cost > 0){
+        resourceChanges.push(`-${cost} ${getResourceIcon(type)}`);
+      }
+    }
+    
+    // Show rewards
+    if(action.rewards && outcome.type !== 'negative'){
+      for(const [type, reward] of Object.entries(action.rewards)){
+        if(reward > 0){
+          resourceChanges.push(`+${reward} ${getResourceIcon(type)}`);
+        }
+      }
+    }
+    
+    const message = outcome.message + (resourceChanges.length > 0 ? `\n${resourceChanges.join(' ')}` : '');
+    
     const panel = createFeedbackPanel(
       outcome.type, 
-      result.action.label,
-      outcome.message
+      action.label,
+      message
     );
+    
+    // Add resource display to panel
+    if(result.resources){
+      const resourcesDiv = document.createElement('div');
+      resourcesDiv.className = 'feedback-resources';
+      resourcesDiv.innerHTML = `
+        <small>
+          ⚡${result.resources.energy} 
+          🎭${result.resources.influence} 
+          🔍${result.resources.information}
+        </small>
+      `;
+      panel.appendChild(resourcesDiv);
+    }
+    
     document.body.appendChild(panel);
+    
+    // Animate in
+    panel.style.animation = 'slideInRight 0.4s ease';
     
     // Auto-remove after 3 seconds
     setTimeout(() => {
       panel.style.animation = 'slideOutRight 0.4s ease';
       setTimeout(() => panel.remove(), 400);
     }, 3000);
+  }
+  
+  function getResourceIcon(type){
+    const icons = {
+      energy: '⚡',
+      influence: '🎭',
+      information: '🔍'
+    };
+    return icons[type] || type;
   }
 
   function createFeedbackPanel(type, title, message){
@@ -638,15 +1048,18 @@
       return;
     }
     
-    console.info('[social-maneuvers] ✓ startPhase() triggered - Initializing social phase with energy system');
-    initSocialEnergy();
+    console.info('[social-maneuvers] ✓ startPhase() triggered - Initializing social phase with resource system');
     
-    // Reset energy for all players
     const alivePlayers = global.alivePlayers?.() || [];
     alivePlayers.forEach(p => {
-      setEnergy(p.id, DEFAULT_ENERGY);
+      // Initialize resources if not already initialized
+      SocialResources.init(p.id);
+      
+      // Apply weekly reset logic
+      SocialResources.resetWeekly(p.id);
     });
-    console.info(`[social-maneuvers] Energy initialized for ${alivePlayers.length} players (${DEFAULT_ENERGY} energy each)`);
+    
+    console.info(`[social-maneuvers] Resources initialized for ${alivePlayers.length} players`);
   }
 
   function onSocialPhaseEnd(){
@@ -655,9 +1068,8 @@
       return;
     }
     
-    console.info('[social-maneuvers] ✓ Social phase complete - cleaning up');
-    // PLACEHOLDER: Generate summary of actions taken
-    // PLACEHOLDER: Update long-term memory structures
+    console.info('[social-maneuvers] ✓ Social phase complete');
+    // Resources persist across phases and weeks (handled by resetWeekly)
   }
 
   // ============================================================================
@@ -668,7 +1080,10 @@
     // Feature flag
     isEnabled,
     
-    // Energy management
+    // Resource management (new comprehensive API)
+    SocialResources,
+    
+    // Legacy energy management (backward compatibility)
     initSocialEnergy,
     getEnergy,
     setEnergy,
@@ -678,6 +1093,7 @@
     // Actions
     getActionById,
     getAvailableActions,
+    getDisabledActions,
     executeAction,
     
     // Memory
@@ -696,6 +1112,11 @@
     endPhase: onSocialPhaseEnd,
     
     // Constants (for external reference)
+    DEFAULT_ENERGY,
+    MAX_ENERGY,
+    SOCIAL_ACTIONS,
+    RESOURCE_CONFIG
+  };
     DEFAULT_ENERGY,
     MAX_ENERGY,
     SOCIAL_ACTIONS
