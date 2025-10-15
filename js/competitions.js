@@ -733,14 +733,64 @@
 
     // Robust social call — prefer startSocial, fall back to startSocialIntermission
     const runSocial = global.startSocial || global.startSocialIntermission;
+    
+    // ===== PHASE SEQUENCE VALIDATION: Social Phase =====
+    // Ensure social phase is included in weekly sequence
+    console.info('[phase-sequence] ✓ HOH complete, checking social phase...');
+    
+    // Check if developer skip is enabled
+    const skipSocialEnabled = g.cfg?.skipSocialPhase === true;
+    
+    if(skipSocialEnabled){
+      console.warn('[phase-sequence] ⚠️ DEVELOPER MODE: Social phase skipped (skipSocialPhase = true)');
+      console.warn('[phase-sequence] This should ONLY be used for testing. Disable in Settings → Debug');
+      
+      // Log skip event for debugging
+      if(!g.__socialPhaseSkipLog) g.__socialPhaseSkipLog = [];
+      g.__socialPhaseSkipLog.push({ week: g.week, timestamp: Date.now(), reason: 'developer_toggle' });
+      
+      if(typeof global.addLog === 'function'){
+        global.addLog('⚠️ Developer Mode: Social phase skipped', 'warn');
+      }
+      
+      // Skip directly to nominations
+      global.tv.say('Nominations');
+      global.setPhase('nominations', g.cfg.tNoms, ()=>global.lockNominationsAndProceed?.());
+      setTimeout(()=>global.startNominations?.(),50);
+      global.updateHud(); global.renderPanel();
+      return;
+    }
+    
     if(typeof runSocial === 'function'){
+      console.info('[phase-sequence] ✓ Social phase confirmed: calling runSocial()');
+      
+      // Log successful social phase inclusion for audit trail
+      if(!g.__socialPhaseLog) g.__socialPhaseLog = [];
+      g.__socialPhaseLog.push({ week: g.week, timestamp: Date.now(), source: 'hoh_completion' });
+      
       runSocial('hoh',()=>{
         global.tv.say('Nominations');
         global.setPhase('nominations', g.cfg.tNoms, ()=>global.lockNominationsAndProceed?.());
         setTimeout(()=>global.startNominations?.(),50);
       });
     } else {
-      // Ultimate fallback: go straight to nominations
+      // CRITICAL ERROR: Social phase function not found
+      console.error('[phase-sequence] ❌ CRITICAL: Social phase function not found!');
+      console.error('[phase-sequence] Expected: global.startSocial or global.startSocialIntermission');
+      console.error('[phase-sequence] This indicates a module loading issue. Social phase BYPASSED.');
+      
+      // Log critical error
+      if(!g.__socialPhaseErrors) g.__socialPhaseErrors = [];
+      g.__socialPhaseErrors.push({
+        week: g.week, timestamp: Date.now(), error: 'function_not_found',
+        expected: ['startSocial', 'startSocialIntermission']
+      });
+      
+      if(typeof global.addLog === 'function'){
+        global.addLog('❌ CRITICAL: Social phase function missing! Check console.', 'danger');
+      }
+      
+      // Ultimate fallback: go straight to nominations (but log the error)
       global.tv.say('Nominations');
       global.setPhase('nominations', g.cfg.tNoms, ()=>global.lockNominationsAndProceed?.());
       setTimeout(()=>global.startNominations?.(),50);

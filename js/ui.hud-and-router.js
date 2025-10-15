@@ -892,18 +892,100 @@ header.innerHTML = `
     if(typeof window.updateTimerHeader === 'function'){
       window.updateTimerHeader();
     }
+    
+    // Update social phase skip banner
+    updateSocialPhaseSkipBanner();
   }
   g.updateHud = updateHud;
+
+  // ------------ Social Phase Skip Banner ------------
+  function updateSocialPhaseSkipBanner(){
+    const game = g.game;
+    if(!game || !game.cfg) return;
+    
+    let banner = document.getElementById('socialPhaseSkipBanner');
+    const shouldShow = game.cfg.skipSocialPhase === true;
+    
+    if(shouldShow && !banner){
+      // Create banner
+      banner = document.createElement('div');
+      banner.id = 'socialPhaseSkipBanner';
+      banner.style.cssText = `
+        position: fixed;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff4444 100%);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
+        z-index: 9999;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-align: center;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        animation: bannerPulse 2s ease-in-out infinite;
+      `;
+      banner.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.2rem;">⚠️</span>
+          <span>Developer Mode: Social Phase Skipped</span>
+          <span style="font-size:1.2rem;">⚠️</span>
+        </div>
+        <div style="font-size:0.7rem;margin-top:4px;opacity:0.9;">Disable in Settings → Debug → Skip Social Phase</div>
+      `;
+      
+      // Add animation
+      if(!document.getElementById('socialPhaseSkipBannerStyle')){
+        const style = document.createElement('style');
+        style.id = 'socialPhaseSkipBannerStyle';
+        style.textContent = `
+          @keyframes bannerPulse {
+            0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.85; transform: translateX(-50%) scale(1.02); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      document.body.appendChild(banner);
+      console.warn('[social-skip] ⚠️ Banner displayed: Social phase skip is enabled');
+    } else if(!shouldShow && banner){
+      // Remove banner
+      banner.remove();
+      console.info('[social-skip] ✓ Banner removed: Social phase skip is disabled');
+    }
+  }
+  g.updateSocialPhaseSkipBanner = updateSocialPhaseSkipBanner;
 
   // ------------ Fast Forward / Skip ------------
   function fastForwardPhase(){
     const game=g.game; if(!game) return;
     
     // Anti fast-forward guard for social_intermission phase
+    // Allow bypass only if skipSocialPhase developer toggle is enabled OR if at least one social action was taken
     if(game.phase === 'social_intermission' || game.phase === 'social'){
-      console.warn('[ff] ⚠️ Fast-forward blocked during social_intermission phase to prevent accidental skips');
-      console.trace('[ff] Stack trace for social phase fast-forward attempt:');
-      return;
+      const skipEnabled = game.cfg?.skipSocialPhase === true;
+      const hasActions = (game.__socialActionsThisPhase || 0) > 0;
+      
+      if(!skipEnabled && !hasActions){
+        console.warn('[ff] ⚠️ Fast-forward blocked during social_intermission phase');
+        console.warn('[ff] Reason: No social actions taken yet. Take at least one action or enable skipSocialPhase in Settings → Debug');
+        console.trace('[ff] Stack trace for social phase fast-forward attempt:');
+        
+        // Show user-friendly message
+        if(typeof g.addLog === 'function'){
+          g.addLog('⚠️ Cannot skip social phase without taking at least one action. Take an action first or enable skip in Settings → Debug.', 'warn');
+        }
+        return;
+      }
+      
+      if(skipEnabled){
+        console.info('[ff] ⏩ Social phase skip allowed (developer mode enabled)');
+      } else if(hasActions){
+        console.info(`[ff] ⏩ Social phase skip allowed (${game.__socialActionsThisPhase} action(s) taken)`);
+      }
     }
     
     // Log fast-forward activation

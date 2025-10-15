@@ -46,7 +46,10 @@
     // Progression system (feature-flagged, off by default)
     progressionEnabled: false,  // Enable XP and leveling system
     // Social Maneuvers system (on by default)
-    enableSocialManeuvers: true  // Enable enhanced social phase with energy and action system
+    enableSocialManeuvers: true,  // Enable enhanced social phase with energy and action system
+    // Social phase configuration
+    tSocial: 30,  // Social phase duration in seconds (fallback to tComms if not set)
+    skipSocialPhase: false  // Developer toggle to skip social phase for testing (shows warning banner)
   };
 
   // Load/save helpers
@@ -328,6 +331,13 @@
   function buildDebugPaneHTML(){
     return [
       '<div class="settingsGrid">',
+        group('Developer Toggles', [
+          '<div style="background:#332211;padding:10px;border-radius:6px;border:1px solid #664422;margin-bottom:10px">',
+            '<div class="tiny muted" style="margin-bottom:8px">⚠️ Warning: These toggles are for testing only and may break game flow</div>',
+            checkbox('skipSocialPhase','Skip Social Phase (shows warning banner)'),
+            '<div class="tiny muted" style="margin-top:4px">When enabled, social phase is skipped and a visible banner warns you</div>',
+          '</div>',
+        ].join('')),
         group('Music / Audio', [
           '<div class="row">',
             '<select id="musicTrack" style="flex:1">',
@@ -708,6 +718,64 @@
           }
         }catch(e){ notify('Failed: '+e, 'warn'); }
       });
+    }
+    
+    // New: Dump social phase logs button
+    var btnDumpSocialLogs = document.createElement('button');
+    btnDumpSocialLogs.className = 'btn small';
+    btnDumpSocialLogs.textContent = 'Dump Social Logs';
+    btnDumpSocialLogs.style.cssText = 'margin-top:8px';
+    btnDumpSocialLogs.addEventListener('click', function(){
+      try{
+        const g = global.game;
+        if(!g){
+          notify('Game not initialized', 'warn');
+          return;
+        }
+        
+        console.group('📊 Social Phase Audit Logs');
+        
+        // Social phase execution log
+        if(g.__socialPhaseLog && g.__socialPhaseLog.length > 0){
+          console.log('✅ Social Phase Executions:', g.__socialPhaseLog);
+        } else {
+          console.warn('⚠️ No social phase executions logged');
+        }
+        
+        // Social phase skip log
+        if(g.__socialPhaseSkipLog && g.__socialPhaseSkipLog.length > 0){
+          console.warn('⚠️ Social Phase Skips:', g.__socialPhaseSkipLog);
+        } else {
+          console.log('✅ No social phase skips');
+        }
+        
+        // Social phase errors
+        if(g.__socialPhaseErrors && g.__socialPhaseErrors.length > 0){
+          console.error('❌ Social Phase Errors:', g.__socialPhaseErrors);
+        } else {
+          console.log('✅ No social phase errors');
+        }
+        
+        // Current week and social action count
+        console.log('Current Week:', g.week || 'N/A');
+        console.log('Social Actions This Phase:', g.__socialActionsThisPhase || 0);
+        console.log('Skip Social Phase Enabled:', g.cfg?.skipSocialPhase || false);
+        
+        console.groupEnd();
+        notify('Social logs dumped to console', 'ok');
+      }catch(e){ 
+        notify('Failed to dump logs: '+e, 'warn'); 
+        console.error('Failed to dump social logs:', e);
+      }
+    });
+    
+    // Add button to Advanced Debug section
+    var advDebugGroup = root.querySelector('.settingsGrid > .card:last-child');
+    if(advDebugGroup){
+      var btnRow = advDebugGroup.querySelector('.row');
+      if(btnRow){
+        btnRow.appendChild(btnDumpSocialLogs);
+      }
     }
   }
 
