@@ -211,10 +211,14 @@
     return { success: true, action, outcome, evaluation, succeeded, telemetry, resources: SocialResources.getAll(actorId) };
   }
 
+  // ============================================================================
+  // OUTCOME PROCESSING (with Traits & Memory Modifiers)
+  // ============================================================================
   function processActionOutcome(actorId, targetId, action, succeeded, evaluation){
     const actor = global.getP?.(actorId); const target = global.getP?.(targetId);
     if(!actor || !target){ return { type: 'error', message: 'Player not found' }; }
     let affinityChange = 0, outcomeType = 'neutral', message = '';
+
     if(succeeded){
       switch(action.category){
         case 'friendly': affinityChange = 0.05 + Math.random() * 0.05; outcomeType = 'positive'; message = `${action.label} went well!`; break;
@@ -231,15 +235,81 @@
         default: affinityChange = -0.04 * backlashMultiplier; message = `${action.label} didn't go as planned.`;
       }
     }
+    // Trait-based modifiers
+    const traitModifiers = calculateTraitModifiers(actorId, targetId, action);
+    affinityChange += traitModifiers.affinityBonus;
+    // Memory-based modifiers
+    const memoryModifiers = calculateMemoryModifiers(actorId, targetId);
+    affinityChange += memoryModifiers.affinityBonus;
+    // Final outcome type
+    if(affinityChange > 0.05) outcomeType = 'positive';
+    else if(affinityChange < -0.05) outcomeType = 'negative';
+    else outcomeType = 'neutral';
     if(actor.affinity && typeof actor.affinity === 'object'){ actor.affinity[targetId] = (actor.affinity[targetId] ?? 0) + affinityChange; }
-    recordActionInMemory(actorId, targetId, action, succeeded ? 'success' : 'failure');
+    recordActionInMemory(actorId, targetId, action, outcomeType);
     applyTraitEffects(actorId, targetId, action);
-    return { type: outcomeType, message, affinityChange, succeeded };
+    return { type: outcomeType, message, affinityChange, traitModifiers, memoryModifiers, succeeded };
   }
 
   // ============================================================================
-  // MEMORY & TRAITS SYSTEM (PLACEHOLDER)
+  // TRAITS & MEMORY SYSTEM
   // ============================================================================
+  function calculateTraitModifiers(actorId, targetId, action){
+    const actor = global.getP?.(actorId);
+    const target = global.getP?.(targetId);
+    let affinityBonus = 0, successBonus = 0, appliedTraits = [];
+    if(!actor || !target) return { affinityBonus, successBonus, appliedTraits };
+    const hasTrait = global.hasTrait || (() => false);
+
+    if(hasTrait(actorId, 'charismatic') && action.category === 'friendly'){
+      affinityBonus += 0.02; successBonus += 0.2; appliedTraits.push('charismatic');
+    }
+    if(hasTrait(actorId, 'loyal')){
+      const currentAffinity = actor.affinity?.[targetId] ?? 0;
+      if(currentAffinity > 0.2){ affinityBonus += 0.015; appliedTraits.push('loyal'); }
+    }
+    if(hasTrait(actorId, 'deceptive')){
+      if(action.category === 'aggressive'){ successBonus += 0.15; appliedTraits.push('deceptive'); }
+      else if(action.category === 'friendly'){ successBonus -= 0.1; }
+    }
+    if(hasTrait(actorId, 'stubborn')){
+      if(action.category === 'strategic'){ successBonus -= 0.2; appliedTraits.push('stubborn'); }
+      else if(action.category === 'aggressive'){ successBonus += 0.1; appliedTraits.push('stubborn'); }
+    }
+    if(hasTrait(targetId, 'gullible') && action.category === 'strategic'){
+      affinityBonus += 0.02; successBonus += 0.15; appliedTraits.push('gullible-target');
+    }
+    if(hasTrait(targetId, 'paranoid')){
+      affinityBonus -= 0.01; successBonus -= 0.1; appliedTraits.push('paranoid-target');
+    }
+    return { affinityBonus, successBonus, appliedTraits };
+  }
+  function calculateMemoryModifiers(actorId, targetId){
+    let affinityBonus = 0, relevantMemories = [];
+    const getMemoryLog = global.getMemoryLog || (() => []);
+    const MEMORY_EVENTS = global.MEMORY_EVENTS || {};
+    const actorMemories = getMemoryLog(actorId, { targetId: targetId });
+    const targetMemories = getMemoryLog(targetId, { targetId: actorId });
+    const countMemory = (memories, eventType) => memories.filter(m => m.event === eventType).length;
+    const promisesMade = countMemory(actorMemories, MEMORY_EVENTS.PROMISE_MADE);
+    const alliancesFormed = countMemory(actorMemories, MEMORY_EVENTS.ALLIANCE_FORMED);
+    const secretsShared = countMemory(actorMemories, MEMORY_EVENTS.SECRET_SHARED);
+    const conflictsResolved = countMemory(actorMemories, MEMORY_EVENTS.CONFLICT_RESOLVED);
+    const mediationSuccesses = countMemory(actorMemories, MEMORY_EVENTS.MEDIATION_SUCCESS);
+    const promisesBroken = countMemory(actorMemories, MEMORY_EVENTS.PROMISE_BROKEN);
+    const betrayals = countMemory(actorMemories, MEMORY_EVENTS.ALLIANCE_BETRAYED);
+    const rumorsExposed = countMemory(actorMemories, MEMORY_EVENTS.RUMOR_EXPOSED);
+    const confrontations = countMemory(actorMemories, MEMORY_EVENTS.PUBLIC_CONFRONTATION);
+
+    const positiveCount = promisesMade + alliancesFormed + secretsShared + conflictsResolved + mediationSuccesses;
+    const negativeCount = promisesBroken + betrayals + rumorsExposed + confrontations;
+    affinityBonus += positiveCount * 0.005;
+    affinityBonus -= negativeCount * 0.01;
+    affinityBonus = clamp(affinityBonus, -0.05, 0.05);
+    if(positiveCount > 0) relevantMemories.push(`${positiveCount} positive`);
+    if(negativeCount > 0) relevantMemories.push(`${negativeCount} negative`);
+    return { affinityBonus, positiveCount, negativeCount, relevantMemories };
+  }
   function recordActionInMemory(actorId, targetId, action, outcome){
     const g = global.game; if(!g) return;
     if(!g.__socialManeuversMemory){ g.__socialManeuversMemory = { actions: [], relationships: new Map() }; }
@@ -262,7 +332,7 @@
   }
 
   // ============================================================================
-  // UI RENDERING (HUD + Dynamic Menu + Feedback)
+  // UI RENDERING (HUD + Dynamic Menu + History + Feedback)
   // ============================================================================
   function renderSocialManeuversUI(container, playerId){
     if(!isEnabled()){ console.info('[social-maneuvers] UI render requested but feature is DISABLED'); return; }
@@ -284,9 +354,25 @@
     // Player selection
     if(otherPlayers.length > 0){
       const playerSection = createPlayerSelection(playerId, otherPlayers, (player) => {
-        selectedPlayer = player; updateActionsList();
+        selectedPlayer = player;
+        updateActionsList();
+        updateHistorySection();
       });
       wrapper.appendChild(playerSection);
+    }
+
+    // History section (collapsible)
+    const historySection = document.createElement('div');
+    historySection.className = 'social-history-section';
+    historySection.style.display = 'none';
+    wrapper.appendChild(historySection);
+
+    function updateHistorySection(){
+      historySection.innerHTML = '';
+      if(!selectedPlayer){ historySection.style.display = 'none'; return; }
+      historySection.style.display = 'block';
+      const historyContent = createHistoryUI(playerId, selectedPlayer.id);
+      historySection.appendChild(historyContent);
     }
 
     // Actions menu
@@ -514,6 +600,128 @@
     return panel;
   }
 
+  // Collapsible history UI
+  function createHistoryUI(playerId, targetId){
+    const container = document.createElement('div');
+    container.className = 'social-history-container';
+    const header = document.createElement('div');
+    header.className = 'social-history-header';
+    header.setAttribute('role', 'button');
+    header.setAttribute('tabindex', '0');
+    header.setAttribute('aria-expanded', 'false');
+    const title = document.createElement('div');
+    title.className = 'social-history-title';
+    const targetName = global.safeName?.(targetId) || `Player ${targetId}`;
+    title.textContent = `History with ${targetName}`;
+    header.appendChild(title);
+    const toggle = document.createElement('div');
+    toggle.className = 'social-history-toggle';
+    toggle.textContent = '▼';
+    header.appendChild(toggle);
+    container.appendChild(header);
+    const content = document.createElement('div');
+    content.className = 'social-history-content collapsed';
+    content.setAttribute('aria-hidden', 'true');
+    // Get memory log, recent actions
+    const getMemoryLog = global.getMemoryLog || (() => []);
+    const MEMORY_EVENTS = global.MEMORY_EVENTS || {};
+    const memories = getMemoryLog(playerId, { targetId: targetId });
+    const recentActions = getPlayerMemory(playerId, targetId);
+    const summary = document.createElement('div');
+    summary.className = 'social-history-summary';
+    const eventCounts = {};
+    const eventOrder = [
+      'AllianceFormed', 'PromiseMade', 'SecretShared', 'ConflictResolved', 'MediationSuccess',
+      'AllianceBetrayed', 'PromiseBroken', 'RumorExposed', 'PublicConfrontation', 'RumorBelieved'
+    ];
+    memories.forEach(m => { eventCounts[m.event] = (eventCounts[m.event] || 0) + 1; });
+    if(Object.keys(eventCounts).length === 0 && recentActions.length === 0){
+      summary.innerHTML = '<p class="social-history-empty">No significant history yet.</p>';
+    } else {
+      const summaryTitle = document.createElement('div');
+      summaryTitle.className = 'social-history-section-title';
+      summaryTitle.textContent = 'Key Events';
+      summary.appendChild(summaryTitle);
+      const eventList = document.createElement('ul');
+      eventList.className = 'social-history-event-list';
+      eventOrder.forEach(eventType => {
+        const count = eventCounts[eventType];
+        if(count){
+          const item = document.createElement('li');
+          item.className = 'social-history-event-item';
+          const isPositive = ['AllianceFormed', 'PromiseMade', 'SecretShared', 'ConflictResolved', 'MediationSuccess'].includes(eventType);
+          item.classList.add(isPositive ? 'positive-event' : 'negative-event');
+          const eventLabel = eventType.replace(/([A-Z])/g, ' $1').trim();
+          item.textContent = `${eventLabel} (${count}x)`;
+          eventList.appendChild(item);
+        }
+      });
+      if(eventList.children.length > 0){ summary.appendChild(eventList); }
+    }
+    content.appendChild(summary);
+    if(recentActions.length > 0){
+      const actionsSection = document.createElement('div');
+      actionsSection.className = 'social-history-actions';
+      const actionsTitle = document.createElement('div');
+      actionsTitle.className = 'social-history-section-title';
+      actionsTitle.textContent = 'Recent Interactions';
+      actionsSection.appendChild(actionsTitle);
+      const actionsList = document.createElement('ul');
+      actionsList.className = 'social-history-action-list';
+      const recent = recentActions.slice(-5).reverse();
+      recent.forEach(action => {
+        const item = document.createElement('li');
+        item.className = 'social-history-action-item';
+        const actionLabel = getActionById(action.action)?.label || action.action;
+        const weekLabel = `Week ${action.week}`;
+        const outcomeClass = action.outcome === 'positive' ? 'positive' : 
+                            action.outcome === 'negative' ? 'negative' : 'neutral';
+        item.innerHTML = `<span class="action-week">${weekLabel}:</span>
+          <span class="action-name">${actionLabel}</span>
+          <span class="action-outcome ${outcomeClass}">${action.outcome}</span>`;
+        actionsList.appendChild(item);
+      });
+      actionsSection.appendChild(actionsList);
+      content.appendChild(actionsSection);
+    }
+    const targetPlayer = global.getP?.(targetId);
+    if(targetPlayer && targetPlayer.socialTraits){
+      const traitsSection = document.createElement('div');
+      traitsSection.className = 'social-history-traits';
+      const traitsTitle = document.createElement('div');
+      traitsTitle.className = 'social-history-section-title';
+      traitsTitle.textContent = 'Known Traits';
+      traitsSection.appendChild(traitsTitle);
+      const traitsList = document.createElement('div');
+      traitsList.className = 'social-trait-tags';
+      targetPlayer.socialTraits.forEach(trait => {
+        const tag = document.createElement('span');
+        tag.className = 'social-trait-tag';
+        tag.textContent = trait;
+        traitsList.appendChild(tag);
+      });
+      traitsSection.appendChild(traitsList);
+      content.appendChild(traitsSection);
+    }
+    container.appendChild(content);
+    let isExpanded = false;
+    const toggleHistory = () => {
+      isExpanded = !isExpanded;
+      content.classList.toggle('collapsed');
+      header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+      content.setAttribute('aria-hidden', isExpanded ? 'false' : 'true');
+      toggle.textContent = isExpanded ? '▲' : '▼';
+    };
+    header.onclick = toggleHistory;
+    header.addEventListener('keypress', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        toggleHistory();
+      }
+    });
+    return container;
+  }
+
   // ============================================================================
   // PHASE INTEGRATION
   // ============================================================================
@@ -537,6 +745,8 @@
     getActionById, getAvailableActions, executeAction,
     recordActionInMemory, getPlayerMemory,
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
+    calculateTraitModifiers, calculateMemoryModifiers,
+    createHistoryUI,
     DEFAULT_ENERGY, MAX_ENERGY, SOCIAL_ACTIONS, RESOURCE_CONFIG
   };
   global.SocialManager = global.SocialManeuvers;

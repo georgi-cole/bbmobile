@@ -4485,6 +4485,82 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 }
 
 /* ============================================================================
+   Social Maneuvers History UI Styles
+   ============================================================================ */
+
+.social-history-section {
+  margin: 15px 0;
+}
+
+.social-history-container {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.social-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+.social-history-header:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.social-history-header:focus {
+  outline: 2px solid rgba(247, 185, 85, 0.5);
+  outline-offset: -2px;
+}
+
+.social-history-title {
+  font-weight: 600;
+  color: #f7b955;
+  font-size: 0.95rem;
+}
+
+.social-history-toggle {
+  color: #95a9c0;
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
+}
+
+.social-history-content {
+  max-height: 500px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: 16px;
+}
+
+.social-history-content.collapsed {
+  max-height: 0;
+  padding: 0 16px;
+}
+
+.social-history-summary,
+.social-history-actions,
+.social-history-traits {
+  margin-bottom: 16px;
+}
+
+.social-history-summary:last-child,
+.social-history-actions:last-child,
+.social-history-traits:last-child {
+  margin-bottom: 0;
+}
+
+.social-history-section-title {
+  font-weight: 600;
+  color: #95a9c0;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
    SOCIAL RESOURCES HUD - Energy, Influence, Information
    ============================================================================ */
 
@@ -4563,6 +4639,133 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   letter-spacing: 0.5px;
 }
 
+.social-history-empty {
+  color: #6c7a89;
+  font-style: italic;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.social-history-event-list,
+.social-history-action-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.social-history-event-item,
+.social-history-action-item {
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.social-history-event-item:hover,
+.social-history-action-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.social-history-event-item.positive-event {
+  border-left-color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.social-history-event-item.negative-event {
+  border-left-color: #f44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.social-history-action-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-week {
+  color: #95a9c0;
+  font-size: 0.8rem;
+  min-width: 60px;
+}
+
+.action-name {
+  flex: 1;
+  color: #e3ecf5;
+}
+
+.action-outcome {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.action-outcome.positive {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.action-outcome.negative {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.action-outcome.neutral {
+  background: rgba(149, 169, 192, 0.2);
+  color: #95a9c0;
+}
+
+.social-trait-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.social-trait-tag {
+  padding: 4px 10px;
+  background: rgba(247, 185, 85, 0.15);
+  color: #f7b955;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid rgba(247, 185, 85, 0.3);
+}
+
+/* Mobile responsive */
+@media (max-width: 520px) {
+  .social-history-header {
+    padding: 10px 12px;
+  }
+  
+  .social-history-title {
+    font-size: 0.85rem;
+  }
+  
+  .social-history-content {
+    padding: 12px;
+  }
+  
+  .social-history-event-item,
+  .social-history-action-item {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .action-week {
+    font-size: 0.75rem;
+    min-width: 50px;
+  }
+  
+  .social-trait-tag {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+  }
+}
 .social-resource-value {
   font-size: 1.4rem;
   font-weight: 700;
