@@ -72,6 +72,41 @@
   border: 1px solid rgba(110, 160, 220, 0.15);
 }
 
+/* Resources display bar (Energy + Information) */
+.social-resources-bar{
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  border: 1px solid rgba(110, 160, 220, 0.15);
+  display: flex;
+  gap: 12px;
+}
+
+.social-resource-section{
+  flex: 1;
+}
+
+.social-resource-label{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #95a9c0;
+  margin-bottom: 6px;
+}
+
+.social-resource-label strong{
+  color: #e3ecf5;
+  font-weight: 600;
+}
+
+.social-resource-value{
+  font-size: 0.9rem;
+  color: #f7b955;
+  font-weight: 700;
+}
+
 .social-energy-label{
   display: flex;
   justify-content: space-between;
@@ -90,6 +125,23 @@
   font-size: 0.9rem;
   color: #f7b955;
   font-weight: 700;
+}
+
+/* Information bar */
+.social-info-bar{
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.social-info-fill{
+  height: 100%;
+  background: linear-gradient(90deg, #9b59b6, #c39bd3);
+  box-shadow: 0 0 8px rgba(155, 89, 182, 0.4);
+  transition: width 0.3s ease;
 }
 
 /* Energy indicator dots */
@@ -119,6 +171,20 @@
 /* Player selection */
 .social-player-select{
   margin-bottom: 14px;
+}
+
+.social-player-select.multi-select-mode .social-section-title::after{
+  content: ' (Multi-select)';
+  font-size: 0.75rem;
+  color: #f7b955;
+  font-weight: normal;
+}
+
+.selection-instruction{
+  font-size: 0.75rem;
+  color: #95a9c0;
+  margin-bottom: 6px;
+  font-style: italic;
 }
 
 .social-section-title{
@@ -223,6 +289,19 @@
   border-radius: 4px;
 }
 
+.social-action-costs{
+  display: flex;
+  gap: 4px;
+}
+
+.social-action-cost.energy-cost{
+  background: rgba(52, 152, 219, 0.2);
+}
+
+.social-action-cost.info-cost{
+  background: rgba(155, 89, 182, 0.2);
+}
+
 .social-action-cost.affordable{
   color: #2ecc71;
 }
@@ -248,6 +327,19 @@
   letter-spacing: 0.3px;
 }
 
+/* Action tags (replacing category, more prominent) */
+.social-action-tag{
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid;
+}
+
 .social-action-category.friendly{
   background: rgba(46, 204, 113, 0.15);
   color: #2ecc71;
@@ -261,6 +353,24 @@
 .social-action-category.aggressive{
   background: rgba(231, 76, 60, 0.15);
   color: #e74c3c;
+}
+
+.social-action-tag.friendly{
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.social-action-tag.strategic{
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+  border-color: #3498db;
+}
+
+.social-action-tag.aggressive{
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  border-color: #e74c3c;
 }
 
 /* Action button */

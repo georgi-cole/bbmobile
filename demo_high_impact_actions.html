@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>High-Impact Actions UI Demo</title>
+  <link rel="stylesheet" href="overrides-fixes.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e3ecf5;
+    }
+    h1 { color: #f7b955; margin-bottom: 10px; }
+    .subtitle { color: #95a9c0; margin-bottom: 30px; }
+    #demo-container {
+      background: rgba(0,0,0,0.3);
+      padding: 20px;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 High-Impact Social Actions - UI Demo</h1>
+  <p class="subtitle">New actions with Information costs and multi-target support</p>
+  
+  <div id="demo-container"></div>
+
+  <!-- Load dependencies -->
+  <script src="js/state.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    // Initialize game state
+    if(!window.game){
+      window.game = {
+        week: 2,
+        humanId: 1,
+        cfg: {
+          enableSocialManeuvers: true
+        },
+        players: [],
+        alliances: []
+      };
+    }
+
+    // Create demo players
+    if(!window.game.players || window.game.players.length === 0){
+      window.game.players = [
+        { id: 1, name: 'You', affinity: {}, information: 65, socialTraits: ['charismatic', 'loyal'], memoryLog: [] },
+        { id: 2, name: 'Alex', affinity: {}, information: 50, socialTraits: ['observant'], memoryLog: [] },
+        { id: 3, name: 'Blake', affinity: {}, information: 40, socialTraits: ['deceptive'], memoryLog: [] },
+        { id: 4, name: 'Casey', affinity: {}, information: 70, socialTraits: ['persuasive'], memoryLog: [] },
+        { id: 5, name: 'Drew', affinity: {}, information: 30, socialTraits: ['gullible'], memoryLog: [] },
+        { id: 6, name: 'Ellis', affinity: {}, information: 55, socialTraits: ['trustworthy'], memoryLog: [] }
+      ];
+    }
+
+    // Mock helper functions
+    if(!window.safeName){
+      window.safeName = function(id) {
+        const p = window.game.players.find(p => p.id === id);
+        return p ? p.name : `Player ${id}`;
+      };
+    }
+
+    if(!window.getP){
+      window.getP = function(id) {
+        return window.game.players.find(p => p.id === id);
+      };
+    }
+
+    if(!window.alivePlayers){
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted);
+      };
+    }
+
+    if(!window.addLog){
+      window.addLog = function(msg, type) {
+        console.log(`[${type}] ${msg}`);
+      };
+    }
+
+    if(!window.formAlliance){
+      window.formAlliance = function(memberIds) {
+        const alliance = {
+          id: Date.now(),
+          members: memberIds,
+          cohesion: 50
+        };
+        window.game.alliances.push(alliance);
+        console.log('Alliance formed:', memberIds);
+      };
+    }
+
+    if(!window.inSameAlliance){
+      window.inSameAlliance = function(id1, id2) {
+        return window.game.alliances.some(al => 
+          al.members.includes(id1) && al.members.includes(id2)
+        );
+      };
+    }
+
+    // Initialize and render UI
+    window.SocialManeuvers.initSocialEnergy();
+    window.SocialManeuvers.setEnergy(1, 4); // Give the human player 4 energy
+    
+    const container = document.getElementById('demo-container');
+    window.SocialManeuvers.renderSocialManeuversUI(container, 1);
+  </script>
+</body>
+</html>
