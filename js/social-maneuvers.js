@@ -149,9 +149,29 @@
     return SOCIAL_ACTIONS.find(a => a.id === actionId);
   }
 
-  function getAvailableActions(playerId){
+  function getAvailableActions(playerId, targetId){
     const energy = getEnergy(playerId);
-    return SOCIAL_ACTIONS.filter(action => action.cost <= energy);
+    const actor = global.getP?.(playerId);
+    const target = targetId ? global.getP?.(targetId) : null;
+    
+    return SOCIAL_ACTIONS.map(action => {
+      const canAfford = action.cost <= energy;
+      
+      // Get evaluation from config system if available and target is specified
+      let evaluation = null;
+      if (target && global.SocialActionConfig) {
+        evaluation = global.SocialActionConfig.getActionEvaluation(action.id, actor, target, action);
+      }
+      
+      return {
+        ...action,
+        canAfford,
+        evaluation
+      };
+    }).filter(action => {
+      // Always show all actions, but mark them appropriately
+      return true;
+    });
   }
 
   // ============================================================================
@@ -170,6 +190,35 @@
       return { success: false, reason: 'unknown_action' };
     }
 
+    const actor = global.getP?.(actorId);
+    const target = global.getP?.(targetId);
+    
+    if(!actor || !target){
+      return { success: false, reason: 'player_not_found' };
+    }
+
+    // Get action evaluation
+    let evaluation = null;
+    let chanceRoll = Math.random();
+    let succeeded = true;
+    
+    if(global.SocialActionConfig){
+      evaluation = global.SocialActionConfig.getActionEvaluation(actionId, actor, target, action);
+      
+      // Check if action is gated
+      if(!evaluation.available){
+        return {
+          success: false,
+          reason: 'gated',
+          message: evaluation.gateReasons.join('; '),
+          gateReasons: evaluation.gateReasons
+        };
+      }
+      
+      // Roll for success based on calculated chance
+      succeeded = chanceRoll < evaluation.finalChance;
+    }
+
     // Check energy
     const hasEnergy = spendEnergy(actorId, action.cost);
     if(!hasEnergy){
@@ -180,18 +229,52 @@
       };
     }
 
-    // Log the action
+    // Log telemetry
     const actorName = global.safeName?.(actorId) || `Player ${actorId}`;
     const targetName = global.safeName?.(targetId) || `Player ${targetId}`;
-    console.info(`[social-maneuvers] ${actorName} -> ${targetName}: ${action.label} (cost: ${action.cost})`);
+    
+    const telemetry = {
+      timestamp: Date.now(),
+      week: global.game?.week || 1,
+      actorId,
+      actorName,
+      targetId,
+      targetName,
+      actionId,
+      actionLabel: action.label,
+      actionCost: action.cost,
+      baseChance: evaluation?.baseChance ?? 0.5,
+      modifiers: evaluation?.modifiers || [],
+      finalChance: evaluation?.finalChance ?? 0.5,
+      chanceRoll,
+      succeeded,
+      energyRemaining: getEnergy(actorId)
+    };
+    
+    console.info(`[social-maneuvers] ${actorName} -> ${targetName}: ${action.label} (${(telemetry.finalChance * 100).toFixed(0)}% chance, rolled ${(chanceRoll * 100).toFixed(0)}%, ${succeeded ? 'SUCCESS' : 'FAILED'})`);
+    console.info('[social-maneuvers] Telemetry:', telemetry);
+    
+    // Store telemetry
+    if(!global.game.__socialManeuversTelemetry){
+      global.game.__socialManeuversTelemetry = [];
+    }
+    global.game.__socialManeuversTelemetry.push(telemetry);
+    
+    // Keep only last 100 telemetry entries
+    if(global.game.__socialManeuversTelemetry.length > 100){
+      global.game.__socialManeuversTelemetry.shift();
+    }
 
     // Process outcome
-    const outcome = processActionOutcome(actorId, targetId, action);
+    const outcome = processActionOutcome(actorId, targetId, action, succeeded, evaluation);
 
     return {
       success: true,
       action: action,
       outcome: outcome,
+      evaluation: evaluation,
+      succeeded: succeeded,
+      telemetry: telemetry,
       energyRemaining: getEnergy(actorId)
     };
   }
@@ -200,7 +283,7 @@
   // OUTCOME PROCESSING (PLACEHOLDER)
   // ============================================================================
   
-  function processActionOutcome(actorId, targetId, action){
+  function processActionOutcome(actorId, targetId, action, succeeded, evaluation){
     // PLACEHOLDER: This will integrate with existing social systems
     // For now, basic affinity adjustments
     
@@ -211,30 +294,58 @@
       return { type: 'error', message: 'Player not found' };
     }
 
-    // Basic affinity changes based on action category
+    // Determine outcome based on success/failure and action category
     let affinityChange = 0;
     let outcomeType = 'neutral';
     let message = '';
 
-    switch(action.category){
-      case 'friendly':
-        affinityChange = 0.05 + Math.random() * 0.05;
-        outcomeType = 'positive';
-        message = `${action.label} went well!`;
-        break;
-      case 'strategic':
-        affinityChange = (Math.random() - 0.3) * 0.1;
-        outcomeType = affinityChange > 0 ? 'positive' : 'neutral';
-        message = `${action.label} was informative.`;
-        break;
-      case 'aggressive':
-        affinityChange = -0.03 + Math.random() * -0.05;
-        outcomeType = 'negative';
-        message = `${action.label} created tension.`;
-        break;
-      default:
-        affinityChange = 0;
-        message = `${action.label} completed.`;
+    if(succeeded){
+      // Success outcomes
+      switch(action.category){
+        case 'friendly':
+          affinityChange = 0.05 + Math.random() * 0.05;
+          outcomeType = 'positive';
+          message = `${action.label} went well!`;
+          break;
+        case 'strategic':
+          affinityChange = 0.03 + Math.random() * 0.07;
+          outcomeType = 'positive';
+          message = `${action.label} was productive.`;
+          break;
+        case 'aggressive':
+          affinityChange = -0.02 + Math.random() * 0.04;
+          outcomeType = 'neutral';
+          message = `${action.label} got your point across.`;
+          break;
+        default:
+          affinityChange = 0.02;
+          message = `${action.label} completed.`;
+      }
+    } else {
+      // Failure outcomes - apply backlash
+      const states = evaluation?.states || {};
+      const backlashMultiplier = states.risky ? 1.5 : 1.0;
+      
+      switch(action.category){
+        case 'friendly':
+          affinityChange = -0.03 * backlashMultiplier;
+          outcomeType = 'negative';
+          message = `${action.label} felt forced.`;
+          break;
+        case 'strategic':
+          affinityChange = -0.05 * backlashMultiplier;
+          outcomeType = 'negative';
+          message = `${action.label} backfired.`;
+          break;
+        case 'aggressive':
+          affinityChange = -0.08 * backlashMultiplier;
+          outcomeType = 'negative';
+          message = `${action.label} created serious tension!`;
+          break;
+        default:
+          affinityChange = -0.04 * backlashMultiplier;
+          message = `${action.label} didn't go as planned.`;
+      }
     }
 
     // Apply affinity change (integrate with existing system)
@@ -243,16 +354,17 @@
       actor.affinity[targetId] = current + affinityChange;
     }
 
-    // PLACEHOLDER: Hook for memory system
-    recordActionInMemory(actorId, targetId, action, outcomeType);
+    // Record in memory system
+    recordActionInMemory(actorId, targetId, action, succeeded ? 'success' : 'failure');
 
-    // PLACEHOLDER: Hook for trait effects
+    // Apply trait effects
     applyTraitEffects(actorId, targetId, action);
 
     return {
       type: outcomeType,
       message: message,
-      affinityChange: affinityChange
+      affinityChange: affinityChange,
+      succeeded: succeeded
     };
   }
 
@@ -360,7 +472,7 @@
 
     // Player selection
     if(otherPlayers.length > 0){
-      const playerSection = createPlayerSelection(otherPlayers, (player) => {
+      const playerSection = createPlayerSelection(playerId, otherPlayers, (player) => {
         selectedPlayer = player;
         updateActionsList();
       });
@@ -414,19 +526,19 @@
         return;
       }
 
-      const availableActions = getAvailableActions(playerId);
+      const availableActions = getAvailableActions(playerId, selectedPlayer.id);
       
       if(availableActions.length === 0){
         const emptyState = document.createElement('div');
         emptyState.className = 'social-empty-state';
-        emptyState.textContent = 'No energy remaining for actions';
+        emptyState.textContent = 'No actions available';
         actionsList.appendChild(emptyState);
         executeBtn.disabled = true;
         return;
       }
 
       availableActions.forEach(action => {
-        const actionItem = createActionItem(action, energy, (selected) => {
+        const actionItem = createActionItem(action, energy, selectedPlayer, (selected) => {
           selectedAction = selected;
           
           // Update visual selection
@@ -435,7 +547,10 @@
           });
           actionItem.classList.add('selected');
           
-          executeBtn.disabled = false;
+          // Disable execute button if action is locked
+          const isLocked = action.evaluation?.states?.locked || false;
+          const canAfford = action.canAfford;
+          executeBtn.disabled = isLocked || !canAfford;
         });
         actionsList.appendChild(actionItem);
       });
@@ -477,7 +592,7 @@
     return container;
   }
 
-  function createPlayerSelection(players, onSelect){
+  function createPlayerSelection(playerId, players, onSelect){
     const container = document.createElement('div');
     container.className = 'social-player-select';
 
@@ -491,10 +606,36 @@
     grid.setAttribute('role', 'radiogroup');
     grid.setAttribute('aria-label', 'Select target player');
 
+    const actor = global.getP?.(playerId);
+
     players.forEach(player => {
       const card = document.createElement('div');
       card.className = 'social-player-card';
-      card.textContent = player.name || `Player ${player.id}`;
+      
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'player-name';
+      nameDiv.textContent = player.name || `Player ${player.id}`;
+      card.appendChild(nameDiv);
+      
+      // Show relationship info
+      if(actor){
+        const affinity = actor.affinity?.[player.id] ?? 0;
+        const affinityDiv = document.createElement('div');
+        affinityDiv.className = 'player-affinity';
+        affinityDiv.style.fontSize = '0.75em';
+        affinityDiv.style.opacity = '0.8';
+        affinityDiv.style.marginTop = '4px';
+        
+        let affinityLabel = 'Neutral';
+        if(affinity >= 0.28) affinityLabel = 'Allies';
+        else if(affinity >= 0.12) affinityLabel = 'Friendly';
+        else if(affinity <= -0.28) affinityLabel = 'Enemies';
+        else if(affinity <= -0.12) affinityLabel = 'Strained';
+        
+        affinityDiv.textContent = `${affinityLabel} (${(affinity * 100).toFixed(0)}%)`;
+        card.appendChild(affinityDiv);
+      }
+      
       card.setAttribute('role', 'radio');
       card.setAttribute('aria-checked', 'false');
       card.setAttribute('tabindex', '0');
@@ -527,17 +668,33 @@
     return container;
   }
 
-  function createActionItem(action, currentEnergy, onSelect){
+  function createActionItem(action, currentEnergy, targetPlayer, onSelect){
     const item = document.createElement('div');
     item.className = 'social-action-item';
     item.setAttribute('role', 'button');
     item.setAttribute('tabindex', '0');
     
     const canAfford = currentEnergy >= action.cost;
-    if(!canAfford){
+    const evaluation = action.evaluation;
+    const states = evaluation?.states || {};
+    
+    // Determine if action is locked
+    const isLocked = states.locked || !evaluation?.available;
+    const isRisky = states.risky;
+    const isBoosted = states.boosted;
+    const isDiscounted = states.discounted;
+    
+    if(isLocked){
+      item.classList.add('locked');
+      item.setAttribute('aria-disabled', 'true');
+    } else if(!canAfford){
       item.classList.add('disabled');
       item.setAttribute('aria-disabled', 'true');
     }
+    
+    if(isRisky) item.classList.add('risky');
+    if(isBoosted) item.classList.add('boosted');
+    if(isDiscounted) item.classList.add('discounted');
 
     const header = document.createElement('div');
     header.className = 'social-action-header';
@@ -546,6 +703,45 @@
     name.className = 'social-action-name';
     name.textContent = action.label;
     header.appendChild(name);
+
+    // Badges container
+    const badges = document.createElement('div');
+    badges.className = 'social-action-badges';
+    badges.style.display = 'flex';
+    badges.style.gap = '4px';
+    badges.style.alignItems = 'center';
+    
+    // Add state badges
+    if(isLocked){
+      const lockBadge = document.createElement('span');
+      lockBadge.className = 'badge badge-locked';
+      lockBadge.textContent = '🔒';
+      lockBadge.title = 'Locked';
+      badges.appendChild(lockBadge);
+    }
+    if(isBoosted){
+      const boostBadge = document.createElement('span');
+      boostBadge.className = 'badge badge-boosted';
+      boostBadge.textContent = '⬆️';
+      boostBadge.title = 'Boosted success chance';
+      badges.appendChild(boostBadge);
+    }
+    if(isDiscounted){
+      const discountBadge = document.createElement('span');
+      discountBadge.className = 'badge badge-discounted';
+      discountBadge.textContent = '💰';
+      discountBadge.title = 'Reduced cost';
+      badges.appendChild(discountBadge);
+    }
+    if(isRisky){
+      const riskyBadge = document.createElement('span');
+      riskyBadge.className = 'badge badge-risky';
+      riskyBadge.textContent = '⚠️';
+      riskyBadge.title = 'Higher backlash on failure';
+      badges.appendChild(riskyBadge);
+    }
+    
+    header.appendChild(badges);
 
     const cost = document.createElement('div');
     cost.className = 'social-action-cost';
@@ -560,12 +756,35 @@
     desc.textContent = action.description;
     item.appendChild(desc);
 
+    // Show locked reason
+    if(isLocked && evaluation){
+      const lockReason = document.createElement('div');
+      lockReason.className = 'social-action-lock-reason';
+      lockReason.style.cssText = 'font-size:0.75em;color:#ff6666;margin-top:4px;';
+      lockReason.textContent = evaluation.gateReasons.join('; ') || 'Requirements not met';
+      item.appendChild(lockReason);
+    }
+
+    // Add tooltip with chance breakdown
+    if(evaluation && !isLocked){
+      const tooltip = createChanceTooltip(evaluation);
+      item.appendChild(tooltip);
+      
+      // Show tooltip on hover
+      item.addEventListener('mouseenter', () => {
+        tooltip.style.display = 'block';
+      });
+      item.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });
+    }
+
     const category = document.createElement('span');
     category.className = `social-action-category ${action.category}`;
     category.textContent = action.category;
     item.appendChild(category);
 
-    if(canAfford){
+    if(!isLocked && canAfford){
       item.onclick = () => onSelect(action);
       
       // Keyboard accessibility
@@ -579,6 +798,51 @@
 
     return item;
   }
+  
+  function createChanceTooltip(evaluation){
+    const tooltip = document.createElement('div');
+    tooltip.className = 'social-action-tooltip';
+    tooltip.style.cssText = 'display:none;position:absolute;background:#1a1a2e;border:1px solid #444;border-radius:6px;padding:8px;z-index:1000;min-width:200px;box-shadow:0 4px 8px rgba(0,0,0,0.3);';
+    
+    const title = document.createElement('div');
+    title.style.cssText = 'font-weight:bold;margin-bottom:6px;color:#f7b955;';
+    title.textContent = 'Success Chance Breakdown';
+    tooltip.appendChild(title);
+    
+    // Base chance
+    const baseLine = document.createElement('div');
+    baseLine.style.cssText = 'font-size:0.85em;margin:2px 0;';
+    baseLine.innerHTML = `Base: <strong>${(evaluation.baseChance * 100).toFixed(0)}%</strong>`;
+    tooltip.appendChild(baseLine);
+    
+    // Modifiers
+    if(evaluation.modifiers && evaluation.modifiers.length > 0){
+      const modSep = document.createElement('div');
+      modSep.style.cssText = 'border-top:1px solid #333;margin:6px 0 4px 0;';
+      tooltip.appendChild(modSep);
+      
+      evaluation.modifiers.forEach(mod => {
+        const modLine = document.createElement('div');
+        modLine.style.cssText = 'font-size:0.85em;margin:2px 0;';
+        const sign = mod.value >= 0 ? '+' : '';
+        const color = mod.value >= 0 ? '#66ff66' : '#ff6666';
+        modLine.innerHTML = `${mod.label}: <span style="color:${color}">${sign}${(mod.value * 100).toFixed(0)}%</span>`;
+        tooltip.appendChild(modLine);
+      });
+    }
+    
+    // Final chance
+    const finalSep = document.createElement('div');
+    finalSep.style.cssText = 'border-top:1px solid #333;margin:6px 0 4px 0;';
+    tooltip.appendChild(finalSep);
+    
+    const finalLine = document.createElement('div');
+    finalLine.style.cssText = 'font-size:0.9em;margin:4px 0;font-weight:bold;';
+    finalLine.innerHTML = `Final Chance: <span style="color:#66ff66">${(evaluation.finalChance * 100).toFixed(0)}%</span>`;
+    tooltip.appendChild(finalLine);
+    
+    return tooltip;
+  }
 
   function showFeedback(result){
     // Remove any existing feedback
@@ -588,17 +852,36 @@
     }
 
     if(!result.success){
-      const panel = createFeedbackPanel('negative', 'Action Failed', result.message || result.reason);
+      let message = result.message || result.reason;
+      if(result.gateReasons && result.gateReasons.length > 0){
+        message = result.gateReasons.join('; ');
+      }
+      const panel = createFeedbackPanel('negative', 'Action Failed', message);
       document.body.appendChild(panel);
       setTimeout(() => panel.remove(), 3000);
       return;
     }
 
     const outcome = result.outcome;
+    const succeeded = result.succeeded;
+    const telemetry = result.telemetry;
+    
+    // Determine feedback type based on outcome
+    let feedbackType = outcome.type;
+    if(!succeeded){
+      feedbackType = 'negative';
+    }
+    
+    // Create detailed message
+    let message = outcome.message;
+    if(telemetry){
+      message += `\n${succeeded ? '✓' : '✗'} ${(telemetry.finalChance * 100).toFixed(0)}% chance (rolled ${(telemetry.chanceRoll * 100).toFixed(0)}%)`;
+    }
+    
     const panel = createFeedbackPanel(
-      outcome.type, 
+      feedbackType, 
       result.action.label,
-      outcome.message
+      message
     );
     document.body.appendChild(panel);
     
