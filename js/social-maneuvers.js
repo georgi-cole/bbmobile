@@ -37,6 +37,23 @@
   
   const DEFAULT_ENERGY = 3; // Default energy points per social phase
   const MAX_ENERGY = 5;
+  
+  // ============================================================================
+  // INFORMATION RESOURCE SYSTEM
+  // ============================================================================
+  
+  function getInformation(playerId){
+    return global.getInformation?.(playerId) ?? 50;
+  }
+  
+  function spendInformation(playerId, cost){
+    const current = getInformation(playerId);
+    if(current < cost){
+      return false; // Not enough information
+    }
+    global.updateInformation?.(playerId, -cost);
+    return true;
+  }
 
   function initSocialEnergy(){
     const g = global.game;
@@ -91,57 +108,116 @@
       id: 'smalltalk',
       label: 'Small Talk',
       cost: 1,
+      infoCost: 0,
       description: 'Light conversation to build rapport',
-      category: 'friendly'
+      category: 'friendly',
+      tag: 'FRIENDLY'
     },
     {
       id: 'strategize',
       label: 'Strategize',
       cost: 2,
+      infoCost: 0,
       description: 'Discuss game plans and alliances',
-      category: 'strategic'
+      category: 'strategic',
+      tag: 'STRATEGIC'
     },
     {
       id: 'confide',
       label: 'Confide',
       cost: 2,
+      infoCost: 0,
       description: 'Share personal thoughts and build trust',
-      category: 'friendly'
+      category: 'friendly',
+      tag: 'FRIENDLY'
     },
     {
       id: 'interrogate',
       label: 'Interrogate',
       cost: 2,
+      infoCost: 0,
       description: 'Press for information about plans',
-      category: 'aggressive'
+      category: 'aggressive',
+      tag: 'AGGRESSIVE'
     },
     {
       id: 'compliment',
       label: 'Compliment',
       cost: 1,
+      infoCost: 0,
       description: 'Give genuine praise',
-      category: 'friendly'
+      category: 'friendly',
+      tag: 'FRIENDLY'
     },
     {
       id: 'confront',
       label: 'Confront',
       cost: 3,
+      infoCost: 0,
       description: 'Address conflicts directly',
-      category: 'aggressive'
+      category: 'aggressive',
+      tag: 'AGGRESSIVE'
     },
     {
       id: 'mediate',
       label: 'Mediate',
       cost: 2,
+      infoCost: 0,
       description: 'Help resolve tensions between others',
-      category: 'strategic'
+      category: 'strategic',
+      tag: 'STRATEGIC'
     },
     {
       id: 'observe',
       label: 'Observe',
       cost: 1,
+      infoCost: 0,
       description: 'Watch and listen quietly',
-      category: 'strategic'
+      category: 'strategic',
+      tag: 'STRATEGIC'
+    },
+    // NEW: High-impact actions
+    {
+      id: 'spread_rumor',
+      label: 'Spread Rumor',
+      cost: 1,
+      infoCost: 15,
+      description: 'Spread damaging information about a player. Risk of being caught!',
+      category: 'aggressive',
+      tag: 'AGGRESSIVE',
+      backlashRisk: 0.3
+    },
+    {
+      id: 'expose_secret',
+      label: 'Expose Secret',
+      cost: 2,
+      infoCost: 25,
+      description: 'Reveal damaging information publicly. High impact, high risk!',
+      category: 'aggressive',
+      tag: 'AGGRESSIVE',
+      backlashRisk: 0.5
+    },
+    {
+      id: 'group_hangout',
+      label: 'Group Hangout',
+      cost: 2,
+      infoCost: 0,
+      description: 'Organize a casual hangout. Select multiple players to bond.',
+      category: 'friendly',
+      tag: 'STRATEGIC',
+      multiTarget: true,
+      minTargets: 2,
+      maxTargets: 4
+    },
+    {
+      id: 'form_alliance',
+      label: 'Form Alliance',
+      cost: 3,
+      infoCost: 10,
+      description: 'Propose a formal alliance with another player. Success creates lasting bond.',
+      category: 'strategic',
+      tag: 'STRATEGIC',
+      allianceProposal: true
     }
   ];
 
@@ -151,14 +227,17 @@
 
   function getAvailableActions(playerId){
     const energy = getEnergy(playerId);
-    return SOCIAL_ACTIONS.filter(action => action.cost <= energy);
+    const info = getInformation(playerId);
+    return SOCIAL_ACTIONS.filter(action => 
+      action.cost <= energy && (action.infoCost || 0) <= info
+    );
   }
 
   // ============================================================================
   // ACTION EXECUTION
   // ============================================================================
   
-  function executeAction(actorId, targetId, actionId){
+  function executeAction(actorId, targetId, actionId, extraTargets){
     if(!isEnabled()){
       console.warn('[social-maneuvers] System is disabled');
       return { success: false, reason: 'disabled' };
@@ -180,34 +259,89 @@
       };
     }
 
+    // Check information cost
+    if(action.infoCost && action.infoCost > 0){
+      const hasInfo = spendInformation(actorId, action.infoCost);
+      if(!hasInfo){
+        // Refund energy since we failed
+        restoreEnergy(actorId, action.cost);
+        return {
+          success: false,
+          reason: 'insufficient_information',
+          message: `Not enough information (need ${action.infoCost})`
+        };
+      }
+    }
+
+    // Handle multi-target actions
+    let allTargets = [targetId];
+    if(action.multiTarget && extraTargets && extraTargets.length > 0){
+      allTargets = [targetId, ...extraTargets];
+      
+      // Validate target count
+      if(action.minTargets && allTargets.length < action.minTargets){
+        // Refund costs
+        restoreEnergy(actorId, action.cost);
+        if(action.infoCost) global.updateInformation?.(actorId, action.infoCost);
+        return {
+          success: false,
+          reason: 'insufficient_targets',
+          message: `Need at least ${action.minTargets} targets`
+        };
+      }
+      if(action.maxTargets && allTargets.length > action.maxTargets){
+        allTargets = allTargets.slice(0, action.maxTargets);
+      }
+    }
+
     // Log the action
     const actorName = global.safeName?.(actorId) || `Player ${actorId}`;
-    const targetName = global.safeName?.(targetId) || `Player ${targetId}`;
-    console.info(`[social-maneuvers] ${actorName} -> ${targetName}: ${action.label} (cost: ${action.cost})`);
+    const targetNames = allTargets.map(id => global.safeName?.(id) || `Player ${id}`).join(', ');
+    console.info(`[social-maneuvers] ${actorName} -> ${targetNames}: ${action.label} (cost: ${action.cost}E, ${action.infoCost || 0}I)`);
 
     // Process outcome
-    const outcome = processActionOutcome(actorId, targetId, action);
+    const outcome = processActionOutcome(actorId, allTargets, action);
+
+    // Record telemetry
+    recordTelemetry(actorId, allTargets, action, outcome);
 
     return {
       success: true,
       action: action,
       outcome: outcome,
-      energyRemaining: getEnergy(actorId)
+      energyRemaining: getEnergy(actorId),
+      informationRemaining: getInformation(actorId)
     };
   }
 
   // ============================================================================
-  // OUTCOME PROCESSING (PLACEHOLDER)
+  // OUTCOME PROCESSING
   // ============================================================================
   
-  function processActionOutcome(actorId, targetId, action){
-    // PLACEHOLDER: This will integrate with existing social systems
-    // For now, basic affinity adjustments
+  function processActionOutcome(actorId, targetIds, action){
+    // targetIds is now an array (even for single target)
+    const targets = Array.isArray(targetIds) ? targetIds : [targetIds];
     
     const actor = global.getP?.(actorId);
-    const target = global.getP?.(targetId);
-    
-    if(!actor || !target){
+    if(!actor){
+      return { type: 'error', message: 'Actor not found' };
+    }
+
+    // Handle special actions
+    switch(action.id){
+      case 'spread_rumor':
+        return processSpreadRumor(actor, targets[0], action);
+      case 'expose_secret':
+        return processExposeSecret(actor, targets[0], action);
+      case 'group_hangout':
+        return processGroupHangout(actor, targets, action);
+      case 'form_alliance':
+        return processFormAlliance(actor, targets[0], action);
+    }
+
+    // Default action processing for basic actions
+    const target = global.getP?.(targets[0]);
+    if(!target){
       return { type: 'error', message: 'Player not found' };
     }
 
@@ -239,31 +373,317 @@
 
     // Apply affinity change (integrate with existing system)
     if(actor.affinity && typeof actor.affinity === 'object'){
-      const current = actor.affinity[targetId] ?? 0;
-      actor.affinity[targetId] = current + affinityChange;
+      const current = actor.affinity[target.id] ?? 0;
+      actor.affinity[target.id] = current + affinityChange;
     }
 
-    // PLACEHOLDER: Hook for memory system
-    recordActionInMemory(actorId, targetId, action, outcomeType);
+    // Record action in memory
+    recordActionInMemory(actorId, targets[0], action, outcomeType);
 
-    // PLACEHOLDER: Hook for trait effects
-    applyTraitEffects(actorId, targetId, action);
+    // Apply trait effects
+    applyTraitEffects(actorId, targets[0], action);
 
     return {
       type: outcomeType,
       message: message,
-      affinityChange: affinityChange
+      affinityChange: affinityChange,
+      participants: [actorId, ...targets]
     };
   }
 
   // ============================================================================
-  // MEMORY SYSTEM INTEGRATION (PLACEHOLDER)
+  // SPECIAL ACTION HANDLERS
+  // ============================================================================
+
+  function processSpreadRumor(actor, targetId, action){
+    const target = global.getP?.(targetId);
+    if(!target){
+      return { type: 'error', message: 'Target not found' };
+    }
+
+    const actorName = actor.name || `Player ${actor.id}`;
+    const targetName = target.name || `Player ${targetId}`;
+
+    // Calculate if caught (based on backlash risk)
+    const caught = Math.random() < (action.backlashRisk || 0.3);
+
+    if(caught){
+      // Backlash: Actor's reputation damaged with target and others
+      const backlashDelta = -0.15 - Math.random() * 0.10;
+      
+      // Apply backlash to actor-target relationship
+      if(actor.affinity && typeof actor.affinity === 'object'){
+        const current = actor.affinity[targetId] ?? 0;
+        actor.affinity[targetId] = current + backlashDelta;
+      }
+      
+      // Apply smaller backlash to other players who heard about it
+      const alivePlayers = global.alivePlayers?.() || [];
+      const witnesses = alivePlayers.filter(p => p.id !== actor.id && p.id !== targetId);
+      witnesses.forEach(witness => {
+        if(Math.random() < 0.4 && actor.affinity){ // 40% chance each witness finds out
+          const current = actor.affinity[witness.id] ?? 0;
+          actor.affinity[witness.id] = current + (backlashDelta * 0.5);
+        }
+      });
+
+      // Create backlash memory
+      recordBacklashMemory(actor.id, targetId, 'rumor_caught', {
+        action: 'spread_rumor',
+        severity: 'medium',
+        description: `${actorName} was caught spreading rumors about ${targetName}`
+      });
+
+      global.addLog?.(`${actorName} was caught spreading rumors about ${targetName}!`, 'danger');
+
+      return {
+        type: 'backlash',
+        message: `You were caught! Your reputation took a hit.`,
+        affinityChange: backlashDelta,
+        caught: true,
+        participants: [actor.id, targetId, ...witnesses.filter((_, i) => Math.random() < 0.4).map(p => p.id)]
+      };
+    } else {
+      // Success: Target's reputation damaged with others
+      const delta = -0.10 - Math.random() * 0.08;
+      
+      // Affect target's relationships with random other players
+      const alivePlayers = global.alivePlayers?.() || [];
+      const affected = alivePlayers.filter(p => p.id !== actor.id && p.id !== targetId);
+      const affectedIds = [];
+      
+      affected.forEach(other => {
+        if(Math.random() < 0.5 && target.affinity){ // 50% chance to affect each relationship
+          const current = target.affinity[other.id] ?? 0;
+          target.affinity[other.id] = current + delta;
+          affectedIds.push(other.id);
+        }
+      });
+
+      global.addLog?.(`${actorName} spread rumors about ${targetName}.`, 'muted');
+
+      return {
+        type: 'success',
+        message: `Rumor spread successfully. ${targetName}'s reputation damaged.`,
+        affinityChange: delta,
+        caught: false,
+        participants: [actor.id, targetId, ...affectedIds]
+      };
+    }
+  }
+
+  function processExposeSecret(actor, targetId, action){
+    const target = global.getP?.(targetId);
+    if(!target){
+      return { type: 'error', message: 'Target not found' };
+    }
+
+    const actorName = actor.name || `Player ${actor.id}`;
+    const targetName = target.name || `Player ${targetId}`;
+
+    // Calculate if caught/backlash (higher risk than rumor)
+    const backlash = Math.random() < (action.backlashRisk || 0.5);
+
+    // Large impact regardless
+    const impactDelta = -0.20 - Math.random() * 0.15;
+    
+    // Affect target's relationships with ALL other players
+    const alivePlayers = global.alivePlayers?.() || [];
+    const affected = alivePlayers.filter(p => p.id !== actor.id && p.id !== targetId);
+    
+    affected.forEach(other => {
+      if(target.affinity){
+        const current = target.affinity[other.id] ?? 0;
+        target.affinity[other.id] = current + impactDelta;
+      }
+    });
+
+    if(backlash){
+      // Actor also suffers reputation damage (seen as untrustworthy)
+      const backlashDelta = -0.12 - Math.random() * 0.08;
+      
+      affected.forEach(other => {
+        if(Math.random() < 0.6 && actor.affinity){ // 60% chance each player sees actor as untrustworthy
+          const current = actor.affinity[other.id] ?? 0;
+          actor.affinity[other.id] = current + backlashDelta;
+        }
+      });
+
+      // Target relationship severely damaged
+      if(actor.affinity){
+        const current = actor.affinity[targetId] ?? 0;
+        actor.affinity[targetId] = current + (-0.25 - Math.random() * 0.10);
+      }
+
+      recordBacklashMemory(actor.id, targetId, 'secret_exposed', {
+        action: 'expose_secret',
+        severity: 'high',
+        description: `${actorName} exposed secrets about ${targetName}, but faced backlash`
+      });
+
+      global.addLog?.(`${actorName} exposed ${targetName}'s secrets! Both reputations damaged.`, 'danger');
+
+      return {
+        type: 'backlash',
+        message: `Secret exposed but you're seen as untrustworthy. High cost!`,
+        affinityChange: impactDelta,
+        backlash: true,
+        backlashDelta: backlashDelta,
+        participants: [actor.id, targetId, ...affected.map(p => p.id)]
+      };
+    } else {
+      global.addLog?.(`${actorName} exposed damaging information about ${targetName}!`, 'warning');
+
+      return {
+        type: 'success',
+        message: `Secret exposed successfully! ${targetName}'s reputation destroyed.`,
+        affinityChange: impactDelta,
+        backlash: false,
+        participants: [actor.id, targetId, ...affected.map(p => p.id)]
+      };
+    }
+  }
+
+  function processGroupHangout(actor, targetIds, action){
+    const actorName = actor.name || `Player ${actor.id}`;
+    const participants = [actor.id, ...targetIds];
+    const participantNames = participants.map(id => global.safeName?.(id) || `Player ${id}`).join(', ');
+
+    // Small affinity boost between all participants
+    const boostDelta = 0.04 + Math.random() * 0.03;
+
+    // Apply boost between all pairs of participants
+    for(let i = 0; i < participants.length; i++){
+      for(let j = i + 1; j < participants.length; j++){
+        const p1 = global.getP?.(participants[i]);
+        const p2 = global.getP?.(participants[j]);
+        
+        if(p1 && p2){
+          // Mutual boost
+          if(p1.affinity){
+            const current1 = p1.affinity[p2.id] ?? 0;
+            p1.affinity[p2.id] = current1 + boostDelta;
+          }
+          if(p2.affinity){
+            const current2 = p2.affinity[p1.id] ?? 0;
+            p2.affinity[p1.id] = current2 + boostDelta;
+          }
+        }
+      }
+    }
+
+    global.addLog?.(`${actorName} organized a group hangout with ${targetIds.length} others.`, 'ok');
+
+    return {
+      type: 'positive',
+      message: `Group hangout was fun! Everyone bonded a little.`,
+      affinityChange: boostDelta,
+      participants: participants,
+      multiTarget: true
+    };
+  }
+
+  function processFormAlliance(actor, targetId, action){
+    const target = global.getP?.(targetId);
+    if(!target){
+      return { type: 'error', message: 'Target not found' };
+    }
+
+    const actorName = actor.name || `Player ${actor.id}`;
+    const targetName = target.name || `Player ${targetId}`;
+
+    // Check current affinity/relationship
+    const currentAffinity = actor.affinity?.[targetId] ?? 0;
+    
+    // Success threshold: need reasonable affinity
+    const successThreshold = 0.15;
+    const success = currentAffinity >= successThreshold;
+
+    if(success){
+      // Create formal alliance using existing alliance system
+      const allianceCreated = tryCreateAlliance(actor.id, targetId);
+      
+      if(allianceCreated){
+        // Boost relationship
+        const boostDelta = 0.10 + Math.random() * 0.05;
+        if(actor.affinity){
+          actor.affinity[targetId] = (actor.affinity[targetId] ?? 0) + boostDelta;
+        }
+        if(target.affinity){
+          target.affinity[actor.id] = (target.affinity[actor.id] ?? 0) + boostDelta;
+        }
+
+        global.addLog?.(`${actorName} and ${targetName} formed an alliance!`, 'success');
+
+        return {
+          type: 'success',
+          message: `Alliance formed with ${targetName}! Stronger together.`,
+          affinityChange: boostDelta,
+          allianceFormed: true,
+          participants: [actor.id, targetId]
+        };
+      } else {
+        // Alliance system rejected (maybe already in alliance)
+        return {
+          type: 'neutral',
+          message: `Proposal accepted but alliance couldn't be formalized.`,
+          participants: [actor.id, targetId]
+        };
+      }
+    } else {
+      // Failure: create BetrayalRisk memory
+      const delta = -0.08 - Math.random() * 0.05;
+      if(actor.affinity){
+        actor.affinity[targetId] = (actor.affinity[targetId] ?? 0) + delta;
+      }
+      if(target.affinity){
+        target.affinity[actor.id] = (target.affinity[actor.id] ?? 0) + delta;
+      }
+
+      recordBetrayalRiskMemory(actor.id, targetId, {
+        action: 'form_alliance',
+        reason: 'proposal_rejected',
+        description: `${targetName} rejected ${actorName}'s alliance proposal`
+      });
+
+      global.addLog?.(`${targetName} rejected ${actorName}'s alliance proposal.`, 'warning');
+
+      return {
+        type: 'failure',
+        message: `${targetName} rejected your proposal. Relationship strained.`,
+        affinityChange: delta,
+        allianceFormed: false,
+        betrayalRisk: true,
+        participants: [actor.id, targetId]
+      };
+    }
+  }
+
+  function tryCreateAlliance(id1, id2){
+    // Use existing alliance system from state.js
+    if(typeof global.formAlliance === 'function'){
+      try {
+        // Check if they're already in an alliance together
+        if(global.inSameAlliance?.(id1, id2)){
+          return false; // Already allied
+        }
+        
+        // Try to form alliance (requires minimum bond strength)
+        global.formAlliance([id1, id2]);
+        return true;
+      } catch(e){
+        console.warn('[social-maneuvers] Alliance creation failed:', e);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  // ============================================================================
+  // MEMORY SYSTEM INTEGRATION
   // ============================================================================
   
   function recordActionInMemory(actorId, targetId, action, outcome){
-    // PLACEHOLDER: Integrate with social-narrative.js or create new memory structure
-    // This will track player actions across phases for deeper narrative
-    
     const g = global.game;
     if(!g) return;
 
@@ -291,8 +711,85 @@
     console.info('[social-maneuvers] Action recorded in memory');
   }
 
+  function recordBacklashMemory(actorId, targetId, eventType, details){
+    const g = global.game;
+    if(!g) return;
+
+    if(!g.__backlashMemories){
+      g.__backlashMemories = [];
+    }
+
+    const actor = global.getP?.(actorId);
+    const target = global.getP?.(targetId);
+
+    g.__backlashMemories.push({
+      week: g.week || 1,
+      timestamp: Date.now(),
+      actorId,
+      targetId,
+      eventType,
+      ...details
+    });
+
+    // Add to player's memory log if available
+    if(actor && actor.memoryLog){
+      actor.memoryLog.push({
+        week: g.week || 1,
+        timestamp: Date.now(),
+        event: eventType,
+        targetId,
+        details
+      });
+      
+      // Keep memory log size in check
+      if(actor.memoryLog.length > 100){
+        actor.memoryLog.shift();
+      }
+    }
+
+    console.info(`[social-maneuvers] Backlash memory recorded: ${eventType}`);
+  }
+
+  function recordBetrayalRiskMemory(actorId, targetId, details){
+    const g = global.game;
+    if(!g) return;
+
+    if(!g.__betrayalRisks){
+      g.__betrayalRisks = [];
+    }
+
+    const actor = global.getP?.(actorId);
+    const target = global.getP?.(targetId);
+
+    g.__betrayalRisks.push({
+      week: g.week || 1,
+      timestamp: Date.now(),
+      actorId,
+      targetId,
+      ...details
+    });
+
+    // Add to both players' memory logs
+    [actor, target].forEach(player => {
+      if(player && player.memoryLog){
+        player.memoryLog.push({
+          week: g.week || 1,
+          timestamp: Date.now(),
+          event: 'betrayal_risk',
+          targetId: player.id === actorId ? targetId : actorId,
+          details
+        });
+        
+        if(player.memoryLog.length > 100){
+          player.memoryLog.shift();
+        }
+      }
+    });
+
+    console.info('[social-maneuvers] BetrayalRisk memory recorded');
+  }
+
   function getPlayerMemory(actorId, targetId){
-    // PLACEHOLDER: Retrieve action history between two players
     const g = global.game;
     if(!g?.__socialManeuversMemory) return [];
 
@@ -303,25 +800,95 @@
   }
 
   // ============================================================================
-  // TRAIT EFFECTS (PLACEHOLDER)
+  // TRAIT EFFECTS
   // ============================================================================
   
   function applyTraitEffects(actorId, targetId, action){
-    // PLACEHOLDER: Apply player personality traits to modify action outcomes
-    // Examples:
-    // - Charismatic players get bonus to friendly actions
-    // - Strategic players get bonus to strategize actions
-    // - Hot-headed players have penalties to confide actions
-    
     const actor = global.getP?.(actorId);
     if(!actor) return;
 
-    // PLACEHOLDER: Check for traits when trait system is implemented
-    // if(actor.traits?.includes('charismatic') && action.category === 'friendly'){
-    //   // Apply bonus
-    // }
+    // Check for traits using global helper if available
+    const hasTrait = global.hasTrait || function(id, trait){
+      const p = global.getP?.(id);
+      return p?.socialTraits?.some(t => t.toLowerCase() === trait.toLowerCase()) || false;
+    };
 
-    console.info('[social-maneuvers] Trait effects would apply here');
+    // Apply trait bonuses/penalties
+    if(hasTrait(actorId, 'charismatic') && action.category === 'friendly'){
+      // Charismatic players get bonus to friendly actions
+      const target = global.getP?.(targetId);
+      if(target && actor.affinity){
+        const bonus = 0.02 + Math.random() * 0.02;
+        actor.affinity[targetId] = (actor.affinity[targetId] ?? 0) + bonus;
+      }
+    }
+
+    if(hasTrait(actorId, 'manipulative') && action.category === 'aggressive'){
+      // Manipulative players have reduced backlash risk
+      // (This would be applied in the action handlers)
+    }
+
+    if(hasTrait(actorId, 'observant') && action.category === 'strategic'){
+      // Observant players gain more information from strategic actions
+      if(global.updateInformation){
+        global.updateInformation(actorId, 2 + Math.floor(Math.random() * 3));
+      }
+    }
+
+    console.info('[social-maneuvers] Trait effects applied for', action.id);
+  }
+
+  // ============================================================================
+  // TELEMETRY
+  // ============================================================================
+  
+  function recordTelemetry(actorId, targetIds, action, outcome){
+    const g = global.game;
+    if(!g) return;
+
+    if(!g.__socialTelemetry){
+      g.__socialTelemetry = [];
+    }
+
+    const telemetryEntry = {
+      week: g.week || 1,
+      timestamp: Date.now(),
+      actorId,
+      targetIds: Array.isArray(targetIds) ? targetIds : [targetIds],
+      actionId: action.id,
+      actionLabel: action.label,
+      energyCost: action.cost,
+      infoCost: action.infoCost || 0,
+      outcomeType: outcome.type,
+      participants: outcome.participants || [actorId, ...targetIds],
+      deltas: {}
+    };
+
+    // Record relationship deltas
+    if(outcome.affinityChange !== undefined){
+      telemetryEntry.deltas.affinity = outcome.affinityChange;
+    }
+    if(outcome.backlashDelta !== undefined){
+      telemetryEntry.deltas.backlash = outcome.backlashDelta;
+    }
+    if(outcome.allianceFormed !== undefined){
+      telemetryEntry.allianceFormed = outcome.allianceFormed;
+    }
+    if(outcome.betrayalRisk !== undefined){
+      telemetryEntry.betrayalRisk = outcome.betrayalRisk;
+    }
+    if(outcome.caught !== undefined){
+      telemetryEntry.caught = outcome.caught;
+    }
+
+    g.__socialTelemetry.push(telemetryEntry);
+
+    // Keep last 200 entries
+    if(g.__socialTelemetry.length > 200){
+      g.__socialTelemetry.shift();
+    }
+
+    console.info('[social-maneuvers] Telemetry recorded:', telemetryEntry);
   }
 
   // ============================================================================
@@ -342,11 +909,12 @@
     }
 
     const energy = getEnergy(playerId);
+    const information = getInformation(playerId);
     const alivePlayers = global.alivePlayers?.() || [];
     const otherPlayers = alivePlayers.filter(p => p.id !== playerId);
 
     // State for UI interactions
-    let selectedPlayer = null;
+    let selectedPlayers = []; // Support multi-select for group actions
     let selectedAction = null;
 
     const wrapper = document.createElement('div');
@@ -354,14 +922,14 @@
     wrapper.setAttribute('role', 'region');
     wrapper.setAttribute('aria-label', 'Social Maneuvers Interface');
 
-    // Energy display
-    const energyBar = createEnergyDisplay(energy);
-    wrapper.appendChild(energyBar);
+    // Energy and Information display
+    const resourcesBar = createResourcesDisplay(energy, information);
+    wrapper.appendChild(resourcesBar);
 
     // Player selection
     if(otherPlayers.length > 0){
-      const playerSection = createPlayerSelection(otherPlayers, (player) => {
-        selectedPlayer = player;
+      const playerSection = createPlayerSelection(otherPlayers, (players, multiSelect) => {
+        selectedPlayers = players;
         updateActionsList();
       });
       wrapper.appendChild(playerSection);
@@ -388,8 +956,10 @@
     executeBtn.disabled = true;
     executeBtn.setAttribute('aria-label', 'Execute selected social action');
     executeBtn.onclick = () => {
-      if(selectedPlayer && selectedAction){
-        const result = executeAction(playerId, selectedPlayer.id, selectedAction.id);
+      if(selectedPlayers.length > 0 && selectedAction){
+        const primaryTarget = selectedPlayers[0];
+        const extraTargets = selectedPlayers.slice(1);
+        const result = executeAction(playerId, primaryTarget, selectedAction.id, extraTargets);
         showFeedback(result);
         
         // Refresh UI after action
@@ -405,7 +975,7 @@
     function updateActionsList(){
       actionsList.innerHTML = '';
       
-      if(!selectedPlayer){
+      if(selectedPlayers.length === 0){
         const emptyState = document.createElement('div');
         emptyState.className = 'social-empty-state';
         emptyState.textContent = 'Select a player to see available actions';
@@ -419,18 +989,58 @@
       if(availableActions.length === 0){
         const emptyState = document.createElement('div');
         emptyState.className = 'social-empty-state';
-        emptyState.textContent = 'No energy remaining for actions';
+        emptyState.textContent = 'No energy or information remaining for actions';
         actionsList.appendChild(emptyState);
         executeBtn.disabled = true;
         return;
       }
 
       availableActions.forEach(action => {
-        const actionItem = createActionItem(action, energy, (selected) => {
+        const actionItem = createActionItem(action, energy, information, (selected) => {
           selectedAction = selected;
           
           // Update visual selection
           actionsList.querySelectorAll('.social-action-item').forEach(item => {
+            item.classList.remove('selected');
+          });
+          actionItem.classList.add('selected');
+          
+          // Enable/disable multi-select based on action
+          updatePlayerSelectionMode(selected.multiTarget, selected.minTargets, selected.maxTargets);
+          
+          executeBtn.disabled = false;
+        });
+        actionsList.appendChild(actionItem);
+      });
+    }
+
+    function updatePlayerSelectionMode(multiTarget, minTargets, maxTargets){
+      const playerSection = wrapper.querySelector('.social-player-select');
+      if(!playerSection) return;
+      
+      if(multiTarget){
+        playerSection.classList.add('multi-select-mode');
+        playerSection.setAttribute('data-min-targets', minTargets || 1);
+        playerSection.setAttribute('data-max-targets', maxTargets || 10);
+        
+        // Update instruction text
+        let instruction = playerSection.querySelector('.selection-instruction');
+        if(!instruction){
+          instruction = document.createElement('div');
+          instruction.className = 'selection-instruction';
+          playerSection.insertBefore(instruction, playerSection.firstChild.nextSibling);
+        }
+        instruction.textContent = `Select ${minTargets || 2}-${maxTargets || 4} players for group action`;
+      } else {
+        playerSection.classList.remove('multi-select-mode');
+        const instruction = playerSection.querySelector('.selection-instruction');
+        if(instruction) instruction.remove();
+      }
+    }
+
+    container.appendChild(wrapper);
+    updateActionsList();
+  }
             item.classList.remove('selected');
           });
           actionItem.classList.add('selected');
@@ -445,24 +1055,28 @@
     updateActionsList();
   }
 
-  function createEnergyDisplay(energy){
+  function createResourcesDisplay(energy, information){
     const container = document.createElement('div');
-    container.className = 'social-energy-bar';
+    container.className = 'social-resources-bar';
     container.setAttribute('role', 'status');
     container.setAttribute('aria-live', 'polite');
 
-    const label = document.createElement('div');
-    label.className = 'social-energy-label';
-    label.innerHTML = `
-      <strong>Social Energy</strong>
-      <span class="social-energy-value">${energy}/${MAX_ENERGY}</span>
+    // Energy section
+    const energySection = document.createElement('div');
+    energySection.className = 'social-resource-section';
+    
+    const energyLabel = document.createElement('div');
+    energyLabel.className = 'social-resource-label';
+    energyLabel.innerHTML = `
+      <strong>⚡ Energy</strong>
+      <span class="social-resource-value">${energy}/${MAX_ENERGY}</span>
     `;
-    container.appendChild(label);
+    energySection.appendChild(energyLabel);
 
     // Energy dots visualization
-    const dots = document.createElement('div');
-    dots.className = 'social-energy-dots';
-    dots.setAttribute('aria-hidden', 'true');
+    const energyDots = document.createElement('div');
+    energyDots.className = 'social-energy-dots';
+    energyDots.setAttribute('aria-hidden', 'true');
     
     for(let i = 0; i < MAX_ENERGY; i++){
       const dot = document.createElement('div');
@@ -470,9 +1084,35 @@
       if(i < energy){
         dot.classList.add('filled');
       }
-      dots.appendChild(dot);
+      energyDots.appendChild(dot);
     }
-    container.appendChild(dots);
+    energySection.appendChild(energyDots);
+    container.appendChild(energySection);
+
+    // Information section
+    const infoSection = document.createElement('div');
+    infoSection.className = 'social-resource-section';
+    
+    const infoLabel = document.createElement('div');
+    infoLabel.className = 'social-resource-label';
+    infoLabel.innerHTML = `
+      <strong>🔍 Information</strong>
+      <span class="social-resource-value">${Math.round(information)}/100</span>
+    `;
+    infoSection.appendChild(infoLabel);
+
+    // Information bar visualization
+    const infoBar = document.createElement('div');
+    infoBar.className = 'social-info-bar';
+    infoBar.setAttribute('aria-hidden', 'true');
+    
+    const infoFill = document.createElement('div');
+    infoFill.className = 'social-info-fill';
+    infoFill.style.width = `${Math.max(0, Math.min(100, information))}%`;
+    infoBar.appendChild(infoFill);
+    
+    infoSection.appendChild(infoBar);
+    container.appendChild(infoSection);
 
     return container;
   }
@@ -480,6 +1120,9 @@
   function createPlayerSelection(players, onSelect){
     const container = document.createElement('div');
     container.className = 'social-player-select';
+    
+    let selectedPlayers = [];
+    let multiSelectMode = false;
 
     const title = document.createElement('div');
     title.className = 'social-section-title';
@@ -488,28 +1131,45 @@
 
     const grid = document.createElement('div');
     grid.className = 'social-player-grid';
-    grid.setAttribute('role', 'radiogroup');
-    grid.setAttribute('aria-label', 'Select target player');
+    grid.setAttribute('role', 'group');
+    grid.setAttribute('aria-label', 'Select target player(s)');
 
     players.forEach(player => {
       const card = document.createElement('div');
       card.className = 'social-player-card';
       card.textContent = player.name || `Player ${player.id}`;
-      card.setAttribute('role', 'radio');
-      card.setAttribute('aria-checked', 'false');
+      card.setAttribute('data-player-id', player.id);
       card.setAttribute('tabindex', '0');
       
       card.onclick = () => {
-        // Clear other selections
-        grid.querySelectorAll('.social-player-card').forEach(c => {
-          c.classList.remove('selected');
-          c.setAttribute('aria-checked', 'false');
-        });
+        const isMultiSelect = container.classList.contains('multi-select-mode');
         
-        // Select this card
-        card.classList.add('selected');
-        card.setAttribute('aria-checked', 'true');
-        onSelect(player);
+        if(isMultiSelect){
+          // Multi-select mode (for group actions)
+          const maxTargets = parseInt(container.getAttribute('data-max-targets') || '10');
+          const isSelected = card.classList.contains('selected');
+          
+          if(isSelected){
+            // Deselect
+            card.classList.remove('selected');
+            selectedPlayers = selectedPlayers.filter(p => p.id !== player.id);
+          } else {
+            // Select if under max
+            if(selectedPlayers.length < maxTargets){
+              card.classList.add('selected');
+              selectedPlayers.push(player);
+            }
+          }
+        } else {
+          // Single-select mode
+          grid.querySelectorAll('.social-player-card').forEach(c => {
+            c.classList.remove('selected');
+          });
+          card.classList.add('selected');
+          selectedPlayers = [player];
+        }
+        
+        onSelect(selectedPlayers, isMultiSelect);
       };
       
       // Keyboard accessibility
@@ -527,13 +1187,16 @@
     return container;
   }
 
-  function createActionItem(action, currentEnergy, onSelect){
+  function createActionItem(action, currentEnergy, currentInfo, onSelect){
     const item = document.createElement('div');
     item.className = 'social-action-item';
     item.setAttribute('role', 'button');
     item.setAttribute('tabindex', '0');
     
-    const canAfford = currentEnergy >= action.cost;
+    const canAffordEnergy = currentEnergy >= action.cost;
+    const canAffordInfo = !action.infoCost || currentInfo >= action.infoCost;
+    const canAfford = canAffordEnergy && canAffordInfo;
+    
     if(!canAfford){
       item.classList.add('disabled');
       item.setAttribute('aria-disabled', 'true');
@@ -547,12 +1210,26 @@
     name.textContent = action.label;
     header.appendChild(name);
 
-    const cost = document.createElement('div');
-    cost.className = 'social-action-cost';
-    cost.classList.add(canAfford ? 'affordable' : 'expensive');
-    cost.textContent = `⚡ ${action.cost}`;
-    header.appendChild(cost);
-
+    const costs = document.createElement('div');
+    costs.className = 'social-action-costs';
+    
+    // Energy cost
+    const energyCost = document.createElement('span');
+    energyCost.className = 'social-action-cost energy-cost';
+    energyCost.classList.add(canAffordEnergy ? 'affordable' : 'expensive');
+    energyCost.textContent = `⚡${action.cost}`;
+    costs.appendChild(energyCost);
+    
+    // Information cost (if any)
+    if(action.infoCost && action.infoCost > 0){
+      const infoCost = document.createElement('span');
+      infoCost.className = 'social-action-cost info-cost';
+      infoCost.classList.add(canAffordInfo ? 'affordable' : 'expensive');
+      infoCost.textContent = `🔍${action.infoCost}`;
+      costs.appendChild(infoCost);
+    }
+    
+    header.appendChild(costs);
     item.appendChild(header);
 
     const desc = document.createElement('div');
@@ -560,10 +1237,11 @@
     desc.textContent = action.description;
     item.appendChild(desc);
 
-    const category = document.createElement('span');
-    category.className = `social-action-category ${action.category}`;
-    category.textContent = action.category;
-    item.appendChild(category);
+    // Action tag (STRATEGIC/AGGRESSIVE/FRIENDLY)
+    const tag = document.createElement('span');
+    tag.className = `social-action-tag ${action.category}`;
+    tag.textContent = action.tag || action.category.toUpperCase();
+    item.appendChild(tag);
 
     if(canAfford){
       item.onclick = () => onSelect(action);
