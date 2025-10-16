@@ -60,7 +60,7 @@
   }
 
   // Show profile creation form
-  function showCreateProfileForm(onComplete) {
+  function showCreateProfileForm(onComplete, preselectId) {
     const panel = modalElement.querySelector('.profile-modal-panel');
     
     panel.innerHTML = `
@@ -110,12 +110,12 @@
     };
 
     cancelBtn.onclick = () => {
-      showProfileList();
+      showProfileList(preselectId);
     };
   }
 
   // Show profile list
-  function showProfileList() {
+  function showProfileList(preselectId) {
     const profiles = global.ProfileStorage.getAllProfiles();
     const atMax = global.ProfileStorage.isAtMaxCapacity();
     
@@ -124,9 +124,11 @@
     const profileCards = profiles.map(p => {
       const xpDisplay = (p.xp !== undefined && p.xp !== null) ? ` • ${p.xp} XP` : '';
       const seasonDisplay = (p.season !== undefined && p.season !== null) ? ` • Season ${p.season}` : '';
+      const isPreselected = preselectId && p.id === preselectId;
+      const preselectClass = isPreselected ? ' preselected' : '';
       
       return `
-        <div class="profile-card" data-id="${p.id}">
+        <div class="profile-card${preselectClass}" data-id="${p.id}">
           <img class="profile-card-avatar" src="${p.avatar}" alt="${p.displayName}" />
           <div class="profile-card-info">
             <div class="profile-card-name">${escapeHtml(p.displayName)}</div>
@@ -189,7 +191,7 @@
         if (confirm(`Delete profile "${profile.displayName}"?`)) {
           try {
             global.ProfileStorage.deleteProfile(id);
-            showProfileList(); // Refresh list
+            showProfileList(preselectId); // Refresh list with same preselection
           } catch (e) {
             alert('Failed to delete profile: ' + e.message);
           }
@@ -206,7 +208,7 @@
           if (onSelectCallback) {
             onSelectCallback(profile);
           }
-        });
+        }, preselectId);
       };
     }
 
@@ -273,9 +275,9 @@
         if (onSelectCallback) {
           onSelectCallback(profile);
         }
-      });
+      }, options.preselectId);
     } else {
-      showProfileList();
+      showProfileList(options.preselectId);
     }
 
     modal.style.display = 'flex';

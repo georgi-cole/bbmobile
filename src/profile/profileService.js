@@ -118,40 +118,32 @@
     }
   }
 
-  // Initialize profile on app start
+  // Initialize profile on app start (pure function - no side effects)
   function initializeProfile() {
     // Check if there are any profiles
     const profiles = global.ProfileStorage.getAllProfiles();
+    const lastProfileId = global.ProfileStorage.getLastProfileId();
     
     if (profiles.length === 0) {
       // First launch - no profiles exist
       console.info('[profileService] first launch - no profiles found');
       return { 
         firstLaunch: true,
-        profile: null,
-        showSelection: false
+        profiles: [],
+        lastProfileId: null
       };
     }
 
-    // Try to load last used profile
-    const lastProfile = global.ProfileStorage.getLastProfile();
+    // Return profile data without applying it
+    console.info('[profileService] profiles exist:', profiles.length);
+    if (lastProfileId) {
+      console.info('[profileService] last profile ID:', lastProfileId);
+    }
     
-    if (lastProfile) {
-      console.info('[profileService] loaded last profile:', lastProfile.displayName);
-      setCurrentProfile(lastProfile);
-      return { 
-        firstLaunch: false, 
-        profile: lastProfile,
-        showSelection: false
-      };
-    }
-
-    // Profiles exist but no last profile - show selection
-    console.info('[profileService] profiles exist, showing selection');
     return { 
       firstLaunch: false,
-      profile: null,
-      showSelection: true 
+      profiles: profiles,
+      lastProfileId: lastProfileId
     };
   }
 

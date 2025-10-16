@@ -64,8 +64,6 @@
 
   // Show profile selection modal
   function showProfileSelectionModal() {
-    if (profileSelected) return;
-
     // Defensive checks for required globals
     if (!global.ProfileService) {
       console.error('[player-profile-modal] ProfileService not loaded');
@@ -78,17 +76,21 @@
 
     const initResult = global.ProfileService.initializeProfile();
     
+    // ALWAYS show the modal - either create form or selection with preselection
     if (initResult.firstLaunch) {
+      // First launch: show create form
+      console.info('[player-profile-modal] first launch - showing create form');
       global.ProfileModal.show({
         autoCreate: true,
         onSelect: handleProfileSelect,
         onGuest: handleGuestMode
       });
-    } else if (initResult.profile) {
-      profileSelected = true;
-      startGame();
-    } else if (initResult.showSelection) {
+    } else {
+      // Profiles exist: show selection modal with last profile preselected
+      console.info('[player-profile-modal] showing selection modal with preselect:', initResult.lastProfileId);
       global.ProfileModal.show({
+        autoCreate: false,
+        preselectId: initResult.lastProfileId,
         onSelect: handleProfileSelect,
         onGuest: handleGuestMode
       });
@@ -98,6 +100,9 @@
   // Listen for rules acknowledgment to trigger profile modal
   function setupRulesListener() {
     window.addEventListener('bb:rules:acknowledged', function () {
+      console.info('[player-profile-modal] bb:rules:acknowledged event received');
+      // Reset profileSelected flag to ensure modal shows
+      profileSelected = false;
       showProfileSelectionModal();
     });
   }
@@ -125,6 +130,14 @@
     showProfileSelectionModal,
     removeStaticProfileText,
     showToast
+  };
+
+  // Expose showProfileModal for the topbar "Switch Profile" button
+  global.showProfileModal = function() {
+    console.info('[player-profile-modal] showProfileModal called');
+    // Reset flag to allow re-showing the modal
+    profileSelected = false;
+    showProfileSelectionModal();
   };
 
 })(window);
