@@ -1,6 +1,18 @@
 /* Profile Modal Styles */
 /* Matches existing modal style (rulesDim/profileDim) */
 
+/* Toast notification animation */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .profile-modal-dim {
   position: fixed;
   inset: 0;
