@@ -122,8 +122,8 @@
     const panel = modalElement.querySelector('.profile-modal-panel');
     
     const profileCards = profiles.map(p => {
-      const xpDisplay = p.xp ? ` • ${p.xp} XP` : '';
-      const seasonDisplay = p.season ? ` • Season ${p.season}` : '';
+      const xpDisplay = (p.xp !== undefined && p.xp !== null) ? ` • ${p.xp} XP` : '';
+      const seasonDisplay = (p.season !== undefined && p.season !== null) ? ` • Season ${p.season}` : '';
       
       return `
         <div class="profile-card" data-id="${p.id}">
