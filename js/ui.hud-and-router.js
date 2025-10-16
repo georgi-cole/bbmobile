@@ -233,7 +233,7 @@ header.innerHTML = `
 
       const c1=document.createElement('div'); c1.className='cell player';
       // Use ProfileService if available for human player display
-      const displayName = p.human && global.ProfileService 
+      const displayName = p.human && global.ProfileService?.getDisplayName
         ? global.ProfileService.getDisplayName() 
         : p.name || '';
       c1.innerHTML = `
