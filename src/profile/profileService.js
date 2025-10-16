@@ -126,7 +126,11 @@
     if (profiles.length === 0) {
       // First launch - no profiles exist
       console.info('[profileService] first launch - no profiles found');
-      return { firstLaunch: true };
+      return { 
+        firstLaunch: true,
+        profile: null,
+        showSelection: false
+      };
     }
 
     // Try to load last used profile
@@ -137,7 +141,8 @@
       setCurrentProfile(lastProfile);
       return { 
         firstLaunch: false, 
-        profile: lastProfile 
+        profile: lastProfile,
+        showSelection: false
       };
     }
 
@@ -145,6 +150,7 @@
     console.info('[profileService] profiles exist, showing selection');
     return { 
       firstLaunch: false,
+      profile: null,
       showSelection: true 
     };
   }
