@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile System Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="src/ui/profileModal.css">
+  <style>
+    body {
+      background: #0a1320;
+      color: #e8f4ff;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: rgba(26, 38, 52, 0.6);
+      border: 1px solid rgba(63, 99, 133, 0.4);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #78b4f0;
+    }
+    .btn {
+      padding: 10px 20px;
+      margin: 5px;
+      background: rgba(63, 99, 133, 0.6);
+      border: 1px solid #78b4f0;
+      border-radius: 8px;
+      color: #e8f4ff;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: rgba(63, 99, 133, 0.8);
+      transform: translateY(-1px);
+    }
+    .btn.primary {
+      background: linear-gradient(135deg, #3f6385, #2a4a62);
+      border-color: #78b4f0;
+      font-weight: 600;
+    }
+    .status {
+      background: rgba(0, 0, 0, 0.3);
+      border-left: 3px solid #78b4f0;
+      padding: 12px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+    }
+    .profile-card-preview {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(26, 38, 52, 0.8);
+      border: 1px solid rgba(63, 99, 133, 0.4);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 5px;
+    }
+    .profile-card-preview img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid #3f6385;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Profile System Test</h1>
+    
+    <div class="test-section">
+      <h2>🧪 Test Controls</h2>
+      <button class="btn" onclick="testShowProfileModal()">Show Profile Modal</button>
+      <button class="btn" onclick="testCreateProfile()">Create Test Profile</button>
+      <button class="btn" onclick="testListProfiles()">List Profiles</button>
+      <button class="btn" onclick="testClearAll()">Clear All Profiles</button>
+      <button class="btn" onclick="testGuestMode()">Set Guest Mode</button>
+      <button class="btn primary" onclick="testInitialize()">Initialize Profile Service</button>
+    </div>
+
+    <div class="test-section">
+      <h2>📊 Current State</h2>
+      <div id="currentState" class="status">Not initialized</div>
+    </div>
+
+    <div class="test-section">
+      <h2>👥 Profiles</h2>
+      <div id="profilesList" class="status">No profiles</div>
+    </div>
+
+    <div class="test-section">
+      <h2>📝 Console Output</h2>
+      <div id="consoleOutput" class="status">Ready</div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>window.global = window;</script>
+  <script src="src/profile/profileStorage.js"></script>
+  <script src="src/profile/profileService.js"></script>
+  <script src="src/ui/ProfileModal.js"></script>
+
+  <script>
+    // Initialize mock game object
+    window.game = {
+      cfg: { humanName: 'You' },
+      players: [
+        { id: 0, name: 'You', human: true }
+      ]
+    };
+
+    function log(msg) {
+      const output = document.getElementById('consoleOutput');
+      const timestamp = new Date().toLocaleTimeString();
+      output.innerHTML = `[${timestamp}] ${msg}\n${output.innerHTML}`;
+      console.log(msg);
+    }
+
+    function updateState() {
+      const current = ProfileService.getCurrentProfile();
+      const isGuest = ProfileService.isGuestMode();
+      const stateDiv = document.getElementById('currentState');
+      
+      if (isGuest) {
+        stateDiv.innerHTML = '<strong>Mode:</strong> Guest (no save)';
+      } else if (current) {
+        stateDiv.innerHTML = `
+          <strong>Profile:</strong> ${current.displayName}<br>
+          <strong>XP:</strong> ${current.xp}<br>
+          <strong>Season:</strong> ${current.season}<br>
+          <strong>ID:</strong> ${current.id}
+        `;
+      } else {
+        stateDiv.innerHTML = 'No profile selected';
+      }
+    }
+
+    function updateProfilesList() {
+      const profiles = ProfileStorage.getAllProfiles();
+      const listDiv = document.getElementById('profilesList');
+      
+      if (profiles.length === 0) {
+        listDiv.innerHTML = 'No profiles stored';
+        return;
+      }
+
+      listDiv.innerHTML = profiles.map(p => `
+        <div class="profile-card-preview">
+          <img src="${p.avatar}" alt="${p.displayName}">
+          <div>
+            <strong>${p.displayName}</strong><br>
+            <small>XP: ${p.xp} | Season: ${p.season}</small>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function testShowProfileModal() {
+      log('Opening profile modal...');
+      ProfileModal.show({
+        onSelect: (profile) => {
+          log(`Profile selected: ${profile.displayName}`);
+          ProfileService.setCurrentProfile(profile);
+          updateState();
+          updateProfilesList();
+        },
+        onGuest: () => {
+          log('Guest mode selected');
+          ProfileService.setGuestMode();
+          updateState();
+        }
+      });
+    }
+
+    function testCreateProfile() {
+      const name = prompt('Enter profile name:', 'Test User ' + Date.now().toString(36));
+      if (!name) return;
+      
+      try {
+        const profile = ProfileStorage.createProfile({
+          displayName: name,
+          xp: Math.floor(Math.random() * 1000),
+          season: Math.floor(Math.random() * 5) + 1
+        });
+        log(`Created profile: ${profile.displayName}`);
+        updateProfilesList();
+      } catch (e) {
+        log(`Error: ${e.message}`);
+        alert(e.message);
+      }
+    }
+
+    function testListProfiles() {
+      const profiles = ProfileStorage.getAllProfiles();
+      log(`Total profiles: ${profiles.length}`);
+      profiles.forEach(p => {
+        log(`  - ${p.displayName} (XP: ${p.xp}, Season: ${p.season})`);
+      });
+      updateProfilesList();
+    }
+
+    function testClearAll() {
+      if (!confirm('Clear all profiles?')) return;
+      
+      const profiles = ProfileStorage.getAllProfiles();
+      profiles.forEach(p => {
+        try {
+          ProfileStorage.deleteProfile(p.id);
+        } catch (e) {
+          log(`Error deleting ${p.displayName}: ${e.message}`);
+        }
+      });
+      log('All profiles cleared');
+      updateProfilesList();
+      updateState();
+    }
+
+    function testGuestMode() {
+      ProfileService.setGuestMode();
+      log('Set to guest mode');
+      updateState();
+    }
+
+    function testInitialize() {
+      const result = ProfileService.initializeProfile();
+      log(`Initialize result: ${JSON.stringify(result)}`);
+      updateState();
+      updateProfilesList();
+      
+      if (result.firstLaunch) {
+        log('First launch detected - would show profile creation');
+      } else if (result.profile) {
+        log(`Auto-loaded profile: ${result.profile.displayName}`);
+      } else if (result.showSelection) {
+        log('Would show profile selection');
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Profile system test loaded');
+      updateProfilesList();
+      updateState();
+    });
+  </script>
+</body>
+</html>
