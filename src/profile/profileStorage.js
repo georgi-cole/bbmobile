@@ -240,6 +240,7 @@
     updateProfile,
     deleteProfile,
     getLastProfile,
+    getLastProfileId,
     setLastProfileId,
     isAtMaxCapacity,
     getProfileCount
