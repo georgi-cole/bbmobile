@@ -1234,6 +1234,52 @@
       clearTimeout(g.__socialFastAdvanceTimeout);
       g.__socialFastAdvanceTimeout = null;
     }
+
+    // Set default 3-minute timer using available APIs
+    console.info('[social-maneuvers] ⏱️ Setting default 3-minute phase duration...');
+    const defaultDurationMs = 180000; // 3 minutes = 180 seconds = 180000ms
+    
+    // Try multiple timer APIs in order of preference
+    let timerSet = false;
+
+    // API 1: setPhaseDurationMs (most direct if available)
+    if(typeof global.setPhaseDurationMs === 'function'){
+      try{
+        global.setPhaseDurationMs(defaultDurationMs);
+        console.info('[social-maneuvers] ✓ Timer set via setPhaseDurationMs API (180s)');
+        timerSet = true;
+      }catch(e){
+        console.warn('[social-maneuvers] setPhaseDurationMs failed:', e);
+      }
+    }
+
+    // API 2: GameTimer.setRemainingMs
+    if(!timerSet && typeof global.GameTimer?.setRemainingMs === 'function'){
+      try{
+        global.GameTimer.setRemainingMs(defaultDurationMs);
+        console.info('[social-maneuvers] ✓ Timer set via GameTimer.setRemainingMs API (180s)');
+        timerSet = true;
+      }catch(e){
+        console.warn('[social-maneuvers] GameTimer.setRemainingMs failed:', e);
+      }
+    }
+
+    // API 3: Direct game.endAt manipulation (deadline fallback)
+    if(!timerSet && g){
+      try{
+        const now = Date.now();
+        g.endAt = now + defaultDurationMs;
+        g.phaseEndsAt = now + defaultDurationMs;
+        console.info('[social-maneuvers] ✓ Timer set via game.endAt fallback (180s)');
+        timerSet = true;
+      }catch(e){
+        console.warn('[social-maneuvers] game.endAt fallback failed:', e);
+      }
+    }
+
+    if(!timerSet){
+      console.warn('[social-maneuvers] ⚠️ Could not set timer - no available API found');
+    }
   }
   
   function onSocialPhaseEnd(){

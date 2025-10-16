@@ -702,6 +702,88 @@
     clearDecisionDeck();
     // Unmask overlay
     const ov=document.getElementById('tvOverlay'); if(ov){ ov.__maskedBySocial = 0; ov.style.visibility=''; }
+    
+    // Clear launcher mount guard and polling
+    g.__socializeLauncherMounted = false;
+    if(g.__socializeLauncherPollId){
+      clearInterval(g.__socializeLauncherPollId);
+      g.__socializeLauncherPollId = null;
+    }
+  }
+
+  // Robust Socialize launcher auto-mount with MutationObserver + fallback polling
+  function ensureSocializeLauncherAutoMount(){
+    if(!global.SocializeMobile || !global.SocializeMobile.ensureLauncher){
+      console.warn('[social] SocializeMobile not available - launcher auto-mount skipped');
+      return;
+    }
+
+    const g = global.game; if(!g) return;
+    
+    // Guard: prevent multiple mount attempts
+    if(g.__socializeLauncherMounted){ 
+      console.info('[social] Socialize launcher already mounted - skipping');
+      return; 
+    }
+
+    // Try immediate mount
+    const tryMount = () => {
+      let target = document.getElementById('tvOverlay');
+      if(!target){
+        // Fallback selectors
+        target = document.querySelector('.tvViewport') || document.querySelector('.tv');
+      }
+      
+      if(target){
+        console.info('[social] ✓ Found mount target, ensuring Socialize launcher...');
+        try{
+          global.SocializeMobile.ensureLauncher();
+          global.SocializeMobile.updateHUD();
+          g.__socializeLauncherMounted = true;
+          console.info('[social] ✓ Socialize launcher mounted successfully');
+          return true;
+        }catch(e){
+          console.error('[social] Failed to mount Socialize launcher:', e);
+          return false;
+        }
+      }
+      return false;
+    };
+
+    // Try immediate mount
+    if(tryMount()) return;
+
+    console.info('[social] tvOverlay not found yet - setting up observers...');
+
+    // MutationObserver: watch for tvOverlay creation
+    const observer = new MutationObserver((mutations) => {
+      if(tryMount()){
+        observer.disconnect();
+        if(g.__socializeLauncherPollId){
+          clearInterval(g.__socializeLauncherPollId);
+          g.__socializeLauncherPollId = null;
+        }
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // Fallback polling (every 500ms for up to 10 seconds)
+    let pollAttempts = 0;
+    g.__socializeLauncherPollId = setInterval(() => {
+      pollAttempts++;
+      if(tryMount() || pollAttempts >= 20){
+        clearInterval(g.__socializeLauncherPollId);
+        g.__socializeLauncherPollId = null;
+        observer.disconnect();
+        if(pollAttempts >= 20 && !g.__socializeLauncherMounted){
+          console.warn('[social] Failed to mount Socialize launcher after 10 seconds - giving up');
+        }
+      }
+    }, 500);
   }
 
   // Public entry
@@ -732,6 +814,10 @@
         console.error('[social] ❌ Failed to initialize Social Maneuvers:', e);
         console.error('[social] Maintaining social phase despite error (no fallback to legacy)');
       }
+
+      // Auto-mount Socialize launcher for mobile-first UX
+      console.info('[social] Mounting Socialize launcher...');
+      ensureSocializeLauncherAutoMount();
     } else {
       console.info('[social] Using legacy social simulation (Social Maneuvers disabled)');
     }
