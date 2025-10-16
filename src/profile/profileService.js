@@ -84,6 +84,7 @@
         console.info('[profileService] applied profile to human player:', humanPlayer);
       } else {
         console.warn('[profileService] human player not found in players array');
+        global.__pendingProfile = profile;
       }
     } else {
       console.warn('[profileService] players array not ready, storing for later application');
