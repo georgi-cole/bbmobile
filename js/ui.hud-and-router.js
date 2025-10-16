@@ -1367,7 +1367,8 @@ header.innerHTML = `
         final3_comp1: game.cfg.tFinal3Comp1,
         final3_comp2: game.cfg.tFinal3Comp2,
         final3_decision: game.cfg.tFinal3Decision,
-        social: game.cfg.tSocial
+        social: game.cfg.tSocial || 180,
+        social_intermission: game.cfg.tComms || 180
       };
       seconds = map[phase] || seconds || 0;
     }

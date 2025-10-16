@@ -420,6 +420,27 @@
 
     // Check if energy depleted
     if (res.energy <= 0) {
+      console.info('[Socialize] Energy depleted, scheduling fast-advance in 3 seconds');
+      
+      // Schedule phase advance when energy reaches 0
+      setTimeout(() => {
+        const advanceDelay = 3000; // 3 seconds
+        const g = global.game || {};
+        
+        if (typeof global.schedulePhaseAdvanceIn === 'function') {
+          global.schedulePhaseAdvanceIn(advanceDelay);
+        } else if (global.GameTimer && typeof global.GameTimer.setRemainingMs === 'function') {
+          global.GameTimer.setRemainingMs(advanceDelay);
+        } else if (typeof global.setPhaseDurationMs === 'function') {
+          global.setPhaseDurationMs(advanceDelay);
+        } else if (g.endAt) {
+          // Fallback: adjust endAt deadline to trigger phase end soon
+          g.endAt = Date.now() + advanceDelay;
+          g.phaseEndsAt = g.endAt;
+          console.info('[Socialize] Fast-advance scheduled via deadline adjustment');
+        }
+      }, 100);
+      
       setTimeout(() => {
         closeSocializeModal(true);
       }, 800);
@@ -546,6 +567,130 @@
     updateResources: updateResourceState
   };
 
+  // ===== Auto-Mount Bootstrap =====
+  // Robust bootstrap that mounts Socialize launcher when Social phase starts
+  // Handles late #tvOverlay creation with MutationObserver + polling fallback
+  
+  let mountAttempted = false;
+  let mutationObserver = null;
+  let pollingInterval = null;
+  
+  function attemptLauncherMount() {
+    if (mountAttempted) return;
+    
+    // Try to find overlay container with fallback selectors
+    let container = $('#tvOverlay');
+    if (!container) {
+      container = $('.tvViewport') || $('.tv') || $('#tv');
+      if (container) {
+        console.info('[Socialize] Using fallback container:', container.className || container.id);
+      }
+    }
+    
+    if (!container) {
+      console.warn('[Socialize] No suitable container found for launcher mount');
+      return;
+    }
+    
+    mountAttempted = true;
+    const launcher = ensureSocializeLauncher();
+    
+    if (launcher) {
+      console.info('[Socialize] Launcher mounted successfully');
+      updateHUDDisplay();
+      
+      // Stop observation/polling once mounted
+      if (mutationObserver) {
+        mutationObserver.disconnect();
+        mutationObserver = null;
+      }
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+    }
+  }
+  
+  function bootstrapLauncherMount() {
+    const g = global.game || {};
+    
+    // Only mount during social phase
+    if (g.phase !== 'social_intermission' && !g.phase?.startsWith?.('social')) {
+      return;
+    }
+    
+    console.info('[Socialize] Bootstrap launcher auto-mount initiated');
+    
+    // Reset mount flag for new phase
+    mountAttempted = false;
+    
+    // Attempt immediate mount
+    attemptLauncherMount();
+    
+    // If mount failed, setup MutationObserver to watch for #tvOverlay creation
+    if (!mountAttempted) {
+      console.info('[Socialize] Setting up MutationObserver for deferred mount');
+      
+      mutationObserver = new MutationObserver(() => {
+        if ($('#tvOverlay') || $('.tvViewport') || $('.tv') || $('#tv')) {
+          attemptLauncherMount();
+        }
+      });
+      
+      mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+      
+      // Fallback polling in case MutationObserver doesn't trigger
+      pollingInterval = setInterval(() => {
+        attemptLauncherMount();
+        if (mountAttempted) {
+          clearInterval(pollingInterval);
+          pollingInterval = null;
+        }
+      }, 500);
+      
+      // Stop polling after 10 seconds to prevent indefinite checks
+      setTimeout(() => {
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+          pollingInterval = null;
+          console.warn('[Socialize] Polling timeout - mount may have failed');
+        }
+      }, 10000);
+    }
+  }
+  
+  // Hook into phase start
+  function onSocialPhaseStart() {
+    const g = global.game || {};
+    
+    console.info('[Socialize] Social phase started');
+    
+    // Set default 3-minute duration
+    const defaultDurationSec = 180; // 3 minutes
+    
+    // Try various timer APIs in priority order
+    if (typeof global.setPhaseDurationMs === 'function') {
+      global.setPhaseDurationMs(defaultDurationSec * 1000);
+      console.info('[Socialize] Timer set via setPhaseDurationMs:', defaultDurationSec, 'seconds');
+    } else if (global.GameTimer && typeof global.GameTimer.setRemainingMs === 'function') {
+      global.GameTimer.setRemainingMs(defaultDurationSec * 1000);
+      console.info('[Socialize] Timer set via GameTimer.setRemainingMs:', defaultDurationSec, 'seconds');
+    } else if (g.endAt) {
+      // Fallback: adjust endAt deadline
+      g.endAt = Date.now() + (defaultDurationSec * 1000);
+      g.phaseEndsAt = g.endAt;
+      console.info('[Socialize] Timer set via deadline fallback:', defaultDurationSec, 'seconds');
+    } else {
+      console.warn('[Socialize] No timer API available to set duration');
+    }
+    
+    // Bootstrap launcher mount
+    bootstrapLauncherMount();
+  }
+  
   // Auto-initialize on social phase
   const originalRenderSocialPhase = global.renderSocialPhase;
   global.renderSocialPhase = function(panel) {
@@ -554,9 +699,8 @@
       originalRenderSocialPhase.call(this, panel);
     }
     
-    // Ensure launcher is present
-    ensureSocializeLauncher();
-    updateHUDDisplay();
+    // Trigger phase start hook
+    onSocialPhaseStart();
   };
 
   // Hook into weekly reset
