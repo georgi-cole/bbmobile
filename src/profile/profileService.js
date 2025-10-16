@@ -63,7 +63,7 @@
     // Find and update human player
     if (global.game.players && global.game.players.length > 0) {
       const humanPlayer = global.game.players.find(p => 
-        p.human || p.id === global.game.humanId || p.id === 0 || p.id === 1
+        p.human || p.id === global.game.humanId
       );
       
       if (humanPlayer) {
