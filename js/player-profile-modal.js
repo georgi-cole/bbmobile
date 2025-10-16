@@ -64,6 +64,8 @@
 
   // Show profile selection modal
   function showProfileSelectionModal() {
+    console.info('[player-profile-modal] showProfileSelectionModal called');
+    
     // Defensive checks for required globals
     if (!global.ProfileService) {
       console.error('[player-profile-modal] ProfileService not loaded');
@@ -75,6 +77,7 @@
     }
 
     const initResult = global.ProfileService.initializeProfile();
+    console.info('[player-profile-modal] initializeProfile result:', initResult);
     
     // ALWAYS show the modal - either create form or selection with preselection
     if (initResult.firstLaunch) {
@@ -99,8 +102,9 @@
 
   // Listen for rules acknowledgment to trigger profile modal
   function setupRulesListener() {
+    console.info('[player-profile-modal] setting up rules listener on window');
     window.addEventListener('bb:rules:acknowledged', function () {
-      console.info('[player-profile-modal] bb:rules:acknowledged event received');
+      console.info('[player-profile-modal] bb:rules:acknowledged event received on window');
       // Reset profileSelected flag to ensure modal shows
       profileSelected = false;
       showProfileSelectionModal();
@@ -143,6 +147,16 @@
     // Reset flag to allow re-showing the modal
     profileSelected = false;
     showProfileSelectionModal();
+  };
+
+  // Expose hideProfileModal for closing the modal programmatically
+  global.hideProfileModal = function() {
+    console.info('[player-profile-modal] hideProfileModal called');
+    if (global.ProfileModal && typeof global.ProfileModal.hide === 'function') {
+      global.ProfileModal.hide();
+    } else {
+      console.warn('[player-profile-modal] ProfileModal.hide not available');
+    }
   };
 
 })(window);

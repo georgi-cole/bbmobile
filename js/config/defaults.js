@@ -96,6 +96,7 @@
   // Initialize game config with defaults and stored settings
   function ensureGameCfg(){
     const g = global.game = global.game || {};
+    // Merge order: DEFAULT_CFG (base) -> existing config (from state.js) -> stored config (user overrides)
     g.cfg = Object.assign({}, DEFAULT_CFG, g.cfg || {}, loadStoredCfg());
     return g.cfg;
   }
@@ -107,5 +108,8 @@
   Config.loadStoredCfg = loadStoredCfg;
   Config.saveStoredCfg = saveStoredCfg;
   Config.ensureGameCfg = ensureGameCfg;
+
+  // Initialize config immediately
+  ensureGameCfg();
 
 })(window);
