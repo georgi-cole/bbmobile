@@ -81,12 +81,13 @@
     
     <div class="test-section">
       <h2>🧪 Test Controls</h2>
-      <button class="btn" onclick="testShowProfileModal()">Show Profile Modal</button>
+      <button class="btn primary" onclick="testRulesAcknowledgement()">Simulate Rules Acknowledgement</button>
+      <button class="btn" onclick="testShowProfileModal()">Test Switch Profile Button</button>
       <button class="btn" onclick="testCreateProfile()">Create Test Profile</button>
       <button class="btn" onclick="testListProfiles()">List Profiles</button>
       <button class="btn" onclick="testClearAll()">Clear All Profiles</button>
       <button class="btn" onclick="testGuestMode()">Set Guest Mode</button>
-      <button class="btn primary" onclick="testInitialize()">Initialize Profile Service</button>
+      <button class="btn" onclick="testInitialize()">Initialize Profile Service</button>
     </div>
 
     <div class="test-section">
@@ -167,20 +168,19 @@
     }
 
     function testShowProfileModal() {
-      log('Opening profile modal...');
-      ProfileModal.show({
-        onSelect: (profile) => {
-          log(`Profile selected: ${profile.displayName}`);
-          ProfileService.setCurrentProfile(profile);
-          updateState();
-          updateProfilesList();
-        },
-        onGuest: () => {
-          log('Guest mode selected');
-          ProfileService.setGuestMode();
-          updateState();
-        }
-      });
+      log('Opening profile modal via window.showProfileModal()...');
+      if (typeof window.showProfileModal === 'function') {
+        window.showProfileModal();
+      } else {
+        log('ERROR: window.showProfileModal not defined');
+      }
+    }
+
+    function testRulesAcknowledgement() {
+      log('Simulating bb:rules:acknowledged event...');
+      const event = new CustomEvent('bb:rules:acknowledged', { detail: {} });
+      window.dispatchEvent(event);
+      log('Event dispatched');
     }
 
     function testCreateProfile() {
@@ -240,10 +240,16 @@
       
       if (result.firstLaunch) {
         log('First launch detected - would show profile creation');
-      } else if (result.profile) {
-        log(`Auto-loaded profile: ${result.profile.displayName}`);
-      } else if (result.showSelection) {
-        log('Would show profile selection');
+      } else if (result.lastProfileId) {
+        log(`Last profile ID found: ${result.lastProfileId}`);
+      }
+      
+      // Check for side effects (should be none)
+      const currentProfile = ProfileService.getCurrentProfile();
+      if (currentProfile) {
+        log('⚠️ WARNING: Profile was auto-applied (side effect detected)');
+      } else {
+        log('✓ GOOD: No side effects - profile not auto-applied');
       }
     }
 
