@@ -118,6 +118,17 @@
     }, { once: true });
   }
 
+  // Listen for intro finished event as fallback (if rules are disabled)
+  function setupIntroListener() {
+    window.addEventListener('bb:intro:finished', function() {
+      console.info('[player-profile-modal] intro finished, checking if profile needed');
+      // Only show if rules haven't already triggered it
+      if (!rulesAcknowledged && !profileSelected) {
+        setTimeout(() => showProfileSelectionModal(), 150);
+      }
+    }, { once: true });
+  }
+
   // Function for manual profile selection (e.g., from settings)
   function showProfileModal() {
     global.ProfileModal.show({
@@ -151,6 +162,7 @@
   // Initialize
   function init() {
     setupRulesListener();
+    setupIntroListener();
   }
 
   if (document.readyState === 'loading') {
