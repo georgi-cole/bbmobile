@@ -109,14 +109,19 @@
 
   // Remove any static "Create Your Profile" text in the UI
   function removeStaticProfileText() {
-    Array.from(document.querySelectorAll('*')).forEach(el => {
-      if (
-        el.textContent &&
-        el.textContent.trim() === 'Create Your Profile'
-      ) {
-        el.style.display = 'none';
-      }
-    });
+    // Remove by ID if exists
+    const staticProfileById = document.getElementById('staticProfileCreate');
+    if (staticProfileById) {
+      staticProfileById.style.display = 'none';
+      console.info('[player-profile-modal] removed static profile element by ID');
+    }
+    
+    // Remove by class if exists
+    const staticProfileByClass = document.querySelector('.static-profile-create');
+    if (staticProfileByClass) {
+      staticProfileByClass.style.display = 'none';
+      console.info('[player-profile-modal] removed static profile element by class');
+    }
   }
 
   // Entry point: Setup event listener after DOMContentLoaded
