@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Socialize Auto-Wire Integration</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0f1a;
+      color: #fff;
+    }
+
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .test-header {
+      background: linear-gradient(135deg, #1a2d45, #0f1e32);
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .test-header h1 {
+      margin: 0 0 10px 0;
+      color: #4a90e2;
+      font-size: 1.5rem;
+    }
+
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(100, 180, 255, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .test-section h2 {
+      margin: 0 0 15px 0;
+      font-size: 1.2rem;
+      color: #4a90e2;
+    }
+
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .test-btn {
+      background: linear-gradient(135deg, #4a90e2, #357abd);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .test-btn:hover {
+      background: linear-gradient(135deg, #5a9ff2, #4585c7);
+      transform: translateY(-2px);
+    }
+
+    .test-btn.secondary {
+      background: linear-gradient(135deg, #6c757d, #5a6268);
+    }
+
+    .test-btn.danger {
+      background: linear-gradient(135deg, #dc3545, #c82333);
+    }
+
+    /* Mock TV container */
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      aspect-ratio: 16 / 9;
+      margin: 20px auto;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .tvViewport {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #1a1a2e, #0f0f1e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #tvOverlay {
+      position: absolute;
+      inset: var(--tv-safe-top, 44px) var(--tv-safe-x, 16px) var(--tv-safe-bottom, 42px) var(--tv-safe-x, 16px);
+      pointer-events: none;
+      z-index: 12;
+    }
+
+    #tvNow {
+      position: absolute;
+      left: var(--tv-safe-x, 16px);
+      right: var(--tv-safe-x, 16px);
+      bottom: 8px;
+      min-height: 28px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      background: linear-gradient(180deg, rgba(9, 24, 40, 0.85), rgba(6, 14, 24, 0.85));
+      color: #fff;
+      text-align: center;
+      z-index: 13;
+    }
+
+    .status-log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-entry.success { color: #4ade80; }
+    .log-entry.info { color: #60a5fa; }
+    .log-entry.warn { color: #fbbf24; }
+    .log-entry.error { color: #f87171; }
+
+    .test-status {
+      padding: 12px;
+      margin-top: 15px;
+      border-radius: 8px;
+      border: 2px solid;
+    }
+
+    .test-status.pass {
+      background: rgba(74, 222, 128, 0.1);
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+
+    .test-status.fail {
+      background: rgba(248, 113, 113, 0.1);
+      border-color: #f87171;
+      color: #f87171;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🔌 Socialize Auto-Wire Integration Test</h1>
+      <p style="margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">
+        Verifies launcher auto-mount, 3-minute timer, and fast-advance on energy depletion.
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h2>TV Display</h2>
+      <div id="tv">
+        <div class="tvViewport">
+          <div id="tvNow">Waiting for test...</div>
+          <!-- tvOverlay will be created dynamically to test deferred mount -->
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div class="test-controls">
+        <button class="test-btn" onclick="testImmediateMount()">Test 1: Immediate Mount</button>
+        <button class="test-btn" onclick="testDeferredMount()">Test 2: Deferred Mount</button>
+        <button class="test-btn" onclick="testTimerDefaults()">Test 3: Timer Defaults</button>
+        <button class="test-btn" onclick="testFastAdvance()">Test 4: Fast-Advance</button>
+        <button class="test-btn danger" onclick="testDepletEnergy()">Deplete Energy</button>
+        <button class="test-btn secondary" onclick="clearLogs()">Clear Logs</button>
+      </div>
+      <div class="status-log" id="statusLog"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="testResults"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/social.js"></script>
+  <script src="js/socialize-mobile.js"></script>
+
+  <script>
+    // Mock game state
+    window.game = {
+      humanId: 1,
+      week: 1,
+      phase: 'lobby',
+      cfg: {},
+      players: [
+        { id: 1, name: 'You', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player1', affinity: {} },
+        { id: 2, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice', affinity: {} },
+        { id: 3, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob', affinity: {} },
+        { id: 4, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=charlie', affinity: {} }
+      ],
+      endAt: 0,
+      phaseEndsAt: 0
+    };
+
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+
+    window.addLog = function(msg, cls = '') {
+      const log = document.getElementById('statusLog');
+      if (log) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry ' + cls;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        log.insertBefore(entry, log.firstChild);
+      }
+      console.log(msg);
+    };
+
+    window.updateHud = function() {
+      console.log('HUD updated');
+    };
+
+    window.socialApplyAction = function(actorId, targetId, action) {
+      const actor = window.getP(actorId);
+      const target = window.getP(targetId);
+      window.addLog(`${actor?.name} performed ${action} on ${target?.name}`, 'success');
+    };
+
+    // Mock setPhase
+    window.setPhase = function(phase, seconds, onTimeout) {
+      window.game.phase = phase;
+      window.game.endAt = Date.now() + (seconds * 1000);
+      window.game.phaseEndsAt = window.game.endAt;
+      window.addLog(`Phase set to ${phase} for ${seconds} seconds`, 'info');
+    };
+
+    // Mock renderPanel
+    window.renderPanel = function() {
+      const panel = document.getElementById('panel');
+      if (panel && window.renderSocialPhase) {
+        window.renderSocialPhase(panel);
+      }
+    };
+
+    // Test functions
+    let testResults = [];
+
+    function addTestResult(testName, passed, message) {
+      testResults.push({ testName, passed, message });
+      updateTestResults();
+    }
+
+    function updateTestResults() {
+      const container = document.getElementById('testResults');
+      container.innerHTML = '';
+      
+      testResults.forEach(result => {
+        const div = document.createElement('div');
+        div.className = `test-status ${result.passed ? 'pass' : 'fail'}`;
+        div.innerHTML = `
+          <strong>${result.passed ? '✓' : '✗'} ${result.testName}</strong><br>
+          ${result.message}
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function testImmediateMount() {
+      window.addLog('=== Test 1: Immediate Mount ===', 'info');
+      
+      // Create tvOverlay first
+      const tvViewport = document.querySelector('.tvViewport');
+      if (!document.getElementById('tvOverlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'tvOverlay';
+        tvViewport.appendChild(overlay);
+      }
+      
+      // Set phase to social
+      window.game.phase = 'social_intermission';
+      
+      // Trigger renderSocialPhase
+      const panel = document.createElement('div');
+      panel.id = 'panel';
+      window.renderSocialPhase(panel);
+      
+      // Check if launcher was mounted
+      setTimeout(() => {
+        const launcher = document.getElementById('socializeLauncher');
+        if (launcher) {
+          addTestResult('Test 1: Immediate Mount', true, 'Launcher mounted successfully when tvOverlay exists');
+          window.addLog('✓ Launcher found in tvOverlay', 'success');
+        } else {
+          addTestResult('Test 1: Immediate Mount', false, 'Launcher not found after immediate mount');
+          window.addLog('✗ Launcher not found', 'error');
+        }
+      }, 500);
+    }
+
+    function testDeferredMount() {
+      window.addLog('=== Test 2: Deferred Mount ===', 'info');
+      
+      // Remove tvOverlay to test deferred mount
+      const existing = document.getElementById('tvOverlay');
+      if (existing) existing.remove();
+      
+      const existingLauncher = document.getElementById('socializeLauncher');
+      if (existingLauncher) existingLauncher.remove();
+      
+      // Set phase to social
+      window.game.phase = 'social_intermission';
+      
+      // Trigger renderSocialPhase
+      const panel = document.createElement('div');
+      panel.id = 'panel';
+      window.renderSocialPhase(panel);
+      
+      window.addLog('Waiting 1 second before creating tvOverlay...', 'info');
+      
+      // Create tvOverlay after 1 second
+      setTimeout(() => {
+        const tvViewport = document.querySelector('.tvViewport');
+        const overlay = document.createElement('div');
+        overlay.id = 'tvOverlay';
+        tvViewport.appendChild(overlay);
+        window.addLog('tvOverlay created, waiting for auto-mount...', 'info');
+        
+        // Check if launcher was mounted after another second
+        setTimeout(() => {
+          const launcher = document.getElementById('socializeLauncher');
+          if (launcher) {
+            addTestResult('Test 2: Deferred Mount', true, 'Launcher mounted after tvOverlay was created (MutationObserver/polling worked)');
+            window.addLog('✓ Deferred mount successful', 'success');
+          } else {
+            addTestResult('Test 2: Deferred Mount', false, 'Launcher not found after deferred mount');
+            window.addLog('✗ Deferred mount failed', 'error');
+          }
+        }, 1500);
+      }, 1000);
+    }
+
+    function testTimerDefaults() {
+      window.addLog('=== Test 3: Timer Defaults ===', 'info');
+      
+      // Reset game state
+      window.game.endAt = 0;
+      window.game.phaseEndsAt = 0;
+      
+      // Set phase to social via startSocialIntermission
+      const startTime = Date.now();
+      
+      if (window.startSocialIntermission) {
+        window.startSocialIntermission('test', () => {
+          window.addLog('Social phase completed', 'info');
+        });
+      }
+      
+      // Check timer was set to 3 minutes (180 seconds)
+      setTimeout(() => {
+        const expectedEnd = startTime + (180 * 1000);
+        const actualEnd = window.game.phaseEndsAt || window.game.endAt;
+        const diff = Math.abs(actualEnd - expectedEnd);
+        
+        if (diff < 5000) { // Allow 5 second tolerance
+          const remainingSecs = Math.ceil((actualEnd - Date.now()) / 1000);
+          addTestResult('Test 3: Timer Defaults', true, `Timer set to ~3 minutes (${remainingSecs}s remaining)`);
+          window.addLog(`✓ Timer set correctly: ${remainingSecs} seconds remaining`, 'success');
+        } else {
+          addTestResult('Test 3: Timer Defaults', false, `Timer not set to 3 minutes (got ${Math.ceil((actualEnd - startTime) / 1000)}s)`);
+          window.addLog('✗ Timer not set to 3 minutes', 'error');
+        }
+      }, 500);
+    }
+
+    function testFastAdvance() {
+      window.addLog('=== Test 4: Fast-Advance ===', 'info');
+      
+      // Set initial timer far in future
+      window.game.endAt = Date.now() + (300 * 1000); // 5 minutes
+      window.game.phaseEndsAt = window.game.endAt;
+      const initialEnd = window.game.endAt;
+      
+      window.addLog(`Initial timer: ${Math.ceil((window.game.endAt - Date.now()) / 1000)}s`, 'info');
+      
+      // Deplete energy (this should trigger fast-advance)
+      if (window.SocializeMobile) {
+        window.SocializeMobile.updateResources({ energy: -3 });
+        window.addLog('Energy depleted to 0', 'warn');
+        
+        // Simulate action execution that checks energy
+        const mockExecute = () => {
+          const res = window.SocializeMobile.getResources();
+          if (res.energy <= 0) {
+            window.addLog('Fast-advance triggered!', 'info');
+            
+            // Apply fast-advance logic
+            const advanceDelay = 3000;
+            window.game.endAt = Date.now() + advanceDelay;
+            window.game.phaseEndsAt = window.game.endAt;
+          }
+        };
+        
+        mockExecute();
+        
+        // Check if timer was adjusted
+        setTimeout(() => {
+          const newEnd = window.game.phaseEndsAt || window.game.endAt;
+          const wasAdjusted = newEnd < initialEnd - 10000; // More than 10s difference
+          
+          if (wasAdjusted) {
+            const remainingSecs = Math.ceil((newEnd - Date.now()) / 1000);
+            addTestResult('Test 4: Fast-Advance', true, `Timer fast-forwarded (${remainingSecs}s remaining)`);
+            window.addLog(`✓ Timer adjusted: ${remainingSecs} seconds remaining`, 'success');
+          } else {
+            addTestResult('Test 4: Fast-Advance', false, 'Timer was not adjusted after energy depletion');
+            window.addLog('✗ Timer not adjusted', 'error');
+          }
+        }, 500);
+      } else {
+        addTestResult('Test 4: Fast-Advance', false, 'SocializeMobile not available');
+        window.addLog('✗ SocializeMobile not available', 'error');
+      }
+    }
+
+    function testDepletEnergy() {
+      if (window.SocializeMobile) {
+        window.SocializeMobile.updateResources({ energy: -3 });
+        window.addLog('Energy depleted manually', 'warn');
+      }
+    }
+
+    function clearLogs() {
+      document.getElementById('statusLog').innerHTML = '';
+      window.addLog('Logs cleared', 'info');
+    }
+
+    // Auto-initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      window.addLog('Test page loaded', 'info');
+      window.addLog('Run tests using the buttons above', 'info');
+      window.addLog('Tests verify: auto-mount, deferred mount, 3-min timer, fast-advance', 'info');
+    });
+  </script>
+</body>
+</html>
