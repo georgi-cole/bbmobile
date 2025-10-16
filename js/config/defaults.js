@@ -108,4 +108,7 @@
   Config.saveStoredCfg = saveStoredCfg;
   Config.ensureGameCfg = ensureGameCfg;
 
+  // Initialize config immediately
+  ensureGameCfg();
+
 })(window);
