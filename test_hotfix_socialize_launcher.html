@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotfix Test: Socialize Launcher Auto-Mount</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #3498db;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+    }
+    .section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass {
+      background: #1e4620;
+      border-left: 4px solid #27ae60;
+    }
+    .fail {
+      background: #4a1e1e;
+      border-left: 4px solid #e74c3c;
+    }
+    .info {
+      background: #1e2f4a;
+      border-left: 4px solid #3498db;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    #log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #0a0a1a;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 2px 0;
+      padding: 4px;
+    }
+    .log-ok { color: #2ecc71; }
+    .log-danger { color: #e74c3c; }
+    .log-info { color: #3498db; }
+    .log-warn { color: #f39c12; }
+
+    /* Mock TV setup */
+    #tv {
+      position: relative;
+      width: 100%;
+      min-height: 400px;
+      background: #0a0a1a;
+      border: 2px solid #333;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    #tvOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+    #tvOverlay > * {
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Hotfix Test: Socialize Launcher Auto-Mount & Timer Integration</h1>
+
+  <div class="section">
+    <h2>Test Overview</h2>
+    <p>This test verifies the hotfix implementation:</p>
+    <ul>
+      <li>✅ Socialize launcher auto-mounts when social phase starts</li>
+      <li>✅ MutationObserver detects late tvOverlay creation</li>
+      <li>✅ Fallback polling works if observer fails</li>
+      <li>✅ Multiple mount guard prevents duplicates</li>
+      <li>✅ Default 3-minute timer is set</li>
+      <li>✅ Fast-advance triggers when energy reaches 0</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Mock TV Container</h2>
+    <div id="tv">
+      <!-- tvOverlay will be created here when phase starts -->
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Test Controls</h2>
+    <button id="btnTestScenario1">Test 1: tvOverlay exists before phase start</button>
+    <button id="btnTestScenario2">Test 2: tvOverlay created after phase start</button>
+    <button id="btnTestScenario3">Test 3: Fallback to .tv selector</button>
+    <button id="btnTestMultipleMounts">Test 4: Multiple mount guard</button>
+    <button id="btnTestTimerDefaults">Test 5: Timer defaults</button>
+    <button id="btnTestEnergyDepletion">Test 6: Energy depletion fast-advance</button>
+    <button id="btnClearLog">Clear Log</button>
+    <button id="btnReset">Reset Test</button>
+  </div>
+
+  <div class="section">
+    <h2>Test Results</h2>
+    <div id="results"></div>
+  </div>
+
+  <div class="section">
+    <h2>Event Log</h2>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    // Mock game environment
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      phase: 'lobby',
+      humanId: 1,
+      week: 1,
+      players: [
+        { id: 1, name: 'Test Player', evicted: false, affinity: {} },
+        { id: 2, name: 'Alice', evicted: false, affinity: {} },
+        { id: 3, name: 'Bob', evicted: false, affinity: {} }
+      ]
+    };
+
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+
+    const logEl = document.getElementById('log');
+    const resultsEl = document.getElementById('results');
+
+    function addLogEntry(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    window.addLog = (msg, type) => {
+      addLogEntry(msg, type || 'info');
+    };
+
+    function addResult(message, pass) {
+      const div = document.createElement('div');
+      div.className = `status ${pass ? 'pass' : 'fail'}`;
+      div.textContent = (pass ? '✅ PASS: ' : '❌ FAIL: ') + message;
+      resultsEl.appendChild(div);
+    }
+
+    function reset() {
+      const tv = document.getElementById('tv');
+      tv.innerHTML = '';
+      window.game.__socializeLauncherMounted = false;
+      if(window.game.__socializeLauncherPollId) {
+        clearInterval(window.game.__socializeLauncherPollId);
+        window.game.__socializeLauncherPollId = null;
+      }
+      addLogEntry('Test environment reset', 'info');
+    }
+
+    // Load modules
+    const modules = [
+      'js/social-maneuvers.js',
+      'js/socialize-mobile.js',
+      'js/social.js'
+    ];
+
+    let loadedCount = 0;
+    modules.forEach(src => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => {
+        addLogEntry(`Loaded: ${src}`, 'ok');
+        loadedCount++;
+        if(loadedCount === modules.length) {
+          addLogEntry('All modules loaded. Ready for testing.', 'ok');
+        }
+      };
+      script.onerror = () => {
+        addLogEntry(`Failed to load: ${src}`, 'danger');
+      };
+      document.head.appendChild(script);
+    });
+
+    // Test 1: tvOverlay exists before phase start
+    document.getElementById('btnTestScenario1').addEventListener('click', () => {
+      reset();
+      addLogEntry('Test 1: tvOverlay exists before phase start', 'info');
+      
+      const tv = document.getElementById('tv');
+      const overlay = document.createElement('div');
+      overlay.id = 'tvOverlay';
+      tv.appendChild(overlay);
+      
+      addLogEntry('Created tvOverlay before phase start', 'ok');
+      
+      // Start social phase
+      if(window.startSocialIntermission) {
+        window.startSocialIntermission('test', () => {
+          addLogEntry('Social phase callback executed', 'ok');
+        });
+        
+        setTimeout(() => {
+          const launcher = document.getElementById('socializeLauncher');
+          if(launcher) {
+            addResult('Launcher mounted successfully in existing tvOverlay', true);
+          } else {
+            addResult('Launcher failed to mount', false);
+          }
+        }, 1000);
+      } else {
+        addLogEntry('startSocialIntermission not available', 'danger');
+      }
+    });
+
+    // Test 2: tvOverlay created after phase start
+    document.getElementById('btnTestScenario2').addEventListener('click', () => {
+      reset();
+      addLogEntry('Test 2: tvOverlay created after phase start', 'info');
+      
+      // Start social phase first
+      if(window.startSocialIntermission) {
+        window.startSocialIntermission('test', () => {
+          addLogEntry('Social phase callback executed', 'ok');
+        });
+        
+        addLogEntry('Phase started without tvOverlay...', 'info');
+        
+        // Create tvOverlay after 1 second
+        setTimeout(() => {
+          addLogEntry('Creating tvOverlay now (delayed)...', 'info');
+          const tv = document.getElementById('tv');
+          const overlay = document.createElement('div');
+          overlay.id = 'tvOverlay';
+          tv.appendChild(overlay);
+          
+          // Check if launcher appears
+          setTimeout(() => {
+            const launcher = document.getElementById('socializeLauncher');
+            if(launcher) {
+              addResult('MutationObserver detected tvOverlay and mounted launcher', true);
+            } else {
+              addResult('MutationObserver failed to detect tvOverlay', false);
+            }
+          }, 1500);
+        }, 1000);
+      }
+    });
+
+    // Test 3: Fallback to .tv selector
+    document.getElementById('btnTestScenario3').addEventListener('click', () => {
+      reset();
+      addLogEntry('Test 3: Fallback to .tv selector', 'info');
+      
+      // Remove tvOverlay, add .tv class to tv element
+      const tv = document.getElementById('tv');
+      tv.className = 'tv';
+      
+      if(window.startSocialIntermission) {
+        window.startSocialIntermission('test', () => {
+          addLogEntry('Social phase callback executed', 'ok');
+        });
+        
+        setTimeout(() => {
+          const launcher = document.getElementById('socializeLauncher');
+          if(launcher && launcher.parentElement === tv) {
+            addResult('Fallback selector .tv worked', true);
+          } else {
+            addResult('Fallback selector .tv failed', false);
+          }
+        }, 1000);
+      }
+    });
+
+    // Test 4: Multiple mount guard
+    document.getElementById('btnTestMultipleMounts').addEventListener('click', () => {
+      reset();
+      addLogEntry('Test 4: Testing multiple mount guard', 'info');
+      
+      const tv = document.getElementById('tv');
+      const overlay = document.createElement('div');
+      overlay.id = 'tvOverlay';
+      tv.appendChild(overlay);
+      
+      if(window.SocializeMobile && window.SocializeMobile.ensureLauncher) {
+        // Try mounting multiple times
+        window.game.__socializeLauncherMounted = false;
+        window.SocializeMobile.ensureLauncher();
+        const firstCount = overlay.querySelectorAll('#socializeLauncher').length;
+        
+        window.game.__socializeLauncherMounted = false;
+        window.SocializeMobile.ensureLauncher();
+        const secondCount = overlay.querySelectorAll('#socializeLauncher').length;
+        
+        if(firstCount === 1 && secondCount === 2) {
+          addResult('Multiple mounts allowed (guard not working)', false);
+        } else if(firstCount === 1 && secondCount === 1) {
+          addResult('Multiple mount guard working (only one launcher)', true);
+        }
+      }
+    });
+
+    // Test 5: Timer defaults
+    document.getElementById('btnTestTimerDefaults').addEventListener('click', () => {
+      reset();
+      addLogEntry('Test 5: Testing timer defaults', 'info');
+      
+      const tv = document.getElementById('tv');
+      const overlay = document.createElement('div');
+      overlay.id = 'tvOverlay';
+      tv.appendChild(overlay);
+      
+      if(window.SocialManeuvers && window.SocialManeuvers.onSocialPhaseStart) {
+        const before = Date.now();
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        setTimeout(() => {
+          // Check if timer was set
+          const endAt = window.game.endAt || window.game.phaseEndsAt;
+          if(endAt) {
+            const duration = endAt - before;
+            const expectedDuration = 180000; // 3 minutes
+            const withinRange = Math.abs(duration - expectedDuration) < 5000; // 5s tolerance
+            
+            addLogEntry(`Timer set to ${Math.round(duration/1000)}s`, 'ok');
+            addResult(`Timer defaults to 3 minutes (${Math.round(duration/1000)}s)`, withinRange);
+          } else {
+            addResult('Timer not set', false);
+          }
+        }, 500);
+      }
+    });
+
+    // Test 6: Energy depletion fast-advance
+    document.getElementById('btnTestEnergyDepletion').addEventListener('click', () => {
+      reset();
+      addLogEntry('Test 6: Testing energy depletion fast-advance', 'info');
+      
+      if(window.SocialManeuvers) {
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        // Deplete energy
+        window.SocialManeuvers.SocialResources.set(1, 'energy', 1);
+        
+        // Execute action to trigger check
+        const actions = window.SocialManeuvers.getAvailableActions(1, 2);
+        if(actions && actions.length > 0) {
+          const result = window.SocialManeuvers.executeAction(1, 2, actions[0].id);
+          
+          setTimeout(() => {
+            const hasTimeout = !!window.game.__socialFastAdvanceTimeout;
+            addResult('Fast-advance scheduled after energy depletion', hasTimeout);
+            
+            if(hasTimeout) {
+              addLogEntry('Fast-advance will trigger in ~3 seconds', 'ok');
+            }
+          }, 500);
+        }
+      }
+    });
+
+    document.getElementById('btnClearLog').addEventListener('click', () => {
+      logEl.innerHTML = '';
+      addLogEntry('Log cleared', 'info');
+    });
+
+    document.getElementById('btnReset').addEventListener('click', reset);
+  </script>
+</body>
+</html>
