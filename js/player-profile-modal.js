@@ -6,7 +6,6 @@
 (function (global) {
   'use strict';
 
-  let rulesAcknowledged = false;
   let profileSelected = false;
 
   // Show toast notification
@@ -99,7 +98,6 @@
   // Listen for rules acknowledgment to trigger profile modal
   function setupRulesListener() {
     window.addEventListener('bb:rules:acknowledged', function () {
-      rulesAcknowledged = true;
       showProfileSelectionModal();
     });
   }
