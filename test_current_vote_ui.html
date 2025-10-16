@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Current America's Vote UI</title>
+  <link rel="stylesheet" href="http://localhost:8080/styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="panel"></div>
+  <script>
+    // Mock data
+    const mockJurors = [1, 2, 3, 4];
+    window.safeName = (id) => ['Alice', 'Bob', 'Charlie', 'Diana'][id-1];
+    window.getAvatar = (id) => `https://api.dicebear.com/6.x/bottts/svg?seed=player${id}`;
+    
+    // Copy the showReturnVotePanel function from jury_return_vote.js
+    function showReturnVotePanel(jurors, voteSecs, onDone) {
+      const panel = document.getElementById('panel');
+      if (!panel) return;
+      panel.innerHTML = '';
+      const box = document.createElement('div'); 
+      box.className = 'minigame-host';
+      box.innerHTML = `<h3>America's Vote — Juror Return</h3>
+        <div class="tiny muted">Who will return? Bars fill for ${voteSecs}s.</div>`;
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:flex;flex-direction:row;gap:24px;justify-content:center;margin-top:12px;';
+
+      // Each juror gets a bar and avatar
+      const state = { counts: new Map(), total: 0 };
+      jurors.forEach((id, i) => {
+        state.counts.set(id, 5 + Math.floor(Math.random()*5));
+        state.total += state.counts.get(id);
+        const cell = document.createElement('div');
+        cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;';
+        const jurorName = window.safeName(id) || String(id);
+        const avatarUrl = window.getAvatar(id);
+        const img = document.createElement('img');
+        img.src = avatarUrl;
+        img.alt = jurorName;
+        img.style.cssText = 'width:54px;height:54px;border-radius:12px;border:2px solid #8fd3ff;box-shadow:0 2px 10px -4px #8fd3ff;';
+        
+        cell.innerHTML = `
+          <div style="height:14px;width:84px;background:#1d2740;border-radius:9px;border:1px solid #2a3b5a;overflow:hidden;">
+            <div class="avBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6fd3ff,#74e48b);box-shadow:0 0 8px -2px #6fd3ff;transition:width .24s"></div>
+          </div>
+          <span class="avPct tiny muted">0%</span>
+        `;
+        cell.insertBefore(img, cell.firstChild);
+        cell.setAttribute('data-j-id', id);
+        grid.appendChild(cell);
+      });
+      box.appendChild(grid);
+
+      // Countdown timer
+      const timer = document.createElement('div');
+      timer.className = 'tiny muted'; 
+      timer.style.marginTop = '7px';
+      timer.textContent = `${voteSecs}s remaining…`;
+      box.appendChild(timer);
+
+      panel.appendChild(box);
+    }
+    
+    // Show the UI
+    showReturnVotePanel(mockJurors, 12, () => {});
+  </script>
+</body>
+</html>
