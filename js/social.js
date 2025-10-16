@@ -176,6 +176,9 @@
     if(!actor || !target || actor.id===target.id) return;
 
     const ALLY_T = ensure(global.ALLY_T, 0.28);
+    
+    // Increment action counter for fast-forward guard
+    g.__socialActionsThisPhase = (g.__socialActionsThisPhase || 0) + 1;
 
     // Repetition tracking
     const aKey = actionKey(actorId, targetId, action);
@@ -707,6 +710,7 @@
     ensureSocialState();
     g.__socialShown = 0;        // reset per intermission (max 3 prompts)
     g.__socialLogBudget = 6;    // reset ambient budget
+    g.__socialActionsThisPhase = 0;  // reset action counter for fast-forward guard
 
     console.info('[social] ✓ Entering social_intermission phase');
     global.tv?.say?.('Social Intermission');
@@ -757,7 +761,10 @@
         try{ startNoms(); }catch(e){ console.error(e); }
       }
     };
-    global.setPhase?.('social_intermission', g.cfg?.tComms||30, onDone);
+    
+    // Use tSocial config with fallback to tComms
+    const duration = g.cfg?.tSocial || g.cfg?.tComms || 30;
+    global.setPhase?.('social_intermission', duration, onDone);
     const panel=document.getElementById('panel'); if(panel) renderSocialPhase(panel);
   };
 

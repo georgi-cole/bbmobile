@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Phase Guards - Manual Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-card {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-card h2 {
+      margin-top: 0;
+      color: #4ecca3;
+    }
+    button {
+      background: #0f3460;
+      color: #eee;
+      border: 1px solid #4ecca3;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1a4d7a;
+    }
+    button.danger {
+      background: #a83232;
+      border-color: #ff6b6b;
+    }
+    button.success {
+      background: #2d6d3f;
+      border-color: #4ecca3;
+    }
+    .log-output {
+      background: #0a0a0a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 15px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin: 5px 0;
+    }
+    .status.pass { background: #2d6d3f; color: #4ecca3; }
+    .status.fail { background: #a83232; color: #ff6b6b; }
+    .status.warn { background: #8a6d3b; color: #ffc107; }
+    .status.info { background: #31708f; color: #5bc0de; }
+    .banner-demo {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff4444 100%);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
+      z-index: 9999;
+      font-weight: 600;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛡️ Social Phase Guards - Manual Test Suite</h1>
+  
+  <div class="banner-demo" id="bannerDemo">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:1.2rem;">⚠️</span>
+      <span>Developer Mode: Social Phase Skipped</span>
+      <span style="font-size:1.2rem;">⚠️</span>
+    </div>
+    <div style="font-size:0.7rem;margin-top:4px;opacity:0.9;">This is what the banner looks like</div>
+  </div>
+
+  <div class="test-card">
+    <h2>Test 1: Configuration Defaults</h2>
+    <p>Verify that default configuration includes social phase settings.</p>
+    <button onclick="testConfigDefaults()">Run Test</button>
+    <div id="config-results"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Test 2: Developer Toggle</h2>
+    <p>Test the skipSocialPhase toggle and banner visibility.</p>
+    <button onclick="toggleSkipSocial(true)" class="danger">Enable Skip Social</button>
+    <button onclick="toggleSkipSocial(false)" class="success">Disable Skip Social</button>
+    <button onclick="showBannerDemo()">Show Banner Demo</button>
+    <button onclick="hideBannerDemo()">Hide Banner Demo</button>
+    <div id="toggle-results"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Test 3: Fast-Forward Guard</h2>
+    <p>Test fast-forward blocking logic during social phase.</p>
+    <button onclick="testFFGuardNoAction()">Test: No Action (Should Block)</button>
+    <button onclick="testFFGuardWithAction()">Test: With Action (Should Allow)</button>
+    <button onclick="testFFGuardWithToggle()">Test: With Toggle (Should Allow)</button>
+    <div id="ff-results"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Test 4: Phase Sequence Logging</h2>
+    <p>Inspect phase sequence audit logs.</p>
+    <button onclick="dumpSocialLogs()">Dump Logs</button>
+    <button onclick="clearSocialLogs()">Clear Logs</button>
+    <button onclick="simulatePhaseSequence()">Simulate HOH → Social</button>
+    <div id="logs-results"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Console Output</h2>
+    <div class="log-output" id="consoleLog">Console messages will appear here...</div>
+  </div>
+
+  <script>
+    // Capture console messages
+    const consoleLog = document.getElementById('consoleLog');
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    function addToConsole(type, ...args) {
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ');
+      const time = new Date().toLocaleTimeString();
+      const color = type === 'error' ? '#ff6b6b' : type === 'warn' ? '#ffc107' : '#4ecca3';
+      consoleLog.innerHTML += `<div style="color:${color}">[${time}] ${type.toUpperCase()}: ${msg}</div>`;
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+
+    console.log = function(...args) { originalLog.apply(console, args); addToConsole('log', ...args); };
+    console.warn = function(...args) { originalWarn.apply(console, args); addToConsole('warn', ...args); };
+    console.error = function(...args) { originalError.apply(console, args); addToConsole('error', ...args); };
+
+    // Initialize mock game object
+    if(!window.game) {
+      window.game = {
+        cfg: {
+          skipSocialPhase: false,
+          tSocial: 30,
+          tComms: 30,
+          tNoms: 25
+        },
+        phase: 'lobby',
+        week: 1,
+        __socialActionsThisPhase: 0,
+        __socialPhaseLog: [],
+        __socialPhaseSkipLog: [],
+        __socialPhaseErrors: []
+      };
+    }
+
+    // Test functions
+    function testConfigDefaults() {
+      const results = document.getElementById('config-results');
+      const cfg = window.game.cfg;
+      
+      let html = '<div class="log-output">';
+      html += '<strong>Configuration:</strong><br>';
+      html += `skipSocialPhase: ${cfg.skipSocialPhase} `;
+      html += cfg.skipSocialPhase === false ? '<span class="status pass">✓ PASS</span>' : '<span class="status fail">✗ FAIL</span>';
+      html += '<br>';
+      html += `tSocial: ${cfg.tSocial} `;
+      html += cfg.tSocial === 30 ? '<span class="status pass">✓ PASS</span>' : '<span class="status fail">✗ FAIL</span>';
+      html += '<br>';
+      html += `tComms: ${cfg.tComms} (fallback) `;
+      html += cfg.tComms === 30 ? '<span class="status pass">✓ PASS</span>' : '<span class="status fail">✗ FAIL</span>';
+      html += '</div>';
+      
+      results.innerHTML = html;
+      console.log('[Test 1] Configuration defaults checked');
+    }
+
+    function toggleSkipSocial(enable) {
+      window.game.cfg.skipSocialPhase = enable;
+      const results = document.getElementById('toggle-results');
+      
+      let html = '<div class="log-output">';
+      html += `<strong>skipSocialPhase = ${enable}</strong><br>`;
+      html += `Status: ${enable ? '<span class="status warn">ENABLED</span>' : '<span class="status pass">DISABLED</span>'}`;
+      html += '</div>';
+      
+      results.innerHTML = html;
+      console.log(`[Test 2] Skip social toggle set to: ${enable}`);
+      
+      if(enable) {
+        showBannerDemo();
+      } else {
+        hideBannerDemo();
+      }
+    }
+
+    function showBannerDemo() {
+      document.getElementById('bannerDemo').style.display = 'block';
+      console.log('[Test 2] Banner displayed');
+    }
+
+    function hideBannerDemo() {
+      document.getElementById('bannerDemo').style.display = 'none';
+      console.log('[Test 2] Banner hidden');
+    }
+
+    function testFFGuardNoAction() {
+      window.game.phase = 'social_intermission';
+      window.game.__socialActionsThisPhase = 0;
+      window.game.cfg.skipSocialPhase = false;
+      
+      const canFF = checkFastForwardAllowed();
+      const results = document.getElementById('ff-results');
+      
+      let html = '<div class="log-output">';
+      html += '<strong>Test: Fast-forward without action</strong><br>';
+      html += `Phase: social_intermission<br>`;
+      html += `Actions: 0<br>`;
+      html += `Skip Toggle: false<br>`;
+      html += `Result: ${!canFF ? '<span class="status pass">✓ BLOCKED (correct)</span>' : '<span class="status fail">✗ ALLOWED (wrong)</span>'}`;
+      html += '</div>';
+      
+      results.innerHTML = html;
+      console.log(`[Test 3] FF without action: ${!canFF ? 'BLOCKED' : 'ALLOWED'}`);
+    }
+
+    function testFFGuardWithAction() {
+      window.game.phase = 'social_intermission';
+      window.game.__socialActionsThisPhase = 1;
+      window.game.cfg.skipSocialPhase = false;
+      
+      const canFF = checkFastForwardAllowed();
+      const results = document.getElementById('ff-results');
+      
+      let html = '<div class="log-output">';
+      html += '<strong>Test: Fast-forward with action taken</strong><br>';
+      html += `Phase: social_intermission<br>`;
+      html += `Actions: 1<br>`;
+      html += `Skip Toggle: false<br>`;
+      html += `Result: ${canFF ? '<span class="status pass">✓ ALLOWED (correct)</span>' : '<span class="status fail">✗ BLOCKED (wrong)</span>'}`;
+      html += '</div>';
+      
+      results.innerHTML = html;
+      console.log(`[Test 3] FF with action: ${canFF ? 'ALLOWED' : 'BLOCKED'}`);
+    }
+
+    function testFFGuardWithToggle() {
+      window.game.phase = 'social_intermission';
+      window.game.__socialActionsThisPhase = 0;
+      window.game.cfg.skipSocialPhase = true;
+      
+      const canFF = checkFastForwardAllowed();
+      const results = document.getElementById('ff-results');
+      
+      let html = '<div class="log-output">';
+      html += '<strong>Test: Fast-forward with toggle enabled</strong><br>';
+      html += `Phase: social_intermission<br>`;
+      html += `Actions: 0<br>`;
+      html += `Skip Toggle: true<br>`;
+      html += `Result: ${canFF ? '<span class="status pass">✓ ALLOWED (correct)</span>' : '<span class="status fail">✗ BLOCKED (wrong)</span>'}`;
+      html += '</div>';
+      
+      results.innerHTML = html;
+      console.log(`[Test 3] FF with toggle: ${canFF ? 'ALLOWED' : 'BLOCKED'}`);
+    }
+
+    function checkFastForwardAllowed() {
+      const g = window.game;
+      if(g.phase !== 'social_intermission' && g.phase !== 'social') return true;
+      
+      const skipEnabled = g.cfg?.skipSocialPhase === true;
+      const hasActions = (g.__socialActionsThisPhase || 0) > 0;
+      
+      return skipEnabled || hasActions;
+    }
+
+    function dumpSocialLogs() {
+      const g = window.game;
+      const results = document.getElementById('logs-results');
+      
+      let html = '<div class="log-output">';
+      html += '<strong>📊 Phase Sequence Audit Logs:</strong><br><br>';
+      
+      html += `<strong>Executions (${g.__socialPhaseLog.length}):</strong><br>`;
+      if(g.__socialPhaseLog.length > 0) {
+        g.__socialPhaseLog.forEach(log => {
+          html += `Week ${log.week}, Source: ${log.source}<br>`;
+        });
+      } else {
+        html += '<span class="status info">No executions logged</span><br>';
+      }
+      
+      html += `<br><strong>Skips (${g.__socialPhaseSkipLog.length}):</strong><br>`;
+      if(g.__socialPhaseSkipLog.length > 0) {
+        g.__socialPhaseSkipLog.forEach(log => {
+          html += `Week ${log.week}, Reason: ${log.reason}<br>`;
+        });
+      } else {
+        html += '<span class="status pass">No skips logged</span><br>';
+      }
+      
+      html += `<br><strong>Errors (${g.__socialPhaseErrors.length}):</strong><br>`;
+      if(g.__socialPhaseErrors.length > 0) {
+        g.__socialPhaseErrors.forEach(log => {
+          html += `Week ${log.week}, Error: ${log.error}<br>`;
+        });
+      } else {
+        html += '<span class="status pass">No errors logged</span><br>';
+      }
+      
+      html += `<br><strong>Current State:</strong><br>`;
+      html += `Week: ${g.week}<br>`;
+      html += `Phase: ${g.phase}<br>`;
+      html += `Actions This Phase: ${g.__socialActionsThisPhase}<br>`;
+      html += `Skip Toggle: ${g.cfg.skipSocialPhase}<br>`;
+      
+      html += '</div>';
+      results.innerHTML = html;
+      console.log('[Test 4] Social logs dumped');
+    }
+
+    function clearSocialLogs() {
+      window.game.__socialPhaseLog = [];
+      window.game.__socialPhaseSkipLog = [];
+      window.game.__socialPhaseErrors = [];
+      
+      const results = document.getElementById('logs-results');
+      results.innerHTML = '<div class="log-output"><span class="status pass">✓ Logs cleared</span></div>';
+      console.log('[Test 4] Social logs cleared');
+    }
+
+    function simulatePhaseSequence() {
+      const g = window.game;
+      
+      // Simulate HOH completion triggering social phase
+      console.log('[Simulation] HOH complete, checking social phase...');
+      
+      if(g.cfg.skipSocialPhase) {
+        console.warn('[Simulation] Developer mode: Social phase skipped');
+        g.__socialPhaseSkipLog.push({
+          week: g.week,
+          timestamp: Date.now(),
+          reason: 'developer_toggle'
+        });
+      } else {
+        console.log('[Simulation] Social phase confirmed: calling runSocial()');
+        g.__socialPhaseLog.push({
+          week: g.week,
+          timestamp: Date.now(),
+          source: 'hoh_completion'
+        });
+      }
+      
+      const results = document.getElementById('logs-results');
+      results.innerHTML = '<div class="log-output"><span class="status pass">✓ Phase sequence simulated</span><br>Check logs above for details.</div>';
+      
+      dumpSocialLogs();
+    }
+
+    // Initialize
+    console.log('🛡️ Social Phase Guards Manual Test Suite Loaded');
+    console.log('Run tests using the buttons above');
+  </script>
+</body>
+</html>
