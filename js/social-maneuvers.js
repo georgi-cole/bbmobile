@@ -1079,7 +1079,7 @@
       g.__socialFastAdvanceTimeout = null;
     }
 
-    console.info(`[social-maneuvers] ⏱️ Scheduling fast advance in ${delayMs}ms (all energy depleted)`);
+    console.info(`[social-timer] fast-advance in ${delayMs}ms (energy depleted)`);
 
     // Try to use existing timer APIs if available, otherwise fallback to setTimeout
     const phaseEndMs = g.phaseEndsAt;
@@ -1236,7 +1236,7 @@
     }
 
     // Set default 3-minute timer using available APIs
-    console.info('[social-maneuvers] ⏱️ Setting default 3-minute phase duration...');
+    console.info('[social-timer] Setting default phase duration...');
     const defaultDurationMs = 180000; // 3 minutes = 180 seconds = 180000ms
     
     // Try multiple timer APIs in order of preference
@@ -1246,7 +1246,7 @@
     if(typeof global.setPhaseDurationMs === 'function'){
       try{
         global.setPhaseDurationMs(defaultDurationMs);
-        console.info('[social-maneuvers] ✓ Timer set via setPhaseDurationMs API (180s)');
+        console.info('[social-timer] set default 180000ms (via setPhaseDurationMs)');
         timerSet = true;
       }catch(e){
         console.warn('[social-maneuvers] setPhaseDurationMs failed:', e);
@@ -1257,7 +1257,7 @@
     if(!timerSet && typeof global.GameTimer?.setRemainingMs === 'function'){
       try{
         global.GameTimer.setRemainingMs(defaultDurationMs);
-        console.info('[social-maneuvers] ✓ Timer set via GameTimer.setRemainingMs API (180s)');
+        console.info('[social-timer] set default 180000ms (via GameTimer.setRemainingMs)');
         timerSet = true;
       }catch(e){
         console.warn('[social-maneuvers] GameTimer.setRemainingMs failed:', e);
@@ -1270,7 +1270,7 @@
         const now = Date.now();
         g.endAt = now + defaultDurationMs;
         g.phaseEndsAt = now + defaultDurationMs;
-        console.info('[social-maneuvers] ✓ Timer set via game.endAt fallback (180s)');
+        console.info('[social-timer] set default 180000ms (via game.endAt fallback)');
         timerSet = true;
       }catch(e){
         console.warn('[social-maneuvers] game.endAt fallback failed:', e);
