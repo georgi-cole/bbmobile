@@ -13,7 +13,7 @@
   <!-- After fonts in <head> -->
 <link rel="stylesheet" href="styles.css?v=fixes-5">
 <link rel="stylesheet" href="overrides-fixes.css?v=fixes-5">
-<link rel="stylesheet" href="css/social-maneuvers.css?v=sm2">
+<link rel="stylesheet" href="css/social-maneuvers.css?v=sm3">
 <link rel="stylesheet" href="styles-intro-show.css">
 <link rel="stylesheet" href="socialize-mobile.css">
 
@@ -288,8 +288,8 @@
   }
   
   // Boot-time assertion for Social Maneuvers build flag
-  window.__SM_BUILD = window.__SM_BUILD || 'sm1';
-  console.info('[Boot] Social Maneuvers build version:', window.__SM_BUILD);
+  window.__SM_BUILD = 'sm3';
+  console.info('[boot] Social Maneuvers build version: sm3');
   
   // Ensure enableSocialManeuvers is true by default
   window.addEventListener('DOMContentLoaded', function() {
@@ -335,10 +335,10 @@
 
 <!-- Game flows -->
 <!-- Social Maneuvers system (loaded before social.js to ensure availability) -->
-<script src="js/social-narrative.js?v=sm1"></script>
-<script src="js/social-action-config.js?v=sm2"></script>
-<script src="js/social-maneuvers.js?v=sm1"></script>
-<script src="js/social.js?v=sm1"></script>
+<script src="js/social-narrative.js?v=sm3"></script>
+<script src="js/social-action-config.js?v=sm3"></script>
+<script src="js/social-maneuvers.js?v=sm3"></script>
+<script src="js/social.js?v=sm3"></script>
 
 <!-- Fallback loader: verify SocialManeuvers is defined after load -->
 <script>
@@ -354,7 +354,7 @@
         
         // Try to reload the script
         var script = document.createElement('script');
-        script.src = 'js/social-maneuvers.js?v=sm1&fallback=1';
+        script.src = 'js/social-maneuvers.js?v=sm3&fallback=1';
         script.onload = function() {
           console.info('[Boot] ✓ SocialManeuvers fallback loaded successfully');
         };
