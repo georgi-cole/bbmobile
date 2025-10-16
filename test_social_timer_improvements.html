@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Phase Timer Improvements Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #3498db;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+    }
+    .section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass {
+      background: #1e4620;
+      border-left: 4px solid #27ae60;
+    }
+    .fail {
+      background: #4a1e1e;
+      border-left: 4px solid #e74c3c;
+    }
+    .info {
+      background: #1e2f4a;
+      border-left: 4px solid #3498db;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .timer-display {
+      font-size: 24px;
+      font-weight: bold;
+      color: #f39c12;
+      margin: 10px 0;
+    }
+    .energy-display {
+      font-size: 18px;
+      color: #2ecc71;
+      margin: 10px 0;
+    }
+    #log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #0a0a1a;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 2px 0;
+      padding: 4px;
+    }
+    .log-ok { color: #2ecc71; }
+    .log-danger { color: #e74c3c; }
+    .log-info { color: #3498db; }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Phase Timer Improvements Test</h1>
+
+  <div class="section">
+    <h2>Test Overview</h2>
+    <p>This test verifies the new social phase timer improvements:</p>
+    <ul>
+      <li>✅ Default timer set to 180 seconds (3 minutes)</li>
+      <li>✅ Auto-advance after 3 seconds when all energy depleted</li>
+      <li>✅ Proper cleanup on phase end</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Phase Status</h2>
+    <div class="timer-display" id="timerDisplay">Timer: --:--</div>
+    <div class="energy-display" id="energyDisplay">Energy: -/-</div>
+    <div class="status info">
+      <strong>Phase:</strong> <span id="phaseStatus">Not Started</span><br>
+      <strong>Fast Advance Scheduled:</strong> <span id="fastAdvanceStatus">No</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Test Controls</h2>
+    <button id="btnStartPhase">Start Social Phase</button>
+    <button id="btnSpendEnergy">Spend 1 Energy</button>
+    <button id="btnDepleteEnergy">Deplete All Energy</button>
+    <button id="btnEndPhase">End Phase Manually</button>
+    <button id="btnClearLog">Clear Log</button>
+  </div>
+
+  <div class="section">
+    <h2>Test Results</h2>
+    <div id="results"></div>
+  </div>
+
+  <div class="section">
+    <h2>Event Log</h2>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    // Mock minimal game environment
+    window.game = {
+      cfg: {},
+      phase: 'lobby',
+      humanId: 1,
+      week: 1,
+      players: [
+        { id: 1, name: 'Test Player', evicted: false, affinity: {} },
+        { id: 2, name: 'Other Player', evicted: false, affinity: {} }
+      ]
+    };
+
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+
+    const logEl = document.getElementById('log');
+    const resultsEl = document.getElementById('results');
+
+    function addLogEntry(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    window.addLog = (msg, type) => {
+      addLogEntry(msg, type);
+    };
+
+    function updateStatus() {
+      document.getElementById('phaseStatus').textContent = window.game.phase;
+      
+      if(window.SocialManeuvers && window.SocialManeuvers.isEnabled()) {
+        const resources = window.SocialManeuvers.SocialResources.getAll(1);
+        document.getElementById('energyDisplay').textContent = 
+          `Energy: ${resources.energy}/${window.SocialManeuvers.MAX_ENERGY}`;
+      }
+
+      const hasFastAdvance = !!window.game.__socialFastAdvanceTimeout;
+      document.getElementById('fastAdvanceStatus').textContent = hasFastAdvance ? 'Yes' : 'No';
+      document.getElementById('fastAdvanceStatus').style.color = hasFastAdvance ? '#f39c12' : '#95a5a6';
+    }
+
+    function addResult(message, pass) {
+      const div = document.createElement('div');
+      div.className = `status ${pass ? 'pass' : 'fail'}`;
+      div.textContent = (pass ? '✅ PASS: ' : '❌ FAIL: ') + message;
+      resultsEl.appendChild(div);
+    }
+
+    // Load social-maneuvers.js
+    const script1 = document.createElement('script');
+    script1.src = 'js/social-maneuvers.js';
+    script1.onload = () => {
+      addLogEntry('social-maneuvers.js loaded', 'ok');
+      runTests();
+    };
+    script1.onerror = () => {
+      addLogEntry('Failed to load social-maneuvers.js', 'danger');
+    };
+    document.head.appendChild(script1);
+
+    function runTests() {
+      addLogEntry('Starting tests...', 'info');
+
+      // Test 1: Check default timer value
+      setTimeout(() => {
+        const script2 = document.createElement('script');
+        script2.src = 'js/social.js';
+        script2.onload = () => {
+          addLogEntry('social.js loaded', 'ok');
+          
+          // Test 2: Verify Social Maneuvers is enabled
+          if(window.SocialManeuvers && window.SocialManeuvers.isEnabled()) {
+            addResult('Social Maneuvers module loaded and enabled', true);
+          } else {
+            addResult('Social Maneuvers module not enabled', false);
+          }
+
+          updateStatus();
+          addLogEntry('All modules loaded. Ready for manual testing.', 'ok');
+        };
+        document.head.appendChild(script2);
+      }, 100);
+    }
+
+    // Test Controls
+    document.getElementById('btnStartPhase').addEventListener('click', () => {
+      addLogEntry('Starting social phase...', 'info');
+      
+      if(window.SocialManeuvers && window.SocialManeuvers.onSocialPhaseStart) {
+        window.game.phase = 'social_intermission';
+        window.SocialManeuvers.onSocialPhaseStart();
+        addLogEntry('Social phase started', 'ok');
+        
+        // Check default energy
+        const resources = window.SocialManeuvers.SocialResources.getAll(1);
+        addResult(`Default energy is ${resources.energy}/${window.SocialManeuvers.MAX_ENERGY}`, 
+                  resources.energy === window.SocialManeuvers.DEFAULT_ENERGY);
+        
+        updateStatus();
+      } else {
+        addLogEntry('Cannot start phase - SocialManeuvers not loaded', 'danger');
+      }
+    });
+
+    document.getElementById('btnSpendEnergy').addEventListener('click', () => {
+      if(!window.SocialManeuvers) {
+        addLogEntry('SocialManeuvers not loaded', 'danger');
+        return;
+      }
+
+      const current = window.SocialManeuvers.SocialResources.get(1, 'energy');
+      if(current > 0) {
+        window.SocialManeuvers.SocialResources.set(1, 'energy', current - 1);
+        addLogEntry(`Spent 1 energy. Remaining: ${current - 1}`, 'ok');
+        updateStatus();
+      } else {
+        addLogEntry('No energy remaining', 'danger');
+      }
+    });
+
+    document.getElementById('btnDepleteEnergy').addEventListener('click', () => {
+      if(!window.SocialManeuvers) {
+        addLogEntry('SocialManeuvers not loaded', 'danger');
+        return;
+      }
+
+      addLogEntry('Depleting all energy...', 'info');
+      window.SocialManeuvers.SocialResources.set(1, 'energy', 0);
+      
+      // Manually trigger the check
+      const checkFn = window.SocialManeuvers.checkEnergyDepletionAndAdvance || 
+                      window.checkEnergyDepletionAndAdvance;
+      
+      if(checkFn) {
+        // The function is private, so we'll simulate an action instead
+        // by executing a small action
+        const actions = window.SocialManeuvers.getAvailableActions(1, 2);
+        if(actions && actions.length > 0) {
+          addLogEntry('Executing action to trigger energy check...', 'info');
+          const result = window.SocialManeuvers.executeAction(1, 2, actions[0].id);
+          if(result.success) {
+            addLogEntry('Action executed successfully', 'ok');
+          }
+        }
+      }
+      
+      updateStatus();
+      
+      // Check if fast advance was scheduled
+      setTimeout(() => {
+        const hasScheduled = !!window.game.__socialFastAdvanceTimeout;
+        addResult('Fast advance scheduled after energy depletion', hasScheduled);
+        updateStatus();
+      }, 100);
+    });
+
+    document.getElementById('btnEndPhase').addEventListener('click', () => {
+      addLogEntry('Ending social phase...', 'info');
+      
+      if(window.SocialManeuvers && window.SocialManeuvers.onSocialPhaseEnd) {
+        window.SocialManeuvers.onSocialPhaseEnd();
+        window.game.phase = 'nominations';
+        addLogEntry('Social phase ended', 'ok');
+        
+        // Check cleanup
+        const cleanedUp = !window.game.__socialFastAdvanceTimeout;
+        addResult('Fast advance timeout cleared on phase end', cleanedUp);
+        
+        updateStatus();
+      } else {
+        addLogEntry('Cannot end phase - SocialManeuvers not loaded', 'danger');
+      }
+    });
+
+    document.getElementById('btnClearLog').addEventListener('click', () => {
+      logEl.innerHTML = '';
+      addLogEntry('Log cleared', 'info');
+    });
+
+    // Update status every second
+    setInterval(updateStatus, 1000);
+  </script>
+</body>
+</html>

@@ -762,8 +762,8 @@
       }
     };
     
-    // Use tSocial config with fallback to tComms
-    const duration = g.cfg?.tSocial || g.cfg?.tComms || 30;
+    // Use tSocial config with fallback to 180 seconds (3 minutes) for social maneuvers
+    const duration = g.cfg?.tSocial || g.cfg?.tComms || 180;
     global.setPhase?.('social_intermission', duration, onDone);
     const panel=document.getElementById('panel'); if(panel) renderSocialPhase(panel);
   };

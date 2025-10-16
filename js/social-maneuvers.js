@@ -305,6 +305,9 @@
       g.__socialManeuversSession.relationshipDeltas.set(key, currentDelta + affinityDelta);
     }
 
+    // Check if player has depleted all energy and schedule fast-advance if needed
+    checkEnergyDepletionAndAdvance(actorId);
+
     return { success: true, action, outcome, evaluation, succeeded, telemetry, resources: SocialResources.getAll(actorId), affinityDelta };
   }
 
@@ -1058,6 +1061,137 @@
   // ============================================================================
 
   // ============================================================================
+  // FAST-ADVANCE HELPER
+  // ============================================================================
+  
+  /**
+   * Schedule a fast advance to next phase after the specified delay.
+   * Used when player depletes all social energy.
+   * @param {number} delayMs - Delay in milliseconds before advancing (default 3000ms)
+   */
+  function scheduleFastAdvance(delayMs = 3000){
+    const g = global.game;
+    if(!g) return;
+
+    // Clear any existing fast-advance timeout
+    if(g.__socialFastAdvanceTimeout){
+      clearTimeout(g.__socialFastAdvanceTimeout);
+      g.__socialFastAdvanceTimeout = null;
+    }
+
+    console.info(`[social-maneuvers] ⏱️ Scheduling fast advance in ${delayMs}ms (all energy depleted)`);
+
+    // Try to use existing timer APIs if available, otherwise fallback to setTimeout
+    const phaseEndMs = g.phaseEndsAt;
+    const now = Date.now();
+    const currentRemaining = phaseEndMs ? Math.max(0, phaseEndMs - now) : 0;
+
+    // Check if we have existing timer APIs (none currently exist, but future-proof)
+    if(typeof global.schedulePhaseAdvanceIn === 'function'){
+      // Use schedulePhaseAdvanceIn if available
+      try{
+        global.schedulePhaseAdvanceIn(delayMs);
+        console.info('[social-maneuvers] Used schedulePhaseAdvanceIn API');
+        return;
+      }catch(e){
+        console.warn('[social-maneuvers] schedulePhaseAdvanceIn failed:', e);
+      }
+    }
+
+    if(typeof global.GameTimer?.shortenCurrentByMs === 'function'){
+      // Use GameTimer.shortenCurrentByMs if available
+      try{
+        const shortenBy = Math.max(0, currentRemaining - delayMs);
+        global.GameTimer.shortenCurrentByMs(shortenBy);
+        console.info('[social-maneuvers] Used GameTimer.shortenCurrentByMs API');
+        return;
+      }catch(e){
+        console.warn('[social-maneuvers] GameTimer.shortenCurrentByMs failed:', e);
+      }
+    }
+
+    if(typeof global.GameTimer?.setRemainingMs === 'function'){
+      // Use GameTimer.setRemainingMs if available
+      try{
+        global.GameTimer.setRemainingMs(delayMs);
+        console.info('[social-maneuvers] Used GameTimer.setRemainingMs API');
+        return;
+      }catch(e){
+        console.warn('[social-maneuvers] GameTimer.setRemainingMs failed:', e);
+      }
+    }
+
+    if(typeof global.setPhaseDurationMs === 'function'){
+      // Use setPhaseDurationMs fallback
+      try{
+        global.setPhaseDurationMs(delayMs);
+        console.info('[social-maneuvers] Used setPhaseDurationMs API');
+        return;
+      }catch(e){
+        console.warn('[social-maneuvers] setPhaseDurationMs failed:', e);
+      }
+    }
+
+    // Fallback: use setTimeout to manually advance phase
+    // This is the most reliable approach given current codebase
+    console.info('[social-maneuvers] Using setTimeout fallback for fast advance');
+    
+    g.__socialFastAdvanceTimeout = setTimeout(() => {
+      console.info('[social-maneuvers] ⏩ Fast-advancing phase (energy depleted)');
+      g.__socialFastAdvanceTimeout = null;
+
+      // Try to advance phase by manipulating the phase timer
+      if(g.endAt && typeof g.endAt === 'number'){
+        // Shorten the timer to expire very soon (100ms buffer for cleanup)
+        g.endAt = Date.now() + 100;
+        console.info('[social-maneuvers] Shortened phase timer to 100ms');
+      } else {
+        // If no endAt, try to call the phase advance directly
+        console.warn('[social-maneuvers] No phase timer found, attempting direct advance');
+        
+        // Try to trigger phase transition via timeout callback
+        // The onDone callback should be stored somewhere accessible
+        if(typeof global.advancePhase === 'function'){
+          global.advancePhase();
+        } else if(typeof global.defaultAdvance === 'function'){
+          global.defaultAdvance(g.phase);
+        } else {
+          console.error('[social-maneuvers] Unable to advance phase - no advance function found');
+        }
+      }
+    }, delayMs);
+  }
+
+  /**
+   * Check if the human player has depleted all their social energy.
+   * If so, schedule a fast advance.
+   * @param {number} playerId - Player ID to check
+   */
+  function checkEnergyDepletionAndAdvance(playerId){
+    if(!isEnabled()) return;
+    
+    const g = global.game;
+    if(!g) return;
+
+    // Only check for human player
+    const humanId = g.humanId;
+    if(playerId !== humanId) return;
+
+    // Check if all energy is spent
+    const energyRemaining = SocialResources.get(playerId, 'energy');
+    
+    if(energyRemaining === 0){
+      console.info(`[social-maneuvers] 🎯 Player ${playerId} has depleted all energy (0/${MAX_ENERGY})`);
+      
+      // Show feedback message
+      global.addLog?.('All social energy spent! Phase will advance shortly...', 'ok');
+      
+      // Schedule fast advance after 3 seconds
+      scheduleFastAdvance(3000);
+    }
+  }
+
+  // ============================================================================
   // PHASE INTEGRATION
   // ============================================================================
   function onSocialPhaseStart(){
@@ -1094,11 +1228,25 @@
       g.__socialManeuversSession.informationSpent.set(p.id, 0);
     });
     console.info(`[social-maneuvers] Session tracking initialized for end-of-phase summary`);
+
+    // Clear any pending fast-advance timeout
+    if(g.__socialFastAdvanceTimeout){
+      clearTimeout(g.__socialFastAdvanceTimeout);
+      g.__socialFastAdvanceTimeout = null;
+    }
   }
   
   function onSocialPhaseEnd(){
     if(!isEnabled()) { console.info('[social-maneuvers] Phase end called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ✓ Social phase complete - generating summary');
+
+    // Clear any pending fast-advance timeout on phase end
+    const g = global.game;
+    if(g?.__socialFastAdvanceTimeout){
+      clearTimeout(g.__socialFastAdvanceTimeout);
+      g.__socialFastAdvanceTimeout = null;
+      console.info('[social-maneuvers] Cleared pending fast-advance timeout');
+    }
     
     // Generate summary data (PR #266)
     const summary = generatePhaseSummary();
