@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Mobile-First Socialize Modal & TV Launcher</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0f1a;
+      color: #fff;
+    }
+
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .test-header {
+      background: linear-gradient(135deg, #1a2d45, #0f1e32);
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .test-header h1 {
+      margin: 0 0 10px 0;
+      color: #4a90e2;
+      font-size: 1.5rem;
+    }
+
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(100, 180, 255, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .test-section h2 {
+      margin: 0 0 15px 0;
+      font-size: 1.2rem;
+      color: #4a90e2;
+    }
+
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .test-btn {
+      background: linear-gradient(135deg, #4a90e2, #357abd);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .test-btn:hover {
+      background: linear-gradient(135deg, #5a9ff2, #4585c7);
+      transform: translateY(-2px);
+    }
+
+    .test-btn.secondary {
+      background: linear-gradient(135deg, #6c757d, #5a6268);
+    }
+
+    .test-btn.secondary:hover {
+      background: linear-gradient(135deg, #7c858d, #6a7278);
+    }
+
+    /* Mock TV container */
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      aspect-ratio: 16 / 9;
+      margin: 20px auto;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .tvViewport {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #1a1a2e, #0f0f1e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #tvOverlay {
+      position: absolute;
+      inset: var(--tv-safe-top, 44px) var(--tv-safe-x, 16px) var(--tv-safe-bottom, 42px) var(--tv-safe-x, 16px);
+      pointer-events: none;
+      z-index: 12;
+    }
+
+    #tvNow {
+      position: absolute;
+      left: var(--tv-safe-x, 16px);
+      right: var(--tv-safe-x, 16px);
+      bottom: 8px;
+      min-height: 28px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      background: linear-gradient(180deg, rgba(9, 24, 40, 0.85), rgba(6, 14, 24, 0.85));
+      color: #fff;
+      text-align: center;
+      z-index: 13;
+    }
+
+    .status-log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-entry.success { color: #4ade80; }
+    .log-entry.info { color: #60a5fa; }
+    .log-entry.warn { color: #fbbf24; }
+    .log-entry.error { color: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🎮 Mobile-First Socialize Modal & TV Launcher</h1>
+      <p style="margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">
+        Test suite for the compact, mobile-optimized Socialize system with resource HUD, player picker, and action menu.
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h2>TV Display with Launcher</h2>
+      <div id="tv">
+        <div class="tvViewport">
+          <div id="tvNow">Social Intermission</div>
+          <div id="tvOverlay"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div class="test-controls">
+        <button class="test-btn" onclick="testShowLauncher()">Show Launcher</button>
+        <button class="test-btn" onclick="testOpenModal()">Open Modal</button>
+        <button class="test-btn" onclick="testCloseModal()">Close Modal</button>
+        <button class="test-btn" onclick="testShowToast()">Show Toast</button>
+        <button class="test-btn secondary" onclick="testResetResources()">Reset Resources</button>
+        <button class="test-btn secondary" onclick="testUpdateResources()">Add Resources</button>
+        <button class="test-btn secondary" onclick="testDepleteEnergy()">Deplete Energy</button>
+      </div>
+      <div class="status-log" id="statusLog"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Feature Checklist</h2>
+      <ul style="list-style: none; padding: 0;">
+        <li>✅ Socialize launcher in TV overlay with compact HUD</li>
+        <li>✅ Resource badges (energy, influence, information) with tooltips</li>
+        <li>✅ Help button with popover explaining mechanics</li>
+        <li>✅ Full-screen mobile-optimized modal</li>
+        <li>✅ Compact header HUD in modal</li>
+        <li>✅ Player picker with multi-select support</li>
+        <li>✅ Action menu with icons and costs</li>
+        <li>✅ Sticky execute button at bottom</li>
+        <li>✅ Feedback and history sections</li>
+        <li>✅ Modal close (X button and tap outside)</li>
+        <li>✅ Social Update toast in TV safe area</li>
+        <li>✅ Toast with Details and OK buttons (no Copy JSON)</li>
+        <li>✅ Details dialog with concise summary</li>
+        <li>✅ Background scroll disable when modal open</li>
+        <li>✅ Responsive design for mobile and desktop</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/social.js"></script>
+  <script src="js/socialize-mobile.js"></script>
+
+  <script>
+    // Mock game state
+    window.game = {
+      humanId: 1,
+      week: 1,
+      phase: 'social_intermission',
+      cfg: {},
+      players: [
+        { id: 1, name: 'You', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player1', affinity: {} },
+        { id: 2, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice', affinity: {} },
+        { id: 3, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob', affinity: {} },
+        { id: 4, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=charlie', affinity: {} },
+        { id: 5, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=diana', affinity: {} },
+        { id: 6, name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=eve', affinity: {} }
+      ]
+    };
+
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+
+    window.addLog = function(msg, cls = '') {
+      const log = document.getElementById('statusLog');
+      if (log) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry ' + cls;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        log.insertBefore(entry, log.firstChild);
+      }
+    };
+
+    window.updateHud = function() {
+      console.log('HUD updated');
+    };
+
+    // Mock socialApplyAction
+    window.socialApplyAction = function(actorId, targetId, action) {
+      const actor = window.getP(actorId);
+      const target = window.getP(targetId);
+      window.addLog(`${actor?.name} performed ${action} on ${target?.name}`, 'success');
+    };
+
+    // Test functions
+    function testShowLauncher() {
+      window.SocializeMobile.ensureLauncher();
+      window.addLog('Launcher displayed', 'info');
+    }
+
+    function testOpenModal() {
+      window.SocializeMobile.openModal();
+      window.addLog('Modal opened', 'info');
+    }
+
+    function testCloseModal() {
+      window.SocializeMobile.closeModal(false);
+      window.addLog('Modal closed', 'info');
+    }
+
+    function testShowToast() {
+      window.SocializeMobile.closeModal(true);
+      window.addLog('Toast displayed', 'info');
+    }
+
+    function testResetResources() {
+      window.SocializeMobile.resetWeeklyResources();
+      window.addLog('Resources reset to default (Energy: 3)', 'success');
+    }
+
+    function testUpdateResources() {
+      window.SocializeMobile.updateResources({ influence: 1, information: 1 });
+      window.addLog('Added 1 influence and 1 information', 'success');
+    }
+
+    function testDepleteEnergy() {
+      window.SocializeMobile.updateResources({ energy: -3 });
+      window.addLog('Energy depleted', 'warn');
+    }
+
+    // Auto-initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      testShowLauncher();
+      window.addLog('Test page loaded', 'info');
+      window.addLog('Click "Show Launcher" to see the HUD', 'info');
+      window.addLog('Click "Open Modal" to test the full Socialize interface', 'info');
+    });
+  </script>
+</body>
+</html>
