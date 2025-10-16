@@ -134,6 +134,12 @@
     global.initAffinities();
     global.initRelationships();
     
+    // Apply pending profile if one exists (for returning users)
+    if (global.__pendingProfile && typeof global.ProfileService?.applyProfileToGame === 'function') {
+      console.info('[bootstrap] applying pending profile:', global.__pendingProfile.displayName);
+      global.ProfileService.applyProfileToGame(global.__pendingProfile);
+    }
+    
     // Apply saved player customizations from localStorage
     if(typeof global.loadPlayerCustomizations === 'function'){
       const customizations = global.loadPlayerCustomizations();
