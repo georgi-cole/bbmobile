@@ -135,7 +135,7 @@
     global.initRelationships();
     
     // Apply pending profile if one exists (for returning users)
-    if (global.__pendingProfile && typeof global.ProfileService?.applyProfileToGame === 'function') {
+    if (global.__pendingProfile && global.ProfileService && typeof global.ProfileService.applyProfileToGame === 'function') {
       console.info('[bootstrap] applying pending profile:', global.__pendingProfile.displayName);
       global.ProfileService.applyProfileToGame(global.__pendingProfile);
     }
