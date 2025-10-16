@@ -827,7 +827,7 @@
         try{ startNoms(); }catch(e){ console.error(e); }
       }
     };
-    global.setPhase?.('social_intermission', g.cfg?.tComms||30, onDone);
+    global.setPhase?.('social_intermission', g.cfg?.tComms||180, onDone);
     const panel=document.getElementById('panel'); if(panel) renderSocialPhase(panel);
   };
 
