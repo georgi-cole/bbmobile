@@ -232,10 +232,14 @@ header.innerHTML = `
         alt="${UI.escapeHtml?.(p.name||'guest')}" onerror="this.onerror=null;this.src='${FALLBACK}'">`;
 
       const c1=document.createElement('div'); c1.className='cell player';
+      // Use ProfileService if available for human player display
+      const displayName = p.human && global.ProfileService?.getDisplayName
+        ? global.ProfileService.getDisplayName() 
+        : p.name || '';
       c1.innerHTML = `
         <div class="chip">
           ${avatarHtml}
-          <div class="meta"><div class="name">${UI.escapeHtml?.(p.name||'')}${p.human?' (You)':''}</div></div>
+          <div class="meta"><div class="name">${UI.escapeHtml?.(displayName)}</div></div>
         </div>`;
       row.appendChild(c1);
 
