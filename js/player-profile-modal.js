@@ -159,16 +159,32 @@
     console.info('[player-profile-modal] modal flow skipped for restart');
   };
 
-  // Initialize
-  function init() {
+  // Initialize on page load
+  function initOnPageLoad() {
+    // Try to auto-load profile for returning users
+    const initResult = global.ProfileService.initializeProfile();
+    
+    if (initResult.profile) {
+      // Returning user with last profile - already loaded by ProfileService
+      console.info('[player-profile-modal] returning user, profile auto-loaded:', initResult.profile.displayName);
+      profileSelected = true;
+      rulesAcknowledged = true; // Skip modal flow for returning users
+    } else if (!initResult.firstLaunch && initResult.showSelection) {
+      // Multiple profiles but no last profile - will show selection after intro/rules
+      console.info('[player-profile-modal] multiple profiles exist, will show selection');
+    } else if (initResult.firstLaunch) {
+      // First launch - will show creation modal after intro/rules
+      console.info('[player-profile-modal] first launch detected');
+    }
+    
     setupRulesListener();
     setupIntroListener();
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
+    document.addEventListener('DOMContentLoaded', initOnPageLoad, { once: true });
   } else {
-    init();
+    initOnPageLoad();
   }
 
 })(window);

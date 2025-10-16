@@ -573,6 +573,35 @@
     settingsBtn.parentNode.insertBefore(rulesBtn, startBtn);
   }
   
+  // Add Profile button between Rules and Start
+  function ensureProfileButton(){
+    const topbar = document.querySelector('.topbar');
+    if(!topbar) return;
+    
+    // Check if Profile button already exists
+    if(document.getElementById('btnProfile')) return;
+    
+    const startBtn = document.getElementById('btnStartQuick');
+    if(!startBtn) return;
+    
+    const profileBtn = document.createElement('button');
+    profileBtn.id = 'btnProfile';
+    profileBtn.className = 'btn iconOnly';
+    profileBtn.textContent = '👤';
+    profileBtn.setAttribute('aria-label', 'Profile');
+    profileBtn.setAttribute('title', 'Switch Profile');
+    
+    profileBtn.onclick = ()=>{
+      // Use the showProfileModal function from player-profile-modal.js
+      if(typeof window.showProfileModal === 'function'){
+        window.showProfileModal();
+      }
+    };
+    
+    // Insert before Start button
+    startBtn.parentNode.insertBefore(profileBtn, startBtn);
+  }
+  
   // Initialize skip progress bar
   function initSkipProgressBar(){
     const progressBar = document.getElementById('timerSkipProgressBar');
@@ -618,7 +647,8 @@
     updateTimerHeader(); 
     initSkipProgressBar(); 
     placementsHover(); 
-    ensureRulesButton(); 
+    ensureRulesButton();
+    ensureProfileButton();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true });
   else init();

@@ -46,9 +46,14 @@
   // Apply profile to game state
   function applyProfileToGame(profile) {
     if (!global.game) {
-      console.warn('[profileService] game not initialized');
+      console.warn('[profileService] game not initialized, will apply later');
+      // Store profile to apply when game initializes
+      global.__pendingProfile = profile;
       return;
     }
+
+    // Clear any pending profile
+    global.__pendingProfile = null;
 
     // Update game config
     if (global.game.cfg) {
@@ -56,9 +61,9 @@
     }
 
     // Find and update human player
-    if (global.game.players) {
+    if (global.game.players && global.game.players.length > 0) {
       const humanPlayer = global.game.players.find(p => 
-        p.human || p.id === global.game.humanId || p.id === 0
+        p.human || p.id === global.game.humanId
       );
       
       if (humanPlayer) {
@@ -77,7 +82,13 @@
         humanPlayer.meta.season = profile.season || 1;
         
         console.info('[profileService] applied profile to human player:', humanPlayer);
+      } else {
+        console.warn('[profileService] human player not found in players array');
+        global.__pendingProfile = profile;
       }
+    } else {
+      console.warn('[profileService] players array not ready, storing for later application');
+      global.__pendingProfile = profile;
     }
 
     // Update HUD if available
