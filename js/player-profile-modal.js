@@ -12,7 +12,7 @@
   // Show toast notification
   function showToast(message, duration = 3000) {
     const toast = document.createElement('div');
-    toast.className = 'profile-toast';
+    // toast.className = 'profile-toast'; // Removed: class not defined in CSS
     toast.textContent = message;
     toast.style.cssText = `
       position: fixed;
