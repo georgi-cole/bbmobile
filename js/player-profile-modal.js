@@ -12,7 +12,6 @@
   // Show toast notification
   function showToast(message, duration = 3000) {
     const toast = document.createElement('div');
-    // toast.className = 'profile-toast'; // Removed: class not defined in CSS
     toast.textContent = message;
     toast.style.cssText = `
       position: fixed;
@@ -42,26 +41,16 @@
 
   // Handle profile selection
   function handleProfileSelect(profile) {
-    console.info('[player-profile-modal] profile selected:', profile.displayName);
-    
     global.ProfileService.setCurrentProfile(profile);
     profileSelected = true;
-    
-    // Start the opening sequence
     startGame();
   }
 
   // Handle guest mode
   function handleGuestMode() {
-    console.info('[player-profile-modal] guest mode selected');
-    
     global.ProfileService.setGuestMode();
     profileSelected = true;
-    
-    // Show toast warning
     showToast('⚠️ Playing as Guest - Progress will not be saved');
-    
-    // Start the opening sequence
     startGame();
   }
 
@@ -70,38 +59,26 @@
     setTimeout(() => {
       if (typeof global.startOpeningSequence === 'function') {
         global.startOpeningSequence();
-      } else {
-        console.warn('[player-profile-modal] startOpeningSequence not found');
       }
     }, 100);
   }
 
   // Show profile selection modal
   function showProfileSelectionModal() {
-    if (profileSelected) {
-      console.info('[player-profile-modal] profile already selected, skipping');
-      return;
-    }
+    if (profileSelected) return;
 
-    // Initialize profile service
     const initResult = global.ProfileService.initializeProfile();
     
     if (initResult.firstLaunch) {
-      // First launch - show modal with auto-create option
-      console.info('[player-profile-modal] first launch - showing profile creation');
       global.ProfileModal.show({
         autoCreate: true,
         onSelect: handleProfileSelect,
         onGuest: handleGuestMode
       });
     } else if (initResult.profile) {
-      // Returning user with last profile - auto-load and start
-      console.info('[player-profile-modal] auto-loading last profile:', initResult.profile.displayName);
       profileSelected = true;
       startGame();
     } else if (initResult.showSelection) {
-      // Multiple profiles but no last - show selection
-      console.info('[player-profile-modal] showing profile selection');
       global.ProfileModal.show({
         onSelect: handleProfileSelect,
         onGuest: handleGuestMode
@@ -109,82 +86,37 @@
     }
   }
 
-  // Listen for rules modal closed event
+  // Listen for rules acknowledgment to trigger profile modal
   function setupRulesListener() {
-    window.addEventListener('bb:rules:acknowledged', function() {
-      console.info('[player-profile-modal] rules acknowledged, checking profile');
+    document.addEventListener('bb:rules:acknowledged', function () {
       rulesAcknowledged = true;
-      setTimeout(() => showProfileSelectionModal(), 150);
-    }, { once: true });
+      showProfileSelectionModal();
+    });
   }
 
-  // Listen for intro finished event as fallback (if rules are disabled)
-  function setupIntroListener() {
-    window.addEventListener('bb:intro:finished', function() {
-      console.info('[player-profile-modal] intro finished, checking if profile needed');
-      // Only show if rules haven't already triggered it
-      if (!rulesAcknowledged && !profileSelected) {
-        setTimeout(() => showProfileSelectionModal(), 150);
-      }
-    }, { once: true });
-  }
-
-  // Function for manual profile selection (e.g., from settings)
-  function showProfileModal() {
-    global.ProfileModal.show({
-      onSelect: (profile) => {
-        global.ProfileService.setCurrentProfile(profile);
-        console.info('[player-profile-modal] profile switched to:', profile.displayName);
-      },
-      onGuest: () => {
-        global.ProfileService.setGuestMode();
-        showToast('⚠️ Playing as Guest - Progress will not be saved');
-        console.info('[player-profile-modal] switched to guest mode');
+  // Remove any static "Create Your Profile" text in the UI
+  function removeStaticProfileText() {
+    Array.from(document.querySelectorAll('*')).forEach(el => {
+      if (
+        el.textContent &&
+        el.textContent.trim() === 'Create Your Profile'
+      ) {
+        el.style.display = 'none';
       }
     });
   }
 
-  // Expose to global
-  global.showProfileModal = showProfileModal;
-  
-  // For backward compatibility
-  global.hideProfileModal = () => {
-    global.ProfileModal.hide();
-  };
-  
-  // Function to allow restart to skip modals
-  global.skipModalFlow = function() {
-    profileSelected = true;
-    rulesAcknowledged = true;
-    console.info('[player-profile-modal] modal flow skipped for restart');
-  };
-
-  // Initialize on page load
-  function initOnPageLoad() {
-    // Try to auto-load profile for returning users
-    const initResult = global.ProfileService.initializeProfile();
-    
-    if (initResult.profile) {
-      // Returning user with last profile - already loaded by ProfileService
-      console.info('[player-profile-modal] returning user, profile auto-loaded:', initResult.profile.displayName);
-      profileSelected = true;
-      rulesAcknowledged = true; // Skip modal flow for returning users
-    } else if (!initResult.firstLaunch && initResult.showSelection) {
-      // Multiple profiles but no last profile - will show selection after intro/rules
-      console.info('[player-profile-modal] multiple profiles exist, will show selection');
-    } else if (initResult.firstLaunch) {
-      // First launch - will show creation modal after intro/rules
-      console.info('[player-profile-modal] first launch detected');
-    }
-    
+  // Entry point: Setup event listener after DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', function () {
     setupRulesListener();
-    setupIntroListener();
-  }
+    removeStaticProfileText();
+  });
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initOnPageLoad, { once: true });
-  } else {
-    initOnPageLoad();
-  }
+  // Expose global for testing/integration
+  global.PlayerProfileModal = {
+    showProfileSelectionModal,
+    removeStaticProfileText,
+    showToast
+  };
 
 })(window);
