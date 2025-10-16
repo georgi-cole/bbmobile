@@ -6,7 +6,6 @@
 (function (global) {
   'use strict';
 
-  let rulesAcknowledged = false;
   let profileSelected = false;
 
   // Show toast notification
@@ -67,6 +66,16 @@
   function showProfileSelectionModal() {
     if (profileSelected) return;
 
+    // Defensive checks for required globals
+    if (!global.ProfileService) {
+      console.error('[player-profile-modal] ProfileService not loaded');
+      return;
+    }
+    if (!global.ProfileModal) {
+      console.error('[player-profile-modal] ProfileModal not loaded');
+      return;
+    }
+
     const initResult = global.ProfileService.initializeProfile();
     
     if (initResult.firstLaunch) {
@@ -88,8 +97,7 @@
 
   // Listen for rules acknowledgment to trigger profile modal
   function setupRulesListener() {
-    document.addEventListener('bb:rules:acknowledged', function () {
-      rulesAcknowledged = true;
+    window.addEventListener('bb:rules:acknowledged', function () {
       showProfileSelectionModal();
     });
   }
