@@ -26,25 +26,102 @@
   // ============================================================================
   // Note: Information is scaled to 0..100 to support high-impact action costs.
   const RESOURCE_CONFIG = {
-    energy:      { default: 3,  max: 5,   weeklyReset: true,  carryover: false, description: 'Energy represents your social stamina.', examples: 'Used for conversations, strategizing.' },
-    influence:   { default: 2,  max: 10,  weeklyReset: false, carryover: true,  description: 'Influence is your social capital.', examples: 'Earned by success, powers maneuvers.' },
-    information: { default: 25, max: 100, weeklyReset: false, carryover: true,  description: 'Information is strategic knowledge.', examples: 'Earned through observation and interrogation.' }
+    energy:      { default: 5,  max: 10,  weeklyReset: true,  carryover: false, description: 'Energy represents your social stamina.', examples: 'Used for conversations, strategizing.' },
+    influence:   { default: 0,  max: 100, weeklyReset: false, carryover: true,  description: 'Influence is your social capital.', examples: 'Earned by success, powers maneuvers.' },
+    information: { default: 0,  max: 100, weeklyReset: false, carryover: true,  description: 'Information is strategic knowledge.', examples: 'Earned through observation and interrogation.' }
   };
 
   const DEFAULT_ENERGY = RESOURCE_CONFIG.energy.default;
   const MAX_ENERGY = RESOURCE_CONFIG.energy.max;
+
+  // Weekly bonuses and penalties for energy seeding
+  const WEEKLY_ENERGY_BONUSES = {
+    HOH_WIN: 5,
+    POV_WIN: 3,
+    NOMINATED: 4,
+    NEW_ALLIANCE: 2, // per alliance
+    SAVED_WITH_POV: 2,
+    SURVIVED_EVICTION: 1
+  };
+
+  const WEEKLY_ENERGY_PENALTIES = {
+    COMP_SKIPPED: -3,
+    NOT_DRAWN_VETO: -1,
+    ZERO_SCORE: -2,
+    BROKE_ALLIANCE: -3
+  };
+
+  // In-phase energy refund chances
+  const ENERGY_REFUND_CHANCES = {
+    COMPLIMENT: 0.30,
+    STRATEGY_CHAT: 0.20,
+    MEDIATE: 1.0 // 100% if conflict resolved
+  };
+
+  // Influence deltas for actions
+  const INFLUENCE_DELTAS = {
+    STRATEGY_CHAT_SUCCESS: 6,
+    CONFIDE_SUCCESS: 10,
+    PROTECT_WITH_VETO: 8,
+    GIVE_GIFT_SUCCESS: 4,
+    MAJOR_BETRAYAL: -25,
+    CONFRONT_FAIL: -8,
+    SERIOUS_NEGATIVE_CONTEXT: -10
+  };
+
+  const INFLUENCE_WEEKLY_DECAY = 0.25; // 25% decay if no positive interaction
+
+  // Information earning
+  const INFORMATION_EARNINGS = {
+    INTERROGATE_SUCCESS: 10,
+    EAVESDROP_SUCCESS: 6,
+    STRATEGY_CHAT_REVEAL: 3,
+    MEDIATE_REVEAL: 4
+  };
+
+  // Information spending
+  const INFORMATION_COSTS = {
+    REVEAL_INTENT: 8,
+    BLACKMAIL_MIN: 8,
+    BLACKMAIL_MAX: 15,
+    BOOST_PER_5: 5 // 5 points for +8% success
+  };
+
+  const INFORMATION_WEEKLY_CARRYOVER = 5;
 
   const SocialResources = {
     init(playerId) {
       const g = global.game;
       if(!g) return;
       if(!g.__socialResources){ g.__socialResources = new Map(); }
+      if(!g.__weeklyEvents){ g.__weeklyEvents = new Map(); }
+      if(!g.__pairwiseInfluence){ g.__pairwiseInfluence = new Map(); }
+      if(!g.__weeklyInteractions){ g.__weeklyInteractions = new Map(); }
+      if(!g.__phaseRefunds){ g.__phaseRefunds = new Map(); }
+      
       if(!g.__socialResources.has(playerId)){
         g.__socialResources.set(playerId, {
           energy: RESOURCE_CONFIG.energy.default,
           influence: RESOURCE_CONFIG.influence.default,
           information: RESOURCE_CONFIG.information.default,
           lastWeekReset: g.week || 1
+        });
+      }
+      
+      // Initialize weekly events tracker for this player
+      if(!g.__weeklyEvents.has(playerId)){
+        g.__weeklyEvents.set(playerId, {
+          hohWin: false,
+          povWin: false,
+          nominated: false,
+          newAlliances: 0,
+          savedWithPov: false,
+          survivedEviction: false,
+          compSkipped: false,
+          notDrawnVeto: false,
+          zeroScore: false,
+          brokeAlliance: false,
+          week: g.week || 1
         });
       }
     },
@@ -104,12 +181,77 @@
       const resources = g.__socialResources.get(playerId);
       const currentWeek = g.week || 1;
       if(resources.lastWeekReset >= currentWeek) return;
+      
+      // Calculate weekly energy delta
+      const weeklyEvents = g.__weeklyEvents.get(playerId) || {};
+      let energyDelta = 0;
+      
+      // Apply bonuses
+      if(weeklyEvents.hohWin) energyDelta += WEEKLY_ENERGY_BONUSES.HOH_WIN;
+      if(weeklyEvents.povWin) energyDelta += WEEKLY_ENERGY_BONUSES.POV_WIN;
+      if(weeklyEvents.nominated) energyDelta += WEEKLY_ENERGY_BONUSES.NOMINATED;
+      energyDelta += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
+      if(weeklyEvents.savedWithPov) energyDelta += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
+      if(weeklyEvents.survivedEviction) energyDelta += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
+      
+      // Apply penalties
+      if(weeklyEvents.compSkipped) energyDelta += WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED;
+      if(weeklyEvents.notDrawnVeto) energyDelta += WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO;
+      if(weeklyEvents.zeroScore) energyDelta += WEEKLY_ENERGY_PENALTIES.ZERO_SCORE;
+      if(weeklyEvents.brokeAlliance) energyDelta += WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE;
+      
+      console.info(`[social-resources] Player ${playerId} weekly energy delta: ${energyDelta}`, weeklyEvents);
+      
       for(const [type, config] of Object.entries(RESOURCE_CONFIG)) {
-        if(config.weeklyReset) resources[type] = config.default;
-        else if(config.carryover) resources[type] = Math.min(resources[type], config.max);
+        if(type === 'energy' && config.weeklyReset) {
+          // Energy: Base + weekly delta, clamped to [0, max]
+          resources[type] = Math.max(0, Math.min(config.max, config.default + energyDelta));
+        } else if(type === 'information' && config.carryover) {
+          // Information: add weekly carryover
+          resources[type] = Math.min(resources[type] + INFORMATION_WEEKLY_CARRYOVER, config.max);
+        } else if(config.weeklyReset) {
+          resources[type] = config.default;
+        } else if(config.carryover) {
+          resources[type] = Math.min(resources[type], config.max);
+        }
       }
+      
+      // Apply influence decay (25% if no positive interaction this week)
+      const alivePlayers = global.alivePlayers?.() || [];
+      for(const target of alivePlayers) {
+        if(target.id !== playerId) {
+          const interactionKey = `${playerId}->${target.id}`;
+          const hadPositiveInteraction = g.__weeklyInteractions.get(interactionKey) || false;
+          if(!hadPositiveInteraction) {
+            const influenceKey = `${playerId}->${target.id}`;
+            const currentInfluence = this.getInfluence(playerId, target.id);
+            const decayed = currentInfluence * (1 - INFLUENCE_WEEKLY_DECAY);
+            this.setInfluence(playerId, target.id, decayed);
+            console.info(`[social-resources] Influence decay: ${influenceKey} ${currentInfluence.toFixed(1)} → ${decayed.toFixed(1)}`);
+          }
+        }
+      }
+      
+      // Reset weekly events tracker
+      g.__weeklyEvents.set(playerId, {
+        hohWin: false,
+        povWin: false,
+        nominated: false,
+        newAlliances: 0,
+        savedWithPov: false,
+        survivedEviction: false,
+        compSkipped: false,
+        notDrawnVeto: false,
+        zeroScore: false,
+        brokeAlliance: false,
+        week: currentWeek
+      });
+      
+      // Clear weekly interactions
+      g.__weeklyInteractions.clear();
+      
       resources.lastWeekReset = currentWeek;
-      console.info(`[social-resources] Weekly reset for player ${playerId} at week ${currentWeek}`);
+      console.info(`[social-resources] Weekly reset for player ${playerId} at week ${currentWeek}`, resources);
       this._logTelemetry(playerId, 'all', 'reset', resources);
     },
     canAfford(playerId, costs) {
@@ -117,6 +259,74 @@
         if(cost > 0 && this.get(playerId, type) < cost) return false;
       }
       return true;
+    },
+    
+    // Pairwise Influence tracking (I[A→B])
+    getInfluence(actorId, targetId) {
+      const g = global.game; if(!g) return 0;
+      if(!g.__pairwiseInfluence) g.__pairwiseInfluence = new Map();
+      const key = `${actorId}->${targetId}`;
+      return g.__pairwiseInfluence.get(key) || 0;
+    },
+    
+    setInfluence(actorId, targetId, amount) {
+      const g = global.game; if(!g) return;
+      if(!g.__pairwiseInfluence) g.__pairwiseInfluence = new Map();
+      const key = `${actorId}->${targetId}`;
+      const capped = Math.max(0, Math.min(100, amount));
+      g.__pairwiseInfluence.set(key, capped);
+      console.info(`[social-resources] Influence set: ${key} = ${capped.toFixed(1)}`);
+    },
+    
+    adjustInfluence(actorId, targetId, delta) {
+      const current = this.getInfluence(actorId, targetId);
+      const newValue = current + delta;
+      this.setInfluence(actorId, targetId, newValue);
+      return newValue;
+    },
+    
+    // Weekly event tracking for energy deltas
+    recordWeeklyEvent(playerId, eventType, value = true) {
+      const g = global.game; if(!g) return;
+      if(!g.__weeklyEvents) g.__weeklyEvents = new Map();
+      const events = g.__weeklyEvents.get(playerId) || {};
+      
+      if(eventType === 'newAlliance') {
+        events.newAlliances = (events.newAlliances || 0) + 1;
+      } else {
+        events[eventType] = value;
+      }
+      
+      g.__weeklyEvents.set(playerId, events);
+      console.info(`[social-resources] Weekly event recorded: ${playerId} - ${eventType}`, value);
+    },
+    
+    // Track positive interactions for influence decay
+    recordPositiveInteraction(actorId, targetId) {
+      const g = global.game; if(!g) return;
+      if(!g.__weeklyInteractions) g.__weeklyInteractions = new Map();
+      const key = `${actorId}->${targetId}`;
+      g.__weeklyInteractions.set(key, true);
+    },
+    
+    // Energy refund tracking (per phase)
+    canRefundEnergy(playerId, actionType) {
+      const g = global.game; if(!g) return false;
+      if(!g.__phaseRefunds) g.__phaseRefunds = new Map();
+      const key = `${playerId}-${actionType}`;
+      return !g.__phaseRefunds.has(key);
+    },
+    
+    recordEnergyRefund(playerId, actionType) {
+      const g = global.game; if(!g) return;
+      if(!g.__phaseRefunds) g.__phaseRefunds = new Map();
+      const key = `${playerId}-${actionType}`;
+      g.__phaseRefunds.set(key, true);
+    },
+    
+    clearPhaseRefunds() {
+      const g = global.game; if(!g) return;
+      if(g.__phaseRefunds) g.__phaseRefunds.clear();
     },
     _logTelemetry(playerId, resourceType, operation, value) {
       const g = global.game; if(!g) return;
@@ -347,6 +557,66 @@
     else outcomeType = 'neutral';
 
     if(actor.affinity && typeof actor.affinity === 'object'){ actor.affinity[targetId] = (actor.affinity[targetId] ?? 0) + affinityChange; }
+    
+    // ==================== NEW: Apply Influence and Information mechanics ====================
+    
+    // Record positive interaction for influence decay tracking
+    if(succeeded && outcomeType === 'positive') {
+      SocialResources.recordPositiveInteraction(actorId, targetId);
+    }
+    
+    // Apply action-specific influence deltas
+    if(succeeded) {
+      if(action.id === 'strategize') {
+        SocialResources.adjustInfluence(actorId, targetId, INFLUENCE_DELTAS.STRATEGY_CHAT_SUCCESS);
+        // Strategy chat can reveal information
+        if(Math.random() < 0.4) {
+          SocialResources.earn(actorId, { information: INFORMATION_EARNINGS.STRATEGY_CHAT_REVEAL });
+        }
+      } else if(action.id === 'confide') {
+        SocialResources.adjustInfluence(actorId, targetId, INFLUENCE_DELTAS.CONFIDE_SUCCESS);
+      } else if(action.id === 'interrogate') {
+        SocialResources.earn(actorId, { information: INFORMATION_EARNINGS.INTERROGATE_SUCCESS });
+      } else if(action.id === 'observe') {
+        // Eavesdrop/observe earns information
+        SocialResources.earn(actorId, { information: INFORMATION_EARNINGS.EAVESDROP_SUCCESS });
+      } else if(action.id === 'mediate') {
+        // Mediate can reveal information
+        if(Math.random() < 0.5) {
+          SocialResources.earn(actorId, { information: INFORMATION_EARNINGS.MEDIATE_REVEAL });
+        }
+      } else if(action.id === 'compliment') {
+        SocialResources.adjustInfluence(actorId, targetId, INFLUENCE_DELTAS.GIVE_GIFT_SUCCESS);
+      }
+    } else {
+      // Failed actions
+      if(action.id === 'confront') {
+        SocialResources.adjustInfluence(actorId, targetId, INFLUENCE_DELTAS.CONFRONT_FAIL);
+      }
+    }
+    
+    // Apply in-phase energy refunds
+    if(succeeded) {
+      if(action.id === 'compliment' && SocialResources.canRefundEnergy(actorId, 'compliment-' + targetId)) {
+        if(Math.random() < ENERGY_REFUND_CHANCES.COMPLIMENT) {
+          SocialResources.earn(actorId, { energy: 1 });
+          SocialResources.recordEnergyRefund(actorId, 'compliment-' + targetId);
+          console.info(`[social-maneuvers] Energy refund: Compliment success (30% chance)`);
+        }
+      } else if(action.id === 'strategize' && SocialResources.canRefundEnergy(actorId, 'strategize-phase')) {
+        if(Math.random() < ENERGY_REFUND_CHANCES.STRATEGY_CHAT) {
+          SocialResources.earn(actorId, { energy: 1 });
+          SocialResources.recordEnergyRefund(actorId, 'strategize-phase');
+          console.info(`[social-maneuvers] Energy refund: Strategy Chat success (20% chance)`);
+        }
+      } else if(action.id === 'mediate' && SocialResources.canRefundEnergy(actorId, 'mediate-conflict')) {
+        // 100% refund if conflict resolved
+        SocialResources.earn(actorId, { energy: 1 });
+        SocialResources.recordEnergyRefund(actorId, 'mediate-conflict');
+        console.info(`[social-maneuvers] Energy refund: Mediate success (100% if conflict resolved)`);
+      }
+    }
+    
     recordActionInMemory(actorId, targetId, action, outcomeType);
     applyTraitEffects(actorId, targetId, action);
     return { type: outcomeType, message, affinityChange, traitModifiers, memoryModifiers, succeeded };
@@ -1200,6 +1470,17 @@
     const alivePlayers = global.alivePlayers?.() || [];
     alivePlayers.forEach(p => { SocialResources.init(p.id); SocialResources.resetWeekly(p.id); });
     console.info(`[social-maneuvers] Resources initialized for ${alivePlayers.length} players`);
+    
+    // Clear phase refunds for new phase
+    SocialResources.clearPhaseRefunds();
+    console.info('[social-maneuvers] Phase refunds cleared for new phase');
+
+    // Log energy seeding for human player
+    const humanId = global.game?.humanId;
+    if(humanId) {
+      const humanEnergy = SocialResources.get(humanId, 'energy');
+      console.info(`[social-maneuvers] ⚡ Energy seeded for human player: ${humanEnergy} (Base=${DEFAULT_ENERGY} + weekly bonuses/penalties)`);
+    }
 
     // Initialize phase session tracking (PR #266)
     const g = global.game;
@@ -1246,7 +1527,7 @@
     if(typeof global.setPhaseDurationMs === 'function'){
       try{
         global.setPhaseDurationMs(defaultDurationMs);
-        console.info('[social-timer] set default 180000ms (via setPhaseDurationMs)');
+        console.info('[social-timer] ✓ Timer set to 180000ms (3 minutes) via setPhaseDurationMs');
         timerSet = true;
       }catch(e){
         console.warn('[social-maneuvers] setPhaseDurationMs failed:', e);
@@ -1257,7 +1538,7 @@
     if(!timerSet && typeof global.GameTimer?.setRemainingMs === 'function'){
       try{
         global.GameTimer.setRemainingMs(defaultDurationMs);
-        console.info('[social-timer] set default 180000ms (via GameTimer.setRemainingMs)');
+        console.info('[social-timer] ✓ Timer set to 180000ms (3 minutes) via GameTimer.setRemainingMs');
         timerSet = true;
       }catch(e){
         console.warn('[social-maneuvers] GameTimer.setRemainingMs failed:', e);
@@ -1270,7 +1551,7 @@
         const now = Date.now();
         g.endAt = now + defaultDurationMs;
         g.phaseEndsAt = now + defaultDurationMs;
-        console.info('[social-timer] set default 180000ms (via game.endAt fallback)');
+        console.info('[social-timer] ✓ Timer set to 180000ms (3 minutes) via game.endAt fallback');
         timerSet = true;
       }catch(e){
         console.warn('[social-maneuvers] game.endAt fallback failed:', e);
@@ -1826,7 +2107,9 @@
     // Modifiers/hooks
     calculateTraitModifiers, calculateMemoryModifiers,
     // Constants
-    DEFAULT_ENERGY, MAX_ENERGY, SOCIAL_ACTIONS, RESOURCE_CONFIG
+    DEFAULT_ENERGY, MAX_ENERGY, SOCIAL_ACTIONS, RESOURCE_CONFIG,
+    WEEKLY_ENERGY_BONUSES, WEEKLY_ENERGY_PENALTIES,
+    INFLUENCE_DELTAS, INFORMATION_EARNINGS, INFORMATION_COSTS
   };
   global.SocialManager = global.SocialManeuvers;
   Object.defineProperty(global, 'USE_SOCIAL_MANEUVERS', {
@@ -1840,6 +2123,78 @@
     },
     enumerable: true, configurable: true
   });
+
+  // ============================================================================
+  // DEV HELPERS (dev build only)
+  // ============================================================================
+  if(!global.__smDebug) {
+    global.__smDebug = {
+      grantEnergy(playerId, amount) {
+        SocialResources.earn(playerId, { energy: amount });
+        console.info(`[__smDebug] Granted ${amount} energy to player ${playerId}`);
+        return SocialResources.get(playerId, 'energy');
+      },
+      grantInfluence(actorId, targetId, amount) {
+        SocialResources.adjustInfluence(actorId, targetId, amount);
+        console.info(`[__smDebug] Granted ${amount} influence from ${actorId} to ${targetId}`);
+        return SocialResources.getInfluence(actorId, targetId);
+      },
+      grantInformation(playerId, amount) {
+        SocialResources.earn(playerId, { information: amount });
+        console.info(`[__smDebug] Granted ${amount} information to player ${playerId}`);
+        return SocialResources.get(playerId, 'information');
+      },
+      setEnergy(playerId, amount) {
+        SocialResources.set(playerId, 'energy', amount);
+        console.info(`[__smDebug] Set energy to ${amount} for player ${playerId}`);
+        return SocialResources.get(playerId, 'energy');
+      },
+      setInfluence(actorId, targetId, amount) {
+        SocialResources.setInfluence(actorId, targetId, amount);
+        console.info(`[__smDebug] Set influence from ${actorId} to ${targetId} to ${amount}`);
+        return SocialResources.getInfluence(actorId, targetId);
+      },
+      setInformation(playerId, amount) {
+        SocialResources.set(playerId, 'information', amount);
+        console.info(`[__smDebug] Set information to ${amount} for player ${playerId}`);
+        return SocialResources.get(playerId, 'information');
+      },
+      recordWeeklyEvent(playerId, eventType, value = true) {
+        SocialResources.recordWeeklyEvent(playerId, eventType, value);
+        console.info(`[__smDebug] Recorded weekly event: ${playerId} - ${eventType}`, value);
+      },
+      getResources(playerId) {
+        const resources = SocialResources.getAll(playerId);
+        console.info(`[__smDebug] Resources for player ${playerId}:`, resources);
+        return resources;
+      },
+      getInfluence(actorId, targetId) {
+        const influence = SocialResources.getInfluence(actorId, targetId);
+        console.info(`[__smDebug] Influence from ${actorId} to ${targetId}: ${influence.toFixed(1)}`);
+        return influence;
+      },
+      showAllInfluence() {
+        const g = global.game;
+        if(!g?.__pairwiseInfluence) {
+          console.info('[__smDebug] No pairwise influence data');
+          return;
+        }
+        console.table(Array.from(g.__pairwiseInfluence.entries()).map(([key, value]) => ({
+          pair: key,
+          influence: value.toFixed(1)
+        })));
+      },
+      clearWeeklyEvents(playerId) {
+        const g = global.game;
+        if(g?.__weeklyEvents) {
+          g.__weeklyEvents.delete(playerId);
+          console.info(`[__smDebug] Cleared weekly events for player ${playerId}`);
+        }
+      }
+    };
+    console.info('[social-maneuvers] ✓ Dev helpers available at window.__smDebug');
+    console.info('[social-maneuvers] Available commands: grantEnergy, grantInfluence, grantInformation, setEnergy, setInfluence, setInformation, recordWeeklyEvent, getResources, getInfluence, showAllInfluence');
+  }
 
   initDefaultFlag();
   console.info('[social-maneuvers] ✓ Module loaded successfully');
