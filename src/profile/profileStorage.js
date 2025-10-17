@@ -78,7 +78,8 @@
 
   // Normalize text fields (default to N/A if blank)
   function normalizeTextField(value) {
-    return (value && value.trim()) ? value.trim() : 'N/A';
+    if (!value || typeof value !== 'string') return 'N/A';
+    return value.trim() ? value.trim() : 'N/A';
   }
 
   // Migration functions
