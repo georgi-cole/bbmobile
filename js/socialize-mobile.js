@@ -382,6 +382,9 @@
         }
         card.classList.toggle('selected');
         updateExecuteButton();
+        
+        // Refresh action menu to show evaluations for selected target
+        populateActionMenu();
       });
 
       picker.appendChild(card);
@@ -414,144 +417,200 @@
     if (!menu) return;
 
     const res = getResourceState();
+    const g = global.game || {};
+    const humanId = g.humanId;
+    const you = global.getP?.(humanId);
+    
+    // Get selected target for evaluation
+    const selectedCard = $('.player-card.selected');
+    const targetId = selectedCard ? parseInt(selectedCard.dataset.playerId) : null;
+    const target = targetId ? global.getP?.(targetId) : null;
 
-    // Unified action catalog (deduped - merged Strategy Chat/Late Night Talk → Strategize)
-    const actions = [
-      { 
-        id: 'alliance', 
-        label: 'Form Alliance', 
-        icon: '🤝', 
-        cost: { energy: 1 },
+    // Use canonical action catalog from SocialManeuvers, or fallback to unified catalog
+    let actions = [];
+    if (global.SocialManeuvers?.SOCIAL_ACTIONS) {
+      // Use canonical catalog from social-maneuvers.js
+      actions = global.SocialManeuvers.SOCIAL_ACTIONS.map(action => ({
+        id: action.id,
+        label: action.label,
+        icon: getActionIcon(action.id),
+        cost: action.costs || { energy: action.cost || 1 },
         require: {},
-        category: 'friendly',
-        description: 'Build a strong alliance with mutual trust and safety.'
-      },
-      { 
-        id: 'strategize', 
-        label: 'Strategize', 
-        icon: '💡', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'strategic',
-        description: 'Deep strategic conversation to align game plans.'
-      },
-      { 
-        id: 'gift', 
-        label: 'Give Gift', 
-        icon: '🎁', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Give a thoughtful gift to improve relationship.'
-      },
-      { 
-        id: 'flirt', 
-        label: 'Flirt', 
-        icon: '😊', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Light romantic or friendly flirtation.'
-      },
-      { 
-        id: 'workout', 
-        label: 'Workout Together', 
-        icon: '💪', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Bond through physical activity and shared fitness.'
-      },
-      { 
-        id: 'cook', 
-        label: 'Cook Meal', 
-        icon: '🍳', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Prepare and share a meal together.'
-      },
-      { 
-        id: 'apologize', 
-        label: 'Apologize', 
-        icon: '🙏', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Mend fences with a sincere apology.'
-      },
-      { 
-        id: 'compliment', 
-        label: 'Compliment', 
-        icon: '✨', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Give a genuine compliment. May refund energy!'
-      },
-      { 
-        id: 'mediate', 
-        label: 'Mediate', 
-        icon: '⚖️', 
-        cost: { energy: 1 },
-        require: { influence: 10 },
-        category: 'strategic',
-        description: 'Mediate conflict between others. Requires influence.'
-      },
-      { 
-        id: 'interrogate', 
-        label: 'Interrogate', 
-        icon: '🔍', 
-        cost: { energy: 1 },
-        require: { influence: 5 },
-        category: 'strategic',
-        description: 'Press for information. Requires influence.'
-      },
-      { 
-        id: 'prank', 
-        label: 'Prank', 
-        icon: '😜', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'risky',
-        description: 'Pull a prank - might backfire or strengthen bonds.'
-      },
-      { 
-        id: 'taunt', 
-        label: 'Taunt', 
-        icon: '😤', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'aggressive',
-        description: 'Taunt and provoke - damages relationship.'
-      },
-      { 
-        id: 'confront', 
-        label: 'Confront', 
-        icon: '⚔️', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'aggressive',
-        description: 'Direct confrontation - air grievances.'
-      }
-    ];
+        category: action.category,
+        description: action.description
+      }));
+    } else {
+      // Fallback unified catalog (merged + deduped)
+      actions = [
+        { 
+          id: 'smalltalk', 
+          label: 'Small Talk', 
+          icon: '💬', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Light conversation to build rapport'
+        },
+        { 
+          id: 'strategize', 
+          label: 'Strategize', 
+          icon: '💡', 
+          cost: { energy: 2 },
+          require: {},
+          category: 'strategic',
+          description: 'Deep strategic conversation to align game plans (includes Strategy Chat/Late Night Talk)'
+        },
+        { 
+          id: 'confide', 
+          label: 'Confide', 
+          icon: '🤫', 
+          cost: { energy: 2 },
+          require: {},
+          category: 'friendly',
+          description: 'Share personal thoughts and build trust'
+        },
+        { 
+          id: 'interrogate', 
+          label: 'Interrogate', 
+          icon: '🔍', 
+          cost: { energy: 2 },
+          require: {},
+          category: 'strategic',
+          description: 'Press for information about plans'
+        },
+        { 
+          id: 'compliment', 
+          label: 'Compliment', 
+          icon: '✨', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Give genuine praise. May refund energy!'
+        },
+        { 
+          id: 'mediate', 
+          label: 'Mediate', 
+          icon: '⚖️', 
+          cost: { energy: 2 },
+          require: { influence: 1, information: 1 },
+          category: 'strategic',
+          description: 'Mediate conflict between others. Requires influence and information.'
+        },
+        { 
+          id: 'observe', 
+          label: 'Observe', 
+          icon: '👁️', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'strategic',
+          description: 'Watch and listen quietly'
+        },
+        { 
+          id: 'confront', 
+          label: 'Confront', 
+          icon: '⚔️', 
+          cost: { energy: 3 },
+          require: {},
+          category: 'aggressive',
+          description: 'Direct confrontation - air grievances'
+        },
+        { 
+          id: 'alliance', 
+          label: 'Form Alliance', 
+          icon: '🤝', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Build a strong alliance with mutual trust and safety.'
+        },
+        { 
+          id: 'gift', 
+          label: 'Give Gift', 
+          icon: '🎁', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Give a thoughtful gift to improve relationship.'
+        },
+        { 
+          id: 'flirt', 
+          label: 'Flirt', 
+          icon: '😊', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Light romantic or friendly flirtation.'
+        },
+        { 
+          id: 'workout', 
+          label: 'Workout', 
+          icon: '💪', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Bond through physical activity and shared fitness (includes Workout Together)'
+        },
+        { 
+          id: 'cook', 
+          label: 'Cook', 
+          icon: '🍳', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Prepare and share a meal together (includes Cook Meal)'
+        },
+        { 
+          id: 'apologize', 
+          label: 'Apologize', 
+          icon: '🙏', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Mend fences with a sincere apology.'
+        },
+        { 
+          id: 'prank', 
+          label: 'Prank', 
+          icon: '😜', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'risky',
+          description: 'Pull a prank - might backfire or strengthen bonds.'
+        },
+        { 
+          id: 'taunt', 
+          label: 'Taunt', 
+          icon: '😤', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'aggressive',
+          description: 'Taunt and provoke - damages relationship.'
+        }
+      ];
+    }
 
     menu.innerHTML = '';
 
     actions.forEach(action => {
       const energyCost = action.cost.energy || 0;
-      const influenceReq = action.require.influence || 0;
-      const informationReq = action.require.information || 0;
+      const influenceReq = action.cost.influence || action.require.influence || 0;
+      const informationReq = action.cost.information || action.require.information || 0;
       
       const canAfford = res.energy >= energyCost && 
                         res.influence >= influenceReq && 
                         res.information >= informationReq;
       
+      // Get evaluation from SocialActionConfig if available and target selected
+      let evaluation = null;
+      if (target && global.SocialActionConfig?.getActionEvaluation) {
+        evaluation = global.SocialActionConfig.getActionEvaluation(action.id, you, target, action);
+      }
+      
       const btn = document.createElement('button');
       btn.className = `action-btn action-${action.category}`;
       btn.dataset.actionId = action.id;
       
-      if (!canAfford) {
+      if (!canAfford || (evaluation && !evaluation.available)) {
         btn.classList.add('disabled');
         btn.disabled = true;
       }
@@ -564,6 +623,8 @@
         if (res.influence < influenceReq) missing.push(`Need ${influenceReq - res.influence} more 🤝`);
         if (res.information < informationReq) missing.push(`Need ${informationReq - res.information} more 💡`);
         disabledReason = missing.join(', ');
+      } else if (evaluation && !evaluation.available) {
+        disabledReason = evaluation.gateReasons?.join('; ') || 'Requirements not met';
       }
 
       btn.innerHTML = `
@@ -577,14 +638,14 @@
           ${informationReq > 0 ? `<span class="cost-badge cost-information ${res.information < informationReq ? 'insufficient' : ''}" title="Information required">💡${informationReq}</span>` : ''}
         </div>
         <div class="action-description">${action.description}</div>
-        ${!canAfford ? `<div class="action-disabled-reason">${disabledReason}</div>` : ''}
+        ${!canAfford || disabledReason ? `<div class="action-disabled-reason">${disabledReason}</div>` : ''}
       `;
 
       // Add tooltip
       btn.title = action.description + (disabledReason ? `\n\n${disabledReason}` : '');
 
       btn.addEventListener('click', () => {
-        if (!canAfford) return;
+        if (!canAfford || (evaluation && !evaluation.available)) return;
         
         // Clear other selections
         $$('.action-btn.selected').forEach(b => b.classList.remove('selected'));
@@ -594,6 +655,34 @@
 
       menu.appendChild(btn);
     });
+  }
+  
+  // Helper function to get action icons
+  function getActionIcon(actionId) {
+    const iconMap = {
+      smalltalk: '💬',
+      strategize: '💡',
+      confide: '🤫',
+      interrogate: '🔍',
+      compliment: '✨',
+      confront: '⚔️',
+      mediate: '⚖️',
+      observe: '👁️',
+      alliance: '🤝',
+      gift: '🎁',
+      flirt: '😊',
+      workout: '💪',
+      cook: '🍳',
+      apologize: '🙏',
+      prank: '😜',
+      taunt: '😤',
+      // High-impact actions
+      spread_rumor: '📢',
+      expose_secret: '🎯',
+      group_hangout: '👥',
+      form_alliance: '🤝'
+    };
+    return iconMap[actionId] || '🎭';
   }
 
   function updateExecuteButton() {
