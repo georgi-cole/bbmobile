@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socialize Launcher Auto-Remount Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css?v=sm3">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #fff;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #0f3460;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #4a90e2;
+    }
+    .test-button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    .test-button:hover {
+      background: #357abd;
+    }
+    .test-button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+    #tv {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      background: linear-gradient(135deg, #0f1419, #1a1f2e);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .console-log {
+      background: #0a0a0a;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #333;
+    }
+    .console-log div {
+      padding: 2px 0;
+      border-bottom: 1px solid #222;
+    }
+    .console-log .info {
+      color: #4a90e2;
+    }
+    .console-log .warn {
+      color: #f39c12;
+    }
+    .console-log .error {
+      color: #e74c3c;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .status.success {
+      background: #27ae60;
+      color: white;
+    }
+    .status.error {
+      background: #e74c3c;
+      color: white;
+    }
+    .status.pending {
+      background: #f39c12;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 Socialize Launcher Auto-Remount Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Environment</h2>
+      <div id="tv">
+        <div id="tvOverlay"></div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <button class="test-button" onclick="initGame()">1. Initialize Game</button>
+      <button class="test-button" onclick="startSocialPhase()">2. Start Social Phase</button>
+      <button class="test-button" onclick="checkLauncher()">3. Check Launcher</button>
+      <button class="test-button" onclick="removeLauncher()">4. Remove Launcher (Test Auto-Remount)</button>
+      <button class="test-button" onclick="rebuildOverlay()">5. Rebuild Overlay (Test Resilience)</button>
+      <button class="test-button" onclick="stopObserver()">6. Stop Observer</button>
+      <button class="test-button" onclick="clearLog()">Clear Log</button>
+      <div id="testStatus" class="status" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Output</h2>
+      <div id="consoleLog" class="console-log">
+        <div class="info">Ready to start tests...</div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="testResults"></div>
+    </div>
+  </div>
+
+  <!-- Load game scripts -->
+  <script src="js/social-narrative.js?v=sm3"></script>
+  <script src="js/social-action-config.js?v=sm3"></script>
+  <script src="js/social-maneuvers.js?v=sm3"></script>
+  <script src="js/socialize-mobile.js"></script>
+  <script src="js/social-maneuvers-launcher-bootstrap.js?v=sm3"></script>
+  <script src="js/social.js?v=sm3"></script>
+
+  <script>
+    // Capture console logs
+    const originalConsoleInfo = console.info;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+    const consoleLogEl = document.getElementById('consoleLog');
+
+    function addToLog(message, level = 'info') {
+      const div = document.createElement('div');
+      div.className = level;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      consoleLogEl.appendChild(div);
+      consoleLogEl.scrollTop = consoleLogEl.scrollHeight;
+    }
+
+    console.info = function(...args) {
+      originalConsoleInfo.apply(console, args);
+      const msg = args.join(' ');
+      if (msg.includes('[social') || msg.includes('Socialize')) {
+        addToLog(msg, 'info');
+      }
+    };
+
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      const msg = args.join(' ');
+      if (msg.includes('[social') || msg.includes('Socialize')) {
+        addToLog(msg, 'warn');
+      }
+    };
+
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      const msg = args.join(' ');
+      if (msg.includes('[social') || msg.includes('Socialize')) {
+        addToLog(msg, 'error');
+      }
+    };
+
+    // Test utilities
+    function showStatus(message, type) {
+      const status = document.getElementById('testStatus');
+      status.textContent = message;
+      status.className = 'status ' + type;
+      status.style.display = 'block';
+      setTimeout(() => {
+        status.style.display = 'none';
+      }, 3000);
+    }
+
+    function updateResults(test, passed) {
+      const results = document.getElementById('testResults');
+      const div = document.createElement('div');
+      div.className = 'status ' + (passed ? 'success' : 'error');
+      div.textContent = `${passed ? '✓' : '✗'} ${test}`;
+      results.appendChild(div);
+    }
+
+    function clearLog() {
+      consoleLogEl.innerHTML = '<div class="info">Log cleared...</div>';
+    }
+
+    // Test functions
+    function initGame() {
+      addToLog('Initializing game...', 'info');
+      window.game = {
+        cfg: {
+          enableSocialManeuvers: true,
+          tSocial: 180
+        },
+        phase: 'opening',
+        week: 1,
+        players: []
+      };
+
+      // Mock essential functions
+      window.alivePlayers = () => [];
+      window.getP = () => null;
+      window.addLog = (msg) => addToLog('Game: ' + msg, 'info');
+      window.setPhase = (phase, duration, callback) => {
+        addToLog(`Phase set to: ${phase} for ${duration}s`, 'info');
+        window.game.phase = phase;
+      };
+
+      showStatus('Game initialized!', 'success');
+      updateResults('Game Initialization', true);
+    }
+
+    function startSocialPhase() {
+      if (!window.game) {
+        showStatus('Initialize game first!', 'error');
+        return;
+      }
+
+      addToLog('Starting social phase...', 'info');
+      
+      if (typeof window.startSocialIntermission === 'function') {
+        window.startSocialIntermission();
+        showStatus('Social phase started!', 'success');
+        
+        // Check if launcher was mounted
+        setTimeout(() => {
+          const launcher = document.querySelector('#socializeLauncher, .socialize-launcher, [data-sm-launcher]');
+          updateResults('Launcher Auto-Mount', launcher !== null);
+        }, 1000);
+      } else {
+        showStatus('startSocialIntermission not found!', 'error');
+        updateResults('Social Phase Start', false);
+      }
+    }
+
+    function checkLauncher() {
+      const launchers = document.querySelectorAll('#socializeLauncher, .socialize-launcher, [data-sm-launcher]');
+      addToLog(`Found ${launchers.length} launcher(s)`, launchers.length === 1 ? 'info' : 'warn');
+      
+      if (launchers.length === 0) {
+        showStatus('No launcher found!', 'error');
+        updateResults('Launcher Check', false);
+      } else if (launchers.length === 1) {
+        showStatus('Launcher found (1 instance)!', 'success');
+        updateResults('Launcher Check', true);
+      } else {
+        showStatus(`Multiple launchers found (${launchers.length})!`, 'error');
+        updateResults('Launcher Check - No Duplicates', false);
+      }
+    }
+
+    function removeLauncher() {
+      const launcher = document.querySelector('#socializeLauncher, .socialize-launcher, [data-sm-launcher]');
+      if (launcher) {
+        addToLog('Removing launcher manually...', 'warn');
+        launcher.remove();
+        showStatus('Launcher removed!', 'pending');
+        
+        // Wait and check if it was re-mounted
+        setTimeout(() => {
+          const remounted = document.querySelector('#socializeLauncher, .socialize-launcher, [data-sm-launcher]');
+          if (remounted) {
+            addToLog('✓ Launcher was re-mounted automatically!', 'info');
+            updateResults('Auto-Remount After Removal', true);
+          } else {
+            addToLog('✗ Launcher was NOT re-mounted!', 'error');
+            updateResults('Auto-Remount After Removal', false);
+          }
+        }, 1500);
+      } else {
+        showStatus('No launcher to remove!', 'error');
+      }
+    }
+
+    function rebuildOverlay() {
+      addToLog('Rebuilding TV overlay...', 'warn');
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) {
+        const parent = tvOverlay.parentNode;
+        tvOverlay.remove();
+        
+        setTimeout(() => {
+          const newOverlay = document.createElement('div');
+          newOverlay.id = 'tvOverlay';
+          newOverlay.className = 'tvOverlay';
+          newOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
+          parent.appendChild(newOverlay);
+          addToLog('TV overlay rebuilt', 'info');
+          
+          // Wait and check if launcher was re-mounted
+          setTimeout(() => {
+            const launcher = document.querySelector('#socializeLauncher, .socialize-launcher, [data-sm-launcher]');
+            if (launcher) {
+              addToLog('✓ Launcher survived overlay rebuild!', 'info');
+              updateResults('Launcher Survives Overlay Rebuild', true);
+            } else {
+              addToLog('✗ Launcher was lost after overlay rebuild!', 'error');
+              updateResults('Launcher Survives Overlay Rebuild', false);
+            }
+          }, 1500);
+        }, 500);
+      }
+    }
+
+    function stopObserver() {
+      if (window.SocialLauncherBootstrap && window.SocialLauncherBootstrap.stopLauncherObserver) {
+        window.SocialLauncherBootstrap.stopLauncherObserver();
+        showStatus('Observer stopped!', 'success');
+        updateResults('Observer Cleanup', true);
+      } else {
+        showStatus('Bootstrap not available!', 'error');
+      }
+    }
+
+    // Auto-run checks on page load
+    window.addEventListener('load', () => {
+      addToLog('Page loaded. Ready for testing.', 'info');
+      
+      // Check if all required modules are loaded
+      const checks = [
+        { name: 'SocialManeuvers', obj: window.SocialManeuvers },
+        { name: 'SocializeMobile', obj: window.SocializeMobile },
+        { name: 'SocialLauncherBootstrap', obj: window.SocialLauncherBootstrap },
+        { name: 'startSocialIntermission', obj: window.startSocialIntermission }
+      ];
+
+      let allLoaded = true;
+      checks.forEach(check => {
+        if (check.obj) {
+          addToLog(`✓ ${check.name} loaded`, 'info');
+        } else {
+          addToLog(`✗ ${check.name} NOT loaded`, 'error');
+          allLoaded = false;
+        }
+      });
+
+      if (allLoaded) {
+        addToLog('All modules loaded successfully!', 'info');
+      } else {
+        addToLog('Some modules failed to load!', 'error');
+      }
+    });
+  </script>
+</body>
+</html>
