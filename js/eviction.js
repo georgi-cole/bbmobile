@@ -690,6 +690,14 @@
       try{ global.juryOnEviction?.(id); }catch{}
     }
     
+    // Record weekly event for social mechanics - survivors
+    if(global.SocialManeuvers?.SocialResources) {
+      const survivors = g.nominees.filter(id => !evictedIds.includes(id));
+      survivors.forEach(survivorId => {
+        global.SocialManeuvers.SocialResources.recordWeeklyEvent(survivorId, 'survivedEviction', true);
+      });
+    }
+    
     // Clear all badges immediately after eviction reveal (Issue #1)
     g.nominees=[]; g.vetoHolder=null; g.nomsLocked=false;
     if(Array.isArray(g.players)){
@@ -745,6 +753,14 @@
       if(!g.juryHouse?.includes(evId)) g.juryHouse=(g.juryHouse||[]).concat([evId]);
     }
     try{ global.juryOnEviction?.(evId); }catch{}
+
+    // Record weekly event for social mechanics - survivors
+    if(global.SocialManeuvers?.SocialResources) {
+      const survivors = g.nominees.filter(id => id !== evId);
+      survivors.forEach(survivorId => {
+        global.SocialManeuvers.SocialResources.recordWeeklyEvent(survivorId, 'survivedEviction', true);
+      });
+    }
 
     // Clear all badges immediately after eviction reveal (Issue #1)
     g.nominees=[]; g.vetoHolder=null; g.nomsLocked=false;

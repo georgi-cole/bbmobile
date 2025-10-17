@@ -127,6 +127,11 @@
       console.info(`[nom] nominated player=${id} state=nominated`);
       global.addBond?.(hohId,id, global.NOMINATION_PENALTY);
       hoh.affinity[id]=global.clamp?.((hoh.affinity[id]??0)-0.15,-1,1) ?? (hoh.affinity[id]??0)-0.15;
+      
+      // Record weekly event for social mechanics
+      if(global.SocialManeuvers?.SocialResources) {
+        global.SocialManeuvers.SocialResources.recordWeeklyEvent(id, 'nominated', true);
+      }
     });
   }
 

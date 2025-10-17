@@ -717,6 +717,11 @@
     const winner=[...g.lastCompScores.entries()].filter(([id])=>elig.includes(id)).sort((a,b)=>b[1]-a[1])[0][0];
     for(const p of g.players) p.hoh=false; g.hohId=winner; g.lastHOHId=winner; const W=global.getP(winner); W.hoh=true; W.stats=W.stats||{}; W.wins=W.wins||{}; W.stats.hohWins=(W.stats.hohWins||0)+1; W.wins.hoh=(W.wins.hoh||0)+1;
 
+    // Record weekly event for social mechanics
+    if(global.SocialManeuvers?.SocialResources) {
+      global.SocialManeuvers.SocialResources.recordWeeklyEvent(winner, 'hohWin', true);
+    }
+
     // Sync player badge states after HOH change
     if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
 
