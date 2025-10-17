@@ -81,6 +81,14 @@
         humanPlayer.meta.xp = profile.xp || 0;
         humanPlayer.meta.season = profile.season || 1;
         
+        // Store extended fields in bio (for intro/HUD display)
+        if (!humanPlayer.bio) humanPlayer.bio = {};
+        if (profile.age !== undefined) humanPlayer.bio.age = profile.age;
+        if (profile.sex) humanPlayer.bio.gender = profile.sex;
+        if (profile.location) humanPlayer.bio.location = profile.location;
+        if (profile.occupation) humanPlayer.bio.occupation = profile.occupation;
+        if (profile.motto) humanPlayer.bio.motto = profile.motto;
+        
         console.info('[profileService] applied profile to human player:', humanPlayer);
       } else {
         console.warn('[profileService] human player not found in players array');

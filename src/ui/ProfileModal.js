@@ -59,6 +59,54 @@
     };
   }
 
+  // Show vampire animation for age > 99
+  function showVampireAnimation() {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'vampire-flash';
+      overlay.innerHTML = '<div class="vampire-icon">🧛</div>';
+      document.body.appendChild(overlay);
+
+      requestAnimationFrame(() => {
+        overlay.classList.add('active');
+      });
+
+      setTimeout(() => {
+        overlay.classList.remove('active');
+        setTimeout(() => {
+          document.body.removeChild(overlay);
+          resolve();
+        }, 200);
+      }, 600);
+    });
+  }
+
+  // Request parental consent for age < 18
+  function requestParentalConsent() {
+    return new Promise((resolve) => {
+      // Check if global showParentalConsentModal exists
+      if (typeof window.showParentalConsentModal === 'function') {
+        window.showParentalConsentModal((granted) => {
+          if (granted) {
+            localStorage.setItem('bb_parental_consent', 'true');
+          }
+          resolve(granted);
+        });
+      } else {
+        // Fallback to confirm dialog
+        const granted = confirm(
+          'Parental consent is required for users under 18.\n\n' +
+          'By clicking OK, a parent or guardian confirms they have reviewed ' +
+          'and approved the creation of this profile.'
+        );
+        if (granted) {
+          localStorage.setItem('bb_parental_consent', 'true');
+        }
+        resolve(granted);
+      }
+    });
+  }
+
   // Show profile creation form
   function showCreateProfileForm(onComplete, preselectId) {
     const panel = modalElement.querySelector('.profile-modal-panel');
@@ -69,9 +117,35 @@
       </div>
       <div class="profile-modal-body">
         <div class="profile-avatar-upload" id="avatarUploadContainer"></div>
-        <div class="profile-form-field">
-          <label for="profileNameInput">Name <span class="required">*</span></label>
-          <input type="text" id="profileNameInput" placeholder="Enter your name" maxlength="30" />
+        <div class="profile-form-grid">
+          <div class="profile-form-field">
+            <label for="profileNameInput">Name <span class="required">*</span></label>
+            <input type="text" id="profileNameInput" placeholder="Enter your name" maxlength="30" />
+          </div>
+          <div class="profile-form-field">
+            <label for="profileAgeInput">Age <span class="required">*</span></label>
+            <input type="number" id="profileAgeInput" placeholder="Age" min="5" max="99999" />
+          </div>
+          <div class="profile-form-field">
+            <label for="profileSexSelect">Sex</label>
+            <select id="profileSexSelect">
+              <option value="NA">Prefer not to say</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+          <div class="profile-form-field">
+            <label for="profileLocationInput">Location</label>
+            <input type="text" id="profileLocationInput" placeholder="e.g., New York, NY" maxlength="50" />
+          </div>
+          <div class="profile-form-field">
+            <label for="profileOccupationInput">Occupation</label>
+            <input type="text" id="profileOccupationInput" placeholder="e.g., Teacher" maxlength="50" />
+          </div>
+          <div class="profile-form-field profile-form-field-full">
+            <label for="profileMottoInput">Motto</label>
+            <input type="text" id="profileMottoInput" placeholder="Your personal motto" maxlength="100" />
+          </div>
         </div>
       </div>
       <div class="profile-modal-footer">
@@ -82,12 +156,17 @@
 
     const avatarUpload = createAvatarUpload('avatarUploadContainer');
     const nameInput = panel.querySelector('#profileNameInput');
+    const ageInput = panel.querySelector('#profileAgeInput');
+    const sexSelect = panel.querySelector('#profileSexSelect');
+    const locationInput = panel.querySelector('#profileLocationInput');
+    const occupationInput = panel.querySelector('#profileOccupationInput');
+    const mottoInput = panel.querySelector('#profileMottoInput');
     const createBtn = panel.querySelector('#profileCreateBtn');
     const cancelBtn = panel.querySelector('#profileCancelBtn');
 
     nameInput.focus();
 
-    createBtn.onclick = () => {
+    createBtn.onclick = async () => {
       const name = nameInput.value.trim();
       if (!name) {
         alert('Please enter a name.');
@@ -95,10 +174,42 @@
         return;
       }
 
+      const age = ageInput.value.trim();
+      if (!age) {
+        alert('Please enter your age.');
+        ageInput.focus();
+        return;
+      }
+
+      const ageNum = Number(age);
+      if (!Number.isInteger(ageNum) || ageNum < 5 || ageNum > 99999) {
+        alert('Age must be an integer between 5 and 99,999.');
+        ageInput.focus();
+        return;
+      }
+
+      // Vampire animation for age > 99
+      if (ageNum > 99) {
+        await showVampireAnimation();
+      }
+
+      // Parental consent check for age < 18
+      if (ageNum < 18) {
+        const consentGranted = await requestParentalConsent();
+        if (!consentGranted) {
+          return; // User cancelled consent
+        }
+      }
+
       try {
         const profile = global.ProfileStorage.createProfile({
           displayName: name,
-          avatar: avatarUpload.getAvatar()
+          avatar: avatarUpload.getAvatar(),
+          age: ageNum,
+          sex: sexSelect.value,
+          location: locationInput.value,
+          occupation: occupationInput.value,
+          motto: mottoInput.value
         });
         
         console.info('[ProfileModal] created profile:', profile);
@@ -124,6 +235,19 @@
     const profileCards = profiles.map(p => {
       const xpDisplay = (p.xp !== undefined && p.xp !== null) ? ` • ${p.xp} XP` : '';
       const seasonDisplay = (p.season !== undefined && p.season !== null) ? ` • Season ${p.season}` : '';
+      
+      // Extended info display
+      const age = p.age !== undefined ? p.age : 'N/A';
+      const sex = p.sex || 'NA';
+      const location = p.location || 'N/A';
+      const occupation = p.occupation || 'N/A';
+      const motto = p.motto || 'N/A';
+      
+      const extendedInfo = `${age} • ${sex} • ${location}`;
+      const extendedDetails = (occupation !== 'N/A' || motto !== 'N/A') 
+        ? `<div class="profile-card-details">${occupation !== 'N/A' ? occupation : ''}${occupation !== 'N/A' && motto !== 'N/A' ? ' • ' : ''}${motto !== 'N/A' ? motto : ''}</div>`
+        : '';
+      
       const isPreselected = preselectId && p.id === preselectId;
       const preselectClass = isPreselected ? ' preselected' : '';
       
@@ -132,7 +256,8 @@
           <img class="profile-card-avatar" src="${p.avatar}" alt="${p.displayName}" />
           <div class="profile-card-info">
             <div class="profile-card-name">${escapeHtml(p.displayName)}</div>
-            <div class="profile-card-meta">${xpDisplay}${seasonDisplay}</div>
+            <div class="profile-card-meta">${extendedInfo}${xpDisplay}${seasonDisplay}</div>
+            ${extendedDetails}
           </div>
           <button class="profile-card-delete" data-id="${p.id}" title="Delete profile">🗑️</button>
         </div>
