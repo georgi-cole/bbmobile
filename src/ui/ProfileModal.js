@@ -85,8 +85,8 @@
   function requestParentalConsent() {
     return new Promise((resolve) => {
       // Check if global showParentalConsentModal exists
-      if (typeof global.showParentalConsentModal === 'function') {
-        global.showParentalConsentModal((granted) => {
+      if (typeof window.showParentalConsentModal === 'function') {
+        window.showParentalConsentModal((granted) => {
           if (granted) {
             localStorage.setItem('bb_parental_consent', 'true');
           }
