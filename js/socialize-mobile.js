@@ -334,6 +334,7 @@
       name.textContent = player.name;
 
       // Add relationship label + affinity percentage
+      const you = global.getP(global.game.humanId);
       const affinity = you?.affinity?.[player.id] ?? 0;
       const affinityPercent = Math.round(affinity * 100);
       const relationshipLabel = getRelationshipLabel(affinity);
