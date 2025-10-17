@@ -706,48 +706,144 @@
       return;
     }
 
-    let actionId = selectedAction.dataset.actionId;
+    const actionId = selectedAction.dataset.actionId;
     const g = global.game || {};
     const you = global.getP?.(g.humanId);
 
     if (!you) return;
 
-    // Map unified actions to legacy social.js actions
-    const actionMapping = {
-      'strategize': 'strategychat',  // Strategize maps to Strategy Chat
-    };
-    const legacyActionId = actionMapping[actionId] || actionId;
-
-    // Execute action for each selected player
-    selectedPlayers.forEach(card => {
-      const targetId = parseInt(card.dataset.playerId);
-      if (global.socialApplyAction) {
-        global.socialApplyAction(you.id, targetId, legacyActionId);
-      }
-    });
-
-    // Deduct energy
-    updateResourceState({ energy: -1 });
-
-    // Add to feedback
-    const feedback = $('#feedbackArea');
-    if (feedback) {
-      const placeholder = feedback.querySelector('.feedback-placeholder');
-      if (placeholder) placeholder.remove();
-
-      const entry = document.createElement('div');
-      entry.className = 'feedback-entry';
-      const targetNames = selectedPlayers.map(c => {
-        const p = global.getP?.(parseInt(c.dataset.playerId));
-        return p?.name || 'Unknown';
-      }).join(', ');
-      const actionLabel = selectedAction.querySelector('.action-label')?.textContent || legacyActionId;
-      entry.textContent = `${actionLabel} → ${targetNames}`;
-      feedback.insertBefore(entry, feedback.firstChild);
+    // Execute via canonical SocialManeuvers.executeAction if available
+    if (global.SocialManeuvers?.executeAction) {
+      selectedPlayers.forEach(card => {
+        const targetId = parseInt(card.dataset.playerId);
+        
+        try {
+          // Use canonical mechanics engine for execution
+          const result = global.SocialManeuvers.executeAction(you.id, targetId, actionId, []);
+          
+          // Dev telemetry (dev builds only)
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.group(`[socialize-mobile] Action executed: ${actionId}`);
+            console.log('Actor:', you.name, '(ID:', you.id, ')');
+            console.log('Target:', global.safeName?.(targetId) || targetId);
+            console.log('Success:', result.success);
+            if (result.outcome) {
+              console.log('Outcome:', result.outcome.type, '-', result.outcome.message);
+              console.log('Affinity change:', result.outcome.affinityChange);
+            }
+            if (result.resources) {
+              console.log('Resources after:', result.resources);
+            }
+            if (result.telemetry) {
+              console.log('Success chance:', `${(result.telemetry.finalChance * 100).toFixed(0)}%`);
+              console.log('Roll:', `${(result.telemetry.chanceRoll * 100).toFixed(0)}%`);
+            }
+            console.groupEnd();
+          }
+          
+          // Show feedback in UI
+          if (result.success) {
+            addFeedbackEntry(
+              selectedAction.querySelector('.action-label')?.textContent || actionId,
+              global.safeName?.(targetId) || 'Unknown',
+              result.outcome?.type || 'neutral',
+              result.outcome?.message || 'Action completed'
+            );
+          } else {
+            addFeedbackEntry(
+              selectedAction.querySelector('.action-label')?.textContent || actionId,
+              global.safeName?.(targetId) || 'Unknown',
+              'error',
+              result.message || result.reason || 'Action failed'
+            );
+          }
+        } catch (e) {
+          console.error('[socialize-mobile] Failed to execute action via SocialManeuvers:', e);
+          // Fallback to legacy system
+          executeLegacyAction(you.id, targetId, actionId, selectedAction);
+        }
+      });
+    } else {
+      // Fallback to legacy system if SocialManeuvers not available
+      selectedPlayers.forEach(card => {
+        const targetId = parseInt(card.dataset.playerId);
+        executeLegacyAction(you.id, targetId, actionId, selectedAction);
+      });
     }
 
     // Clear selections
     selectedPlayers.forEach(c => c.classList.remove('selected'));
+    selectedAction.classList.remove('selected');
+    updateExecuteButton();
+
+    // Refresh action menu to update costs/availability
+    populateActionMenu();
+
+    // Check if energy depleted
+    const updatedRes = getResourceState();
+    if (updatedRes.energy <= 0) {
+      setTimeout(() => {
+        closeSocializeModal(true);
+      }, 800);
+    }
+  }
+  
+  // Fallback to legacy social.js action system
+  function executeLegacyAction(actorId, targetId, actionId, actionBtn) {
+    // Map unified actions to legacy social.js actions
+    const actionMapping = {
+      'strategize': 'strategychat',  // Strategize maps to Strategy Chat
+      'smalltalk': 'gift',           // Small talk uses gift mechanic
+      'observe': 'gift',             // Observe uses gift mechanic
+    };
+    const legacyActionId = actionMapping[actionId] || actionId;
+    
+    if (global.socialApplyAction) {
+      global.socialApplyAction(actorId, targetId, legacyActionId);
+    }
+    
+    // Deduct energy manually (legacy system doesn't use canonical store)
+    updateResourceState({ energy: -1 });
+    
+    const actionLabel = actionBtn.querySelector('.action-label')?.textContent || legacyActionId;
+    const targetName = global.safeName?.(targetId) || 'Unknown';
+    addFeedbackEntry(actionLabel, targetName, 'neutral', 'Action completed (legacy)');
+  }
+  
+  // Add feedback entry to the UI
+  function addFeedbackEntry(actionLabel, targetName, outcomeType, message) {
+    const feedback = $('#feedbackArea');
+    if (!feedback) return;
+    
+    const placeholder = feedback.querySelector('.feedback-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const entry = document.createElement('div');
+    entry.className = `feedback-entry feedback-${outcomeType}`;
+    
+    const outcomeIcon = {
+      'positive': '✓',
+      'success': '✓',
+      'neutral': '→',
+      'negative': '✗',
+      'error': '⚠',
+      'backlash': '⚠'
+    }[outcomeType] || '•';
+    
+    entry.innerHTML = `
+      <span class="feedback-icon">${outcomeIcon}</span>
+      <span class="feedback-text">${actionLabel} → ${targetName}</span>
+      <span class="feedback-message">${message}</span>
+    `;
+    
+    feedback.insertBefore(entry, feedback.firstChild);
+    
+    // Limit feedback entries to 10
+    const entries = feedback.querySelectorAll('.feedback-entry');
+    if (entries.length > 10) {
+      entries[entries.length - 1].remove();
+    }
+  }
     selectedAction.classList.remove('selected');
     updateExecuteButton();
 
