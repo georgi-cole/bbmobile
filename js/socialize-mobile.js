@@ -628,7 +628,7 @@
         const p = global.getP?.(parseInt(c.dataset.playerId));
         return p?.name || 'Unknown';
       }).join(', ');
-      const actionLabel = selectedAction.querySelector('.action-label')?.textContent || actionId;
+      const actionLabel = selectedAction.querySelector('.action-label')?.textContent || legacyActionId;
       entry.textContent = `${actionLabel} → ${targetNames}`;
       feedback.insertBefore(entry, feedback.firstChild);
     }
