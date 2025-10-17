@@ -56,6 +56,31 @@
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
   }
 
+  // Validate age (required for new/updated profiles)
+  function requireValidAge(age) {
+    if (age === undefined || age === null || age === '') {
+      throw new Error('Age is required');
+    }
+    const ageNum = Number(age);
+    if (!Number.isInteger(ageNum) || ageNum < 5 || ageNum > 99999) {
+      throw new Error('Age must be an integer between 5 and 99,999');
+    }
+    return ageNum;
+  }
+
+  // Normalize sex field to M/F/NA
+  function normalizeSex(sex) {
+    if (!sex || sex.trim() === '') return 'NA';
+    const upper = sex.trim().toUpperCase();
+    if (upper === 'M' || upper === 'F' || upper === 'NA') return upper;
+    return 'NA';
+  }
+
+  // Normalize text fields (default to N/A if blank)
+  function normalizeTextField(value) {
+    return (value && value.trim()) ? value.trim() : 'N/A';
+  }
+
   // Migration functions
   function migrate(profiles, fromVersion) {
     console.info('[profileStorage] migrating from version', fromVersion, 'to', CURRENT_VERSION);
@@ -134,6 +159,9 @@
       throw new Error('Display name is required');
     }
 
+    // Validate and normalize age (required for new profiles)
+    const age = requireValidAge(data.age);
+
     const now = new Date().toISOString();
     const profile = {
       id: generateId(),
@@ -141,6 +169,11 @@
       avatar: data.avatar || DEFAULT_AVATAR,
       xp: data.xp || 0,
       season: data.season || 1,
+      age: age,
+      sex: normalizeSex(data.sex),
+      location: normalizeTextField(data.location),
+      occupation: normalizeTextField(data.occupation),
+      motto: normalizeTextField(data.motto),
       createdAt: now,
       updatedAt: now
     };
@@ -176,6 +209,18 @@
     if (data.avatar !== undefined) profile.avatar = data.avatar;
     if (data.xp !== undefined) profile.xp = data.xp;
     if (data.season !== undefined) profile.season = data.season;
+    
+    // Validate and update age if provided
+    if (data.age !== undefined) {
+      profile.age = requireValidAge(data.age);
+    }
+    
+    // Update extended fields with normalization
+    if (data.sex !== undefined) profile.sex = normalizeSex(data.sex);
+    if (data.location !== undefined) profile.location = normalizeTextField(data.location);
+    if (data.occupation !== undefined) profile.occupation = normalizeTextField(data.occupation);
+    if (data.motto !== undefined) profile.motto = normalizeTextField(data.motto);
+    
     profile.updatedAt = now;
 
     profiles[index] = profile;

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Requirements Test</title>
+  <link rel="stylesheet" href="src/ui/profileModal.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      background: #0a1320;
+      color: #e8f4ff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(26, 38, 52, 0.6);
+      border: 1px solid #3f6385;
+      border-radius: 8px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid #0f0;
+    }
+    .test-result.fail {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid #f00;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #3f6385;
+      border: 1px solid #78b4f0;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      background: #4a7699;
+    }
+  </style>
+</head>
+<body>
+  <h1>Profile Requirements Test Suite</h1>
+
+  <div class="test-section">
+    <h2>1. Age Validation Tests</h2>
+    <button onclick="testAgeValidation()">Run Age Validation Tests</button>
+    <div id="age-test-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Field Normalization Tests</h2>
+    <button onclick="testFieldNormalization()">Run Field Normalization Tests</button>
+    <div id="field-test-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Profile Creation Tests</h2>
+    <button onclick="testProfileCreation()">Run Profile Creation Tests</button>
+    <div id="creation-test-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. UI Integration Tests</h2>
+    <button onclick="showCreateProfileModal()">Open Create Profile Modal</button>
+    <button onclick="showProfileListModal()">Open Profile List Modal</button>
+    <button onclick="clearProfiles()">Clear All Profiles</button>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Profile Bio Application Test</h2>
+    <button onclick="testBioApplication()">Test Bio Application to Game</button>
+    <div id="bio-test-results"></div>
+  </div>
+
+  <script src="src/profile/profileStorage.js"></script>
+  <script src="src/profile/profileService.js"></script>
+  <script src="src/ui/ProfileModal.js"></script>
+
+  <script>
+    // Mock game object for testing
+    window.game = {
+      cfg: {},
+      players: [
+        { human: true, id: 'human1', name: 'Test Player', meta: {}, bio: {} }
+      ],
+      humanId: 'human1'
+    };
+
+    function logResult(containerId, message, passed) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      div.textContent = `${passed ? '✓' : '✗'} ${message}`;
+      container.appendChild(div);
+    }
+
+    function testAgeValidation() {
+      const container = document.getElementById('age-test-results');
+      container.innerHTML = '';
+
+      // Test 1: Age < 5 should fail
+      try {
+        ProfileStorage.createProfile({ displayName: 'Test', age: 4 });
+        logResult('age-test-results', 'Age < 5 validation', false);
+      } catch (e) {
+        logResult('age-test-results', 'Age < 5 correctly rejected: ' + e.message, true);
+      }
+
+      // Test 2: Age > 99999 should fail
+      try {
+        ProfileStorage.createProfile({ displayName: 'Test', age: 100000 });
+        logResult('age-test-results', 'Age > 99999 validation', false);
+      } catch (e) {
+        logResult('age-test-results', 'Age > 99999 correctly rejected: ' + e.message, true);
+      }
+
+      // Test 3: Non-integer should fail
+      try {
+        ProfileStorage.createProfile({ displayName: 'Test', age: 25.5 });
+        logResult('age-test-results', 'Non-integer age validation', false);
+      } catch (e) {
+        logResult('age-test-results', 'Non-integer age correctly rejected: ' + e.message, true);
+      }
+
+      // Test 4: Missing age should fail
+      try {
+        ProfileStorage.createProfile({ displayName: 'Test' });
+        logResult('age-test-results', 'Missing age validation', false);
+      } catch (e) {
+        logResult('age-test-results', 'Missing age correctly rejected: ' + e.message, true);
+      }
+
+      // Test 5: Valid ages should pass
+      try {
+        const profile = ProfileStorage.createProfile({ displayName: 'Test1', age: 5 });
+        logResult('age-test-results', 'Age 5 (minimum) accepted', true);
+        ProfileStorage.deleteProfile(profile.id);
+
+        const profile2 = ProfileStorage.createProfile({ displayName: 'Test2', age: 25 });
+        logResult('age-test-results', 'Age 25 (typical) accepted', true);
+        ProfileStorage.deleteProfile(profile2.id);
+
+        const profile3 = ProfileStorage.createProfile({ displayName: 'Test3', age: 99999 });
+        logResult('age-test-results', 'Age 99999 (maximum) accepted', true);
+        ProfileStorage.deleteProfile(profile3.id);
+      } catch (e) {
+        logResult('age-test-results', 'Valid age test failed: ' + e.message, false);
+      }
+    }
+
+    function testFieldNormalization() {
+      const container = document.getElementById('field-test-results');
+      container.innerHTML = '';
+
+      try {
+        // Test sex normalization
+        const profile1 = ProfileStorage.createProfile({
+          displayName: 'Test1',
+          age: 25,
+          sex: 'm'
+        });
+        logResult('field-test-results', 
+          `Sex 'm' normalized to '${profile1.sex}' (expected M)`, 
+          profile1.sex === 'M');
+        ProfileStorage.deleteProfile(profile1.id);
+
+        const profile2 = ProfileStorage.createProfile({
+          displayName: 'Test2',
+          age: 25,
+          sex: ''
+        });
+        logResult('field-test-results', 
+          `Empty sex normalized to '${profile2.sex}' (expected NA)`, 
+          profile2.sex === 'NA');
+        ProfileStorage.deleteProfile(profile2.id);
+
+        // Test text field normalization
+        const profile3 = ProfileStorage.createProfile({
+          displayName: 'Test3',
+          age: 25,
+          location: '',
+          occupation: '',
+          motto: ''
+        });
+        logResult('field-test-results', 
+          `Empty location normalized to '${profile3.location}' (expected N/A)`, 
+          profile3.location === 'N/A');
+        logResult('field-test-results', 
+          `Empty occupation normalized to '${profile3.occupation}' (expected N/A)`, 
+          profile3.occupation === 'N/A');
+        logResult('field-test-results', 
+          `Empty motto normalized to '${profile3.motto}' (expected N/A)`, 
+          profile3.motto === 'N/A');
+        ProfileStorage.deleteProfile(profile3.id);
+
+        const profile4 = ProfileStorage.createProfile({
+          displayName: 'Test4',
+          age: 25,
+          location: 'New York',
+          occupation: 'Teacher',
+          motto: 'Expect the unexpected'
+        });
+        logResult('field-test-results', 
+          `Values preserved: location='${profile4.location}', occupation='${profile4.occupation}', motto='${profile4.motto}'`, 
+          profile4.location === 'New York' && profile4.occupation === 'Teacher' && profile4.motto === 'Expect the unexpected');
+        ProfileStorage.deleteProfile(profile4.id);
+
+      } catch (e) {
+        logResult('field-test-results', 'Field normalization test failed: ' + e.message, false);
+      }
+    }
+
+    function testProfileCreation() {
+      const container = document.getElementById('creation-test-results');
+      container.innerHTML = '';
+
+      try {
+        // Create a complete profile
+        const profile = ProfileStorage.createProfile({
+          displayName: 'John Doe',
+          age: 28,
+          sex: 'M',
+          location: 'Los Angeles, CA',
+          occupation: 'Software Engineer',
+          motto: 'Code with passion'
+        });
+
+        logResult('creation-test-results', 'Profile created successfully', true);
+        logResult('creation-test-results', `Name: ${profile.displayName}`, true);
+        logResult('creation-test-results', `Age: ${profile.age}`, true);
+        logResult('creation-test-results', `Sex: ${profile.sex}`, true);
+        logResult('creation-test-results', `Location: ${profile.location}`, true);
+        logResult('creation-test-results', `Occupation: ${profile.occupation}`, true);
+        logResult('creation-test-results', `Motto: ${profile.motto}`, true);
+
+        // Load and verify
+        const loaded = ProfileStorage.getProfileById(profile.id);
+        logResult('creation-test-results', 
+          'Profile loaded correctly', 
+          loaded && loaded.age === 28 && loaded.sex === 'M');
+
+        ProfileStorage.deleteProfile(profile.id);
+        logResult('creation-test-results', 'Profile deleted successfully', true);
+
+      } catch (e) {
+        logResult('creation-test-results', 'Profile creation test failed: ' + e.message, false);
+      }
+    }
+
+    function showCreateProfileModal() {
+      ProfileModal.show({
+        onSelect: (profile) => {
+          console.log('Profile created:', profile);
+          alert(`Profile created: ${profile.displayName}, Age: ${profile.age}, Sex: ${profile.sex}`);
+        },
+        onGuest: () => {
+          console.log('Guest mode selected');
+          alert('Guest mode selected');
+        }
+      });
+    }
+
+    function showProfileListModal() {
+      ProfileModal.show({
+        onSelect: (profile) => {
+          console.log('Profile selected:', profile);
+          alert(`Profile selected: ${profile.displayName}, Age: ${profile.age}`);
+        },
+        onGuest: () => {
+          console.log('Guest mode selected');
+          alert('Guest mode selected');
+        }
+      });
+    }
+
+    function clearProfiles() {
+      const profiles = ProfileStorage.getAllProfiles();
+      profiles.forEach(p => ProfileStorage.deleteProfile(p.id));
+      alert('All profiles cleared');
+    }
+
+    function testBioApplication() {
+      const container = document.getElementById('bio-test-results');
+      container.innerHTML = '';
+
+      try {
+        // Create profile with extended fields
+        const profile = ProfileStorage.createProfile({
+          displayName: 'Jane Smith',
+          age: 30,
+          sex: 'F',
+          location: 'Chicago, IL',
+          occupation: 'Doctor',
+          motto: 'Help others'
+        });
+
+        // Apply to game
+        ProfileService.setCurrentProfile(profile);
+
+        // Check if bio was applied
+        const humanPlayer = game.players.find(p => p.human);
+        
+        logResult('bio-test-results', 'Profile applied to game', true);
+        logResult('bio-test-results', 
+          `Bio age: ${humanPlayer.bio.age} (expected ${profile.age})`, 
+          humanPlayer.bio.age === profile.age);
+        logResult('bio-test-results', 
+          `Bio gender: ${humanPlayer.bio.gender} (expected ${profile.sex})`, 
+          humanPlayer.bio.gender === profile.sex);
+        logResult('bio-test-results', 
+          `Bio location: ${humanPlayer.bio.location} (expected ${profile.location})`, 
+          humanPlayer.bio.location === profile.location);
+        logResult('bio-test-results', 
+          `Bio occupation: ${humanPlayer.bio.occupation} (expected ${profile.occupation})`, 
+          humanPlayer.bio.occupation === profile.occupation);
+        logResult('bio-test-results', 
+          `Bio motto: ${humanPlayer.bio.motto} (expected ${profile.motto})`, 
+          humanPlayer.bio.motto === profile.motto);
+
+        ProfileStorage.deleteProfile(profile.id);
+
+      } catch (e) {
+        logResult('bio-test-results', 'Bio application test failed: ' + e.message, false);
+      }
+    }
+
+    // Run basic tests on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('Profile requirements test page loaded');
+      console.log('ProfileStorage:', window.ProfileStorage);
+      console.log('ProfileService:', window.ProfileService);
+      console.log('ProfileModal:', window.ProfileModal);
+    });
+  </script>
+</body>
+</html>

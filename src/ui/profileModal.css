@@ -195,11 +195,20 @@
 }
 
 /* Form fields */
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
 .profile-form-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 12px;
+}
+
+.profile-form-field-full {
+  grid-column: 1 / -1;
 }
 
 .profile-form-field label {
@@ -212,7 +221,8 @@
   color: #ff6b6b;
 }
 
-.profile-form-field input {
+.profile-form-field input,
+.profile-form-field select {
   padding: 12px 14px;
   background: #1a2634;
   border: 1px solid #3f6385;
@@ -223,10 +233,63 @@
   transition: border-color 0.2s ease;
 }
 
-.profile-form-field input:focus {
+.profile-form-field input:focus,
+.profile-form-field select:focus {
   outline: none;
   border-color: #78b4f0;
   box-shadow: 0 0 0 2px rgba(120, 180, 240, 0.2);
+}
+
+.profile-form-field select {
+  cursor: pointer;
+}
+
+/* Profile card details */
+.profile-card-details {
+  font-size: 0.8rem;
+  color: #8cabc8;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Vampire animation */
+@keyframes vampireFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.vampire-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.vampire-flash.active {
+  opacity: 1;
+}
+
+.vampire-icon {
+  font-size: 8rem;
+  animation: vampireFlash 0.6s ease-in-out;
 }
 
 /* Footer */
@@ -286,6 +349,10 @@
     font-size: 1.3rem;
   }
   
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+  
   .profile-card {
     padding: 10px 12px;
     gap: 12px;
@@ -302,5 +369,9 @@
   
   .profile-card-meta {
     font-size: 0.8rem;
+  }
+  
+  .vampire-icon {
+    font-size: 6rem;
   }
 }
