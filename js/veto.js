@@ -368,7 +368,7 @@
     };
     
     // Store result for potential later use
-    g.__lastPOVResult = povResult;
+    global.game.__lastPOVResult = povResult;
 
     // Hook: Log XP for POV win (updated to use normalized result)
     if(global.ProgressionEvents?.onPOVWin){
