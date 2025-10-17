@@ -7,66 +7,85 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
 
-  // Resource state management - use SocialManeuvers store if available
+  // Resource state management - thin view over canonical SocialManeuvers store
   function getResourceState() {
     const g = global.game || {};
     const humanId = g.humanId;
     
-    // Use SocialManeuvers resource system if available
-    if (global.SocialManeuvers && typeof global.SocialManeuvers.getResources === 'function') {
+    // Always use canonical SocialManeuvers resource system
+    if (global.SocialManeuvers?.SocialResources) {
       try {
-        const resources = global.SocialManeuvers.getResources(humanId);
+        const resources = global.SocialManeuvers.SocialResources.getAll(humanId);
         return {
           energy: resources.energy || 0,
           influence: resources.influence || 0,
           information: resources.information || 0
         };
       } catch(e) {
-        console.warn('[socialize-mobile] Failed to get SocialManeuvers resources:', e);
+        console.error('[socialize-mobile] Failed to get SocialManeuvers resources:', e);
+        // Initialize if not yet seeded
+        if (global.SocialManeuvers?.SocialResources?.init) {
+          global.SocialManeuvers.SocialResources.init(humanId);
+          const resources = global.SocialManeuvers.SocialResources.getAll(humanId);
+          return {
+            energy: resources.energy || 0,
+            influence: resources.influence || 0,
+            information: resources.information || 0
+          };
+        }
       }
     }
     
-    // Fallback to local state
-    if (!g.__socialResources) {
-      g.__socialResources = {
-        energy: 3,        // Used for all actions
-        influence: 0,     // Gained from successful positive interactions
-        information: 0    // Gained from successful negative interactions
-      };
-    }
-    return g.__socialResources;
+    // No fallback - always require canonical store
+    console.warn('[socialize-mobile] SocialManeuvers not available - returning zeros');
+    return { energy: 0, influence: 0, information: 0 };
   }
 
   function updateResourceState(delta) {
     const g = global.game || {};
     const humanId = g.humanId;
     
-    // Use SocialManeuvers resource system if available
-    if (global.SocialManeuvers && typeof global.SocialManeuvers.updateResources === 'function') {
+    // Always use canonical SocialManeuvers resource system
+    if (global.SocialManeuvers?.SocialResources) {
       try {
-        global.SocialManeuvers.updateResources(humanId, delta);
+        // Use earn/spend methods from canonical store
+        if (delta.energy < 0 || delta.influence < 0 || delta.information < 0) {
+          // Spending resources
+          const costs = {};
+          if (delta.energy < 0) costs.energy = -delta.energy;
+          if (delta.influence < 0) costs.influence = -delta.influence;
+          if (delta.information < 0) costs.information = -delta.information;
+          global.SocialManeuvers.SocialResources.spend(humanId, costs);
+        } else {
+          // Earning resources
+          const gains = {};
+          if (delta.energy > 0) gains.energy = delta.energy;
+          if (delta.influence > 0) gains.influence = delta.influence;
+          if (delta.information > 0) gains.information = delta.information;
+          global.SocialManeuvers.SocialResources.earn(humanId, gains);
+        }
         updateHUDDisplay();
+        
+        // Trigger resources-changed event for live updates
+        if (typeof global.dispatchEvent === 'function') {
+          const event = new CustomEvent('social-resources-changed', {
+            detail: { playerId: humanId, delta, resources: getResourceState() }
+          });
+          global.dispatchEvent(event);
+        }
         return;
       } catch(e) {
-        console.warn('[socialize-mobile] Failed to update SocialManeuvers resources:', e);
+        console.error('[socialize-mobile] Failed to update SocialManeuvers resources:', e);
       }
     }
     
-    // Fallback to local state
-    const res = getResourceState();
-    res.energy = Math.max(0, res.energy + (delta.energy || 0));
-    res.influence = Math.max(0, res.influence + (delta.influence || 0));
-    res.information = Math.max(0, res.information + (delta.information || 0));
-    updateHUDDisplay();
+    console.error('[socialize-mobile] Cannot update resources - SocialManeuvers not available');
   }
 
   function resetWeeklyResources() {
-    const g = global.game || {};
-    g.__socialResources = {
-      energy: 3,
-      influence: 0,
-      information: 0
-    };
+    // No-op: weekly reset is handled by SocialManeuvers.SocialResources.resetWeekly
+    // This is called from onSocialPhaseStart with proper weekly bonuses/penalties
+    console.info('[socialize-mobile] Weekly reset handled by canonical SocialManeuvers store');
     updateHUDDisplay();
   }
 
@@ -90,7 +109,7 @@
         <div class="socialize-hud-resources">
           <div class="resource-badge" data-tip="Energy: Used for all social actions">
             <span class="resource-icon">⚡</span>
-            <span class="resource-value" id="hudEnergy">3</span>
+            <span class="resource-value" id="hudEnergy">5</span>
           </div>
           <div class="resource-badge" data-tip="Influence: Gained from positive interactions">
             <span class="resource-icon">🤝</span>
@@ -111,6 +130,11 @@
     // Attach event listeners
     $('#socializeOpenBtn')?.addEventListener('click', openSocializeModal);
     $('#resourceHelpBtn')?.addEventListener('click', showResourceHelp);
+    
+    // Subscribe to resource-changed events for live updates
+    global.addEventListener('social-resources-changed', (event) => {
+      updateHUDDisplay();
+    });
 
     return launcher;
   }
@@ -153,7 +177,7 @@
           <span class="help-icon">⚡</span>
           <div>
             <strong>Energy</strong>
-            <p>Used for all social actions. Start with 3 per week. Actions cost 1 energy each.</p>
+            <p>Used for all social actions. Start with 5 per week (+ weekly bonuses). Actions cost 1-3 energy each.</p>
           </div>
         </div>
         <div class="help-item">
