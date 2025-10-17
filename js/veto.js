@@ -1,6 +1,10 @@
 // MODULE: veto.js
 // Integrated: automatic 0 submission for human participant if time expires without submission.
 // Other flow unchanged.
+//
+// COMPETITION RESULTS CONTRACT:
+// This module now uses the normalized competition results contract from types/competition-results.ts
+// POV competition results follow the standard format: { kind: 'POV', winnerId, finalists, participants }
 
 (function(global){
   'use strict';
@@ -335,14 +339,41 @@
       
       // Record weekly event for social mechanics
       if(global.SocialManeuvers?.SocialResources) {
-        global.SocialManeuvers.SocialResources.recordWeeklyEvent(winner, 'povWin', true);
+        global.SocialManeuvers.SocialResources.recordWeeklyEvent(W.id, 'povWin', true);
       }
     }
 
-    // Hook: Log XP for POV win
+    // Create normalized competition result (POV)
+    var finalists = arr.slice(0, Math.min(3, arr.length)).map(function(entry) {
+      return {
+        id: entry[0],
+        score: entry[1],
+        name: safeName(entry[0])
+      };
+    });
+    
+    var allParticipants = arr.map(function(entry) {
+      return {
+        id: entry[0],
+        score: entry[1],
+        name: safeName(entry[0])
+      };
+    });
+    
+    var povResult = {
+      kind: 'POV',
+      winnerId: global.game.vetoHolder,
+      finalists: finalists,
+      participants: allParticipants
+    };
+    
+    // Store result for potential later use
+    g.__lastPOVResult = povResult;
+
+    // Hook: Log XP for POV win (updated to use normalized result)
     if(global.ProgressionEvents?.onPOVWin){
       var participants = eligible || [];
-      global.ProgressionEvents.onPOVWin(global.game.vetoHolder, participants);
+      global.ProgressionEvents.onPOVWin(povResult.winnerId, participants, povResult);
     }
 
     try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
