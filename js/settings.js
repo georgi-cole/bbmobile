@@ -753,6 +753,27 @@
 
   function cfg(){ (g.game = g.game || {}).cfg = g.game.cfg || {}; return g.game.cfg; }
 
+  function applyPlayersConfig(v){
+    const val = Math.max(4, Math.min(16, Number(v)||12));
+    cfg().numPlayers = val;
+    try{ localStorage.setItem('bb_cfg_numPlayers', String(val)); }catch{}
+    
+    try{
+      if(g.game?.phase === 'lobby'){
+        if(typeof g.rebuildGame === 'function'){ g.rebuildGame(false); }
+        else if(typeof g.buildCast === 'function'){ g.buildCast(); }
+        if(typeof g.startOpeningSequence === 'function'){ setTimeout(()=>g.startOpeningSequence(), 60); }
+        g.addLog?.(`New season started with ${val} players.`,'ok');
+      }else{
+        g.addLog?.(`Players set to ${val}. Restarting to apply…`,'warn');
+        setTimeout(()=>location.reload(), 250);
+      }
+    }catch(e){
+      console.warn('[settings] applyPlayersConfig failed; reloading as fallback', e);
+      setTimeout(()=>location.reload(), 250);
+    }
+  }
+
   function applyTvBg(url){
     const tv=document.getElementById('tv'); if(!tv) return;
     if(url && String(url).trim()){
@@ -791,7 +812,7 @@
     input.value = String(Math.max(4, Math.min(16, current || 12)));
     input.addEventListener('change', ()=>{
       const v=Math.max(4, Math.min(16, Number(input.value)||12));
-      cfg().numPlayers=v;
+      applyPlayersConfig(v);
     });
   }
 
@@ -829,6 +850,27 @@
 
   function cfg(){ (g.game = g.game || {}).cfg = g.game.cfg || {}; return g.game.cfg; }
 
+  function applyPlayersConfig(v){
+    const val = Math.max(4, Math.min(16, Number(v)||12));
+    cfg().numPlayers = val;
+    try{ localStorage.setItem('bb_cfg_numPlayers', String(val)); }catch{}
+    
+    try{
+      if(g.game?.phase === 'lobby'){
+        if(typeof g.rebuildGame === 'function'){ g.rebuildGame(false); }
+        else if(typeof g.buildCast === 'function'){ g.buildCast(); }
+        if(typeof g.startOpeningSequence === 'function'){ setTimeout(()=>g.startOpeningSequence(), 60); }
+        g.addLog?.(`New season started with ${val} players.`,'ok');
+      }else{
+        g.addLog?.(`Players set to ${val}. Restarting to apply…`,'warn');
+        setTimeout(()=>location.reload(), 250);
+      }
+    }catch(e){
+      console.warn('[settings] applyPlayersConfig failed; reloading as fallback', e);
+      setTimeout(()=>location.reload(), 250);
+    }
+  }
+
   function applyTvBg(url){
     const tv=document.getElementById('tv'); if(!tv) return;
     if(url && String(url).trim()){
@@ -861,8 +903,7 @@
       np.value = String(Math.max(4, Math.min(16, current || 12)));
       np.addEventListener('change', ()=>{
         const v=Math.max(4, Math.min(16, Number(np.value)||12));
-        cfg().numPlayers=v;
-        try{ localStorage.setItem('bb_cfg_numPlayers', String(v)); }catch{}
+        applyPlayersConfig(v);
       });
     }
     // Jury Return vote seconds
