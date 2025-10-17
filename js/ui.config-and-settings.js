@@ -212,6 +212,42 @@
     return game.cfg;
   }
 
+  // Apply players total from settings and rebuild/reload
+  function applyPlayersFromSettings(v){
+    try{
+      // Clamp to 6..22 (align with players-total.js injector)
+      const val = Math.max(6, Math.min(22, parseInt(v, 10) || 12));
+      
+      // Write to cfg().numPlayers
+      const game = g.game = g.game || {};
+      const cfg = game.cfg = Object.assign({}, DEFAULT_CFG, game.cfg || {});
+      cfg.numPlayers = val;
+      saveStoredCfg(cfg);
+      
+      // Apply based on phase
+      if(g.game?.phase === 'lobby'){
+        // In lobby: rebuild cast/game and start opening sequence
+        if(typeof g.rebuildGame === 'function'){
+          g.rebuildGame(false);
+        } else if(typeof g.buildCast === 'function'){
+          g.buildCast();
+        }
+        if(typeof g.startOpeningSequence === 'function'){
+          setTimeout(()=> g.startOpeningSequence(), 60);
+        }
+        g.addLog?.(`New season started with ${val} players.`, 'ok');
+      } else {
+        // Mid-season: reload to apply
+        g.addLog?.(`Players set to ${val}. Restarting to apply…`, 'warn');
+        setTimeout(()=> location.reload(), 250);
+      }
+    }catch(err){
+      console.warn('[ui.config-and-settings] applyPlayersFromSettings error:', err);
+      // Fallback to reload
+      setTimeout(()=> location.reload(), 250);
+    }
+  }
+
   // Expose config helpers
   UI.ensureCfg = ensureGameCfg;
   UI.applyCfgEffects = applyCfgEffects;
@@ -1313,6 +1349,35 @@
     renderCastStrip(modal);
     fillCastForm(modal);
     if(!modal.__castWired){ wireCastEditor(modal); modal.__castWired = true; }
+    wirePlayersTotal(modal);
+  }
+  
+  /**
+   * Wire players total change listeners for #numPlayersCast and #numPlayers
+   * Prevents duplicate listeners using __wired flag on elements
+   */
+  function wirePlayersTotal(modal){
+    if(!modal) return;
+    
+    // Wire #numPlayersCast (injected by players-total.js)
+    const numPlayersCast = modal.querySelector('#numPlayersCast');
+    if(numPlayersCast && !numPlayersCast.__wired){
+      numPlayersCast.__wired = true;
+      numPlayersCast.addEventListener('change', function(){
+        const v = this.value;
+        applyPlayersFromSettings(v);
+      });
+    }
+    
+    // Wire #numPlayers (if present)
+    const numPlayers = modal.querySelector('#numPlayers');
+    if(numPlayers && !numPlayers.__wired){
+      numPlayers.__wired = true;
+      numPlayers.addEventListener('change', function(){
+        const v = this.value;
+        applyPlayersFromSettings(v);
+      });
+    }
   }
   function wireThemeSelector(modal){
     if(modal.__themeSelectorWired) return;
@@ -1555,6 +1620,7 @@
     const modal = dim.querySelector('.modal');
     fillSettingsModalValues(modal, g.game.cfg);
     wireThemeSelector(modal);
+    wirePlayersTotal(modal);
     const activePane = modal.querySelector('.settingsTabPane.active');
     if(activePane && activePane.getAttribute('data-pane')==='cast'){ initCastTab(modal); }
     if(activePane && activePane.getAttribute('data-pane')==='debug'){
