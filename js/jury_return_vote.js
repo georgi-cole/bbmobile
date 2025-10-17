@@ -103,54 +103,237 @@
     });
   }
 
-  // Jury panel with avatars and live percentages
+  // Jury panel with avatars and live percentages - MODERNIZED
   function showReturnVotePanel(jurors, voteSecs, onDone) {
     const panel = document.getElementById('panel');
     if (!panel) return;
     panel.innerHTML = '';
-    const box = document.createElement('div'); box.className = 'minigame-host';
-    box.innerHTML = `<h3>America's Vote — Juror Return</h3>
-      <div class="tiny muted">Who will return? Bars fill for ${voteSecs}s.</div>`;
+    
+    // Modern container with gradient background
+    const container = document.createElement('div');
+    container.style.cssText = `
+      background: linear-gradient(135deg, rgba(13,27,42,0.95) 0%, rgba(27,38,59,0.95) 100%);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 1px rgba(255,255,255,0.1) inset;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      max-width: 900px;
+      margin: 0 auto;
+    `;
+    
+    // Modern header with better typography
+    const header = document.createElement('div');
+    header.style.cssText = 'text-align:center;margin-bottom:28px;';
+    header.innerHTML = `
+      <h2 style="
+        font-size:2rem;
+        font-weight:700;
+        margin:0 0 8px 0;
+        background:linear-gradient(135deg,#00d9ff 0%,#00e0cc 50%,#7effa3 100%);
+        -webkit-background-clip:text;
+        -webkit-text-fill-color:transparent;
+        background-clip:text;
+        letter-spacing:-0.5px;
+      ">🗳️ America's Vote</h2>
+      <div style="
+        font-size:1.1rem;
+        color:#8fb4d4;
+        font-weight:500;
+      ">Which juror deserves a second chance?</div>
+    `;
+    container.appendChild(header);
+    
+    // Grid for juror cards
     const grid = document.createElement('div');
-    grid.style.cssText = 'display:flex;flex-direction:row;gap:24px;justify-content:center;margin-top:12px;';
+    grid.style.cssText = `
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:20px;
+      margin-bottom:24px;
+    `;
 
-    // Each juror gets a bar and avatar
+    // Each juror gets a modern card
     const state = { counts: new Map(), total: 0 };
     jurors.forEach((id, i) => {
       state.counts.set(id, 5 + Math.floor(Math.random()*5));
       state.total += state.counts.get(id);
-      const cell = document.createElement('div');
-      cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;';
+      
       const jurorName = global.safeName?.(id) || String(id);
       const avatarUrl = getAvatar(id);
+      
+      // Modern card design
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background:linear-gradient(135deg,rgba(20,35,55,0.8) 0%,rgba(30,45,65,0.6) 100%);
+        border-radius:16px;
+        padding:20px;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:12px;
+        border:1px solid rgba(143,211,255,0.2);
+        box-shadow:0 8px 24px rgba(0,0,0,0.3);
+        transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+        position:relative;
+        overflow:hidden;
+      `;
+      card.setAttribute('data-j-id', id);
+      
+      // Animated glow effect
+      const glow = document.createElement('div');
+      glow.style.cssText = `
+        position:absolute;
+        top:-50%;
+        left:-50%;
+        width:200%;
+        height:200%;
+        background:radial-gradient(circle,rgba(143,211,255,0.1) 0%,transparent 70%);
+        animation:pulse 3s ease-in-out infinite;
+        pointer-events:none;
+      `;
+      card.appendChild(glow);
+      
+      // Avatar with modern styling
+      const avatarWrap = document.createElement('div');
+      avatarWrap.style.cssText = `
+        position:relative;
+        width:120px;
+        height:120px;
+        border-radius:50%;
+        padding:4px;
+        background:linear-gradient(135deg,#00d9ff,#00e0cc);
+        box-shadow:0 8px 24px rgba(0,224,204,0.4);
+      `;
+      
       const img = document.createElement('img');
       img.src = avatarUrl;
       img.alt = jurorName;
-      img.style.cssText = 'width:54px;height:54px;border-radius:12px;border:2px solid #8fd3ff;box-shadow:0 2px 10px -4px #8fd3ff;';
+      img.style.cssText = `
+        width:100%;
+        height:100%;
+        border-radius:50%;
+        object-fit:cover;
+        background:#1a2942;
+        border:3px solid #0d1b2a;
+      `;
       img.onerror = function() {
         console.info(`[jury_return_vote] avatar fallback used for juror=${id} url=${this.src}`);
         this.onerror = null;
         this.src = getAvatarFallback(jurorName, this.src);
       };
+      avatarWrap.appendChild(img);
+      card.appendChild(avatarWrap);
       
-      cell.innerHTML = `
-        <div style="height:14px;width:84px;background:#1d2740;border-radius:9px;border:1px solid #2a3b5a;overflow:hidden;">
-          <div class="avBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6fd3ff,#74e48b);box-shadow:0 0 8px -2px #6fd3ff;transition:width .24s"></div>
-        </div>
-        <span class="avPct tiny muted">0%</span>
+      // Name with modern typography
+      const nameLabel = document.createElement('div');
+      nameLabel.style.cssText = `
+        font-size:1.1rem;
+        font-weight:700;
+        color:#e8f4ff;
+        letter-spacing:-0.3px;
       `;
-      cell.insertBefore(img, cell.firstChild);
-      cell.setAttribute('data-j-id', id);
-      grid.appendChild(cell);
+      nameLabel.textContent = jurorName;
+      card.appendChild(nameLabel);
+      
+      // Vote count and percentage
+      const voteInfo = document.createElement('div');
+      voteInfo.className = 'vote-info';
+      voteInfo.style.cssText = `
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:6px;
+        width:100%;
+      `;
+      voteInfo.innerHTML = `
+        <div class="vote-count" style="
+          font-size:1.5rem;
+          font-weight:700;
+          color:#00e0cc;
+          text-shadow:0 2px 12px rgba(0,224,204,0.5);
+        ">0</div>
+        <div style="
+          font-size:0.85rem;
+          color:#8fb4d4;
+          font-weight:500;
+        ">votes</div>
+      `;
+      card.appendChild(voteInfo);
+      
+      // Modern progress bar
+      const barContainer = document.createElement('div');
+      barContainer.style.cssText = `
+        width:100%;
+        height:8px;
+        background:rgba(20,35,55,0.6);
+        border-radius:6px;
+        overflow:hidden;
+        box-shadow:0 2px 8px rgba(0,0,0,0.3) inset;
+      `;
+      
+      const bar = document.createElement('div');
+      bar.className = 'avBar';
+      bar.style.cssText = `
+        height:100%;
+        width:0%;
+        background:linear-gradient(90deg,#00d9ff,#00e0cc,#7effa3);
+        box-shadow:0 0 12px rgba(0,224,204,0.6);
+        transition:width 0.4s cubic-bezier(0.4,0,0.2,1);
+        border-radius:6px;
+      `;
+      barContainer.appendChild(bar);
+      card.appendChild(barContainer);
+      
+      // Percentage label
+      const pctLabel = document.createElement('div');
+      pctLabel.className = 'avPct';
+      pctLabel.style.cssText = `
+        font-size:1.2rem;
+        font-weight:700;
+        color:#8fd3ff;
+        text-shadow:0 2px 8px rgba(143,211,255,0.4);
+      `;
+      pctLabel.textContent = '0%';
+      card.appendChild(pctLabel);
+      
+      grid.appendChild(card);
     });
-    box.appendChild(grid);
+    container.appendChild(grid);
 
-    // Countdown timer
+    // Modern countdown timer
+    const timerWrap = document.createElement('div');
+    timerWrap.style.cssText = `
+      text-align:center;
+      padding:16px;
+      background:rgba(0,224,204,0.1);
+      border-radius:12px;
+      border:1px solid rgba(0,224,204,0.2);
+    `;
     const timer = document.createElement('div');
-    timer.className = 'tiny muted'; timer.style.marginTop = '7px';
-    box.appendChild(timer);
+    timer.style.cssText = `
+      font-size:1.3rem;
+      font-weight:700;
+      color:#00e0cc;
+      text-shadow:0 2px 12px rgba(0,224,204,0.5);
+    `;
+    timerWrap.appendChild(timer);
+    container.appendChild(timerWrap);
+    
+    panel.appendChild(container);
 
-    panel.appendChild(box);
+    // Add pulse animation only once
+    if (!document.getElementById('jury-return-vote-pulse-style')) {
+      const style = document.createElement('style');
+      style.id = 'jury-return-vote-pulse-style';
+      style.textContent = `
+        @keyframes pulse {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.05); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     // Animate bars for voteSecs seconds
     let running = true;
@@ -160,23 +343,32 @@
       if (!running) return;
       const now = Date.now();
       const rem = Math.max(0, Math.ceil((endAt-now)/1000));
-      timer.textContent = `${rem}s remaining…`;
+      timer.innerHTML = `⏱️ <span style="font-size:1.5rem">${rem}</span>s remaining`;
+      
       jurors.forEach((id) => {
         // Simulate voting
         const inc = 2 + Math.floor(Math.random()*3);
         state.counts.set(id, state.counts.get(id)+inc);
         state.total += inc;
       });
-      // Update bars and percentages
+      
+      // Update bars, percentages, and vote counts
       jurors.forEach((id) => {
-        const cell = grid.querySelector(`[data-j-id="${id}"]`);
-        if(!cell) return;
-        const pct = Math.round((state.counts.get(id)/state.total)*100);
-        const bar = cell.querySelector('.avBar');
-        const lab = cell.querySelector('.avPct');
+        const card = grid.querySelector(`[data-j-id="${id}"]`);
+        if(!card) return;
+        
+        const count = state.counts.get(id);
+        const pct = Math.round((count/state.total)*100);
+        
+        const bar = card.querySelector('.avBar');
+        const pctLabel = card.querySelector('.avPct');
+        const voteCount = card.querySelector('.vote-count');
+        
         if(bar) bar.style.width = `${pct}%`;
-        if(lab) lab.textContent = `${pct}%`;
+        if(pctLabel) pctLabel.textContent = `${pct}%`;
+        if(voteCount) voteCount.textContent = count;
       });
+      
       if(now < endAt) {
         setTimeout(update, 170);
       } else {
