@@ -53,6 +53,9 @@ export function isCompetitionResult(value: unknown): value is CompetitionResult 
   if (result.winnerId === undefined || result.winnerId === null) {
     return false;
   }
+  if (typeof result.winnerId !== 'number' && typeof result.winnerId !== 'string') {
+    return false;
+  }
   
   // Optional arrays validation
   if (result.finalists !== undefined && !Array.isArray(result.finalists)) {
