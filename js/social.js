@@ -493,14 +493,12 @@
   function renderSocialPhase(panel){
     const g=global.game; if(!panel || !g) return;
 
-    console.info('[social] Rendering social phase UI');
+    console.info('[social] Rendering social phase UI - TV modal only mode');
     
+    // Hide the legacy below-TV panel: only the TV modal (Socialize button) is interactive
     panel.innerHTML='';
-    const box=document.createElement('div'); box.className='minigame-host';
-    box.innerHTML=`<h3>Social Intermission</h3>
-      <div class="tiny muted">House interactions, alliances, and rivalries are evolving…</div>`;
-    panel.appendChild(box);
-
+    panel.style.display = 'none'; // Hide the panel completely
+    
     // New: small log budget per intermission to avoid ambient spam
     ensureSocialState();
     g.__socialLogBudget = 6;
@@ -514,48 +512,8 @@
       console.info('[social] Social Maneuvers enabled - skipping legacy simulation');
     }
 
-    const fWrap=document.createElement('div'); fWrap.className='tiny';
-    const floaters=[...g.__floatersWeek].map(id=>global.safeName(id));
-    fWrap.textContent = floaters.length ? `Floaters this week: ${floaters.join(', ')}` : 'Floaters this week: none';
-    box.appendChild(fWrap);
-
     const you=global.getP?.(g.humanId);
     if(you && !you.evicted){
-      // Check if Social Maneuvers system is enabled
-      if(global.SocialManeuvers?.isEnabled()){
-        console.info('[social] ✓ Rendering Social Maneuvers UI (human present)');
-        // Render enhanced Social Maneuvers UI
-        const maneuversContainer = document.createElement('div');
-        maneuversContainer.id = 'social-maneuvers-container';
-        box.appendChild(maneuversContainer);
-        
-        try{
-          global.SocialManeuvers.renderSocialManeuversUI(maneuversContainer, you.id);
-          console.info('[social-maneuvers] ✓ Rendering Social Maneuvers UI completed');
-        }catch(e){
-          console.error('[social] ❌ Failed to render Social Maneuvers UI:', e);
-          console.error('[social] Error details:', e.stack);
-          console.info('[social] Maintaining social phase UI (no fallback to legacy)');
-          // Display error message in UI instead of falling back
-          const errorMsg = document.createElement('div');
-          errorMsg.className = 'social-error-message';
-          errorMsg.style.cssText = 'padding:12px;background:#2a1a1a;border:1px solid #663333;border-radius:8px;color:#ff9999;margin:8px 0;';
-          const strong = document.createElement('strong');
-          strong.textContent = '⚠️ Social Maneuvers UI Error';
-          errorMsg.appendChild(strong);
-          errorMsg.appendChild(document.createElement('br'));
-          const span = document.createElement('span');
-          span.className = 'tiny';
-          span.textContent = 'Check console for details. Phase continues.';
-          errorMsg.appendChild(span);
-          maneuversContainer.appendChild(errorMsg);
-        }
-      } else {
-        console.info('[social] Rendering basic social UI (Social Maneuvers disabled)');
-        // Render basic social UI
-        renderBasicSocialUI(box, you);
-      }
-
       // Only build legacy decision cards if Social Maneuvers is disabled
       if(!global.SocialManeuvers?.isEnabled()){
         buildSocialDecisions();
@@ -563,10 +521,6 @@
         console.info('[social] Skipping legacy buildSocialDecisions() (using Social Maneuvers)');
       }
     }
-
-    const hint=document.createElement('div'); hint.className='tiny muted'; hint.style.marginTop='6px';
-    hint.textContent='Tip: Allies and enemies shift with interactions; nominations naturally follow relations.';
-    box.appendChild(hint);
   }
   
   function renderBasicSocialUI(box, you){

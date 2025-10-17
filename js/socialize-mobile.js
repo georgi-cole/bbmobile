@@ -7,9 +7,26 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
 
-  // Resource state management
+  // Resource state management - use SocialManeuvers store if available
   function getResourceState() {
     const g = global.game || {};
+    const humanId = g.humanId;
+    
+    // Use SocialManeuvers resource system if available
+    if (global.SocialManeuvers && typeof global.SocialManeuvers.getResources === 'function') {
+      try {
+        const resources = global.SocialManeuvers.getResources(humanId);
+        return {
+          energy: resources.energy || 0,
+          influence: resources.influence || 0,
+          information: resources.information || 0
+        };
+      } catch(e) {
+        console.warn('[socialize-mobile] Failed to get SocialManeuvers resources:', e);
+      }
+    }
+    
+    // Fallback to local state
     if (!g.__socialResources) {
       g.__socialResources = {
         energy: 3,        // Used for all actions
@@ -21,6 +38,21 @@
   }
 
   function updateResourceState(delta) {
+    const g = global.game || {};
+    const humanId = g.humanId;
+    
+    // Use SocialManeuvers resource system if available
+    if (global.SocialManeuvers && typeof global.SocialManeuvers.updateResources === 'function') {
+      try {
+        global.SocialManeuvers.updateResources(humanId, delta);
+        updateHUDDisplay();
+        return;
+      } catch(e) {
+        console.warn('[socialize-mobile] Failed to update SocialManeuvers resources:', e);
+      }
+    }
+    
+    // Fallback to local state
     const res = getResourceState();
     res.energy = Math.max(0, res.energy + (delta.energy || 0));
     res.influence = Math.max(0, res.influence + (delta.influence || 0));
@@ -301,8 +333,21 @@
       name.className = 'player-name';
       name.textContent = player.name;
 
+      // Add relationship label + affinity percentage
+      const affinity = you?.affinity?.[player.id] ?? 0;
+      const affinityPercent = Math.round(affinity * 100);
+      const relationshipLabel = getRelationshipLabel(affinity);
+      
+      const relationshipInfo = document.createElement('div');
+      relationshipInfo.className = 'player-relationship';
+      relationshipInfo.innerHTML = `
+        <span class="relationship-label ${getRelationshipClass(affinity)}">${relationshipLabel}</span>
+        <span class="relationship-percent">${affinityPercent > 0 ? '+' : ''}${affinityPercent}%</span>
+      `;
+
       card.appendChild(avatar);
       card.appendChild(name);
+      card.appendChild(relationshipInfo);
 
       card.addEventListener('click', (e) => {
         // Multi-select support
@@ -318,37 +363,204 @@
     });
   }
 
+  // Get relationship label from affinity (matching social.js)
+  function getRelationshipLabel(affinity) {
+    const a = affinity ?? 0;
+    if (a >= 0.65) return 'Romance/Bromance';
+    if (a >= 0.48) return 'Ride or Die';
+    if (a >= 0.28) return 'Allies';
+    if (a >= 0.12) return 'Friendly';
+    if (a >= -0.12) return 'Neutral';
+    if (a >= -0.28) return 'Strained';
+    if (a >= -0.48) return 'Enemies';
+    return 'Arch Enemies';
+  }
+
+  // Get CSS class for relationship
+  function getRelationshipClass(affinity) {
+    const a = affinity ?? 0;
+    if (a >= 0.28) return 'relationship-positive';
+    if (a >= -0.12) return 'relationship-neutral';
+    return 'relationship-negative';
+  }
+
   function populateActionMenu() {
     const menu = $('#actionMenu');
     if (!menu) return;
 
+    const res = getResourceState();
+
+    // Unified action catalog (deduped - merged Strategy Chat/Late Night Talk → Strategize)
     const actions = [
-      { id: 'alliance', label: 'Form Alliance', icon: '🤝', cost: 1 },
-      { id: 'strategychat', label: 'Strategy Chat', icon: '💡', cost: 1 },
-      { id: 'gift', label: 'Give Gift', icon: '🎁', cost: 1 },
-      { id: 'flirt', label: 'Flirt', icon: '😊', cost: 1 },
-      { id: 'workout', label: 'Workout Together', icon: '💪', cost: 1 },
-      { id: 'cook', label: 'Cook Meal', icon: '🍳', cost: 1 },
-      { id: 'latenighttalk', label: 'Late Night Talk', icon: '🌙', cost: 1 },
-      { id: 'apologize', label: 'Apologize', icon: '🙏', cost: 1 },
-      { id: 'prank', label: 'Prank', icon: '😜', cost: 1 },
-      { id: 'taunt', label: 'Taunt', icon: '😤', cost: 1 },
-      { id: 'confront', label: 'Confront', icon: '⚔️', cost: 1 }
+      { 
+        id: 'alliance', 
+        label: 'Form Alliance', 
+        icon: '🤝', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'friendly',
+        description: 'Build a strong alliance with mutual trust and safety.'
+      },
+      { 
+        id: 'strategize', 
+        label: 'Strategize', 
+        icon: '💡', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'strategic',
+        description: 'Deep strategic conversation to align game plans.'
+      },
+      { 
+        id: 'gift', 
+        label: 'Give Gift', 
+        icon: '🎁', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'friendly',
+        description: 'Give a thoughtful gift to improve relationship.'
+      },
+      { 
+        id: 'flirt', 
+        label: 'Flirt', 
+        icon: '😊', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'friendly',
+        description: 'Light romantic or friendly flirtation.'
+      },
+      { 
+        id: 'workout', 
+        label: 'Workout Together', 
+        icon: '💪', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'friendly',
+        description: 'Bond through physical activity and shared fitness.'
+      },
+      { 
+        id: 'cook', 
+        label: 'Cook Meal', 
+        icon: '🍳', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'friendly',
+        description: 'Prepare and share a meal together.'
+      },
+      { 
+        id: 'apologize', 
+        label: 'Apologize', 
+        icon: '🙏', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'friendly',
+        description: 'Mend fences with a sincere apology.'
+      },
+      { 
+        id: 'compliment', 
+        label: 'Compliment', 
+        icon: '✨', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'friendly',
+        description: 'Give a genuine compliment. May refund energy!'
+      },
+      { 
+        id: 'mediate', 
+        label: 'Mediate', 
+        icon: '⚖️', 
+        cost: { energy: 1 },
+        require: { influence: 10 },
+        category: 'strategic',
+        description: 'Mediate conflict between others. Requires influence.'
+      },
+      { 
+        id: 'interrogate', 
+        label: 'Interrogate', 
+        icon: '🔍', 
+        cost: { energy: 1 },
+        require: { influence: 5 },
+        category: 'strategic',
+        description: 'Press for information. Requires influence.'
+      },
+      { 
+        id: 'prank', 
+        label: 'Prank', 
+        icon: '😜', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'risky',
+        description: 'Pull a prank - might backfire or strengthen bonds.'
+      },
+      { 
+        id: 'taunt', 
+        label: 'Taunt', 
+        icon: '😤', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'aggressive',
+        description: 'Taunt and provoke - damages relationship.'
+      },
+      { 
+        id: 'confront', 
+        label: 'Confront', 
+        icon: '⚔️', 
+        cost: { energy: 1 },
+        require: {},
+        category: 'aggressive',
+        description: 'Direct confrontation - air grievances.'
+      }
     ];
 
     menu.innerHTML = '';
 
     actions.forEach(action => {
+      const energyCost = action.cost.energy || 0;
+      const influenceReq = action.require.influence || 0;
+      const informationReq = action.require.information || 0;
+      
+      const canAfford = res.energy >= energyCost && 
+                        res.influence >= influenceReq && 
+                        res.information >= informationReq;
+      
       const btn = document.createElement('button');
-      btn.className = 'action-btn';
+      btn.className = `action-btn action-${action.category}`;
       btn.dataset.actionId = action.id;
+      
+      if (!canAfford) {
+        btn.classList.add('disabled');
+        btn.disabled = true;
+      }
+
+      // Build tooltip for disabled actions
+      let disabledReason = '';
+      if (!canAfford) {
+        const missing = [];
+        if (res.energy < energyCost) missing.push(`Need ${energyCost - res.energy} more ⚡`);
+        if (res.influence < influenceReq) missing.push(`Need ${influenceReq - res.influence} more 🤝`);
+        if (res.information < informationReq) missing.push(`Need ${informationReq - res.information} more 💡`);
+        disabledReason = missing.join(', ');
+      }
+
       btn.innerHTML = `
-        <span class="action-icon">${action.icon}</span>
-        <span class="action-label">${action.label}</span>
-        <span class="action-cost">${action.cost}⚡</span>
+        <div class="action-header">
+          <span class="action-icon">${action.icon}</span>
+          <span class="action-label">${action.label}</span>
+        </div>
+        <div class="action-costs">
+          ${energyCost > 0 ? `<span class="cost-badge cost-energy" title="Energy cost">⚡${energyCost}</span>` : ''}
+          ${influenceReq > 0 ? `<span class="cost-badge cost-influence ${res.influence < influenceReq ? 'insufficient' : ''}" title="Influence required">🤝${influenceReq}</span>` : ''}
+          ${informationReq > 0 ? `<span class="cost-badge cost-information ${res.information < informationReq ? 'insufficient' : ''}" title="Information required">💡${informationReq}</span>` : ''}
+        </div>
+        <div class="action-description">${action.description}</div>
+        ${!canAfford ? `<div class="action-disabled-reason">${disabledReason}</div>` : ''}
       `;
 
+      // Add tooltip
+      btn.title = action.description + (disabledReason ? `\n\n${disabledReason}` : '');
+
       btn.addEventListener('click', () => {
+        if (!canAfford) return;
+        
         // Clear other selections
         $$('.action-btn.selected').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
@@ -380,17 +592,23 @@
       return;
     }
 
-    const actionId = selectedAction.dataset.actionId;
+    let actionId = selectedAction.dataset.actionId;
     const g = global.game || {};
     const you = global.getP?.(g.humanId);
 
     if (!you) return;
 
+    // Map unified actions to legacy social.js actions
+    const actionMapping = {
+      'strategize': 'strategychat',  // Strategize maps to Strategy Chat
+    };
+    const legacyActionId = actionMapping[actionId] || actionId;
+
     // Execute action for each selected player
     selectedPlayers.forEach(card => {
       const targetId = parseInt(card.dataset.playerId);
       if (global.socialApplyAction) {
-        global.socialApplyAction(you.id, targetId, actionId);
+        global.socialApplyAction(you.id, targetId, legacyActionId);
       }
     });
 
@@ -409,7 +627,8 @@
         const p = global.getP?.(parseInt(c.dataset.playerId));
         return p?.name || 'Unknown';
       }).join(', ');
-      entry.textContent = `${selectedAction.textContent.trim()} → ${targetNames}`;
+      const actionLabel = selectedAction.querySelector('.action-label')?.textContent || actionId;
+      entry.textContent = `${actionLabel} → ${targetNames}`;
       feedback.insertBefore(entry, feedback.firstChild);
     }
 
@@ -418,8 +637,12 @@
     selectedAction.classList.remove('selected');
     updateExecuteButton();
 
+    // Refresh action menu to update costs/availability
+    populateActionMenu();
+
     // Check if energy depleted
-    if (res.energy <= 0) {
+    const updatedRes = getResourceState();
+    if (updatedRes.energy <= 0) {
       setTimeout(() => {
         closeSocializeModal(true);
       }, 800);
