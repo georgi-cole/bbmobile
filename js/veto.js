@@ -345,6 +345,25 @@
       global.ProgressionEvents.onPOVWin(global.game.vetoHolder, participants);
     }
 
+    // Dispatch standardized bb:pov:finished event
+    try{
+      var povResult = {
+        winnerId: global.game.vetoHolder,
+        participants: eligible || [],
+        scores: arr
+      };
+      if(typeof window.CustomEvent === 'function'){
+        window.dispatchEvent(new CustomEvent('bb:pov:finished', {
+          detail: {
+            winnerId: povResult.winnerId,
+            result: povResult
+          }
+        }));
+      }
+    }catch(e){
+      console.warn('[veto] failed to dispatch bb:pov:finished event', e);
+    }
+
     try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
 
     // Build top-3 reveal sequence

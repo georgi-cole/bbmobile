@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: bb:pov:finished Event Dispatch</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #0d151f; color: #e3ecf5; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { color: #83bfff; }
+    .test-section { background: #132132; border: 1px solid #24364b; border-radius: 10px; padding: 20px; margin: 20px 0; }
+    .pass { color: #77d58d; font-weight: bold; }
+    .fail { color: #ff6d6d; font-weight: bold; }
+    .info { color: #83bfff; }
+    button { background: #3563a7; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+    button:hover { background: #4876c2; }
+    .log { background: #0a0f16; padding: 10px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 400px; overflow-y: auto; }
+    .event-detail { background: #162435; padding: 10px; margin: 10px 0; border-radius: 6px; }
+    pre { margin: 5px 0; color: #95a9c0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: bb:pov:finished Event Dispatch</h1>
+    <p>Verifies that the standardized <code>bb:pov:finished</code> event is dispatched after POV competition results are stored.</p>
+
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <button onclick="runTest()">Run Test</button>
+      <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Event Details</h2>
+      <div id="event-details"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script src="js/veto.js"></script>
+  <script>
+    let eventCaptured = null;
+    let logs = [];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-20).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    // Set up event listener
+    window.addEventListener('bb:pov:finished', function(event) {
+      eventCaptured = event;
+      log('✓ bb:pov:finished event received!', 'pass');
+      log('Event detail: ' + JSON.stringify(event.detail), 'info');
+    });
+
+    function setupMockGame() {
+      // Set up minimal game state needed for veto competition
+      window.game = {
+        phase: 'veto_comp',
+        humanId: 1,
+        hohId: 1,
+        nominees: [2, 3],
+        lastCompScores: new Map(),
+        week: 1,
+        cfg: { tVeto: 40 },
+        players: [
+          { id: 1, name: 'Alice', human: true, evicted: false, compBeast: 0.7 },
+          { id: 2, name: 'Bob', human: false, evicted: false, compBeast: 0.5 },
+          { id: 3, name: 'Charlie', human: false, evicted: false, compBeast: 0.6 },
+          { id: 4, name: 'Diana', human: false, evicted: false, compBeast: 0.8 }
+        ]
+      };
+
+      window.game.__vetoPlayers = [1, 2, 3, 4];
+
+      // Mock helper functions
+      window.getP = function(id) {
+        return window.game.players.find(p => p.id === id);
+      };
+
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted);
+      };
+
+      window.safeName = function(id) {
+        const p = window.getP(id);
+        return p ? p.name : String(id);
+      };
+
+      window.rng = Math.random;
+
+      // Mock other required functions
+      window.updateHud = function() {};
+      window.showTriSlotReveal = null; // Force fallback to original implementation
+      window.showCard = function() {};
+      window.cardQueueWaitIdle = function() { return Promise.resolve(); };
+      window.startVetoCeremony = function() { log('startVetoCeremony called', 'info'); };
+      window.startFinal4Eviction = function() { log('startFinal4Eviction called', 'info'); };
+      window.addLog = function(msg) { log('Game log: ' + msg, 'info'); };
+
+      // Add some mock scores
+      window.game.lastCompScores.set(1, 15);
+      window.game.lastCompScores.set(2, 12);
+      window.game.lastCompScores.set(3, 18); // Charlie wins
+      window.game.lastCompScores.set(4, 10);
+
+      log('Mock game setup complete', 'info');
+    }
+
+    async function runTest() {
+      eventCaptured = null;
+      logs = [];
+      log('Starting test...', 'info');
+      
+      setupMockGame();
+      
+      // Run the veto competition finish function
+      try {
+        log('Calling finishVetoComp()...', 'info');
+        window.finishVetoComp();
+        
+        // Wait a bit for async operations
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Check results
+        const results = document.getElementById('results');
+        const eventDetails = document.getElementById('event-details');
+        const tests = [];
+        
+        // Test 1: Event was dispatched
+        tests.push({
+          name: 'bb:pov:finished event dispatched',
+          pass: eventCaptured !== null,
+          expected: 'Event should be dispatched',
+          actual: eventCaptured ? 'Event captured' : 'No event received'
+        });
+        
+        // Test 2: Event has detail property
+        tests.push({
+          name: 'Event has detail property',
+          pass: eventCaptured && eventCaptured.detail !== undefined,
+          expected: 'detail property exists',
+          actual: eventCaptured ? 'detail exists' : 'No event'
+        });
+        
+        // Test 3: Event detail has winnerId
+        tests.push({
+          name: 'Event detail includes winnerId',
+          pass: eventCaptured && eventCaptured.detail && eventCaptured.detail.winnerId !== undefined,
+          expected: 'winnerId in detail',
+          actual: eventCaptured && eventCaptured.detail ? `winnerId=${eventCaptured.detail.winnerId}` : 'Missing'
+        });
+        
+        // Test 4: Event detail has result
+        tests.push({
+          name: 'Event detail includes result object',
+          pass: eventCaptured && eventCaptured.detail && eventCaptured.detail.result !== undefined,
+          expected: 'result object in detail',
+          actual: eventCaptured && eventCaptured.detail && eventCaptured.detail.result ? 'result exists' : 'Missing'
+        });
+        
+        // Test 5: winnerId matches expected winner (Charlie = 3)
+        tests.push({
+          name: 'winnerId matches actual winner',
+          pass: eventCaptured && eventCaptured.detail && eventCaptured.detail.winnerId === 3,
+          expected: 'winnerId should be 3 (Charlie)',
+          actual: eventCaptured && eventCaptured.detail ? `winnerId=${eventCaptured.detail.winnerId}` : 'N/A'
+        });
+        
+        // Test 6: Result includes participants
+        tests.push({
+          name: 'Result includes participants array',
+          pass: eventCaptured && eventCaptured.detail && eventCaptured.detail.result && 
+                Array.isArray(eventCaptured.detail.result.participants),
+          expected: 'participants array in result',
+          actual: eventCaptured && eventCaptured.detail && eventCaptured.detail.result && 
+                  Array.isArray(eventCaptured.detail.result.participants) ? 
+                  `${eventCaptured.detail.result.participants.length} participants` : 'Missing'
+        });
+
+        // Display results
+        results.innerHTML = tests.map(t => `
+          <div style="padding: 10px; margin: 5px 0; background: ${t.pass ? '#1a3329' : '#332020'}; border-left: 4px solid ${t.pass ? '#77d58d' : '#ff6d6d'}; border-radius: 4px;">
+            <div style="font-weight: 700; color: ${t.pass ? '#77d58d' : '#ff6d6d'};">
+              ${t.pass ? '✓' : '✗'} ${t.name}
+            </div>
+            <div style="font-size: 0.85rem; color: #95a9c0; margin-top: 4px;">
+              Expected: ${t.expected}<br>
+              Actual: ${t.actual}
+            </div>
+          </div>
+        `).join('');
+
+        // Display event details
+        if (eventCaptured && eventCaptured.detail) {
+          eventDetails.innerHTML = `
+            <div class="event-detail">
+              <h3>Captured Event Detail:</h3>
+              <pre>${JSON.stringify(eventCaptured.detail, null, 2)}</pre>
+            </div>
+          `;
+        } else {
+          eventDetails.innerHTML = '<div class="fail">No event captured</div>';
+        }
+
+        const passCount = tests.filter(t => t.pass).length;
+        const totalCount = tests.length;
+        log(`Test complete: ${passCount}/${totalCount} tests passed`, passCount === totalCount ? 'pass' : 'fail');
+        
+      } catch (error) {
+        log('Test error: ' + error.message, 'fail');
+        console.error(error);
+      }
+    }
+
+    function clearResults() {
+      eventCaptured = null;
+      logs = [];
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('event-details').innerHTML = '';
+      updateLog();
+      log('Results cleared', 'info');
+    }
+
+    // Initialize
+    log('Test page loaded. Click "Run Test" to begin.', 'info');
+  </script>
+</body>
+</html>
