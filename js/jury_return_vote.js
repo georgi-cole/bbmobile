@@ -322,15 +322,18 @@
     
     panel.appendChild(container);
 
-    // Add pulse animation
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes pulse {
-        0%, 100% { opacity: 0.3; transform: scale(1); }
-        50% { opacity: 0.6; transform: scale(1.05); }
-      }
-    `;
-    document.head.appendChild(style);
+    // Add pulse animation only once
+    if (!document.getElementById('jury-return-vote-pulse-style')) {
+      const style = document.createElement('style');
+      style.id = 'jury-return-vote-pulse-style';
+      style.textContent = `
+        @keyframes pulse {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.05); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     // Animate bars for voteSecs seconds
     let running = true;
