@@ -331,23 +331,66 @@
     return modifiers;
   }
   
-  function calculateChance(baseChance, modifiers) {
+  /**
+   * Unified success calculation function
+   * Combines: BaseChance + Affinity adjustment (±15%) + Influence uplift + Info boost - Risk penalties
+   * Clamped to [5%, 95%]
+   */
+  function calculateChance(baseChance, modifiers, actor, target, infoBoost = 0) {
     let chance = baseChance;
     
-    // Apply additive modifiers
+    // Apply additive modifiers (existing)
     const additiveTotal = modifiers
       .filter(m => m.type === 'additive')
       .reduce((sum, m) => sum + m.value, 0);
     chance += additiveTotal;
     
-    // Apply multiplicative modifiers
+    // Apply multiplicative modifiers (existing)
     const multiplicativeTotal = modifiers
       .filter(m => m.type === 'multiplicative')
       .reduce((product, m) => product * (1 + m.value), 1);
     chance *= multiplicativeTotal;
     
-    // Clamp to 0-100%
-    return Math.max(0, Math.min(1, chance));
+    // Apply Influence uplift (+0.25% per 1 point of I[A→B])
+    if(actor && target && global.SocialManeuvers?.SocialResources) {
+      const influence = global.SocialManeuvers.SocialResources.getInfluence(actor.id, target.id);
+      if(influence > 0) {
+        const influenceBonus = influence * 0.0025; // 0.25% per point
+        chance += influenceBonus;
+        console.info(`[unified-success] Influence bonus: ${influence.toFixed(1)} pts → +${(influenceBonus * 100).toFixed(1)}%`);
+      }
+    }
+    
+    // Apply Information boost
+    if(infoBoost > 0) {
+      chance += infoBoost;
+      console.info(`[unified-success] Information boost: +${(infoBoost * 100).toFixed(1)}%`);
+    }
+    
+    // Clamp to [5%, 95%] per spec
+    const clamped = Math.max(0.05, Math.min(0.95, chance));
+    
+    // Telemetry
+    if(global.game && !global.game.__successCalcTelemetry) {
+      global.game.__successCalcTelemetry = [];
+    }
+    if(global.game?.__successCalcTelemetry) {
+      const entry = {
+        timestamp: Date.now(),
+        baseChance,
+        additiveTotal,
+        multiplicativeTotal,
+        influenceBonus: actor && target ? global.SocialManeuvers?.SocialResources?.getInfluence(actor.id, target.id) || 0 : 0,
+        infoBoost,
+        finalChance: clamped
+      };
+      global.game.__successCalcTelemetry.push(entry);
+      if(global.game.__successCalcTelemetry.length > 100) {
+        global.game.__successCalcTelemetry.shift();
+      }
+    }
+    
+    return clamped;
   }
   
   function evaluateStates(actor, target, stateCheckers) {
@@ -361,7 +404,7 @@
     return states;
   }
   
-  function getActionEvaluation(actionId, actor, target, action) {
+  function getActionEvaluation(actionId, actor, target, action, infoBoost = 0) {
     const config = getActionConfig(actionId);
     if (!config) {
       return {
@@ -380,8 +423,8 @@
     // Calculate modifiers
     const modifiers = calculateModifiers(actor, target, config.modifiers, action.category);
     
-    // Calculate final chance
-    const finalChance = calculateChance(config.baseChance, modifiers);
+    // Calculate final chance using unified success function
+    const finalChance = calculateChance(config.baseChance, modifiers, actor, target, infoBoost);
     
     // Evaluate states
     const states = evaluateStates(actor, target, config.states);

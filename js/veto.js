@@ -332,6 +332,11 @@
       W.wins = W.wins || {};
       W.stats.vetoWins = (W.stats.vetoWins||0)+1;
       W.wins.veto = (W.wins.veto||0)+1;
+      
+      // Record weekly event for social mechanics
+      if(global.SocialManeuvers?.SocialResources) {
+        global.SocialManeuvers.SocialResources.recordWeeklyEvent(winner, 'povWin', true);
+      }
     }
 
     // Hook: Log XP for POV win
@@ -742,6 +747,15 @@
       var savedId = (typeof decision.savedId==='number') ? decision.savedId : g.vetoHolder;
       var savedName = safeName(savedId);
       g.vetoSavedId = savedId;
+
+      // Record weekly event for social mechanics (saved with POV)
+      if(global.SocialManeuvers?.SocialResources) {
+        global.SocialManeuvers.SocialResources.recordWeeklyEvent(savedId, 'savedWithPov', true);
+        // Also record for the veto holder if they saved someone else
+        if(savedId !== g.vetoHolder) {
+          global.SocialManeuvers.SocialResources.recordWeeklyEvent(g.vetoHolder, 'savedWithPov', true);
+        }
+      }
 
       // Set pendingSave state - NOM label should still show
       var savedP = getP(savedId);
