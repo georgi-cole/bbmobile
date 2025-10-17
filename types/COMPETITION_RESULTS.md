@@ -101,9 +101,11 @@ game.__lastHOHResult = hohResult;
 
 ### Type Guard Usage
 
-```typescript
-import { isCompetitionResult } from './types/competition-results';
+### Importing
 
+**TypeScript usage:**
+```typescript
+import { isCompetitionResult } from 'types/competition-results';
 function handleCompetitionComplete(result: unknown) {
   if (isCompetitionResult(result)) {
     console.log(`${result.kind} won by player ${result.winnerId}`);
