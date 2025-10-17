@@ -11,7 +11,7 @@
     "test:runtime": "node scripts/test-runtime-validation.mjs",
     "test:e2e": "node scripts/test-e2e-competitions.mjs",
     "test:jurors": "node scripts/test-jurors-return-challenge.mjs",
-    "test:competition-results": "node types/test-competition-results.mjs",
+    "test:competition-results": "npm run build:types && node types/test-competition-results.mjs",
     "test:playwright": "playwright test",
     "test:playwright:ui": "playwright test --ui",
     "test:playwright:headed": "playwright test --headed",
