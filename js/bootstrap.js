@@ -592,9 +592,11 @@
         }
       }
       
+      // Populate UI inputs with loaded config
       loadSettingsIntoUI(global.game.cfg);
-      applyInputsToConfig();
-      saveSettings();
+      // NOTE: Don't call applyInputsToConfig() and saveSettings() on initial boot
+      // as they would read from UI defaults and overwrite the loaded config.
+      // They should only be called when user actually changes settings.
 
       buildCast();
 
