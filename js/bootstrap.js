@@ -584,7 +584,7 @@
             global.cfg = global.game.cfg;
           }
         } else {
-          global.game.cfg = Object.assign(global.game.cfg || {}, getDefaultCfg());
+          global.game.cfg = Object.assign({}, getDefaultCfg(), global.game.cfg || {});
           global.cfg = global.game.cfg;
           // Save to both keys
           StorageSafe.set('bb_cfg_v2', JSON.stringify(global.game.cfg));
