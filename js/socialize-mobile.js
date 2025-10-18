@@ -7,66 +7,85 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
 
-  // Resource state management - use SocialManeuvers store if available
+  // Resource state management - thin view over canonical SocialManeuvers store
   function getResourceState() {
     const g = global.game || {};
     const humanId = g.humanId;
     
-    // Use SocialManeuvers resource system if available
-    if (global.SocialManeuvers && typeof global.SocialManeuvers.getResources === 'function') {
+    // Always use canonical SocialManeuvers resource system
+    if (global.SocialManeuvers?.SocialResources) {
       try {
-        const resources = global.SocialManeuvers.getResources(humanId);
+        const resources = global.SocialManeuvers.SocialResources.getAll(humanId);
         return {
           energy: resources.energy || 0,
           influence: resources.influence || 0,
           information: resources.information || 0
         };
       } catch(e) {
-        console.warn('[socialize-mobile] Failed to get SocialManeuvers resources:', e);
+        console.error('[socialize-mobile] Failed to get SocialManeuvers resources:', e);
+        // Initialize if not yet seeded
+        if (global.SocialManeuvers?.SocialResources?.init) {
+          global.SocialManeuvers.SocialResources.init(humanId);
+          const resources = global.SocialManeuvers.SocialResources.getAll(humanId);
+          return {
+            energy: resources.energy || 0,
+            influence: resources.influence || 0,
+            information: resources.information || 0
+          };
+        }
       }
     }
     
-    // Fallback to local state
-    if (!g.__socialResources) {
-      g.__socialResources = {
-        energy: 3,        // Used for all actions
-        influence: 0,     // Gained from successful positive interactions
-        information: 0    // Gained from successful negative interactions
-      };
-    }
-    return g.__socialResources;
+    // No fallback - always require canonical store
+    console.warn('[socialize-mobile] SocialManeuvers not available - returning zeros');
+    return { energy: 0, influence: 0, information: 0 };
   }
 
   function updateResourceState(delta) {
     const g = global.game || {};
     const humanId = g.humanId;
     
-    // Use SocialManeuvers resource system if available
-    if (global.SocialManeuvers && typeof global.SocialManeuvers.updateResources === 'function') {
+    // Always use canonical SocialManeuvers resource system
+    if (global.SocialManeuvers?.SocialResources) {
       try {
-        global.SocialManeuvers.updateResources(humanId, delta);
+        // Use earn/spend methods from canonical store
+        if (delta.energy < 0 || delta.influence < 0 || delta.information < 0) {
+          // Spending resources
+          const costs = {};
+          if (delta.energy < 0) costs.energy = -delta.energy;
+          if (delta.influence < 0) costs.influence = -delta.influence;
+          if (delta.information < 0) costs.information = -delta.information;
+          global.SocialManeuvers.SocialResources.spend(humanId, costs);
+        } else {
+          // Earning resources
+          const gains = {};
+          if (delta.energy > 0) gains.energy = delta.energy;
+          if (delta.influence > 0) gains.influence = delta.influence;
+          if (delta.information > 0) gains.information = delta.information;
+          global.SocialManeuvers.SocialResources.earn(humanId, gains);
+        }
         updateHUDDisplay();
+        
+        // Trigger resources-changed event for live updates
+        if (typeof global.dispatchEvent === 'function') {
+          const event = new CustomEvent('social-resources-changed', {
+            detail: { playerId: humanId, delta, resources: getResourceState() }
+          });
+          global.dispatchEvent(event);
+        }
         return;
       } catch(e) {
-        console.warn('[socialize-mobile] Failed to update SocialManeuvers resources:', e);
+        console.error('[socialize-mobile] Failed to update SocialManeuvers resources:', e);
       }
     }
     
-    // Fallback to local state
-    const res = getResourceState();
-    res.energy = Math.max(0, res.energy + (delta.energy || 0));
-    res.influence = Math.max(0, res.influence + (delta.influence || 0));
-    res.information = Math.max(0, res.information + (delta.information || 0));
-    updateHUDDisplay();
+    console.error('[socialize-mobile] Cannot update resources - SocialManeuvers not available');
   }
 
   function resetWeeklyResources() {
-    const g = global.game || {};
-    g.__socialResources = {
-      energy: 3,
-      influence: 0,
-      information: 0
-    };
+    // No-op: weekly reset is handled by SocialManeuvers.SocialResources.resetWeekly
+    // This is called from onSocialPhaseStart with proper weekly bonuses/penalties
+    console.info('[socialize-mobile] Weekly reset handled by canonical SocialManeuvers store');
     updateHUDDisplay();
   }
 
@@ -90,7 +109,7 @@
         <div class="socialize-hud-resources">
           <div class="resource-badge" data-tip="Energy: Used for all social actions">
             <span class="resource-icon">⚡</span>
-            <span class="resource-value" id="hudEnergy">3</span>
+            <span class="resource-value" id="hudEnergy">5</span>
           </div>
           <div class="resource-badge" data-tip="Influence: Gained from positive interactions">
             <span class="resource-icon">🤝</span>
@@ -111,6 +130,11 @@
     // Attach event listeners
     $('#socializeOpenBtn')?.addEventListener('click', openSocializeModal);
     $('#resourceHelpBtn')?.addEventListener('click', showResourceHelp);
+    
+    // Subscribe to resource-changed events for live updates
+    global.addEventListener('social-resources-changed', (event) => {
+      updateHUDDisplay();
+    });
 
     return launcher;
   }
@@ -153,7 +177,7 @@
           <span class="help-icon">⚡</span>
           <div>
             <strong>Energy</strong>
-            <p>Used for all social actions. Start with 3 per week. Actions cost 1 energy each.</p>
+            <p>Used for all social actions. Start with 5 per week (+ weekly bonuses). Actions cost 1-3 energy each.</p>
           </div>
         </div>
         <div class="help-item">
@@ -358,6 +382,9 @@
         }
         card.classList.toggle('selected');
         updateExecuteButton();
+        
+        // Refresh action menu to show evaluations for selected target
+        populateActionMenu();
       });
 
       picker.appendChild(card);
@@ -390,144 +417,200 @@
     if (!menu) return;
 
     const res = getResourceState();
+    const g = global.game || {};
+    const humanId = g.humanId;
+    const you = global.getP?.(humanId);
+    
+    // Get selected target for evaluation
+    const selectedCard = $('.player-card.selected');
+    const targetId = selectedCard ? parseInt(selectedCard.dataset.playerId) : null;
+    const target = targetId ? global.getP?.(targetId) : null;
 
-    // Unified action catalog (deduped - merged Strategy Chat/Late Night Talk → Strategize)
-    const actions = [
-      { 
-        id: 'alliance', 
-        label: 'Form Alliance', 
-        icon: '🤝', 
-        cost: { energy: 1 },
+    // Use canonical action catalog from SocialManeuvers, or fallback to unified catalog
+    let actions = [];
+    if (global.SocialManeuvers?.SOCIAL_ACTIONS) {
+      // Use canonical catalog from social-maneuvers.js
+      actions = global.SocialManeuvers.SOCIAL_ACTIONS.map(action => ({
+        id: action.id,
+        label: action.label,
+        icon: getActionIcon(action.id),
+        cost: action.costs || { energy: action.cost || 1 },
         require: {},
-        category: 'friendly',
-        description: 'Build a strong alliance with mutual trust and safety.'
-      },
-      { 
-        id: 'strategize', 
-        label: 'Strategize', 
-        icon: '💡', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'strategic',
-        description: 'Deep strategic conversation to align game plans.'
-      },
-      { 
-        id: 'gift', 
-        label: 'Give Gift', 
-        icon: '🎁', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Give a thoughtful gift to improve relationship.'
-      },
-      { 
-        id: 'flirt', 
-        label: 'Flirt', 
-        icon: '😊', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Light romantic or friendly flirtation.'
-      },
-      { 
-        id: 'workout', 
-        label: 'Workout Together', 
-        icon: '💪', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Bond through physical activity and shared fitness.'
-      },
-      { 
-        id: 'cook', 
-        label: 'Cook Meal', 
-        icon: '🍳', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Prepare and share a meal together.'
-      },
-      { 
-        id: 'apologize', 
-        label: 'Apologize', 
-        icon: '🙏', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Mend fences with a sincere apology.'
-      },
-      { 
-        id: 'compliment', 
-        label: 'Compliment', 
-        icon: '✨', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'friendly',
-        description: 'Give a genuine compliment. May refund energy!'
-      },
-      { 
-        id: 'mediate', 
-        label: 'Mediate', 
-        icon: '⚖️', 
-        cost: { energy: 1 },
-        require: { influence: 10 },
-        category: 'strategic',
-        description: 'Mediate conflict between others. Requires influence.'
-      },
-      { 
-        id: 'interrogate', 
-        label: 'Interrogate', 
-        icon: '🔍', 
-        cost: { energy: 1 },
-        require: { influence: 5 },
-        category: 'strategic',
-        description: 'Press for information. Requires influence.'
-      },
-      { 
-        id: 'prank', 
-        label: 'Prank', 
-        icon: '😜', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'risky',
-        description: 'Pull a prank - might backfire or strengthen bonds.'
-      },
-      { 
-        id: 'taunt', 
-        label: 'Taunt', 
-        icon: '😤', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'aggressive',
-        description: 'Taunt and provoke - damages relationship.'
-      },
-      { 
-        id: 'confront', 
-        label: 'Confront', 
-        icon: '⚔️', 
-        cost: { energy: 1 },
-        require: {},
-        category: 'aggressive',
-        description: 'Direct confrontation - air grievances.'
-      }
-    ];
+        category: action.category,
+        description: action.description
+      }));
+    } else {
+      // Fallback unified catalog (merged + deduped)
+      actions = [
+        { 
+          id: 'smalltalk', 
+          label: 'Small Talk', 
+          icon: '💬', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Light conversation to build rapport'
+        },
+        { 
+          id: 'strategize', 
+          label: 'Strategize', 
+          icon: '💡', 
+          cost: { energy: 2 },
+          require: {},
+          category: 'strategic',
+          description: 'Deep strategic conversation to align game plans (includes Strategy Chat/Late Night Talk)'
+        },
+        { 
+          id: 'confide', 
+          label: 'Confide', 
+          icon: '🤫', 
+          cost: { energy: 2 },
+          require: {},
+          category: 'friendly',
+          description: 'Share personal thoughts and build trust'
+        },
+        { 
+          id: 'interrogate', 
+          label: 'Interrogate', 
+          icon: '🔍', 
+          cost: { energy: 2 },
+          require: {},
+          category: 'strategic',
+          description: 'Press for information about plans'
+        },
+        { 
+          id: 'compliment', 
+          label: 'Compliment', 
+          icon: '✨', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Give genuine praise. May refund energy!'
+        },
+        { 
+          id: 'mediate', 
+          label: 'Mediate', 
+          icon: '⚖️', 
+          cost: { energy: 2 },
+          require: { influence: 1, information: 1 },
+          category: 'strategic',
+          description: 'Mediate conflict between others. Requires influence and information.'
+        },
+        { 
+          id: 'observe', 
+          label: 'Observe', 
+          icon: '👁️', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'strategic',
+          description: 'Watch and listen quietly'
+        },
+        { 
+          id: 'confront', 
+          label: 'Confront', 
+          icon: '⚔️', 
+          cost: { energy: 3 },
+          require: {},
+          category: 'aggressive',
+          description: 'Direct confrontation - air grievances'
+        },
+        { 
+          id: 'alliance', 
+          label: 'Form Alliance', 
+          icon: '🤝', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Build a strong alliance with mutual trust and safety.'
+        },
+        { 
+          id: 'gift', 
+          label: 'Give Gift', 
+          icon: '🎁', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Give a thoughtful gift to improve relationship.'
+        },
+        { 
+          id: 'flirt', 
+          label: 'Flirt', 
+          icon: '😊', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Light romantic or friendly flirtation.'
+        },
+        { 
+          id: 'workout', 
+          label: 'Workout', 
+          icon: '💪', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Bond through physical activity and shared fitness (includes Workout Together)'
+        },
+        { 
+          id: 'cook', 
+          label: 'Cook', 
+          icon: '🍳', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Prepare and share a meal together (includes Cook Meal)'
+        },
+        { 
+          id: 'apologize', 
+          label: 'Apologize', 
+          icon: '🙏', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Mend fences with a sincere apology.'
+        },
+        { 
+          id: 'prank', 
+          label: 'Prank', 
+          icon: '😜', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'risky',
+          description: 'Pull a prank - might backfire or strengthen bonds.'
+        },
+        { 
+          id: 'taunt', 
+          label: 'Taunt', 
+          icon: '😤', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'aggressive',
+          description: 'Taunt and provoke - damages relationship.'
+        }
+      ];
+    }
 
     menu.innerHTML = '';
 
     actions.forEach(action => {
       const energyCost = action.cost.energy || 0;
-      const influenceReq = action.require.influence || 0;
-      const informationReq = action.require.information || 0;
+      const influenceReq = action.cost.influence || action.require.influence || 0;
+      const informationReq = action.cost.information || action.require.information || 0;
       
       const canAfford = res.energy >= energyCost && 
                         res.influence >= influenceReq && 
                         res.information >= informationReq;
       
+      // Get evaluation from SocialActionConfig if available and target selected
+      let evaluation = null;
+      if (target && global.SocialActionConfig?.getActionEvaluation) {
+        evaluation = global.SocialActionConfig.getActionEvaluation(action.id, you, target, action);
+      }
+      
       const btn = document.createElement('button');
       btn.className = `action-btn action-${action.category}`;
       btn.dataset.actionId = action.id;
       
-      if (!canAfford) {
+      if (!canAfford || (evaluation && !evaluation.available)) {
         btn.classList.add('disabled');
         btn.disabled = true;
       }
@@ -540,6 +623,8 @@
         if (res.influence < influenceReq) missing.push(`Need ${influenceReq - res.influence} more 🤝`);
         if (res.information < informationReq) missing.push(`Need ${informationReq - res.information} more 💡`);
         disabledReason = missing.join(', ');
+      } else if (evaluation && !evaluation.available) {
+        disabledReason = evaluation.gateReasons?.join('; ') || 'Requirements not met';
       }
 
       btn.innerHTML = `
@@ -553,14 +638,14 @@
           ${informationReq > 0 ? `<span class="cost-badge cost-information ${res.information < informationReq ? 'insufficient' : ''}" title="Information required">💡${informationReq}</span>` : ''}
         </div>
         <div class="action-description">${action.description}</div>
-        ${!canAfford ? `<div class="action-disabled-reason">${disabledReason}</div>` : ''}
+        ${!canAfford || disabledReason ? `<div class="action-disabled-reason">${disabledReason}</div>` : ''}
       `;
 
       // Add tooltip
       btn.title = action.description + (disabledReason ? `\n\n${disabledReason}` : '');
 
       btn.addEventListener('click', () => {
-        if (!canAfford) return;
+        if (!canAfford || (evaluation && !evaluation.available)) return;
         
         // Clear other selections
         $$('.action-btn.selected').forEach(b => b.classList.remove('selected'));
@@ -570,6 +655,34 @@
 
       menu.appendChild(btn);
     });
+  }
+  
+  // Helper function to get action icons
+  function getActionIcon(actionId) {
+    const iconMap = {
+      smalltalk: '💬',
+      strategize: '💡',
+      confide: '🤫',
+      interrogate: '🔍',
+      compliment: '✨',
+      confront: '⚔️',
+      mediate: '⚖️',
+      observe: '👁️',
+      alliance: '🤝',
+      gift: '🎁',
+      flirt: '😊',
+      workout: '💪',
+      cook: '🍳',
+      apologize: '🙏',
+      prank: '😜',
+      taunt: '😤',
+      // High-impact actions
+      spread_rumor: '📢',
+      expose_secret: '🎯',
+      group_hangout: '👥',
+      form_alliance: '🤝'
+    };
+    return iconMap[actionId] || '🎭';
   }
 
   function updateExecuteButton() {
@@ -593,48 +706,144 @@
       return;
     }
 
-    let actionId = selectedAction.dataset.actionId;
+    const actionId = selectedAction.dataset.actionId;
     const g = global.game || {};
     const you = global.getP?.(g.humanId);
 
     if (!you) return;
 
-    // Map unified actions to legacy social.js actions
-    const actionMapping = {
-      'strategize': 'strategychat',  // Strategize maps to Strategy Chat
-    };
-    const legacyActionId = actionMapping[actionId] || actionId;
-
-    // Execute action for each selected player
-    selectedPlayers.forEach(card => {
-      const targetId = parseInt(card.dataset.playerId);
-      if (global.socialApplyAction) {
-        global.socialApplyAction(you.id, targetId, legacyActionId);
-      }
-    });
-
-    // Deduct energy
-    updateResourceState({ energy: -1 });
-
-    // Add to feedback
-    const feedback = $('#feedbackArea');
-    if (feedback) {
-      const placeholder = feedback.querySelector('.feedback-placeholder');
-      if (placeholder) placeholder.remove();
-
-      const entry = document.createElement('div');
-      entry.className = 'feedback-entry';
-      const targetNames = selectedPlayers.map(c => {
-        const p = global.getP?.(parseInt(c.dataset.playerId));
-        return p?.name || 'Unknown';
-      }).join(', ');
-      const actionLabel = selectedAction.querySelector('.action-label')?.textContent || legacyActionId;
-      entry.textContent = `${actionLabel} → ${targetNames}`;
-      feedback.insertBefore(entry, feedback.firstChild);
+    // Execute via canonical SocialManeuvers.executeAction if available
+    if (global.SocialManeuvers?.executeAction) {
+      selectedPlayers.forEach(card => {
+        const targetId = parseInt(card.dataset.playerId);
+        
+        try {
+          // Use canonical mechanics engine for execution
+          const result = global.SocialManeuvers.executeAction(you.id, targetId, actionId, []);
+          
+          // Dev telemetry (dev builds only)
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.group(`[socialize-mobile] Action executed: ${actionId}`);
+            console.log('Actor:', you.name, '(ID:', you.id, ')');
+            console.log('Target:', global.safeName?.(targetId) || targetId);
+            console.log('Success:', result.success);
+            if (result.outcome) {
+              console.log('Outcome:', result.outcome.type, '-', result.outcome.message);
+              console.log('Affinity change:', result.outcome.affinityChange);
+            }
+            if (result.resources) {
+              console.log('Resources after:', result.resources);
+            }
+            if (result.telemetry) {
+              console.log('Success chance:', `${(result.telemetry.finalChance * 100).toFixed(0)}%`);
+              console.log('Roll:', `${(result.telemetry.chanceRoll * 100).toFixed(0)}%`);
+            }
+            console.groupEnd();
+          }
+          
+          // Show feedback in UI
+          if (result.success) {
+            addFeedbackEntry(
+              selectedAction.querySelector('.action-label')?.textContent || actionId,
+              global.safeName?.(targetId) || 'Unknown',
+              result.outcome?.type || 'neutral',
+              result.outcome?.message || 'Action completed'
+            );
+          } else {
+            addFeedbackEntry(
+              selectedAction.querySelector('.action-label')?.textContent || actionId,
+              global.safeName?.(targetId) || 'Unknown',
+              'error',
+              result.message || result.reason || 'Action failed'
+            );
+          }
+        } catch (e) {
+          console.error('[socialize-mobile] Failed to execute action via SocialManeuvers:', e);
+          // Fallback to legacy system
+          executeLegacyAction(you.id, targetId, actionId, selectedAction);
+        }
+      });
+    } else {
+      // Fallback to legacy system if SocialManeuvers not available
+      selectedPlayers.forEach(card => {
+        const targetId = parseInt(card.dataset.playerId);
+        executeLegacyAction(you.id, targetId, actionId, selectedAction);
+      });
     }
 
     // Clear selections
     selectedPlayers.forEach(c => c.classList.remove('selected'));
+    selectedAction.classList.remove('selected');
+    updateExecuteButton();
+
+    // Refresh action menu to update costs/availability
+    populateActionMenu();
+
+    // Check if energy depleted
+    const updatedRes = getResourceState();
+    if (updatedRes.energy <= 0) {
+      setTimeout(() => {
+        closeSocializeModal(true);
+      }, 800);
+    }
+  }
+  
+  // Fallback to legacy social.js action system
+  function executeLegacyAction(actorId, targetId, actionId, actionBtn) {
+    // Map unified actions to legacy social.js actions
+    const actionMapping = {
+      'strategize': 'strategychat',  // Strategize maps to Strategy Chat
+      'smalltalk': 'gift',           // Small talk uses gift mechanic
+      'observe': 'gift',             // Observe uses gift mechanic
+    };
+    const legacyActionId = actionMapping[actionId] || actionId;
+    
+    if (global.socialApplyAction) {
+      global.socialApplyAction(actorId, targetId, legacyActionId);
+    }
+    
+    // Deduct energy manually (legacy system doesn't use canonical store)
+    updateResourceState({ energy: -1 });
+    
+    const actionLabel = actionBtn.querySelector('.action-label')?.textContent || legacyActionId;
+    const targetName = global.safeName?.(targetId) || 'Unknown';
+    addFeedbackEntry(actionLabel, targetName, 'neutral', 'Action completed (legacy)');
+  }
+  
+  // Add feedback entry to the UI
+  function addFeedbackEntry(actionLabel, targetName, outcomeType, message) {
+    const feedback = $('#feedbackArea');
+    if (!feedback) return;
+    
+    const placeholder = feedback.querySelector('.feedback-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const entry = document.createElement('div');
+    entry.className = `feedback-entry feedback-${outcomeType}`;
+    
+    const outcomeIcon = {
+      'positive': '✓',
+      'success': '✓',
+      'neutral': '→',
+      'negative': '✗',
+      'error': '⚠',
+      'backlash': '⚠'
+    }[outcomeType] || '•';
+    
+    entry.innerHTML = `
+      <span class="feedback-icon">${outcomeIcon}</span>
+      <span class="feedback-text">${actionLabel} → ${targetName}</span>
+      <span class="feedback-message">${message}</span>
+    `;
+    
+    feedback.insertBefore(entry, feedback.firstChild);
+    
+    // Limit feedback entries to 10
+    const entries = feedback.querySelectorAll('.feedback-entry');
+    if (entries.length > 10) {
+      entries[entries.length - 1].remove();
+    }
+  }
     selectedAction.classList.remove('selected');
     updateExecuteButton();
 
