@@ -1417,35 +1417,40 @@
         await global.cardQueueWaitIdle?.();
         
         let summaryShown = false;
-        if (typeof showSummaryPanel === 'function') {
+        
+        // Helper to try showing a summary method
+        function tryShowSummaryMethod(fn, successMsg, errorMsg) {
           try {
-            const summary = generatePhaseSummary();
-            showSummaryPanel(summary);
+            fn();
             summaryShown = true;
-            console.info('[social-maneuvers] ✓ Summary shown via showSummaryPanel');
+            console.info(successMsg);
           } catch (e) {
-            console.error('[social-maneuvers] showSummaryPanel failed:', e);
+            console.error(errorMsg, e);
           }
+        }
+        
+        if (typeof showSummaryPanel === 'function') {
+          tryShowSummaryMethod(
+            () => showSummaryPanel(generatePhaseSummary()),
+            '[social-maneuvers] ✓ Summary shown via showSummaryPanel',
+            '[social-maneuvers] showSummaryPanel failed:'
+          );
         }
         
         if (!summaryShown && typeof global.SocialManeuvers?.showEndOfPhaseSummary === 'function') {
-          try {
-            global.SocialManeuvers.showEndOfPhaseSummary();
-            summaryShown = true;
-            console.info('[social-maneuvers] ✓ Summary shown via showEndOfPhaseSummary');
-          } catch (e) {
-            console.error('[social-maneuvers] showEndOfPhaseSummary failed:', e);
-          }
+          tryShowSummaryMethod(
+            () => global.SocialManeuvers.showEndOfPhaseSummary(),
+            '[social-maneuvers] ✓ Summary shown via showEndOfPhaseSummary',
+            '[social-maneuvers] showEndOfPhaseSummary failed:'
+          );
         }
         
         if (!summaryShown && typeof global.SocialManeuvers?.presentPhaseSummary === 'function') {
-          try {
-            global.SocialManeuvers.presentPhaseSummary();
-            summaryShown = true;
-            console.info('[social-maneuvers] ✓ Summary shown via presentPhaseSummary');
-          } catch (e) {
-            console.error('[social-maneuvers] presentPhaseSummary failed:', e);
-          }
+          tryShowSummaryMethod(
+            () => global.SocialManeuvers.presentPhaseSummary(),
+            '[social-maneuvers] ✓ Summary shown via presentPhaseSummary',
+            '[social-maneuvers] presentPhaseSummary failed:'
+          );
         }
         
         await global.cardQueueWaitIdle?.();
