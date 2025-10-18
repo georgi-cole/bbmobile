@@ -34,7 +34,10 @@
     console.info('[social-launcher] No mount target found - creating fallback #tvOverlay on document.body');
     const fallback = document.createElement('div');
     fallback.id = 'tvOverlay';
-    fallback.style.cssText = 'position: absolute; inset: 0; pointer-events: none; z-index: 10;';
+    fallback.style.position = 'absolute';
+    fallback.style.inset = '0';
+    fallback.style.pointerEvents = 'none';
+    fallback.style.zIndex = '10';
     document.body.appendChild(fallback);
     
     return fallback;
