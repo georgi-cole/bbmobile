@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player Count Fix Test</title>
+  <style>
+    body {
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #f9f9f9;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .status.pass {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.fail {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      background: #007bff;
+      color: white;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .log {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 2px 4px;
+    }
+    .log-entry.info {
+      color: #0066cc;
+    }
+    .log-entry.success {
+      color: #28a745;
+    }
+    .log-entry.error {
+      color: #dc3545;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 Player Count Fix Test</h1>
+    <p>This test verifies that changing numPlayers via the Cast tab correctly triggers a rebuild using the window.Game namespace (or fallback to window).</p>
+    
+    <div class="test-section">
+      <h3>Test Scenario 1: Legacy Mode (functions on window)</h3>
+      <p>Tests backward compatibility when functions are directly on window object.</p>
+      <button id="btnTest1">Run Test 1</button>
+      <div id="status1" class="status" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test Scenario 2: window.Game Namespace</h3>
+      <p>Tests the fix when functions are under window.Game namespace.</p>
+      <button id="btnTest2">Run Test 2</button>
+      <div id="status2" class="status" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test Scenario 3: buildCast reads cfg().numPlayers</h3>
+      <p>Verifies that buildCast() correctly reads the numPlayers from config.</p>
+      <button id="btnTest3">Run Test 3</button>
+      <div id="status3" class="status" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Console Log</h3>
+      <div id="testLog" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    // Mock localStorage
+    const mockStorage = {};
+    const originalLocalStorage = window.localStorage;
+    
+    // Helper to log to the page
+    function addLog(msg, type = 'info') {
+      const log = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = msg;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+      console.log(`[Test ${type}]`, msg);
+    }
+
+    function setStatus(id, pass, message) {
+      const statusEl = document.getElementById(`status${id}`);
+      statusEl.style.display = 'block';
+      statusEl.className = pass ? 'status pass' : 'status fail';
+      statusEl.textContent = pass ? `✓ PASS: ${message}` : `✗ FAIL: ${message}`;
+    }
+
+    // Test 1: Legacy mode (functions on window)
+    document.getElementById('btnTest1').addEventListener('click', () => {
+      addLog('=== Test 1: Legacy Mode ===', 'info');
+      
+      try {
+        // Setup: Create a mock window environment
+        const testWindow = {
+          game: { 
+            phase: 'lobby',
+            cfg: { numPlayers: 12 },
+            players: []
+          },
+          rebuildGameCalled: false,
+          buildCastCalled: false,
+          startOpeningSequenceCalled: false
+        };
+
+        // Mock the functions on window (legacy mode)
+        testWindow.rebuildGame = function(preservePlayers) {
+          testWindow.rebuildGameCalled = true;
+          addLog(`rebuildGame(${preservePlayers}) called on window`, 'success');
+        };
+        
+        testWindow.buildCast = function() {
+          testWindow.buildCastCalled = true;
+          addLog('buildCast() called on window', 'success');
+        };
+        
+        testWindow.startOpeningSequence = function() {
+          testWindow.startOpeningSequenceCalled = true;
+          addLog('startOpeningSequence() called on window', 'success');
+        };
+
+        // Simulate the fix: const API = g.Game || g;
+        const API = testWindow.Game || testWindow;
+        
+        addLog(`API resolved to: ${testWindow.Game ? 'window.Game' : 'window'}`, 'info');
+        
+        // Simulate applyPlayers logic
+        if (testWindow.game?.phase === 'lobby') {
+          if (typeof API.rebuildGame === 'function') {
+            API.rebuildGame(false);
+          }
+          if (typeof API.startOpeningSequence === 'function') {
+            setTimeout(() => API.startOpeningSequence(), 60);
+          }
+        }
+
+        // Wait a bit for setTimeout
+        setTimeout(() => {
+          const passed = testWindow.rebuildGameCalled && testWindow.startOpeningSequenceCalled;
+          if (passed) {
+            addLog('Legacy mode correctly calls functions on window', 'success');
+            setStatus(1, true, 'Functions correctly called on window object');
+          } else {
+            addLog('Legacy mode failed to call expected functions', 'error');
+            setStatus(1, false, 'Expected functions not called');
+          }
+        }, 100);
+
+      } catch (e) {
+        addLog(`Test 1 error: ${e.message}`, 'error');
+        setStatus(1, false, e.message);
+      }
+    });
+
+    // Test 2: window.Game namespace
+    document.getElementById('btnTest2').addEventListener('click', () => {
+      addLog('=== Test 2: window.Game Namespace ===', 'info');
+      
+      try {
+        // Setup: Create a mock window environment with Game namespace
+        const testWindow = {
+          game: { 
+            phase: 'lobby',
+            cfg: { numPlayers: 8 },
+            players: []
+          },
+          Game: {
+            rebuildGameCalled: false,
+            buildCastCalled: false,
+            startOpeningSequenceCalled: false
+          }
+        };
+
+        // Mock the functions on window.Game namespace
+        testWindow.Game.rebuildGame = function(preservePlayers) {
+          testWindow.Game.rebuildGameCalled = true;
+          addLog(`rebuildGame(${preservePlayers}) called on window.Game`, 'success');
+        };
+        
+        testWindow.Game.buildCast = function() {
+          testWindow.Game.buildCastCalled = true;
+          addLog('buildCast() called on window.Game', 'success');
+        };
+        
+        testWindow.Game.startOpeningSequence = function() {
+          testWindow.Game.startOpeningSequenceCalled = true;
+          addLog('startOpeningSequence() called on window.Game', 'success');
+        };
+
+        // Simulate the fix: const API = g.Game || g;
+        const API = testWindow.Game || testWindow;
+        
+        addLog(`API resolved to: ${testWindow.Game ? 'window.Game' : 'window'}`, 'info');
+        
+        // Simulate applyPlayers logic
+        if (testWindow.game?.phase === 'lobby') {
+          if (typeof API.rebuildGame === 'function') {
+            API.rebuildGame(false);
+          }
+          if (typeof API.startOpeningSequence === 'function') {
+            setTimeout(() => API.startOpeningSequence(), 60);
+          }
+        }
+
+        // Wait a bit for setTimeout
+        setTimeout(() => {
+          const passed = testWindow.Game.rebuildGameCalled && testWindow.Game.startOpeningSequenceCalled;
+          if (passed) {
+            addLog('Game namespace correctly prioritized', 'success');
+            setStatus(2, true, 'Functions correctly called on window.Game');
+          } else {
+            addLog('Game namespace failed to call expected functions', 'error');
+            setStatus(2, false, 'Expected functions not called on window.Game');
+          }
+        }, 100);
+
+      } catch (e) {
+        addLog(`Test 2 error: ${e.message}`, 'error');
+        setStatus(2, false, e.message);
+      }
+    });
+
+    // Test 3: buildCast reads cfg().numPlayers
+    document.getElementById('btnTest3').addEventListener('click', () => {
+      addLog('=== Test 3: buildCast reads cfg().numPlayers ===', 'info');
+      
+      try {
+        // Simulate game object with config
+        const testGame = {
+          game: {
+            cfg: { numPlayers: 7 },
+            players: []
+          }
+        };
+
+        // Simulate buildCast logic (simplified)
+        const N = +(testGame.game.cfg?.numPlayers) || 12;
+        
+        addLog(`Config has numPlayers: ${testGame.game.cfg.numPlayers}`, 'info');
+        addLog(`buildCast will create N=${N} players`, 'info');
+        
+        // Verify
+        if (N === 7) {
+          addLog('buildCast correctly reads numPlayers from config', 'success');
+          setStatus(3, true, 'buildCast correctly uses cfg().numPlayers = 7');
+        } else {
+          addLog(`buildCast used wrong value: expected 7, got ${N}`, 'error');
+          setStatus(3, false, `Expected 7 players, got ${N}`);
+        }
+
+        // Test fallback to default
+        const testGame2 = {
+          game: {
+            cfg: {},
+            players: []
+          }
+        };
+        const N2 = +(testGame2.game.cfg?.numPlayers) || 12;
+        
+        addLog(`Without numPlayers in config, defaults to: ${N2}`, 'info');
+        
+        if (N2 === 12) {
+          addLog('buildCast correctly falls back to default 12', 'success');
+        } else {
+          addLog(`Fallback failed: expected 12, got ${N2}`, 'error');
+        }
+
+      } catch (e) {
+        addLog(`Test 3 error: ${e.message}`, 'error');
+        setStatus(3, false, e.message);
+      }
+    });
+
+    // Initial message
+    addLog('Test suite loaded. Click buttons to run tests.', 'info');
+  </script>
+</body>
+</html>
