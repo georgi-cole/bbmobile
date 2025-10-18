@@ -6,6 +6,9 @@
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
+  
+  // Flag to prevent re-entrant mounting during DOM mutations
+  let _isCurrentlyMounting = false;
 
   // Resource state management - thin view over canonical SocialManeuvers store
   function getResourceState() {
@@ -91,8 +94,15 @@
 
   // Ensure launcher exists in TV overlay
   function ensureSocializeLauncher() {
+    // Prevent re-entrant calls during mounting
+    if (_isCurrentlyMounting) {
+      return null;
+    }
+    
     let launcher = $('#socializeLauncher');
     if (launcher) return launcher;
+    
+    _isCurrentlyMounting = true;
 
     // Use SocialLauncherBootstrap.resolveMountTarget() if available
     let mountTarget;
@@ -105,6 +115,7 @@
     
     if (!mountTarget) {
       console.info('[socialize-mobile] No mount target available - observer will retry');
+      _isCurrentlyMounting = false;
       return null;
     }
 
@@ -148,7 +159,8 @@
     
     // Call updateHUDDisplay() after mounting
     updateHUDDisplay();
-
+    
+    _isCurrentlyMounting = false;
     return launcher;
   }
 
