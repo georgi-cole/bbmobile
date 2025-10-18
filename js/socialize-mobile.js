@@ -349,7 +349,7 @@
     document.body.style.overflow = '';
 
     // Remove backdrop
-    const backdrop = modal.querySelector('.socialize-modal-backdrop');
+    const backdrop = document.querySelector('.socialize-modal-backdrop');
     if (backdrop) {
       backdrop.remove();
     }
