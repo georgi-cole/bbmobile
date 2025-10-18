@@ -232,15 +232,23 @@
       return;
     }
 
+    // Pause phase timer when modal opens
+    if (global.SocialManeuvers?.pausePhaseTimer) {
+      global.SocialManeuvers.pausePhaseTimer();
+      console.info('[socialize-mobile] ⏸️ Phase timer paused (modal opened)');
+    }
+
     // Disable background scrolling
     document.body.style.overflow = 'hidden';
 
     const modal = document.createElement('div');
     modal.id = 'socializeModal';
     modal.className = 'socialize-modal';
+    
+    // Add high z-index backdrop to prevent click-through
     modal.innerHTML = `
-      <div class="socialize-modal-backdrop"></div>
-      <div class="socialize-modal-content">
+      <div class="socialize-modal-backdrop" style="z-index: 9998;"></div>
+      <div class="socialize-modal-content" style="z-index: 9999;">
         <button class="modal-close-btn" aria-label="Close">×</button>
         
         <div class="modal-header-hud">
@@ -315,6 +323,12 @@
   function closeSocializeModal(showToast = false) {
     const modal = $('#socializeModal');
     if (!modal) return;
+
+    // Resume phase timer when modal closes
+    if (global.SocialManeuvers?.resumePhaseTimer) {
+      global.SocialManeuvers.resumePhaseTimer();
+      console.info('[socialize-mobile] ▶️ Phase timer resumed (modal closed)');
+    }
 
     // Re-enable scrolling
     document.body.style.overflow = '';
@@ -785,7 +799,10 @@
     }
 
     // Execute via canonical SocialManeuvers.executeAction if available
-    if (global.SocialManeuvers?.executeAction) {
+    // When Social Maneuvers is enabled, ALWAYS use the engine (no legacy fallbacks)
+    const useSocialManeuvers = global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.executeAction;
+    
+    if (useSocialManeuvers) {
       if (isGroupAction) {
         // GROUP ACTION: Pass all targets as a single call
         const targetIds = selectedPlayers.map(card => parseInt(card.dataset.playerId));
@@ -881,13 +898,13 @@
             }
           } catch (e) {
             console.error('[socialize-mobile] Failed to execute action via SocialManeuvers:', e);
-            // Fallback to legacy system
-            executeLegacyAction(you.id, targetId, actionId, selectedAction);
+            global.addLog?.(`Error executing action: ${e.message}`, 'error');
           }
         });
       }
     } else {
-      // Fallback to legacy system if SocialManeuvers not available
+      // Fallback to legacy system only if SocialManeuvers is disabled
+      console.info('[socialize-mobile] Social Maneuvers disabled or unavailable - using legacy system');
       selectedPlayers.forEach(card => {
         const targetId = parseInt(card.dataset.playerId);
         executeLegacyAction(you.id, targetId, actionId, selectedAction);

@@ -39,6 +39,24 @@
     g.__weekPosInteractions = new Map();
     g.__weekNegInteractions = new Map();
     g.__actionCounts = new Map();
+    
+    // When Social Maneuvers is enabled, also reset weekly resources for all alive players
+    if(global.SocialManeuvers?.isEnabled?.()){
+      console.info('[social.js] Social Maneuvers enabled - resetting weekly resources for all alive players');
+      const alive = global.alivePlayers?.() || [];
+      alive.forEach(player => {
+        if(global.SocialManeuvers?.SocialResources?.resetWeekly){
+          global.SocialManeuvers.SocialResources.resetWeekly(player.id);
+        }
+      });
+      // Refresh HUD to show updated energy
+      if(global.updateHud){
+        global.updateHud();
+      }
+      if(global.SocializeMobile?.updateHUD){
+        global.SocializeMobile.updateHUD();
+      }
+    }
   }
   global.socialOnNewWeek = resetWeeklyCounters;
 
@@ -637,6 +655,23 @@
   function renderSocialPhase(panel){
     const g=global.game; if(!panel || !g) return;
 
+    // Hard-swap: when Social Maneuvers is enabled, use new UI only
+    if(global.SocialManeuvers?.isEnabled?.()){
+      console.info('[social.js] Social Maneuvers enabled - mounting launcher, hiding legacy UI');
+      panel.innerHTML=''; // Clear legacy panel
+      
+      // Mount Socialize launcher in TV overlay
+      if(global.SocializeMobile?.ensureSocializeLauncher){
+        global.SocializeMobile.ensureSocializeLauncher();
+        global.SocializeMobile.updateHUD?.();
+        global.SocializeMobile.show?.();
+      }
+      
+      // Do NOT run legacy simulation or decision cards
+      return;
+    }
+
+    // Legacy UI below (only runs when Social Maneuvers is disabled)
     panel.innerHTML='';
     const box=document.createElement('div'); box.className='minigame-host';
     box.innerHTML=`<h3>Social Intermission</h3>

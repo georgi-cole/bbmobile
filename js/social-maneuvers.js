@@ -1477,6 +1477,105 @@
   }
 
   // ============================================================================
+  // PHASE TIMER CONTROL
+  // ============================================================================
+  
+  let timerPaused = false;
+  let pausedTimerState = null;
+  
+  /**
+   * Pause the phase timer. Called when Socialize modal opens.
+   */
+  function pausePhaseTimer() {
+    if (timerPaused) {
+      console.info('[social-maneuvers] Timer already paused');
+      return;
+    }
+    
+    const g = global.game;
+    if (!g) return;
+    
+    // Store current timer state
+    if (g.endAt && typeof g.endAt === 'number') {
+      const now = Date.now();
+      const remaining = Math.max(0, g.endAt - now);
+      pausedTimerState = {
+        endAt: g.endAt,
+        remaining: remaining,
+        phase: g.phase,
+        pausedAt: now
+      };
+      
+      // Freeze the timer by setting endAt to far future
+      g.endAt = now + (1000 * 60 * 60 * 24); // 24 hours in the future
+      if (typeof g.phaseEndsAt === 'number') {
+        g.phaseEndsAt = g.endAt;
+      }
+      
+      timerPaused = true;
+      console.info('[social-maneuvers] ⏸️ Timer paused:', remaining, 'ms remaining');
+    } else {
+      console.warn('[social-maneuvers] Cannot pause timer - no endAt found');
+    }
+  }
+  
+  /**
+   * Resume the phase timer. Called when Socialize modal closes.
+   */
+  function resumePhaseTimer() {
+    if (!timerPaused) {
+      console.info('[social-maneuvers] Timer not paused');
+      return;
+    }
+    
+    const g = global.game;
+    if (!g || !pausedTimerState) return;
+    
+    // Restore timer with remaining time
+    const now = Date.now();
+    g.endAt = now + pausedTimerState.remaining;
+    if (typeof g.phaseEndsAt === 'number') {
+      g.phaseEndsAt = g.endAt;
+    }
+    
+    timerPaused = false;
+    console.info('[social-maneuvers] ▶️ Timer resumed:', pausedTimerState.remaining, 'ms remaining');
+    pausedTimerState = null;
+  }
+  
+  // Wrap setPhase to handle phase transitions
+  const originalSetPhase = global.setPhase;
+  if (typeof originalSetPhase === 'function') {
+    global.setPhase = function(phase, duration, callback) {
+      const g = global.game;
+      
+      // If leaving social_intermission, close launcher and resume timer
+      if (g?.phase === 'social_intermission' && phase !== 'social_intermission') {
+        console.info('[social-maneuvers] Leaving social_intermission - closing launcher');
+        
+        // Close socialize modal if open
+        if (global.SocializeMobile?.closeModal) {
+          global.SocializeMobile.closeModal();
+        }
+        
+        // Hide launcher
+        if (global.SocializeMobile?.hide) {
+          global.SocializeMobile.hide();
+        }
+        
+        // Resume timer if paused
+        if (timerPaused) {
+          resumePhaseTimer();
+        }
+      }
+      
+      // Call original setPhase
+      return originalSetPhase.call(this, phase, duration, callback);
+    };
+    console.info('[social-maneuvers] Wrapped setPhase for phase exit handling');
+  }
+
+  // ============================================================================
   // PHASE INTEGRATION
   // ============================================================================
   function onSocialPhaseStart(){
@@ -2093,6 +2192,7 @@
     getActionById, getAvailableActions, executeAction,
     recordActionInMemory, getPlayerMemory,
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
+    pausePhaseTimer, resumePhaseTimer, // Timer control exports
     // Modifiers/hooks
     calculateTraitModifiers, calculateMemoryModifiers,
     // Constants
