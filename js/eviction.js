@@ -843,6 +843,21 @@
     g.__nomsCommitted=false;
     g._pendingNoms=null;
     g.week++;
+    
+    // Call socialOnNewWeek at week rollover (Social Maneuvers weekly reset)
+    // Guard to run once per week by tracking the last reset week
+    if(!g.__socialWeeklyResetWeek || g.__socialWeeklyResetWeek < g.week){
+      g.__socialWeeklyResetWeek = g.week;
+      if(typeof global.socialOnNewWeek === 'function'){
+        try{
+          global.socialOnNewWeek();
+          console.info('[eviction] ✓ Called socialOnNewWeek for week', g.week);
+        }catch(e){
+          console.error('[eviction] socialOnNewWeek failed:', e);
+        }
+      }
+    }
+    
     global.updateHud?.();
 
     if(shouldRunAmericaReturn()){
