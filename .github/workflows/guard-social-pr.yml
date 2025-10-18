@@ -3,6 +3,27 @@ name: Guard Social Module PR Scope
 on:
   pull_request:
     branches: [ main ]
+    paths:
+      - 'js/social.js'
+      - 'js/social-*.js'
+      - 'js/socialize-mobile.js'
+      - 'js/minigames/social-strings.js'
+      - 'js/logic/social/**'
+      - 'js/data/config/interactionCatalog.js'
+      - 'css/social-maneuvers.css'
+      - 'socialize-mobile.css'
+      - 'test_social*.html'
+      - 'test_social*.spec.js'
+      - 'test_socialize*.html'
+      - 'test_game_progression_social*'
+      - 'test_hotfix_socialize*'
+      - 'test_player_social*'
+      - 'verify_social*'
+      - 'screenshots/social*'
+      - 'docs/social*'
+      - 'audio/social.mp3'
+      - 'SOCIAL*.md'
+      - 'SOCIALIZE*.md'
 
 jobs:
   validate-scope:
