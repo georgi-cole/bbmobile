@@ -429,7 +429,7 @@
               - Energy Spent: ${Object.values(summary.resources.energySpent).reduce((a,b)=>a+b,0)}<br>
               - Info Spent: ${Object.values(summary.resources.informationSpent||{}).reduce((a,b)=>a+b,0)}<br>
               - Relationship Changes: ${summary.relationships.changes.length}<br>
-              <em>Click "View Details" button in the card to see full breakdown.</em>
+              <em>Click "Details" button in the card to see full breakdown.</em>
             `;
             statusEl.className = 'info-box';
           } else {
