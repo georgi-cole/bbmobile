@@ -64,7 +64,7 @@
     try {
       // Mount the launcher
       global.SocializeMobile.ensureLauncher();
-      global.SocializeMobile.updateHUD?.();
+      global.SocializeMobile.updateHUDDisplay?.();
       global.SocializeMobile.show?.();
       console.info('[social-launcher] re-mounted after DOM change');
       return true;
