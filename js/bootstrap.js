@@ -123,7 +123,8 @@
     g.players.length = 0;
 
     const humanName=(g.cfg?.humanName || document.getElementById('humanName')?.value || 'You').trim();
-    const N=+g.cfg?.numPlayers || 12;
+    // Read target cast size from config when creating players
+    const N = +(g.cfg?.numPlayers) || 12;
     const defaults=['Finn','Mimi','Rae','Nova','Kai','Zed','Ivy','Ash','Lux','Remy','Blue','Jax','Echo','Vee','Sol','Quinn','Aria','Dex','Rune','Bea','Nico','Pax','Noa','Kian','Lia','Rey'];
 
     for(let i=0;i<N;i++){
