@@ -1419,7 +1419,17 @@
       if(g.endAt && typeof g.endAt === 'number'){
         // Shorten the timer to expire very soon (100ms buffer for cleanup)
         g.endAt = Date.now() + 100;
+        // Also update phaseEndsAt if tracked
+        if (typeof g.phaseEndsAt === 'number') {
+          g.phaseEndsAt = g.endAt;
+          console.info('[social-maneuvers] Updated phaseEndsAt to match endAt');
+        }
         console.info('[social-maneuvers] Shortened phase timer to 100ms');
+        // Trigger manual timer check if available
+        if (typeof global.checkPhaseTimer === 'function') {
+          global.checkPhaseTimer();
+          console.info('[social-maneuvers] Triggered manual phase timer check');
+        }
       } else {
         // If no endAt, try to call the phase advance directly
         console.warn('[social-maneuvers] No phase timer found, attempting direct advance');
