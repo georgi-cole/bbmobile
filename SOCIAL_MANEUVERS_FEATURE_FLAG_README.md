@@ -35,15 +35,8 @@ The following files were copied verbatim from `feature/social-maneuvers`:
 - `socialize-mobile.css` - Updated mobile UI styles
 
 ### 🛡️ Scope Guard Workflow
-- **File**: `.github/workflows/guard-social-pr.yml`
-- **Purpose**: Ensures PR only modifies Social-related files
-- **Behavior**: Fails if non-Social files are changed
-- **Allowed Paths**:
-  - Social module files (`js/social*.js`, `js/socialize-mobile.js`, etc.)
-  - Configuration (`index.html`, CSS files)
-  - Tests (`test_social*.html`, `test-social*.spec.js`)
-  - Documentation (`SOCIAL*.md`, `docs/social*`)
-  - Assets (`screenshots/social*`, `audio/social.mp3`)
+- **Status**: Removed (previously at `.github/workflows/guard-social-pr.yml`)
+- **Note**: The scope guard workflow was removed to prevent false failures on non-social PRs. It can be restored in the future if needed with a refined trigger or as an optional, label-gated workflow.
 
 ### ✅ Testing
 - **Interactive Test**: `test-social-feature-flag.html`
@@ -106,7 +99,7 @@ git revert <this-commit-sha>
 ## File Changes Summary
 
 ```
- .github/workflows/guard-social-pr.yml     |   88 +++
+ .github/workflows/guard-social-pr.yml     |   88 +++ (later removed)
  css/social-maneuvers.css                  |  460 +++++++++++++++
  index.html                                |   19 +
  js/minigames/social-strings.js            |  263 +--------
@@ -118,6 +111,8 @@ git revert <this-commit-sha>
  test-social-feature-flag.html             |  285 +++++++++
  10 files changed, 4663 insertions(+), 316 deletions(-)
 ```
+
+**Note**: The `guard-social-pr.yml` workflow was removed in a later PR to prevent false failures on non-social PRs.
 
 ## Verification Checklist
 
