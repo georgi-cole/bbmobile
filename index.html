@@ -15,10 +15,25 @@
 <link rel="stylesheet" href="overrides-fixes.css?v=fixes-5">
 <link rel="stylesheet" href="styles-intro-show.css">
 <link rel="stylesheet" href="socialize-mobile.css">
+<link rel="stylesheet" href="css/social-maneuvers.css">
 <link rel="stylesheet" href="src/ui/profileModal.css">
 
 <!-- Global shim for resilience against stray global references -->
 <script>window.global = window;</script>
+
+<!-- Feature Flag: Social Maneuvers (default: enabled, runtime toggleable) -->
+<script>
+  (function() {
+    if (!window.game) window.game = {};
+    if (!window.game.cfg) window.game.cfg = {};
+    // Default to NEW Social Maneuvers implementation
+    // Set to false to use legacy Social
+    if (window.game.cfg.enableSocialManeuvers === undefined) {
+      window.game.cfg.enableSocialManeuvers = true;
+    }
+    console.info('[Social FF] enableSocialManeuvers =', window.game.cfg.enableSocialManeuvers);
+  })();
+</script>
 
 <!-- GSAP Animation Library (for intro show) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -227,6 +242,10 @@
 <script defer src="js/data/config/interactionCatalog.js"></script>
 <script defer src="js/logic/social/generator.js"></script>
 <script defer src="js/logic/social/adapter.js"></script>
+<!-- NEW: Social Maneuvers (feature-flagged, default enabled) -->
+<script src="js/social-action-config.js"></script>
+<script src="js/social-maneuvers.js"></script>
+<script src="js/social-maneuvers-launcher-bootstrap.js"></script>
 <script src="js/minigames.js"></script><!-- Legacy stub - see docs/minigames.md -->
 
 <!-- Utilities -->
