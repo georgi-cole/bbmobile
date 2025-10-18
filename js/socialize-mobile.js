@@ -421,9 +421,10 @@
     const humanId = g.humanId;
     const you = global.getP?.(humanId);
     
-    // Get selected target for evaluation
-    const selectedCard = $('.player-card.selected');
-    const targetId = selectedCard ? parseInt(selectedCard.dataset.playerId) : null;
+    // Get selected targets for evaluation (multi-select support)
+    const selectedCards = Array.from($$('.player-card.selected'));
+    const selectedPlayerIds = selectedCards.map(card => parseInt(card.dataset.playerId));
+    const targetId = selectedPlayerIds[0] || null;
     const target = targetId ? global.getP?.(targetId) : null;
 
     // Use canonical action catalog from SocialManeuvers, or fallback to unified catalog
@@ -593,38 +594,57 @@
 
     actions.forEach(action => {
       const energyCost = action.cost.energy || 0;
-      const influenceReq = action.cost.influence || action.require.influence || 0;
-      const informationReq = action.cost.information || action.require.information || 0;
+      const influenceReq = action.cost.influence || action.require?.influence || 0;
+      const informationReq = action.cost.information || action.require?.information || 0;
+      const minTargets = action.minTargets || 1;
+      const affinityMin = action.affinityMin !== undefined ? action.affinityMin : null;
       
-      const canAfford = res.energy >= energyCost && 
-                        res.influence >= influenceReq && 
-                        res.information >= informationReq;
+      // Evaluate each requirement independently
+      const hasEnoughEnergy = res.energy >= energyCost;
+      const hasEnoughInfluence = res.influence >= influenceReq;
+      const hasEnoughInformation = res.information >= informationReq;
+      const hasEnoughTargets = selectedPlayerIds.length >= minTargets;
       
       // Get evaluation from SocialActionConfig if available and target selected
       let evaluation = null;
+      let hasAffinityReq = true;
       if (target && global.SocialActionConfig?.getActionEvaluation) {
         evaluation = global.SocialActionConfig.getActionEvaluation(action.id, you, target, action);
+        hasAffinityReq = evaluation.available;
       }
+      
+      // Action is available if ALL requirements are met
+      const allRequirementsMet = hasEnoughEnergy && hasEnoughInfluence && hasEnoughInformation && hasEnoughTargets && hasAffinityReq;
       
       const btn = document.createElement('button');
       btn.className = `action-btn action-${action.category}`;
       btn.dataset.actionId = action.id;
+      btn.dataset.minTargets = minTargets;
       
-      if (!canAfford || (evaluation && !evaluation.available)) {
+      if (!allRequirementsMet) {
         btn.classList.add('disabled');
         btn.disabled = true;
       }
 
-      // Build tooltip for disabled actions
-      let disabledReason = '';
-      if (!canAfford) {
-        const missing = [];
-        if (res.energy < energyCost) missing.push(`Need ${energyCost - res.energy} more ⚡`);
-        if (res.influence < influenceReq) missing.push(`Need ${influenceReq - res.influence} more 🤝`);
-        if (res.information < informationReq) missing.push(`Need ${informationReq - res.information} more 💡`);
-        disabledReason = missing.join(', ');
-      } else if (evaluation && !evaluation.available) {
-        disabledReason = evaluation.gateReasons?.join('; ') || 'Requirements not met';
+      // Build requirement chips for missing requirements
+      const requirementChips = [];
+      if (!hasEnoughEnergy) {
+        requirementChips.push(`<span class="requirement-chip chip-energy">Needs: +${energyCost - res.energy} ⚡</span>`);
+      }
+      if (!hasEnoughInfluence) {
+        requirementChips.push(`<span class="requirement-chip chip-influence">Needs: +${influenceReq - res.influence} 🤝 (Influence)</span>`);
+      }
+      if (!hasEnoughInformation) {
+        requirementChips.push(`<span class="requirement-chip chip-information">Needs: +${informationReq - res.information} 💡 (Information)</span>`);
+      }
+      if (!hasEnoughTargets) {
+        requirementChips.push(`<span class="requirement-chip chip-targets">Needs: Select ≥ ${minTargets} players</span>`);
+      }
+      if (evaluation && !evaluation.available && evaluation.gateReasons) {
+        // Show affinity or other gate reasons
+        evaluation.gateReasons.forEach(reason => {
+          requirementChips.push(`<span class="requirement-chip chip-affinity">${reason}</span>`);
+        });
       }
 
       btn.innerHTML = `
@@ -633,19 +653,31 @@
           <span class="action-label">${action.label}</span>
         </div>
         <div class="action-costs">
-          ${energyCost > 0 ? `<span class="cost-badge cost-energy" title="Energy cost">⚡${energyCost}</span>` : ''}
-          ${influenceReq > 0 ? `<span class="cost-badge cost-influence ${res.influence < influenceReq ? 'insufficient' : ''}" title="Influence required">🤝${influenceReq}</span>` : ''}
-          ${informationReq > 0 ? `<span class="cost-badge cost-information ${res.information < informationReq ? 'insufficient' : ''}" title="Information required">💡${informationReq}</span>` : ''}
+          ${energyCost > 0 ? `<span class="cost-badge cost-energy ${!hasEnoughEnergy ? 'insufficient' : ''}" title="Energy cost">⚡${energyCost}</span>` : ''}
+          ${influenceReq > 0 ? `<span class="cost-badge cost-influence ${!hasEnoughInfluence ? 'insufficient' : ''}" title="Influence required">🤝${influenceReq}</span>` : ''}
+          ${informationReq > 0 ? `<span class="cost-badge cost-information ${!hasEnoughInformation ? 'insufficient' : ''}" title="Information required">💡${informationReq}</span>` : ''}
         </div>
         <div class="action-description">${action.description}</div>
-        ${!canAfford || disabledReason ? `<div class="action-disabled-reason">${disabledReason}</div>` : ''}
+        ${requirementChips.length > 0 ? `<div class="action-requirements">${requirementChips.join('')}</div>` : ''}
       `;
 
-      // Add tooltip
-      btn.title = action.description + (disabledReason ? `\n\n${disabledReason}` : '');
+      // Add tooltip with all requirements
+      const tooltipParts = [action.description];
+      if (requirementChips.length > 0) {
+        tooltipParts.push('');
+        tooltipParts.push('Missing requirements:');
+        if (!hasEnoughEnergy) tooltipParts.push(`  - Need ${energyCost - res.energy} more Energy`);
+        if (!hasEnoughInfluence) tooltipParts.push(`  - Need ${influenceReq - res.influence} more Influence`);
+        if (!hasEnoughInformation) tooltipParts.push(`  - Need ${informationReq - res.information} more Information`);
+        if (!hasEnoughTargets) tooltipParts.push(`  - Need to select ${minTargets} or more players`);
+        if (evaluation && !evaluation.available) {
+          evaluation.gateReasons?.forEach(r => tooltipParts.push(`  - ${r}`));
+        }
+      }
+      btn.title = tooltipParts.join('\n');
 
       btn.addEventListener('click', () => {
-        if (!canAfford || (evaluation && !evaluation.available)) return;
+        if (!allRequirementsMet) return;
         
         // Clear other selections
         $$('.action-btn.selected').forEach(b => b.classList.remove('selected'));
@@ -689,12 +721,40 @@
     const btn = $('#executeActionBtn');
     if (!btn) return;
 
-    const selectedPlayers = $$('.player-card.selected');
+    const selectedPlayers = Array.from($$('.player-card.selected'));
     const selectedAction = $('.action-btn.selected');
     const res = getResourceState();
 
-    const canExecute = selectedPlayers.length > 0 && selectedAction && res.energy > 0;
+    if (!selectedAction || !selectedPlayers.length) {
+      btn.disabled = true;
+      btn.textContent = 'Select Action & Players';
+      return;
+    }
+
+    // Get action details
+    const actionId = selectedAction.dataset.actionId;
+    const minTargets = parseInt(selectedAction.dataset.minTargets) || 1;
+    
+    // Find the action definition to get cost
+    const actions = global.SocialManeuvers?.SOCIAL_ACTIONS || [];
+    const action = actions.find(a => a.id === actionId);
+    const energyCost = action?.costs?.energy || action?.cost || 1;
+    
+    // Check all requirements
+    const hasEnoughPlayers = selectedPlayers.length >= minTargets;
+    const hasEnoughEnergy = res.energy >= energyCost;
+    
+    const canExecute = hasEnoughPlayers && hasEnoughEnergy && selectedAction;
     btn.disabled = !canExecute;
+    
+    // Update button text
+    if (!hasEnoughPlayers) {
+      btn.textContent = `Select ${minTargets}+ Players (${selectedPlayers.length} selected)`;
+    } else if (!hasEnoughEnergy) {
+      btn.textContent = `Need ${energyCost} Energy (have ${res.energy})`;
+    } else {
+      btn.textContent = `Execute Action (Cost: ${energyCost}⚡)`;
+    }
   }
 
   function executeAction() {
@@ -707,62 +767,125 @@
     }
 
     const actionId = selectedAction.dataset.actionId;
+    const minTargets = parseInt(selectedAction.dataset.minTargets) || 1;
     const g = global.game || {};
     const you = global.getP?.(g.humanId);
 
     if (!you) return;
 
+    // Get action definition to check if it's a group action
+    const actions = global.SocialManeuvers?.SOCIAL_ACTIONS || [];
+    const action = actions.find(a => a.id === actionId);
+    const isGroupAction = action?.multiTarget === true || minTargets >= 2;
+    
+    // Validate target count for group actions
+    if (isGroupAction && selectedPlayers.length < minTargets) {
+      global.addLog?.(`Need at least ${minTargets} targets for this action.`, 'warn');
+      return;
+    }
+
     // Execute via canonical SocialManeuvers.executeAction if available
     if (global.SocialManeuvers?.executeAction) {
-      selectedPlayers.forEach(card => {
-        const targetId = parseInt(card.dataset.playerId);
+      if (isGroupAction) {
+        // GROUP ACTION: Pass all targets as a single call
+        const targetIds = selectedPlayers.map(card => parseInt(card.dataset.playerId));
+        const primaryTargetId = targetIds[0];
+        const extraTargetIds = targetIds.slice(1);
         
         try {
-          // Use canonical mechanics engine for execution
-          const result = global.SocialManeuvers.executeAction(you.id, targetId, actionId, []);
+          // Use canonical mechanics engine for execution with group mode
+          const result = global.SocialManeuvers.executeAction(you.id, primaryTargetId, actionId, extraTargetIds);
           
           // Dev telemetry (dev builds only)
           if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.group(`[socialize-mobile] Action executed: ${actionId}`);
+            console.group(`[socialize-mobile] Group action executed: ${actionId}`);
             console.log('Actor:', you.name, '(ID:', you.id, ')');
-            console.log('Target:', global.safeName?.(targetId) || targetId);
+            console.log('Targets:', targetIds.map(id => global.safeName?.(id) || id).join(', '));
+            console.log('Target count:', targetIds.length);
             console.log('Success:', result.success);
             if (result.outcome) {
               console.log('Outcome:', result.outcome.type, '-', result.outcome.message);
-              console.log('Affinity change:', result.outcome.affinityChange);
+              console.log('Participants:', result.outcome.participants);
             }
             if (result.resources) {
               console.log('Resources after:', result.resources);
-            }
-            if (result.telemetry) {
-              console.log('Success chance:', `${(result.telemetry.finalChance * 100).toFixed(0)}%`);
-              console.log('Roll:', `${(result.telemetry.chanceRoll * 100).toFixed(0)}%`);
             }
             console.groupEnd();
           }
           
           // Show feedback in UI
           if (result.success) {
+            const targetNames = targetIds.map(id => global.safeName?.(id) || 'Unknown').join(', ');
             addFeedbackEntry(
               selectedAction.querySelector('.action-label')?.textContent || actionId,
-              global.safeName?.(targetId) || 'Unknown',
+              targetNames,
               result.outcome?.type || 'neutral',
-              result.outcome?.message || 'Action completed'
+              result.outcome?.message || 'Group action completed'
             );
           } else {
             addFeedbackEntry(
               selectedAction.querySelector('.action-label')?.textContent || actionId,
-              global.safeName?.(targetId) || 'Unknown',
+              `${targetIds.length} players`,
               'error',
-              result.message || result.reason || 'Action failed'
+              result.message || result.reason || 'Group action failed'
             );
           }
         } catch (e) {
-          console.error('[socialize-mobile] Failed to execute action via SocialManeuvers:', e);
-          // Fallback to legacy system
-          executeLegacyAction(you.id, targetId, actionId, selectedAction);
+          console.error('[socialize-mobile] Failed to execute group action via SocialManeuvers:', e);
+          global.addLog?.(`Error executing group action: ${e.message}`, 'error');
         }
-      });
+      } else {
+        // SINGLE TARGET ACTION: Execute for each target separately
+        selectedPlayers.forEach(card => {
+          const targetId = parseInt(card.dataset.playerId);
+          
+          try {
+            // Use canonical mechanics engine for execution
+            const result = global.SocialManeuvers.executeAction(you.id, targetId, actionId, []);
+            
+            // Dev telemetry (dev builds only)
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+              console.group(`[socialize-mobile] Action executed: ${actionId}`);
+              console.log('Actor:', you.name, '(ID:', you.id, ')');
+              console.log('Target:', global.safeName?.(targetId) || targetId);
+              console.log('Success:', result.success);
+              if (result.outcome) {
+                console.log('Outcome:', result.outcome.type, '-', result.outcome.message);
+                console.log('Affinity change:', result.outcome.affinityChange);
+              }
+              if (result.resources) {
+                console.log('Resources after:', result.resources);
+              }
+              if (result.telemetry) {
+                console.log('Success chance:', `${(result.telemetry.finalChance * 100).toFixed(0)}%`);
+                console.log('Roll:', `${(result.telemetry.chanceRoll * 100).toFixed(0)}%`);
+              }
+              console.groupEnd();
+            }
+            
+            // Show feedback in UI
+            if (result.success) {
+              addFeedbackEntry(
+                selectedAction.querySelector('.action-label')?.textContent || actionId,
+                global.safeName?.(targetId) || 'Unknown',
+                result.outcome?.type || 'neutral',
+                result.outcome?.message || 'Action completed'
+              );
+            } else {
+              addFeedbackEntry(
+                selectedAction.querySelector('.action-label')?.textContent || actionId,
+                global.safeName?.(targetId) || 'Unknown',
+                'error',
+                result.message || result.reason || 'Action failed'
+              );
+            }
+          } catch (e) {
+            console.error('[socialize-mobile] Failed to execute action via SocialManeuvers:', e);
+            // Fallback to legacy system
+            executeLegacyAction(you.id, targetId, actionId, selectedAction);
+          }
+        });
+      }
     } else {
       // Fallback to legacy system if SocialManeuvers not available
       selectedPlayers.forEach(card => {

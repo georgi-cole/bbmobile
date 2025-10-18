@@ -845,6 +845,53 @@
   border-radius: 4px;
 }
 
+/* Requirement Chips */
+.action-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.requirement-chip {
+  font-size: 0.7rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.requirement-chip.chip-energy {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+.requirement-chip.chip-influence {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+.requirement-chip.chip-information {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+.requirement-chip.chip-targets {
+  background: rgba(243, 156, 18, 0.15);
+  border: 1px solid rgba(243, 156, 18, 0.3);
+  color: #f39c12;
+}
+
+.requirement-chip.chip-affinity {
+  background: rgba(155, 89, 182, 0.15);
+  border: 1px solid rgba(155, 89, 182, 0.3);
+  color: #9b59b6;
+}
+
 /* Action Categories */
 .action-btn.action-friendly {
   border-left: 3px solid rgba(46, 204, 113, 0.5);
