@@ -168,10 +168,13 @@
     log('apply numPlayers =', val, 'phase=', g.game?.phase);
 
     try{
+      // Support both window.Game namespace and direct window access for backward compatibility
+      const API = g.Game || g;
+      
       if(g.game?.phase === 'lobby'){
-        if(typeof g.rebuildGame === 'function'){ g.rebuildGame(false); }
-        else if(typeof g.buildCast === 'function'){ g.buildCast(); }
-        if(typeof g.startOpeningSequence === 'function'){ setTimeout(()=>g.startOpeningSequence(), 60); }
+        if(typeof API.rebuildGame === 'function'){ API.rebuildGame(false); }
+        else if(typeof API.buildCast === 'function'){ API.buildCast(); }
+        if(typeof API.startOpeningSequence === 'function'){ setTimeout(()=>API.startOpeningSequence(), 60); }
         g.addLog?.(`New season started with ${val} players.`,'ok');
       }else{
         g.addLog?.(`Players set to ${val}. Restarting to apply…`,'warn');
