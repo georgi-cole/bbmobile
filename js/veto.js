@@ -142,14 +142,36 @@
     if(typeof global.phaseMusic==='function') global.phaseMusic('veto_comp');
     if(typeof global.setPhase==='function') global.setPhase('veto_comp', g.cfg && g.cfg.tVeto || 40, finishVetoComp);
 
+    // Host resolution with fallback chain
     var panel = document.querySelector('#panel');
+    var host = null;
+    var fallbackUsed = null;
+
     if(panel){
+      // Legacy path: #panel exists, use it
       panel.innerHTML = '';
-      var host = document.createElement('div');
+      host = document.createElement('div');
       host.className = 'minigame-host';
       var names = g.__vetoPlayers.map(safeName).join(', ');
       host.innerHTML = '<div class="tiny">Players: '+names+'</div>';
       panel.appendChild(host);
+    } else {
+      // Fallback path: #panel doesn't exist, use TV overlay or fallbacks
+      var hostContainer = document.querySelector('#tvOverlay') ||
+                         document.querySelector('.tvViewport') ||
+                         document.querySelector('#tv') ||
+                         document.body;
+      
+      fallbackUsed = hostContainer.id || hostContainer.className || 'body';
+      console.info('[veto] host fallback used: ' + fallbackUsed);
+      
+      // Create a host container
+      host = document.createElement('div');
+      host.className = 'minigame-host veto-comp-host';
+      host.style.cssText = 'padding: 1rem; background: rgba(0,0,0,0.8); border-radius: 8px; margin: 1rem auto; max-width: 600px;';
+      var names = g.__vetoPlayers.map(safeName).join(', ');
+      host.innerHTML = '<div class="tiny">Players: '+names+'</div>';
+      hostContainer.appendChild(host);
     }
 
     var you = (g.humanId!=null) ? getP(g.humanId) : null;
@@ -157,24 +179,76 @@
 
     if(humanIn){
       var mg = (typeof global.pickMinigameType==='function') ? global.pickMinigameType() : 'clicker';
-      var hostNode = document.querySelector('#panel .minigame-host');
-      if(hostNode && typeof global.renderMinigame==='function'){
+      
+      // Use the host node we just created or found
+      var hostNode = host;
+      
+      if(hostNode){
         var playWrap = document.createElement('div');
         playWrap.className = 'col';
-        global.renderMinigame(mg, playWrap, function(base){
-          // Use compBeast for human too (no guaranteed wins)
-          var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
-          submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
-        });
-        hostNode.appendChild(playWrap);
+        
+        // Try runHumanMinigameWithGuards if available, else runHumanMinigame, else renderMinigame
+        if(typeof global.runHumanMinigameWithGuards === 'function'){
+          try{
+            global.runHumanMinigameWithGuards(hostNode, mg, function(base){
+              var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
+              submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
+            });
+          }catch(e){
+            console.warn('[veto] runHumanMinigameWithGuards failed, falling back to renderMinigame', e);
+            if(typeof global.renderMinigame==='function'){
+              global.renderMinigame(mg, playWrap, function(base){
+                var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
+                submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
+              });
+              hostNode.appendChild(playWrap);
+            }
+          }
+        } else if(typeof global.runHumanMinigame === 'function'){
+          try{
+            global.runHumanMinigame(hostNode, mg, function(base){
+              var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
+              submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
+            });
+          }catch(e){
+            console.warn('[veto] runHumanMinigame failed, falling back to renderMinigame', e);
+            if(typeof global.renderMinigame==='function'){
+              global.renderMinigame(mg, playWrap, function(base){
+                var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
+                submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
+              });
+              hostNode.appendChild(playWrap);
+            }
+          }
+        } else if(typeof global.renderMinigame==='function'){
+          global.renderMinigame(mg, playWrap, function(base){
+            var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
+            submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
+          });
+          hostNode.appendChild(playWrap);
+        } else {
+          // Last resort: create a simple submit button to avoid dead flow
+          console.warn('[veto] No minigame rendering available, creating fallback submit');
+          var fallbackBtn = document.createElement('button');
+          fallbackBtn.className = 'btn primary';
+          fallbackBtn.textContent = 'Submit Veto Entry';
+          fallbackBtn.onclick = function(){
+            var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
+            var baseScore = 10 + rng()*10; // Random baseline
+            submitGuarded(you.id, baseScore, humanMultiplier, 'Veto/Fallback');
+            fallbackBtn.disabled = true;
+            fallbackBtn.textContent = 'Submitted';
+          };
+          hostNode.appendChild(fallbackBtn);
+        }
       }
     } else {
-      var host2 = document.querySelector('#panel .minigame-host');
-      if(host2){
+      // Non-participant message
+      if(host){
         var note = document.createElement('div');
         note.className = 'tiny muted';
         note.textContent = 'You were not drawn to play in this Veto. Waiting for results…';
-        host2.appendChild(note);
+        host.appendChild(note);
       }
     }
 
