@@ -1921,35 +1921,9 @@
     // Details button
     const detailsBtn = document.createElement('button');
     detailsBtn.className = 'btn small';
-    detailsBtn.textContent = 'View Details';
+    detailsBtn.textContent = 'Details';
     detailsBtn.onclick = () => showDetailedSummary(summary);
     buttonBar.appendChild(detailsBtn);
-
-    // Copy JSON button
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'btn small';
-    copyBtn.textContent = 'Copy JSON';
-    copyBtn.onclick = () => {
-      const jsonStr = global.game?.__latestSocialSummaryJSON;
-      if(jsonStr){
-        navigator.clipboard.writeText(jsonStr).then(() => {
-          copyBtn.textContent = 'Copied!';
-          setTimeout(() => { copyBtn.textContent = 'Copy JSON'; }, 2000);
-        }).catch(err => {
-          console.error('Failed to copy:', err);
-          // Fallback: create textarea
-          const textarea = document.createElement('textarea');
-          textarea.value = jsonStr;
-          document.body.appendChild(textarea);
-          textarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textarea);
-          copyBtn.textContent = 'Copied!';
-          setTimeout(() => { copyBtn.textContent = 'Copy JSON'; }, 2000);
-        });
-      }
-    };
-    buttonBar.appendChild(copyBtn);
 
     // Continue button
     const continueBtn = document.createElement('button');
