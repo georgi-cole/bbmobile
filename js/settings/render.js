@@ -592,8 +592,11 @@
       const game = global.game = global.game || {};
       const cfg = game.cfg = Object.assign({}, Config.DEFAULT_CFG || {}, game.cfg || {});
       cfg.numPlayers = val;
-      if(Config.saveStoredCfg) Config.saveStoredCfg(cfg);
-      
+      if(typeof global.saveStoredCfg === 'function') {
+        global.saveStoredCfg(cfg);
+      } else if(typeof Config.saveStoredCfg === 'function') {
+        Config.saveStoredCfg(cfg);
+      }
       if(game.phase === 'lobby'){
         // In lobby: rebuild cast/game and start opening sequence
         if(typeof global.rebuildGame === 'function'){
