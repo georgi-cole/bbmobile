@@ -187,40 +187,8 @@
         var playWrap = document.createElement('div');
         playWrap.className = 'col';
         
-        // Try runHumanMinigameWithGuards if available, else runHumanMinigame, else renderMinigame
-        if(typeof global.runHumanMinigameWithGuards === 'function'){
-          try{
-            global.runHumanMinigameWithGuards(hostNode, mg, function(base){
-              var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
-              submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
-            });
-          }catch(e){
-            console.warn('[veto] runHumanMinigameWithGuards failed, falling back to renderMinigame', e);
-            if(typeof global.renderMinigame==='function'){
-              global.renderMinigame(mg, playWrap, function(base){
-                var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
-                submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
-              });
-              hostNode.appendChild(playWrap);
-            }
-          }
-        } else if(typeof global.runHumanMinigame === 'function'){
-          try{
-            global.runHumanMinigame(hostNode, mg, function(base){
-              var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
-              submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
-            });
-          }catch(e){
-            console.warn('[veto] runHumanMinigame failed, falling back to renderMinigame', e);
-            if(typeof global.renderMinigame==='function'){
-              global.renderMinigame(mg, playWrap, function(base){
-                var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
-                submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
-              });
-              hostNode.appendChild(playWrap);
-            }
-          }
-        } else if(typeof global.renderMinigame==='function'){
+        // Render minigame directly using the standard renderMinigame function
+        if(typeof global.renderMinigame==='function'){
           global.renderMinigame(mg, playWrap, function(base){
             var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
             submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
