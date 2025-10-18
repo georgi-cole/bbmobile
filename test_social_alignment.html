@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Alignment Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 0 20px;
+      background: #f5f5f5;
+    }
+    .test-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .test-pass {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .test-fail {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .test-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    .log-entry {
+      padding: 4px 8px;
+      margin: 2px 0;
+      background: #f8f9fa;
+      border-left: 3px solid #007bff;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    .log-success { border-left-color: #28a745; }
+    .log-error { border-left-color: #dc3545; }
+    .log-warn { border-left-color: #ffc107; }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Maneuvers Alignment Test</h1>
+  
+  <div class="test-card">
+    <h2>Test Suite: Social Maneuvers Alignment</h2>
+    <p>This test validates that Social Maneuvers properly hard-swaps legacy UI, pauses/resumes timers, and routes actions through the engine.</p>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+  </div>
+
+  <div class="test-card">
+    <h2>Test Results</h2>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Console Log</h2>
+    <div id="consoleLog"></div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/social.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/socialize-mobile.js"></script>
+
+  <script>
+    const testResults = document.getElementById('testResults');
+    const consoleLog = document.getElementById('consoleLog');
+    let testCount = 0;
+    let passCount = 0;
+    let failCount = 0;
+
+    // Intercept console.info to capture logs
+    const originalConsoleInfo = console.info;
+    console.info = function(...args) {
+      originalConsoleInfo.apply(console, args);
+      const entry = document.createElement('div');
+      entry.className = 'log-entry log-success';
+      entry.textContent = args.join(' ');
+      consoleLog.appendChild(entry);
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    };
+
+    // Intercept console.warn
+    const originalConsoleWarn = console.warn;
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      const entry = document.createElement('div');
+      entry.className = 'log-entry log-warn';
+      entry.textContent = args.join(' ');
+      consoleLog.appendChild(entry);
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    };
+
+    // Intercept console.error
+    const originalConsoleError = console.error;
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      const entry = document.createElement('div');
+      entry.className = 'log-entry log-error';
+      entry.textContent = args.join(' ');
+      consoleLog.appendChild(entry);
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    };
+
+    function clearResults() {
+      testResults.innerHTML = '';
+      consoleLog.innerHTML = '';
+      testCount = 0;
+      passCount = 0;
+      failCount = 0;
+    }
+
+    function logTest(name, passed, details) {
+      testCount++;
+      if (passed) passCount++;
+      else failCount++;
+
+      const result = document.createElement('div');
+      result.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+      result.innerHTML = `
+        <strong>${passed ? '✓' : '✗'} Test ${testCount}: ${name}</strong>
+        ${details ? `<br><small>${details}</small>` : ''}
+      `;
+      testResults.appendChild(result);
+    }
+
+    function setupMockGame() {
+      // Setup minimal game state
+      window.game = {
+        cfg: { enableSocialManeuvers: true },
+        humanId: 1,
+        phase: 'social_intermission',
+        week: 1,
+        endAt: Date.now() + 60000, // 1 minute
+        players: [
+          { id: 1, name: 'Player1', evicted: false, affinity: {} },
+          { id: 2, name: 'Player2', evicted: false, affinity: {} },
+          { id: 3, name: 'Player3', evicted: false, affinity: {} }
+        ]
+      };
+
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      window.safeName = (id) => {
+        const p = window.getP(id);
+        return p ? p.name : `Player${id}`;
+      };
+    }
+
+    async function runAllTests() {
+      clearResults();
+      console.info('[TEST] Starting Social Maneuvers Alignment Tests');
+
+      setupMockGame();
+
+      // Test 1: Social Maneuvers enabled by default
+      try {
+        const enabled = window.SocialManeuvers && window.SocialManeuvers.isEnabled();
+        logTest(
+          'Social Maneuvers enabled by default',
+          enabled === true,
+          `SocialManeuvers.isEnabled() = ${enabled}`
+        );
+      } catch (e) {
+        logTest('Social Maneuvers enabled by default', false, e.message);
+      }
+
+      // Test 2: Timer control functions exported
+      try {
+        const hasPause = typeof window.SocialManeuvers.pausePhaseTimer === 'function';
+        const hasResume = typeof window.SocialManeuvers.resumePhaseTimer === 'function';
+        logTest(
+          'Timer control functions exported',
+          hasPause && hasResume,
+          `pausePhaseTimer: ${hasPause}, resumePhaseTimer: ${hasResume}`
+        );
+      } catch (e) {
+        logTest('Timer control functions exported', false, e.message);
+      }
+
+      // Test 3: SocialResources.resetWeekly exists
+      try {
+        const hasResetWeekly = typeof window.SocialManeuvers.SocialResources.resetWeekly === 'function';
+        logTest(
+          'SocialResources.resetWeekly available',
+          hasResetWeekly,
+          `resetWeekly function: ${hasResetWeekly ? 'found' : 'missing'}`
+        );
+      } catch (e) {
+        logTest('SocialResources.resetWeekly available', false, e.message);
+      }
+
+      // Test 4: Weekly reset initializes resources
+      try {
+        window.SocialManeuvers.SocialResources.resetWeekly(1);
+        const resources = window.SocialManeuvers.SocialResources.getAll(1);
+        const hasEnergy = resources.energy > 0;
+        logTest(
+          'Weekly reset initializes energy',
+          hasEnergy,
+          `Energy after reset: ${resources.energy}`
+        );
+      } catch (e) {
+        logTest('Weekly reset initializes energy', false, e.message);
+      }
+
+      // Test 5: Timer pause functionality
+      try {
+        const initialEndAt = window.game.endAt;
+        window.SocialManeuvers.pausePhaseTimer();
+        const pausedEndAt = window.game.endAt;
+        const isPaused = pausedEndAt > initialEndAt + 10000; // Should be much larger
+        logTest(
+          'Timer pause freezes endAt',
+          isPaused,
+          `Initial: ${initialEndAt}, Paused: ${pausedEndAt}, Difference: ${pausedEndAt - initialEndAt}ms`
+        );
+      } catch (e) {
+        logTest('Timer pause freezes endAt', false, e.message);
+      }
+
+      // Test 6: Timer resume functionality
+      try {
+        const beforeResume = window.game.endAt;
+        window.SocialManeuvers.resumePhaseTimer();
+        const afterResume = window.game.endAt;
+        const resumed = afterResume < beforeResume;
+        logTest(
+          'Timer resume restores endAt',
+          resumed,
+          `Before: ${beforeResume}, After: ${afterResume}`
+        );
+      } catch (e) {
+        logTest('Timer resume restores endAt', false, e.message);
+      }
+
+      // Test 7: SocializeMobile exports
+      try {
+        const hasOpenModal = typeof window.SocializeMobile.openModal === 'function';
+        const hasCloseModal = typeof window.SocializeMobile.closeModal === 'function';
+        const hasUpdateHUD = typeof window.SocializeMobile.updateHUD === 'function';
+        logTest(
+          'SocializeMobile API complete',
+          hasOpenModal && hasCloseModal && hasUpdateHUD,
+          `openModal: ${hasOpenModal}, closeModal: ${hasCloseModal}, updateHUD: ${hasUpdateHUD}`
+        );
+      } catch (e) {
+        logTest('SocializeMobile API complete', false, e.message);
+      }
+
+      // Test 8: Legacy UI hard-swap
+      try {
+        const mockPanel = document.createElement('div');
+        mockPanel.id = 'testPanel';
+        document.body.appendChild(mockPanel);
+        
+        window.renderSocialPhase(mockPanel);
+        
+        const hasLegacyUI = mockPanel.querySelector('.minigame-host') !== null;
+        logTest(
+          'Legacy UI hidden when Social Maneuvers enabled',
+          !hasLegacyUI,
+          `Legacy UI present: ${hasLegacyUI} (should be false)`
+        );
+        
+        mockPanel.remove();
+      } catch (e) {
+        logTest('Legacy UI hidden when Social Maneuvers enabled', false, e.message);
+      }
+
+      // Test 9: setPhase wrapped for phase exit handling
+      try {
+        const originalSetPhase = window.setPhase;
+        const isWrapped = originalSetPhase && originalSetPhase.toString().includes('social_intermission');
+        logTest(
+          'setPhase wrapped for phase exit handling',
+          isWrapped,
+          `setPhase wrapped: ${isWrapped}`
+        );
+      } catch (e) {
+        logTest('setPhase wrapped for phase exit handling', false, e.message);
+      }
+
+      // Test 10: Weekly reset refreshes HUD
+      try {
+        let hudUpdated = false;
+        const originalUpdateHud = window.updateHud;
+        window.updateHud = () => { hudUpdated = true; };
+        
+        window.socialOnNewWeek();
+        
+        logTest(
+          'Weekly reset refreshes HUD',
+          hudUpdated,
+          `HUD update called: ${hudUpdated}`
+        );
+        
+        window.updateHud = originalUpdateHud;
+      } catch (e) {
+        logTest('Weekly reset refreshes HUD', false, e.message);
+      }
+
+      // Summary
+      const summary = document.createElement('div');
+      summary.className = testCount === passCount ? 'test-result test-pass' : 'test-result test-info';
+      summary.innerHTML = `
+        <strong>Test Summary</strong><br>
+        Total: ${testCount} | Passed: ${passCount} | Failed: ${failCount}
+      `;
+      testResults.appendChild(summary);
+
+      console.info('[TEST] All tests completed');
+    }
+  </script>
+</body>
+</html>
