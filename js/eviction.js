@@ -411,6 +411,14 @@
       }
 
       const pick=entry.evict;
+      
+      // Safety check: If pick is null, skip this voter (shouldn't happen but prevents hang)
+      if(pick == null){
+        console.warn('[eviction] Voter', entry.voter, 'has null pick, skipping');
+        markVoter(entry.voter,'skipped (no vote)');
+        continue;
+      }
+      
       const nameV=global.safeName(entry.voter), namePick=global.safeName(pick);
       markVoter(entry.voter,'voting…');
       
