@@ -844,20 +844,6 @@
       entries[entries.length - 1].remove();
     }
   }
-    selectedAction.classList.remove('selected');
-    updateExecuteButton();
-
-    // Refresh action menu to update costs/availability
-    populateActionMenu();
-
-    // Check if energy depleted
-    const updatedRes = getResourceState();
-    if (updatedRes.energy <= 0) {
-      setTimeout(() => {
-        closeSocializeModal(true);
-      }, 800);
-    }
-  }
 
   function showSocialUpdateToast() {
     const toast = document.createElement('div');
@@ -968,37 +954,153 @@
     dialog.querySelector('.dialog-backdrop')?.addEventListener('click', closeDialog);
   }
 
+  // Seed phase resources if engine is present
+  function seedPhaseResources() {
+    const g = global.game || {};
+    const humanId = g.humanId;
+    
+    if (!humanId) {
+      console.warn('[socialize-mobile] Cannot seed resources - no humanId');
+      return;
+    }
+    
+    // Defer to canonical SocialManeuvers engine if present
+    if (global.SocialManeuvers?.SocialResources) {
+      try {
+        // Engine handles seeding automatically on phase start
+        console.info('[socialize-mobile] Resources seeded via SocialManeuvers engine');
+        return;
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to seed resources:', e);
+      }
+    }
+    
+    console.warn('[socialize-mobile] SocialManeuvers not available - cannot seed resources');
+  }
+
+  // Resources changed event hook
+  function onResourcesChanged(callback) {
+    if (typeof callback !== 'function') return;
+    
+    global.addEventListener('social-resources-changed', (event) => {
+      callback(event.detail);
+    });
+  }
+
   // Public API
   global.SocializeMobile = {
     ensureLauncher: ensureSocializeLauncher,
+    ensureSocializeLauncher: ensureSocializeLauncher, // Alias for clarity
+    mountTVLauncher: ensureSocializeLauncher, // Back-compat alias
     openModal: openSocializeModal,
     closeModal: closeSocializeModal,
     updateHUD: updateHUDDisplay,
     resetWeeklyResources: resetWeeklyResources,
     getResources: getResourceState,
-    updateResources: updateResourceState
+    updateResources: updateResourceState,
+    seedPhaseResources: seedPhaseResources,
+    onResourcesChanged: onResourcesChanged
   };
+
+  // Resilient auto-mount with MutationObserver
+  let mountObserver = null;
+  
+  function startMountObserver() {
+    if (mountObserver) {
+      console.info('[socialize-mobile] Mount observer already active');
+      return;
+    }
+    
+    // Try initial mount
+    try {
+      ensureSocializeLauncher();
+      updateHUDDisplay();
+    } catch(e) {
+      console.warn('[socialize-mobile] Initial mount failed:', e.message);
+    }
+    
+    // Watch for #tvOverlay to appear or be re-created
+    mountObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          // Check if tvOverlay exists but launcher is missing
+          const tvOverlay = document.querySelector('#tvOverlay');
+          const launcher = document.querySelector('#socializeLauncher');
+          
+          if (tvOverlay && !launcher) {
+            try {
+              console.info('[socialize-mobile] Auto-mounting launcher after DOM change');
+              ensureSocializeLauncher();
+              updateHUDDisplay();
+            } catch(e) {
+              console.error('[socialize-mobile] Auto-mount failed:', e.message);
+            }
+          }
+        }
+      }
+    });
+    
+    // Observe document.body for childList changes
+    mountObserver.observe(document.body, { 
+      childList: true, 
+      subtree: true 
+    });
+    
+    console.info('[socialize-mobile] Mount observer started');
+  }
+
+  // Bootstrap on DOMContentLoaded
+  function bootstrap() {
+    try {
+      // Try to mount launcher if DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          try {
+            startMountObserver();
+          } catch(e) {
+            console.error('[socialize-mobile] Bootstrap failed:', e.message);
+          }
+        });
+      } else {
+        // DOM already loaded
+        startMountObserver();
+      }
+    } catch(e) {
+      console.error('[socialize-mobile] Bootstrap initialization failed:', e.message);
+    }
+  }
+
+  // Start bootstrap
+  bootstrap();
 
   // Auto-initialize on social phase
   const originalRenderSocialPhase = global.renderSocialPhase;
   global.renderSocialPhase = function(panel) {
-    // Call original if exists
-    if (typeof originalRenderSocialPhase === 'function') {
-      originalRenderSocialPhase.call(this, panel);
+    try {
+      // Call original if exists
+      if (typeof originalRenderSocialPhase === 'function') {
+        originalRenderSocialPhase.call(this, panel);
+      }
+      
+      // Ensure launcher is present
+      ensureSocializeLauncher();
+      updateHUDDisplay();
+    } catch(e) {
+      console.error('[socialize-mobile] renderSocialPhase failed:', e.message);
     }
-    
-    // Ensure launcher is present
-    ensureSocializeLauncher();
-    updateHUDDisplay();
   };
 
   // Hook into weekly reset
   const originalSocialOnNewWeek = global.socialOnNewWeek;
   global.socialOnNewWeek = function() {
-    if (typeof originalSocialOnNewWeek === 'function') {
-      originalSocialOnNewWeek.call(this);
+    try {
+      if (typeof originalSocialOnNewWeek === 'function') {
+        originalSocialOnNewWeek.call(this);
+      }
+      resetWeeklyResources();
+    } catch(e) {
+      console.error('[socialize-mobile] socialOnNewWeek failed:', e.message);
     }
-    resetWeeklyResources();
   };
 
 })(window);
