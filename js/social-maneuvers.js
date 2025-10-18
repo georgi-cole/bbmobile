@@ -1339,7 +1339,12 @@
    * Used when player depletes all social energy.
    * @param {number} delayMs - Delay in milliseconds before advancing (default 3000ms)
    */
-  function scheduleFastAdvance(delayMs = 3000){
+  /**
+   * Shorten the current phase timer and accelerate phase end after the specified delay.
+   * Used when player depletes all social energy.
+   * @param {number} delayMs - Delay in milliseconds before advancing (default 3000ms)
+   */
+  function shortenPhaseTimer(delayMs = 3000){
     const g = global.game;
     if(!g) return;
 
