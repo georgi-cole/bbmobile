@@ -560,13 +560,30 @@
     try{
       ensureGame();
 
-      const raw=StorageSafe.get('bb_settings_modular', null);
-      if(raw){
-        try{ global.game.cfg = Object.assign({}, getDefaultCfg(), JSON.parse(raw)); }catch{ global.game.cfg = getDefaultCfg(); }
+      // Use Config.ensureGameCfg if available (preserves aliases)
+      if(typeof global.Config !== 'undefined' && typeof global.Config.ensureGameCfg === 'function'){
+        global.Config.ensureGameCfg();
       } else {
-        global.game.cfg = getDefaultCfg();
-        StorageSafe.set('bb_settings_modular', JSON.stringify(global.game.cfg));
+        // Fallback: read from bb_settings_modular but don't break existing config object
+        const raw=StorageSafe.get('bb_settings_modular', null);
+        if(raw){
+          try{ 
+            const stored = JSON.parse(raw);
+            // Merge into existing config object instead of replacing it
+            global.game.cfg = Object.assign(global.game.cfg || {}, getDefaultCfg(), stored);
+            // Re-establish window.cfg alias
+            global.cfg = global.game.cfg;
+          }catch{ 
+            global.game.cfg = getDefaultCfg();
+            global.cfg = global.game.cfg;
+          }
+        } else {
+          global.game.cfg = Object.assign(global.game.cfg || {}, getDefaultCfg());
+          global.cfg = global.game.cfg;
+          StorageSafe.set('bb_settings_modular', JSON.stringify(global.game.cfg));
+        }
       }
+      
       loadSettingsIntoUI(global.game.cfg);
       applyInputsToConfig();
       saveSettings();
