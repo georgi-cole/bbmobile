@@ -575,8 +575,8 @@
         if(raw){
           try{ 
             const stored = JSON.parse(raw);
-            // Merge into existing config object instead of replacing it
-            global.game.cfg = Object.assign(global.game.cfg || {}, getDefaultCfg(), stored);
+            // Merge into new config object following documented priority: defaults → existing config → stored overrides
+            global.game.cfg = Object.assign({}, getDefaultCfg(), global.game.cfg || {}, stored);
             // Re-establish window.cfg alias
             global.cfg = global.game.cfg;
           }catch{ 
