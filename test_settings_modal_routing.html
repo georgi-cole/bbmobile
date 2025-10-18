@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings Modal Routing Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: #0f1320;
+      color: #e6e8ee;
+    }
+    h1 { color: #2d8ab4; }
+    .test-section {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #79d19a;
+    }
+    button {
+      background: #2877a0;
+      color: white;
+      border: 1px solid #2d8ab4;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 4px;
+    }
+    button:hover {
+      background: #1a4a63;
+    }
+    .result {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #0e1422;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .pass { color: #79d19a; }
+    .fail { color: #f2c862; }
+    .info { color: #9aa3b2; }
+  </style>
+</head>
+<body>
+  <h1>Settings Modal Routing Test</h1>
+  
+  <div class="test-section">
+    <h2>1. Check Modal Function Availability</h2>
+    <button onclick="testModalFunctions()">Run Test</button>
+    <div id="test1-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. Check SettingsRender Namespace</h2>
+    <button onclick="testSettingsRender()">Run Test</button>
+    <div id="test2-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. Test Modal Opening (Visual)</h2>
+    <button onclick="window.openSettingsModal()">Open Settings Modal</button>
+    <button onclick="window.closeSettingsModal && window.closeSettingsModal()">Close Settings Modal</button>
+    <div id="test3-result" class="result">Click "Open Settings Modal" to verify the modular modal appears</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>4. Check Player Count Application Function</h2>
+    <button onclick="testPlayerCountFunctions()">Run Test</button>
+    <div id="test4-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>5. Simulate Player Count Change (Lobby Phase)</h2>
+    <button onclick="testLobbyPlayerChange()">Test Lobby Phase</button>
+    <div id="test5-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>6. Simulate Player Count Change (Mid-Season Phase)</h2>
+    <button onclick="testMidSeasonPlayerChange()">Test Mid-Season Phase</button>
+    <div id="test6-result" class="result"></div>
+  </div>
+
+  <!-- Load required dependencies -->
+  <script defer src="js/config/defaults.js"></script>
+  <script defer src="js/settings/effects.js"></script>
+  <script defer src="js/settings/registry.js"></script>
+  <script type="module" src="js/settings/cast-tab.js"></script>
+  <script defer src="js/settings/render.js"></script>
+  <script defer src="js/ui.config-and-settings.js"></script>
+
+  <script>
+    // Wait for all scripts to load
+    window.addEventListener('load', function() {
+      console.log('All scripts loaded');
+      
+      // Initialize minimal game state for testing
+      if(!window.game) {
+        window.game = {
+          phase: 'lobby',
+          cfg: { numPlayers: 12 },
+          players: []
+        };
+      }
+      
+      // Mock addLog if not available
+      if(!window.addLog) {
+        window.addLog = function(msg, cls) {
+          console.log('[LOG]', cls || '', msg);
+          const logDiv = document.createElement('div');
+          logDiv.className = 'info';
+          logDiv.textContent = '[' + (cls || 'info') + '] ' + msg;
+          document.body.appendChild(logDiv);
+        };
+      }
+    });
+    
+    function testModalFunctions() {
+      const result = document.getElementById('test1-result');
+      let output = '';
+      
+      output += 'window.openSettingsModal: ' + (typeof window.openSettingsModal === 'function' ? '✓ PASS' : '✗ FAIL') + '\n';
+      output += 'window.closeSettingsModal: ' + (typeof window.closeSettingsModal === 'function' ? '✓ PASS' : '✗ FAIL') + '\n';
+      
+      result.textContent = output;
+      result.className = 'result ' + (output.includes('FAIL') ? 'fail' : 'pass');
+    }
+    
+    function testSettingsRender() {
+      const result = document.getElementById('test2-result');
+      let output = '';
+      
+      output += 'window.SettingsRender exists: ' + (typeof window.SettingsRender !== 'undefined' ? '✓ PASS' : '✗ FAIL') + '\n';
+      output += 'SettingsRender.openSettingsModal: ' + (typeof window.SettingsRender?.openSettingsModal === 'function' ? '✓ PASS' : '✗ FAIL') + '\n';
+      output += 'SettingsRender.closeSettingsModal: ' + (typeof window.SettingsRender?.closeSettingsModal === 'function' ? '✓ PASS' : '✗ FAIL') + '\n';
+      output += 'Global redirects to SettingsRender: ' + (window.openSettingsModal === window.SettingsRender?.openSettingsModal ? '✓ PASS' : '✗ FAIL') + '\n';
+      
+      result.textContent = output;
+      result.className = 'result ' + (output.includes('FAIL') ? 'fail' : 'pass');
+    }
+    
+    function testPlayerCountFunctions() {
+      const result = document.getElementById('test4-result');
+      let output = '';
+      
+      output += 'window.applyPlayersFromSettings: ' + (typeof window.applyPlayersFromSettings === 'function' ? '✓ PASS' : '✗ FAIL') + '\n';
+      output += 'window.applyPlayers: ' + (typeof window.applyPlayers === 'function' ? '✓ PASS' : '✗ FAIL') + '\n';
+      
+      result.textContent = output;
+      result.className = 'result ' + (output.includes('FAIL') && !output.includes('✓ PASS') ? 'fail' : 'pass');
+    }
+    
+    function testLobbyPlayerChange() {
+      const result = document.getElementById('test5-result');
+      
+      // Set lobby phase
+      if(!window.game) window.game = {};
+      window.game.phase = 'lobby';
+      window.game.cfg = window.game.cfg || {};
+      
+      let output = 'Phase: lobby\n';
+      output += 'Testing applyPlayersFromSettings(16)...\n\n';
+      
+      // Mock rebuild functions
+      let rebuildCalled = false;
+      let openingSequenceCalled = false;
+      
+      window.rebuildGame = function() { rebuildCalled = true; };
+      window.startOpeningSequence = function() { openingSequenceCalled = true; };
+      
+      try {
+        if(typeof window.applyPlayersFromSettings === 'function') {
+          window.applyPlayersFromSettings(16);
+          output += 'rebuildGame called: ' + (rebuildCalled ? '✓ PASS' : '✗ FAIL') + '\n';
+          output += 'startOpeningSequence called: ' + (openingSequenceCalled ? '✓ PASS' : '✗ FAIL') + '\n';
+          output += 'numPlayers saved: ' + (window.game.cfg.numPlayers === 16 ? '✓ PASS' : '✗ FAIL (got ' + window.game.cfg.numPlayers + ')') + '\n';
+        } else {
+          output += '✗ FAIL: applyPlayersFromSettings not available\n';
+        }
+      } catch(e) {
+        output += '✗ FAIL: ' + e.message + '\n';
+      }
+      
+      result.textContent = output;
+      result.className = 'result ' + (output.includes('FAIL') ? 'fail' : 'pass');
+    }
+    
+    function testMidSeasonPlayerChange() {
+      const result = document.getElementById('test6-result');
+      
+      // Set mid-season phase
+      if(!window.game) window.game = {};
+      window.game.phase = 'week';  // Any phase other than 'lobby'
+      window.game.cfg = window.game.cfg || {};
+      
+      let output = 'Phase: week (mid-season)\n';
+      output += 'Testing applyPlayersFromSettings(18)...\n\n';
+      
+      // Track if rebuild functions are NOT called
+      let rebuildCalled = false;
+      let openingSequenceCalled = false;
+      let logCalled = false;
+      let logMessage = '';
+      
+      window.rebuildGame = function() { rebuildCalled = true; };
+      window.startOpeningSequence = function() { openingSequenceCalled = true; };
+      const originalAddLog = window.addLog;
+      window.addLog = function(msg, cls) {
+        logCalled = true;
+        logMessage = msg;
+        if(originalAddLog) originalAddLog(msg, cls);
+      };
+      
+      try {
+        if(typeof window.applyPlayersFromSettings === 'function') {
+          window.applyPlayersFromSettings(18);
+          output += 'rebuildGame NOT called: ' + (!rebuildCalled ? '✓ PASS' : '✗ FAIL (should defer)') + '\n';
+          output += 'startOpeningSequence NOT called: ' + (!openingSequenceCalled ? '✓ PASS' : '✗ FAIL (should defer)') + '\n';
+          output += 'numPlayers saved: ' + (window.game.cfg.numPlayers === 18 ? '✓ PASS' : '✗ FAIL (got ' + window.game.cfg.numPlayers + ')') + '\n';
+          output += 'Log message shown: ' + (logCalled && logMessage.includes('Will apply next season') ? '✓ PASS' : '✗ FAIL') + '\n';
+          output += 'Message: "' + logMessage + '"';
+        } else {
+          output += '✗ FAIL: applyPlayersFromSettings not available\n';
+        }
+      } catch(e) {
+        output += '✗ FAIL: ' + e.message + '\n';
+      }
+      
+      // Restore original addLog
+      window.addLog = originalAddLog;
+      
+      result.textContent = output;
+      result.className = 'result ' + (output.includes('FAIL') ? 'fail' : 'pass');
+    }
+  </script>
+</body>
+</html>
