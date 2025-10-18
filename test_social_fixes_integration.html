@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Fixes - Integration Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0a0f1a;
+      color: #fff;
+    }
+    h1 { color: #4a90e2; }
+    h2 { color: #66b3ff; margin-top: 30px; }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .test-result.pass {
+      background: #1a4d2e;
+      border-left: 4px solid #27ae60;
+    }
+    .test-result.fail {
+      background: #4d1a1a;
+      border-left: 4px solid #e74c3c;
+    }
+    .test-result.info {
+      background: #1a2d4d;
+      border-left: 4px solid #3498db;
+    }
+    pre {
+      background: #1a1a2e;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Social Maneuvers Fixes - Integration Test</h1>
+  <p>Testing the three main issues fixed in this PR:</p>
+  <ol>
+    <li>scheduleFastAdvance ReferenceError prevention</li>
+    <li>Resource spend/earn + weekly replenishment</li>
+    <li>End-of-phase summary (Social Maneuvers, not legacy)</li>
+  </ol>
+
+  <div id="test-output"></div>
+
+  <script>
+    // Mock game state
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      humanId: 1,
+      week: 1,
+      phase: 'social_intermission',
+      players: [
+        { id: 1, name: 'Alice', evicted: false, affinity: {} },
+        { id: 2, name: 'Bob', evicted: false, affinity: {} },
+        { id: 3, name: 'Charlie', evicted: false, affinity: {} }
+      ]
+    };
+    
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    window.addLog = (msg, type) => console.log(`[LOG ${type}] ${msg}`);
+    window.updateHud = () => console.log('[updateHud] called');
+    
+    const output = document.getElementById('test-output');
+    
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      output.appendChild(div);
+    }
+    
+    function testScheduleFastAdvanceShim() {
+      log('Test 1: scheduleFastAdvance Shim', 'info');
+      
+      // Check if shim is installed
+      if (typeof window.scheduleFastAdvance === 'function') {
+        log('✓ window.scheduleFastAdvance is defined', 'pass');
+      } else {
+        log('✗ window.scheduleFastAdvance is NOT defined', 'fail');
+        return false;
+      }
+      
+      // Test that calling it doesn't throw
+      try {
+        // We'll immediately clear it to avoid actually advancing
+        const testTimeout = window.scheduleFastAdvance(100);
+        log('✓ scheduleFastAdvance callable without ReferenceError', 'pass');
+        
+        // Clean up
+        if (window.game.__socialFastAdvanceTimeout) {
+          clearTimeout(window.game.__socialFastAdvanceTimeout);
+          window.game.__socialFastAdvanceTimeout = null;
+          log('✓ Cleanup successful', 'pass');
+        }
+        return true;
+      } catch (e) {
+        log(`✗ scheduleFastAdvance threw error: ${e.message}`, 'fail');
+        return false;
+      }
+    }
+    
+    function testResourceEvents() {
+      log('\nTest 2: Resource Events & HUD Updates', 'info');
+      
+      let eventFired = false;
+      let eventDetail = null;
+      
+      const handler = (e) => {
+        eventFired = true;
+        eventDetail = e.detail;
+      };
+      
+      window.addEventListener('social-resources-changed', handler);
+      
+      try {
+        // Test spend
+        const spendResult = window.SocialManeuvers.SocialResources.spend(1, { energy: 1 });
+        
+        if (spendResult.success) {
+          log('✓ SocialResources.spend() succeeded', 'pass');
+        } else {
+          log('✗ SocialResources.spend() failed', 'fail');
+          return false;
+        }
+        
+        // Wait for event
+        setTimeout(() => {
+          if (eventFired) {
+            log('✓ social-resources-changed event fired', 'pass');
+            log(`  Event detail: playerId=${eventDetail.playerId}, delta=${JSON.stringify(eventDetail.delta)}`, 'info');
+          } else {
+            log('✗ social-resources-changed event NOT fired', 'fail');
+          }
+          
+          window.removeEventListener('social-resources-changed', handler);
+        }, 100);
+        
+        return true;
+      } catch (e) {
+        log(`✗ Resource event test threw error: ${e.message}`, 'fail');
+        window.removeEventListener('social-resources-changed', handler);
+        return false;
+      }
+    }
+    
+    function testWeeklyReset() {
+      log('\nTest 3: Weekly Reset with Guard', 'info');
+      
+      try {
+        // Set week
+        window.game.week = 2;
+        
+        // First reset should work
+        window.socialOnNewWeek();
+        
+        if (window.game.__socialWeeklyResetWeek === 2) {
+          log('✓ Weekly reset guard set correctly', 'pass');
+        } else {
+          log('✗ Weekly reset guard NOT set', 'fail');
+          return false;
+        }
+        
+        // Second reset in same week should be skipped
+        const before = window.game.__socialWeeklyResetWeek;
+        window.socialOnNewWeek();
+        const after = window.game.__socialWeeklyResetWeek;
+        
+        if (before === after) {
+          log('✓ Duplicate weekly reset prevented', 'pass');
+        } else {
+          log('✗ Duplicate weekly reset NOT prevented', 'fail');
+          return false;
+        }
+        
+        return true;
+      } catch (e) {
+        log(`✗ Weekly reset test threw error: ${e.message}`, 'fail');
+        return false;
+      }
+    }
+    
+    function testLegacySummarySkip() {
+      log('\nTest 4: Legacy Summary Skipped', 'info');
+      
+      // This test just verifies the function exists and has the guard
+      if (typeof window.shouldShowLegacyMemories === 'function') {
+        log('✓ shouldShowLegacyMemories helper exists', 'pass');
+        
+        const shouldShow = window.shouldShowLegacyMemories();
+        if (!shouldShow && window.SocialManeuvers?.isEnabled?.()) {
+          log('✓ Legacy summary correctly disabled when SM enabled', 'pass');
+        } else {
+          log(`  Legacy summary state: ${shouldShow} (SM enabled: ${window.SocialManeuvers?.isEnabled?.()})`, 'info');
+        }
+        
+        return true;
+      } else {
+        log('✗ shouldShowLegacyMemories helper NOT found', 'fail');
+        return false;
+      }
+    }
+    
+    function runTests() {
+      log('=== Starting Integration Tests ===', 'info');
+      log('Loading social-maneuvers.js...', 'info');
+    }
+    
+    // Load scripts in sequence
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+    
+    // Run tests after scripts load
+    (async () => {
+      try {
+        await loadScript('js/social-maneuvers.js');
+        log('✓ social-maneuvers.js loaded', 'pass');
+        
+        await loadScript('js/social.js');
+        log('✓ social.js loaded', 'pass');
+        
+        await loadScript('js/socialize-mobile.js');
+        log('✓ socialize-mobile.js loaded', 'pass');
+        
+        // Wait for module initialization
+        setTimeout(() => {
+          runTests();
+          
+          setTimeout(() => {
+            testScheduleFastAdvanceShim();
+            setTimeout(() => testResourceEvents(), 200);
+            setTimeout(() => testWeeklyReset(), 400);
+            setTimeout(() => testLegacySummarySkip(), 600);
+            
+            setTimeout(() => {
+              log('\n=== Test Suite Complete ===', 'info');
+              log('Review the results above. All ✓ means success!', 'info');
+            }, 1000);
+          }, 200);
+        }, 500);
+        
+      } catch (e) {
+        log(`✗ Failed to load scripts: ${e.message}`, 'fail');
+      }
+    })();
+  </script>
+</body>
+</html>
