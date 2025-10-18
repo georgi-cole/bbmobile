@@ -91,7 +91,11 @@
   global.applyInputsToConfig = applyInputsToConfig;
 
   function saveSettings(){
-    try{ StorageSafe.set('bb_settings_modular', JSON.stringify(global.game?.cfg||{})); }catch{}
+    const cfg = global.game?.cfg;
+    if(!cfg) return;
+    // Save to both storage keys for compatibility
+    try{ StorageSafe.set('bb_settings_modular', JSON.stringify(cfg)); }catch{}
+    try{ StorageSafe.set('bb_cfg_v2', JSON.stringify(cfg)); }catch{}
   }
 
   // ---------- Cast build/reset ----------
@@ -123,8 +127,18 @@
     g.players.length = 0;
 
     const humanName=(g.cfg?.humanName || document.getElementById('humanName')?.value || 'You').trim();
-    // Read target cast size from config when creating players
-    const N = +(g.cfg?.numPlayers) || 12;
+    
+    // Robust getter for numPlayers: check config, then storage fallback, then default
+    // This ensures numPlayers is read correctly even if config objects become de-aliased
+    let N = +(g.cfg?.numPlayers);
+    if(!N || isNaN(N)){
+      // Fallback to storage if config is missing/invalid
+      try{
+        const stored = global.Config?.loadStoredCfg?.() || {};
+        N = +(stored.numPlayers) || 0;
+      }catch{}
+    }
+    if(!N || isNaN(N)) N = 12; // Final fallback to default
     const defaults=['Finn','Mimi','Rae','Nova','Kai','Zed','Ivy','Ash','Lux','Remy','Blue','Jax','Echo','Vee','Sol','Quinn','Aria','Dex','Rune','Bea','Nico','Pax','Noa','Kian','Lia','Rey'];
 
     for(let i=0;i<N;i++){
@@ -550,16 +564,39 @@
     try{
       ensureGame();
 
-      const raw=StorageSafe.get('bb_settings_modular', null);
-      if(raw){
-        try{ global.game.cfg = Object.assign({}, getDefaultCfg(), JSON.parse(raw)); }catch{ global.game.cfg = getDefaultCfg(); }
+      // Use Config.ensureGameCfg if available (preserves aliases)
+      if(typeof global.Config !== 'undefined' && typeof global.Config.ensureGameCfg === 'function'){
+        global.Config.ensureGameCfg();
       } else {
-        global.game.cfg = getDefaultCfg();
-        StorageSafe.set('bb_settings_modular', JSON.stringify(global.game.cfg));
+        // Fallback: read from bb_cfg_v2 first, then bb_settings_modular
+        let raw = StorageSafe.get('bb_cfg_v2', null);
+        if(!raw) raw = StorageSafe.get('bb_settings_modular', null);
+        
+        if(raw){
+          try{ 
+            const stored = JSON.parse(raw);
+            // Merge into new config object following documented priority: defaults → existing config → stored overrides
+            global.game.cfg = Object.assign({}, getDefaultCfg(), global.game.cfg || {}, stored);
+            // Re-establish window.cfg alias
+            global.cfg = global.game.cfg;
+          }catch{ 
+            global.game.cfg = getDefaultCfg();
+            global.cfg = global.game.cfg;
+          }
+        } else {
+          global.game.cfg = Object.assign({}, getDefaultCfg(), global.game.cfg || {});
+          global.cfg = global.game.cfg;
+          // Save to both keys
+          StorageSafe.set('bb_cfg_v2', JSON.stringify(global.game.cfg));
+          StorageSafe.set('bb_settings_modular', JSON.stringify(global.game.cfg));
+        }
       }
+      
+      // Populate UI inputs with loaded config
       loadSettingsIntoUI(global.game.cfg);
-      applyInputsToConfig();
-      saveSettings();
+      // NOTE: Don't call applyInputsToConfig() and saveSettings() on initial boot
+      // as they would read from UI defaults and overwrite the loaded config.
+      // They should only be called when user actually changes settings.
 
       buildCast();
 

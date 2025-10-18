@@ -34,18 +34,35 @@
 
   function readCfg(){
     let merged = {};
-    for (const k of LS_KEYS){
-      try{
-        const raw = localStorage.getItem(k);
-        if(raw) merged = Object.assign(merged, JSON.parse(raw));
-      }catch{}
+    // Try Config.loadStoredCfg first (centralized)
+    if(typeof g.Config !== 'undefined' && typeof g.Config.loadStoredCfg === 'function'){
+      merged = g.Config.loadStoredCfg();
+    } else {
+      // Fallback to manual read
+      for (const k of LS_KEYS){
+        try{
+          const raw = localStorage.getItem(k);
+          if(raw) merged = Object.assign(merged, JSON.parse(raw));
+        }catch{}
+      }
     }
     (g.game = g.game || {}).cfg = Object.assign({}, g.game.cfg || {}, merged);
+    // Ensure both aliases point to the same object
+    g.cfg = g.game.cfg;
     return g.game.cfg;
   }
   function writeCfg(cfg){
-    try{ localStorage.setItem(LS_KEYS[0], JSON.stringify(cfg)); }catch{}
-    try{ localStorage.setItem(LS_KEYS[1], JSON.stringify(cfg)); }catch{}
+    // Use Config.saveStoredCfg when available (centralized)
+    if(typeof g.Config !== 'undefined' && typeof g.Config.saveStoredCfg === 'function'){
+      g.Config.saveStoredCfg(cfg);
+    } else {
+      // Fallback to manual write
+      try{ localStorage.setItem(LS_KEYS[0], JSON.stringify(cfg)); }catch{}
+      try{ localStorage.setItem(LS_KEYS[1], JSON.stringify(cfg)); }catch{}
+    }
+    // Re-establish aliases after write
+    (g.game = g.game || {}).cfg = cfg;
+    g.cfg = cfg;
   }
 
   function isVisible(el){
