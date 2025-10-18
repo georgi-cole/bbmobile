@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Feature Flag Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 20px;
+      background: #f5f5f5;
+    }
+    .test-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .test-pass {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .test-fail {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .test-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button.danger {
+      background: #dc3545;
+    }
+    button.danger:hover {
+      background: #c82333;
+    }
+    button.success {
+      background: #28a745;
+    }
+    button.success:hover {
+      background: #218838;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .status-on { background: #28a745; }
+    .status-off { background: #dc3545; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Social Maneuvers Feature Flag Test</h1>
+  
+  <div class="test-card">
+    <h2>Feature Flag Status</h2>
+    <div id="flagStatus"></div>
+    <div style="margin-top: 15px;">
+      <button onclick="enableFeature()">Enable Social Maneuvers</button>
+      <button class="danger" onclick="disableFeature()">Disable (Use Legacy)</button>
+    </div>
+  </div>
+  
+  <div class="test-card">
+    <h2>Module Loading Tests</h2>
+    <div id="moduleTests"></div>
+  </div>
+  
+  <div class="test-card">
+    <h2>Global Exports Verification</h2>
+    <div id="globalTests"></div>
+  </div>
+  
+  <div class="test-card">
+    <h2>Feature Flag Toggle Test</h2>
+    <div id="toggleTest"></div>
+    <button class="success" onclick="runToggleTest()">Run Toggle Test</button>
+  </div>
+  
+  <!-- Global shim -->
+  <script>window.global = window;</script>
+  
+  <!-- Feature Flag Configuration -->
+  <script>
+    (function() {
+      if (!window.game) window.game = {};
+      if (!window.game.cfg) window.game.cfg = {};
+      if (window.game.cfg.enableSocialManeuvers === undefined) {
+        window.game.cfg.enableSocialManeuvers = true;
+      }
+      console.info('[Social FF] enableSocialManeuvers =', window.game.cfg.enableSocialManeuvers);
+    })();
+  </script>
+  
+  <!-- Load Social Maneuvers modules -->
+  <script src="js/social-action-config.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social-maneuvers-launcher-bootstrap.js"></script>
+  
+  <!-- Test Runner -->
+  <script>
+    function updateFlagStatus() {
+      const status = document.getElementById('flagStatus');
+      const isEnabled = window.game?.cfg?.enableSocialManeuvers === true;
+      const indicator = isEnabled ? 'status-on' : 'status-off';
+      const label = isEnabled ? 'ENABLED' : 'DISABLED (Legacy)';
+      
+      status.innerHTML = `
+        <div class="test-info">
+          <span class="status-indicator ${indicator}"></span>
+          <strong>Social Maneuvers:</strong> ${label}
+          <br><br>
+          <code>window.game.cfg.enableSocialManeuvers = ${isEnabled}</code>
+        </div>
+      `;
+    }
+    
+    function enableFeature() {
+      window.game.cfg.enableSocialManeuvers = true;
+      console.log('✓ Enabled Social Maneuvers');
+      updateFlagStatus();
+      runModuleTests();
+    }
+    
+    function disableFeature() {
+      window.game.cfg.enableSocialManeuvers = false;
+      console.log('✓ Disabled Social Maneuvers (using legacy)');
+      updateFlagStatus();
+      runModuleTests();
+    }
+    
+    function runModuleTests() {
+      const results = [];
+      
+      // Test 1: SocialManeuvers exists
+      if (typeof window.SocialManeuvers !== 'undefined') {
+        results.push({ pass: true, msg: 'SocialManeuvers global exists' });
+      } else {
+        results.push({ pass: false, msg: 'SocialManeuvers global NOT FOUND' });
+      }
+      
+      // Test 2: SocialLauncherBootstrap exists
+      if (typeof window.SocialLauncherBootstrap !== 'undefined') {
+        results.push({ pass: true, msg: 'SocialLauncherBootstrap global exists' });
+      } else {
+        results.push({ pass: false, msg: 'SocialLauncherBootstrap global NOT FOUND' });
+      }
+      
+      // Test 3: SocialActionConfig exists
+      if (typeof window.SocialActionConfig !== 'undefined') {
+        results.push({ pass: true, msg: 'SocialActionConfig global exists' });
+      } else {
+        results.push({ pass: false, msg: 'SocialActionConfig global NOT FOUND' });
+      }
+      
+      const html = results.map(r => {
+        const className = r.pass ? 'test-pass' : 'test-fail';
+        const icon = r.pass ? '✅' : '❌';
+        return `<div class="${className}">${icon} ${r.msg}</div>`;
+      }).join('');
+      
+      document.getElementById('moduleTests').innerHTML = html;
+    }
+    
+    function runGlobalTests() {
+      const results = [];
+      
+      // Test SocialManeuvers API
+      if (window.SocialManeuvers) {
+        const api = window.SocialManeuvers;
+        
+        if (typeof api.SocialResources === 'object') {
+          results.push({ pass: true, msg: 'SocialManeuvers.SocialResources API exists' });
+        } else {
+          results.push({ pass: false, msg: 'SocialManeuvers.SocialResources API missing' });
+        }
+        
+        if (typeof api.SocialActions === 'object') {
+          results.push({ pass: true, msg: 'SocialManeuvers.SocialActions API exists' });
+        } else {
+          results.push({ pass: false, msg: 'SocialManeuvers.SocialActions API missing' });
+        }
+        
+        if (typeof api.SocialMemory === 'object') {
+          results.push({ pass: true, msg: 'SocialManeuvers.SocialMemory API exists' });
+        } else {
+          results.push({ pass: false, msg: 'SocialManeuvers.SocialMemory API missing' });
+        }
+      }
+      
+      const html = results.map(r => {
+        const className = r.pass ? 'test-pass' : 'test-fail';
+        const icon = r.pass ? '✅' : '❌';
+        return `<div class="${className}">${icon} ${r.msg}</div>`;
+      }).join('');
+      
+      document.getElementById('globalTests').innerHTML = html || '<div class="test-info">Run module tests first</div>';
+    }
+    
+    function runToggleTest() {
+      const results = [];
+      const output = document.getElementById('toggleTest');
+      
+      // Save original state
+      const originalState = window.game.cfg.enableSocialManeuvers;
+      
+      // Test 1: Enable
+      window.game.cfg.enableSocialManeuvers = true;
+      if (window.game.cfg.enableSocialManeuvers === true) {
+        results.push({ pass: true, msg: 'Toggle to TRUE works' });
+      } else {
+        results.push({ pass: false, msg: 'Toggle to TRUE failed' });
+      }
+      
+      // Test 2: Disable
+      window.game.cfg.enableSocialManeuvers = false;
+      if (window.game.cfg.enableSocialManeuvers === false) {
+        results.push({ pass: true, msg: 'Toggle to FALSE works' });
+      } else {
+        results.push({ pass: false, msg: 'Toggle to FALSE failed' });
+      }
+      
+      // Test 3: Re-enable
+      window.game.cfg.enableSocialManeuvers = true;
+      if (window.game.cfg.enableSocialManeuvers === true) {
+        results.push({ pass: true, msg: 'Toggle back to TRUE works' });
+      } else {
+        results.push({ pass: false, msg: 'Toggle back to TRUE failed' });
+      }
+      
+      // Restore original state
+      window.game.cfg.enableSocialManeuvers = originalState;
+      
+      const html = results.map(r => {
+        const className = r.pass ? 'test-pass' : 'test-fail';
+        const icon = r.pass ? '✅' : '❌';
+        return `<div class="${className}">${icon} ${r.msg}</div>`;
+      }).join('');
+      
+      output.innerHTML = html;
+      updateFlagStatus();
+    }
+    
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      updateFlagStatus();
+      runModuleTests();
+      runGlobalTests();
+    });
+  </script>
+</body>
+</html>
