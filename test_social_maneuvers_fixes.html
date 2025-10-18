@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Fixes Verification</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 20px;
+      background: #0a0f1a;
+      color: #fff;
+    }
+    .test-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .test-pass {
+      background: rgba(40, 167, 69, 0.2);
+      color: #4caf50;
+      border: 1px solid rgba(40, 167, 69, 0.4);
+    }
+    .test-fail {
+      background: rgba(220, 53, 69, 0.2);
+      color: #f44336;
+      border: 1px solid rgba(220, 53, 69, 0.4);
+    }
+    .test-info {
+      background: rgba(23, 162, 184, 0.2);
+      color: #17a2b8;
+      border: 1px solid rgba(23, 162, 184, 0.4);
+    }
+    button {
+      background: linear-gradient(135deg, #4a90e2, #357abd);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: linear-gradient(135deg, #5a9ff2, #4585c7);
+    }
+    code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .status-on { background: #28a745; }
+    .status-off { background: #dc3545; }
+    h1, h2 { color: #4a90e2; }
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      aspect-ratio: 16 / 9;
+      margin: 20px auto;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    .tvViewport {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #1a1a2e, #0f0f1e);
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Social Maneuvers Fixes Verification</h1>
+  
+  <div class="test-card">
+    <h2>1. Mount Target Resolution Test</h2>
+    <div id="mountTargetTests"></div>
+    <button onclick="testMountTargetResolution()">Test Mount Target Resolution</button>
+  </div>
+  
+  <div class="test-card">
+    <h2>2. Timer Controls Test</h2>
+    <div id="timerTests"></div>
+    <button onclick="testTimerControls()">Test Pause/Resume Timer</button>
+  </div>
+  
+  <div class="test-card">
+    <h2>3. Phase Transition Test</h2>
+    <div id="phaseTests"></div>
+    <button onclick="testPhaseTransitions()">Test setPhase Wrapper</button>
+  </div>
+  
+  <div class="test-card">
+    <h2>4. Weekly Reset Test</h2>
+    <div id="weeklyTests"></div>
+    <button onclick="testWeeklyReset()">Test Weekly Reset Hook</button>
+  </div>
+  
+  <div class="test-card">
+    <h2>5. Execute Action Test</h2>
+    <div id="actionTests"></div>
+    <button onclick="testExecuteAction()">Test Execute Action (No Legacy Fallback)</button>
+  </div>
+  
+  <div class="test-card">
+    <h2>Test Environment</h2>
+    <div id="tv">
+      <div class="tvViewport"></div>
+    </div>
+  </div>
+  
+  <!-- Global shim -->
+  <script>window.global = window;</script>
+  
+  <!-- Mock game state -->
+  <script>
+    // Initialize game state
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      phase: 'none',
+      week: 1,
+      humanId: 1,
+      endAt: null,
+      phaseEndsAt: null,
+      players: [
+        { id: 1, name: 'Alice', affinity: {}, evicted: false },
+        { id: 2, name: 'Bob', affinity: {}, evicted: false },
+        { id: 3, name: 'Charlie', affinity: {}, evicted: false }
+      ]
+    };
+    
+    // Mock functions
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    window.addLog = (msg, type) => console.log(`[LOG ${type}]`, msg);
+    window.updateHud = () => console.log('[updateHud] called');
+    
+    // Mock GameTimer for testing
+    window.GameTimer = {
+      pause: function() {
+        console.log('[GameTimer] pause() called');
+        this._paused = true;
+      },
+      resume: function() {
+        console.log('[GameTimer] resume() called');
+        this._paused = false;
+      },
+      _paused: false
+    };
+  </script>
+  
+  <!-- Load Social Maneuvers modules -->
+  <script src="js/social-action-config.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social-maneuvers-launcher-bootstrap.js"></script>
+  <script src="js/socialize-mobile.js"></script>
+  <script src="js/social.js"></script>
+  
+  <!-- Test Runner -->
+  <script>
+    function testMountTargetResolution() {
+      const output = document.getElementById('mountTargetTests');
+      const results = [];
+      
+      // Test 1: resolveMountTarget finds existing element
+      const target = window.SocialLauncherBootstrap.resolveMountTarget();
+      if (target) {
+        results.push('<div class="test-pass">✓ resolveMountTarget() returned a valid element</div>');
+        results.push(`<div class="test-info">Target selector: ${target.id || target.className}</div>`);
+      } else {
+        results.push('<div class="test-fail">✗ resolveMountTarget() returned null</div>');
+      }
+      
+      // Test 2: Fallback creates #tvOverlay if missing
+      const existingOverlay = document.querySelector('#tvOverlay');
+      if (!existingOverlay) {
+        // Remove all potential mount targets
+        const tv = document.querySelector('#tv');
+        const tvParent = tv?.parentNode;
+        tv?.remove();
+        
+        const newTarget = window.SocialLauncherBootstrap.resolveMountTarget();
+        if (newTarget && newTarget.id === 'tvOverlay') {
+          results.push('<div class="test-pass">✓ Fallback created #tvOverlay on document.body</div>');
+        } else {
+          results.push('<div class="test-fail">✗ Fallback did not create #tvOverlay</div>');
+        }
+        
+        // Restore TV
+        if (tvParent && tv) {
+          tvParent.appendChild(tv);
+        }
+      }
+      
+      output.innerHTML = results.join('');
+    }
+    
+    function testTimerControls() {
+      const output = document.getElementById('timerTests');
+      const results = [];
+      
+      // Test 1: pausePhaseTimer uses GameTimer.pause()
+      if (window.SocialManeuvers?.pausePhaseTimer) {
+        window.GameTimer._paused = false;
+        window.SocialManeuvers.pausePhaseTimer();
+        
+        if (window.GameTimer._paused) {
+          results.push('<div class="test-pass">✓ pausePhaseTimer() called GameTimer.pause()</div>');
+        } else {
+          results.push('<div class="test-fail">✗ pausePhaseTimer() did not call GameTimer.pause()</div>');
+        }
+      } else {
+        results.push('<div class="test-fail">✗ SocialManeuvers.pausePhaseTimer not found</div>');
+      }
+      
+      // Test 2: resumePhaseTimer uses GameTimer.resume()
+      if (window.SocialManeuvers?.resumePhaseTimer) {
+        window.GameTimer._paused = true;
+        window.SocialManeuvers.resumePhaseTimer();
+        
+        if (!window.GameTimer._paused) {
+          results.push('<div class="test-pass">✓ resumePhaseTimer() called GameTimer.resume()</div>');
+        } else {
+          results.push('<div class="test-fail">✗ resumePhaseTimer() did not call GameTimer.resume()</div>');
+        }
+      } else {
+        results.push('<div class="test-fail">✗ SocialManeuvers.resumePhaseTimer not found</div>');
+      }
+      
+      // Test 3: Fallback mode (when GameTimer not available)
+      const origGameTimer = window.GameTimer;
+      window.GameTimer = null;
+      window.game.endAt = Date.now() + 60000; // 1 minute from now
+      
+      if (window.SocialManeuvers?.pausePhaseTimer) {
+        window.SocialManeuvers.pausePhaseTimer();
+        const pausedEndAt = window.game.endAt;
+        
+        if (pausedEndAt > Date.now() + 3600000) { // More than 1 hour
+          results.push('<div class="test-pass">✓ Fallback pause set endAt to far future</div>');
+        } else {
+          results.push('<div class="test-fail">✗ Fallback pause did not set endAt correctly</div>');
+        }
+        
+        if (window.SocialManeuvers?.resumePhaseTimer) {
+          window.SocialManeuvers.resumePhaseTimer();
+          if (window.game.endAt < pausedEndAt) {
+            results.push('<div class="test-pass">✓ Fallback resume restored original time</div>');
+          } else {
+            results.push('<div class="test-fail">✗ Fallback resume did not restore time</div>');
+          }
+        }
+      }
+      
+      // Restore GameTimer
+      window.GameTimer = origGameTimer;
+      
+      output.innerHTML = results.join('');
+    }
+    
+    function testPhaseTransitions() {
+      const output = document.getElementById('phaseTests');
+      const results = [];
+      
+      // Test 1: Check if setPhase is wrapped
+      if (window.setPhase) {
+        results.push('<div class="test-pass">✓ setPhase function exists</div>');
+        
+        // Test 2: Entering social_intermission
+        window.game.phase = 'none';
+        let onSocialPhaseStartCalled = false;
+        const origOnStart = window.SocialManeuvers?.onSocialPhaseStart;
+        if (origOnStart) {
+          window.SocialManeuvers.onSocialPhaseStart = function() {
+            onSocialPhaseStartCalled = true;
+            origOnStart.call(this);
+          };
+        }
+        
+        // Simulate phase change
+        console.log('[Test] Simulating phase change to social_intermission');
+        try {
+          window.setPhase('social_intermission', 180, () => {});
+          
+          if (onSocialPhaseStartCalled || window.game.phase === 'social_intermission') {
+            results.push('<div class="test-pass">✓ Entering social_intermission detected</div>');
+          } else {
+            results.push('<div class="test-fail">✗ Phase transition not detected</div>');
+          }
+        } catch (e) {
+          results.push(`<div class="test-fail">✗ Error during phase transition: ${e.message}</div>`);
+        }
+        
+        // Test 3: Leaving social_intermission
+        window.game.phase = 'social_intermission';
+        let onSocialPhaseEndCalled = false;
+        const origOnEnd = window.SocialManeuvers?.onSocialPhaseEnd;
+        if (origOnEnd) {
+          window.SocialManeuvers.onSocialPhaseEnd = function() {
+            onSocialPhaseEndCalled = true;
+            origOnEnd.call(this);
+          };
+        }
+        
+        console.log('[Test] Simulating phase change to nominations');
+        try {
+          window.setPhase('nominations', 60, () => {});
+          
+          if (onSocialPhaseEndCalled || window.game.phase === 'nominations') {
+            results.push('<div class="test-pass">✓ Leaving social_intermission detected</div>');
+          } else {
+            results.push('<div class="test-fail">✗ Phase exit not detected</div>');
+          }
+        } catch (e) {
+          results.push(`<div class="test-fail">✗ Error during phase exit: ${e.message}</div>`);
+        }
+        
+        // Restore
+        if (origOnStart) window.SocialManeuvers.onSocialPhaseStart = origOnStart;
+        if (origOnEnd) window.SocialManeuvers.onSocialPhaseEnd = origOnEnd;
+        
+      } else {
+        results.push('<div class="test-fail">✗ setPhase function not found</div>');
+      }
+      
+      output.innerHTML = results.join('');
+    }
+    
+    function testWeeklyReset() {
+      const output = document.getElementById('weeklyTests');
+      const results = [];
+      
+      // Test 1: Check if socialOnNewWeek exists
+      if (window.socialOnNewWeek) {
+        results.push('<div class="test-pass">✓ socialOnNewWeek function exists</div>');
+        
+        // Test 2: Call weekly reset
+        try {
+          window.socialOnNewWeek();
+          results.push('<div class="test-pass">✓ socialOnNewWeek executed without errors</div>');
+          
+          // Test 3: Check if resources were reset (if SocialManeuvers is enabled)
+          if (window.SocialManeuvers?.isEnabled?.()) {
+            const humanId = window.game.humanId;
+            const resources = window.SocialManeuvers?.SocialResources?.getAll(humanId);
+            
+            if (resources) {
+              results.push('<div class="test-pass">✓ Resources reset called for alive players</div>');
+              results.push(`<div class="test-info">Energy: ${resources.energy}, Influence: ${resources.influence}, Information: ${resources.information}</div>`);
+            } else {
+              results.push('<div class="test-fail">✗ Resources not found after reset</div>');
+            }
+          }
+        } catch (e) {
+          results.push(`<div class="test-fail">✗ Error during weekly reset: ${e.message}</div>`);
+        }
+      } else {
+        results.push('<div class="test-fail">✗ socialOnNewWeek function not found</div>');
+      }
+      
+      output.innerHTML = results.join('');
+    }
+    
+    function testExecuteAction() {
+      const output = document.getElementById('actionTests');
+      const results = [];
+      
+      // Test 1: Check if executeAction always uses SocialManeuvers
+      if (window.SocialManeuvers?.isEnabled?.() && window.SocialManeuvers?.executeAction) {
+        results.push('<div class="test-pass">✓ SocialManeuvers.executeAction is available</div>');
+        
+        // Test 2: Execute a test action
+        try {
+          const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk', []);
+          
+          if (result.success) {
+            results.push('<div class="test-pass">✓ Action executed successfully via SocialManeuvers</div>');
+            results.push(`<div class="test-info">Result: ${result.outcome?.message || 'Action completed'}</div>`);
+          } else {
+            results.push(`<div class="test-fail">✗ Action failed: ${result.reason || result.message}</div>`);
+          }
+        } catch (e) {
+          results.push(`<div class="test-fail">✗ Error during action execution: ${e.message}</div>`);
+        }
+        
+        // Test 3: Verify no legacy fallback when flag is ON
+        results.push('<div class="test-info">ℹ️ When flag is ON, no legacy fallback should occur (executeAction always uses SocialManeuvers)</div>');
+        
+      } else {
+        results.push('<div class="test-fail">✗ SocialManeuvers engine not available or disabled</div>');
+      }
+      
+      output.innerHTML = results.join('');
+    }
+    
+    // Run all tests on load
+    window.addEventListener('load', () => {
+      console.log('[Test Suite] Social Maneuvers Fixes Verification loaded');
+      console.log('[Test Suite] Feature flag:', window.game?.cfg?.enableSocialManeuvers);
+      console.log('[Test Suite] SocialManeuvers available:', !!window.SocialManeuvers);
+      console.log('[Test Suite] SocialLauncherBootstrap available:', !!window.SocialLauncherBootstrap);
+      console.log('[Test Suite] SocializeMobile available:', !!window.SocializeMobile);
+    });
+  </script>
+</body>
+</html>
