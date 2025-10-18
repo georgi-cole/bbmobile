@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Summary Demo</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .demo-container {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .demo-container h2 {
+      color: #4ecca3;
+      margin-top: 0;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+    button {
+      background: #0f3460;
+      color: #eee;
+      border: 1px solid #4ecca3;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1a4d7a;
+    }
+    button.primary {
+      background: #4ecca3;
+      color: #1a1a2e;
+      font-weight: 600;
+    }
+    .screenshot-area {
+      margin: 20px 0;
+      padding: 15px;
+      background: #0a0a0a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      min-height: 100px;
+    }
+    .info-box {
+      background: #2d3561;
+      border-left: 4px solid #4ecca3;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .warning-box {
+      background: #3d2d1f;
+      border-left: 4px solid #f39c12;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .status-log {
+      background: #0a0a0a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 15px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin: 3px 0;
+      padding: 3px 8px;
+      border-left: 3px solid #333;
+    }
+    .log-entry.success { border-left-color: #4ecca3; color: #4ecca3; }
+    .log-entry.info { border-left-color: #5bc0de; color: #5bc0de; }
+    .log-entry.warning { border-left-color: #ffc107; color: #ffc107; }
+    .log-entry.error { border-left-color: #ff6b6b; color: #ff6b6b; }
+    
+    /* TV Frame Styles */
+    #tv {
+      position: relative;
+      width: 100%;
+      min-height: 500px;
+      background: #0a0a0a;
+      border: 2px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+    }
+    #decisionDeck {
+      position: absolute;
+      inset: 10% 5%;
+      display: grid;
+      place-items: center;
+      z-index: 12;
+      pointer-events: none;
+    }
+    .revealCard {
+      background: #16213e;
+      border: 2px solid #4ecca3;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      pointer-events: auto;
+      animation: popIn 0.45s ease forwards;
+    }
+    @keyframes popIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    @keyframes popOut {
+      from {
+        transform: scale(1);
+        opacity: 1;
+      }
+      to {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+    }
+    .btn {
+      background: #0f3460;
+      color: #eee;
+      border: 1px solid #4ecca3;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 4px;
+    }
+    .btn.small {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Maneuvers Summary Demo</h1>
+  
+  <div class="info-box">
+    <strong>Purpose:</strong> This page demonstrates the Social Maneuvers phase summary system and allows comparison with the legacy memory popup.
+  </div>
+
+  <div class="demo-container">
+    <h2>Setup & Initialization</h2>
+    <div class="button-group">
+      <button class="primary" onclick="initializeGame()">1. Initialize Game</button>
+      <button onclick="enableSocialManeuvers()">2. Enable Social Maneuvers</button>
+      <button onclick="startSocialPhase()">3. Start Social Phase</button>
+    </div>
+    <div class="status-log" id="setupLog"></div>
+  </div>
+
+  <div class="demo-container">
+    <h2>Simulate Social Actions</h2>
+    <p>Perform actions to generate data for the summary:</p>
+    <div class="button-group">
+      <button onclick="simulateAction('strategize', 2)">Strategize (costs 2 energy)</button>
+      <button onclick="simulateAction('smalltalk', 1)">Small Talk (costs 1 energy)</button>
+      <button onclick="simulateAction('confide', 2)">Confide (costs 2 energy)</button>
+      <button onclick="simulateAction('compliment', 1)">Compliment (costs 1 energy)</button>
+      <button onclick="simulateAction('alliance', 1)">Form Alliance (costs 1 energy)</button>
+    </div>
+    <div class="button-group">
+      <button class="primary" onclick="simulateMultipleActions()">Simulate Full Session (5 actions)</button>
+    </div>
+    <div class="status-log" id="actionLog"></div>
+  </div>
+
+  <div class="demo-container">
+    <h2>View Summaries</h2>
+    <div class="button-group">
+      <button class="primary" onclick="showNewSummary()">Show NEW Social Maneuvers Summary</button>
+      <button onclick="showLegacySummary()">Show LEGACY Memory Popup (for comparison)</button>
+      <button onclick="clearSummaries()">Clear All</button>
+    </div>
+    <div class="warning-box" id="summaryStatus">
+      No summary shown yet. Perform actions first, then click a summary button.
+    </div>
+  </div>
+
+  <div class="demo-container">
+    <h2>Summary Display Area</h2>
+    <div id="tv">
+      <div id="tvOverlay"></div>
+      <div id="decisionDeck"></div>
+    </div>
+  </div>
+
+  <div class="demo-container">
+    <h2>Session Data Inspector</h2>
+    <button onclick="inspectSessionData()">Inspect Current Session Data</button>
+    <button onclick="exportSessionJSON()">Export Session JSON</button>
+    <div class="status-log" id="dataLog"></div>
+  </div>
+
+  <!-- Include game modules -->
+  <script src="js/state.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/socialize-mobile.js"></script>
+  <script src="js/social.js"></script>
+
+  <script>
+    // Utility functions
+    function log(elementId, message, type = 'info') {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      el.appendChild(entry);
+      el.scrollTop = el.scrollHeight;
+      console.log(`[${type.toUpperCase()}]`, message);
+    }
+
+    // Step 1: Initialize Game
+    function initializeGame() {
+      log('setupLog', 'Initializing game state...', 'info');
+      
+      if (!window.game) {
+        // Initialize basic game state
+        window.game = {
+          phase: 'lobby',
+          week: 1,
+          cfg: {
+            enableSocialManeuvers: false,
+            skipSocialPhase: false
+          },
+          players: [],
+          humanId: 1
+        };
+        log('setupLog', 'Created new game state', 'success');
+      }
+
+      // Create mock players
+      const mockPlayers = [
+        { id: 1, name: 'You', evicted: false, affinity: {} },
+        { id: 2, name: 'Alice', evicted: false, affinity: {} },
+        { id: 3, name: 'Bob', evicted: false, affinity: {} },
+        { id: 4, name: 'Charlie', evicted: false, affinity: {} },
+        { id: 5, name: 'Diana', evicted: false, affinity: {} }
+      ];
+
+      // Initialize affinity between players
+      mockPlayers.forEach(p1 => {
+        p1.affinity = {};
+        mockPlayers.forEach(p2 => {
+          if (p1.id !== p2.id) {
+            p1.affinity[p2.id] = 0;
+          }
+        });
+      });
+
+      window.game.players = mockPlayers;
+      window.game.humanId = 1;
+
+      // Create helper functions
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+
+      log('setupLog', `Created ${mockPlayers.length} mock players`, 'success');
+      log('setupLog', 'Game initialization complete!', 'success');
+    }
+
+    // Step 2: Enable Social Maneuvers
+    function enableSocialManeuvers() {
+      log('setupLog', 'Enabling Social Maneuvers...', 'info');
+      
+      if (!window.game) {
+        log('setupLog', 'Error: Initialize game first!', 'error');
+        return;
+      }
+
+      window.USE_SOCIAL_MANEUVERS = true;
+      window.game.cfg.enableSocialManeuvers = true;
+
+      if (window.SocialManeuvers) {
+        log('setupLog', 'Social Maneuvers module detected', 'success');
+        log('setupLog', `Feature enabled: ${window.SocialManeuvers.isEnabled()}`, 'success');
+      } else {
+        log('setupLog', 'Warning: Social Maneuvers module not loaded', 'warning');
+      }
+    }
+
+    // Step 3: Start Social Phase
+    function startSocialPhase() {
+      log('setupLog', 'Starting social phase...', 'info');
+      
+      if (!window.game) {
+        log('setupLog', 'Error: Initialize game first!', 'error');
+        return;
+      }
+
+      window.game.phase = 'social_intermission';
+      
+      if (window.SocialManeuvers && window.SocialManeuvers.onSocialPhaseStart) {
+        try {
+          window.SocialManeuvers.onSocialPhaseStart();
+          log('setupLog', 'Social phase started successfully!', 'success');
+          log('setupLog', 'Session tracking initialized', 'success');
+          
+          // Check session state
+          if (window.game.__socialManeuversSession) {
+            log('setupLog', `Session: Week ${window.game.__socialManeuversSession.week}`, 'info');
+            log('setupLog', `Actions tracked: ${window.game.__socialManeuversSession.actionsThisPhase.length}`, 'info');
+          }
+        } catch (e) {
+          log('setupLog', `Error starting phase: ${e.message}`, 'error');
+        }
+      } else {
+        log('setupLog', 'Warning: onSocialPhaseStart not available', 'warning');
+      }
+    }
+
+    // Simulate a single action
+    function simulateAction(actionId, energyCost) {
+      log('actionLog', `Executing action: ${actionId}...`, 'info');
+      
+      if (!window.game || !window.game.__socialManeuversSession) {
+        log('actionLog', 'Error: Start social phase first!', 'error');
+        return;
+      }
+
+      const humanId = window.game.humanId;
+      const alivePlayers = window.alivePlayers();
+      const target = alivePlayers.find(p => p.id !== humanId);
+      
+      if (!target) {
+        log('actionLog', 'Error: No target player found', 'error');
+        return;
+      }
+
+      if (window.SocialManeuvers && window.SocialManeuvers.executeAction) {
+        try {
+          const result = window.SocialManeuvers.executeAction(humanId, target.id, actionId, []);
+          
+          if (result.success) {
+            log('actionLog', `✓ ${actionId} with ${target.name} - ${result.outcome.type}`, 'success');
+            log('actionLog', `  Energy spent: ${energyCost}, Affinity change: ${result.affinityDelta?.toFixed(3) || '0'}`, 'info');
+            
+            // Log session state
+            const session = window.game.__socialManeuversSession;
+            log('actionLog', `  Total actions: ${session.actionsThisPhase.length}`, 'info');
+          } else {
+            log('actionLog', `✗ Action failed: ${result.message}`, 'error');
+          }
+        } catch (e) {
+          log('actionLog', `Error executing action: ${e.message}`, 'error');
+        }
+      } else {
+        log('actionLog', 'Error: executeAction not available', 'error');
+      }
+    }
+
+    // Simulate multiple actions
+    function simulateMultipleActions() {
+      log('actionLog', 'Simulating full social session...', 'info');
+      
+      const actions = [
+        { id: 'strategize', cost: 2 },
+        { id: 'smalltalk', cost: 1 },
+        { id: 'confide', cost: 2 },
+        { id: 'compliment', cost: 1 },
+        { id: 'alliance', cost: 1 }
+      ];
+
+      let delay = 0;
+      actions.forEach((action, index) => {
+        setTimeout(() => {
+          simulateAction(action.id, action.cost);
+        }, delay);
+        delay += 800; // Space out actions
+      });
+
+      setTimeout(() => {
+        log('actionLog', 'Session simulation complete!', 'success');
+      }, delay + 500);
+    }
+
+    // Show NEW Social Maneuvers Summary
+    function showNewSummary() {
+      const statusEl = document.getElementById('summaryStatus');
+      statusEl.innerHTML = '<strong>Showing NEW Social Maneuvers Summary...</strong>';
+      statusEl.className = 'info-box';
+      
+      if (!window.game || !window.game.__socialManeuversSession) {
+        statusEl.innerHTML = '<strong>Error:</strong> No session data available. Start social phase and perform actions first.';
+        statusEl.className = 'warning-box';
+        return;
+      }
+
+      // Trigger the onSocialPhaseEnd which generates and shows the summary
+      if (window.SocialManeuvers && typeof window.SocialManeuvers.onSocialPhaseEnd === 'function') {
+        try {
+          window.SocialManeuvers.onSocialPhaseEnd();
+          
+          const summary = window.game.__latestSocialSummary;
+          if (summary) {
+            statusEl.innerHTML = `
+              <strong>NEW Summary Displayed!</strong><br>
+              - Actions: ${summary.actions.total}<br>
+              - Energy Spent: ${Object.values(summary.resources.energySpent).reduce((a,b)=>a+b,0)}<br>
+              - Info Spent: ${Object.values(summary.resources.informationSpent||{}).reduce((a,b)=>a+b,0)}<br>
+              - Relationship Changes: ${summary.relationships.changes.length}<br>
+              <em>Click "View Details" button in the card to see full breakdown.</em>
+            `;
+            statusEl.className = 'info-box';
+          } else {
+            statusEl.innerHTML = '<strong>Warning:</strong> Summary generated but not saved to __latestSocialSummary';
+            statusEl.className = 'warning-box';
+          }
+        } catch (e) {
+          statusEl.innerHTML = `<strong>Error:</strong> ${e.message}`;
+          statusEl.className = 'warning-box';
+        }
+      } else {
+        statusEl.innerHTML = '<strong>Error:</strong> onSocialPhaseEnd function not available.';
+        statusEl.className = 'warning-box';
+      }
+    }
+
+    // Show LEGACY Memory Popup
+    function showLegacySummary() {
+      const statusEl = document.getElementById('summaryStatus');
+      statusEl.innerHTML = '<strong>Showing LEGACY Memory Popup (for comparison)...</strong>';
+      statusEl.className = 'info-box';
+      
+      // Force show legacy popup even if Social Maneuvers is enabled
+      if (window.showCard && typeof window.showCard === 'function') {
+        const mockSummary = [
+          'Alice & Bob formed a strong alliance',
+          'Charlie and Diana had a tense exchange',
+          'You strategized with Alice'
+        ];
+        
+        window.showCard('Social Update', mockSummary, 'social', 10000, true);
+        
+        statusEl.innerHTML = `
+          <strong>LEGACY Popup Displayed!</strong><br>
+          This is the old "Memories" popup that was overlapping with the new summary.<br>
+          <em>With phase gating, this should NOT appear when Social Maneuvers is enabled.</em>
+        `;
+        statusEl.className = 'warning-box';
+      } else {
+        statusEl.innerHTML = '<strong>Error:</strong> Legacy showCard function not available.';
+        statusEl.className = 'warning-box';
+      }
+    }
+
+    // Clear all summaries
+    function clearSummaries() {
+      const deck = document.getElementById('decisionDeck');
+      if (deck) {
+        deck.innerHTML = '';
+      }
+      
+      // Remove any reveal cards
+      document.querySelectorAll('.revealCard').forEach(card => card.remove());
+      
+      const statusEl = document.getElementById('summaryStatus');
+      statusEl.innerHTML = 'All summaries cleared.';
+      statusEl.className = 'info-box';
+    }
+
+    // Inspect session data
+    function inspectSessionData() {
+      const logEl = document.getElementById('dataLog');
+      logEl.innerHTML = '';
+      
+      if (!window.game || !window.game.__socialManeuversSession) {
+        log('dataLog', 'No session data available', 'warning');
+        return;
+      }
+
+      const session = window.game.__socialManeuversSession;
+      
+      log('dataLog', '=== SESSION DATA ===', 'info');
+      log('dataLog', `Week: ${session.week}`, 'info');
+      log('dataLog', `Start Time: ${new Date(session.startTime).toLocaleString()}`, 'info');
+      log('dataLog', `Actions Count: ${session.actionsThisPhase.length}`, 'info');
+      
+      log('dataLog', '\n=== ENERGY SPENT ===', 'info');
+      session.energySpent.forEach((spent, playerId) => {
+        const playerName = window.safeName(playerId);
+        log('dataLog', `${playerName}: ${spent} energy`, spent > 0 ? 'success' : 'info');
+      });
+      
+      log('dataLog', '\n=== INFORMATION SPENT ===', 'info');
+      session.informationSpent.forEach((spent, playerId) => {
+        const playerName = window.safeName(playerId);
+        log('dataLog', `${playerName}: ${spent} information`, spent > 0 ? 'success' : 'info');
+      });
+      
+      log('dataLog', '\n=== ACTIONS ===', 'info');
+      session.actionsThisPhase.forEach((action, index) => {
+        log('dataLog', `${index + 1}. ${action.actorName} → ${action.targetName}: ${action.actionLabel} (${action.outcome})`, 'success');
+      });
+      
+      log('dataLog', '\n=== RELATIONSHIP DELTAS ===', 'info');
+      session.relationshipDeltas.forEach((delta, key) => {
+        log('dataLog', `${key}: ${delta > 0 ? '+' : ''}${delta.toFixed(3)}`, delta > 0 ? 'success' : 'warning');
+      });
+    }
+
+    // Export session JSON
+    function exportSessionJSON() {
+      if (!window.game || !window.game.__latestSocialSummaryJSON) {
+        log('dataLog', 'No summary JSON available. Generate a summary first.', 'warning');
+        return;
+      }
+
+      const json = window.game.__latestSocialSummaryJSON;
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `social-session-week${window.game.week}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      log('dataLog', 'Session JSON exported successfully!', 'success');
+    }
+
+    // Auto-initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('setupLog', 'Demo page loaded. Follow the steps to test:', 'info');
+      log('setupLog', '1. Initialize Game', 'info');
+      log('setupLog', '2. Enable Social Maneuvers', 'info');
+      log('setupLog', '3. Start Social Phase', 'info');
+      log('setupLog', '4. Simulate Actions', 'info');
+      log('setupLog', '5. View Summaries', 'info');
+    });
+  </script>
+</body>
+</html>
