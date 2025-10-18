@@ -581,6 +581,12 @@
 
   // Generate end-of-social summary card
   function generateSocialSummary(){
+    // Skip legacy summary if Social Maneuvers is enabled (PR #XXX)
+    if(global.SocialManeuvers?.isEnabled()){
+      console.info('[social] Skipping legacy summary - Social Maneuvers handles phase summary');
+      return;
+    }
+    
     const g=global.game; if(!g) return;
     const alive = global.alivePlayers?.() || [];
     if(alive.length < 2) return;
