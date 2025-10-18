@@ -91,7 +91,11 @@
   global.applyInputsToConfig = applyInputsToConfig;
 
   function saveSettings(){
-    try{ StorageSafe.set('bb_settings_modular', JSON.stringify(global.game?.cfg||{})); }catch{}
+    const cfg = global.game?.cfg;
+    if(!cfg) return;
+    // Save to both storage keys for compatibility
+    try{ StorageSafe.set('bb_settings_modular', JSON.stringify(cfg)); }catch{}
+    try{ StorageSafe.set('bb_cfg_v2', JSON.stringify(cfg)); }catch{}
   }
 
   // ---------- Cast build/reset ----------
@@ -564,8 +568,10 @@
       if(typeof global.Config !== 'undefined' && typeof global.Config.ensureGameCfg === 'function'){
         global.Config.ensureGameCfg();
       } else {
-        // Fallback: read from bb_settings_modular but don't break existing config object
-        const raw=StorageSafe.get('bb_settings_modular', null);
+        // Fallback: read from bb_cfg_v2 first, then bb_settings_modular
+        let raw = StorageSafe.get('bb_cfg_v2', null);
+        if(!raw) raw = StorageSafe.get('bb_settings_modular', null);
+        
         if(raw){
           try{ 
             const stored = JSON.parse(raw);
@@ -580,6 +586,8 @@
         } else {
           global.game.cfg = Object.assign(global.game.cfg || {}, getDefaultCfg());
           global.cfg = global.game.cfg;
+          // Save to both keys
+          StorageSafe.set('bb_cfg_v2', JSON.stringify(global.game.cfg));
           StorageSafe.set('bb_settings_modular', JSON.stringify(global.game.cfg));
         }
       }
