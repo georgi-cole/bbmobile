@@ -388,6 +388,16 @@
       W.wins.veto = (W.wins.veto||0)+1;
     }
 
+    // Social Maneuvers: Record veto win event for weekly energy bonus
+    if(global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.recordWeeklyEvent){
+      try{
+        global.SocialManeuvers.recordWeeklyEvent(global.game.vetoHolder, { vetoWin: true });
+        console.info('[veto.js] ✓ Recorded veto win event for player', global.game.vetoHolder);
+      }catch(e){
+        console.error('[veto.js] Failed to record veto win event:', e);
+      }
+    }
+
     // Hook: Log XP for POV win
     if(global.ProgressionEvents?.onPOVWin){
       var participants = eligible || [];
@@ -801,6 +811,16 @@
       var savedName = safeName(savedId);
       g.vetoSavedId = savedId;
 
+      // Social Maneuvers: Record veto used event for weekly energy bonus
+      if(global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.recordWeeklyEvent){
+        try{
+          global.SocialManeuvers.recordWeeklyEvent(g.vetoHolder, { vetoUsed: true });
+          console.info('[veto.js] ✓ Recorded veto used event for player', g.vetoHolder);
+        }catch(e){
+          console.error('[veto.js] Failed to record veto used event:', e);
+        }
+      }
+
       // Set pendingSave state - NOM label should still show
       var savedP = getP(savedId);
       if(savedP){ 
@@ -918,6 +938,16 @@
       var savedId = g.vetoSavedId;
       g.nominees = (g.nominees||[]).filter(function(id){ return id!==savedId; });
       if(g.nominees.indexOf(replacementId)===-1) g.nominees.push(replacementId);
+
+      // Social Maneuvers: Record replacement nomination event for weekly energy bonus
+      if(global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.recordWeeklyEvent){
+        try{
+          global.SocialManeuvers.recordWeeklyEvent(replacementId, { nominated: true });
+          console.info('[veto.js] ✓ Recorded replacement nomination event for player', replacementId);
+        }catch(e){
+          console.error('[veto.js] Failed to record replacement nomination event:', e);
+        }
+      }
 
       // Hook: Log XP for veto usage
       if(global.ProgressionEvents){

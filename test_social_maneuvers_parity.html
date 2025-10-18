@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Parity Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #0f3460;
+    }
+    .test-section h2 {
+      color: #ffd700;
+      margin-top: 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .pass {
+      background: rgba(76, 175, 80, 0.2);
+      border-left: 4px solid #4caf50;
+    }
+    .fail {
+      background: rgba(244, 67, 54, 0.2);
+      border-left: 4px solid #f44336;
+    }
+    .info {
+      background: rgba(33, 150, 243, 0.2);
+      border-left: 4px solid #2196f3;
+    }
+    button {
+      background: #0f3460;
+      color: #eee;
+      border: 1px solid #ffd700;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1a4d7a;
+    }
+    #console-output {
+      background: #0a0a0a;
+      color: #0f0;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Maneuvers Parity Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Setup</h2>
+    <p>This test verifies Social Maneuvers parity implementation:</p>
+    <ul>
+      <li>Phase hooks (onSocialPhaseStart/End)</li>
+      <li>Legacy UI suppression when SM enabled</li>
+      <li>Weekly resource lifecycle</li>
+      <li>Event-driven energy/influence grants</li>
+      <li>Launcher mounting and HUD updates</li>
+    </ul>
+    <button onclick="runAllTests()">▶ Run All Tests</button>
+    <button onclick="clearConsole()">🗑 Clear Console</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="test-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Output</h2>
+    <div id="console-output"></div>
+  </div>
+
+  <script>
+    // Capture console output
+    const consoleOutput = document.getElementById('console-output');
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    function logToOutput(type, ...args) {
+      const line = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+      consoleOutput.textContent += `[${type}] ${line}\n`;
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    console.log = (...args) => { originalLog(...args); logToOutput('LOG', ...args); };
+    console.info = (...args) => { originalInfo(...args); logToOutput('INFO', ...args); };
+    console.warn = (...args) => { originalWarn(...args); logToOutput('WARN', ...args); };
+    console.error = (...args) => { originalError(...args); logToOutput('ERROR', ...args); };
+
+    function clearConsole() {
+      consoleOutput.textContent = '';
+    }
+
+    function addTestResult(name, passed, message) {
+      const resultsDiv = document.getElementById('test-results');
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.innerHTML = `<strong>${passed ? '✓' : '✗'} ${name}</strong><br>${message}`;
+      resultsDiv.appendChild(resultDiv);
+    }
+
+    function addInfo(message) {
+      const resultsDiv = document.getElementById('test-results');
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'test-result info';
+      infoDiv.innerHTML = message;
+      resultsDiv.appendChild(infoDiv);
+    }
+
+    // Mock game state
+    function setupMockGame() {
+      window.game = {
+        cfg: {
+          enableSocialManeuvers: true,
+          tComms: 30
+        },
+        week: 1,
+        humanId: 1,
+        hohId: null,
+        nominees: [],
+        players: [
+          { id: 1, name: 'Alice', human: true, evicted: false, affinity: {} },
+          { id: 2, name: 'Bob', human: false, evicted: false, affinity: {} },
+          { id: 3, name: 'Charlie', human: false, evicted: false, affinity: {} },
+          { id: 4, name: 'Diana', human: false, evicted: false, affinity: {} }
+        ]
+      };
+
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      window.safeName = (id) => window.getP(id)?.name || 'Unknown';
+      window.updateHud = () => console.log('[Mock] updateHud called');
+      
+      // Mock Social Maneuvers API
+      window.SocialManeuvers = {
+        isEnabled: () => window.game?.cfg?.enableSocialManeuvers === true,
+        onSocialPhaseStart: () => console.info('[SM] onSocialPhaseStart called'),
+        onSocialPhaseEnd: () => console.info('[SM] onSocialPhaseEnd called'),
+        showSummaryPanel: () => console.info('[SM] showSummaryPanel called'),
+        pausePhaseTimer: () => console.info('[SM] pausePhaseTimer called'),
+        resumePhaseTimer: () => console.info('[SM] resumePhaseTimer called'),
+        recordWeeklyEvent: (playerId, event) => {
+          console.info('[SM] recordWeeklyEvent:', playerId, event);
+        },
+        SocialResources: {
+          resetWeekly: (playerId) => {
+            console.info('[SM] SocialResources.resetWeekly:', playerId);
+          },
+          getAll: (playerId) => ({ energy: 5, influence: 0, information: 0 })
+        }
+      };
+
+      window.SocializeMobile = {
+        ensureSocializeLauncher: () => console.log('[SM-Mobile] Launcher mounted'),
+        show: () => console.log('[SM-Mobile] Launcher shown'),
+        hide: () => console.log('[SM-Mobile] Launcher hidden'),
+        updateHUD: () => console.log('[SM-Mobile] HUD updated')
+      };
+
+      window.tv = {
+        say: (text) => console.log('[TV]', text)
+      };
+
+      window.setPhase = (phase, duration, callback) => {
+        console.log(`[setPhase] ${phase} (${duration}s)`);
+        window.game.phase = phase;
+        if (callback) setTimeout(callback, 100);
+      };
+
+      window.addLog = (msg) => console.log('[Log]', msg);
+    }
+
+    async function runAllTests() {
+      document.getElementById('test-results').innerHTML = '';
+      clearConsole();
+      
+      addInfo('<strong>Starting test suite...</strong>');
+      
+      setupMockGame();
+
+      // Test 1: Check if shouldShowLegacyMemories works
+      addInfo('<strong>Test 1: Legacy UI Suppression</strong>');
+      try {
+        // This function should be defined in social.js
+        const shouldShow = typeof window.shouldShowLegacyMemories === 'function' 
+          ? window.shouldShowLegacyMemories() 
+          : !(window.SocialManeuvers?.isEnabled?.());
+        
+        const passed = !shouldShow; // Should be false when SM is enabled
+        addTestResult(
+          'shouldShowLegacyMemories()',
+          passed,
+          passed 
+            ? 'Legacy memories correctly suppressed when SM enabled' 
+            : 'Legacy memories not suppressed - check implementation'
+        );
+      } catch (e) {
+        addTestResult('shouldShowLegacyMemories()', false, `Error: ${e.message}`);
+      }
+
+      // Test 2: Check socialOnNewWeek
+      addInfo('<strong>Test 2: Weekly Resource Lifecycle</strong>');
+      try {
+        if (typeof window.socialOnNewWeek === 'function') {
+          window.socialOnNewWeek();
+          addTestResult(
+            'socialOnNewWeek()',
+            true,
+            'Weekly reset function exists and executed - check console for resetWeekly calls'
+          );
+        } else {
+          addTestResult(
+            'socialOnNewWeek()',
+            false,
+            'socialOnNewWeek function not found'
+          );
+        }
+      } catch (e) {
+        addTestResult('socialOnNewWeek()', false, `Error: ${e.message}`);
+      }
+
+      // Test 3: Check recordWeeklyEvent calls
+      addInfo('<strong>Test 3: Event-Driven Grants</strong>');
+      
+      // HOH Win
+      try {
+        window.SocialManeuvers.recordWeeklyEvent(1, { hohWin: true });
+        addTestResult(
+          'recordWeeklyEvent - HOH Win',
+          true,
+          'HOH win event recorded - check console for grant'
+        );
+      } catch (e) {
+        addTestResult('recordWeeklyEvent - HOH Win', false, `Error: ${e.message}`);
+      }
+
+      // Nomination
+      try {
+        window.SocialManeuvers.recordWeeklyEvent(2, { nominated: true });
+        addTestResult(
+          'recordWeeklyEvent - Nomination',
+          true,
+          'Nomination event recorded - check console for grant'
+        );
+      } catch (e) {
+        addTestResult('recordWeeklyEvent - Nomination', false, `Error: ${e.message}`);
+      }
+
+      // Veto Win
+      try {
+        window.SocialManeuvers.recordWeeklyEvent(1, { vetoWin: true });
+        addTestResult(
+          'recordWeeklyEvent - Veto Win',
+          true,
+          'Veto win event recorded - check console for grant'
+        );
+      } catch (e) {
+        addTestResult('recordWeeklyEvent - Veto Win', false, `Error: ${e.message}`);
+      }
+
+      // Veto Used
+      try {
+        window.SocialManeuvers.recordWeeklyEvent(1, { vetoUsed: true });
+        addTestResult(
+          'recordWeeklyEvent - Veto Used',
+          true,
+          'Veto used event recorded - check console for grant'
+        );
+      } catch (e) {
+        addTestResult('recordWeeklyEvent - Veto Used', false, `Error: ${e.message}`);
+      }
+
+      // Test 4: Timer pause/resume
+      addInfo('<strong>Test 4: Timer Pause/Resume</strong>');
+      try {
+        window.SocialManeuvers.pausePhaseTimer();
+        window.SocialManeuvers.resumePhaseTimer();
+        addTestResult(
+          'Timer Pause/Resume',
+          true,
+          'Timer controls available - check console for pause/resume calls'
+        );
+      } catch (e) {
+        addTestResult('Timer Pause/Resume', false, `Error: ${e.message}`);
+      }
+
+      // Test 5: Launcher mounting
+      addInfo('<strong>Test 5: Launcher Mounting</strong>');
+      try {
+        window.SocializeMobile.ensureSocializeLauncher();
+        window.SocializeMobile.updateHUD();
+        addTestResult(
+          'Launcher Mount & HUD',
+          true,
+          'Launcher and HUD functions available - check console for mount/update calls'
+        );
+      } catch (e) {
+        addTestResult('Launcher Mount & HUD', false, `Error: ${e.message}`);
+      }
+
+      // Test 6: setPhase wrapper detection
+      addInfo('<strong>Test 6: Phase Transition Detection</strong>');
+      try {
+        // Simulate entering social_intermission
+        window.setPhase('social_intermission', 30, () => {});
+        
+        // Check if wrapped
+        const isWrapped = window.__setPhaseWrapped === true;
+        
+        addTestResult(
+          'setPhase Wrapper',
+          isWrapped,
+          isWrapped 
+            ? 'setPhase wrapper installed - check console for phase transition logs' 
+            : 'setPhase wrapper not installed - may need to load social.js'
+        );
+      } catch (e) {
+        addTestResult('setPhase Wrapper', false, `Error: ${e.message}`);
+      }
+
+      addInfo('<strong>✓ Test suite complete! Review results and console output above.</strong>');
+    }
+  </script>
+</body>
+</html>

@@ -127,6 +127,16 @@
       console.info(`[nom] nominated player=${id} state=nominated`);
       global.addBond?.(hohId,id, global.NOMINATION_PENALTY);
       hoh.affinity[id]=global.clamp?.((hoh.affinity[id]??0)-0.15,-1,1) ?? (hoh.affinity[id]??0)-0.15;
+      
+      // Social Maneuvers: Record nomination event for weekly energy bonus
+      if(global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.recordWeeklyEvent){
+        try{
+          global.SocialManeuvers.recordWeeklyEvent(id, { nominated: true });
+          console.info('[nom] ✓ Recorded nomination event for player', id);
+        }catch(e){
+          console.error('[nom] Failed to record nomination event:', e);
+        }
+      }
     });
   }
 
