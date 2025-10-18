@@ -1014,85 +1014,91 @@
     
     let _inSocialPhase = false;
     
+    function handleSocialPhaseEntry() {
+      _inSocialPhase = true;
+      console.info('[social.js wrapper] ▶ Detected entering social_intermission via setPhase');
+      
+      if(global.SocialManeuvers?.isEnabled?.()){
+        // Call onSocialPhaseStart if not already called
+        if(global.SocialManeuvers?.onSocialPhaseStart && !global.game?.__socialPhaseStartCalled){
+          try{
+            global.game.__socialPhaseStartCalled = true;
+            global.SocialManeuvers.onSocialPhaseStart();
+            console.info('[social.js wrapper] ✓ Called onSocialPhaseStart');
+          }catch(e){
+            console.error('[social.js wrapper] onSocialPhaseStart failed:', e);
+          }
+        }
+        
+        // Mount launcher
+        if(global.SocializeMobile?.ensureSocializeLauncher){
+          try{
+            global.SocializeMobile.ensureSocializeLauncher();
+          }catch(e){}
+        }
+        
+        // Update HUD
+        if(global.SocializeMobile?.show){
+          try{
+            global.SocializeMobile.show();
+          }catch(e){}
+        }
+        if(global.SocializeMobile?.updateHUD){
+          try{
+            global.SocializeMobile.updateHUD();
+          }catch(e){}
+        }
+      }
+    }
+    
+    function handleSocialPhaseExit() {
+      _inSocialPhase = false;
+      console.info('[social.js wrapper] ◼ Detected leaving social_intermission via setPhase');
+      
+      if(global.SocialManeuvers?.isEnabled?.()){
+        // Call onSocialPhaseEnd if not already called
+        if(global.SocialManeuvers?.onSocialPhaseEnd && !global.game?.__socialPhaseEndCalled){
+          try{
+            global.game.__socialPhaseEndCalled = true;
+            global.SocialManeuvers.onSocialPhaseEnd();
+            console.info('[social.js wrapper] ✓ Called onSocialPhaseEnd');
+          }catch(e){
+            console.error('[social.js wrapper] onSocialPhaseEnd failed:', e);
+          }
+        }
+        
+        // Hide launcher
+        if(global.SocializeMobile?.hide){
+          try{
+            global.SocializeMobile.hide();
+          }catch(e){}
+        }
+        
+        // Resume timer
+        if(global.SocialManeuvers?.resumePhaseTimer){
+          try{
+            global.SocialManeuvers.resumePhaseTimer();
+          }catch(e){}
+        }
+      }
+      
+      // Reset flags for next phase
+      if(global.game){
+        delete global.game.__socialPhaseStartCalled;
+        delete global.game.__socialPhaseEndCalled;
+      }
+    }
+    
     global.setPhase = function wrappedSetPhase(phase, duration, callback){
       const entering = phase === 'social_intermission' || phase === 'social';
       const leaving = !entering && _inSocialPhase;
       
-      // Entering social_intermission
       if(entering && !_inSocialPhase){
-        _inSocialPhase = true;
-        console.info('[social.js wrapper] ▶ Detected entering social_intermission via setPhase');
-        
-        if(global.SocialManeuvers?.isEnabled?.()){
-          // Call onSocialPhaseStart if not already called
-          if(global.SocialManeuvers?.onSocialPhaseStart && !global.game?.__socialPhaseStartCalled){
-            try{
-              global.game.__socialPhaseStartCalled = true;
-              global.SocialManeuvers.onSocialPhaseStart();
-              console.info('[social.js wrapper] ✓ Called onSocialPhaseStart');
-            }catch(e){
-              console.error('[social.js wrapper] onSocialPhaseStart failed:', e);
-            }
-          }
-          
-          // Mount launcher
-          if(global.SocializeMobile?.ensureSocializeLauncher){
-            try{
-              global.SocializeMobile.ensureSocializeLauncher();
-            }catch(e){}
-          }
-          
-          // Update HUD
-          if(global.SocializeMobile?.show){
-            try{
-              global.SocializeMobile.show();
-            }catch(e){}
-          }
-          if(global.SocializeMobile?.updateHUD){
-            try{
-              global.SocializeMobile.updateHUD();
-            }catch(e){}
-          }
-        }
+        handleSocialPhaseEntry();
       }
       
-      // Leaving social_intermission
       if(leaving){
-        _inSocialPhase = false;
-        console.info('[social.js wrapper] ◼ Detected leaving social_intermission via setPhase');
-        
-        if(global.SocialManeuvers?.isEnabled?.()){
-          // Call onSocialPhaseEnd if not already called
-          if(global.SocialManeuvers?.onSocialPhaseEnd && !global.game?.__socialPhaseEndCalled){
-            try{
-              global.game.__socialPhaseEndCalled = true;
-              global.SocialManeuvers.onSocialPhaseEnd();
-              console.info('[social.js wrapper] ✓ Called onSocialPhaseEnd');
-            }catch(e){
-              console.error('[social.js wrapper] onSocialPhaseEnd failed:', e);
-            }
-          }
-          
-          // Hide launcher
-          if(global.SocializeMobile?.hide){
-            try{
-              global.SocializeMobile.hide();
-            }catch(e){}
-          }
-          
-          // Resume timer
-          if(global.SocialManeuvers?.resumePhaseTimer){
-            try{
-              global.SocialManeuvers.resumePhaseTimer();
-            }catch(e){}
-          }
-        }
-        
-        // Reset flags for next phase
-        if(global.game){
-          delete global.game.__socialPhaseStartCalled;
-          delete global.game.__socialPhaseEndCalled;
-        }
+        handleSocialPhaseExit();
       }
       
       // Call original setPhase
