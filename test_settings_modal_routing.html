@@ -181,19 +181,24 @@
       try {
         if(typeof window.applyPlayersFromSettings === 'function') {
           window.applyPlayersFromSettings(16);
-          output += 'rebuildGame called: ' + (rebuildCalled ? '✓ PASS' : '✗ FAIL') + '\n';
-          output += 'startOpeningSequence called: ' + (openingSequenceCalled ? '✓ PASS' : '✗ FAIL') + '\n';
-          output += 'numPlayers saved: ' + (window.game.cfg.numPlayers === 16 ? '✓ PASS' : '✗ FAIL (got ' + window.game.cfg.numPlayers + ')') + '\n';
+          setTimeout(function() {
+            let localOutput = output;
+            localOutput += 'rebuildGame called: ' + (rebuildCalled ? '✓ PASS' : '✗ FAIL') + '\n';
+            localOutput += 'startOpeningSequence called: ' + (openingSequenceCalled ? '✓ PASS' : '✗ FAIL') + '\n';
+            localOutput += 'numPlayers saved: ' + (window.game.cfg.numPlayers === 16 ? '✓ PASS' : '✗ FAIL (got ' + window.game.cfg.numPlayers + ')') + '\n';
+            result.textContent = localOutput;
+            result.className = 'result ' + (localOutput.includes('FAIL') ? 'fail' : 'pass');
+          }, 100);
         } else {
           output += '✗ FAIL: applyPlayersFromSettings not available\n';
+          result.textContent = output;
+          result.className = 'result fail';
         }
       } catch(e) {
         output += '✗ FAIL: ' + e.message + '\n';
+        result.textContent = output;
+        result.className = 'result fail';
       }
-      
-      result.textContent = output;
-      result.className = 'result ' + (output.includes('FAIL') ? 'fail' : 'pass');
-    }
     
     function testMidSeasonPlayerChange() {
       const result = document.getElementById('test6-result');
