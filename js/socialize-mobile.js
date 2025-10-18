@@ -940,8 +940,12 @@
       }
     } else {
       // DO NOT fallback to legacy when flag is ON
-      console.error('[socialize-mobile] Social Maneuvers is enabled but engine not available');
-      global.addLog?.('Social Maneuvers engine unavailable', 'error');
+      const missingComponents = [];
+      if (!global.SocialManeuvers?.isEnabled?.()) missingComponents.push('isEnabled');
+      if (!global.SocialManeuvers?.executeAction) missingComponents.push('executeAction');
+      const details = missingComponents.length ? `Missing: ${missingComponents.join(', ')}` : 'Unknown component missing';
+      console.error(`[socialize-mobile] Social Maneuvers is enabled but engine not available. ${details}`);
+      global.addLog?.(`Social Maneuvers engine unavailable. ${details}`, 'error');
       return;
     }
 
