@@ -810,9 +810,10 @@
     // prefer cfg value, else current roster length
     const current = Number(cfg().numPlayers) || (Array.isArray(g.game?.players)? g.game.players.length : 12);
     input.value = String(Math.max(6, Math.min(22, current || 12)));
-    input.addEventListener('change', ()=>{
+    // Only wire input event for UI clamping (no change event to avoid mid-season reload)
+    input.addEventListener('input', ()=>{
       const v=Math.max(6, Math.min(22, Number(input.value)||12));
-      applyPlayersConfig(v);
+      if(String(v) !== input.value) input.value = String(v);
     });
   }
 
@@ -882,9 +883,10 @@
     if(np){
       const current = Number(cfg().numPlayers) || (Array.isArray(g.game?.players)? g.game.players.length : 12);
       np.value = String(Math.max(6, Math.min(22, current || 12)));
-      np.addEventListener('change', ()=>{
+      // Only wire input event for UI clamping (no change event to avoid mid-season reload)
+      np.addEventListener('input', ()=>{
         const v=Math.max(6, Math.min(22, Number(np.value)||12));
-        applyPlayersConfig(v);
+        if(String(v) !== np.value) np.value = String(v);
       });
     }
     // Jury Return vote seconds

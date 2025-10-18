@@ -1351,30 +1351,30 @@
   }
   
   /**
-   * Wire players total change listeners for #numPlayersCast and #numPlayers
-   * Prevents duplicate listeners using __wired flag on elements
-   * Note: This wires the change event but applyPlayersFromSettings now defers mid-season application
+   * Wire players total UI elements but do NOT wire change events to rebuild/reload.
+   * The Apply/Save buttons will handle persistence via applySettingsFromModal.
+   * Only wire input event for UI clamping.
    */
   function wirePlayersTotal(modal){
     if(!modal) return;
     
-    // Wire #numPlayersCast (injected by players-total.js)
+    // Wire #numPlayersCast (injected by players-total.js) - only for UI clamping
     const numPlayersCast = modal.querySelector('#numPlayersCast');
-    if(numPlayersCast && !numPlayersCast.__wired){
-      numPlayersCast.__wired = true;
-      numPlayersCast.addEventListener('change', function(){
-        const v = this.value;
-        applyPlayersFromSettings(v);
+    if(numPlayersCast && !numPlayersCast.__wiredClamp){
+      numPlayersCast.__wiredClamp = true;
+      numPlayersCast.addEventListener('input', function(){
+        const v = Math.max(6, Math.min(22, parseInt(this.value, 10) || 12));
+        if(String(v) !== this.value) this.value = String(v);
       });
     }
     
-    // Wire #numPlayers (if present)
+    // Wire #numPlayers (if present) - only for UI clamping
     const numPlayers = modal.querySelector('#numPlayers');
-    if(numPlayers && !numPlayers.__wired){
-      numPlayers.__wired = true;
-      numPlayers.addEventListener('change', function(){
-        const v = this.value;
-        applyPlayersFromSettings(v);
+    if(numPlayers && !numPlayers.__wiredClamp){
+      numPlayers.__wiredClamp = true;
+      numPlayers.addEventListener('input', function(){
+        const v = Math.max(6, Math.min(22, parseInt(this.value, 10) || 12));
+        if(String(v) !== this.value) this.value = String(v);
       });
     }
   }
@@ -1660,6 +1660,10 @@
   function applySettingsFromModal(modal){
     const game=g.game = g.game || {};
     const cfg = game.cfg = Object.assign({}, DEFAULT_CFG, game.cfg||{});
+    
+    // Track if numPlayers changed to trigger applyPlayersFromSettings
+    const oldNumPlayers = cfg.numPlayers;
+    
     modal.querySelectorAll('[data-key]').forEach(inp=>{
       const k = inp.getAttribute('data-key');
       if(inp.type==='checkbox') cfg[k] = !!inp.checked;
@@ -1670,6 +1674,12 @@
     });
     saveStoredCfg(cfg);
     applyCfgEffects(cfg);
+    
+    // If numPlayers changed, apply it (will defer mid-season, rebuild in lobby)
+    if(oldNumPlayers !== cfg.numPlayers){
+      applyPlayersFromSettings(cfg.numPlayers);
+    }
+    
     g.updateHud?.();
   }
   function notify(msg, cls){ try{ g.addLog?.(msg, cls||''); }catch(e){} }
