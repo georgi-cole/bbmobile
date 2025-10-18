@@ -237,14 +237,12 @@
         }
         g.addLog?.(`New season started with ${val} players.`, 'ok');
       } else {
-        // Mid-season: reload to apply
-        g.addLog?.(`Players set to ${val}. Restarting to apply…`, 'warn');
-        setTimeout(()=> location.reload(), 250);
+        // Mid-season: defer application
+        g.addLog?.(`Players set to ${val}. Will apply next season or after a manual refresh.`, 'ok');
+        console.info('[ui.config-and-settings] Players set to', val, '. Will apply next season or after a manual refresh.');
       }
     }catch(err){
       console.warn('[ui.config-and-settings] applyPlayersFromSettings error:', err);
-      // Fallback to reload
-      setTimeout(()=> location.reload(), 250);
     }
   }
 
@@ -1355,6 +1353,7 @@
   /**
    * Wire players total change listeners for #numPlayersCast and #numPlayers
    * Prevents duplicate listeners using __wired flag on elements
+   * Note: This wires the change event but applyPlayersFromSettings now defers mid-season application
    */
   function wirePlayersTotal(modal){
     if(!modal) return;
