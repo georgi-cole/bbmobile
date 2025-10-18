@@ -8,7 +8,7 @@
   position: absolute;
   top: 12px;
   right: 16px;
-  z-index: 15;
+  z-index: 2147483000;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -731,4 +731,191 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ============================================
+   RELATIONSHIP LABELS & ACTION COSTS
+   ============================================ */
+
+/* Player Relationship Info */
+.player-relationship {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.relationship-label {
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-size: 0.65rem;
+}
+
+.relationship-label.relationship-positive {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+}
+
+.relationship-label.relationship-neutral {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+}
+
+.relationship-label.relationship-negative {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.relationship-percent {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+/* Action Button Enhancements */
+.action-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.action-costs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.cost-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cost-badge.cost-energy {
+  background: rgba(52, 152, 219, 0.15);
+  border-color: rgba(52, 152, 219, 0.3);
+  color: #3498db;
+}
+
+.cost-badge.cost-influence {
+  background: rgba(46, 204, 113, 0.15);
+  border-color: rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
+}
+
+.cost-badge.cost-information {
+  background: rgba(155, 89, 182, 0.15);
+  border-color: rgba(155, 89, 182, 0.3);
+  color: #9b59b6;
+}
+
+.cost-badge.insufficient {
+  background: rgba(231, 76, 60, 0.15);
+  border-color: rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+.action-description {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.action-disabled-reason {
+  font-size: 0.7rem;
+  color: #e74c3c;
+  font-style: italic;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(231, 76, 60, 0.1);
+  border-radius: 4px;
+}
+
+/* Requirement Chips */
+.action-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.requirement-chip {
+  font-size: 0.7rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.requirement-chip.chip-energy {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+.requirement-chip.chip-influence {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+.requirement-chip.chip-information {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+.requirement-chip.chip-targets {
+  background: rgba(243, 156, 18, 0.15);
+  border: 1px solid rgba(243, 156, 18, 0.3);
+  color: #f39c12;
+}
+
+.requirement-chip.chip-affinity {
+  background: rgba(155, 89, 182, 0.15);
+  border: 1px solid rgba(155, 89, 182, 0.3);
+  color: #9b59b6;
+}
+
+/* Action Categories */
+.action-btn.action-friendly {
+  border-left: 3px solid rgba(46, 204, 113, 0.5);
+}
+
+.action-btn.action-strategic {
+  border-left: 3px solid rgba(52, 152, 219, 0.5);
+}
+
+.action-btn.action-aggressive {
+  border-left: 3px solid rgba(231, 76, 60, 0.5);
+}
+
+.action-btn.action-risky {
+  border-left: 3px solid rgba(255, 152, 0, 0.5);
+}
+
+.action-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+
+.action-btn.disabled:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: none;
 }

@@ -7,34 +7,85 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
 
-  // Resource state management
+  // Resource state management - thin view over canonical SocialManeuvers store
   function getResourceState() {
     const g = global.game || {};
-    if (!g.__socialResources) {
-      g.__socialResources = {
-        energy: 3,        // Used for all actions
-        influence: 0,     // Gained from successful positive interactions
-        information: 0    // Gained from successful negative interactions
-      };
+    const humanId = g.humanId;
+    
+    // Always use canonical SocialManeuvers resource system
+    if (global.SocialManeuvers?.SocialResources) {
+      try {
+        const resources = global.SocialManeuvers.SocialResources.getAll(humanId);
+        return {
+          energy: resources.energy || 0,
+          influence: resources.influence || 0,
+          information: resources.information || 0
+        };
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to get SocialManeuvers resources:', e);
+        // Initialize if not yet seeded
+        if (global.SocialManeuvers?.SocialResources?.init) {
+          global.SocialManeuvers.SocialResources.init(humanId);
+          const resources = global.SocialManeuvers.SocialResources.getAll(humanId);
+          return {
+            energy: resources.energy || 0,
+            influence: resources.influence || 0,
+            information: resources.information || 0
+          };
+        }
+      }
     }
-    return g.__socialResources;
+    
+    // No fallback - always require canonical store
+    console.warn('[socialize-mobile] SocialManeuvers not available - returning zeros');
+    return { energy: 0, influence: 0, information: 0 };
   }
 
   function updateResourceState(delta) {
-    const res = getResourceState();
-    res.energy = Math.max(0, res.energy + (delta.energy || 0));
-    res.influence = Math.max(0, res.influence + (delta.influence || 0));
-    res.information = Math.max(0, res.information + (delta.information || 0));
-    updateHUDDisplay();
+    const g = global.game || {};
+    const humanId = g.humanId;
+    
+    // Always use canonical SocialManeuvers resource system
+    if (global.SocialManeuvers?.SocialResources) {
+      try {
+        // Use earn/spend methods from canonical store
+        if (delta.energy < 0 || delta.influence < 0 || delta.information < 0) {
+          // Spending resources
+          const costs = {};
+          if (delta.energy < 0) costs.energy = -delta.energy;
+          if (delta.influence < 0) costs.influence = -delta.influence;
+          if (delta.information < 0) costs.information = -delta.information;
+          global.SocialManeuvers.SocialResources.spend(humanId, costs);
+        } else {
+          // Earning resources
+          const gains = {};
+          if (delta.energy > 0) gains.energy = delta.energy;
+          if (delta.influence > 0) gains.influence = delta.influence;
+          if (delta.information > 0) gains.information = delta.information;
+          global.SocialManeuvers.SocialResources.earn(humanId, gains);
+        }
+        updateHUDDisplay();
+        
+        // Trigger resources-changed event for live updates
+        if (typeof global.dispatchEvent === 'function') {
+          const event = new CustomEvent('social-resources-changed', {
+            detail: { playerId: humanId, delta, resources: getResourceState() }
+          });
+          global.dispatchEvent(event);
+        }
+        return;
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to update SocialManeuvers resources:', e);
+      }
+    }
+    
+    console.error('[socialize-mobile] Cannot update resources - SocialManeuvers not available');
   }
 
   function resetWeeklyResources() {
-    const g = global.game || {};
-    g.__socialResources = {
-      energy: 3,
-      influence: 0,
-      information: 0
-    };
+    // No-op: weekly reset is handled by SocialManeuvers.SocialResources.resetWeekly
+    // This is called from onSocialPhaseStart with proper weekly bonuses/penalties
+    console.info('[socialize-mobile] Weekly reset handled by canonical SocialManeuvers store');
     updateHUDDisplay();
   }
 
@@ -58,7 +109,7 @@
         <div class="socialize-hud-resources">
           <div class="resource-badge" data-tip="Energy: Used for all social actions">
             <span class="resource-icon">⚡</span>
-            <span class="resource-value" id="hudEnergy">3</span>
+            <span class="resource-value" id="hudEnergy">5</span>
           </div>
           <div class="resource-badge" data-tip="Influence: Gained from positive interactions">
             <span class="resource-icon">🤝</span>
@@ -79,6 +130,11 @@
     // Attach event listeners
     $('#socializeOpenBtn')?.addEventListener('click', openSocializeModal);
     $('#resourceHelpBtn')?.addEventListener('click', showResourceHelp);
+    
+    // Subscribe to resource-changed events for live updates
+    global.addEventListener('social-resources-changed', (event) => {
+      updateHUDDisplay();
+    });
 
     return launcher;
   }
@@ -121,7 +177,7 @@
           <span class="help-icon">⚡</span>
           <div>
             <strong>Energy</strong>
-            <p>Used for all social actions. Start with 3 per week. Actions cost 1 energy each.</p>
+            <p>Used for all social actions. Start with 5 per week (+ weekly bonuses). Actions cost 1-3 energy each.</p>
           </div>
         </div>
         <div class="help-item">
@@ -301,8 +357,22 @@
       name.className = 'player-name';
       name.textContent = player.name;
 
+      // Add relationship label + affinity percentage
+      const you = global.getP(global.game.humanId);
+      const affinity = you?.affinity?.[player.id] ?? 0;
+      const affinityPercent = Math.round(affinity * 100);
+      const relationshipLabel = getRelationshipLabel(affinity);
+      
+      const relationshipInfo = document.createElement('div');
+      relationshipInfo.className = 'player-relationship';
+      relationshipInfo.innerHTML = `
+        <span class="relationship-label ${getRelationshipClass(affinity)}">${relationshipLabel}</span>
+        <span class="relationship-percent">${affinityPercent > 0 ? '+' : ''}${affinityPercent}%</span>
+      `;
+
       card.appendChild(avatar);
       card.appendChild(name);
+      card.appendChild(relationshipInfo);
 
       card.addEventListener('click', (e) => {
         // Multi-select support
@@ -312,43 +382,303 @@
         }
         card.classList.toggle('selected');
         updateExecuteButton();
+        
+        // Refresh action menu to show evaluations for selected target
+        populateActionMenu();
       });
 
       picker.appendChild(card);
     });
   }
 
+  // Get relationship label from affinity (matching social.js)
+  function getRelationshipLabel(affinity) {
+    const a = affinity ?? 0;
+    if (a >= 0.65) return 'Romance/Bromance';
+    if (a >= 0.48) return 'Ride or Die';
+    if (a >= 0.28) return 'Allies';
+    if (a >= 0.12) return 'Friendly';
+    if (a >= -0.12) return 'Neutral';
+    if (a >= -0.28) return 'Strained';
+    if (a >= -0.48) return 'Enemies';
+    return 'Arch Enemies';
+  }
+
+  // Get CSS class for relationship
+  function getRelationshipClass(affinity) {
+    const a = affinity ?? 0;
+    if (a >= 0.28) return 'relationship-positive';
+    if (a >= -0.12) return 'relationship-neutral';
+    return 'relationship-negative';
+  }
+
   function populateActionMenu() {
     const menu = $('#actionMenu');
     if (!menu) return;
 
-    const actions = [
-      { id: 'alliance', label: 'Form Alliance', icon: '🤝', cost: 1 },
-      { id: 'strategychat', label: 'Strategy Chat', icon: '💡', cost: 1 },
-      { id: 'gift', label: 'Give Gift', icon: '🎁', cost: 1 },
-      { id: 'flirt', label: 'Flirt', icon: '😊', cost: 1 },
-      { id: 'workout', label: 'Workout Together', icon: '💪', cost: 1 },
-      { id: 'cook', label: 'Cook Meal', icon: '🍳', cost: 1 },
-      { id: 'latenighttalk', label: 'Late Night Talk', icon: '🌙', cost: 1 },
-      { id: 'apologize', label: 'Apologize', icon: '🙏', cost: 1 },
-      { id: 'prank', label: 'Prank', icon: '😜', cost: 1 },
-      { id: 'taunt', label: 'Taunt', icon: '😤', cost: 1 },
-      { id: 'confront', label: 'Confront', icon: '⚔️', cost: 1 }
-    ];
+    const res = getResourceState();
+    const g = global.game || {};
+    const humanId = g.humanId;
+    const you = global.getP?.(humanId);
+    
+    // Get selected targets for evaluation (multi-select support)
+    const selectedCards = Array.from($$('.player-card.selected'));
+    const selectedPlayerIds = selectedCards.map(card => parseInt(card.dataset.playerId));
+    const targetId = selectedPlayerIds[0] || null;
+    const target = targetId ? global.getP?.(targetId) : null;
+
+    // Use canonical action catalog from SocialManeuvers, or fallback to unified catalog
+    let actions = [];
+    if (global.SocialManeuvers?.SOCIAL_ACTIONS) {
+      // Use canonical catalog from social-maneuvers.js
+      actions = global.SocialManeuvers.SOCIAL_ACTIONS.map(action => ({
+        id: action.id,
+        label: action.label,
+        icon: getActionIcon(action.id),
+        cost: action.costs || { energy: action.cost || 1 },
+        require: {},
+        category: action.category,
+        description: action.description
+      }));
+    } else {
+      // Fallback unified catalog (merged + deduped)
+      actions = [
+        { 
+          id: 'smalltalk', 
+          label: 'Small Talk', 
+          icon: '💬', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Light conversation to build rapport'
+        },
+        { 
+          id: 'strategize', 
+          label: 'Strategize', 
+          icon: '💡', 
+          cost: { energy: 2 },
+          require: {},
+          category: 'strategic',
+          description: 'Deep strategic conversation to align game plans (includes Strategy Chat/Late Night Talk)'
+        },
+        { 
+          id: 'confide', 
+          label: 'Confide', 
+          icon: '🤫', 
+          cost: { energy: 2 },
+          require: {},
+          category: 'friendly',
+          description: 'Share personal thoughts and build trust'
+        },
+        { 
+          id: 'interrogate', 
+          label: 'Interrogate', 
+          icon: '🔍', 
+          cost: { energy: 2 },
+          require: {},
+          category: 'strategic',
+          description: 'Press for information about plans'
+        },
+        { 
+          id: 'compliment', 
+          label: 'Compliment', 
+          icon: '✨', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Give genuine praise. May refund energy!'
+        },
+        { 
+          id: 'mediate', 
+          label: 'Mediate', 
+          icon: '⚖️', 
+          cost: { energy: 2 },
+          require: { influence: 1, information: 1 },
+          category: 'strategic',
+          description: 'Mediate conflict between others. Requires influence and information.'
+        },
+        { 
+          id: 'observe', 
+          label: 'Observe', 
+          icon: '👁️', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'strategic',
+          description: 'Watch and listen quietly'
+        },
+        { 
+          id: 'confront', 
+          label: 'Confront', 
+          icon: '⚔️', 
+          cost: { energy: 3 },
+          require: {},
+          category: 'aggressive',
+          description: 'Direct confrontation - air grievances'
+        },
+        { 
+          id: 'alliance', 
+          label: 'Form Alliance', 
+          icon: '🤝', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Build a strong alliance with mutual trust and safety.'
+        },
+        { 
+          id: 'gift', 
+          label: 'Give Gift', 
+          icon: '🎁', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Give a thoughtful gift to improve relationship.'
+        },
+        { 
+          id: 'flirt', 
+          label: 'Flirt', 
+          icon: '😊', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Light romantic or friendly flirtation.'
+        },
+        { 
+          id: 'workout', 
+          label: 'Workout', 
+          icon: '💪', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Bond through physical activity and shared fitness (includes Workout Together)'
+        },
+        { 
+          id: 'cook', 
+          label: 'Cook', 
+          icon: '🍳', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Prepare and share a meal together (includes Cook Meal)'
+        },
+        { 
+          id: 'apologize', 
+          label: 'Apologize', 
+          icon: '🙏', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'friendly',
+          description: 'Mend fences with a sincere apology.'
+        },
+        { 
+          id: 'prank', 
+          label: 'Prank', 
+          icon: '😜', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'risky',
+          description: 'Pull a prank - might backfire or strengthen bonds.'
+        },
+        { 
+          id: 'taunt', 
+          label: 'Taunt', 
+          icon: '😤', 
+          cost: { energy: 1 },
+          require: {},
+          category: 'aggressive',
+          description: 'Taunt and provoke - damages relationship.'
+        }
+      ];
+    }
 
     menu.innerHTML = '';
 
     actions.forEach(action => {
+      const energyCost = action.cost.energy || 0;
+      const influenceReq = action.cost.influence || action.require?.influence || 0;
+      const informationReq = action.cost.information || action.require?.information || 0;
+      const minTargets = action.minTargets || 1;
+      const affinityMin = action.affinityMin !== undefined ? action.affinityMin : null;
+      
+      // Evaluate each requirement independently
+      const hasEnoughEnergy = res.energy >= energyCost;
+      const hasEnoughInfluence = res.influence >= influenceReq;
+      const hasEnoughInformation = res.information >= informationReq;
+      const hasEnoughTargets = selectedPlayerIds.length >= minTargets;
+      
+      // Get evaluation from SocialActionConfig if available and target selected
+      let evaluation = null;
+      let hasAffinityReq = true;
+      if (target && global.SocialActionConfig?.getActionEvaluation) {
+        evaluation = global.SocialActionConfig.getActionEvaluation(action.id, you, target, action);
+        hasAffinityReq = evaluation.available;
+      }
+      
+      // Action is available if ALL requirements are met
+      const allRequirementsMet = hasEnoughEnergy && hasEnoughInfluence && hasEnoughInformation && hasEnoughTargets && hasAffinityReq;
+      
       const btn = document.createElement('button');
-      btn.className = 'action-btn';
+      btn.className = `action-btn action-${action.category}`;
       btn.dataset.actionId = action.id;
+      btn.dataset.minTargets = minTargets;
+      
+      if (!allRequirementsMet) {
+        btn.classList.add('disabled');
+        btn.disabled = true;
+      }
+
+      // Build requirement chips for missing requirements
+      const requirementChips = [];
+      if (!hasEnoughEnergy) {
+        requirementChips.push(`<span class="requirement-chip chip-energy">Needs: +${energyCost - res.energy} ⚡</span>`);
+      }
+      if (!hasEnoughInfluence) {
+        requirementChips.push(`<span class="requirement-chip chip-influence">Needs: +${influenceReq - res.influence} 🤝 (Influence)</span>`);
+      }
+      if (!hasEnoughInformation) {
+        requirementChips.push(`<span class="requirement-chip chip-information">Needs: +${informationReq - res.information} 💡 (Information)</span>`);
+      }
+      if (!hasEnoughTargets) {
+        requirementChips.push(`<span class="requirement-chip chip-targets">Needs: Select ≥ ${minTargets} players</span>`);
+      }
+      if (evaluation && !evaluation.available && evaluation.gateReasons) {
+        // Show affinity or other gate reasons
+        evaluation.gateReasons.forEach(reason => {
+          requirementChips.push(`<span class="requirement-chip chip-affinity">${reason}</span>`);
+        });
+      }
+
       btn.innerHTML = `
-        <span class="action-icon">${action.icon}</span>
-        <span class="action-label">${action.label}</span>
-        <span class="action-cost">${action.cost}⚡</span>
+        <div class="action-header">
+          <span class="action-icon">${action.icon}</span>
+          <span class="action-label">${action.label}</span>
+        </div>
+        <div class="action-costs">
+          ${energyCost > 0 ? `<span class="cost-badge cost-energy ${!hasEnoughEnergy ? 'insufficient' : ''}" title="Energy cost">⚡${energyCost}</span>` : ''}
+          ${influenceReq > 0 ? `<span class="cost-badge cost-influence ${!hasEnoughInfluence ? 'insufficient' : ''}" title="Influence required">🤝${influenceReq}</span>` : ''}
+          ${informationReq > 0 ? `<span class="cost-badge cost-information ${!hasEnoughInformation ? 'insufficient' : ''}" title="Information required">💡${informationReq}</span>` : ''}
+        </div>
+        <div class="action-description">${action.description}</div>
+        ${requirementChips.length > 0 ? `<div class="action-requirements">${requirementChips.join('')}</div>` : ''}
       `;
 
+      // Add tooltip with all requirements
+      const tooltipParts = [action.description];
+      if (requirementChips.length > 0) {
+        tooltipParts.push('');
+        tooltipParts.push('Missing requirements:');
+        if (!hasEnoughEnergy) tooltipParts.push(`  - Need ${energyCost - res.energy} more Energy`);
+        if (!hasEnoughInfluence) tooltipParts.push(`  - Need ${influenceReq - res.influence} more Influence`);
+        if (!hasEnoughInformation) tooltipParts.push(`  - Need ${informationReq - res.information} more Information`);
+        if (!hasEnoughTargets) tooltipParts.push(`  - Need to select ${minTargets} or more players`);
+        if (evaluation && !evaluation.available) {
+          evaluation.gateReasons?.forEach(r => tooltipParts.push(`  - ${r}`));
+        }
+      }
+      btn.title = tooltipParts.join('\n');
+
       btn.addEventListener('click', () => {
+        if (!allRequirementsMet) return;
+        
         // Clear other selections
         $$('.action-btn.selected').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
@@ -358,17 +688,73 @@
       menu.appendChild(btn);
     });
   }
+  
+  // Helper function to get action icons
+  function getActionIcon(actionId) {
+    const iconMap = {
+      smalltalk: '💬',
+      strategize: '💡',
+      confide: '🤫',
+      interrogate: '🔍',
+      compliment: '✨',
+      confront: '⚔️',
+      mediate: '⚖️',
+      observe: '👁️',
+      alliance: '🤝',
+      gift: '🎁',
+      flirt: '😊',
+      workout: '💪',
+      cook: '🍳',
+      apologize: '🙏',
+      prank: '😜',
+      taunt: '😤',
+      // High-impact actions
+      spread_rumor: '📢',
+      expose_secret: '🎯',
+      group_hangout: '👥',
+      form_alliance: '🤝'
+    };
+    return iconMap[actionId] || '🎭';
+  }
 
   function updateExecuteButton() {
     const btn = $('#executeActionBtn');
     if (!btn) return;
 
-    const selectedPlayers = $$('.player-card.selected');
+    const selectedPlayers = Array.from($$('.player-card.selected'));
     const selectedAction = $('.action-btn.selected');
     const res = getResourceState();
 
-    const canExecute = selectedPlayers.length > 0 && selectedAction && res.energy > 0;
+    if (!selectedAction || !selectedPlayers.length) {
+      btn.disabled = true;
+      btn.textContent = 'Select Action & Players';
+      return;
+    }
+
+    // Get action details
+    const actionId = selectedAction.dataset.actionId;
+    const minTargets = parseInt(selectedAction.dataset.minTargets) || 1;
+    
+    // Find the action definition to get cost
+    const actions = global.SocialManeuvers?.SOCIAL_ACTIONS || [];
+    const action = actions.find(a => a.id === actionId);
+    const energyCost = action?.costs?.energy || action?.cost || 1;
+    
+    // Check all requirements
+    const hasEnoughPlayers = selectedPlayers.length >= minTargets;
+    const hasEnoughEnergy = res.energy >= energyCost;
+    
+    const canExecute = hasEnoughPlayers && hasEnoughEnergy && selectedAction;
     btn.disabled = !canExecute;
+    
+    // Update button text
+    if (!hasEnoughPlayers) {
+      btn.textContent = `Select ${minTargets}+ Players (${selectedPlayers.length} selected)`;
+    } else if (!hasEnoughEnergy) {
+      btn.textContent = `Need ${energyCost} Energy (have ${res.energy})`;
+    } else {
+      btn.textContent = `Execute Action (Cost: ${energyCost}⚡)`;
+    }
   }
 
   function executeAction() {
@@ -381,36 +767,131 @@
     }
 
     const actionId = selectedAction.dataset.actionId;
+    const minTargets = parseInt(selectedAction.dataset.minTargets) || 1;
     const g = global.game || {};
     const you = global.getP?.(g.humanId);
 
     if (!you) return;
 
-    // Execute action for each selected player
-    selectedPlayers.forEach(card => {
-      const targetId = parseInt(card.dataset.playerId);
-      if (global.socialApplyAction) {
-        global.socialApplyAction(you.id, targetId, actionId);
+    // Get action definition to check if it's a group action
+    const actions = global.SocialManeuvers?.SOCIAL_ACTIONS || [];
+    const action = actions.find(a => a.id === actionId);
+    const isGroupAction = action?.multiTarget === true || minTargets >= 2;
+    
+    // Validate target count for group actions
+    if (isGroupAction && selectedPlayers.length < minTargets) {
+      global.addLog?.(`Need at least ${minTargets} targets for this action.`, 'warn');
+      return;
+    }
+
+    // Execute via canonical SocialManeuvers.executeAction if available
+    if (global.SocialManeuvers?.executeAction) {
+      if (isGroupAction) {
+        // GROUP ACTION: Pass all targets as a single call
+        const targetIds = selectedPlayers.map(card => parseInt(card.dataset.playerId));
+        const primaryTargetId = targetIds[0];
+        const extraTargetIds = targetIds.slice(1);
+        
+        try {
+          // Use canonical mechanics engine for execution with group mode
+          const result = global.SocialManeuvers.executeAction(you.id, primaryTargetId, actionId, extraTargetIds);
+          
+          // Dev telemetry (dev builds only)
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.group(`[socialize-mobile] Group action executed: ${actionId}`);
+            console.log('Actor:', you.name, '(ID:', you.id, ')');
+            console.log('Targets:', targetIds.map(id => global.safeName?.(id) || id).join(', '));
+            console.log('Target count:', targetIds.length);
+            console.log('Success:', result.success);
+            if (result.outcome) {
+              console.log('Outcome:', result.outcome.type, '-', result.outcome.message);
+              console.log('Participants:', result.outcome.participants);
+            }
+            if (result.resources) {
+              console.log('Resources after:', result.resources);
+            }
+            console.groupEnd();
+          }
+          
+          // Show feedback in UI
+          if (result.success) {
+            const targetNames = targetIds.map(id => global.safeName?.(id) || 'Unknown').join(', ');
+            addFeedbackEntry(
+              selectedAction.querySelector('.action-label')?.textContent || actionId,
+              targetNames,
+              result.outcome?.type || 'neutral',
+              result.outcome?.message || 'Group action completed'
+            );
+          } else {
+            addFeedbackEntry(
+              selectedAction.querySelector('.action-label')?.textContent || actionId,
+              `${targetIds.length} players`,
+              'error',
+              result.message || result.reason || 'Group action failed'
+            );
+          }
+        } catch (e) {
+          console.error('[socialize-mobile] Failed to execute group action via SocialManeuvers:', e);
+          global.addLog?.(`Error executing group action: ${e.message}`, 'error');
+        }
+      } else {
+        // SINGLE TARGET ACTION: Execute for each target separately
+        selectedPlayers.forEach(card => {
+          const targetId = parseInt(card.dataset.playerId);
+          
+          try {
+            // Use canonical mechanics engine for execution
+            const result = global.SocialManeuvers.executeAction(you.id, targetId, actionId, []);
+            
+            // Dev telemetry (dev builds only)
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+              console.group(`[socialize-mobile] Action executed: ${actionId}`);
+              console.log('Actor:', you.name, '(ID:', you.id, ')');
+              console.log('Target:', global.safeName?.(targetId) || targetId);
+              console.log('Success:', result.success);
+              if (result.outcome) {
+                console.log('Outcome:', result.outcome.type, '-', result.outcome.message);
+                console.log('Affinity change:', result.outcome.affinityChange);
+              }
+              if (result.resources) {
+                console.log('Resources after:', result.resources);
+              }
+              if (result.telemetry) {
+                console.log('Success chance:', `${(result.telemetry.finalChance * 100).toFixed(0)}%`);
+                console.log('Roll:', `${(result.telemetry.chanceRoll * 100).toFixed(0)}%`);
+              }
+              console.groupEnd();
+            }
+            
+            // Show feedback in UI
+            if (result.success) {
+              addFeedbackEntry(
+                selectedAction.querySelector('.action-label')?.textContent || actionId,
+                global.safeName?.(targetId) || 'Unknown',
+                result.outcome?.type || 'neutral',
+                result.outcome?.message || 'Action completed'
+              );
+            } else {
+              addFeedbackEntry(
+                selectedAction.querySelector('.action-label')?.textContent || actionId,
+                global.safeName?.(targetId) || 'Unknown',
+                'error',
+                result.message || result.reason || 'Action failed'
+              );
+            }
+          } catch (e) {
+            console.error('[socialize-mobile] Failed to execute action via SocialManeuvers:', e);
+            // Fallback to legacy system
+            executeLegacyAction(you.id, targetId, actionId, selectedAction);
+          }
+        });
       }
-    });
-
-    // Deduct energy
-    updateResourceState({ energy: -1 });
-
-    // Add to feedback
-    const feedback = $('#feedbackArea');
-    if (feedback) {
-      const placeholder = feedback.querySelector('.feedback-placeholder');
-      if (placeholder) placeholder.remove();
-
-      const entry = document.createElement('div');
-      entry.className = 'feedback-entry';
-      const targetNames = selectedPlayers.map(c => {
-        const p = global.getP?.(parseInt(c.dataset.playerId));
-        return p?.name || 'Unknown';
-      }).join(', ');
-      entry.textContent = `${selectedAction.textContent.trim()} → ${targetNames}`;
-      feedback.insertBefore(entry, feedback.firstChild);
+    } else {
+      // Fallback to legacy system if SocialManeuvers not available
+      selectedPlayers.forEach(card => {
+        const targetId = parseInt(card.dataset.playerId);
+        executeLegacyAction(you.id, targetId, actionId, selectedAction);
+      });
     }
 
     // Clear selections
@@ -418,11 +899,72 @@
     selectedAction.classList.remove('selected');
     updateExecuteButton();
 
+    // Refresh action menu to update costs/availability
+    populateActionMenu();
+
     // Check if energy depleted
-    if (res.energy <= 0) {
+    const updatedRes = getResourceState();
+    if (updatedRes.energy <= 0) {
       setTimeout(() => {
         closeSocializeModal(true);
       }, 800);
+    }
+  }
+  
+  // Fallback to legacy social.js action system
+  function executeLegacyAction(actorId, targetId, actionId, actionBtn) {
+    // Map unified actions to legacy social.js actions
+    const actionMapping = {
+      'strategize': 'strategychat',  // Strategize maps to Strategy Chat
+      'smalltalk': 'gift',           // Small talk uses gift mechanic
+      'observe': 'gift',             // Observe uses gift mechanic
+    };
+    const legacyActionId = actionMapping[actionId] || actionId;
+    
+    if (global.socialApplyAction) {
+      global.socialApplyAction(actorId, targetId, legacyActionId);
+    }
+    
+    // Deduct energy manually (legacy system doesn't use canonical store)
+    updateResourceState({ energy: -1 });
+    
+    const actionLabel = actionBtn.querySelector('.action-label')?.textContent || legacyActionId;
+    const targetName = global.safeName?.(targetId) || 'Unknown';
+    addFeedbackEntry(actionLabel, targetName, 'neutral', 'Action completed (legacy)');
+  }
+  
+  // Add feedback entry to the UI
+  function addFeedbackEntry(actionLabel, targetName, outcomeType, message) {
+    const feedback = $('#feedbackArea');
+    if (!feedback) return;
+    
+    const placeholder = feedback.querySelector('.feedback-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const entry = document.createElement('div');
+    entry.className = `feedback-entry feedback-${outcomeType}`;
+    
+    const outcomeIcon = {
+      'positive': '✓',
+      'success': '✓',
+      'neutral': '→',
+      'negative': '✗',
+      'error': '⚠',
+      'backlash': '⚠'
+    }[outcomeType] || '•';
+    
+    entry.innerHTML = `
+      <span class="feedback-icon">${outcomeIcon}</span>
+      <span class="feedback-text">${actionLabel} → ${targetName}</span>
+      <span class="feedback-message">${message}</span>
+    `;
+    
+    feedback.insertBefore(entry, feedback.firstChild);
+    
+    // Limit feedback entries to 10
+    const entries = feedback.querySelectorAll('.feedback-entry');
+    if (entries.length > 10) {
+      entries[entries.length - 1].remove();
     }
   }
 
@@ -535,37 +1077,190 @@
     dialog.querySelector('.dialog-backdrop')?.addEventListener('click', closeDialog);
   }
 
+  // Seed phase resources if engine is present
+  function seedPhaseResources() {
+    const g = global.game || {};
+    const humanId = g.humanId;
+    
+    if (!humanId) {
+      console.warn('[socialize-mobile] Cannot seed resources - no humanId');
+      return;
+    }
+    
+    // Defer to canonical SocialManeuvers engine if present
+    if (global.SocialManeuvers?.SocialResources) {
+      try {
+        // Engine handles seeding automatically on phase start
+        console.info('[socialize-mobile] Resources seeded via SocialManeuvers engine');
+        return;
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to seed resources:', e);
+      }
+    }
+    
+    console.warn('[socialize-mobile] SocialManeuvers not available - cannot seed resources');
+  }
+
+  // Resources changed event hook
+  function onResourcesChanged(callback) {
+    if (typeof callback !== 'function') return;
+    
+    global.addEventListener('social-resources-changed', (event) => {
+      callback(event.detail);
+    });
+  }
+
+  // Phase visibility management
+  function showLauncher() {
+    const launcher = $('#socializeLauncher');
+    if (launcher) {
+      launcher.style.display = '';
+      console.info('[socialize-mobile] Launcher shown');
+    }
+  }
+
+  function hideLauncher() {
+    const launcher = $('#socializeLauncher');
+    if (launcher) {
+      launcher.style.display = 'none';
+      console.info('[socialize-mobile] Launcher hidden');
+    }
+  }
+
+  // Check if current phase is social_intermission
+  function isInSocialPhase() {
+    const g = global.game || {};
+    return g.phase === 'social_intermission' || g.phase === 'social';
+  }
+
   // Public API
   global.SocializeMobile = {
     ensureLauncher: ensureSocializeLauncher,
+    ensureSocializeLauncher: ensureSocializeLauncher, // Alias for clarity
+    mountTVLauncher: ensureSocializeLauncher, // Back-compat alias
     openModal: openSocializeModal,
     closeModal: closeSocializeModal,
     updateHUD: updateHUDDisplay,
     resetWeeklyResources: resetWeeklyResources,
     getResources: getResourceState,
-    updateResources: updateResourceState
+    updateResources: updateResourceState,
+    seedPhaseResources: seedPhaseResources,
+    onResourcesChanged: onResourcesChanged,
+    show: showLauncher,
+    hide: hideLauncher,
+    isInSocialPhase: isInSocialPhase
   };
+
+  // Resilient auto-mount with MutationObserver
+  let mountObserver = null;
+  
+  function startMountObserver() {
+    if (mountObserver) {
+      console.info('[socialize-mobile] Mount observer already active');
+      return;
+    }
+    
+    // Try initial mount only if in social phase
+    try {
+      if (isInSocialPhase()) {
+        ensureSocializeLauncher();
+        updateHUDDisplay();
+        showLauncher();
+      } else {
+        console.info('[socialize-mobile] Not in social phase - launcher will mount on phase entry');
+      }
+    } catch(e) {
+      console.warn('[socialize-mobile] Initial mount failed:', e.message);
+    }
+    
+    // Watch for #tvOverlay to appear or be re-created
+    mountObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          // Only auto-mount if in social phase
+          if (!isInSocialPhase()) {
+            continue;
+          }
+          
+          // Check if tvOverlay exists but launcher is missing
+          const tvOverlay = document.querySelector('#tvOverlay');
+          const launcher = document.querySelector('#socializeLauncher');
+          
+          if (tvOverlay && !launcher) {
+            try {
+              console.info('[socialize-mobile] Auto-mounting launcher after DOM change');
+              ensureSocializeLauncher();
+              updateHUDDisplay();
+              showLauncher();
+            } catch(e) {
+              console.error('[socialize-mobile] Auto-mount failed:', e.message);
+            }
+          }
+        }
+      }
+    });
+    
+    // Observe document.body for childList changes
+    mountObserver.observe(document.body, { 
+      childList: true, 
+      subtree: true 
+    });
+    
+    console.info('[socialize-mobile] Mount observer started');
+  }
+
+  // Bootstrap on DOMContentLoaded
+  function bootstrap() {
+    try {
+      // Try to mount launcher if DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          try {
+            startMountObserver();
+          } catch(e) {
+            console.error('[socialize-mobile] Bootstrap failed:', e.message);
+          }
+        });
+      } else {
+        // DOM already loaded
+        startMountObserver();
+      }
+    } catch(e) {
+      console.error('[socialize-mobile] Bootstrap initialization failed:', e.message);
+    }
+  }
+
+  // Start bootstrap
+  bootstrap();
 
   // Auto-initialize on social phase
   const originalRenderSocialPhase = global.renderSocialPhase;
   global.renderSocialPhase = function(panel) {
-    // Call original if exists
-    if (typeof originalRenderSocialPhase === 'function') {
-      originalRenderSocialPhase.call(this, panel);
+    try {
+      // Call original if exists
+      if (typeof originalRenderSocialPhase === 'function') {
+        originalRenderSocialPhase.call(this, panel);
+      }
+      
+      // Ensure launcher is present
+      ensureSocializeLauncher();
+      updateHUDDisplay();
+    } catch(e) {
+      console.error('[socialize-mobile] renderSocialPhase failed:', e.message);
     }
-    
-    // Ensure launcher is present
-    ensureSocializeLauncher();
-    updateHUDDisplay();
   };
 
   // Hook into weekly reset
   const originalSocialOnNewWeek = global.socialOnNewWeek;
   global.socialOnNewWeek = function() {
-    if (typeof originalSocialOnNewWeek === 'function') {
-      originalSocialOnNewWeek.call(this);
+    try {
+      if (typeof originalSocialOnNewWeek === 'function') {
+        originalSocialOnNewWeek.call(this);
+      }
+      resetWeeklyResources();
+    } catch(e) {
+      console.error('[socialize-mobile] socialOnNewWeek failed:', e.message);
     }
-    resetWeeklyResources();
   };
 
 })(window);
