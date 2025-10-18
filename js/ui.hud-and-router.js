@@ -1386,6 +1386,30 @@ header.innerHTML = `
     ensureCfg();
     g.phaseMusic?.(phase);
 
+    // Hook: Show/hide Socialize launcher based on phase
+    try {
+      if (g.SocialManeuvers?.isEnabled() && typeof g.SocializeMobile?.show === 'function') {
+        if (phase === 'social_intermission' || phase === 'social') {
+          // Entering social phase - ensure launcher is visible
+          console.info('[phase] Entering social phase - showing Socialize launcher');
+          const launcher = document.querySelector('#socializeLauncher');
+          if (launcher) {
+            g.SocializeMobile.show();
+          } else {
+            // Launcher not yet created - it will be shown when mounted
+            console.info('[phase] Launcher will be shown when mounted');
+          }
+        } else {
+          // Leaving social phase - hide launcher and close modal
+          console.info('[phase] Leaving social phase - hiding Socialize launcher');
+          g.SocializeMobile.hide();
+          g.SocializeMobile.closeModal();
+        }
+      }
+    } catch(e) {
+      console.warn('[phase] Failed to update Socialize launcher visibility:', e);
+    }
+
     // Toggle copy disabling for competitions
     try{
       const body=document.body;

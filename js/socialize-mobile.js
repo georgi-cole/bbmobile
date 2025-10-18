@@ -1110,6 +1110,29 @@
     });
   }
 
+  // Phase visibility management
+  function showLauncher() {
+    const launcher = $('#socializeLauncher');
+    if (launcher) {
+      launcher.style.display = '';
+      console.info('[socialize-mobile] Launcher shown');
+    }
+  }
+
+  function hideLauncher() {
+    const launcher = $('#socializeLauncher');
+    if (launcher) {
+      launcher.style.display = 'none';
+      console.info('[socialize-mobile] Launcher hidden');
+    }
+  }
+
+  // Check if current phase is social_intermission
+  function isInSocialPhase() {
+    const g = global.game || {};
+    return g.phase === 'social_intermission' || g.phase === 'social';
+  }
+
   // Public API
   global.SocializeMobile = {
     ensureLauncher: ensureSocializeLauncher,
@@ -1122,7 +1145,10 @@
     getResources: getResourceState,
     updateResources: updateResourceState,
     seedPhaseResources: seedPhaseResources,
-    onResourcesChanged: onResourcesChanged
+    onResourcesChanged: onResourcesChanged,
+    show: showLauncher,
+    hide: hideLauncher,
+    isInSocialPhase: isInSocialPhase
   };
 
   // Resilient auto-mount with MutationObserver
@@ -1134,10 +1160,15 @@
       return;
     }
     
-    // Try initial mount
+    // Try initial mount only if in social phase
     try {
-      ensureSocializeLauncher();
-      updateHUDDisplay();
+      if (isInSocialPhase()) {
+        ensureSocializeLauncher();
+        updateHUDDisplay();
+        showLauncher();
+      } else {
+        console.info('[socialize-mobile] Not in social phase - launcher will mount on phase entry');
+      }
     } catch(e) {
       console.warn('[socialize-mobile] Initial mount failed:', e.message);
     }
@@ -1146,6 +1177,11 @@
     mountObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.type === 'childList') {
+          // Only auto-mount if in social phase
+          if (!isInSocialPhase()) {
+            continue;
+          }
+          
           // Check if tvOverlay exists but launcher is missing
           const tvOverlay = document.querySelector('#tvOverlay');
           const launcher = document.querySelector('#socializeLauncher');
@@ -1155,6 +1191,7 @@
               console.info('[socialize-mobile] Auto-mounting launcher after DOM change');
               ensureSocializeLauncher();
               updateHUDDisplay();
+              showLauncher();
             } catch(e) {
               console.error('[socialize-mobile] Auto-mount failed:', e.message);
             }
