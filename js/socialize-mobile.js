@@ -247,8 +247,8 @@
     
     // Add high z-index backdrop to prevent click-through
     modal.innerHTML = `
-      <div class="socialize-modal-backdrop" style="z-index: 9998;"></div>
-      <div class="socialize-modal-content" style="z-index: 9999;">
+      <div class="socialize-modal-backdrop socialize-modal-backdrop-high"></div>
+      <div class="socialize-modal-content socialize-modal-content-high">
         <button class="modal-close-btn" aria-label="Close">×</button>
         
         <div class="modal-header-hud">
