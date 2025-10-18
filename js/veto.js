@@ -87,12 +87,17 @@
       id = finalSet[i];
       if(!seen[id]){ seen[id]=true; unique.push(id); }
     }
-    return unique;
+    // Ensure all IDs are numeric to avoid string/number mismatches downstream
+    return unique.map(function(x){ return +x; });
   }
 
   function submitGuarded(id, base, mult, label){
     var g = global.game;
     g.lastCompScores = g.lastCompScores || new Map();
+    // Normalize inputs to numeric and guard duplicate submissions
+    id = +id;
+    base = +base;
+    mult = (mult==null ? 1 : +mult) || 1;
     if(g.lastCompScores.has(id)) return false;
 
     var finalScore = base * mult;
@@ -133,6 +138,9 @@
     g.__replacementApplied = false;
 
     g.__vetoPlayers = computeVetoParticipants();
+    // Normalize to numeric again in case upstream changed shape
+    if(Array.isArray(g.__vetoPlayers)){
+      g.__vetoPlayers = g.__vetoPlayers.map(function(x){ return +x; }); }
 
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Competition');
     if(typeof global.phaseMusic==='function') global.phaseMusic('veto_comp');
@@ -150,6 +158,7 @@
 
     var you = (g.humanId!=null) ? getP(g.humanId) : null;
     var humanIn = !!(you && !you.evicted && g.__vetoPlayers.indexOf(you.id)!==-1);
+    // humanIn will be correct because g.__vetoPlayers and you.id are numeric now
 
     if(humanIn){
       var mg = (typeof global.pickMinigameType==='function') ? global.pickMinigameType() : 'clicker';
@@ -179,6 +188,11 @@
           });
           hostNode.appendChild(playWrap);
         }
+        else {
+          // Last-resort fallback: if no modern or legacy renderer is available,
+          // auto-submit a zero so the flow cannot stall.
+          setTimeout(function(){ submitGuarded(you.id, 0, 1, 'Veto/AutoFallback'); }, 200);
+        }
       }
     } else {
       var host2 = document.querySelector('#panel .minigame-host');
@@ -205,7 +219,7 @@
           // Use compBeast for fairer AI scoring
           var baseScore = 8 + rng()*20;
           var aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.6);
-          submitGuarded(id, baseScore, aiMultiplier, 'Veto/AI');
+          submitGuarded(+id, baseScore, aiMultiplier, 'Veto/AI');
         }, 300 + rng()*((g.cfg && g.cfg.tVeto || 40)*620));
       })(aiList[i]);
     }
@@ -324,24 +338,48 @@
     }
 
     var eligible = (Array.isArray(g.__vetoPlayers) && g.__vetoPlayers.length)
-      ? g.__vetoPlayers.slice()
-      : alivePlayers().map(function(p){ return p.id; });
+      ? g.__vetoPlayers.map(function(x){ return +x; })
+      : alivePlayers().map(function(p){ return +p.id; });
 
     // Synthesize AI or absent scores before reveal (fallback assignment)
-    for(var i=0;i<eligible.length;i++){
-      var id = eligible[i];
-      if(!g.lastCompScores.has(id)){
-        g.lastCompScores.set(id, 5 + rng()*5);
+    (function ensureScores(){
+      for(var i=0;i<eligible.length;i++){
+        var id = +eligible[i];
+        // Some branches may have stored string keys; migrate them to numeric
+        if(g.lastCompScores.has(String(id)) && !g.lastCompScores.has(id)){
+          var v = g.lastCompScores.get(String(id));
+          g.lastCompScores.delete(String(id));
+          g.lastCompScores.set(id, +v);
+        }
+        if(!g.lastCompScores.has(id)){
+          g.lastCompScores.set(id, 5 + rng()*5);
+        }
       }
-    }
+    })();
 
     var arr = [];
     g.lastCompScores.forEach(function(score, pid){
-      if(eligible.indexOf(pid)!==-1){ arr.push([pid, score]); }
+      var pidNum = +pid;
+      if(eligible.indexOf(pidNum)!==-1){ arr.push([pidNum, +score]); }
     });
+    // Absolute fallback: if filtering ended up empty (e.g., ID type drift), repopulate
+    if(arr.length === 0 && eligible.length){
+      for(var j=0;j<eligible.length;j++){
+        var eid = +eligible[j];
+        var s = g.lastCompScores.has(eid) ? +g.lastCompScores.get(eid) : (5 + rng()*5);
+        g.lastCompScores.set(eid, s);
+        arr.push([eid, s]);
+      }
+    }
     arr.sort(function(a,b){ return b[1]-a[1]; });
 
-    global.game.vetoHolder = arr[0][0];
+    // Final guard: if still no scores, pick a random eligible to avoid deadlock
+    if(!arr.length && eligible.length){
+      var pick = eligible[Math.floor(rng()*eligible.length)];
+      arr = [[pick, 0]];
+    }
+
+    global.game.vetoHolder = arr[0] && arr[0][0];
     var W = getP(global.game.vetoHolder);
     if(W){
       W.stats = W.stats || {};
@@ -360,6 +398,10 @@
 
     // Build top-3 reveal sequence
     var top3 = arr.slice(0, Math.min(3, arr.length));
+    // Defensive: ensure shape is [id, score]
+    top3 = top3.filter(function(x){ return x && typeof x[0] !== 'undefined'; });
+    if(!top3.length && eligible.length){ top3 = [[eligible[0], 0]]; }
+
     showVetoRevealSequence(top3).then(function(){
       // Check for Final 4 — skip veto ceremony and go direct to eviction
       handlePostVetoReveal();
