@@ -6,6 +6,9 @@
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
+  
+  // Flag to prevent re-entrant mounting during DOM mutations
+  let _isCurrentlyMounting = false;
 
   // Resource state management - thin view over canonical SocialManeuvers store
   function getResourceState() {
@@ -91,18 +94,36 @@
 
   // Ensure launcher exists in TV overlay
   function ensureSocializeLauncher() {
+    // Prevent re-entrant calls during mounting
+    if (_isCurrentlyMounting) {
+      return null;
+    }
+    
     let launcher = $('#socializeLauncher');
     if (launcher) return launcher;
+    
+    _isCurrentlyMounting = true;
 
-    const tvOverlay = $('#tvOverlay');
-    if (!tvOverlay) {
-      console.warn('[Socialize] tvOverlay not found');
+    // Use SocialLauncherBootstrap.resolveMountTarget() if available
+    let mountTarget;
+    if (global.SocialLauncherBootstrap?.resolveMountTarget) {
+      mountTarget = global.SocialLauncherBootstrap.resolveMountTarget();
+    } else {
+      // Fallback if bootstrap not loaded
+      mountTarget = $('#tvOverlay') || $('.tvViewport') || $('#tv') || $('.tv') || $('#panel');
+    }
+    
+    if (!mountTarget) {
+      console.info('[socialize-mobile] No mount target available - observer will retry');
+      _isCurrentlyMounting = false;
       return null;
     }
 
     launcher = document.createElement('div');
     launcher.id = 'socializeLauncher';
     launcher.className = 'socialize-launcher';
+    // Mount with z-index 2147483000 to ensure visibility
+    launcher.style.zIndex = '2147483000';
     launcher.innerHTML = `
       <div class="socialize-hud">
         <div class="socialize-hud-title">Social Phase</div>
@@ -125,7 +146,7 @@
       <button class="socialize-open-btn" id="socializeOpenBtn">Socialize</button>
     `;
 
-    tvOverlay.appendChild(launcher);
+    mountTarget.appendChild(launcher);
 
     // Attach event listeners
     $('#socializeOpenBtn')?.addEventListener('click', openSocializeModal);
@@ -135,7 +156,11 @@
     global.addEventListener('social-resources-changed', (event) => {
       updateHUDDisplay();
     });
-
+    
+    // Call updateHUDDisplay() after mounting
+    updateHUDDisplay();
+    
+    _isCurrentlyMounting = false;
     return launcher;
   }
 
@@ -244,11 +269,13 @@
     const modal = document.createElement('div');
     modal.id = 'socializeModal';
     modal.className = 'socialize-modal';
+    // High z-index to block click-through to background
+    modal.style.zIndex = '2147483600';
     
     // Add high z-index backdrop to prevent click-through
     modal.innerHTML = `
-      <div class="socialize-modal-backdrop socialize-modal-backdrop-high"></div>
-      <div class="socialize-modal-content socialize-modal-content-high">
+      <div class="socialize-modal-backdrop socialize-modal-backdrop-high" style="z-index: 2147483599;"></div>
+      <div class="socialize-modal-content socialize-modal-content-high" style="z-index: 2147483600;">
         <button class="modal-close-btn" aria-label="Close">×</button>
         
         <div class="modal-header-hud">
@@ -332,6 +359,12 @@
 
     // Re-enable scrolling
     document.body.style.overflow = '';
+
+    // Remove backdrop
+    const backdrop = document.querySelector('.socialize-modal-backdrop');
+    if (backdrop) {
+      backdrop.remove();
+    }
 
     // Animate out
     modal.classList.remove('open');
@@ -798,13 +831,13 @@
       return;
     }
 
-    // Execute via canonical SocialManeuvers.executeAction if available
+    // Execute via canonical SocialManeuvers.executeAction when enabled
     // When Social Maneuvers is enabled, ALWAYS use the engine (no legacy fallbacks)
     const useSocialManeuvers = global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.executeAction;
     
     if (useSocialManeuvers) {
       if (isGroupAction) {
-        // GROUP ACTION: Pass all targets as a single call
+        // GROUP ACTION: Pass all targets as a single grouped call
         const targetIds = selectedPlayers.map(card => parseInt(card.dataset.playerId));
         const primaryTargetId = targetIds[0];
         const extraTargetIds = targetIds.slice(1);
@@ -852,63 +885,68 @@
           global.addLog?.(`Error executing group action: ${e.message}`, 'error');
         }
       } else {
-        // SINGLE TARGET ACTION: Execute for each target separately
-        selectedPlayers.forEach(card => {
-          const targetId = parseInt(card.dataset.playerId);
+        // SINGLE TARGET ACTION: Treat multi-target as a single grouped call when multiple selected
+        const targetIds = selectedPlayers.map(card => parseInt(card.dataset.playerId));
+        const primaryTargetId = targetIds[0];
+        const extraTargetIds = targetIds.slice(1);
+        
+        try {
+          // Always use single call with all targets (treat as grouped)
+          const result = global.SocialManeuvers.executeAction(you.id, primaryTargetId, actionId, extraTargetIds);
           
-          try {
-            // Use canonical mechanics engine for execution
-            const result = global.SocialManeuvers.executeAction(you.id, targetId, actionId, []);
-            
-            // Dev telemetry (dev builds only)
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-              console.group(`[socialize-mobile] Action executed: ${actionId}`);
-              console.log('Actor:', you.name, '(ID:', you.id, ')');
-              console.log('Target:', global.safeName?.(targetId) || targetId);
-              console.log('Success:', result.success);
-              if (result.outcome) {
-                console.log('Outcome:', result.outcome.type, '-', result.outcome.message);
+          // Dev telemetry (dev builds only)
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.group(`[socialize-mobile] Action executed: ${actionId}`);
+            console.log('Actor:', you.name, '(ID:', you.id, ')');
+            console.log('Targets:', targetIds.map(id => global.safeName?.(id) || id).join(', '));
+            console.log('Success:', result.success);
+            if (result.outcome) {
+              console.log('Outcome:', result.outcome.type, '-', result.outcome.message);
+              if (result.outcome.affinityChange !== undefined) {
                 console.log('Affinity change:', result.outcome.affinityChange);
               }
-              if (result.resources) {
-                console.log('Resources after:', result.resources);
-              }
-              if (result.telemetry) {
-                console.log('Success chance:', `${(result.telemetry.finalChance * 100).toFixed(0)}%`);
-                console.log('Roll:', `${(result.telemetry.chanceRoll * 100).toFixed(0)}%`);
-              }
-              console.groupEnd();
             }
-            
-            // Show feedback in UI
-            if (result.success) {
-              addFeedbackEntry(
-                selectedAction.querySelector('.action-label')?.textContent || actionId,
-                global.safeName?.(targetId) || 'Unknown',
-                result.outcome?.type || 'neutral',
-                result.outcome?.message || 'Action completed'
-              );
-            } else {
-              addFeedbackEntry(
-                selectedAction.querySelector('.action-label')?.textContent || actionId,
-                global.safeName?.(targetId) || 'Unknown',
-                'error',
-                result.message || result.reason || 'Action failed'
-              );
+            if (result.resources) {
+              console.log('Resources after:', result.resources);
             }
-          } catch (e) {
-            console.error('[socialize-mobile] Failed to execute action via SocialManeuvers:', e);
-            global.addLog?.(`Error executing action: ${e.message}`, 'error');
+            if (result.telemetry) {
+              console.log('Success chance:', `${(result.telemetry.finalChance * 100).toFixed(0)}%`);
+              console.log('Roll:', `${(result.telemetry.chanceRoll * 100).toFixed(0)}%`);
+            }
+            console.groupEnd();
           }
-        });
+          
+          // Show feedback in UI
+          const targetNames = targetIds.map(id => global.safeName?.(id) || 'Unknown').join(', ');
+          if (result.success) {
+            addFeedbackEntry(
+              selectedAction.querySelector('.action-label')?.textContent || actionId,
+              targetNames,
+              result.outcome?.type || 'neutral',
+              result.outcome?.message || 'Action completed'
+            );
+          } else {
+            addFeedbackEntry(
+              selectedAction.querySelector('.action-label')?.textContent || actionId,
+              targetNames,
+              'error',
+              result.message || result.reason || 'Action failed'
+            );
+          }
+        } catch (e) {
+          console.error('[socialize-mobile] Failed to execute action via SocialManeuvers:', e);
+          global.addLog?.(`Error executing action: ${e.message}`, 'error');
+        }
       }
     } else {
-      // Fallback to legacy system only if SocialManeuvers is disabled
-      console.info('[socialize-mobile] Social Maneuvers disabled or unavailable - using legacy system');
-      selectedPlayers.forEach(card => {
-        const targetId = parseInt(card.dataset.playerId);
-        executeLegacyAction(you.id, targetId, actionId, selectedAction);
-      });
+      // DO NOT fallback to legacy when flag is ON
+      const missingComponents = [];
+      if (!global.SocialManeuvers?.isEnabled?.()) missingComponents.push('isEnabled');
+      if (!global.SocialManeuvers?.executeAction) missingComponents.push('executeAction');
+      const details = missingComponents.length ? `Missing: ${missingComponents.join(', ')}` : 'Unknown component missing';
+      console.error(`[socialize-mobile] Social Maneuvers is enabled but engine not available. ${details}`);
+      global.addLog?.(`Social Maneuvers engine unavailable. ${details}`, 'error');
+      return;
     }
 
     // Clear selections
@@ -1169,6 +1207,7 @@
   };
 
   // Resilient auto-mount with MutationObserver
+  // Only mount launcher when in social_intermission (phase-gated), but keep observer active
   let mountObserver = null;
   
   function startMountObserver() {
@@ -1177,33 +1216,42 @@
       return;
     }
     
-    // Try initial mount only if in social phase
+    // Try initial mount ONLY if in social phase (phase-gated)
     try {
       if (isInSocialPhase()) {
         ensureSocializeLauncher();
         updateHUDDisplay();
         showLauncher();
+        console.info('[socialize-mobile] Launcher mounted (in social_intermission)');
       } else {
-        console.info('[socialize-mobile] Not in social phase - launcher will mount on phase entry');
+        console.info('[socialize-mobile] Not in social_intermission - launcher will mount on phase entry');
       }
     } catch(e) {
       console.warn('[socialize-mobile] Initial mount failed:', e.message);
     }
     
-    // Watch for #tvOverlay to appear or be re-created
+    // Keep MutationObserver active to remount if the surface changes
     mountObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.type === 'childList') {
-          // Only auto-mount if in social phase
+          // Only auto-mount if in social_intermission (phase-gated)
           if (!isInSocialPhase()) {
             continue;
           }
           
-          // Check if tvOverlay exists but launcher is missing
-          const tvOverlay = document.querySelector('#tvOverlay');
+          // Check if mount target exists but launcher is missing
+          let mountTarget;
+          if (global.SocialLauncherBootstrap?.resolveMountTarget) {
+            mountTarget = global.SocialLauncherBootstrap.resolveMountTarget();
+          } else {
+            mountTarget = document.querySelector('#tvOverlay') || 
+                          document.querySelector('.tvViewport') || 
+                          document.querySelector('#tv');
+          }
+          
           const launcher = document.querySelector('#socializeLauncher');
           
-          if (tvOverlay && !launcher) {
+          if (mountTarget && !launcher) {
             try {
               console.info('[socialize-mobile] Auto-mounting launcher after DOM change');
               ensureSocializeLauncher();
@@ -1223,7 +1271,7 @@
       subtree: true 
     });
     
-    console.info('[socialize-mobile] Mount observer started');
+    console.info('[socialize-mobile] Mount observer started (phase-gated, observer remains active)');
   }
 
   // Bootstrap on DOMContentLoaded

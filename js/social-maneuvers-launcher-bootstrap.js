@@ -15,13 +15,32 @@
 
   /**
    * Resolve the mount target for the Socialize launcher.
-   * Primary selector: #tvOverlay
-   * Fallbacks: .tvViewport, .tv
+   * Robust fallback chain: #tvOverlay → .tvViewport → #tv → .tv → #panel → create #tvOverlay on body
+   * Logs once when creating fallback container.
    */
   function resolveMountTarget() {
-    return document.querySelector('#tvOverlay') ||
-           document.querySelector('.tvViewport') ||
-           document.querySelector('.tv');
+    // Try existing selectors in priority order
+    const existing = document.querySelector('#tvOverlay') ||
+                     document.querySelector('.tvViewport') ||
+                     document.querySelector('#tv') ||
+                     document.querySelector('.tv') ||
+                     document.querySelector('#panel');
+    
+    if (existing) {
+      return existing;
+    }
+    
+    // No suitable mount target found - create fallback #tvOverlay on document.body
+    console.info('[social-launcher] No mount target found - creating fallback #tvOverlay on document.body');
+    const fallback = document.createElement('div');
+    fallback.id = 'tvOverlay';
+    fallback.style.position = 'absolute';
+    fallback.style.inset = '0';
+    fallback.style.pointerEvents = 'none';
+    fallback.style.zIndex = '10';
+    document.body.appendChild(fallback);
+    
+    return fallback;
   }
 
   // ============================================================================
@@ -80,6 +99,7 @@
 
   /**
    * Start observing the TV overlay for DOM mutations and auto-remount launcher.
+   * Uses new resolveMountTarget() and attempts mountIfMissing() after mount target is created.
    */
   function startLauncherObserver() {
     // Prevent duplicate observers
@@ -91,10 +111,13 @@
     observerActive = true;
     console.info('[social-launcher] observer started');
 
+    // Use resolveMountTarget() to get or create mount target
+    const initialTarget = resolveMountTarget();
+    
     // Initial mount attempt
     mountIfMissing();
 
-    // Observer for document.body (to catch mount target creation)
+    // Observer for document.body (to catch mount target creation/removal)
     activeObserver = new MutationObserver((mutations) => {
       // Check if mount target was added/removed
       for (const mutation of mutations) {
@@ -105,7 +128,7 @@
             if (!mountTargetObserver) {
               observeMountTarget(target);
             }
-            // Try to mount launcher if missing
+            // Try to mount launcher if missing (after mount target is created)
             mountIfMissing();
           }
         }
@@ -118,7 +141,6 @@
     });
 
     // Also observe the mount target directly if it exists
-    const initialTarget = resolveMountTarget();
     if (initialTarget) {
       observeMountTarget(initialTarget);
     }
