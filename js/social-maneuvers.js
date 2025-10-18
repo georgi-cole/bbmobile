@@ -1485,6 +1485,7 @@
   
   /**
    * Pause the phase timer. Called when Socialize modal opens.
+   * Prefers GameTimer.pause() if available, otherwise stores remaining ms and sets far future.
    */
   function pausePhaseTimer() {
     if (timerPaused) {
@@ -1495,12 +1496,25 @@
     const g = global.game;
     if (!g) return;
     
-    // Store current timer state
+    // Prefer GameTimer.pause() if available
+    if (global.GameTimer && typeof global.GameTimer.pause === 'function') {
+      try {
+        global.GameTimer.pause();
+        timerPaused = true;
+        console.info('[social-maneuvers] ⏸️ Timer paused via GameTimer.pause()');
+        return;
+      } catch(e) {
+        console.warn('[social-maneuvers] GameTimer.pause() failed, using fallback:', e);
+      }
+    }
+    
+    // Fallback: Store remaining ms and set far future
     if (g.endAt && typeof g.endAt === 'number') {
       const now = Date.now();
       const remaining = Math.max(0, g.endAt - now);
       pausedTimerState = {
         endAt: g.endAt,
+        phaseEndsAt: g.phaseEndsAt,
         remaining: remaining,
         phase: g.phase,
         pausedAt: now
@@ -1513,7 +1527,7 @@
       }
       
       timerPaused = true;
-      console.info('[social-maneuvers] ⏸️ Timer paused:', remaining, 'ms remaining');
+      console.info('[social-maneuvers] ⏸️ Timer paused (fallback):', remaining, 'ms remaining');
     } else {
       console.warn('[social-maneuvers] Cannot pause timer - no endAt found');
     }
@@ -1521,6 +1535,7 @@
   
   /**
    * Resume the phase timer. Called when Socialize modal closes.
+   * Prefers GameTimer.resume() if available, otherwise restores stored time.
    */
   function resumePhaseTimer() {
     if (!timerPaused) {
@@ -1529,29 +1544,90 @@
     }
     
     const g = global.game;
-    if (!g || !pausedTimerState) return;
+    if (!g) return;
     
-    // Restore timer with remaining time
+    // Prefer GameTimer.resume() if available
+    if (global.GameTimer && typeof global.GameTimer.resume === 'function') {
+      try {
+        global.GameTimer.resume();
+        timerPaused = false;
+        pausedTimerState = null;
+        console.info('[social-maneuvers] ▶️ Timer resumed via GameTimer.resume()');
+        return;
+      } catch(e) {
+        console.warn('[social-maneuvers] GameTimer.resume() failed, using fallback:', e);
+      }
+    }
+    
+    // Fallback: Restore timer with remaining time
+    if (!pausedTimerState) {
+      console.warn('[social-maneuvers] Cannot resume timer - no pausedTimerState');
+      timerPaused = false;
+      return;
+    }
+    
     const now = Date.now();
     g.endAt = now + pausedTimerState.remaining;
-    if (typeof g.phaseEndsAt === 'number') {
-      g.phaseEndsAt = g.endAt;
+    if (typeof pausedTimerState.phaseEndsAt === 'number') {
+      g.phaseEndsAt = now + pausedTimerState.remaining;
     }
     
     timerPaused = false;
-    console.info('[social-maneuvers] ▶️ Timer resumed:', pausedTimerState.remaining, 'ms remaining');
+    console.info('[social-maneuvers] ▶️ Timer resumed (fallback):', pausedTimerState.remaining, 'ms remaining');
     pausedTimerState = null;
   }
   
-  // Wrap setPhase to handle phase transitions
+  // Wrap setPhase once to detect entering and leaving social_intermission
   const originalSetPhase = global.setPhase;
   if (typeof originalSetPhase === 'function') {
     global.setPhase = function(phase, duration, callback) {
       const g = global.game;
+      const previousPhase = g?.phase;
       
-      // If leaving social_intermission, close launcher and resume timer
-      if (g?.phase === 'social_intermission' && phase !== 'social_intermission') {
-        console.info('[social-maneuvers] Leaving social_intermission - closing launcher');
+      // Detect entering social_intermission
+      if (previousPhase !== 'social_intermission' && phase === 'social_intermission') {
+        console.info('[social-maneuvers] ✓ Entering social_intermission');
+        
+        // Call onSocialPhaseStart
+        if (isEnabled()) {
+          try {
+            onSocialPhaseStart();
+          } catch(e) {
+            console.error('[social-maneuvers] onSocialPhaseStart failed:', e);
+          }
+        }
+        
+        // Start launcher observer
+        if (global.SocialLauncherBootstrap?.startLauncherObserver) {
+          global.SocialLauncherBootstrap.startLauncherObserver();
+        }
+        
+        // Ensure launcher
+        if (global.SocializeMobile?.ensureSocializeLauncher) {
+          global.SocializeMobile.ensureSocializeLauncher();
+        }
+        
+        // Show and update HUD
+        if (global.SocializeMobile?.show) {
+          global.SocializeMobile.show();
+        }
+        if (global.SocializeMobile?.updateHUD) {
+          global.SocializeMobile.updateHUD();
+        }
+      }
+      
+      // Detect leaving social_intermission
+      if (previousPhase === 'social_intermission' && phase !== 'social_intermission') {
+        console.info('[social-maneuvers] ✓ Leaving social_intermission');
+        
+        // Call onSocialPhaseEnd
+        if (isEnabled()) {
+          try {
+            onSocialPhaseEnd();
+          } catch(e) {
+            console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
+          }
+        }
         
         // Close socialize modal if open
         if (global.SocializeMobile?.closeModal) {
@@ -1563,7 +1639,7 @@
           global.SocializeMobile.hide();
         }
         
-        // Resume timer if paused
+        // Resume timer if paused (safety)
         if (timerPaused) {
           resumePhaseTimer();
         }
@@ -1572,7 +1648,7 @@
       // Call original setPhase
       return originalSetPhase.call(this, phase, duration, callback);
     };
-    console.info('[social-maneuvers] Wrapped setPhase for phase exit handling');
+    console.info('[social-maneuvers] ✓ Wrapped setPhase for phase entry/exit detection');
   }
 
   // ============================================================================

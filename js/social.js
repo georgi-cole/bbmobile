@@ -40,22 +40,23 @@
     g.__weekNegInteractions = new Map();
     g.__actionCounts = new Map();
     
-    // When Social Maneuvers is enabled, also reset weekly resources for all alive players
+    // Weekly reset hook: forward to SocialManeuvers.SocialResources.resetWeekly for all alive players
     if(global.SocialManeuvers?.isEnabled?.()){
-      console.info('[social.js] Social Maneuvers enabled - resetting weekly resources for all alive players');
+      console.info('[social.js] Social Maneuvers enabled - forwarding weekly reset to SocialResources');
       const alive = global.alivePlayers?.() || [];
       alive.forEach(player => {
         if(global.SocialManeuvers?.SocialResources?.resetWeekly){
           global.SocialManeuvers.SocialResources.resetWeekly(player.id);
         }
       });
-      // Refresh HUD to show updated energy
+      // Refresh HUD to reflect updated energy
       if(global.updateHud){
         global.updateHud();
       }
       if(global.SocializeMobile?.updateHUD){
         global.SocializeMobile.updateHUD();
       }
+      console.info('[social.js] ✓ Weekly reset complete - energy reset (base 5 + bonuses/penalties)');
     }
   }
   global.socialOnNewWeek = resetWeeklyCounters;
@@ -655,19 +656,30 @@
   function renderSocialPhase(panel){
     const g=global.game; if(!panel || !g) return;
 
-    // Hard-swap: when Social Maneuvers is enabled, use new UI only
+    // Keep legacy fully suppressed when SocialManeuvers.isEnabled() is true
     if(global.SocialManeuvers?.isEnabled?.()){
-      console.info('[social.js] Social Maneuvers enabled - mounting launcher, hiding legacy UI');
-      panel.innerHTML=''; // Clear legacy panel
+      console.info('[social.js] Social Maneuvers enabled - suppressing legacy UI/simulation/decisions');
+      panel.innerHTML=''; // Clear/hide panel
       
-      // Mount Socialize launcher in TV overlay
-      if(global.SocializeMobile?.ensureSocializeLauncher){
-        global.SocializeMobile.ensureSocializeLauncher();
-        global.SocializeMobile.updateHUD?.();
-        global.SocializeMobile.show?.();
+      // Start launcher observer
+      if(global.SocialLauncherBootstrap?.startLauncherObserver){
+        global.SocialLauncherBootstrap.startLauncherObserver();
       }
       
-      // Do NOT run legacy simulation or decision cards
+      // Ensure launcher mounted in TV overlay
+      if(global.SocializeMobile?.ensureSocializeLauncher){
+        global.SocializeMobile.ensureSocializeLauncher();
+      }
+      
+      // Show and update HUD
+      if(global.SocializeMobile?.show){
+        global.SocializeMobile.show();
+      }
+      if(global.SocializeMobile?.updateHUD){
+        global.SocializeMobile.updateHUD();
+      }
+      
+      // Skip legacy simulation and decision cards entirely
       return;
     }
 
