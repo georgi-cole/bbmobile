@@ -157,7 +157,7 @@
       output += 'window.applyPlayers: ' + (typeof window.applyPlayers === 'function' ? '✓ PASS' : '✗ FAIL') + '\n';
       
       result.textContent = output;
-      result.className = 'result ' + (output.includes('FAIL') && !output.includes('✓ PASS') ? 'fail' : 'pass');
+      result.className = 'result ' + (output.includes('FAIL') ? 'fail' : 'pass');
     }
     
     function testLobbyPlayerChange() {
