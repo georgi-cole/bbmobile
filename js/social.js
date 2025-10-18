@@ -36,13 +36,21 @@
   function actionKey(actorId,targetId,action){ return `${actorId}|${targetId}|${action}`; }
   function resetWeeklyCounters(){
     const g=global.game; if(!g) return;
+    const currentWeek = g.week || 1;
+    
+    // One-per-week guard
+    if (g.__socialWeeklyResetWeek === currentWeek) {
+      console.info(`[social.js] ⏭️ Weekly reset already done for week ${currentWeek}`);
+      return;
+    }
+    
     g.__weekPosInteractions = new Map();
     g.__weekNegInteractions = new Map();
     g.__actionCounts = new Map();
     
     // Weekly reset hook: forward to SocialManeuvers.SocialResources.resetWeekly for all alive players
     if(global.SocialManeuvers?.isEnabled?.()){
-      console.info('[social.js] Social Maneuvers enabled - forwarding weekly reset to SocialResources');
+      console.info('[social.js] 🔄 Social Maneuvers enabled - forwarding weekly reset to SocialResources');
       const alive = global.alivePlayers?.() || [];
       alive.forEach(player => {
         if(global.SocialManeuvers?.SocialResources?.resetWeekly){
@@ -56,7 +64,14 @@
       if(global.SocializeMobile?.updateHUD){
         global.SocializeMobile.updateHUD();
       }
-      console.info('[social.js] ✓ Weekly reset complete - energy reset (base 5 + bonuses/penalties)');
+      
+      // Mark this week as reset
+      g.__socialWeeklyResetWeek = currentWeek;
+      
+      console.info('[social.js] ✓ Weekly reset complete - energy reset (base 5 + bonuses/penalties) for week', currentWeek);
+    } else {
+      // Mark week as reset for legacy mode too
+      g.__socialWeeklyResetWeek = currentWeek;
     }
   }
   global.socialOnNewWeek = resetWeeklyCounters;
@@ -775,7 +790,7 @@
     
     // Skip legacy summary when Social Maneuvers is enabled
     if(!shouldShowLegacyMemories()){
-      console.info('[social.js] Social Maneuvers enabled - skipping legacy generateSocialSummary');
+      console.info('[social] Skipping legacy summary - Social Maneuvers handles phase summary');
       return;
     }
     
