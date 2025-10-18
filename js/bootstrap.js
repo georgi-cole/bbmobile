@@ -123,8 +123,18 @@
     g.players.length = 0;
 
     const humanName=(g.cfg?.humanName || document.getElementById('humanName')?.value || 'You').trim();
-    // Read target cast size from config when creating players
-    const N = +(g.cfg?.numPlayers) || 12;
+    
+    // Robust getter for numPlayers: check config, then storage fallback, then default
+    // This ensures numPlayers is read correctly even if config objects become de-aliased
+    let N = +(g.cfg?.numPlayers);
+    if(!N || isNaN(N)){
+      // Fallback to storage if config is missing/invalid
+      try{
+        const stored = global.Config?.loadStoredCfg?.() || {};
+        N = +(stored.numPlayers) || 0;
+      }catch{}
+    }
+    if(!N || isNaN(N)) N = 12; // Final fallback to default
     const defaults=['Finn','Mimi','Rae','Nova','Kai','Zed','Ivy','Ash','Lux','Remy','Blue','Jax','Echo','Vee','Sol','Quinn','Aria','Dex','Rune','Bea','Nico','Pax','Noa','Kian','Lia','Rey'];
 
     for(let i=0;i<N;i++){

@@ -94,11 +94,18 @@
   }
 
   // Initialize game config with defaults and stored settings
+  // CRITICAL: Creates both window.cfg and window.game.cfg as aliases to the SAME object
+  // This prevents config drift where different modules reference different config objects
   function ensureGameCfg(){
     const g = global.game = global.game || {};
     // Merge order: DEFAULT_CFG (base) -> existing config (from state.js) -> stored config (user overrides)
-    g.cfg = Object.assign({}, DEFAULT_CFG, g.cfg || {}, loadStoredCfg());
-    return g.cfg;
+    const cfg = Object.assign({}, DEFAULT_CFG, g.cfg || {}, loadStoredCfg());
+    
+    // Create aliases: both window.cfg and window.game.cfg point to same object
+    g.cfg = cfg;
+    global.cfg = cfg;
+    
+    return cfg;
   }
 
   // Export to global namespace

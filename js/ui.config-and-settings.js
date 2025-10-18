@@ -188,6 +188,11 @@
     document.head.appendChild(st);
   }
   function loadStoredCfg(){
+    // Use centralized Config.loadStoredCfg when available
+    if(typeof Config !== 'undefined' && typeof Config.loadStoredCfg === 'function'){
+      return Config.loadStoredCfg();
+    }
+    // Fallback implementation
     try{
       const raw = localStorage.getItem(SETTINGS_STORE_KEY);
       if(!raw) return {};
@@ -196,6 +201,12 @@
     }catch(e){ return {}; }
   }
   function saveStoredCfg(cfg){
+    // Use centralized Config.saveStoredCfg when available
+    if(typeof Config !== 'undefined' && typeof Config.saveStoredCfg === 'function'){
+      Config.saveStoredCfg(cfg);
+      return;
+    }
+    // Fallback implementation
     try{ localStorage.setItem(SETTINGS_STORE_KEY, JSON.stringify(cfg||{})); }catch(e){}
   }
   function applyCfgEffects(cfg){
@@ -206,10 +217,19 @@
     }catch(e){}
   }
   function ensureGameCfg(){
+    // Use centralized Config.ensureGameCfg when available to ensure single alias
+    if(typeof Config !== 'undefined' && typeof Config.ensureGameCfg === 'function'){
+      const cfg = Config.ensureGameCfg();
+      applyCfgEffects(cfg);
+      return cfg;
+    }
+    // Fallback implementation - creates both aliases
     const game = g.game = g.game || {};
-    game.cfg = Object.assign({}, DEFAULT_CFG, game.cfg || {}, loadStoredCfg());
-    applyCfgEffects(game.cfg);
-    return game.cfg;
+    const cfg = Object.assign({}, DEFAULT_CFG, game.cfg || {}, loadStoredCfg());
+    game.cfg = cfg;
+    g.cfg = cfg; // Create window.cfg alias
+    applyCfgEffects(cfg);
+    return cfg;
   }
 
   // Apply players total from settings and rebuild/reload
@@ -218,11 +238,15 @@
       // Clamp to 6..22 (align with players-total.js injector)
       const val = Math.max(6, Math.min(22, parseInt(v, 10) || 12));
       
-      // Write to cfg().numPlayers
+      // Write to cfg().numPlayers via centralized storage
       const game = g.game = g.game || {};
       const cfg = game.cfg = Object.assign({}, DEFAULT_CFG, game.cfg || {});
       cfg.numPlayers = val;
+      
+      // Use centralized save and re-alias both cfg objects to same instance
       saveStoredCfg(cfg);
+      game.cfg = cfg;
+      g.cfg = cfg; // Re-establish alias after write
       
       // Apply based on phase
       if(g.game?.phase === 'lobby'){

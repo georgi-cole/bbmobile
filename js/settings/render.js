@@ -368,8 +368,12 @@
       cfg[k] = newValue;
     });
 
-    // Persist to localStorage
+    // Persist to localStorage via centralized helper
     if(Config.saveStoredCfg) Config.saveStoredCfg(cfg);
+    
+    // Re-establish aliases to prevent drift
+    g.cfg = cfg;
+    global.cfg = cfg;
 
     // Apply side effects for changed keys
     if(SettingsEffects.applyEffects) SettingsEffects.applyEffects(cfg, changedKeys);
@@ -592,11 +596,18 @@
       const game = global.game = global.game || {};
       const cfg = game.cfg = Object.assign({}, Config.DEFAULT_CFG || {}, game.cfg || {});
       cfg.numPlayers = val;
+      
+      // Use centralized save
       if(typeof global.saveStoredCfg === 'function') {
         global.saveStoredCfg(cfg);
       } else if(typeof Config.saveStoredCfg === 'function') {
         Config.saveStoredCfg(cfg);
       }
+      
+      // Re-establish aliases after write
+      game.cfg = cfg;
+      global.cfg = cfg;
+      
       if(game.phase === 'lobby'){
         // In lobby: rebuild cast/game and start opening sequence
         if(typeof global.rebuildGame === 'function'){
