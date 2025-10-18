@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socialize Phase Gating - Manual Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-card {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-card h2 {
+      margin-top: 0;
+      color: #4ecca3;
+    }
+    button {
+      background: #0f3460;
+      color: #eee;
+      border: 1px solid #4ecca3;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1a4d7a;
+    }
+    button.active {
+      background: #2d6d3f;
+      border-color: #4ecca3;
+    }
+    .log-output {
+      background: #0a0a0a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 15px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin: 3px 0;
+      padding: 3px 8px;
+      border-left: 3px solid #333;
+    }
+    .log-entry.pass { border-left-color: #4ecca3; color: #4ecca3; }
+    .log-entry.fail { border-left-color: #ff6b6b; color: #ff6b6b; }
+    .log-entry.info { border-left-color: #5bc0de; color: #5bc0de; }
+    .log-entry.warn { border-left-color: #ffc107; color: #ffc107; }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin: 5px 0;
+    }
+    .status.pass { background: #2d6d3f; color: #4ecca3; }
+    .status.fail { background: #a83232; color: #ff6b6b; }
+    .status.warn { background: #8a6d3b; color: #ffc107; }
+    .status.info { background: #31708f; color: #5bc0de; }
+    .phase-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #16213e;
+      border: 2px solid #4ecca3;
+      border-radius: 8px;
+      padding: 15px;
+      min-width: 200px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+    }
+    .phase-indicator h3 {
+      margin: 0 0 10px 0;
+      color: #4ecca3;
+      font-size: 14px;
+    }
+    .phase-indicator .phase-name {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .launcher-status {
+      margin-top: 10px;
+      padding: 8px;
+      background: #0a0a0a;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Socialize Phase Gating - Manual Test Suite</h1>
+  
+  <div class="phase-indicator" id="phaseIndicator">
+    <h3>Current Phase</h3>
+    <div class="phase-name" id="currentPhase">lobby</div>
+    <div class="launcher-status">
+      <div>Launcher: <span id="launcherVisible">N/A</span></div>
+      <div>Modal: <span id="modalOpen">N/A</span></div>
+      <div>Social Maneuvers: <span id="socialManeuversEnabled">N/A</span></div>
+    </div>
+  </div>
+
+  <div class="test-card">
+    <h2>Test 1: Phase Transitions</h2>
+    <p>Test launcher visibility across different phases.</p>
+    <div>
+      <button onclick="setPhase('lobby')">Set Lobby Phase</button>
+      <button onclick="setPhase('hoh')">Set HOH Phase</button>
+      <button onclick="setPhase('nominations')">Set Nominations Phase</button>
+      <button onclick="setPhase('social_intermission')" class="active">Set Social Phase</button>
+      <button onclick="setPhase('veto')">Set Veto Phase</button>
+      <button onclick="setPhase('livevote')">Set Vote Phase</button>
+    </div>
+    <div class="log-output" id="phaseLog"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Test 2: Modal Auto-Close</h2>
+    <p>Open modal in social phase, then switch phases - modal should auto-close.</p>
+    <div>
+      <button onclick="runModalAutoCloseTest()">Run Test</button>
+    </div>
+    <div class="log-output" id="modalLog"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Test 3: Legacy Memory Popup</h2>
+    <p>Test that legacy memory popups are suppressed when Social Maneuvers is enabled.</p>
+    <div>
+      <button onclick="testLegacyMemoryGuard()">Test Guard Function</button>
+      <button onclick="testLegacyMemoryPopup()">Try Create Legacy Popup</button>
+      <button onclick="dismissStrayPopups()">Dismiss Stray Popups</button>
+    </div>
+    <div class="log-output" id="memoryLog"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Test 4: MutationObserver Behavior</h2>
+    <p>Test that the observer respects phase gates.</p>
+    <div>
+      <button onclick="testObserverInSocialPhase()">Test in Social Phase</button>
+      <button onclick="testObserverOutsideSocialPhase()">Test Outside Social Phase</button>
+      <button onclick="testObserverRemount()">Test Remount</button>
+    </div>
+    <div class="log-output" id="observerLog"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>Test Results Summary</h2>
+    <div id="summary">
+      <div class="status info">Tests not yet run</div>
+    </div>
+  </div>
+
+  <!-- Include game modules -->
+  <script src="js/state.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/socialize-mobile.js"></script>
+  <script src="js/social.js"></script>
+  <script src="js/ui.hud-and-router.js"></script>
+
+  <script>
+    // Test logging utilities
+    function log(element, message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      element.appendChild(entry);
+      element.scrollTop = element.scrollHeight;
+      console.log(`[TEST ${type.toUpperCase()}]`, message);
+    }
+
+    // Update phase indicator
+    function updatePhaseIndicator() {
+      const phaseEl = document.getElementById('currentPhase');
+      const launcherEl = document.getElementById('launcherVisible');
+      const modalEl = document.getElementById('modalOpen');
+      const smEl = document.getElementById('socialManeuversEnabled');
+
+      if (window.game) {
+        phaseEl.textContent = window.game.phase || 'unknown';
+      }
+
+      const launcher = document.querySelector('#socializeLauncher');
+      if (launcher) {
+        const isVisible = launcher.style.display !== 'none';
+        launcherEl.textContent = isVisible ? '✓ Visible' : '✗ Hidden';
+        launcherEl.style.color = isVisible ? '#4ecca3' : '#ff6b6b';
+      } else {
+        launcherEl.textContent = '✗ Not Found';
+        launcherEl.style.color = '#ffc107';
+      }
+
+      const modal = document.querySelector('#socializeModal');
+      const isModalOpen = modal && modal.classList.contains('open');
+      modalEl.textContent = isModalOpen ? '✓ Open' : '✗ Closed';
+      modalEl.style.color = isModalOpen ? '#4ecca3' : '#ff6b6b';
+
+      const isEnabled = window.SocialManeuvers?.isEnabled();
+      smEl.textContent = isEnabled ? '✓ Enabled' : '✗ Disabled';
+      smEl.style.color = isEnabled ? '#4ecca3' : '#ff6b6b';
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      // Initialize game if not already done
+      if (!window.game) {
+        window.game = {
+          phase: 'lobby',
+          week: 1,
+          cfg: { skipSocialPhase: false },
+          players: [],
+          humanId: 1
+        };
+      }
+
+      // Enable Social Maneuvers
+      if (window.SocialManeuvers) {
+        window.USE_SOCIAL_MANEUVERS = true;
+        console.log('[TEST] Social Maneuvers enabled');
+      }
+
+      // Start with social phase for testing
+      setPhase('social_intermission');
+
+      // Update indicator every second
+      setInterval(updatePhaseIndicator, 1000);
+      updatePhaseIndicator();
+    });
+
+    // Test 1: Phase Transitions
+    function setPhase(phase) {
+      const logEl = document.getElementById('phaseLog');
+      log(logEl, `Setting phase to: ${phase}`, 'info');
+
+      if (!window.game) {
+        log(logEl, 'Game not initialized', 'fail');
+        return;
+      }
+
+      const launcherBefore = document.querySelector('#socializeLauncher');
+      const launcherVisibleBefore = launcherBefore && launcherBefore.style.display !== 'none';
+
+      // Set phase (mimicking setPhase function)
+      window.game.phase = phase;
+
+      // Call show/hide based on phase
+      if (window.SocializeMobile) {
+        const isSocialPhase = phase === 'social_intermission' || phase === 'social';
+        if (isSocialPhase) {
+          if (launcherBefore) {
+            window.SocializeMobile.show();
+            log(logEl, '✓ Launcher shown for social phase', 'pass');
+          } else {
+            log(logEl, '⚠ Launcher not yet created', 'warn');
+          }
+        } else {
+          window.SocializeMobile.hide();
+          window.SocializeMobile.closeModal();
+          log(logEl, '✓ Launcher hidden for non-social phase', 'pass');
+        }
+      }
+
+      const launcherAfter = document.querySelector('#socializeLauncher');
+      const launcherVisibleAfter = launcherAfter && launcherAfter.style.display !== 'none';
+
+      const expectedVisible = phase === 'social_intermission' || phase === 'social';
+      if (launcherAfter && launcherVisibleAfter === expectedVisible) {
+        log(logEl, `✓ Launcher visibility correct: ${expectedVisible ? 'visible' : 'hidden'}`, 'pass');
+      } else if (!launcherAfter) {
+        log(logEl, '⚠ Launcher not yet created', 'warn');
+      } else {
+        log(logEl, `✗ Launcher visibility incorrect: expected ${expectedVisible}, got ${launcherVisibleAfter}`, 'fail');
+      }
+
+      updatePhaseIndicator();
+    }
+
+    // Test 2: Modal Auto-Close
+    async function runModalAutoCloseTest() {
+      const logEl = document.getElementById('modalLog');
+      log(logEl, 'Starting modal auto-close test...', 'info');
+
+      // 1. Set to social phase
+      setPhase('social_intermission');
+      log(logEl, '✓ Set to social phase', 'pass');
+
+      // 2. Wait a bit
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 3. Try to open modal
+      if (window.SocializeMobile?.openModal) {
+        try {
+          window.SocializeMobile.openModal();
+          log(logEl, '✓ Modal opened', 'pass');
+        } catch (e) {
+          log(logEl, `✗ Failed to open modal: ${e.message}`, 'fail');
+          return;
+        }
+      } else {
+        log(logEl, '✗ SocializeMobile.openModal not available', 'fail');
+        return;
+      }
+
+      // 4. Wait a bit
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 5. Check if modal is open
+      let modal = document.querySelector('#socializeModal');
+      if (modal && modal.classList.contains('open')) {
+        log(logEl, '✓ Modal confirmed open', 'pass');
+      } else {
+        log(logEl, '✗ Modal not open', 'fail');
+        return;
+      }
+
+      // 6. Switch to different phase
+      log(logEl, 'Switching to nominations phase...', 'info');
+      setPhase('nominations');
+
+      // 7. Wait a bit
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 8. Check if modal closed
+      modal = document.querySelector('#socializeModal');
+      const modalOpen = modal && modal.classList.contains('open');
+      if (!modalOpen) {
+        log(logEl, '✓ Modal auto-closed when leaving social phase', 'pass');
+      } else {
+        log(logEl, '✗ Modal still open after leaving social phase', 'fail');
+      }
+
+      updatePhaseIndicator();
+    }
+
+    // Test 3: Legacy Memory Popup
+    function testLegacyMemoryGuard() {
+      const logEl = document.getElementById('memoryLog');
+      log(logEl, 'Testing shouldShowLegacyMemories guard...', 'info');
+
+      if (typeof window.shouldShowLegacyMemories !== 'function') {
+        log(logEl, '✗ shouldShowLegacyMemories function not found', 'fail');
+        return;
+      }
+
+      const shouldShow = window.shouldShowLegacyMemories();
+      const smEnabled = window.SocialManeuvers?.isEnabled();
+
+      if (smEnabled && !shouldShow) {
+        log(logEl, '✓ Legacy memories correctly suppressed with Social Maneuvers', 'pass');
+      } else if (smEnabled && shouldShow) {
+        log(logEl, '✗ Legacy memories not suppressed despite Social Maneuvers', 'fail');
+      } else if (!smEnabled && shouldShow) {
+        log(logEl, '✓ Legacy memories allowed without Social Maneuvers', 'pass');
+      } else {
+        log(logEl, '⚠ Unexpected state', 'warn');
+      }
+
+      log(logEl, `Social Maneuvers enabled: ${smEnabled}`, 'info');
+      log(logEl, `Should show legacy: ${shouldShow}`, 'info');
+    }
+
+    function testLegacyMemoryPopup() {
+      const logEl = document.getElementById('memoryLog');
+      log(logEl, 'Attempting to create legacy memory popup...', 'info');
+
+      if (!window.shouldShowLegacyMemories || !window.shouldShowLegacyMemories()) {
+        log(logEl, '✓ Legacy popup creation blocked by guard', 'pass');
+        return;
+      }
+
+      // Try to create a test reveal card
+      if (typeof window.showCard === 'function') {
+        window.showCard('Social Update', ['Test memory popup'], 'social', 3000, true);
+        log(logEl, '⚠ Legacy popup created (guard did not block)', 'warn');
+      } else {
+        log(logEl, '✗ showCard function not available', 'fail');
+      }
+    }
+
+    function dismissStrayPopups() {
+      const logEl = document.getElementById('memoryLog');
+      log(logEl, 'Dismissing stray popups...', 'info');
+
+      const revealCards = document.querySelectorAll('.revealCard, .reveal-card, [data-reveal-card]');
+      let dismissed = 0;
+
+      revealCards.forEach(card => {
+        const title = card.querySelector('.revealTitle, .reveal-title, h2, h3');
+        if (title && (title.textContent.includes('Social Update') || title.textContent.includes('Memories'))) {
+          card.remove();
+          dismissed++;
+        }
+      });
+
+      if (dismissed > 0) {
+        log(logEl, `✓ Dismissed ${dismissed} stray popup(s)`, 'pass');
+      } else {
+        log(logEl, '✓ No stray popups found', 'pass');
+      }
+    }
+
+    // Test 4: MutationObserver
+    function testObserverInSocialPhase() {
+      const logEl = document.getElementById('observerLog');
+      log(logEl, 'Testing observer in social phase...', 'info');
+
+      setPhase('social_intermission');
+
+      // Remove launcher
+      const launcher = document.querySelector('#socializeLauncher');
+      if (launcher) {
+        launcher.remove();
+        log(logEl, '✓ Removed launcher to trigger observer', 'pass');
+
+        setTimeout(() => {
+          const newLauncher = document.querySelector('#socializeLauncher');
+          if (newLauncher) {
+            log(logEl, '✓ Observer remounted launcher in social phase', 'pass');
+          } else {
+            log(logEl, '✗ Observer did not remount launcher', 'fail');
+          }
+          updatePhaseIndicator();
+        }, 1000);
+      } else {
+        log(logEl, '✗ No launcher found to remove', 'fail');
+      }
+    }
+
+    function testObserverOutsideSocialPhase() {
+      const logEl = document.getElementById('observerLog');
+      log(logEl, 'Testing observer outside social phase...', 'info');
+
+      setPhase('nominations');
+
+      // Try to trigger observer
+      const tvOverlay = document.querySelector('#tvOverlay');
+      if (tvOverlay) {
+        const testDiv = document.createElement('div');
+        testDiv.id = 'testObserver';
+        tvOverlay.appendChild(testDiv);
+        testDiv.remove();
+
+        setTimeout(() => {
+          const launcher = document.querySelector('#socializeLauncher');
+          const launcherVisible = launcher && launcher.style.display !== 'none';
+          if (!launcherVisible) {
+            log(logEl, '✓ Observer did not mount launcher outside social phase', 'pass');
+          } else {
+            log(logEl, '✗ Observer incorrectly mounted launcher outside social phase', 'fail');
+          }
+          updatePhaseIndicator();
+        }, 1000);
+      } else {
+        log(logEl, '✗ TV overlay not found', 'fail');
+      }
+    }
+
+    function testObserverRemount() {
+      const logEl = document.getElementById('observerLog');
+      log(logEl, 'Testing observer remount behavior...', 'info');
+
+      setPhase('social_intermission');
+
+      // Simulate TV overlay removal and recreation
+      const tvOverlay = document.querySelector('#tvOverlay');
+      if (tvOverlay) {
+        tvOverlay.remove();
+        log(logEl, '✓ Removed TV overlay', 'pass');
+
+        setTimeout(() => {
+          // Recreate TV overlay
+          const newOverlay = document.createElement('div');
+          newOverlay.id = 'tvOverlay';
+          document.body.appendChild(newOverlay);
+          log(logEl, '✓ Recreated TV overlay', 'pass');
+
+          setTimeout(() => {
+            const launcher = document.querySelector('#socializeLauncher');
+            if (launcher) {
+              log(logEl, '✓ Observer remounted launcher after overlay recreation', 'pass');
+            } else {
+              log(logEl, '✗ Observer did not remount launcher', 'fail');
+            }
+            updatePhaseIndicator();
+          }, 1000);
+        }, 500);
+      } else {
+        log(logEl, '✗ TV overlay not found', 'fail');
+      }
+    }
+  </script>
+</body>
+</html>

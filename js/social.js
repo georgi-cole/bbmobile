@@ -579,10 +579,23 @@
     };
   }
 
+  // Guard function to check if legacy memories should be shown
+  function shouldShowLegacyMemories() {
+    // Never show legacy memories if Social Maneuvers is enabled
+    if (global.SocialManeuvers?.isEnabled()) {
+      return false;
+    }
+    // Check for explicit window flag (backwards compatibility)
+    if (global.USE_SOCIAL_MANEUVERS === true) {
+      return false;
+    }
+    return true;
+  }
+
   // Generate end-of-social summary card
   function generateSocialSummary(){
-    // Skip legacy summary if Social Maneuvers is enabled (PR #XXX)
-    if(global.SocialManeuvers?.isEnabled()){
+    // Skip legacy summary if Social Maneuvers is enabled
+    if (!shouldShowLegacyMemories()) {
       console.info('[social] Skipping legacy summary - Social Maneuvers handles phase summary');
       return;
     }
@@ -687,6 +700,20 @@
     global.SocialLauncherBootstrap.startLauncherObserver();
   }
 
+  // Dismiss any stray legacy memory popups
+  function dismissLegacyMemoryPopups() {
+    // Find and remove any reveal cards that might be legacy memory popups
+    const revealCards = document.querySelectorAll('.revealCard, .reveal-card, [data-reveal-card]');
+    revealCards.forEach(card => {
+      // Check if it's a social/memory card by checking title or content
+      const title = card.querySelector('.revealTitle, .reveal-title, h2, h3');
+      if (title && (title.textContent.includes('Social Update') || title.textContent.includes('Memories'))) {
+        console.info('[social] Dismissing stray legacy memory popup');
+        card.remove();
+      }
+    });
+  }
+
   // Public entry
   global.startSocialIntermission = async function(source, callback){
     const g=global.game; if(!g) return;
@@ -697,6 +724,11 @@
 
     console.info('[social] ✓ Entering social_intermission phase');
     global.tv?.say?.('Social Intermission');
+    
+    // Dismiss any stray legacy memory popups when Social Maneuvers is enabled
+    if (!shouldShowLegacyMemories()) {
+      dismissLegacyMemoryPopups();
+    }
     
     // Trigger social music
     try{ global.phaseMusic?.('social'); }catch{}
@@ -763,5 +795,8 @@
   // Back-compat alias used by competitions.js
   global.startSocial = global.startSocialIntermission;
   global.renderSocial = renderSocialPhase;
+  
+  // Export guard function for other modules to use
+  global.shouldShowLegacyMemories = shouldShowLegacyMemories;
 
 })(window);

@@ -31,8 +31,17 @@
   /**
    * Mount the Socialize launcher if it's missing.
    * Guards against duplicate mounts by checking for existing launcher.
+   * Only mounts if in social phase.
    */
   function mountIfMissing() {
+    // Check if we're in social phase
+    const g = global.game || {};
+    const inSocialPhase = g.phase === 'social_intermission' || g.phase === 'social';
+    if (!inSocialPhase) {
+      // Not in social phase - don't mount
+      return false;
+    }
+
     // Check if launcher already exists
     const existingLauncher = document.querySelector('#socializeLauncher, .socialize-launcher, [data-sm-launcher]');
     if (existingLauncher) {
@@ -55,7 +64,8 @@
     try {
       // Mount the launcher
       global.SocializeMobile.ensureLauncher();
-      global.SocializeMobile.updateHUD?.();
+      global.SocializeMobile.updateHUDDisplay?.();
+      global.SocializeMobile.show?.();
       console.info('[social-launcher] re-mounted after DOM change');
       return true;
     } catch (e) {
