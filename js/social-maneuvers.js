@@ -145,9 +145,16 @@
       const config = RESOURCE_CONFIG[resourceType];
       if(!config) return false;
       const resources = g.__socialResources.get(playerId);
+      const oldValue = resources[resourceType];
       const capped = Math.max(0, Math.min(config.max, amount));
       resources[resourceType] = capped;
       this._logTelemetry(playerId, resourceType, 'set', capped);
+      
+      // Dispatch resource changed event
+      const delta = {};
+      delta[resourceType] = capped - oldValue;
+      this._dispatchResourceChangedEvent(playerId, delta);
+      
       return true;
     },
     spend(playerId, costs) {
@@ -156,23 +163,55 @@
         if(cost > 0 && this.get(playerId, type) < cost) return { success: false, insufficient: type };
       }
       // deduct
+      const delta = {};
       for(const [type, cost] of Object.entries(costs)) {
         if(cost > 0) {
           const current = this.get(playerId, type);
           this.set(playerId, type, current - cost);
+          delta[type] = -cost;
         }
       }
       this._logTelemetry(playerId, 'multiple', 'spend', costs);
+      console.info(`[social-resources] ⚡ Player ${playerId} spent:`, costs);
+      
+      // Dispatch resource changed event
+      this._dispatchResourceChangedEvent(playerId, delta);
+      
+      // Defensively call SocializeMobile.updateHUD if present
+      if (global.SocializeMobile?.updateHUD) {
+        try {
+          global.SocializeMobile.updateHUD();
+        } catch(e) {
+          console.warn('[social-resources] Failed to update HUD:', e);
+        }
+      }
+      
       return { success: true };
     },
     earn(playerId, gains) {
+      const delta = {};
       for(const [type, amount] of Object.entries(gains)) {
         if(amount > 0) {
           const current = this.get(playerId, type);
           this.set(playerId, type, current + amount);
+          delta[type] = amount;
         }
       }
       this._logTelemetry(playerId, 'multiple', 'earn', gains);
+      console.info(`[social-resources] ⬆️ Player ${playerId} earned:`, gains);
+      
+      // Dispatch resource changed event
+      this._dispatchResourceChangedEvent(playerId, delta);
+      
+      // Defensively call SocializeMobile.updateHUD if present
+      if (global.SocializeMobile?.updateHUD) {
+        try {
+          global.SocializeMobile.updateHUD();
+        } catch(e) {
+          console.warn('[social-resources] Failed to update HUD:', e);
+        }
+      }
+      
       return { success: true };
     },
     resetWeekly(playerId) {
@@ -180,7 +219,12 @@
       this.init(playerId);
       const resources = g.__socialResources.get(playerId);
       const currentWeek = g.week || 1;
-      if(resources.lastWeekReset >= currentWeek) return;
+      
+      // Guard: only reset once per week
+      if(resources.lastWeekReset >= currentWeek) {
+        console.info(`[social-resources] ⏭️ Weekly reset already done for player ${playerId} at week ${currentWeek}`);
+        return;
+      }
       
       // Calculate weekly energy delta
       const weeklyEvents = g.__weeklyEvents.get(playerId) || {};
@@ -200,7 +244,8 @@
       if(weeklyEvents.zeroScore) energyDelta += WEEKLY_ENERGY_PENALTIES.ZERO_SCORE;
       if(weeklyEvents.brokeAlliance) energyDelta += WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE;
       
-      console.info(`[social-resources] Player ${playerId} weekly energy delta: ${energyDelta}`, weeklyEvents);
+      console.info(`[social-resources] 🔄 Weekly reset for player ${playerId} at week ${currentWeek}`);
+      console.info(`[social-resources] Energy delta: base ${DEFAULT_ENERGY} + ${energyDelta} = ${DEFAULT_ENERGY + energyDelta}`, weeklyEvents);
       
       for(const [type, config] of Object.entries(RESOURCE_CONFIG)) {
         if(type === 'energy' && config.weeklyReset) {
@@ -344,6 +389,18 @@
       g.__socialResourcesTelemetry.push(entry);
       if(g.__socialResourcesTelemetry.length > 100) g.__socialResourcesTelemetry.shift();
       console.info('[social-resources] Telemetry:', operation, resourceType, value, 'Balance:', entry.balance);
+    },
+    _dispatchResourceChangedEvent(playerId, delta) {
+      try {
+        const resources = this.getAll(playerId);
+        const event = new CustomEvent('social-resources-changed', {
+          detail: { playerId, delta, resources }
+        });
+        window.dispatchEvent(event);
+        console.info('[social-resources] 📡 Dispatched social-resources-changed event:', { playerId, delta, resources });
+      } catch(e) {
+        console.warn('[social-resources] Failed to dispatch event:', e);
+      }
     }
   };
 
@@ -1331,14 +1388,114 @@
   // ============================================================================
 
   // ============================================================================
-  // FAST-ADVANCE HELPER
+  // FAST-ADVANCE HELPER + SHIM
   // ============================================================================
   
   /**
-   * Schedule a fast advance to next phase after the specified delay.
-   * Used when player depletes all social energy.
-   * @param {number} delayMs - Delay in milliseconds before advancing (default 3000ms)
+   * Fallback implementation for scheduleFastAdvance when native API is not available.
+   * Shows summary, calls phase end, and advances to nominations after delay.
+   * @param {number} delayMs - Delay in milliseconds before advancing (default 800ms)
    */
+  function scheduleFastAdvanceFallback(delayMs = 800) {
+    const g = global.game;
+    if (!g) return;
+    
+    console.info(`[social-maneuvers] scheduleFastAdvance fallback - advancing in ${delayMs}ms`);
+    
+    // Clear any existing timeout
+    if (g.__socialFastAdvanceTimeout) {
+      clearTimeout(g.__socialFastAdvanceTimeout);
+      g.__socialFastAdvanceTimeout = null;
+    }
+    
+    g.__socialFastAdvanceTimeout = setTimeout(async () => {
+      console.info('[social-maneuvers] ⏩ Fast-advance triggered (fallback)');
+      g.__socialFastAdvanceTimeout = null;
+      
+      try {
+        // (a) Render the Social Maneuvers summary
+        await global.cardQueueWaitIdle?.();
+        
+        let summaryShown = false;
+        if (typeof showSummaryPanel === 'function') {
+          try {
+            const summary = generatePhaseSummary();
+            showSummaryPanel(summary);
+            summaryShown = true;
+            console.info('[social-maneuvers] ✓ Summary shown via showSummaryPanel');
+          } catch (e) {
+            console.error('[social-maneuvers] showSummaryPanel failed:', e);
+          }
+        }
+        
+        if (!summaryShown && typeof global.SocialManeuvers?.showEndOfPhaseSummary === 'function') {
+          try {
+            global.SocialManeuvers.showEndOfPhaseSummary();
+            summaryShown = true;
+            console.info('[social-maneuvers] ✓ Summary shown via showEndOfPhaseSummary');
+          } catch (e) {
+            console.error('[social-maneuvers] showEndOfPhaseSummary failed:', e);
+          }
+        }
+        
+        if (!summaryShown && typeof global.SocialManeuvers?.presentPhaseSummary === 'function') {
+          try {
+            global.SocialManeuvers.presentPhaseSummary();
+            summaryShown = true;
+            console.info('[social-maneuvers] ✓ Summary shown via presentPhaseSummary');
+          } catch (e) {
+            console.error('[social-maneuvers] presentPhaseSummary failed:', e);
+          }
+        }
+        
+        await global.cardQueueWaitIdle?.();
+        
+        // (b) Call onSocialPhaseEnd
+        if (typeof onSocialPhaseEnd === 'function') {
+          try {
+            onSocialPhaseEnd();
+            console.info('[social-maneuvers] ✓ onSocialPhaseEnd called');
+          } catch (e) {
+            console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
+          }
+        }
+        
+        // (c) Advance to nominations
+        if (typeof global.startNominations === 'function') {
+          global.startNominations();
+          console.info('[social-maneuvers] ✓ Advanced to nominations via startNominations');
+        } else if (typeof global.setPhase === 'function') {
+          global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
+            if (typeof global.startVeto === 'function') global.startVeto();
+            else if (typeof global.startVetoComp === 'function') global.startVetoComp();
+          });
+          global.renderPanel?.();
+          console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
+        } else {
+          console.error('[social-maneuvers] No method available to advance to nominations');
+        }
+      } catch (e) {
+        console.error('[social-maneuvers] Fast-advance fallback failed:', e);
+      }
+    }, delayMs);
+  }
+  
+  /**
+   * Install guarded shim for window.scheduleFastAdvance if undefined.
+   * This ensures energy depletion doesn't cause ReferenceError.
+   */
+  function installScheduleFastAdvanceShim() {
+    if (typeof window.scheduleFastAdvance === 'undefined') {
+      window.scheduleFastAdvance = scheduleFastAdvanceFallback;
+      console.info('[social-maneuvers] ✓ Installed scheduleFastAdvance shim (fallback implementation)');
+    } else {
+      console.info('[social-maneuvers] scheduleFastAdvance already defined - using existing implementation');
+    }
+  }
+  
+  // Install shim immediately on module load
+  installScheduleFastAdvanceShim();
+  
   /**
    * Shorten the current phase timer and accelerate phase end after the specified delay.
    * Used when player depletes all social energy.
@@ -1449,7 +1606,7 @@
 
   /**
    * Check if the human player has depleted all their social energy.
-   * If so, schedule a fast advance.
+   * If so, schedule a fast advance using the shim or native implementation.
    * @param {number} playerId - Player ID to check
    */
   function checkEnergyDepletionAndAdvance(playerId){
@@ -1471,8 +1628,10 @@
       // Show feedback message
       global.addLog?.('All social energy spent! Phase will advance shortly...', 'ok');
       
-      // Schedule fast advance after 3 seconds
-      scheduleFastAdvance(3000);
+      // Use guarded shim: window.scheduleFastAdvance (installed at module load) or fallback
+      const scheduleFn = window.scheduleFastAdvance || scheduleFastAdvanceFallback;
+      scheduleFn(800); // 800ms delay as specified in requirements
+      console.info('[social-maneuvers] ✓ Scheduled fast advance via', window.scheduleFastAdvance ? 'native API' : 'fallback');
     }
   }
 
@@ -1656,10 +1815,15 @@
   // ============================================================================
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
-    console.info('[social-maneuvers] ✓ startPhase() triggered');
+    console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
     const alivePlayers = global.alivePlayers?.() || [];
-    alivePlayers.forEach(p => { SocialResources.init(p.id); SocialResources.resetWeekly(p.id); });
-    console.info(`[social-maneuvers] Resources initialized for ${alivePlayers.length} players`);
+    
+    // Initialize and reset resources for all alive players
+    alivePlayers.forEach(p => { 
+      SocialResources.init(p.id); 
+      SocialResources.resetWeekly(p.id); 
+    });
+    console.info(`[social-maneuvers] ✓ Resources initialized and reset for ${alivePlayers.length} players`);
     
     // Clear phase refunds for new phase
     SocialResources.clearPhaseRefunds();
@@ -1755,6 +1919,7 @@
   
   function onSocialPhaseEnd(){
     if(!isEnabled()) { console.info('[social-maneuvers] Phase end called but feature is DISABLED'); return; }
+    console.info('[social-maneuvers] ◼️ onSocialPhaseEnd() - leaving social_intermission phase');
     console.info('[social-maneuvers] ✓ Social phase complete - generating summary');
 
     // Clear any pending fast-advance timeout on phase end
