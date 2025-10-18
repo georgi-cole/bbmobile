@@ -259,8 +259,12 @@
 
     // Pause phase timer when modal opens
     if (global.SocialManeuvers?.pausePhaseTimer) {
-      global.SocialManeuvers.pausePhaseTimer();
-      console.info('[socialize-mobile] ⏸️ Phase timer paused (modal opened)');
+      try{
+        global.SocialManeuvers.pausePhaseTimer();
+        console.info('[socialize-mobile] ⏸️ Phase timer paused (modal opened)');
+      }catch(e){
+        console.error('[socialize-mobile] Failed to pause timer:', e);
+      }
     }
 
     // Disable background scrolling
@@ -274,7 +278,7 @@
     
     // Add high z-index backdrop to prevent click-through
     modal.innerHTML = `
-      <div class="socialize-modal-backdrop socialize-modal-backdrop-high" style="z-index: 2147483599;"></div>
+      <div class="socialize-modal-backdrop socialize-modal-backdrop-high" style="z-index: 2147483599; position: fixed; inset: 0; background: rgba(0,0,0,0.7); pointer-events: auto;"></div>
       <div class="socialize-modal-content socialize-modal-content-high" style="z-index: 2147483600;">
         <button class="modal-close-btn" aria-label="Close">×</button>
         
@@ -353,8 +357,12 @@
 
     // Resume phase timer when modal closes
     if (global.SocialManeuvers?.resumePhaseTimer) {
-      global.SocialManeuvers.resumePhaseTimer();
-      console.info('[socialize-mobile] ▶️ Phase timer resumed (modal closed)');
+      try{
+        global.SocialManeuvers.resumePhaseTimer();
+        console.info('[socialize-mobile] ▶️ Phase timer resumed (modal closed)');
+      }catch(e){
+        console.error('[socialize-mobile] Failed to resume timer:', e);
+      }
     }
 
     // Re-enable scrolling
