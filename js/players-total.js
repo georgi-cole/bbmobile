@@ -127,7 +127,7 @@
       <div class="sep"></div>
       <label style="display:block;max-width:260px">
         Players total
-        <input id="numPlayersCast" type="number" min="6" max="22" value="12" style="width:100%"/>
+        <input id="numPlayersCast" type="number" min="6" max="22" value="12" data-key="numPlayers" style="width:100%"/>
       </label>
     `;
 
@@ -147,13 +147,6 @@
     input.addEventListener('input', ()=>{
       const v = clamp(input.value, 6, 22);
       if(String(v)!==input.value) input.value = String(v);
-    });
-    input.addEventListener('change', ()=>{
-      const c = readCfg();
-      c.numPlayers = clamp(input.value, 6, 22);
-      writeCfg(c);
-      log('saved numPlayers =', c.numPlayers);
-      applyPlayers(c.numPlayers);
     });
 
     // Mark injected for this modal instance
@@ -177,12 +170,12 @@
         if(typeof API.startOpeningSequence === 'function'){ setTimeout(()=>API.startOpeningSequence(), 60); }
         g.addLog?.(`New season started with ${val} players.`,'ok');
       }else{
-        g.addLog?.(`Players set to ${val}. Restarting to apply…`,'warn');
-        setTimeout(()=>location.reload(), 250);
+        // Mid-season: defer application
+        g.addLog?.(`Players set to ${val}. Will apply next season or after a manual refresh.`,'ok');
+        log(`Players set to ${val}. Will apply next season or after a manual refresh.`);
       }
     }catch(e){
-      warn('apply failed; reloading as fallback', e);
-      setTimeout(()=>location.reload(), 250);
+      warn('apply failed', e);
     }
 
     try{

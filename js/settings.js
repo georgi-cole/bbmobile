@@ -754,7 +754,7 @@
   function cfg(){ (g.game = g.game || {}).cfg = g.game.cfg || {}; return g.game.cfg; }
 
   function applyPlayersConfig(v){
-    const val = Math.max(4, Math.min(16, Number(v)||12));
+    const val = Math.max(6, Math.min(22, Number(v)||12));
     cfg().numPlayers = val;
     try{ localStorage.setItem('bb_cfg_numPlayers', String(val)); }catch{}
     
@@ -765,12 +765,12 @@
         if(typeof g.startOpeningSequence === 'function'){ setTimeout(()=>g.startOpeningSequence(), 60); }
         g.addLog?.(`New season started with ${val} players.`,'ok');
       }else{
-        g.addLog?.(`Players set to ${val}. Restarting to apply…`,'warn');
-        setTimeout(()=>location.reload(), 250);
+        // Mid-season: defer application
+        g.addLog?.(`Players set to ${val}. Will apply next season or after a manual refresh.`,'ok');
+        console.info('[settings] Players set to', val, '. Will apply next season or after a manual refresh.');
       }
     }catch(e){
-      console.warn('[settings] applyPlayersConfig failed; reloading as fallback', e);
-      setTimeout(()=>location.reload(), 250);
+      console.warn('[settings] applyPlayersConfig failed', e);
     }
   }
 
@@ -803,16 +803,17 @@
     let input=document.getElementById('numPlayers');
     if(!input){
       const label=document.createElement('label');
-      label.innerHTML='Players total<input id="numPlayers" type="number" min="4" max="16" value="12"/>';
+      label.innerHTML='Players total<input id="numPlayers" type="number" min="6" max="22" value="12"/>';
       (pane.querySelector('.settingsGrid') || pane).prepend(label);
       input=label.querySelector('#numPlayers');
     }
     // prefer cfg value, else current roster length
     const current = Number(cfg().numPlayers) || (Array.isArray(g.game?.players)? g.game.players.length : 12);
-    input.value = String(Math.max(4, Math.min(16, current || 12)));
-    input.addEventListener('change', ()=>{
-      const v=Math.max(4, Math.min(16, Number(input.value)||12));
-      applyPlayersConfig(v);
+    input.value = String(Math.max(6, Math.min(22, current || 12)));
+    // Only wire input event for UI clamping (no change event to avoid mid-season reload)
+    input.addEventListener('input', ()=>{
+      const v=Math.max(6, Math.min(22, Number(input.value)||12));
+      if(String(v) !== input.value) input.value = String(v);
     });
   }
 
@@ -881,10 +882,11 @@
     const np=document.getElementById('numPlayers');
     if(np){
       const current = Number(cfg().numPlayers) || (Array.isArray(g.game?.players)? g.game.players.length : 12);
-      np.value = String(Math.max(4, Math.min(16, current || 12)));
-      np.addEventListener('change', ()=>{
-        const v=Math.max(4, Math.min(16, Number(np.value)||12));
-        applyPlayersConfig(v);
+      np.value = String(Math.max(6, Math.min(22, current || 12)));
+      // Only wire input event for UI clamping (no change event to avoid mid-season reload)
+      np.addEventListener('input', ()=>{
+        const v=Math.max(6, Math.min(22, Number(np.value)||12));
+        if(String(v) !== np.value) np.value = String(v);
       });
     }
     // Jury Return vote seconds
