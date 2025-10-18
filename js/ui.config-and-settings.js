@@ -1697,7 +1697,20 @@
   g.ensureGameCfg = ensureGameCfg;
   g.populateDebugMinigameDropdown = populateDebugMinigameDropdown;
   
+  // Expose applyPlayersFromSettings for use by other modules (e.g., settings/render.js)
+  g.applyPlayersFromSettings = applyPlayersFromSettings;
+  
   // Expose populateSelfEvictDropdown for debugging purposes
   g.populateSelfEvictDropdown = populateSelfEvictDropdown;
+
+  // COMPATIBILITY REDIRECT: If SettingsRender exists, redirect global openSettingsModal/closeSettingsModal
+  // This ensures that even if legacy modal code is loaded, all calls use the modular modal
+  if(typeof g.SettingsRender !== 'undefined' && g.SettingsRender.openSettingsModal){
+    console.info('[ui.config-and-settings] SettingsRender detected, redirecting to modular modal');
+    g.openSettingsModal = g.SettingsRender.openSettingsModal;
+    if(g.SettingsRender.closeSettingsModal){
+      g.closeSettingsModal = g.SettingsRender.closeSettingsModal;
+    }
+  }
 
 })(window);

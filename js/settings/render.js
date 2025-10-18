@@ -346,6 +346,8 @@
     const cfg = g.cfg = Object.assign({}, Config.DEFAULT_CFG || {}, g.cfg || {});
     
     const changedKeys = [];
+    const oldNumPlayers = cfg.numPlayers;
+    
     Array.prototype.forEach.call(modal.querySelectorAll('[data-key]'), function(inp){
       const k = inp.getAttribute('data-key');
       const oldValue = cfg[k];
@@ -371,6 +373,11 @@
 
     // Apply side effects for changed keys
     if(SettingsEffects.applyEffects) SettingsEffects.applyEffects(cfg, changedKeys);
+    
+    // If numPlayers changed, apply the player count logic
+    if(changedKeys.indexOf('numPlayers') !== -1 && oldNumPlayers !== cfg.numPlayers){
+      applyPlayerCount(cfg.numPlayers);
+    }
     
     // Always trigger global HUD update
     try{
@@ -565,6 +572,52 @@
     if(dim) dim.style.display = 'none';
   }
 
+  // Apply player count changes (with defer or rebuild logic)
+  function applyPlayerCount(v){
+    try{
+      // Clamp to 6..22 (align with players-total.js)
+      const val = Math.max(6, Math.min(22, parseInt(v, 10) || 12));
+      
+      // Check if a shared helper exists
+      if(typeof global.applyPlayersFromSettings === 'function'){
+        global.applyPlayersFromSettings(val);
+        return;
+      }
+      if(typeof global.applyPlayers === 'function'){
+        global.applyPlayers(val);
+        return;
+      }
+      
+      // Fallback inline logic
+      const game = global.game = global.game || {};
+      const cfg = game.cfg = Object.assign({}, Config.DEFAULT_CFG || {}, game.cfg || {});
+      cfg.numPlayers = val;
+      if(typeof global.saveStoredCfg === 'function') {
+        global.saveStoredCfg(cfg);
+      } else if(typeof Config.saveStoredCfg === 'function') {
+        Config.saveStoredCfg(cfg);
+      }
+      if(game.phase === 'lobby'){
+        // In lobby: rebuild cast/game and start opening sequence
+        if(typeof global.rebuildGame === 'function'){
+          global.rebuildGame(false);
+        } else if(typeof global.buildCast === 'function'){
+          global.buildCast();
+        }
+        if(typeof global.startOpeningSequence === 'function'){
+          setTimeout(function(){ global.startOpeningSequence(); }, 60);
+        }
+        notify('New season started with ' + val + ' players.', 'ok');
+      } else {
+        // Mid-season: defer application
+        notify('Players set to ' + val + '. Will apply next season or after a manual refresh.', 'ok');
+        console.info('[settings/render] Players set to', val, '. Will apply next season or after a manual refresh.');
+      }
+    }catch(err){
+      console.warn('[settings/render] applyPlayerCount error:', err);
+    }
+  }
+
   // Notification helper
   function notify(msg, cls){
     try{
@@ -582,8 +635,9 @@
   SettingsRender.applySettings = applySettings;
   SettingsRender.fillSettingsModal = fillSettingsModal;
 
-  // Make openSettingsModal available globally for convenience
+  // Make openSettingsModal and closeSettingsModal available globally for convenience
   global.openSettingsModal = openSettingsModal;
+  global.closeSettingsModal = closeSettingsModal;
 
   // Initialize settings button (find and wire the settings button)
   function initSettingsButton(){
