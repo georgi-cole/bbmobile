@@ -69,8 +69,12 @@ if (shouldRenderDuring) {
   console.log('  ✅ PASS: Red X correctly suppressed during animation');
 }
 
-console.log(`\n4️⃣ Animation completes - clear suppression flag`);
-game.__suppressEvictedHudUntilVisualDone = false;
+console.log(`\n4️⃣ Animation completes - clear suppression for this player`);
+game.__pendingEvictionVisuals.delete(evictedId);
+if(game.__pendingEvictionVisuals.size === 0){
+  game.__suppressEvictedHudUntilVisualDone = false;
+}
+console.log(`  __pendingEvictionVisuals = [${Array.from(game.__pendingEvictionVisuals).join(', ')}]`);
 console.log(`  __suppressEvictedHudUntilVisualDone = ${game.__suppressEvictedHudUntilVisualDone}`);
 
 console.log(`\n5️⃣ Check if red X should render AFTER animation`);
@@ -116,8 +120,12 @@ if (anyRenderDuring) {
   console.log('  ✅ PASS: All red X correctly suppressed during animation');
 }
 
-console.log(`\n4️⃣ Animation completes - clear suppression flag`);
-game.__suppressEvictedHudUntilVisualDone = false;
+console.log(`\n4️⃣ Animation completes - clear suppression for all players`);
+evictedIds.forEach(id => game.__pendingEvictionVisuals.delete(id));
+if(game.__pendingEvictionVisuals.size === 0){
+  game.__suppressEvictedHudUntilVisualDone = false;
+}
+console.log(`  __pendingEvictionVisuals = [${Array.from(game.__pendingEvictionVisuals).join(', ')}]`);
 console.log(`  __suppressEvictedHudUntilVisualDone = ${game.__suppressEvictedHudUntilVisualDone}`);
 
 console.log(`\n5️⃣ Check if red X should render AFTER animation`);
