@@ -793,22 +793,43 @@
     // Find the action definition to get cost
     const actions = global.SocialManeuvers?.SOCIAL_ACTIONS || [];
     const action = actions.find(a => a.id === actionId);
-    const energyCost = action?.costs?.energy || action?.cost || 1;
+    const baseCost = action?.costs?.energy || action?.cost || 1;
+    
+    // ==== COMPUTE EFFECTIVE COST FOR GROUP ACTIONS ====
+    // effectiveCost = baseCost + Math.max(0, targets.length - 2)
+    const extraCost = Math.max(0, selectedPlayers.length - 2);
+    const effectiveCost = baseCost + extraCost;
     
     // Check all requirements
     const hasEnoughPlayers = selectedPlayers.length >= minTargets;
-    const hasEnoughEnergy = res.energy >= energyCost;
+    const hasEnoughEnergy = res.energy >= effectiveCost;
     
     const canExecute = hasEnoughPlayers && hasEnoughEnergy && selectedAction;
     btn.disabled = !canExecute;
     
-    // Update button text
+    // Update button text with effective cost display
     if (!hasEnoughPlayers) {
       btn.textContent = `Select ${minTargets}+ Players (${selectedPlayers.length} selected)`;
     } else if (!hasEnoughEnergy) {
-      btn.textContent = `Need ${energyCost} Energy (have ${res.energy})`;
+      if(extraCost > 0) {
+        btn.textContent = `Need ${effectiveCost}⚡ (base ${baseCost} + group ${extraCost}), have ${res.energy}⚡`;
+      } else {
+        btn.textContent = `Need ${effectiveCost}⚡, have ${res.energy}⚡`;
+      }
     } else {
-      btn.textContent = `Execute Action (Cost: ${energyCost}⚡)`;
+      // Show effective cost with breakdown for group actions
+      if(extraCost > 0) {
+        btn.textContent = `Execute Action: ⚡${effectiveCost} (base ${baseCost} + group ${extraCost})`;
+      } else {
+        btn.textContent = `Execute Action: ⚡${effectiveCost}`;
+      }
+    }
+    
+    // Add tooltip with cost breakdown for transparency
+    if(extraCost > 0) {
+      btn.title = `Base cost: ${baseCost}⚡\n+${extraCost}⚡ for ${extraCost} extra target${extraCost !== 1 ? 's' : ''} (after 2nd)\nTotal: ${effectiveCost}⚡`;
+    } else {
+      btn.title = `Energy cost: ${effectiveCost}⚡`;
     }
   }
 
