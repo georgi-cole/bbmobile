@@ -793,7 +793,7 @@
     // Find the action definition to get cost
     const actions = global.SocialManeuvers?.SOCIAL_ACTIONS || [];
     const action = actions.find(a => a.id === actionId);
-    const baseCost = action?.costs?.energy || action?.cost || 1;
+    const baseCost = (action?.costs?.energy ?? action?.cost ?? 1);
     
     // ==== COMPUTE EFFECTIVE COST FOR GROUP ACTIONS ====
     // effectiveCost = baseCost + Math.max(0, targets.length - 2)
