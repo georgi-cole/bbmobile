@@ -304,7 +304,7 @@
       }
       
       // NEW BANK SYSTEM: No need to compute energy - bank already has it!
-      // Just seed phase energy from bank (this happens at phase start via recomputePhaseEnergy)
+      // Phase energy is seeded from the bank separately at social phase start (via recomputePhaseEnergy), not during weekly reset.
       console.info(`[social-resources] 🔄 Weekly reset for player ${playerId} at week ${currentWeek} (bank-based)`);
       
       // Handle other resources (non-energy)
