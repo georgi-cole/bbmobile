@@ -10,20 +10,20 @@ The Social Maneuvers system had issues where:
 ## Root Cause Analysis
 
 ### Issue 1: Bank Seeding Not Active
-- `onSocialPhaseStart` called `resetWeekly` which skipped energy seeding (line 307)
+- `onSocialPhaseStart` called `resetWeekly` which skipped energy seeding
 - Phase energy was never explicitly seeded from bank
-- The log message (line 2200) was misleading, showing legacy formula
+- The log message in `onSocialPhaseStart` was misleading, showing legacy formula
 
 ### Issue 2: HUD TDZ Error
-- In `ui.hud-and-router.js`, `ariaLabel` was used at line 679
-- But declared later at line 688
+- In `ui.hud-and-router.js`, `ariaLabel` was used before it was declared
+- Declaration of `ariaLabel` occurred after its usage
 - This caused a Temporal Dead Zone error blocking HUD updates
 
 ## Changes Made
 
 ### 1. social-maneuvers.js
 
-**onSocialPhaseStart (lines 2176-2207)**
+**onSocialPhaseStart function**
 
 Before:
 ```javascript
