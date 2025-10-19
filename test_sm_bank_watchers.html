@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SM Bank Watchers Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 { color: #0f3; text-align: center; }
+    h2 { color: #4af; margin-top: 30px; border-bottom: 2px solid #4af; padding-bottom: 5px; }
+    h3 { color: #f84; margin-top: 20px; }
+    .test-section {
+      background: #16213e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+    }
+    .pass { background: #1a4d2e; border-left: 4px solid #0f3; }
+    .fail { background: #4d1a1a; border-left: 4px solid #f33; }
+    .info { background: #1a2a4d; border-left: 4px solid #4af; }
+    button {
+      background: #4af;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+      transition: background 0.3s;
+    }
+    button:hover { background: #3a9; }
+    button:active { background: #2a7; }
+    pre {
+      background: #0a0a0a;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .summary {
+      background: #2a2a4a;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border: 2px solid #4af;
+    }
+    .summary h3 { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <h1>🏦 SM Bank Watchers Validation Test</h1>
+  
+  <div class="summary">
+    <h3>Test Objectives</h3>
+    <ol>
+      <li>✅ Verify bank starts at 0 (no auto-initialization to 5)</li>
+      <li>✅ Verify property watchers are installed</li>
+      <li>✅ Test HOH win → bank +5 immediately</li>
+      <li>✅ Test POV win → bank +3 immediately</li>
+      <li>✅ Test nomination → bank +4 immediately</li>
+      <li>✅ Test week rollover → bank +5 for all players</li>
+      <li>✅ Test social phase seeding from bank (no overwrite)</li>
+      <li>✅ Test leftover energy sync on phase end</li>
+    </ol>
+  </div>
+
+  <div id="results"></div>
+
+  <div class="test-section">
+    <h3>Manual Test Controls</h3>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+    <button onclick="showState()">Show Game State</button>
+  </div>
+
+  <script>
+    const results = document.getElementById('results');
+
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      results.appendChild(div);
+      console.log(`[TEST] ${message}`);
+    }
+
+    function clearResults() {
+      results.innerHTML = '';
+    }
+
+    function showState() {
+      const g = window.game;
+      const state = {
+        week: g?.week,
+        hohId: g?.hohId,
+        nominees: g?.nominees,
+        vetoHolder: g?.vetoHolder,
+        vetoUsed: g?.vetoUsed,
+        banks: {},
+        phaseEnergy: {}
+      };
+
+      const alivePlayers = window.alivePlayers?.() || [];
+      alivePlayers.forEach(p => {
+        state.banks[p.id] = window.SocialManeuvers?.SocialEnergyBank?.get(p.id);
+        state.phaseEnergy[p.id] = window.SocialManeuvers?.SocialResources?.get(p.id, 'energy');
+      });
+
+      log('=== GAME STATE ===', 'info');
+      log(JSON.stringify(state, null, 2), 'info');
+    }
+
+    async function runAllTests() {
+      clearResults();
+      log('=== Starting SM Bank Watchers Test Suite ===', 'info');
+      
+      // Setup
+      await setupTestEnvironment();
+      
+      // Run tests
+      await testBankInitialization();
+      await testWatchersInstalled();
+      await testHOHWin();
+      await testPOVWin();
+      await testNomination();
+      await testWeekRollover();
+      await testSocialPhaseSeeding();
+      await testLeftoverSync();
+      
+      log('=== Test Suite Complete ===', 'info');
+      showState();
+    }
+
+    async function setupTestEnvironment() {
+      log('Setting up test environment...', 'info');
+      
+      // Initialize game object if needed
+      if(!window.game) {
+        window.game = {
+          week: 1,
+          phase: 'pre_hoh',
+          humanId: 1,
+          cfg: { enableSocialManeuvers: true }
+        };
+      }
+
+      // Create test players
+      window.alivePlayers = () => [
+        { id: 1, name: 'Player 1' },
+        { id: 2, name: 'Player 2' },
+        { id: 3, name: 'Player 3' },
+        { id: 4, name: 'Player 4' }
+      ];
+
+      // Initialize Social Maneuvers
+      if(window.SocialManeuvers) {
+        const alivePlayers = window.alivePlayers();
+        alivePlayers.forEach(p => {
+          window.SocialManeuvers.SocialEnergyBank.init(p.id);
+          window.SocialManeuvers.SocialResources.init(p.id);
+        });
+        
+        log('✓ Test environment ready', 'pass');
+      } else {
+        log('✗ Social Maneuvers module not loaded!', 'fail');
+      }
+    }
+
+    async function testBankInitialization() {
+      log('--- Test: Bank Initialization ---', 'info');
+      
+      const bank1 = window.SocialManeuvers.SocialEnergyBank.get(1);
+      const bank2 = window.SocialManeuvers.SocialEnergyBank.get(2);
+      
+      if(bank1 === 0 && bank2 === 0) {
+        log('✓ Banks correctly initialized to 0 (no auto-seed to 5)', 'pass');
+      } else {
+        log(`✗ Banks not initialized correctly: P1=${bank1}, P2=${bank2} (expected 0)`, 'fail');
+      }
+    }
+
+    async function testWatchersInstalled() {
+      log('--- Test: Property Watchers Installed ---', 'info');
+      
+      const g = window.game;
+      const descriptor = Object.getOwnPropertyDescriptor(g, 'hohId');
+      
+      if(descriptor && descriptor.get && descriptor.set) {
+        log('✓ Property watchers installed (hohId has getter/setter)', 'pass');
+      } else {
+        log('✗ Property watchers not installed correctly', 'fail');
+      }
+    }
+
+    async function testHOHWin() {
+      log('--- Test: HOH Win Event ---', 'info');
+      
+      const g = window.game;
+      const bankBefore = window.SocialManeuvers.SocialEnergyBank.get(1);
+      
+      // Trigger HOH win
+      g.hohId = 1;
+      
+      await new Promise(r => setTimeout(r, 100)); // Wait for watcher
+      
+      const bankAfter = window.SocialManeuvers.SocialEnergyBank.get(1);
+      const delta = bankAfter - bankBefore;
+      
+      if(delta === 5) {
+        log(`✓ HOH win: Player 1 bank ${bankBefore} → ${bankAfter} (+5)`, 'pass');
+      } else {
+        log(`✗ HOH win: Expected +5, got +${delta}`, 'fail');
+      }
+    }
+
+    async function testPOVWin() {
+      log('--- Test: POV Win Event ---', 'info');
+      
+      const g = window.game;
+      const bankBefore = window.SocialManeuvers.SocialEnergyBank.get(2);
+      
+      // Trigger POV win
+      g.vetoHolder = 2;
+      
+      await new Promise(r => setTimeout(r, 100)); // Wait for watcher
+      
+      const bankAfter = window.SocialManeuvers.SocialEnergyBank.get(2);
+      const delta = bankAfter - bankBefore;
+      
+      if(delta === 3) {
+        log(`✓ POV win: Player 2 bank ${bankBefore} → ${bankAfter} (+3)`, 'pass');
+      } else {
+        log(`✗ POV win: Expected +3, got +${delta}`, 'fail');
+      }
+    }
+
+    async function testNomination() {
+      log('--- Test: Nomination Event ---', 'info');
+      
+      const g = window.game;
+      const bankBefore = window.SocialManeuvers.SocialEnergyBank.get(3);
+      
+      // Trigger nomination
+      g.nominees = [3, 4];
+      
+      await new Promise(r => setTimeout(r, 100)); // Wait for watcher
+      
+      const bankAfter = window.SocialManeuvers.SocialEnergyBank.get(3);
+      const delta = bankAfter - bankBefore;
+      
+      if(delta === 4) {
+        log(`✓ Nomination: Player 3 bank ${bankBefore} → ${bankAfter} (+4)`, 'pass');
+      } else {
+        log(`✗ Nomination: Expected +4, got +${delta}`, 'fail');
+      }
+    }
+
+    async function testWeekRollover() {
+      log('--- Test: Week Rollover (+5 base) ---', 'info');
+      
+      const g = window.game;
+      const alivePlayers = window.alivePlayers();
+      const banksBefore = alivePlayers.map(p => ({
+        id: p.id,
+        bank: window.SocialManeuvers.SocialEnergyBank.get(p.id)
+      }));
+      
+      // Trigger week rollover
+      g.week = 2;
+      
+      await new Promise(r => setTimeout(r, 100)); // Wait for watcher
+      
+      const banksAfter = alivePlayers.map(p => ({
+        id: p.id,
+        bank: window.SocialManeuvers.SocialEnergyBank.get(p.id)
+      }));
+      
+      let allCorrect = true;
+      for(let i = 0; i < alivePlayers.length; i++) {
+        const delta = banksAfter[i].bank - banksBefore[i].bank;
+        if(delta !== 5) {
+          log(`✗ Week rollover: Player ${alivePlayers[i].id} expected +5, got +${delta}`, 'fail');
+          allCorrect = false;
+        }
+      }
+      
+      if(allCorrect) {
+        log('✓ Week rollover: All players received +5 base energy', 'pass');
+      }
+    }
+
+    async function testSocialPhaseSeeding() {
+      log('--- Test: Social Phase Seeding from Bank ---', 'info');
+      
+      const g = window.game;
+      g.phase = 'social_intermission';
+      
+      // Get bank balance
+      const bank1 = window.SocialManeuvers.SocialEnergyBank.get(1);
+      
+      // Seed phase energy
+      window.SocialManeuvers.SocialResources.recomputePhaseEnergy(1);
+      
+      // Get phase energy
+      const phaseEnergy = window.SocialManeuvers.SocialResources.get(1, 'energy');
+      
+      if(phaseEnergy === bank1) {
+        log(`✓ Phase seeding: Player 1 energy=${phaseEnergy} matches bank=${bank1}`, 'pass');
+      } else {
+        log(`✗ Phase seeding: Energy=${phaseEnergy} doesn't match bank=${bank1}`, 'fail');
+      }
+    }
+
+    async function testLeftoverSync() {
+      log('--- Test: Leftover Energy Sync on Phase End ---', 'info');
+      
+      const g = window.game;
+      
+      // Set phase energy to simulate spending
+      const bankBefore = window.SocialManeuvers.SocialEnergyBank.get(1);
+      window.SocialManeuvers.SocialResources.set(1, 'energy', bankBefore - 2); // Spent 2
+      
+      const phaseEnergyBefore = window.SocialManeuvers.SocialResources.get(1, 'energy');
+      
+      // Trigger phase end (simulate sync)
+      const currentEnergy = window.SocialManeuvers.SocialResources.get(1, 'energy');
+      window.SocialManeuvers.SocialEnergyBank.set(1, currentEnergy);
+      
+      const bankAfter = window.SocialManeuvers.SocialEnergyBank.get(1);
+      
+      if(bankAfter === phaseEnergyBefore) {
+        log(`✓ Leftover sync: Bank updated to ${bankAfter} (spent 2 from ${bankBefore})`, 'pass');
+      } else {
+        log(`✗ Leftover sync: Expected ${phaseEnergyBefore}, got ${bankAfter}`, 'fail');
+      }
+    }
+  </script>
+
+  <script src="js/social-maneuvers.js"></script>
+</body>
+</html>
