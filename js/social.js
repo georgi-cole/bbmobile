@@ -310,55 +310,7 @@
     global.updateHud?.();
   }
 
-  function simulateHouseSocial(){
-    ensureSocialState();
-    const g=global.game; if(!g) return;
-    const alive = global.alivePlayers?.()||[];
-    if(alive.length<3) return;
-
-    g.__floatersWeek.clear();
-    const floaterCount = Math.max(1, Math.round(alive.length*0.20));
-    const floaterIds = sample(alive.map(p=>p.id), floaterCount);
-    for(const id of floaterIds){ g.__floatersWeek.add(id); }
-    g.players.forEach(p=>{ p.floater = g.__floatersWeek.has(p.id); });
-
-    const ALLY_T = ensure(global.ALLY_T, 0.28);
-    const ENEMY_T = ensure(global.ENEMY_T, -0.28);
-
-    for(const A of alive){
-      if(A.floater && Math.random()<0.7) continue;
-      const others = alive.filter(p=>p.id!==A.id && !p.evicted)
-        .sort((x,y)=> (A.affinity?.[y.id]??0) - (A.affinity?.[x.id]??0));
-      const pickAllies = others.slice(0, 2 + (Math.random()<0.25?1:0));
-      for(const B of pickAllies){
-        const cur = A.affinity?.[B.id]??0;
-        if(cur < ALLY_T){
-          const boost = 0.12 + Math.random()*0.08;
-          A.affinity[B.id] = cur + boost;
-          B.affinity[A.id] = (B.affinity?.[A.id]??0) + boost*0.8;
-        }
-      }
-      const low = others.slice(-2);
-      for(const B of low){
-        const cur = A.affinity?.[B.id]??0;
-        if(cur > ENEMY_T){
-          const down = -(0.10 + Math.random()*0.06);
-          A.affinity[B.id] = cur + down;
-          B.affinity[A.id] = (B.affinity?.[A.id]??0) + down*0.7;
-        }
-      }
-    }
-
-    const ticks = Math.max(3, Math.round(alive.length*1.2));
-    for(let i=0;i<ticks;i++){
-      const A = pick(alive);
-      const pool = alive.filter(p=>p.id!==A.id);
-      if(!pool.length) break;
-      const B = pick(pool);
-      const kind = Math.random()<0.62 ? 'positive' : 'negative';
-      applyInteraction(A.id, B.id, kind);
-    }
-  }
+  // REMOVED: simulateHouseSocial() - legacy social simulation now handled by Social Maneuvers engine
 
   // Ensure decision deck exists and is centered in TV safe area
   function ensureDecisionDeck(){
@@ -434,333 +386,45 @@
     card.style.animation='popIn .45s ease forwards';
   }
 
-  function buildSocialDecisions(){
-    ensureSocialState();
-    const g=global.game; if(!g) return;
-    const alive=global.alivePlayers?.()||[];
-    const you=global.getP?.(g.humanId);
-    if(!you || you.evicted) return;
-
-    // Cap hard at 3 prompts per session (reset each intermission)
-    g.__socialShown = 0;
-
-    const others=alive.filter(p=>p.id!==you.id);
-    if(!others.length) return;
-
-    // Check if Social Logic v2 is enabled
-    const cfg = g.cfg || {};
-    if(cfg.social_logic_v2_enabled && global.SocialGenerator && global.SocialAdapter) {
-      buildSocialDecisionsV2();
-      return;
-    }
-
-    // Legacy random logic continues below
-
-    const allyTarget = pick(others);
-    if(g.__socialShown<3){
-      queueDecision({
-        title: 'Alliance Offer',
-        targetPlayer: allyTarget, // Add player reference for avatar
-        lines: [
-          `${allyTarget.name} wants an alliance with you.`,
-          'Do you accept?'
-        ],
-        actions: [
-          { label:'Accept', onChoose:()=>{
-            const AL = (global.ALLY_T ?? 0.28);
-            const curY = you.affinity?.[allyTarget.id]??0;
-            const curT = allyTarget.affinity?.[you.id]??0;
-            const bumpY = Math.max(AL+0.07 - curY, 0.18);
-            const bumpT = Math.max(AL+0.05 - curT, 0.14);
-            you.affinity[allyTarget.id] = curY + bumpY;
-            allyTarget.affinity[you.id] = curT + bumpT;
-            global.addLog?.(`You and ${allyTarget.name} made a safety pact.`, 'ok');
-            global.updateHud?.();
-          }},
-          { label:'Decline', onChoose:()=>{
-            you.affinity[allyTarget.id]=(you.affinity?.[allyTarget.id]??0)-0.06;
-            allyTarget.affinity[you.id]=(allyTarget.affinity?.[you.id]??0)-0.10;
-            global.addLog?.(`You turned down an alliance with ${allyTarget.name}.`,'muted');
-            global.updateHud?.();
-          }},
-        ]
-      });
-      g.__socialShown++;
-    }
-
-    const instigator = pick(others);
-    const possibleTargets = others.filter(p=>p.id!==instigator.id);
-    const tgt = possibleTargets.length ? pick(possibleTargets) : null;
-    if(g.__socialShown<3){
-      queueDecision({
-        title: 'Target Talk',
-        targetPlayer: instigator, // Add player reference for avatar
-        lines: [
-          `${instigator.name} suggests targeting ${tgt?.name||'someone'}.`,
-          'Do you agree to target them this week?'
-        ],
-        actions: [
-          { label:'Agree', onChoose:()=>{
-            applyInteraction(you.id, instigator.id, 'positive');
-            if(tgt){
-              you.affinity[tgt.id]=(you.affinity?.[tgt.id]??0)-0.12;
-              global.addLog?.(`You quietly agreed to push ${tgt.name}.`,'warn');
-              global.updateHud?.();
-            }
-          }},
-          { label:'Refuse', onChoose:()=>{ applyInteraction(you.id, instigator.id, 'negative'); }},
-        ]
-      });
-      g.__socialShown++;
-    }
-
-    if(others.length>=3 && Math.random()<0.6 && g.__socialShown<3){
-      const press = pick(others);
-      queueDecision({
-        title: 'Flip Plan',
-        targetPlayer: press, // Add player reference for avatar
-        lines: [
-          `${press.name} asks you to consider flipping a vote later.`,
-          'How do you respond?'
-        ],
-        actions: [
-          { label:'Promise', onChoose:()=>{ applyInteraction(you.id, press.id, 'positive'); }},
-          { label:'Reject', onChoose:()=>{ applyInteraction(you.id, press.id, 'negative'); }},
-        ]
-      });
-      g.__socialShown++;
-    }
-
-    showNextDecision();
-  }
+  // REMOVED: buildSocialDecisions() - legacy decision generation now handled by Social Maneuvers engine
 
   // ===== Social Logic v2 =====
   
-  function buildSocialDecisionsV2(){
-    ensureSocialState();
-    const g=global.game; if(!g) return;
-    const you=global.getP?.(g.humanId);
-    if(!you || you.evicted) return;
+  // REMOVED: buildSocialDecisionsV2() - V2 logic now integrated into Social Maneuvers engine
 
-    // Clear session at start
-    global.SocialGenerator.resetCooldownSession();
-    g.__socialShown = 0;
-
-    // Generate interactions using context-aware logic
-    const cooldowns = global.SocialGenerator.ensureCooldownStore();
-    const interactions = global.SocialGenerator.generateSocialInteractions(g, cooldowns, 3);
-
-    if(!interactions || interactions.length === 0) {
-      console.warn('[Social v2] No interactions generated, falling back to legacy');
-      buildSocialDecisionsLegacy();
-      return;
-    }
-
-    // Convert interactions to popup format and queue
-    const popupOptions = global.SocialAdapter.interactionBatchToPopups(interactions, you);
-    
-    for(const options of popupOptions) {
-      if(g.__socialShown < 3) {
-        queueDecision({
-          title: options.title,
-          targetPlayer: options.player,
-          lines: options.bodyText,
-          actions: options.actions.map(action => ({
-            label: action.label,
-            onChoose: action.onClick
-          }))
-        });
-        g.__socialShown++;
-      }
-    }
-
-    console.info(`[Social v2] Generated ${interactions.length} context-aware interactions`);
-    showNextDecision();
-  }
-
-  function buildSocialDecisionsLegacy(){
-    // Legacy logic extracted for fallback
-    ensureSocialState();
-    const g=global.game; if(!g) return;
-    const alive=global.alivePlayers?.()||[];
-    const you=global.getP?.(g.humanId);
-    if(!you || you.evicted) return;
-
-    g.__socialShown = 0;
-    const others=alive.filter(p=>p.id!==you.id);
-    if(!others.length) return;
-
-    const allyTarget = pick(others);
-    if(g.__socialShown<3){
-      queueDecision({
-        title: 'Alliance Offer',
-        targetPlayer: allyTarget,
-        lines: [
-          `${allyTarget.name} wants an alliance with you.`,
-          'Do you accept?'
-        ],
-        actions: [
-          { label:'Accept', onChoose:()=>{
-            const AL = (global.ALLY_T ?? 0.28);
-            const curY = you.affinity?.[allyTarget.id]??0;
-            const curT = allyTarget.affinity?.[you.id]??0;
-            const bumpY = Math.max(AL+0.07 - curY, 0.18);
-            const bumpT = Math.max(AL+0.05 - curT, 0.14);
-            you.affinity[allyTarget.id] = curY + bumpY;
-            allyTarget.affinity[you.id] = curT + bumpT;
-            global.addLog?.(`You and ${allyTarget.name} made a safety pact.`, 'ok');
-            global.updateHud?.();
-          }},
-          { label:'Decline', onChoose:()=>{
-            you.affinity[allyTarget.id]=(you.affinity?.[allyTarget.id]??0)-0.06;
-            allyTarget.affinity[you.id]=(allyTarget.affinity?.[you.id]??0)-0.10;
-            global.addLog?.(`You turned down an alliance with ${allyTarget.name}.`,'muted');
-            global.updateHud?.();
-          }},
-        ]
-      });
-      g.__socialShown++;
-    }
-
-    const instigator = pick(others);
-    const possibleTargets = others.filter(p=>p.id!==instigator.id);
-    const tgt = possibleTargets.length ? pick(possibleTargets) : null;
-    if(g.__socialShown<3){
-      queueDecision({
-        title: 'Target Talk',
-        targetPlayer: instigator,
-        lines: [
-          `${instigator.name} suggests targeting ${tgt?.name||'someone'}.`,
-          'Do you agree to target them this week?'
-        ],
-        actions: [
-          { label:'Agree', onChoose:()=>{
-            applyInteraction(you.id, instigator.id, 'positive');
-            if(tgt){
-              you.affinity[tgt.id]=(you.affinity?.[tgt.id]??0)-0.12;
-              global.addLog?.(`You quietly agreed to push ${tgt.name}.`,'warn');
-              global.updateHud?.();
-            }
-          }},
-          { label:'Refuse', onChoose:()=>{ applyInteraction(you.id, instigator.id, 'negative'); }},
-        ]
-      });
-      g.__socialShown++;
-    }
-
-    if(others.length>=3 && Math.random()<0.6 && g.__socialShown<3){
-      const press = pick(others);
-      queueDecision({
-        title: 'Flip Plan',
-        targetPlayer: press,
-        lines: [
-          `${press.name} asks you to consider flipping a vote later.`,
-          'How do you respond?'
-        ],
-        actions: [
-          { label:'Promise', onChoose:()=>{ applyInteraction(you.id, press.id, 'positive'); }},
-          { label:'Reject', onChoose:()=>{ applyInteraction(you.id, press.id, 'negative'); }},
-        ]
-      });
-      g.__socialShown++;
-    }
-
-    showNextDecision();
-  }
+  // REMOVED: buildSocialDecisionsLegacy() - legacy fallback decision generation no longer needed
 
   // Helper: determine if legacy memories/UI should show
+  // DEPRECATED: Legacy UI completely removed - Social Maneuvers is now sole owner
   function shouldShowLegacyMemories(){
-    return !(global.SocialManeuvers?.isEnabled?.());
+    return false; // Always return false - legacy UI removed
   }
 
+  // REMOVED: renderSocialPhase() - legacy UI rendering replaced by Social Maneuvers
   function renderSocialPhase(panel){
     const g=global.game; if(!panel || !g) return;
 
-    // Keep legacy fully suppressed when SocialManeuvers.isEnabled() is true
-    if(!shouldShowLegacyMemories()){
-      console.info('[social.js] Social Maneuvers enabled - suppressing legacy UI/simulation/decisions');
-      panel.innerHTML=''; // Clear/hide panel
-      
-      // Start launcher observer
-      if(global.SocialLauncherBootstrap?.startLauncherObserver){
-        global.SocialLauncherBootstrap.startLauncherObserver();
-      }
-      
-      // Ensure launcher mounted in TV overlay
-      if(global.SocializeMobile?.ensureSocializeLauncher){
-        global.SocializeMobile.ensureSocializeLauncher();
-      }
-      
-      // Show and update HUD
-      if(global.SocializeMobile?.show){
-        global.SocializeMobile.show();
-      }
-      if(global.SocializeMobile?.updateHUD){
-        global.SocializeMobile.updateHUD();
-      }
-      
-      // Skip legacy simulation and decision cards entirely
-      return;
+    // Social Maneuvers is now the sole owner of social_intermission
+    console.info('[social.js] Social Maneuvers is sole owner - mounting launcher');
+    panel.innerHTML=''; // Clear panel
+    
+    // Start launcher observer
+    if(global.SocialLauncherBootstrap?.startLauncherObserver){
+      global.SocialLauncherBootstrap.startLauncherObserver();
     }
-
-    // Legacy UI below (only runs when Social Maneuvers is disabled)
-    panel.innerHTML='';
-    const box=document.createElement('div'); box.className='minigame-host';
-    box.innerHTML=`<h3>Social Intermission</h3>
-      <div class="tiny muted">House interactions, alliances, and rivalries are evolving…</div>`;
-    panel.appendChild(box);
-
-    // New: small log budget per intermission to avoid ambient spam
-    ensureSocialState();
-    g.__socialLogBudget = 6;
-
-    simulateHouseSocial();
-
-    const fWrap=document.createElement('div'); fWrap.className='tiny';
-    const floaters=[...g.__floatersWeek].map(id=>global.safeName(id));
-    fWrap.textContent = floaters.length ? `Floaters this week: ${floaters.join(', ')}` : 'Floaters this week: none';
-    box.appendChild(fWrap);
-
-    const you=global.getP?.(g.humanId);
-    if(you && !you.evicted){
-      const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
-      const sel=document.createElement('select');
-      const alive=global.alivePlayers?.()||[];
-      alive.filter(p=>p.id!==you.id).forEach(p=>{
-        const opt=document.createElement('option'); opt.value=p.id; opt.textContent=p.name; sel.appendChild(opt);
-      });
-
-      // Action selector with expanded interactions
-      const act=document.createElement('select');
-      const actions = [
-        {val:'alliance', label:'Alliance'},
-        {val:'apologize', label:'Apologize'},
-        {val:'gift', label:'Gift'},
-        {val:'flirt', label:'Flirt'},
-        {val:'prank', label:'Prank'},
-        {val:'strategychat', label:'Strategy Chat'},
-        {val:'workout', label:'Workout Together'},
-        {val:'cook', label:'Cook Meal'},
-        {val:'latenighttalk', label:'Late Night Talk'},
-        {val:'taunt', label:'Taunt'},
-        {val:'confront', label:'Confront'}
-      ];
-      actions.forEach(({val, label})=>{
-        const o=document.createElement('option'); o.value=val; o.textContent=label; act.appendChild(o);
-      });
-
-      const bDo=document.createElement('button'); bDo.className='btn small'; bDo.textContent='Do Action';
-      bDo.onclick=()=>{ const tid=+sel.value; const a=act.value; applyAction(you.id, tid, a); };
-
-      row.append(sel, act, bDo);
-      box.appendChild(row);
-
-      buildSocialDecisions();
+    
+    // Ensure launcher mounted in TV overlay
+    if(global.SocializeMobile?.ensureSocializeLauncher){
+      global.SocializeMobile.ensureSocializeLauncher();
     }
-
-    const hint=document.createElement('div'); hint.className='tiny muted'; hint.style.marginTop='6px';
-    hint.textContent='Tip: Allies and enemies shift with interactions; nominations naturally follow relations.';
-    box.appendChild(hint);
+    
+    // Show and update HUD
+    if(global.SocializeMobile?.show){
+      global.SocializeMobile.show();
+    }
+    if(global.SocializeMobile?.updateHUD){
+      global.SocializeMobile.updateHUD();
+    }
   }
   global.renderSocialPhase = renderSocialPhase;
 
@@ -784,82 +448,7 @@
     };
   }
 
-  // Generate end-of-social summary card
-  function generateSocialSummary(){
-    const g=global.game; if(!g) return;
-    
-    // Skip legacy summary when Social Maneuvers is enabled
-    if(!shouldShowLegacyMemories()){
-      console.info('[social] Skipping legacy summary - Social Maneuvers handles phase summary');
-      return;
-    }
-    
-    const alive = global.alivePlayers?.() || [];
-    if(alive.length < 2) return;
-
-    const summary = [];
-    
-    // Check for new major alliances (high affinity pairs)
-    const alliancePairs = [];
-    for(let i=0; i<alive.length; i++){
-      for(let j=i+1; j<alive.length; j++){
-        const p1 = alive[i], p2 = alive[j];
-        const aff1 = p1.affinity?.[p2.id] ?? 0;
-        const aff2 = p2.affinity?.[p1.id] ?? 0;
-        const avg = (aff1 + aff2) / 2;
-        if(avg >= 0.35){
-          alliancePairs.push({p1, p2, strength: avg});
-        }
-      }
-    }
-    if(alliancePairs.length > 0){
-      alliancePairs.sort((a,b) => b.strength - a.strength);
-      const top = alliancePairs[0];
-      summary.push(`Strong alliance: ${top.p1.name} & ${top.p2.name}`);
-    }
-
-    // Check for rivalries (low affinity)
-    const rivalries = [];
-    for(let i=0; i<alive.length; i++){
-      for(let j=i+1; j<alive.length; j++){
-        const p1 = alive[i], p2 = alive[j];
-        const aff1 = p1.affinity?.[p2.id] ?? 0;
-        const aff2 = p2.affinity?.[p1.id] ?? 0;
-        const avg = (aff1 + aff2) / 2;
-        if(avg <= -0.30){
-          rivalries.push({p1, p2, intensity: -avg});
-        }
-      }
-    }
-    if(rivalries.length > 0){
-      rivalries.sort((a,b) => b.intensity - a.intensity);
-      const top = rivalries[0];
-      summary.push(`Rivalry emerged: ${top.p1.name} vs ${top.p2.name}`);
-    }
-
-    // Check for romance (very high affinity)
-    const romances = [];
-    for(let i=0; i<alive.length; i++){
-      for(let j=i+1; j<alive.length; j++){
-        const p1 = alive[i], p2 = alive[j];
-        const aff1 = p1.affinity?.[p2.id] ?? 0;
-        const aff2 = p2.affinity?.[p1.id] ?? 0;
-        const avg = (aff1 + aff2) / 2;
-        if(avg >= 0.60){
-          romances.push({p1, p2});
-        }
-      }
-    }
-    if(romances.length > 0){
-      const r = romances[0];
-      summary.push(`Romance/Bromance: ${r.p1.name} & ${r.p2.name}`);
-    }
-
-    // Show summary card if we have content
-    if(summary.length > 0 && typeof global.showCard === 'function'){
-      global.showCard('Social Update', summary, 'social', 4500, true);
-    }
-  }
+  // REMOVED: generateSocialSummary() - legacy summary card replaced by Social Maneuvers engine
 
   function endSocialPhaseCleanup(){
     const g=global.game; if(!g) return;
@@ -993,12 +582,8 @@
           }
           
           await global.cardQueueWaitIdle?.();
-        }else{
-          // Legacy: generate summary before cleanup
-          await global.cardQueueWaitIdle?.();
-          generateSocialSummary();
-          await global.cardQueueWaitIdle?.();
         }
+        // REMOVED: Legacy summary generation - Social Maneuvers is now sole owner
         
         endSocialPhaseCleanup(); 
       }catch(e){ console.error(e); }

@@ -12,7 +12,8 @@
     "test:runtime-helpers": "node scripts/test-runtime-helpers.mjs",
     "test:e2e": "node scripts/test-e2e-competitions.mjs",
     "test:jurors": "node scripts/test-jurors-return-challenge.mjs",
-    "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e",
+    "test:social": "node verify_social_phase_requirements.mjs",
+    "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e && npm run test:social",
     "build:progression": "cd src/progression && tsc",
     "typecheck:progression": "cd src/progression && tsc --noEmit"
   },
