@@ -2796,7 +2796,7 @@
   // GLOBAL EXPORTS
   // ============================================================================
   global.SocialManeuvers = {
-    isEnabled, SocialResources, SocialEnergyBank,
+    isEnabled, SocialResources, SocialEnergyBank, // New uncapped energy storage system
     getActionById, getAvailableActions, executeAction,
     recordActionInMemory, getPlayerMemory,
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
