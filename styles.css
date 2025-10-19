@@ -1625,7 +1625,7 @@ button:focus-visible,.btn:focus-visible{
   white-space:nowrap;
 }
 
-/* Avatar Rank Badge - positioned inside avatar container (bottom-right) */
+/* Avatar Rank Badge - positioned inside avatar container (bottom-right by default) */
 .avatar-rank-badge{
   position:absolute;
   bottom:2px;
@@ -1648,8 +1648,38 @@ button:focus-visible,.btn:focus-visible{
   line-height:1;
 }
 
+/* Centered variant - for eviction ordinal overlay */
+.avatar-rank-badge.center{
+  bottom:auto;
+  right:auto;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  font-size:1.1rem;
+  padding:6px 12px;
+  background:linear-gradient(135deg, #444, #666);
+  border:3px solid rgba(255,255,255,0.5);
+  box-shadow:0 3px 10px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,255,255,0.2);
+}
+
+/* Avatar grayscale + semi-transparent after eviction animation completes */
+.avatar-bw-dim,
+.avatar-bw-dim img,
+img.avatar-bw-dim{
+  filter:grayscale(100%) !important;
+  opacity:0.6 !important;
+  transition:filter 0.4s ease-out, opacity 0.4s ease-out;
+}
+
+/* Hide red X when rank badge is shown */
+.top-tile-avatar-wrap:has(.avatar-rank-badge) .evicted-cross,
+.top-tile-avatar-wrap:has(.avatar-rank-badge) .redx{
+  display:none !important;
+}
+
 /* Suppress interim roster visuals during eviction animation */
-body.evict-visual-in-progress .evicted-cross{
+body.evict-visual-in-progress .evicted-cross,
+body.evict-visual-in-progress .redx{
   display:none !important;
 }
 

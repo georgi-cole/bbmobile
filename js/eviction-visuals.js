@@ -128,7 +128,8 @@
 
   /**
    * Update roster to show ordinal finishing badge for evicted player
-   * Badge is rendered INSIDE the avatar container (bottom-right)
+   * Badge is rendered CENTERED INSIDE the avatar container
+   * Avatar becomes grayscale + semi-transparent
    * Only for ranks ≥ 3 (medals/awards shown for 1st and 2nd)
    * Houseguest name is kept visible
    */
@@ -182,7 +183,8 @@
 
   /**
    * Update existing roster tile with finishing badge (immediate feedback)
-   * Badge is placed INSIDE the avatar container (bottom-right overlay)
+   * Badge is placed CENTERED INSIDE the avatar container
+   * Avatar becomes grayscale + semi-transparent
    * Red X is hidden when badge is shown
    * Houseguest name is kept visible
    */
@@ -204,8 +206,8 @@
       return;
     }
 
-    // Hide any existing red X
-    const existingCross = tile.querySelector('.evicted-cross');
+    // Hide any existing red X (via CSS class that hides .redx and .evicted-cross)
+    const existingCross = tile.querySelector('.evicted-cross') || tile.querySelector('.redx');
     if(existingCross){
       existingCross.style.display = 'none';
       console.info(`[eviction-visuals] red X hidden for id=${evictedId}`);
@@ -231,16 +233,23 @@
       return;
     }
 
-    // Create avatar rank badge (positioned inside avatar)
-    const badge = document.createElement('div');
-    badge.className = 'avatar-rank-badge';
+    // Apply grayscale + opacity to avatar image AFTER animation completes
+    const avatarImg = avatarContainer.querySelector('img') || avatarContainer.querySelector('.top-tile-avatar');
+    if(avatarImg){
+      avatarImg.classList.add('avatar-bw-dim');
+      console.info(`[eviction-visuals] avatar grayscale+opacity applied for id=${evictedId}`);
+    }
+
+    // Create avatar rank badge (positioned centered inside avatar)
+    const badge = document.createElement('span');
+    badge.className = 'avatar-rank-badge center';
     badge.textContent = ordinal(rank);
     badge.title = `Finished in ${ordinal(rank)} place`;
 
     // Add badge to avatar container
     avatarContainer.appendChild(badge);
 
-    console.info(`[eviction-visuals] avatar rank badge added to tile id=${evictedId} rank=${ordinal(rank)}`);
+    console.info(`[eviction-visuals] centered avatar rank badge added to tile id=${evictedId} rank=${ordinal(rank)}`);
   }
 
   /**
