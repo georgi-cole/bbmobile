@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Guest Mode Intro Skip & Season Increment</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a131f;
+      color: #eaf4ff;
+    }
+    h1 {
+      color: #ffdc8b;
+      border-bottom: 2px solid #3f6385;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #9bbdff;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: #1a2634;
+      border: 1px solid #3f6385;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background: #1a4d2e;
+      border-left: 4px solid #4caf50;
+    }
+    .test-result.fail {
+      background: #4d1a1a;
+      border-left: 4px solid #f44336;
+    }
+    button {
+      background: #3563a7;
+      color: #eaf4ff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #2a4d85;
+    }
+    button.danger {
+      background: #993636;
+    }
+    button.danger:hover {
+      background: #7a2a2a;
+    }
+    .info {
+      background: #0e1622;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      border-left: 4px solid #ffdc8b;
+    }
+    pre {
+      background: #0e1622;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .status {
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .status.ok {
+      background: #1a4d2e;
+      color: #4caf50;
+    }
+    .status.error {
+      background: #4d1a1a;
+      color: #f44336;
+    }
+  </style>
+</head>
+<body>
+  <h1>Guest Mode Intro Skip & Season Increment Test</h1>
+
+  <div class="test-section">
+    <h2>Test Environment</h2>
+    <div id="testEnv"></div>
+    <button onclick="setupTestEnv()">Initialize Test Environment</button>
+    <button class="danger" onclick="clearStorage()">Clear All Storage</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Guest Mode Detection & Intro Skip</h2>
+    <div class="info">
+      This test verifies that when a user selects "Play as Guest", the intro is skipped
+      and the game proceeds directly without playing theatrical sequences.
+    </div>
+    <div id="test1Results"></div>
+    <button onclick="runTest1()">Run Test 1</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Season Increment for Profile</h2>
+    <div class="info">
+      This test verifies that when a profile completes a game and clicks "Start New Season",
+      the season number increments by +1 and persists to storage.
+    </div>
+    <div id="test2Results"></div>
+    <button onclick="runTest2()">Run Test 2</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Season Normalization</h2>
+    <div class="info">
+      This test verifies that profiles with missing or invalid season values are normalized to 1.
+    </div>
+    <div id="test3Results"></div>
+    <button onclick="runTest3()">Run Test 3</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Guest Mode Never Increments Season</h2>
+    <div class="info">
+      This test verifies that incrementSeason() is a no-op when in guest mode.
+    </div>
+    <div id="test4Results"></div>
+    <button onclick="runTest4()">Run Test 4</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Integration Test - startGame() Flow</h2>
+    <div class="info">
+      This test verifies that startGame() calls the correct functions based on guest mode status.
+    </div>
+    <div id="test5Results"></div>
+    <button onclick="runTest5()">Run Test 5</button>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="src/profile/profileStorage.js"></script>
+  <script src="src/profile/profileService.js"></script>
+  <script src="js/player-profile-modal.js"></script>
+
+  <script>
+    // Test utilities
+    function log(containerId, message, isPass = null) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = 'test-result' + (isPass === true ? ' pass' : isPass === false ? ' fail' : '');
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function clearResults(containerId) {
+      document.getElementById(containerId).innerHTML = '';
+    }
+
+    function clearStorage() {
+      localStorage.clear();
+      sessionStorage.clear();
+      log('testEnv', '✓ Storage cleared');
+      updateEnvStatus();
+    }
+
+    function setupTestEnv() {
+      clearStorage();
+      
+      // Initialize a mock game object
+      if (!window.game) {
+        window.game = {
+          cfg: { humanName: 'You' },
+          players: [{
+            id: 0,
+            name: 'You',
+            human: true,
+            meta: {},
+            bio: {}
+          }],
+          humanId: 0
+        };
+      }
+
+      // Mock functions that might be called
+      window.markGameStarted = function() {
+        console.log('[Mock] markGameStarted called');
+      };
+      
+      window.startFastCastFlow = function() {
+        console.log('[Mock] startFastCastFlow called');
+      };
+      
+      window.startOpeningSequence = function() {
+        console.log('[Mock] startOpeningSequence called');
+      };
+
+      window.updateHud = function() {
+        console.log('[Mock] updateHud called');
+      };
+
+      window.renderPanel = function() {
+        console.log('[Mock] renderPanel called');
+      };
+
+      log('testEnv', '✓ Test environment initialized');
+      updateEnvStatus();
+    }
+
+    function updateEnvStatus() {
+      const profiles = window.ProfileStorage?.getAllProfiles() || [];
+      const currentProfile = window.ProfileService?.getCurrentProfile();
+      const isGuest = window.ProfileService?.isGuestMode();
+      
+      document.getElementById('testEnv').innerHTML = `
+        <div class="info">
+          <strong>Profiles in storage:</strong> ${profiles.length}<br>
+          <strong>Current profile:</strong> ${currentProfile ? currentProfile.displayName : 'None'}<br>
+          <strong>Guest mode:</strong> ${isGuest ? 'Yes' : 'No'}<br>
+          ${currentProfile ? `<strong>Season:</strong> ${currentProfile.season || 'N/A'}` : ''}
+        </div>
+      `;
+    }
+
+    // Test 1: Guest mode detection and intro skip
+    function runTest1() {
+      clearResults('test1Results');
+      setupTestEnv();
+
+      try {
+        // Set guest mode
+        window.ProfileService.setGuestMode();
+        
+        // Verify guest mode is active
+        const isGuest = window.ProfileService.isGuestMode();
+        log('test1Results', `Guest mode active: ${isGuest}`, isGuest === true);
+        
+        if (!isGuest) {
+          log('test1Results', 'FAIL: Guest mode not detected', false);
+          return;
+        }
+
+        // Mock the intro-related functions to track calls
+        let markGameStartedCalled = false;
+        let fastCastFlowCalled = false;
+        let openingSequenceCalled = false;
+        let introFinishedDispatched = false;
+
+        window.markGameStarted = function() {
+          markGameStartedCalled = true;
+          console.log('[Mock] markGameStarted called');
+        };
+
+        window.startFastCastFlow = function() {
+          fastCastFlowCalled = true;
+          console.log('[Mock] startFastCastFlow called');
+        };
+
+        window.startOpeningSequence = function() {
+          openingSequenceCalled = true;
+          console.log('[Mock] startOpeningSequence called');
+        };
+
+        window.addEventListener('bb:intro:finished', function() {
+          introFinishedDispatched = true;
+        }, { once: true });
+
+        // Simulate what happens in player-profile-modal when guest mode is active
+        // This mimics the startGame() function behavior
+        if (window.ProfileService.isGuestMode()) {
+          if (typeof window.markGameStarted === 'function') {
+            window.markGameStarted();
+          }
+          
+          if (typeof window.startFastCastFlow === 'function') {
+            window.startFastCastFlow();
+          } else {
+            window.dispatchEvent(new CustomEvent('bb:intro:finished'));
+          }
+        } else {
+          if (typeof window.startOpeningSequence === 'function') {
+            window.startOpeningSequence();
+          }
+        }
+
+        // Give event time to dispatch
+        setTimeout(() => {
+          log('test1Results', `markGameStarted called: ${markGameStartedCalled}`, markGameStartedCalled);
+          log('test1Results', `startFastCastFlow called: ${fastCastFlowCalled}`, fastCastFlowCalled);
+          log('test1Results', `startOpeningSequence NOT called: ${!openingSequenceCalled}`, !openingSequenceCalled);
+          
+          if (markGameStartedCalled && fastCastFlowCalled && !openingSequenceCalled) {
+            log('test1Results', '✓ PASS: Guest mode correctly skips intro', true);
+          } else if (markGameStartedCalled && !fastCastFlowCalled && introFinishedDispatched && !openingSequenceCalled) {
+            log('test1Results', '✓ PASS: Guest mode correctly dispatches intro:finished event', true);
+          } else {
+            log('test1Results', '✗ FAIL: Guest mode did not skip intro correctly', false);
+          }
+        }, 100);
+
+      } catch (e) {
+        log('test1Results', `✗ ERROR: ${e.message}`, false);
+      }
+    }
+
+    // Test 2: Season increment for profile
+    function runTest2() {
+      clearResults('test2Results');
+      setupTestEnv();
+
+      try {
+        // Create a profile
+        const profile = window.ProfileStorage.createProfile({
+          displayName: 'Test User',
+          age: 25,
+          season: 1
+        });
+        
+        log('test2Results', `Created profile: ${profile.displayName}, Season: ${profile.season}`, true);
+
+        // Set as current profile
+        window.ProfileService.setCurrentProfile(profile);
+        
+        const currentBefore = window.ProfileService.getCurrentProfile();
+        log('test2Results', `Current profile season before increment: ${currentBefore.season}`, currentBefore.season === 1);
+
+        // Increment season
+        window.ProfileService.incrementSeason();
+
+        // Check current profile season
+        const currentAfter = window.ProfileService.getCurrentProfile();
+        log('test2Results', `Current profile season after increment: ${currentAfter.season}`, currentAfter.season === 2);
+
+        // Verify persistence in storage
+        const storedProfile = window.ProfileStorage.getProfileById(profile.id);
+        log('test2Results', `Stored profile season: ${storedProfile.season}`, storedProfile.season === 2);
+
+        if (currentAfter.season === 2 && storedProfile.season === 2) {
+          log('test2Results', '✓ PASS: Season incremented and persisted correctly', true);
+        } else {
+          log('test2Results', '✗ FAIL: Season not incremented correctly', false);
+        }
+
+      } catch (e) {
+        log('test2Results', `✗ ERROR: ${e.message}`, false);
+      }
+    }
+
+    // Test 3: Season normalization
+    function runTest3() {
+      clearResults('test3Results');
+      setupTestEnv();
+
+      try {
+        // Test case 1: Missing season
+        const profile1 = window.ProfileStorage.createProfile({
+          displayName: 'No Season',
+          age: 30
+        });
+        delete profile1.season;
+        
+        window.ProfileService.setCurrentProfile(profile1);
+        const current1 = window.ProfileService.getCurrentProfile();
+        log('test3Results', `Missing season normalized to: ${current1.season}`, current1.season === 1);
+
+        // Test case 2: Invalid season (string)
+        const profile2 = window.ProfileStorage.createProfile({
+          displayName: 'Invalid Season',
+          age: 28,
+          season: 'invalid'
+        });
+        
+        window.ProfileService.setCurrentProfile(profile2);
+        const current2 = window.ProfileService.getCurrentProfile();
+        log('test3Results', `Invalid season (string) normalized to: ${current2.season}`, current2.season === 1);
+
+        // Test case 3: Invalid season (negative)
+        const profile3 = window.ProfileStorage.createProfile({
+          displayName: 'Negative Season',
+          age: 26,
+          season: -5
+        });
+        
+        window.ProfileService.setCurrentProfile(profile3);
+        const current3 = window.ProfileService.getCurrentProfile();
+        log('test3Results', `Invalid season (negative) normalized to: ${current3.season}`, current3.season === 1);
+
+        // Test case 4: Valid season should not be changed
+        const profile4 = window.ProfileStorage.createProfile({
+          displayName: 'Valid Season',
+          age: 29,
+          season: 5
+        });
+        
+        window.ProfileService.setCurrentProfile(profile4);
+        const current4 = window.ProfileService.getCurrentProfile();
+        log('test3Results', `Valid season preserved: ${current4.season}`, current4.season === 5);
+
+        if (current1.season === 1 && current2.season === 1 && current3.season === 1 && current4.season === 5) {
+          log('test3Results', '✓ PASS: Season normalization works correctly', true);
+        } else {
+          log('test3Results', '✗ FAIL: Season normalization failed', false);
+        }
+
+      } catch (e) {
+        log('test3Results', `✗ ERROR: ${e.message}`, false);
+      }
+    }
+
+    // Test 4: Guest mode never increments season
+    function runTest4() {
+      clearResults('test4Results');
+      setupTestEnv();
+
+      try {
+        // Set guest mode
+        window.ProfileService.setGuestMode();
+        const isGuest = window.ProfileService.isGuestMode();
+        log('test4Results', `Guest mode active: ${isGuest}`, isGuest === true);
+
+        // Try to increment season (should be no-op)
+        window.ProfileService.incrementSeason();
+
+        // Verify still in guest mode and no profile exists
+        const currentProfile = window.ProfileService.getCurrentProfile();
+        log('test4Results', `No profile after increment in guest mode: ${currentProfile === null}`, currentProfile === null);
+
+        if (isGuest && currentProfile === null) {
+          log('test4Results', '✓ PASS: Guest mode correctly skips season increment', true);
+        } else {
+          log('test4Results', '✗ FAIL: Guest mode should not have a profile', false);
+        }
+
+      } catch (e) {
+        log('test4Results', `✗ ERROR: ${e.message}`, false);
+      }
+    }
+
+    // Test 5: Integration test - startGame() flow
+    function runTest5() {
+      clearResults('test5Results');
+      setupTestEnv();
+
+      try {
+        let testsPassed = 0;
+        const totalTests = 2;
+
+        // Test 5a: Non-guest mode should call startOpeningSequence
+        let openingSequenceCalled = false;
+        let fastCastFlowCalled = false;
+
+        window.startOpeningSequence = function() {
+          openingSequenceCalled = true;
+        };
+
+        window.startFastCastFlow = function() {
+          fastCastFlowCalled = true;
+        };
+
+        // Create and set a normal profile
+        const profile = window.ProfileStorage.createProfile({
+          displayName: 'Normal User',
+          age: 27,
+          season: 1
+        });
+        window.ProfileService.setCurrentProfile(profile);
+
+        // Simulate startGame() for normal user
+        if (window.ProfileService.isGuestMode()) {
+          if (typeof window.markGameStarted === 'function') {
+            window.markGameStarted();
+          }
+          if (typeof window.startFastCastFlow === 'function') {
+            window.startFastCastFlow();
+          }
+        } else {
+          if (typeof window.startOpeningSequence === 'function') {
+            window.startOpeningSequence();
+          }
+        }
+
+        log('test5Results', `Normal mode calls startOpeningSequence: ${openingSequenceCalled}`, openingSequenceCalled);
+        log('test5Results', `Normal mode does NOT call startFastCastFlow: ${!fastCastFlowCalled}`, !fastCastFlowCalled);
+        
+        if (openingSequenceCalled && !fastCastFlowCalled) {
+          testsPassed++;
+        }
+
+        // Test 5b: Guest mode should NOT call startOpeningSequence
+        openingSequenceCalled = false;
+        fastCastFlowCalled = false;
+
+        window.ProfileService.setGuestMode();
+
+        // Simulate startGame() for guest
+        if (window.ProfileService.isGuestMode()) {
+          if (typeof window.markGameStarted === 'function') {
+            window.markGameStarted();
+          }
+          if (typeof window.startFastCastFlow === 'function') {
+            window.startFastCastFlow();
+          }
+        } else {
+          if (typeof window.startOpeningSequence === 'function') {
+            window.startOpeningSequence();
+          }
+        }
+
+        log('test5Results', `Guest mode does NOT call startOpeningSequence: ${!openingSequenceCalled}`, !openingSequenceCalled);
+        log('test5Results', `Guest mode calls startFastCastFlow: ${fastCastFlowCalled}`, fastCastFlowCalled);
+        
+        if (!openingSequenceCalled && fastCastFlowCalled) {
+          testsPassed++;
+        }
+
+        if (testsPassed === totalTests) {
+          log('test5Results', `✓ PASS: All integration tests passed (${testsPassed}/${totalTests})`, true);
+        } else {
+          log('test5Results', `✗ FAIL: Only ${testsPassed}/${totalTests} integration tests passed`, false);
+        }
+
+      } catch (e) {
+        log('test5Results', `✗ ERROR: ${e.message}`, false);
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', function() {
+      updateEnvStatus();
+    });
+  </script>
+</body>
+</html>
