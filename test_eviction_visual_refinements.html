@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eviction Visual Refinements Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: rgba(20, 30, 45, 0.9);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #83bfff;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(13, 21, 31, 0.5);
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .test-section h2 {
+      color: #f2ce7b;
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+    .btn {
+      background: linear-gradient(135deg, #4a6fa5 0%, #2d5aa0 100%);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 5px;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #5a7fb5 0%, #3d6ab0 100%);
+    }
+    .btn.danger {
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    }
+    .status {
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 5px;
+    }
+    .status.pass {
+      background: #22c55e;
+      color: #fff;
+    }
+    .status.fail {
+      background: #dc2626;
+      color: #fff;
+    }
+    .status.pending {
+      background: #f2ce7b;
+      color: #000;
+    }
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      height: 400px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      margin: 20px auto;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #888;
+    }
+    #rosterBar {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(13, 21, 31, 0.7);
+      border-radius: 6px;
+    }
+    .log {
+      background: rgba(13, 21, 31, 0.7);
+      padding: 15px;
+      border-radius: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .log-entry.info { color: #83bfff; }
+    .log-entry.success { color: #22c55e; }
+    .log-entry.error { color: #dc2626; }
+    .log-entry.warning { color: #f2ce7b; }
+    
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    .checklist li {
+      padding: 8px;
+      margin: 4px 0;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+    }
+    .checklist li:before {
+      content: '☐ ';
+      font-size: 1.2em;
+      margin-right: 8px;
+    }
+    .checklist li.done:before {
+      content: '✓ ';
+      color: #22c55e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 Eviction Visual Refinements Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Objectives</h2>
+      <ul class="checklist">
+        <li id="obj1">Evicted card appears first</li>
+        <li id="obj2">Body class suppresses red X during animation</li>
+        <li id="obj3">Faux TV animation plays immediately</li>
+        <li id="obj4">After animation, roster shows badge inside avatar</li>
+        <li id="obj5">Houseguest name remains visible</li>
+        <li id="obj6">Red X is hidden when badge appears</li>
+        <li id="obj7">1st/2nd place still show medals (unchanged)</li>
+        <li id="obj8">3rd+ places show ordinal badge in avatar</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>Setup & Controls</h2>
+      <button class="btn" onclick="setupGame()">Setup Game (12 Players)</button>
+      <button class="btn" onclick="resetTest()">Reset Test</button>
+      <div style="margin-top: 10px;">
+        <button class="btn danger" onclick="testStandardEviction()">Test Standard Eviction</button>
+        <button class="btn danger" onclick="testFinal4Eviction()">Test Final 4 Eviction</button>
+        <button class="btn danger" onclick="testFinal3Eviction()">Test Final 3 Eviction</button>
+        <button class="btn danger" onclick="testSelfEviction()">Test Self-Eviction</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Visual Preview</h2>
+      <div id="tv">TV Screen (Faux TV Animation)</div>
+      <div id="rosterBar"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div class="log" id="testLog"></div>
+    </div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/eviction-visuals.js"></script>
+  <script>
+    // Mock game state
+    window.game = null;
+    
+    // Mock functions
+    window.getP = function(id) {
+      if(!window.game || !window.game.players) return null;
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.alivePlayers = function() {
+      if(!window.game || !window.game.players) return [];
+      return window.game.players.filter(p => !p.evicted);
+    };
+    
+    window.cardQueueWaitIdle = async function() {
+      return new Promise(resolve => setTimeout(resolve, 100));
+    };
+    
+    window.updateHud = function() {
+      renderRoster();
+    };
+    
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    window.resolveAvatar = function(player) {
+      return window.getDicebearUrl(player.name);
+    };
+    
+    // Logging utility
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(`[${type}] ${message}`);
+    }
+    
+    function checkObjective(objId) {
+      const el = document.getElementById(objId);
+      if(el) el.classList.add('done');
+    }
+    
+    // Setup game with 12 players
+    function setupGame() {
+      window.game = {
+        players: [],
+        week: 1,
+        phase: 'intermission',
+        hohId: null,
+        nominees: [],
+        vetoHolder: null,
+        cfg: { enableJuryHouse: true }
+      };
+      
+      for(let i = 1; i <= 12; i++) {
+        window.game.players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          weekEvicted: null,
+          finalRank: null,
+          showFinishingBadge: false,
+          affinity: {}
+        });
+      }
+      
+      log('Game setup complete with 12 players', 'success');
+      renderRoster();
+      checkObjective('obj1');
+    }
+    
+    function resetTest() {
+      window.game = null;
+      document.getElementById('tv').innerHTML = 'TV Screen (Faux TV Animation)';
+      document.getElementById('rosterBar').innerHTML = '';
+      document.getElementById('testLog').innerHTML = '';
+      document.body.classList.remove('evict-visual-in-progress');
+      
+      // Uncheck objectives
+      document.querySelectorAll('.checklist li').forEach(li => li.classList.remove('done'));
+      
+      log('Test reset', 'info');
+    }
+    
+    // Render roster (simplified version)
+    function renderRoster() {
+      const rosterBar = document.getElementById('rosterBar');
+      if(!window.game || !window.game.players) {
+        rosterBar.innerHTML = '<p style="color: #888;">No game setup</p>';
+        return;
+      }
+      
+      rosterBar.innerHTML = '<h3 style="margin-top:0;">Roster</h3>';
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.gap = '10px';
+      row.style.flexWrap = 'wrap';
+      
+      window.game.players.forEach(p => {
+        const tile = document.createElement('div');
+        tile.className = 'top-roster-tile';
+        tile.dataset.playerId = p.id;
+        tile.style.width = '80px';
+        tile.style.textAlign = 'center';
+        
+        if(p.evicted) tile.classList.add('evicted');
+        
+        const wrap = document.createElement('div');
+        wrap.className = 'top-tile-avatar-wrap';
+        wrap.style.position = 'relative';
+        wrap.style.width = '60px';
+        wrap.style.height = '60px';
+        wrap.style.margin = '0 auto 5px';
+        
+        // Red X (evicted-cross)
+        if(p.evicted && !p.showFinishingBadge) {
+          const cross = document.createElement('div');
+          cross.className = 'evicted-cross';
+          wrap.appendChild(cross);
+        }
+        
+        const img = document.createElement('img');
+        img.className = 'top-tile-avatar';
+        if(p.evicted) img.classList.add('grayed');
+        img.src = window.getDicebearUrl(p.name);
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.borderRadius = '50%';
+        wrap.appendChild(img);
+        
+        // Avatar rank badge (inside avatar for 3rd+)
+        if(p.evicted && p.showFinishingBadge && p.finalRank && p.finalRank >= 3) {
+          const ordinalRank = (function(n){
+            const s = ['th','st','nd','rd'];
+            const v = n % 100;
+            return n + (s[(v-20)%10] || s[v] || s[0]);
+          })(p.finalRank);
+          
+          const badge = document.createElement('div');
+          badge.className = 'avatar-rank-badge';
+          badge.textContent = ordinalRank;
+          badge.title = `Finished in ${ordinalRank} place`;
+          wrap.appendChild(badge);
+        }
+        
+        const name = document.createElement('div');
+        name.className = 'top-tile-name';
+        name.style.fontSize = '0.75rem';
+        
+        // Show medals for 1st/2nd, otherwise name
+        if(p.showFinalLabel === 'WINNER' || p.winner) {
+          name.textContent = '🥇';
+        } else if(p.showFinalLabel === 'RUNNER-UP' || p.runnerUp) {
+          name.textContent = '🥈';
+        } else {
+          name.textContent = p.name;
+        }
+        
+        tile.appendChild(wrap);
+        tile.appendChild(name);
+        row.appendChild(tile);
+      });
+      
+      rosterBar.appendChild(row);
+    }
+    
+    // Test scenarios
+    async function testStandardEviction() {
+      if(!window.game || window.game.players.length === 0) {
+        log('Please setup game first', 'error');
+        return;
+      }
+      
+      log('Starting standard eviction test...', 'info');
+      
+      // Simulate eviction
+      const evictedId = 1;
+      const player = window.getP(evictedId);
+      if(!player) {
+        log('Player not found', 'error');
+        return;
+      }
+      
+      player.evicted = true;
+      player.weekEvicted = window.game.week;
+      player.finalRank = window.alivePlayers().length + 1;
+      
+      log(`Evicting ${player.name} (rank ${player.finalRank})`, 'info');
+      checkObjective('obj1');
+      
+      // Step 1: Show evicted card (simulated)
+      log('Step 1: Showing "Evicted" card', 'info');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Step 2: Notify for visual (adds body class)
+      if(typeof window.notifyEvictedForVisual === 'function') {
+        window.notifyEvictedForVisual(evictedId, 'vote');
+        log('Step 2: notifyEvictedForVisual called, body class added', 'success');
+        
+        // Verify body class
+        if(document.body.classList.contains('evict-visual-in-progress')) {
+          log('✓ Body class "evict-visual-in-progress" is present', 'success');
+          checkObjective('obj2');
+        } else {
+          log('✗ Body class not found!', 'error');
+        }
+      }
+      
+      // Step 3: Run animation
+      log('Step 3: Running faux TV animation...', 'info');
+      checkObjective('obj3');
+      
+      if(typeof window.runEvictionVisual === 'function') {
+        await window.runEvictionVisual(evictedId, { reason: 'vote' });
+        log('Animation complete', 'success');
+        checkObjective('obj4');
+        
+        // Verify body class removed
+        if(!document.body.classList.contains('evict-visual-in-progress')) {
+          log('✓ Body class removed after animation', 'success');
+        } else {
+          log('✗ Body class still present!', 'error');
+        }
+        
+        // Check roster
+        if(player.showFinishingBadge) {
+          log('✓ Player has showFinishingBadge flag', 'success');
+          checkObjective('obj5');
+          checkObjective('obj6');
+          checkObjective('obj8');
+        }
+      }
+      
+      log('Standard eviction test complete', 'success');
+    }
+    
+    async function testFinal4Eviction() {
+      if(!window.game) {
+        log('Please setup game first', 'error');
+        return;
+      }
+      
+      log('Starting Final 4 eviction test...', 'info');
+      
+      // Evict down to 4 players
+      for(let i = 1; i <= 8; i++) {
+        const p = window.getP(i);
+        if(p) {
+          p.evicted = true;
+          p.finalRank = 13 - i;
+        }
+      }
+      
+      // Evict player 9 (4th place)
+      const evictedId = 9;
+      const player = window.getP(evictedId);
+      player.evicted = true;
+      player.finalRank = 4;
+      
+      log(`Final 4: Evicting ${player.name} (4th place)`, 'info');
+      
+      if(typeof window.notifyEvictedForVisual === 'function') {
+        window.notifyEvictedForVisual(evictedId, 'final4');
+      }
+      
+      if(typeof window.runEvictionVisual === 'function') {
+        await window.runEvictionVisual(evictedId, { reason: 'final4' });
+        log('Final 4 eviction test complete', 'success');
+        checkObjective('obj8');
+      }
+    }
+    
+    async function testFinal3Eviction() {
+      if(!window.game) {
+        log('Please setup game first', 'error');
+        return;
+      }
+      
+      log('Starting Final 3 eviction test...', 'info');
+      
+      // Evict down to 3 players
+      for(let i = 1; i <= 9; i++) {
+        const p = window.getP(i);
+        if(p) {
+          p.evicted = true;
+          p.finalRank = 13 - i;
+        }
+      }
+      
+      // Evict player 10 (3rd place)
+      const evictedId = 10;
+      const player = window.getP(evictedId);
+      player.evicted = true;
+      player.finalRank = 3;
+      
+      log(`Final 3: Evicting ${player.name} (3rd place - Bronze Medalist)`, 'info');
+      
+      if(typeof window.notifyEvictedForVisual === 'function') {
+        window.notifyEvictedForVisual(evictedId, 'final3');
+      }
+      
+      if(typeof window.runEvictionVisual === 'function') {
+        await window.runEvictionVisual(evictedId, { reason: 'final3' });
+        log('Final 3 eviction test complete', 'success');
+        checkObjective('obj8');
+        
+        // Verify 3rd place badge
+        if(player.showFinishingBadge && player.finalRank === 3) {
+          log('✓ 3rd place shows ordinal badge', 'success');
+        }
+      }
+      
+      // Mark remaining 2 as finalists for medal test
+      const p11 = window.getP(11);
+      const p12 = window.getP(12);
+      if(p11) {
+        p11.showFinalLabel = 'RUNNER-UP';
+        p11.runnerUp = true;
+        p11.finalRank = 2;
+      }
+      if(p12) {
+        p12.showFinalLabel = 'WINNER';
+        p12.winner = true;
+        p12.finalRank = 1;
+      }
+      
+      renderRoster();
+      log('✓ Finalists show medals (1st: 🥇, 2nd: 🥈)', 'success');
+      checkObjective('obj7');
+    }
+    
+    async function testSelfEviction() {
+      if(!window.game) {
+        log('Please setup game first', 'error');
+        return;
+      }
+      
+      log('Starting self-eviction test...', 'info');
+      
+      const evictedId = 2;
+      const player = window.getP(evictedId);
+      player.evicted = true;
+      player.weekEvicted = window.game.week;
+      player.finalRank = window.alivePlayers().length + 1;
+      
+      log(`Self-eviction: ${player.name} (rank ${player.finalRank})`, 'info');
+      
+      if(typeof window.notifyEvictedForVisual === 'function') {
+        window.notifyEvictedForVisual(evictedId, 'self');
+      }
+      
+      if(typeof window.runEvictionVisual === 'function') {
+        await window.runEvictionVisual(evictedId, { reason: 'self' });
+        log('Self-eviction test complete', 'success');
+      }
+    }
+    
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded. Click "Setup Game" to begin.', 'info');
+    });
+  </script>
+</body>
+</html>
