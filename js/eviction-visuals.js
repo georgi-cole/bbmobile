@@ -234,8 +234,15 @@
     }
 
     // Apply grayscale + opacity to avatar image AFTER animation completes
-    const avatarImg = avatarContainer.querySelector('img') || avatarContainer.querySelector('.top-tile-avatar');
-    if(avatarImg){
+    let avatarImg = avatarContainer.querySelector('img');
+    // Only apply to <img> elements, never to containers
+    if (!avatarImg) {
+      const maybeImg = avatarContainer.querySelector('.top-tile-avatar');
+      if (maybeImg && maybeImg.tagName && maybeImg.tagName.toLowerCase() === 'img') {
+        avatarImg = maybeImg;
+      }
+    }
+    if (avatarImg) {
       avatarImg.classList.add('avatar-bw-dim');
       console.info(`[eviction-visuals] avatar grayscale+opacity applied for id=${evictedId}`);
     }
