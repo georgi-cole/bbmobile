@@ -614,6 +614,9 @@ header.innerHTML = `
 
       const wrap=document.createElement('div'); wrap.className='top-tile-avatar-wrap';
       
+      // Add position:relative to wrap for absolute positioning of avatar badge
+      wrap.style.position = 'relative';
+      
       // Status checks
       const hasHOH = !!p.hoh;
       const hasVeto = game.vetoHolder===p.id;
@@ -654,6 +657,24 @@ header.innerHTML = `
       img.onerror=function(){ this.onerror=null; this.src=FALLBACK; };
       wrap.appendChild(img);
 
+      // Add finishing place badge inside avatar for ranks ≥ 3
+      // This appears in the avatar container, not as a label replacement
+      if(p.evicted && p.showFinishingBadge && p.finalRank && p.finalRank >= 3){
+        const ordinalRank = (function(n){
+          const s = ['th','st','nd','rd'];
+          const v = n % 100;
+          return n + (s[(v-20)%10] || s[v] || s[0]);
+        })(p.finalRank);
+        const badge = document.createElement('div');
+        badge.className = 'avatar-rank-badge';
+        badge.textContent = ordinalRank;
+        badge.title = `Finished in ${ordinalRank} place`;
+        wrap.appendChild(badge);
+        
+        // Update aria label to include rank
+        ariaLabel = `${p.name} (Finished ${ordinalRank})`;
+      }
+
       // Name/Status label - show icons or text that replaces the name
       const name=document.createElement('div'); 
       name.className='top-tile-name';
@@ -662,7 +683,8 @@ header.innerHTML = `
       let statusClass = '';
       let ariaLabel = p.name;
       
-      // Label precedence: WINNER > RUNNER-UP > FINISHING BADGE (≥3rd) > NOM > HOH/POV icons > name
+      // Label precedence: WINNER > RUNNER-UP > NOM > HOH/POV icons > name
+      // Note: FINISHING BADGE (≥3rd) is now rendered inside avatar, not as label
       if(isWinner){
         labelText = '🥇';
         statusClass = 'status-icon-label medal-winner';
@@ -671,16 +693,6 @@ header.innerHTML = `
         labelText = '🥈';
         statusClass = 'status-icon-label medal-runner-up';
         ariaLabel = `${p.name} (Runner-Up)`;
-      } else if(p.evicted && p.showFinishingBadge && p.finalRank && p.finalRank >= 3){
-        // Show ordinal finishing badge for evicted players ranked 3rd or lower
-        const ordinalRank = (function(n){
-          const s = ['th','st','nd','rd'];
-          const v = n % 100;
-          return n + (s[(v-20)%10] || s[v] || s[0]);
-        })(p.finalRank);
-        labelText = ordinalRank;
-        statusClass = 'status-finishing-badge';
-        ariaLabel = `${p.name} (Finished ${ordinalRank})`;
       } else if(hasNom){
         labelText = 'NOM';
         statusClass = 'status-nom';

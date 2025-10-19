@@ -168,14 +168,14 @@
    * @param {object} context - Phase context
    * @returns {boolean} Success
    */
-  function handleNomineeSelfEviction(playerId, context){
+  async function handleNomineeSelfEviction(playerId, context){
     const g = global.game;
     
     console.info('[self-eviction] Handling nominee self-eviction', context);
 
     if(context.beforeVeto){
       // Nominee self-evicts before veto ceremony: HOH must renominate
-      processEviction(playerId, 'self');
+      await processEviction(playerId, 'self');
       
       // Clear the self-evicting nominee from nominations
       if(Array.isArray(g.nominees)){
@@ -223,7 +223,7 @@
         console.info('[self-eviction] Invalidated votes due to nominee self-eviction');
       }
       
-      processEviction(playerId, 'self');
+      await processEviction(playerId, 'self');
       
       // Clear all badges
       clearAllBadges();
@@ -243,7 +243,7 @@
       return true;
     } else if(context.duringVeto){
       // During veto ceremony: process eviction and continue week
-      processEviction(playerId, 'self');
+      await processEviction(playerId, 'self');
       
       // Remove from nominees
       if(Array.isArray(g.nominees)){
@@ -264,12 +264,12 @@
    * @param {object} context - Phase context
    * @returns {boolean} Success
    */
-  function handleHOHSelfEviction(playerId, context){
+  async function handleHOHSelfEviction(playerId, context){
     const g = global.game;
     
     console.info('[self-eviction] Handling HOH self-eviction');
 
-    processEviction(playerId, 'self');
+    await processEviction(playerId, 'self');
     
     // Clear nominations and HOH badge
     g.hohId = null;
@@ -302,14 +302,14 @@
    * @param {object} context - Phase context
    * @returns {boolean} Success
    */
-  function handlePOVSelfEviction(playerId, context){
+  async function handlePOVSelfEviction(playerId, context){
     const g = global.game;
     
     console.info('[self-eviction] Handling POV holder self-eviction', context);
 
     // Special F4 handling
     if(context.isF4){
-      processEviction(playerId, 'self');
+      await processEviction(playerId, 'self');
       
       // At F4, POV holder self-evicting skips the week and proceeds to F3
       if(typeof global.showCard === 'function'){
@@ -338,7 +338,7 @@
 
     if(context.beforeVeto || context.phase === 'veto_comp'){
       // Pre-ceremony: skip veto ceremony
-      processEviction(playerId, 'self');
+      await processEviction(playerId, 'self');
       
       g.vetoHolder = null;
       
@@ -362,7 +362,7 @@
       return true;
     } else if(context.afterVeto || context.duringVeto){
       // Post-ceremony: continue week normally
-      processEviction(playerId, 'self');
+      await processEviction(playerId, 'self');
       
       g.vetoHolder = null;
       
@@ -389,10 +389,10 @@
    * @param {object} context - Phase context
    * @returns {boolean} Success
    */
-  function handleNonRoleSelfEviction(playerId, context){
+  async function handleNonRoleSelfEviction(playerId, context){
     console.info('[self-eviction] Handling non-role self-eviction');
 
-    processEviction(playerId, 'self');
+    await processEviction(playerId, 'self');
     
     if(typeof global.showCard === 'function'){
       const player = global.getP ? global.getP(playerId) : null;
@@ -416,7 +416,7 @@
    * @param {number} playerId - Player ID
    * @param {string} reason - Reason for eviction
    */
-  function processEviction(playerId, reason){
+  async function processEviction(playerId, reason){
     const g = global.game;
     const player = global.getP ? global.getP(playerId) : null;
     if(!player) return;
@@ -430,6 +430,11 @@
     player.finalRank = aliveCount;
     
     console.info(`[self-eviction] Processed eviction for ${player.name}, finalRank=${player.finalRank}`);
+
+    // Notify that visual is pending (suppress interim roster updates)
+    if(typeof global.notifyEvictedForVisual === 'function'){
+      global.notifyEvictedForVisual(playerId, 'self');
+    }
 
     // Add to jury if applicable
     const JURY_START_AT = 9;
@@ -457,6 +462,15 @@
     // Update PlayerService with current alive players after self-eviction
     if(typeof global.PlayerService?.setAlivePlayers === 'function' && g.players){
       global.PlayerService.setAlivePlayers(g.players);
+    }
+
+    // Run eviction visual enhancement (avatar animation + roster badge update)
+    if(typeof global.runEvictionVisual === 'function'){
+      try{
+        await global.runEvictionVisual(playerId, { reason: 'self' });
+      }catch(e){
+        console.error('[self-eviction] visual enhancement failed:', e);
+      }
     }
 
     // Update UI

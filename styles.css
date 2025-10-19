@@ -1625,6 +1625,39 @@ button:focus-visible,.btn:focus-visible{
   white-space:nowrap;
 }
 
+/* Avatar Rank Badge - positioned inside avatar container (bottom-right) */
+.avatar-rank-badge{
+  position:absolute;
+  bottom:2px;
+  right:2px;
+  display:inline-block;
+  padding:3px 8px;
+  border-radius:10px;
+  font-size:0.65rem;
+  font-weight:800;
+  letter-spacing:0.3px;
+  color:#fff;
+  background:linear-gradient(135deg, #555, #777);
+  border:2px solid rgba(255,255,255,0.4);
+  box-shadow:0 2px 6px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.15);
+  text-shadow:0 1px 2px rgba(0,0,0,0.6);
+  animation:badgeFadeIn 0.5s ease-out;
+  white-space:nowrap;
+  z-index:5;
+  pointer-events:none;
+  line-height:1;
+}
+
+/* Suppress interim roster visuals during eviction animation */
+body.evict-visual-in-progress .evicted-cross{
+  display:none !important;
+}
+
+body.evict-visual-in-progress .top-tile-avatar.grayed{
+  filter:none !important;
+  opacity:1 !important;
+}
+
 @keyframes badgeFadeIn{
   0%{ opacity:0; transform:scale(0.8); }
   100%{ opacity:1; transform:scale(1); }
