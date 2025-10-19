@@ -672,71 +672,6 @@
   function shouldShowLegacyMemories(){
     return !(global.SocialManeuvers?.isEnabled?.());
   }
-  
-  // Show blinking LOW BATTERY overlay and auto-advance after 3 seconds
-  function showLowBatteryOverlay(){
-    const g = global.game; if(!g) return;
-    
-    // Create overlay
-    const overlay = document.createElement('div');
-    overlay.id = 'lowBatteryOverlay';
-    overlay.style.cssText = `
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.8);
-      z-index: 9999;
-      pointer-events: none;
-      animation: lowBatteryBlink 0.8s ease-in-out infinite;
-    `;
-    
-    const message = document.createElement('div');
-    message.style.cssText = `
-      font-size: 3em;
-      font-weight: bold;
-      color: #ff6d6d;
-      text-shadow: 0 0 20px rgba(255, 109, 109, 0.8);
-      text-transform: uppercase;
-      letter-spacing: 4px;
-    `;
-    message.textContent = '⚡ LOW BATTERY ⚡';
-    
-    overlay.appendChild(message);
-    document.body.appendChild(overlay);
-    
-    console.info('[social.js] 🔋 LOW BATTERY overlay displayed - auto-advancing in 3s');
-    
-    // Auto-advance after 3 seconds
-    setTimeout(() => {
-      overlay.remove();
-      
-      // Use scheduleFastAdvance shim or fallback
-      if(typeof window.scheduleFastAdvance === 'function'){
-        window.scheduleFastAdvance(800);
-        console.info('[social.js] ✓ Auto-advance triggered via scheduleFastAdvance');
-      } else if(global.SocialManeuvers?.scheduleFastAdvanceFallback){
-        global.SocialManeuvers.scheduleFastAdvanceFallback(800);
-        console.info('[social.js] ✓ Auto-advance triggered via fallback');
-      } else {
-        console.warn('[social.js] No scheduleFastAdvance method available');
-      }
-    }, 3000);
-  }
-  
-  // Add CSS animation for low battery blink
-  if(!document.getElementById('lowBatteryStyle')){
-    const style = document.createElement('style');
-    style.id = 'lowBatteryStyle';
-    style.textContent = `
-      @keyframes lowBatteryBlink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.3; }
-      }
-    `;
-    document.head.appendChild(style);
-  }
 
   function renderSocialPhase(panel){
     const g=global.game; if(!panel || !g) return;
@@ -745,15 +680,6 @@
     if(!shouldShowLegacyMemories()){
       console.info('[social.js] Social Maneuvers enabled - suppressing legacy UI/simulation/decisions');
       panel.innerHTML=''; // Clear/hide panel
-      
-      // Check for zero energy entry and show LOW BATTERY overlay
-      if(global.SocialManeuvers?.seedPhaseResources){
-        const result = global.SocialManeuvers.seedPhaseResources();
-        if(result && result.seeded && result.energy === 0){
-          console.info('[social.js] 🔋 Zero energy detected on phase entry - showing LOW BATTERY overlay');
-          showLowBatteryOverlay();
-        }
-      }
       
       // Start launcher observer
       if(global.SocialLauncherBootstrap?.startLauncherObserver){
