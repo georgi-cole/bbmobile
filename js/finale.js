@@ -151,6 +151,21 @@
     const name = g.safeName?.(winnerId) || (g.getP?.(winnerId)?.name ?? 'Winner');
     const nameEl=dim.querySelector('#cinWinName'); if(nameEl) nameEl.textContent=name;
     
+    // Mark game as completed for season increment logic
+    try {
+      localStorage.setItem('bb.lastGameCompleted', '1');
+      // Store the profile ID that completed the game (if available)
+      if (g.ProfileService && !g.ProfileService.isGuestMode()) {
+        const profile = g.ProfileService.getCurrentProfile();
+        if (profile && profile.id) {
+          localStorage.setItem('bb.lastGameCompletedProfileId', profile.id);
+          console.info('[finale] marked game as completed for profile:', profile.id);
+        }
+      }
+    } catch (e) {
+      console.warn('[finale] failed to mark game as completed:', e);
+    }
+    
     // Autoplay outro video after 5 seconds only on first call (unless already started via CREDITS button)
     // Check if outro has already been autoplayed by checking a persistent flag
     if(!g.__outroStarted && !g.__outroAutoPlayed){

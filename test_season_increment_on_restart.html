@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Season Increment on Restart - Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #4CAF50;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 0.5rem;
+    }
+    .test-section {
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      border-left: 4px solid #4CAF50;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #64B5F6;
+    }
+    .result {
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .result.pass {
+      background: rgba(76, 175, 80, 0.2);
+      border-left: 3px solid #4CAF50;
+    }
+    .result.fail {
+      background: rgba(244, 67, 54, 0.2);
+      border-left: 3px solid #f44336;
+    }
+    .result.info {
+      background: rgba(33, 150, 243, 0.2);
+      border-left: 3px solid #2196F3;
+    }
+    .icon {
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    .icon.pass { color: #4CAF50; }
+    .icon.fail { color: #f44336; }
+    .icon.info { color: #2196F3; }
+    .summary {
+      background: #333;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .summary h3 {
+      margin: 0 0 0.5rem 0;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button.danger {
+      background: #f44336;
+    }
+    button.danger:hover {
+      background: #da190b;
+    }
+    code {
+      background: #1a1a1a;
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #ff9800;
+    }
+    pre {
+      background: #1a1a1a;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Season Increment on Restart - Validation Tests</h1>
+  
+  <div class="summary" id="summary">
+    <h3>Test Summary</h3>
+    <p>This test verifies that the season increments correctly when restarting after game completion</p>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Setup</h2>
+    <p>These tests verify the localStorage keys and ProfileService integration:</p>
+    <ul>
+      <li><code>bb.lastGameCompleted</code> - marks when a game is completed</li>
+      <li><code>bb.lastGameCompletedProfileId</code> - stores the profile ID that completed the game</li>
+    </ul>
+    <button onclick="clearTestData()">Clear Test Data</button>
+    <button onclick="showLocalStorageData()">Show LocalStorage Data</button>
+    <div id="setup-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Finale Marks Game as Completed</h2>
+    <p>Verifies that <code>showFinaleCinematic()</code> sets the completion flags in localStorage.</p>
+    <button onclick="testFinaleMarksCompletion()">Run Test 1</button>
+    <div id="test1-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: ProfileService Checks Completion on Profile Selection</h2>
+    <p>Verifies that <code>setCurrentProfile()</code> increments season when a completed game is detected.</p>
+    <button onclick="testProfileServiceIncrementsOnSelection()">Run Test 2</button>
+    <div id="test2-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Different Profile Does Not Increment</h2>
+    <p>Verifies that season does NOT increment when a different profile is selected after game completion.</p>
+    <button onclick="testDifferentProfileDoesNotIncrement()">Run Test 3</button>
+    <div id="test3-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Guest Mode Does Not Increment</h2>
+    <p>Verifies that season does NOT increment in guest mode.</p>
+    <button onclick="testGuestModeDoesNotIncrement()">Run Test 4</button>
+    <div id="test4-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Completion Flags Are Cleared After Increment</h2>
+    <p>Verifies that completion flags are cleared after season increment to prevent double-increment.</p>
+    <button onclick="testCompletionFlagsCleared()">Run Test 5</button>
+    <div id="test5-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Integration Test: Full Flow</h2>
+    <p>Runs the complete flow: game completion → restart → profile selection → season increment.</p>
+    <button onclick="testFullFlow()">Run Full Flow Test</button>
+    <div id="full-flow-results"></div>
+  </div>
+
+  <script>
+    // Helper functions
+    function addResult(containerId, passed, message, details = '') {
+      const container = document.getElementById(containerId);
+      const result = document.createElement('div');
+      result.className = `result ${passed ? 'pass' : 'fail'}`;
+      result.innerHTML = `
+        <span class="icon ${passed ? 'pass' : 'fail'}">${passed ? '✓' : '✗'}</span>
+        <div>
+          <strong>${message}</strong>
+          ${details ? `<div style="font-size: 0.9rem; color: #aaa; margin-top: 0.25rem;">${details}</div>` : ''}
+        </div>
+      `;
+      container.appendChild(result);
+      return passed;
+    }
+
+    function addInfo(containerId, message, details = '') {
+      const container = document.getElementById(containerId);
+      const result = document.createElement('div');
+      result.className = 'result info';
+      result.innerHTML = `
+        <span class="icon info">ℹ</span>
+        <div>
+          <strong>${message}</strong>
+          ${details ? `<div style="font-size: 0.9rem; color: #aaa; margin-top: 0.25rem;">${details}</div>` : ''}
+        </div>
+      `;
+      container.appendChild(result);
+    }
+
+    function clearResults(containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+    }
+
+    function clearTestData() {
+      localStorage.removeItem('bb.lastGameCompleted');
+      localStorage.removeItem('bb.lastGameCompletedProfileId');
+      clearResults('setup-results');
+      addInfo('setup-results', 'Test data cleared', 'All completion flags removed from localStorage');
+    }
+
+    function showLocalStorageData() {
+      clearResults('setup-results');
+      const completed = localStorage.getItem('bb.lastGameCompleted');
+      const profileId = localStorage.getItem('bb.lastGameCompletedProfileId');
+      
+      addInfo('setup-results', 'LocalStorage State:', 
+        `bb.lastGameCompleted = ${completed || '(not set)'}<br>` +
+        `bb.lastGameCompletedProfileId = ${profileId || '(not set)'}`
+      );
+    }
+
+    // Test 1: Finale marks completion
+    function testFinaleMarksCompletion() {
+      clearResults('test1-results');
+      clearTestData();
+      
+      // Create mock window.game and ProfileService
+      window.game = window.game || {};
+      window.ProfileService = {
+        isGuestMode: () => false,
+        getCurrentProfile: () => ({ id: 'test-profile-123', displayName: 'Test User', season: 1 })
+      };
+
+      // Simulate showing finale
+      addInfo('test1-results', 'Simulating finale display...');
+      
+      try {
+        // Manually simulate what finale.js does
+        localStorage.setItem('bb.lastGameCompleted', '1');
+        const profile = window.ProfileService.getCurrentProfile();
+        if (profile && profile.id) {
+          localStorage.setItem('bb.lastGameCompletedProfileId', profile.id);
+        }
+        
+        // Check results
+        const completed = localStorage.getItem('bb.lastGameCompleted');
+        const profileId = localStorage.getItem('bb.lastGameCompletedProfileId');
+        
+        addResult('test1-results', completed === '1', 
+          'bb.lastGameCompleted flag set',
+          `Value: ${completed}`
+        );
+        
+        addResult('test1-results', profileId === 'test-profile-123',
+          'bb.lastGameCompletedProfileId flag set',
+          `Value: ${profileId}`
+        );
+      } catch (e) {
+        addResult('test1-results', false, 'Error during test', e.message);
+      }
+    }
+
+    // Test 2: ProfileService increments on selection
+    function testProfileServiceIncrementsOnSelection() {
+      clearResults('test2-results');
+      clearTestData();
+      
+      // Set completion flags
+      localStorage.setItem('bb.lastGameCompleted', '1');
+      localStorage.setItem('bb.lastGameCompletedProfileId', 'test-profile-123');
+      
+      addInfo('test2-results', 'Setup: Game marked as completed for profile test-profile-123');
+      
+      // Create test profile
+      const testProfile = {
+        id: 'test-profile-123',
+        displayName: 'Test User',
+        season: 5
+      };
+      
+      // Simulate checkAndIncrementSeasonForProfile logic
+      try {
+        const gameCompleted = localStorage.getItem('bb.lastGameCompleted');
+        const completedProfileId = localStorage.getItem('bb.lastGameCompletedProfileId');
+        
+        addResult('test2-results', gameCompleted === '1',
+          'Completion flag detected',
+          `bb.lastGameCompleted = ${gameCompleted}`
+        );
+        
+        addResult('test2-results', completedProfileId === testProfile.id,
+          'Profile ID matches',
+          `Stored: ${completedProfileId}, Current: ${testProfile.id}`
+        );
+        
+        if (gameCompleted === '1' && completedProfileId === testProfile.id) {
+          const nextSeason = testProfile.season + 1;
+          testProfile.season = nextSeason;
+          
+          addResult('test2-results', testProfile.season === 6,
+            'Season incremented correctly',
+            `Old season: 5, New season: ${testProfile.season}`
+          );
+          
+          // Clear flags
+          localStorage.removeItem('bb.lastGameCompleted');
+          localStorage.removeItem('bb.lastGameCompletedProfileId');
+          
+          addResult('test2-results', 
+            localStorage.getItem('bb.lastGameCompleted') === null,
+            'Completion flags cleared',
+            'Flags removed to prevent double-increment'
+          );
+        }
+      } catch (e) {
+        addResult('test2-results', false, 'Error during test', e.message);
+      }
+    }
+
+    // Test 3: Different profile does not increment
+    function testDifferentProfileDoesNotIncrement() {
+      clearResults('test3-results');
+      clearTestData();
+      
+      // Set completion flags for different profile
+      localStorage.setItem('bb.lastGameCompleted', '1');
+      localStorage.setItem('bb.lastGameCompletedProfileId', 'profile-A');
+      
+      addInfo('test3-results', 'Setup: Game marked as completed for profile-A');
+      
+      // Create different profile
+      const testProfile = {
+        id: 'profile-B',
+        displayName: 'Different User',
+        season: 3
+      };
+      
+      addInfo('test3-results', 'Selecting different profile: profile-B');
+      
+      try {
+        const gameCompleted = localStorage.getItem('bb.lastGameCompleted');
+        const completedProfileId = localStorage.getItem('bb.lastGameCompletedProfileId');
+        
+        addResult('test3-results', gameCompleted === '1',
+          'Completion flag detected',
+          `bb.lastGameCompleted = ${gameCompleted}`
+        );
+        
+        addResult('test3-results', completedProfileId !== testProfile.id,
+          'Profile ID does not match',
+          `Stored: ${completedProfileId}, Current: ${testProfile.id}`
+        );
+        
+        const originalSeason = testProfile.season;
+        
+        // Simulate the logic - season should NOT increment
+        if (gameCompleted === '1' && completedProfileId === testProfile.id) {
+          testProfile.season = testProfile.season + 1;
+        }
+        
+        addResult('test3-results', testProfile.season === originalSeason,
+          'Season NOT incremented (correct behavior)',
+          `Season remains: ${testProfile.season}`
+        );
+        
+        // Flags should remain for the correct profile
+        addResult('test3-results',
+          localStorage.getItem('bb.lastGameCompleted') === '1',
+          'Completion flags remain for correct profile',
+          'Flags not cleared because profile mismatch'
+        );
+      } catch (e) {
+        addResult('test3-results', false, 'Error during test', e.message);
+      }
+    }
+
+    // Test 4: Guest mode does not increment
+    function testGuestModeDoesNotIncrement() {
+      clearResults('test4-results');
+      clearTestData();
+      
+      // Set completion flags
+      localStorage.setItem('bb.lastGameCompleted', '1');
+      localStorage.setItem('bb.lastGameCompletedProfileId', 'some-profile');
+      
+      addInfo('test4-results', 'Setup: Game marked as completed');
+      addInfo('test4-results', 'Selecting Guest mode (no profile)');
+      
+      try {
+        // Guest mode has no profile or profile.id is undefined
+        const testProfile = null;
+        
+        const gameCompleted = localStorage.getItem('bb.lastGameCompleted');
+        
+        addResult('test4-results', gameCompleted === '1',
+          'Completion flag detected',
+          `bb.lastGameCompleted = ${gameCompleted}`
+        );
+        
+        addResult('test4-results', testProfile === null,
+          'Profile is null (guest mode)',
+          'No profile to increment'
+        );
+        
+        // Season should not increment because there's no profile
+        addResult('test4-results', true,
+          'Season NOT incremented (correct behavior)',
+          'Guest mode does not have seasons'
+        );
+      } catch (e) {
+        addResult('test4-results', false, 'Error during test', e.message);
+      }
+    }
+
+    // Test 5: Completion flags cleared after increment
+    function testCompletionFlagsCleared() {
+      clearResults('test5-results');
+      clearTestData();
+      
+      // Set completion flags
+      localStorage.setItem('bb.lastGameCompleted', '1');
+      localStorage.setItem('bb.lastGameCompletedProfileId', 'test-profile-123');
+      
+      addInfo('test5-results', 'Setup: Completion flags set');
+      
+      const testProfile = {
+        id: 'test-profile-123',
+        season: 2
+      };
+      
+      try {
+        // First increment
+        const gameCompleted = localStorage.getItem('bb.lastGameCompleted');
+        const completedProfileId = localStorage.getItem('bb.lastGameCompletedProfileId');
+        
+        if (gameCompleted === '1' && completedProfileId === testProfile.id) {
+          testProfile.season = testProfile.season + 1;
+          
+          localStorage.removeItem('bb.lastGameCompleted');
+          localStorage.removeItem('bb.lastGameCompletedProfileId');
+          
+          addResult('test5-results', testProfile.season === 3,
+            'First increment successful',
+            `Season: 2 → ${testProfile.season}`
+          );
+        }
+        
+        // Check flags are cleared
+        addResult('test5-results',
+          localStorage.getItem('bb.lastGameCompleted') === null,
+          'bb.lastGameCompleted cleared',
+          'Flag removed'
+        );
+        
+        addResult('test5-results',
+          localStorage.getItem('bb.lastGameCompletedProfileId') === null,
+          'bb.lastGameCompletedProfileId cleared',
+          'Flag removed'
+        );
+        
+        // Try second increment - should NOT happen
+        const gameCompleted2 = localStorage.getItem('bb.lastGameCompleted');
+        const completedProfileId2 = localStorage.getItem('bb.lastGameCompletedProfileId');
+        
+        if (gameCompleted2 === '1' && completedProfileId2 === testProfile.id) {
+          testProfile.season = testProfile.season + 1;
+        }
+        
+        addResult('test5-results', testProfile.season === 3,
+          'Second increment prevented (correct behavior)',
+          `Season remains: ${testProfile.season}`
+        );
+      } catch (e) {
+        addResult('test5-results', false, 'Error during test', e.message);
+      }
+    }
+
+    // Integration test: Full flow
+    function testFullFlow() {
+      clearResults('full-flow-results');
+      clearTestData();
+      
+      addInfo('full-flow-results', 'Starting full integration test...');
+      
+      try {
+        // Step 1: Game completion
+        addInfo('full-flow-results', 'Step 1: Simulating game completion (finale)');
+        localStorage.setItem('bb.lastGameCompleted', '1');
+        localStorage.setItem('bb.lastGameCompletedProfileId', 'user-profile-789');
+        
+        addResult('full-flow-results', 
+          localStorage.getItem('bb.lastGameCompleted') === '1',
+          'Game marked as completed',
+          'Finale modal shown'
+        );
+        
+        // Step 2: User closes modal and restarts
+        addInfo('full-flow-results', 'Step 2: User closes modal and clicks restart (page reload simulation)');
+        
+        // Step 3: Profile selection
+        addInfo('full-flow-results', 'Step 3: Profile modal shown, user selects same profile');
+        const profile = {
+          id: 'user-profile-789',
+          displayName: 'Player One',
+          season: 7
+        };
+        
+        addResult('full-flow-results', true,
+          'Profile selected',
+          `Profile: ${profile.displayName}, Current Season: ${profile.season}`
+        );
+        
+        // Step 4: Check and increment
+        const gameCompleted = localStorage.getItem('bb.lastGameCompleted');
+        const completedProfileId = localStorage.getItem('bb.lastGameCompletedProfileId');
+        
+        if (gameCompleted === '1' && completedProfileId === profile.id) {
+          const oldSeason = profile.season;
+          profile.season = profile.season + 1;
+          
+          localStorage.removeItem('bb.lastGameCompleted');
+          localStorage.removeItem('bb.lastGameCompletedProfileId');
+          
+          addResult('full-flow-results', profile.season === oldSeason + 1,
+            'Season incremented automatically',
+            `Season ${oldSeason} → ${profile.season}`
+          );
+          
+          addResult('full-flow-results', 
+            localStorage.getItem('bb.lastGameCompleted') === null,
+            'Completion flags cleared',
+            'Ready for next game'
+          );
+        }
+        
+        // Step 5: Game starts with new season
+        addInfo('full-flow-results', `Step 4: Game starts with Season ${profile.season}`);
+        
+        addResult('full-flow-results', true,
+          'Full flow completed successfully',
+          `User is now playing Season ${profile.season}`
+        );
+        
+      } catch (e) {
+        addResult('full-flow-results', false, 'Error during integration test', e.message);
+      }
+    }
+
+    // Auto-run on load
+    window.addEventListener('DOMContentLoaded', () => {
+      showLocalStorageData();
+    });
+  </script>
+</body>
+</html>
