@@ -408,7 +408,7 @@
       updateResourceDisplay(window.SocialManeuvers.SocialResources.getAll(1));
       logTest('Set energy to 10⚡', 'info');
       
-      // Execute group action with 4 targets (base 1 + 2 extra = 3⚡ total)
+      // Execute group action with 3 targets (base 1 + 2 extra = 3⚡ total)
       const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk', [3, 4]);
       
       if(result.success) {
