@@ -154,6 +154,29 @@
     // For ranks 1 and 2, medals/awards are already shown via existing logic
     if(rank < 3) return;
 
+    // Store the badge info on the player object so it can be rendered on next HUD update
+    player.showFinishingBadge = true;
+
+    // Trigger HUD update to re-render roster with the badge
+    if(typeof global.updateHud === 'function'){
+      setTimeout(() => {
+        try{
+          global.updateHud();
+          console.info(`[eviction-visuals] HUD updated, roster re-rendered with badge for id=${evictedId}`);
+        }catch(e){
+          console.error('[eviction-visuals] HUD update failed:', e);
+        }
+      }, 100);
+    }
+
+    // Also try to update existing tile if already rendered (for immediate visual feedback)
+    updateExistingTile(evictedId, rank);
+  }
+
+  /**
+   * Update existing roster tile with finishing badge (immediate feedback)
+   */
+  function updateExistingTile(evictedId, rank){
     // Find roster tile - resilient to different selector patterns
     const tile = document.querySelector(`[data-player-id="${evictedId}"]`) ||
                  document.querySelector(`#p-${evictedId}`) ||
@@ -202,7 +225,7 @@
     badgeContainer.innerHTML = '';
     badgeContainer.appendChild(badge);
 
-    console.info(`[eviction-visuals] finishing badge added id=${evictedId} rank=${ordinal(rank)}`);
+    console.info(`[eviction-visuals] finishing badge added to existing tile id=${evictedId} rank=${ordinal(rank)}`);
   }
 
   // Export to global

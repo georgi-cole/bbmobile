@@ -1609,7 +1609,7 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* Finishing Place Badge (for ranks ≥ 3) */
-.finishing-badge{
+.finishing-badge, .status-finishing-badge{
   display:inline-block;
   padding:4px 10px;
   border-radius:12px;
