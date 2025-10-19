@@ -414,18 +414,17 @@
   };
 
   // Auto-initialize on load if Social Maneuvers is enabled
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      if (global.SocialManeuvers?.isEnabled?.()) {
-        init();
-      }
-    });
-  } else {
+  function maybeAutoInit() {
     if (global.SocialManeuvers?.isEnabled?.()) {
       init();
     }
   }
 
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', maybeAutoInit);
+  } else {
+    maybeAutoInit();
+  }
   console.info('[social-battery] Module loaded');
 
 })(window);
