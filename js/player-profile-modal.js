@@ -56,8 +56,28 @@
   // Start the game
   function startGame() {
     setTimeout(() => {
-      if (typeof global.startOpeningSequence === 'function') {
-        global.startOpeningSequence();
+      // Guest mode: skip intro and go straight to gameplay
+      if (global.ProfileService.isGuestMode()) {
+        console.info('[player-profile-modal] guest mode detected, skipping intro');
+        
+        // Try to mark the user as having started the game
+        if (typeof global.markGameStarted === 'function') {
+          global.markGameStarted();
+        }
+        
+        // Prefer fast cast flow for smooth, non-theatrical start
+        if (typeof global.startFastCastFlow === 'function') {
+          global.startFastCastFlow();
+        } else {
+          // Fallback: dispatch event to continue flow without intro
+          window.dispatchEvent(new CustomEvent('bb:intro:finished'));
+          console.info('[player-profile-modal] dispatched bb:intro:finished for guest mode');
+        }
+      } else {
+        // Non-guest: normal intro flow
+        if (typeof global.startOpeningSequence === 'function') {
+          global.startOpeningSequence();
+        }
       }
     }, 100);
   }
