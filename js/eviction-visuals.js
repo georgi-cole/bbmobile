@@ -209,7 +209,7 @@
     // Hide any existing red X (via CSS class that hides .redx and .evicted-cross)
     const existingCross = tile.querySelector('.evicted-cross') || tile.querySelector('.redx');
     if(existingCross){
-      existingCross.style.display = 'none';
+      existingCross.classList.add('hidden');
       console.info(`[eviction-visuals] red X hidden for id=${evictedId}`);
     }
 
