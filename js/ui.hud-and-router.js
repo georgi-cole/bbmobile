@@ -661,10 +661,6 @@ header.innerHTML = `
       const name=document.createElement('div'); 
       name.className='top-tile-name';
       
-      let labelText = p.name;
-      let statusClass = '';
-      let ariaLabel = p.name;
-      
       // Label precedence: WINNER > RUNNER-UP > NOM > HOH/POV icons > name
       // Note: FINISHING BADGE (≥3rd) is now rendered inside avatar, not as label
       if(isWinner){
