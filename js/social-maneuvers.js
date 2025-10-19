@@ -344,6 +344,90 @@
       
       g.__weeklyEvents.set(playerId, events);
       console.info(`[social-resources] Weekly event recorded: ${playerId} - ${eventType}`, value);
+      
+      // Dispatch battery preview update event
+      try {
+        const preview = this.getPreviewEnergy(playerId);
+        const event = new CustomEvent('social-battery-preview', {
+          detail: { playerId, preview, eventType }
+        });
+        window.dispatchEvent(event);
+        console.info(`[social-resources] 📡 Dispatched social-battery-preview event:`, { playerId, preview: preview.total, eventType });
+      } catch(e) {
+        console.warn('[social-resources] Failed to dispatch preview event:', e);
+      }
+    },
+    
+    // Get preview energy for next social phase (base + event deltas)
+    getPreviewEnergy(playerId) {
+      const g = global.game; if(!g) return { total: DEFAULT_ENERGY, breakdown: { base: DEFAULT_ENERGY, bonuses: {}, penalties: {} } };
+      
+      const weeklyEvents = g.__weeklyEvents?.get(playerId) || {};
+      let total = DEFAULT_ENERGY;
+      const bonuses = {};
+      const penalties = {};
+      
+      // Apply bonuses
+      if(weeklyEvents.hohWin) {
+        bonuses.HOH = WEEKLY_ENERGY_BONUSES.HOH_WIN;
+        total += WEEKLY_ENERGY_BONUSES.HOH_WIN;
+      }
+      if(weeklyEvents.povWin) {
+        bonuses.POV = WEEKLY_ENERGY_BONUSES.POV_WIN;
+        total += WEEKLY_ENERGY_BONUSES.POV_WIN;
+      }
+      if(weeklyEvents.nominated) {
+        bonuses.Nominated = WEEKLY_ENERGY_BONUSES.NOMINATED;
+        total += WEEKLY_ENERGY_BONUSES.NOMINATED;
+      }
+      if(weeklyEvents.newAlliances && weeklyEvents.newAlliances > 0) {
+        const allianceBonus = weeklyEvents.newAlliances * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
+        bonuses.Alliances = allianceBonus;
+        total += allianceBonus;
+      }
+      if(weeklyEvents.savedWithPov) {
+        bonuses.SavedWithPOV = WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
+        total += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
+      }
+      if(weeklyEvents.survivedEviction) {
+        bonuses.SurvivedEviction = WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
+        total += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
+      }
+      
+      // Apply penalties
+      if(weeklyEvents.compSkipped) {
+        penalties.Skipped = WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED;
+        total += WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED;
+      }
+      if(weeklyEvents.notDrawnVeto) {
+        penalties.NotDrawn = WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO;
+        total += WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO;
+      }
+      if(weeklyEvents.zeroScore) {
+        penalties.ZeroScore = WEEKLY_ENERGY_PENALTIES.ZERO_SCORE;
+        total += WEEKLY_ENERGY_PENALTIES.ZERO_SCORE;
+      }
+      if(weeklyEvents.brokeAlliance) {
+        penalties.BrokeAlliance = WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE;
+        total += WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE;
+      }
+      
+      // Clamp to [0, MAX_ENERGY]
+      total = Math.max(0, Math.min(MAX_ENERGY, total));
+      
+      return {
+        total,
+        breakdown: {
+          base: DEFAULT_ENERGY,
+          bonuses,
+          penalties
+        }
+      };
+    },
+    
+    // Get preview energy breakdown (detailed)
+    getPreviewEnergyBreakdown(playerId) {
+      return this.getPreviewEnergy(playerId);
     },
     
     // Track positive interactions for influence decay
@@ -439,7 +523,7 @@
   }
 
   // ============================================================================
-  // ACTION EXECUTION & FEEDBACK (supports multi-target + info costs)
+  // ACTION EXECUTION & FEEDBACK (supports multi-target + info costs + group cost)
   // ============================================================================
   function executeAction(actorId, targetId, actionId, extraTargetIds = []){
     if(!isEnabled()){ console.warn('[social-maneuvers] System is disabled'); return { success: false, reason: 'disabled' }; }
@@ -464,6 +548,27 @@
     } else {
       allTargets = [targetId];
     }
+    
+    // Compute group action extra cost: +1 energy per target after the second
+    const groupExtras = Math.max(0, allTargets.length - 2);
+    const baseEnergyCost = action.costs?.energy || action.cost || 0;
+    const effectiveEnergyCost = baseEnergyCost + groupExtras;
+    
+    if(groupExtras > 0) {
+      console.info(`[social-maneuvers] Group cost computed: base ${baseEnergyCost} + ${groupExtras} extras = ${effectiveEnergyCost} energy`);
+    }
+    
+    // Pre-check effective energy cost
+    const currentEnergy = SocialResources.get(actorId, 'energy');
+    if(currentEnergy < effectiveEnergyCost) {
+      return { 
+        success: false, 
+        reason: 'insufficient_energy', 
+        message: `Need ${effectiveEnergyCost} energy (have ${currentEnergy})`,
+        requiredEnergy: effectiveEnergyCost,
+        currentEnergy
+      };
+    }
 
     // Evaluation/gating
     let evaluation = null, chanceRoll = Math.random(), succeeded = true;
@@ -479,9 +584,21 @@
     const affinityBefore = actor?.affinity?.[targetId] ?? 0;
 
     // Spend resources (energy, influence, information via unified API)
+    // Base cost is charged here by the engine
     const spendResult = SocialResources.spend(actorId, action.costs);
     if(!spendResult.success){
       return { success: false, reason: 'insufficient_resources', insufficient: spendResult.insufficient, message: `Not enough ${spendResult.insufficient}` };
+    }
+    
+    // Charge group extras (after base cost, to avoid double-charging)
+    if(groupExtras > 0) {
+      const extrasResult = SocialResources.spend(actorId, { energy: groupExtras });
+      if(!extrasResult.success) {
+        // Shouldn't happen since we pre-checked, but handle gracefully
+        console.error(`[social-maneuvers] Failed to charge group extras: ${groupExtras}`);
+        return { success: false, reason: 'insufficient_energy_extras', message: `Failed to charge ${groupExtras} extra energy` };
+      }
+      console.info(`[social-maneuvers] ⚡ Charged ${groupExtras} extra energy for group action (${allTargets.length} targets)`);
     }
 
     // Telemetry (generic)
@@ -1816,8 +1933,162 @@
   }
 
   // ============================================================================
+  // AMBIENT AI INTERACTIONS
+  // ============================================================================
+  
+  let ambientAIInterval = null;
+  const AMBIENT_AI_DELAY = 15000; // 15 seconds between ambient interactions
+  
+  /**
+   * Start ambient AI interactions during social phase
+   * AI-to-AI interactions occur at a low rate with concise log lines
+   */
+  function startAmbientAI() {
+    if(ambientAIInterval) {
+      console.info('[social-maneuvers] Ambient AI already running');
+      return;
+    }
+    
+    const g = global.game;
+    if(!g) return;
+    
+    const alivePlayers = global.alivePlayers?.() || [];
+    if(alivePlayers.length < 3) {
+      console.info('[social-maneuvers] Not enough players for ambient AI');
+      return;
+    }
+    
+    // Cap ambient logs by player count to avoid spam
+    const maxLogsPerPhase = Math.min(10, Math.floor(alivePlayers.length * 1.5));
+    let logCount = 0;
+    
+    ambientAIInterval = setInterval(() => {
+      if(logCount >= maxLogsPerPhase) {
+        console.info(`[social-maneuvers] Ambient AI log budget exhausted (${maxLogsPerPhase} logs)`);
+        return;
+      }
+      
+      // Pick two random AI players (excluding human)
+      const humanId = g.humanId;
+      const aiPlayers = alivePlayers.filter(p => p.id !== humanId && !p.evicted);
+      
+      if(aiPlayers.length < 2) return;
+      
+      const p1 = aiPlayers[Math.floor(Math.random() * aiPlayers.length)];
+      const remaining = aiPlayers.filter(p => p.id !== p1.id);
+      const p2 = remaining[Math.floor(Math.random() * remaining.length)];
+      
+      if(!p1 || !p2) return;
+      
+      // Generate concise house chatter
+      const chatter = generateHouseChatter(p1, p2);
+      if(chatter) {
+        global.addLog?.(chatter, 'muted');
+        logCount++;
+        console.info(`[social-maneuvers] Ambient AI: ${chatter}`);
+      }
+    }, AMBIENT_AI_DELAY);
+    
+    console.info(`[social-maneuvers] ✓ Ambient AI started (max ${maxLogsPerPhase} logs, ${AMBIENT_AI_DELAY}ms interval)`);
+  }
+  
+  /**
+   * Stop ambient AI interactions
+   */
+  function stopAmbientAI() {
+    if(ambientAIInterval) {
+      clearInterval(ambientAIInterval);
+      ambientAIInterval = null;
+      console.info('[social-maneuvers] ◼️ Ambient AI stopped');
+    }
+  }
+  
+  /**
+   * Generate concise house chatter between two AI players
+   */
+  function generateHouseChatter(p1, p2) {
+    const affinity = p1.affinity?.[p2.id] ?? 0;
+    
+    const chatterTemplates = {
+      positive: [
+        `${p1.name} and ${p2.name} chatted by the pool.`,
+        `${p1.name} checked in with ${p2.name}.`,
+        `${p1.name} and ${p2.name} shared a laugh.`,
+        `${p1.name} offered ${p2.name} some advice.`,
+        `${p1.name} and ${p2.name} strategized quietly.`
+      ],
+      neutral: [
+        `${p1.name} and ${p2.name} passed in the hallway.`,
+        `${p1.name} nodded at ${p2.name}.`,
+        `${p1.name} and ${p2.name} made small talk.`,
+        `${p1.name} and ${p2.name} sat in silence.`,
+        `${p1.name} avoided ${p2.name}'s gaze.`
+      ],
+      negative: [
+        `${p1.name} gave ${p2.name} a cold shoulder.`,
+        `${p1.name} and ${p2.name} exchanged tense glances.`,
+        `${p1.name} walked past ${p2.name} without speaking.`,
+        `${p1.name} whispered about ${p2.name}.`,
+        `${p1.name} and ${p2.name} argued briefly.`
+      ]
+    };
+    
+    let category = 'neutral';
+    if(affinity >= 0.2) category = 'positive';
+    else if(affinity <= -0.2) category = 'negative';
+    
+    const templates = chatterTemplates[category];
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+
+  // ============================================================================
   // PHASE INTEGRATION
   // ============================================================================
+  
+  /**
+   * Seed phase resources for all players before social phase starts.
+   * Recomputes energy from weekly events and emits social-resources-changed.
+   */
+  function seedPhaseResources(){
+    if(!isEnabled()){ 
+      console.info('[social-maneuvers] seedPhaseResources called but feature is DISABLED'); 
+      return { seeded: false, energy: 0, reason: 'disabled' };
+    }
+    
+    const g = global.game;
+    if(!g) return { seeded: false, energy: 0, reason: 'no_game' };
+    
+    const humanId = g.humanId;
+    if(!humanId) return { seeded: false, energy: 0, reason: 'no_human' };
+    
+    // Initialize and reset resources for human player
+    SocialResources.init(humanId);
+    SocialResources.resetWeekly(humanId);
+    
+    const seededEnergy = SocialResources.get(humanId, 'energy');
+    
+    // Emit social-resources-changed to update UI
+    try {
+      const resources = SocialResources.getAll(humanId);
+      const event = new CustomEvent('social-resources-changed', {
+        detail: { 
+          playerId: humanId, 
+          delta: { energy: 0 }, // Initial seed, no delta
+          resources,
+          seeded: true
+        }
+      });
+      window.dispatchEvent(event);
+      console.info(`[social-maneuvers] 📡 Dispatched social-resources-changed after seeding:`, { humanId, energy: seededEnergy });
+    } catch(e) {
+      console.warn('[social-maneuvers] Failed to dispatch resources-changed event:', e);
+    }
+    
+    console.info(`[social-maneuvers] ⚡ Phase resources seeded: ${seededEnergy} (Base=${DEFAULT_ENERGY} + weekly events)`);
+    
+    return { seeded: true, energy: seededEnergy };
+  }
+  
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
@@ -1834,11 +2105,12 @@
     SocialResources.clearPhaseRefunds();
     console.info('[social-maneuvers] Phase refunds cleared for new phase');
 
-    // Log energy seeding for human player
-    const humanId = global.game?.humanId;
+    // Seed phase resources and check for zero energy
+    const g = global.game;
+    const humanId = g?.humanId;
     if(humanId) {
-      const humanEnergy = SocialResources.get(humanId, 'energy');
-      console.info(`[social-maneuvers] ⚡ Energy seeded for human player: ${humanEnergy} (Base=${DEFAULT_ENERGY} + weekly bonuses/penalties)`);
+      const result = seedPhaseResources();
+      console.info(`[social-maneuvers] ⚡ Energy seeded for human player: ${result.energy} (Base=${DEFAULT_ENERGY} + weekly bonuses/penalties)`);
     }
 
     // Initialize phase session tracking (PR #266)
@@ -1874,6 +2146,10 @@
       clearTimeout(g.__socialFastAdvanceTimeout);
       g.__socialFastAdvanceTimeout = null;
     }
+    
+    // Start ambient AI interactions
+    startAmbientAI();
+    console.info('[social-maneuvers] Ambient AI started for social phase');
 
     // Set default 3-minute timer using available APIs
     console.info('[social-timer] Setting default phase duration...');
@@ -1926,6 +2202,9 @@
     if(!isEnabled()) { console.info('[social-maneuvers] Phase end called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ◼️ onSocialPhaseEnd() - leaving social_intermission phase');
     console.info('[social-maneuvers] ✓ Social phase complete - generating summary');
+
+    // Stop ambient AI
+    stopAmbientAI();
 
     // Clear any pending fast-advance timeout on phase end
     const g = global.game;
@@ -2438,7 +2717,9 @@
     getActionById, getAvailableActions, executeAction,
     recordActionInMemory, getPlayerMemory,
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
+    seedPhaseResources, // Phase resource seeding
     pausePhaseTimer, resumePhaseTimer, // Timer control exports
+    startAmbientAI, stopAmbientAI, // Ambient AI exports
     // Modifiers/hooks
     calculateTraitModifiers, calculateMemoryModifiers,
     // Constants
