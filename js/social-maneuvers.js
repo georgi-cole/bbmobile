@@ -310,7 +310,7 @@
       // Handle other resources (non-energy)
       for(const [type, config] of Object.entries(RESOURCE_CONFIG)) {
         if(type === 'energy') {
-          // Energy handled by bank - skip
+          // Energy managed by SocialEnergyBank system - skip legacy weekly reset
           continue;
         } else if(type === 'information' && config.carryover) {
           // Information: add weekly carryover
