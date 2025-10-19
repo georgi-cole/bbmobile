@@ -740,6 +740,12 @@
     g.__twistEvictedThisNight=0;
     g.__twistNomineeSnapshot=null;
 
+    // Notify visual system and run eviction visuals sequentially
+    // Suppress red X for all evicted players during animations
+    if(typeof global.notifyEvictedForVisual === 'function'){
+      evictedIds.forEach(id => global.notifyEvictedForVisual(id));
+    }
+
     // Run eviction visual enhancement for each evicted player
     // Show animations sequentially for better visual clarity
     if(typeof global.runEvictionVisual === 'function'){
@@ -751,6 +757,10 @@
         }
       }
     }
+
+    // Animation complete - allow red X to render and refresh HUD
+    g.__suppressEvictedHudUntilVisualDone = false;
+    global.updateHud?.(); // Trigger HUD re-render to show red X
 
     postEvictionRouting();
   }
@@ -803,7 +813,12 @@
 
     if(!g.__twistMode) global.twists?.afterPhase?.('eviction');
 
-    // Run eviction visual enhancement (avatar animation + roster badge update)
+    // Notify visual system to suppress red X during animation
+    if(typeof global.notifyEvictedForVisual === 'function'){
+      global.notifyEvictedForVisual(evId);
+    }
+
+    // Run eviction visual enhancement (avatar animation)
     // Defer routing until animation completes
     if(typeof global.runEvictionVisual === 'function'){
       try{
@@ -812,6 +827,10 @@
         console.error('[eviction] visual enhancement failed:', e);
       }
     }
+
+    // Animation complete - allow red X to render and refresh HUD
+    g.__suppressEvictedHudUntilVisualDone = false;
+    global.updateHud?.(); // Trigger HUD re-render to show red X
 
     postEvictionRouting();
   }

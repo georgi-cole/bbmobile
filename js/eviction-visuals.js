@@ -50,6 +50,26 @@
   }
 
   /**
+   * Notify that an eviction visual is pending for a player.
+   * Sets flags to suppress red X on HUD until visual completes.
+   * @param {number} evictedId - Player ID of evicted houseguest
+   */
+  function notifyEvictedForVisual(evictedId){
+    const g = global.game;
+    if(!g) return;
+    
+    // Set suppression flags so HUD does not render red X during animation
+    g.__pendingEvictionVisual = evictedId;
+    g.__suppressEvictedHudUntilVisualDone = true;
+    
+    console.info(`[eviction-visuals] suppression enabled for id=${evictedId}`);
+  }
+
+  // Export functions to global
+  global.runEvictionVisual = runEvictionVisual;
+  global.notifyEvictedForVisual = notifyEvictedForVisual;
+
+  /**
    * Animate evicted player's avatar in faux TV
    * Sequence: zoom-in (0.6s) → grayscale (0.4s) → fade out (0.6s)
    * Total: ~1.6s
@@ -109,9 +129,6 @@
       avatarEl.remove();
     }
   }
-
-  // Export to global
-  global.runEvictionVisual = runEvictionVisual;
 
   console.info('[eviction-visuals] module loaded');
 
