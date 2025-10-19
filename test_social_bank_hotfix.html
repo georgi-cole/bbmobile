@@ -215,23 +215,28 @@ Got: phaseEnergy=${phaseEnergy}, bank=${bankBalance}, bank log=${hasBankLog}, le
         window.SocialManeuvers.SocialEnergyBank.set(1, 5);
         const before = window.SocialManeuvers.SocialEnergyBank.get(1);
         
-        // Record HOH win event (should add +5)
+        // Get HOH win delta from config
+        const hohDelta = window.SocialManeuvers.SocialResources.EVENT_CONFIG
+          ? window.SocialManeuvers.SocialResources.EVENT_CONFIG['hohWin'].delta
+          : 5; // fallback for legacy
+        // Record HOH win event (should add hohDelta)
         window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'hohWin', true);
         const after = window.SocialManeuvers.SocialEnergyBank.get(1);
         
-        if (after === before + 5) {
+        if (after === before + hohDelta) {
           result.innerHTML = `
             <p class="pass">✓ PASS</p>
             <pre>Before: ${before}
 After HOH win: ${after}
-Delta: +${after - before}</pre>
+Delta: +${after - before} (expected: +${hohDelta})</pre>
             <span class="status-badge pass">PASS</span>
           `;
         } else {
           result.innerHTML = `
             <p class="fail">✗ FAIL</p>
-            <pre>Expected: ${before + 5}
-Got: ${after}</pre>
+            <pre>Expected: ${before + hohDelta}
+Got: ${after}
+Delta: +${after - before} (expected: +${hohDelta})</pre>
             <span class="status-badge fail">FAIL</span>
           `;
         }
