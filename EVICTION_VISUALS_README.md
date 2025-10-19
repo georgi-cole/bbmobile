@@ -2,9 +2,10 @@
 
 ## Overview
 
-This enhancement adds non-breaking visual effects to evictions:
-1. **Avatar Animation**: Evicted houseguest's avatar appears in the faux TV with a zoom-in → black & white → fade out animation
-2. **Finishing Place Badges**: Roster displays ordinal badges (e.g., "12th") for evicted players ranked 3rd or lower
+This enhancement adds a non-breaking visual effect to evictions:
+- **Avatar Animation**: Evicted houseguest's avatar appears in the faux TV with a zoom-in → black & white → fade out animation
+
+**Note**: Previously, this module also added finishing place badges to the roster, but that feature has been removed. The roster now behaves exactly as it did before these changes, showing the red X for all evicted players.
 
 ## Features
 
@@ -17,11 +18,10 @@ This enhancement adds non-breaking visual effects to evictions:
 - **Styling**: Large circular avatar with white border and shadow
 - **Resilient**: Works with multiple TV selector patterns (`#tv`, `.tv`, `.faux-tv`, `.tv-screen`)
 
-### Finishing Place Badges
-- **Display**: Ordinal badge (e.g., "3rd", "12th") replaces the red X for ranks ≥ 3
+### Roster Display
+- **No modifications**: Roster displays normally with red X for evicted players
 - **Medals**: 1st and 2nd place continue to show 🥇 and 🥈 medals (unchanged)
-- **Styling**: Gray gradient badge with white border and subtle shadow
-- **Integration**: Seamlessly integrated into existing roster rendering
+- **No badges**: Finishing place badges (3rd, 4th, etc.) have been removed
 
 ## Eviction Types Supported
 
@@ -39,8 +39,12 @@ This enhancement adds non-breaking visual effects to evictions:
 **Main Function**: `runEvictionVisual(evictedId, context)`
 - Waits for card queue to go idle
 - Renders avatar animation in faux TV
-- Updates roster with finishing badge
 - Idempotent (runs only once per eviction via `game.__evictVisualDone[evictedId]`)
+
+**Removed Functions** (as of selective revert):
+- `updateRosterFinishingBadge()` - removed
+- `updateExistingTile()` - removed
+- `notifyEvictedForVisual()` - removed
 
 ### Integration Points
 
@@ -59,25 +63,29 @@ This enhancement adds non-breaking visual effects to evictions:
 ### Roster Rendering
 **File**: `js/ui.hud-and-router.js`
 
+**No changes**: Roster rendering is unchanged from before the eviction visuals feature. Evicted players show red X overlay.
+
 **Label Precedence** (in `renderTopRoster()`):
 1. WINNER (🥇)
 2. RUNNER-UP (🥈)
-3. **FINISHING BADGE** (e.g., "3rd", "12th") ← NEW
-4. NOM
-5. HOH/POV icons
-6. Player name
+3. NOM
+4. HOH/POV icons
+5. Player name
 
 ### CSS Classes
 
-**Animation**:
+**Animation** (kept):
 - `.eviction-visual-avatar` - Container for animated avatar
 - `.eviction-visual-avatar.zoom-in` - Zoom-in phase
 - `.eviction-visual-avatar.grayscale` - Grayscale filter
 - `.eviction-visual-avatar.fade-out` - Fade out phase
 
-**Badge**:
-- `.finishing-badge` - Standalone badge (legacy)
-- `.status-finishing-badge` - Roster-integrated badge
+**Removed** (as of selective revert):
+- `.finishing-badge` - removed
+- `.status-finishing-badge` - removed
+- `.avatar-rank-badge` - removed
+- `.avatar-bw-dim` - removed
+- `body.evict-visual-in-progress` - removed
 
 ## Design Decisions
 
@@ -87,17 +95,20 @@ This enhancement adds non-breaking visual effects to evictions:
 
 ### 2. Non-Breaking
 - If TV container not found, animation is skipped (no error)
-- If roster tile not found, badge update is skipped (no error)
 - Routing proceeds normally even if visual enhancement fails
 
-### 3. Deferred Routing
-- Routing is deferred until avatar animation completes
-- Ensures smooth visual experience without blocking game flow
-- Uses async/await for clean control flow
+### 3. Minimal Impact
+- No modifications to roster rendering
+- No body-level classes that affect other UI elements
+- Animation runs independently of game logic
 
-### 4. Rank Calculation
-- Uses `player.finalRank` if available (set during eviction)
-- Falls back to calculating rank based on eviction order
+### 4. Removed Features
+The following features were part of PRs #317, #320, and #324 but have been selectively reverted:
+- Finishing place badges on roster (3rd, 4th, 5th, etc.)
+- Avatar grayscale/opacity effects on roster
+- Red X suppression for badged players
+- `body.evict-visual-in-progress` class
+- Roster-related helper functions
 - Handles multi-evictions with proper rank assignment
 
 ## Testing
