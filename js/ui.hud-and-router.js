@@ -633,8 +633,7 @@ header.innerHTML = `
       }
       
       // Evicted overlay with SVG brush X - add only once (check data-evictAnimated)
-      // Skip red X if player has finishing badge (ranks ≥ 3)
-      if(p.evicted && !(p.showFinishingBadge && p.finalRank && p.finalRank >= 3)){
+      if(p.evicted){
         const needsAnimation = !p.__evictAnimated;
         if(needsAnimation) p.__evictAnimated = true; // Mark as animated
         
@@ -657,32 +656,6 @@ header.innerHTML = `
       img.src=getAvatar(p); img.alt=p.name||'guest';
       img.onerror=function(){ this.onerror=null; this.src=FALLBACK; };
       wrap.appendChild(img);
-
-      // Initialize aria label and status variables before any use
-      let ariaLabel = p.name;
-      let labelText = p.name;
-      let statusClass = '';
-
-      // Add finishing place badge inside avatar for ranks ≥ 3
-      // Badge is centered inside avatar, avatar becomes grayscale + semi-transparent
-      if(p.evicted && p.showFinishingBadge && p.finalRank && p.finalRank >= 3){
-        const ordinalRank = (function(n){
-          const s = ['th','st','nd','rd'];
-          const v = n % 100;
-          return n + (s[(v-20)%10] || s[v] || s[0]);
-        })(p.finalRank);
-        const badge = document.createElement('span');
-        badge.className = 'avatar-rank-badge center';
-        badge.textContent = ordinalRank;
-        badge.title = `Finished in ${ordinalRank} place`;
-        wrap.appendChild(badge);
-        
-        // Apply grayscale + opacity to avatar image
-        img.classList.add('avatar-bw-dim');
-        
-        // Update aria label to include rank
-        ariaLabel = `${p.name} (Finished ${ordinalRank})`;
-      }
 
       // Name/Status label - show icons or text that replaces the name
       const name=document.createElement('div'); 

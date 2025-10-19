@@ -4,13 +4,14 @@
 
 After the "Evicted" card:
 1. **Avatar Animation**: Evicted player's avatar zooms in, turns B&W, fades out (~1.6s)
-2. **Badge Update**: Roster shows "3rd", "12th", etc. instead of red X (for ranks ≥ 3)
+
+**Note**: Roster badge feature has been removed. The roster now shows the red X for all evicted players (original behavior).
 
 ## Key Files
 
 ```
-js/eviction-visuals.js       - Core module
-styles.css                   - Animation + badge CSS
+js/eviction-visuals.js       - Core module (TV animation only)
+styles.css                   - Animation CSS only
 test_eviction_visuals.html   - Test page
 ```
 
@@ -42,9 +43,14 @@ runEvictionVisual(evictedId, context)
 .eviction-visual-avatar.zoom-in  /* Phase 1 */
 .eviction-visual-avatar.grayscale /* Phase 2 */
 .eviction-visual-avatar.fade-out  /* Phase 3 */
-.finishing-badge                  /* Badge */
-.status-finishing-badge           /* Roster badge */
 ```
+
+**Removed** (as of selective revert):
+- `.finishing-badge` - removed
+- `.status-finishing-badge` - removed
+- `.avatar-rank-badge` - removed
+- `.avatar-bw-dim` - removed
+- `body.evict-visual-in-progress` - removed
 
 ## Guards
 
@@ -52,17 +58,13 @@ runEvictionVisual(evictedId, context)
 game.__evictVisualDone[evictedId] = true  // Prevent duplicate runs
 ```
 
-## Roster Badge Logic
+## Roster Display
 
-```
-Priority:
-1. 🥇 Winner
-2. 🥈 Runner-up  
-3. "3rd", "12th", etc. (if evicted && finalRank ≥ 3)
-4. NOM
-5. HOH/POV
-6. Name
-```
+**No changes**: Roster shows red X for all evicted players (original behavior).
+
+Medal display unchanged:
+- 🥇 Winner (1st place)
+- 🥈 Runner-up (2nd place)
 
 ## Testing
 
@@ -73,14 +75,13 @@ open test_eviction_visuals.html
 # Test steps
 1. Click "Setup Game (12 players)"
 2. Click "Evict Player 1"
-3. Watch animation + badge update
+3. Watch animation in TV (roster shows red X only)
 ```
 
 ## Console Logs
 
 ```
 [eviction-visuals] start id=1 context={"reason":"vote"}
-[eviction-visuals] roster update id=1 rank=12
 [eviction-visuals] complete id=1
 ```
 
@@ -89,17 +90,13 @@ open test_eviction_visuals.html
 | Issue | Solution |
 |-------|----------|
 | No animation | Check TV container exists (`#tv`) |
-| No badge | Check roster rendered, player has `finalRank` |
 | Runs twice | Check guard: `game.__evictVisualDone[id]` |
-| Wrong rank | Verify `player.finalRank` set correctly |
 
 ## Quick Checklist
 
 - [x] Module loaded: `typeof window.runEvictionVisual === 'function'`
 - [x] TV container: `document.getElementById('tv')` exists
-- [x] Roster rendered: `#rosterBar` has tiles
 - [x] Guard set: `game.__evictVisualDone[id] === true`
-- [x] Badge shown: Tile has `.finishing-badge` or `.status-finishing-badge`
 
 ## Example Usage
 
@@ -125,68 +122,31 @@ for(const id of evictedIds){
 1.6s: Fade complete (opacity 0), element removed
 ```
 
-## Badge Calculation
-
-```javascript
-// Rank calculation
-const aliveCount = alivePlayers().length + 1;  // +1 for current eviction
-player.finalRank = aliveCount;
-
-// Badge display (only if rank ≥ 3)
-if(player.finalRank >= 3) {
-  showBadge(ordinal(player.finalRank)); // e.g., "3rd", "12th"
-}
-```
-
-## Performance Notes
-
-- **Animation**: Uses CSS transforms (GPU-accelerated)
-- **Roster Update**: Single `updateHud()` call
-- **Memory**: ~50 bytes per eviction (guard object)
-- **DOM**: 1 temporary element created/removed per animation
-
-## Browser Support
-
-| Feature | Chrome | Firefox | Safari | Edge |
-|---------|--------|---------|--------|------|
-| Animation | ✅ | ✅ | ✅ | ✅ |
-| Badges | ✅ | ✅ | ✅ | ✅ |
-| Async/Await | ✅ | ✅ | ✅ | ✅ |
-
-## Common Patterns
-
-**Check if visual ran**:
-```javascript
-if(game.__evictVisualDone[playerId]) {
-  console.log('Visual already ran for player', playerId);
-}
-```
-
-**Force re-run** (for testing):
-```javascript
-delete game.__evictVisualDone[playerId];
-await runEvictionVisual(playerId);
-```
-
-**Skip animation** (no TV container):
-```javascript
-// Animation auto-skips if TV not found
-// Badge update still happens
-```
-
 ## Code Size
 
-- **eviction-visuals.js**: 220 lines
-- **CSS additions**: ~60 lines
-- **Test page**: 370 lines
-- **Total changes**: ~300 lines across 6 files
+- **eviction-visuals.js**: ~120 lines (reduced from 289)
+- **CSS additions**: ~40 lines (reduced from ~80)
+- **Test page**: Updated to test TV animation only
+
+## Removed Features
+
+The following features were part of PRs #317, #320, and #324 but have been selectively reverted:
+- Finishing place badges on roster (3rd, 4th, 5th, etc.)
+- Avatar grayscale/opacity effects on roster
+- Red X suppression for badged players
+- `body.evict-visual-in-progress` class
+- `notifyEvictedForVisual()` function
+- `updateRosterFinishingBadge()` function
+- `updateExistingTile()` function
 
 ## Dependencies
 
 - `global.getP()` - Get player by ID
 - `global.resolveAvatar()` - Get avatar URL
-- `global.cardQueueWaitIdle()` - Wait for cards
-- `global.updateHud()` - Re-render roster
+- `global.cardQueueWaitIdle()` - Wait for cards (optional)
+
+**Removed Dependencies**:
+- `global.updateHud()` - no longer called by this module
 
 ## No Dependencies On
 
