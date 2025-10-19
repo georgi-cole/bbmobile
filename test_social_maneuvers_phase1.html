@@ -319,7 +319,8 @@
     }
     
     function recordNewAlliance() {
-      window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'newAlliance', true);
+      const current = (window.game.__weeklyEvents?.get(1)?.newAlliances || 0) + 1;
+      window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'newAlliances', current);
       logEvent('Recorded: New Alliance', 'success');
     }
     
