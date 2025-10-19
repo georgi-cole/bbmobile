@@ -26,7 +26,7 @@
   // ============================================================================
   // Note: Information is scaled to 0..100 to support high-impact action costs.
   const RESOURCE_CONFIG = {
-    energy:      { default: 5,  max: Infinity,  weeklyReset: true,  carryover: false, description: 'Energy represents your social stamina.', examples: 'Used for conversations, strategizing.' },
+    energy:      { default: 5,  max: Infinity,  weeklyReset: false,  carryover: true, description: 'Energy represents your social stamina.', examples: 'Used for conversations, strategizing.' },
     influence:   { default: 0,  max: 100, weeklyReset: false, carryover: true,  description: 'Influence is your social capital.', examples: 'Earned by success, powers maneuvers.' },
     information: { default: 0,  max: 100, weeklyReset: false, carryover: true,  description: 'Information is strategic knowledge.', examples: 'Earned through observation and interrogation.' }
   };
