@@ -211,7 +211,7 @@
     
     socialStrings: {
       title: 'Social Strings',
-      description: 'Match pairs of houseguests who have alliances! 3 rounds with increasing difficulty.',
+      description: 'Identify which houseguests are in alliances together! An alliance is a secret group working together to advance in the game. 3 rounds with increasing difficulty.',
       steps: []
     },
     
