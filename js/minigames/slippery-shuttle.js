@@ -184,6 +184,7 @@
       gameOver = true;
       clearInterval(timerInterval);
       cancelAnimationFrame(gameLoop);
+      document.removeEventListener('keydown', keydownHandler);
       
       const elapsed = (Date.now() - startTime) / 1000;
       
@@ -222,6 +223,7 @@
       gameOver = true;
       clearInterval(timerInterval);
       cancelAnimationFrame(gameLoop);
+      document.removeEventListener('keydown', keydownHandler);
       
       instructions.textContent = 'Fell off! Try again next time.';
       instructions.style.color = '#ff6b6b';
@@ -229,8 +231,8 @@
       setTimeout(() => onComplete(25), 1500);
     }
     
-    // Controls
-    document.addEventListener('keydown', (e) => {
+    // Controls - store handler reference for cleanup
+    const keydownHandler = (e) => {
       if(gameOver) return;
       
       if(e.key === 'ArrowLeft' || e.key === 'a'){
@@ -245,7 +247,9 @@
           applyForce(0, -12); // Jump
         }
       }
-    });
+    };
+    
+    document.addEventListener('keydown', keydownHandler);
     
     btnLeft.addEventListener('click', () => applyForce(-acceleration, 0));
     btnRight.addEventListener('click', () => applyForce(acceleration, 0));
