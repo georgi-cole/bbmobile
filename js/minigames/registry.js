@@ -445,7 +445,7 @@
     socialStrings: {
       key: 'socialStrings',
       name: 'Social Strings',
-      description: 'Connect players with social relationships',
+      description: 'Identify houseguests in alliances together',
       type: 'puzzle',
       scoring: 'accuracy',
       mobileFriendly: true,
