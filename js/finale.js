@@ -142,7 +142,7 @@
     const name = g.safeName?.(winnerId) || (g.getP?.(winnerId)?.name ?? 'Winner');
     const nameEl=dim.querySelector('#cinWinName'); if(nameEl) nameEl.textContent=name;
     
-    // Autoplay outro video after 8 seconds only on first call (unless already started via CREDITS button)
+    // Autoplay outro video after 5 seconds only on first call (unless already started via CREDITS button)
     // Check if outro has already been autoplayed by checking a persistent flag
     if(!g.__outroStarted && !g.__outroAutoPlayed){
       setTimeout(()=>{
@@ -157,7 +157,7 @@
             g.__outroStarted = false;
           }
         }
-      }, 8000);
+      }, 5000);
     }
     
     return dim;

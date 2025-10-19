@@ -107,6 +107,12 @@
     const { vid, skip, tap } = buildOverlay();
     let finished = false;
 
+    // Customize tap button text based on video type
+    const isOutro = url.includes('outro');
+    if (isOutro) {
+      tap.textContent = 'Tap to play credits with sound';
+    }
+
     function finish(kind) {
       if (finished) return;
       finished = true;
