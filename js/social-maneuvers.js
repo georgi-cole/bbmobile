@@ -1952,21 +1952,7 @@
     // Recompute phase energy based on weekly events
     const energy = SocialResources.recomputePhaseEnergy(playerId);
     
-    // Emit social-resources-changed event for HUD updates
-    try {
-      const resources = SocialResources.getAll(playerId);
-      const event = new CustomEvent('social-resources-changed', {
-        detail: { 
-          playerId, 
-          delta: { energy: energy - DEFAULT_ENERGY }, 
-          resources 
-        }
-      });
-      window.dispatchEvent(event);
-      console.info('[social-maneuvers] 📡 Dispatched social-resources-changed event after seeding:', { playerId, energy, resources });
-    } catch(e) {
-      console.warn('[social-maneuvers] Failed to dispatch event after seeding:', e);
-    }
+    // Event dispatch is handled by SocialResources.set() via recomputePhaseEnergy
     
     console.info(`[social-maneuvers] ✓ Phase resources seeded for player ${playerId}: energy=${energy}`);
   }
