@@ -48,11 +48,11 @@
     timerDiv.textContent = hardMode ? 'Time: 20s' : 'Time: 30s';
     timerDiv.style.cssText = 'font-size:1rem;color:#95a9c0;';
     
-    // Canvas for game (placeholder for images)
+    // Canvas for game (two side-by-side panels)
     const canvas = document.createElement('canvas');
-    canvas.width = 350;
-    canvas.height = 250;
-    canvas.style.cssText = 'border:3px solid #3d4f64;background:#1a2332;border-radius:4px;cursor:crosshair;';
+    canvas.width = 600;
+    canvas.height = 300;
+    canvas.style.cssText = 'border:3px solid #3d4f64;background:#1a2332;border-radius:4px;cursor:crosshair;max-width:100%;';
     const ctx = canvas.getContext('2d');
     
     const skipBtn = document.createElement('button');
@@ -78,22 +78,126 @@
     let timerInterval = null;
     let totalFound = 0;
     let totalPossible = 0;
+    let comicElements = [];
+    
+    function generateComicScene(){
+      // Generate a random comic scene with various elements
+      comicElements = [];
+      const elementTypes = ['circle', 'square', 'triangle', 'star', 'heart'];
+      const colors = ['#ff6b9d', '#83bfff', '#f7b955', '#74e48b', '#b19cd9'];
+      
+      // Create 8-12 random elements for the comic panel
+      const numElements = 8 + Math.floor(Math.random() * 5);
+      for(let i = 0; i < numElements; i++){
+        comicElements.push({
+          type: elementTypes[Math.floor(Math.random() * elementTypes.length)],
+          x: 30 + Math.random() * (canvas.width / 2 - 80),
+          y: 30 + Math.random() * (canvas.height - 60),
+          size: 15 + Math.random() * 20,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotation: Math.random() * Math.PI * 2
+        });
+      }
+    }
     
     function generateDifferences(){
       differences = [];
       const count = hardMode ? 7 : 5;
       
-      // Generate random difference locations (circles on canvas)
-      for(let i = 0; i < count; i++){
-        differences.push({
-          x: 30 + Math.random() * (canvas.width - 60),
-          y: 30 + Math.random() * (canvas.height - 60),
-          radius: 20,
+      // Generate differences based on existing elements
+      // Types: color change, size change, position shift, missing element, extra element
+      const availableIndices = comicElements.map((_, i) => i);
+      
+      for(let i = 0; i < Math.min(count, comicElements.length); i++){
+        const idx = availableIndices.splice(Math.floor(Math.random() * availableIndices.length), 1)[0];
+        const element = comicElements[idx];
+        const diffType = Math.floor(Math.random() * 3); // 0: color, 1: size, 2: position
+        
+        const diff = {
+          elementIndex: idx,
+          type: diffType,
+          x: element.x + canvas.width / 2, // Right panel X position
+          y: element.y,
+          radius: 25,
           found: false
-        });
+        };
+        
+        // Store the difference modification
+        if(diffType === 0){
+          // Color change
+          const colors = ['#ff6b9d', '#83bfff', '#f7b955', '#74e48b', '#b19cd9'];
+          const otherColors = colors.filter(c => c !== element.color);
+          diff.newColor = otherColors[Math.floor(Math.random() * otherColors.length)];
+        } else if(diffType === 1){
+          // Size change
+          diff.newSize = element.size * (Math.random() > 0.5 ? 1.5 : 0.6);
+        } else {
+          // Position shift
+          diff.offsetX = (Math.random() - 0.5) * 40;
+          diff.offsetY = (Math.random() - 0.5) * 40;
+        }
+        
+        differences.push(diff);
       }
       
       totalPossible += count;
+    }
+    
+    function drawElement(element, offsetX = 0, offsetY = 0, colorOverride = null, sizeOverride = null){
+      ctx.save();
+      ctx.translate(element.x + offsetX, element.y + offsetY);
+      ctx.rotate(element.rotation);
+      
+      const size = sizeOverride || element.size;
+      const color = colorOverride || element.color;
+      ctx.fillStyle = color;
+      ctx.strokeStyle = '#0f1419';
+      ctx.lineWidth = 2;
+      
+      switch(element.type){
+        case 'circle':
+          ctx.beginPath();
+          ctx.arc(0, 0, size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          break;
+        case 'square':
+          ctx.fillRect(-size, -size, size * 2, size * 2);
+          ctx.strokeRect(-size, -size, size * 2, size * 2);
+          break;
+        case 'triangle':
+          ctx.beginPath();
+          ctx.moveTo(0, -size);
+          ctx.lineTo(size, size);
+          ctx.lineTo(-size, size);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          break;
+        case 'star':
+          ctx.beginPath();
+          for(let i = 0; i < 5; i++){
+            const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+            const x = Math.cos(angle) * size;
+            const y = Math.sin(angle) * size;
+            if(i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          break;
+        case 'heart':
+          ctx.beginPath();
+          ctx.moveTo(0, size * 0.3);
+          ctx.bezierCurveTo(-size * 0.5, -size * 0.5, -size, size * 0.1, 0, size);
+          ctx.bezierCurveTo(size, size * 0.1, size * 0.5, -size * 0.5, 0, size * 0.3);
+          ctx.fill();
+          ctx.stroke();
+          break;
+      }
+      
+      ctx.restore();
     }
     
     function drawScene(){
@@ -101,22 +205,46 @@
       ctx.fillStyle = '#1a2332';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Draw placeholder comic panel
+      // Draw left panel background (original)
       ctx.fillStyle = '#2c3a4d';
-      ctx.fillRect(10, 10, canvas.width - 20, canvas.height - 20);
+      ctx.fillRect(5, 5, canvas.width / 2 - 10, canvas.height - 10);
       
-      // Draw some simple shapes to represent comic elements
+      // Draw right panel background (with differences)
+      ctx.fillStyle = '#2c3a4d';
+      ctx.fillRect(canvas.width / 2 + 5, 5, canvas.width / 2 - 10, canvas.height - 10);
+      
+      // Draw center divider
       ctx.fillStyle = '#3d4f64';
-      for(let i = 0; i < 8; i++){
-        const x = 30 + (i % 4) * 80;
-        const y = 30 + Math.floor(i / 4) * 100;
-        ctx.fillRect(x, y, 60, 80);
-      }
+      ctx.fillRect(canvas.width / 2 - 2, 0, 4, canvas.height);
       
-      // Draw difference circles (visible only if found or in debug mode)
+      // Draw LEFT panel elements (original)
+      comicElements.forEach((element, idx) => {
+        drawElement(element, 0, 0);
+      });
+      
+      // Draw RIGHT panel elements (with differences)
+      comicElements.forEach((element, idx) => {
+        // Check if this element has a difference
+        const diff = differences.find(d => d.elementIndex === idx);
+        
+        if(diff){
+          // Draw with difference
+          const offsetX = canvas.width / 2 + (diff.offsetX || 0);
+          const offsetY = diff.offsetY || 0;
+          const color = diff.newColor || null;
+          const size = diff.newSize || null;
+          
+          drawElement(element, offsetX, offsetY, color, size);
+        } else {
+          // Draw normally
+          drawElement(element, canvas.width / 2, 0);
+        }
+      });
+      
+      // Draw difference highlights (visible only if found or in debug mode)
       differences.forEach((diff, idx) => {
         if(diff.found){
-          // Draw found difference
+          // Draw found difference - highlight on both sides
           ctx.strokeStyle = '#74e48b';
           ctx.lineWidth = 3;
           ctx.beginPath();
@@ -125,6 +253,7 @@
           
           // Draw X
           ctx.strokeStyle = '#74e48b';
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(diff.x - 10, diff.y - 10);
           ctx.lineTo(diff.x + 10, diff.y + 10);
@@ -134,7 +263,7 @@
         } else if(debugMode){
           // Show hitboxes in debug mode
           ctx.strokeStyle = 'rgba(255,107,107,0.5)';
-          ctx.lineWidth = 1;
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.arc(diff.x, diff.y, diff.radius, 0, Math.PI * 2);
           ctx.stroke();
@@ -142,16 +271,17 @@
       });
       
       // Instructions overlay
-      ctx.fillStyle = 'rgba(149, 169, 192, 0.8)';
-      ctx.font = '14px Arial';
+      ctx.fillStyle = 'rgba(149, 169, 192, 0.9)';
+      ctx.font = 'bold 13px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('Click on differences (placeholder panel)', canvas.width/2, canvas.height - 15);
+      ctx.fillText('Find the differences between the two panels!', canvas.width/2, canvas.height - 10);
     }
     
     function startRound(){
       foundDifferences.clear();
       timeRemaining = timeLimit;
       
+      generateComicScene();
       generateDifferences();
       drawScene();
       

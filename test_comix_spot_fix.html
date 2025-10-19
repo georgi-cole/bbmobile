@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comix Spot - Test Fix</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0f1419;
+      color: #e3ecf5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 32px;
+    }
+    .game-container {
+      min-height: 450px;
+      background: #1a2332;
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .status.success {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid #4caf50;
+      color: #4caf50;
+    }
+    .status.info {
+      background: rgba(33, 150, 243, 0.2);
+      border: 1px solid #2196f3;
+      color: #2196f3;
+    }
+    .test-info {
+      background: rgba(131, 191, 255, 0.1);
+      border: 1px solid #83bfff;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .test-info h3 {
+      margin-top: 0;
+      color: #83bfff;
+    }
+    .test-info ul {
+      margin: 8px 0;
+      padding-left: 20px;
+      color: #95a9c0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Comix Spot - Test Fix</h1>
+  
+  <div class="test-info">
+    <h3>Test Instructions</h3>
+    <ul>
+      <li>The game should show TWO comic panels side by side</li>
+      <li>Each panel should have colorful shapes (circles, squares, triangles, stars, hearts)</li>
+      <li>The right panel should have 5 differences from the left panel</li>
+      <li>Click on differences in the RIGHT panel to find them</li>
+      <li>Complete 3 rounds to finish the game</li>
+    </ul>
+  </div>
+  
+  <div id="status" class="status info">Initializing game...</div>
+  
+  <div id="gameContainer" class="game-container"></div>
+  
+  <div id="result"></div>
+
+  <script src="js/minigames/comix-spot.js"></script>
+  <script>
+    const container = document.getElementById('gameContainer');
+    const statusDiv = document.getElementById('status');
+    const resultDiv = document.getElementById('result');
+    
+    statusDiv.textContent = 'Starting Comix Spot game...';
+    
+    function onComplete(score) {
+      statusDiv.className = 'status success';
+      statusDiv.textContent = 'Game completed!';
+      resultDiv.innerHTML = `<div class="status success">Final Score: ${score}</div>`;
+      console.log('Game completed with score:', score);
+    }
+    
+    // Check if game is loaded
+    if (window.MiniGames && window.MiniGames.comixSpot) {
+      console.log('Comix Spot module loaded successfully');
+      statusDiv.textContent = 'Rendering Comix Spot...';
+      
+      // Render the game with debug mode OFF to test normal gameplay
+      window.MiniGames.comixSpot.render(container, onComplete, {
+        debugMode: false,
+        competitionMode: false,
+        variant: 'normal'
+      });
+      
+      statusDiv.textContent = 'Game running - Find the differences!';
+    } else {
+      statusDiv.className = 'status error';
+      statusDiv.textContent = 'ERROR: Comix Spot module not loaded!';
+      console.error('MiniGames.comixSpot not available');
+    }
+  </script>
+</body>
+</html>
