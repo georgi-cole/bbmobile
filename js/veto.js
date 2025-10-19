@@ -549,7 +549,7 @@
   }
   global.renderFinal4EvictionPanel = renderFinal4EvictionPanel;
   
-  function finalizeFinal4Eviction(targetId){
+  async function finalizeFinal4Eviction(targetId){
     var g = global.game;
     if(g.__f4EvictionResolved) return;
     if(g.__f4EvictionInProgress) return;
@@ -579,23 +579,27 @@
         global.showCard('Evicted', [evictee.name + ' has been evicted.', 'Three remain.'], 'evict', 4500, true); 
     }catch(e){}
     
+    // Wait for card to display
+    if(typeof global.cardQueueWaitIdle === 'function'){
+      try{ await global.cardQueueWaitIdle(); }catch(e){}
+    }
+    
+    // Run eviction visual enhancement (avatar animation + roster badge update)
+    if(typeof global.runEvictionVisual === 'function'){
+      try{
+        await global.runEvictionVisual(target, { reason: 'final4' });
+      }catch(e){
+        console.error('[final4] visual enhancement failed:', e);
+      }
+    }
+    
     // Add to jury if enabled
     if(global.alivePlayers().length <= 9 && g.cfg.enableJuryHouse && !g.juryHouse.includes(target)){
       g.juryHouse.push(target);
     }
     
-    // Proceed to next phase after card displays
-    (function waitCards(){
-      if(typeof global.cardQueueWaitIdle === 'function'){
-        try{ 
-          global.cardQueueWaitIdle().then(function(){ 
-            setTimeout(function(){ proceedAfterFinal4Eviction(); }, 700); 
-          }); 
-          return; 
-        }catch(e){}
-      }
-      setTimeout(function(){ proceedAfterFinal4Eviction(); }, 700);
-    })();
+    // Proceed to next phase
+    setTimeout(function(){ proceedAfterFinal4Eviction(); }, 700);
   }
   global.finalizeFinal4Eviction = finalizeFinal4Eviction;
   
