@@ -661,33 +661,42 @@ header.innerHTML = `
       const name=document.createElement('div'); 
       name.className='top-tile-name';
       
+      // Initialize label variables with fallback to player name
+      // This ensures we always have a valid label even if no special status applies
+      const nameLabel = (typeof global.safeName === 'function') 
+        ? global.safeName(p.id) 
+        : (p.name || `Player ${p.id}`);
+      let labelText = nameLabel;
+      let statusClass = '';
+      let ariaLabel = nameLabel;
+      
       // Label precedence: WINNER > RUNNER-UP > NOM > HOH/POV icons > name
       // Note: FINISHING BADGE (≥3rd) is now rendered inside avatar, not as label
       if(isWinner){
         labelText = '🥇';
         statusClass = 'status-icon-label medal-winner';
-        ariaLabel = `${p.name} (Winner)`;
+        ariaLabel = `${nameLabel} (Winner)`;
       } else if(isRunnerUp){
         labelText = '🥈';
         statusClass = 'status-icon-label medal-runner-up';
-        ariaLabel = `${p.name} (Runner-Up)`;
+        ariaLabel = `${nameLabel} (Runner-Up)`;
       } else if(hasNom){
         labelText = 'NOM';
         statusClass = 'status-nom';
-        ariaLabel = `${p.name} (Nominated)`;
+        ariaLabel = `${nameLabel} (Nominated)`;
       } else if(hasHOH && hasVeto){
         // Both HOH and POV - show both icons side by side
         name.innerHTML = '<span class="icon-hoh">👑</span><span class="icon-veto">🛡</span>';
         statusClass = 'status-icon-label hoh-pov-icons';
-        ariaLabel = `${p.name} (Head of Household and Veto Holder)`;
+        ariaLabel = `${nameLabel} (Head of Household and Veto Holder)`;
       } else if(hasHOH){
         labelText = 'HOH';
         statusClass = 'status-hoh';
-        ariaLabel = `${p.name} (Head of Household)`;
+        ariaLabel = `${nameLabel} (Head of Household)`;
       } else if(hasVeto){
         labelText = 'POV';
         statusClass = 'status-pov';
-        ariaLabel = `${p.name} (Veto Holder)`;
+        ariaLabel = `${nameLabel} (Veto Holder)`;
       }
       
       if(!(hasHOH && hasVeto)){
