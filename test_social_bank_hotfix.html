@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Energy Bank Hotfix Verification</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 { color: #4a9eff; }
+    h2 { color: #7ec8e3; margin-top: 2em; }
+    .test-section {
+      background: #16213e;
+      border-left: 4px solid #4a9eff;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .pass { color: #4ecdc4; }
+    .fail { color: #ff6b6b; }
+    .info { color: #95e1d3; }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button:hover { background: #3a7ecf; }
+    pre {
+      background: #0f1419;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+      border: 1px solid #2a3f5f;
+    }
+    .log-output {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .status-badge.pass {
+      background: #2ecc71;
+      color: white;
+    }
+    .status-badge.fail {
+      background: #e74c3c;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏦 Social Energy Bank Hotfix Verification</h1>
+  <p class="info">This test verifies the fixes for bank-driven seeding and HUD TDZ error.</p>
+
+  <div class="test-section">
+    <h2>Test 1: Bank-Based Seeding at Phase Start</h2>
+    <p>Verifies that energy is seeded strictly from bank, not Base + bonuses/penalties</p>
+    <button onclick="test1_bankSeeding()">Run Test</button>
+    <div id="test1-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Event Deltas Apply to Bank Immediately</h2>
+    <p>Verifies that weekly events (HOH win, nominations, etc.) apply to bank in real-time</p>
+    <button onclick="test2_eventDeltas()">Run Test</button>
+    <div id="test2-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Leftover Energy Syncs Back to Bank</h2>
+    <p>Verifies that unused phase energy is maintained in bank via lock-step operations</p>
+    <button onclick="test3_leftoverSync()">Run Test</button>
+    <div id="test3-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: HUD ariaLabel TDZ Fix</h2>
+    <p>Verifies that renderTopRoster doesn't throw TDZ errors</p>
+    <button onclick="test4_hudTDZ()">Run Test</button>
+    <div id="test4-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Log Messages Show Bank Seeding</h2>
+    <p>Verifies that logs show [sm-phase] seeded from bank=X format</p>
+    <button onclick="test5_logMessages()">Run Test</button>
+    <div id="test5-result"></div>
+    <div id="test5-logs" class="log-output"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/ui.hud-and-router.js"></script>
+
+  <script>
+    // Mock game environment
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      week: 2,
+      phase: 'social_intermission',
+      humanId: 1,
+      players: [
+        { id: 1, name: 'Alice', human: true, evicted: false, bio: {} },
+        { id: 2, name: 'Bob', evicted: false, bio: {} },
+        { id: 3, name: 'Charlie', evicted: false, bio: {} }
+      ]
+    };
+
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+
+    // Capture console logs
+    const logs = [];
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    console.log = function(...args) {
+      logs.push({ level: 'log', args });
+      originalLog.apply(console, args);
+    };
+    console.info = function(...args) {
+      logs.push({ level: 'info', args });
+      originalInfo.apply(console, args);
+    };
+
+    function clearLogs() {
+      logs.length = 0;
+    }
+
+    function getLogs() {
+      return logs.map(l => l.args.join(' ')).join('\n');
+    }
+
+    // Test 1: Bank-based seeding
+    function test1_bankSeeding() {
+      clearLogs();
+      const result = document.getElementById('test1-result');
+      result.innerHTML = '<p class="info">Running...</p>';
+
+      try {
+        // Initialize bank with 8 energy
+        window.SocialManeuvers.SocialEnergyBank.set(1, 8);
+        
+        // Call onSocialPhaseStart
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        // Check that phase energy equals bank (capped at MAX_ENERGY)
+        const phaseEnergy = window.SocialManeuvers.SocialResources.get(1, 'energy');
+        const bankBalance = window.SocialManeuvers.SocialEnergyBank.get(1);
+        
+        // Check logs for bank-based seeding message
+        const logText = getLogs();
+        const hasBankLog = logText.includes('[sm-phase] seeded from bank=');
+        const hasLegacyLog = logText.includes('Base=5 + weekly bonuses/penalties');
+        
+        if (phaseEnergy === 8 && bankBalance === 8 && hasBankLog && !hasLegacyLog) {
+          result.innerHTML = `
+            <p class="pass">✓ PASS</p>
+            <pre>Bank balance: ${bankBalance}
+Phase energy: ${phaseEnergy}
+Bank log present: ${hasBankLog}
+Legacy log absent: ${!hasLegacyLog}</pre>
+            <span class="status-badge pass">PASS</span>
+          `;
+        } else {
+          result.innerHTML = `
+            <p class="fail">✗ FAIL</p>
+            <pre>Expected: phaseEnergy=8, bank=8, bank log=true, legacy log=false
+Got: phaseEnergy=${phaseEnergy}, bank=${bankBalance}, bank log=${hasBankLog}, legacy log=${hasLegacyLog}</pre>
+            <span class="status-badge fail">FAIL</span>
+          `;
+        }
+      } catch (e) {
+        result.innerHTML = '';
+        const errorP = document.createElement('p');
+        errorP.className = 'fail';
+        errorP.textContent = `✗ ERROR: ${e.message}`;
+        result.appendChild(errorP);
+        const badge = document.createElement('span');
+        badge.className = 'status-badge fail';
+        badge.textContent = 'ERROR';
+        result.appendChild(badge);
+      }
+    }
+
+    // Test 2: Event deltas to bank
+    function test2_eventDeltas() {
+      clearLogs();
+      const result = document.getElementById('test2-result');
+      result.innerHTML = '<p class="info">Running...</p>';
+
+      try {
+        // Set initial bank balance
+        window.SocialManeuvers.SocialEnergyBank.set(1, 5);
+        const before = window.SocialManeuvers.SocialEnergyBank.get(1);
+        
+        // Get HOH win delta from config
+        const hohDelta = window.SocialManeuvers.SocialResources.EVENT_CONFIG
+          ? window.SocialManeuvers.SocialResources.EVENT_CONFIG['hohWin'].delta
+          : 5; // fallback for legacy
+        // Record HOH win event (should add hohDelta)
+        window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'hohWin', true);
+        const after = window.SocialManeuvers.SocialEnergyBank.get(1);
+        
+        if (after === before + hohDelta) {
+          result.innerHTML = `
+            <p class="pass">✓ PASS</p>
+            <pre>Before: ${before}
+After HOH win: ${after}
+Delta: +${after - before} (expected: +${hohDelta})</pre>
+            <span class="status-badge pass">PASS</span>
+          `;
+        } else {
+          result.innerHTML = `
+            <p class="fail">✗ FAIL</p>
+            <pre>Expected: ${before + hohDelta}
+Got: ${after}
+Delta: +${after - before} (expected: +${hohDelta})</pre>
+            <span class="status-badge fail">FAIL</span>
+          `;
+        }
+      } catch (e) {
+        result.innerHTML = `<p class="fail">✗ ERROR: ${e.message}</p><span class="status-badge fail">ERROR</span>`;
+      }
+    }
+
+    // Test 3: Leftover energy sync
+    function test3_leftoverSync() {
+      clearLogs();
+      const result = document.getElementById('test3-result');
+      result.innerHTML = '<p class="info">Running...</p>';
+
+      try {
+        // Set bank and phase energy
+        window.SocialManeuvers.SocialEnergyBank.set(1, 8);
+        window.SocialManeuvers.SocialResources.set(1, 'energy', 8);
+        
+        // Spend 3 energy
+        window.SocialManeuvers.SocialResources.spend(1, { energy: 3 });
+        
+        // Check that bank also decreased
+        const bankAfter = window.SocialManeuvers.SocialEnergyBank.get(1);
+        const phaseAfter = window.SocialManeuvers.SocialResources.get(1, 'energy');
+        
+        if (bankAfter === 5 && phaseAfter === 5) {
+          result.innerHTML = `
+            <p class="pass">✓ PASS</p>
+            <pre>Bank after spend: ${bankAfter}
+Phase energy after spend: ${phaseAfter}
+Lock-step sync working ✓</pre>
+            <span class="status-badge pass">PASS</span>
+          `;
+        } else {
+          result.innerHTML = `
+            <p class="fail">✗ FAIL</p>
+            <pre>Expected both to be 5
+Bank: ${bankAfter}, Phase: ${phaseAfter}</pre>
+            <span class="status-badge fail">FAIL</span>
+          `;
+        }
+      } catch (e) {
+        result.innerHTML = `<p class="fail">✗ ERROR: ${e.message}</p><span class="status-badge fail">ERROR</span>`;
+      }
+    }
+
+    // Test 4: HUD TDZ fix
+    function test4_hudTDZ() {
+      const result = document.getElementById('test4-result');
+      result.innerHTML = '<p class="info">Running...</p>';
+
+      try {
+        // Try to render top roster (should not throw TDZ error)
+        window.renderTopRoster();
+        
+        result.innerHTML = `
+          <p class="pass">✓ PASS</p>
+          <pre>renderTopRoster executed without TDZ errors</pre>
+          <span class="status-badge pass">PASS</span>
+        `;
+      } catch (e) {
+        if (e.message.includes('ariaLabel') || e.message.includes('initialization')) {
+          result.innerHTML = `
+            <p class="fail">✗ FAIL</p>
+            <pre>TDZ Error: ${e.message}</pre>
+            <span class="status-badge fail">FAIL</span>
+          `;
+        } else {
+          result.innerHTML = `
+            <p class="pass">✓ PASS (no TDZ error)</p>
+            <pre>Error was: ${e.message}
+(Not a TDZ error - this is expected if DOM elements are missing)</pre>
+            <span class="status-badge pass">PASS</span>
+          `;
+        }
+      }
+    }
+
+    // Test 5: Log messages
+    function test5_logMessages() {
+      clearLogs();
+      const result = document.getElementById('test5-result');
+      const logDiv = document.getElementById('test5-logs');
+      result.innerHTML = '<p class="info">Running...</p>';
+
+      try {
+        // Set bank and trigger phase start
+        window.SocialManeuvers.SocialEnergyBank.set(1, 7);
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        const logText = getLogs();
+        const hasBankLog = logText.includes('[sm-phase] seeded from bank=');
+        const hasCorrectFormat = /\[sm-phase\] seeded from bank=\d+, phase energy=\d+/.test(logText);
+        
+        logDiv.innerHTML = `<pre>${logText}</pre>`;
+        
+        if (hasBankLog && hasCorrectFormat) {
+          result.innerHTML = `
+            <p class="pass">✓ PASS</p>
+            <pre>Log format correct: [sm-phase] seeded from bank=X, phase energy=Y</pre>
+            <span class="status-badge pass">PASS</span>
+          `;
+        } else {
+          result.innerHTML = `
+            <p class="fail">✗ FAIL</p>
+            <pre>Bank log found: ${hasBankLog}
+Correct format: ${hasCorrectFormat}</pre>
+            <span class="status-badge fail">FAIL</span>
+          `;
+        }
+      } catch (e) {
+        result.innerHTML = `<p class="fail">✗ ERROR: ${e.message}</p><span class="status-badge fail">ERROR</span>`;
+      }
+    }
+
+    // Auto-run all tests on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.info('🧪 Running automated test suite...');
+        test1_bankSeeding();
+        setTimeout(test2_eventDeltas, 100);
+        setTimeout(test3_leftoverSync, 200);
+        setTimeout(test4_hudTDZ, 300);
+        setTimeout(test5_logMessages, 400);
+      }, 500);
+    });
+  </script>
+</body>
+</html>

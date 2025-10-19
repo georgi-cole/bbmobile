@@ -658,6 +658,11 @@ header.innerHTML = `
       img.onerror=function(){ this.onerror=null; this.src=FALLBACK; };
       wrap.appendChild(img);
 
+      // Initialize aria label and status variables before any use
+      let ariaLabel = p.name;
+      let labelText = p.name;
+      let statusClass = '';
+
       // Add finishing place badge inside avatar for ranks ≥ 3
       // Badge is centered inside avatar, avatar becomes grayscale + semi-transparent
       if(p.evicted && p.showFinishingBadge && p.finalRank && p.finalRank >= 3){
@@ -682,10 +687,6 @@ header.innerHTML = `
       // Name/Status label - show icons or text that replaces the name
       const name=document.createElement('div'); 
       name.className='top-tile-name';
-      
-      let labelText = p.name;
-      let statusClass = '';
-      let ariaLabel = p.name;
       
       // Label precedence: WINNER > RUNNER-UP > NOM > HOH/POV icons > name
       // Note: FINISHING BADGE (≥3rd) is now rendered inside avatar, not as label

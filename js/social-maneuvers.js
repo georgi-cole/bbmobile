@@ -2185,19 +2185,25 @@
     });
     console.info(`[social-maneuvers] ✓ Resources initialized for ${alivePlayers.length} players`);
     
-    // Reset weekly for all alive players (applies weekly housekeeping and energy seeding)
+    // Reset weekly for all alive players (applies weekly housekeeping - influence decay, event tracker reset)
     alivePlayers.forEach(p => {
       SocialResources.resetWeekly(p.id);
+    });
+    
+    // BANK-BASED SEEDING: Seed phase energy strictly from bank for all players
+    alivePlayers.forEach(p => {
+      SocialResources.recomputePhaseEnergy(p.id);
     });
     
     // Clear phase refunds for new phase
     SocialResources.clearPhaseRefunds();
     console.info('[social-maneuvers] Phase refunds cleared for new phase');
 
-    // Log energy seeding for human player (humanId already declared at function start)
+    // Log bank-based seeding for human player
     if(humanId) {
-      const humanEnergy = SocialResources.get(humanId, 'energy');
-      console.info(`[social-maneuvers] ⚡ Energy seeded for human player: ${humanEnergy} (Base=${DEFAULT_ENERGY} + weekly bonuses/penalties)`);
+      const bankBalance = SocialEnergyBank.get(humanId);
+      const phaseEnergy = SocialResources.get(humanId, 'energy');
+      console.info(`[sm-phase] seeded from bank=${bankBalance}, phase energy=${phaseEnergy}`);
     }
 
     // Initialize phase session tracking (PR #266)
