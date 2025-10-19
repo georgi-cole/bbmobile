@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SM Enhancements Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 { color: #0f3; text-align: center; }
+    h2 { color: #4af; margin-top: 30px; border-bottom: 2px solid #4af; padding-bottom: 5px; }
+    h3 { color: #f84; margin-top: 20px; }
+    .test-section {
+      background: #16213e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+    }
+    .pass { background: #1a4d2e; border-left: 4px solid #0f3; }
+    .fail { background: #4d1a1a; border-left: 4px solid #f33; }
+    .info { background: #1a2a4d; border-left: 4px solid #4af; }
+    button {
+      background: #4af;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+      transition: background 0.3s;
+    }
+    button:hover { background: #3a9; }
+    button:active { background: #2a7; }
+    pre {
+      background: #0a0a0a;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .summary {
+      background: #2a2a4a;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border: 2px solid #4af;
+    }
+    .summary h3 { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <h1>🚀 SM Enhancements Validation Test</h1>
+  
+  <div class="summary">
+    <h3>Test Objectives</h3>
+    <ol>
+      <li>✅ Week 1 starter +5 bonus (one-time)</li>
+      <li>✅ HOH participation detection via game.lastCompScores</li>
+      <li>✅ HOH skip penalty → bank=0</li>
+      <li>✅ HOH last place penalty → bank=0</li>
+      <li>✅ HOH participated bonus +5</li>
+      <li>✅ HOH phase exit fallback</li>
+      <li>✅ Veto drawing watcher on game.__vetoPlayers</li>
+      <li>✅ notDrawnVeto penalty -1 for excluded players</li>
+    </ol>
+  </div>
+
+  <div id="results"></div>
+
+  <div class="test-section">
+    <h3>Manual Test Controls</h3>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+    <button onclick="showState()">Show Game State</button>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    const results = document.getElementById('results');
+
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      results.appendChild(div);
+      console.log(`[TEST] ${message}`);
+    }
+
+    function clearResults() {
+      results.innerHTML = '';
+    }
+
+    function showState() {
+      const g = window.game;
+      const state = {
+        week: g?.week,
+        hohId: g?.hohId,
+        lastCompScores: g?.lastCompScores ? Object.fromEntries(g.lastCompScores) : {},
+        __vetoPlayers: g?.__vetoPlayers,
+        __sm_weekStarterApplied: g?.__sm_weekStarterApplied,
+        banks: {},
+        phaseEnergy: {}
+      };
+
+      const alivePlayers = window.alivePlayers?.() || [];
+      alivePlayers.forEach(p => {
+        state.banks[p.id] = window.SocialManeuvers?.SocialEnergyBank?.get(p.id);
+        state.phaseEnergy[p.id] = window.SocialManeuvers?.SocialResources?.get(p.id, 'energy');
+      });
+
+      log('=== GAME STATE ===', 'info');
+      log(JSON.stringify(state, null, 2), 'info');
+    }
+
+    async function runAllTests() {
+      clearResults();
+      log('=== Starting SM Enhancements Test Suite ===', 'info');
+      
+      // Setup
+      await setupTestEnvironment();
+      
+      // Run tests
+      await testWeek1StarterBonus();
+      await testHOHSkipPenalty();
+      await testHOHLastPlacePenalty();
+      await testHOHParticipationBonus();
+      await testHOHPhaseExitFallback();
+      await testVetoDrawingWatcher();
+      await testNotDrawnVetoPenalty();
+      
+      log('=== Test Suite Complete ===', 'info');
+      showState();
+    }
+
+    async function setupTestEnvironment() {
+      log('Setting up test environment...', 'info');
+      
+      // Initialize game object
+      if(!window.game) {
+        window.game = {
+          week: 0, // Start at 0 to test week 1 trigger
+          phase: 'pre_hoh',
+          humanId: 1,
+          cfg: { enableSocialManeuvers: true },
+          lastCompScores: new Map()
+        };
+      } else {
+        window.game.week = 0;
+        window.game.lastCompScores = new Map();
+        window.game.__sm_weekStarterApplied = 0;
+        window.game.__sm_watcherApplied = new Map();
+      }
+
+      // Create test players
+      window.alivePlayers = () => [
+        { id: 1, name: 'Player 1 (Human)' },
+        { id: 2, name: 'Player 2' },
+        { id: 3, name: 'Player 3' },
+        { id: 4, name: 'Player 4' },
+        { id: 5, name: 'Player 5' }
+      ];
+
+      // Mock getP function
+      window.getP = (id) => window.alivePlayers().find(p => p.id === id);
+
+      // Initialize Social Maneuvers
+      if(window.SocialManeuvers) {
+        const alivePlayers = window.alivePlayers();
+        alivePlayers.forEach(p => {
+          window.SocialManeuvers.SocialEnergyBank.init(p.id);
+          window.SocialManeuvers.SocialResources.init(p.id);
+          // Set all banks to 0 for clean testing
+          window.SocialManeuvers.SocialEnergyBank.set(p.id, 0);
+        });
+        
+        log('✓ Test environment ready', 'pass');
+      } else {
+        log('✗ Social Maneuvers module not loaded!', 'fail');
+      }
+    }
+
+    async function testWeek1StarterBonus() {
+      log('--- Test: Week 1 Starter Bonus ---', 'info');
+      
+      const g = window.game;
+      const initialBanks = {};
+      window.alivePlayers().forEach(p => {
+        initialBanks[p.id] = window.SocialManeuvers.SocialEnergyBank.get(p.id);
+      });
+      
+      // Trigger week 1
+      g.week = 1;
+      
+      // Wait for property setter to execute
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Check all banks got +5
+      let allCorrect = true;
+      window.alivePlayers().forEach(p => {
+        const bank = window.SocialManeuvers.SocialEnergyBank.get(p.id);
+        const expected = initialBanks[p.id] + 5;
+        if(bank !== expected) {
+          log(`✗ Player ${p.id} bank: ${bank}, expected: ${expected}`, 'fail');
+          allCorrect = false;
+        }
+      });
+      
+      // Check flag is set
+      if(g.__sm_weekStarterApplied !== 1) {
+        log(`✗ Flag __sm_weekStarterApplied not set (value: ${g.__sm_weekStarterApplied})`, 'fail');
+        allCorrect = false;
+      }
+      
+      if(allCorrect) {
+        log('✓ Week 1 starter bonus applied correctly (+5 to all alive players)', 'pass');
+        log('✓ Flag __sm_weekStarterApplied set to prevent duplicates', 'pass');
+      }
+      
+      // Test idempotence - set week 1 again
+      g.week = 1;
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const bank1AfterRepeat = window.SocialManeuvers.SocialEnergyBank.get(1);
+      if(bank1AfterRepeat === initialBanks[1] + 5) {
+        log('✓ Idempotence verified: bonus not applied twice', 'pass');
+      } else {
+        log(`✗ Idempotence failed: bank=${bank1AfterRepeat}, expected=${initialBanks[1] + 5}`, 'fail');
+      }
+    }
+
+    async function testHOHSkipPenalty() {
+      log('--- Test: HOH Skip Penalty ---', 'info');
+      
+      const g = window.game;
+      g.week = 2;
+      g.humanId = 1;
+      g.lastCompScores = new Map([[2, 50], [3, 45], [4, 40]]); // Human (1) not in scores
+      
+      // Set initial bank for human
+      window.SocialManeuvers.SocialEnergyBank.set(1, 10);
+      
+      // Trigger HOH winner
+      g.hohId = 2;
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const humanBank = window.SocialManeuvers.SocialEnergyBank.get(1);
+      if(humanBank === 0) {
+        log('✓ HOH skip penalty applied: human bank set to 0', 'pass');
+      } else {
+        log(`✗ HOH skip penalty failed: bank=${humanBank}, expected=0`, 'fail');
+      }
+    }
+
+    async function testHOHLastPlacePenalty() {
+      log('--- Test: HOH Last Place Penalty ---', 'info');
+      
+      const g = window.game;
+      g.week = 3;
+      g.humanId = 1;
+      g.__sm_watcherApplied = new Map(); // Reset
+      g.lastCompScores = new Map([[1, 25], [2, 50], [3, 45], [4, 40]]); // Human scored lowest
+      
+      // Set initial bank for human
+      window.SocialManeuvers.SocialEnergyBank.set(1, 15);
+      
+      // Trigger HOH winner
+      g.hohId = 2;
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const humanBank = window.SocialManeuvers.SocialEnergyBank.get(1);
+      if(humanBank === 0) {
+        log('✓ HOH last place penalty applied: human bank set to 0', 'pass');
+      } else {
+        log(`✗ HOH last place penalty failed: bank=${humanBank}, expected=0`, 'fail');
+      }
+    }
+
+    async function testHOHParticipationBonus() {
+      log('--- Test: HOH Participation Bonus ---', 'info');
+      
+      const g = window.game;
+      g.week = 4;
+      g.humanId = 1;
+      g.__sm_watcherApplied = new Map(); // Reset
+      g.lastCompScores = new Map([[1, 45], [2, 50], [3, 40], [4, 35]]); // Human not last
+      
+      // Set initial bank for human
+      const initialBank = 10;
+      window.SocialManeuvers.SocialEnergyBank.set(1, initialBank);
+      
+      // Trigger HOH winner
+      g.hohId = 2;
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const humanBank = window.SocialManeuvers.SocialEnergyBank.get(1);
+      const expected = initialBank + 5;
+      if(humanBank === expected) {
+        log(`✓ HOH participation bonus applied: bank increased from ${initialBank} to ${humanBank}`, 'pass');
+      } else {
+        log(`✗ HOH participation bonus failed: bank=${humanBank}, expected=${expected}`, 'fail');
+      }
+    }
+
+    async function testHOHPhaseExitFallback() {
+      log('--- Test: HOH Phase Exit Fallback ---', 'info');
+      
+      const g = window.game;
+      g.week = 5;
+      g.phase = 'hoh';
+      g.humanId = 1;
+      g.__sm_watcherApplied = new Map(); // Reset
+      g.lastCompScores = new Map([[1, 45], [2, 50], [3, 40]]); // Human participated
+      
+      // Set initial bank
+      const initialBank = 8;
+      window.SocialManeuvers.SocialEnergyBank.set(1, initialBank);
+      
+      // Mock setPhase to trigger fallback (don't set hohId)
+      if(window.setPhase) {
+        window.setPhase('nominations', 300, null);
+      } else {
+        log('⚠ setPhase not available, manually triggering fallback logic', 'info');
+        g.phase = 'nominations';
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const humanBank = window.SocialManeuvers.SocialEnergyBank.get(1);
+      const expected = initialBank + 5;
+      if(humanBank === expected) {
+        log(`✓ HOH phase exit fallback applied: bank increased to ${humanBank}`, 'pass');
+      } else {
+        log(`✗ HOH phase exit fallback failed: bank=${humanBank}, expected=${expected}`, 'fail');
+      }
+    }
+
+    async function testVetoDrawingWatcher() {
+      log('--- Test: Veto Drawing Watcher ---', 'info');
+      
+      const g = window.game;
+      g.week = 6;
+      g.__sm_watcherApplied = new Map(); // Reset
+      
+      // Set initial banks
+      window.alivePlayers().forEach(p => {
+        window.SocialManeuvers.SocialEnergyBank.set(p.id, 10);
+      });
+      
+      // Draw players 1, 2, 3 for veto (exclude 4, 5)
+      g.__vetoPlayers = [1, 2, 3];
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Check that players 4 and 5 got -1 penalty
+      const bank4 = window.SocialManeuvers.SocialEnergyBank.get(4);
+      const bank5 = window.SocialManeuvers.SocialEnergyBank.get(5);
+      
+      if(bank4 === 9 && bank5 === 9) {
+        log('✓ Veto drawing watcher applied notDrawnVeto penalty (-1) to excluded players', 'pass');
+      } else {
+        log(`✗ Veto drawing watcher failed: bank4=${bank4}, bank5=${bank5}, expected=9`, 'fail');
+      }
+      
+      // Check that drawn players (1, 2, 3) were not penalized
+      const bank1 = window.SocialManeuvers.SocialEnergyBank.get(1);
+      const bank2 = window.SocialManeuvers.SocialEnergyBank.get(2);
+      const bank3 = window.SocialManeuvers.SocialEnergyBank.get(3);
+      
+      if(bank1 === 10 && bank2 === 10 && bank3 === 10) {
+        log('✓ Drawn players not penalized', 'pass');
+      } else {
+        log(`✗ Drawn players incorrectly penalized: bank1=${bank1}, bank2=${bank2}, bank3=${bank3}`, 'fail');
+      }
+    }
+
+    async function testNotDrawnVetoPenalty() {
+      log('--- Test: notDrawnVeto Event Recording ---', 'info');
+      
+      const g = window.game;
+      g.week = 7;
+      g.__sm_watcherApplied = new Map(); // Reset
+      
+      // Set initial banks
+      window.alivePlayers().forEach(p => {
+        window.SocialManeuvers.SocialEnergyBank.set(p.id, 20);
+      });
+      
+      // Draw only player 1 for veto
+      g.__vetoPlayers = [1];
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Check that players 2, 3, 4, 5 got -1 penalty
+      let allCorrect = true;
+      [2, 3, 4, 5].forEach(id => {
+        const bank = window.SocialManeuvers.SocialEnergyBank.get(id);
+        if(bank !== 19) {
+          log(`✗ Player ${id} bank=${bank}, expected=19`, 'fail');
+          allCorrect = false;
+        }
+      });
+      
+      if(allCorrect) {
+        log('✓ notDrawnVeto penalty applied correctly to all non-drawn players', 'pass');
+      }
+      
+      // Verify idempotence - set __vetoPlayers again
+      g.__vetoPlayers = [1];
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const bank2AfterRepeat = window.SocialManeuvers.SocialEnergyBank.get(2);
+      if(bank2AfterRepeat === 19) {
+        log('✓ Idempotence verified: notDrawnVeto not applied twice', 'pass');
+      } else {
+        log(`✗ Idempotence failed: bank2=${bank2AfterRepeat}, expected=19`, 'fail');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -2050,6 +2050,47 @@
         }
       }
       
+      // ENHANCEMENT 2: HOH phase exit fallback for participation rules
+      if (previousPhase === 'hoh' && phase !== 'hoh' && isEnabled()) {
+        console.info('[social-maneuvers] ✓ Exiting HOH phase - applying participation rules (fallback)');
+        
+        const week = g.week || 1;
+        const humanId = g.humanId;
+        const lastCompScores = g.lastCompScores;
+        
+        if(!g.__sm_watcherApplied) g.__sm_watcherApplied = new Map();
+        const participationKey = `hoh-participation-${week}`;
+        const eventApplied = g.__sm_watcherApplied.has(participationKey);
+        
+        if(humanId && lastCompScores && !eventApplied) {
+          // Check if human participated
+          if(!lastCompScores.has(humanId)) {
+            // Human skipped HOH - apply compSkipped penalty and set bank to 0
+            SocialResources.recordWeeklyEvent(humanId, 'compSkipped', true);
+            SocialEnergyBank.set(humanId, 0);
+            console.info(`[sm-penalty] hohSkipped → bank=0 for player ${humanId} (fallback)`);
+          } else {
+            // Human participated - check if they came in last place
+            const scores = Array.from(lastCompScores.entries());
+            const participantScores = scores.map(([id, score]) => ({ id, score }));
+            const minScore = Math.min(...participantScores.map(p => p.score));
+            const humanScore = lastCompScores.get(humanId);
+            
+            if(humanScore === minScore) {
+              // Human came in last - set bank to 0
+              SocialEnergyBank.set(humanId, 0);
+              console.info(`[sm-penalty] hohLast → bank=0 for player ${humanId} (fallback)`);
+            } else {
+              // Human participated and didn't come in last - award +5
+              SocialEnergyBank.adjust(humanId, 5);
+              console.info(`[sm-event] hohParticipated +5 for player ${humanId} (fallback)`);
+            }
+          }
+          
+          g.__sm_watcherApplied.set(participationKey, true);
+        }
+      }
+      
       // Call original setPhase
       return originalSetPhase.call(this, phase, duration, callback);
     };
@@ -2226,6 +2267,42 @@
             SocialResources.recordWeeklyEvent(newValue, 'hohWin', true);
             markEventApplied(week, eventKey);
           }
+          
+          // ENHANCEMENT 2: HOH participation/last/skip rules
+          const humanId = g.humanId;
+          const lastCompScores = g.lastCompScores;
+          
+          if(humanId && lastCompScores) {
+            const participationKey = `hoh-participation-${week}`;
+            
+            if(!isEventApplied(week, participationKey)) {
+              // Check if human participated
+              if(!lastCompScores.has(humanId)) {
+                // Human skipped HOH - apply compSkipped penalty and set bank to 0
+                SocialResources.recordWeeklyEvent(humanId, 'compSkipped', true);
+                SocialEnergyBank.set(humanId, 0);
+                console.info(`[sm-penalty] hohSkipped → bank=0 for player ${humanId}`);
+              } else {
+                // Human participated - check if they came in last place
+                const scores = Array.from(lastCompScores.entries());
+                const participantScores = scores.map(([id, score]) => ({ id, score }));
+                const minScore = Math.min(...participantScores.map(p => p.score));
+                const humanScore = lastCompScores.get(humanId);
+                
+                if(humanScore === minScore) {
+                  // Human came in last - set bank to 0
+                  SocialEnergyBank.set(humanId, 0);
+                  console.info(`[sm-penalty] hohLast → bank=0 for player ${humanId}`);
+                } else {
+                  // Human participated and didn't come in last - award +5
+                  SocialEnergyBank.adjust(humanId, 5);
+                  console.info(`[sm-event] hohParticipated +5 for player ${humanId}`);
+                }
+              }
+              
+              markEventApplied(week, participationKey);
+            }
+          }
         }
       },
       enumerable: true,
@@ -2358,12 +2435,66 @@
             keysToDelete.forEach(key => g.__sm_watcherApplied.delete(key));
           }
         }
+        
+        // ENHANCEMENT 1: Week 1 starter bonus (+5 for human and all alive players)
+        if(newValue === 1 && !g.__sm_weekStarterApplied) {
+          console.info('[sm-week] Applying week 1 starter bonus');
+          const humanId = g.humanId;
+          const alivePlayers = global.alivePlayers?.() || [];
+          
+          // Grant +5 to human
+          if(humanId) {
+            SocialEnergyBank.adjust(humanId, 5);
+            console.info(`[sm-week] starter +5 applied (week=1) for human player ${humanId}`);
+          }
+          
+          // Grant +5 to all alive players
+          alivePlayers.forEach(player => {
+            SocialEnergyBank.adjust(player.id, 5);
+            console.info(`[sm-week] starter +5 applied (week=1) for player ${player.id} (${player.name || 'unknown'})`);
+          });
+          
+          // Mark as applied to prevent duplicates
+          g.__sm_weekStarterApplied = 1;
+        }
       },
       enumerable: true,
       configurable: true
     });
     
-    console.info('[sm-watchers] ✓ Property watchers installed: hohId, nominees, vetoHolder, vetoUsed, week');
+    // 6. Watch game.__vetoPlayers for notDrawnVeto penalty (ENHANCEMENT 3)
+    let _vetoPlayers = g.__vetoPlayers;
+    Object.defineProperty(g, '__vetoPlayers', {
+      get() { return _vetoPlayers; },
+      set(newValue) {
+        _vetoPlayers = newValue;
+        
+        // ENHANCEMENT 3: Apply notDrawnVeto penalty for players not drawn
+        if(Array.isArray(newValue) && newValue.length > 0) {
+          const week = g.week || 1;
+          const alivePlayers = global.alivePlayers?.() || [];
+          const drawnPlayerIds = newValue.map(id => +id); // Ensure numeric
+          
+          // Find players not drawn for veto
+          const notDrawn = alivePlayers.filter(p => !drawnPlayerIds.includes(p.id));
+          
+          notDrawn.forEach(player => {
+            const eventKey = `notDrawnVeto-${player.id}`;
+            
+            if(!isEventApplied(week, eventKey)) {
+              // Record weekly event which applies the penalty immediately to bank
+              SocialResources.recordWeeklyEvent(player.id, 'notDrawnVeto', true);
+              console.info(`[sm-event] notDrawnVeto -1 for player=${player.id} (${player.name || 'unknown'})`);
+              markEventApplied(week, eventKey);
+            }
+          });
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    
+    console.info('[sm-watchers] ✓ Property watchers installed: hohId, nominees, vetoHolder, vetoUsed, week, __vetoPlayers (with enhancements)');
   }
   
   // Helper to track pre-veto nominees for save detection
