@@ -635,7 +635,8 @@ header.innerHTML = `
       // Evicted overlay with SVG brush X - add only once (check data-evictAnimated)
       // Suppress rendering if visual animation is in progress for this player
       if(p.evicted){
-        const isSuppressed = game.__suppressEvictedHudUntilVisualDone && p.id === game.__pendingEvictionVisual;
+        const isSuppressed = game.__suppressEvictedHudUntilVisualDone && 
+                            game.__pendingEvictionVisuals?.has(p.id);
         
         if(!isSuppressed){
           const needsAnimation = !p.__evictAnimated;

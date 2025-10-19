@@ -335,7 +335,7 @@
       }
       window.game.__evictVisualDone = {};
       window.game.__suppressEvictedHudUntilVisualDone = false;
-      window.game.__pendingEvictionVisual = null;
+      window.game.__pendingEvictionVisuals = new Set();
       renderRoster();
       updateStatus('Game setup with 8 players', 'pass');
       log('Game initialized with 8 players', 'success');
@@ -520,7 +520,7 @@
       window.game.week = 1;
       window.game.__evictVisualDone = {};
       window.game.__suppressEvictedHudUntilVisualDone = false;
-      window.game.__pendingEvictionVisual = null;
+      window.game.__pendingEvictionVisuals = new Set();
       document.getElementById('rosterBar').innerHTML = '';
       document.getElementById('log').innerHTML = '';
       updateStatus('Game reset', 'pending');

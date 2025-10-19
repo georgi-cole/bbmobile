@@ -58,8 +58,11 @@
     const g = global.game;
     if(!g) return;
     
-    // Set suppression flags so HUD does not render red X during animation
-    g.__pendingEvictionVisual = evictedId;
+    // Initialize pending set if needed
+    if(!g.__pendingEvictionVisuals) g.__pendingEvictionVisuals = new Set();
+    
+    // Add to pending set and enable suppression
+    g.__pendingEvictionVisuals.add(evictedId);
     g.__suppressEvictedHudUntilVisualDone = true;
     
     console.info(`[eviction-visuals] suppression enabled for id=${evictedId}`);
