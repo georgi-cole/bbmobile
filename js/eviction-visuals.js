@@ -42,22 +42,27 @@
 
     console.info(`[eviction-visuals] start id=${evictedId} context=${JSON.stringify(context)}`);
 
-    // Wait for card queue to go idle
-    if(typeof global.cardQueueWaitIdle === 'function'){
-      try{
-        await global.cardQueueWaitIdle();
-      }catch(e){
-        console.warn('[eviction-visuals] cardQueueWaitIdle failed:', e);
+    try {
+      // Wait for card queue to go idle
+      if(typeof global.cardQueueWaitIdle === 'function'){
+        try{
+          await global.cardQueueWaitIdle();
+        }catch(e){
+          console.warn('[eviction-visuals] cardQueueWaitIdle failed:', e);
+        }
       }
+
+      // Run avatar animation in faux TV
+      await animateEvictedAvatar(evictedId);
+
+      // Update roster with finishing badge
+      updateRosterFinishingBadge(evictedId);
+
+      console.info(`[eviction-visuals] complete id=${evictedId}`);
+    } finally {
+      // Remove body class to allow roster to show final state
+      document.body.classList.remove('evict-visual-in-progress');
     }
-
-    // Run avatar animation in faux TV
-    await animateEvictedAvatar(evictedId);
-
-    // Update roster with finishing badge
-    updateRosterFinishingBadge(evictedId);
-
-    console.info(`[eviction-visuals] complete id=${evictedId}`);
   }
 
   /**
@@ -123,7 +128,9 @@
 
   /**
    * Update roster to show ordinal finishing badge for evicted player
+   * Badge is rendered INSIDE the avatar container (bottom-right)
    * Only for ranks ≥ 3 (medals/awards shown for 1st and 2nd)
+   * Houseguest name is kept visible
    */
   function updateRosterFinishingBadge(evictedId){
     const player = global.getP?.(evictedId);
@@ -175,6 +182,9 @@
 
   /**
    * Update existing roster tile with finishing badge (immediate feedback)
+   * Badge is placed INSIDE the avatar container (bottom-right overlay)
+   * Red X is hidden when badge is shown
+   * Houseguest name is kept visible
    */
   function updateExistingTile(evictedId, rank){
     // Find roster tile - resilient to different selector patterns
@@ -188,48 +198,74 @@
       return;
     }
 
-    // Check if tile already has finishing badge
-    if(tile.querySelector('.finishing-badge')){
-      console.info(`[eviction-visuals] finishing badge already exists for id=${evictedId}`);
+    // Check if tile already has avatar rank badge
+    if(tile.querySelector('.avatar-rank-badge')){
+      console.info(`[eviction-visuals] avatar rank badge already exists for id=${evictedId}`);
       return;
     }
 
-    // Find or create badge container in tile
-    let badgeContainer = tile.querySelector('.top-tile-name');
-    if(!badgeContainer){
-      // Fallback: look for other name containers
-      badgeContainer = tile.querySelector('.roster-name') ||
-                      tile.querySelector('.player-name') ||
-                      tile.querySelector('.name');
+    // Hide any existing red X
+    const existingCross = tile.querySelector('.evicted-cross');
+    if(existingCross){
+      existingCross.style.display = 'none';
+      console.info(`[eviction-visuals] red X hidden for id=${evictedId}`);
     }
 
-    if(!badgeContainer){
-      console.warn(`[eviction-visuals] badge container not found in tile for id=${evictedId}`);
+    // Find avatar container - prefer .top-tile-avatar-wrap, then .roster-avatar, .avatar, or img parent
+    let avatarContainer = tile.querySelector('.top-tile-avatar-wrap') ||
+                          tile.querySelector('.roster-avatar') ||
+                          tile.querySelector('.avatar');
+    
+    if(!avatarContainer){
+      // Fallback: find img and use its parent
+      const img = tile.querySelector('img');
+      if(img && img.parentElement){
+        avatarContainer = img.parentElement;
+      }
+    }
+
+    if(!avatarContainer){
+      console.warn(`[eviction-visuals] avatar container not found, using tile-level fallback for id=${evictedId}`);
+      // Fallback: add data-rank attribute to tile for CSS-based badge
+      tile.dataset.rank = ordinal(rank);
       return;
     }
 
-    // Create finishing badge
-    const badge = document.createElement('span');
-    badge.className = 'finishing-badge';
+    // Create avatar rank badge (positioned inside avatar)
+    const badge = document.createElement('div');
+    badge.className = 'avatar-rank-badge';
     badge.textContent = ordinal(rank);
     badge.title = `Finished in ${ordinal(rank)} place`;
 
-    // Replace existing cross with badge
-    const existingCross = tile.querySelector('.evicted-cross');
-    if(existingCross){
-      // Hide cross and show badge instead
-      existingCross.style.display = 'none';
+    // Add badge to avatar container
+    avatarContainer.appendChild(badge);
+
+    console.info(`[eviction-visuals] avatar rank badge added to tile id=${evictedId} rank=${ordinal(rank)}`);
+  }
+
+  /**
+   * Notify that an eviction visual is pending
+   * Adds body class to suppress interim roster updates during animation
+   * @param {number} evictedId - Player ID of evicted houseguest
+   * @param {string} source - Source of eviction (e.g., 'vote', 'self', 'final4', 'final3')
+   */
+  function notifyEvictedForVisual(evictedId, source = 'vote'){
+    console.info(`[eviction-visuals] notified evictedId=${evictedId} source=${source}`);
+    
+    // Add body class to suppress red X and pale-out during animation
+    document.body.classList.add('evict-visual-in-progress');
+    
+    // Store pending visual info for routing coordination
+    const g = global.game;
+    if(g){
+      if(!g.__pendingVisuals) g.__pendingVisuals = {};
+      g.__pendingVisuals[evictedId] = { source, timestamp: Date.now() };
     }
-
-    // Clear badge container and add finishing badge
-    badgeContainer.innerHTML = '';
-    badgeContainer.appendChild(badge);
-
-    console.info(`[eviction-visuals] finishing badge added to existing tile id=${evictedId} rank=${ordinal(rank)}`);
   }
 
   // Export to global
   global.runEvictionVisual = runEvictionVisual;
+  global.notifyEvictedForVisual = notifyEvictedForVisual;
 
   console.info('[eviction-visuals] module loaded');
 

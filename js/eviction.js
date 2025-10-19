@@ -729,6 +729,11 @@
     console.info('[eviction] badges cleared after multi-eviction reveal');
     global.updateHud?.();
 
+    // Notify that visuals are pending for all evicted players
+    if(typeof global.notifyEvictedForVisual === 'function'){
+      evictedIds.forEach(id => global.notifyEvictedForVisual(id, 'multi'));
+    }
+
     const parts=[...counts.keys()].map(id=>`${global.safeName(id)} ${counts.get(id)||0}`).join(' — ');
     const names=evictedIds.map(global.safeName).join(', ');
     global.showCard('Eviction Results',[`${modeLabel}: ${names}`,`Final votes: ${parts}`],'evict',4200,true);
@@ -771,6 +776,11 @@
     const aliveCount = global.alivePlayers().length + 1; // +1 because this player is being evicted
     ev.finalRank = aliveCount;
     console.info(`[eviction] assigned finalRank=${ev.finalRank} to ${ev.name}`);
+
+    // Notify that visual is pending (suppress interim roster updates)
+    if(typeof global.notifyEvictedForVisual === 'function'){
+      global.notifyEvictedForVisual(evId, reason);
+    }
 
     if(reason==='self'){
       global.showCard('Self-Evicted',[ev.name],'evict',3800,true);
