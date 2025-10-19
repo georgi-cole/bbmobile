@@ -563,7 +563,7 @@
       return { 
         success: false, 
         reason: 'insufficient_energy',
-        message: `Not enough energy: need ${effectiveCost}⚡ for ${allTargets.length} targets (base ${baseCost} + ${extraTargetsCount} extra), have ${currentEnergy}⚡`
+        message: `Not enough energy: need ${effectiveCost}⚡ for ${allTargets.length} targets (base ${baseCost} + group ${extraTargetsCount}), have ${currentEnergy}⚡`
       };
     }
 
