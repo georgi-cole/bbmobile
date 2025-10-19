@@ -633,21 +633,27 @@ header.innerHTML = `
       }
       
       // Evicted overlay with SVG brush X - add only once (check data-evictAnimated)
+      // Suppress rendering if visual animation is in progress for this player
       if(p.evicted){
-        const needsAnimation = !p.__evictAnimated;
-        if(needsAnimation) p.__evictAnimated = true; // Mark as animated
+        const isSuppressed = game.__suppressEvictedHudUntilVisualDone && 
+                            game.__pendingEvictionVisuals?.has(p.id);
         
-        tile.dataset.evictAnimated = needsAnimation ? 'animating' : 'done';
-        
-        // Check if cross already exists to prevent duplication
-        if(!wrap.querySelector('.evicted-cross')){
-          const cross=document.createElement('div'); 
-          cross.className='evicted-cross' + (needsAnimation ? ' animating' : '');
-          // SVG brush X - theme colored
-          cross.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 4 L20 20 M20 4 L4 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-          </svg>`;
-          wrap.appendChild(cross);
+        if(!isSuppressed){
+          const needsAnimation = !p.__evictAnimated;
+          if(needsAnimation) p.__evictAnimated = true; // Mark as animated
+          
+          tile.dataset.evictAnimated = needsAnimation ? 'animating' : 'done';
+          
+          // Check if cross already exists to prevent duplication
+          if(!wrap.querySelector('.evicted-cross')){
+            const cross=document.createElement('div'); 
+            cross.className='evicted-cross' + (needsAnimation ? ' animating' : '');
+            // SVG brush X - theme colored
+            cross.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 4 L20 20 M20 4 L4 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>`;
+            wrap.appendChild(cross);
+          }
         }
       }
 
