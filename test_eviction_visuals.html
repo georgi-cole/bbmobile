@@ -106,6 +106,9 @@
 <body>
   <div class="container">
     <h1>🎬 Eviction Visual Enhancement Test</h1>
+    <p style="color: #f2ce7b; text-align: center; margin-bottom: 20px;">
+      Tests the faux TV animation only (roster badges removed)
+    </p>
     
     <div class="test-section">
       <h2>Test Controls</h2>
@@ -311,8 +314,8 @@
         img.alt = p.name;
         wrap.appendChild(img);
         
-        // Add evicted cross
-        if(p.evicted && !p.showFinishingBadge) {
+        // Add evicted cross (always shown for evicted players)
+        if(p.evicted) {
           const cross = document.createElement('div');
           cross.className = 'evicted-cross';
           cross.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 4 L20 20 M20 4 L4 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>';
@@ -321,19 +324,7 @@
         
         const name = document.createElement('div');
         name.className = 'top-tile-name';
-        
-        // Show finishing badge for evicted players with rank >= 3
-        if(p.evicted && p.showFinishingBadge && p.finalRank && p.finalRank >= 3) {
-          const ordinal = (function(n){
-            const s = ['th','st','nd','rd'];
-            const v = n % 100;
-            return n + (s[(v-20)%10] || s[v] || s[0]);
-          })(p.finalRank);
-          name.textContent = ordinal;
-          name.className = 'top-tile-name status-finishing-badge';
-        } else {
-          name.textContent = p.name;
-        }
+        name.textContent = p.name;
         
         tile.appendChild(wrap);
         tile.appendChild(name);
@@ -353,10 +344,9 @@
     // Check status
     function checkStatus() {
       const evicted = window.game.players.filter(p => p.evicted);
-      const badges = evicted.filter(p => p.showFinishingBadge);
       
-      log(`Status: ${evicted.length} evicted, ${badges.length} with badges`);
-      updateStatus(`${evicted.length} evicted, ${badges.length} with finishing badges`, 'pass');
+      log(`Status: ${evicted.length} evicted players`);
+      updateStatus(`${evicted.length} evicted (roster shows red X only)`, 'pass');
     }
     
     // Initialize

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Eviction Visual Refinements Test</title>
+  <title>Eviction Visual Test - Faux TV Animation Only</title>
   <link rel="stylesheet" href="styles.css">
   <style>
     body {
@@ -242,7 +242,6 @@
           evicted: false,
           weekEvicted: null,
           finalRank: null,
-          showFinishingBadge: false,
           affinity: {}
         });
       }
@@ -295,8 +294,8 @@
         wrap.style.height = '60px';
         wrap.style.margin = '0 auto 5px';
         
-        // Red X (evicted-cross)
-        if(p.evicted && !p.showFinishingBadge) {
+        // Red X (evicted-cross) - always shown for evicted players
+        if(p.evicted) {
           const cross = document.createElement('div');
           cross.className = 'evicted-cross';
           wrap.appendChild(cross);
@@ -310,21 +309,6 @@
         img.style.height = '100%';
         img.style.borderRadius = '50%';
         wrap.appendChild(img);
-        
-        // Avatar rank badge (inside avatar for 3rd+)
-        if(p.evicted && p.showFinishingBadge && p.finalRank && p.finalRank >= 3) {
-          const ordinalRank = (function(n){
-            const s = ['th','st','nd','rd'];
-            const v = n % 100;
-            return n + (s[(v-20)%10] || s[v] || s[0]);
-          })(p.finalRank);
-          
-          const badge = document.createElement('div');
-          badge.className = 'avatar-rank-badge';
-          badge.textContent = ordinalRank;
-          badge.title = `Finished in ${ordinalRank} place`;
-          wrap.appendChild(badge);
-        }
         
         const name = document.createElement('div');
         name.className = 'top-tile-name';
@@ -442,10 +426,6 @@
       
       log(`Final 4: Evicting ${player.name} (4th place)`, 'info');
       
-      if(typeof window.notifyEvictedForVisual === 'function') {
-        window.notifyEvictedForVisual(evictedId, 'final4');
-      }
-      
       if(typeof window.runEvictionVisual === 'function') {
         await window.runEvictionVisual(evictedId, { reason: 'final4' });
         log('Final 4 eviction test complete', 'success');
@@ -478,19 +458,10 @@
       
       log(`Final 3: Evicting ${player.name} (3rd place - Bronze Medalist)`, 'info');
       
-      if(typeof window.notifyEvictedForVisual === 'function') {
-        window.notifyEvictedForVisual(evictedId, 'final3');
-      }
-      
       if(typeof window.runEvictionVisual === 'function') {
         await window.runEvictionVisual(evictedId, { reason: 'final3' });
         log('Final 3 eviction test complete', 'success');
         checkObjective('obj8');
-        
-        // Verify 3rd place badge
-        if(player.showFinishingBadge && player.finalRank === 3) {
-          log('✓ 3rd place shows ordinal badge', 'success');
-        }
       }
       
       // Mark remaining 2 as finalists for medal test
