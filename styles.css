@@ -1663,12 +1663,10 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* Avatar grayscale + semi-transparent after eviction animation completes */
-.avatar-bw-dim,
-.avatar-bw-dim img,
-img.avatar-bw-dim{
-  filter:grayscale(100%) !important;
-  opacity:0.6 !important;
-  transition:filter 0.4s ease-out, opacity 0.4s ease-out;
+img.avatar-bw-dim {
+  filter: grayscale(100%) !important;
+  opacity: 0.6 !important;
+  transition: filter 0.4s ease-out, opacity 0.4s ease-out;
 }
 
 /* Hide red X when rank badge is shown */
