@@ -548,7 +548,7 @@
 
     // ==== GROUP ACTION EXTRA COST ENFORCEMENT ====
     // Compute effective cost: baseCost + Math.max(0, targets.length - 2)
-    const baseCost = action.costs?.energy || action.cost || 0;
+    const baseCost = (action.costs?.energy ?? action.cost ?? 0);
     const extraTargetsCount = Math.max(0, allTargets.length - 2);
     const effectiveCost = baseCost + extraTargetsCount;
     
