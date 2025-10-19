@@ -574,11 +574,6 @@
     
     global.addLog('Final 4 eviction: <b>' + holder.name + '</b> has chosen to evict <b>' + evictee.name + '</b>.', 'danger');
     
-    // Notify that visual is pending (suppress interim roster updates)
-    if(typeof global.notifyEvictedForVisual === 'function'){
-      global.notifyEvictedForVisual(target, 'final4');
-    }
-    
     // Show eviction card with generous duration
     try{ 
       if(typeof global.showCard === 'function') 

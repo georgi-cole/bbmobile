@@ -431,11 +431,6 @@
     
     console.info(`[self-eviction] Processed eviction for ${player.name}, finalRank=${player.finalRank}`);
 
-    // Notify that visual is pending (suppress interim roster updates)
-    if(typeof global.notifyEvictedForVisual === 'function'){
-      global.notifyEvictedForVisual(playerId, 'self');
-    }
-
     // Add to jury if applicable
     const JURY_START_AT = 9;
     if(aliveCount <= JURY_START_AT && g.cfg && g.cfg.enableJuryHouse){

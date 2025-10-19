@@ -1674,11 +1674,6 @@
 
     global.addLog(`Final 3 eviction: <b>${hoh.name}</b> has chosen to evict <b>${ev.name}</b>.`, 'danger');
 
-    // Notify that visual is pending (suppress interim roster updates)
-    if(typeof global.notifyEvictedForVisual === 'function'){
-      global.notifyEvictedForVisual(target, 'final3');
-    }
-
     safeShowCard('🎬 Final Eviction Decision', [`${hoh.name} has chosen to evict`, ev.name, 'to the Jury'], 'evict', 5000, true);
 
     try { await global.cardQueueWaitIdle?.(); } catch { }
