@@ -487,7 +487,7 @@
       }
     },
     
-    // Get preview energy for next phase based on bank balance
+    // Get preview energy for display based on bank balance
     getPreviewEnergy(playerId) {
       // With the new bank system, preview energy is simply the bank balance
       // capped at MAX_ENERGY for the phase
