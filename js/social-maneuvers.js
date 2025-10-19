@@ -367,23 +367,15 @@
       
       console.info('[social-resources] 🏁 Finalizing week for all players - bank already updated with events');
       
+      // With lock-step updates, bank and current energy are always synchronized
+      // Log final state for each player
       alivePlayers.forEach(player => {
         const playerId = player.id;
         this.init(playerId);
         
-        // NEW BANK SYSTEM: Carryover leftover energy to bank
         const currentEnergy = this.get(playerId, 'energy');
-        if(currentEnergy > 0) {
-          // Update bank with leftover energy from this phase
-          // Bank already has bonuses/penalties applied immediately via recordWeeklyEvent
-          // We just need to carry over any unspent phase energy
-          const currentBank = SocialEnergyBank.get(playerId);
-          // The bank should already equal currentEnergy if no energy was spent
-          // But if energy was spent, we need to sync the leftover back to bank
-          // Actually, with lock-step updates, bank should already reflect current energy
-          // So this is just a log for clarity
-          console.info(`[social-resources] Player ${playerId} (${player.name || 'unknown'}): Bank=${currentBank}, Phase leftover=${currentEnergy}`);
-        }
+        const bankBalance = SocialEnergyBank.get(playerId);
+        console.info(`[social-resources] Player ${playerId} (${player.name || 'unknown'}): Bank=${bankBalance}, Phase energy=${currentEnergy}`);
       });
       
       console.info('[social-resources] ✓ Week finalization complete - bank balances maintained');
@@ -2101,6 +2093,9 @@
     // Track players who entered a competition phase
     if(!g.__sm_compPhaseEntries) g.__sm_compPhaseEntries = new Map();
     
+    // Capture reference to SocialResources for use in wrapper
+    const resources = SocialResources;
+    
     // Wrap setPhase to detect competition phases
     const originalSetPhase = global.setPhase;
     if(typeof originalSetPhase !== 'function') return;
@@ -2138,7 +2133,8 @@
             if(status.entered && !status.participated) {
               // Player skipped the competition - apply penalty immediately to bank
               console.warn(`[social-skip-watcher] ⚠️ Player ${playerId} skipped ${previousPhase} competition`);
-              SocialResources.recordWeeklyEvent(playerId, 'compSkipped', true);
+              // Use captured reference to maintain module consistency
+              resources.recordWeeklyEvent(playerId, 'compSkipped', true);
             }
           });
         }
