@@ -43,17 +43,18 @@
       const g = global.game; if(!g) return;
       if(!g.__sm_bankEnergy) g.__sm_bankEnergy = new Map();
       
+      // DO NOT auto-initialize to 5 - bank should only be seeded via events/week watchers
+      // Bank starts at 0 and accumulates through gameplay
       if(!g.__sm_bankEnergy.has(playerId)) {
-        // Initialize bank with default energy
-        g.__sm_bankEnergy.set(playerId, DEFAULT_ENERGY);
-        console.info(`[social-bank] 🏦 Initialized bank for player ${playerId}: ${DEFAULT_ENERGY}`);
+        g.__sm_bankEnergy.set(playerId, 0);
+        console.info(`[social-bank] 🏦 Bank initialized for player ${playerId}: 0 (no auto-seed)`);
       }
     },
     
     get(playerId) {
-      const g = global.game; if(!g) return DEFAULT_ENERGY;
+      const g = global.game; if(!g) return 0;
       if(!g.__sm_bankEnergy) g.__sm_bankEnergy = new Map();
-      return g.__sm_bankEnergy.get(playerId) ?? DEFAULT_ENERGY;
+      return g.__sm_bankEnergy.get(playerId) ?? 0;
     },
     
     set(playerId, amount) {
@@ -152,7 +153,13 @@
 
   const INFORMATION_WEEKLY_CARRYOVER = 5;
 
+  // SM Bank Configuration
+  const SM_BANK_CONFIG = {
+    baseWeeklyAdd: 5 // Base energy added to bank for all alive players at week rollover
+  };
+
   const SocialResources = {
+    CONFIG: SM_BANK_CONFIG, // Export for external access
     init(playerId) {
       const g = global.game;
       if(!g) return;
@@ -496,7 +503,7 @@
     // Get detailed breakdown of preview energy
     getPreviewEnergyBreakdown(playerId) {
       const g = global.game; 
-      if(!g) return { bankBalance: DEFAULT_ENERGY, total: DEFAULT_ENERGY };
+      if(!g) return { bankBalance: 0, total: 0 };
       
       const bankBalance = SocialEnergyBank.get(playerId);
       const phaseEnergy = bankBalance; // No cap - use full bank balance
@@ -2169,6 +2176,214 @@
   // Install skip watcher on module load
   installCompetitionSkipWatcher();
   
+  // ============================================================================
+  // PROPERTY WATCHERS FOR EVENT-DRIVEN BANK UPDATES
+  // ============================================================================
+  
+  /**
+   * Install Object.defineProperty watchers on game properties to trigger immediate bank updates.
+   * Watches: hohId, nominees, vetoHolder, vetoUsed, replacementNominee, week
+   */
+  function installPropertyWatchers() {
+    if(!isEnabled()) return;
+    
+    const g = global.game;
+    if(!g) {
+      console.warn('[sm-watchers] Cannot install watchers - game object not found');
+      return;
+    }
+    
+    // Track which events have been applied this week to prevent double-application
+    if(!g.__sm_watcherApplied) g.__sm_watcherApplied = new Map();
+    
+    console.info('[sm-watchers] Installing property watchers for event-driven bank updates');
+    
+    // Helper to check if event already applied
+    function isEventApplied(week, eventKey) {
+      const key = `${week}-${eventKey}`;
+      return g.__sm_watcherApplied.has(key);
+    }
+    
+    function markEventApplied(week, eventKey) {
+      const key = `${week}-${eventKey}`;
+      g.__sm_watcherApplied.set(key, true);
+    }
+    
+    // 1. Watch game.hohId for HOH wins
+    let _hohId = g.hohId;
+    Object.defineProperty(g, 'hohId', {
+      get() { return _hohId; },
+      set(newValue) {
+        const oldValue = _hohId;
+        _hohId = newValue;
+        
+        if(newValue && newValue !== oldValue) {
+          const week = g.week || 1;
+          const eventKey = `hoh-${newValue}`;
+          
+          if(!isEventApplied(week, eventKey)) {
+            console.info(`[sm-event] HOH win detected: Player ${newValue} at week ${week}`);
+            SocialResources.recordWeeklyEvent(newValue, 'hohWin', true);
+            markEventApplied(week, eventKey);
+          }
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    
+    // 2. Watch game.nominees for nominations
+    let _nominees = g.nominees || [];
+    Object.defineProperty(g, 'nominees', {
+      get() { return _nominees; },
+      set(newValue) {
+        const oldValue = _nominees;
+        _nominees = newValue;
+        
+        if(Array.isArray(newValue)) {
+          const week = g.week || 1;
+          newValue.forEach(nomineeId => {
+            const eventKey = `nominated-${nomineeId}`;
+            
+            if(!isEventApplied(week, eventKey)) {
+              console.info(`[sm-event] Nomination detected: Player ${nomineeId} at week ${week}`);
+              SocialResources.recordWeeklyEvent(nomineeId, 'nominated', true);
+              markEventApplied(week, eventKey);
+            }
+          });
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    
+    // 3. Watch game.vetoHolder for POV wins
+    let _vetoHolder = g.vetoHolder;
+    Object.defineProperty(g, 'vetoHolder', {
+      get() { return _vetoHolder; },
+      set(newValue) {
+        const oldValue = _vetoHolder;
+        _vetoHolder = newValue;
+        
+        if(newValue && newValue !== oldValue) {
+          const week = g.week || 1;
+          const eventKey = `pov-${newValue}`;
+          
+          if(!isEventApplied(week, eventKey)) {
+            console.info(`[sm-event] POV win detected: Player ${newValue} at week ${week}`);
+            SocialResources.recordWeeklyEvent(newValue, 'povWin', true);
+            markEventApplied(week, eventKey);
+          }
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    
+    // 4. Watch game.vetoUsed + game.replacementNominee for POV saves
+    let _vetoUsed = g.vetoUsed;
+    Object.defineProperty(g, 'vetoUsed', {
+      get() { return _vetoUsed; },
+      set(newValue) {
+        _vetoUsed = newValue;
+        
+        if(newValue === true) {
+          // Check if veto saved someone from the block
+          const week = g.week || 1;
+          const vetoHolderId = g.vetoHolder;
+          const replacementId = g.replacementNominee;
+          
+          // The veto holder saved someone - check who was saved
+          // Logic: if there's a replacement, the original nominee was saved
+          if(replacementId && Array.isArray(g.nominees)) {
+            // Find who was saved (not in current nominees but was before)
+            // We'll assume the veto holder used it to save themselves or a nominee
+            // For simplicity, if vetoHolder was in nominees, they saved themselves
+            const originalNominees = g.__sm_preVetoNominees || [];
+            const savedPlayers = originalNominees.filter(id => !g.nominees.includes(id) && id !== replacementId);
+            
+            savedPlayers.forEach(savedId => {
+              const eventKey = `saved-pov-${savedId}`;
+              
+              if(!isEventApplied(week, eventKey)) {
+                console.info(`[sm-event] POV save detected: Player ${savedId} at week ${week}`);
+                SocialResources.recordWeeklyEvent(savedId, 'savedWithPov', true);
+                markEventApplied(week, eventKey);
+              }
+            });
+          }
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    
+    // 5. Watch game.week for weekly rollover (+5 base energy)
+    let _week = g.week || 1;
+    Object.defineProperty(g, 'week', {
+      get() { return _week; },
+      set(newValue) {
+        const oldValue = _week;
+        _week = newValue;
+        
+        if(newValue > oldValue) {
+          console.info(`[sm-week] Week rollover detected: ${oldValue} → ${newValue}`);
+          
+          // Add base weekly energy to all alive players
+          const alivePlayers = global.alivePlayers?.() || [];
+          const baseAdd = SocialResources.CONFIG.baseWeeklyAdd;
+          
+          alivePlayers.forEach(player => {
+            const eventKey = `week-rollover-${newValue}`;
+            
+            if(!isEventApplied(newValue, eventKey)) {
+              SocialEnergyBank.adjust(player.id, baseAdd);
+              console.info(`[sm-week] +${baseAdd} base added to bank for player ${player.id} (${player.name || 'unknown'}) at week ${newValue}`);
+            }
+          });
+          
+          // Mark week rollover as applied (once per week)
+          markEventApplied(newValue, `week-rollover-${newValue}`);
+          
+          // Clear weekly event tracker for new week
+          if(g.__sm_watcherApplied) {
+            // Keep only current week's events
+            const keysToDelete = [];
+            g.__sm_watcherApplied.forEach((_, key) => {
+              const weekMatch = key.match(/^(\d+)-/);
+              if(weekMatch && parseInt(weekMatch[1]) < newValue) {
+                keysToDelete.push(key);
+              }
+            });
+            keysToDelete.forEach(key => g.__sm_watcherApplied.delete(key));
+          }
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    
+    console.info('[sm-watchers] ✓ Property watchers installed: hohId, nominees, vetoHolder, vetoUsed, week');
+  }
+  
+  // Helper to track pre-veto nominees for save detection
+  function trackPreVetoNominees() {
+    const g = global.game;
+    if(!g) return;
+    
+    // Store current nominees before veto is used
+    if(Array.isArray(g.nominees)) {
+      g.__sm_preVetoNominees = [...g.nominees];
+    }
+  }
+  
+  // Install watchers on module load
+  try {
+    installPropertyWatchers();
+  } catch(e) {
+    console.error('[sm-watchers] Failed to install property watchers:', e);
+  }
+  
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
@@ -2295,6 +2510,19 @@
       g.__socialFastAdvanceTimeout = null;
       console.info('[social-maneuvers] Cleared pending fast-advance timeout');
     }
+    
+    // SYNC LEFTOVER ENERGY TO BANK: Update bank with remaining in-phase energy
+    const alivePlayers = global.alivePlayers?.() || [];
+    alivePlayers.forEach(player => {
+      const currentEnergy = SocialResources.get(player.id, 'energy');
+      const currentBank = SocialEnergyBank.get(player.id);
+      
+      // Sync: set bank to current in-phase energy (reflects spending during phase)
+      if(currentEnergy !== currentBank) {
+        SocialEnergyBank.set(player.id, currentEnergy);
+        console.info(`[sm-phase] Synced leftover energy to bank for player ${player.id}: ${currentEnergy}`);
+      }
+    });
     
     // Finalize week for all players - compute next week seeds with unlimited carryover
     SocialResources.finalizeWeekForAll();
@@ -2804,10 +3032,12 @@
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
     pausePhaseTimer, resumePhaseTimer, // Timer control exports
     recordCompetitionParticipation, // Skip watcher integration
+    trackPreVetoNominees, // Pre-veto tracking for save detection
+    installPropertyWatchers, // Manual watcher installation if needed
     // Modifiers/hooks
     calculateTraitModifiers, calculateMemoryModifiers,
     // Constants
-    DEFAULT_ENERGY, SOCIAL_ACTIONS, RESOURCE_CONFIG,
+    DEFAULT_ENERGY, SOCIAL_ACTIONS, RESOURCE_CONFIG, SM_BANK_CONFIG,
     WEEKLY_ENERGY_BONUSES, WEEKLY_ENERGY_PENALTIES,
     INFLUENCE_DELTAS, INFORMATION_EARNINGS, INFORMATION_COSTS
   };
