@@ -478,7 +478,7 @@
     // Track affinity before action (for PR #266 session summary)
     const affinityBefore = actor?.affinity?.[targetId] ?? 0;
 
-    // Spend resources (energy, influence, information via unified API)
+    // Spend resources (energy, influence, information) using the unified SocialResources API
     const spendResult = SocialResources.spend(actorId, action.costs);
     if(!spendResult.success){
       return { success: false, reason: 'insufficient_resources', insufficient: spendResult.insufficient, message: `Not enough ${spendResult.insufficient}` };
