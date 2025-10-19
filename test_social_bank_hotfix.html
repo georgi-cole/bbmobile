@@ -192,7 +192,15 @@ Got: phaseEnergy=${phaseEnergy}, bank=${bankBalance}, bank log=${hasBankLog}, le
           `;
         }
       } catch (e) {
-        result.innerHTML = `<p class="fail">✗ ERROR: ${e.message}</p><span class="status-badge fail">ERROR</span>`;
+        result.innerHTML = '';
+        const errorP = document.createElement('p');
+        errorP.className = 'fail';
+        errorP.textContent = `✗ ERROR: ${e.message}`;
+        result.appendChild(errorP);
+        const badge = document.createElement('span');
+        badge.className = 'status-badge fail';
+        badge.textContent = 'ERROR';
+        result.appendChild(badge);
       }
     }
 
