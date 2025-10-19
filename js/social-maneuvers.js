@@ -2061,9 +2061,8 @@
     const humanId = g.humanId;
     if(!humanId) return { seeded: false, energy: 0, reason: 'no_human' };
     
-    // Initialize and reset resources for human player
+    // Initialize resources for human player
     SocialResources.init(humanId);
-    SocialResources.resetWeekly(humanId);
     
     const seededEnergy = SocialResources.get(humanId, 'energy');
     
