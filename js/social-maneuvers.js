@@ -32,7 +32,6 @@
   };
 
   const DEFAULT_ENERGY = RESOURCE_CONFIG.energy.default;
-  const MAX_ENERGY = Infinity; // Bank is uncapped - no maximum limit
   
   // ============================================================================
   // SOCIAL ENERGY BANK (SR storage - uncapped rolling balance)
