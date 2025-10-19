@@ -68,7 +68,7 @@
       // Mark this week as reset
       g.__socialWeeklyResetWeek = currentWeek;
       
-      console.info('[social.js] ✓ Weekly reset complete - energy reset (base 5 + bonuses/penalties) for week', currentWeek);
+      console.info('[social.js] ✓ Weekly reset complete - energy managed by SM bank (uncapped rolling balance) for week', currentWeek);
     } else {
       // Mark week as reset for legacy mode too
       g.__socialWeeklyResetWeek = currentWeek;
