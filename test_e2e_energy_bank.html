@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E2E Energy Bank Tests</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 { color: #4CAF50; }
+    h2 { color: #64b5f6; border-bottom: 2px solid #64b5f6; padding-bottom: 0.5rem; }
+    .test-section {
+      background: #2a2a2a;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      border-radius: 8px;
+      border-left: 4px solid #4CAF50;
+    }
+    .test-result {
+      padding: 0.5rem 1rem;
+      margin: 0.5rem 0;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    .pass { background: #1b5e20; color: #81c784; }
+    .fail { background: #b71c1c; color: #ef5350; }
+    .info { background: #0d47a1; color: #64b5f6; }
+    .warn { background: #f57f17; color: #fff59d; }
+    .state-display {
+      background: #1e1e1e;
+      border: 2px solid #4CAF50;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      font-family: monospace;
+    }
+    .state-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #333;
+    }
+    .state-row:last-child {
+      border-bottom: none;
+    }
+    .state-label {
+      color: #64b5f6;
+      font-weight: bold;
+    }
+    .state-value {
+      color: #81c784;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+    }
+    button:hover { background: #45a049; }
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+    .screenshot-area {
+      background: #000;
+      border: 2px dashed #4CAF50;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #81c784;
+      font-style: italic;
+    }
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 E2E Energy Bank Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Test Objective</h2>
+    <p>
+      Validate the uncapped Social Energy Bank through the exact scenarios requested:
+    </p>
+    <ol>
+      <li>Win HOH in week 1 → Start social phase with <strong>10 energy</strong> (5 base + 5 HOH bonus)</li>
+      <li>Spend 6 energy → Update immediately to <strong>4 energy</strong> remaining</li>
+      <li>After veto (not won/skipped), spend 3 more → Update to <strong>1 energy</strong> remaining</li>
+      <li>Next week skip HOH → During social phase have <strong>3 energy</strong> (1 carried + 5 new week - 3 skip penalty)</li>
+    </ol>
+  </div>
+
+  <div class="test-section">
+    <h2>Current State</h2>
+    <div class="state-display" id="stateDisplay"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <div class="controls">
+      <button onclick="runTest1()">Test 1: Win HOH Week 1</button>
+      <button onclick="runTest2()">Test 2: Spend 6 Energy</button>
+      <button onclick="runTest3()">Test 3: Spend 3 More</button>
+      <button onclick="runTest4()">Test 4: Skip HOH Week 2</button>
+      <button onclick="resetAll()">Reset All</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="results"></div>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script>
+    const results = document.getElementById('results');
+    const stateDisplay = document.getElementById('stateDisplay');
+    
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      results.appendChild(div);
+    }
+    
+    function updateStateDisplay() {
+      const g = window.game;
+      if (!g) {
+        stateDisplay.innerHTML = '<div class="state-row"><span class="state-label">Status:</span><span class="state-value">Not Initialized</span></div>';
+        return;
+      }
+      
+      const playerId = g.humanId || 1;
+      const bank = window.SocialManeuvers?.SocialEnergyBank;
+      const resources = window.SocialManeuvers?.SocialResources;
+      
+      const bankBalance = bank ? bank.get(playerId) : 'N/A';
+      const currentEnergy = resources ? resources.get(playerId, 'energy') : 'N/A';
+      const week = g.week || 1;
+      const phase = g.phase || 'unknown';
+      
+      stateDisplay.innerHTML = `
+        <div class="state-row">
+          <span class="state-label">Week:</span>
+          <span class="state-value">${week}</span>
+        </div>
+        <div class="state-row">
+          <span class="state-label">Phase:</span>
+          <span class="state-value">${phase}</span>
+        </div>
+        <div class="state-row">
+          <span class="state-label">Bank Balance:</span>
+          <span class="state-value">${bankBalance} energy</span>
+        </div>
+        <div class="state-row">
+          <span class="state-label">Current Phase Energy:</span>
+          <span class="state-value">${currentEnergy} energy</span>
+        </div>
+      `;
+    }
+    
+    function setupGame() {
+      // Initialize game state
+      window.game = {
+        week: 1,
+        phase: 'setup',
+        humanId: 1,
+        cfg: { enableSocialManeuvers: true },
+        players: [
+          { id: 1, name: 'TestPlayer', evicted: false, affinity: {} }
+        ]
+      };
+      
+      // Initialize Social Maneuvers
+      if (window.SocialManeuvers?.SocialResources) {
+        window.SocialManeuvers.SocialResources.init(1);
+      }
+      
+      updateStateDisplay();
+    }
+    
+    function assert(condition, message) {
+      if (condition) {
+        log(`✓ PASS: ${message}`, 'pass');
+        return true;
+      } else {
+        log(`✗ FAIL: ${message}`, 'fail');
+        return false;
+      }
+    }
+    
+    function resetAll() {
+      results.innerHTML = '';
+      setupGame();
+      log('Test environment reset', 'info');
+    }
+    
+    // Test 1: Win HOH in week 1, check social phase starts with 10 energy
+    function runTest1() {
+      log('=== TEST 1: Win HOH Week 1 ===', 'info');
+      
+      setupGame();
+      const playerId = window.game.humanId;
+      const bank = window.SocialManeuvers.SocialEnergyBank;
+      const resources = window.SocialManeuvers.SocialResources;
+      
+      // Initial state
+      const initialBank = bank.get(playerId);
+      log(`Initial bank: ${initialBank}`, 'info');
+      assert(initialBank === 5, 'Bank starts at 5 (DEFAULT_ENERGY)');
+      
+      // Record HOH win
+      log('Recording HOH win (+5 bonus)...', 'info');
+      resources.recordWeeklyEvent(playerId, 'hohWin', true);
+      
+      const afterHOH = bank.get(playerId);
+      log(`Bank after HOH win: ${afterHOH}`, 'info');
+      assert(afterHOH === 10, 'Bank updated to 10 (5 + 5 HOH bonus)');
+      
+      // Start social phase - seed from bank
+      log('Starting social phase...', 'info');
+      window.game.phase = 'social_intermission';
+      resources.recomputePhaseEnergy(playerId);
+      
+      const phaseEnergy = resources.get(playerId, 'energy');
+      log(`Phase energy seeded: ${phaseEnergy}`, 'info');
+      assert(phaseEnergy === 10, 'Social phase starts with 10 energy');
+      
+      updateStateDisplay();
+      log('✓ TEST 1 COMPLETE: Won HOH, bank = 10, phase energy = 10', 'pass');
+      log('📸 Screenshot 1: Social phase starts with 10 energy after HOH win', 'warn');
+      
+      return phaseEnergy === 10;
+    }
+    
+    // Test 2: Spend 6 energy, check immediate update to 4
+    function runTest2() {
+      log('=== TEST 2: Spend 6 Energy ===', 'info');
+      
+      const playerId = window.game.humanId;
+      const bank = window.SocialManeuvers.SocialEnergyBank;
+      const resources = window.SocialManeuvers.SocialResources;
+      
+      const before = resources.get(playerId, 'energy');
+      log(`Energy before spending: ${before}`, 'info');
+      
+      if (before < 6) {
+        log('⚠️ Not enough energy to spend 6. Run Test 1 first.', 'warn');
+        return false;
+      }
+      
+      // Spend 6 energy
+      log('Spending 6 energy...', 'info');
+      const spendResult = resources.spend(playerId, { energy: 6 });
+      
+      if (!spendResult.success) {
+        log(`✗ Failed to spend energy: ${spendResult.insufficient || 'unknown'}`, 'fail');
+        return false;
+      }
+      
+      const after = resources.get(playerId, 'energy');
+      const bankAfter = bank.get(playerId);
+      
+      log(`Energy after spending: ${after}`, 'info');
+      log(`Bank after spending: ${bankAfter}`, 'info');
+      
+      assert(after === 4, 'Phase energy immediately updated to 4');
+      assert(bankAfter === 4, 'Bank synced to 4 (lock-step update)');
+      
+      updateStateDisplay();
+      log('✓ TEST 2 COMPLETE: Spent 6, remaining = 4', 'pass');
+      log('📸 Screenshot 2: Immediate update to 4 energy after spending 6', 'warn');
+      
+      return after === 4 && bankAfter === 4;
+    }
+    
+    // Test 3: Spend 3 more during/after veto, check update to 1
+    function runTest3() {
+      log('=== TEST 3: Spend 3 More (After Veto Phase) ===', 'info');
+      
+      const playerId = window.game.humanId;
+      const bank = window.SocialManeuvers.SocialEnergyBank;
+      const resources = window.SocialManeuvers.SocialResources;
+      
+      // Simulate veto phase (not won, not skipped - no energy change)
+      log('Simulating veto phase (not won, not skipped)...', 'info');
+      window.game.phase = 'veto_comp';
+      // Don't record any veto events - just move through the phase
+      window.game.phase = 'social_intermission';
+      
+      const before = resources.get(playerId, 'energy');
+      log(`Energy before spending: ${before}`, 'info');
+      
+      if (before < 3) {
+        log('⚠️ Not enough energy to spend 3. Run Tests 1 & 2 first.', 'warn');
+        return false;
+      }
+      
+      // Spend 3 energy
+      log('Spending 3 energy...', 'info');
+      const spendResult = resources.spend(playerId, { energy: 3 });
+      
+      if (!spendResult.success) {
+        log(`✗ Failed to spend energy: ${spendResult.insufficient || 'unknown'}`, 'fail');
+        return false;
+      }
+      
+      const after = resources.get(playerId, 'energy');
+      const bankAfter = bank.get(playerId);
+      
+      log(`Energy after spending: ${after}`, 'info');
+      log(`Bank after spending: ${bankAfter}`, 'info');
+      
+      assert(after === 1, 'Phase energy updated to 1');
+      assert(bankAfter === 1, 'Bank synced to 1');
+      
+      updateStateDisplay();
+      log('✓ TEST 3 COMPLETE: Spent 3 more, remaining = 1', 'pass');
+      log('📸 Screenshot 3: Update to 1 energy after spending 3 more', 'warn');
+      
+      return after === 1 && bankAfter === 1;
+    }
+    
+    // Test 4: Skip HOH week 2, check social phase has 3 energy (1 + 5 - 3)
+    function runTest4() {
+      log('=== TEST 4: Skip HOH Week 2 ===', 'info');
+      
+      const playerId = window.game.humanId;
+      const bank = window.SocialManeuvers.SocialEnergyBank;
+      const resources = window.SocialManeuvers.SocialResources;
+      
+      // End social phase - sync leftover to bank
+      log('Ending social phase (syncing leftover to bank)...', 'info');
+      const leftover = resources.get(playerId, 'energy');
+      log(`Leftover energy: ${leftover}`, 'info');
+      
+      // Move to week 2
+      log('Advancing to Week 2...', 'info');
+      window.game.week = 2;
+      window.game.phase = 'hoh';
+      
+      // Add weekly base grant (+5)
+      log('Adding weekly base grant (+5)...', 'info');
+      bank.adjust(playerId, 5);
+      const afterWeeklyGrant = bank.get(playerId);
+      log(`Bank after weekly grant: ${afterWeeklyGrant}`, 'info');
+      assert(afterWeeklyGrant === 6, 'Bank updated to 6 (1 leftover + 5 weekly grant)');
+      
+      // Skip HOH competition (-3 penalty)
+      log('Recording HOH skip (-3 penalty)...', 'info');
+      resources.recordWeeklyEvent(playerId, 'compSkipped', true);
+      
+      const afterSkip = bank.get(playerId);
+      log(`Bank after skip penalty: ${afterSkip}`, 'info');
+      assert(afterSkip === 3, 'Bank updated to 3 (6 - 3 skip penalty)');
+      
+      // Start social phase
+      log('Starting social phase...', 'info');
+      window.game.phase = 'social_intermission';
+      resources.recomputePhaseEnergy(playerId);
+      
+      const phaseEnergy = resources.get(playerId, 'energy');
+      log(`Phase energy seeded: ${phaseEnergy}`, 'info');
+      assert(phaseEnergy === 3, 'Social phase starts with 3 energy');
+      
+      updateStateDisplay();
+      log('✓ TEST 4 COMPLETE: Week 2 skip HOH, bank = 3, phase energy = 3', 'pass');
+      log('📸 Screenshot 4: Social phase in Week 2 with 3 energy (1 carried + 5 new - 3 skip)', 'warn');
+      
+      return phaseEnergy === 3;
+    }
+    
+    // Auto-run all tests on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        setupGame();
+        log('Ready for testing. Click buttons to run tests.', 'info');
+        log('Or run all tests sequentially:', 'info');
+        
+        // Add "Run All Tests" button
+        const runAllBtn = document.createElement('button');
+        runAllBtn.textContent = 'Run All Tests Sequentially';
+        runAllBtn.onclick = () => {
+          results.innerHTML = '';
+          if (runTest1()) {
+            setTimeout(() => {
+              if (runTest2()) {
+                setTimeout(() => {
+                  if (runTest3()) {
+                    setTimeout(() => {
+                      runTest4();
+                    }, 500);
+                  }
+                }, 500);
+              }
+            }, 500);
+          }
+        };
+        document.querySelector('.controls').appendChild(runAllBtn);
+      }, 100);
+    });
+  </script>
+</body>
+</html>

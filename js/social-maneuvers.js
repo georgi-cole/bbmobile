@@ -26,13 +26,12 @@
   // ============================================================================
   // Note: Information is scaled to 0..100 to support high-impact action costs.
   const RESOURCE_CONFIG = {
-    energy:      { default: 5,  max: 10,  weeklyReset: true,  carryover: false, description: 'Energy represents your social stamina.', examples: 'Used for conversations, strategizing.' },
+    energy:      { default: 5,  max: Infinity,  weeklyReset: false,  carryover: true, description: 'Energy represents your social stamina.', examples: 'Used for conversations, strategizing.' },
     influence:   { default: 0,  max: 100, weeklyReset: false, carryover: true,  description: 'Influence is your social capital.', examples: 'Earned by success, powers maneuvers.' },
     information: { default: 0,  max: 100, weeklyReset: false, carryover: true,  description: 'Information is strategic knowledge.', examples: 'Earned through observation and interrogation.' }
   };
 
   const DEFAULT_ENERGY = RESOURCE_CONFIG.energy.default;
-  const MAX_ENERGY = RESOURCE_CONFIG.energy.max; // Max for current phase energy only, NOT the bank
   
   // ============================================================================
   // SOCIAL ENERGY BANK (SR storage - uncapped rolling balance)
@@ -83,10 +82,10 @@
       return after;
     },
     
-    // Seed phase energy from bank (capped at MAX_ENERGY for phase)
+    // Seed phase energy from bank (no cap - bank balance is phase energy)
     seedPhaseEnergy(playerId) {
       const bankAmount = this.get(playerId);
-      const phaseEnergy = Math.min(bankAmount, MAX_ENERGY);
+      const phaseEnergy = bankAmount; // No capping - use full bank balance
       console.info(`[social-bank] 🌱 Seeding phase energy for player ${playerId}: ${phaseEnergy} (from bank: ${bankAmount})`);
       return phaseEnergy;
     }
@@ -95,9 +94,9 @@
   // ============================================================================
   // CONFIGURABLE WEEKLY BONUSES AND PENALTIES
   // ============================================================================
-  // Balanced default values for weekly energy seeding.
+  // Balanced default values for weekly energy adjustments.
   // Maintainers can adjust these values to tune the system.
-  // Used in weekly finalization: nextSeed = clamp(Base + Bonuses − Penalties + CarryoverLeftover, 0..MAX_ENERGY)
+  // Applied immediately to uncapped bank: newBank = currentBank + Bonuses − Penalties
   
   const WEEKLY_ENERGY_BONUSES = {
     HOH_WIN: 5,             // Won Head of Household competition
@@ -489,20 +488,18 @@
     
     // Get preview energy for display based on bank balance
     getPreviewEnergy(playerId) {
-      // With the new bank system, preview energy is simply the bank balance
-      // capped at MAX_ENERGY for the phase
+      // With the new bank system, preview energy is simply the bank balance (uncapped)
       const bankBalance = SocialEnergyBank.get(playerId);
-      const preview = Math.min(bankBalance, MAX_ENERGY);
-      return preview;
+      return bankBalance;
     },
     
     // Get detailed breakdown of preview energy
     getPreviewEnergyBreakdown(playerId) {
       const g = global.game; 
-      if(!g) return { bankBalance: DEFAULT_ENERGY, phaseEnergyCap: MAX_ENERGY, total: DEFAULT_ENERGY };
+      if(!g) return { bankBalance: DEFAULT_ENERGY, total: DEFAULT_ENERGY };
       
       const bankBalance = SocialEnergyBank.get(playerId);
-      const phaseEnergy = Math.min(bankBalance, MAX_ENERGY);
+      const phaseEnergy = bankBalance; // No cap - use full bank balance
       const weeklyEvents = g.__weeklyEvents?.get(playerId) || {};
       
       // Show which events have been recorded this week
@@ -528,7 +525,6 @@
       
       return {
         bankBalance,
-        phaseEnergyCap: MAX_ENERGY,
         bonuses,
         penalties,
         bonusTotal,
@@ -1866,7 +1862,7 @@
     const energyRemaining = SocialResources.get(playerId, 'energy');
     
     if(energyRemaining === 0){
-      console.info(`[social-maneuvers] 🎯 Player ${playerId} has depleted all energy (0/${MAX_ENERGY})`);
+      console.info(`[social-maneuvers] 🎯 Player ${playerId} has depleted all energy (0 remaining)`);
       
       // Show feedback message
       global.addLog?.('All social energy spent! Phase will advance shortly...', 'ok');

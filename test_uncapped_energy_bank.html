@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uncapped Energy Bank Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 { color: #4CAF50; }
+    .test-section {
+      background: #2a2a2a;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      border-radius: 8px;
+      border-left: 4px solid #4CAF50;
+    }
+    .test-result {
+      padding: 0.5rem 1rem;
+      margin: 0.5rem 0;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    .pass { background: #1b5e20; color: #81c784; }
+    .fail { background: #b71c1c; color: #ef5350; }
+    .info { background: #0d47a1; color: #64b5f6; }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+    }
+    button:hover { background: #45a049; }
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    code {
+      background: #333;
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      color: #ffa726;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏦 Uncapped Social Energy Bank Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Objective</h2>
+    <p>
+      Verify that the Social Energy Bank is <strong>fully uncapped</strong> and can accumulate 
+      energy beyond the old MAX_ENERGY=10 limit. The bank should:
+    </p>
+    <ul>
+      <li>✅ Accept unlimited energy accumulation (no 10-point cap)</li>
+      <li>✅ Persist energy across weeks</li>
+      <li>✅ Seed phase energy directly from bank (no capping)</li>
+      <li>✅ Apply bonuses/penalties immediately to bank</li>
+      <li>⚠️ Only prevent negative energy (minimum 0)</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <div class="controls">
+      <button onclick="runBasicTests()">Run Basic Tests</button>
+      <button onclick="testUncappedAccumulation()">Test Uncapped Accumulation</button>
+      <button onclick="testWeeklyBonuses()">Test Weekly Bonuses</button>
+      <button onclick="testPhaseSeedingNoCap()">Test Phase Seeding (No Cap)</button>
+      <button onclick="clearResults()">Clear Results</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="results"></div>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script>
+    const results = document.getElementById('results');
+    
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      results.appendChild(div);
+    }
+    
+    function clearResults() {
+      results.innerHTML = '';
+    }
+    
+    function assert(condition, testName, actual, expected) {
+      if (condition) {
+        log(`✓ PASS: ${testName}`, 'pass');
+        return true;
+      } else {
+        log(`✗ FAIL: ${testName} (expected: ${expected}, got: ${actual})`, 'fail');
+        return false;
+      }
+    }
+    
+    function setupTestEnvironment() {
+      // Initialize game state
+      window.game = {
+        week: 1,
+        humanId: 1,
+        cfg: { enableSocialManeuvers: true },
+        players: [
+          { id: 1, name: 'TestPlayer1', evicted: false, affinity: {} }
+        ]
+      };
+      
+      // Initialize Social Maneuvers
+      if (window.SocialManeuvers?.SocialResources) {
+        window.SocialManeuvers.SocialResources.init(1);
+      }
+      
+      log('Test environment initialized', 'info');
+    }
+    
+    function runBasicTests() {
+      clearResults();
+      log('=== Running Basic Bank Tests ===', 'info');
+      setupTestEnvironment();
+      
+      const playerId = 1;
+      const bank = window.SocialManeuvers.SocialEnergyBank;
+      
+      // Test 1: Bank initialization
+      const initial = bank.get(playerId);
+      assert(initial === 5, 'Bank initializes with DEFAULT_ENERGY (5)', initial, 5);
+      
+      // Test 2: MAX_ENERGY should be Infinity
+      const maxEnergy = window.SocialManeuvers.MAX_ENERGY;
+      assert(maxEnergy === Infinity, 'MAX_ENERGY is Infinity (uncapped)', maxEnergy, Infinity);
+      
+      // Test 3: RESOURCE_CONFIG.energy.max should be Infinity
+      const resourceMax = window.SocialManeuvers.RESOURCE_CONFIG.energy.max;
+      assert(resourceMax === Infinity, 'RESOURCE_CONFIG.energy.max is Infinity', resourceMax, Infinity);
+      
+      log('=== Basic Tests Complete ===', 'info');
+    }
+    
+    function testUncappedAccumulation() {
+      clearResults();
+      log('=== Testing Uncapped Accumulation ===', 'info');
+      setupTestEnvironment();
+      
+      const playerId = 1;
+      const bank = window.SocialManeuvers.SocialEnergyBank;
+      
+      // Test accumulation beyond 10
+      log('Setting bank to 50 (5x the old MAX of 10)...', 'info');
+      bank.set(playerId, 50);
+      const result1 = bank.get(playerId);
+      assert(result1 === 50, 'Bank accepts 50 energy (no 10-cap)', result1, 50);
+      
+      // Test accumulation beyond 100
+      log('Setting bank to 150...', 'info');
+      bank.set(playerId, 150);
+      const result2 = bank.get(playerId);
+      assert(result2 === 150, 'Bank accepts 150 energy', result2, 150);
+      
+      // Test incremental adjustment
+      log('Adding 75 to bank (150 + 75 = 225)...', 'info');
+      bank.adjust(playerId, 75);
+      const result3 = bank.get(playerId);
+      assert(result3 === 225, 'Bank accepts incremental increase to 225', result3, 225);
+      
+      // Test that negative is prevented
+      log('Attempting to set bank to -10 (should clamp to 0)...', 'info');
+      bank.set(playerId, -10);
+      const result4 = bank.get(playerId);
+      assert(result4 === 0, 'Bank prevents negative energy (clamps to 0)', result4, 0);
+      
+      log('=== Uncapped Accumulation Tests Complete ===', 'info');
+    }
+    
+    function testWeeklyBonuses() {
+      clearResults();
+      log('=== Testing Weekly Bonuses Application ===', 'info');
+      setupTestEnvironment();
+      
+      const playerId = 1;
+      const bank = window.SocialManeuvers.SocialEnergyBank;
+      const resources = window.SocialManeuvers.SocialResources;
+      
+      // Initialize with 5
+      log('Starting with bank = 5', 'info');
+      
+      // Apply HOH win (+5)
+      log('Recording HOH win (+5)...', 'info');
+      resources.recordWeeklyEvent(playerId, 'hohWin', true);
+      const afterHOH = bank.get(playerId);
+      assert(afterHOH === 10, 'Bank updated after HOH win', afterHOH, 10);
+      
+      // Apply POV win (+3)
+      log('Recording POV win (+3)...', 'info');
+      resources.recordWeeklyEvent(playerId, 'povWin', true);
+      const afterPOV = bank.get(playerId);
+      assert(afterPOV === 13, 'Bank updated after POV win', afterPOV, 13);
+      
+      // Apply nomination bonus (+4)
+      log('Recording nomination (+4)...', 'info');
+      resources.recordWeeklyEvent(playerId, 'nominated', true);
+      const afterNom = bank.get(playerId);
+      assert(afterNom === 17, 'Bank updated after nomination', afterNom, 17);
+      
+      // Verify bank exceeds old MAX of 10
+      assert(afterNom > 10, 'Bank exceeds old MAX_ENERGY of 10', afterNom, '>10');
+      
+      log('=== Weekly Bonuses Tests Complete ===', 'info');
+    }
+    
+    function testPhaseSeedingNoCap() {
+      clearResults();
+      log('=== Testing Phase Seeding (No Cap) ===', 'info');
+      setupTestEnvironment();
+      
+      const playerId = 1;
+      const bank = window.SocialManeuvers.SocialEnergyBank;
+      const resources = window.SocialManeuvers.SocialResources;
+      
+      // Set bank to 50 (5x old MAX)
+      log('Setting bank to 50...', 'info');
+      bank.set(playerId, 50);
+      
+      // Seed phase energy
+      log('Seeding phase energy from bank...', 'info');
+      const phaseEnergy = bank.seedPhaseEnergy(playerId);
+      assert(phaseEnergy === 50, 'Phase energy equals bank (no cap)', phaseEnergy, 50);
+      
+      // Set phase energy via recomputePhaseEnergy
+      log('Setting phase energy via recomputePhaseEnergy...', 'info');
+      resources.recomputePhaseEnergy(playerId);
+      const currentEnergy = resources.get(playerId, 'energy');
+      assert(currentEnergy === 50, 'Current energy set to bank amount (no cap)', currentEnergy, 50);
+      
+      // Test with even larger bank
+      log('Setting bank to 200...', 'info');
+      bank.set(playerId, 200);
+      resources.recomputePhaseEnergy(playerId);
+      const largeEnergy = resources.get(playerId, 'energy');
+      assert(largeEnergy === 200, 'Phase energy handles large bank amounts', largeEnergy, 200);
+      
+      log('=== Phase Seeding Tests Complete ===', 'info');
+    }
+    
+    // Run basic tests on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        log('Page loaded. Click "Run Basic Tests" to start.', 'info');
+      }, 100);
+    });
+  </script>
+</body>
+</html>
