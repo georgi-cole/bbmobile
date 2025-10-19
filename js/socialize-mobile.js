@@ -793,22 +793,30 @@
     // Find the action definition to get cost
     const actions = global.SocialManeuvers?.SOCIAL_ACTIONS || [];
     const action = actions.find(a => a.id === actionId);
-    const energyCost = action?.costs?.energy || action?.cost || 1;
+    const baseEnergyCost = action?.costs?.energy || action?.cost || 1;
+    
+    // Compute group action extra cost: +1 energy per target after the second
+    const groupExtras = Math.max(0, selectedPlayers.length - 2);
+    const effectiveEnergyCost = baseEnergyCost + groupExtras;
     
     // Check all requirements
     const hasEnoughPlayers = selectedPlayers.length >= minTargets;
-    const hasEnoughEnergy = res.energy >= energyCost;
+    const hasEnoughEnergy = res.energy >= effectiveEnergyCost;
     
     const canExecute = hasEnoughPlayers && hasEnoughEnergy && selectedAction;
     btn.disabled = !canExecute;
     
-    // Update button text
+    // Update button text with group cost indicator
     if (!hasEnoughPlayers) {
       btn.textContent = `Select ${minTargets}+ Players (${selectedPlayers.length} selected)`;
     } else if (!hasEnoughEnergy) {
-      btn.textContent = `Need ${energyCost} Energy (have ${res.energy})`;
+      btn.textContent = `Need ${effectiveEnergyCost} Energy (have ${res.energy})`;
     } else {
-      btn.textContent = `Execute Action (Cost: ${energyCost}⚡)`;
+      let costText = `${baseEnergyCost}⚡`;
+      if (groupExtras > 0) {
+        costText += ` + group ${groupExtras}⚡`;
+      }
+      btn.textContent = `Execute Action (Cost: ${costText})`;
     }
   }
 
