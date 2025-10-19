@@ -662,7 +662,7 @@ header.innerHTML = `
       let statusClass = '';
       let ariaLabel = p.name;
       
-      // Label precedence: WINNER > RUNNER-UP > NOM > HOH/POV icons > name
+      // Label precedence: WINNER > RUNNER-UP > FINISHING BADGE (≥3rd) > NOM > HOH/POV icons > name
       if(isWinner){
         labelText = '🥇';
         statusClass = 'status-icon-label medal-winner';
@@ -671,6 +671,16 @@ header.innerHTML = `
         labelText = '🥈';
         statusClass = 'status-icon-label medal-runner-up';
         ariaLabel = `${p.name} (Runner-Up)`;
+      } else if(p.evicted && p.showFinishingBadge && p.finalRank && p.finalRank >= 3){
+        // Show ordinal finishing badge for evicted players ranked 3rd or lower
+        const ordinalRank = (function(n){
+          const s = ['th','st','nd','rd'];
+          const v = n % 100;
+          return n + (s[(v-20)%10] || s[v] || s[0]);
+        })(p.finalRank);
+        labelText = ordinalRank;
+        statusClass = 'status-finishing-badge';
+        ariaLabel = `${p.name} (Finished ${ordinalRank})`;
       } else if(hasNom){
         labelText = 'NOM';
         statusClass = 'status-nom';

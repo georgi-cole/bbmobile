@@ -740,6 +740,18 @@
     g.__twistEvictedThisNight=0;
     g.__twistNomineeSnapshot=null;
 
+    // Run eviction visual enhancement for each evicted player
+    // Show animations sequentially for better visual clarity
+    if(typeof global.runEvictionVisual === 'function'){
+      for(const id of evictedIds){
+        try{
+          await global.runEvictionVisual(id, { reason: 'multi', mode: modeLabel });
+        }catch(e){
+          console.error('[eviction] visual enhancement failed for id:', id, e);
+        }
+      }
+    }
+
     postEvictionRouting();
   }
 
@@ -751,7 +763,7 @@
   }
 
   // Legacy handler for vote-based evictions (not self-eviction)
-  function handleEvictionLegacy(evId,reason='vote'){
+  async function handleEvictionLegacy(evId,reason='vote'){
     const g=global.game; const ev=global.getP(evId); if(!ev) return;
     ev.evicted=true; ev.weekEvicted=g.week;
     
@@ -790,6 +802,16 @@
     }
 
     if(!g.__twistMode) global.twists?.afterPhase?.('eviction');
+
+    // Run eviction visual enhancement (avatar animation + roster badge update)
+    // Defer routing until animation completes
+    if(typeof global.runEvictionVisual === 'function'){
+      try{
+        await global.runEvictionVisual(evId, { reason });
+      }catch(e){
+        console.error('[eviction] visual enhancement failed:', e);
+      }
+    }
 
     postEvictionRouting();
   }

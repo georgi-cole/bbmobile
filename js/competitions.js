@@ -1681,6 +1681,15 @@
 
     try { await global.cardQueueWaitIdle?.(); } catch { }
 
+    // Run eviction visual enhancement (avatar animation + roster badge update)
+    if(typeof global.runEvictionVisual === 'function'){
+      try{
+        await global.runEvictionVisual(target, { reason: 'final3' });
+      }catch(e){
+        console.error('[final3] visual enhancement failed:', e);
+      }
+    }
+
     const justification = g.__lastEvictionJustification;
     if (justification) {
       safeShowCard(`💬 ${hoh.name}`, [`"${justification}"`], 'neutral', 4000, true);
