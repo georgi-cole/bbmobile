@@ -1969,16 +1969,9 @@
     });
     console.info(`[social-maneuvers] ✓ Resources initialized for ${alivePlayers.length} players`);
     
-    // Seed phase resources for human player (applies weekly bonuses/penalties)
-    if(humanId) {
-      seedPhaseResources(humanId);
-    }
-    
-    // Reset weekly for non-human players (standard base energy)
+    // Reset weekly for all alive players (applies weekly housekeeping and energy seeding)
     alivePlayers.forEach(p => {
-      if(p.id !== humanId) {
-        SocialResources.resetWeekly(p.id);
-      }
+      SocialResources.resetWeekly(p.id);
     });
     
     // Clear phase refunds for new phase
