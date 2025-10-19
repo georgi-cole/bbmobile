@@ -16,12 +16,27 @@
     return isGuest;
   }
 
+  // Ensure profile has a valid season number (normalize to 1 if missing/invalid)
+  function ensureSeason(profile) {
+    if (!profile) return profile;
+    
+    const season = profile.season;
+    if (typeof season !== 'number' || season < 1 || !Number.isInteger(season)) {
+      profile.season = 1;
+    }
+    
+    return profile;
+  }
+
   // Set current profile
   function setCurrentProfile(profile) {
     currentProfile = profile;
     isGuest = false;
     
     if (profile) {
+      // Ensure season is valid before applying
+      ensureSeason(profile);
+      
       global.ProfileStorage.setLastProfileId(profile.id);
       
       // Apply profile to game
@@ -166,6 +181,45 @@
     return currentProfile.displayName;
   }
 
+  // Increment season for current profile after game completion
+  function incrementSeason() {
+    // No-op if guest or no profile
+    if (isGuest || !currentProfile) {
+      console.info('[profileService] incrementSeason skipped - guest or no profile');
+      return;
+    }
+
+    try {
+      // Compute next season
+      const nextSeason = (currentProfile.season || 1) + 1;
+      console.info('[profileService] incrementing season from', currentProfile.season, 'to', nextSeason);
+
+      // Persist to storage
+      const updatedProfile = global.ProfileStorage.updateProfile(currentProfile.id, {
+        season: nextSeason,
+        updatedAt: Date.now()
+      });
+
+      // Update current profile with returned value or fallback to local update
+      if (updatedProfile) {
+        currentProfile = updatedProfile;
+      } else {
+        // Fallback if update failed - still apply locally
+        currentProfile.season = nextSeason;
+      }
+
+      // Re-apply to game to update HUD/display
+      applyProfileToGame(currentProfile);
+
+      console.info('[profileService] season incremented successfully to', currentProfile.season);
+    } catch (e) {
+      console.error('[profileService] failed to increment season:', e);
+      // Still try to apply locally even if storage failed
+      currentProfile.season = (currentProfile.season || 1) + 1;
+      applyProfileToGame(currentProfile);
+    }
+  }
+
   // Export API
   const ProfileService = {
     getCurrentProfile,
@@ -175,7 +229,8 @@
     updateCurrentProfile,
     initializeProfile,
     getDisplayName,
-    applyProfileToGame
+    applyProfileToGame,
+    incrementSeason
   };
 
   // Expose to global

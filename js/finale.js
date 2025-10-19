@@ -119,6 +119,15 @@
       const s=panel.querySelector('#cinStats'); if(s) s.style.display='block';
     };
     panel.querySelector('#cinProfileStart').onclick=()=>{
+      // Increment season before starting new season flow
+      try {
+        if (g.ProfileService && typeof g.ProfileService.incrementSeason === 'function') {
+          g.ProfileService.incrementSeason();
+        }
+      } catch (e) {
+        console.warn('[finale] failed to increment season:', e);
+      }
+      
       const profile={
         name:(panel.querySelector('#cinPName')?.value||'You').trim(),
         age:(panel.querySelector('#cinPAge')?.value||'').trim(),
