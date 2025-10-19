@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Energy Bank Test</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 { color: #3498db; margin-bottom: 10px; }
+    h2 { color: #2ecc71; margin-top: 30px; font-size: 1.2rem; }
+    .test-case {
+      background: #2a2a2a;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+    }
+    .test-case.pass {
+      border-left-color: #2ecc71;
+    }
+    .test-case.fail {
+      border-left-color: #e74c3c;
+    }
+    .result {
+      font-weight: bold;
+      margin-top: 8px;
+    }
+    .result.pass { color: #2ecc71; }
+    .result.fail { color: #e74c3c; }
+    pre {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 10px 5px 10px 0;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    #summary {
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏦 Social Energy Bank Test Suite</h1>
+  <p>Testing the new uncapped Social Energy Bank with immediate event deltas and skip penalties.</p>
+
+  <button onclick="runAllTests()">▶️ Run All Tests</button>
+  <button onclick="location.reload()">🔄 Reset</button>
+
+  <div id="results"></div>
+  <div id="summary"></div>
+
+  <!-- Minimal dependencies -->
+  <script>
+    // Mock minimal game environment
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      week: 1,
+      phase: 'social_intermission',
+      humanId: 1
+    };
+
+    // Mock helper functions
+    window.alivePlayers = () => [
+      { id: 1, name: 'Player 1' },
+      { id: 2, name: 'Player 2' },
+      { id: 3, name: 'Player 3' }
+    ];
+    window.getP = (id) => window.alivePlayers().find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    window.addLog = (msg, type) => console.log(`[${type}] ${msg}`);
+  </script>
+
+  <!-- Load Social Maneuvers module -->
+  <script src="js/social-maneuvers.js"></script>
+
+  <script>
+    let testResults = [];
+
+    function addTest(name, result, details = '') {
+      const passed = result === true;
+      testResults.push({ name, passed, details });
+      
+      const div = document.createElement('div');
+      div.className = `test-case ${passed ? 'pass' : 'fail'}`;
+      div.innerHTML = `
+        <div><strong>${name}</strong></div>
+        ${details ? `<pre>${details}</pre>` : ''}
+        <div class="result ${passed ? 'pass' : 'fail'}">${passed ? '✅ PASS' : '❌ FAIL'}</div>
+      `;
+      document.getElementById('results').appendChild(div);
+    }
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message);
+    }
+
+    function assertEquals(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(`${message}: expected ${expected}, got ${actual}`);
+      }
+    }
+
+    function runAllTests() {
+      document.getElementById('results').innerHTML = '<h2>Test Results</h2>';
+      testResults = [];
+
+      try {
+        test_bankInitialization();
+        test_immediateEventDeltaApplication();
+        test_uncappedBankStorage();
+        test_phaseSeeding();
+        test_lockStepUpdates();
+        test_skipPenaltyWatcher();
+        test_previewEnergy();
+        
+        showSummary();
+      } catch(e) {
+        console.error('Test suite failed:', e);
+        addTest('Test Suite', false, `Fatal error: ${e.message}\n${e.stack}`);
+      }
+    }
+
+    function test_bankInitialization() {
+      const playerId = 1;
+      
+      // Initialize bank
+      SocialManeuvers.SocialEnergyBank.init(playerId);
+      const initial = SocialManeuvers.SocialEnergyBank.get(playerId);
+      
+      assert(initial === 5, 'Bank should initialize with DEFAULT_ENERGY (5)');
+      addTest('Bank Initialization', true, `Initial bank balance: ${initial}`);
+    }
+
+    function test_immediateEventDeltaApplication() {
+      const playerId = 2;
+      
+      // Initialize
+      SocialManeuvers.SocialResources.init(playerId);
+      const before = SocialManeuvers.SocialEnergyBank.get(playerId);
+      
+      // Record HOH win - should apply +5 to bank immediately
+      SocialManeuvers.SocialResources.recordWeeklyEvent(playerId, 'hohWin', true);
+      const after = SocialManeuvers.SocialEnergyBank.get(playerId);
+      
+      const delta = after - before;
+      assertEquals(delta, 5, 'HOH win should add +5 to bank immediately');
+      
+      addTest('Immediate Event Delta Application', true, 
+        `Before: ${before}\nAfter HOH win: ${after}\nDelta: +${delta}`);
+    }
+
+    function test_uncappedBankStorage() {
+      const playerId = 3;
+      
+      // Initialize
+      SocialManeuvers.SocialEnergyBank.init(playerId);
+      
+      // Set bank to value above MAX_ENERGY (10)
+      SocialManeuvers.SocialEnergyBank.set(playerId, 25);
+      const stored = SocialManeuvers.SocialEnergyBank.get(playerId);
+      
+      assert(stored === 25, 'Bank should store values above MAX_ENERGY');
+      assert(stored > 10, 'Bank should be uncapped');
+      
+      addTest('Uncapped Bank Storage', true, 
+        `Bank balance: ${stored} (MAX_ENERGY = 10)\nBank is uncapped ✓`);
+    }
+
+    function test_phaseSeeding() {
+      const playerId = 1;
+      
+      // Set bank to 15 (above MAX_ENERGY)
+      SocialManeuvers.SocialEnergyBank.set(playerId, 15);
+      const bankBalance = SocialManeuvers.SocialEnergyBank.get(playerId);
+      
+      // Seed phase energy
+      const phaseEnergy = SocialManeuvers.SocialResources.recomputePhaseEnergy(playerId);
+      const currentEnergy = SocialManeuvers.SocialResources.get(playerId, 'energy');
+      
+      assert(bankBalance === 15, 'Bank should be 15');
+      assertEquals(phaseEnergy, 10, 'Phase energy should be capped at MAX_ENERGY (10)');
+      assertEquals(currentEnergy, 10, 'Current energy should match phase energy');
+      
+      addTest('Phase Seeding from Bank', true,
+        `Bank balance: ${bankBalance}\nPhase energy: ${phaseEnergy} (capped at MAX_ENERGY)\nCurrent energy: ${currentEnergy}`);
+    }
+
+    function test_lockStepUpdates() {
+      const playerId = 2;
+      
+      // Setup: bank = 12, phase energy = 10
+      SocialManeuvers.SocialEnergyBank.set(playerId, 12);
+      SocialManeuvers.SocialResources.set(playerId, 'energy', 10);
+      
+      const bankBefore = SocialManeuvers.SocialEnergyBank.get(playerId);
+      const energyBefore = SocialManeuvers.SocialResources.get(playerId, 'energy');
+      
+      // Spend 3 energy
+      SocialManeuvers.SocialResources.spend(playerId, { energy: 3 });
+      
+      const bankAfter = SocialManeuvers.SocialEnergyBank.get(playerId);
+      const energyAfter = SocialManeuvers.SocialResources.get(playerId, 'energy');
+      
+      assertEquals(energyAfter, 7, 'Current energy should be 7 after spending 3');
+      assertEquals(bankAfter, 9, 'Bank should also decrease by 3 (lock-step)');
+      
+      // Test earn
+      SocialManeuvers.SocialResources.earn(playerId, { energy: 2 });
+      
+      const bankFinal = SocialManeuvers.SocialEnergyBank.get(playerId);
+      const energyFinal = SocialManeuvers.SocialResources.get(playerId, 'energy');
+      
+      assertEquals(energyFinal, 9, 'Current energy should be 9 after earning 2');
+      assertEquals(bankFinal, 11, 'Bank should also increase by 2 (lock-step)');
+      
+      addTest('Lock-Step Bank Updates', true,
+        `Initial: Bank=${bankBefore}, Energy=${energyBefore}\n` +
+        `After spend 3: Bank=${bankAfter}, Energy=${energyAfter}\n` +
+        `After earn 2: Bank=${bankFinal}, Energy=${energyFinal}`);
+    }
+
+    function test_skipPenaltyWatcher() {
+      // Check that skip watcher is installed
+      const hasWatcher = typeof SocialManeuvers.recordCompetitionParticipation === 'function';
+      
+      assert(hasWatcher, 'recordCompetitionParticipation should be exported');
+      
+      addTest('Skip Penalty Watcher', true,
+        'recordCompetitionParticipation() is available for integration\n' +
+        'Skip watcher installed via installCompetitionSkipWatcher()');
+    }
+
+    function test_previewEnergy() {
+      const playerId = 3;
+      
+      // Setup: bank = 20
+      SocialManeuvers.SocialEnergyBank.set(playerId, 20);
+      
+      // Get preview (should be capped at MAX_ENERGY for display)
+      const preview = SocialManeuvers.SocialResources.getPreviewEnergy(playerId);
+      const breakdown = SocialManeuvers.SocialResources.getPreviewEnergyBreakdown(playerId);
+      
+      assertEquals(preview, 10, 'Preview should be capped at MAX_ENERGY');
+      assertEquals(breakdown.bankBalance, 20, 'Breakdown should show actual bank balance');
+      assertEquals(breakdown.total, 10, 'Breakdown total should be capped');
+      
+      addTest('Preview Energy', true,
+        `Bank balance: ${breakdown.bankBalance}\n` +
+        `Preview energy: ${preview} (capped at MAX_ENERGY)\n` +
+        `Phase energy cap: ${breakdown.phaseEnergyCap}`);
+    }
+
+    function showSummary() {
+      const total = testResults.length;
+      const passed = testResults.filter(t => t.passed).length;
+      const failed = total - passed;
+      
+      const summaryDiv = document.getElementById('summary');
+      summaryDiv.innerHTML = `
+        <h2>📊 Test Summary</h2>
+        <div style="font-size: 1.2rem; margin: 15px 0;">
+          <div>Total Tests: <strong>${total}</strong></div>
+          <div style="color: #2ecc71;">Passed: <strong>${passed}</strong></div>
+          ${failed > 0 ? `<div style="color: #e74c3c;">Failed: <strong>${failed}</strong></div>` : ''}
+        </div>
+        <div style="margin-top: 20px;">
+          ${failed === 0 ? 
+            '<div style="color: #2ecc71; font-size: 1.5rem;">✅ All tests passed!</div>' :
+            '<div style="color: #e74c3c; font-size: 1.5rem;">❌ Some tests failed</div>'
+          }
+        </div>
+      `;
+    }
+
+    // Auto-run on load
+    window.addEventListener('load', () => {
+      console.log('Social Energy Bank Test Suite loaded');
+      console.log('SocialManeuvers:', SocialManeuvers);
+      console.log('SocialEnergyBank:', SocialManeuvers.SocialEnergyBank);
+    });
+  </script>
+</body>
+</html>

@@ -32,7 +32,65 @@
   };
 
   const DEFAULT_ENERGY = RESOURCE_CONFIG.energy.default;
-  const MAX_ENERGY = RESOURCE_CONFIG.energy.max;
+  const MAX_ENERGY = RESOURCE_CONFIG.energy.max; // Max for current phase energy only, NOT the bank
+  
+  // ============================================================================
+  // SOCIAL ENERGY BANK (SR storage - uncapped rolling balance)
+  // ============================================================================
+  // The bank persists across weeks and is uncapped. Weekly bonuses/penalties 
+  // are applied immediately to the bank. Phase energy is seeded from bank.
+  const SocialEnergyBank = {
+    init(playerId) {
+      const g = global.game; if(!g) return;
+      if(!g.__sm_bankEnergy) g.__sm_bankEnergy = new Map();
+      
+      if(!g.__sm_bankEnergy.has(playerId)) {
+        // Initialize bank with default energy
+        g.__sm_bankEnergy.set(playerId, DEFAULT_ENERGY);
+        console.info(`[social-bank] 🏦 Initialized bank for player ${playerId}: ${DEFAULT_ENERGY}`);
+      }
+    },
+    
+    get(playerId) {
+      const g = global.game; if(!g) return DEFAULT_ENERGY;
+      if(!g.__sm_bankEnergy) g.__sm_bankEnergy = new Map();
+      return g.__sm_bankEnergy.get(playerId) ?? DEFAULT_ENERGY;
+    },
+    
+    set(playerId, amount) {
+      const g = global.game; if(!g) return;
+      if(!g.__sm_bankEnergy) g.__sm_bankEnergy = new Map();
+      
+      // Bank is UNCAPPED - can accumulate indefinitely
+      const clamped = Math.max(0, amount);
+      g.__sm_bankEnergy.set(playerId, clamped);
+      console.info(`[social-bank] 🏦 Bank updated for player ${playerId}: ${clamped}`);
+      return clamped;
+    },
+    
+    adjust(playerId, delta) {
+      const current = this.get(playerId);
+      const newAmount = current + delta;
+      return this.set(playerId, newAmount);
+    },
+    
+    // Apply weekly event delta immediately to bank
+    applyEventDelta(playerId, eventType, delta) {
+      this.init(playerId);
+      const before = this.get(playerId);
+      const after = this.adjust(playerId, delta);
+      console.info(`[social-bank] 📊 Event ${eventType} for player ${playerId}: ${before} + ${delta} = ${after}`);
+      return after;
+    },
+    
+    // Seed phase energy from bank (capped at MAX_ENERGY for phase)
+    seedPhaseEnergy(playerId) {
+      const bankAmount = this.get(playerId);
+      const phaseEnergy = Math.min(bankAmount, MAX_ENERGY);
+      console.info(`[social-bank] 🌱 Seeding phase energy for player ${playerId}: ${phaseEnergy} (from bank: ${bankAmount})`);
+      return phaseEnergy;
+    }
+  };
 
   // ============================================================================
   // CONFIGURABLE WEEKLY BONUSES AND PENALTIES
@@ -105,6 +163,9 @@
       if(!g.__weeklyInteractions){ g.__weeklyInteractions = new Map(); }
       if(!g.__phaseRefunds){ g.__phaseRefunds = new Map(); }
       
+      // Initialize bank for this player
+      SocialEnergyBank.init(playerId);
+      
       if(!g.__socialResources.has(playerId)){
         g.__socialResources.set(playerId, {
           energy: RESOURCE_CONFIG.energy.default,
@@ -175,6 +236,11 @@
           const current = this.get(playerId, type);
           this.set(playerId, type, current - cost);
           delta[type] = -cost;
+          
+          // LOCK-STEP: Update bank when spending energy
+          if(type === 'energy') {
+            SocialEnergyBank.adjust(playerId, -cost);
+          }
         }
       }
       this._logTelemetry(playerId, 'multiple', 'spend', costs);
@@ -201,6 +267,11 @@
           const current = this.get(playerId, type);
           this.set(playerId, type, current + amount);
           delta[type] = amount;
+          
+          // LOCK-STEP: Update bank when earning energy
+          if(type === 'energy') {
+            SocialEnergyBank.adjust(playerId, amount);
+          }
         }
       }
       this._logTelemetry(playerId, 'multiple', 'earn', gains);
@@ -232,46 +303,14 @@
         return;
       }
       
-      // Check if we have a pre-computed seed from finalization
-      if(!g.__sm_nextWeekSeedEnergy) g.__sm_nextWeekSeedEnergy = new Map();
-      const precomputedSeed = g.__sm_nextWeekSeedEnergy.get(playerId);
-      
-      if(precomputedSeed !== undefined) {
-        // Use pre-computed seed from finalization (includes carryover + bonuses/penalties)
-        resources.energy = precomputedSeed;
-        console.info(`[social-resources] 🔄 Weekly reset for player ${playerId} using precomputed seed: ${precomputedSeed}`);
-        // Clear the seed after use
-        g.__sm_nextWeekSeedEnergy.delete(playerId);
-      } else {
-        // Fallback: Calculate weekly energy delta (legacy path for backwards compatibility)
-        const weeklyEvents = g.__weeklyEvents.get(playerId) || {};
-        let energyDelta = 0;
-        
-        // Apply bonuses
-        if(weeklyEvents.hohWin) energyDelta += WEEKLY_ENERGY_BONUSES.HOH_WIN;
-        if(weeklyEvents.povWin) energyDelta += WEEKLY_ENERGY_BONUSES.POV_WIN;
-        if(weeklyEvents.nominated) energyDelta += WEEKLY_ENERGY_BONUSES.NOMINATED;
-        energyDelta += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
-        if(weeklyEvents.savedWithPov) energyDelta += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
-        if(weeklyEvents.survivedEviction) energyDelta += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
-        
-        // Apply penalties
-        if(weeklyEvents.compSkipped) energyDelta += WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED;
-        if(weeklyEvents.notDrawnVeto) energyDelta += WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO;
-        if(weeklyEvents.zeroScore) energyDelta += WEEKLY_ENERGY_PENALTIES.ZERO_SCORE;
-        if(weeklyEvents.brokeAlliance) energyDelta += WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE;
-        
-        console.info(`[social-resources] 🔄 Weekly reset for player ${playerId} at week ${currentWeek}`);
-        console.info(`[social-resources] Energy delta: base ${DEFAULT_ENERGY} + ${energyDelta} = ${DEFAULT_ENERGY + energyDelta}`, weeklyEvents);
-        
-        // Energy: Base + weekly delta, clamped to [0, max]
-        resources.energy = Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + energyDelta));
-      }
+      // NEW BANK SYSTEM: No need to compute energy - bank already has it!
+      // Phase energy is seeded from the bank separately at social phase start (via recomputePhaseEnergy), not during weekly reset.
+      console.info(`[social-resources] 🔄 Weekly reset for player ${playerId} at week ${currentWeek} (bank-based)`);
       
       // Handle other resources (non-energy)
       for(const [type, config] of Object.entries(RESOURCE_CONFIG)) {
         if(type === 'energy') {
-          // Already handled above
+          // Energy managed by SocialEnergyBank system - skip legacy weekly reset
           continue;
         } else if(type === 'information' && config.carryover) {
           // Information: add weekly carryover
@@ -318,54 +357,28 @@
       g.__weeklyInteractions.clear();
       
       resources.lastWeekReset = currentWeek;
-      console.info(`[social-resources] Weekly reset for player ${playerId} at week ${currentWeek}`, resources);
+      const bankBalance = SocialEnergyBank.get(playerId);
+      console.info(`[social-resources] Weekly reset complete for player ${playerId} at week ${currentWeek}. Bank balance: ${bankBalance}`, resources);
       this._logTelemetry(playerId, 'all', 'reset', resources);
     },
     finalizeWeekForAll() {
       const g = global.game; if(!g) return;
       const alivePlayers = global.alivePlayers?.() || [];
       
-      if(!g.__sm_nextWeekSeedEnergy) g.__sm_nextWeekSeedEnergy = new Map();
+      console.info('[social-resources] 🏁 Finalizing week for all players - bank already updated with events');
       
-      console.info('[social-resources] 🏁 Finalizing week for all players - computing next week seeds with unlimited carryover');
-      
+      // With lock-step updates, bank and current energy are always synchronized
+      // Log final state for each player
       alivePlayers.forEach(player => {
         const playerId = player.id;
         this.init(playerId);
         
-        // Get current energy (leftover after social phase)
         const currentEnergy = this.get(playerId, 'energy');
-        const carryoverLeftover = currentEnergy; // Unlimited carryover
-        
-        // Get weekly events for bonuses/penalties
-        const weeklyEvents = g.__weeklyEvents.get(playerId) || {};
-        let bonuses = 0;
-        let penalties = 0;
-        
-        // Apply bonuses
-        if(weeklyEvents.hohWin) bonuses += WEEKLY_ENERGY_BONUSES.HOH_WIN;
-        if(weeklyEvents.povWin) bonuses += WEEKLY_ENERGY_BONUSES.POV_WIN;
-        if(weeklyEvents.nominated) bonuses += WEEKLY_ENERGY_BONUSES.NOMINATED;
-        bonuses += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
-        if(weeklyEvents.savedWithPov) bonuses += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
-        if(weeklyEvents.survivedEviction) bonuses += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
-        
-        // Apply penalties
-        if(weeklyEvents.compSkipped) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED);
-        if(weeklyEvents.notDrawnVeto) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO);
-        if(weeklyEvents.zeroScore) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.ZERO_SCORE);
-        if(weeklyEvents.brokeAlliance) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE);
-        
-        // Compute next seed: Base + Bonuses - Penalties + CarryoverLeftover
-        const nextSeed = Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + bonuses - penalties + carryoverLeftover));
-        
-        // Store in map
-        g.__sm_nextWeekSeedEnergy.set(playerId, nextSeed);
-        
-        console.info(`[social-resources] Player ${playerId} (${player.name || 'unknown'}): nextSeed = ${nextSeed} (Base=${DEFAULT_ENERGY} + Bonuses=${bonuses} - Penalties=${penalties} + Carryover=${carryoverLeftover})`);
+        const bankBalance = SocialEnergyBank.get(playerId);
+        console.info(`[social-resources] Player ${playerId} (${player.name || 'unknown'}): Bank=${bankBalance}, Phase energy=${currentEnergy}`);
       });
       
-      console.info('[social-resources] ✓ Week finalization complete - seeds stored in g.__sm_nextWeekSeedEnergy');
+      console.info('[social-resources] ✓ Week finalization complete - bank balances maintained');
     },
     canAfford(playerId, costs) {
       for(const [type, cost] of Object.entries(costs)) {
@@ -404,14 +417,61 @@
       if(!g.__weeklyEvents) g.__weeklyEvents = new Map();
       const events = g.__weeklyEvents.get(playerId) || {};
       
+      // Calculate the delta for this event
+      let delta = 0;
+      let isEventRecorded = false;
+      
       if(eventType === 'newAlliance') {
         events.newAlliances = (events.newAlliances || 0) + 1;
+        delta = WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
+        isEventRecorded = true;
+      } else if(eventType === 'hohWin' && !events.hohWin && value) {
+        events[eventType] = value;
+        delta = WEEKLY_ENERGY_BONUSES.HOH_WIN;
+        isEventRecorded = true;
+      } else if(eventType === 'povWin' && !events.povWin && value) {
+        events[eventType] = value;
+        delta = WEEKLY_ENERGY_BONUSES.POV_WIN;
+        isEventRecorded = true;
+      } else if(eventType === 'nominated' && !events.nominated && value) {
+        events[eventType] = value;
+        delta = WEEKLY_ENERGY_BONUSES.NOMINATED;
+        isEventRecorded = true;
+      } else if(eventType === 'savedWithPov' && !events.savedWithPov && value) {
+        events[eventType] = value;
+        delta = WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
+        isEventRecorded = true;
+      } else if(eventType === 'survivedEviction' && !events.survivedEviction && value) {
+        events[eventType] = value;
+        delta = WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
+        isEventRecorded = true;
+      } else if(eventType === 'compSkipped' && !events.compSkipped && value) {
+        events[eventType] = value;
+        delta = WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED; // Already negative
+        isEventRecorded = true;
+      } else if(eventType === 'notDrawnVeto' && !events.notDrawnVeto && value) {
+        events[eventType] = value;
+        delta = WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO; // Already negative
+        isEventRecorded = true;
+      } else if(eventType === 'zeroScore' && !events.zeroScore && value) {
+        events[eventType] = value;
+        delta = WEEKLY_ENERGY_PENALTIES.ZERO_SCORE; // Already negative
+        isEventRecorded = true;
+      } else if(eventType === 'brokeAlliance' && !events.brokeAlliance && value) {
+        events[eventType] = value;
+        delta = WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE; // Already negative
+        isEventRecorded = true;
       } else {
         events[eventType] = value;
       }
       
       g.__weeklyEvents.set(playerId, events);
       console.info(`[social-resources] Weekly event recorded: ${playerId} - ${eventType}`, value);
+      
+      // IMMEDIATE APPLICATION TO BANK: Apply delta to bank right away
+      if(isEventRecorded && delta !== 0) {
+        SocialEnergyBank.applyEventDelta(playerId, eventType, delta);
+      }
       
       // Dispatch preview event after recording
       const preview = this.getPreviewEnergy(playerId);
@@ -427,45 +487,25 @@
       }
     },
     
-    // Get preview energy for next phase based on current weekly events
+    // Get preview energy for display based on bank balance
     getPreviewEnergy(playerId) {
-      const g = global.game; if(!g) return DEFAULT_ENERGY;
-      const weeklyEvents = g.__weeklyEvents?.get(playerId) || {};
-      
-      // Get current leftover energy for carryover
-      const currentEnergy = this.get(playerId, 'energy');
-      const carryover = currentEnergy; // Unlimited carryover
-      
-      let bonuses = 0;
-      let penalties = 0;
-      
-      // Apply bonuses
-      if(weeklyEvents.hohWin) bonuses += WEEKLY_ENERGY_BONUSES.HOH_WIN;
-      if(weeklyEvents.povWin) bonuses += WEEKLY_ENERGY_BONUSES.POV_WIN;
-      if(weeklyEvents.nominated) bonuses += WEEKLY_ENERGY_BONUSES.NOMINATED;
-      bonuses += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
-      if(weeklyEvents.savedWithPov) bonuses += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
-      if(weeklyEvents.survivedEviction) bonuses += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
-      
-      // Apply penalties
-      if(weeklyEvents.compSkipped) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED);
-      if(weeklyEvents.notDrawnVeto) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO);
-      if(weeklyEvents.zeroScore) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.ZERO_SCORE);
-      if(weeklyEvents.brokeAlliance) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE);
-      
-      // Preview = Base + Bonuses - Penalties + Carryover, clamped to [0, max]
-      return Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + bonuses - penalties + carryover));
+      // With the new bank system, preview energy is simply the bank balance
+      // capped at MAX_ENERGY for the phase
+      const bankBalance = SocialEnergyBank.get(playerId);
+      const preview = Math.min(bankBalance, MAX_ENERGY);
+      return preview;
     },
     
     // Get detailed breakdown of preview energy
     getPreviewEnergyBreakdown(playerId) {
-      const g = global.game; if(!g) return { base: DEFAULT_ENERGY, bonuses: [], penalties: [], carryover: 0, total: DEFAULT_ENERGY };
+      const g = global.game; 
+      if(!g) return { bankBalance: DEFAULT_ENERGY, phaseEnergyCap: MAX_ENERGY, total: DEFAULT_ENERGY };
+      
+      const bankBalance = SocialEnergyBank.get(playerId);
+      const phaseEnergy = Math.min(bankBalance, MAX_ENERGY);
       const weeklyEvents = g.__weeklyEvents?.get(playerId) || {};
       
-      // Get current leftover energy for carryover
-      const currentEnergy = this.get(playerId, 'energy');
-      const carryover = currentEnergy; // Unlimited carryover
-      
+      // Show which events have been recorded this week
       const bonuses = [];
       const penalties = [];
       
@@ -477,7 +517,7 @@
       if(weeklyEvents.savedWithPov) bonuses.push({ reason: 'Saved with POV', amount: WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV });
       if(weeklyEvents.survivedEviction) bonuses.push({ reason: 'Survived Eviction', amount: WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION });
       
-      // Track penalties (convert negative values to positive for display)
+      // Track penalties (convert negative values for display)
       if(weeklyEvents.compSkipped) penalties.push({ reason: 'Comp Skipped', amount: WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED });
       if(weeklyEvents.notDrawnVeto) penalties.push({ reason: 'Not Drawn for Veto', amount: WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO });
       if(weeklyEvents.zeroScore) penalties.push({ reason: 'Zero Score', amount: WEEKLY_ENERGY_PENALTIES.ZERO_SCORE });
@@ -486,17 +526,15 @@
       const bonusTotal = bonuses.reduce((sum, b) => sum + b.amount, 0);
       const penaltyTotal = penalties.reduce((sum, p) => sum + p.amount, 0); // Already negative
       
-      // Total = Base + Bonuses + Penalties (already negative) + Carryover
-      const total = Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + bonusTotal + penaltyTotal + carryover));
-      
       return {
-        base: DEFAULT_ENERGY,
+        bankBalance,
+        phaseEnergyCap: MAX_ENERGY,
         bonuses,
         penalties,
         bonusTotal,
         penaltyTotal,
-        carryover,
-        total
+        eventsApplied: bonuses.length + penalties.length,
+        total: phaseEnergy
       };
     },
     
@@ -2038,6 +2076,103 @@
     console.info(`[social-maneuvers] ✓ Phase resources seeded for player ${playerId}: energy=${energy}`);
   }
   
+  // ============================================================================
+  // COMPETITION SKIP WATCHER (SM-only, no legacy module edits)
+  // ============================================================================
+  
+  /**
+   * Watch for competition phase entries and track participation.
+   * If a player skips a competition (no score recorded), apply skip penalty to bank.
+   */
+  function installCompetitionSkipWatcher() {
+    if(!isEnabled()) return;
+    
+    const g = global.game;
+    if(!g) return;
+    
+    // Track players who entered a competition phase
+    if(!g.__sm_compPhaseEntries) g.__sm_compPhaseEntries = new Map();
+    
+    // Capture reference to SocialResources for use in wrapper
+    const resources = SocialResources;
+    
+    // Wrap setPhase to detect competition phases
+    const originalSetPhase = global.setPhase;
+    if(typeof originalSetPhase !== 'function') return;
+    
+    global.setPhase = function(phase, duration, callback) {
+      const previousPhase = g.phase;
+      
+      // Detect entering HOH or POV competition
+      if((phase === 'hoh' || phase === 'pov') && previousPhase !== phase) {
+        console.info(`[social-skip-watcher] 📋 Entering ${phase} competition phase`);
+        
+        // Mark all alive players as potentially skipping (innocent until proven participatory)
+        const alivePlayers = global.alivePlayers?.() || [];
+        const compKey = `${g.week}-${phase}`;
+        
+        if(!g.__sm_compPhaseEntries.has(compKey)) {
+          const entryMap = new Map();
+          alivePlayers.forEach(p => {
+            entryMap.set(p.id, { entered: true, participated: false });
+          });
+          g.__sm_compPhaseEntries.set(compKey, entryMap);
+          console.info(`[social-skip-watcher] Tracking ${alivePlayers.length} players for ${phase} participation`);
+        }
+      }
+      
+      // Detect leaving HOH or POV competition - check for skips
+      if((previousPhase === 'hoh' || previousPhase === 'pov') && phase !== previousPhase) {
+        console.info(`[social-skip-watcher] 📊 Leaving ${previousPhase} competition phase - checking for skips`);
+        
+        const compKey = `${g.week}-${previousPhase}`;
+        const entries = g.__sm_compPhaseEntries.get(compKey);
+        
+        if(entries) {
+          entries.forEach((status, playerId) => {
+            if(status.entered && !status.participated) {
+              // Player skipped the competition - apply penalty immediately to bank
+              console.warn(`[social-skip-watcher] ⚠️ Player ${playerId} skipped ${previousPhase} competition`);
+              // Use captured reference to maintain module consistency
+              resources.recordWeeklyEvent(playerId, 'compSkipped', true);
+            }
+          });
+        }
+      }
+      
+      // Call original setPhase
+      return originalSetPhase.call(this, phase, duration, callback);
+    };
+    
+    console.info('[social-maneuvers] ✓ Competition skip watcher installed');
+  }
+  
+  /**
+   * Mark a player as having participated in the current competition.
+   * Called when a player submits a score.
+   * @param {number} playerId - Player ID who participated
+   */
+  function recordCompetitionParticipation(playerId) {
+    if(!isEnabled()) return;
+    
+    const g = global.game;
+    if(!g) return;
+    
+    const currentPhase = g.phase;
+    if(currentPhase !== 'hoh' && currentPhase !== 'pov') return;
+    
+    const compKey = `${g.week}-${currentPhase}`;
+    const entries = g.__sm_compPhaseEntries?.get(compKey);
+    
+    if(entries && entries.has(playerId)) {
+      entries.get(playerId).participated = true;
+      console.info(`[social-skip-watcher] ✓ Player ${playerId} participated in ${currentPhase}`);
+    }
+  }
+  
+  // Install skip watcher on module load
+  installCompetitionSkipWatcher();
+  
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
@@ -2661,11 +2796,12 @@
   // GLOBAL EXPORTS
   // ============================================================================
   global.SocialManeuvers = {
-    isEnabled, SocialResources,
+    isEnabled, SocialResources, SocialEnergyBank, // New uncapped energy storage system
     getActionById, getAvailableActions, executeAction,
     recordActionInMemory, getPlayerMemory,
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
     pausePhaseTimer, resumePhaseTimer, // Timer control exports
+    recordCompetitionParticipation, // Skip watcher integration
     // Modifiers/hooks
     calculateTraitModifiers, calculateMemoryModifiers,
     // Constants
@@ -2752,10 +2888,39 @@
           g.__weeklyEvents.delete(playerId);
           console.info(`[__smDebug] Cleared weekly events for player ${playerId}`);
         }
+      },
+      getBank(playerId) {
+        const balance = SocialEnergyBank.get(playerId);
+        console.info(`[__smDebug] Bank balance for player ${playerId}: ${balance}`);
+        return balance;
+      },
+      setBank(playerId, amount) {
+        const newBalance = SocialEnergyBank.set(playerId, amount);
+        console.info(`[__smDebug] Set bank for player ${playerId} to ${newBalance}`);
+        return newBalance;
+      },
+      adjustBank(playerId, delta) {
+        const newBalance = SocialEnergyBank.adjust(playerId, delta);
+        console.info(`[__smDebug] Adjusted bank for player ${playerId} by ${delta} = ${newBalance}`);
+        return newBalance;
+      },
+      showAllBanks() {
+        const g = global.game;
+        if(!g?.__sm_bankEnergy) {
+          console.info('[__smDebug] No bank data');
+          return;
+        }
+        const alivePlayers = global.alivePlayers?.() || [];
+        console.table(alivePlayers.map(p => ({
+          id: p.id,
+          name: p.name || 'Unknown',
+          bank: SocialEnergyBank.get(p.id),
+          currentEnergy: SocialResources.get(p.id, 'energy')
+        })));
       }
     };
     console.info('[social-maneuvers] ✓ Dev helpers available at window.__smDebug');
-    console.info('[social-maneuvers] Available commands: grantEnergy, grantInfluence, grantInformation, setEnergy, setInfluence, setInformation, recordWeeklyEvent, getResources, getInfluence, showAllInfluence');
+    console.info('[social-maneuvers] Available commands: grantEnergy, grantInfluence, grantInformation, setEnergy, setInfluence, setInformation, recordWeeklyEvent, getResources, getInfluence, showAllInfluence, getBank, setBank, adjustBank, showAllBanks');
   }
 
   initDefaultFlag();
