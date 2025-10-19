@@ -34,21 +34,27 @@
   const DEFAULT_ENERGY = RESOURCE_CONFIG.energy.default;
   const MAX_ENERGY = RESOURCE_CONFIG.energy.max;
 
-  // Weekly bonuses and penalties for energy seeding
+  // ============================================================================
+  // CONFIGURABLE WEEKLY BONUSES AND PENALTIES
+  // ============================================================================
+  // Balanced default values for weekly energy seeding.
+  // Maintainers can adjust these values to tune the system.
+  // Used in weekly finalization: nextSeed = clamp(Base + Bonuses − Penalties + CarryoverLeftover, 0..MAX_ENERGY)
+  
   const WEEKLY_ENERGY_BONUSES = {
-    HOH_WIN: 5,
-    POV_WIN: 3,
-    NOMINATED: 4,
-    NEW_ALLIANCE: 2, // per alliance
-    SAVED_WITH_POV: 2,
-    SURVIVED_EVICTION: 1
+    HOH_WIN: 5,             // Won Head of Household competition
+    POV_WIN: 3,             // Won Power of Veto competition
+    NOMINATED: 4,           // Was nominated for eviction (adversity bonus)
+    NEW_ALLIANCE: 2,        // Per alliance formed (can stack)
+    SAVED_WITH_POV: 2,      // Was saved from eviction using POV
+    SURVIVED_EVICTION: 1    // Survived being on the block
   };
 
   const WEEKLY_ENERGY_PENALTIES = {
-    COMP_SKIPPED: -3,
-    NOT_DRAWN_VETO: -1,
-    ZERO_SCORE: -2,
-    BROKE_ALLIANCE: -3
+    COMP_SKIPPED: -3,       // Skipped a competition
+    NOT_DRAWN_VETO: -1,     // Not drawn to compete in veto
+    ZERO_SCORE: -2,         // Scored zero in a competition
+    BROKE_ALLIANCE: -3      // Broke an alliance (trust damage)
   };
 
   // In-phase energy refund chances
@@ -226,31 +232,47 @@
         return;
       }
       
-      // Calculate weekly energy delta
-      const weeklyEvents = g.__weeklyEvents.get(playerId) || {};
-      let energyDelta = 0;
+      // Check if we have a pre-computed seed from finalization
+      if(!g.__sm_nextWeekSeedEnergy) g.__sm_nextWeekSeedEnergy = new Map();
+      const precomputedSeed = g.__sm_nextWeekSeedEnergy.get(playerId);
       
-      // Apply bonuses
-      if(weeklyEvents.hohWin) energyDelta += WEEKLY_ENERGY_BONUSES.HOH_WIN;
-      if(weeklyEvents.povWin) energyDelta += WEEKLY_ENERGY_BONUSES.POV_WIN;
-      if(weeklyEvents.nominated) energyDelta += WEEKLY_ENERGY_BONUSES.NOMINATED;
-      energyDelta += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
-      if(weeklyEvents.savedWithPov) energyDelta += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
-      if(weeklyEvents.survivedEviction) energyDelta += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
+      if(precomputedSeed !== undefined) {
+        // Use pre-computed seed from finalization (includes carryover + bonuses/penalties)
+        resources.energy = precomputedSeed;
+        console.info(`[social-resources] 🔄 Weekly reset for player ${playerId} using precomputed seed: ${precomputedSeed}`);
+        // Clear the seed after use
+        g.__sm_nextWeekSeedEnergy.delete(playerId);
+      } else {
+        // Fallback: Calculate weekly energy delta (legacy path for backwards compatibility)
+        const weeklyEvents = g.__weeklyEvents.get(playerId) || {};
+        let energyDelta = 0;
+        
+        // Apply bonuses
+        if(weeklyEvents.hohWin) energyDelta += WEEKLY_ENERGY_BONUSES.HOH_WIN;
+        if(weeklyEvents.povWin) energyDelta += WEEKLY_ENERGY_BONUSES.POV_WIN;
+        if(weeklyEvents.nominated) energyDelta += WEEKLY_ENERGY_BONUSES.NOMINATED;
+        energyDelta += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
+        if(weeklyEvents.savedWithPov) energyDelta += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
+        if(weeklyEvents.survivedEviction) energyDelta += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
+        
+        // Apply penalties
+        if(weeklyEvents.compSkipped) energyDelta += WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED;
+        if(weeklyEvents.notDrawnVeto) energyDelta += WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO;
+        if(weeklyEvents.zeroScore) energyDelta += WEEKLY_ENERGY_PENALTIES.ZERO_SCORE;
+        if(weeklyEvents.brokeAlliance) energyDelta += WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE;
+        
+        console.info(`[social-resources] 🔄 Weekly reset for player ${playerId} at week ${currentWeek}`);
+        console.info(`[social-resources] Energy delta: base ${DEFAULT_ENERGY} + ${energyDelta} = ${DEFAULT_ENERGY + energyDelta}`, weeklyEvents);
+        
+        // Energy: Base + weekly delta, clamped to [0, max]
+        resources.energy = Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + energyDelta));
+      }
       
-      // Apply penalties
-      if(weeklyEvents.compSkipped) energyDelta += WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED;
-      if(weeklyEvents.notDrawnVeto) energyDelta += WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO;
-      if(weeklyEvents.zeroScore) energyDelta += WEEKLY_ENERGY_PENALTIES.ZERO_SCORE;
-      if(weeklyEvents.brokeAlliance) energyDelta += WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE;
-      
-      console.info(`[social-resources] 🔄 Weekly reset for player ${playerId} at week ${currentWeek}`);
-      console.info(`[social-resources] Energy delta: base ${DEFAULT_ENERGY} + ${energyDelta} = ${DEFAULT_ENERGY + energyDelta}`, weeklyEvents);
-      
+      // Handle other resources (non-energy)
       for(const [type, config] of Object.entries(RESOURCE_CONFIG)) {
-        if(type === 'energy' && config.weeklyReset) {
-          // Energy: Base + weekly delta, clamped to [0, max]
-          resources[type] = Math.max(0, Math.min(config.max, config.default + energyDelta));
+        if(type === 'energy') {
+          // Already handled above
+          continue;
         } else if(type === 'information' && config.carryover) {
           // Information: add weekly carryover
           resources[type] = Math.min(resources[type] + INFORMATION_WEEKLY_CARRYOVER, config.max);
@@ -298,6 +320,52 @@
       resources.lastWeekReset = currentWeek;
       console.info(`[social-resources] Weekly reset for player ${playerId} at week ${currentWeek}`, resources);
       this._logTelemetry(playerId, 'all', 'reset', resources);
+    },
+    finalizeWeekForAll() {
+      const g = global.game; if(!g) return;
+      const alivePlayers = global.alivePlayers?.() || [];
+      
+      if(!g.__sm_nextWeekSeedEnergy) g.__sm_nextWeekSeedEnergy = new Map();
+      
+      console.info('[social-resources] 🏁 Finalizing week for all players - computing next week seeds with unlimited carryover');
+      
+      alivePlayers.forEach(player => {
+        const playerId = player.id;
+        this.init(playerId);
+        
+        // Get current energy (leftover after social phase)
+        const currentEnergy = this.get(playerId, 'energy');
+        const carryoverLeftover = currentEnergy; // Unlimited carryover
+        
+        // Get weekly events for bonuses/penalties
+        const weeklyEvents = g.__weeklyEvents.get(playerId) || {};
+        let bonuses = 0;
+        let penalties = 0;
+        
+        // Apply bonuses
+        if(weeklyEvents.hohWin) bonuses += WEEKLY_ENERGY_BONUSES.HOH_WIN;
+        if(weeklyEvents.povWin) bonuses += WEEKLY_ENERGY_BONUSES.POV_WIN;
+        if(weeklyEvents.nominated) bonuses += WEEKLY_ENERGY_BONUSES.NOMINATED;
+        bonuses += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
+        if(weeklyEvents.savedWithPov) bonuses += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
+        if(weeklyEvents.survivedEviction) bonuses += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
+        
+        // Apply penalties
+        if(weeklyEvents.compSkipped) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED);
+        if(weeklyEvents.notDrawnVeto) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO);
+        if(weeklyEvents.zeroScore) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.ZERO_SCORE);
+        if(weeklyEvents.brokeAlliance) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE);
+        
+        // Compute next seed: Base + Bonuses - Penalties + CarryoverLeftover
+        const nextSeed = Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + bonuses - penalties + carryoverLeftover));
+        
+        // Store in map
+        g.__sm_nextWeekSeedEnergy.set(playerId, nextSeed);
+        
+        console.info(`[social-resources] Player ${playerId} (${player.name || 'unknown'}): nextSeed = ${nextSeed} (Base=${DEFAULT_ENERGY} + Bonuses=${bonuses} - Penalties=${penalties} + Carryover=${carryoverLeftover})`);
+      });
+      
+      console.info('[social-resources] ✓ Week finalization complete - seeds stored in g.__sm_nextWeekSeedEnergy');
     },
     canAfford(playerId, costs) {
       for(const [type, cost] of Object.entries(costs)) {
@@ -364,29 +432,39 @@
       const g = global.game; if(!g) return DEFAULT_ENERGY;
       const weeklyEvents = g.__weeklyEvents?.get(playerId) || {};
       
-      let energyDelta = 0;
+      // Get current leftover energy for carryover
+      const currentEnergy = this.get(playerId, 'energy');
+      const carryover = currentEnergy; // Unlimited carryover
+      
+      let bonuses = 0;
+      let penalties = 0;
       
       // Apply bonuses
-      if(weeklyEvents.hohWin) energyDelta += WEEKLY_ENERGY_BONUSES.HOH_WIN;
-      if(weeklyEvents.povWin) energyDelta += WEEKLY_ENERGY_BONUSES.POV_WIN;
-      if(weeklyEvents.nominated) energyDelta += WEEKLY_ENERGY_BONUSES.NOMINATED;
-      energyDelta += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
-      if(weeklyEvents.savedWithPov) energyDelta += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
-      if(weeklyEvents.survivedEviction) energyDelta += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
+      if(weeklyEvents.hohWin) bonuses += WEEKLY_ENERGY_BONUSES.HOH_WIN;
+      if(weeklyEvents.povWin) bonuses += WEEKLY_ENERGY_BONUSES.POV_WIN;
+      if(weeklyEvents.nominated) bonuses += WEEKLY_ENERGY_BONUSES.NOMINATED;
+      bonuses += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
+      if(weeklyEvents.savedWithPov) bonuses += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
+      if(weeklyEvents.survivedEviction) bonuses += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
       
       // Apply penalties
-      if(weeklyEvents.compSkipped) energyDelta += WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED;
-      if(weeklyEvents.notDrawnVeto) energyDelta += WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO;
-      if(weeklyEvents.zeroScore) energyDelta += WEEKLY_ENERGY_PENALTIES.ZERO_SCORE;
-      if(weeklyEvents.brokeAlliance) energyDelta += WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE;
+      if(weeklyEvents.compSkipped) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED);
+      if(weeklyEvents.notDrawnVeto) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO);
+      if(weeklyEvents.zeroScore) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.ZERO_SCORE);
+      if(weeklyEvents.brokeAlliance) penalties += Math.abs(WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE);
       
-      return Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + energyDelta));
+      // Preview = Base + Bonuses - Penalties + Carryover, clamped to [0, max]
+      return Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + bonuses - penalties + carryover));
     },
     
     // Get detailed breakdown of preview energy
     getPreviewEnergyBreakdown(playerId) {
-      const g = global.game; if(!g) return { base: DEFAULT_ENERGY, bonuses: [], penalties: [], total: DEFAULT_ENERGY };
+      const g = global.game; if(!g) return { base: DEFAULT_ENERGY, bonuses: [], penalties: [], carryover: 0, total: DEFAULT_ENERGY };
       const weeklyEvents = g.__weeklyEvents?.get(playerId) || {};
+      
+      // Get current leftover energy for carryover
+      const currentEnergy = this.get(playerId, 'energy');
+      const carryover = currentEnergy; // Unlimited carryover
       
       const bonuses = [];
       const penalties = [];
@@ -399,15 +477,17 @@
       if(weeklyEvents.savedWithPov) bonuses.push({ reason: 'Saved with POV', amount: WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV });
       if(weeklyEvents.survivedEviction) bonuses.push({ reason: 'Survived Eviction', amount: WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION });
       
-      // Track penalties
+      // Track penalties (convert negative values to positive for display)
       if(weeklyEvents.compSkipped) penalties.push({ reason: 'Comp Skipped', amount: WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED });
       if(weeklyEvents.notDrawnVeto) penalties.push({ reason: 'Not Drawn for Veto', amount: WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO });
       if(weeklyEvents.zeroScore) penalties.push({ reason: 'Zero Score', amount: WEEKLY_ENERGY_PENALTIES.ZERO_SCORE });
       if(weeklyEvents.brokeAlliance) penalties.push({ reason: 'Broke Alliance', amount: WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE });
       
       const bonusTotal = bonuses.reduce((sum, b) => sum + b.amount, 0);
-      const penaltyTotal = penalties.reduce((sum, p) => sum + p.amount, 0);
-      const total = Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + bonusTotal + penaltyTotal));
+      const penaltyTotal = penalties.reduce((sum, p) => sum + p.amount, 0); // Already negative
+      
+      // Total = Base + Bonuses + Penalties (already negative) + Carryover
+      const total = Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + bonusTotal + penaltyTotal + carryover));
       
       return {
         base: DEFAULT_ENERGY,
@@ -415,6 +495,7 @@
         penalties,
         bonusTotal,
         penaltyTotal,
+        carryover,
         total
       };
     },
@@ -2077,6 +2158,9 @@
       g.__socialFastAdvanceTimeout = null;
       console.info('[social-maneuvers] Cleared pending fast-advance timeout');
     }
+    
+    // Finalize week for all players - compute next week seeds with unlimited carryover
+    SocialResources.finalizeWeekForAll();
     
     // Generate summary data (PR #266)
     const summary = generatePhaseSummary();
