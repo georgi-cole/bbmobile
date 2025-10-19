@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Maneuvers Phase 1 - Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #3498db;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .log {
+      background: #0f1419;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 10px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px;
+      border-left: 3px solid transparent;
+    }
+    .log-entry.info { border-left-color: #3498db; }
+    .log-entry.success { border-left-color: #27ae60; }
+    .log-entry.warn { border-left-color: #f39c12; }
+    .log-entry.error { border-left-color: #e74c3c; }
+    .preview-display {
+      background: #0f1419;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+    .preview-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px;
+      margin: 4px 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    }
+    .preview-item strong {
+      color: #3498db;
+    }
+    .bonus { color: #27ae60; }
+    .penalty { color: #e74c3c; }
+    .resource-display {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #0f3460;
+      border-radius: 4px;
+      margin: 5px;
+      font-weight: bold;
+    }
+    .cost-example {
+      background: rgba(52, 152, 219, 0.1);
+      border: 1px solid #3498db;
+      border-radius: 4px;
+      padding: 12px;
+      margin: 10px 0;
+    }
+    .cost-breakdown {
+      font-family: 'Courier New', monospace;
+      margin: 8px 0;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 Social Maneuvers Phase 1 Test</h1>
+  
+  <div class="test-section">
+    <h2>Phase 1: Event-driven Energy Preview and Seeding</h2>
+    <p>Test energy preview calculations and event dispatch when weekly events are recorded.</p>
+    
+    <div>
+      <button onclick="recordHOHWin()">Record HOH Win (+5⚡)</button>
+      <button onclick="recordPOVWin()">Record POV Win (+3⚡)</button>
+      <button onclick="recordNominated()">Record Nominated (+4⚡)</button>
+      <button onclick="recordNewAlliance()">Record New Alliance (+2⚡)</button>
+      <button onclick="recordCompSkipped()">Record Comp Skipped (-3⚡)</button>
+      <button onclick="recordZeroScore()">Record Zero Score (-2⚡)</button>
+      <button onclick="clearEvents()">Clear Events</button>
+    </div>
+    
+    <div id="previewDisplay" class="preview-display" style="display:none;">
+      <h3>Energy Preview</h3>
+      <div id="previewContent"></div>
+    </div>
+    
+    <div>
+      <h3>Event Log</h3>
+      <div id="eventLog" class="log"></div>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Phase 2: Group Actions Extra Cost</h2>
+    <p>Test group action cost calculation: effectiveCost = baseCost + Math.max(0, targets.length - 2)</p>
+    
+    <div>
+      <label>Base Cost: <input type="number" id="baseCost" value="2" min="1" max="5" style="width: 60px;"></label>
+      <label style="margin-left: 20px;">Number of Targets: <input type="number" id="targetCount" value="1" min="1" max="8" style="width: 60px;"></label>
+      <button onclick="calculateGroupCost()">Calculate Cost</button>
+    </div>
+    
+    <div id="costDisplay" class="cost-example" style="display:none;">
+      <h3>Cost Breakdown</h3>
+      <div id="costBreakdown" class="cost-breakdown"></div>
+    </div>
+    
+    <div>
+      <h3>Examples</h3>
+      <div class="cost-example">
+        <strong>Single target (1 target):</strong>
+        <div class="cost-breakdown">
+          baseCost: 2⚡<br>
+          extraCost: max(0, 1 - 2) = 0⚡<br>
+          <strong>effectiveCost: 2⚡</strong>
+        </div>
+      </div>
+      
+      <div class="cost-example">
+        <strong>Dual target (2 targets):</strong>
+        <div class="cost-breakdown">
+          baseCost: 2⚡<br>
+          extraCost: max(0, 2 - 2) = 0⚡<br>
+          <strong>effectiveCost: 2⚡</strong>
+        </div>
+      </div>
+      
+      <div class="cost-example">
+        <strong>Group action (3 targets):</strong>
+        <div class="cost-breakdown">
+          baseCost: 2⚡<br>
+          extraCost: max(0, 3 - 2) = 1⚡<br>
+          <strong>effectiveCost: 3⚡ (base 2 + group 1)</strong>
+        </div>
+      </div>
+      
+      <div class="cost-example">
+        <strong>Large group (5 targets):</strong>
+        <div class="cost-breakdown">
+          baseCost: 2⚡<br>
+          extraCost: max(0, 5 - 2) = 3⚡<br>
+          <strong>effectiveCost: 5⚡ (base 2 + group 3)</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Integration Test</h2>
+    <p>Simulate phase entry with recorded weekly events to validate energy seeding.</p>
+    
+    <div>
+      <button onclick="simulatePhaseEntry()">Simulate Phase Entry</button>
+      <button onclick="testInsufficientEnergy()">Test Insufficient Energy</button>
+      <button onclick="testGroupActionExecution()">Test Group Action Execution</button>
+    </div>
+    
+    <div>
+      <h3>Current Resources</h3>
+      <div id="resourceDisplay">
+        <span class="resource-display">⚡ Energy: <span id="energyDisplay">0</span></span>
+        <span class="resource-display">🎭 Influence: <span id="influenceDisplay">0</span></span>
+        <span class="resource-display">🔍 Information: <span id="informationDisplay">0</span></span>
+      </div>
+    </div>
+    
+    <div>
+      <h3>Test Log</h3>
+      <div id="testLog" class="log"></div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/social-maneuvers.js"></script>
+  
+  <script>
+    // Setup minimal game environment
+    window.game = {
+      week: 1,
+      phase: 'social_intermission',
+      humanId: 1,
+      cfg: {
+        enableSocialManeuvers: true
+      }
+    };
+    
+    window.getP = (id) => {
+      if(id === 1) return { id: 1, name: 'Test Player', affinity: {} };
+      return { id, name: `Player ${id}`, affinity: {} };
+    };
+    
+    window.alivePlayers = () => [
+      { id: 1, name: 'Test Player' },
+      { id: 2, name: 'Alice' },
+      { id: 3, name: 'Bob' }
+    ];
+    
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    
+    // Setup event listeners
+    window.addEventListener('social-battery-preview', (event) => {
+      const { playerId, preview, breakdown } = event.detail;
+      logEvent('Preview event received', 'success');
+      displayPreview(breakdown);
+    });
+    
+    window.addEventListener('social-resources-changed', (event) => {
+      const { playerId, delta, resources } = event.detail;
+      logEvent(`Resources changed: ${JSON.stringify(delta)}`, 'info');
+      updateResourceDisplay(resources);
+    });
+    
+    // Helper functions
+    function logEvent(message, type = 'info') {
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      log.insertBefore(entry, log.firstChild);
+    }
+    
+    function logTest(message, type = 'info') {
+      const log = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      log.insertBefore(entry, log.firstChild);
+    }
+    
+    function displayPreview(breakdown) {
+      const display = document.getElementById('previewDisplay');
+      const content = document.getElementById('previewContent');
+      
+      let html = `<div class="preview-item"><strong>Base Energy:</strong> <span>${breakdown.base}⚡</span></div>`;
+      
+      if(breakdown.bonuses.length > 0) {
+        html += `<div class="preview-item"><strong>Bonuses:</strong></div>`;
+        breakdown.bonuses.forEach(b => {
+          html += `<div class="preview-item"><span>${b.reason}:</span> <span class="bonus">+${b.amount}⚡</span></div>`;
+        });
+      }
+      
+      if(breakdown.penalties.length > 0) {
+        html += `<div class="preview-item"><strong>Penalties:</strong></div>`;
+        breakdown.penalties.forEach(p => {
+          html += `<div class="preview-item"><span>${p.reason}:</span> <span class="penalty">${p.amount}⚡</span></div>`;
+        });
+      }
+      
+      html += `<div class="preview-item" style="border-top: 2px solid #3498db; margin-top: 8px; padding-top: 8px;"><strong>Total Energy:</strong> <span style="font-size: 1.2em; color: #27ae60;">${breakdown.total}⚡</span></div>`;
+      
+      content.innerHTML = html;
+      display.style.display = 'block';
+    }
+    
+    function updateResourceDisplay(resources) {
+      document.getElementById('energyDisplay').textContent = resources.energy;
+      document.getElementById('influenceDisplay').textContent = resources.influence;
+      document.getElementById('informationDisplay').textContent = resources.information;
+    }
+    
+    // Phase 1 test functions
+    function recordHOHWin() {
+      window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'hohWin', true);
+      logEvent('Recorded: HOH Win', 'success');
+    }
+    
+    function recordPOVWin() {
+      window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'povWin', true);
+      logEvent('Recorded: POV Win', 'success');
+    }
+    
+    function recordNominated() {
+      window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'nominated', true);
+      logEvent('Recorded: Nominated', 'success');
+    }
+    
+    function recordNewAlliance() {
+      const current = (window.game.__weeklyEvents?.get(1)?.newAlliances || 0) + 1;
+      window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'newAlliances', current);
+      logEvent('Recorded: New Alliance', 'success');
+    }
+    
+    function recordCompSkipped() {
+      window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'compSkipped', true);
+      logEvent('Recorded: Comp Skipped', 'warn');
+    }
+    
+    function recordZeroScore() {
+      window.SocialManeuvers.SocialResources.recordWeeklyEvent(1, 'zeroScore', true);
+      logEvent('Recorded: Zero Score', 'warn');
+    }
+    
+    function clearEvents() {
+      window.game.__weeklyEvents = new Map();
+      logEvent('All events cleared', 'info');
+      document.getElementById('previewDisplay').style.display = 'none';
+    }
+    
+    // Phase 2 test functions
+    function calculateGroupCost() {
+      const baseCost = parseInt(document.getElementById('baseCost').value);
+      const targetCount = parseInt(document.getElementById('targetCount').value);
+      const extraCost = Math.max(0, targetCount - 2);
+      const effectiveCost = baseCost + extraCost;
+      
+      const display = document.getElementById('costDisplay');
+      const breakdown = document.getElementById('costBreakdown');
+      
+      let html = `baseCost: ${baseCost}⚡<br>`;
+      html += `targetCount: ${targetCount}<br>`;
+      html += `extraCost: max(0, ${targetCount} - 2) = ${extraCost}⚡<br>`;
+      html += `<strong style="color: #27ae60;">effectiveCost: ${effectiveCost}⚡</strong>`;
+      
+      if(extraCost > 0) {
+        html += ` <span style="color: #3498db;">(base ${baseCost} + group ${extraCost})</span>`;
+      }
+      
+      breakdown.innerHTML = html;
+      display.style.display = 'block';
+      
+      logEvent(`Calculated cost for ${targetCount} targets: ${effectiveCost}⚡`, 'success');
+    }
+    
+    // Integration test functions
+    function simulatePhaseEntry() {
+      logTest('Simulating phase entry...', 'info');
+      
+      // Initialize
+      window.SocialManeuvers.SocialResources.init(1);
+      
+      // Call onSocialPhaseStart (which calls seedPhaseResources internally)
+      window.SocialManeuvers.onSocialPhaseStart();
+      
+      const energy = window.SocialManeuvers.SocialResources.get(1, 'energy');
+      logTest(`Phase entry complete. Energy seeded: ${energy}⚡`, 'success');
+      
+      // Update display
+      updateResourceDisplay(window.SocialManeuvers.SocialResources.getAll(1));
+    }
+    
+    function testInsufficientEnergy() {
+      logTest('Testing insufficient energy check...', 'info');
+      
+      // Set low energy
+      window.SocialManeuvers.SocialResources.set(1, 'energy', 2);
+      updateResourceDisplay(window.SocialManeuvers.SocialResources.getAll(1));
+      
+      // Try to execute group action with 5 targets (would need 5⚡)
+      const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk', [3, 4, 5, 6]);
+      
+      if(!result.success && result.reason === 'insufficient_energy') {
+        logTest('✓ Insufficient energy check passed!', 'success');
+        logTest(`Message: ${result.message}`, 'info');
+      } else {
+        logTest('✗ Insufficient energy check failed!', 'error');
+      }
+    }
+    
+    function testGroupActionExecution() {
+      logTest('Testing group action execution...', 'info');
+      
+      // Set sufficient energy
+      window.SocialManeuvers.SocialResources.set(1, 'energy', 10);
+      updateResourceDisplay(window.SocialManeuvers.SocialResources.getAll(1));
+      logTest('Set energy to 10⚡', 'info');
+      
+      // Execute group action with 3 targets (base 1 + 2 extra = 3⚡ total)
+      const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk', [3, 4]);
+      
+      if(result.success) {
+        const energyAfter = window.SocialManeuvers.SocialResources.get(1, 'energy');
+        logTest(`✓ Group action executed successfully!`, 'success');
+        logTest(`Energy before: 10⚡, after: ${energyAfter}⚡ (spent ${10 - energyAfter}⚡)`, 'info');
+        updateResourceDisplay(window.SocialManeuvers.SocialResources.getAll(1));
+      } else {
+        logTest(`✗ Group action failed: ${result.message}`, 'error');
+      }
+    }
+    
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      logEvent('Test page loaded', 'info');
+      logTest('Test page loaded', 'info');
+      
+      // Initialize resources
+      window.SocialManeuvers.SocialResources.init(1);
+      updateResourceDisplay(window.SocialManeuvers.SocialResources.getAll(1));
+    });
+  </script>
+</body>
+</html>

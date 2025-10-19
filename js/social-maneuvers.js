@@ -344,6 +344,87 @@
       
       g.__weeklyEvents.set(playerId, events);
       console.info(`[social-resources] Weekly event recorded: ${playerId} - ${eventType}`, value);
+      
+      // Dispatch preview event after recording
+      const preview = this.getPreviewEnergy(playerId);
+      const breakdown = this.getPreviewEnergyBreakdown(playerId);
+      try {
+        const event = new CustomEvent('social-battery-preview', {
+          detail: { playerId, preview, breakdown }
+        });
+        window.dispatchEvent(event);
+        console.info('[social-resources] 📡 Dispatched social-battery-preview event:', { playerId, preview, breakdown });
+      } catch(e) {
+        console.warn('[social-resources] Failed to dispatch preview event:', e);
+      }
+    },
+    
+    // Get preview energy for next phase based on current weekly events
+    getPreviewEnergy(playerId) {
+      const g = global.game; if(!g) return DEFAULT_ENERGY;
+      const weeklyEvents = g.__weeklyEvents?.get(playerId) || {};
+      
+      let energyDelta = 0;
+      
+      // Apply bonuses
+      if(weeklyEvents.hohWin) energyDelta += WEEKLY_ENERGY_BONUSES.HOH_WIN;
+      if(weeklyEvents.povWin) energyDelta += WEEKLY_ENERGY_BONUSES.POV_WIN;
+      if(weeklyEvents.nominated) energyDelta += WEEKLY_ENERGY_BONUSES.NOMINATED;
+      energyDelta += (weeklyEvents.newAlliances || 0) * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE;
+      if(weeklyEvents.savedWithPov) energyDelta += WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV;
+      if(weeklyEvents.survivedEviction) energyDelta += WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION;
+      
+      // Apply penalties
+      if(weeklyEvents.compSkipped) energyDelta += WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED;
+      if(weeklyEvents.notDrawnVeto) energyDelta += WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO;
+      if(weeklyEvents.zeroScore) energyDelta += WEEKLY_ENERGY_PENALTIES.ZERO_SCORE;
+      if(weeklyEvents.brokeAlliance) energyDelta += WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE;
+      
+      return Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + energyDelta));
+    },
+    
+    // Get detailed breakdown of preview energy
+    getPreviewEnergyBreakdown(playerId) {
+      const g = global.game; if(!g) return { base: DEFAULT_ENERGY, bonuses: [], penalties: [], total: DEFAULT_ENERGY };
+      const weeklyEvents = g.__weeklyEvents?.get(playerId) || {};
+      
+      const bonuses = [];
+      const penalties = [];
+      
+      // Track bonuses
+      if(weeklyEvents.hohWin) bonuses.push({ reason: 'HOH Win', amount: WEEKLY_ENERGY_BONUSES.HOH_WIN });
+      if(weeklyEvents.povWin) bonuses.push({ reason: 'POV Win', amount: WEEKLY_ENERGY_BONUSES.POV_WIN });
+      if(weeklyEvents.nominated) bonuses.push({ reason: 'Nominated', amount: WEEKLY_ENERGY_BONUSES.NOMINATED });
+      if(weeklyEvents.newAlliances > 0) bonuses.push({ reason: 'New Alliances', amount: weeklyEvents.newAlliances * WEEKLY_ENERGY_BONUSES.NEW_ALLIANCE });
+      if(weeklyEvents.savedWithPov) bonuses.push({ reason: 'Saved with POV', amount: WEEKLY_ENERGY_BONUSES.SAVED_WITH_POV });
+      if(weeklyEvents.survivedEviction) bonuses.push({ reason: 'Survived Eviction', amount: WEEKLY_ENERGY_BONUSES.SURVIVED_EVICTION });
+      
+      // Track penalties
+      if(weeklyEvents.compSkipped) penalties.push({ reason: 'Comp Skipped', amount: WEEKLY_ENERGY_PENALTIES.COMP_SKIPPED });
+      if(weeklyEvents.notDrawnVeto) penalties.push({ reason: 'Not Drawn for Veto', amount: WEEKLY_ENERGY_PENALTIES.NOT_DRAWN_VETO });
+      if(weeklyEvents.zeroScore) penalties.push({ reason: 'Zero Score', amount: WEEKLY_ENERGY_PENALTIES.ZERO_SCORE });
+      if(weeklyEvents.brokeAlliance) penalties.push({ reason: 'Broke Alliance', amount: WEEKLY_ENERGY_PENALTIES.BROKE_ALLIANCE });
+      
+      const bonusTotal = bonuses.reduce((sum, b) => sum + b.amount, 0);
+      const penaltyTotal = penalties.reduce((sum, p) => sum + p.amount, 0);
+      const total = Math.max(0, Math.min(MAX_ENERGY, DEFAULT_ENERGY + bonusTotal + penaltyTotal));
+      
+      return {
+        base: DEFAULT_ENERGY,
+        bonuses,
+        penalties,
+        bonusTotal,
+        penaltyTotal,
+        total
+      };
+    },
+    
+    // Recompute and set phase energy based on weekly events (used during phase seeding)
+    recomputePhaseEnergy(playerId) {
+      const preview = this.getPreviewEnergy(playerId);
+      this.set(playerId, 'energy', preview);
+      console.info(`[social-resources] 🔄 Phase energy recomputed for player ${playerId}: ${preview}`);
+      return preview;
     },
     
     // Track positive interactions for influence decay
@@ -465,6 +546,27 @@
       allTargets = [targetId];
     }
 
+    // ==== GROUP ACTION EXTRA COST ENFORCEMENT ====
+    // Compute effective cost: baseCost + Math.max(0, targets.length - 2)
+    const baseCost = (action.costs?.energy ?? action.cost ?? 0);
+    const extraTargetsCount = Math.max(0, allTargets.length - 2);
+    const effectiveCost = baseCost + extraTargetsCount;
+    
+    if(extraTargetsCount > 0) {
+      console.info(`[social-maneuvers] 💰 Group action cost: base=${baseCost} + extras=${extraTargetsCount} = ${effectiveCost} (${allTargets.length} targets)`);
+    }
+    
+    // Pre-check energy for effective cost BEFORE spending anything
+    const currentEnergy = SocialResources.get(actorId, 'energy');
+    if(currentEnergy < effectiveCost) {
+      console.warn(`[social-maneuvers] ⚠️ Insufficient energy for group action: need ${effectiveCost}, have ${currentEnergy}`);
+      return { 
+        success: false, 
+        reason: 'insufficient_energy',
+        message: `Not enough energy: need ${effectiveCost}⚡ for ${allTargets.length} targets (base ${baseCost} + group ${extraTargetsCount}), have ${currentEnergy}⚡`
+      };
+    }
+
     // Evaluation/gating
     let evaluation = null, chanceRoll = Math.random(), succeeded = true;
     if(global.SocialActionConfig){
@@ -478,10 +580,22 @@
     // Track affinity before action (for PR #266 session summary)
     const affinityBefore = actor?.affinity?.[targetId] ?? 0;
 
-    // Spend resources (energy, influence, information) using the unified SocialResources API
+    // Spend BASE resources only (energy, influence, information) using the unified SocialResources API
     const spendResult = SocialResources.spend(actorId, action.costs);
     if(!spendResult.success){
       return { success: false, reason: 'insufficient_resources', insufficient: spendResult.insufficient, message: `Not enough ${spendResult.insufficient}` };
+    }
+    
+    // ==== SPEND EXTRA ENERGY FOR GROUP ACTIONS ====
+    // After successful base spend, deduct the extra portion for multi-target
+    if(extraTargetsCount > 0) {
+      const extraSpendResult = SocialResources.spend(actorId, { energy: extraTargetsCount });
+      if(!extraSpendResult.success) {
+        // This should never happen since we pre-checked, but log it
+        console.error(`[social-maneuvers] ⚠️ Failed to spend extra energy after base spend (should not happen)`);
+      } else {
+        console.info(`[social-maneuvers] ✓ Extra energy spent: ${extraTargetsCount}⚡ for ${extraTargetsCount} additional targets`);
+      }
     }
 
     // Telemetry (generic)
@@ -497,7 +611,12 @@
       finalChance: evaluation?.finalChance ?? 0.5,
       chanceRoll, succeeded,
       energyRemaining: SocialResources.get(actorId, 'energy'),
-      infoRemaining: SocialResources.get(actorId, 'information')
+      infoRemaining: SocialResources.get(actorId, 'information'),
+      // Group action metadata
+      targetCount: allTargets.length,
+      baseCost,
+      extraCost: extraTargetsCount,
+      effectiveCost
     };
     if(!global.game.__socialManeuversTelemetry) global.game.__socialManeuversTelemetry = [];
     global.game.__socialManeuversTelemetry.push(telemetry);
@@ -1818,24 +1937,48 @@
   // ============================================================================
   // PHASE INTEGRATION
   // ============================================================================
+  
+  /**
+   * Seed phase resources for a player using weekly events.
+   * Called once at phase entry to set initial energy based on weekly bonuses/penalties.
+   * @param {number} playerId - Player ID to seed resources for
+   */
+  function seedPhaseResources(playerId) {
+    if(!isEnabled()) return;
+    
+    // Initialize player resources if not already done
+    SocialResources.init(playerId);
+    
+    // Recompute phase energy based on weekly events
+    const energy = SocialResources.recomputePhaseEnergy(playerId);
+    
+    // Event dispatch is handled by SocialResources.set() via recomputePhaseEnergy
+    
+    console.info(`[social-maneuvers] ✓ Phase resources seeded for player ${playerId}: energy=${energy}`);
+  }
+  
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
     const alivePlayers = global.alivePlayers?.() || [];
+    const humanId = global.game?.humanId;
     
-    // Initialize and reset resources for all alive players
+    // Initialize resources for all alive players
     alivePlayers.forEach(p => { 
-      SocialResources.init(p.id); 
-      SocialResources.resetWeekly(p.id); 
+      SocialResources.init(p.id);
     });
-    console.info(`[social-maneuvers] ✓ Resources initialized and reset for ${alivePlayers.length} players`);
+    console.info(`[social-maneuvers] ✓ Resources initialized for ${alivePlayers.length} players`);
+    
+    // Reset weekly for all alive players (applies weekly housekeeping and energy seeding)
+    alivePlayers.forEach(p => {
+      SocialResources.resetWeekly(p.id);
+    });
     
     // Clear phase refunds for new phase
     SocialResources.clearPhaseRefunds();
     console.info('[social-maneuvers] Phase refunds cleared for new phase');
 
-    // Log energy seeding for human player
-    const humanId = global.game?.humanId;
+    // Log energy seeding for human player (humanId already declared at function start)
     if(humanId) {
       const humanEnergy = SocialResources.get(humanId, 'energy');
       console.info(`[social-maneuvers] ⚡ Energy seeded for human player: ${humanEnergy} (Base=${DEFAULT_ENERGY} + weekly bonuses/penalties)`);
