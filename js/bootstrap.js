@@ -244,52 +244,6 @@
     global.renderPanel?.();
   }
 
-  // ---------- Check and increment season after completion ----------
-  function checkAndIncrementSeasonAfterCompletion(){
-    try {
-      // Check if last game was completed
-      const gameCompleted = localStorage.getItem('bb.lastGameCompleted');
-      if (gameCompleted !== '1') {
-        console.info('[bootstrap] no completed game found, skipping season increment');
-        return;
-      }
-
-      // Check if ProfileService is available
-      if (!global.ProfileService || typeof global.ProfileService.incrementSeason !== 'function') {
-        console.warn('[bootstrap] ProfileService not available for season increment');
-        return;
-      }
-
-      // Check if we're in guest mode (guests don't have seasons)
-      if (global.ProfileService.isGuestMode()) {
-        console.info('[bootstrap] guest mode - skipping season increment');
-        return;
-      }
-
-      // Get current profile
-      const currentProfile = global.ProfileService.getCurrentProfile();
-      if (!currentProfile || !currentProfile.id) {
-        console.info('[bootstrap] no current profile - skipping season increment');
-        return;
-      }
-
-      // Check if the same profile completed the last game
-      const completedProfileId = localStorage.getItem('bb.lastGameCompletedProfileId');
-      if (completedProfileId && completedProfileId === currentProfile.id) {
-        console.info('[bootstrap] same profile detected - incrementing season');
-        global.ProfileService.incrementSeason();
-        
-        // Clear the completion flags after incrementing
-        localStorage.removeItem('bb.lastGameCompleted');
-        localStorage.removeItem('bb.lastGameCompletedProfileId');
-      } else {
-        console.info('[bootstrap] different profile or no profile match - not incrementing season');
-      }
-    } catch (e) {
-      console.error('[bootstrap] failed to check/increment season:', e);
-    }
-  }
-
   // ---------- Start / Skip ----------
   async function safeStartGame(){
     try{
@@ -300,10 +254,6 @@
           confirmText: 'Restart',
           tone: 'warn'
         })) return;
-        
-        // Check if previous game was completed and increment season if same profile
-        checkAndIncrementSeasonAfterCompletion();
-        
         rebuildGame(false);
       }
 

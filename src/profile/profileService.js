@@ -28,12 +28,55 @@
     return profile;
   }
 
+  // Check if last game was completed with this profile and increment season
+  function checkAndIncrementSeasonForProfile(profile) {
+    if (!profile || !profile.id) return;
+    
+    try {
+      // Check if last game was completed
+      const gameCompleted = localStorage.getItem('bb.lastGameCompleted');
+      if (gameCompleted !== '1') {
+        console.info('[profileService] no completed game found, skipping season increment');
+        return;
+      }
+
+      // Check if the same profile completed the last game
+      const completedProfileId = localStorage.getItem('bb.lastGameCompletedProfileId');
+      if (completedProfileId && completedProfileId === profile.id) {
+        console.info('[profileService] same profile detected - incrementing season for profile:', profile.id);
+        
+        // Increment season in the profile object
+        const nextSeason = (profile.season || 1) + 1;
+        profile.season = nextSeason;
+        
+        // Persist to storage
+        global.ProfileStorage.updateProfile(profile.id, {
+          season: nextSeason,
+          updatedAt: Date.now()
+        });
+        
+        // Clear the completion flags after incrementing
+        localStorage.removeItem('bb.lastGameCompleted');
+        localStorage.removeItem('bb.lastGameCompletedProfileId');
+        
+        console.info('[profileService] season incremented to', nextSeason);
+      } else {
+        console.info('[profileService] different profile or no profile match - not incrementing season');
+      }
+    } catch (e) {
+      console.error('[profileService] failed to check/increment season:', e);
+    }
+  }
+
   // Set current profile
   function setCurrentProfile(profile) {
     currentProfile = profile;
     isGuest = false;
     
     if (profile) {
+      // Check if previous game was completed with this profile and increment season
+      checkAndIncrementSeasonForProfile(profile);
+      
       // Ensure season is valid before applying
       ensureSeason(profile);
       
