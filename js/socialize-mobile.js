@@ -99,6 +99,15 @@
       return null;
     }
     
+    // Check if human player is evicted - hide launcher if they are
+    const g = global.game || {};
+    const humanId = g.humanId;
+    const humanPlayer = global.getP?.(humanId);
+    if(humanPlayer && humanPlayer.evicted){
+      console.info('[socialize-mobile] Human player is evicted - not mounting launcher');
+      return null;
+    }
+    
     let launcher = $('#socializeLauncher');
     if (launcher) return launcher;
     
@@ -251,6 +260,17 @@
 
   // Create full-screen Socialize modal
   function openSocializeModal() {
+    const g = global.game || {};
+    const humanId = g.humanId;
+    const humanPlayer = global.getP?.(humanId);
+    
+    // Check if player is evicted
+    if(humanPlayer && humanPlayer.evicted){
+      console.info('[socialize-mobile] Human player is evicted - cannot open modal');
+      global.addLog?.('You have been evicted and can no longer participate in social interactions.', 'danger');
+      return;
+    }
+    
     const res = getResourceState();
     if (res.energy <= 0) {
       global.addLog?.('No energy remaining for social actions.', 'warn');
@@ -837,6 +857,18 @@
     const selectedPlayers = Array.from($$('.player-card.selected'));
     const selectedAction = $('.action-btn.selected');
     const res = getResourceState();
+    
+    const g = global.game || {};
+    const humanId = g.humanId;
+    const humanPlayer = global.getP?.(humanId);
+    
+    // Check if player is evicted
+    if(humanPlayer && humanPlayer.evicted){
+      console.info('[socialize-mobile] Human player is evicted - cannot execute action');
+      global.addLog?.('You have been evicted and can no longer participate in social interactions.', 'danger');
+      closeSocializeModal(false);
+      return;
+    }
 
     if (!selectedPlayers.length || !selectedAction || res.energy <= 0) {
       return;
@@ -844,7 +876,6 @@
 
     const actionId = selectedAction.dataset.actionId;
     const minTargets = parseInt(selectedAction.dataset.minTargets) || 1;
-    const g = global.game || {};
     const you = global.getP?.(g.humanId);
 
     if (!you) return;
@@ -1211,10 +1242,17 @@
     }
   }
 
-  // Check if current phase is social_intermission
+  // Check if current phase is social_intermission AND human player is not evicted
   function isInSocialPhase() {
     const g = global.game || {};
-    return g.phase === 'social_intermission' || g.phase === 'social';
+    const isPhaseCorrect = g.phase === 'social_intermission' || g.phase === 'social';
+    
+    // Also check if human player is evicted
+    const humanId = g.humanId;
+    const humanPlayer = global.getP?.(humanId);
+    const isNotEvicted = !(humanPlayer && humanPlayer.evicted);
+    
+    return isPhaseCorrect && isNotEvicted;
   }
 
   // Public API
