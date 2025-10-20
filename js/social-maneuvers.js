@@ -2451,15 +2451,12 @@
             });
             
             // Check if veto holder used it on someone other than themselves
-            if(vetoHolderId === humanId && savedPlayers.length > 0) {
-              const savedSomeoneElse = savedPlayers.some(id => id !== humanId);
-              if(savedSomeoneElse) {
-                const eventKey = `pov-used-other-${week}`;
-                if(!isEventApplied(week, eventKey)) {
-                  SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_BONUSES.POV_USED_OTHER);
-                  console.info(`[sm-event] povUsedOther +2 for player ${humanId}`);
-                  markEventApplied(week, eventKey);
-                }
+            if(vetoHolderId === humanId && savedPlayers.length > 0 && savedPlayers.every(id => id !== humanId)) {
+              const eventKey = `pov-used-other-${week}`;
+              if(!isEventApplied(week, eventKey)) {
+                SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_BONUSES.POV_USED_OTHER);
+                console.info(`[sm-event] povUsedOther +2 for player ${humanId}`);
+                markEventApplied(week, eventKey);
               }
             }
           }
