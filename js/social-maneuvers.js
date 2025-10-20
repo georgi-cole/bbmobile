@@ -1277,6 +1277,22 @@
     console.info('[social-maneuvers] ✓ Rendering Social Maneuvers UI for player', playerId);
     if(!container){ console.warn('[social-maneuvers] No container provided for UI'); return; }
 
+    // Check if player is evicted
+    const player = global.getP?.(playerId);
+    if(player && player.evicted){
+      console.info('[social-maneuvers] Player', playerId, 'is evicted - showing eviction message');
+      const evictedMessage = document.createElement('div');
+      evictedMessage.className = 'social-evicted-message';
+      evictedMessage.style.cssText = 'padding: 24px; text-align: center; color: #999; font-size: 1.1rem;';
+      evictedMessage.innerHTML = `
+        <h3 style="margin-bottom: 12px; color: #ff6b6b;">You Have Been Evicted</h3>
+        <p>You can no longer participate in social interactions.</p>
+      `;
+      container.innerHTML = '';
+      container.appendChild(evictedMessage);
+      return;
+    }
+
     const resources = SocialResources.getAll(playerId);
     const alivePlayers = global.alivePlayers?.() || [];
     const otherPlayers = alivePlayers.filter(p => p.id !== playerId);
@@ -2731,6 +2747,13 @@
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
     const alivePlayers = getAlivePlayers();
     const humanId = global.game?.humanId;
+    
+    // Check if human player is evicted - skip social phase if they are
+    const humanPlayer = global.getP?.(humanId);
+    if(humanPlayer && humanPlayer.evicted){
+      console.info('[social-maneuvers] ⏭️ Human player is evicted - skipping social phase');
+      return;
+    }
     
     // Initialize resources for all alive players
     alivePlayers.forEach(p => { 
