@@ -459,6 +459,11 @@
       global.PlayerService.setAlivePlayers(g.players);
     }
 
+    // Notify visual system to suppress red X during animation
+    if(typeof global.notifyEvictedForVisual === 'function'){
+      global.notifyEvictedForVisual(playerId);
+    }
+
     // Run eviction visual enhancement (avatar animation + roster badge update)
     if(typeof global.runEvictionVisual === 'function'){
       try{
@@ -468,10 +473,7 @@
       }
     }
 
-    // Update UI
-    if(typeof global.updateHud === 'function'){
-      global.updateHud();
-    }
+    // Note: Suppression clearing and HUD update now handled by runEvictionVisual
   }
 
   /**

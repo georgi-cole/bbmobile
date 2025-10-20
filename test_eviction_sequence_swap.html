@@ -379,16 +379,12 @@
       if(typeof window.runEvictionVisual === 'function') {
         await window.runEvictionVisual(playerId, { reason: 'vote' });
         log('✓ TV animation complete', 'success');
+        log(`Suppression cleared by runEvictionVisual: __suppressEvictedHudUntilVisualDone=${window.game.__suppressEvictedHudUntilVisualDone}`, 'info');
       } else {
         log('✗ runEvictionVisual not found!', 'error');
       }
       
-      // Clear suppression and update HUD
-      log('🔓 Clearing suppression flags...', 'info');
-      window.game.__suppressEvictedHudUntilVisualDone = false;
-      window.updateHud();
-      
-      // Check if red X now appears
+      // Check if red X now appears (should be automatic after runEvictionVisual)
       const crossExistsAfter = document.querySelector('.evicted-cross') !== null;
       log(`Red X visible after animation: ${crossExistsAfter ? 'YES (PASS)' : 'NO (FAIL)'}`, crossExistsAfter ? 'success' : 'error');
       
@@ -444,14 +440,10 @@
           await window.runEvictionVisual(id, { reason: 'multi', mode: 'Double Eviction' });
           log(`✓ Animation complete for Player ${id}`, 'success');
         }
+        log(`Suppression cleared by runEvictionVisual: __suppressEvictedHudUntilVisualDone=${window.game.__suppressEvictedHudUntilVisualDone}`, 'info');
       }
       
-      // Clear suppression
-      log('🔓 Clearing suppression flags...', 'info');
-      window.game.__suppressEvictedHudUntilVisualDone = false;
-      window.updateHud();
-      
-      // Check red X now appears
+      // Check red X now appears (should be automatic after runEvictionVisual)
       const crossCountAfter = document.querySelectorAll('.evicted-cross').length;
       log(`Red X count after animation: ${crossCountAfter} (expected: 2)`, crossCountAfter === 2 ? 'success' : 'error');
       
@@ -484,7 +476,7 @@
         
         // Check suppression
         const isSuppressed = window.game.__suppressEvictedHudUntilVisualDone && 
-                            p.id === window.game.__pendingEvictionVisual;
+                            window.game.__pendingEvictionVisuals?.has(p.id);
         
         // Add red X only if evicted and NOT suppressed
         if(p.evicted && !isSuppressed) {

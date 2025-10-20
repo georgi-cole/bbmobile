@@ -758,9 +758,7 @@
       }
     }
 
-    // Animation complete - allow red X to render and refresh HUD
-    g.__suppressEvictedHudUntilVisualDone = false;
-    global.updateHud?.(); // Trigger HUD re-render to show red X
+    // Note: Suppression clearing and HUD update now handled by runEvictionVisual
 
     postEvictionRouting();
   }
@@ -828,9 +826,7 @@
       }
     }
 
-    // Animation complete - allow red X to render and refresh HUD
-    g.__suppressEvictedHudUntilVisualDone = false;
-    global.updateHud?.(); // Trigger HUD re-render to show red X
+    // Note: Suppression clearing and HUD update now handled by runEvictionVisual
 
     postEvictionRouting();
   }

@@ -1682,6 +1682,11 @@
 
     try { await global.cardQueueWaitIdle?.(); } catch { }
 
+    // Notify visual system to suppress red X during animation
+    if(typeof global.notifyEvictedForVisual === 'function'){
+      global.notifyEvictedForVisual(target);
+    }
+
     // Run eviction visual enhancement (avatar animation + roster badge update)
     if(typeof global.runEvictionVisual === 'function'){
       try{

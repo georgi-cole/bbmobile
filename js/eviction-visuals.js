@@ -47,6 +47,21 @@
     await animateEvictedAvatar(evictedId);
 
     console.info(`[eviction-visuals] complete id=${evictedId}`);
+    
+    // Animation complete - clear suppression for this player
+    if(g.__pendingEvictionVisuals){
+      g.__pendingEvictionVisuals.delete(evictedId);
+      
+      // If no more pending visuals, disable suppression entirely
+      if(g.__pendingEvictionVisuals.size === 0){
+        g.__suppressEvictedHudUntilVisualDone = false;
+      }
+    }
+    
+    // Update HUD to show red X now that animation is complete
+    if(typeof global.updateHud === 'function'){
+      global.updateHud();
+    }
   }
 
   /**
@@ -66,6 +81,11 @@
     g.__suppressEvictedHudUntilVisualDone = true;
     
     console.info(`[eviction-visuals] suppression enabled for id=${evictedId}`);
+    
+    // Immediately update HUD to suppress red X display
+    if(typeof global.updateHud === 'function'){
+      global.updateHud();
+    }
   }
 
   // Export functions to global
