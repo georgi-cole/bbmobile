@@ -2290,8 +2290,8 @@
               // Check if human participated
               if(!lastCompScores.has(humanId)) {
                 // Human skipped HOH - apply -4 penalty
-                SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_PENALTIES.HOH_SKIPPED);
-                console.info(`[sm-penalty] hohSkipped -4 for player ${humanId}`);
+                SocialEnergyBank.set(humanId, 0);
+                console.info(`[sm-penalty] hohSkipped bank set to 0 for player ${humanId}`);
               } else {
                 // Human participated - determine placement
                 const scores = Array.from(lastCompScores.entries());
