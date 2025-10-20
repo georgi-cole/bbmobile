@@ -101,15 +101,24 @@
   
   const WEEKLY_ENERGY_BONUSES = {
     HOH_WIN: 5,             // Won Head of Household competition
+    HOH_SECOND: 2,          // Second place in HOH competition
     POV_WIN: 3,             // Won Power of Veto competition
+    POV_SECOND: 1,          // Second place in POV competition
     NOMINATED: 4,           // Was nominated for eviction (adversity bonus)
     NEW_ALLIANCE: 2,        // Per alliance formed (can stack)
     SAVED_WITH_POV: 2,      // Was saved from eviction using POV
+    POV_USED_OTHER: 2,      // Used veto on someone other than yourself
     SURVIVED_EVICTION: 1    // Survived being on the block
   };
 
   const WEEKLY_ENERGY_PENALTIES = {
-    COMP_SKIPPED: -3,       // Skipped a competition
+    COMP_SKIPPED: -3,       // Generic: Skipped a competition (legacy)
+    HOH_LAST: -2,           // Last place in HOH competition
+    HOH_SKIPPED: -4,        // Skipped HOH competition
+    HOH_QUIT: -3,           // Started but quit HOH competition
+    POV_LAST: -2,           // Last place in POV competition
+    POV_SKIPPED: -3,        // Skipped POV competition
+    POV_QUIT: -2,           // Started but quit POV competition
     NOT_DRAWN_VETO: -1,     // Not drawn to compete in veto
     ZERO_SCORE: -2,         // Scored zero in a competition
     BROKE_ALLIANCE: -3      // Broke an alliance (trust damage)
@@ -2050,6 +2059,24 @@
         }
       }
       
+      // ENHANCEMENT 2: HOH phase exit fallback for placement rules
+      if (previousPhase === 'hoh' && phase !== 'hoh' && isEnabled()) {
+        console.info('[social-maneuvers] ✓ Exiting HOH phase - applying placement rules (fallback)');
+        
+        const week = g.week || 1;
+        const humanId = g.humanId;
+        const lastCompScores = g.lastCompScores;
+        
+        if(!g.__sm_watcherApplied) g.__sm_watcherApplied = new Map();
+        const participationKey = `hoh-participation-${week}`;
+        const eventApplied = g.__sm_watcherApplied.has(`${week}-${participationKey}`);
+        
+        if(humanId && lastCompScores && !eventApplied) {
+          applyHOHPlacement(humanId, lastCompScores, week, 'fallback');
+          g.__sm_watcherApplied.set(`${week}-${participationKey}`, true);
+        }
+      }
+      
       // Call original setPhase
       return originalSetPhase.call(this, phase, duration, callback);
     };
@@ -2181,6 +2208,50 @@
   // ============================================================================
   
   /**
+   * Helper to get alive players with fallback to empty array
+   */
+  function getAlivePlayers() {
+    return global.alivePlayers?.() || [];
+  }
+  
+  /**
+   * Helper to apply HOH placement rewards/penalties based on competition scores
+   * @param {number} humanId - The human player's ID
+   * @param {Map} lastCompScores - Map of player IDs to their competition scores
+   * @param {number} week - Current game week
+   * @param {string} context - Context string for logging (e.g., 'fallback', 'reconciliation')
+   */
+  function applyHOHPlacement(humanId, lastCompScores, week, context = '') {
+    const contextSuffix = context ? ` (${context})` : '';
+    
+    if(!lastCompScores.has(humanId)) {
+      // Human skipped HOH - apply -4 penalty
+      SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_PENALTIES.HOH_SKIPPED);
+      console.info(`[sm-penalty] hohSkipped -4 for player ${humanId}${contextSuffix}`);
+    } else {
+      // Human participated - determine placement
+      const scores = Array.from(lastCompScores.entries());
+      const sortedScores = scores.sort((a, b) => b[1] - a[1]); // Sort by score descending
+      const humanIndex = sortedScores.findIndex(([id]) => id === humanId);
+      const placement = humanIndex + 1;
+      const totalParticipants = sortedScores.length;
+      
+      if(placement === 1) {
+        // Winner - already handled by hohWin event (+5)
+        // Do nothing additional here
+      } else if(placement === 2) {
+        // Second place - award +2
+        SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_BONUSES.HOH_SECOND);
+        console.info(`[sm-event] hohSecond +2 for player ${humanId}${contextSuffix}`);
+      } else if(placement === totalParticipants) {
+        // Last place - deduct -2
+        SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_PENALTIES.HOH_LAST);
+        console.info(`[sm-penalty] hohLast -2 for player ${humanId}${contextSuffix}`);
+      }
+    }
+  }
+  
+  /**
    * Install Object.defineProperty watchers on game properties to trigger immediate bank updates.
    * Watches: hohId, nominees, vetoHolder, vetoUsed, replacementNominee, week
    */
@@ -2226,6 +2297,19 @@
             SocialResources.recordWeeklyEvent(newValue, 'hohWin', true);
             markEventApplied(week, eventKey);
           }
+          
+          // ENHANCEMENT 2: HOH participation/placement rules
+          const humanId = g.humanId;
+          const lastCompScores = g.lastCompScores;
+          
+          if(humanId && lastCompScores) {
+            const participationKey = `hoh-participation-${week}`;
+            
+            if(!isEventApplied(week, participationKey)) {
+              applyHOHPlacement(humanId, lastCompScores, week);
+              markEventApplied(week, participationKey);
+            }
+          }
         }
       },
       enumerable: true,
@@ -2257,7 +2341,7 @@
       configurable: true
     });
     
-    // 3. Watch game.vetoHolder for POV wins
+    // 3. Watch game.vetoHolder for POV wins and participation
     let _vetoHolder = g.vetoHolder;
     Object.defineProperty(g, 'vetoHolder', {
       get() { return _vetoHolder; },
@@ -2273,6 +2357,49 @@
             console.info(`[sm-event] POV win detected: Player ${newValue} at week ${week}`);
             SocialResources.recordWeeklyEvent(newValue, 'povWin', true);
             markEventApplied(week, eventKey);
+          }
+          
+          // POV participation/placement rules for human player
+          const humanId = g.humanId;
+          const lastCompScores = g.lastCompScores;
+          const vetoPlayers = g.__vetoPlayers;
+          
+          if(humanId && Array.isArray(vetoPlayers)) {
+            const participationKey = `pov-participation-${week}`;
+            
+            if(!isEventApplied(week, participationKey)) {
+              // Check if human was drawn for veto
+              if(!vetoPlayers.includes(humanId)) {
+                // Human was not drawn - penalty already handled by notDrawnVeto
+              } else if(!lastCompScores || !lastCompScores.has(humanId)) {
+                // Human was drawn but skipped POV - apply -3 penalty
+                SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_PENALTIES.POV_SKIPPED);
+                console.info(`[sm-penalty] povSkipped -3 for player ${humanId}`);
+              } else {
+                // Human participated - determine placement among veto players
+                const vetoScores = Array.from(lastCompScores.entries())
+                  .filter(([id]) => vetoPlayers.includes(id))
+                  .sort((a, b) => b[1] - a[1]); // Sort by score descending
+                
+                const humanIndex = vetoScores.findIndex(([id]) => id === humanId);
+                const placement = humanIndex + 1;
+                const totalParticipants = vetoScores.length;
+                
+                if(placement === 1) {
+                  // Winner - already handled by povWin event (+3)
+                } else if(placement === 2) {
+                  // Second place - award +1
+                  SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_BONUSES.POV_SECOND);
+                  console.info(`[sm-event] povSecond +1 for player ${humanId}`);
+                } else if(placement === totalParticipants) {
+                  // Last place - deduct -2
+                  SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_PENALTIES.POV_LAST);
+                  console.info(`[sm-penalty] povLast -2 for player ${humanId}`);
+                }
+              }
+              
+              markEventApplied(week, participationKey);
+            }
           }
         }
       },
@@ -2292,13 +2419,12 @@
           const week = g.week || 1;
           const vetoHolderId = g.vetoHolder;
           const replacementId = g.replacementNominee;
+          const humanId = g.humanId;
           
           // The veto holder saved someone - check who was saved
           // Logic: if there's a replacement, the original nominee was saved
           if(replacementId && Array.isArray(g.nominees)) {
             // Find who was saved (not in current nominees but was before)
-            // We'll assume the veto holder used it to save themselves or a nominee
-            // For simplicity, if vetoHolder was in nominees, they saved themselves
             const originalNominees = g.__sm_preVetoNominees || [];
             const savedPlayers = originalNominees.filter(id => !g.nominees.includes(id) && id !== replacementId);
             
@@ -2311,6 +2437,16 @@
                 markEventApplied(week, eventKey);
               }
             });
+            
+            // Check if veto holder used it on someone other than themselves
+            if(vetoHolderId === humanId && savedPlayers.length > 0 && savedPlayers.every(id => id !== humanId)) {
+              const eventKey = `pov-used-other-${week}`;
+              if(!isEventApplied(week, eventKey)) {
+                SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_BONUSES.POV_USED_OTHER);
+                console.info(`[sm-event] povUsedOther +2 for player ${humanId}`);
+                markEventApplied(week, eventKey);
+              }
+            }
           }
         }
       },
@@ -2330,7 +2466,7 @@
           console.info(`[sm-week] Week rollover detected: ${oldValue} → ${newValue}`);
           
           // Add base weekly energy to all alive players
-          const alivePlayers = global.alivePlayers?.() || [];
+          const alivePlayers = getAlivePlayers();
           const baseAdd = SocialResources.CONFIG.baseWeeklyAdd;
           
           alivePlayers.forEach(player => {
@@ -2338,7 +2474,7 @@
             
             if(!isEventApplied(newValue, eventKey)) {
               SocialEnergyBank.adjust(player.id, baseAdd);
-              console.info(`[sm-week] +${baseAdd} base added to bank for player ${player.id} (${player.name || 'unknown'}) at week ${newValue}`);
+              console.info(`[sm-week] +${baseAdd} base added to bank for week=${newValue} for player ${player.id} (${player.name || 'unknown'})`);
             }
           });
           
@@ -2358,12 +2494,218 @@
             keysToDelete.forEach(key => g.__sm_watcherApplied.delete(key));
           }
         }
+        
+        // ENHANCEMENT 1: Week 1 starter bonus (+5 for human and all alive players)
+        if(newValue === 1 && !g.__sm_weekStarterApplied) {
+          console.info('[sm-week] Applying week 1 starter bonus');
+          const humanId = g.humanId;
+          const alivePlayers = getAlivePlayers();
+          
+          // Grant +5 to human
+          if(humanId) {
+            SocialEnergyBank.adjust(humanId, 5);
+            console.info(`[sm-week] starter +5 applied (week=1) for human player ${humanId}`);
+          }
+          
+          // Grant +5 to all alive players
+          alivePlayers.forEach(player => {
+            SocialEnergyBank.adjust(player.id, 5);
+            console.info(`[sm-week] starter +5 applied (week=1) for player ${player.id} (${player.name || 'unknown'})`);
+          });
+          
+          // Mark as applied to prevent duplicates
+          g.__sm_weekStarterApplied = 1;
+        }
       },
       enumerable: true,
       configurable: true
     });
     
-    console.info('[sm-watchers] ✓ Property watchers installed: hohId, nominees, vetoHolder, vetoUsed, week');
+    // 6. Watch game.__vetoPlayers for notDrawnVeto penalty (ENHANCEMENT 3)
+    let _vetoPlayers = g.__vetoPlayers;
+    Object.defineProperty(g, '__vetoPlayers', {
+      get() { return _vetoPlayers; },
+      set(newValue) {
+        _vetoPlayers = newValue;
+        
+        // ENHANCEMENT 3: Apply notDrawnVeto penalty for players not drawn
+        if(Array.isArray(newValue) && newValue.length > 0) {
+          const week = g.week || 1;
+          const alivePlayers = getAlivePlayers();
+          const drawnPlayerIds = newValue.map(id => +id); // Ensure numeric
+          
+          // Find players not drawn for veto
+          const notDrawn = alivePlayers.filter(p => !drawnPlayerIds.includes(p.id));
+          
+          notDrawn.forEach(player => {
+            const eventKey = `notDrawnVeto-${player.id}`;
+            
+            if(!isEventApplied(week, eventKey)) {
+              // Record weekly event which applies the penalty immediately to bank
+              SocialResources.recordWeeklyEvent(player.id, 'notDrawnVeto', true);
+              console.info(`[sm-event] notDrawnVeto -1 for player=${player.id} (${player.name || 'unknown'})`);
+              markEventApplied(week, eventKey);
+            }
+          });
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    
+    // 7. Watch game.lastCompScores for zeroScore penalty (ENHANCEMENT 4)
+    let _lastCompScores = g.lastCompScores;
+    Object.defineProperty(g, 'lastCompScores', {
+      get() { return _lastCompScores; },
+      set(newValue) {
+        const oldValue = _lastCompScores;
+        _lastCompScores = newValue;
+        
+        // ENHANCEMENT 4: Apply zeroScore penalty when human scores 0
+        if(newValue instanceof Map && newValue.size > 0) {
+          const week = g.week || 1;
+          const humanId = g.humanId;
+          const currentPhase = g.phase;
+          
+          // Only check during HOH or veto_comp phases
+          if(humanId && (currentPhase === 'hoh' || currentPhase === 'veto_comp')) {
+            const humanScore = newValue.get(humanId);
+            
+            if(humanScore !== undefined && humanScore === 0) {
+              const eventKey = `zeroScore-${currentPhase}-${week}`;
+              
+              if(!isEventApplied(week, eventKey)) {
+                // Apply zeroScore penalty
+                SocialResources.recordWeeklyEvent(humanId, 'zeroScore', true);
+                console.info(`[sm-penalty] zeroScore -2 for player=${humanId}`);
+                markEventApplied(week, eventKey);
+              }
+            }
+          }
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    
+    console.info('[sm-watchers] ✓ Property watchers installed: hohId, nominees, vetoHolder, vetoUsed, week, __vetoPlayers, lastCompScores (with enhancements)');
+    
+    // ENHANCEMENT 5: Reconciliation - check current values and apply events if needed
+    reconcileWatchers();
+  }
+  
+  /**
+   * Reconcile watchers by checking current game state and applying events that may have
+   * occurred before watchers were installed. Uses idempotence keys to prevent duplicates.
+   */
+  function reconcileWatchers() {
+    if(!isEnabled()) return;
+    
+    const g = global.game;
+    if(!g) return;
+    
+    console.info('[sm-watchers] 🔄 Reconciling current game state...');
+    
+    const week = g.week || 1;
+    const humanId = g.humanId;
+    const alivePlayers = getAlivePlayers();
+    
+    // Reconcile week 1 starter bonus
+    if(week === 1 && !g.__sm_weekStarterApplied) {
+      console.info('[sm-week] Reconciliation: Applying week 1 starter bonus');
+      
+      alivePlayers.forEach(player => {
+        SocialEnergyBank.adjust(player.id, 5);
+        console.info(`[sm-week] starter +5 applied (week=1) for player ${player.id} (${player.name || 'unknown'})`);
+      });
+      
+      g.__sm_weekStarterApplied = 1;
+    }
+    
+    // Helper to check if event already applied (local version for reconciliation)
+    function isEventApplied(week, eventKey) {
+      const key = `${week}-${eventKey}`;
+      return g.__sm_watcherApplied.has(key);
+    }
+    
+    function markEventApplied(week, eventKey) {
+      const key = `${week}-${eventKey}`;
+      g.__sm_watcherApplied.set(key, true);
+    }
+    
+    // Reconcile HOH winner
+    if(g.hohId) {
+      const eventKey = `hoh-${g.hohId}`;
+      if(!isEventApplied(week, eventKey)) {
+        console.info(`[sm-event] Reconciliation: HOH win detected for player ${g.hohId}`);
+        SocialResources.recordWeeklyEvent(g.hohId, 'hohWin', true);
+        markEventApplied(week, eventKey);
+      }
+      
+      // Reconcile HOH placement for human
+      if(humanId && g.lastCompScores) {
+        const participationKey = `hoh-participation-${week}`;
+        if(!isEventApplied(week, participationKey)) {
+          applyHOHPlacement(humanId, g.lastCompScores, week, 'reconciliation');
+          markEventApplied(week, participationKey);
+        }
+      }
+    }
+    
+    // Reconcile nominees
+    if(Array.isArray(g.nominees)) {
+      g.nominees.forEach(nomineeId => {
+        const eventKey = `nominated-${nomineeId}`;
+        if(!isEventApplied(week, eventKey)) {
+          console.info(`[sm-event] Reconciliation: Nomination detected for player ${nomineeId}`);
+          SocialResources.recordWeeklyEvent(nomineeId, 'nominated', true);
+          markEventApplied(week, eventKey);
+        }
+      });
+    }
+    
+    // Reconcile veto holder
+    if(g.vetoHolder) {
+      const eventKey = `pov-${g.vetoHolder}`;
+      if(!isEventApplied(week, eventKey)) {
+        console.info(`[sm-event] Reconciliation: POV win detected for player ${g.vetoHolder}`);
+        SocialResources.recordWeeklyEvent(g.vetoHolder, 'povWin', true);
+        markEventApplied(week, eventKey);
+      }
+    }
+    
+    // Reconcile veto players (notDrawnVeto)
+    if(Array.isArray(g.__vetoPlayers) && g.__vetoPlayers.length > 0) {
+      const drawnPlayerIds = g.__vetoPlayers.map(id => +id);
+      const notDrawn = alivePlayers.filter(p => !drawnPlayerIds.includes(p.id));
+      
+      notDrawn.forEach(player => {
+        const eventKey = `notDrawnVeto-${player.id}`;
+        if(!isEventApplied(week, eventKey)) {
+          SocialResources.recordWeeklyEvent(player.id, 'notDrawnVeto', true);
+          console.info(`[sm-event] notDrawnVeto -1 for player=${player.id} (reconciliation)`);
+          markEventApplied(week, eventKey);
+        }
+      });
+    }
+    
+    // Reconcile zero scores
+    if(g.lastCompScores instanceof Map) {
+      const currentPhase = g.phase;
+      if(humanId && (currentPhase === 'hoh' || currentPhase === 'veto_comp')) {
+        const humanScore = g.lastCompScores.get(humanId);
+        if(humanScore !== undefined && humanScore === 0) {
+          const eventKey = `zeroScore-${currentPhase}-${week}`;
+          if(!isEventApplied(week, eventKey)) {
+            SocialResources.recordWeeklyEvent(humanId, 'zeroScore', true);
+            console.info(`[sm-penalty] zeroScore -2 for player=${humanId} (reconciliation)`);
+            markEventApplied(week, eventKey);
+          }
+        }
+      }
+    }
+    
+    console.info('[sm-watchers] ✓ Reconciliation complete');
   }
   
   // Helper to track pre-veto nominees for save detection
@@ -2387,7 +2729,7 @@
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
-    const alivePlayers = global.alivePlayers?.() || [];
+    const alivePlayers = getAlivePlayers();
     const humanId = global.game?.humanId;
     
     // Initialize resources for all alive players
