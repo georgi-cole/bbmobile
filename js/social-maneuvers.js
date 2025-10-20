@@ -2284,8 +2284,7 @@
               } else {
                 // Human participated - check if they came in last place
                 const scores = Array.from(lastCompScores.entries());
-                const participantScores = scores.map(([id, score]) => ({ id, score }));
-                const minScore = Math.min(...participantScores.map(p => p.score));
+                const minScore = Math.min(...scores.map(([_, score]) => score));
                 const humanScore = lastCompScores.get(humanId);
                 
                 if(humanScore === minScore) {
