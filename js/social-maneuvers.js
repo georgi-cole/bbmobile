@@ -2311,9 +2311,9 @@
                   SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_BONUSES.HOH_SECOND);
                   console.info(`[sm-event] hohSecond +2 for player ${humanId}`);
                 } else if(placement === totalParticipants) {
-                  // Last place - deduct -2
-                  SocialEnergyBank.adjust(humanId, WEEKLY_ENERGY_PENALTIES.HOH_LAST);
-                  console.info(`[sm-penalty] hohLast -2 for player ${humanId}`);
+                  // Last place - set bank to 0 per documentation
+                  SocialEnergyBank.setBank(humanId, 0);
+                  console.info(`[sm-penalty] hohLast set bank to 0 for player ${humanId}`);
                 }
                 // Note: "quit" scenario would need additional game state tracking
                 // For now, we handle win/2nd/last/skip
