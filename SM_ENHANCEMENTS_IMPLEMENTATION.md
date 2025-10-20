@@ -126,7 +126,7 @@ if(humanId && lastCompScores) {
 **Location:** `js/social-maneuvers.js` - `installPropertyWatchers()` function, __vetoPlayers property watcher
 
 **Implementation:**
-- Watches `game.__vetoPlayers` property (existing property used by veto.js)
+- Watches `game.__vetoPlayers` property (property used by veto.js; watcher installed in this PR)
 - Triggers when set to an array
 - Computes alive players not in the drawn list
 - Applies `notDrawnVeto` event for each excluded player
