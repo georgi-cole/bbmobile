@@ -2413,7 +2413,7 @@
             
             if(!isEventApplied(newValue, eventKey)) {
               SocialEnergyBank.adjust(player.id, baseAdd);
-              console.info(`[sm-week] +${baseAdd} base added to bank for player ${player.id} (${player.name || 'unknown'}) at week ${newValue}`);
+              console.info(`[sm-week] +${baseAdd} base added to bank for week=${newValue} for player ${player.id} (${player.name || 'unknown'})`);
             }
           });
           
@@ -2492,7 +2492,170 @@
       configurable: true
     });
     
-    console.info('[sm-watchers] ✓ Property watchers installed: hohId, nominees, vetoHolder, vetoUsed, week, __vetoPlayers (with enhancements)');
+    // 7. Watch game.lastCompScores for zeroScore penalty (ENHANCEMENT 4)
+    let _lastCompScores = g.lastCompScores;
+    Object.defineProperty(g, 'lastCompScores', {
+      get() { return _lastCompScores; },
+      set(newValue) {
+        const oldValue = _lastCompScores;
+        _lastCompScores = newValue;
+        
+        // ENHANCEMENT 4: Apply zeroScore penalty when human scores 0
+        if(newValue instanceof Map && newValue.size > 0) {
+          const week = g.week || 1;
+          const humanId = g.humanId;
+          const currentPhase = g.phase;
+          
+          // Only check during HOH or veto_comp phases
+          if(humanId && (currentPhase === 'hoh' || currentPhase === 'veto_comp')) {
+            const humanScore = newValue.get(humanId);
+            
+            if(humanScore !== undefined && humanScore === 0) {
+              const eventKey = `zeroScore-${currentPhase}-${week}`;
+              
+              if(!isEventApplied(week, eventKey)) {
+                // Apply zeroScore penalty
+                SocialResources.recordWeeklyEvent(humanId, 'zeroScore', true);
+                console.info(`[sm-penalty] zeroScore -2 for player=${humanId}`);
+                markEventApplied(week, eventKey);
+              }
+            }
+          }
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    
+    console.info('[sm-watchers] ✓ Property watchers installed: hohId, nominees, vetoHolder, vetoUsed, week, __vetoPlayers, lastCompScores (with enhancements)');
+    
+    // ENHANCEMENT 5: Reconciliation - check current values and apply events if needed
+    reconcileWatchers();
+  }
+  
+  /**
+   * Reconcile watchers by checking current game state and applying events that may have
+   * occurred before watchers were installed. Uses idempotence keys to prevent duplicates.
+   */
+  function reconcileWatchers() {
+    if(!isEnabled()) return;
+    
+    const g = global.game;
+    if(!g) return;
+    
+    console.info('[sm-watchers] 🔄 Reconciling current game state...');
+    
+    const week = g.week || 1;
+    const humanId = g.humanId;
+    const alivePlayers = global.alivePlayers?.() || [];
+    
+    // Reconcile week 1 starter bonus
+    if(week === 1 && !g.__sm_weekStarterApplied) {
+      console.info('[sm-week] Reconciliation: Applying week 1 starter bonus');
+      
+      if(humanId) {
+        SocialEnergyBank.adjust(humanId, 5);
+        console.info(`[sm-week] starter +5 applied (week=1) for human player ${humanId}`);
+      }
+      
+      alivePlayers.forEach(player => {
+        SocialEnergyBank.adjust(player.id, 5);
+        console.info(`[sm-week] starter +5 applied (week=1) for player ${player.id} (${player.name || 'unknown'})`);
+      });
+      
+      g.__sm_weekStarterApplied = 1;
+    }
+    
+    // Reconcile HOH winner
+    if(g.hohId) {
+      const eventKey = `hoh-${g.hohId}`;
+      if(!g.__sm_watcherApplied.has(`${week}-${eventKey}`)) {
+        console.info(`[sm-event] Reconciliation: HOH win detected for player ${g.hohId}`);
+        SocialResources.recordWeeklyEvent(g.hohId, 'hohWin', true);
+        g.__sm_watcherApplied.set(`${week}-${eventKey}`, true);
+      }
+      
+      // Reconcile HOH participation for human
+      if(humanId && g.lastCompScores) {
+        const participationKey = `hoh-participation-${week}`;
+        if(!g.__sm_watcherApplied.has(`${week}-${participationKey}`)) {
+          if(!g.lastCompScores.has(humanId)) {
+            SocialResources.recordWeeklyEvent(humanId, 'compSkipped', true);
+            SocialEnergyBank.set(humanId, 0);
+            console.info(`[sm-penalty] hohSkipped → bank=0 for player ${humanId} (reconciliation)`);
+          } else {
+            const scores = Array.from(g.lastCompScores.entries());
+            const participantScores = scores.map(([id, score]) => ({ id, score }));
+            const minScore = Math.min(...participantScores.map(p => p.score));
+            const humanScore = g.lastCompScores.get(humanId);
+            
+            if(humanScore === minScore) {
+              SocialEnergyBank.set(humanId, 0);
+              console.info(`[sm-penalty] hohLast → bank=0 for player ${humanId} (reconciliation)`);
+            } else {
+              SocialEnergyBank.adjust(humanId, 5);
+              console.info(`[sm-event] hohParticipated +5 for player ${humanId} (reconciliation)`);
+            }
+          }
+          g.__sm_watcherApplied.set(`${week}-${participationKey}`, true);
+        }
+      }
+    }
+    
+    // Reconcile nominees
+    if(Array.isArray(g.nominees)) {
+      g.nominees.forEach(nomineeId => {
+        const eventKey = `nominated-${nomineeId}`;
+        if(!g.__sm_watcherApplied.has(`${week}-${eventKey}`)) {
+          console.info(`[sm-event] Reconciliation: Nomination detected for player ${nomineeId}`);
+          SocialResources.recordWeeklyEvent(nomineeId, 'nominated', true);
+          g.__sm_watcherApplied.set(`${week}-${eventKey}`, true);
+        }
+      });
+    }
+    
+    // Reconcile veto holder
+    if(g.vetoHolder) {
+      const eventKey = `pov-${g.vetoHolder}`;
+      if(!g.__sm_watcherApplied.has(`${week}-${eventKey}`)) {
+        console.info(`[sm-event] Reconciliation: POV win detected for player ${g.vetoHolder}`);
+        SocialResources.recordWeeklyEvent(g.vetoHolder, 'povWin', true);
+        g.__sm_watcherApplied.set(`${week}-${eventKey}`, true);
+      }
+    }
+    
+    // Reconcile veto players (notDrawnVeto)
+    if(Array.isArray(g.__vetoPlayers) && g.__vetoPlayers.length > 0) {
+      const drawnPlayerIds = g.__vetoPlayers.map(id => +id);
+      const notDrawn = alivePlayers.filter(p => !drawnPlayerIds.includes(p.id));
+      
+      notDrawn.forEach(player => {
+        const eventKey = `notDrawnVeto-${player.id}`;
+        if(!g.__sm_watcherApplied.has(`${week}-${eventKey}`)) {
+          SocialResources.recordWeeklyEvent(player.id, 'notDrawnVeto', true);
+          console.info(`[sm-event] notDrawnVeto -1 for player=${player.id} (reconciliation)`);
+          g.__sm_watcherApplied.set(`${week}-${eventKey}`, true);
+        }
+      });
+    }
+    
+    // Reconcile zero scores
+    if(g.lastCompScores instanceof Map) {
+      const currentPhase = g.phase;
+      if(humanId && (currentPhase === 'hoh' || currentPhase === 'veto_comp')) {
+        const humanScore = g.lastCompScores.get(humanId);
+        if(humanScore !== undefined && humanScore === 0) {
+          const eventKey = `zeroScore-${currentPhase}-${week}`;
+          if(!g.__sm_watcherApplied.has(`${week}-${eventKey}`)) {
+            SocialResources.recordWeeklyEvent(humanId, 'zeroScore', true);
+            console.info(`[sm-penalty] zeroScore -2 for player=${humanId} (reconciliation)`);
+            g.__sm_watcherApplied.set(`${week}-${eventKey}`, true);
+          }
+        }
+      }
+    }
+    
+    console.info('[sm-watchers] ✓ Reconciliation complete');
   }
   
   // Helper to track pre-veto nominees for save detection

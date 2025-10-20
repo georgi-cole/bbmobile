@@ -1,7 +1,7 @@
 # SM-only Social Energy Bank Enhancements - Implementation Summary
 
 ## Overview
-This document summarizes the implementation of three SM-only enhancements to the Social Energy Bank system, as specified in the requirements.
+This document summarizes the implementation of five SM-only enhancements to the Social Energy Bank system, as specified in the requirements.
 
 ## Enhancements Implemented
 
@@ -276,6 +276,106 @@ npm run test:social
 
 ---
 
+## Enhancement 4: zeroScore Penalty
+
+**Location:** `js/social-maneuvers.js` - `installPropertyWatchers()` function, lastCompScores property watcher
+
+**Implementation:**
+- Watches `game.lastCompScores` property for changes
+- When human player's score is exactly 0 during HOH or veto_comp phases
+- Applies `zeroScore` event which triggers -2 penalty
+- Idempotent per competition per week using `zeroScore-${phase}-${week}` event key
+
+**Code snippet:**
+```javascript
+// 7. Watch game.lastCompScores for zeroScore penalty (ENHANCEMENT 4)
+let _lastCompScores = g.lastCompScores;
+Object.defineProperty(g, 'lastCompScores', {
+  get() { return _lastCompScores; },
+  set(newValue) {
+    const oldValue = _lastCompScores;
+    _lastCompScores = newValue;
+    
+    if(newValue instanceof Map && newValue.size > 0) {
+      const week = g.week || 1;
+      const humanId = g.humanId;
+      const currentPhase = g.phase;
+      
+      if(humanId && (currentPhase === 'hoh' || currentPhase === 'veto_comp')) {
+        const humanScore = newValue.get(humanId);
+        
+        if(humanScore !== undefined && humanScore === 0) {
+          const eventKey = `zeroScore-${currentPhase}-${week}`;
+          
+          if(!isEventApplied(week, eventKey)) {
+            SocialResources.recordWeeklyEvent(humanId, 'zeroScore', true);
+            console.info(`[sm-penalty] zeroScore -2 for player=${humanId}`);
+            markEventApplied(week, eventKey);
+          }
+        }
+      }
+    }
+  },
+  enumerable: true,
+  configurable: true
+});
+```
+
+**Testing:**
+- Test file: `test_sm_enhancements.html`
+- Test function: `testZeroScorePenalty()`
+- Verifies: -2 penalty applied when score is 0, idempotence
+
+---
+
+## Enhancement 5: Early Installation + Reconciliation
+
+**Location:** `js/social-maneuvers.js` - `reconcileWatchers()` function
+
+**Implementation:**
+- Installs property watchers early during module load
+- After installation, immediately reconciles current game state
+- Checks for pre-existing values and applies events if not already applied
+- Uses idempotence keys to prevent duplicate applications
+- Reconciles: week 1 starter, HOH winner, HOH participation, nominees, veto holder, veto players, zero scores
+
+**Code snippet:**
+```javascript
+function reconcileWatchers() {
+  if(!isEnabled()) return;
+  
+  const g = global.game;
+  if(!g) return;
+  
+  console.info('[sm-watchers] 🔄 Reconciling current game state...');
+  
+  const week = g.week || 1;
+  const humanId = g.humanId;
+  const alivePlayers = global.alivePlayers?.() || [];
+  
+  // Reconcile week 1 starter bonus
+  if(week === 1 && !g.__sm_weekStarterApplied) {
+    // Apply starter bonus...
+  }
+  
+  // Reconcile HOH winner
+  if(g.hohId) {
+    // Apply HOH win bonus...
+  }
+  
+  // Reconcile other events...
+  
+  console.info('[sm-watchers] ✓ Reconciliation complete');
+}
+```
+
+**Testing:**
+- Test file: `test_sm_enhancements.html`
+- Test function: `testReconciliation()`
+- Verifies: Events correctly applied for pre-existing state
+
+---
+
 ## Logging Format
 
 All enhancements follow consistent logging patterns:
@@ -285,6 +385,11 @@ All enhancements follow consistent logging patterns:
 [sm-week] Applying week 1 starter bonus
 [sm-week] starter +5 applied (week=1) for human player 1
 [sm-week] starter +5 applied (week=1) for player 2 (Player 2)
+```
+
+### Week Rollover
+```
+[sm-week] +5 base added to bank for week=2 for player 1 (Player 1)
 ```
 
 ### HOH Participation
@@ -300,11 +405,21 @@ All enhancements follow consistent logging patterns:
 [sm-event] notDrawnVeto -1 for player=5 (Player 5)
 ```
 
+### zeroScore
+```
+[sm-penalty] zeroScore -2 for player=1
+```
+
+### Phase Seeding
+```
+[sm-phase] seeded from bank=10, phase energy=10
+```
+
 ---
 
 ## Summary
 
-✅ All three enhancements implemented as specified
+✅ All five enhancements implemented as specified
 ✅ SM-only approach - no legacy module edits
 ✅ Property watchers for event-driven updates
 ✅ Idempotence ensured for all enhancements
@@ -313,5 +428,7 @@ All enhancements follow consistent logging patterns:
 ✅ No regressions in existing tests
 ✅ Consistent logging and error handling
 ✅ Integration with existing Social Energy Bank infrastructure
+✅ Early watcher installation with reconciliation
+✅ Bank starts at 0, no auto-initialization to 5
 
-**Total changes:** ~120 lines added to `js/social-maneuvers.js`, plus new test file
+**Total changes:** ~250 lines added to `js/social-maneuvers.js`, plus enhanced test file

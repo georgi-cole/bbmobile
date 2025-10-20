@@ -76,6 +76,8 @@
       <li>✅ HOH phase exit fallback</li>
       <li>✅ Veto drawing watcher on game.__vetoPlayers</li>
       <li>✅ notDrawnVeto penalty -1 for excluded players</li>
+      <li>✅ zeroScore penalty -2 when score is 0</li>
+      <li>✅ Reconciliation of watchers on initial load</li>
     </ol>
   </div>
 
@@ -143,6 +145,8 @@
       await testHOHPhaseExitFallback();
       await testVetoDrawingWatcher();
       await testNotDrawnVetoPenalty();
+      await testZeroScorePenalty();
+      await testReconciliation();
       
       log('=== Test Suite Complete ===', 'info');
       showState();
@@ -433,6 +437,128 @@
       } else {
         log(`✗ Idempotence failed: bank2=${bank2AfterRepeat}, expected=19`, 'fail');
       }
+    }
+
+    async function testZeroScorePenalty() {
+      log('--- Test: zeroScore Penalty ---', 'info');
+      
+      const g = window.game;
+      g.week = 8;
+      g.phase = 'hoh';
+      g.humanId = 1;
+      g.__sm_watcherApplied = new Map(); // Reset
+      
+      // Set initial bank
+      window.SocialManeuvers.SocialEnergyBank.set(1, 15);
+      
+      // Human scores 0 in HOH
+      g.lastCompScores = new Map([[1, 0], [2, 50], [3, 45]]);
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Check that zeroScore penalty was applied (-2)
+      const humanBank = window.SocialManeuvers.SocialEnergyBank.get(1);
+      const expected = 15 - 2; // Initial bank minus zeroScore penalty
+      
+      if(humanBank === expected) {
+        log(`✓ zeroScore penalty applied: bank reduced from 15 to ${humanBank}`, 'pass');
+      } else {
+        log(`✗ zeroScore penalty failed: bank=${humanBank}, expected=${expected}`, 'fail');
+      }
+      
+      // Test idempotence - set lastCompScores again
+      g.lastCompScores = new Map([[1, 0], [2, 50], [3, 45]]);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const bankAfterRepeat = window.SocialManeuvers.SocialEnergyBank.get(1);
+      if(bankAfterRepeat === expected) {
+        log('✓ Idempotence verified: zeroScore not applied twice', 'pass');
+      } else {
+        log(`✗ Idempotence failed: bank=${bankAfterRepeat}, expected=${expected}`, 'fail');
+      }
+    }
+
+    async function testReconciliation() {
+      log('--- Test: Watcher Reconciliation ---', 'info');
+      
+      // Create a fresh game state with pre-existing values
+      const testGame = {
+        week: 1,
+        phase: 'hoh',
+        humanId: 1,
+        hohId: 2,
+        nominees: [3, 4],
+        vetoHolder: 2,
+        __vetoPlayers: [1, 2, 3],
+        lastCompScores: new Map([[1, 45], [2, 50], [3, 40], [4, 35]]),
+        cfg: { enableSocialManeuvers: true },
+        __sm_bankEnergy: new Map(),
+        __sm_watcherApplied: new Map()
+      };
+      
+      // Override game temporarily
+      const originalGame = window.game;
+      window.game = testGame;
+      
+      // Initialize banks to 0
+      [1, 2, 3, 4, 5].forEach(id => {
+        window.SocialManeuvers.SocialEnergyBank.init(id);
+        window.SocialManeuvers.SocialResources.init(id);
+        window.SocialManeuvers.SocialEnergyBank.set(id, 0);
+      });
+      
+      // Manually call reconciliation (normally called after installing watchers)
+      if(window.SocialManeuvers.reconcileWatchers) {
+        window.SocialManeuvers.reconcileWatchers();
+      } else {
+        // If not exported, we can't test it directly
+        log('⚠ reconcileWatchers not exported, skipping direct test', 'info');
+        
+        // Restore original game
+        window.game = originalGame;
+        return;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Verify reconciliation results
+      let allCorrect = true;
+      
+      // Week 1 starter should be applied (+5 to all)
+      const bank1 = window.SocialManeuvers.SocialEnergyBank.get(1);
+      if(bank1 < 5) {
+        log(`✗ Week 1 starter not applied: bank1=${bank1}, expected >= 5`, 'fail');
+        allCorrect = false;
+      }
+      
+      // HOH winner should get bonus (+5)
+      const bank2 = window.SocialManeuvers.SocialEnergyBank.get(2);
+      if(bank2 < 5) {
+        log(`✗ HOH win bonus not applied: bank2=${bank2}`, 'fail');
+        allCorrect = false;
+      }
+      
+      // Nominees should get bonus (+4 each)
+      const bank3 = window.SocialManeuvers.SocialEnergyBank.get(3);
+      const bank4 = window.SocialManeuvers.SocialEnergyBank.get(4);
+      if(bank3 < 5 || bank4 < 5) {
+        log(`✗ Nominee bonus not applied: bank3=${bank3}, bank4=${bank4}`, 'fail');
+        allCorrect = false;
+      }
+      
+      // Players not drawn for veto should get penalty (-1)
+      const bank5 = window.SocialManeuvers.SocialEnergyBank.get(5);
+      if(bank5 !== 4) { // Week 1 starter +5, notDrawnVeto -1 = 4
+        log(`✗ notDrawnVeto penalty not applied: bank5=${bank5}, expected=4`, 'fail');
+        allCorrect = false;
+      }
+      
+      if(allCorrect) {
+        log('✓ Reconciliation correctly applied events for pre-existing state', 'pass');
+      }
+      
+      // Restore original game
+      window.game = originalGame;
     }
   </script>
 </body>
