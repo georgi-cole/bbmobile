@@ -81,11 +81,25 @@
   if(!global.__cardGen) global.__cardGen = 0;
   if(!global.__cardTimeouts) global.__cardTimeouts = [];
 
-  // Safe card wrapper that tags with generation token
+  // Safe card wrapper that tags with generation token (dedupe-aware)
   function safeShowCard(title, lines, type, duration, queue){
+    // Short signature for dedupe: title + joined lines + type
+    const sig = `${String(title||'')}\u0000${Array.isArray(lines)?lines.join('|'):String(lines||'')}\u0000${String(type||'')}`;
+
+    // Ensure global tracking structures exist
+    if(!global.__cardPendingMap) global.__cardPendingMap = {};
+
+    // If an identical card is already pending, skip scheduling another
+    if(global.__cardPendingMap[sig]){
+      return global.__cardPendingMap[sig];
+    }
+
     const currentGen = global.__cardGen;
     const timeoutId = setTimeout(() => {
-      // Check if generation still valid
+      // Remove signature from pending map when firing
+      try { delete global.__cardPendingMap[sig]; } catch(e){}
+
+      // Only show if generation hasn't been invalidated
       if(global.__cardGen === currentGen && typeof global.showCard === 'function'){
         try {
           global.showCard(title, lines, type, duration, queue);
@@ -93,11 +107,19 @@
           console.warn('[cards] showCard error:', e);
         }
       }
-      // Remove from timeouts array
-      const idx = global.__cardTimeouts.indexOf(timeoutId);
-      if(idx >= 0) global.__cardTimeouts.splice(idx, 1);
+
+      // Cleanup from __cardTimeouts list
+      try {
+        const idx = (global.__cardTimeouts || []).indexOf(timeoutId);
+        if(idx >= 0) global.__cardTimeouts.splice(idx, 1);
+      } catch(e){}
     }, 0);
+
+    // Track timeouts for flush/cleanup and the pending signature
+    if(!Array.isArray(global.__cardTimeouts)) global.__cardTimeouts = [];
     global.__cardTimeouts.push(timeoutId);
+    global.__cardPendingMap[sig] = timeoutId;
+
     return timeoutId;
   }
 
@@ -205,7 +227,7 @@
   function recomputeAllianceCohesion(al){
     let sum=0,c=0;
     for(let i=0;i<al.members.length;i++)
-      for(let j=i+1;j<al.members.length;j++){ sum+=getBond(al.members[i],al.members[j]); c++; }
+      for(let j=i+1;j<al.members.length;j++){ sum+=getBond(al.members[i].id,al.members[j].id); c++; }
     al.cohesion=c?Math.round(sum/c):0;
   }
   function formAlliance(memberIds){
