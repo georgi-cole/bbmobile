@@ -166,6 +166,31 @@
     p3c.textContent = 'Don\'t underestimate social influence: even a weak competitor can survive if they\'re well-connected.';
     container.appendChild(p3c);
 
+    // Section 3b: Social Maneuvers (if enabled)
+    const cfg = (global.game && global.game.cfg) || {};
+    if (cfg.enableSocialManeuvers !== false) { // Show if enabled or undefined (default enabled)
+      const h3b = document.createElement('h3');
+      h3b.textContent = '3b. Social Maneuvers';
+      h3b.style.cssText = 'margin-top:16px;margin-bottom:6px;color:#ffdc8b;font-weight:700;';
+      container.appendChild(h3b);
+
+      const p3b1 = document.createElement('p');
+      p3b1.innerHTML = '<strong>Social Maneuvers</strong> lets you actively shape relationships by spending Energy to interact with houseguests—chat, strategize, and influence others.';
+      container.appendChild(p3b1);
+
+      const p3b2 = document.createElement('p');
+      p3b2.innerHTML = '<strong>How it works:</strong> Select players (tap on mobile; Ctrl/Cmd-click on desktop), pick an action, and execute. Stronger relationships unlock more options. Active actions appear first; locked actions show requirements.';
+      container.appendChild(p3b2);
+
+      const p3b3 = document.createElement('p');
+      p3b3.innerHTML = '<strong>Resources:</strong> Energy (social stamina), Influence (standing with players), Information (strategic knowledge). Build relationships gradually; observe to gather intel; use strategy actions when unlocked.';
+      container.appendChild(p3b3);
+
+      const p3b4 = document.createElement('p');
+      p3b4.innerHTML = '<strong>Note:</strong> Evicted players cannot use Social Maneuvers. <a href="docs/social-maneuvers-guide.md" target="_blank" style="color:#4a9eff;">Learn more</a>';
+      container.appendChild(p3b4);
+    }
+
     // Section 4
     const h4 = document.createElement('h3');
     h4.textContent = '4. Eviction & Jury';
