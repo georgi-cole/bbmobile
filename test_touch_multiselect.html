@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Touch Multi-Select for Social Maneuvers</title>
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0f1a;
+      color: #fff;
+    }
+
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .test-header {
+      background: linear-gradient(135deg, #1a2d45, #0f1e32);
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .test-header h1 {
+      margin: 0 0 10px 0;
+      color: #4a90e2;
+      font-size: 1.5rem;
+    }
+
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(100, 180, 255, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .test-section h2 {
+      margin: 0 0 15px 0;
+      font-size: 1.2rem;
+      color: #4a90e2;
+    }
+
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .test-btn {
+      background: linear-gradient(135deg, #4a90e2, #357abd);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .test-btn:hover {
+      background: linear-gradient(135deg, #5a9ff2, #4585c7);
+      transform: translateY(-2px);
+    }
+
+    .status-display {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .status-item {
+      margin-bottom: 6px;
+    }
+
+    .status-label {
+      color: rgba(255, 255, 255, 0.6);
+      margin-right: 8px;
+    }
+
+    .status-value {
+      color: #4a90e2;
+      font-weight: 600;
+    }
+
+    /* Mock TV container */
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      aspect-ratio: 16 / 9;
+      margin: 20px auto;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    #tvOverlay > * {
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🎮 Touch Multi-Select Test</h1>
+      <p style="margin: 0; font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">
+        Testing mobile multi-select for Social Maneuvers UI
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h2>Device Detection</h2>
+      <div class="status-display">
+        <div class="status-item">
+          <span class="status-label">Touch Device:</span>
+          <span class="status-value" id="isTouchDevice">Checking...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Group Mode:</span>
+          <span class="status-value" id="groupModeStatus">Checking...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Selected IDs:</span>
+          <span class="status-value" id="selectedIdsStatus">None</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div class="test-controls">
+        <button class="test-btn" onclick="openTestModal()">Open Modal</button>
+        <button class="test-btn" onclick="toggleGroupModeManual()">Toggle Group Mode</button>
+        <button class="test-btn" onclick="clearSelections()">Clear Selections</button>
+        <button class="test-btn" onclick="updateStatus()">Update Status</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Instructions</h2>
+      <ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: rgba(255, 255, 255, 0.8);">
+        <li><strong>Touch Device:</strong> Tap to add/remove players. Long-press (350ms) to toggle Group mode.</li>
+        <li><strong>Desktop:</strong> Click to select. Hold Ctrl/Cmd for multi-select.</li>
+        <li><strong>Group Toggle:</strong> On touch devices, a "Group" pill appears in the header.</li>
+        <li><strong>Visual Feedback:</strong> Selected cards have blue outline and glow effect.</li>
+        <li><strong>Accessibility:</strong> Cards have role="button" and aria-pressed attributes.</li>
+      </ul>
+    </div>
+
+    <!-- Mock TV Container -->
+    <div id="tv">
+      <div id="tvOverlay"></div>
+    </div>
+  </div>
+
+  <script>
+    // Mock game environment
+    window.game = {
+      humanId: 1,
+      phase: 'social_intermission'
+    };
+
+    // Mock players
+    const mockPlayers = [
+      { id: 1, name: 'You', evicted: false, affinity: {} },
+      { id: 2, name: 'Alice', evicted: false },
+      { id: 3, name: 'Bob', evicted: false },
+      { id: 4, name: 'Carol', evicted: false },
+      { id: 5, name: 'David', evicted: false },
+      { id: 6, name: 'Eve', evicted: false }
+    ];
+
+    // Mock game functions
+    window.getP = (id) => mockPlayers.find(p => p.id === id);
+    window.alivePlayers = () => mockPlayers.filter(p => !p.evicted);
+    window.safeName = (id) => window.getP(id)?.name || 'Unknown';
+    window.addLog = (msg, type) => console.log(`[${type}] ${msg}`);
+    window.getDicebearUrl = (name) => `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(name)}`;
+    window.Game = {
+      resolveAvatar: (player) => `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(player.name)}`
+    };
+
+    // Mock SocialManeuvers
+    window.SocialManeuvers = {
+      isEnabled: () => true,
+      pausePhaseTimer: () => console.log('Timer paused'),
+      resumePhaseTimer: () => console.log('Timer resumed'),
+      executeAction: (actorId, targetId, actionId, extraTargets) => {
+        console.log('Action executed:', { actorId, targetId, actionId, extraTargets });
+        return {
+          success: true,
+          outcome: {
+            type: 'positive',
+            message: 'Action completed successfully'
+          }
+        };
+      },
+      SOCIAL_ACTIONS: [
+        { 
+          id: 'smalltalk', 
+          label: 'Small Talk', 
+          costs: { energy: 1 },
+          maxTargets: 1,
+          groupAllowed: false,
+          category: 'friendly',
+          description: 'Light conversation'
+        },
+        { 
+          id: 'group_hangout', 
+          label: 'Group Hangout', 
+          costs: { energy: 2 },
+          maxTargets: 5,
+          groupAllowed: true,
+          multiTarget: true,
+          category: 'friendly',
+          description: 'Hang out with multiple people'
+        }
+      ],
+      SocialResources: {
+        getAll: (playerId) => ({ energy: 5, influence: 2, information: 1 }),
+        spend: (playerId, costs) => console.log('Spent:', costs),
+        earn: (playerId, gains) => console.log('Earned:', gains),
+        init: (playerId) => console.log('Resources initialized for', playerId)
+      }
+    };
+
+    // Load socialize-mobile.js
+    const script = document.createElement('script');
+    script.src = 'js/socialize-mobile.js';
+    document.body.appendChild(script);
+
+    // Test functions
+    function openTestModal() {
+      if (window.SocializeMobile) {
+        window.SocializeMobile.openModal();
+      } else {
+        alert('SocializeMobile not loaded yet');
+      }
+    }
+
+    function toggleGroupModeManual() {
+      if (window.SocializeMobile?.state) {
+        window.SocializeMobile.state.multiSelectMode = !window.SocializeMobile.state.multiSelectMode;
+        updateStatus();
+        alert(`Group mode: ${window.SocializeMobile.state.multiSelectMode ? 'ON' : 'OFF'}`);
+      }
+    }
+
+    function clearSelections() {
+      if (window.SocializeMobile?.state) {
+        window.SocializeMobile.state.selectedIds.clear();
+        document.querySelectorAll('.player-card.selected').forEach(card => {
+          card.classList.remove('selected');
+          card.setAttribute('aria-pressed', 'false');
+        });
+        updateStatus();
+      }
+    }
+
+    function updateStatus() {
+      if (window.SocializeMobile) {
+        document.getElementById('isTouchDevice').textContent = 
+          window.SocializeMobile.isTouchDevice ? 'Yes (Touch)' : 'No (Desktop)';
+        document.getElementById('groupModeStatus').textContent = 
+          window.SocializeMobile.state.multiSelectMode ? 'ON' : 'OFF';
+        document.getElementById('selectedIdsStatus').textContent = 
+          window.SocializeMobile.state.selectedIds.size > 0 
+            ? Array.from(window.SocializeMobile.state.selectedIds).join(', ') 
+            : 'None';
+      }
+    }
+
+    // Auto-update status every 2 seconds
+    setInterval(updateStatus, 2000);
+    setTimeout(updateStatus, 1000);
+
+    // Log when script loads
+    window.addEventListener('load', () => {
+      console.log('Test page loaded');
+      setTimeout(() => {
+        console.log('SocializeMobile available:', !!window.SocializeMobile);
+        updateStatus();
+      }, 500);
+    });
+  </script>
+</body>
+</html>
