@@ -13,7 +13,17 @@ Complete documentation for the minigame system, including:
 - Linting rules
 - Migration guide
 
+### [social-maneuvers-guide.md](social-maneuvers-guide.md)
+Quick guide to the Social Maneuvers system for players:
+- What Social Maneuvers is and when it appears
+- The three resources (Energy, Influence, Information)
+- How to select players and use actions
+- Tips for success and accessibility features
+
 ## Quick Links
+
+### For Players
+- **Understanding Social Maneuvers**: See [social-maneuvers-guide.md](social-maneuvers-guide.md) for a quick guide to the Social phase
 
 ### For Developers
 - **Adding a new minigame**: See [minigames.md - Adding New Games](minigames.md#adding-new-games)
