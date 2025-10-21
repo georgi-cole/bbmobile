@@ -147,10 +147,11 @@
     launcher = document.createElement('div');
     launcher.id = 'socializeLauncher';
     launcher.className = 'socialize-launcher';
+    launcher.setAttribute('data-sm-social-card-wrap', ''); // Wrapper for safe-area padding
     // Mount with z-index 2147483000 to ensure visibility
     launcher.style.zIndex = '2147483000';
     launcher.innerHTML = `
-      <div class="socialize-hud">
+      <div class="socialize-hud socialize-card social-live-card" data-sm-social-card>
         <div class="socialize-hud-title">Social Phase</div>
         <div class="socialize-hud-resources">
           <div class="resource-badge" data-tip="Energy: Used for all social actions">
@@ -168,7 +169,7 @@
           <button class="resource-help-btn" id="resourceHelpBtn" aria-label="Help">?</button>
         </div>
       </div>
-      <button class="socialize-open-btn" id="socializeOpenBtn">Socialize</button>
+      <button class="socialize-open-btn btn-socialize" id="socializeOpenBtn" data-sm-socialize-btn>Socialize</button>
     `;
 
     mountTarget.appendChild(launcher);

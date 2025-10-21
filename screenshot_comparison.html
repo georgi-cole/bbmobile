@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Social Card Glass Treatment Comparison</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #0d151f 0%, #1a2d45 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .comparison-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #fff;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1.8rem;
+    }
+
+    .cards-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .card-section {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .card-label {
+      color: #83bfff;
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 15px;
+      text-align: center;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+
+    /* Social Card Container */
+    .social-card-container {
+      position: relative;
+      min-height: 200px;
+    }
+
+    /* Challenge Card Example (using same styles from revealCard) */
+    .challenge-card-example {
+      background: linear-gradient(145deg, rgba(28, 43, 62, 0.75), rgba(12, 22, 36, 0.72));
+      backdrop-filter: blur(16px) saturate(1.4);
+      -webkit-backdrop-filter: blur(16px) saturate(1.4);
+      border: 1px solid rgba(110, 160, 220, 0.25);
+      border-radius: 18px;
+      padding: 22px 26px 24px;
+      box-shadow: 0 12px 36px -16px rgba(0, 0, 0, 0.8), 0 6px 20px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(120, 180, 255, 0.15),
+                  0 0 32px -10px rgba(131, 191, 255, 0.3) inset;
+      color: #e3ecf5;
+      text-align: center;
+    }
+
+    .challenge-card-example h3 {
+      font-size: 1.15rem;
+      margin: 0 0 0.6em;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0f8ff 0%, #66b8ff 50%, #f0f8ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 28px #83bfff;
+    }
+
+    .viewport-indicator {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      z-index: 10000;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.4rem;
+      }
+      
+      .card-label {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-indicator" id="viewportInfo"></div>
+  
+  <div class="comparison-container">
+    <h1>🎨 Glass Treatment Comparison</h1>
+
+    <div class="cards-wrapper">
+      <!-- Challenge Card Reference -->
+      <div class="card-section">
+        <div class="card-label">🏆 Challenge Card (Reference)</div>
+        <div class="challenge-card-example">
+          <h3>Head of Household Competition</h3>
+          <p>This card uses the exact glass treatment that Social cards should match:</p>
+          <ul style="text-align: left; margin: 15px 0; padding-left: 20px;">
+            <li>backdrop-filter: blur(16px) saturate(1.4)</li>
+            <li>Background gradient with 75%/72% opacity</li>
+            <li>Border: rgba(110, 160, 220, 0.25)</li>
+            <li>Multiple shadow layers with inset glow</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Social Card -->
+      <div class="card-section">
+        <div class="card-label">💬 Social Maneuvers Card (Updated)</div>
+        <div class="social-card-container">
+          <div class="socialize-launcher" data-sm-social-card-wrap style="position: relative; top: 0; right: auto;">
+            <div class="socialize-hud socialize-card social-live-card" data-sm-social-card>
+              <div class="socialize-hud-title">Social Phase</div>
+              <div class="socialize-hud-resources">
+                <div class="resource-badge">
+                  <span class="resource-icon">⚡</span>
+                  <span class="resource-value">5</span>
+                </div>
+                <div class="resource-badge">
+                  <span class="resource-icon">🤝</span>
+                  <span class="resource-value">3</span>
+                </div>
+                <div class="resource-badge">
+                  <span class="resource-icon">💡</span>
+                  <span class="resource-value">2</span>
+                </div>
+                <button class="resource-help-btn">?</button>
+              </div>
+            </div>
+            <button class="socialize-open-btn btn-socialize" data-sm-socialize-btn>Socialize</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateViewportInfo() {
+      const width = window.innerWidth;
+      const mode = width >= 768 ? '🖥️ Desktop' : '📱 Mobile';
+      document.getElementById('viewportInfo').textContent = `${mode} (${width}px)`;
+    }
+    window.addEventListener('resize', updateViewportInfo);
+    updateViewportInfo();
+  </script>
+</body>
+</html>

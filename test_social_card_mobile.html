@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Test: Social Card Mobile Centering & Glass</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: #0d151f;
+      position: relative;
+    }
+
+    /* Simulate TV overlay container */
+    #tvOverlay {
+      position: relative;
+      width: 100%;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0d151f 0%, #1a2d45 100%);
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Simulate some header text that might overlap */
+    .header-text {
+      color: #fff;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+
+    /* Test info panel */
+    .test-info {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      max-width: 300px;
+      z-index: 10000;
+    }
+
+    .test-info h3 {
+      margin: 0 0 8px 0;
+      font-size: 1rem;
+    }
+
+    .test-info ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .test-info li {
+      margin: 4px 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="tvOverlay">
+    <div class="header-text">
+      🎮 Social Phase Active - Week 3
+    </div>
+
+    <!-- Social Card (will be injected by JS) -->
+    <div id="socializeLauncher" class="socialize-launcher" data-sm-social-card-wrap>
+      <div class="socialize-hud socialize-card social-live-card" data-sm-social-card>
+        <div class="socialize-hud-title">Social Phase</div>
+        <div class="socialize-hud-resources">
+          <div class="resource-badge" data-tip="Energy: Used for all social actions">
+            <span class="resource-icon">⚡</span>
+            <span class="resource-value" id="hudEnergy">5</span>
+          </div>
+          <div class="resource-badge" data-tip="Influence: Gained from positive interactions">
+            <span class="resource-icon">🤝</span>
+            <span class="resource-value" id="hudInfluence">3</span>
+          </div>
+          <div class="resource-badge" data-tip="Information: Gained from strategic talks">
+            <span class="resource-icon">💡</span>
+            <span class="resource-value" id="hudInformation">2</span>
+          </div>
+          <button class="resource-help-btn" id="resourceHelpBtn" aria-label="Help">?</button>
+        </div>
+      </div>
+      <button class="socialize-open-btn btn-socialize" id="socializeOpenBtn" data-sm-socialize-btn>Socialize</button>
+    </div>
+  </div>
+
+  <div class="test-info">
+    <h3>✅ Test Checklist</h3>
+    <ul>
+      <li>Card is centered on mobile (< 768px)</li>
+      <li>Card has glass treatment (blur + saturation)</li>
+      <li>Card has proper spacing from top (no overlap)</li>
+      <li>Socialize button has glass treatment</li>
+      <li>Safe-area insets applied on mobile</li>
+      <li>Desktop: Card stays in top-right (≥ 768px)</li>
+    </ul>
+    <p><strong>Resize window to test mobile vs desktop!</strong></p>
+  </div>
+
+  <script>
+    // Simple interaction test
+    document.getElementById('socializeOpenBtn')?.addEventListener('click', function() {
+      alert('Socialize button clicked! ✅');
+    });
+
+    document.getElementById('resourceHelpBtn')?.addEventListener('click', function() {
+      alert('Resource help button clicked! ✅');
+    });
+
+    // Display current viewport width
+    function updateViewportInfo() {
+      const width = window.innerWidth;
+      const mode = width >= 768 ? 'DESKTOP' : 'MOBILE';
+      console.log(`Viewport: ${width}px - Mode: ${mode}`);
+    }
+
+    window.addEventListener('resize', updateViewportInfo);
+    updateViewportInfo();
+  </script>
+</body>
+</html>
