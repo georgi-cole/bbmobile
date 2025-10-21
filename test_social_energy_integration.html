@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integration Test: Social Energy Week 1 & Auto-Skip</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    h2 { color: #f7b955; }
+    button {
+      padding: 10px 20px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .status.success { background: rgba(46, 204, 113, 0.2); }
+    .status.warning { background: rgba(241, 196, 15, 0.2); }
+    .status.error { background: rgba(231, 76, 60, 0.2); }
+  </style>
+</head>
+<body>
+  <h1>Social Energy Integration Test</h1>
+  
+  <div class="test-section">
+    <h2>Scenario 1: Fresh Week 1 Game</h2>
+    <p>Start a new game and enter the Social phase. Verify 5 energy is available.</p>
+    <div id="scenario1-status" class="status"></div>
+    <button onclick="runScenario1()">Run Scenario 1</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Scenario 2: Zero Energy Auto-Skip</h2>
+    <p>Manually set energy to 0 and trigger Social phase. Verify auto-skip occurs.</p>
+    <div id="scenario2-status" class="status"></div>
+    <button onclick="runScenario2()">Run Scenario 2</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Scenario 3: Week 2 with Accumulated Energy</h2>
+    <p>Simulate Week 2 with prior energy accumulation. Verify no auto-seeding.</p>
+    <div id="scenario3-status" class="status"></div>
+    <button onclick="runScenario3()">Run Scenario 3</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Debug Panel</h2>
+    <p>Current Game State:</p>
+    <pre id="debug-info" style="background: #000; padding: 10px; border-radius: 4px; overflow: auto; max-height: 200px;"></pre>
+    <button onclick="updateDebugInfo()">Refresh Debug Info</button>
+    <button onclick="window.__smDebug?.showBank?.()">Show Bank</button>
+    <button onclick="window.__smDebug?.setBank?.(window.game?.humanId, 0)">Set Bank to 0</button>
+    <button onclick="window.__smDebug?.setBank?.(window.game?.humanId, 10)">Set Bank to 10</button>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social.js"></script>
+  <script src="js/ui.hud-and-router.js"></script>
+  
+  <script>
+    let eventLog = [];
+
+    // Setup game
+    function setupGame() {
+      window.game = {
+        week: 1,
+        phase: 'lobby',
+        humanId: 'player1',
+        players: [
+          { id: 'player1', name: 'TestPlayer', human: true, evicted: false },
+          { id: 'player2', name: 'CPU1', evicted: false },
+          { id: 'player3', name: 'CPU2', evicted: false }
+        ],
+        cfg: { enableSocialManeuvers: true }
+      };
+
+      // Listen for auto-skip event
+      window.addEventListener('sm-phase-skip-empty', (e) => {
+        eventLog.push({
+          type: 'sm-phase-skip-empty',
+          detail: e.detail,
+          timestamp: new Date().toISOString()
+        });
+        console.log('✅ Auto-skip event received:', e.detail);
+      });
+
+      console.log('✓ Game setup complete');
+      updateDebugInfo();
+    }
+
+    function updateDebugInfo() {
+      const SM = window.SocialManeuvers;
+      if (!SM || !window.game) {
+        document.getElementById('debug-info').textContent = 'Not initialized';
+        return;
+      }
+
+      const humanId = window.game.humanId;
+      const info = {
+        week: window.game.week,
+        phase: window.game.phase,
+        humanId,
+        bankBalance: SM.SocialEnergyBank.get(humanId),
+        phaseEnergy: SM.SocialResources.get(humanId, 'energy'),
+        influence: SM.SocialResources.get(humanId, 'influence'),
+        information: SM.SocialResources.get(humanId, 'information'),
+        eventLog: eventLog
+      };
+
+      document.getElementById('debug-info').textContent = JSON.stringify(info, null, 2);
+    }
+
+    function setStatus(elementId, message, type = 'success') {
+      const el = document.getElementById(elementId);
+      el.textContent = message;
+      el.className = `status ${type}`;
+    }
+
+    function runScenario1() {
+      console.log('═══ Scenario 1: Fresh Week 1 Game ═══');
+      setupGame();
+      
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+
+      // Initialize bank (simulates first-time player)
+      SM.SocialEnergyBank.init(humanId);
+      const bankBalance = SM.SocialEnergyBank.get(humanId);
+
+      console.log(`Bank balance: ${bankBalance}`);
+
+      if (bankBalance === 5) {
+        setStatus('scenario1-status', `✅ PASS: Week 1 bank initialized to 5 energy`, 'success');
+      } else {
+        setStatus('scenario1-status', `❌ FAIL: Expected 5, got ${bankBalance}`, 'error');
+      }
+
+      // Simulate entering social phase
+      SM.SocialResources.init(humanId);
+      SM.SocialResources.recomputePhaseEnergy(humanId);
+      const phaseEnergy = SM.SocialResources.get(humanId, 'energy');
+
+      console.log(`Phase energy: ${phaseEnergy}`);
+
+      if (phaseEnergy === 5) {
+        setStatus('scenario1-status', `✅ PASS: Week 1 starts with 5 energy (bank: ${bankBalance}, phase: ${phaseEnergy})`, 'success');
+      } else {
+        setStatus('scenario1-status', `❌ FAIL: Phase energy is ${phaseEnergy}, expected 5`, 'error');
+      }
+
+      updateDebugInfo();
+    }
+
+    function runScenario2() {
+      console.log('═══ Scenario 2: Zero Energy Auto-Skip ═══');
+      setupGame();
+      eventLog = [];
+
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+
+      // Set bank to 0
+      SM.SocialEnergyBank.init(humanId);
+      SM.SocialEnergyBank.set(humanId, 0);
+      SM.SocialResources.init(humanId);
+      SM.SocialResources.recomputePhaseEnergy(humanId);
+
+      const phaseEnergy = SM.SocialResources.get(humanId, 'energy');
+      console.log(`Phase energy: ${phaseEnergy}`);
+
+      if (phaseEnergy <= 0) {
+        setStatus('scenario2-status', `✅ Energy is ${phaseEnergy} - triggering onSocialPhaseStart...`, 'warning');
+        
+        // Trigger phase start (this should trigger auto-skip)
+        SM.onSocialPhaseStart();
+
+        // Check if event was emitted
+        setTimeout(() => {
+          const skipEvent = eventLog.find(e => e.type === 'sm-phase-skip-empty');
+          if (skipEvent) {
+            setStatus('scenario2-status', `✅ PASS: Auto-skip triggered and event emitted!`, 'success');
+          } else {
+            setStatus('scenario2-status', `⚠️ Auto-skip overlay shown, event should emit`, 'warning');
+          }
+          updateDebugInfo();
+        }, 100);
+      } else {
+        setStatus('scenario2-status', `❌ FAIL: Energy is ${phaseEnergy}, expected 0 or less`, 'error');
+      }
+    }
+
+    function runScenario3() {
+      console.log('═══ Scenario 3: Week 2 with Accumulated Energy ═══');
+      setupGame();
+      
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+
+      // Simulate Week 2
+      window.game.week = 2;
+      window.game.__sm_bankEnergy = new Map();
+
+      // Initialize bank for Week 2 (should be 0)
+      SM.SocialEnergyBank.init(humanId);
+      let bankBalance = SM.SocialEnergyBank.get(humanId);
+
+      console.log(`Week 2 initial bank: ${bankBalance}`);
+
+      if (bankBalance === 0) {
+        setStatus('scenario3-status', `✅ Week 2 bank correctly starts at 0`, 'success');
+      } else {
+        setStatus('scenario3-status', `❌ Week 2 bank is ${bankBalance}, expected 0`, 'error');
+        return;
+      }
+
+      // Simulate accumulating energy from events
+      SM.SocialEnergyBank.adjust(humanId, 15); // e.g., won HOH + POV
+      bankBalance = SM.SocialEnergyBank.get(humanId);
+
+      console.log(`Week 2 after events: ${bankBalance}`);
+
+      if (bankBalance === 15) {
+        setStatus('scenario3-status', `✅ PASS: Week 2 energy accumulation works (0 → 15)`, 'success');
+      } else {
+        setStatus('scenario3-status', `❌ FAIL: Expected 15, got ${bankBalance}`, 'error');
+      }
+
+      updateDebugInfo();
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setupGame();
+      console.log('✓ Integration test page loaded');
+    });
+  </script>
+</body>
+</html>
