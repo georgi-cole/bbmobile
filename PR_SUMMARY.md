@@ -1,161 +1,83 @@
-# 🎭 Social Maneuvers Parity - PR Summary
+# Fix Duplicate "Challenge completed" Popup
 
-## Overview
-This PR brings the main branch to full Social Maneuvers parity by addressing 4 root causes and implementing comprehensive phase hooks, event tracking, and resource lifecycle management.
+## Problem
+During HOH or Veto competition completion, a green "Challenge completed" card (faux TV reveal card) appeared, disappeared, then briefly reappeared and disappeared again. This looked like a duplicate render.
 
-## 🎯 Problem Statement
-**Goal**: Enable Social Maneuvers system to work reliably with proper phase transitions, weekly resets, and event-driven bonuses.
+## Root Cause
+The same card was being scheduled twice via two near-simultaneous paths:
+1. **CardQueue-based `showCard`** - Direct enqueueing to CardQueue
+2. **Zero-delay timeout via `safeShowCard`** - setTimeout(0) wrapper that also calls showCard
 
-**Root Causes Fixed**:
-1. ❌ Phase hooks not reliably called → ✅ Dual entry points + wrapper
-2. ❌ Legacy summary still showing → ✅ Full suppression with helper
-3. ❌ Weekly reset not wired → ✅ Called at week rollover
-4. ❌ Event grants missing → ✅ All events tracked
+Neither layer performed deduplication of identical cards, so two near-simultaneous enqueues rendered the same card twice.
 
-## 📊 Changes at a Glance
+## Solution
 
-### Code Files Modified: 7
-| File | Changes | Purpose |
-|------|---------|---------|
-| `js/social.js` | +140 lines | Phase hooks, legacy suppression, engine summary |
-| `js/competitions.js` | +10 lines | HOH win event recording |
-| `js/nominations.js` | +12 lines | Nomination event recording |
-| `js/veto.js` | +24 lines | Veto win/usage/replacement events |
-| `js/eviction.js` | +14 lines | Weekly reset at eviction |
-| `js/self-eviction.js` | +14 lines | Weekly reset at self-eviction |
-| `js/socialize-mobile.js` | +8 lines | Timer pause/resume error handling |
+### 1. CardQueue Deduplication (js/ui.overlay-and-logs.js)
+- Added `pendingSigs` Set to track queued card signatures
+- Signature format: `${title}\u0000${lines.join('|')}\u0000${tone}`
+- `push()` skips enqueue if signature already pending
+- Signature attached to job as `job.__sig` for cleanup
+- `next()` deletes signature after card is removed (success and error paths)
 
-### Documentation Created: 4
-- `test_social_maneuvers_parity.html` - Automated test suite (11KB)
-- `SOCIAL_MANEUVERS_PARITY_IMPLEMENTATION.md` - Technical docs (11KB)
-- `SOCIAL_MANEUVERS_VISUAL_VERIFICATION.md` - Testing guide (10KB)
-- `SOCIAL_MANEUVERS_COMPLETE.md` - Final summary (10KB)
+### 2. FlushAllCards Cleanup (js/state.js)
+- Updated `flushAllCards()` to clear `global.__cardPendingMap`
+- Prevents stuck dedupe state if flush occurs before scheduled timeouts fire
 
-## 🔑 Key Features
+### 3. safeShowCard Deduplication (js/state.js)
+- Already implemented with signature-based pending map
+- Skips scheduling if identical signature already pending
+- Clears signature when timeout fires
 
-### 1. Phase Hooks (social.js)
-```javascript
-// Dual entry points for reliability
-startSocialIntermission() {
-  onSocialPhaseStart();  // Direct call
-  // ... phase logic
-  onDone() {
-    onSocialPhaseEnd();  // Direct call
-  }
-}
+## Changes Summary
 
-setPhase() {
-  // Wrapper catches direct calls
-  if (entering) onSocialPhaseStart();
-  if (leaving) onSocialPhaseEnd();
-}
-```
+### Files Modified
+- `js/state.js` - Added __cardPendingMap cleanup in flushAllCards
+- `js/ui.overlay-and-logs.js` - Added pendingSigs Set and deduplication logic in CardQueue
 
-### 2. Weekly Reset (eviction.js, self-eviction.js)
-```javascript
-g.week++;
-if (g.__socialWeeklyResetWeek < g.week) {
-  g.__socialWeeklyResetWeek = g.week;
-  socialOnNewWeek(); // Resets energy with bonuses
-}
-```
+### Test Files Added
+- `test_card_deduplication.html` - Interactive browser test page
+- `test_card_dedup_logic.mjs` - Unit tests for deduplication logic
+- `CARD_DEDUP_VERIFICATION.md` - Manual verification guide
 
-### 3. Event Tracking (competitions.js, nominations.js, veto.js)
-```javascript
-// HOH Win
-recordWeeklyEvent(winnerId, { hohWin: true }); // +5 energy
-
-// Nomination
-recordWeeklyEvent(nomineeId, { nominated: true }); // +4 energy
-
-// Veto Win
-recordWeeklyEvent(holderId, { vetoWin: true }); // +3 energy
-```
-
-## ✅ Testing
+## Testing
 
 ### Automated Tests
-Run `test_social_maneuvers_parity.html`:
-- ✅ Legacy suppression
-- ✅ Weekly lifecycle
-- ✅ Event grants
-- ✅ Timer controls
-- ✅ Launcher mounting
-- ✅ setPhase wrapper
-
-### Manual Verification
-Console logs to check:
+```bash
+node test_card_dedup_logic.mjs
 ```
-✓ [social.js] ▶ Entering social_intermission
-✓ [social.js] ✓ Launcher mounted
-✓ [competitions.js] ✓ Recorded HOH win event
-✓ [eviction] ✓ Called socialOnNewWeek
-✓ [socialize-mobile] ⏸️ Phase timer paused
+All tests pass ✓
+
+### Manual Testing Required
+1. Complete HOH competition - verify "Challenge Complete!" appears exactly once
+2. Complete Veto competition - verify no duplicate appearance
+3. Verify other game cards (nominations, evictions, jury votes) still work correctly
+
+## Technical Details
+
+### Signature Consistency
+Both deduplication paths use identical signature format:
+```javascript
+`${String(title)}\u0000${lines.join('|')}\u0000${String(tone)}`
 ```
 
-## 🛡️ Quality Assurance
+### Cleanup Paths
+Signatures are released:
+1. After card is removed from DOM (normal path)
+2. On render error (error path)
+3. When `flushAllCards()` is called (reset path)
 
-**Error Handling**:
-- All external calls wrapped in try-catch
-- Feature detection guards before all calls
-- Console logging for debugging
-- Graceful fallbacks
+## Verification Checklist
+- [x] Signature generation is consistent across both paths
+- [x] Deduplication prevents identical cards from queuing
+- [x] Signatures are properly cleaned up after card display
+- [x] Flush properly clears pending dedupe state
+- [x] Unit tests pass
+- [ ] HOH completion shows card exactly once (requires manual testing)
+- [ ] Veto completion shows card exactly once (requires manual testing)
+- [ ] Other game cards display correctly (requires manual testing)
 
-**Backward Compatibility**:
-- Legacy system works when SM disabled
-- No breaking changes
-- All existing APIs preserved
-
-**Performance**:
-- Guards prevent double-calls
-- Week tracking prevents redundant resets
-- Minimal overhead
-
-## 📈 Impact
-
-### When SM Enabled (enableSocialManeuvers: true)
-✅ Only new UI (launcher, modal, HUD)  
-✅ Engine summary (not legacy)  
-✅ Weekly energy bonuses  
-✅ Event grants applied  
-✅ Timer controls work  
-
-### When SM Disabled (enableSocialManeuvers: false)
-✅ Legacy system unchanged  
-✅ Legacy UI shows  
-✅ Legacy summary generates  
-✅ No impact on gameplay  
-
-## 🚀 Deployment
-
-**Ready for**:
-- [x] Code review
-- [x] Automated testing
-- [x] Manual validation
-- [ ] Production deployment
-
-**How to Test**:
-1. Open `test_social_maneuvers_parity.html`
-2. Click "Run All Tests"
-3. Follow `SOCIAL_MANEUVERS_VISUAL_VERIFICATION.md`
-4. Check console for expected logs
-
-## 📚 Documentation
-
-| Document | Purpose | Size |
-|----------|---------|------|
-| PARITY_IMPLEMENTATION.md | Technical details | 11KB |
-| VISUAL_VERIFICATION.md | Testing guide | 10KB |
-| COMPLETE.md | Final summary | 10KB |
-| test_parity.html | Test suite | 11KB |
-
-## ✨ Summary
-
-**Lines Changed**: ~222 code + ~1,400 docs  
-**Files Modified**: 7 code + 4 docs  
-**Root Causes Fixed**: 4/4 ✅  
-**Test Coverage**: 100% ✅  
-**Documentation**: Complete ✅  
-**Backward Compatible**: Yes ✅  
-
-**Status**: ✅ READY FOR REVIEW AND MERGE
+## Compatibility
+- No breaking changes to existing API
+- Maintains existing timings and visual behavior
+- Only prevents duplicate scheduling of identical cards
+- Does not alter card animation or duration

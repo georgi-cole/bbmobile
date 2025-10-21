@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Card Deduplication</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: #83bfff; 
+    }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    
+    /* TV container */
+    #tv {
+      background: #0a0f16;
+      border: 2px solid #24364b;
+      border-radius: 12px;
+      padding: 40px 20px;
+      min-height: 400px;
+      position: relative;
+      margin: 20px 0;
+    }
+
+    .log {
+      background: #0a0f16;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+    .warn { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Card Deduplication</h1>
+    <p>Tests that duplicate cards are prevented when scheduled near-simultaneously through different paths:</p>
+    <ul>
+      <li><strong>safeShowCard</strong> (state.js) - uses setTimeout with signature-based pending map</li>
+      <li><strong>CardQueue.push</strong> (ui.overlay-and-logs.js) - uses Set to track pending signatures</li>
+    </ul>
+
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <button onclick="testSingleCard()">1. Show Single Card (Baseline)</button>
+      <button onclick="testDuplicateViaShowCard()">2. Try Duplicate via showCard (Should Skip)</button>
+      <button onclick="testDuplicateViaSafeShowCard()">3. Try Duplicate via safeShowCard (Should Skip)</button>
+      <button onclick="testDuplicateMixed()">4. Try Duplicate Mixed Paths (Should Skip)</button>
+      <button onclick="testDifferentCards()">5. Show Different Cards (Should All Display)</button>
+      <button onclick="testFlushCards()">6. Test Flush (Should Clear Pending Signatures)</button>
+      <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="test-section">
+      <h2>TV Display</h2>
+      <div id="tv">
+        <div style="color: #95a9c0; font-style: italic; text-align: center;">Cards will appear here</div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <!-- Load game modules -->
+  <script src="js/state.js"></script>
+  <script src="js/ui.overlay-and-logs.js"></script>
+
+  <script>
+    // Initialize minimal game state
+    window.game = window.game || {
+      cfg: {
+        fxCards: true,
+        cardHoldMs: 2000,
+        cardGapMs: 1000
+      },
+      players: []
+    };
+
+    // Logging helper
+    function addLog(msg, type = 'info') {
+      const log = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      log.prepend(entry);
+      console.log(msg);
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+      addLog('Log cleared', 'info');
+    }
+
+    // Test 1: Single card baseline
+    function testSingleCard() {
+      addLog('TEST 1: Showing single card via showCard', 'info');
+      window.showCard('Test Card', ['This is a test card', 'It should appear once'], 'neutral', 2000);
+      addLog('✓ Card scheduled', 'pass');
+    }
+
+    // Test 2: Duplicate via showCard (direct to CardQueue)
+    function testDuplicateViaShowCard() {
+      addLog('TEST 2: Attempting duplicate via showCard (should skip second)', 'info');
+      window.showCard('Duplicate Test', ['First call'], 'neutral', 3000);
+      addLog('First card scheduled', 'info');
+      
+      // Immediate second call with same params - should be skipped by CardQueue
+      setTimeout(() => {
+        window.showCard('Duplicate Test', ['First call'], 'neutral', 3000);
+        addLog('Second card attempted (should be skipped)', 'warn');
+      }, 10);
+    }
+
+    // Test 3: Duplicate via safeShowCard
+    function testDuplicateViaSafeShowCard() {
+      addLog('TEST 3: Attempting duplicate via safeShowCard (should skip second)', 'info');
+      window.safeShowCard('Safe Duplicate', ['First safe call'], 'neutral', 3000);
+      addLog('First safeShowCard scheduled', 'info');
+      
+      // Immediate second call - should be skipped by pending map
+      setTimeout(() => {
+        window.safeShowCard('Safe Duplicate', ['First safe call'], 'neutral', 3000);
+        addLog('Second safeShowCard attempted (should be skipped)', 'warn');
+      }, 10);
+    }
+
+    // Test 4: Mixed paths (safeShowCard + showCard)
+    function testDuplicateMixed() {
+      addLog('TEST 4: Attempting duplicate via mixed paths', 'info');
+      
+      // Call via safeShowCard
+      window.safeShowCard('Mixed Duplicate', ['Mixed test'], 'neutral', 3000);
+      addLog('Called via safeShowCard', 'info');
+      
+      // Call via showCard immediately after
+      setTimeout(() => {
+        window.showCard('Mixed Duplicate', ['Mixed test'], 'neutral', 3000);
+        addLog('Called via showCard (one should be skipped)', 'warn');
+      }, 50);
+    }
+
+    // Test 5: Different cards (should all display)
+    function testDifferentCards() {
+      addLog('TEST 5: Showing multiple different cards (all should display)', 'info');
+      window.showCard('Card A', ['First different card'], 'neutral', 2000);
+      window.showCard('Card B', ['Second different card'], 'neutral', 2000);
+      window.showCard('Card C', ['Third different card'], 'neutral', 2000);
+      addLog('✓ Three different cards scheduled', 'pass');
+    }
+
+    // Test 6: Flush and verify pending signatures cleared
+    function testFlushCards() {
+      addLog('TEST 6: Testing flush clears pending signatures', 'info');
+      
+      // Schedule some cards
+      window.safeShowCard('Pre-Flush Card', ['This card will be flushed'], 'neutral', 3000);
+      addLog('Card scheduled before flush', 'info');
+      
+      // Flush immediately
+      setTimeout(() => {
+        if (typeof window.flushAllCards === 'function') {
+          window.flushAllCards('test');
+          addLog('✓ flushAllCards called', 'pass');
+          
+          // Try to schedule same card again - should work now (not be blocked as duplicate)
+          setTimeout(() => {
+            window.safeShowCard('Pre-Flush Card', ['This card will be flushed'], 'neutral', 3000);
+            addLog('✓ Same card scheduled after flush (should not be blocked)', 'pass');
+          }, 100);
+        } else {
+          addLog('✗ flushAllCards not available', 'fail');
+        }
+      }, 100);
+    }
+
+    // Initial log
+    addLog('Card deduplication test page loaded', 'pass');
+    addLog('Ready to test. Click buttons above to run tests.', 'info');
+  </script>
+</body>
+</html>

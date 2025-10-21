@@ -132,6 +132,11 @@
     global.__cardTimeouts.forEach(id => clearTimeout(id));
     global.__cardTimeouts = [];
     
+    // Clear pending signature map to avoid stuck dedupe state
+    if(global.__cardPendingMap){
+      global.__cardPendingMap = {};
+    }
+    
     // Remove existing card DOM elements
     const cardHosts = document.querySelectorAll('.bb-card-host, [data-bb-card]');
     cardHosts.forEach(el => el.remove());

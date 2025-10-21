@@ -124,6 +124,7 @@
   // CardQueue with avatar logic
   const CardQueue = (function(){
     const q=[]; let busy=false; let turboUntil=0;
+    const pendingSigs = new Set(); // Track pending card signatures for deduplication
 
     function now(){ return Date.now(); }
     function inTurbo(){ return now()<turboUntil; }
@@ -400,16 +401,43 @@
             const host=uiEnsureTvOverlay();
             if(host && host.firstChild && host.firstChild.classList.contains('revealCard')) host.removeChild(host.firstChild);
             if(!q.length) document.getElementById('tv')?.classList.remove('tvTall');
-          }catch{}
+            // Release signature from pending set after card is removed
+            if(job.__sig) pendingSigs.delete(job.__sig);
+          }catch(e){
+            // Release signature on error path too
+            if(job.__sig) pendingSigs.delete(job.__sig);
+          }
           setTimeout(()=>{ busy=false; next(); },gap);
         },hold);
       }catch(e){
         console.error('[CardQueue] render fail',e);
+        // Release signature on error path
+        if(job.__sig) pendingSigs.delete(job.__sig);
         busy=false; setTimeout(next,120);
       }
     }
 
-    function push(job){ q.push(job); if(!busy) next(); }
+    function push(job){
+      // Compute signature for deduplication: title + joined lines + tone
+      // Use same format as safeShowCard for consistency
+      const title = job.title || '';
+      const lines = Array.isArray(job.lines) ? job.lines : [job.lines].filter(Boolean);
+      const tone = job.tone || '';
+      const sig = `${String(title)}\u0000${lines.join('|')}\u0000${String(tone)}`;
+      
+      // Skip if identical card is already pending in queue
+      if(pendingSigs.has(sig)){
+        console.info('[CardQueue] Skipping duplicate card:', title);
+        return;
+      }
+      
+      // Attach signature to job and mark as pending
+      job.__sig = sig;
+      pendingSigs.add(sig);
+      
+      q.push(job);
+      if(!busy) next();
+    }
     function waitIdle(){ return new Promise(res=>{ const t=()=>{ if(!busy && !q.length) res(); else setTimeout(t,60); }; t(); }); }
     function setTurboMs(ms){ turboUntil=Date.now()+Math.max(200,+ms||0); }
 
