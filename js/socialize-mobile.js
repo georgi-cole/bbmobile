@@ -88,6 +88,10 @@
           });
           global.dispatchEvent(event);
         }
+        
+        // Trigger reordering when resources change (affects action availability)
+        scheduleReorder();
+        
         return;
       } catch(e) {
         console.error('[socialize-mobile] Failed to update SocialManeuvers resources:', e);
@@ -340,7 +344,7 @@
 
           <section class="modal-section action-menu-section">
             <h3>Choose Action</h3>
-            <div class="action-menu" id="actionMenu"></div>
+            <div class="action-menu" id="actionMenu" data-sm-actions-container></div>
           </section>
 
           <section class="modal-section feedback-section">
@@ -604,6 +608,63 @@
         }
       });
     });
+    
+    // Install MutationObserver on action menu container for dynamic reordering
+    installActionMenuObserver();
+  }
+  
+  // MutationObserver for action menu - watches for changes to trigger reordering
+  let actionMenuObserver = null;
+  function installActionMenuObserver() {
+    // Only install once
+    if (actionMenuObserver) return;
+    
+    const container = $('[data-sm-actions-container]') || $('#actionMenu');
+    if (!container) return;
+    
+    actionMenuObserver = new MutationObserver((mutations) => {
+      let needsReorder = false;
+      
+      for (const mutation of mutations) {
+        // Check if childList changed (cards added/removed)
+        if (mutation.type === 'childList') {
+          needsReorder = true;
+          break;
+        }
+        
+        // Check if attributes changed on action cards
+        if (mutation.type === 'attributes') {
+          const target = mutation.target;
+          if (target.hasAttribute('data-sm-action-card')) {
+            // Reorder if class, aria-disabled, disabled, or data-* changed
+            const attrName = mutation.attributeName;
+            if (attrName === 'class' || 
+                attrName === 'aria-disabled' || 
+                attrName === 'disabled' ||
+                attrName === 'data-enabled' ||
+                attrName === 'data-disabled' ||
+                attrName === 'data-recommended') {
+              needsReorder = true;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (needsReorder) {
+        scheduleReorder();
+      }
+    });
+    
+    // Observe container for childList and attributes
+    actionMenuObserver.observe(container, {
+      childList: true,
+      attributes: true,
+      attributeFilter: ['class', 'aria-disabled', 'disabled', 'data-enabled', 'data-disabled', 'data-recommended'],
+      subtree: true
+    });
+    
+    console.info('[socialize-mobile] Action menu observer installed for dynamic sorting');
   }
 
   // Handle card selection logic
@@ -660,6 +721,102 @@
     
     updateExecuteButton();
     populateActionMenu();
+    
+    // Trigger reordering when player selection changes (affects action availability)
+    scheduleReorder();
+  }
+
+  // Reorder action cards: enabled first, then disabled; recommended first within each group
+  function reorderActionCards() {
+    // Container selector with fallback
+    const container = $('[data-sm-actions-container]') || $('#actionMenu');
+    if (!container) return;
+
+    // Get all action cards
+    const cards = Array.from(container.querySelectorAll('[data-sm-action-card]'));
+    if (cards.length === 0) return;
+
+    // Preserve focus element before reordering
+    const focusedElement = document.activeElement;
+    const focusedCard = focusedElement?.closest?.('[data-sm-action-card]') || null;
+    const focusedActionId = focusedCard?.dataset?.actionId;
+
+    // Sort cards by: 1) active/enabled, 2) recommended, 3) cost (optional), 4) original index
+    const sortedCards = cards.map((card, originalIndex) => {
+      // Detect if action is active/enabled
+      const isDisabled = card.disabled || 
+                        card.hasAttribute('disabled') ||
+                        card.dataset.disabled === 'true' ||
+                        card.getAttribute('aria-disabled') === 'true' ||
+                        card.classList.contains('disabled');
+      const isActive = !isDisabled;
+
+      // Detect if action is recommended
+      const isRecommended = card.dataset.recommended === 'true' ||
+                           card.classList.contains('recommended') ||
+                           (global.SocialManeuvers?.getRecommendedActionIds?.()?.includes(card.dataset.actionId));
+
+      // Get cost for optional tertiary sorting
+      let cost = Infinity;
+      if (card.dataset.energy) {
+        cost = parseInt(card.dataset.energy) || Infinity;
+      } else if (card.dataset.cost) {
+        cost = parseInt(card.dataset.cost) || Infinity;
+      } else if (global.SocialManeuvers?.getActionCost && card.dataset.actionId) {
+        const actionCost = global.SocialManeuvers.getActionCost(card.dataset.actionId);
+        cost = (typeof actionCost === 'object' ? actionCost.energy : actionCost) || Infinity;
+      }
+
+      return {
+        card,
+        isActive,
+        isRecommended,
+        cost,
+        originalIndex
+      };
+    });
+
+    // Sort: active first, then recommended, then cost, then original index
+    sortedCards.sort((a, b) => {
+      // Primary: active first
+      if (a.isActive !== b.isActive) return b.isActive - a.isActive;
+      // Secondary: recommended first
+      if (a.isRecommended !== b.isRecommended) return b.isRecommended - a.isRecommended;
+      // Tertiary: lower cost first (if available)
+      if (a.cost !== b.cost && a.cost !== Infinity && b.cost !== Infinity) {
+        return a.cost - b.cost;
+      }
+      // Quaternary: original index (stable sort)
+      return a.originalIndex - b.originalIndex;
+    });
+
+    // Check if order changed
+    const orderChanged = sortedCards.some((item, idx) => item.originalIndex !== idx);
+    if (!orderChanged) return; // Skip DOM manipulation if order is unchanged
+
+    // Reorder DOM
+    sortedCards.forEach(item => {
+      container.appendChild(item.card);
+    });
+
+    // Restore focus to the same action card if it was focused
+    if (focusedActionId) {
+      const newFocusTarget = container.querySelector(`[data-sm-action-card][data-action-id="${focusedActionId}"]`);
+      if (newFocusTarget && typeof newFocusTarget.focus === 'function') {
+        newFocusTarget.focus();
+      }
+    }
+  }
+
+  // Debounced reorder using requestAnimationFrame
+  let reorderPending = false;
+  function scheduleReorder() {
+    if (reorderPending) return;
+    reorderPending = true;
+    requestAnimationFrame(() => {
+      reorderPending = false;
+      reorderActionCards();
+    });
   }
 
   function populateActionMenu() {
@@ -870,10 +1027,15 @@
       btn.className = `action-btn action-${action.category}`;
       btn.dataset.actionId = action.id;
       btn.dataset.minTargets = minTargets;
+      btn.dataset.smActionCard = ''; // Mark as action card for sorting
+      btn.dataset.energy = energyCost; // Store energy cost for sorting
       
       if (!allRequirementsMet) {
         btn.classList.add('disabled');
         btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+      } else {
+        btn.setAttribute('aria-disabled', 'false');
       }
 
       // Build requirement chips for missing requirements
@@ -937,6 +1099,9 @@
 
       menu.appendChild(btn);
     });
+    
+    // Trigger reordering after menu is populated
+    scheduleReorder();
   }
   
   // Helper function to get action icons
@@ -1527,6 +1692,7 @@
         document.addEventListener('DOMContentLoaded', () => {
           try {
             startMountObserver();
+            installResourceChangeListeners();
           } catch(e) {
             console.error('[socialize-mobile] Bootstrap failed:', e.message);
           }
@@ -1534,10 +1700,28 @@
       } else {
         // DOM already loaded
         startMountObserver();
+        installResourceChangeListeners();
       }
     } catch(e) {
       console.error('[socialize-mobile] Bootstrap initialization failed:', e.message);
     }
+  }
+  
+  // Install event listeners for resource changes and battery preview
+  function installResourceChangeListeners() {
+    // Listen for social-resources-changed events
+    global.addEventListener('social-resources-changed', (event) => {
+      console.log('[socialize-mobile] Resources changed, triggering reorder');
+      scheduleReorder();
+    });
+    
+    // Listen for social-battery-preview events
+    global.addEventListener('social-battery-preview', (event) => {
+      console.log('[socialize-mobile] Battery preview, triggering reorder');
+      scheduleReorder();
+    });
+    
+    console.info('[socialize-mobile] Resource change listeners installed');
   }
 
   // Start bootstrap
