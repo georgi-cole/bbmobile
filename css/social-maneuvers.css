@@ -458,3 +458,93 @@
     right: -10px;
   }
 }
+
+/* ============================================================================
+   EMPTY ENERGY OVERLAY (Auto-Skip)
+   ============================================================================ */
+
+.sm-empty-energy-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: sm-fade-in 0.3s ease-in;
+}
+
+.sm-empty-energy-content {
+  text-align: center;
+  padding: 40px;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(15, 15, 35, 0.95));
+  border: 2px solid rgba(255, 68, 68, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.sm-empty-battery-icon {
+  font-size: 80px;
+  line-height: 1;
+  margin-bottom: 20px;
+  animation: sm-battery-blink 1s ease-in-out infinite;
+  opacity: 0.7;
+}
+
+.sm-empty-energy-message {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #ff4444;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.sm-empty-energy-submessage {
+  font-size: 1.2rem;
+  color: #aaa;
+  font-style: italic;
+}
+
+@keyframes sm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sm-battery-blink {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* Responsive adjustments for empty energy overlay */
+@media (max-width: 768px) {
+  .sm-empty-energy-content {
+    padding: 30px;
+    max-width: 90%;
+  }
+  
+  .sm-empty-battery-icon {
+    font-size: 60px;
+  }
+  
+  .sm-empty-energy-message {
+    font-size: 1.5rem;
+  }
+  
+  .sm-empty-energy-submessage {
+    font-size: 1rem;
+  }
+}

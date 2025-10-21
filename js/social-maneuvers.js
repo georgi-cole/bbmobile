@@ -43,11 +43,12 @@
       const g = global.game; if(!g) return;
       if(!g.__sm_bankEnergy) g.__sm_bankEnergy = new Map();
       
-      // DO NOT auto-initialize to 5 - bank should only be seeded via events/week watchers
-      // Bank starts at 0 and accumulates through gameplay
+      // Week 1 seeding: Initialize to default energy (5) for new games
       if(!g.__sm_bankEnergy.has(playerId)) {
-        g.__sm_bankEnergy.set(playerId, 0);
-        console.info(`[social-bank] 🏦 Bank initialized for player ${playerId}: 0 (no auto-seed)`);
+        const week = g.week || 1;
+        const initialEnergy = (week === 1) ? RESOURCE_CONFIG.energy.default : 0;
+        g.__sm_bankEnergy.set(playerId, initialEnergy);
+        console.info(`[social-bank] 🏦 Bank initialized for player ${playerId}: ${initialEnergy} (week ${week})`);
       }
     },
     
@@ -2816,6 +2817,60 @@
     console.error('[sm-watchers] Failed to install property watchers:', e);
   }
   
+  // ============================================================================
+  // AUTO-SKIP WHEN ENERGY IS ZERO
+  // ============================================================================
+  function showEmptyEnergyOverlayAndSkip(playerId) {
+    const g = global.game;
+    const week = g?.week || 1;
+    
+    console.info(`[sm-phase-skip] Showing empty energy overlay for player ${playerId}, week ${week}`);
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'sm-empty-energy-overlay';
+    overlay.setAttribute('role', 'alert');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.setAttribute('aria-label', 'No Social Energy Available');
+    
+    overlay.innerHTML = `
+      <div class="sm-empty-energy-content">
+        <div class="sm-empty-battery-icon">🔋</div>
+        <div class="sm-empty-energy-message">No Social Energy</div>
+        <div class="sm-empty-energy-submessage">Skipping Social Phase...</div>
+      </div>
+    `;
+    
+    // Add to TV viewport or panel
+    const container = document.querySelector('.tvViewport .fitCanvas') 
+                   || document.querySelector('.tvViewport')
+                   || document.getElementById('panel')
+                   || document.body;
+    container.appendChild(overlay);
+    
+    // Dispatch event for telemetry
+    window.dispatchEvent(new CustomEvent('sm-phase-skip-empty', {
+      detail: { playerId, week }
+    }));
+    
+    console.info(`[sm-phase-skip] Event dispatched: sm-phase-skip-empty`, { playerId, week });
+    
+    // Auto-advance after 3 seconds
+    setTimeout(() => {
+      overlay.remove();
+      console.info(`[sm-phase-skip] Auto-advancing to next phase`);
+      
+      // Advance to next phase
+      if (typeof global.advancePhase === 'function') {
+        global.advancePhase();
+      } else if (typeof global.nextPhase === 'function') {
+        global.nextPhase();
+      } else {
+        console.warn('[sm-phase-skip] No advancePhase or nextPhase function available');
+      }
+    }, 3000);
+  }
+  
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
@@ -2854,6 +2909,13 @@
       const bankBalance = SocialEnergyBank.get(humanId);
       const phaseEnergy = SocialResources.get(humanId, 'energy');
       console.info(`[sm-phase] seeded from bank=${bankBalance}, phase energy=${phaseEnergy}`);
+      
+      // AUTO-SKIP: If human has zero energy, show overlay and skip phase
+      if(phaseEnergy <= 0) {
+        console.info(`[sm-phase-skip] Human player has zero energy (${phaseEnergy}) - triggering auto-skip`);
+        showEmptyEnergyOverlayAndSkip(humanId);
+        return; // Exit early, don't set up normal phase
+      }
     }
 
     // Initialize phase session tracking (PR #266)

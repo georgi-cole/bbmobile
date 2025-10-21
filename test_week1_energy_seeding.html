@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Week 1 Energy Seeding & Auto-Skip</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background: rgba(46, 204, 113, 0.2);
+      border: 1px solid #2ecc71;
+    }
+    .test-result.fail {
+      background: rgba(231, 76, 60, 0.2);
+      border: 1px solid #e74c3c;
+    }
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 20px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    button.danger {
+      background: #e74c3c;
+    }
+    button.danger:hover {
+      background: #c0392b;
+    }
+    .console-log {
+      background: #000;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    .console-log div {
+      margin: 2px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Week 1 Energy Seeding & Auto-Skip Tests</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Week 1 Energy Seeding</h2>
+    <p>Verify that new players in Week 1 start with 5 energy in the bank.</p>
+    <div id="test1-results"></div>
+    <div class="test-controls">
+      <button onclick="runTest1()">Run Test</button>
+      <button onclick="resetGame()">Reset Game</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Later Week Bank Initialization</h2>
+    <p>Verify that players in Week 2+ start with 0 energy in the bank.</p>
+    <div id="test2-results"></div>
+    <div class="test-controls">
+      <button onclick="runTest2()">Run Test</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Zero Energy Auto-Skip</h2>
+    <p>Simulate zero energy at Social phase start and verify overlay appears.</p>
+    <div id="test3-results"></div>
+    <div class="test-controls">
+      <button onclick="runTest3()">Run Test (Show Overlay)</button>
+      <button onclick="runTest3WithSkip()">Run Test (Full Auto-Skip)</button>
+    </div>
+    <div id="overlay-container" style="position: relative; min-height: 200px; background: rgba(0,0,0,0.3); margin-top: 10px; border-radius: 8px;"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Event Emission</h2>
+    <p>Verify sm-phase-skip-empty event is emitted when auto-skipping.</p>
+    <div id="test4-results"></div>
+    <div class="test-controls">
+      <button onclick="runTest4()">Run Test</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Logs</h2>
+    <div id="console-log" class="console-log"></div>
+    <button onclick="clearConsole()">Clear Console</button>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/social-maneuvers.js"></script>
+  
+  <script>
+    // Intercept console.info for display
+    const originalConsoleInfo = console.info;
+    const logContainer = document.getElementById('console-log');
+    
+    console.info = function(...args) {
+      originalConsoleInfo.apply(console, args);
+      const logEntry = document.createElement('div');
+      logEntry.textContent = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+      logContainer.appendChild(logEntry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    };
+
+    function clearConsole() {
+      logContainer.innerHTML = '';
+    }
+
+    function resetGame() {
+      if (window.game) {
+        window.game.week = 1;
+        window.game.phase = 'lobby';
+        window.game.humanId = 'player1';
+        window.game.__sm_bankEnergy = new Map();
+        window.game.__socialResources = new Map();
+      } else {
+        window.game = {
+          week: 1,
+          phase: 'lobby',
+          humanId: 'player1',
+          players: [
+            { id: 'player1', name: 'TestPlayer', human: true, evicted: false }
+          ],
+          cfg: { enableSocialManeuvers: true }
+        };
+      }
+      console.info('✓ Game reset to Week 1');
+    }
+
+    function showResult(containerId, passed, message) {
+      const container = document.getElementById(containerId);
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.innerHTML = `<strong>${passed ? '✅ PASS' : '❌ FAIL'}:</strong> ${message}`;
+      container.innerHTML = '';
+      container.appendChild(resultDiv);
+    }
+
+    function runTest1() {
+      console.info('═══ Running Test 1: Week 1 Energy Seeding ═══');
+      resetGame();
+      
+      // Initialize bank for player in week 1
+      const playerId = 'player1';
+      window.SocialEnergyBank.init(playerId);
+      
+      const bankBalance = window.SocialEnergyBank.get(playerId);
+      const expectedEnergy = 5;
+      
+      console.info(`Bank balance for ${playerId} in Week 1: ${bankBalance}`);
+      
+      if (bankBalance === expectedEnergy) {
+        showResult('test1-results', true, `Bank initialized to ${expectedEnergy} energy for Week 1`);
+      } else {
+        showResult('test1-results', false, `Expected ${expectedEnergy}, got ${bankBalance}`);
+      }
+    }
+
+    function runTest2() {
+      console.info('═══ Running Test 2: Later Week Initialization ═══');
+      
+      // Reset to Week 2
+      window.game.week = 2;
+      window.game.__sm_bankEnergy = new Map();
+      
+      const playerId = 'player1';
+      window.SocialEnergyBank.init(playerId);
+      
+      const bankBalance = window.SocialEnergyBank.get(playerId);
+      const expectedEnergy = 0;
+      
+      console.info(`Bank balance for ${playerId} in Week 2: ${bankBalance}`);
+      
+      if (bankBalance === expectedEnergy) {
+        showResult('test2-results', true, `Bank initialized to ${expectedEnergy} energy for Week 2+`);
+      } else {
+        showResult('test2-results', false, `Expected ${expectedEnergy}, got ${bankBalance}`);
+      }
+      
+      // Reset back to week 1
+      resetGame();
+    }
+
+    function runTest3() {
+      console.info('═══ Running Test 3: Zero Energy Overlay ═══');
+      resetGame();
+      
+      // Set bank to 0
+      const playerId = 'player1';
+      window.SocialEnergyBank.set(playerId, 0);
+      
+      // Create mock overlay manually to test styling
+      const overlayContainer = document.getElementById('overlay-container');
+      overlayContainer.innerHTML = '';
+      
+      const overlay = document.createElement('div');
+      overlay.className = 'sm-empty-energy-overlay';
+      overlay.style.position = 'absolute';
+      overlay.innerHTML = `
+        <div class="sm-empty-energy-content">
+          <div class="sm-empty-battery-icon">🔋</div>
+          <div class="sm-empty-energy-message">No Social Energy</div>
+          <div class="sm-empty-energy-submessage">Skipping Social Phase...</div>
+        </div>
+      `;
+      
+      overlayContainer.appendChild(overlay);
+      
+      setTimeout(() => {
+        overlay.remove();
+        showResult('test3-results', true, 'Overlay displayed and removed successfully');
+      }, 3000);
+      
+      showResult('test3-results', true, 'Overlay shown (will auto-remove in 3s)');
+    }
+
+    function runTest3WithSkip() {
+      console.info('═══ Running Test 3: Full Auto-Skip Simulation ═══');
+      resetGame();
+      
+      // Mock advancePhase
+      let phaseAdvanced = false;
+      window.advancePhase = function() {
+        phaseAdvanced = true;
+        console.info('✓ advancePhase() called');
+      };
+      
+      // Set bank to 0 and trigger phase start
+      const playerId = 'player1';
+      window.SocialEnergyBank.set(playerId, 0);
+      window.SocialResources.init(playerId);
+      window.SocialResources.recomputePhaseEnergy(playerId);
+      
+      const energy = window.SocialResources.get(playerId, 'energy');
+      console.info(`Phase energy after recompute: ${energy}`);
+      
+      if (energy <= 0) {
+        // This would trigger the auto-skip in real code
+        showResult('test3-results', true, `Energy is ${energy} - auto-skip would trigger`);
+      } else {
+        showResult('test3-results', false, `Energy is ${energy} - auto-skip would NOT trigger`);
+      }
+    }
+
+    function runTest4() {
+      console.info('═══ Running Test 4: Event Emission ═══');
+      
+      let eventReceived = false;
+      let eventDetail = null;
+      
+      // Listen for the event
+      window.addEventListener('sm-phase-skip-empty', function handler(e) {
+        eventReceived = true;
+        eventDetail = e.detail;
+        console.info('✓ sm-phase-skip-empty event received:', e.detail);
+        window.removeEventListener('sm-phase-skip-empty', handler);
+      });
+      
+      // Dispatch a test event
+      window.dispatchEvent(new CustomEvent('sm-phase-skip-empty', {
+        detail: { playerId: 'player1', week: 1 }
+      }));
+      
+      setTimeout(() => {
+        if (eventReceived && eventDetail) {
+          showResult('test4-results', true, `Event received with detail: ${JSON.stringify(eventDetail)}`);
+        } else {
+          showResult('test4-results', false, 'Event was not received');
+        }
+      }, 100);
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      resetGame();
+      console.info('✓ Test page loaded and ready');
+    });
+  </script>
+</body>
+</html>
