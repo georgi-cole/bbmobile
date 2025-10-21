@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Game Demo: Week 1 Energy & Auto-Skip</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .demo-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .demo-header h1 {
+      margin: 0 0 10px 0;
+      color: white;
+    }
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .demo-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .demo-section h2 {
+      color: #f7b955;
+      margin-top: 0;
+    }
+    .status-box {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .status-box .label {
+      color: #888;
+      display: inline-block;
+      width: 150px;
+    }
+    .status-box .value {
+      color: #4ade80;
+      font-weight: bold;
+    }
+    .status-box .value.zero {
+      color: #ef4444;
+    }
+    button {
+      padding: 12px 24px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    button.primary {
+      background: #10b981;
+    }
+    button.primary:hover {
+      background: #059669;
+    }
+    button.danger {
+      background: #ef4444;
+    }
+    button.danger:hover {
+      background: #dc2626;
+    }
+    .game-view {
+      background: #000;
+      border: 3px solid #333;
+      border-radius: 8px;
+      padding: 20px;
+      min-height: 400px;
+      position: relative;
+    }
+    .log-viewer {
+      background: #000;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 15px;
+      height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 3px 0;
+      padding: 2px 0;
+    }
+    .log-entry.info {
+      color: #60a5fa;
+    }
+    .log-entry.success {
+      color: #4ade80;
+    }
+    .log-entry.warning {
+      color: #fbbf24;
+    }
+    .log-entry.error {
+      color: #ef4444;
+    }
+    .log-entry .timestamp {
+      color: #666;
+      margin-right: 8px;
+    }
+    .event-log {
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 3px solid #10b981;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    @media (max-width: 1200px) {
+      .demo-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-header">
+    <h1>🎮 Live Game Demo: Week 1 Social Energy & Auto-Skip</h1>
+    <p>This demo runs the actual game with Social Maneuvers to demonstrate the implemented features.</p>
+  </div>
+
+  <div class="demo-grid">
+    <div class="demo-section">
+      <h2>📊 Game State Monitor</h2>
+      <div class="status-box" id="status-box">
+        <div><span class="label">Week:</span> <span class="value" id="week-value">-</span></div>
+        <div><span class="label">Phase:</span> <span class="value" id="phase-value">-</span></div>
+        <div><span class="label">Bank Balance:</span> <span class="value" id="bank-value">-</span></div>
+        <div><span class="label">Phase Energy:</span> <span class="value" id="phase-energy-value">-</span></div>
+        <div><span class="label">Influence:</span> <span class="value" id="influence-value">-</span></div>
+        <div><span class="label">Information:</span> <span class="value" id="info-value">-</span></div>
+      </div>
+
+      <h3>🎯 Demo Controls</h3>
+      <div class="controls">
+        <button class="primary" onclick="startWeek1Game()">🆕 Start Week 1 Game</button>
+        <button onclick="startWeek2Game()">➡️ Start Week 2 Game</button>
+        <button onclick="enterSocialPhase()">▶️ Enter Social Phase</button>
+      </div>
+      <div class="controls">
+        <button onclick="setEnergyTo5()">⚡ Set Energy = 5</button>
+        <button class="danger" onclick="setEnergyTo0()">🔋 Set Energy = 0</button>
+        <button onclick="addBonus()">➕ Add HOH Bonus (+5)</button>
+      </div>
+
+      <h3>📝 Event Log</h3>
+      <div class="log-viewer" id="log-viewer"></div>
+      <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div class="demo-section">
+      <h2>🎬 Game Viewport</h2>
+      <div class="game-view" id="game-view">
+        <p style="color: #888; text-align: center; padding: 40px;">
+          Click "Start Week 1 Game" to begin the demo
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load game scripts -->
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social.js"></script>
+  
+  <script>
+    let logs = [];
+    const logViewer = document.getElementById('log-viewer');
+    
+    // Enhanced logging
+    function addLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, message, type });
+      
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span class="timestamp">[${timestamp}]</span>${message}`;
+      logViewer.appendChild(entry);
+      logViewer.scrollTop = logViewer.scrollHeight;
+    }
+
+    function clearLogs() {
+      logs = [];
+      logViewer.innerHTML = '';
+      addLog('Logs cleared', 'info');
+    }
+
+    // Monitor events
+    window.addEventListener('sm-phase-skip-empty', (e) => {
+      addLog(`🚨 AUTO-SKIP EVENT: Player ${e.detail.playerId}, Week ${e.detail.week}`, 'success');
+      const eventDiv = document.createElement('div');
+      eventDiv.className = 'event-log';
+      eventDiv.innerHTML = `
+        <strong>✅ sm-phase-skip-empty Event Emitted</strong><br>
+        Player: ${e.detail.playerId}<br>
+        Week: ${e.detail.week}
+      `;
+      document.getElementById('game-view').appendChild(eventDiv);
+      setTimeout(() => eventDiv.remove(), 5000);
+    });
+
+    window.addEventListener('social-resources-changed', (e) => {
+      addLog(`Resource changed for ${e.detail.playerId}`, 'info');
+      updateStatusDisplay();
+    });
+
+    // Initialize game
+    function initGame(week) {
+      window.game = {
+        week: week,
+        phase: 'lobby',
+        humanId: 'player1',
+        players: [
+          { id: 'player1', name: 'You', human: true, evicted: false },
+          { id: 'player2', name: 'Alice', evicted: false },
+          { id: 'player3', name: 'Bob', evicted: false },
+          { id: 'player4', name: 'Carol', evicted: false }
+        ],
+        cfg: { enableSocialManeuvers: true }
+      };
+      
+      // Clear any existing bank/resources
+      if (window.game.__sm_bankEnergy) {
+        window.game.__sm_bankEnergy.clear();
+      }
+      if (window.game.__socialResources) {
+        window.game.__socialResources.clear();
+      }
+      
+      addLog(`Game initialized for Week ${week}`, 'success');
+      updateStatusDisplay();
+    }
+
+    function startWeek1Game() {
+      addLog('=== STARTING WEEK 1 GAME ===', 'warning');
+      initGame(1);
+      
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+      
+      // Initialize bank (should seed to 5 for Week 1)
+      SM.SocialEnergyBank.init(humanId);
+      const bankBalance = SM.SocialEnergyBank.get(humanId);
+      
+      addLog(`✅ Bank initialized: ${bankBalance} energy`, bankBalance === 5 ? 'success' : 'error');
+      
+      if (bankBalance === 5) {
+        addLog('✅ PASS: Week 1 bank seeded to 5 energy', 'success');
+      } else {
+        addLog(`❌ FAIL: Expected 5, got ${bankBalance}`, 'error');
+      }
+      
+      updateStatusDisplay();
+      document.getElementById('game-view').innerHTML = `
+        <div style="color: white; padding: 20px;">
+          <h2>Week 1 Game Started</h2>
+          <p>✅ Bank Balance: <strong style="color: #4ade80;">${bankBalance}</strong></p>
+          <p>Click "Enter Social Phase" to proceed to Social phase</p>
+        </div>
+      `;
+    }
+
+    function startWeek2Game() {
+      addLog('=== STARTING WEEK 2 GAME ===', 'warning');
+      initGame(2);
+      
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+      
+      // Initialize bank (should be 0 for Week 2+)
+      SM.SocialEnergyBank.init(humanId);
+      const bankBalance = SM.SocialEnergyBank.get(humanId);
+      
+      addLog(`Bank initialized: ${bankBalance} energy`, 'info');
+      
+      if (bankBalance === 0) {
+        addLog('✅ PASS: Week 2+ bank starts at 0', 'success');
+      } else {
+        addLog(`❌ FAIL: Expected 0, got ${bankBalance}`, 'error');
+      }
+      
+      updateStatusDisplay();
+      document.getElementById('game-view').innerHTML = `
+        <div style="color: white; padding: 20px;">
+          <h2>Week 2 Game Started</h2>
+          <p>✅ Bank Balance: <strong style="color: #4ade80;">${bankBalance}</strong></p>
+          <p>Note: Week 2+ starts at 0, but can accumulate from bonuses/penalties</p>
+        </div>
+      `;
+    }
+
+    function enterSocialPhase() {
+      if (!window.game) {
+        addLog('❌ Start a game first!', 'error');
+        return;
+      }
+
+      addLog('=== ENTERING SOCIAL PHASE ===', 'warning');
+      window.game.phase = 'social';
+      
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+      
+      // Initialize resources
+      SM.SocialResources.init(humanId);
+      SM.SocialResources.recomputePhaseEnergy(humanId);
+      
+      const bankBalance = SM.SocialEnergyBank.get(humanId);
+      const phaseEnergy = SM.SocialResources.get(humanId, 'energy');
+      
+      addLog(`Bank: ${bankBalance}, Phase Energy: ${phaseEnergy}`, 'info');
+      
+      updateStatusDisplay();
+      
+      const gameView = document.getElementById('game-view');
+      
+      if (phaseEnergy <= 0) {
+        addLog('⚠️ Zero energy detected - triggering auto-skip', 'warning');
+        
+        // Call the actual onSocialPhaseStart to trigger auto-skip
+        SM.onSocialPhaseStart();
+        
+        addLog('✅ Auto-skip overlay should appear', 'success');
+      } else {
+        gameView.innerHTML = `
+          <div style="color: white; padding: 20px;">
+            <h2>Social Phase</h2>
+            <p>✅ Phase Energy: <strong style="color: #4ade80;">${phaseEnergy}</strong></p>
+            <p>You can now take social actions!</p>
+            <div style="margin-top: 20px; padding: 15px; background: rgba(16, 185, 129, 0.2); border-radius: 6px;">
+              <strong>✅ VERIFIED:</strong> Week ${window.game.week} has ${phaseEnergy} energy available
+            </div>
+          </div>
+        `;
+        addLog(`✅ PASS: Social phase has ${phaseEnergy} energy`, 'success');
+      }
+    }
+
+    function setEnergyTo5() {
+      if (!window.game) {
+        addLog('❌ Start a game first!', 'error');
+        return;
+      }
+
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+      
+      SM.SocialEnergyBank.set(humanId, 5);
+      addLog('Set bank to 5 energy', 'info');
+      updateStatusDisplay();
+    }
+
+    function setEnergyTo0() {
+      if (!window.game) {
+        addLog('❌ Start a game first!', 'error');
+        return;
+      }
+
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+      
+      SM.SocialEnergyBank.set(humanId, 0);
+      addLog('Set bank to 0 energy (for auto-skip demo)', 'warning');
+      updateStatusDisplay();
+    }
+
+    function addBonus() {
+      if (!window.game) {
+        addLog('❌ Start a game first!', 'error');
+        return;
+      }
+
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+      
+      SM.SocialEnergyBank.adjust(humanId, 5);
+      addLog('Added +5 energy (simulating HOH win)', 'success');
+      updateStatusDisplay();
+    }
+
+    function updateStatusDisplay() {
+      if (!window.game) return;
+      
+      const SM = window.SocialManeuvers;
+      const humanId = window.game.humanId;
+      
+      document.getElementById('week-value').textContent = window.game.week || '-';
+      document.getElementById('phase-value').textContent = window.game.phase || '-';
+      
+      const bankBalance = SM.SocialEnergyBank.get(humanId);
+      const bankEl = document.getElementById('bank-value');
+      bankEl.textContent = bankBalance;
+      bankEl.className = bankBalance <= 0 ? 'value zero' : 'value';
+      
+      const phaseEnergy = SM.SocialResources.get(humanId, 'energy');
+      const phaseEl = document.getElementById('phase-energy-value');
+      phaseEl.textContent = phaseEnergy;
+      phaseEl.className = phaseEnergy <= 0 ? 'value zero' : 'value';
+      
+      document.getElementById('influence-value').textContent = SM.SocialResources.get(humanId, 'influence');
+      document.getElementById('info-value').textContent = SM.SocialResources.get(humanId, 'information');
+    }
+
+    // Auto-start demo
+    window.addEventListener('DOMContentLoaded', () => {
+      addLog('🎮 Live Game Demo Ready', 'success');
+      addLog('Click "Start Week 1 Game" to begin', 'info');
+    });
+  </script>
+</body>
+</html>
