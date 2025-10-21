@@ -176,9 +176,9 @@
       
       // Initialize bank for player in week 1
       const playerId = 'player1';
-      window.SocialEnergyBank.init(playerId);
+      window.SocialManeuvers.SocialEnergyBank.init(playerId);
       
-      const bankBalance = window.SocialEnergyBank.get(playerId);
+      const bankBalance = window.SocialManeuvers.SocialEnergyBank.get(playerId);
       const expectedEnergy = 5;
       
       console.info(`Bank balance for ${playerId} in Week 1: ${bankBalance}`);
@@ -198,9 +198,9 @@
       window.game.__sm_bankEnergy = new Map();
       
       const playerId = 'player1';
-      window.SocialEnergyBank.init(playerId);
+      window.SocialManeuvers.SocialEnergyBank.init(playerId);
       
-      const bankBalance = window.SocialEnergyBank.get(playerId);
+      const bankBalance = window.SocialManeuvers.SocialEnergyBank.get(playerId);
       const expectedEnergy = 0;
       
       console.info(`Bank balance for ${playerId} in Week 2: ${bankBalance}`);
@@ -221,7 +221,8 @@
       
       // Set bank to 0
       const playerId = 'player1';
-      window.SocialEnergyBank.set(playerId, 0);
+      window.SocialManeuvers.SocialEnergyBank.init(playerId);
+      window.SocialManeuvers.SocialEnergyBank.set(playerId, 0);
       
       // Create mock overlay manually to test styling
       const overlayContainer = document.getElementById('overlay-container');
@@ -261,11 +262,11 @@
       
       // Set bank to 0 and trigger phase start
       const playerId = 'player1';
-      window.SocialEnergyBank.set(playerId, 0);
-      window.SocialResources.init(playerId);
-      window.SocialResources.recomputePhaseEnergy(playerId);
+      window.SocialManeuvers.SocialEnergyBank.set(playerId, 0);
+      window.SocialManeuvers.SocialResources.init(playerId);
+      window.SocialManeuvers.SocialResources.recomputePhaseEnergy(playerId);
       
-      const energy = window.SocialResources.get(playerId, 'energy');
+      const energy = window.SocialManeuvers.SocialResources.get(playerId, 'energy');
       console.info(`Phase energy after recompute: ${energy}`);
       
       if (energy <= 0) {
