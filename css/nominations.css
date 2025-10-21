@@ -1,0 +1,183 @@
+/* ============================================================================
+   NOMINATIONS - NOMINEE SPEECH CARDS MOBILE OPTIMIZATION
+   Mobile-responsive layout for nominee reaction/speech cards with progressive
+   enhancement for staggered animations.
+   ============================================================================ */
+
+/* Container for nominee reactions/speeches
+   Data hook: [data-nom-speeches]
+   Fallbacks: .nominee-speeches, .nominations__speeches, .nominee-reactions-container */
+
+/* Desktop default (multi-column grid layout) - preserved as-is */
+[data-nom-speeches],
+.nominee-speeches,
+.nominations__speeches,
+.nominee-reactions-container {
+  /* Desktop keeps existing inline grid styles from nominations.js */
+  /* This CSS focuses on mobile overrides */
+}
+
+/* Individual speech/reaction cards
+   Data hook: [data-nom-speech-card]
+   Fallback: .nominee-reaction-card */
+[data-nom-speech-card],
+.nominee-reaction-card {
+  /* Base styles preserved from inline styles in nominations.js */
+}
+
+/* Mobile optimization (<768px) - vertical stack with proper spacing */
+@media (max-width: 768px) {
+  [data-nom-speeches],
+  .nominee-speeches,
+  .nominations__speeches,
+  .nominee-reactions-container {
+    /* Override inline grid/row styles to force vertical stack */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 8px 12px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    /* Ensure container stays within TV overlay boundaries */
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Cards become full-width in vertical stack */
+  [data-nom-speech-card],
+  .nominee-reaction-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 12px 14px !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important; /* Prevent cards from shrinking */
+    
+    /* Glass styling matching existing panel tokens */
+    background: linear-gradient(145deg, var(--popup-bg-start, rgba(28,43,62,.75)), var(--popup-bg-end, rgba(12,22,36,.75))) !important;
+    backdrop-filter: blur(var(--popup-backdrop-blur, 16px)) saturate(1.4) !important;
+    -webkit-backdrop-filter: blur(var(--popup-backdrop-blur, 16px)) saturate(1.4) !important;
+    border: 1px solid var(--popup-border, rgba(110,160,220,.25)) !important;
+    border-radius: var(--popup-radius, 24px) !important;
+    
+    /* Typography improvements for mobile readability */
+    overflow-wrap: anywhere !important;
+    hyphens: auto !important;
+    -webkit-hyphens: auto !important;
+  }
+
+  /* Mobile typography adjustments */
+  [data-nom-speech-card] h3,
+  .nominee-reaction-card h3 {
+    font-size: clamp(0.9rem, 3.5vw, 1.05rem) !important;
+    line-height: 1.35 !important;
+    margin-bottom: 8px !important;
+  }
+
+  [data-nom-speech-card] .big,
+  .nominee-reaction-card .big {
+    font-size: clamp(0.75rem, 2.8vw, 0.85rem) !important;
+    line-height: 1.35 !important;
+    overflow-wrap: anywhere !important;
+    hyphens: auto !important;
+  }
+
+  /* Avatar sizing for mobile - slightly smaller */
+  [data-nom-speech-card] .rc-face,
+  .nominee-reaction-card .rc-face {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 12px !important;
+  }
+
+  [data-nom-speech-card] .rc-face.small,
+  .nominee-reaction-card .rc-face.small {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 12px !important;
+  }
+
+  [data-nom-speech-card] .rc-face-row,
+  .nominee-reaction-card .rc-face-row {
+    margin-top: 8px !important;
+  }
+}
+
+/* Animation keyframes for staggered reveal */
+@keyframes nomCardIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger-ready state - activated by JS on mobile */
+@media (max-width: 768px) {
+  /* Initially hide cards for stagger animation */
+  [data-nom-speeches].stagger-ready [data-nom-speech-card],
+  .nominee-speeches.stagger-ready .nominee-reaction-card,
+  .nominations__speeches.stagger-ready .nominee-reaction-card,
+  .nominee-reactions-container.stagger-ready .nominee-reaction-card {
+    opacity: 0;
+    animation: nomCardIn 0.44s cubic-bezier(0.25, 0.9, 0.25, 1) forwards !important;
+  }
+
+  /* Staggered delays using nth-child */
+  [data-nom-speeches].stagger-ready [data-nom-speech-card]:nth-child(1),
+  .nominee-speeches.stagger-ready .nominee-reaction-card:nth-child(1),
+  .nominations__speeches.stagger-ready .nominee-reaction-card:nth-child(1),
+  .nominee-reactions-container.stagger-ready .nominee-reaction-card:nth-child(1) {
+    animation-delay: 0ms !important;
+  }
+
+  [data-nom-speeches].stagger-ready [data-nom-speech-card]:nth-child(2),
+  .nominee-speeches.stagger-ready .nominee-reaction-card:nth-child(2),
+  .nominations__speeches.stagger-ready .nominee-reaction-card:nth-child(2),
+  .nominee-reactions-container.stagger-ready .nominee-reaction-card:nth-child(2) {
+    animation-delay: 140ms !important;
+  }
+
+  [data-nom-speeches].stagger-ready [data-nom-speech-card]:nth-child(3),
+  .nominee-speeches.stagger-ready .nominee-reaction-card:nth-child(3),
+  .nominations__speeches.stagger-ready .nominee-reaction-card:nth-child(3),
+  .nominee-reactions-container.stagger-ready .nominee-reaction-card:nth-child(3) {
+    animation-delay: 280ms !important;
+  }
+
+  [data-nom-speeches].stagger-ready [data-nom-speech-card]:nth-child(4),
+  .nominee-speeches.stagger-ready .nominee-reaction-card:nth-child(4),
+  .nominations__speeches.stagger-ready .nominee-reaction-card:nth-child(4),
+  .nominee-reactions-container.stagger-ready .nominee-reaction-card:nth-child(4) {
+    animation-delay: 420ms !important;
+  }
+
+  /* Additional delays for more than 4 cards (just in case) */
+  [data-nom-speeches].stagger-ready [data-nom-speech-card]:nth-child(n+5),
+  .nominee-speeches.stagger-ready .nominee-reaction-card:nth-child(n+5),
+  .nominations__speeches.stagger-ready .nominee-reaction-card:nth-child(n+5),
+  .nominee-reactions-container.stagger-ready .nominee-reaction-card:nth-child(n+5) {
+    animation-delay: calc((var(--card-index, 5) - 1) * 140ms) !important;
+  }
+}
+
+/* Desktop (>=769px) - no stagger animation, keep existing behavior */
+@media (min-width: 769px) {
+  [data-nom-speeches].stagger-ready [data-nom-speech-card],
+  .nominee-speeches.stagger-ready .nominee-reaction-card,
+  .nominations__speeches.stagger-ready .nominee-reaction-card,
+  .nominee-reactions-container.stagger-ready .nominee-reaction-card {
+    /* Preserve existing cardFloatIn animation from inline styles */
+    opacity: 1 !important;
+    animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards !important;
+  }
+}

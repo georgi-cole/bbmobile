@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test: Nomination Ceremony 2x2 Grid Layout</title>
+  <title>Test: Mobile Nominee Speech Cards Optimization</title>
   <link rel="stylesheet" href="styles.css?v=test">
   <link rel="stylesheet" href="css/nominations.css?v=test">
   <style>
@@ -23,7 +23,7 @@
       padding: 15px;
       border-radius: 12px;
       border: 1px solid rgba(110, 160, 220, 0.25);
-      max-width: 250px;
+      max-width: 280px;
     }
     .test-controls h3 {
       margin: 0 0 10px;
@@ -45,6 +45,14 @@
     .test-controls button:hover {
       background: #356089;
     }
+    .test-controls .info {
+      margin-top: 12px;
+      padding: 8px;
+      background: rgba(40, 60, 85, 0.7);
+      border-radius: 6px;
+      font-size: 12px;
+      border-left: 3px solid #4CAF50;
+    }
     .test-info {
       margin: 20px 0;
       padding: 15px;
@@ -64,6 +72,18 @@
     .test-info li {
       margin: 8px 0;
       line-height: 1.6;
+    }
+    .viewport-display {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(20, 30, 45, 0.95);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid rgba(110, 160, 220, 0.25);
+      font-size: 13px;
+      color: #83bfff;
+      z-index: 999;
     }
     #tv {
       margin: 20px auto;
@@ -86,39 +106,125 @@
       align-items: center;
       justify-content: center;
     }
+
+    /* Mobile simulation overlay */
+    .mobile-simulator {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #0a0f16;
+      z-index: 10000;
+      overflow: auto;
+      padding: 20px;
+    }
+    .mobile-simulator.active {
+      display: block;
+    }
+    .mobile-simulator-header {
+      position: sticky;
+      top: 0;
+      background: #0a0f16;
+      padding: 10px 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #356089;
+      z-index: 10001;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .mobile-simulator-header h3 {
+      margin: 0;
+      color: #4CAF50;
+    }
+    .close-simulator {
+      background: #ff6d6d;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .mobile-simulator #tv {
+      max-width: 100%;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
   <div class="test-controls">
     <h3>🧪 Test Controls</h3>
-    <button id="testHohSpeech">HOH Speech</button>
     <button id="test2Nominees">2 Nominees (Row)</button>
     <button id="test3Nominees">3 Nominees (Grid)</button>
     <button id="test4Nominees">4 Nominees (Grid)</button>
-    <button id="testCeremonyEnd">Ceremony End</button>
-    <button id="testFullCeremony">Full Ceremony</button>
+    <button id="testMobileSimulator">📱 Mobile Simulator</button>
     <button id="clearPopups">Clear Popups</button>
+    <div class="info">
+      <strong>Desktop:</strong> Grid/row layout<br>
+      <strong>Mobile (&lt;768px):</strong> Vertical stack with stagger animation
+    </div>
+  </div>
+
+  <div class="viewport-display">
+    Viewport: <span id="viewportWidth">--</span>px
+    <br>Mode: <span id="viewportMode">--</span>
   </div>
 
   <div class="test-info">
-    <h2>🧪 Nomination Ceremony - 2x2 Grid Layout Test</h2>
-    <p><strong>Expected Behavior (from issue #1-4):</strong></p>
+    <h2>🧪 Mobile Nominee Speech Cards Optimization Test</h2>
+    <p><strong>What's Being Tested:</strong></p>
     <ul>
-      <li>✅ HOH speech popup shows only HOH avatar (not nominee avatars)</li>
-      <li>✅ 2 nominees: displayed in single row layout</li>
-      <li>✅ 3-4 nominees: displayed in 2x2 grid layout (NOT column)</li>
-      <li>✅ Each nominee reaction shows: avatar, name, and unique quote</li>
-      <li>✅ All popups have 75% opacity background (updated from 65%)</li>
-      <li>✅ "Ceremony is adjourned" popup styled like nominee cards</li>
-      <li>✅ All popups are contained within the faux TV frame</li>
+      <li>✅ <strong>Desktop (≥769px):</strong> Existing grid/row layout unchanged</li>
+      <li>✅ <strong>Mobile (&lt;768px):</strong> Vertical stack, full width, proper spacing</li>
+      <li>✅ <strong>Typography:</strong> Improved readability on mobile (no awkward wrapping)</li>
+      <li>✅ <strong>Animation:</strong> Staggered fade/slide on mobile (touch devices only)</li>
+      <li>✅ <strong>Progressive Enhancement:</strong> Works without JS (layout only)</li>
+      <li>✅ <strong>Data Hooks:</strong> Uses [data-nom-speeches] and [data-nom-speech-card]</li>
+      <li>✅ <strong>Safe Areas:</strong> Proper padding for mobile notches</li>
     </ul>
+    <p><strong>How to Test:</strong></p>
+    <ol>
+      <li>Resize your browser to &lt;768px wide OR click "📱 Mobile Simulator"</li>
+      <li>Click a test button to show nominee cards</li>
+      <li>On touch devices + mobile width, cards should animate in one-by-one</li>
+      <li>On desktop, cards should show in grid/row layout without stagger</li>
+    </ol>
   </div>
 
   <div id="tv">
     <div id="tvOverlay"></div>
   </div>
 
+  <div class="mobile-simulator" id="mobileSimulator">
+    <div class="mobile-simulator-header">
+      <h3>📱 Mobile Simulator (Touch Device)</h3>
+      <button class="close-simulator" id="closeMobileSimulator">✕ Close</button>
+    </div>
+    <div id="tvMobile" style="
+      margin: 20px auto;
+      max-width: 100%;
+      position: relative;
+      background: linear-gradient(135deg, #0e1a28, #1a2b3f);
+      border: 3px solid #356089;
+      border-radius: 24px;
+      padding: 40px 30px;
+      min-height: 500px;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+    ">
+      <div id="tvOverlayMobile" style="
+        position: absolute;
+        inset: 40px 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      "></div>
+    </div>
+  </div>
+
   <script src="js/ui.overlay-and-logs.js"></script>
+  <script src="js/nominations-enhancer.js"></script>
   <script>
     // Mock game data
     window.game = {
@@ -147,7 +253,7 @@
       return player && player.avatar || window.getDicebearUrl((player && player.name) || 'player');
     };
 
-    // Nominee reaction quotes (from nominations.js)
+    // Nominee reaction quotes
     const NOMINEE_REACTIONS = [
       'I am shocked, but I am ready to fight for my place here.',
       'I did not see this coming at all.',
@@ -156,47 +262,32 @@
       'I am going to prove why I deserve to stay.',
       'This nomination just lit a fire under me.',
       'I will show everyone what I am made of this week.',
-      'I am disappointed, but I know I can win the veto.',
-      'This is a wake-up call — time to step up my game.',
-      'I will use this as motivation to keep fighting.'
+      'I am disappointed, but I know I can win the veto.'
     ];
 
-    // Test HOH speech
-    function testHohSpeech() {
-      const hoh = window.getP(1);
-      if (window.buildCardWithAvatars) {
-        const card = window.buildCardWithAvatars({
-          title: 'Nomination Ceremony',
-          lines: [hoh.name + ' addresses the house.'],
-          tone: 'noms',
-          duration: 2400,
-          actorId: hoh.id,
-          targetIds: [], // No nominee avatars
-          type: 'hohSpeech'
-        });
-        setTimeout(function() {
-          const host = document.getElementById('tvOverlay');
-          if(host) host.innerHTML = '';
-          var tv = document.getElementById('tv');
-          if(tv) tv.classList.remove('tvTall');
-        }, 2400);
-      }
-      console.log('✅ HOH speech displayed');
+    // Update viewport display
+    function updateViewportDisplay() {
+      const width = window.innerWidth;
+      document.getElementById('viewportWidth').textContent = width;
+      document.getElementById('viewportMode').textContent = width <= 768 ? 'Mobile 📱' : 'Desktop 💻';
     }
+    updateViewportDisplay();
+    window.addEventListener('resize', updateViewportDisplay);
 
-    // Test nominee reactions in grid or row
-    function testNomineeReactions(nomineeIds) {
-      const host = document.getElementById('tvOverlay');
+    // Test nominee reactions
+    function testNomineeReactions(nomineeIds, targetHost) {
+      const host = targetHost || document.getElementById('tvOverlay');
+      if (!host) return;
+
       host.innerHTML = '';
-
       const isGrid = nomineeIds.length >= 3;
-      console.log('Testing ' + nomineeIds.length + ' nominees in ' + (isGrid ? 'grid' : 'row') + ' layout');
-
+      
       const container = document.createElement('div');
       container.className = 'nominee-reactions-container';
+      container.setAttribute('data-nom-speeches', '');
       container.style.cssText = isGrid 
-        ? 'display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 92%; padding: 16px; box-sizing: border-box; margin: 0 auto;'
-        : 'display: flex; flex-direction: row; gap: 12px; width: 100%; max-width: 92%; padding: 16px; box-sizing: border-box; margin: 0 auto;';
+        ? 'display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-items: center; justify-content: center; width: 100%; max-width: 92%; padding: 16px; box-sizing: border-box; margin: 0 auto;'
+        : 'display: flex; flex-direction: row; gap: 12px; align-items: center; justify-content: center; width: 100%; max-width: 92%; padding: 16px; box-sizing: border-box; margin: 0 auto;';
 
       nomineeIds.forEach(function(playerId) {
         const player = window.getP(playerId);
@@ -205,6 +296,7 @@
         const quote = NOMINEE_REACTIONS[Math.floor(Math.random() * NOMINEE_REACTIONS.length)];
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard nominee-reaction-card';
+        card.setAttribute('data-nom-speech-card', '');
         card.style.cssText = 'width: 100%; max-width: ' + (isGrid ? '100%' : '45%') + '; margin: 0; padding: 12px 16px; animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards; display: flex; flex-direction: column; align-items: center;';
 
         const title = document.createElement('h3');
@@ -235,65 +327,46 @@
       });
 
       host.appendChild(container);
-      document.getElementById('tv').classList.add('tvTall');
-      console.log('✅ ' + nomineeIds.length + ' nominees displayed in ' + (isGrid ? '2x2 grid' : 'row'));
-    }
+      const tv = targetHost ? document.getElementById('tvMobile') : document.getElementById('tv');
+      if (tv) tv.classList.add('tvTall');
 
-    // Test ceremony end
-    function testCeremonyEnd() {
-      const host = document.getElementById('tvOverlay');
-      host.innerHTML = '';
-      
-      const card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
-      card.style.cssText = 'width: 90%; max-width: 450px; margin: 0 auto; padding: 20px 24px; text-align: center; animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;';
-      
-      const title = document.createElement('h3');
-      title.textContent = 'Nomination Ceremony';
-      title.style.marginBottom = '12px';
-      card.appendChild(title);
-      
-      const message = document.createElement('div');
-      message.className = 'big';
-      message.textContent = 'This ceremony is adjourned.';
-      message.style.fontSize = '0.9rem';
-      card.appendChild(message);
-      
-      host.appendChild(card);
-      document.getElementById('tv').classList.add('tvTall');
-      console.log('✅ Ceremony end message displayed');
-    }
+      // Trigger stagger animation if on mobile
+      if (window.initNomineeStagger) {
+        window.initNomineeStagger(container);
+      }
 
-    // Full ceremony test
-    async function testFullCeremony() {
-      console.log('🎬 Starting full ceremony test...');
-      testHohSpeech();
-      await new Promise(function(r) { setTimeout(r, 2400); });
-      testNomineeReactions([2, 3, 4, 5]);
-      await new Promise(function(r) { setTimeout(r, 3500); });
-      testCeremonyEnd();
-      await new Promise(function(r) { setTimeout(r, 2000); });
-      clearPopups();
-      console.log('✅ Full ceremony test complete');
+      console.log('✅ ' + nomineeIds.length + ' nominees displayed');
     }
 
     // Clear popups
     function clearPopups() {
       document.getElementById('tvOverlay').innerHTML = '';
+      document.getElementById('tvOverlayMobile').innerHTML = '';
       document.getElementById('tv').classList.remove('tvTall');
+      document.getElementById('tvMobile').classList.remove('tvTall');
       console.log('🧹 Cleared');
     }
 
+    // Mobile simulator
+    document.getElementById('testMobileSimulator').onclick = function() {
+      document.getElementById('mobileSimulator').classList.add('active');
+      // Trigger a test automatically
+      setTimeout(() => testNomineeReactions([2, 3, 4, 5], document.getElementById('tvOverlayMobile')), 100);
+    };
+
+    document.getElementById('closeMobileSimulator').onclick = function() {
+      document.getElementById('mobileSimulator').classList.remove('active');
+      clearPopups();
+    };
+
     // Wire buttons
-    document.getElementById('testHohSpeech').onclick = testHohSpeech;
     document.getElementById('test2Nominees').onclick = function() { testNomineeReactions([2, 3]); };
     document.getElementById('test3Nominees').onclick = function() { testNomineeReactions([2, 3, 4]); };
     document.getElementById('test4Nominees').onclick = function() { testNomineeReactions([2, 3, 4, 5]); };
-    document.getElementById('testCeremonyEnd').onclick = testCeremonyEnd;
-    document.getElementById('testFullCeremony').onclick = testFullCeremony;
     document.getElementById('clearPopups').onclick = clearPopups;
 
-    console.log('✓ Test page ready');
+    console.log('✓ Mobile optimization test page ready');
+    console.log('Viewport:', window.innerWidth + 'px', window.innerWidth <= 768 ? '(Mobile)' : '(Desktop)');
   </script>
 </body>
 </html>
