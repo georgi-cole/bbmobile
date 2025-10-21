@@ -1185,7 +1185,7 @@
     
     // Add tooltip with cost breakdown for transparency
     if(groupCost > 0) {
-      btn.title = `Base cost: ${baseCost}⚡\n+${groupCost}⚡ for ${selectedIds.length - 1} extra target${groupCost !== 1 ? 's' : ''}\nTotal: ${effectiveCost}⚡`;
+      btn.title = `Base cost: ${baseCost}⚡\n+${groupCost}⚡ for ${selectedIds.length - 1} extra target${(selectedIds.length - 1) !== 1 ? 's' : ''}\nTotal: ${effectiveCost}⚡`;
     } else {
       btn.title = `Energy cost: ${effectiveCost}⚡`;
     }
