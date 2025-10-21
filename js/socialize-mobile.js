@@ -10,6 +10,18 @@
   // Flag to prevent re-entrant mounting during DOM mutations
   let _isCurrentlyMounting = false;
 
+  // Touch detection
+  const isTouchDevice = ('ontouchstart' in window) || 
+                        (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+
+  // SocializeMobile state for multi-select
+  const SocializeMobile = {
+    state: {
+      multiSelectMode: isTouchDevice, // Default ON for touch, OFF for desktop
+      selectedIds: new Set() // Persist selection across re-renders
+    }
+  };
+
   // Resource state management - thin view over canonical SocialManeuvers store
   function getResourceState() {
     const g = global.game || {};
@@ -319,9 +331,9 @@
 
         <div class="modal-body">
           <section class="modal-section player-picker-section">
-            <h3>Select Players</h3>
-            <div class="player-picker-instructions">
-              Tap to select. Hold Ctrl/Cmd for multi-select group actions.
+            <h3 data-sm-select-header>Select Players</h3>
+            <div class="player-picker-instructions" data-sm-hint>
+              ${isTouchDevice ? 'Tap to add/remove. Long-press to toggle Group mode.' : 'Tap to select. Hold Ctrl/Cmd for multi-select group actions.'}
             </div>
             <div class="player-picker" id="playerPicker"></div>
           </section>
@@ -416,10 +428,41 @@
 
     picker.innerHTML = '';
 
+    // Add Group toggle pill for touch devices in the header
+    if (isTouchDevice) {
+      const header = $('[data-sm-select-header]');
+      if (header) {
+        // Check if pill already exists
+        let pill = header.querySelector('.sm-pill.sm-group-toggle');
+        if (!pill) {
+          pill = document.createElement('button');
+          pill.className = 'sm-pill sm-group-toggle';
+          pill.setAttribute('aria-pressed', SocializeMobile.state.multiSelectMode ? 'true' : 'false');
+          pill.textContent = 'Group';
+          pill.addEventListener('click', toggleGroupMode);
+          header.appendChild(pill);
+        } else {
+          // Update existing pill state
+          pill.setAttribute('aria-pressed', SocializeMobile.state.multiSelectMode ? 'true' : 'false');
+        }
+      }
+    }
+
     others.forEach(player => {
       const card = document.createElement('div');
       card.className = 'player-card';
       card.dataset.playerId = player.id;
+      card.dataset.smPlayerCard = ''; // Add data attribute for initPlayerGrid
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      
+      // Restore selection state if in selectedIds
+      if (SocializeMobile.state.selectedIds.has(player.id)) {
+        card.classList.add('selected');
+        card.setAttribute('aria-pressed', 'true');
+      } else {
+        card.setAttribute('aria-pressed', 'false');
+      }
       
       const avatar = document.createElement('img');
       avatar.className = 'player-avatar';
@@ -449,21 +492,11 @@
       card.appendChild(name);
       card.appendChild(relationshipInfo);
 
-      card.addEventListener('click', (e) => {
-        // Multi-select support
-        if (!e.ctrlKey && !e.metaKey) {
-          // Clear other selections
-          $$('.player-card.selected').forEach(c => c.classList.remove('selected'));
-        }
-        card.classList.toggle('selected');
-        updateExecuteButton();
-        
-        // Refresh action menu to show evaluations for selected target
-        populateActionMenu();
-      });
-
       picker.appendChild(card);
     });
+
+    // Initialize player grid handlers (bind click/long-press)
+    initPlayerGrid();
   }
 
   // Get relationship label from affinity (matching social.js)
@@ -485,6 +518,148 @@
     if (a >= 0.28) return 'relationship-positive';
     if (a >= -0.12) return 'relationship-neutral';
     return 'relationship-negative';
+  }
+
+  // Toggle Group mode for touch devices
+  function toggleGroupMode() {
+    SocializeMobile.state.multiSelectMode = !SocializeMobile.state.multiSelectMode;
+    
+    // Update pill state
+    const pill = $('.sm-pill.sm-group-toggle');
+    if (pill) {
+      pill.setAttribute('aria-pressed', SocializeMobile.state.multiSelectMode ? 'true' : 'false');
+    }
+    
+    // Clear selections when toggling off
+    if (!SocializeMobile.state.multiSelectMode) {
+      SocializeMobile.state.selectedIds.clear();
+      $$('.player-card.selected').forEach(card => {
+        card.classList.remove('selected');
+        card.setAttribute('aria-pressed', 'false');
+      });
+      updateExecuteButton();
+      populateActionMenu();
+    }
+    
+    console.log('[socialize-mobile] Group mode:', SocializeMobile.state.multiSelectMode ? 'ON' : 'OFF');
+  }
+
+  // Initialize player grid handlers (re-bind on grid re-render)
+  function initPlayerGrid() {
+    const cards = $$('[data-sm-player-card]');
+    
+    cards.forEach(card => {
+      const playerId = parseInt(card.dataset.playerId);
+      
+      // Remove any existing listeners by cloning the node
+      const newCard = card.cloneNode(true);
+      card.parentNode.replaceChild(newCard, card);
+      
+      let longPressTimer = null;
+      let longPressTriggered = false;
+      
+      // Touch handlers for long-press
+      if (isTouchDevice) {
+        newCard.addEventListener('touchstart', (e) => {
+          longPressTriggered = false;
+          longPressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            
+            // Trigger vibrate if supported
+            if (navigator.vibrate) {
+              navigator.vibrate(50);
+            }
+            
+            // Toggle Group mode
+            toggleGroupMode();
+          }, 350);
+        }, { passive: true });
+        
+        newCard.addEventListener('touchend', (e) => {
+          clearTimeout(longPressTimer);
+          
+          if (!longPressTriggered) {
+            // Normal tap - handle selection
+            handleCardSelection(newCard, playerId, e);
+          }
+        });
+        
+        newCard.addEventListener('touchcancel', () => {
+          clearTimeout(longPressTimer);
+        });
+      }
+      
+      // Click handler for desktop and tap fallback
+      newCard.addEventListener('click', (e) => {
+        if (!isTouchDevice) {
+          handleCardSelection(newCard, playerId, e);
+        }
+      });
+      
+      // Keyboard support
+      newCard.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardSelection(newCard, playerId, e);
+        }
+      });
+    });
+  }
+
+  // Handle card selection logic
+  function handleCardSelection(card, playerId, event) {
+    // Get selected action to check if it's group capable
+    const selectedAction = $('.action-btn.selected');
+    const actionId = selectedAction?.dataset.actionId;
+    
+    // Check if action is group capable
+    let isGroupCapable = false;
+    if (actionId && global.SocialManeuvers?.SOCIAL_ACTIONS) {
+      const action = global.SocialManeuvers.SOCIAL_ACTIONS.find(a => a.id === actionId);
+      isGroupCapable = action?.maxTargets > 1 || action?.groupAllowed === true;
+    }
+    
+    // Determine if we should do additive selection
+    let isAdditive = false;
+    if (isTouchDevice) {
+      // Touch: additive when multiSelectMode is ON or action is group capable
+      isAdditive = SocializeMobile.state.multiSelectMode || isGroupCapable;
+    } else {
+      // Desktop: additive when Ctrl/Cmd pressed
+      isAdditive = event.ctrlKey || event.metaKey;
+    }
+    
+    // Single-target actions always single select
+    if (selectedAction && actionId) {
+      const minTargets = parseInt(selectedAction.dataset.minTargets) || 1;
+      if (minTargets === 1 && !isGroupCapable) {
+        isAdditive = false;
+      }
+    }
+    
+    if (!isAdditive) {
+      // Clear other selections
+      $$('.player-card.selected').forEach(c => {
+        c.classList.remove('selected');
+        c.setAttribute('aria-pressed', 'false');
+        SocializeMobile.state.selectedIds.delete(parseInt(c.dataset.playerId));
+      });
+    }
+    
+    // Toggle this card
+    const isSelected = card.classList.contains('selected');
+    if (isSelected) {
+      card.classList.remove('selected');
+      card.setAttribute('aria-pressed', 'false');
+      SocializeMobile.state.selectedIds.delete(playerId);
+    } else {
+      card.classList.add('selected');
+      card.setAttribute('aria-pressed', 'true');
+      SocializeMobile.state.selectedIds.add(playerId);
+    }
+    
+    updateExecuteButton();
+    populateActionMenu();
   }
 
   function populateActionMenu() {
@@ -1270,7 +1445,10 @@
     onResourcesChanged: onResourcesChanged,
     show: showLauncher,
     hide: hideLauncher,
-    isInSocialPhase: isInSocialPhase
+    isInSocialPhase: isInSocialPhase,
+    initPlayerGrid: initPlayerGrid, // New: re-bind handlers on grid re-render
+    state: SocializeMobile.state, // Expose state for testing/debugging
+    isTouchDevice: isTouchDevice // Expose for testing
   };
 
   // Resilient auto-mount with MutationObserver

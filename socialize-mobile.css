@@ -308,6 +308,48 @@
   font-size: 0.95rem;
   color: rgba(255, 255, 255, 0.9);
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Group Toggle Pill */
+.sm-pill.sm-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid rgba(74, 144, 226, 0.3);
+  background: rgba(74, 144, 226, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: auto;
+}
+
+.sm-pill.sm-group-toggle[aria-pressed="true"] {
+  background: rgba(74, 144, 226, 0.3);
+  border-color: #4a90e2;
+  color: #fff;
+  box-shadow: 0 0 8px rgba(74, 144, 226, 0.3);
+}
+
+.sm-pill.sm-group-toggle:hover {
+  background: rgba(74, 144, 226, 0.2);
+  border-color: rgba(74, 144, 226, 0.5);
+  transform: translateY(-1px);
+}
+
+.sm-pill.sm-group-toggle[aria-pressed="true"]:hover {
+  background: rgba(74, 144, 226, 0.4);
+}
+
+.sm-pill.sm-group-toggle::before {
+  content: '👥';
+  font-size: 0.9rem;
 }
 
 /* Player Picker */
@@ -344,7 +386,8 @@
 .player-card.selected {
   border-color: #4a90e2;
   background: rgba(74, 144, 226, 0.2);
-  box-shadow: 0 0 12px rgba(74, 144, 226, 0.4);
+  box-shadow: 0 0 16px rgba(74, 144, 226, 0.5), 0 0 0 3px rgba(74, 144, 226, 0.3);
+  transform: scale(1.05);
 }
 
 .player-avatar {
