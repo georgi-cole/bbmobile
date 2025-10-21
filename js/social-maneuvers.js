@@ -617,6 +617,74 @@
   };
 
   // ============================================================================
+  // UNIFIED ACTION COST CALCULATOR (Single Source of Truth)
+  // ============================================================================
+  /**
+   * Compute the total energy cost for an action with the given targets.
+   * 
+   * @param {string} actionId - The action identifier
+   * @param {Array<number>} selectedIds - Array of target player IDs
+   * @param {Object} context - Optional context with action metadata overrides
+   * @returns {Object} Cost breakdown: { total, base, group, breakdown }
+   * 
+   * Default pricing rule: total = base + (selectedIds.length - 1) * groupExtra
+   * where groupExtra defaults to 1 per additional target.
+   * 
+   * First target is "free" in the base cost.
+   * Each additional target beyond the first incurs +1 energy (groupExtra).
+   * 
+   * Examples:
+   *   1 target:  total = 1 + (1-1)*1 = 1
+   *   2 targets: total = 1 + (2-1)*1 = 2  
+   *   3 targets: total = 1 + (3-1)*1 = 3
+   *   4 targets: total = 1 + (4-1)*1 = 4
+   */
+  function computeActionCost(actionId, selectedIds, context = {}) {
+    const action = getActionById(actionId);
+    if (!action) {
+      console.warn('[computeActionCost] Unknown action:', actionId);
+      return { total: 0, base: 0, group: 0, breakdown: 'Unknown action' };
+    }
+
+    // Base cost from action definition
+    const baseCost = context.baseCost ?? action.costs?.energy ?? action.cost ?? 1;
+    
+    // Group pricing parameters
+    const targetCount = Array.isArray(selectedIds) ? selectedIds.length : 0;
+    const groupExtraPerAdditional = context.groupExtraPerAdditional ?? 1;
+    const perTarget = context.perTarget ?? false;
+    const multiplier = context.multiplier ?? 1;
+
+    let groupCost = 0;
+    let total = baseCost;
+
+    if (targetCount > 1) {
+      if (perTarget) {
+        // Per-target pricing: each target costs the base amount
+        total = baseCost * targetCount * multiplier;
+        groupCost = total - baseCost;
+      } else {
+        // Default group pricing: base + (count - 1) * groupExtra
+        groupCost = (targetCount - 1) * groupExtraPerAdditional;
+        total = (baseCost + groupCost) * multiplier;
+      }
+    }
+
+    const breakdown = targetCount > 1 
+      ? `base ${baseCost} + group ${groupCost} (${targetCount - 1} extra)`
+      : `${baseCost}`;
+
+    console.info(`[computeActionCost] ${actionId}: ${total}⚡ (${breakdown})`);
+
+    return {
+      total: Math.max(0, Math.round(total)),
+      base: Math.round(baseCost),
+      group: Math.round(groupCost),
+      breakdown
+    };
+  }
+
+  // ============================================================================
   // ACTION DEFINITIONS & DYNAMIC MENU (includes high-impact actions)
   // ============================================================================
   const SOCIAL_ACTIONS = [
@@ -662,8 +730,11 @@
     const target = global.getP?.(targetId);
     if(!actor || !target){ return { success: false, reason: 'player_not_found' }; }
 
-    // Validate multi-target counts before spending resources
+    // Build complete target list (primary + extra targets)
+    // Always respect extraTargetIds for group pricing, regardless of multiTarget flag
     let allTargets = [targetId, ...((Array.isArray(extraTargetIds) ? extraTargetIds : []).filter(Boolean))];
+    
+    // Validate multi-target requirements for actions marked as multiTarget
     if(action.multiTarget){
       const minT = action.minTargets ?? 2;
       const maxT = action.maxTargets ?? 10;
@@ -673,28 +744,25 @@
       if(allTargets.length > maxT){
         allTargets = allTargets.slice(0, maxT);
       }
-    } else {
-      allTargets = [targetId];
     }
+    // Note: Non-multiTarget actions CAN still have multiple targets for group pricing
+    // The multiTarget flag is just for validation and UI hints
 
-    // ==== GROUP ACTION EXTRA COST ENFORCEMENT ====
-    // Compute effective cost: baseCost + Math.max(0, targets.length - 2)
-    const baseCost = (action.costs?.energy ?? action.cost ?? 0);
-    const extraTargetsCount = Math.max(0, allTargets.length - 2);
-    const effectiveCost = baseCost + extraTargetsCount;
+    // ==== UNIFIED COST CALCULATION (Single Source of Truth) ====
+    // Use computeActionCost to get accurate pricing
+    const costCalc = computeActionCost(actionId, allTargets);
+    const { total: effectiveCost, base: baseCost, group: groupCost } = costCalc;
     
-    if(extraTargetsCount > 0) {
-      console.info(`[social-maneuvers] 💰 Group action cost: base=${baseCost} + extras=${extraTargetsCount} = ${effectiveCost} (${allTargets.length} targets)`);
-    }
+    console.info(`[sm-exec] action=${actionId} targets=${allTargets.length} cost=${effectiveCost}⚡ (${costCalc.breakdown})`);
     
-    // Pre-check energy for effective cost BEFORE spending anything
+    // Pre-check energy for total cost BEFORE spending anything
     const currentEnergy = SocialResources.get(actorId, 'energy');
     if(currentEnergy < effectiveCost) {
-      console.warn(`[social-maneuvers] ⚠️ Insufficient energy for group action: need ${effectiveCost}, have ${currentEnergy}`);
+      console.warn(`[sm-exec] ⚠️ Insufficient energy: need ${effectiveCost}⚡, have ${currentEnergy}⚡`);
       return { 
         success: false, 
         reason: 'insufficient_energy',
-        message: `Not enough energy: need ${effectiveCost}⚡ for ${allTargets.length} targets (base ${baseCost} + group ${extraTargetsCount}), have ${currentEnergy}⚡`
+        message: `Not enough energy: need ${effectiveCost}⚡ for ${allTargets.length} target${allTargets.length !== 1 ? 's' : ''} (${costCalc.breakdown}), have ${currentEnergy}⚡`
       };
     }
 
@@ -711,23 +779,28 @@
     // Track affinity before action (for PR #266 session summary)
     const affinityBefore = actor?.affinity?.[targetId] ?? 0;
 
-    // Spend BASE resources only (energy, influence, information) using the unified SocialResources API
-    const spendResult = SocialResources.spend(actorId, action.costs);
+    // ==== ATOMIC COST DEDUCTION (Single Source of Truth) ====
+    // Spend ALL resources (energy including group cost, influence, information) atomically
+    // This ensures preview and execution costs match exactly
+    const totalEnergyCost = effectiveCost;
+    const spendCosts = {
+      energy: totalEnergyCost,
+      influence: action.costs?.influence ?? 0,
+      information: action.costs?.information ?? 0
+    };
+    
+    const spendResult = SocialResources.spend(actorId, spendCosts);
     if(!spendResult.success){
-      return { success: false, reason: 'insufficient_resources', insufficient: spendResult.insufficient, message: `Not enough ${spendResult.insufficient}` };
+      console.error(`[sm-exec] ⚠️ Failed to spend resources:`, spendCosts);
+      return { 
+        success: false, 
+        reason: 'insufficient_resources', 
+        insufficient: spendResult.insufficient, 
+        message: `Not enough ${spendResult.insufficient}` 
+      };
     }
     
-    // ==== SPEND EXTRA ENERGY FOR GROUP ACTIONS ====
-    // After successful base spend, deduct the extra portion for multi-target
-    if(extraTargetsCount > 0) {
-      const extraSpendResult = SocialResources.spend(actorId, { energy: extraTargetsCount });
-      if(!extraSpendResult.success) {
-        // This should never happen since we pre-checked, but log it
-        console.error(`[social-maneuvers] ⚠️ Failed to spend extra energy after base spend (should not happen)`);
-      } else {
-        console.info(`[social-maneuvers] ✓ Extra energy spent: ${extraTargetsCount}⚡ for ${extraTargetsCount} additional targets`);
-      }
-    }
+    console.info(`[sm-exec] ✓ Resources spent: energy=${totalEnergyCost}⚡, influence=${spendCosts.influence}, info=${spendCosts.information}`);
 
     // Telemetry (generic)
     const actorName = global.safeName?.(actorId) || `Player ${actorId}`;
@@ -743,11 +816,12 @@
       chanceRoll, succeeded,
       energyRemaining: SocialResources.get(actorId, 'energy'),
       infoRemaining: SocialResources.get(actorId, 'information'),
-      // Group action metadata
+      // Group action metadata (with correct unified costs)
       targetCount: allTargets.length,
       baseCost,
-      extraCost: extraTargetsCount,
-      effectiveCost
+      groupCost,
+      effectiveCost,
+      costBreakdown: costCalc.breakdown
     };
     if(!global.game.__socialManeuversTelemetry) global.game.__socialManeuversTelemetry = [];
     global.game.__socialManeuversTelemetry.push(telemetry);
@@ -803,8 +877,8 @@
         succeeded
       });
 
-      // Track energy spent
-      const energySpent = action.costs?.energy || action.cost || 0;
+      // Track energy spent (use total effective cost, not just base)
+      const energySpent = effectiveCost;
       const spent = g.__socialManeuversSession.energySpent.get(actorId) || 0;
       g.__socialManeuversSession.energySpent.set(actorId, spent + energySpent);
 
@@ -3393,6 +3467,7 @@
   global.SocialManeuvers = {
     isEnabled, SocialResources, SocialEnergyBank, // New uncapped energy storage system
     getActionById, getAvailableActions, executeAction,
+    computeActionCost, // Unified cost calculator (single source of truth)
     recordActionInMemory, getPlayerMemory,
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
     pausePhaseTimer, resumePhaseTimer, // Timer control exports
