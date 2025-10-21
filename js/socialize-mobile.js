@@ -1151,15 +1151,12 @@
     const actionId = selectedAction.dataset.actionId;
     const minTargets = parseInt(selectedAction.dataset.minTargets) || 1;
     
-    // Find the action definition to get cost
-    const actions = global.SocialManeuvers?.SOCIAL_ACTIONS || [];
-    const action = actions.find(a => a.id === actionId);
-    const baseCost = (action?.costs?.energy ?? action?.cost ?? 1);
+    // ==== USE UNIFIED COST CALCULATOR (Single Source of Truth) ====
+    const selectedIds = selectedPlayers.map(card => parseInt(card.dataset.playerId));
+    const costCalc = global.SocialManeuvers?.computeActionCost?.(actionId, selectedIds) || { total: 1, base: 1, group: 0 };
+    const { total: effectiveCost, base: baseCost, group: groupCost } = costCalc;
     
-    // ==== COMPUTE EFFECTIVE COST FOR GROUP ACTIONS ====
-    // effectiveCost = baseCost + Math.max(0, targets.length - 2)
-    const extraCost = Math.max(0, selectedPlayers.length - 2);
-    const effectiveCost = baseCost + extraCost;
+    console.info(`[socialize-mobile] Preview cost: ${effectiveCost}⚡ (${costCalc.breakdown})`);
     
     // Check all requirements
     const hasEnoughPlayers = selectedPlayers.length >= minTargets;
@@ -1172,23 +1169,23 @@
     if (!hasEnoughPlayers) {
       btn.textContent = `Select ${minTargets}+ Players (${selectedPlayers.length} selected)`;
     } else if (!hasEnoughEnergy) {
-      if(extraCost > 0) {
-        btn.textContent = `Need ${effectiveCost}⚡ (base ${baseCost} + group ${extraCost}), have ${res.energy}⚡`;
+      if(groupCost > 0) {
+        btn.textContent = `Need ${effectiveCost}⚡ (base ${baseCost} + group ${groupCost}), have ${res.energy}⚡`;
       } else {
         btn.textContent = `Need ${effectiveCost}⚡, have ${res.energy}⚡`;
       }
     } else {
       // Show effective cost with breakdown for group actions
-      if(extraCost > 0) {
-        btn.textContent = `Execute Action: ⚡${effectiveCost} (base ${baseCost} + group ${extraCost})`;
+      if(groupCost > 0) {
+        btn.textContent = `Execute Action: ⚡${effectiveCost} (base ${baseCost} + group ${groupCost})`;
       } else {
         btn.textContent = `Execute Action: ⚡${effectiveCost}`;
       }
     }
     
     // Add tooltip with cost breakdown for transparency
-    if(extraCost > 0) {
-      btn.title = `Base cost: ${baseCost}⚡\n+${extraCost}⚡ for ${extraCost} extra target${extraCost !== 1 ? 's' : ''} (after 2nd)\nTotal: ${effectiveCost}⚡`;
+    if(groupCost > 0) {
+      btn.title = `Base cost: ${baseCost}⚡\n+${groupCost}⚡ for ${selectedIds.length - 1} extra target${groupCost !== 1 ? 's' : ''}\nTotal: ${effectiveCost}⚡`;
     } else {
       btn.title = `Energy cost: ${effectiveCost}⚡`;
     }

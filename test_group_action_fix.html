@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Group Action Cost Fix</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 { color: #00d9ff; border-bottom: 2px solid #00d9ff; padding-bottom: 10px; }
+    h2 { color: #ff6b6b; margin-top: 30px; }
+    .test-case {
+      background: #16213e;
+      border-left: 4px solid #0f3460;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .pass { border-left-color: #4caf50; }
+    .fail { border-left-color: #f44336; }
+    .result {
+      font-weight: bold;
+      font-size: 1.1em;
+      margin-top: 10px;
+    }
+    .pass .result { color: #4caf50; }
+    .fail .result { color: #f44336; }
+    code {
+      background: #0a0e27;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #ffd700;
+    }
+    .details {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #aaa;
+    }
+    .summary {
+      background: #0f3460;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 30px;
+      text-align: center;
+    }
+    .summary h2 { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Group Action Energy Cost Fix - Test Suite</h1>
+  <div id="results"></div>
+  <div class="summary" id="summary"></div>
+
+  <script>
+    // Mock the global context
+    window.game = { cfg: { enableSocialManeuvers: true }, humanId: 1, week: 1 };
+    window.getP = (id) => ({ id, name: `Player${id}`, affinity: {} });
+    window.safeName = (id) => `Player${id}`;
+    window.alivePlayers = () => [
+      { id: 1, name: 'Player1' },
+      { id: 2, name: 'Player2' },
+      { id: 3, name: 'Player3' },
+      { id: 4, name: 'Player4' },
+      { id: 5, name: 'Player5' }
+    ];
+  </script>
+
+  <!-- Load the actual social-maneuvers.js -->
+  <script src="../js/social-maneuvers.js"></script>
+
+  <script>
+    const results = [];
+    
+    function runTest(description, testFn) {
+      try {
+        const result = testFn();
+        results.push({ description, ...result });
+        return result;
+      } catch (e) {
+        results.push({ 
+          description, 
+          pass: false, 
+          expected: 'No error', 
+          actual: e.message 
+        });
+        return { pass: false, expected: 'No error', actual: e.message };
+      }
+    }
+
+    // Test 1: Single target cost
+    runTest('Single target (1 target, base 1)', () => {
+      const cost = window.SocialManeuvers.computeActionCost('smalltalk', [1]);
+      return {
+        pass: cost.total === 1 && cost.base === 1 && cost.group === 0,
+        expected: 'total=1, base=1, group=0',
+        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`
+      };
+    });
+
+    // Test 2: Two targets
+    runTest('Two targets (2 targets, base 1)', () => {
+      const cost = window.SocialManeuvers.computeActionCost('smalltalk', [1, 2]);
+      return {
+        pass: cost.total === 2 && cost.base === 1 && cost.group === 1,
+        expected: 'total=2, base=1, group=1',
+        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`
+      };
+    });
+
+    // Test 3: Three targets
+    runTest('Three targets (3 targets, base 1)', () => {
+      const cost = window.SocialManeuvers.computeActionCost('smalltalk', [1, 2, 3]);
+      return {
+        pass: cost.total === 3 && cost.base === 1 && cost.group === 2,
+        expected: 'total=3, base=1, group=2',
+        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`
+      };
+    });
+
+    // Test 4: Four targets (the bug scenario!)
+    runTest('Four targets (4 targets, base 1) - BUG SCENARIO', () => {
+      const cost = window.SocialManeuvers.computeActionCost('smalltalk', [1, 2, 3, 4]);
+      return {
+        pass: cost.total === 4 && cost.base === 1 && cost.group === 3,
+        expected: 'total=4, base=1, group=3',
+        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`,
+        note: 'This is the exact scenario from the bug report!'
+      };
+    });
+
+    // Test 5: Action with higher base cost
+    runTest('Two targets with base cost 2', () => {
+      const cost = window.SocialManeuvers.computeActionCost('strategize', [1, 2]);
+      return {
+        pass: cost.total === 3 && cost.base === 2 && cost.group === 1,
+        expected: 'total=3, base=2, group=1',
+        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`
+      };
+    });
+
+    // Test 6: Verify execution deducts correct amount
+    runTest('Execution: Four targets deducts 4 energy (not 1)', () => {
+      // Set up test player with 5 energy
+      window.SocialManeuvers.SocialResources.init(1);
+      window.SocialManeuvers.SocialEnergyBank.set(1, 5);
+      window.SocialManeuvers.SocialResources.set(1, 'energy', 5);
+      
+      const energyBefore = window.SocialManeuvers.SocialResources.get(1, 'energy');
+      
+      // Execute group action with 4 targets: primary (2) + extras ([3, 4, 5])
+      // Total targets = [2, 3, 4, 5] = 4 targets
+      const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk', [3, 4, 5]);
+      
+      const energyAfter = window.SocialManeuvers.SocialResources.get(1, 'energy');
+      const energySpent = energyBefore - energyAfter;
+      
+      return {
+        pass: energySpent === 4 && result.success === true,
+        expected: '4 energy deducted (5 → 1)',
+        actual: `${energySpent} energy deducted (${energyBefore} → ${energyAfter})`,
+        details: result.success ? 'Action executed successfully' : `Failed: ${result.reason}`
+      };
+    });
+
+    // Test 7: Insufficient energy blocking
+    runTest('Execution blocked when insufficient energy', () => {
+      // Set up test player with only 2 energy
+      window.SocialManeuvers.SocialResources.init(1);
+      window.SocialManeuvers.SocialEnergyBank.set(1, 2);
+      window.SocialManeuvers.SocialResources.set(1, 'energy', 2);
+      
+      // Try to execute action needing 4 energy: [2, 3, 4, 5] = 4 targets = 4 energy
+      const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk', [3, 4, 5]);
+      
+      return {
+        pass: result.success === false && result.reason === 'insufficient_energy',
+        expected: 'Blocked with insufficient_energy',
+        actual: result.success ? 'Allowed (WRONG!)' : `Blocked: ${result.reason}`,
+        details: result.message || ''
+      };
+    });
+
+    // Test 8: Formula verification
+    runTest('Formula: total = base + (count - 1)', () => {
+      const testCases = [
+        { targets: 1, expected: 1 },
+        { targets: 2, expected: 2 },
+        { targets: 3, expected: 3 },
+        { targets: 4, expected: 4 },
+        { targets: 5, expected: 5 }
+      ];
+      
+      const results = testCases.map(tc => {
+        const ids = Array.from({ length: tc.targets }, (_, i) => i + 1);
+        const cost = window.SocialManeuvers.computeActionCost('smalltalk', ids);
+        return { targets: tc.targets, cost: cost.total, expected: tc.expected, match: cost.total === tc.expected };
+      });
+      
+      const allPass = results.every(r => r.match);
+      
+      return {
+        pass: allPass,
+        expected: 'All test cases pass formula',
+        actual: results.map(r => `${r.targets}→${r.cost}${r.match ? '✓' : '✗'}`).join(', '),
+        details: allPass ? 'Formula works for all target counts' : 'Some cases failed'
+      };
+    });
+
+    // Render results
+    const resultsDiv = document.getElementById('results');
+    results.forEach((result, idx) => {
+      const div = document.createElement('div');
+      div.className = `test-case ${result.pass ? 'pass' : 'fail'}`;
+      div.innerHTML = `
+        <strong>Test ${idx + 1}:</strong> ${result.description}
+        <div class="details">
+          <div><strong>Expected:</strong> ${result.expected}</div>
+          <div><strong>Actual:</strong> ${result.actual}</div>
+          ${result.note ? `<div><strong>Note:</strong> ${result.note}</div>` : ''}
+          ${result.details ? `<div>${result.details}</div>` : ''}
+        </div>
+        <div class="result">${result.pass ? '✅ PASS' : '❌ FAIL'}</div>
+      `;
+      resultsDiv.appendChild(div);
+    });
+
+    // Summary
+    const passed = results.filter(r => r.pass).length;
+    const failed = results.filter(r => !r.pass).length;
+    const summaryDiv = document.getElementById('summary');
+    summaryDiv.innerHTML = `
+      <h2>${passed === results.length ? '🎉 All Tests Passed!' : '⚠️ Some Tests Failed'}</h2>
+      <p><strong>${passed}</strong> passed, <strong>${failed}</strong> failed out of <strong>${results.length}</strong> total</p>
+      ${passed === results.length ? '<p style="color: #4caf50;">✓ Group action energy cost fix is working correctly!</p>' : '<p style="color: #f44336;">✗ There are still issues to fix.</p>'}
+    `;
+
+    // Log to console
+    console.group('🧪 Test Results');
+    results.forEach((r, i) => {
+      console.log(`${r.pass ? '✅' : '❌'} Test ${i + 1}: ${r.description}`);
+      console.log(`   Expected: ${r.expected}`);
+      console.log(`   Actual: ${r.actual}`);
+      if (r.details) console.log(`   ${r.details}`);
+    });
+    console.groupEnd();
+    console.log(`\n${passed}/${results.length} tests passed`);
+  </script>
+</body>
+</html>
