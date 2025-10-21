@@ -243,9 +243,10 @@
       // Determine layout: 2 nominees = 1 row, 3-4 nominees = 2x2 grid
       const isGrid = nomineeIds.length >= 3;
       
-      // Create grid or row container
+      // Create grid or row container with data hooks
       const container = document.createElement('div');
       container.className = 'nominee-reactions-container';
+      container.setAttribute('data-nom-speeches', '');
       container.style.cssText = isGrid 
         ? `
           display: grid;
@@ -280,9 +281,10 @@
         // Pick a unique random reaction quote
         const quote = NOMINEE_REACTIONS[Math.floor((global.rng?.()||Math.random())*NOMINEE_REACTIONS.length)];
 
-        // Create reaction card
+        // Create reaction card with data hook
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard nominee-reaction-card';
+        card.setAttribute('data-nom-speech-card', '');
         card.style.cssText = `
           width: 100%;
           max-width: ${isGrid ? '100%' : '45%'};
@@ -330,6 +332,9 @@
 
       host.appendChild(container);
       document.getElementById('tv')?.classList.add('tvTall');
+
+      // Progressive enhancement: trigger stagger animation on mobile/touch devices
+      if(global.initNomineeStagger) global.initNomineeStagger(container);
 
       // Remove after duration
       const duration = 3500;
