@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Auto-Skip Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/social-maneuvers.css">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+    .test-controls {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 2px solid #3498db;
+    }
+    .test-controls h2 {
+      color: #3498db;
+      margin-top: 0;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    button.danger {
+      background: #e74c3c;
+    }
+    button.danger:hover {
+      background: #c0392b;
+    }
+    button.success {
+      background: #2ecc71;
+    }
+    button.success:hover {
+      background: #27ae60;
+    }
+    .info {
+      background: #2a2a2a;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border-left: 4px solid #f39c12;
+    }
+    .status {
+      background: #2a2a2a;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    #tvContainer {
+      margin: 20px 0;
+      max-width: 800px;
+    }
+    .tvFrame {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .tvViewport {
+      position: relative;
+      height: 400px;
+      background: #0f0f1e;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .event-log {
+      background: #2a2a2a;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .event-log-entry {
+      padding: 5px 0;
+      border-bottom: 1px solid #3a3a3a;
+    }
+    .event-log-entry.skip-event {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔋 Social Auto-Skip Test Suite</h1>
+  <p>Test the Social phase auto-skip functionality when energy is 0.</p>
+
+  <div class="test-controls">
+    <h2>Test Controls</h2>
+    
+    <div class="info">
+      <strong>Test Scenario 1:</strong> Set bank to 0, start Social phase → Should show centered indicator for 3s and auto-advance
+    </div>
+    <button onclick="testZeroEnergy()">🔴 Test Zero Energy (Should Auto-Skip)</button>
+    
+    <div class="info">
+      <strong>Test Scenario 2:</strong> Set bank to 5, start Social phase → Should run normally with timer
+    </div>
+    <button onclick="testNormalEnergy()" class="success">✅ Test Normal Energy (5)</button>
+    
+    <div class="info">
+      <strong>Controls:</strong>
+    </div>
+    <button onclick="resetTest()">🔄 Reset Test</button>
+    <button onclick="checkCurrentBank()">📊 Check Bank</button>
+  </div>
+
+  <div id="statusDisplay" class="status"></div>
+
+  <!-- Simulated TV Container -->
+  <div id="tvContainer">
+    <div class="tvFrame">
+      <h3 style="color: #3498db; margin-top: 0;">Faux TV Screen</h3>
+      <div class="tvViewport" data-sm-faux-tv id="testTvViewport">
+        <div style="color: #666;">TV Content Area - Auto-skip indicator should appear centered here</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Log -->
+  <div class="event-log" id="eventLog">
+    <strong>Event Log:</strong>
+  </div>
+
+  <!-- Mock game environment -->
+  <script>
+    // Mock minimal game environment
+    window.game = {
+      cfg: { enableSocialManeuvers: true },
+      week: 1,
+      phase: 'social_intermission',
+      humanId: 1,
+      endAt: Date.now() + 180000,
+      phaseEndsAt: Date.now() + 180000
+    };
+
+    // Mock helper functions
+    window.alivePlayers = () => [
+      { id: 1, name: 'Human Player', evicted: false },
+      { id: 2, name: 'AI Player 2', evicted: false },
+      { id: 3, name: 'AI Player 3', evicted: false }
+    ];
+    window.getP = (id) => window.alivePlayers().find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    window.addLog = (msg, type) => {
+      console.log(`[${type}] ${msg}`);
+      logEvent(`[${type}] ${msg}`);
+    };
+    
+    // Mock phase advance
+    window.advancePhase = () => {
+      logEvent('🎯 advancePhase() called - Phase would advance here', 'skip-event');
+      updateStatus('Phase advanced successfully');
+    };
+
+    // Event logging
+    function logEvent(msg, className = '') {
+      const log = document.getElementById('eventLog');
+      const entry = document.createElement('div');
+      entry.className = `event-log-entry ${className}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Listen for skip event
+    window.addEventListener('sm-phase-skip-empty', (e) => {
+      logEvent(`🚨 sm-phase-skip-empty event fired! Player: ${e.detail.playerId}, Week: ${e.detail.week}`, 'skip-event');
+    });
+
+    function updateStatus(msg) {
+      const status = document.getElementById('statusDisplay');
+      status.innerHTML = `<strong>Status:</strong> ${msg}<br><strong>Time:</strong> ${new Date().toLocaleTimeString()}`;
+    }
+
+    function checkCurrentBank() {
+      if (window.__smDebug) {
+        const bank = window.__smDebug.getBank(1);
+        updateStatus(`Current bank for human player: ${bank}`);
+        logEvent(`Bank check: ${bank} energy`);
+      } else {
+        updateStatus('Social Maneuvers not loaded yet');
+      }
+    }
+
+    function resetTest() {
+      location.reload();
+    }
+
+    function testZeroEnergy() {
+      logEvent('=== STARTING ZERO ENERGY TEST ===');
+      updateStatus('Setting bank to 0 and starting Social phase...');
+      
+      if (!window.SocialManeuvers) {
+        updateStatus('ERROR: Social Maneuvers module not loaded');
+        return;
+      }
+
+      // Set bank to 0
+      if (window.__smDebug) {
+        window.__smDebug.setBank(1, 0);
+        logEvent('Set bank to 0 for human player');
+      }
+
+      // Clear any existing skip flag
+      if (window.game) {
+        window.game.__smSkipInProgress = false;
+      }
+
+      // Start Social phase
+      setTimeout(() => {
+        logEvent('Starting Social phase...');
+        window.SocialManeuvers.onSocialPhaseStart();
+        
+        // Check if timer was stopped
+        setTimeout(() => {
+          const endAt = window.game?.endAt || 0;
+          const now = Date.now();
+          const timeRemaining = endAt - now;
+          if (timeRemaining > 100000000) {
+            logEvent('✅ Timer stopped successfully (far future endAt)', 'skip-event');
+          } else {
+            logEvent(`⚠️ Timer may still be running (${Math.round(timeRemaining/1000)}s remaining)`, 'skip-event');
+          }
+        }, 500);
+      }, 100);
+    }
+
+    function testNormalEnergy() {
+      logEvent('=== STARTING NORMAL ENERGY TEST ===');
+      updateStatus('Setting bank to 5 and starting Social phase...');
+      
+      if (!window.SocialManeuvers) {
+        updateStatus('ERROR: Social Maneuvers module not loaded');
+        return;
+      }
+
+      // Set bank to 5
+      if (window.__smDebug) {
+        window.__smDebug.setBank(1, 5);
+        logEvent('Set bank to 5 for human player');
+      }
+
+      // Clear any existing skip flag
+      if (window.game) {
+        window.game.__smSkipInProgress = false;
+      }
+
+      // Start Social phase
+      setTimeout(() => {
+        logEvent('Starting Social phase...');
+        window.SocialManeuvers.onSocialPhaseStart();
+        updateStatus('Social phase started with normal energy');
+        
+        // Check if timer is running normally
+        setTimeout(() => {
+          const endAt = window.game?.endAt || 0;
+          const now = Date.now();
+          const timeRemaining = endAt - now;
+          if (timeRemaining < 200000 && timeRemaining > 0) {
+            logEvent(`✅ Timer running normally (${Math.round(timeRemaining/1000)}s remaining)`);
+          } else {
+            logEvent(`⚠️ Timer state unexpected (${Math.round(timeRemaining/1000)}s)`);
+          }
+        }, 500);
+      }, 100);
+    }
+
+    // Auto-check on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        updateStatus('Test ready - Click a test button to begin');
+        logEvent('Test page loaded and ready');
+        checkCurrentBank();
+      }, 500);
+    });
+  </script>
+
+  <!-- Load Social Maneuvers module -->
+  <script src="js/social-maneuvers.js"></script>
+</body>
+</html>

@@ -463,18 +463,26 @@
    EMPTY ENERGY OVERLAY (Auto-Skip)
    ============================================================================ */
 
-.sm-empty-energy-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
+/* Wrapper for centering inside faux TV */
+.sm-empty-energy-wrapper {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Overlay content - centered inside TV */
+.sm-empty-energy-overlay {
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 16px;
+  padding: 20px;
+  pointer-events: auto;
   animation: sm-fade-in 0.3s ease-in;
+  max-width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .sm-empty-energy-content {
