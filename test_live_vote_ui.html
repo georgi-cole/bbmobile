@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Vote 2.0 UI Test Harness</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    
+    .checkbox-row {
+      margin: 10px 0;
+    }
+    
+    .checkbox-row label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    
+    .checkbox-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🎬 Live Vote 2.0 UI Test Harness</h1>
+    
+    <div class="checkbox-row">
+      <label>
+        <input type="checkbox" id="toggleEnabled" checked>
+        <span>Enable Modern Live Vote UI</span>
+      </label>
+    </div>
+    
+    <div class="checkbox-row">
+      <label>
+        <input type="checkbox" id="toggleReducedMotion">
+        <span>Simulate Reduced Motion (refresh required)</span>
+      </label>
+    </div>
+    
+    <button onclick="initTest()">Initialize Live Vote</button>
+    <button onclick="pushSingleVote()" id="btnPushVote" disabled>Push Random Vote</button>
+    <button onclick="pushAllVotes()" id="btnPushAll" disabled>Push All Votes</button>
+    <button onclick="finishTest()" id="btnFinish" disabled>Finish & Highlight Winner</button>
+    <button onclick="clearPanel()">Clear Panel</button>
+    
+    <div class="test-info">
+      <strong>Test Features:</strong>
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li>✅ Versus layout with left/right contestants</li>
+        <li>✅ Central meter filling from both sides</li>
+        <li>✅ Flip card animations with voter names</li>
+        <li>✅ Flying cards to target lanes (or fade if reduced motion)</li>
+        <li>✅ Smooth odometer count updates</li>
+        <li>✅ Winner highlighting at the end</li>
+        <li>✅ ARIA live regions for accessibility</li>
+        <li>✅ Respects prefers-reduced-motion</li>
+      </ul>
+      <p><strong>Current Mode:</strong> <span id="modeIndicator">Normal Motion</span></p>
+    </div>
+  </div>
+  
+  <div id="panel"></div>
+  
+  <script>
+    // Mock global helpers
+    window.game = {
+      cfg: {
+        modernLiveVoteUI: true,
+        cardHoldMs: 500,
+        cardGapMs: 250
+      }
+    };
+    
+    window.getP = function(id) {
+      return mockPlayers[id];
+    };
+    
+    window.safeName = function(id) {
+      return mockPlayers[id]?.name || 'Unknown';
+    };
+    
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    // Mock players
+    const mockPlayers = {
+      1: { id: 1, name: 'Alice', avatar: null },
+      2: { id: 2, name: 'Bob', avatar: null },
+      3: { id: 3, name: 'Charlie', avatar: null },
+      4: { id: 4, name: 'Diana', avatar: null },
+      5: { id: 5, name: 'Eve', avatar: null },
+      6: { id: 6, name: 'Frank', avatar: null },
+      7: { id: 7, name: 'Grace', avatar: null }
+    };
+    
+    const voters = [
+      { id: 3, name: 'Charlie' },
+      { id: 4, name: 'Diana' },
+      { id: 5, name: 'Eve' },
+      { id: 6, name: 'Frank' },
+      { id: 7, name: 'Grace' }
+    ];
+    
+    let voteIndex = 0;
+    let isInitialized = false;
+    
+    // Update mode indicator
+    function updateModeIndicator() {
+      const indicator = document.getElementById('modeIndicator');
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        indicator.textContent = 'Reduced Motion (Fade transitions)';
+        indicator.style.color = '#f2ce7b';
+      } else {
+        indicator.textContent = 'Normal Motion (Flip & fly animations)';
+        indicator.style.color = '#77d58d';
+      }
+    }
+    
+    // Toggle enabled
+    document.getElementById('toggleEnabled').addEventListener('change', function(e) {
+      window.game.cfg.modernLiveVoteUI = e.target.checked;
+      if (window.lv2) {
+        window.lv2.enabled = e.target.checked;
+      }
+      console.log('Modern Live Vote UI:', e.target.checked);
+    });
+    
+    // Simulate reduced motion (note: requires refresh to apply media query)
+    document.getElementById('toggleReducedMotion').addEventListener('change', function(e) {
+      if (e.target.checked) {
+        alert('To properly test reduced motion, use your OS/browser settings to enable "prefers-reduced-motion", then refresh this page.');
+      }
+    });
+    
+    function initTest() {
+      if (!window.lv2) {
+        alert('Error: lv2 module not loaded. Please include js/livevote-ui.js');
+        return;
+      }
+      
+      window.lv2.init({
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2,
+        pacing: {
+          holdMs: 500,
+          gapMs: 250
+        }
+      });
+      
+      isInitialized = true;
+      voteIndex = 0;
+      
+      document.getElementById('btnPushVote').disabled = false;
+      document.getElementById('btnPushAll').disabled = false;
+      document.getElementById('btnFinish').disabled = false;
+      
+      console.log('Live Vote initialized');
+    }
+    
+    function pushSingleVote() {
+      if (!isInitialized || voteIndex >= voters.length) {
+        console.warn('No more votes to push or not initialized');
+        return;
+      }
+      
+      const voter = voters[voteIndex];
+      const pick = Math.random() > 0.5 ? 'left' : 'right';
+      
+      window.lv2.pushVote({
+        voterId: voter.id,
+        voterName: voter.name,
+        pick: pick
+      });
+      
+      voteIndex++;
+      console.log(`Vote ${voteIndex}/${voters.length} pushed: ${voter.name} → ${pick}`);
+      
+      if (voteIndex >= voters.length) {
+        document.getElementById('btnPushVote').disabled = true;
+      }
+    }
+    
+    async function pushAllVotes() {
+      if (!isInitialized) {
+        console.warn('Not initialized');
+        return;
+      }
+      
+      document.getElementById('btnPushVote').disabled = true;
+      document.getElementById('btnPushAll').disabled = true;
+      
+      // Push remaining votes
+      while (voteIndex < voters.length) {
+        const voter = voters[voteIndex];
+        const pick = Math.random() > 0.5 ? 'left' : 'right';
+        
+        window.lv2.pushVote({
+          voterId: voter.id,
+          voterName: voter.name,
+          pick: pick
+        });
+        
+        voteIndex++;
+        console.log(`Vote ${voteIndex}/${voters.length} pushed: ${voter.name} → ${pick}`);
+        
+        // Small delay between auto votes
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      console.log('All votes pushed');
+    }
+    
+    function finishTest() {
+      if (!isInitialized) {
+        console.warn('Not initialized');
+        return;
+      }
+      
+      window.lv2.finish();
+      console.log('Live Vote finished, winner highlighted');
+    }
+    
+    function clearPanel() {
+      const panel = document.getElementById('panel');
+      panel.innerHTML = '';
+      isInitialized = false;
+      voteIndex = 0;
+      
+      document.getElementById('btnPushVote').disabled = true;
+      document.getElementById('btnPushAll').disabled = true;
+      document.getElementById('btnFinish').disabled = true;
+      
+      console.log('Panel cleared');
+    }
+    
+    // Update mode indicator on load
+    updateModeIndicator();
+  </script>
+  
+  <!-- Load the lv2 module -->
+  <script src="js/livevote-ui.js"></script>
+</body>
+</html>

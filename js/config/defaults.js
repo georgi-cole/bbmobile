@@ -16,6 +16,7 @@
     strictAvatars: false, // When true, use local silhouette instead of external fallback
     autoShowRulesOnStart: true, // When true, shows rules modal automatically after intro
     useRibbon: true,
+    modernLiveVoteUI: true, // When true, use modern cinematic Live Vote UI (lv2)
     
     // Core game mechanics
     enableJuryHouse: true,
