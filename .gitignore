@@ -33,3 +33,4 @@ build/
 coverage/
 test_players_total_live.html
 test_player_count_deferred.html
+test_color_match_slider_default.html

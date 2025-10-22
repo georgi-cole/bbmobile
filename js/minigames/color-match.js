@@ -19,7 +19,7 @@
     const { 
       debugMode = false, 
       competitionMode = false,
-      variant = 'button' // 'button' or 'slider'
+      variant = 'slider' // 'button' or 'slider'
     } = options;
     
     const sliderMode = variant === 'slider';
