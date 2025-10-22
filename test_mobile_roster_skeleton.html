@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Skeleton Roster Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/theme-bridge.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid var(--line);
+    }
+    .section h2 {
+      margin-top: 0;
+      color: var(--accent);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 10px;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .btn {
+      padding: 10px 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .btn.danger {
+      background: var(--bad);
+    }
+    .info-box {
+      background: var(--card-2);
+      border-radius: var(--radius-s);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .log {
+      background: var(--bg);
+      border-radius: var(--radius-s);
+      padding: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .log-entry {
+      padding: 6px;
+      margin: 4px 0;
+      border-left: 3px solid var(--line);
+      padding-left: 10px;
+    }
+    .log-entry.success {
+      border-left-color: var(--good);
+      background: rgba(119, 213, 141, 0.1);
+    }
+    .log-entry.info {
+      border-left-color: var(--accent);
+      background: rgba(48, 80, 116, 0.1);
+    }
+
+    /* Simulate roster bar for testing */
+    #rosterBar {
+      background: linear-gradient(180deg, rgba(18,29,42,.88), rgba(13,22,35,.92));
+      border: 1px solid #1f3248;
+      border-radius: 12px;
+      padding: 10px 12px 8px;
+      margin-bottom: 20px;
+      position: relative;
+      min-height: 100px;
+    }
+
+    /* TV Viewport Test */
+    .tvFrame {
+      margin-top: 20px;
+    }
+    .tv {
+      background: var(--card);
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .tvHead {
+      padding: 8px 12px;
+      background: var(--card-2);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tvTitle {
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .tvTimer {
+      color: var(--muted-2);
+      font-family: monospace;
+    }
+    .tvViewport {
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .viewport-modes {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .mode-btn {
+      padding: 8px 16px;
+      background: var(--card-2);
+      color: var(--ink);
+      border: 2px solid var(--line);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .mode-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body data-roster-hidden="true">
+  <div class="test-container">
+    <h1>🎯 Mobile Skeleton Roster & TV Background Test</h1>
+    
+    <div class="section">
+      <h2>Test Controls</h2>
+      
+      <div class="info-box">
+        <h4>Test Scenario</h4>
+        <p>This test verifies:</p>
+        <ul>
+          <li><strong>Mobile (≤700px):</strong> Skeleton roster with question-mark avatar tiles</li>
+          <li><strong>Desktop (>700px):</strong> BIG/BROTHER letter tiles (existing behavior)</li>
+          <li><strong>TV Background:</strong> Restored faux TV background with fallback chain</li>
+          <li><strong>Responsive:</strong> Layout adapts to viewport size changes</li>
+        </ul>
+        <p><strong>Current viewport:</strong> <span id="viewportSize">Calculating...</span></p>
+      </div>
+
+      <div class="controls">
+        <button class="btn" onclick="showPlaceholders()">▶️ Show Placeholders</button>
+        <button class="btn danger" onclick="hidePlaceholders()">❌ Hide Placeholders</button>
+        <button class="btn" onclick="toggleRoster()">🔄 Toggle Real Roster</button>
+        <button class="btn" onclick="reloadPlaceholders()">🔄 Reload (Resize Test)</button>
+        <button class="btn" onclick="clearLog()">🗑️ Clear Log</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Roster Container</h2>
+      <div id="rosterBar">
+        <!-- Placeholders will be injected here -->
+      </div>
+      <div class="info-box">
+        <p><strong>Current state:</strong> <span id="stateDisplay">Roster hidden, placeholders should be visible</span></p>
+        <p><strong>Mode:</strong> <span id="modeDisplay">Detecting...</span></p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>TV Viewport Background Test</h2>
+      <div class="info-box">
+        <p>Test the faux TV background with different modes:</p>
+        <div class="viewport-modes">
+          <button class="mode-btn active" onclick="setTvMode('default')">Default (Fallback Chain)</button>
+          <button class="mode-btn" onclick="setTvMode('gradient')">Theme Gradient Only</button>
+        </div>
+      </div>
+      <div class="tvFrame">
+        <div class="tv">
+          <div class="tvHead">
+            <div class="tvTitle">House Network Live</div>
+            <div class="tvTimer">00:00</div>
+          </div>
+          <div class="tvViewport" id="tvViewport">
+            Welcome to the season.
+          </div>
+        </div>
+      </div>
+      <div class="info-box">
+        <p><strong>Background status:</strong> <span id="bgStatus">Checking...</span></p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Test Log</h2>
+      <div class="log" id="testLog"></div>
+    </div>
+
+    <div class="section">
+      <h2>Verification Checklist</h2>
+      <ul>
+        <li>✓ Mobile (≤700px): Skeleton roster with question-mark tiles in grid layout</li>
+        <li>✓ Desktop (>700px): BIG/BROTHER letter tiles in rows</li>
+        <li>✓ Placeholders use cfg.numPlayers or game.players.length for count</li>
+        <li>✓ Touch targets ≥44px on mobile (accessibility)</li>
+        <li>✓ Auto-removal when roster is revealed works</li>
+        <li>✓ TV viewport has visible background texture</li>
+        <li>✓ Text on TV viewport remains readable with overlay</li>
+        <li>✓ Responsive on window resize</li>
+        <li>✓ No console errors</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Initialize game config for testing -->
+  <script>
+    window.game = window.game || {};
+    window.game.cfg = window.game.cfg || {};
+    window.cfg = window.game.cfg;
+    window.cfg.numPlayers = 12; // Test with 12 players
+  </script>
+
+  <!-- Load the roster placeholders script -->
+  <script src="js/roster-placeholders.js"></script>
+
+  <script>
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span style="color: var(--muted-2)">[${new Date().toLocaleTimeString()}]</span> ${message}`;
+      logEl.insertBefore(entry, logEl.firstChild);
+    }
+
+    function updateViewportInfo() {
+      const width = window.innerWidth;
+      const isMobile = width <= 700;
+      document.getElementById('viewportSize').textContent = `${width}px (${isMobile ? 'Mobile' : 'Desktop'})`;
+      document.getElementById('modeDisplay').textContent = isMobile ? 'Skeleton Roster (Mobile)' : 'BIG/BROTHER (Desktop)';
+    }
+
+    function updateState() {
+      const isHidden = document.body.getAttribute('data-roster-hidden') === 'true';
+      const placeholdersVisible = document.body.getAttribute('data-roster-placeholders-visible') === 'true';
+      const stateText = isHidden 
+        ? (placeholdersVisible ? 'Roster hidden, placeholders visible' : 'Roster hidden, no placeholders')
+        : 'Roster visible, placeholders should be hidden';
+      document.getElementById('stateDisplay').textContent = stateText;
+      updateViewportInfo();
+    }
+
+    function showPlaceholders() {
+      if (window.RosterPlaceholders && typeof window.RosterPlaceholders.show === 'function') {
+        window.RosterPlaceholders.show();
+        log('✅ <strong>show()</strong> called', 'success');
+        updateState();
+      } else {
+        log('⚠️ RosterPlaceholders.show() not available', 'info');
+      }
+    }
+
+    function hidePlaceholders() {
+      if (window.RosterPlaceholders && typeof window.RosterPlaceholders.hide === 'function') {
+        window.RosterPlaceholders.hide();
+        log('❌ <strong>hide()</strong> called', 'success');
+        updateState();
+      } else {
+        log('⚠️ RosterPlaceholders.hide() not available', 'info');
+      }
+    }
+
+    function toggleRoster() {
+      const isHidden = document.body.getAttribute('data-roster-hidden') === 'true';
+      if (isHidden) {
+        document.body.removeAttribute('data-roster-hidden');
+        log('🔄 Real roster shown (data-roster-hidden removed)', 'info');
+      } else {
+        document.body.setAttribute('data-roster-hidden', 'true');
+        log('🔄 Real roster hidden (data-roster-hidden set to true)', 'info');
+      }
+      updateState();
+    }
+
+    function reloadPlaceholders() {
+      // Remove existing placeholders
+      const overlay = document.getElementById('bbRosterPlaceholderOverlay');
+      if (overlay) {
+        overlay.remove();
+        document.body.removeAttribute('data-roster-placeholders-visible');
+      }
+      // Re-render based on current viewport
+      setTimeout(() => {
+        showPlaceholders();
+        log('🔄 Placeholders reloaded for current viewport size', 'success');
+      }, 100);
+    }
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '';
+      log('Test log cleared', 'info');
+    }
+
+    function setTvMode(mode) {
+      const viewport = document.getElementById('tvViewport');
+      const buttons = document.querySelectorAll('.mode-btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      if (mode === 'gradient') {
+        viewport.style.backgroundImage = 'none';
+        log('TV mode: Theme gradient only', 'info');
+      } else {
+        viewport.style.backgroundImage = '';
+        log('TV mode: Default fallback chain', 'info');
+      }
+      checkTvBackground();
+    }
+
+    function checkTvBackground() {
+      const viewport = document.getElementById('tvViewport');
+      const computed = window.getComputedStyle(viewport);
+      const bgImage = computed.backgroundImage;
+      const hasBg = bgImage && bgImage !== 'none';
+      document.getElementById('bgStatus').textContent = hasBg 
+        ? '✅ Background applied' 
+        : '⚠️ No background (check fallback chain)';
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      log('✅ Test page loaded', 'success');
+      updateState();
+      checkTvBackground();
+      
+      // Check if placeholders rendered
+      setTimeout(() => {
+        const overlay = document.getElementById('bbRosterPlaceholderOverlay');
+        if (overlay) {
+          const skeletonTiles = overlay.querySelectorAll('.roster-placeholder-skeleton');
+          const letterRows = overlay.querySelectorAll('.roster-placeholder-row');
+          const letterTiles = overlay.querySelectorAll('.roster-placeholder-tile');
+          
+          if (skeletonTiles.length > 0) {
+            log(`✅ Mobile skeleton roster rendered: ${skeletonTiles.length} tiles`, 'success');
+          } else if (letterRows.length > 0 && letterTiles.length > 0) {
+            log(`✅ Desktop placeholders rendered: ${letterRows.length} rows, ${letterTiles.length} tiles`, 'success');
+          }
+        } else {
+          log('⚠️ No placeholders found in DOM', 'info');
+        }
+      }, 500);
+    });
+
+    // Update viewport info on resize
+    window.addEventListener('resize', () => {
+      updateViewportInfo();
+      log('📐 Viewport resized - placeholders may need reload', 'info');
+    });
+  </script>
+</body>
+</html>
