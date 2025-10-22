@@ -174,7 +174,7 @@
 
     const leftFill = document.createElement('div');
     leftFill.className = 'lv2-fill left';
-    leftFill.style.width = '0%';
+    leftFill.style.height = '0%';
     meterContainer.appendChild(leftFill);
 
     const rightFill = document.createElement('div');
