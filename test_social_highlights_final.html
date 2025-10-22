@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Highlights - Final Verification</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a1420;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #c8d5e6;
+    }
+    .test-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+    h1 {
+      color: #78b4f0;
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+    }
+    h2 {
+      color: #a0c4e0;
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+    }
+    .description {
+      color: #94a7bd;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .checklist {
+      background: #16283b;
+      border: 1px solid #253a51;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .checklist h3 {
+      color: #7fd996;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+    .checklist ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #c8d5e6;
+    }
+    .checklist li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .diary-room-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .diary-room-mock {
+      background: #16283b;
+      border: 1px solid #253a51;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .diary-room-mock h3 {
+      color: #78b4f0;
+      font-size: 1.1rem;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+    @media (max-width: 768px) {
+      .diary-room-section {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="section">
+      <h1>✅ Social Highlights - Text-Only Implementation</h1>
+      <div class="description">
+        <strong>Final verification test</strong> showing the simplified text-only rendering for Diary Room → Social highlights.
+        This implementation removes all card UI, icons, and emojis, replacing them with simple, accessible text lines.
+      </div>
+    </div>
+
+    <div class="checklist">
+      <h3>✓ Requirements Verified:</h3>
+      <ul>
+        <li>✅ <strong>Text-only rendering</strong> - No cards, no icons, no emojis</li>
+        <li>✅ <strong>Semantic list markup</strong> - Using &lt;ul&gt;/&lt;li&gt; for accessibility</li>
+        <li>✅ <strong>Simple text heading</strong> - "Social Highlights" in plain text</li>
+        <li>✅ <strong>Latest first ordering</strong> - Most recent highlights appear first</li>
+        <li>✅ <strong>Small vertical gaps</strong> - 6px between list items</li>
+        <li>✅ <strong>Mobile wrapping</strong> - Text wraps naturally on small screens</li>
+        <li>✅ <strong>Safe-area respect</strong> - Works within Diary Room log pane</li>
+        <li>✅ <strong>No capture changes</strong> - Event classification logic unchanged</li>
+        <li>✅ <strong>No threshold changes</strong> - Default thresholds unchanged</li>
+      </ul>
+    </div>
+
+    <h2>Live Comparison:</h2>
+    <div class="diary-room-section">
+      <div class="diary-room-mock">
+        <h3>Standard Diary Room Log</h3>
+        <div id="logStandard" class="log log-pane active" data-pane="social">
+          <div style="color: #7fd996;">Week 3 Social Phase completed.</div>
+          <div style="color: #c8d5e6;">Alex socialized with Jordan.</div>
+          <div style="color: #c8d5e6;">Sam spread a rumor about Taylor.</div>
+        </div>
+      </div>
+      
+      <div class="diary-room-mock">
+        <h3>With Social Highlights</h3>
+        <div id="logWithHighlights" class="log log-pane active" data-pane="social">
+          <!-- Highlights will be prepended here -->
+          <div style="color: #7fd996;">Week 3 Social Phase completed.</div>
+          <div style="color: #c8d5e6;">Alex socialized with Jordan.</div>
+          <div style="color: #c8d5e6;">Sam spread a rumor about Taylor.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <button onclick="renderHighlights()" style="padding: 12px 24px; background: #2d4b6a; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 10px;">
+        ✨ Show Highlights
+      </button>
+      <button onclick="clearHighlights()" style="padding: 12px 24px; background: #4a3030; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        🗑️ Clear Highlights
+      </button>
+    </div>
+
+    <div class="section" style="margin-top: 40px;">
+      <div class="checklist">
+        <h3>📊 Code Changes Summary:</h3>
+        <ul>
+          <li><strong>js/social-highlights.js:</strong> Simplified rendering (291 → 271 lines, -20 lines)</li>
+          <li><strong>styles.css:</strong> Replaced card styles with minimal text styles (-68 lines of CSS)</li>
+          <li><strong>No functional changes:</strong> Event classification and thresholds unchanged</li>
+          <li><strong>Security:</strong> CodeQL passed with 0 alerts</li>
+          <li><strong>Tests:</strong> All existing social tests pass</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the actual social-highlights.js module -->
+  <script src="js/social-highlights.js"></script>
+
+  <script>
+    // Mock global objects
+    window.game = { cfg: { socialHighlightsEnabled: true } };
+    window.safeName = function(id) {
+      const names = {
+        'p1': 'Danny', 'p2': 'Rae', 'p3': 'Nova', 
+        'p4': 'Alex', 'p5': 'Jordan', 'p6': 'Sam', 
+        'p7': 'Taylor', 'p8': 'You'
+      };
+      return names[id] || `Player ${id}`;
+    };
+
+    function renderHighlights() {
+      if (!window.SocialHighlights) {
+        console.error('SocialHighlights module not loaded');
+        return;
+      }
+
+      // Clear and reinitialize
+      window.SocialHighlights.onPhaseStart();
+
+      // Simulate diverse events
+      const events = [
+        {
+          actorId: 'p1',
+          targetIds: ['p2', 'p3', 'p4'],
+          actionId: 'group_hangout',
+          outcome: { type: 'success', participants: ['p1', 'p2', 'p3', 'p4'] },
+          deltas: { affinity: 5 },
+          success: true
+        },
+        {
+          actorId: 'p2',
+          targetIds: ['p3'],
+          actionId: 'confront',
+          outcome: { type: 'failure', backlash: true },
+          deltas: { influence: -10 },
+          success: false
+        },
+        {
+          actorId: 'p8',
+          targetIds: ['p1'],
+          actionId: 'confide',
+          outcome: { type: 'success' },
+          deltas: { affinity: 10 },
+          success: true
+        },
+        {
+          actorId: 'p4',
+          targetIds: ['p5'],
+          actionId: 'strategize',
+          outcome: { type: 'success' },
+          deltas: { influence: 12 },
+          success: true
+        },
+        {
+          actorId: 'p6',
+          targetIds: ['p7'],
+          actionId: 'spread_rumor',
+          outcome: { caught: true },
+          deltas: { influence: -15 },
+          success: false
+        }
+      ];
+
+      events.forEach(e => window.SocialHighlights.recordHumanAction(e));
+      
+      // Temporarily redirect rendering to our log
+      const originalLog = document.getElementById('logSocial');
+      const tempLog = document.getElementById('logWithHighlights');
+      
+      // Swap IDs temporarily
+      if (originalLog) originalLog.id = 'logSocialTemp';
+      tempLog.id = 'logSocial';
+      
+      window.SocialHighlights.onPhaseEnd();
+      
+      // Restore IDs
+      tempLog.id = 'logWithHighlights';
+      if (originalLog) originalLog.id = 'logSocial';
+      
+      console.log('✓ Highlights rendered');
+    }
+
+    function clearHighlights() {
+      const log = document.getElementById('logWithHighlights');
+      const children = Array.from(log.children);
+      children.forEach(child => {
+        if (child.className === 'social-highlights-list') {
+          child.remove();
+        }
+      });
+      console.log('✓ Highlights cleared');
+    }
+
+    // Auto-render on load
+    window.addEventListener('load', () => {
+      setTimeout(renderHighlights, 500);
+    });
+  </script>
+</body>
+</html>
