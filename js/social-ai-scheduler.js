@@ -183,8 +183,8 @@
       }
 
       // Execute action using existing engine
-      const outcome = SM.executeAction?.(actorId, targetIds, action.id);
-      if (!outcome) {
+      const result = SM.executeAction?.(actorId, targetIds, action.id);
+      if (!result) {
         console.warn('[ai-scheduler] executeAction failed');
         return null;
       }
@@ -193,10 +193,11 @@
       incrementActionCount(actorId);
       markPairing(actorId, targetIds);
 
-      // Calculate deltas from outcome
+      // Calculate deltas from result (align with human action version in social-maneuvers.js)
+      const outcome = result.outcome;
       const deltas = {
         influence: outcome.influenceChange || 0,
-        affinity: outcome.affinityChange || 0,
+        affinity: outcome.affinityChange || result.affinityDelta || 0,
         information: outcome.informationGain || 0
       };
 
@@ -210,7 +211,7 @@
         deltas
       });
 
-      return outcome;
+      return result;
     } catch (e) {
       console.error('[ai-scheduler] executeAIAction failed:', e);
       return null;
@@ -298,16 +299,16 @@
     if (!action) return;
 
     // Execute
-    const outcome = executeAIAction(actor.id, targetIds, action);
+    const result = executeAIAction(actor.id, targetIds, action);
     
-    if (outcome) {
+    if (result) {
       const actorName = global.safeName?.(actor.id) || `Player ${actor.id}`;
       const targetNames = targetIds.map(tid => 
         global.safeName?.(tid) || `Player ${tid}`
       ).join(', ');
       
       console.info(
-        `[ai-scheduler] ${actorName} → ${action.label} → ${targetNames}: ${outcome.type}`
+        `[ai-scheduler] ${actorName} → ${action.label} → ${targetNames}: ${result.outcome.type}`
       );
     }
   }
