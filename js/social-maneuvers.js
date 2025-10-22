@@ -2840,35 +2840,76 @@
   // ============================================================================
   // AUTO-SKIP WHEN ENERGY IS ZERO
   // ============================================================================
+  
+  /**
+   * Stop the Social phase timer to prevent countdown during auto-skip
+   */
+  function stopSocialPhaseTimer() {
+    const g = global.game;
+    if(!g) return;
+    
+    console.info('[sm-phase-skip] Stopping Social phase timer...');
+    
+    // Set endAt to far future to effectively stop countdown
+    const farFuture = Date.now() + (365 * 24 * 60 * 60 * 1000); // 1 year
+    g.endAt = farFuture;
+    g.phaseEndsAt = farFuture;
+    
+    console.info('[sm-phase-skip] ✓ Timer stopped (endAt set to far future)');
+  }
+  
   function showEmptyEnergyOverlayAndSkip(playerId) {
     const g = global.game;
     const week = g?.week || 1;
     
+    // Idempotency guard: prevent double execution
+    if(g.__smSkipInProgress) {
+      console.warn('[sm-phase-skip] Skip already in progress - ignoring duplicate call');
+      return;
+    }
+    g.__smSkipInProgress = true;
+    
     console.info(`[sm-phase-skip] Showing empty energy overlay for player ${playerId}, week ${week}`);
     
-    // Create overlay
+    // Stop the phase timer immediately
+    stopSocialPhaseTimer();
+    
+    // Find faux TV container with fallbacks
+    const tvContainer = document.querySelector('[data-sm-faux-tv]')
+                     || document.querySelector('#fauxTv')
+                     || document.querySelector('.faux-tv')
+                     || document.querySelector('[data-tv-screen]')
+                     || document.querySelector('.tvViewport')
+                     || document.getElementById('panel')
+                     || document.body;
+    
+    // Create wrapper container for centering inside TV
+    const wrapper = document.createElement('div');
+    wrapper.className = 'sm-empty-energy-wrapper';
+    wrapper.setAttribute('data-sm-empty-battery-wrapper', '');
+    wrapper.style.cssText = 'position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 100;';
+    
+    // Create overlay content
     const overlay = document.createElement('div');
     overlay.className = 'sm-empty-energy-overlay';
-    overlay.setAttribute('role', 'alert');
+    overlay.setAttribute('data-sm-empty-battery', '');
+    overlay.setAttribute('role', 'status');
     overlay.setAttribute('aria-live', 'polite');
-    overlay.setAttribute('aria-label', 'No Social Energy Available');
+    overlay.setAttribute('aria-label', 'No Social Energy. Skipping...');
+    overlay.style.cssText = 'pointer-events: auto;';
     
     overlay.innerHTML = `
       <div class="sm-empty-energy-content">
         <div class="sm-empty-battery-icon">🔋</div>
         <div class="sm-empty-energy-message">No Social Energy</div>
-        <div class="sm-empty-energy-submessage">Skipping Social Phase...</div>
+        <div class="sm-empty-energy-submessage">Skipping…</div>
       </div>
     `;
     
-    // Add to TV viewport or panel
-    const container = document.querySelector('.tvViewport .fitCanvas') 
-                   || document.querySelector('.tvViewport')
-                   || document.getElementById('panel')
-                   || document.body;
-    container.appendChild(overlay);
+    wrapper.appendChild(overlay);
+    tvContainer.appendChild(wrapper);
     
-    // Dispatch event for telemetry
+    // Dispatch event for telemetry (exactly once due to idempotency guard)
     window.dispatchEvent(new CustomEvent('sm-phase-skip-empty', {
       detail: { playerId, week }
     }));
@@ -2877,7 +2918,7 @@
     
     // Auto-advance after 3 seconds
     setTimeout(() => {
-      overlay.remove();
+      wrapper.remove();
       console.info(`[sm-phase-skip] Auto-advancing to next phase`);
       
       // Advance to next phase
@@ -2888,6 +2929,9 @@
       } else {
         console.warn('[sm-phase-skip] No advancePhase or nextPhase function available');
       }
+      
+      // Clean up idempotency flag after phase advance
+      if(g) g.__smSkipInProgress = false;
     }, 3000);
   }
   
