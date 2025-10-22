@@ -25,12 +25,15 @@
    01. FAUX TV COMPONENTS
    ============================================================================ */
 
-/* TV Container - Use theme card colors */
+/* TV Container - Use theme card colors and remove/adapt border */
 .tvFrame .tv {
   background: linear-gradient(to bottom, var(--card), color-mix(in srgb, var(--card) 90%, var(--bg))),
               url('assets/videos/tvscreen.jpg') center/cover;
   background-color: var(--card);
-  border-color: var(--line);
+  /* Use theme line color for border, or remove entirely by setting to transparent */
+  border: 2px solid var(--line);
+  /* Optional: Add subtle box-shadow using theme colors for depth */
+  box-shadow: 0 16px 36px -22px color-mix(in srgb, var(--bg) 75%, black);
 }
 
 .tvFrame .tv.hasTvBg {
@@ -95,6 +98,14 @@
   background: var(--card);
   border-color: var(--line);
   color: var(--ink);
+}
+
+/* Log Tabs Container - Use theme colors for the container background */
+#logTabs {
+  /* Ensure the tabs container adapts to theme */
+  background: transparent;
+  /* Optional: subtle background if needed */
+  /* background: color-mix(in srgb, var(--card-2) 50%, transparent); */
 }
 
 /* Log Tabs - Use theme colors */
