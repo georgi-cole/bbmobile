@@ -63,8 +63,8 @@
   </div>
 
   <div class="test-section">
-    <h2>Scenario 3: Week 2 with Accumulated Energy</h2>
-    <p>Simulate Week 2 with prior energy accumulation. Verify no auto-seeding.</p>
+    <h2>Scenario 3: Week 2 Energy Carryover</h2>
+    <p>Simulate Week 2 with energy carryover from Week 1. Verify energy carries over + accumulates.</p>
     <div id="scenario3-status" class="status"></div>
     <button onclick="runScenario3()">Run Scenario 3</button>
   </div>
@@ -217,39 +217,45 @@
     }
 
     function runScenario3() {
-      console.log('═══ Scenario 3: Week 2 with Accumulated Energy ═══');
+      console.log('═══ Scenario 3: Week 2 Energy Carryover ═══');
       setupGame();
       
       const SM = window.SocialManeuvers;
       const humanId = window.game.humanId;
 
-      // Simulate Week 2
-      window.game.week = 2;
-      window.game.__sm_bankEnergy = new Map();
-
-      // Initialize bank for Week 2 (should be 0)
+      // Start Week 1 with 5 energy
       SM.SocialEnergyBank.init(humanId);
       let bankBalance = SM.SocialEnergyBank.get(humanId);
+      console.log(`Week 1 starting bank: ${bankBalance}`);
 
-      console.log(`Week 2 initial bank: ${bankBalance}`);
+      // Don't use any energy in Week 1, so all 5 should carry over
+      
+      // Simulate advancing to Week 2 (don't clear the bank!)
+      window.game.week = 2;
 
-      if (bankBalance === 0) {
-        setStatus('scenario3-status', `✅ Week 2 bank correctly starts at 0`, 'success');
+      // Initialize again - should NOT reset because bank already exists
+      SM.SocialEnergyBank.init(humanId);
+      const week2StartBalance = SM.SocialEnergyBank.get(humanId);
+      
+      console.log(`Week 2 starting bank (after carryover): ${week2StartBalance}`);
+
+      if (week2StartBalance === 5) {
+        setStatus('scenario3-status', `✅ Week 2 carries over 5 energy from Week 1`, 'success');
       } else {
-        setStatus('scenario3-status', `❌ Week 2 bank is ${bankBalance}, expected 0`, 'error');
+        setStatus('scenario3-status', `❌ Week 2 bank is ${week2StartBalance}, expected 5 (carryover)`, 'error');
         return;
       }
 
-      // Simulate accumulating energy from events
-      SM.SocialEnergyBank.adjust(humanId, 15); // e.g., won HOH + POV
+      // Simulate accumulating more energy from events (e.g., won HOH)
+      SM.SocialEnergyBank.adjust(humanId, 5); // +5 for HOH win
       bankBalance = SM.SocialEnergyBank.get(humanId);
 
-      console.log(`Week 2 after events: ${bankBalance}`);
+      console.log(`Week 2 after HOH win: ${bankBalance}`);
 
-      if (bankBalance === 15) {
-        setStatus('scenario3-status', `✅ PASS: Week 2 energy accumulation works (0 → 15)`, 'success');
+      if (bankBalance === 10) {
+        setStatus('scenario3-status', `✅ PASS: Week 2 energy carryover + accumulation (5 → 10)`, 'success');
       } else {
-        setStatus('scenario3-status', `❌ FAIL: Expected 15, got ${bankBalance}`, 'error');
+        setStatus('scenario3-status', `❌ FAIL: Expected 10, got ${bankBalance}`, 'error');
       }
 
       updateDebugInfo();
