@@ -482,7 +482,7 @@
       // Pause on human turn until they actually vote (no auto vote)
       if(entry.voter===g.humanId && entry.evict==null){
         markVoter(entry.voter,'your turn…');
-        if(!useLv2){ global.showCard?.('Diary Room',['It'\u2019s your turn. Please cast your vote now.'],'live',2000,true); } else{ global.lv2?.showTurnIndicator?.(); }
+        if(!useLv2){ global.showCard?.('Diary Room',["It's your turn. Please cast your vote now."],'live',2000,true); } else{ global.lv2?.showTurnIndicator?.(); }
         try{ await waitForHumanVote(); }catch{}
         entry.evict = g.__human_vote;
         if(useLv2){ global.lv2?.hideTurnIndicator?.(); }
