@@ -68,7 +68,13 @@
     // Social Logic v2 (feature-flagged, on by default)
     social_logic_v2_enabled: true,  // Enable context-aware weighted social popup selection
     social_cadence_enabled: true,  // Enable social decision popup cadence system
-    social_inter_delay: 800  // Inter-popup delay for social decisions (ms)
+    social_inter_delay: 800,  // Inter-popup delay for social decisions (ms)
+    
+    // AI Social Interactions (feature-flagged, on by default)
+    aiSocialEnabled: true,  // Enable AI-to-AI background social interactions during Social phase
+    aiSocialAggression: 'low',  // AI action selection aggression: 'low' | 'medium'
+    aiSocialMaxPerPhase: 5,  // Soft cap on AI actions per AI per phase
+    socialHighlightsEnabled: true  // Show Social Highlights in Diary Room logs
   };
 
   // Load configuration from localStorage
