@@ -44,10 +44,22 @@
           const desired = cfg.castSize || cfg.players || cfg.numPlayers || (pool.length || 0);
 
           if (pool.length > 0 && desired > 0) {
-            const selected = pickRandomCast(pool, desired);
-            game.players = shuffle(selected);
+            // Find and extract the human player (always keep first)
+            const humanIndex = pool.findIndex(p => p && p.human);
+            const humanPlayer = humanIndex >= 0 ? pool[humanIndex] : null;
+            
+            // Remove human player from pool for randomization
+            const aiPool = humanIndex >= 0 ? pool.filter((p, i) => i !== humanIndex) : pool.slice();
+            
+            // Select and shuffle AI players
+            const aiSize = humanPlayer ? desired - 1 : desired;
+            const selectedAI = pickRandomCast(aiPool, aiSize);
+            const shuffledAI = shuffle(selectedAI);
+            
+            // Always put human player first, then shuffled AI players
+            game.players = humanPlayer ? [humanPlayer, ...shuffledAI] : shuffledAI;
             game.__castRandomized = true;
-            console.info('[cast-randomizer] randomized cast:', { size: desired, from: pool.length });
+            console.info('[cast-randomizer] randomized cast:', { size: desired, from: pool.length, humanFirst: !!humanPlayer });
           } else {
             console.info('[cast-randomizer] skipped (no pool/size)');
           }
