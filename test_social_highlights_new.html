@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Highlights - New Text-Only Implementation</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a1420;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #c8d5e6;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+    h1 {
+      color: #78b4f0;
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+    h2 {
+      color: #a0c4e0;
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+    }
+    .description {
+      color: #94a7bd;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="section">
+      <h1>Social Highlights - New Text-Only Implementation</h1>
+      <div class="description">
+        This test shows the new simplified text-only rendering with no cards, icons, or emojis.
+        Just plain text lines with semantic list markup.
+      </div>
+    </div>
+
+    <div class="comparison">
+      <div>
+        <h2>Before (Cards):</h2>
+        <div id="logSocialOld" class="log log-pane active" data-pane="social"></div>
+      </div>
+      <div>
+        <h2>After (Text-Only):</h2>
+        <div id="logSocialNew" class="log log-pane active" data-pane="social"></div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top: 30px;">
+      <button onclick="renderHighlights()" style="padding: 10px 20px; background: #2d4b6a; color: #fff; border: none; border-radius: 8px; cursor: pointer;">
+        Refresh Both Renderings
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Sample highlights data
+    const sampleHighlights = [
+      { message: 'Danny had a positive group interaction with 4 others.' },
+      { message: 'Rae confronted Nova and it backfired (-10).' },
+      { message: 'You confided in Mimi (+10).' },
+      { message: 'Alex gained major influence with Jordan (+12).' },
+      { message: 'Sam was caught spreading rumors about Taylor!' }
+    ];
+
+    // Old card-based rendering
+    function renderOldStyle() {
+      const logPane = document.getElementById('logSocialOld');
+      logPane.innerHTML = '';
+
+      const highlights = [
+        { icon: '👥', message: 'Danny had a positive group interaction with 4 others', className: 'highlight-success' },
+        { icon: '⚔️', message: 'Rae confronted Nova and it backfired (-10)', className: 'highlight-negative' },
+        { icon: '💖', message: 'You confided in Mimi (+10)', className: 'highlight-success' },
+        { icon: '📈', message: 'Alex gained major influence with Jordan', className: 'highlight-success' },
+        { icon: '⚠️', message: 'Sam was caught spreading rumors about Taylor!', className: 'highlight-warning' }
+      ];
+
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        background: linear-gradient(135deg, #1c2b3e, #0e1a28);
+        border: 2px solid rgba(120,180,240,0.5);
+        border-radius: 20px;
+        padding: 24px 28px;
+        box-shadow: 0 24px 64px -24px rgba(0,0,0,0.95);
+        max-width: 100%;
+        text-align: center;
+      `;
+      
+      const header = document.createElement('div');
+      header.style.cssText = 'margin-bottom: 12px; text-align: center;';
+      header.innerHTML = '<h3 style="margin: 0; font-size: 1.1rem; color: #78b4f0;">🌟 Social Highlights</h3>';
+      
+      const body = document.createElement('div');
+      body.style.cssText = 'display: flex; flex-direction: column; gap: 10px;';
+      
+      highlights.forEach(h => {
+        const entry = document.createElement('div');
+        entry.style.cssText = `
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 10px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.05);
+          border-left: 3px solid rgba(120, 180, 240, 0.3);
+        `;
+        entry.innerHTML = `
+          <span style="font-size: 1.3rem; min-width: 24px; text-align: center;">${h.icon}</span>
+          <span style="flex: 1; font-size: 0.85rem; line-height: 1.4; color: #c8d5e6;">${h.message}</span>
+        `;
+        body.appendChild(entry);
+      });
+
+      card.appendChild(header);
+      card.appendChild(body);
+      logPane.appendChild(card);
+    }
+
+    // New text-only rendering
+    function renderNewStyle() {
+      const logPane = document.getElementById('logSocialNew');
+      logPane.innerHTML = '';
+
+      const container = document.createElement('div');
+      container.className = 'social-highlights-list';
+      
+      const heading = document.createElement('div');
+      heading.className = 'social-highlights-heading';
+      heading.textContent = 'Social Highlights';
+      container.appendChild(heading);
+      
+      const list = document.createElement('ul');
+      list.className = 'social-highlights-items';
+      
+      sampleHighlights.forEach(highlight => {
+        const item = document.createElement('li');
+        item.className = 'social-highlight-item';
+        item.textContent = highlight.message;
+        list.appendChild(item);
+      });
+
+      container.appendChild(list);
+      logPane.appendChild(container);
+    }
+
+    function renderHighlights() {
+      renderOldStyle();
+      renderNewStyle();
+    }
+
+    // Render on load
+    window.addEventListener('load', renderHighlights);
+  </script>
+</body>
+</html>

@@ -80,82 +80,64 @@
       global.safeName?.(tid) || `Player ${tid}`
     );
 
-    let icon = '💬';
     let message = '';
-    let className = 'highlight-neutral';
 
     // Alliance formed
     if (outcome?.allianceFormed) {
-      icon = '🤝';
-      message = `${actorName} formed an alliance with ${targetNames[0]}`;
-      className = 'highlight-success';
+      message = `${actorName} formed an alliance with ${targetNames[0]}.`;
     }
     // Betrayal/backlash
     else if (outcome?.betrayalRisk || outcome?.caught || outcome?.backlash) {
-      icon = '⚠️';
       if (outcome?.caught) {
         message = `${actorName} was caught spreading rumors about ${targetNames[0]}!`;
       } else {
-        message = `${actorName}'s actions backfired with ${targetNames[0]}`;
+        message = `${actorName}'s actions backfired with ${targetNames[0]}.`;
       }
-      className = 'highlight-warning';
     }
     // Expose secret success
     else if (actionId === 'expose_secret' && success) {
-      icon = '🔓';
-      message = `${actorName} exposed a secret about ${targetNames[0]}`;
-      className = 'highlight-warning';
+      message = `${actorName} exposed a secret about ${targetNames[0]}.`;
     }
     // Confront
     else if (actionId === 'confront') {
-      icon = outcome?.type === 'failure' ? '❌' : '⚔️';
-      message = outcome?.type === 'failure' 
-        ? `${actorName}'s confrontation with ${targetNames[0]} went poorly`
-        : `${actorName} confronted ${targetNames[0]}`;
-      className = outcome?.type === 'failure' ? 'highlight-negative' : 'highlight-neutral';
+      const delta = Math.abs(deltas?.influence || 0) + Math.abs(deltas?.affinity || 0);
+      if (outcome?.type === 'failure') {
+        message = `${actorName} confronted ${targetNames[0]} and it backfired (${deltas?.influence || 0}).`;
+      } else {
+        message = `${actorName} confronted ${targetNames[0]}.`;
+      }
     }
     // Strong negative
     else if ((deltas?.influence || 0) <= DEFAULT_THRESHOLDS.negativeThreshold ||
              (deltas?.affinity || 0) <= DEFAULT_THRESHOLDS.negativeThreshold) {
-      icon = '📉';
-      message = `${actorName}'s relationship with ${targetNames[0]} deteriorated significantly`;
-      className = 'highlight-negative';
+      const delta = Math.min(deltas?.influence || 0, deltas?.affinity || 0);
+      message = `${actorName}'s relationship with ${targetNames[0]} deteriorated significantly (${delta}).`;
     }
     // Major influence gain
     else if ((deltas?.influence || 0) >= DEFAULT_THRESHOLDS.majorInfluenceDelta) {
-      icon = '📈';
-      message = `${actorName} gained major influence with ${targetNames[0]}`;
-      className = 'highlight-success';
+      message = `${actorName} gained major influence with ${targetNames[0]} (+${deltas.influence}).`;
     }
     // Major affinity gain
     else if ((deltas?.affinity || 0) >= DEFAULT_THRESHOLDS.majorAffinityDelta) {
-      icon = '💖';
-      message = `${actorName} bonded strongly with ${targetNames[0]}`;
-      className = 'highlight-success';
+      message = `${actorName} bonded strongly with ${targetNames[0]} (+${deltas.affinity}).`;
     }
     // Big information gain
     else if ((deltas?.information || 0) >= DEFAULT_THRESHOLDS.majorInformationGain) {
-      icon = '🔍';
-      message = `${actorName} learned valuable information from ${targetNames[0]}`;
-      className = 'highlight-success';
+      message = `${actorName} learned valuable information from ${targetNames[0]} (+${deltas.information}).`;
     }
     // Group events
     else if (outcome?.multiTarget || (outcome?.participants?.length > 2)) {
-      icon = '👥';
       const count = targetNames.length || outcome?.participants?.length || 2;
-      message = `${actorName} had a positive group interaction with ${count} others`;
-      className = 'highlight-success';
+      message = `${actorName} had a positive group interaction with ${count} others.`;
     }
     // Generic major event
     else {
-      message = `${actorName} had a significant interaction with ${targetNames.join(', ')}`;
+      message = `${actorName} had a significant interaction with ${targetNames.join(', ')}.`;
     }
 
     return {
       timestamp: Date.now(),
-      icon,
       message,
-      className,
       actorId,
       targetIds,
       actionId,
@@ -213,33 +195,32 @@
       return;
     }
 
-    // Create highlights card
-    const card = document.createElement('div');
-    card.className = 'revealCard diaryRoomCard social-highlights-card';
+    // Create simple text-based list container
+    const container = document.createElement('div');
+    container.className = 'social-highlights-list';
     
-    const header = document.createElement('div');
-    header.className = 'card-header';
-    header.innerHTML = '<h3>🌟 Social Highlights</h3>';
+    // Optional simple text heading
+    const heading = document.createElement('div');
+    heading.className = 'social-highlights-heading';
+    heading.textContent = 'Social Highlights';
+    container.appendChild(heading);
     
-    const body = document.createElement('div');
-    body.className = 'card-body';
+    // Create unordered list for semantic markup
+    const list = document.createElement('ul');
+    list.className = 'social-highlights-items';
     
-    // Add each highlight
+    // Add each highlight as a list item (no icons, no emojis)
     currentHighlights.forEach(highlight => {
-      const entry = document.createElement('div');
-      entry.className = `highlight-entry ${highlight.className}`;
-      entry.innerHTML = `
-        <span class="highlight-icon">${highlight.icon}</span>
-        <span class="highlight-message">${highlight.message}</span>
-      `;
-      body.appendChild(entry);
+      const item = document.createElement('li');
+      item.className = 'social-highlight-item';
+      item.textContent = highlight.message;
+      list.appendChild(item);
     });
 
-    card.appendChild(header);
-    card.appendChild(body);
+    container.appendChild(list);
     
     // Prepend to Social log pane (most recent first)
-    logPane.insertBefore(card, logPane.firstChild);
+    logPane.insertBefore(container, logPane.firstChild);
     
     console.info(`[social-highlights] Rendered ${currentHighlights.length} highlights to Diary Room`);
   }

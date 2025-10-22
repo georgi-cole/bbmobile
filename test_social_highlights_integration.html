@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Highlights Integration Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a1420;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #c8d5e6;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+    h1 {
+      color: #78b4f0;
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+    .description {
+      color: #94a7bd;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    .diary-room-mock {
+      background: #16283b;
+      border: 1px solid #253a51;
+      border-radius: 10px;
+      padding: 20px;
+      max-width: 600px;
+    }
+    .diary-room-mock h2 {
+      color: #78b4f0;
+      font-size: 1.2rem;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="section">
+      <h1>Social Highlights Integration Test</h1>
+      <div class="description">
+        Testing the social-highlights.js module with the new text-only rendering in a Diary Room context.
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="diary-room-mock">
+        <h2>Diary Room - Social Tab</h2>
+        <div id="logSocial" class="log log-pane active" data-pane="social">
+          <div style="color: #94a7bd; font-size: 0.7rem; margin-bottom: 10px;">
+            [Previous social logs would appear here...]
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <button onclick="simulatePhaseEnd()" style="padding: 10px 20px; background: #2d4b6a; color: #fff; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">
+        Simulate Social Phase End
+      </button>
+      <button onclick="clearLog()" style="padding: 10px 20px; background: #4a3030; color: #fff; border: none; border-radius: 8px; cursor: pointer;">
+        Clear Log
+      </button>
+    </div>
+  </div>
+
+  <!-- Load the actual social-highlights.js module -->
+  <script src="js/social-highlights.js"></script>
+
+  <script>
+    // Mock the global game object and safeName function
+    window.game = {
+      cfg: {
+        socialHighlightsEnabled: true
+      }
+    };
+
+    window.safeName = function(id) {
+      const names = {
+        'player1': 'Danny',
+        'player2': 'Rae',
+        'player3': 'Nova',
+        'player4': 'Alex',
+        'player5': 'Jordan',
+        'player6': 'Sam',
+        'player7': 'Taylor',
+        'player8': 'Mimi',
+        'player9': 'You'
+      };
+      return names[id] || `Player ${id}`;
+    };
+
+    function simulatePhaseEnd() {
+      console.log('Simulating Social phase end with highlights...');
+      
+      // Initialize the phase
+      if (window.SocialHighlights) {
+        window.SocialHighlights.onPhaseStart();
+
+        // Simulate various social events
+        const events = [
+          {
+            actorId: 'player1',
+            targetIds: ['player2', 'player3', 'player4', 'player5'],
+            actionId: 'group_hangout',
+            outcome: { type: 'success', participants: ['player1', 'player2', 'player3', 'player4', 'player5'] },
+            deltas: { affinity: 5 },
+            success: true
+          },
+          {
+            actorId: 'player2',
+            targetIds: ['player3'],
+            actionId: 'confront',
+            outcome: { type: 'failure', backlash: true },
+            deltas: { influence: -10, affinity: -8 },
+            success: false
+          },
+          {
+            actorId: 'player9',
+            targetIds: ['player8'],
+            actionId: 'confide',
+            outcome: { type: 'success' },
+            deltas: { affinity: 10, information: 5 },
+            success: true
+          },
+          {
+            actorId: 'player4',
+            targetIds: ['player5'],
+            actionId: 'strategize',
+            outcome: { type: 'success' },
+            deltas: { influence: 12 },
+            success: true
+          },
+          {
+            actorId: 'player6',
+            targetIds: ['player7'],
+            actionId: 'spread_rumor',
+            outcome: { type: 'failure', caught: true },
+            deltas: { influence: -15 },
+            success: false
+          }
+        ];
+
+        // Record each event
+        events.forEach(event => {
+          window.SocialHighlights.recordHumanAction(event);
+        });
+
+        // Render the highlights
+        window.SocialHighlights.onPhaseEnd();
+        
+        console.log('✓ Social highlights rendered');
+      } else {
+        console.error('SocialHighlights module not loaded!');
+      }
+    }
+
+    function clearLog() {
+      const log = document.getElementById('logSocial');
+      const keeper = log.querySelector('div[style*="Previous social logs"]');
+      log.innerHTML = '';
+      if (keeper) {
+        log.appendChild(keeper);
+      }
+    }
+
+    // Auto-run on load
+    window.addEventListener('load', () => {
+      setTimeout(simulatePhaseEnd, 500);
+    });
+  </script>
+</body>
+</html>
