@@ -89,7 +89,28 @@
       panel.innerHTML='<div class="tiny muted">Eviction flow not initialized.</div>';
       return;
     }
-    const box=document.createElement('div'); box.className='minigame-host'; box.innerHTML='<h3>Live Vote</h3>';
+
+    // Check if we should use modern lv2 UI (2 nominees only, enabled in settings)
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
+
+    if (useLv2) {
+      // Use modern Live Vote 2.0 UI
+      const [leftId, rightId] = g.eviction.nominees;
+      global.lv2.init({
+        leftName: global.safeName(leftId),
+        rightName: global.safeName(rightId),
+        leftId: leftId,
+        rightId: rightId
+      });
+      // Continue with legacy info and buttons below the lv2 panel
+    }
+
+    const box=document.createElement('div'); box.className='minigame-host'; 
+    if (!useLv2) {
+      box.innerHTML='<h3>Live Vote</h3>';
+    }
     const remain=global.alivePlayers().length;
 
     const info=document.createElement('div'); info.className='tiny';
@@ -107,47 +128,49 @@
       box.appendChild(note);
     }
 
-    // Live tally (handles 2 or >2 automatically)
-    if(g.eviction.nominees.length===2){
-      const [A,B]=g.eviction.nominees;
-      const tally=document.createElement('div');
-      tally.innerHTML=`
-        <div class="tiny" style="margin-top:8px;margin-bottom:4px">Live Tally</div>
-        <div style="display:flex; gap:8px; align-items:flex-end">
-          <div class="lvCol">
-            <div class="tiny muted" id="lvNameA">${global.safeName(A)}</div>
-            <div class="lvBarWrap"><div id="lvBarA" class="lvBar"></div></div>
-            <div class="tiny" id="lvCountA">0</div>
-          </div>
-          <div class="lvCol">
-            <div class="tiny muted" id="lvNameB">${global.safeName(B)}</div>
-            <div class="lvBarWrap"><div id="lvBarB" class="lvBar alt"></div></div>
-            <div class="tiny" id="lvCountB">0</div>
-          </div>
-        </div>`;
-      box.appendChild(tally);
-    } else {
-      const hdr=document.createElement('div');
-      hdr.className='tiny'; hdr.style.margin='8px 0 4px';
-      hdr.textContent='Live Tally';
-      box.appendChild(hdr);
-      const ul=document.createElement('ul'); ul.id='lvMultiList'; ul.className='tiny';
-      g.eviction.nominees.forEach(id=>{
-        const li=document.createElement('li'); li.dataset.candId=String(id);
-        li.textContent=`${global.safeName(id)} — 0`;
+    // Live tally (handles 2 or >2 automatically) - only show if NOT using lv2
+    if (!useLv2) {
+      if(g.eviction.nominees.length===2){
+        const [A,B]=g.eviction.nominees;
+        const tally=document.createElement('div');
+        tally.innerHTML=`
+          <div class="tiny" style="margin-top:8px;margin-bottom:4px">Live Tally</div>
+          <div style="display:flex; gap:8px; align-items:flex-end">
+            <div class="lvCol">
+              <div class="tiny muted" id="lvNameA">${global.safeName(A)}</div>
+              <div class="lvBarWrap"><div id="lvBarA" class="lvBar"></div></div>
+              <div class="tiny" id="lvCountA">0</div>
+            </div>
+            <div class="lvCol">
+              <div class="tiny muted" id="lvNameB">${global.safeName(B)}</div>
+              <div class="lvBarWrap"><div id="lvBarB" class="lvBar alt"></div></div>
+              <div class="tiny" id="lvCountB">0</div>
+            </div>
+          </div>`;
+        box.appendChild(tally);
+      } else {
+        const hdr=document.createElement('div');
+        hdr.className='tiny'; hdr.style.margin='8px 0 4px';
+        hdr.textContent='Live Tally';
+        box.appendChild(hdr);
+        const ul=document.createElement('ul'); ul.id='lvMultiList'; ul.className='tiny';
+        g.eviction.nominees.forEach(id=>{
+          const li=document.createElement('li'); li.dataset.candId=String(id);
+          li.textContent=`${global.safeName(id)} — 0`;
+          ul.appendChild(li);
+        });
+        box.appendChild(ul);
+      }
+
+      // Voter checklist
+      const ul=document.createElement('ul'); ul.id='liveVoteList'; ul.className='tiny'; ul.style.marginTop='6px';
+      voters.forEach(v=>{
+        const li=document.createElement('li'); li.dataset.voterId=String(v.id);
+        li.textContent=`${v.name} — waiting`;
         ul.appendChild(li);
       });
       box.appendChild(ul);
     }
-
-    // Voter checklist
-    const ul=document.createElement('ul'); ul.id='liveVoteList'; ul.className='tiny'; ul.style.marginTop='6px';
-    voters.forEach(v=>{
-      const li=document.createElement('li'); li.dataset.voterId=String(v.id);
-      li.textContent=`${v.name} — waiting`;
-      ul.appendChild(li);
-    });
-    box.appendChild(ul);
 
     // Human voting UI (2-nom or multi-nom), locked after vote
     const you=global.getP?.(g.humanId);
@@ -446,6 +469,17 @@
       await sleep(3000);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
 
+      // Hook: Push vote to lv2 if enabled and 2-nom mode
+      if(twoMode && global.lv2?.pushVote){
+        const [leftId, rightId] = noms;
+        const votePick = pick === leftId ? 'left' : 'right';
+        global.lv2.pushVote({
+          voterId: entry.voter,
+          voterName: nameV,
+          pick: votePick
+        });
+      }
+
       if(twoMode){
         const [A,B]=noms;
         if(pick===A) tallyA++; else tallyB++;
@@ -459,6 +493,12 @@
     }
 
     g.eviction.sequenceDone=true;
+
+    // Hook: Mark lv2 as finished
+    if(twoMode && global.lv2?.finish){
+      global.lv2.finish();
+    }
+
     if(twoMode) await revealVotes(true,tallyA,tallyB);
     else await revealVotes(true,counts);
   }

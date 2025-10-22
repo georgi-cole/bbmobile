@@ -162,7 +162,8 @@
         {
           title: 'Badges & effects',
           fields: [
-            checkbox('useRibbon', 'Use EVICTED ribbon overlay')
+            checkbox('useRibbon', 'Use EVICTED ribbon overlay'),
+            checkbox('modernLiveVoteUI', 'Modern Live Vote UI (cinematic versus layout)')
           ]
         },
         {

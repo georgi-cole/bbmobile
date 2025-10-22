@@ -1664,6 +1664,282 @@ button:focus-visible,.btn:focus-visible{
 .lvBar{ height:100%; width:0%; background:#6fd3ff; box-shadow:0 0 8px -2px #6fd3ff; transition:width .25s; }
 .lvBar.alt{ background:#74e48b; box-shadow:0 0 8px -2px #74e48b; }
 
+/* 11b. MODERN LIVE VOTE UI (lv2) - Cinematic versus layout with flip cards */
+.lv2-panel{
+  background:linear-gradient(135deg, rgba(18,30,48,0.85) 0%, rgba(25,38,58,0.9) 100%);
+  border-radius:var(--radius-xl);
+  padding:var(--pad-lg) var(--pad);
+  margin-bottom:16px;
+  border:1px solid rgba(131,191,255,0.15);
+  box-shadow:0 8px 32px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+.lv2-header h3{
+  text-align:center;
+  margin:0 0 18px;
+  font-size:1.4rem;
+  background:linear-gradient(135deg, #83bfff 0%, #66d9ff 50%, #77efdd 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  letter-spacing:-0.4px;
+}
+
+/* Versus layout - Left vs Right */
+.lv2-versus{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  gap:20px;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+/* Contestant cards */
+.lv2-contestant{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  padding:16px;
+  background:rgba(19,32,50,0.6);
+  border-radius:var(--radius-lg);
+  border:1px solid rgba(131,191,255,0.12);
+  transition:all 0.3s ease;
+}
+
+.lv2-contestant.winner{
+  background:rgba(119,213,141,0.15);
+  border-color:var(--good);
+  box-shadow:0 0 20px -5px var(--good);
+}
+
+.lv2-avatar{
+  width:80px;
+  height:80px;
+  border-radius:50%;
+  border:3px solid rgba(131,191,255,0.3);
+  object-fit:cover;
+  box-shadow:0 4px 16px -6px rgba(0,0,0,0.5);
+  transition:transform 0.3s ease, border-color 0.3s ease;
+}
+
+.lv2-contestant.winner .lv2-avatar{
+  border-color:var(--good);
+  box-shadow:0 0 20px -5px var(--good);
+}
+
+.lv2-name{
+  font-size:0.95rem;
+  font-weight:600;
+  color:var(--ink);
+  text-align:center;
+  letter-spacing:-0.2px;
+}
+
+.lv2-count{
+  font-size:2rem;
+  font-weight:700;
+  color:#83bfff;
+  text-shadow:0 2px 12px rgba(131,191,255,0.4);
+  transition:all 0.4s ease;
+}
+
+.lv2-contestant.winner .lv2-count{
+  color:var(--good);
+  text-shadow:0 2px 12px rgba(119,213,141,0.6);
+}
+
+/* Central meter */
+.lv2-meter{
+  position:relative;
+  width:120px;
+  height:200px;
+  background:rgba(13,21,35,0.8);
+  border:2px solid rgba(131,191,255,0.2);
+  border-radius:12px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 0 20px -8px rgba(0,0,0,0.7) inset;
+}
+
+.lv2-fill{
+  position:absolute;
+  left:0;
+  right:0;
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1), width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  height:0%;
+}
+
+.lv2-fill.left{
+  bottom:0;
+  background:linear-gradient(to top, #66d9ff, #83bfff);
+  box-shadow:0 0 16px -4px #66d9ff;
+}
+
+.lv2-fill.right{
+  top:0;
+  background:linear-gradient(to bottom, #77d58d, #5ec97d);
+  box-shadow:0 0 16px -4px #77d58d;
+}
+
+.lv2-meter-glow{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  width:40px;
+  height:40px;
+  background:radial-gradient(circle, rgba(131,191,255,0.3), transparent 70%);
+  pointer-events:none;
+  animation:pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow{
+  0%, 100%{ opacity:0.4; transform:translate(-50%, -50%) scale(1); }
+  50%{ opacity:0.7; transform:translate(-50%, -50%) scale(1.2); }
+}
+
+/* Reveal area for flip cards */
+.lv2-reveal{
+  min-height:80px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+  align-items:flex-start;
+  margin-bottom:12px;
+  padding:12px;
+  background:rgba(13,21,35,0.4);
+  border-radius:var(--radius);
+  border:1px solid rgba(131,191,255,0.08);
+}
+
+/* Flip card */
+.lv2-card{
+  width:140px;
+  height:60px;
+  perspective:1000px;
+  transition:transform 0.6s ease, opacity 0.3s ease;
+}
+
+.lv2-card-inner{
+  position:relative;
+  width:100%;
+  height:100%;
+  transition:transform 0.6s;
+  transform-style:preserve-3d;
+}
+
+.lv2-card.revealed .lv2-card-inner{
+  transform:rotateY(180deg);
+}
+
+.lv2-face{
+  position:absolute;
+  width:100%;
+  height:100%;
+  backface-visibility:hidden;
+  border-radius:8px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-size:0.75rem;
+  font-weight:600;
+  padding:8px;
+  box-shadow:0 4px 12px -4px rgba(0,0,0,0.4);
+}
+
+.lv2-face.front{
+  background:linear-gradient(135deg, rgba(28,43,62,0.9), rgba(35,52,75,0.9));
+  border:1px solid rgba(131,191,255,0.25);
+  color:#83bfff;
+  font-size:1.5rem;
+}
+
+.lv2-face.back{
+  background:linear-gradient(135deg, rgba(131,191,255,0.2), rgba(102,217,255,0.15));
+  border:1px solid rgba(131,191,255,0.4);
+  color:var(--ink);
+  transform:rotateY(180deg);
+}
+
+.lv2-face.back .voter-name{
+  font-size:0.8rem;
+  font-weight:700;
+  margin-bottom:4px;
+}
+
+.lv2-face.back .vote-arrow{
+  font-size:0.7rem;
+  color:var(--muted-2);
+}
+
+/* Status text */
+.lv2-status{
+  text-align:center;
+  margin-top:12px;
+  font-size:0.85rem;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce){
+  .lv2-avatar,
+  .lv2-count,
+  .lv2-fill,
+  .lv2-card,
+  .lv2-card-inner,
+  .lv2-contestant{
+    transition:none !important;
+    animation:none !important;
+  }
+  
+  .lv2-meter-glow{
+    animation:none;
+    opacity:0.4;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px){
+  .lv2-versus{
+    grid-template-columns:1fr;
+    gap:16px;
+  }
+  
+  .lv2-meter{
+    width:100%;
+    height:60px;
+    flex-direction:row;
+  }
+  
+  .lv2-fill.left{
+    top:0;
+    right:50%;
+    left:0;
+    height:100%;
+    width:0%;
+    background:linear-gradient(to right, #66d9ff, #83bfff);
+  }
+  
+  .lv2-fill.right{
+    top:0;
+    left:50%;
+    right:0;
+    height:100%;
+    width:0%;
+    background:linear-gradient(to left, #77d58d, #5ec97d);
+  }
+  
+  .lv2-card{
+    width:120px;
+    height:50px;
+  }
+}
+
 /* 12. SETTINGS MODAL & FORMS ----------------------------------------------- */
 .modal-backdrop{
   position:fixed; inset:0; background:rgba(4,10,18,.72);
