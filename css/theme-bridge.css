@@ -1,0 +1,373 @@
+/* ============================================================================
+   THEME BRIDGE — High-specificity overrides for theme-aware components
+   
+   Purpose: Unify colors and typography across Faux TV, Diary Room, and common
+            popups so they adapt to the selected visual theme (e.g., Modern 
+            Apartment), fixing contrast/readability issues where those areas 
+            keep default styling.
+   
+   Approach: Map fixed colors to CSS variables (--card, --card-2, --line, 
+             --ink, --accent) so any theme applies consistently without JS changes.
+   
+   Scope:
+   - Faux TV: .tv, .tvHead, .tvTitle, #tvTimer, .tvViewport, .liveBadge, .twistBadge
+   - Diary Room: #sideCard, #logTabs/.tabBar, .tab-btn, .log/.log-pane
+   - Common overlays/popups: .results-modal-overlay .modal, .announcement-overlay .modal/.card,
+     .pfModalHost .pfModal, .pfWinnerCard, .cinDim .cinPanel
+   - Credits overlay controls: .bbCreditsOverlay .bbBtn
+   
+   Non-goals:
+   - No JS or DOM structure changes
+   - Do not modify existing setPhase or rendering logic
+   ============================================================================ */
+
+/* ============================================================================
+   01. FAUX TV COMPONENTS
+   ============================================================================ */
+
+/* TV Container - Use theme card colors and remove/adapt border */
+.tvFrame .tv {
+  background: linear-gradient(to bottom, var(--card), color-mix(in srgb, var(--card) 90%, var(--bg))),
+              url('assets/videos/tvscreen.jpg') center/cover;
+  background-color: var(--card);
+  /* Use theme line color for border, or remove entirely by setting to transparent */
+  border: 2px solid var(--line);
+  /* Optional: Add subtle box-shadow using theme colors for depth */
+  box-shadow: 0 16px 36px -22px color-mix(in srgb, var(--bg) 75%, black);
+}
+
+.tvFrame .tv.hasTvBg {
+  background: linear-gradient(to bottom, var(--card), color-mix(in srgb, var(--card) 90%, var(--bg))),
+              var(--tv-bg) center/cover;
+  background-color: var(--card);
+}
+
+/* TV Header - Use theme colors */
+.tvFrame .tvHead {
+  border-bottom-color: color-mix(in srgb, var(--line) 30%, transparent);
+  background: linear-gradient(180deg, 
+              color-mix(in srgb, var(--card) 80%, transparent), 
+              color-mix(in srgb, var(--card) 40%, transparent));
+}
+
+/* TV Title - Use theme ink color for text */
+.tvFrame .tvTitle {
+  color: var(--ink);
+}
+
+/* TV Timer - Use theme ink color for text */
+.tvFrame .tvTimer,
+#tvTimer {
+  color: var(--ink);
+}
+
+/* LIVE Badge - Keep vibrant red but improve contrast with theme-aware shadow */
+.tvFrame .tvViewport .liveBadge {
+  /* Preserve iconic red gradient but add theme-aware shadow */
+  box-shadow: 0 0 0 2px rgba(255,56,56,.3), 
+              0 4px 12px -4px rgba(255,56,56,.8),
+              0 0 0 3px color-mix(in srgb, var(--card) 20%, transparent),
+              inset 0 1px 2px rgba(255,255,255,.35), 
+              inset 0 -1px 2px rgba(0,0,0,.25);
+}
+
+/* Twist Badge - Use theme accent with improved visibility */
+.tvFrame .tvViewport .twistBadge {
+  background: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 80%, var(--accent-2)) 50%, var(--accent) 100%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent),
+              0 4px 12px -4px color-mix(in srgb, var(--accent) 80%, black),
+              inset 0 1px 2px rgba(255,255,255,.35),
+              inset 0 -1px 2px rgba(0,0,0,.25);
+  color: color-mix(in srgb, var(--ink) 95%, white);
+}
+
+.tvFrame .tvViewport .twistBadge:hover {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent),
+              0 6px 18px -2px color-mix(in srgb, var(--accent) 100%, black),
+              0 0 24px -6px color-mix(in srgb, var(--accent) 90%, black),
+              inset 0 1px 2px rgba(255,255,255,.45),
+              inset 0 -1px 2px rgba(0,0,0,.25);
+}
+
+/* ============================================================================
+   02. DIARY ROOM COMPONENTS
+   ============================================================================ */
+
+/* Side Card - Use theme colors */
+#sideCard {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+/* Log Tabs Container - Use theme colors for the container background */
+#logTabs {
+  /* Ensure the tabs container adapts to theme */
+  background: transparent;
+  /* Optional: subtle background if needed */
+  /* background: color-mix(in srgb, var(--card-2) 50%, transparent); */
+}
+
+/* Log Tabs - Use theme colors */
+#logTabs .tab-btn,
+.tabBar .tab-btn {
+  background: var(--card-2);
+  color: var(--muted-2);
+  border-color: var(--line);
+}
+
+#logTabs .tab-btn.active,
+#logTabs .tab-btn:hover,
+.tabBar .tab-btn.active,
+.tabBar .tab-btn:hover {
+  background: color-mix(in srgb, var(--accent) 20%, var(--card-2));
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+/* Log Container - Use theme colors */
+.log {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.log-pane {
+  color: var(--ink);
+}
+
+/* Log text colors - Preserve semantic colors but improve contrast */
+.log .ok {
+  color: var(--good);
+}
+
+.log .danger {
+  color: var(--bad);
+}
+
+.log .warn {
+  color: var(--warn);
+}
+
+/* Social position indicators - Use theme-aware colors */
+.soc-pos,
+.log .soc-pos {
+  color: var(--good) !important;
+}
+
+.soc-neg,
+.log .soc-neg {
+  color: var(--warn) !important;
+}
+
+/* ============================================================================
+   03. COMMON OVERLAYS AND POPUPS
+   ============================================================================ */
+
+/* Results Modal Overlay */
+.results-modal-overlay[role="dialog"] {
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
+  backdrop-filter: blur(var(--popup-backdrop-blur));
+}
+
+.results-modal-overlay .modal {
+  background: linear-gradient(145deg, 
+              color-mix(in srgb, var(--card) 95%, transparent), 
+              color-mix(in srgb, var(--card-2) 92%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--ink);
+  box-shadow: var(--popup-shadow);
+}
+
+/* Announcement Overlay */
+.announcement-overlay {
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
+  backdrop-filter: blur(var(--popup-backdrop-blur));
+}
+
+.announcement-overlay .modal,
+.announcement-overlay .card {
+  background: linear-gradient(145deg, 
+              color-mix(in srgb, var(--card) 95%, transparent), 
+              color-mix(in srgb, var(--card-2) 92%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--ink);
+  box-shadow: var(--popup-shadow);
+}
+
+/* Public Favorite Modal */
+.pfModalHost {
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
+  backdrop-filter: blur(var(--popup-backdrop-blur));
+}
+
+.pfModalHost .pfModal,
+.pfModalHost .pfPanel {
+  background: linear-gradient(145deg, var(--card), var(--card-2));
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--ink);
+}
+
+.pfModalHost .pfTitle {
+  color: color-mix(in srgb, var(--accent) 90%, var(--warn));
+}
+
+.pfModalHost .pfName {
+  color: var(--muted-2);
+}
+
+/* Public Favorite Winner Card */
+.pfWinnerCard {
+  background: linear-gradient(145deg, var(--card), var(--card-2));
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--ink);
+}
+
+/* ============================================================================
+   04. FINALE PANEL (cinDim)
+   ============================================================================ */
+
+.cinDim {
+  background: radial-gradient(120% 120% at 50% 10%, 
+              color-mix(in srgb, var(--bg) 92%, black), 
+              color-mix(in srgb, var(--bg) 97%, black)),
+              var(--bg);
+}
+
+.cinDim .cinPanel {
+  background: linear-gradient(145deg, var(--card), var(--card-2));
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--ink);
+  box-shadow: 0 24px 64px -28px rgba(0,0,0,.85),
+              inset 0 0 48px -20px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.cinDim .cinPanel:before {
+  background: radial-gradient(circle at 50% 20%, 
+              color-mix(in srgb, var(--accent) 8%, transparent), 
+              transparent 70%);
+}
+
+.cinDim .cinName {
+  color: var(--ink);
+}
+
+.cinDim .cinTitle {
+  color: color-mix(in srgb, var(--accent) 90%, var(--warn));
+}
+
+/* ============================================================================
+   05. CREDITS OVERLAY CONTROLS
+   ============================================================================ */
+
+.bbCreditsOverlay .bbBtn {
+  background: color-mix(in srgb, var(--card) 45%, transparent);
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+}
+
+.bbCreditsOverlay .bbBtn:hover {
+  background: color-mix(in srgb, var(--card) 65%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.bbCreditsOverlay .bbTitle {
+  color: var(--ink);
+}
+
+.bbCreditsOverlay .bbBody {
+  color: var(--muted-2);
+}
+
+.bbCreditsOverlay .bbCaption {
+  background: color-mix(in srgb, var(--card) 35%, transparent);
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--line) 35%, transparent);
+}
+
+/* ============================================================================
+   06. MODAL TABS (Generic)
+   ============================================================================ */
+
+.modalTabs .tab-btn {
+  background: var(--card-2);
+  color: var(--muted-2);
+}
+
+.modalTabs .tab-btn.active,
+.modalTabs .tab-btn:hover {
+  background: color-mix(in srgb, var(--accent) 20%, var(--card-2));
+  color: var(--ink);
+}
+
+/* ============================================================================
+   07. LEADERBOARD PANEL
+   ============================================================================ */
+
+.leaderboard-panel {
+  background: linear-gradient(135deg, 
+              color-mix(in srgb, var(--card) 95%, transparent), 
+              color-mix(in srgb, var(--card-2) 97%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--ink);
+}
+
+.leaderboard-panel h2 {
+  color: color-mix(in srgb, var(--accent) 85%, var(--warn));
+}
+
+.leaderboard-item {
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--ink);
+}
+
+.leaderboard-item:hover {
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* ============================================================================
+   08. ACCESSIBILITY - Respect prefers-reduced-motion
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .tvFrame .tv,
+  .tvFrame .tvHead,
+  .tvFrame .tvTitle,
+  .tvFrame .tvTimer,
+  .tvFrame .liveBadge,
+  .tvFrame .twistBadge,
+  #logTabs .tab-btn,
+  .tabBar .tab-btn,
+  .modalTabs .tab-btn,
+  .results-modal-overlay,
+  .announcement-overlay,
+  .pfModalHost,
+  .cinDim,
+  .bbCreditsOverlay .bbBtn {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ============================================================================
+   09. RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+/* Mobile: Ensure readability on smaller screens */
+@media (max-width: 768px) {
+  .tvFrame .tvTitle {
+    font-size: 0.7rem;
+  }
+  
+  .tvFrame .tvTimer {
+    font-size: 0.88rem;
+  }
+  
+  #logTabs .tab-btn,
+  .tabBar .tab-btn {
+    font-size: 0.6rem;
+    padding: 4px 9px 5px;
+  }
+}
