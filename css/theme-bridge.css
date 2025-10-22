@@ -61,6 +61,31 @@
   color: var(--ink);
 }
 
+/* TV Viewport - Restore background with fallback chain and overlay for text contrast */
+.tvFrame .tvViewport {
+  background-image: 
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.35),
+      rgba(0, 0, 0, 0.30)
+    ),
+    var(--tv-bg-url, url('/img/studio_bg.jpg')),
+    url('/avatars/tvstudio.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: linear-gradient(135deg, 
+    color-mix(in srgb, var(--card, #2a3f5f) 85%, var(--bg, #0d1623)),
+    color-mix(in srgb, var(--card-2, #1f3248) 90%, var(--bg, #0d1623)));
+}
+
+/* Fallback: If no images load, use theme gradient */
+.tvFrame .tvViewport:not([style*="background-image"]) {
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--card, #2a3f5f) 85%, var(--bg, #0d1623)),
+    color-mix(in srgb, var(--card-2, #1f3248) 90%, var(--bg, #0d1623)));
+}
+
 /* LIVE Badge - Keep vibrant red but improve contrast with theme-aware shadow */
 .tvFrame .tvViewport .liveBadge {
   /* Preserve iconic red gradient but add theme-aware shadow */
