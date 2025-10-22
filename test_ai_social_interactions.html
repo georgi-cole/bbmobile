@@ -224,11 +224,9 @@
         window.game.players.forEach(p => {
           window.SocialManeuvers.SocialResources?.init(p.id);
           window.SocialManeuvers.SocialEnergyBank?.init(p.id);
-          // Give AI players some energy
-          if (p.id !== 0) {
-            window.SocialManeuvers.SocialEnergyBank?.set(p.id, 10);
-            window.SocialManeuvers.SocialResources?.recomputePhaseEnergy(p.id);
-          }
+          // Give all players some energy (including human)
+          window.SocialManeuvers.SocialEnergyBank?.set(p.id, 10);
+          window.SocialManeuvers.SocialResources?.recomputePhaseEnergy(p.id);
         });
       }
       
