@@ -125,8 +125,9 @@
     
     // Filter by affordability and eligibility
     const affordable = actions.filter(a => {
-      // Check if actor can afford the action
-      if (!SM.SocialResources?.canAfford(actorId, a.costs)) return false;
+      // Check if actor can afford the action (use unified cost calculation)
+      const costCalc = SM.computeActionCost?.(a.id, targetIds) || { total: 0 };
+      if (!SM.SocialResources?.canAfford(actorId, { energy: costCalc.total })) return false;
       
       // Multi-target actions only if we have multiple targets
       if (a.multiTarget && targetIds.length < (a.minTargets || 2)) return false;
