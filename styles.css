@@ -4734,101 +4734,45 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 /* ============================================================================
    SOCIAL HIGHLIGHTS CARD
    ============================================================================ */
-.social-highlights-card {
-  margin-bottom: 16px;
-}
-
-.social-highlights-card .card-header {
+/* Social Highlights - Text-only list (no cards) */
+.social-highlights-list {
   margin-bottom: 12px;
-  text-align: center;
 }
 
-.social-highlights-card .card-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
+.social-highlights-heading {
+  font-size: 0.75rem;
+  font-weight: 600;
   color: #78b4f0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
 
-.social-highlights-card .card-body {
+.social-highlights-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
-.highlight-entry {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-left: 3px solid rgba(120, 180, 240, 0.3);
-  transition: all 0.2s ease;
-}
-
-.highlight-entry:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateX(2px);
-}
-
-.highlight-icon {
-  font-size: 1.3rem;
-  min-width: 24px;
-  text-align: center;
-}
-
-.highlight-message {
-  flex: 1;
-  font-size: 0.85rem;
+.social-highlight-item {
+  font-size: 0.67rem;
   line-height: 1.4;
   color: #c8d5e6;
-}
-
-/* Highlight type variations */
-.highlight-success {
-  border-left-color: #7fd996;
-}
-
-.highlight-success .highlight-message {
-  color: #a8e8b8;
-}
-
-.highlight-warning {
-  border-left-color: #e6c473;
-}
-
-.highlight-warning .highlight-message {
-  color: #f0d896;
-}
-
-.highlight-negative {
-  border-left-color: #ff7c7c;
-}
-
-.highlight-negative .highlight-message {
-  color: #ffa0a0;
-}
-
-.highlight-neutral {
-  border-left-color: #78b4f0;
+  padding: 0;
+  margin: 0;
 }
 
 /* Mobile responsive */
 @media (max-width: 768px) {
-  .social-highlights-card {
-    max-width: 100%;
+  .social-highlights-heading {
+    font-size: 0.7rem;
   }
   
-  .highlight-entry {
-    padding: 8px;
-    gap: 8px;
-  }
-  
-  .highlight-icon {
-    font-size: 1.1rem;
-  }
-  
-  .highlight-message {
-    font-size: 0.8rem;
+  .social-highlight-item {
+    font-size: 0.65rem;
+    line-height: 1.35;
   }
 }
