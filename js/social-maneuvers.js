@@ -901,7 +901,7 @@
     checkEnergyDepletionAndAdvance(actorId);
     
     // Record human action for highlights (if actor is human player)
-    const g = global.game;
+    // Use existing 'g' variable from above
     if(actorId === g?.humanId && typeof global.SocialHighlights?.recordHumanAction === 'function'){
       // Calculate deltas for highlights
       const deltas = {
