@@ -1,12 +1,13 @@
 /* roster-placeholders.js
  * Displays "BIG BROTHER" placeholder tiles in the roster area before the game starts.
  * These placeholders are removed when the actual roster becomes visible.
+ * Multi-row layout: splits by spaces for natural wrapping across desktop and mobile.
  */
 (function(g) {
   'use strict';
   if (!g || !document) return;
 
-  const LETTERS = 'BIGBROTHER'.split('');
+  const WORDS = ['BIG', 'BROTHER']; // Split by spaces for multi-row layout
   const PLACEHOLDER_OVERLAY_ID = 'bbRosterPlaceholderOverlay';
   const ATTR_PLACEHOLDERS_VISIBLE = 'data-roster-placeholders-visible';
 
@@ -36,10 +37,10 @@
    */
   function createPlaceholderTile(letter) {
     const tile = document.createElement('div');
-    tile.className = 'bb-placeholder-tile';
+    tile.className = 'roster-placeholder-tile';
     
     const letterSpan = document.createElement('span');
-    letterSpan.className = 'bb-placeholder-letter';
+    letterSpan.className = 'roster-placeholder-letter';
     letterSpan.textContent = letter;
     
     tile.appendChild(letterSpan);
@@ -47,7 +48,7 @@
   }
 
   /**
-   * Inject CSS for placeholder tiles.
+   * Inject CSS for placeholder tiles with multi-row support.
    */
   function injectPlaceholderCSS() {
     if (document.getElementById('bbRosterPlaceholderCSS')) return;
@@ -55,13 +56,13 @@
     const style = document.createElement('style');
     style.id = 'bbRosterPlaceholderCSS';
     style.textContent = `
-      /* Placeholder overlay container */
+      /* Placeholder overlay container - column layout for rows */
       #${PLACEHOLDER_OVERLAY_ID} {
         display: flex;
-        gap: 8px;
+        flex-direction: column;
+        gap: 12px;
         align-items: center;
         justify-content: center;
-        flex-wrap: wrap;
         padding: 12px;
         position: relative;
         z-index: 1;
@@ -79,10 +80,18 @@
         }
       }
       
-      /* Individual placeholder tile */
-      .bb-placeholder-tile {
-        width: 64px;
-        height: 64px;
+      /* Row container for each word */
+      .roster-placeholder-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+      }
+      
+      /* Individual placeholder tile with responsive sizing */
+      .roster-placeholder-tile {
+        width: clamp(44px, 6.0vw, 72px);
+        height: clamp(44px, 6.0vw, 72px);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -95,8 +104,14 @@
                     0 4px 8px rgba(0,0,0,0.3);
         position: relative;
         overflow: hidden;
-        animation: bbPlaceholderPulse 2s ease-in-out infinite;
-        animation-delay: calc(var(--tile-index, 0) * 0.1s);
+      }
+      
+      /* Pulse animation (respects reduced motion) */
+      @media (prefers-reduced-motion: no-preference) {
+        .roster-placeholder-tile {
+          animation: bbPlaceholderPulse 2s ease-in-out infinite;
+          animation-delay: calc(var(--tile-index, 0) * 0.1s);
+        }
       }
       
       /* Subtle pulse animation */
@@ -111,11 +126,11 @@
         }
       }
       
-      /* Letter text */
-      .bb-placeholder-letter {
+      /* Letter text with responsive sizing */
+      .roster-placeholder-letter {
         font-family: 'Oswald', 'Montserrat', sans-serif;
         font-weight: 700;
-        font-size: 28px;
+        font-size: clamp(18px, 3.2vw, 32px);
         color: #ffffff;
         text-shadow: 0 2px 8px rgba(0,0,0,0.4);
         letter-spacing: 0;
@@ -123,22 +138,24 @@
         z-index: 1;
       }
       
-      /* Shimmer effect overlay */
-      .bb-placeholder-tile::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(
-          45deg,
-          transparent 30%,
-          rgba(255,255,255,0.15) 50%,
-          transparent 70%
-        );
-        animation: bbPlaceholderShimmer 3s linear infinite;
-        animation-delay: calc(var(--tile-index, 0) * 0.15s);
+      /* Shimmer effect overlay (respects reduced motion) */
+      @media (prefers-reduced-motion: no-preference) {
+        .roster-placeholder-tile::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: linear-gradient(
+            45deg,
+            transparent 30%,
+            rgba(255,255,255,0.15) 50%,
+            transparent 70%
+          );
+          animation: bbPlaceholderShimmer 3s linear infinite;
+          animation-delay: calc(var(--tile-index, 0) * 0.15s);
+        }
       }
       
       @keyframes bbPlaceholderShimmer {
@@ -153,18 +170,12 @@
       /* Mobile responsive adjustments */
       @media (max-width: 640px) {
         #${PLACEHOLDER_OVERLAY_ID} {
-          gap: 6px;
+          gap: 8px;
           padding: 8px;
         }
         
-        .bb-placeholder-tile {
-          width: 48px;
-          height: 48px;
-          border-radius: 8px;
-        }
-        
-        .bb-placeholder-letter {
-          font-size: 22px;
+        .roster-placeholder-row {
+          gap: 8px;
         }
       }
       
@@ -193,7 +204,7 @@
   }
 
   /**
-   * Render placeholder tiles in the roster container.
+   * Render placeholder tiles in multi-row layout in the roster container.
    */
   function renderPlaceholders() {
     const container = findRosterContainer();
@@ -206,15 +217,25 @@
     let overlay = document.getElementById(PLACEHOLDER_OVERLAY_ID);
     if (overlay) return true; // Already rendered
 
-    // Create overlay
+    // Create overlay with column layout
     overlay = document.createElement('div');
     overlay.id = PLACEHOLDER_OVERLAY_ID;
 
-    // Create tiles for each letter
-    LETTERS.forEach((letter, index) => {
-      const tile = createPlaceholderTile(letter);
-      tile.style.setProperty('--tile-index', index);
-      overlay.appendChild(tile);
+    // Create a row for each word
+    let tileIndex = 0;
+    WORDS.forEach((word) => {
+      const row = document.createElement('div');
+      row.className = 'roster-placeholder-row';
+      
+      // Create tiles for each letter in the word
+      word.split('').forEach((letter) => {
+        const tile = createPlaceholderTile(letter);
+        tile.style.setProperty('--tile-index', tileIndex);
+        tileIndex++;
+        row.appendChild(tile);
+      });
+      
+      overlay.appendChild(row);
     });
 
     // Append to container
@@ -228,7 +249,7 @@
     // Mark placeholders as visible
     document.body.setAttribute(ATTR_PLACEHOLDERS_VISIBLE, 'true');
 
-    console.log('[RosterPlaceholders] Placeholders rendered:', LETTERS.length, 'tiles');
+    console.log('[RosterPlaceholders] Placeholders rendered:', WORDS.join(' '), '(' + tileIndex + ' tiles in ' + WORDS.length + ' rows)');
     return true;
   }
 
@@ -287,9 +308,9 @@
       attributeFilter: ['data-roster-hidden']
     });
 
-    // Expose API
+    // Expose API (unchanged for backward compatibility)
     g.RosterPlaceholders = {
-      render: renderPlaceholders,
+      show: renderPlaceholders,
       hide: hidePlaceholders
     };
   }
