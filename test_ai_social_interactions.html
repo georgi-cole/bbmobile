@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Social Interactions & Highlights Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0a1628;
+      color: #c8d5e6;
+    }
+    h1 { color: #78b4f0; }
+    h2 { color: #a8e8b8; margin-top: 30px; }
+    .test-section {
+      background: #1c2b3e;
+      border: 1px solid #284061;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .status { 
+      padding: 8px 12px; 
+      border-radius: 6px; 
+      display: inline-block; 
+      margin: 5px 0;
+      font-weight: 600;
+    }
+    .pass { background: #2d5f3f; color: #7fd996; }
+    .fail { background: #5f2d2d; color: #ff7c7c; }
+    .info { background: #2d3d5f; color: #78b4f0; }
+    button {
+      background: #284061;
+      border: 1px solid #3a5a81;
+      color: #c8d5e6;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    button:hover { background: #3a5a81; }
+    button:active { background: #1c2e43; }
+    #log-output {
+      background: #0f1f2d;
+      border: 1px solid #1d3042;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .log-entry { margin: 3px 0; }
+    .log-pass { color: #7fd996; }
+    .log-fail { color: #ff7c7c; }
+    .log-info { color: #78b4f0; }
+    .log-warn { color: #e6c473; }
+  </style>
+</head>
+<body>
+  <h1>🤖 AI Social Interactions & Highlights Test</h1>
+  <p>This page tests the new AI-to-AI social interactions and highlights aggregation system.</p>
+
+  <div class="test-section">
+    <h2>Module Loading</h2>
+    <div id="module-status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Configuration</h2>
+    <div id="config-status"></div>
+    <button onclick="toggleAISocial()">Toggle AI Social</button>
+    <button onclick="setAggression('low')">Set Aggression: Low</button>
+    <button onclick="setAggression('medium')">Set Aggression: Medium</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Mock Game Setup</h2>
+    <button onclick="setupMockGame()">Setup Mock Game</button>
+    <button onclick="startMockPhase()">Start Social Phase</button>
+    <button onclick="stopMockPhase()">Stop Social Phase</button>
+    <button onclick="triggerEmptyEnergyBurst()">Trigger Empty Energy Burst</button>
+    <div id="game-status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>AI Scheduler Tests</h2>
+    <button onclick="testEligiblePlayers()">Test Eligible Players</button>
+    <button onclick="testSingleInteraction()">Test Single Interaction</button>
+    <button onclick="testMultipleInteractions()">Test 5 Interactions</button>
+    <div id="scheduler-status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Highlights Tests</h2>
+    <button onclick="testMajorEventDetection()">Test Major Event Detection</button>
+    <button onclick="testHighlightRendering()">Test Highlight Rendering</button>
+    <button onclick="clearHighlights()">Clear Highlights</button>
+    <div id="highlights-status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <button onclick="clearLog()">Clear Log</button>
+    <div id="log-output"></div>
+  </div>
+
+  <!-- Hidden log panes for testing -->
+  <div id="logSocial" style="display: none;"></div>
+
+  <!-- Load required modules -->
+  <script src="js/config/defaults.js"></script>
+  <script src="js/social-action-config.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social-ai-scheduler.js"></script>
+  <script src="js/social-highlights.js"></script>
+
+  <script>
+    const logOutput = document.getElementById('log-output');
+    
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logOutput.appendChild(entry);
+      logOutput.scrollTop = logOutput.scrollHeight;
+      console.log(message);
+    }
+
+    function clearLog() {
+      logOutput.innerHTML = '';
+    }
+
+    // Module loading checks
+    function checkModules() {
+      const status = document.getElementById('module-status');
+      let html = '';
+      
+      const checks = [
+        { name: 'SocialManeuvers', obj: window.SocialManeuvers },
+        { name: 'SocialAIScheduler', obj: window.SocialAIScheduler },
+        { name: 'SocialHighlights', obj: window.SocialHighlights },
+        { name: 'computeActionCost', obj: window.SocialManeuvers?.computeActionCost },
+        { name: 'executeAction', obj: window.SocialManeuvers?.executeAction }
+      ];
+      
+      checks.forEach(check => {
+        const exists = !!check.obj;
+        html += `<div class="status ${exists ? 'pass' : 'fail'}">
+          ${exists ? '✓' : '✗'} ${check.name}
+        </div>`;
+        log(`Module check: ${check.name} - ${exists ? 'PASS' : 'FAIL'}`, exists ? 'pass' : 'fail');
+      });
+      
+      status.innerHTML = html;
+    }
+
+    // Configuration checks
+    function checkConfig() {
+      const status = document.getElementById('config-status');
+      const cfg = window.game?.cfg || {};
+      
+      let html = `
+        <div class="status info">AI Social Enabled: ${cfg.aiSocialEnabled ?? true}</div>
+        <div class="status info">AI Aggression: ${cfg.aiSocialAggression || 'low'}</div>
+        <div class="status info">Max Per Phase: ${cfg.aiSocialMaxPerPhase ?? 5}</div>
+        <div class="status info">Highlights Enabled: ${cfg.socialHighlightsEnabled ?? true}</div>
+      `;
+      
+      status.innerHTML = html;
+      log(`Config: aiSocialEnabled=${cfg.aiSocialEnabled ?? true}, aggression=${cfg.aiSocialAggression || 'low'}`, 'info');
+    }
+
+    function toggleAISocial() {
+      if (!window.game) window.game = { cfg: {} };
+      if (!window.game.cfg) window.game.cfg = {};
+      window.game.cfg.aiSocialEnabled = !window.game.cfg.aiSocialEnabled;
+      checkConfig();
+      log(`Toggled AI Social to ${window.game.cfg.aiSocialEnabled}`, 'info');
+    }
+
+    function setAggression(level) {
+      if (!window.game) window.game = { cfg: {} };
+      if (!window.game.cfg) window.game.cfg = {};
+      window.game.cfg.aiSocialAggression = level;
+      checkConfig();
+      log(`Set aggression to ${level}`, 'info');
+    }
+
+    // Mock game setup
+    function setupMockGame() {
+      log('Setting up mock game...', 'info');
+      
+      // Setup game object
+      window.game = window.game || {};
+      window.game.cfg = window.game.cfg || {};
+      window.game.week = 3;
+      window.game.humanId = 0;
+      
+      // Create mock players
+      window.game.players = [];
+      for (let i = 0; i < 8; i++) {
+        window.game.players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          affinity: {}
+        });
+      }
+      
+      // Mock helper functions
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+      window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      
+      // Initialize Social Maneuvers resources for all players
+      if (window.SocialManeuvers) {
+        window.game.players.forEach(p => {
+          window.SocialManeuvers.SocialResources?.init(p.id);
+          window.SocialManeuvers.SocialEnergyBank?.init(p.id);
+          // Give all players some energy (including human)
+          window.SocialManeuvers.SocialEnergyBank?.set(p.id, 10);
+          window.SocialManeuvers.SocialResources?.recomputePhaseEnergy(p.id);
+        });
+      }
+      
+      const status = document.getElementById('game-status');
+      status.innerHTML = `
+        <div class="status pass">✓ Mock game created</div>
+        <div class="status info">Players: ${window.game.players.length}</div>
+        <div class="status info">Human ID: ${window.game.humanId}</div>
+        <div class="status info">Week: ${window.game.week}</div>
+      `;
+      
+      log(`Created ${window.game.players.length} mock players`, 'pass');
+    }
+
+    function startMockPhase() {
+      if (!window.SocialAIScheduler) {
+        log('SocialAIScheduler not loaded!', 'fail');
+        return;
+      }
+      
+      log('Starting AI social phase...', 'info');
+      window.SocialAIScheduler.startAiSocialPhase({
+        week: window.game?.week || 1,
+        durationMs: 180000,
+        humanId: window.game?.humanId
+      });
+      log('AI social phase started', 'pass');
+    }
+
+    function stopMockPhase() {
+      if (!window.SocialAIScheduler) {
+        log('SocialAIScheduler not loaded!', 'fail');
+        return;
+      }
+      
+      log('Stopping AI social phase...', 'info');
+      window.SocialAIScheduler.stopAiSocialPhase();
+      log('AI social phase stopped', 'pass');
+    }
+
+    function triggerEmptyEnergyBurst() {
+      if (!window.SocialAIScheduler) {
+        log('SocialAIScheduler not loaded!', 'fail');
+        return;
+      }
+      
+      log('Triggering empty energy burst...', 'info');
+      window.SocialAIScheduler.runEmptyEnergyBurst();
+      log('Empty energy burst triggered', 'pass');
+    }
+
+    // Scheduler tests
+    function testEligiblePlayers() {
+      if (!window.SocialAIScheduler?._getEligibleAIPlayers) {
+        log('Scheduler not available', 'fail');
+        return;
+      }
+      
+      const eligible = window.SocialAIScheduler._getEligibleAIPlayers();
+      const status = document.getElementById('scheduler-status');
+      status.innerHTML = `
+        <div class="status ${eligible.length > 0 ? 'pass' : 'fail'}">
+          Eligible AI Players: ${eligible.length}
+        </div>
+      `;
+      
+      log(`Found ${eligible.length} eligible AI players: ${eligible.map(p => p.name).join(', ')}`, 'info');
+    }
+
+    function testSingleInteraction() {
+      if (!window.SocialAIScheduler?._performSingleInteraction) {
+        log('Scheduler not available', 'fail');
+        return;
+      }
+      
+      log('Performing single AI interaction...', 'info');
+      window.SocialAIScheduler._performSingleInteraction();
+      log('Single interaction attempted', 'info');
+    }
+
+    function testMultipleInteractions() {
+      if (!window.SocialAIScheduler?._performSingleInteraction) {
+        log('Scheduler not available', 'fail');
+        return;
+      }
+      
+      log('Performing 5 AI interactions...', 'info');
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          window.SocialAIScheduler._performSingleInteraction();
+          log(`Interaction ${i + 1}/5 attempted`, 'info');
+        }, i * 500);
+      }
+    }
+
+    // Highlights tests
+    function testMajorEventDetection() {
+      if (!window.SocialHighlights?._isMajorEvent) {
+        log('Highlights not available', 'fail');
+        return;
+      }
+      
+      const testEvents = [
+        {
+          name: 'Alliance Formed',
+          data: { outcome: { allianceFormed: true }, deltas: {} },
+          expected: true
+        },
+        {
+          name: 'Betrayal Risk',
+          data: { outcome: { betrayalRisk: true }, deltas: {} },
+          expected: true
+        },
+        {
+          name: 'Major Influence Gain',
+          data: { outcome: {}, deltas: { influence: 10 } },
+          expected: true
+        },
+        {
+          name: 'Small Talk Success',
+          data: { outcome: {}, deltas: { influence: 2 } },
+          expected: false
+        }
+      ];
+      
+      let html = '<div style="margin-top: 10px;">';
+      testEvents.forEach(test => {
+        const result = window.SocialHighlights._isMajorEvent(test.data);
+        const pass = result === test.expected;
+        html += `<div class="status ${pass ? 'pass' : 'fail'}">
+          ${pass ? '✓' : '✗'} ${test.name}: ${result ? 'Major' : 'Minor'} (expected: ${test.expected ? 'Major' : 'Minor'})
+        </div>`;
+        log(`Event detection: ${test.name} - ${pass ? 'PASS' : 'FAIL'}`, pass ? 'pass' : 'fail');
+      });
+      html += '</div>';
+      
+      document.getElementById('highlights-status').innerHTML = html;
+    }
+
+    function testHighlightRendering() {
+      if (!window.SocialHighlights?.onPhaseEnd) {
+        log('Highlights not available', 'fail');
+        return;
+      }
+      
+      log('Rendering highlights...', 'info');
+      window.SocialHighlights.onPhaseEnd();
+      
+      const logPane = document.getElementById('logSocial');
+      const highlightCard = logPane?.querySelector('.social-highlights-card');
+      
+      if (highlightCard) {
+        log('Highlight card rendered successfully', 'pass');
+        document.getElementById('highlights-status').innerHTML = 
+          '<div class="status pass">✓ Highlight card rendered</div>';
+      } else {
+        log('No highlight card found (may be no highlights to show)', 'warn');
+        document.getElementById('highlights-status').innerHTML = 
+          '<div class="status info">No highlights to render (this is OK if no major events occurred)</div>';
+      }
+    }
+
+    function clearHighlights() {
+      const logPane = document.getElementById('logSocial');
+      if (logPane) {
+        logPane.innerHTML = '';
+        log('Highlights cleared', 'info');
+      }
+    }
+
+    // Event listeners
+    window.addEventListener('sm-ai-interaction', (e) => {
+      const data = e.detail;
+      const actor = window.safeName?.(data.actorId) || data.actorId;
+      const targets = data.targetIds.map(id => window.safeName?.(id) || id).join(', ');
+      log(`AI Interaction: ${actor} → ${data.actionId} → ${targets} (${data.success ? 'success' : 'fail'})`, 
+          data.success ? 'pass' : 'warn');
+    });
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        checkModules();
+        checkConfig();
+        log('Test page loaded and ready', 'info');
+      }, 500);
+    });
+  </script>
+</body>
+</html>

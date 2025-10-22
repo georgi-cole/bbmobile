@@ -899,6 +899,26 @@
 
     // Check if player has depleted all energy and schedule fast-advance if needed
     checkEnergyDepletionAndAdvance(actorId);
+    
+    // Record human action for highlights (if actor is human player)
+    // Use existing 'g' variable from above
+    if(actorId === g?.humanId && typeof global.SocialHighlights?.recordHumanAction === 'function'){
+      // Calculate deltas for highlights
+      const deltas = {
+        influence: outcome.influenceChange || 0,
+        affinity: outcome.affinityChange || affinityDelta || 0,
+        information: outcome.informationGain || 0
+      };
+      const eventData = {
+        actorId,
+        targetIds: allTargets,
+        actionId: action.id,
+        success: succeeded,
+        outcome,
+        deltas
+      };
+      global.SocialHighlights.recordHumanAction(eventData);
+    }
 
     return { success: true, action, outcome, evaluation, succeeded, telemetry, resources: SocialResources.getAll(actorId), affinityDelta };
   }
@@ -2884,6 +2904,11 @@
       return;
     }
     
+    // Initialize highlights tracking
+    if(typeof global.SocialHighlights?.onPhaseStart === 'function'){
+      global.SocialHighlights.onPhaseStart();
+    }
+    
     // Initialize resources for all alive players
     alivePlayers.forEach(p => { 
       SocialResources.init(p.id);
@@ -2913,6 +2938,14 @@
       // AUTO-SKIP: If human has zero energy, show overlay and skip phase
       if(phaseEnergy <= 0) {
         console.info(`[sm-phase-skip] Human player has zero energy (${phaseEnergy}) - triggering auto-skip`);
+        
+        // Run AI burst during the 3s overlay before skip
+        if(typeof global.SocialAIScheduler?.runEmptyEnergyBurst === 'function'){
+          setTimeout(() => {
+            global.SocialAIScheduler.runEmptyEnergyBurst();
+          }, 100); // Start burst quickly, completes before 3s overlay ends
+        }
+        
         showEmptyEnergyOverlayAndSkip(humanId);
         return; // Exit early, don't set up normal phase
       }
@@ -2997,12 +3030,32 @@
     if(!timerSet){
       console.warn('[social-maneuvers] ⚠️ Could not set timer - no available API found');
     }
+    
+    // Start AI social scheduler
+    if(typeof global.SocialAIScheduler?.startAiSocialPhase === 'function'){
+      const g = global.game;
+      global.SocialAIScheduler.startAiSocialPhase({
+        week: g?.week || 1,
+        durationMs: defaultDurationMs,
+        humanId
+      });
+    }
   }
   
   function onSocialPhaseEnd(){
     if(!isEnabled()) { console.info('[social-maneuvers] Phase end called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ◼️ onSocialPhaseEnd() - leaving social_intermission phase');
     console.info('[social-maneuvers] ✓ Social phase complete - generating summary');
+    
+    // Stop AI social scheduler
+    if(typeof global.SocialAIScheduler?.stopAiSocialPhase === 'function'){
+      global.SocialAIScheduler.stopAiSocialPhase();
+    }
+    
+    // Render highlights before other cleanup
+    if(typeof global.SocialHighlights?.onPhaseEnd === 'function'){
+      global.SocialHighlights.onPhaseEnd();
+    }
 
     // Clear any pending fast-advance timeout on phase end
     const g = global.game;
