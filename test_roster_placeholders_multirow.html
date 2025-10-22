@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roster Placeholders Multi-Row Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .section h2 {
+      margin-top: 0;
+      color: var(--accent);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 10px;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .info-box {
+      background: var(--card-2);
+      border-radius: var(--radius-s);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .log {
+      background: var(--bg);
+      border-radius: var(--radius-s);
+      padding: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .log-entry {
+      padding: 6px;
+      margin: 4px 0;
+      border-left: 3px solid var(--line);
+      padding-left: 10px;
+    }
+    .log-entry.success {
+      border-left-color: var(--good);
+      background: rgba(119, 213, 141, 0.1);
+    }
+    .log-entry.info {
+      border-left-color: var(--accent);
+      background: rgba(48, 80, 116, 0.1);
+    }
+
+    /* Simulate roster bar for testing */
+    #rosterBar {
+      background: linear-gradient(180deg, rgba(18,29,42,.88), rgba(13,22,35,.92));
+      border: 1px solid #1f3248;
+      border-radius: 12px;
+      padding: 10px 12px 8px;
+      margin-bottom: 20px;
+      position: relative;
+      min-height: 150px;
+    }
+  </style>
+</head>
+<body data-roster-hidden="true">
+  <div class="test-container">
+    <h1>🎯 Roster Placeholders Multi-Row Layout Test</h1>
+    
+    <div class="section">
+      <h2>Test Controls</h2>
+      
+      <div class="info-box">
+        <h4>Test Scenario</h4>
+        <p>This test verifies the multi-row placeholder layout:</p>
+        <ul>
+          <li><strong>Multi-row layout:</strong> "BIG" on first row, "BROTHER" on second row</li>
+          <li><strong>Responsive sizing:</strong> Tiles use clamp() for width/height and font-size</li>
+          <li><strong>Reduced motion:</strong> Pulse animation respects prefers-reduced-motion</li>
+          <li><strong>API compatibility:</strong> show() and hide() methods work as expected</li>
+        </ul>
+      </div>
+
+      <div class="controls">
+        <button class="btn" onclick="showPlaceholders()">▶️ Show Placeholders</button>
+        <button class="btn danger" onclick="hidePlaceholders()">❌ Hide Placeholders</button>
+        <button class="btn" onclick="toggleRoster()">🔄 Toggle Real Roster</button>
+        <button class="btn" onclick="clearLog()">🗑️ Clear Log</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Roster Container</h2>
+      <div id="rosterBar">
+        <!-- Placeholders will be injected here -->
+      </div>
+      <div class="info-box">
+        <p><strong>Current state:</strong> <span id="stateDisplay">Roster hidden, placeholders should be visible</span></p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Test Log</h2>
+      <div class="log" id="testLog"></div>
+    </div>
+
+    <div class="section">
+      <h2>Verification Checklist</h2>
+      <ul>
+        <li>✓ Placeholders split into rows: "BIG" on first row, "BROTHER" on second</li>
+        <li>✓ Tiles use responsive sizing (clamp for width/height/font-size)</li>
+        <li>✓ Layout centers properly with proper gaps</li>
+        <li>✓ Reduced motion preference is respected (no pulse if user prefers)</li>
+        <li>✓ API methods (show/hide) work correctly</li>
+        <li>✓ Integration with data-roster-hidden attribute works</li>
+        <li>✓ Responsive on mobile (resize browser to test)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Load the roster placeholders script -->
+  <script src="js/roster-placeholders.js"></script>
+
+  <script>
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span style="color: var(--muted-2)">[${new Date().toLocaleTimeString()}]</span> ${message}`;
+      logEl.insertBefore(entry, logEl.firstChild);
+    }
+
+    function updateState() {
+      const isHidden = document.body.getAttribute('data-roster-hidden') === 'true';
+      const placeholdersVisible = document.body.getAttribute('data-roster-placeholders-visible') === 'true';
+      const stateText = isHidden 
+        ? (placeholdersVisible ? 'Roster hidden, placeholders visible' : 'Roster hidden, no placeholders')
+        : 'Roster visible, placeholders should be hidden';
+      document.getElementById('stateDisplay').textContent = stateText;
+    }
+
+    function showPlaceholders() {
+      if (window.RosterPlaceholders && typeof window.RosterPlaceholders.show === 'function') {
+        window.RosterPlaceholders.show();
+        log('✅ <strong>show()</strong> called', 'success');
+        updateState();
+      } else {
+        log('⚠️ RosterPlaceholders.show() not available', 'info');
+      }
+    }
+
+    function hidePlaceholders() {
+      if (window.RosterPlaceholders && typeof window.RosterPlaceholders.hide === 'function') {
+        window.RosterPlaceholders.hide();
+        log('❌ <strong>hide()</strong> called', 'success');
+        updateState();
+      } else {
+        log('⚠️ RosterPlaceholders.hide() not available', 'info');
+      }
+    }
+
+    function toggleRoster() {
+      const isHidden = document.body.getAttribute('data-roster-hidden') === 'true';
+      if (isHidden) {
+        document.body.removeAttribute('data-roster-hidden');
+        log('🔄 Real roster shown (data-roster-hidden removed)', 'info');
+      } else {
+        document.body.setAttribute('data-roster-hidden', 'true');
+        log('🔄 Real roster hidden (data-roster-hidden set to true)', 'info');
+      }
+      updateState();
+    }
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '';
+      log('Test log cleared', 'info');
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      log('✅ Test page loaded', 'success');
+      updateState();
+      
+      // Check if placeholders rendered
+      setTimeout(() => {
+        const overlay = document.getElementById('bbRosterPlaceholderOverlay');
+        if (overlay) {
+          const rows = overlay.querySelectorAll('.roster-placeholder-row');
+          const tiles = overlay.querySelectorAll('.roster-placeholder-tile');
+          log(`✅ Placeholders rendered: ${rows.length} rows, ${tiles.length} tiles`, 'success');
+        } else {
+          log('⚠️ No placeholders found in DOM', 'info');
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>
