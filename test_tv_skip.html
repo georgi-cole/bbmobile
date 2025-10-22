@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>TV Skip Control Test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="styles.css">
+<style>
+body {
+  padding: 20px;
+  background: #0e1730;
+  color: #fff;
+}
+.test-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+.test-controls {
+  background: rgba(255,255,255,0.1);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+.test-controls button {
+  margin: 5px;
+  padding: 8px 16px;
+  background: #4a90e2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.test-controls button:hover {
+  background: #5aa0f2;
+}
+.log-container {
+  background: rgba(0,0,0,0.3);
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 12px;
+}
+.log-entry {
+  margin: 2px 0;
+  padding: 2px 4px;
+}
+</style>
+</head>
+<body>
+<div class="test-container">
+  <h1>TV Skip Control Test</h1>
+  
+  <div class="test-controls">
+    <h3>Test Controls</h3>
+    <button onclick="setTestPhase('opening')">Set Phase: Opening</button>
+    <button onclick="setTestPhase('intermission')">Set Phase: Intermission</button>
+    <button onclick="setTestPhase('hoh')">Set Phase: HOH</button>
+    <button onclick="setTestPhase('nominations')">Set Phase: Nominations</button>
+    <button onclick="setTestPhase('lobby')">Set Phase: Lobby (Not Skippable)</button>
+    <button onclick="setTestPhase(null)">Set Phase: null (Not Skippable)</button>
+    <button onclick="testUpdateHud()">Call updateHud()</button>
+  </div>
+
+  <div class="card">
+    <h2>TV Component</h2>
+    <div class="tvFrame">
+      <div class="tvBezel">
+        <div class="tv" id="tv">
+          <div class="tvHead">
+            <div class="tvTitle">House Network Live</div>
+            <div class="tvTimer" id="tvTimer">00:00</div>
+          </div>
+          <div class="tvViewport">
+            <div id="tvNow" class="tvNow">Test content area</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="log-container" id="logContainer">
+    <strong>Event Log:</strong>
+  </div>
+</div>
+
+<script>
+// Setup global game object
+window.game = window.game || {
+  phase: 'lobby',
+  week: 1,
+  season: 1,
+  players: []
+};
+
+// Log helper
+function addLog(message, type = 'info') {
+  const logContainer = document.getElementById('logContainer');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.style.color = type === 'warn' ? '#ffa500' : type === 'error' ? '#ff4444' : '#4af';
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  logContainer.appendChild(entry);
+  logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+// Mock skip functions
+window.fastForwardPhase = function() {
+  addLog('fastForwardPhase() called', 'info');
+  console.info('[Test] fastForwardPhase called');
+};
+
+window.skipPhase = function() {
+  addLog('skipPhase() called', 'info');
+  console.info('[Test] skipPhase called');
+};
+
+window.advancePhase = function() {
+  addLog('advancePhase() called', 'info');
+  console.info('[Test] advancePhase called');
+};
+
+// Mock setPhase
+window.setPhase = function(phase) {
+  addLog(`setPhase('${phase}') called`);
+  window.game.phase = phase;
+  // TVSkip will wrap this, so just update the game state
+};
+
+// Mock updateHud
+window.updateHud = function() {
+  addLog('updateHud() called');
+  // TVSkip will wrap this
+};
+
+// Test functions
+function setTestPhase(phase) {
+  addLog(`Setting phase to: ${phase}`);
+  window.game.phase = phase;
+  if (window.TVSkip && window.TVSkip.updateVisibility) {
+    window.TVSkip.updateVisibility();
+  }
+  
+  // Check button visibility
+  setTimeout(() => {
+    const skipBtn = document.getElementById('tvSkipButton');
+    const tvTitle = document.querySelector('.tvTitle');
+    if (skipBtn) {
+      const isVisible = skipBtn.style.display !== 'none';
+      addLog(`Skip button visible: ${isVisible}`, isVisible ? 'info' : 'warn');
+    }
+    if (tvTitle) {
+      const isVisible = tvTitle.style.display !== 'none';
+      addLog(`TV Title visible: ${isVisible}`, isVisible ? 'info' : 'warn');
+    }
+  }, 100);
+}
+
+function testUpdateHud() {
+  if (typeof window.updateHud === 'function') {
+    window.updateHud();
+  }
+}
+
+// Initial log
+addLog('Test page loaded');
+addLog(`Initial phase: ${window.game.phase}`);
+</script>
+
+<!-- Load tv-skip.js -->
+<script src="js/tv-skip.js"></script>
+
+<script>
+// After tv-skip.js loads
+setTimeout(() => {
+  addLog('tv-skip.js loaded');
+  const skipBtn = document.getElementById('tvSkipButton');
+  if (skipBtn) {
+    addLog('Skip button found in DOM');
+  } else {
+    addLog('Skip button NOT found in DOM', 'error');
+  }
+}, 500);
+</script>
+
+</body>
+</html>
