@@ -710,6 +710,36 @@ button:focus-visible,.btn:focus-visible{
 .tvTitle{ font-weight:600; letter-spacing:.6px; font-size:.75rem; color:#c7d7eb; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tvTimer{ font-size:.95rem; font-weight:600; color:#e2edf8; white-space:nowrap; }
 
+/* Inline TV Skip Button */
+.tv-skip-button{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  padding:6px 14px 7px; border-radius:8px; font-size:.72rem; font-weight:700;
+  letter-spacing:.8px; color:#fff; border:none; cursor:pointer;
+  background:linear-gradient(135deg, rgba(120,210,255,.25) 0%, rgba(90,170,235,.35) 100%);
+  backdrop-filter:blur(8px) brightness(1.15);
+  -webkit-backdrop-filter:blur(8px) brightness(1.15);
+  box-shadow:0 0 0 1px rgba(120,210,255,.2), 0 2px 8px -2px rgba(120,210,255,.4),
+             inset 0 1px 2px rgba(255,255,255,.2);
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+  text-shadow:0 1px 2px rgba(0,0,0,.3);
+  white-space:nowrap;
+}
+.tv-skip-button:hover{
+  background:linear-gradient(135deg, rgba(120,210,255,.35) 0%, rgba(90,170,235,.45) 100%);
+  transform:translateY(-1px);
+  box-shadow:0 0 0 1px rgba(120,210,255,.3), 0 4px 12px -2px rgba(120,210,255,.6),
+             inset 0 1px 2px rgba(255,255,255,.25);
+}
+.tv-skip-button:active{
+  transform:translateY(0);
+  box-shadow:0 0 0 1px rgba(120,210,255,.2), 0 2px 6px -2px rgba(120,210,255,.4),
+             inset 0 1px 2px rgba(255,255,255,.15);
+}
+.tv-skip-button:focus{
+  outline:2px solid rgba(120,210,255,.5);
+  outline-offset:2px;
+}
+
 .tvViewport{
   position:relative; flex:1 1 auto; overflow:hidden;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
