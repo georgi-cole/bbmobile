@@ -643,7 +643,7 @@
     try{ if(typeof global.updateHud === 'function') global.updateHud(); }catch(e){}
   }
 
-  function startVetoCeremony(){
+  async function startVetoCeremony(){
     var g = global.game;
     g.vetoSavedId = null;
     g.vetoRepPref = null;
@@ -657,28 +657,59 @@
 
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Ceremony');
     if(typeof global.phaseMusic==='function') global.phaseMusic('nominations');
-    try{ if(typeof global.showCard==='function') global.showCard('Veto Ceremony', ['The holder will make a decision…'],'veto', 3600, true); }catch(e){}
-    (function waitCards(){
+
+    // Step 1: Ceremony Intro (faux TV) - POV holder avatar
+    var holder = getP(g.vetoHolder);
+    var holderName = holder ? holder.name : 'POV Holder';
+    
+    if(global.buildCardWithAvatars){
+      // Use buildCardWithAvatars to show POV holder avatar
+      await new Promise(function(resolve){
+        var card = global.buildCardWithAvatars({
+          title: 'Veto Ceremony',
+          lines: ['This is the Veto ceremony. As ' + holderName + ' holds the Power of Veto, please stand and make your decision.'],
+          tone: 'veto',
+          duration: 2400,
+          actorId: g.vetoHolder,
+          targetIds: [],
+          type: 'vetoCeremonyIntro'
+        });
+        
+        // Manually remove card after duration
+        setTimeout(function(){
+          var host = document.getElementById('tvOverlay');
+          if(host) host.innerHTML = '';
+          document.getElementById('tv')?.classList.remove('tvTall');
+          resolve();
+        }, 2400);
+      });
+    } else {
+      // Fallback to regular showCard
+      try{ if(typeof global.showCard==='function') global.showCard('Veto Ceremony', ['This is the Veto ceremony. As ' + holderName + ' holds the Power of Veto, please stand and make your decision.'],'veto', 2400, true); }catch(e){}
       if(typeof global.cardQueueWaitIdle==='function'){
-        try{ global.cardQueueWaitIdle().then(function(){ afterWait(); }); return; }catch(e){}
+        try{ await global.cardQueueWaitIdle(); }catch(e){}
       }
-      afterWait();
-    })();
+    }
 
-    function afterWait(){
-      if(typeof global.setPhase==='function')
-        global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25, finalizeCeremony);
-      setTimeout(function(){ renderVetoCeremonyPanel(); }, 50);
+    // Log action
+    try{ 
+      if(global.addLog) global.addLog(holderName + ' stands to make the veto decision.', 'tiny'); 
+    }catch(e){}
 
-      var holder = getP(g.vetoHolder);
-      if(holder && !holder.human){
-        g.__vetoAutoTimer = setTimeout(function(){
-          var gg = global.game;
-          if(gg && gg.phase==='veto_ceremony' && !gg._awaitingReplacement && !gg.__vetoCeremonyResolved){
-            try{ finalizeCeremony(); }catch(e){}
-          }
-        }, 1200);
-      }
+    // Step 2: Set phase and render decision panel
+    if(typeof global.setPhase==='function')
+      global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25, finalizeCeremony);
+    
+    setTimeout(function(){ renderVetoCeremonyPanel(); }, 50);
+
+    // AI auto-decision after brief delay
+    if(holder && !holder.human){
+      g.__vetoAutoTimer = setTimeout(function(){
+        var gg = global.game;
+        if(gg && gg.phase==='veto_ceremony' && !gg._awaitingReplacement && !gg.__vetoCeremonyResolved){
+          try{ finalizeCeremony(); }catch(e){}
+        }
+      }, 1200);
     }
   }
   global.startVetoCeremony = startVetoCeremony;
@@ -688,57 +719,85 @@
     var panel = document.querySelector('#panel'); if(!panel) return;
     panel.innerHTML = '';
     var box = document.createElement('div'); box.className='minigame-host';
-    box.innerHTML = '<h3>Veto Ceremony</h3>';
     var holder = getP(g.vetoHolder);
     var noms = (g.nominees||[]).map(getP);
-    var info = document.createElement('div'); info.className='tiny';
-    info.textContent = 'Holder: '+(holder?holder.name:'?')+'. Nominees: '+noms.map(function(n){ return n?n.name:'?'; }).join(', ')+'.';
-    box.appendChild(info);
 
     if(g.__vetoCeremonyResolved){
+      box.innerHTML = '<h3>Veto Ceremony</h3>';
       var done = document.createElement('div'); done.className='tiny ok'; done.textContent='Decision locked.';
       box.appendChild(done); panel.appendChild(box); return;
     }
 
     if(!g._awaitingReplacement){
+      // Decision panel: Use POV?
+      box.innerHTML = '<h3>Would you like to use the Power of Veto?</h3>';
+      
+      var info = document.createElement('div'); info.className='tiny';
+      info.textContent = 'POV Holder: '+(holder?holder.name:'?')+'. Nominees: '+noms.map(function(n){ return n?n.name:'?'; }).join(', ')+'.';
+      box.appendChild(info);
+
       if(holder && holder.human){
         if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
-        var row = document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+        
+        var row = document.createElement('div'); row.className='row'; row.style.marginTop='16px';
         function disableAll(){
           var bs=row.querySelectorAll('button');
           for(var i=0;i<bs.length;i++){ bs[i].disabled=true; }
         }
-        var btnNone = document.createElement('button'); btnNone.className='btn'; btnNone.textContent='Do NOT use veto';
-        btnNone.disabled = !!g.__vetoDecisionInProgress;
-        btnNone.onclick = function(){ if(g.__vetoDecisionInProgress) return; disableAll(); finalizeCeremony({ used: false }); };
-        row.appendChild(btnNone);
+        
+        // Yes button (green, prominent)
+        var btnYes = document.createElement('button'); 
+        btnYes.className='btn primary'; 
+        btnYes.textContent='Yes — Use the Veto';
+        btnYes.style.marginRight = '8px';
+        btnYes.disabled = !!g.__vetoDecisionInProgress;
+        btnYes.onclick = function(){ 
+          if(g.__vetoDecisionInProgress) return; 
+          disableAll(); 
+          // Show nominee selection if more than one nominee
+          if(g.nominees.length > 1){
+            showNomineeSelection();
+          } else {
+            finalizeCeremony({ used: true, savedId: g.nominees[0] }); 
+          }
+        };
+        row.appendChild(btnYes);
 
-        for(var i=0;i<g.nominees.length;i++){
-          (function wrapSave(id){
-            var p = getP(id);
-            var b = document.createElement('button'); b.className='btn'; b.textContent='Use on '+(p?p.name:'?');
-            b.disabled = !!g.__vetoDecisionInProgress;
-            b.onclick = function(){ if(g.__vetoDecisionInProgress) return; disableAll(); finalizeCeremony({ used: true, savedId: id }); };
-            row.appendChild(b);
-          })(g.nominees[i]);
-        }
+        // No button (default)
+        var btnNo = document.createElement('button'); 
+        btnNo.className='btn'; 
+        btnNo.textContent='No — Keep Nominations the Same';
+        btnNo.disabled = !!g.__vetoDecisionInProgress;
+        btnNo.onclick = function(){ 
+          if(g.__vetoDecisionInProgress) return; 
+          disableAll(); 
+          finalizeCeremony({ used: false }); 
+        };
+        row.appendChild(btnNo);
 
         box.appendChild(row);
+        
         var hint = document.createElement('div'); hint.className='tiny muted';
-        hint.textContent = 'Using the veto will force the HOH to name a replacement.';
+        hint.style.marginTop = '12px';
+        hint.textContent = 'Using the veto will force the HOH to name a replacement nominee.';
         box.appendChild(hint);
       } else {
-        var note = document.createElement('div'); note.className='tiny muted'; note.textContent='Holder is deciding…';
+        var note = document.createElement('div'); note.className='tiny muted'; 
+        note.style.marginTop = '12px';
+        note.textContent='POV holder is making a decision…';
         box.appendChild(note);
       }
     } else {
+      // Replacement nominee selection
+      box.innerHTML = '<h3>Select Replacement Nominee</h3>';
+      
       var repPool = alivePlayers().filter(function(p){
         return !p.hoh && g.nominees.indexOf(p.id)===-1 && p.id!==g.vetoHolder && p.id!==g.vetoSavedId;
       });
       var hint2 = document.createElement('div'); hint2.className='tiny';
-      hint2.textContent = g.__replacementCommitted ? 'Replacement submitted…' : 'Select a replacement nominee.';
+      hint2.textContent = g.__replacementCommitted ? 'Replacement submitted…' : 'The HOH must select a replacement nominee.';
       box.appendChild(hint2);
-      var row2 = document.createElement('div'); row2.className='row'; row2.style.marginTop='8px';
+      var row2 = document.createElement('div'); row2.className='row'; row2.style.marginTop='12px';
       var sel = document.createElement('select'); sel.disabled = !!g.__replacementCommitted;
       for(var j=0;j<repPool.length;j++){
         var o = document.createElement('option'); o.value = String(repPool[j].id); o.textContent = repPool[j].name; sel.appendChild(o);
@@ -758,6 +817,46 @@
     panel.appendChild(box);
   }
   global.renderVetoCeremonyPanel = renderVetoCeremonyPanel;
+
+  // Show nominee selection panel when Yes is clicked and multiple nominees exist
+  function showNomineeSelection(){
+    var g = global.game;
+    var panel = document.querySelector('#panel'); if(!panel) return;
+    panel.innerHTML = '';
+    var box = document.createElement('div'); box.className='minigame-host';
+    box.innerHTML = '<h3>Save Which Nominee?</h3>';
+    
+    var info = document.createElement('div'); info.className='tiny';
+    info.textContent = 'Select which nominee to save with the Power of Veto.';
+    box.appendChild(info);
+    
+    var row = document.createElement('div'); row.className='row'; row.style.marginTop='16px';
+    function disableAll(){
+      var bs=row.querySelectorAll('button');
+      for(var i=0;i<bs.length;i++){ bs[i].disabled=true; }
+    }
+    
+    for(var i=0;i<g.nominees.length;i++){
+      (function wrapSave(id){
+        var p = getP(id);
+        var b = document.createElement('button'); 
+        b.className='btn primary'; 
+        b.textContent='Save '+(p?p.name:'?');
+        b.style.marginRight = '8px';
+        b.disabled = !!g.__vetoDecisionInProgress;
+        b.onclick = function(){ 
+          if(g.__vetoDecisionInProgress) return; 
+          disableAll(); 
+          finalizeCeremony({ used: true, savedId: id }); 
+        };
+        row.appendChild(b);
+      })(g.nominees[i]);
+    }
+    
+    box.appendChild(row);
+    panel.appendChild(box);
+  }
+  global.showNomineeSelection = showNomineeSelection;
 
   function aiVetoDecision(){
     var g = global.game, holderId = g.vetoHolder;
@@ -791,7 +890,7 @@
     return scored[0].id;
   }
 
-  function finalizeCeremony(choice){
+  async function finalizeCeremony(choice){
     var g = global.game;
 
     if(g._awaitingReplacement) return;
@@ -836,95 +935,152 @@
       }
 
       if(!g.__vetoNarrativeShown){
-        try{ if(typeof global.showCard==='function') global.showCard('Veto Decision', [pickPhrase(VETO_USE_PHRASES)], 'veto', 3200, true); }catch(e){}
-        if(typeof global.cardQueueWaitIdle==='function'){ try{ global.cardQueueWaitIdle().then(function(){ thenSaved(); }); return; }catch(e){} }
-        thenSaved();
-        function thenSaved(){
+        g.__vetoNarrativeShown = true;
+        
+        // Show veto decision with POV holder avatar
+        if(global.buildCardWithAvatars){
+          await new Promise(function(resolve){
+            var card = global.buildCardWithAvatars({
+              title: 'Veto Decision',
+              lines: [pickPhrase(VETO_USE_PHRASES)],
+              tone: 'veto',
+              duration: 3200,
+              actorId: g.vetoHolder,
+              targetIds: [],
+              type: 'vetoDecision'
+            });
+            
+            setTimeout(function(){
+              var host = document.getElementById('tvOverlay');
+              if(host) host.innerHTML = '';
+              document.getElementById('tv')?.classList.remove('tvTall');
+              resolve();
+            }, 3200);
+          });
+        } else {
+          try{ if(typeof global.showCard==='function') global.showCard('Veto Decision', [pickPhrase(VETO_USE_PHRASES)], 'veto', 3200, true); }catch(e){}
+          if(typeof global.cardQueueWaitIdle==='function'){ try{ await global.cardQueueWaitIdle(); }catch(e){} }
+        }
+        
+        // Show saved player with avatar arrow (POV holder -> Saved player)
+        if(global.buildCardWithAvatars){
+          await new Promise(function(resolve){
+            var card = global.buildCardWithAvatars({
+              title: 'Saved',
+              lines: [savedName + ' is saved from the block.'],
+              tone: 'veto',
+              duration: 3200,
+              actorId: g.vetoHolder,
+              targetIds: [savedId],
+              type: 'vetoSaved'
+            });
+            
+            setTimeout(function(){
+              var host = document.getElementById('tvOverlay');
+              if(host) host.innerHTML = '';
+              document.getElementById('tv')?.classList.remove('tvTall');
+              resolve();
+            }, 3200);
+          });
+        } else {
           try{ if(typeof global.showCard==='function') global.showCard('Saved', [savedName+' is saved.'], 'veto', 3200, true); }catch(e){}
-          if(typeof global.cardQueueWaitIdle==='function'){ try{ global.cardQueueWaitIdle().then(function(){ afterNarr(); }); return; }catch(e){} }
-          afterNarr();
+          if(typeof global.cardQueueWaitIdle==='function'){ try{ await global.cardQueueWaitIdle(); }catch(e){} }
         }
-        function afterNarr(){ g.__vetoNarrativeShown = true; continueAfterSaved(); }
-      } else {
-        continueAfterSaved();
+        
+        // Log action
+        try{ if(global.addLog) global.addLog(safeName(g.vetoHolder) + ' has used the Power of Veto to save ' + savedName + '.', 'warn'); }catch(e){}
       }
 
-      function continueAfterSaved(){
-        if(aliveCount===4){
-          var f4 = alivePlayers().map(function(p){ return p.id; });
-          var forced = f4.filter(function(id){ return id!==g.hohId && id!==g.vetoHolder; });
-          if(forced.length>=2){
-            g.nominees = forced.slice(0,2);
-            g.nomsLocked = true;
-            for(var i=0;i<g.players.length;i++){ g.players[i].nominated = (g.nominees.indexOf(g.players[i].id)!==-1); }
-            // Sync player badge states after F4 veto application
-            try{ if(typeof global.syncPlayerBadgeStates==='function') global.syncPlayerBadgeStates(); }catch(e){}
-            try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
-          }
-          try{ if(typeof global.showCard==='function') global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 3200, true); }catch(e){}
-          if(typeof global.cardQueueWaitIdle==='function'){
-            try{ global.cardQueueWaitIdle().then(function(){ endCerAndVote(); }); return; }catch(e){}
-          }
-          endCerAndVote();
-          return;
+      // Continue after saved player revealed
+      if(aliveCount===4){
+        var f4 = alivePlayers().map(function(p){ return p.id; });
+        var forced = f4.filter(function(id){ return id!==g.hohId && id!==g.vetoHolder; });
+        if(forced.length>=2){
+          g.nominees = forced.slice(0,2);
+          g.nomsLocked = true;
+          for(var i=0;i<g.players.length;i++){ g.players[i].nominated = (g.nominees.indexOf(g.players[i].id)!==-1); }
+          // Sync player badge states after F4 veto application
+          try{ if(typeof global.syncPlayerBadgeStates==='function') global.syncPlayerBadgeStates(); }catch(e){}
+          try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
         }
-
-        var hoh = getP(g.hohId);
-        try{ if(typeof global.showCard==='function') global.showCard('HOH', ['As I have vetoed one of your nominations, you must now select a replacement.'],'noms', 3200, true); }catch(e){}
+        try{ if(typeof global.showCard==='function') global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 3200, true); }catch(e){}
         if(typeof global.cardQueueWaitIdle==='function'){
-          try{ global.cardQueueWaitIdle().then(function(){ afterHoHCard(); }); return; }catch(e){}
+          try{ await global.cardQueueWaitIdle(); }catch(e){}
         }
-        afterHoHCard();
-
-        function afterHoHCard(){
-          if(hoh && hoh.human){
-            g._awaitingReplacement = true;
-            try{ if(global.addLog) global.addLog('Veto used. '+savedName+' is saved. HOH must choose a replacement.','warn'); }catch(e){}
-            setTimeout(function(){ if(typeof global.renderVetoCeremonyPanel==='function') global.renderVetoCeremonyPanel(); }, 100);
-          } else {
-            var replacementId = pickReplacementByHOH(savedId);
-            applyReplacementAndContinue(replacementId);
-          }
-        }
-      }
-
-      function endCerAndVote(){
         g.__vetoCeremonyResolved = true;
         g.__vetoDecisionInProgress = false;
         setTimeout(function(){ if(typeof global.startLiveVote==='function') global.startLiveVote(); }, 300);
+        return;
+      }
+
+      var hoh = getP(g.hohId);
+      
+      // Show HOH must select replacement with HOH avatar
+      if(global.buildCardWithAvatars){
+        await new Promise(function(resolve){
+          var card = global.buildCardWithAvatars({
+            title: 'Replacement Required',
+            lines: ['As I have vetoed one of your nominations, you must now select a replacement.'],
+            tone: 'noms',
+            duration: 3200,
+            actorId: g.hohId,
+            targetIds: [],
+            type: 'replacementRequired'
+          });
+          
+          setTimeout(function(){
+            var host = document.getElementById('tvOverlay');
+            if(host) host.innerHTML = '';
+            document.getElementById('tv')?.classList.remove('tvTall');
+            resolve();
+          }, 3200);
+        });
+      } else {
+        try{ if(typeof global.showCard==='function') global.showCard('HOH', ['As I have vetoed one of your nominations, you must now select a replacement.'],'noms', 3200, true); }catch(e){}
+        if(typeof global.cardQueueWaitIdle==='function'){
+          try{ await global.cardQueueWaitIdle(); }catch(e){}
+        }
+      }
+
+      if(hoh && hoh.human){
+        g._awaitingReplacement = true;
+        try{ if(global.addLog) global.addLog('Veto used. '+savedName+' is saved. HOH must choose a replacement.','warn'); }catch(e){}
+        setTimeout(function(){ if(typeof global.renderVetoCeremonyPanel==='function') global.renderVetoCeremonyPanel(); }, 100);
+      } else {
+        var replacementId = pickReplacementByHOH(savedId);
+        await applyReplacementAndContinue(replacementId);
       }
     } else {
+      // Veto NOT used
       try{ if(global.addLog) global.addLog('Veto not used.','muted'); }catch(e){}
-      try{ if(typeof global.showCard==='function') global.showCard('Veto Not Used',[pickPhrase(VETO_NOT_USE_PHRASES)],'veto',3600,true); }catch(e){}
-      if(typeof global.cardQueueWaitIdle==='function'){
-        try{ global.cardQueueWaitIdle().then(function(){ finishNoUse(); }); return; }catch(e){}
+      
+      // Show veto not used with POV holder avatar
+      if(global.buildCardWithAvatars){
+        await new Promise(function(resolve){
+          var card = global.buildCardWithAvatars({
+            title: 'Veto Not Used',
+            lines: [pickPhrase(VETO_NOT_USE_PHRASES)],
+            tone: 'veto',
+            duration: 3600,
+            actorId: g.vetoHolder,
+            targetIds: [],
+            type: 'vetoNotUsed'
+          });
+          
+          setTimeout(function(){
+            var host = document.getElementById('tvOverlay');
+            if(host) host.innerHTML = '';
+            document.getElementById('tv')?.classList.remove('tvTall');
+            resolve();
+          }, 3600);
+        });
+      } else {
+        try{ if(typeof global.showCard==='function') global.showCard('Veto Not Used',[pickPhrase(VETO_NOT_USE_PHRASES)],'veto',3600,true); }catch(e){}
+        if(typeof global.cardQueueWaitIdle==='function'){
+          try{ await global.cardQueueWaitIdle(); }catch(e){}
+        }
       }
-      finishNoUse();
 
-      function finishNoUse(){
-        g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
-        g.__vetoCeremonyResolved = true;
-        g.__vetoDecisionInProgress = false;
-        setTimeout(function(){
-          if(typeof global.startSocial==='function'){
-            global.startSocial('veto', function(){
-              if(typeof global.startLiveVote==='function') global.startLiveVote();
-            });
-          } else if(typeof global.startLiveVote==='function'){
-            global.startLiveVote();
-          }
-        }, 200);
-      }
-    }
-  }
-  global.finalizeCeremony = finalizeCeremony;
-
-  function applyReplacementAndContinue(replacementId){
-    var g = global.game;
-    if(g.__replacementApplied) return;
-    g.__replacementApplied = true;
-
-    function proceed(){
       g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
       g.__vetoCeremonyResolved = true;
       g.__vetoDecisionInProgress = false;
@@ -938,6 +1094,13 @@
         }
       }, 200);
     }
+  }
+  global.finalizeCeremony = finalizeCeremony;
+
+  async function applyReplacementAndContinue(replacementId){
+    var g = global.game;
+    if(g.__replacementApplied) return;
+    g.__replacementApplied = true;
 
     if(replacementId!=null){
       var savedId = g.vetoSavedId;
@@ -994,33 +1157,82 @@
 
       var hoh = getP(g.hohId);
       var announce = (hoh ? hoh.name : 'HOH')+': I name '+safeName(replacementId)+' as the replacement nominee.';
-      try{ if(typeof global.showCard==='function') global.showCard('HOH Announcement',[announce],'noms',3400,true); }catch(e){}
-
-      function afterAnnouncement(){
-        try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by HOH).','warn'); }catch(e){}
-        try{ if(typeof global.showCard==='function') global.showCard('Replacement',[safeName(replacementId)],'replace',3600,true); }catch(e){}
-
-        function afterReplacementCard(){
-          try{ g.__twistNomineeSnapshot = g.nominees.slice(); }catch(e){}
-          try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
-          proceed();
-        }
-
+      
+      // Show HOH announcement with avatar (HOH -> Replacement)
+      if(global.buildCardWithAvatars){
+        await new Promise(function(resolve){
+          var card = global.buildCardWithAvatars({
+            title: 'HOH Announcement',
+            lines: [announce],
+            tone: 'noms',
+            duration: 3400,
+            actorId: g.hohId,
+            targetIds: [replacementId],
+            type: 'hohAnnouncement'
+          });
+          
+          setTimeout(function(){
+            var host = document.getElementById('tvOverlay');
+            if(host) host.innerHTML = '';
+            document.getElementById('tv')?.classList.remove('tvTall');
+            resolve();
+          }, 3400);
+        });
+      } else {
+        try{ if(typeof global.showCard==='function') global.showCard('HOH Announcement',[announce],'noms',3400,true); }catch(e){}
         if(typeof global.cardQueueWaitIdle==='function'){
-          try{ global.cardQueueWaitIdle().then(function(){ afterReplacementCard(); }); return; }catch(e){}
+          try{ await global.cardQueueWaitIdle(); }catch(e){}
         }
-        afterReplacementCard();
       }
 
-      if(typeof global.cardQueueWaitIdle==='function'){
-        try{ global.cardQueueWaitIdle().then(function(){ afterAnnouncement(); }); return; }catch(e){}
+      try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by HOH).','warn'); }catch(e){}
+      
+      // Show replacement nominee card
+      if(global.buildCardWithAvatars){
+        await new Promise(function(resolve){
+          var card = global.buildCardWithAvatars({
+            title: 'Replacement Nominee',
+            lines: [safeName(replacementId)],
+            tone: 'replace',
+            duration: 3600,
+            actorId: replacementId,
+            targetIds: [],
+            type: 'replacement'
+          });
+          
+          setTimeout(function(){
+            var host = document.getElementById('tvOverlay');
+            if(host) host.innerHTML = '';
+            document.getElementById('tv')?.classList.remove('tvTall');
+            resolve();
+          }, 3600);
+        });
+      } else {
+        try{ if(typeof global.showCard==='function') global.showCard('Replacement',[safeName(replacementId)],'replace',3600,true); }catch(e){}
+        if(typeof global.cardQueueWaitIdle==='function'){
+          try{ await global.cardQueueWaitIdle(); }catch(e){}
+        }
       }
-      afterAnnouncement();
 
+      try{ g.__twistNomineeSnapshot = g.nominees.slice(); }catch(e){}
+      try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
     } else {
       try{ if(global.addLog) global.addLog('Veto used, but no valid replacement available.','danger'); }catch(e){}
-      proceed();
     }
+
+    // Proceed to next phase
+    g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
+    g.__vetoCeremonyResolved = true;
+    g.__vetoDecisionInProgress = false;
+    setTimeout(function(){
+      if(typeof global.startSocial==='function'){
+        global.startSocial('veto', function(){
+          if(typeof global.startLiveVote==='function') global.startLiveVote();
+        });
+      } else if(typeof global.startLiveVote==='function'){
+        global.startLiveVote();
+      }
+    }, 200);
   }
   global.applyReplacementAndContinue = applyReplacementAndContinue;
 
