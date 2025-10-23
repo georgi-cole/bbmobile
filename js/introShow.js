@@ -373,7 +373,6 @@
     if (!CONFIG.enableLighting) return;
     
     const sweep = overlay.querySelector('.intro-lighting-sweep');
-    const projectorBeam = overlay.querySelector('.intro-projector-beam');
 
     if (isGsapAvailable()) {
       // Animate lighting sweep
@@ -392,6 +391,7 @@
       }
 
       // Animate projector beam - subtle opacity pulse and rotation
+      const projectorBeam = overlay.querySelector('.intro-projector-beam');
       if (projectorBeam) {
         gsap.to(projectorBeam, {
           opacity: 0.08,
@@ -404,6 +404,7 @@
       }
     } else {
       // Fallback: add CSS pulse class
+      const projectorBeam = overlay.querySelector('.intro-projector-beam');
       if (projectorBeam) {
         projectorBeam.classList.add('intro-projector-pulse');
       }
