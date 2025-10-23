@@ -40,7 +40,8 @@
     const canvas = document.createElement('canvas');
     canvas.width = 400;
     canvas.height = 400;
-    canvas.style.cssText = 'border:3px solid #3d4f64;background:#1a2332;border-radius:4px;';
+    // disable touch-action default gestures on the canvas to reduce accidental double-tap zoom/pinch interactions
+    canvas.style.cssText = 'border:3px solid #3d4f64;background:#1a2332;border-radius:4px;touch-action:none;';
     const ctx = canvas.getContext('2d');
     
     // Control buttons
@@ -63,7 +64,14 @@
       const btn = document.createElement('button');
       btn.textContent = text;
       btn.className = 'btn';
-      btn.style.cssText = 'width:60px;height:60px;font-size:1.5rem;padding:0;';
+      // touch-action manipulation reduces accidental zoom / double-tap issues on mobile
+      btn.style.cssText = 'width:60px;height:60px;font-size:1.5rem;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
+      // make touchstart passive false to be able to preventDefault if needed (some platforms)
+      btn.addEventListener('touchstart', (ev) => {
+        // prevent synthetic double-tap zoom and stop propagation to higher level handlers
+        ev.preventDefault();
+        ev.stopPropagation();
+      }, { passive: false });
       return btn;
     }
     
@@ -94,7 +102,10 @@
     let gameOver = false;
     let timerInterval = null;
     let gameLoop = null;
-    
+
+    // Minimum active time to ignore accidental immediate win/lose right after starting
+    const STARTUP_GRACE_MS = 300;
+
     function update(){
       if(gameOver) return;
       
@@ -138,12 +149,13 @@
         return;
       }
       
-      // Check goal
+      // Check goal (guarded by startup grace to avoid accidental immediate wins)
+      const elapsedSinceStart = Date.now() - startTime;
       const dist = Math.sqrt(
         Math.pow(player.x - goal.x, 2) + 
         Math.pow(player.y - goal.y, 2)
       );
-      if(dist < player.size + goal.size){
+      if(elapsedSinceStart >= STARTUP_GRACE_MS && dist < player.size + goal.size){
         win();
       }
       
@@ -181,10 +193,13 @@
     }
     
     function win(){
+      // Prevent spurious wins during startup
+      if(Date.now() - startTime < STARTUP_GRACE_MS) return;
+
       gameOver = true;
       clearInterval(timerInterval);
       cancelAnimationFrame(gameLoop);
-      document.removeEventListener('keydown', keydownHandler);
+      try { document.removeEventListener('keydown', keydownHandler); } catch(e){}
       
       const elapsed = (Date.now() - startTime) / 1000;
       
@@ -220,10 +235,13 @@
     }
     
     function lose(){
+      // Prevent spurious loses during startup
+      if(Date.now() - startTime < STARTUP_GRACE_MS) return;
+
       gameOver = true;
       clearInterval(timerInterval);
       cancelAnimationFrame(gameLoop);
-      document.removeEventListener('keydown', keydownHandler);
+      try { document.removeEventListener('keydown', keydownHandler); } catch(e){}
       
       instructions.textContent = 'Fell off! Try again next time.';
       instructions.style.color = '#ff6b6b';
@@ -235,6 +253,7 @@
     const keydownHandler = (e) => {
       if(gameOver) return;
       
+      // explicit preventDefault for arrow keys
       if(e.key === 'ArrowLeft' || e.key === 'a'){
         e.preventDefault();
         applyForce(-acceleration, 0);
@@ -249,14 +268,19 @@
       }
     };
     
-    document.addEventListener('keydown', keydownHandler);
+    // attach keydown so preventDefault works on mobile/desktop
+    document.addEventListener('keydown', keydownHandler, { passive: false });
     
-    btnLeft.addEventListener('click', () => applyForce(-acceleration, 0));
-    btnRight.addEventListener('click', () => applyForce(acceleration, 0));
-    btnUp.addEventListener('click', () => {
-      if(onGround) applyForce(0, -12);
-    });
-    
+    // Button click/touch handlers - prevent default and stop propagation to avoid accidental gestures or bubbling
+    btnLeft.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); applyForce(-acceleration, 0); });
+    btnRight.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); applyForce(acceleration, 0); });
+    btnUp.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); if(onGround) applyForce(0, -12); });
+
+    // Also add touch handlers as some platforms synthesize clicks from touch
+    btnLeft.addEventListener('touchend', (ev) => { ev.preventDefault(); ev.stopPropagation(); applyForce(-acceleration, 0); }, { passive: false });
+    btnRight.addEventListener('touchend', (ev) => { ev.preventDefault(); ev.stopPropagation(); applyForce(acceleration, 0); }, { passive: false });
+    btnUp.addEventListener('touchend', (ev) => { ev.preventDefault(); ev.stopPropagation(); if(onGround) applyForce(0, -12); }, { passive: false });
+
     // Timer
     timerInterval = setInterval(() => {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
