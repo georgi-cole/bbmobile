@@ -22,7 +22,9 @@
     cardGapMs: 250,
     isProcessing: false,
     container: null,
+    stage: null,
     ctaBar: null,
+    resizeObserver: null,
     humanTurn: false,
     isTieBreak: false,
     isFinal4: false
@@ -73,7 +75,7 @@
     renderPanel();
   }
 
-  // Render the modern panel inside #tv
+  // Render the modern panel inside #tv with fixed canvas and ResizeObserver scaling
   function renderPanel() {
     const tv = document.querySelector('#tv');
     if (!tv) {
@@ -87,13 +89,17 @@
       panel.style.display = 'none';
     }
 
-    // Create fit wrapper for responsive scaling inside TV
+    // Create overlay wrapper with overflow:hidden
+    const overlay = document.createElement('div');
+    overlay.className = 'lv2-overlay';
+    overlay.setAttribute('role', 'region');
+    overlay.setAttribute('aria-label', 'Live Vote');
+
+    // Create fixed-size fit wrapper (1200x560) that will be scaled
     const fitWrapper = document.createElement('div');
     fitWrapper.className = 'lv2-fit';
-    fitWrapper.setAttribute('role', 'region');
-    fitWrapper.setAttribute('aria-label', 'Live Vote');
 
-    // Create container
+    // Create main grid container
     const container = document.createElement('div');
     container.className = 'lv2-panel';
 
@@ -103,31 +109,39 @@
     header.innerHTML = '<h3>Live Vote</h3>';
     container.appendChild(header);
 
-    // Versus layout container
-    const versus = document.createElement('div');
-    versus.className = 'lv2-versus';
+    // Main content grid (left contestant | center stage | right contestant)
+    const grid = document.createElement('div');
+    grid.className = 'lv2-grid';
 
-    // Left contestant
+    // Left contestant with drop anchor
     const leftSide = createContestant('left', state.leftName, state.leftId);
-    versus.appendChild(leftSide);
+    const leftAnchor = document.createElement('div');
+    leftAnchor.className = 'lv2-drop-anchor left';
+    leftSide.appendChild(leftAnchor);
+    grid.appendChild(leftSide);
 
-    // Central meter
+    // Center stage for spawning vote cards
+    const stage = document.createElement('div');
+    stage.className = 'lv2-stage';
+    stage.setAttribute('role', 'log');
+    stage.setAttribute('aria-live', 'polite');
+    stage.setAttribute('aria-atomic', 'false');
+    stage.setAttribute('aria-label', 'Vote announcements');
+    
+    // Add meter in center stage
     const meter = createMeter();
-    versus.appendChild(meter);
+    stage.appendChild(meter);
+    
+    grid.appendChild(stage);
 
-    // Right contestant
+    // Right contestant with drop anchor
     const rightSide = createContestant('right', state.rightName, state.rightId);
-    versus.appendChild(rightSide);
+    const rightAnchor = document.createElement('div');
+    rightAnchor.className = 'lv2-drop-anchor right';
+    rightSide.appendChild(rightAnchor);
+    grid.appendChild(rightSide);
 
-    container.appendChild(versus);
-
-    // Reveal area for flip cards
-    const reveal = document.createElement('div');
-    reveal.className = 'lv2-reveal';
-    reveal.setAttribute('role', 'log');
-    reveal.setAttribute('aria-live', 'polite');
-    reveal.setAttribute('aria-atomic', 'false');
-    container.appendChild(reveal);
+    container.appendChild(grid);
 
     // Status text area
     const status = document.createElement('div');
@@ -135,15 +149,26 @@
     status.textContent = 'Waiting for votes...';
     container.appendChild(status);
 
+    // CTA footer row (reserved for buttons, never overlaps avatars)
+    const ctaRow = document.createElement('div');
+    ctaRow.className = 'lv2-cta-row';
+    container.appendChild(ctaRow);
+
     fitWrapper.appendChild(container);
+    overlay.appendChild(fitWrapper);
+    
     state.container = container;
+    state.stage = stage;
     
     // Clear any existing lv2 UI
-    const existingLv2 = tv.querySelector('.lv2-fit');
+    const existingLv2 = tv.querySelector('.lv2-overlay');
     if (existingLv2) existingLv2.remove();
     
     // Append to TV
-    tv.appendChild(fitWrapper);
+    tv.appendChild(overlay);
+
+    // Setup ResizeObserver for responsive scaling
+    setupResizeObserver(tv, fitWrapper);
   }
 
   // Create contestant card (left or right)
@@ -249,10 +274,10 @@
     processNextVote();
   }
 
-  // Reveal a vote card with flip animation
+  // Reveal a vote card with flip animation - spawn from center stage, then fly to anchor
   async function revealVoteCard(vote) {
-    const reveal = state.container?.querySelector('.lv2-reveal');
-    if (!reveal) return;
+    const stage = state.stage;
+    if (!stage) return;
 
     // Create card
     const card = document.createElement('div');
@@ -276,7 +301,13 @@
     inner.appendChild(back);
 
     card.appendChild(inner);
-    reveal.appendChild(card);
+    
+    // Spawn card at center stage
+    stage.appendChild(card);
+
+    // Announce vote to screen readers
+    const announcement = `${vote.voterName} voted to evict ${vote.pick === 'left' ? state.leftName : state.rightName}`;
+    card.setAttribute('aria-label', announcement);
 
     // Trigger flip animation
     if (!reducedMotion) {
@@ -284,15 +315,15 @@
       card.classList.add('revealed');
       await sleep(state.cardHoldMs);
 
-      // Fly to target side
+      // Fly to target drop anchor
       const targetSide = vote.pick;
-      const targetEl = state.container?.querySelector(`.lv2-contestant.${targetSide}`);
+      const targetAnchor = state.container?.querySelector(`.lv2-drop-anchor.${targetSide}`);
       
-      if (targetEl) {
+      if (targetAnchor) {
         const cardRect = card.getBoundingClientRect();
-        const targetRect = targetEl.getBoundingClientRect();
-        const deltaX = targetRect.left - cardRect.left + (targetRect.width / 2) - (cardRect.width / 2);
-        const deltaY = targetRect.top - cardRect.top - 20;
+        const anchorRect = targetAnchor.getBoundingClientRect();
+        const deltaX = anchorRect.left - cardRect.left + (anchorRect.width / 2) - (cardRect.width / 2);
+        const deltaY = anchorRect.top - cardRect.top + (anchorRect.height / 2) - (cardRect.height / 2);
 
         card.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.3)`;
         card.style.opacity = '0';
@@ -423,19 +454,13 @@
     }
   }
 
-  // Create voting CTA bar inside TV
+  // Create voting CTA bar in reserved footer row (never overlaps avatars)
   function createCtaBar(options = {}) {
-    const tv = document.querySelector('#tv');
-    if (!tv) return;
+    const ctaRow = state.container?.querySelector('.lv2-cta-row');
+    if (!ctaRow) return;
 
-    // Remove existing CTA bar
-    const existingCta = tv.querySelector('.lv2-cta');
-    if (existingCta) existingCta.remove();
-
-    const ctaBar = document.createElement('div');
-    ctaBar.className = 'lv2-cta';
-    ctaBar.setAttribute('role', 'group');
-    ctaBar.setAttribute('aria-label', 'Voting controls');
+    // Clear existing buttons
+    ctaRow.innerHTML = '';
 
     const {
       enabled = false,
@@ -448,19 +473,24 @@
       onVote = null
     } = options;
 
+    ctaRow.setAttribute('role', 'group');
+    ctaRow.setAttribute('aria-label', 'Voting controls');
+
     if (isFinal4) {
       // Final 4: Single vote button (sole vote)
       const btn = document.createElement('button');
+      btn.className = 'lv2-cta-btn';
       btn.textContent = `Cast Sole Vote`;
       btn.disabled = !enabled;
       btn.setAttribute('aria-label', 'Cast your sole vote');
       btn.onclick = () => {
         if (onVote) onVote(null); // Let the caller handle the UI for picking
       };
-      ctaBar.appendChild(btn);
+      ctaRow.appendChild(btn);
     } else if (isTieBreak) {
       // Tie-break: HOH wording
       const btnLeft = document.createElement('button');
+      btnLeft.className = 'lv2-cta-btn';
       btnLeft.textContent = `Break Tie: Evict ${leftName}`;
       btnLeft.disabled = !enabled;
       btnLeft.setAttribute('aria-label', `Break tie by evicting ${leftName}`);
@@ -468,9 +498,10 @@
       btnLeft.onclick = () => {
         if (onVote) onVote(leftId);
       };
-      ctaBar.appendChild(btnLeft);
+      ctaRow.appendChild(btnLeft);
 
       const btnRight = document.createElement('button');
+      btnRight.className = 'lv2-cta-btn';
       btnRight.textContent = `Break Tie: Evict ${rightName}`;
       btnRight.disabled = !enabled;
       btnRight.setAttribute('aria-label', `Break tie by evicting ${rightName}`);
@@ -478,35 +509,36 @@
       btnRight.onclick = () => {
         if (onVote) onVote(rightId);
       };
-      ctaBar.appendChild(btnRight);
+      ctaRow.appendChild(btnRight);
     } else {
       // Normal vote: Two buttons
       const btnLeft = document.createElement('button');
+      btnLeft.className = 'lv2-cta-btn';
       btnLeft.textContent = `Evict ${leftName}`;
       btnLeft.disabled = !enabled;
-      btnLeft.setAttribute('aria-label', `Vote to evict ${leftName}`);
+      btnLeft.setAttribute('aria-label', `Vote to evict ${leftName}. Press 1 to select.`);
       btnLeft.dataset.pick = leftId;
       btnLeft.dataset.key = '1';
       btnLeft.onclick = () => {
         if (onVote) onVote(leftId);
       };
-      ctaBar.appendChild(btnLeft);
+      ctaRow.appendChild(btnLeft);
 
       const btnRight = document.createElement('button');
+      btnRight.className = 'lv2-cta-btn';
       btnRight.textContent = `Evict ${rightName}`;
       btnRight.disabled = !enabled;
-      btnRight.setAttribute('aria-label', `Vote to evict ${rightName}`);
+      btnRight.setAttribute('aria-label', `Vote to evict ${rightName}. Press 2 to select.`);
       btnRight.dataset.pick = rightId;
       btnRight.dataset.key = '2';
       btnRight.onclick = () => {
         if (onVote) onVote(rightId);
       };
-      ctaBar.appendChild(btnRight);
+      ctaRow.appendChild(btnRight);
     }
 
-    tv.appendChild(ctaBar);
-    state.ctaBar = ctaBar;
-    return ctaBar;
+    state.ctaBar = ctaRow;
+    return ctaRow;
   }
 
   // Update CTA bar state
@@ -514,7 +546,7 @@
     if (!state.ctaBar) return;
 
     const { enabled = false } = options;
-    const buttons = state.ctaBar.querySelectorAll('button');
+    const buttons = state.ctaBar.querySelectorAll('.lv2-cta-btn');
     buttons.forEach(btn => {
       btn.disabled = !enabled;
     });
@@ -553,14 +585,16 @@
 
   // Clean up lv2 UI and restore panel visibility
   function cleanup() {
+    // Disconnect ResizeObserver
+    if (state.resizeObserver) {
+      state.resizeObserver.disconnect();
+      state.resizeObserver = null;
+    }
+
     // Remove lv2 UI from TV
     const tv = document.querySelector('#tv');
-    const existingLv2 = tv?.querySelector('.lv2-fit');
-    if (existingLv2) existingLv2.remove();
-
-    // Remove CTA bar
-    const existingCta = tv?.querySelector('.lv2-cta');
-    if (existingCta) existingCta.remove();
+    const existingOverlay = tv?.querySelector('.lv2-overlay');
+    if (existingOverlay) existingOverlay.remove();
 
     // Remove turn indicator
     const existingIndicator = tv?.querySelector('.lv2-turn-indicator');
@@ -574,6 +608,7 @@
 
     // Reset state
     state.container = null;
+    state.stage = null;
     state.ctaBar = null;
     state.humanTurn = false;
     state.isTieBreak = false;
@@ -590,6 +625,34 @@
     return t * (2 - t);
   }
 
+  // Setup ResizeObserver for responsive scaling (fixed 1200x560 canvas)
+  function setupResizeObserver(tv, fitWrapper) {
+    const CANVAS_WIDTH = 1200;
+    const CANVAS_HEIGHT = 560;
+
+    function updateScale() {
+      const tvRect = tv.getBoundingClientRect();
+      const scaleX = tvRect.width / CANVAS_WIDTH;
+      const scaleY = tvRect.height / CANVAS_HEIGHT;
+      const scale = Math.min(scaleX, scaleY, 1); // Never scale up beyond 100%
+
+      fitWrapper.style.width = `${CANVAS_WIDTH}px`;
+      fitWrapper.style.height = `${CANVAS_HEIGHT}px`;
+      fitWrapper.style.transform = `scale(${scale})`;
+    }
+
+    // Initial scale
+    updateScale();
+
+    // Setup observer
+    const observer = new ResizeObserver(() => {
+      updateScale();
+    });
+
+    observer.observe(tv);
+    state.resizeObserver = observer;
+  }
+
   // Keyboard shortcuts for voting (1 and 2 keys)
   document.addEventListener('keydown', (e) => {
     if (!state.ctaBar) return;
@@ -598,7 +661,7 @@
     const key = e.key;
     if (key !== '1' && key !== '2') return;
 
-    const buttons = state.ctaBar.querySelectorAll('button');
+    const buttons = state.ctaBar.querySelectorAll('.lv2-cta-btn');
     buttons.forEach(btn => {
       if (btn.dataset.key === key && !btn.disabled) {
         btn.click();
