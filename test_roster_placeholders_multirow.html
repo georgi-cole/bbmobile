@@ -78,16 +78,16 @@
 </head>
 <body data-roster-hidden="true">
   <div class="test-container">
-    <h1>🎯 Roster Placeholders Multi-Row Layout Test</h1>
+    <h1>🎯 Roster Placeholders Avatar Layout Test</h1>
     
     <div class="section">
       <h2>Test Controls</h2>
       
       <div class="info-box">
         <h4>Test Scenario</h4>
-        <p>This test verifies the multi-row placeholder layout:</p>
+        <p>This test verifies the avatar-style placeholder layout:</p>
         <ul>
-          <li><strong>Multi-row layout:</strong> "BIG" on first row, "BROTHER" on second row</li>
+          <li><strong>Avatar-style tiles:</strong> Question-mark circles with name bands on all viewports</li>
           <li><strong>Responsive sizing:</strong> Tiles use clamp() for width/height and font-size</li>
           <li><strong>Reduced motion:</strong> Pulse animation respects prefers-reduced-motion</li>
           <li><strong>API compatibility:</strong> show() and hide() methods work as expected</li>
@@ -120,13 +120,13 @@
     <div class="section">
       <h2>Verification Checklist</h2>
       <ul>
-        <li>✓ Placeholders split into rows: "BIG" on first row, "BROTHER" on second</li>
+        <li>✓ Avatar-style placeholders render on all viewports (mobile + desktop)</li>
         <li>✓ Tiles use responsive sizing (clamp for width/height/font-size)</li>
-        <li>✓ Layout centers properly with proper gaps</li>
+        <li>✓ Layout centers properly with proper gaps and wrapping</li>
         <li>✓ Reduced motion preference is respected (no pulse if user prefers)</li>
         <li>✓ API methods (show/hide) work correctly</li>
         <li>✓ Integration with data-roster-hidden attribute works</li>
-        <li>✓ Responsive on mobile (resize browser to test)</li>
+        <li>✓ Responsive on mobile and desktop (resize browser to test)</li>
       </ul>
     </div>
   </div>
@@ -198,9 +198,8 @@
       setTimeout(() => {
         const overlay = document.getElementById('bbRosterPlaceholderOverlay');
         if (overlay) {
-          const rows = overlay.querySelectorAll('.roster-placeholder-row');
-          const tiles = overlay.querySelectorAll('.roster-placeholder-tile');
-          log(`✅ Placeholders rendered: ${rows.length} rows, ${tiles.length} tiles`, 'success');
+          const skeletonTiles = overlay.querySelectorAll('.roster-placeholder-skeleton');
+          log(`✅ Avatar placeholders rendered: ${skeletonTiles.length} tiles`, 'success');
         } else {
           log('⚠️ No placeholders found in DOM', 'info');
         }

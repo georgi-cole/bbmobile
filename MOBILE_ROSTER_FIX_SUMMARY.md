@@ -1,35 +1,34 @@
-# Mobile Roster & TV Background Fix - Implementation Summary
+# Avatar-Style Roster Placeholders - Implementation Summary
 
 ## Overview
-This PR successfully addresses two critical mobile UX issues:
-1. Pre-start roster on mobile now shows skeleton tiles instead of awkward BIG/BROTHER placeholders
-2. Faux TV viewport background has been restored with proper fallback chain
+This implementation replaces desktop BIG/BROTHER letter tiles with unified avatar-style placeholder tiles across all viewports.
 
 ## Problem Statement
 
-### Issue 1: Mobile Roster Placeholders
-**Before:** Mobile users saw large "BIG/BROTHER" letter tiles that looked odd and took up too much space
-**After:** Mobile users see a clean skeleton roster with question-mark avatar tiles that mirror the actual roster layout
-
-### Issue 2: Missing TV Background
-**Before:** TV viewport had no background, looking flat and inconsistent with the theme
-**After:** TV viewport has a textured background with proper fallback chain and text contrast overlay
+### Issue: Desktop Letter Tiles
+**Before:** Desktop users saw "BIG/BROTHER" letter tiles pre-start while mobile users saw avatar-style skeleton tiles, creating inconsistent UX
+**After:** All users (mobile + desktop) see consistent avatar-style placeholder tiles with question-mark circles and name bands
 
 ## Implementation Details
 
-### A) roster-placeholders.js Changes
+### roster-placeholders.js Changes
 
-#### New Functions:
-- `isMobile()` - Detects viewport ≤700px using matchMedia
+#### Removed:
+- `WORDS` constant (was ['BIG', 'BROTHER'])
+- `MOBILE_BREAKPOINT` constant (was '(max-width: 700px)')
+- `isMobile()` function - no longer needed
+- `createPlaceholderTile(letter)` function - desktop letter tile creation
+- All desktop-specific CSS for letter tiles (.roster-placeholder-tile, .roster-placeholder-row, etc.)
+
+#### Retained Functions:
 - `getPlayerCount()` - Returns cfg.numPlayers or game.players.length (default: 12)
-- `createSkeletonTile(index)` - Creates question-mark avatar tiles for mobile
+- `findRosterContainer()` - Locates roster container using priority selectors
+- `createSkeletonTile(index)` - Creates question-mark avatar tiles (now used for all viewports)
+- `renderPlaceholders()` - Simplified to always render avatar tiles
+- `hidePlaceholders()` - Unchanged
+- `init()` - Unchanged, maintains integration with data-roster-hidden
 
-#### Updated Functions:
-- `findRosterContainer()` - Added #rosterBar to priority selector list
-- `renderPlaceholders()` - Conditional rendering based on viewport size
-- `injectPlaceholderCSS()` - Added comprehensive CSS for both desktop and mobile modes
-
-#### Mobile Skeleton Tiles:
+#### Avatar-Style Skeleton Tiles (All Viewports):
 - Circular avatars with "?" character
 - Minimum 44px touch targets (accessibility compliant)
 - Theme-aware neutral backgrounds using color-mix
@@ -37,53 +36,35 @@ This PR successfully addresses two critical mobile UX issues:
 - Pulse and shimmer animations (respects prefers-reduced-motion)
 - Uses clamp() for responsive sizing: clamp(44px, 12vw, 64px)
 
-#### Desktop Letter Tiles:
-- Unchanged behavior from previous implementation
-- Multi-row layout: "BIG" / "BROTHER"
-- Theme-aware gradients and effects retained
-- Responsive sizing with existing clamp() values
+### Updated CSS Structure
 
-### B) theme-bridge.css Changes
+The CSS has been streamlined to support only avatar-style tiles:
 
-#### TV Viewport Background:
-```css
-.tvFrame .tvViewport {
-  background-image: 
-    linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.30)),
-    var(--tv-bg-url, url('/img/studio_bg.jpg')),
-    url('/avatars/tvstudio.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-```
+#### Overlay Container:
+- Flexible row layout with wrapping
+- Responsive gap using clamp(6px, 1.2vw, 12px)
+- Responsive padding using clamp(8px, 1.5vw, 16px)
+- Fade-in animation on appearance
 
-**Fallback Chain:**
-1. Custom CSS var: `var(--tv-bg-url)` (for theme customization)
-2. Primary fallback: `/img/studio_bg.jpg`
-3. Secondary fallback: `/avatars/tvstudio.jpg` (confirmed exists)
-4. Ultimate fallback: Theme gradient (in separate rule)
-
-**Overlay:**
-- 30-35% opacity black gradient for text contrast
-- Ensures content remains readable on any background
-- Gradient from top to bottom for natural shadowing
+#### Avatar Tiles:
+- Responsive sizing for all viewports
+- Consistent styling across mobile and desktop
+- Animations respect prefers-reduced-motion
 
 ## Testing Results
 
 ### Mobile Testing (375px × 667px)
-✅ Skeleton roster renders with 12 question-mark tiles
+✅ Avatar skeleton roster renders with question-mark tiles
 ✅ Tiles arranged in responsive grid layout
 ✅ Touch targets ≥44px (accessibility compliant)
-✅ Console log: "Mobile skeleton roster rendered: 12 tiles"
+✅ Console log: "Avatar skeleton roster rendered: 12 tiles"
 ✅ Placeholders auto-remove when roster revealed
-✅ TV background visible with good contrast
 
 ### Desktop Testing (1280px × 900px)
-✅ BIG/BROTHER letter tiles render as before
-✅ Multi-row layout maintained
-✅ Console log: "Desktop placeholders rendered: BIG BROTHER (10 tiles in 2 rows)"
-✅ TV background visible and properly scaled
+✅ Avatar skeleton roster renders consistently with mobile
+✅ Same avatar-style tiles across all viewports
+✅ Console log: "Avatar skeleton roster rendered: 12 tiles"
+✅ Responsive layout adapts to larger viewport
 ✅ No visual regressions
 
 ### Responsive Testing
@@ -105,21 +86,27 @@ This PR successfully addresses two critical mobile UX issues:
 
 ## Files Modified
 
-1. **js/roster-placeholders.js** (+196 lines, comprehensive rewrite)
-   - Added mobile detection and skeleton roster system
-   - Enhanced CSS with both desktop and mobile modes
+1. **js/roster-placeholders.js** (simplified from 490 to 330 lines)
+   - Removed desktop letter tile rendering (WORDS, createPlaceholderTile, mobile detection)
+   - Unified to always use avatar-style skeleton tiles
    - Maintained backward compatibility with existing integration
+   - Preserved data-roster-hidden integration and auto-hide logic
 
-2. **css/theme-bridge.css** (+25 lines)
-   - Added .tvViewport background with fallback chain
-   - Added overlay for text contrast
-   - Added ultimate fallback gradient rule
+2. **test_roster_placeholders_multirow.html** (updated)
+   - Updated test descriptions to reflect avatar-only placeholders
+   - Updated verification checklist
+   - Updated test result validation to check for skeleton tiles
 
-3. **test_mobile_roster_skeleton.html** (new file, +387 lines)
-   - Comprehensive test page for manual verification
-   - Tests both mobile and desktop modes
-   - Tests TV background fallback chain
-   - Interactive controls for testing all scenarios
+3. **test_mobile_roster_skeleton.html** (updated)
+   - Updated test descriptions to reflect unified avatar placeholders
+   - Removed mobile/desktop mode distinction
+   - Updated verification checklist
+   - Simplified viewport info display
+
+4. **MOBILE_ROSTER_FIX_SUMMARY.md** (updated)
+   - Updated to reflect removal of BIG/BROTHER tiles
+   - Documented unified avatar-style placeholder approach
+   - Updated testing results to reflect new behavior
 
 ## Configuration
 
@@ -128,16 +115,16 @@ This PR successfully addresses two critical mobile UX issues:
 2. `game.players.length` - Current players array length
 3. Default: 12 players
 
-### Mobile Breakpoint:
-- Set at 700px (matches problem statement requirement)
-- Uses matchMedia for precise detection
-- Consistent with mobile-first design principles
-
 ### Auto-Removal Integration:
 - Existing RosterVisibility system maintained
 - Watches data-roster-hidden attribute
 - Removes placeholders when roster becomes visible
 - Fade-out animation (300ms) for smooth transition
+
+### Viewport Consistency:
+- No breakpoint detection needed
+- Avatar-style tiles render consistently across all viewports
+- Responsive sizing adapts naturally via clamp() values
 
 ## Performance Impact
 
@@ -165,11 +152,12 @@ Potential improvements (not in scope for this PR):
 
 ## Conclusion
 
-This implementation successfully addresses both issues with minimal code changes:
-- Mobile users get a clean, professional-looking skeleton roster
-- TV viewport regains its background texture and visual depth
-- Desktop behavior remains unchanged
-- All accessibility and performance standards met
-- Comprehensive test coverage provided
+This implementation successfully unifies placeholder rendering across all viewports:
+- All users (mobile + desktop) see consistent avatar-style placeholder tiles
+- BIG/BROTHER letter tiles have been completely removed
+- Code simplified by removing viewport detection and conditional rendering
+- All accessibility and performance standards maintained
+- Backward compatibility preserved (same API, same integration points)
+- Comprehensive test coverage updated
 
-The solution is production-ready and fully backward compatible.
+The solution is production-ready and represents a cleaner, more maintainable codebase.

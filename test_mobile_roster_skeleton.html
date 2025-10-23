@@ -155,7 +155,7 @@
 </head>
 <body data-roster-hidden="true">
   <div class="test-container">
-    <h1>🎯 Mobile Skeleton Roster & TV Background Test</h1>
+    <h1>🎯 Avatar-Style Roster Placeholders Test</h1>
     
     <div class="section">
       <h2>Test Controls</h2>
@@ -164,10 +164,10 @@
         <h4>Test Scenario</h4>
         <p>This test verifies:</p>
         <ul>
-          <li><strong>Mobile (≤700px):</strong> Skeleton roster with question-mark avatar tiles</li>
-          <li><strong>Desktop (>700px):</strong> BIG/BROTHER letter tiles (existing behavior)</li>
-          <li><strong>TV Background:</strong> Restored faux TV background with fallback chain</li>
-          <li><strong>Responsive:</strong> Layout adapts to viewport size changes</li>
+          <li><strong>All viewports:</strong> Avatar-style skeleton roster with question-mark tiles</li>
+          <li><strong>Responsive:</strong> Layout adapts to viewport size changes (consistent avatar tiles)</li>
+          <li><strong>Accessibility:</strong> Touch targets ≥44px (WCAG compliant)</li>
+          <li><strong>Animation:</strong> Respects prefers-reduced-motion preference</li>
         </ul>
         <p><strong>Current viewport:</strong> <span id="viewportSize">Calculating...</span></p>
       </div>
@@ -188,7 +188,6 @@
       </div>
       <div class="info-box">
         <p><strong>Current state:</strong> <span id="stateDisplay">Roster hidden, placeholders should be visible</span></p>
-        <p><strong>Mode:</strong> <span id="modeDisplay">Detecting...</span></p>
       </div>
     </div>
 
@@ -225,10 +224,10 @@
     <div class="section">
       <h2>Verification Checklist</h2>
       <ul>
-        <li>✓ Mobile (≤700px): Skeleton roster with question-mark tiles in grid layout</li>
-        <li>✓ Desktop (>700px): BIG/BROTHER letter tiles in rows</li>
+        <li>✓ Avatar-style placeholders render on all viewports (mobile + desktop)</li>
+        <li>✓ Skeleton roster with question-mark tiles in grid layout</li>
         <li>✓ Placeholders use cfg.numPlayers or game.players.length for count</li>
-        <li>✓ Touch targets ≥44px on mobile (accessibility)</li>
+        <li>✓ Touch targets ≥44px (accessibility compliant)</li>
         <li>✓ Auto-removal when roster is revealed works</li>
         <li>✓ TV viewport has visible background texture</li>
         <li>✓ Text on TV viewport remains readable with overlay</li>
@@ -262,7 +261,6 @@
       const width = window.innerWidth;
       const isMobile = width <= 700;
       document.getElementById('viewportSize').textContent = `${width}px (${isMobile ? 'Mobile' : 'Desktop'})`;
-      document.getElementById('modeDisplay').textContent = isMobile ? 'Skeleton Roster (Mobile)' : 'BIG/BROTHER (Desktop)';
     }
 
     function updateState() {
@@ -363,14 +361,7 @@
         const overlay = document.getElementById('bbRosterPlaceholderOverlay');
         if (overlay) {
           const skeletonTiles = overlay.querySelectorAll('.roster-placeholder-skeleton');
-          const letterRows = overlay.querySelectorAll('.roster-placeholder-row');
-          const letterTiles = overlay.querySelectorAll('.roster-placeholder-tile');
-          
-          if (skeletonTiles.length > 0) {
-            log(`✅ Mobile skeleton roster rendered: ${skeletonTiles.length} tiles`, 'success');
-          } else if (letterRows.length > 0 && letterTiles.length > 0) {
-            log(`✅ Desktop placeholders rendered: ${letterRows.length} rows, ${letterTiles.length} tiles`, 'success');
-          }
+          log(`✅ Avatar skeleton roster rendered: ${skeletonTiles.length} tiles`, 'success');
         } else {
           log('⚠️ No placeholders found in DOM', 'info');
         }
