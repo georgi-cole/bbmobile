@@ -7,15 +7,20 @@ The Modern Live Vote UI (internally called "lv2") is a cinematic, broadcast-styl
 ## Features
 
 ### Visual Design
-- **In-TV Rendering**: The entire lv2 UI renders inside the #tv overlay using a responsive fit wrapper (.lv2-fit), not below in #panel
-- **Versus Layout**: Nominees displayed left vs right with large avatars (80px), names, and live vote counts
-- **Central Meter**: Animated distribution meter that fills from both sides as votes are revealed
-- **Flip Cards**: Each vote appears as a flipping card labeled with the voter's name, then flies to the chosen nominee's lane
-- **In-TV Voting CTAs**: Vote buttons appear at the bottom of the TV overlay with keyboard shortcuts (1/2)
+- **In-TV Rendering**: The entire lv2 UI renders inside the #tv overlay using a fixed-size canvas (1200x560) scaled via ResizeObserver, not below in #panel
+- **No Scrolling**: overflow:hidden on overlay wrapper ensures no internal scrollbars; entire experience visible at once
+- **Grid Layout**: Three-column grid (Left Nominee | Center Stage | Right Nominee) with reserved footer row for CTAs
+- **Center Stage**: Interactive spawn point (.lv2-stage) where vote cards flip and animate before flying to nominees
+- **Drop Anchors**: Visual targets on each nominee where vote cards land after flying from center stage
+- **Flip Cards**: Each vote appears as a flipping card at center stage labeled with the voter's name, then flies to the chosen nominee's anchor
+- **Non-Overlapping CTAs**: Vote buttons appear in dedicated footer row (.lv2-cta-row), never positioned over avatars
+- **Large Tap Targets**: Buttons sized 48px minimum height for accessibility and mobile usability
+- **Keyboard Shortcuts**: Press 1 or 2 keys to quickly vote for left or right nominee
 - **Turn Indicators**: "Your Turn" badge appears at the top of the TV when it's the player's turn to vote
 - **Result Banners**: Eviction results and tie notifications shown in-TV instead of pop-up cards
 - **Glassmorphism**: Semi-transparent panels with subtle borders, neon accents, and soft glows
 - **Winner Highlighting**: The leader/winner is highlighted with green glow at sequence end
+- **Responsive Scaling**: Fixed 1200x560 design canvas scales down proportionally to fit any TV size
 
 ### Card Suppression
 When lv2 is active, the following legacy pop-up cards are **suppressed**:
@@ -41,7 +46,9 @@ This eliminates UI duplication and keeps all interaction within the TV frame.
 - **No External Dependencies**: Pure vanilla JS with CSS transitions and `requestAnimationFrame`
 - **Optional Integration**: Completely optional via settings toggle; falls back to legacy UI when disabled
 - **Non-Breaking**: Does not alter existing game logic, timing, or eviction flow
-- **Responsive Fit**: Uses transform scaling via .lv2-fit wrapper to ensure UI stays within TV frame at all sizes
+- **Fixed Canvas with Scaling**: Uses a fixed 1200x560 design canvas scaled via ResizeObserver to fit TV dynamically
+- **No Internal Scrolling**: overflow:hidden on overlay wrapper prevents scrollbars; transform scale ensures visibility
+- **Grid Layout Architecture**: CSS Grid with reserved footer row ensures CTAs never overlap avatars
 - **Pointer Events**: Properly managed to allow interaction with CTAs while keeping overlay non-blocking
 
 ## How to Enable/Disable
@@ -260,28 +267,35 @@ The `lv2.reducedMotion` property reads from `window.matchMedia('(prefers-reduced
 All lv2 styles are prefixed with `lv2-` to avoid collisions with legacy styles:
 
 **In-TV Container:**
-- `.lv2-fit` - Responsive fit wrapper inside #tv overlay with absolute positioning
-- `.lv2-panel` - Main container with glassmorphic background (updated for in-TV rendering)
+- `.lv2-overlay` - Outer wrapper with overflow:hidden to prevent scrolling
+- `.lv2-fit` - Fixed 1200x560 canvas scaled via ResizeObserver
+- `.lv2-panel` - Main container with CSS Grid layout and glassmorphic background
 
-**Versus Layout:**
-- `.lv2-versus` - Grid layout for left/meter/right
-- `.lv2-contestant` - Individual contestant card (left/right)
+**Grid Layout:**
+- `.lv2-grid` - Three-column grid (left | center stage | right)
+- `.lv2-contestant` - Individual contestant card (left/right) with relative positioning
+- `.lv2-drop-anchor` - Target point where vote cards land (positioned on contestants)
+- `.lv2-stage` - Center column spawn point for vote card animations
+- `.lv2-cta-row` - Reserved footer row for voting buttons (never overlaps avatars)
+
+**Contestant Display:**
 - `.lv2-avatar` - Circular avatar (80px)
 - `.lv2-name` - Contestant name
 - `.lv2-count` - Vote count with glow effect
-- `.lv2-meter` - Central vertical meter
-- `.lv2-fill.left` / `.lv2-fill.right` - Meter fill bars
-- `.lv2-meter-glow` - Animated glow effect
 - `.lv2-contestant.winner` - Applied to winning contestant
 
+**Center Stage:**
+- `.lv2-meter` - Vertical meter displayed in center stage
+- `.lv2-fill.left` / `.lv2-fill.right` - Meter fill bars
+- `.lv2-meter-glow` - Animated glow effect
+
 **Vote Animation:**
-- `.lv2-reveal` - Container for flip cards
-- `.lv2-card` - Individual flip card
+- `.lv2-card` - Individual flip card (spawns in center stage)
 - `.lv2-card-inner` - Inner wrapper for 3D transform
 - `.lv2-face.front` / `.lv2-face.back` - Card faces
 
-**In-TV Controls:**
-- `.lv2-cta` - CTA bar for voting buttons (bottom-center in TV)
+**Controls:**
+- `.lv2-cta-btn` - Individual voting button with large tap target
 - `.lv2-turn-indicator` - "Your Turn" badge (top-center in TV) with pulse animation
 - `.lv2-status` - Status text area (shows tie/result messages)
 
@@ -316,8 +330,9 @@ Use `test_live_vote_ui.html` to iterate on the UI without entering the full game
 **In-TV Rendering:**
 - [ ] Modern UI renders entirely inside #tv overlay (not in #panel)
 - [ ] #panel content hidden while lv2 is active
-- [ ] lv2 UI uses .lv2-fit wrapper for responsive scaling
-- [ ] UI stays within TV frame at all viewport sizes
+- [ ] lv2 UI uses fixed 1200x560 canvas scaled via ResizeObserver
+- [ ] No internal scrollbars appear; entire experience visible without scrolling
+- [ ] UI scales proportionally to fit any TV size
 
 **Card Suppression:**
 - [ ] No "Your turn" pop-up card (shows in-TV indicator instead)
@@ -327,21 +342,26 @@ Use `test_live_vote_ui.html` to iterate on the UI without entering the full game
 - [ ] No eviction result card (in-TV banner instead)
 
 **Voting CTAs:**
-- [ ] CTA buttons appear at bottom-center of TV
+- [ ] CTA buttons appear in reserved footer row
+- [ ] CTAs never overlap or cover avatar images
+- [ ] Buttons have large tap targets (48px min height)
 - [ ] Buttons properly clickable and responsive
 - [ ] Keyboard shortcuts (1/2) work correctly
 - [ ] Tie-break shows "Break Tie: Evict X" wording
 - [ ] Final 4 shows single "Cast Sole Vote" button
 - [ ] Buttons disabled after vote cast
 - [ ] ARIA labels announced correctly
+- [ ] On narrow screens, buttons stack vertically without overlap
 
 **Core Functionality:**
 - [ ] Modern UI appears for 2-nominee evictions when enabled
 - [ ] Legacy UI appears when disabled or with 3+ nominees
-- [ ] Flip cards appear and flip on reveal
-- [ ] Cards fly to correct side (left or right)
+- [ ] Flip cards spawn at center stage
+- [ ] Cards flip to reveal voter/target
+- [ ] Cards fly from center stage to correct drop anchor (left or right)
 - [ ] Counts increment smoothly
 - [ ] Meter fills from both sides
+- [ ] Center stage is purposeful (not empty space)
 - [ ] Winner is highlighted with green glow
 - [ ] Reduced motion mode works (fade instead of fly)
 - [ ] Setting toggle works in Settings modal
