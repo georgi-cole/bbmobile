@@ -702,6 +702,11 @@ button:focus-visible,.btn:focus-visible{
     var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
 .tvHead{
   display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
   padding:10px 14px 8px; border-bottom:1px solid rgba(120,210,255,.07);
@@ -2479,6 +2484,11 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
     var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
 .tv.tvTall{
   height: clamp(340px, 52vh, 600px);
 }
@@ -2647,6 +2657,11 @@ img{ max-width:100%; display:block; }
     var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
 .tv.tvTall{ height: clamp(340px, 52vh, 600px); }
 .tvViewport{
   position:relative;
@@ -2806,6 +2821,11 @@ img{ max-width:100%; display:block; }
   background:
     linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
     var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
 .tv.tvTall{ height: clamp(360px, 56vh, 640px); }
@@ -2970,6 +2990,11 @@ img{ max-width:100%; display:block; }
   background:
     linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
     var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
 .tv.tvTall{ height: clamp(360px, 56vh, 640px); }
