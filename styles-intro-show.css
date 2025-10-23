@@ -221,7 +221,7 @@
   box-shadow: 
     0 0 60px rgba(255, 245, 220, 0.1),
     inset 0 0 40px rgba(0, 0, 0, 0.3);
-  transform: perspective(1500px) rotateX(-2deg);
+  transform: rotateX(-2deg);
   transform-style: preserve-3d;
 }
 
