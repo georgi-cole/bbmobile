@@ -287,6 +287,24 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
   }
 }
 
+/* Tighten spacing between roster and TV */
+#rosterBar { margin-bottom: clamp(8px, 1.6vh, 16px) !important; }
+#topRoster.top-roster { margin-bottom: clamp(8px, 1.6vh, 16px) !important; }
+
+/* Ensure TV sits close to roster */
+.tvFrame { margin-top: 0 !important; }
+.tvViewport { margin-top: 0 !important; }
+
+/* Optional: ensure Houseguests heading doesn't add extra gap */
+#rosterBar h1, #rosterBar h2, #rosterBar h3 {
+  margin-bottom: clamp(8px, 1.2vh, 14px) !important;
+}
+
+@media (max-width: 700px) {
+  #rosterBar { margin-bottom: 10px !important; }
+  #topRoster.top-roster { margin-bottom: 10px !important; }
+}
+
 /* Medium screens (tablets) - optimize Cast form layout */
 @media (min-width: 541px) and (max-width: 1100px) {
   #settingsBackdrop .settingsTabPane[data-pane="cast"] .cast-form {
