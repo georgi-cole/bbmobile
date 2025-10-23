@@ -120,26 +120,22 @@
     leftSide.appendChild(leftAnchor);
     grid.appendChild(leftSide);
 
-    // Center stage for spawning vote cards
-    const stage = document.createElement('div');
-    stage.className = 'lv2-stage';
-    stage.setAttribute('role', 'log');
-    stage.setAttribute('aria-live', 'polite');
-    stage.setAttribute('aria-atomic', 'false');
-    stage.setAttribute('aria-label', 'Vote announcements');
-    
-    // Add meter in center stage
-    const meter = createMeter();
-    stage.appendChild(meter);
-    
-    grid.appendChild(stage);
-
     // Right contestant with drop anchor
     const rightSide = createContestant('right', state.rightName, state.rightId);
     const rightAnchor = document.createElement('div');
     rightAnchor.className = 'lv2-drop-anchor right';
     rightSide.appendChild(rightAnchor);
     grid.appendChild(rightSide);
+    
+    // Hidden stage for vote announcements (no visual display)
+    const stage = document.createElement('div');
+    stage.className = 'lv2-stage';
+    stage.setAttribute('role', 'log');
+    stage.setAttribute('aria-live', 'polite');
+    stage.setAttribute('aria-atomic', 'false');
+    stage.setAttribute('aria-label', 'Vote announcements');
+    stage.style.display = 'none'; // Hidden, only for ARIA
+    container.appendChild(stage);
 
     container.appendChild(grid);
 
@@ -348,28 +344,36 @@
     processNextVote();
   }
 
-  // Reveal a vote card with flip animation - spawn from center stage, then fly to anchor
+  // Reveal a vote card with flip animation - spawn from center, then fly to anchor
   async function revealVoteCard(vote) {
     const stage = state.stage;
     if (!stage) return;
-
-    // V2.1: Spawn small pip at portal center
+    
+    // Announce vote to screen readers only
+    const announcement = `${vote.voterName} voted to evict ${vote.pick === 'left' ? state.leftName : state.rightName}`;
+    const ariaAnnounce = document.createElement('div');
+    ariaAnnounce.setAttribute('role', 'status');
+    ariaAnnounce.setAttribute('aria-live', 'polite');
+    ariaAnnounce.setAttribute('aria-label', announcement);
+    ariaAnnounce.style.display = 'none';
+    stage.appendChild(ariaAnnounce);
+    
+    // V2.1: Spawn small pip at grid center
     const pip = document.createElement('div');
     pip.className = 'lv2-pip';
-    pip.setAttribute('role', 'status');
-    pip.setAttribute('aria-live', 'polite');
     
-    // Position pip at center of portal
+    // Position pip at center of grid
+    const grid = state.container?.querySelector('.lv2-grid');
+    if (!grid) return;
+    
     pip.style.position = 'absolute';
     pip.style.left = '50%';
     pip.style.top = '50%';
     pip.style.transform = 'translate(-50%, -50%)';
+    pip.style.zIndex = '20';
     
-    stage.appendChild(pip);
-
-    // Announce vote to screen readers
-    const announcement = `${vote.voterName} voted to evict ${vote.pick === 'left' ? state.leftName : state.rightName}`;
-    pip.setAttribute('aria-label', announcement);
+    grid.style.position = 'relative';
+    grid.appendChild(pip);
 
     if (!reducedMotion) {
       await sleep(50); // Small delay for DOM to settle
@@ -401,6 +405,9 @@
       await sleep(300);
       pip.remove();
     }
+    
+    // Clean up aria announcement
+    setTimeout(() => ariaAnnounce.remove(), 1000);
   }
 
   // Update contestant counts with animation

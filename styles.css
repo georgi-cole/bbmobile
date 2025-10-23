@@ -1687,13 +1687,16 @@ button:focus-visible,.btn:focus-visible{
   letter-spacing:-0.4px;
 }
 
-/* Grid layout - Left | Center Stage | Right */
+/* Grid layout - Left | Right (center removed) */
 .lv2-grid{
   display:grid;
-  grid-template-columns:1fr 2fr 1fr;
-  gap:20px;
+  grid-template-columns:1fr 1fr;
+  gap:40px;
   align-items:stretch;
   min-height:0;
+  justify-content:center;
+  max-width:800px;
+  margin:0 auto;
 }
 
 /* Contestant cards */
@@ -1805,19 +1808,9 @@ button:focus-visible,.btn:focus-visible{
   50%{ opacity:0.7; transform:translate(-50%, -50%) scale(1.2); }
 }
 
-/* Center Stage - Spawn point for vote cards */
+/* Center Stage - Hidden, only for ARIA announcements */
 .lv2-stage{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-  padding:16px;
-  background:rgba(13,21,35,0.6);
-  border-radius:var(--radius-lg);
-  border:1px solid rgba(131,191,255,0.15);
-  position:relative;
-  min-height:0;
+  display:none;
 }
 
 /* Drop anchors on contestants (target for flying cards) */
@@ -2115,9 +2108,9 @@ button:focus-visible,.btn:focus-visible{
    - Subtle top-center turn tag instead of large badge
    ======================================================================== */
 
-/* Refined panel: softer background, lighter borders, subtle inner shadows */
+/* Refined panel: increased opacity to show TV background, lighter borders, subtle inner shadows */
 .lv2-fit .lv2-panel {
-  background: linear-gradient(135deg, rgba(18,30,48,0.75) 0%, rgba(25,38,58,0.8) 100%);
+  background: linear-gradient(135deg, rgba(18,30,48,0.5) 0%, rgba(25,38,58,0.55) 100%);
   border: 1px solid rgba(131,191,255,0.1);
   box-shadow: 0 8px 32px -12px rgba(0,0,0,0.4), 
               inset 0 1px 0 rgba(255,255,255,0.03),
