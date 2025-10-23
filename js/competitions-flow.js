@@ -281,6 +281,7 @@
 
   /**
    * Show completion animation with confetti and message
+   * Enhanced: Use glassmorphism panel style matching Final Jury Vote panels
    * @param {HTMLElement} overlay - The overlay element
    * @param {number} score - The achieved score
    * @param {number} previousBest - Previous best score (optional)
@@ -288,46 +289,59 @@
   function showCompletionAnimation(overlay, score, previousBest){
     const isNewRecord = previousBest !== undefined && score > previousBest;
     
-    // Create animation container
+    // Create animation container - positioned top-right (desktop) / top-center (mobile)
     const animContainer = document.createElement('div');
+    animContainer.className = 'ccPanel'; // Competition completion panel class
     animContainer.style.cssText = `
       position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      right: 12px;
+      top: 12px;
       z-index: 10002;
       pointer-events: none;
-      animation: fadeIn 0.3s ease;
+      /* Glassmorphism matching jury panels */
+      background: rgba(0, 224, 204, 0.12);
+      backdrop-filter: blur(6px) saturate(1.2);
+      -webkit-backdrop-filter: blur(6px) saturate(1.2);
+      border: 1px solid rgba(0, 224, 204, 0.35);
+      border-radius: 10px;
+      padding: 8px 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15), 0 0 12px rgba(0, 224, 204, 0.2);
+      /* Compact width matching jury panels */
+      max-width: min(280px, 35vw);
+      word-wrap: break-word;
+      /* Slide-in animation matching jury panels */
+      animation: ccPanelSlideIn 0.4s cubic-bezier(0.25, 0.9, 0.25, 1);
+      /* Mobile responsive */
+      @media (max-width: 768px) {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: min(45vw, 280px);
+      }
     `;
     
-    // Create message
+    // Create message with glassmorphism styling
     const message = document.createElement('div');
     message.style.cssText = `
-      background: linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(22, 163, 74, 0.95));
-      border: 2px solid #22c55e;
-      border-radius: 16px;
-      padding: 24px 32px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
       text-align: center;
-      animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      color: #ffffff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5);
     `;
     
     const title = document.createElement('div');
     title.textContent = isNewRecord ? '🎉 New Record!' : '✅ Challenge Complete!';
     title.style.cssText = `
-      font-size: 1.8rem;
-      font-weight: bold;
-      color: white;
-      margin-bottom: 8px;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      font-size: clamp(13px, 2vw, 18px);
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 4px;
     `;
     
     const scoreText = document.createElement('div');
     scoreText.textContent = `Score: ${score}`;
     scoreText.style.cssText = `
-      font-size: 1.3rem;
-      color: rgba(255, 255, 255, 0.95);
+      font-size: clamp(12px, 1.8vw, 16px);
+      color: rgba(255, 255, 255, 0.9);
       font-weight: 600;
     `;
     
@@ -344,7 +358,8 @@
     
     // Fade out after delay
     setTimeout(() => {
-      animContainer.style.animation = 'fadeOut 0.5s ease';
+      animContainer.style.opacity = '0';
+      animContainer.style.transition = 'opacity 0.5s ease';
     }, 1800);
   }
   
@@ -801,6 +816,30 @@
       100% {
         transform: translateY(100vh) rotate(360deg);
         opacity: 0;
+      }
+    }
+    /* Competition completion panel slide-in animation (matching jury panels) */
+    @keyframes ccPanelSlideIn {
+      0% { 
+        opacity: 0; 
+        transform: translateX(20px); 
+      }
+      100% { 
+        opacity: 1; 
+        transform: translateX(0); 
+      }
+    }
+    /* Mobile version of slide-in for centered panel */
+    @media (max-width: 768px) {
+      @keyframes ccPanelSlideIn {
+        0% { 
+          opacity: 0; 
+          transform: translateX(-50%) translateY(-10px); 
+        }
+        100% { 
+          opacity: 1; 
+          transform: translateX(-50%) translateY(0); 
+        }
       }
     }
   `;
