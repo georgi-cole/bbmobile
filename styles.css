@@ -2105,6 +2105,228 @@ button:focus-visible,.btn:focus-visible{
   }
 }
 
+/* ========================================================================
+   Live Vote 2.1 Visual Refinements
+   - Softer glass look with lighter borders
+   - Avatar gradient ring with ambient glow
+   - Count badges as neon capsules with bump animation
+   - Center Stage portal with pulse and SVG arc meter
+   - Refined CTA bar with turn emphasis
+   - Subtle top-center turn tag instead of large badge
+   ======================================================================== */
+
+/* Refined panel: softer background, lighter borders, subtle inner shadows */
+.lv2-fit .lv2-panel {
+  background: linear-gradient(135deg, rgba(18,30,48,0.75) 0%, rgba(25,38,58,0.8) 100%);
+  border: 1px solid rgba(131,191,255,0.1);
+  box-shadow: 0 8px 32px -12px rgba(0,0,0,0.4), 
+              inset 0 1px 0 rgba(255,255,255,0.03),
+              inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+/* Avatar gradient ring with ambient glow */
+.lv2-avatar {
+  border: 3px solid transparent;
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-image: linear-gradient(rgba(19,32,50,0.9), rgba(19,32,50,0.9)),
+                    linear-gradient(135deg, #83bfff, #66d9ff, #77efdd);
+  box-shadow: 0 4px 16px -6px rgba(0,0,0,0.5),
+              0 0 20px -8px rgba(131,191,255,0.3);
+}
+
+.lv2-contestant.winner .lv2-avatar {
+  background-image: linear-gradient(rgba(19,32,50,0.9), rgba(19,32,50,0.9)),
+                    linear-gradient(135deg, #77d58d, #5ec97d, #77efdd);
+  box-shadow: 0 4px 16px -6px rgba(0,0,0,0.5),
+              0 0 24px -6px rgba(119,213,141,0.5);
+}
+
+/* Count badges as neon capsules with bump animation */
+.lv2-count {
+  background: linear-gradient(135deg, rgba(131,191,255,0.15), rgba(102,217,255,0.1));
+  border: 1px solid rgba(131,191,255,0.3);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 1.8rem;
+  box-shadow: 0 0 16px -6px rgba(131,191,255,0.4),
+              inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.lv2-count.bump {
+  animation: count-bump 0.4s ease;
+}
+
+@keyframes count-bump {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.2); }
+  70% { transform: scale(0.95); }
+}
+
+.lv2-contestant.winner .lv2-count {
+  background: linear-gradient(135deg, rgba(119,213,141,0.2), rgba(94,201,125,0.15));
+  border-color: rgba(119,213,141,0.4);
+  box-shadow: 0 0 20px -6px rgba(119,213,141,0.5),
+              inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+/* Center Stage portal node with pulse */
+.lv2-portal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(131,191,255,0.3), transparent 70%);
+  border: 2px solid rgba(131,191,255,0.4);
+  box-shadow: 0 0 24px -6px rgba(131,191,255,0.6),
+              inset 0 0 16px -4px rgba(131,191,255,0.2);
+  animation: portal-pulse 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes portal-pulse {
+  0%, 100% { 
+    opacity: 0.6; 
+    transform: translate(-50%, -50%) scale(1); 
+    box-shadow: 0 0 24px -6px rgba(131,191,255,0.6),
+                inset 0 0 16px -4px rgba(131,191,255,0.2);
+  }
+  50% { 
+    opacity: 0.9; 
+    transform: translate(-50%, -50%) scale(1.15); 
+    box-shadow: 0 0 32px -4px rgba(131,191,255,0.8),
+                inset 0 0 20px -2px rgba(131,191,255,0.3);
+  }
+}
+
+/* SVG arc meter container */
+.lv2-arc {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.lv2-arc svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+/* Arc meter paths */
+.lv2-arc-path {
+  fill: none;
+  stroke-width: 4;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lv2-arc-path.left {
+  stroke: url(#leftGradient);
+  filter: drop-shadow(0 0 8px rgba(102,217,255,0.4));
+}
+
+.lv2-arc-path.right {
+  stroke: url(#rightGradient);
+  filter: drop-shadow(0 0 8px rgba(119,213,141,0.4));
+}
+
+/* Vote pip animation */
+.lv2-pip {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(131,191,255,0.9), rgba(102,217,255,0.6));
+  box-shadow: 0 0 12px -2px rgba(131,191,255,0.8);
+  pointer-events: none;
+  z-index: 10;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
+}
+
+.lv2-pip.fly {
+  opacity: 0;
+  transform: scale(0.3);
+}
+
+/* Drop anchor refinement for pip targeting */
+.lv2-drop-anchor.left,
+.lv2-drop-anchor.right {
+  border-style: solid;
+  border-width: 2px;
+  border-color: rgba(131,191,255,0.2);
+  background: radial-gradient(circle, rgba(131,191,255,0.1), transparent 70%);
+}
+
+/* Subtle top-center turn tag */
+.lv2-turn-tag {
+  position: absolute;
+  top: calc(var(--tv-safe-top, 10px) + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, rgba(131,191,255,0.2), rgba(102,217,255,0.15));
+  border-radius: 12px;
+  border: 1px solid rgba(131,191,255,0.3);
+  box-shadow: 0 2px 8px -4px rgba(0,0,0,0.3);
+  color: #83bfff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+/* CTA bar emphasis when it's user's turn */
+.lv2-cta-row.active {
+  background: linear-gradient(135deg, rgba(131,191,255,0.1), rgba(102,217,255,0.08));
+  border-color: rgba(131,191,255,0.25);
+  box-shadow: 0 0 20px -8px rgba(131,191,255,0.4),
+              inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.lv2-cta-btn.active {
+  box-shadow: 0 2px 8px -2px rgba(217,79,79,0.4),
+              0 0 20px -6px rgba(131,191,255,0.5);
+  animation: cta-pulse 2s ease-in-out infinite;
+}
+
+@keyframes cta-pulse {
+  0%, 100% { 
+    box-shadow: 0 2px 8px -2px rgba(217,79,79,0.4),
+                0 0 20px -6px rgba(131,191,255,0.5);
+  }
+  50% { 
+    box-shadow: 0 4px 12px -2px rgba(217,79,79,0.6),
+                0 0 28px -4px rgba(131,191,255,0.7);
+  }
+}
+
+/* Reduced motion overrides for V2.1 */
+@media (prefers-reduced-motion: reduce) {
+  .lv2-portal,
+  .lv2-count.bump,
+  .lv2-cta-btn.active {
+    animation: none !important;
+  }
+  
+  .lv2-pip {
+    transition: opacity 0.3s ease;
+  }
+  
+  .lv2-arc-path {
+    transition: stroke-dashoffset 0.3s ease;
+  }
+}
+
 /* 12. SETTINGS MODAL & FORMS ----------------------------------------------- */
 .modal-backdrop{
   position:fixed; inset:0; background:rgba(4,10,18,.72);

@@ -4,21 +4,26 @@
 
 The Modern Live Vote UI (internally called "lv2") is a cinematic, broadcast-style visual experience for the eviction phase that renders **entirely inside the TV (#tv) overlay**. It replaces the traditional "cards appear in a list" interface with a dynamic versus layout, flip card animations, smooth meter fills, and in-TV voting controls. When enabled, all legacy pop-up cards are suppressed in favor of integrated in-TV notifications.
 
+**V2.1 Refinements (Latest)**: The latest version features softer glass aesthetics, a center "Stage" portal that spawns glowing vote pips which fly to nominees, SVG arc meters that fill with each vote, neon count capsules with bump animations, and a subtle top-center turn indicator instead of the large green badge. The CTA bar is highlighted when it's the user's turn to vote.
+
 ## Features
 
-### Visual Design
+### Visual Design (V2.1)
 - **In-TV Rendering**: The entire lv2 UI renders inside the #tv overlay using a fixed-size canvas (1200x560) scaled via ResizeObserver, not below in #panel
 - **No Scrolling**: overflow:hidden on overlay wrapper ensures no internal scrollbars; entire experience visible at once
 - **Grid Layout**: Three-column grid (Left Nominee | Center Stage | Right Nominee) with reserved footer row for CTAs
-- **Center Stage**: Interactive spawn point (.lv2-stage) where vote cards flip and animate before flying to nominees
-- **Drop Anchors**: Visual targets on each nominee where vote cards land after flying from center stage
-- **Flip Cards**: Each vote appears as a flipping card at center stage labeled with the voter's name, then flies to the chosen nominee's anchor
+- **Center Stage Portal**: Interactive spawn point (.lv2-portal) - a glowing circular node with pulse animation where vote pips originate
+- **Vote Pips**: Small glowing orbs (.lv2-pip) that spawn at the portal center and fly to the chosen nominee's anchor
+- **SVG Arc Meter**: Semicircular arcs (#leftArc/#rightArc) that fill left/right using strokeDashoffset to visualize vote distribution
+- **Neon Count Capsules**: Vote counts displayed in glowing capsule badges with bump animation on increment
+- **Avatar Gradient Rings**: Avatars surrounded by gradient borders with ambient glow effect
+- **Softer Glass Look**: Lighter panel backgrounds, subtle borders, and inner shadows for a modern aesthetic
 - **Non-Overlapping CTAs**: Vote buttons appear in dedicated footer row (.lv2-cta-row), never positioned over avatars
 - **Large Tap Targets**: Buttons sized 48px minimum height for accessibility and mobile usability
 - **Keyboard Shortcuts**: Press 1 or 2 keys to quickly vote for left or right nominee
-- **Turn Indicators**: "Your Turn" badge appears at the top of the TV when it's the player's turn to vote
+- **Subtle Turn Tag**: Small top-center tag (.lv2-turn-tag) appears when it's the player's turn, replacing the large green badge
+- **CTA Bar Highlight**: The footer CTA bar glows and buttons pulse when it's the user's turn to vote
 - **Result Banners**: Eviction results and tie notifications shown in-TV instead of pop-up cards
-- **Glassmorphism**: Semi-transparent panels with subtle borders, neon accents, and soft glows
 - **Winner Highlighting**: The leader/winner is highlighted with green glow at sequence end
 - **Responsive Scaling**: Fixed 1200x560 design canvas scales down proportionally to fit any TV size
 
@@ -120,9 +125,13 @@ lv2.createCtaBar({
 // Update CTA bar state
 lv2.updateCtaBar({ enabled: false });  // Disable buttons after vote
 
-// Show/hide turn indicator
-lv2.showTurnIndicator();  // Shows "Your Turn" badge at top of TV
-lv2.hideTurnIndicator();
+// V2.1: Set turn state (shows subtle tag and highlights CTA bar)
+lv2.setTurn(true);   // Show turn indicator and highlight CTAs
+lv2.setTurn(false);  // Hide turn indicator and remove CTA highlight
+
+// Legacy turn indicator methods (still supported, internally use setTurn)
+lv2.showTurnIndicator();  // Same as setTurn(true)
+lv2.hideTurnIndicator();  // Same as setTurn(false)
 
 // Clean up and restore panel visibility
 lv2.cleanup();
@@ -243,22 +252,132 @@ Added to `js/config/defaults.js`:
 modernLiveVoteUI: true, // When true, use modern cinematic Live Vote UI (lv2)
 ```
 
+## V2.1 Visual Refinements
+
+Version 2.1 introduces significant visual polish while maintaining full backward compatibility with V2.0:
+
+### What's New in V2.1
+
+**Center Stage Portal & Arc Meter**
+- The center column now features a glowing portal node (`.lv2-portal`) that pulses with ambient light
+- Votes spawn as small pips (`.lv2-pip`) at the portal center and fly to the chosen nominee
+- SVG arc meters (`#leftArc` and `#rightArc`) wrap around the stage, filling left/right using `strokeDashoffset` to visualize vote distribution in real-time
+- The portal replaces the static meter glow with a purposeful animation hub
+
+**Neon Count Capsules**
+- Vote counts are now displayed in glowing capsule badges with neon borders
+- Each count increment triggers a smooth "bump" animation (`.bump` class)
+- Capsules have gradient backgrounds and inner shadows for depth
+
+**Avatar Gradient Rings**
+- Avatars are surrounded by animated gradient borders using layered `background-image`
+- Ambient glow effect creates a soft halo around each avatar
+- Winner avatars get enhanced glow with green tones
+
+**Softer Glass Aesthetic**
+- Panel backgrounds use lighter opacity for a less rigid feel
+- Borders are thinner and more subtle (0.1 opacity vs 0.15)
+- Added inner shadows for depth without harshness
+- Overall "glass" effect is more refined and modern
+
+**Subtle Turn Indicator**
+- Replaced the large green "Your Turn" badge with a small top-center tag (`.lv2-turn-tag`)
+- New tag uses soft cyan tones and is less intrusive
+- Turn state is managed via `lv2.setTurn(true/false)`
+
+**CTA Bar Emphasis**
+- When it's the user's turn, the CTA bar receives a highlight (`.lv2-cta-row.active`)
+- Buttons pulse with a subtle glow animation (`.lv2-cta-btn.active`)
+- Creates a clear visual cue without blocking content
+
+### V2.1 Technical Implementation
+
+**Portal & Arc Meter**
+```javascript
+// Portal is rendered inside .lv2-meter as a circular node
+<div class="lv2-portal"></div>
+
+// SVG arcs wrap the meter, filling based on vote distribution
+<svg viewBox="0 0 200 200">
+  <path id="leftArc" class="lv2-arc-path left" 
+        d="M 100,30 A 70,70 0 0,0 100,170" 
+        stroke-dasharray="220" 
+        stroke-dashoffset="220" />
+  <path id="rightArc" class="lv2-arc-path right" 
+        d="M 100,30 A 70,70 0 0,1 100,170" 
+        stroke-dasharray="220" 
+        stroke-dashoffset="220" />
+</svg>
+```
+
+**Vote Pip Animation**
+```javascript
+// Instead of flip cards, spawn small pips at portal center
+const pip = document.createElement('div');
+pip.className = 'lv2-pip';
+pip.style.left = '50%';
+pip.style.top = '50%';
+
+// Fly pip to drop anchor with ease-out animation
+pip.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.3)`;
+pip.style.opacity = '0';
+```
+
+**Count Bump Animation**
+```javascript
+// Add bump class to trigger CSS animation
+element.classList.add('bump');
+```
+
+**Turn State Management**
+```javascript
+// New setTurn API manages both tag and CTA highlight
+lv2.setTurn(true);   // Show turn tag + highlight CTAs
+lv2.setTurn(false);  // Hide tag + remove highlight
+```
+
+### Migration from V2.0 to V2.1
+
+No breaking changes! V2.1 is fully backward compatible:
+- Legacy `showTurnIndicator()` and `hideTurnIndicator()` still work (internally call `setTurn`)
+- All V2.0 features remain functional
+- Visual refinements apply automatically when using existing API calls
+- Reduced motion fallbacks updated to handle pips instead of cards
+
+### V2.1 CSS Classes
+
+**New in V2.1:**
+- `.lv2-portal` - Glowing circular portal node at center stage
+- `.lv2-arc` - SVG arc container
+- `.lv2-arc-path` - Individual arc path (`.left` / `.right`)
+- `.lv2-pip` - Small glowing vote orb that flies to nominees
+- `.lv2-turn-tag` - Subtle top-center turn indicator
+- `.lv2-cta-row.active` - Highlighted CTA bar state
+- `.lv2-cta-btn.active` - Pulsing button state
+- `.lv2-count.bump` - Triggers bump animation on count capsule
+
+**Updated in V2.1:**
+- `.lv2-count` - Now styled as neon capsule with gradient background
+- `.lv2-avatar` - Enhanced with gradient ring and ambient glow
+- `.lv2-panel` - Softer glass background with lighter borders
+
 ## Reduced Motion Behavior
 
 When the user has enabled "Reduce Motion" in their operating system or browser:
 
-### Normal Mode (Motion Enabled)
-1. Flip card animation (3D rotate)
-2. Card flies to target nominee lane
-3. Odometer-style count increment
-4. Smooth meter fill with easing
+### Normal Mode (Motion Enabled) - V2.1
+1. Portal pulses with ambient glow
+2. Pips spawn at center and fly to target nominee
+3. Count capsules bump on increment
+4. Arc meter fills smoothly with easing
+5. CTA buttons pulse when active
 
-### Reduced Motion Mode
-1. Card fades in (no flip)
-2. Card fades out (no fly)
-3. Count updates directly (no odometer)
-4. Meter fills without complex transitions
-5. No glow pulse animation
+### Reduced Motion Mode - V2.1
+1. Portal shows static (no pulse)
+2. Pips fade in and out (no fly animation)
+3. Count updates directly (no bump)
+4. Arc meter fills instantly
+5. CTA buttons static (no pulse)
 
 The `lv2.reducedMotion` property reads from `window.matchMedia('(prefers-reduced-motion: reduce)')`.
 
@@ -274,29 +393,36 @@ All lv2 styles are prefixed with `lv2-` to avoid collisions with legacy styles:
 **Grid Layout:**
 - `.lv2-grid` - Three-column grid (left | center stage | right)
 - `.lv2-contestant` - Individual contestant card (left/right) with relative positioning
-- `.lv2-drop-anchor` - Target point where vote cards land (positioned on contestants)
-- `.lv2-stage` - Center column spawn point for vote card animations
+- `.lv2-drop-anchor` - Target point where vote pips land (positioned on contestants)
+- `.lv2-stage` - Center column spawn point for vote pip animations
 - `.lv2-cta-row` - Reserved footer row for voting buttons (never overlaps avatars)
 
 **Contestant Display:**
-- `.lv2-avatar` - Circular avatar (80px)
+- `.lv2-avatar` - Circular avatar (80px) with gradient ring (V2.1)
 - `.lv2-name` - Contestant name
-- `.lv2-count` - Vote count with glow effect
+- `.lv2-count` - Vote count in neon capsule (V2.1: with bump animation)
 - `.lv2-contestant.winner` - Applied to winning contestant
 
-**Center Stage:**
+**Center Stage (V2.1):**
 - `.lv2-meter` - Vertical meter displayed in center stage
 - `.lv2-fill.left` / `.lv2-fill.right` - Meter fill bars
-- `.lv2-meter-glow` - Animated glow effect
+- `.lv2-meter-glow` - Animated glow effect (legacy)
+- `.lv2-portal` - Glowing circular portal node at center (V2.1)
+- `.lv2-arc` - SVG arc container (V2.1)
+- `.lv2-arc-path` - Arc path with gradient stroke (V2.1)
 
-**Vote Animation:**
-- `.lv2-card` - Individual flip card (spawns in center stage)
-- `.lv2-card-inner` - Inner wrapper for 3D transform
-- `.lv2-face.front` / `.lv2-face.back` - Card faces
+**Vote Animation (V2.1):**
+- `.lv2-pip` - Small glowing orb that flies from portal to nominee (V2.1)
+- `.lv2-card` - Individual flip card (legacy, still supported)
+- `.lv2-card-inner` - Inner wrapper for 3D transform (legacy)
+- `.lv2-face.front` / `.lv2-face.back` - Card faces (legacy)
 
-**Controls:**
+**Controls (V2.1):**
 - `.lv2-cta-btn` - Individual voting button with large tap target
-- `.lv2-turn-indicator` - "Your Turn" badge (top-center in TV) with pulse animation
+- `.lv2-cta-btn.active` - Pulsing button state when user's turn (V2.1)
+- `.lv2-cta-row.active` - Highlighted CTA bar when user's turn (V2.1)
+- `.lv2-turn-tag` - Subtle top-center turn indicator (V2.1)
+- `.lv2-turn-indicator` - Legacy large green badge (still works, but replaced by turn-tag)
 - `.lv2-status` - Status text area (shows tie/result messages)
 
 ## Testing

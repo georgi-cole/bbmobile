@@ -202,7 +202,7 @@
     return contestant;
   }
 
-  // Create central meter
+  // Create central meter with V2.1 portal and SVG arcs
   function createMeter() {
     const meterContainer = document.createElement('div');
     meterContainer.className = 'lv2-meter';
@@ -225,6 +225,80 @@
     const glow = document.createElement('div');
     glow.className = 'lv2-meter-glow';
     meterContainer.appendChild(glow);
+
+    // V2.1: Add portal node at center
+    const portal = document.createElement('div');
+    portal.className = 'lv2-portal';
+    meterContainer.appendChild(portal);
+
+    // V2.1: Add SVG arc meter overlay
+    const arcContainer = document.createElement('div');
+    arcContainer.className = 'lv2-arc';
+    
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '200');
+    svg.setAttribute('height', '200');
+    svg.setAttribute('viewBox', '0 0 200 200');
+    
+    // Define gradients for arcs
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    
+    const leftGrad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+    leftGrad.setAttribute('id', 'leftGradient');
+    leftGrad.setAttribute('x1', '0%');
+    leftGrad.setAttribute('y1', '0%');
+    leftGrad.setAttribute('x2', '100%');
+    leftGrad.setAttribute('y2', '0%');
+    const leftStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    leftStop1.setAttribute('offset', '0%');
+    leftStop1.setAttribute('style', 'stop-color:#66d9ff;stop-opacity:1');
+    const leftStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    leftStop2.setAttribute('offset', '100%');
+    leftStop2.setAttribute('style', 'stop-color:#83bfff;stop-opacity:1');
+    leftGrad.appendChild(leftStop1);
+    leftGrad.appendChild(leftStop2);
+    defs.appendChild(leftGrad);
+    
+    const rightGrad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+    rightGrad.setAttribute('id', 'rightGradient');
+    rightGrad.setAttribute('x1', '0%');
+    rightGrad.setAttribute('y1', '0%');
+    rightGrad.setAttribute('x2', '100%');
+    rightGrad.setAttribute('y2', '0%');
+    const rightStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    rightStop1.setAttribute('offset', '0%');
+    rightStop1.setAttribute('style', 'stop-color:#77d58d;stop-opacity:1');
+    const rightStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    rightStop2.setAttribute('offset', '100%');
+    rightStop2.setAttribute('style', 'stop-color:#5ec97d;stop-opacity:1');
+    rightGrad.appendChild(rightStop1);
+    rightGrad.appendChild(rightStop2);
+    defs.appendChild(rightGrad);
+    
+    svg.appendChild(defs);
+    
+    // Left arc (semicircle on left side)
+    const leftArc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    leftArc.setAttribute('id', 'leftArc');
+    leftArc.setAttribute('class', 'lv2-arc-path left');
+    leftArc.setAttribute('d', 'M 100,30 A 70,70 0 0,0 100,170');
+    const leftLength = 220; // Approximate path length
+    leftArc.setAttribute('stroke-dasharray', leftLength);
+    leftArc.setAttribute('stroke-dashoffset', leftLength);
+    svg.appendChild(leftArc);
+    
+    // Right arc (semicircle on right side)
+    const rightArc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    rightArc.setAttribute('id', 'rightArc');
+    rightArc.setAttribute('class', 'lv2-arc-path right');
+    rightArc.setAttribute('d', 'M 100,30 A 70,70 0 0,1 100,170');
+    const rightLength = 220; // Approximate path length
+    rightArc.setAttribute('stroke-dasharray', rightLength);
+    rightArc.setAttribute('stroke-dashoffset', rightLength);
+    svg.appendChild(rightArc);
+    
+    arcContainer.appendChild(svg);
+    meterContainer.appendChild(arcContainer);
 
     return meterContainer;
   }
@@ -279,67 +353,53 @@
     const stage = state.stage;
     if (!stage) return;
 
-    // Create card
-    const card = document.createElement('div');
-    card.className = 'lv2-card';
-    card.setAttribute('role', 'status');
-    card.setAttribute('aria-live', 'polite');
-
-    const inner = document.createElement('div');
-    inner.className = 'lv2-card-inner';
-
-    // Front (hidden)
-    const front = document.createElement('div');
-    front.className = 'lv2-face front';
-    front.textContent = '?';
-    inner.appendChild(front);
-
-    // Back (revealed)
-    const back = document.createElement('div');
-    back.className = 'lv2-face back';
-    back.innerHTML = `<div class="voter-name">${vote.voterName}</div><div class="vote-arrow">→ ${vote.pick === 'left' ? state.leftName : state.rightName}</div>`;
-    inner.appendChild(back);
-
-    card.appendChild(inner);
+    // V2.1: Spawn small pip at portal center
+    const pip = document.createElement('div');
+    pip.className = 'lv2-pip';
+    pip.setAttribute('role', 'status');
+    pip.setAttribute('aria-live', 'polite');
     
-    // Spawn card at center stage
-    stage.appendChild(card);
+    // Position pip at center of portal
+    pip.style.position = 'absolute';
+    pip.style.left = '50%';
+    pip.style.top = '50%';
+    pip.style.transform = 'translate(-50%, -50%)';
+    
+    stage.appendChild(pip);
 
     // Announce vote to screen readers
     const announcement = `${vote.voterName} voted to evict ${vote.pick === 'left' ? state.leftName : state.rightName}`;
-    card.setAttribute('aria-label', announcement);
+    pip.setAttribute('aria-label', announcement);
 
-    // Trigger flip animation
     if (!reducedMotion) {
       await sleep(50); // Small delay for DOM to settle
-      card.classList.add('revealed');
-      await sleep(state.cardHoldMs);
-
-      // Fly to target drop anchor
+      
+      // Fly pip to target drop anchor
       const targetSide = vote.pick;
       const targetAnchor = state.container?.querySelector(`.lv2-drop-anchor.${targetSide}`);
       
       if (targetAnchor) {
-        const cardRect = card.getBoundingClientRect();
+        const pipRect = pip.getBoundingClientRect();
         const anchorRect = targetAnchor.getBoundingClientRect();
-        const deltaX = anchorRect.left - cardRect.left + (anchorRect.width / 2) - (cardRect.width / 2);
-        const deltaY = anchorRect.top - cardRect.top + (anchorRect.height / 2) - (cardRect.height / 2);
+        const deltaX = anchorRect.left - pipRect.left + (anchorRect.width / 2) - (pipRect.width / 2);
+        const deltaY = anchorRect.top - pipRect.top + (anchorRect.height / 2) - (pipRect.height / 2);
 
-        card.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.3)`;
-        card.style.opacity = '0';
+        // Apply fly animation
+        pip.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px)) scale(0.3)`;
+        pip.style.opacity = '0';
+        pip.classList.add('fly');
         await sleep(600); // Travel animation duration
       }
 
-      // Remove card after animation
-      card.remove();
+      // Remove pip after animation
+      pip.remove();
     } else {
-      // Reduced motion: just fade in and show
-      card.classList.add('revealed');
-      card.style.opacity = '1';
+      // Reduced motion: just fade in and out
+      pip.style.opacity = '1';
       await sleep(state.cardHoldMs);
-      card.style.opacity = '0';
+      pip.style.opacity = '0';
       await sleep(300);
-      card.remove();
+      pip.remove();
     }
   }
 
@@ -356,12 +416,17 @@
     }
   }
 
-  // Animate count with odometer effect
+  // Animate count with odometer effect and V2.1 bump animation
   function animateCount(element, targetValue, name) {
     const currentValue = parseInt(element.dataset.count || '0', 10);
     if (currentValue === targetValue) return;
 
     element.dataset.count = String(targetValue);
+    
+    // V2.1: Add bump animation to capsule
+    element.classList.remove('bump');
+    void element.offsetWidth; // Force reflow
+    element.classList.add('bump');
     
     if (reducedMotion) {
       // No animation, just update
@@ -407,6 +472,12 @@
       leftFill.style.width = '0%';
       rightFill.style.width = '0%';
       meter.setAttribute('aria-valuenow', '50');
+      
+      // Reset arcs
+      const leftArc = meter.querySelector('#leftArc');
+      const rightArc = meter.querySelector('#rightArc');
+      if (leftArc) leftArc.setAttribute('stroke-dashoffset', '220');
+      if (rightArc) rightArc.setAttribute('stroke-dashoffset', '220');
       return;
     }
 
@@ -420,6 +491,21 @@
     const balance = Math.round(leftPct);
     meter.setAttribute('aria-valuenow', String(balance));
     meter.setAttribute('aria-label', `Vote distribution: ${state.leftName} ${leftPct.toFixed(0)}%, ${state.rightName} ${rightPct.toFixed(0)}%`);
+    
+    // V2.1: Update SVG arcs using strokeDashoffset
+    const leftArc = meter.querySelector('#leftArc');
+    const rightArc = meter.querySelector('#rightArc');
+    const arcLength = 220; // Total arc length
+    
+    if (leftArc) {
+      const leftOffset = arcLength - (arcLength * (leftPct / 100));
+      leftArc.setAttribute('stroke-dashoffset', String(leftOffset));
+    }
+    
+    if (rightArc) {
+      const rightOffset = arcLength - (arcLength * (rightPct / 100));
+      rightArc.setAttribute('stroke-dashoffset', String(rightOffset));
+    }
   }
 
   // Mark the winner/leader at the end
@@ -552,35 +638,68 @@
     });
   }
 
-  // Show "Your turn" indicator
-  function showTurnIndicator() {
+  // V2.1: Set turn state - shows subtle tag and highlights CTA bar
+  function setTurn(isActive) {
+    state.humanTurn = isActive;
+    
+    if (isActive) {
+      showTurnTag();
+      highlightCtaBar(true);
+    } else {
+      hideTurnTag();
+      highlightCtaBar(false);
+    }
+  }
+
+  // V2.1: Show subtle top-center turn tag
+  function showTurnTag() {
     const tv = document.querySelector('#tv');
     if (!tv) return;
 
-    // Remove existing indicator
-    const existing = tv.querySelector('.lv2-turn-indicator');
+    // Remove existing tag
+    const existing = tv.querySelector('.lv2-turn-tag');
     if (existing) existing.remove();
 
-    const indicator = document.createElement('div');
-    indicator.className = 'lv2-turn-indicator';
-    indicator.textContent = 'Your Turn';
-    indicator.setAttribute('role', 'status');
-    indicator.setAttribute('aria-live', 'assertive');
-    indicator.setAttribute('aria-label', 'It is your turn to vote');
+    const tag = document.createElement('div');
+    tag.className = 'lv2-turn-tag';
+    tag.textContent = 'Your Turn';
+    tag.setAttribute('role', 'status');
+    tag.setAttribute('aria-live', 'polite');
+    tag.setAttribute('aria-label', 'It is your turn to vote');
 
-    tv.appendChild(indicator);
-
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-      indicator.remove();
-    }, 3000);
+    tv.appendChild(tag);
   }
 
-  // Hide "Your turn" indicator
-  function hideTurnIndicator() {
+  // V2.1: Hide turn tag
+  function hideTurnTag() {
     const tv = document.querySelector('#tv');
-    const indicator = tv?.querySelector('.lv2-turn-indicator');
-    if (indicator) indicator.remove();
+    const tag = tv?.querySelector('.lv2-turn-tag');
+    if (tag) tag.remove();
+  }
+
+  // V2.1: Highlight CTA bar when it's user's turn
+  function highlightCtaBar(active) {
+    if (!state.ctaBar) return;
+    
+    if (active) {
+      state.ctaBar.classList.add('active');
+      const buttons = state.ctaBar.querySelectorAll('.lv2-cta-btn:not(:disabled)');
+      buttons.forEach(btn => btn.classList.add('active'));
+    } else {
+      state.ctaBar.classList.remove('active');
+      const buttons = state.ctaBar.querySelectorAll('.lv2-cta-btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+    }
+  }
+
+  // Show "Your turn" indicator (legacy - kept for backward compatibility)
+  function showTurnIndicator() {
+    setTurn(true);
+  }
+
+  // Hide "Your turn" indicator (legacy - kept for backward compatibility)
+  function hideTurnIndicator() {
+    setTurn(false);
   }
 
   // Clean up lv2 UI and restore panel visibility
@@ -596,9 +715,13 @@
     const existingOverlay = tv?.querySelector('.lv2-overlay');
     if (existingOverlay) existingOverlay.remove();
 
-    // Remove turn indicator
+    // Remove turn indicator (legacy)
     const existingIndicator = tv?.querySelector('.lv2-turn-indicator');
     if (existingIndicator) existingIndicator.remove();
+    
+    // V2.1: Remove turn tag
+    const existingTag = tv?.querySelector('.lv2-turn-tag');
+    if (existingTag) existingTag.remove();
 
     // Restore panel visibility
     const panel = document.querySelector('#panel');
@@ -678,6 +801,7 @@
     cleanup: cleanup,
     createCtaBar: createCtaBar,
     updateCtaBar: updateCtaBar,
+    setTurn: setTurn,
     showTurnIndicator: showTurnIndicator,
     hideTurnIndicator: hideTurnIndicator,
     get enabled() {
