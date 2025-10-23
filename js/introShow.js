@@ -115,6 +115,14 @@
     return typeof gsap !== 'undefined';
   }
 
+  // Escape HTML to prevent XSS injection
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // Create the intro overlay container
   function createOverlay() {
     let overlay = document.getElementById('introShowOverlay');
@@ -125,14 +133,20 @@
     overlay.className = 'intro-show-overlay';
     overlay.innerHTML = `
       <div class="intro-show-background">
+        <div class="intro-auditorium-bg"></div>
         <div class="intro-studio-bg"></div>
         <div class="intro-bg-layer intro-bg-layer-1"></div>
         <div class="intro-bg-layer intro-bg-layer-2"></div>
         <div class="intro-bg-layer intro-bg-layer-3"></div>
         <div class="intro-lighting-sweep"></div>
       </div>
+      <div class="intro-projector-beam"></div>
       <div class="intro-show-stage">
-        <div class="intro-card-container"></div>
+        <div class="intro-screen">
+          <div class="intro-screen-glare"></div>
+          <div class="intro-screen-scanlines"></div>
+          <div class="intro-card-container"></div>
+        </div>
       </div>
       <div class="intro-reactions-layer"></div>
       <button class="intro-skip-btn" aria-label="Skip intro">
@@ -180,9 +194,16 @@
   // Build a contestant card
   function buildContestantCard(player) {
     const card = document.createElement('div');
-    card.className = 'intro-contestant-card';
+    card.className = 'intro-contestant-card intro-projection-card';
     
     const avatarUrl = resolveAvatarForPlayer(player);
+    
+    // Escape user-provided strings to prevent XSS
+    const safeName = escapeHtml(player.name || 'Contestant');
+    const safeAge = escapeHtml(player.age);
+    const safeLocation = escapeHtml(player.location);
+    const safeOccupation = escapeHtml(player.occupation);
+    const safeMotto = escapeHtml(player.motto);
     
     card.innerHTML = `
       <div class="intro-card-bg"></div>
@@ -191,13 +212,13 @@
           <div class="intro-card-avatar-glow"></div>
         </div>
         <div class="intro-card-info">
-          <div class="intro-card-name">${player.name || 'Contestant'}</div>
+          <div class="intro-card-name">${safeName}</div>
           <div class="intro-card-meta">
-            ${player.age ? `<span class="intro-card-age">${player.age}</span>` : ''}
-            ${player.location ? `<span class="intro-card-location">${player.location}</span>` : ''}
+            ${safeAge ? `<span class="intro-card-age">${safeAge}</span>` : ''}
+            ${safeLocation ? `<span class="intro-card-location">${safeLocation}</span>` : ''}
           </div>
-          ${player.occupation ? `<div class="intro-card-occupation">${player.occupation}</div>` : ''}
-          ${player.motto ? `<div class="intro-card-motto">"${player.motto}"</div>` : ''}
+          ${safeOccupation ? `<div class="intro-card-occupation">${safeOccupation}</div>` : ''}
+          ${safeMotto ? `<div class="intro-card-motto">"${safeMotto}"</div>` : ''}
         </div>
       </div>
       <div class="intro-card-spotlight"></div>
@@ -207,7 +228,7 @@
     const avatarWrapper = card.querySelector('.intro-card-avatar-wrapper');
     const avatarImg = document.createElement('img');
     avatarImg.className = 'intro-card-avatar';
-    avatarImg.alt = player.name || 'Contestant';
+    avatarImg.alt = safeName;
     avatarImg.src = avatarUrl;
     
     // Robust onerror handler - ensures avatar always displays
@@ -347,82 +368,138 @@
     }
   }
 
-  // Animate lighting sweep
+  // Animate lighting sweep and projector beam
   function animateLighting(overlay) {
     if (!CONFIG.enableLighting) return;
     
     const sweep = overlay.querySelector('.intro-lighting-sweep');
-    if (!sweep) return;
 
     if (isGsapAvailable()) {
-      gsap.fromTo(sweep,
-        { left: '-100%', opacity: 0.6 },
-        { 
-          left: '100%', 
-          opacity: 0,
+      // Animate lighting sweep
+      if (sweep) {
+        gsap.fromTo(sweep,
+          { left: '-100%', opacity: 0.6 },
+          { 
+            left: '100%', 
+            opacity: 0,
+            duration: 2,
+            ease: 'power2.inOut',
+            repeat: -1,
+            repeatDelay: 1
+          }
+        );
+      }
+
+      // Animate projector beam - subtle opacity pulse and rotation
+      const projectorBeam = overlay.querySelector('.intro-projector-beam');
+      if (projectorBeam) {
+        gsap.to(projectorBeam, {
+          opacity: 0.08,
+          rotation: 0.5,
           duration: 2,
-          ease: 'power2.inOut',
-          repeat: -1,
-          repeatDelay: 1
-        }
-      );
+          ease: 'sine.inOut',
+          yoyo: true,
+          repeat: -1
+        });
+      }
+    } else {
+      // Fallback: add CSS pulse class
+      const projectorBeam = overlay.querySelector('.intro-projector-beam');
+      if (projectorBeam) {
+        projectorBeam.classList.add('intro-projector-pulse');
+      }
     }
   }
 
-  // Animate background parallax layers
+  // Animate background parallax layers and auditorium
   function animateBackground(overlay) {
     if (!CONFIG.enableParallax) return;
 
     const layers = overlay.querySelectorAll('.intro-bg-layer');
-    if (!isGsapAvailable() || layers.length === 0) return;
+    const auditorium = overlay.querySelector('.intro-auditorium-bg');
+    
+    if (!isGsapAvailable()) return;
 
-    layers.forEach((layer, idx) => {
-      const speed = 20 + (idx * 10);
-      gsap.to(layer, {
-        x: `-${speed}%`,
-        duration: 20 + (idx * 5),
-        ease: 'none',
+    // Animate parallax layers
+    if (layers.length > 0) {
+      layers.forEach((layer, idx) => {
+        const speed = 20 + (idx * 10);
+        gsap.to(layer, {
+          x: `-${speed}%`,
+          duration: 20 + (idx * 5),
+          ease: 'none',
+          repeat: -1
+        });
+      });
+    }
+
+    // Animate auditorium with slow drift
+    if (auditorium) {
+      gsap.to(auditorium, {
+        x: '2%',
+        y: '1%',
+        scale: 1.02,
+        duration: 30,
+        ease: 'sine.inOut',
+        yoyo: true,
         repeat: -1
       });
-    });
+    }
   }
 
   // Animate a single contestant card
   function animateCard(card, container, isLast) {
     if (!isGsapAvailable()) {
-      // Fallback: simple fade-in
+      // Fallback: simple fade-in with CSS transitions
       card.style.opacity = '0';
-      card.style.transform = 'scale(0.8)';
+      card.style.transform = 'scale(0.8) perspective(1000px) rotateX(10deg)';
       container.appendChild(card);
       setTimeout(() => {
         card.style.transition = 'all 0.8s ease-out';
         card.style.opacity = '1';
-        card.style.transform = 'scale(1)';
+        card.style.transform = 'scale(1) perspective(1000px) rotateX(0deg)';
       }, 50);
       return;
     }
 
     container.appendChild(card);
 
-    // Initial state
+    // Initial state - projection from above with perspective
     gsap.set(card, { 
       opacity: 0, 
       scale: 0.7, 
-      rotationY: -15,
+      rotationX: -25,
+      rotationY: -5,
+      y: -100,
       z: -500
     });
 
-    // Entrance animation
+    // Entrance animation with perspective projection
     const timeline = gsap.timeline();
     
     timeline.to(card, {
       opacity: 1,
       scale: 1,
+      rotationX: 0,
       rotationY: 0,
+      y: 0,
       z: 0,
       duration: 0.8,
       ease: 'power3.out'
     });
+
+    // Trigger projector beam pulse on card reveal
+    const overlay = document.getElementById('introShowOverlay');
+    const projectorBeam = overlay?.querySelector('.intro-projector-beam');
+    if (projectorBeam) {
+      gsap.to(projectorBeam, {
+        opacity: 0.15,
+        duration: 0.3,
+        ease: 'power2.out',
+        yoyo: true,
+        repeat: 1
+      });
+    }
 
     // Spotlight pulse
     const spotlight = card.querySelector('.intro-card-spotlight');
@@ -453,19 +530,21 @@
       });
     }
 
-    // Camera zoom (subtle)
+    // Camera zoom (subtle) with slight perspective shift
     timeline.to(card, {
       scale: 1.05,
+      rotationX: 2,
       duration: CONFIG.cardDuration / 1000,
       ease: 'sine.inOut'
     }, '+=0.5');
 
-    // Exit animation
+    // Exit animation with perspective
     if (!isLast) {
       timeline.to(card, {
         opacity: 0,
         scale: 0.9,
-        rotationY: 15,
+        rotationX: 15,
+        rotationY: 10,
         x: -100,
         duration: CONFIG.transitionDuration / 1000,
         ease: 'power2.in'
