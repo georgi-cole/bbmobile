@@ -85,11 +85,11 @@
       
       <div class="info-box">
         <h4>Test Scenario</h4>
-        <p>This test verifies the avatar-style placeholder layout:</p>
+        <p>This test verifies the card-style placeholder layout:</p>
         <ul>
-          <li><strong>Avatar-style tiles:</strong> Question-mark circles with name bands on all viewports</li>
-          <li><strong>Responsive sizing:</strong> Tiles use clamp() for width/height and font-size</li>
-          <li><strong>Reduced motion:</strong> Pulse animation respects prefers-reduced-motion</li>
+          <li><strong>Card-style tiles:</strong> Rounded square cards with avatar silhouettes and "Guest" labels on all viewports</li>
+          <li><strong>Responsive sizing:</strong> Cards use clamp() for width/height and font-size</li>
+          <li><strong>Reduced motion:</strong> Pulse and shimmer animations respect prefers-reduced-motion</li>
           <li><strong>API compatibility:</strong> show() and hide() methods work as expected</li>
         </ul>
       </div>
@@ -120,10 +120,11 @@
     <div class="section">
       <h2>Verification Checklist</h2>
       <ul>
-        <li>✓ Avatar-style placeholders render on all viewports (mobile + desktop)</li>
-        <li>✓ Tiles use responsive sizing (clamp for width/height/font-size)</li>
+        <li>✓ Card-style placeholders render on all viewports (mobile + desktop)</li>
+        <li>✓ Cards show avatar silhouettes and "Guest" labels</li>
+        <li>✓ Cards use responsive sizing (clamp for width/height/font-size)</li>
         <li>✓ Layout centers properly with proper gaps and wrapping</li>
-        <li>✓ Reduced motion preference is respected (no pulse if user prefers)</li>
+        <li>✓ Reduced motion preference is respected (no pulse/shimmer if user prefers)</li>
         <li>✓ API methods (show/hide) work correctly</li>
         <li>✓ Integration with data-roster-hidden attribute works</li>
         <li>✓ Responsive on mobile and desktop (resize browser to test)</li>
@@ -199,7 +200,7 @@
         const overlay = document.getElementById('bbRosterPlaceholderOverlay');
         if (overlay) {
           const skeletonTiles = overlay.querySelectorAll('.roster-placeholder-skeleton');
-          log(`✅ Avatar placeholders rendered: ${skeletonTiles.length} tiles`, 'success');
+          log(`✅ Card-style placeholders rendered: ${skeletonTiles.length} tiles`, 'success');
         } else {
           log('⚠️ No placeholders found in DOM', 'info');
         }

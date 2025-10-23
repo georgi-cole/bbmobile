@@ -1,69 +1,72 @@
-# Avatar-Style Roster Placeholders - Implementation Summary
+# Card-Style Roster Placeholders - Implementation Summary
 
 ## Overview
-This implementation replaces desktop BIG/BROTHER letter tiles with unified avatar-style placeholder tiles across all viewports.
+This implementation provides card-style placeholder tiles with avatar silhouettes and "Guest" labels across all viewports.
 
 ## Problem Statement
 
-### Issue: Desktop Letter Tiles
-**Before:** Desktop users saw "BIG/BROTHER" letter tiles pre-start while mobile users saw avatar-style skeleton tiles, creating inconsistent UX
-**After:** All users (mobile + desktop) see consistent avatar-style placeholder tiles with question-mark circles and name bands
+### Issue: Placeholder Design
+**Before:** Simple circular question-mark avatars with horizontal name bands
+**After:** Card-style placeholders with rounded square backgrounds, avatar silhouettes, and "Guest" labels that better match the final roster card design
 
 ## Implementation Details
 
 ### roster-placeholders.js Changes
 
-#### Removed:
-- `WORDS` constant (was ['BIG', 'BROTHER'])
-- `MOBILE_BREAKPOINT` constant (was '(max-width: 700px)')
-- `isMobile()` function - no longer needed
-- `createPlaceholderTile(letter)` function - desktop letter tile creation
-- All desktop-specific CSS for letter tiles (.roster-placeholder-tile, .roster-placeholder-row, etc.)
+#### Updated Structure:
+- `createSkeletonTile(index)` - Now creates card-style tiles with:
+  - Rounded square card container with gradient background
+  - Avatar silhouette icon (SVG) inside a darker rounded container
+  - "Guest" label below the card
+- All CSS updated to support card-style design with proper spacing and animations
 
-#### Retained Functions:
-- `getPlayerCount()` - Returns cfg.numPlayers or game.players.length (default: 12)
-- `findRosterContainer()` - Locates roster container using priority selectors
-- `createSkeletonTile(index)` - Creates question-mark avatar tiles (now used for all viewports)
-- `renderPlaceholders()` - Simplified to always render avatar tiles
-- `hidePlaceholders()` - Unchanged
-- `init()` - Unchanged, maintains integration with data-roster-hidden
-
-#### Avatar-Style Skeleton Tiles (All Viewports):
-- Circular avatars with "?" character
-- Minimum 44px touch targets (accessibility compliant)
-- Theme-aware neutral backgrounds using color-mix
-- Flex grid layout with wrap and responsive gaps
+#### Card-Style Placeholder Tiles (All Viewports):
+- Rounded square cards with 0.75 aspect ratio
+- Avatar silhouette SVG (person icon) inside darker rounded container
+- "Guest" label below each card
+- Responsive sizing using clamp(80px, 15vw, 120px)
+- Gradient backgrounds with theme color integration
 - Pulse and shimmer animations (respects prefers-reduced-motion)
-- Uses clamp() for responsive sizing: clamp(44px, 12vw, 64px)
+- Larger gaps for better visual spacing (12-20px)
 
 ### Updated CSS Structure
 
-The CSS has been streamlined to support only avatar-style tiles:
+The CSS has been updated to support card-style placeholder tiles:
 
-#### Overlay Container:
-- Flexible row layout with wrapping
-- Responsive gap using clamp(6px, 1.2vw, 12px)
-- Responsive padding using clamp(8px, 1.5vw, 16px)
-- Fade-in animation on appearance
+#### Card Container:
+- Rounded square design with 0.75 aspect ratio (portrait orientation)
+- Gradient background using theme colors
+- Border radius of 16px for smooth rounded corners
+- Box shadow for depth
 
-#### Avatar Tiles:
-- Responsive sizing for all viewports
-- Consistent styling across mobile and desktop
-- Animations respect prefers-reduced-motion
+#### Avatar Silhouette:
+- SVG person icon (head circle + body shape)
+- Contained in darker rounded container (60% of card size)
+- Subtle opacity for placeholder feel
+
+#### Guest Label:
+- Below each card
+- Theme-aware styling
+- Responsive font sizing
+
+#### Animations:
+- Pulse animation on entire tile
+- Shimmer effect on card
+- All animations respect prefers-reduced-motion
 
 ## Testing Results
 
 ### Mobile Testing (375px × 667px)
-✅ Avatar skeleton roster renders with question-mark tiles
-✅ Tiles arranged in responsive grid layout
-✅ Touch targets ≥44px (accessibility compliant)
-✅ Console log: "Avatar skeleton roster rendered: 12 tiles"
+✅ Card-style placeholders render with avatar silhouettes and "Guest" labels
+✅ Cards arranged in responsive grid layout
+✅ Cards are large enough for easy visibility
+✅ Console log: "Card-style skeleton roster rendered: 12 tiles"
 ✅ Placeholders auto-remove when roster revealed
 
 ### Desktop Testing (1280px × 900px)
-✅ Avatar skeleton roster renders consistently with mobile
-✅ Same avatar-style tiles across all viewports
-✅ Console log: "Avatar skeleton roster rendered: 12 tiles"
+✅ Card-style placeholders render consistently with mobile
+✅ Same card design across all viewports
+✅ Console log: "Card-style skeleton roster rendered: 12 tiles"
 ✅ Responsive layout adapts to larger viewport
 ✅ No visual regressions
 
@@ -86,27 +89,26 @@ The CSS has been streamlined to support only avatar-style tiles:
 
 ## Files Modified
 
-1. **js/roster-placeholders.js** (simplified from 490 to 330 lines)
-   - Removed desktop letter tile rendering (WORDS, createPlaceholderTile, mobile detection)
-   - Unified to always use avatar-style skeleton tiles
+1. **js/roster-placeholders.js** (updated from 330 lines)
+   - Updated createSkeletonTile() to create card-style placeholders with SVG avatar silhouettes
+   - Redesigned CSS for card-style tiles with rounded squares and "Guest" labels
+   - Enhanced animations for card shimmer effect
    - Maintained backward compatibility with existing integration
-   - Preserved data-roster-hidden integration and auto-hide logic
 
 2. **test_roster_placeholders_multirow.html** (updated)
-   - Updated test descriptions to reflect avatar-only placeholders
+   - Updated test descriptions to reflect card-style placeholders
    - Updated verification checklist
-   - Updated test result validation to check for skeleton tiles
+   - Updated test result validation
 
 3. **test_mobile_roster_skeleton.html** (updated)
-   - Updated test descriptions to reflect unified avatar placeholders
-   - Removed mobile/desktop mode distinction
+   - Updated test descriptions to reflect card-style design
    - Updated verification checklist
-   - Simplified viewport info display
+   - Updated console log expectations
 
 4. **MOBILE_ROSTER_FIX_SUMMARY.md** (updated)
-   - Updated to reflect removal of BIG/BROTHER tiles
-   - Documented unified avatar-style placeholder approach
-   - Updated testing results to reflect new behavior
+   - Updated to reflect card-style placeholder design
+   - Documented SVG avatar silhouette implementation
+   - Updated testing results
 
 ## Configuration
 
@@ -152,12 +154,12 @@ Potential improvements (not in scope for this PR):
 
 ## Conclusion
 
-This implementation successfully unifies placeholder rendering across all viewports:
-- All users (mobile + desktop) see consistent avatar-style placeholder tiles
-- BIG/BROTHER letter tiles have been completely removed
-- Code simplified by removing viewport detection and conditional rendering
-- All accessibility and performance standards maintained
-- Backward compatibility preserved (same API, same integration points)
+This implementation provides a polished card-style placeholder experience:
+- All users see consistent card-style placeholder tiles with avatar silhouettes
+- Card design better matches the final roster card aesthetic
+- "Guest" labels provide clear context for placeholder state
+- SVG avatar silhouettes are scalable and theme-aware
+- Code maintains backward compatibility (same API, same integration points)
 - Comprehensive test coverage updated
 
-The solution is production-ready and represents a cleaner, more maintainable codebase.
+The solution is production-ready and provides a more polished pre-game experience.

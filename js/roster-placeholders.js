@@ -43,7 +43,7 @@
   }
 
   /**
-   * Create a skeleton tile element with question-mark avatar
+   * Create a card-style placeholder tile with avatar silhouette
    * @param {number} index - Tile index for stagger animation
    * @returns {HTMLElement} The skeleton tile element
    */
@@ -52,17 +52,42 @@
     tile.className = 'roster-placeholder-skeleton';
     tile.style.setProperty('--tile-index', index);
 
-    // Avatar circle with question mark
-    const avatar = document.createElement('div');
-    avatar.className = 'roster-placeholder-avatar';
-    avatar.textContent = '?';
+    // Card container with rounded square background
+    const card = document.createElement('div');
+    card.className = 'roster-placeholder-card';
     
-    // Name band placeholder
-    const nameband = document.createElement('div');
-    nameband.className = 'roster-placeholder-nameband';
+    // Avatar icon container (silhouette)
+    const avatarIcon = document.createElement('div');
+    avatarIcon.className = 'roster-placeholder-avatar-icon';
     
-    tile.appendChild(avatar);
-    tile.appendChild(nameband);
+    // Create SVG avatar silhouette
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('class', 'avatar-silhouette');
+    
+    // Head circle
+    const headCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    headCircle.setAttribute('cx', '12');
+    headCircle.setAttribute('cy', '8');
+    headCircle.setAttribute('r', '4');
+    
+    // Body path
+    const bodyPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    bodyPath.setAttribute('d', 'M12,14 C8,14 4,16 4,19 L4,22 L20,22 L20,19 C20,16 16,14 12,14 Z');
+    
+    svg.appendChild(headCircle);
+    svg.appendChild(bodyPath);
+    avatarIcon.appendChild(svg);
+    
+    card.appendChild(avatarIcon);
+    
+    // Guest label
+    const label = document.createElement('div');
+    label.className = 'roster-placeholder-label';
+    label.textContent = 'Guest';
+    
+    tile.appendChild(card);
+    tile.appendChild(label);
     return tile;
   }
 
@@ -80,10 +105,10 @@
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
-        gap: clamp(6px, 1.2vw, 12px);
-        align-items: center;
+        gap: clamp(12px, 2vw, 20px);
+        align-items: flex-start;
         justify-content: center;
-        padding: clamp(8px, 1.5vw, 16px);
+        padding: clamp(12px, 2vw, 24px);
         position: relative;
         z-index: 1;
         animation: bbPlaceholderFadeIn 400ms ease-out;
@@ -106,44 +131,60 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 4px;
-        width: clamp(44px, 12vw, 64px);
+        gap: 8px;
+        width: clamp(80px, 15vw, 120px);
       }
       
-      /* Avatar circle with question mark */
-      .roster-placeholder-avatar {
-        width: clamp(44px, 12vw, 64px);
-        height: clamp(44px, 12vw, 64px);
-        min-width: 44px;
-        min-height: 44px;
-        border-radius: 50%;
+      /* Card container with rounded square background */
+      .roster-placeholder-card {
+        width: 100%;
+        aspect-ratio: 0.75;
         background: linear-gradient(135deg,
-          color-mix(in srgb, var(--card, #2a3f5f) 90%, var(--accent, #4a90e2)),
-          color-mix(in srgb, var(--card-2, #1f3248) 85%, var(--bg, #0d1623)));
-        border: 2px solid color-mix(in srgb, var(--line, #3a4f6f) 60%, transparent);
+          color-mix(in srgb, var(--accent, #4a90e2) 70%, var(--card, #2a3f5f)),
+          color-mix(in srgb, var(--accent, #4a90e2) 50%, var(--card-2, #1f3248)));
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-family: 'Oswald', 'Montserrat', sans-serif;
-        font-size: clamp(20px, 6vw, 28px);
-        font-weight: 700;
-        color: color-mix(in srgb, var(--muted-2, #7a8fa5) 80%, var(--ink, #e8f1ff));
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3),
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4),
                     inset 0 1px 2px rgba(255,255,255,0.1);
         position: relative;
         overflow: hidden;
+        border: 2px solid color-mix(in srgb, var(--accent, #4a90e2) 60%, transparent);
       }
       
-      /* Name band placeholder */
-      .roster-placeholder-nameband {
+      /* Avatar icon container */
+      .roster-placeholder-avatar-icon {
+        width: 60%;
+        height: 60%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 12px;
+        padding: 12%;
+      }
+      
+      /* SVG avatar silhouette */
+      .avatar-silhouette {
         width: 100%;
-        height: clamp(8px, 2vw, 12px);
-        background: linear-gradient(90deg,
-          color-mix(in srgb, var(--card-2, #1f3248) 70%, transparent),
-          color-mix(in srgb, var(--card, #2a3f5f) 50%, transparent),
-          color-mix(in srgb, var(--card-2, #1f3248) 70%, transparent));
-        border-radius: 4px;
-        opacity: 0.6;
+        height: 100%;
+        fill: color-mix(in srgb, var(--muted-2, #7a8fa5) 70%, var(--ink, #e8f1ff));
+        opacity: 0.8;
+      }
+      
+      /* Guest label */
+      .roster-placeholder-label {
+        width: 100%;
+        padding: 6px 12px;
+        background: color-mix(in srgb, var(--card-2, #1f3248) 90%, var(--bg, #0d1623));
+        border-radius: 8px;
+        text-align: center;
+        font-family: 'Oswald', 'Montserrat', sans-serif;
+        font-size: clamp(12px, 2.5vw, 16px);
+        font-weight: 600;
+        color: color-mix(in srgb, var(--muted-2, #7a8fa5) 90%, var(--ink, #e8f1ff));
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       }
       
       /* Pulse animation for skeleton tiles (respects reduced motion) */
@@ -163,9 +204,9 @@
         }
       }
       
-      /* Shimmer effect for skeleton avatar */
+      /* Shimmer effect for card */
       @media (prefers-reduced-motion: no-preference) {
-        .roster-placeholder-avatar::before {
+        .roster-placeholder-card::before {
           content: '';
           position: absolute;
           top: -50%;
@@ -175,15 +216,15 @@
           background: linear-gradient(
             90deg,
             transparent 0%,
-            rgba(255,255,255,0.12) 50%,
+            rgba(255,255,255,0.15) 50%,
             transparent 100%
           );
-          animation: bbSkeletonShimmer 2.5s ease-in-out infinite;
+          animation: bbCardShimmer 2.5s ease-in-out infinite;
           animation-delay: calc(var(--tile-index, 0) * 0.1s);
         }
       }
       
-      @keyframes bbSkeletonShimmer {
+      @keyframes bbCardShimmer {
         0% {
           left: -150%;
         }
@@ -242,7 +283,7 @@
       const tile = createSkeletonTile(i);
       overlay.appendChild(tile);
     }
-    console.log('[RosterPlaceholders] Avatar skeleton roster rendered:', playerCount, 'tiles');
+    console.log('[RosterPlaceholders] Card-style skeleton roster rendered:', playerCount, 'tiles');
 
     // Append to container
     // If container is #rosterBar, prepend; otherwise append

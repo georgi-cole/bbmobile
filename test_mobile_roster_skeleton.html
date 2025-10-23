@@ -155,7 +155,7 @@
 </head>
 <body data-roster-hidden="true">
   <div class="test-container">
-    <h1>🎯 Avatar-Style Roster Placeholders Test</h1>
+    <h1>🎯 Card-Style Roster Placeholders Test</h1>
     
     <div class="section">
       <h2>Test Controls</h2>
@@ -164,9 +164,9 @@
         <h4>Test Scenario</h4>
         <p>This test verifies:</p>
         <ul>
-          <li><strong>All viewports:</strong> Avatar-style skeleton roster with question-mark tiles</li>
-          <li><strong>Responsive:</strong> Layout adapts to viewport size changes (consistent avatar tiles)</li>
-          <li><strong>Accessibility:</strong> Touch targets ≥44px (WCAG compliant)</li>
+          <li><strong>All viewports:</strong> Card-style placeholders with avatar silhouettes and "Guest" labels</li>
+          <li><strong>Responsive:</strong> Layout adapts to viewport size changes (consistent card tiles)</li>
+          <li><strong>Accessibility:</strong> Cards are large enough for easy visibility</li>
           <li><strong>Animation:</strong> Respects prefers-reduced-motion preference</li>
         </ul>
         <p><strong>Current viewport:</strong> <span id="viewportSize">Calculating...</span></p>
@@ -224,10 +224,10 @@
     <div class="section">
       <h2>Verification Checklist</h2>
       <ul>
-        <li>✓ Avatar-style placeholders render on all viewports (mobile + desktop)</li>
-        <li>✓ Skeleton roster with question-mark tiles in grid layout</li>
+        <li>✓ Card-style placeholders render on all viewports (mobile + desktop)</li>
+        <li>✓ Cards show avatar silhouettes with "Guest" labels</li>
         <li>✓ Placeholders use cfg.numPlayers or game.players.length for count</li>
-        <li>✓ Touch targets ≥44px (accessibility compliant)</li>
+        <li>✓ Cards are large enough for easy visibility (accessibility)</li>
         <li>✓ Auto-removal when roster is revealed works</li>
         <li>✓ TV viewport has visible background texture</li>
         <li>✓ Text on TV viewport remains readable with overlay</li>
@@ -361,7 +361,7 @@
         const overlay = document.getElementById('bbRosterPlaceholderOverlay');
         if (overlay) {
           const skeletonTiles = overlay.querySelectorAll('.roster-placeholder-skeleton');
-          log(`✅ Avatar skeleton roster rendered: ${skeletonTiles.length} tiles`, 'success');
+          log(`✅ Card-style skeleton roster rendered: ${skeletonTiles.length} tiles`, 'success');
         } else {
           log('⚠️ No placeholders found in DOM', 'info');
         }
