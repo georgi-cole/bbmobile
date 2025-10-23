@@ -1885,6 +1885,120 @@ button:focus-visible,.btn:focus-visible{
   font-size:0.85rem;
 }
 
+/* LV2 Fit Wrapper - Responsive container inside TV overlay */
+.lv2-fit{
+  position:absolute;
+  z-index:14;
+  inset:var(--tv-safe-top, 10px) var(--tv-safe-x, 10px) var(--tv-safe-bottom, 10px) var(--tv-safe-x, 10px);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  pointer-events:auto;
+  /* Use transform scaling for responsive fit */
+  transform-origin:center center;
+}
+
+/* Override lv2-panel for in-TV rendering */
+.lv2-fit .lv2-panel{
+  width:100%;
+  max-width:600px;
+  max-height:100%;
+  overflow-y:auto;
+  margin:0;
+  padding:var(--pad) var(--pad-sm);
+  /* Slightly more transparent for TV overlay */
+  background:linear-gradient(135deg, rgba(18,30,48,0.92) 0%, rgba(25,38,58,0.95) 100%);
+}
+
+/* Adjust header for compact TV rendering */
+.lv2-fit .lv2-header h3{
+  font-size:1.1rem;
+  margin:0 0 12px;
+}
+
+/* CTA bar for voting buttons inside TV */
+.lv2-cta{
+  position:absolute;
+  bottom:calc(var(--tv-safe-bottom, 10px) + 10px);
+  left:50%;
+  transform:translateX(-50%);
+  z-index:15;
+  display:flex;
+  gap:12px;
+  padding:10px 16px;
+  background:linear-gradient(135deg, rgba(18,30,48,0.95) 0%, rgba(25,38,58,0.98) 100%);
+  border-radius:12px;
+  border:1px solid rgba(131,191,255,0.25);
+  box-shadow:0 8px 32px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  pointer-events:auto;
+}
+
+.lv2-cta button{
+  padding:10px 20px;
+  font-size:0.85rem;
+  font-weight:700;
+  letter-spacing:0.3px;
+  border-radius:8px;
+  border:none;
+  cursor:pointer;
+  transition:all 0.2s ease;
+  background:linear-gradient(135deg, #d94f4f 0%, #c83838 100%);
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.3);
+  box-shadow:0 2px 8px -2px rgba(217,79,79,0.4);
+}
+
+.lv2-cta button:hover:not(:disabled){
+  background:linear-gradient(135deg, #e85e5e 0%, #d94f4f 100%);
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px -2px rgba(217,79,79,0.6);
+}
+
+.lv2-cta button:active:not(:disabled){
+  transform:translateY(0);
+  box-shadow:0 2px 6px -2px rgba(217,79,79,0.4);
+}
+
+.lv2-cta button:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+  background:linear-gradient(135deg, rgba(217,79,79,0.5) 0%, rgba(200,56,56,0.5) 100%);
+}
+
+.lv2-cta button:focus{
+  outline:2px solid rgba(131,191,255,0.5);
+  outline-offset:2px;
+}
+
+/* Your turn indicator */
+.lv2-turn-indicator{
+  position:absolute;
+  top:calc(var(--tv-safe-top, 10px) + 10px);
+  left:50%;
+  transform:translateX(-50%);
+  z-index:15;
+  padding:8px 16px;
+  background:linear-gradient(135deg, rgba(119,213,141,0.95) 0%, rgba(94,201,125,0.98) 100%);
+  border-radius:8px;
+  border:1px solid rgba(119,213,141,0.4);
+  box-shadow:0 4px 16px -8px rgba(119,213,141,0.6);
+  color:#fff;
+  font-size:0.85rem;
+  font-weight:700;
+  letter-spacing:0.3px;
+  text-shadow:0 1px 2px rgba(0,0,0,0.3);
+  animation:pulse-glow 2s ease-in-out infinite;
+  pointer-events:none;
+}
+
+@keyframes pulse-glow{
+  0%, 100%{ box-shadow:0 4px 16px -8px rgba(119,213,141,0.6); }
+  50%{ box-shadow:0 4px 24px -4px rgba(119,213,141,0.9); }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce){
   .lv2-avatar,

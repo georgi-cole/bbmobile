@@ -2,20 +2,36 @@
 
 ## Overview
 
-The Modern Live Vote UI (internally called "lv2") is a cinematic, broadcast-style visual experience for the eviction phase that replaces the traditional "cards appear in a list" interface with a dynamic versus layout, flip card animations, and smooth meter fills.
+The Modern Live Vote UI (internally called "lv2") is a cinematic, broadcast-style visual experience for the eviction phase that renders **entirely inside the TV (#tv) overlay**. It replaces the traditional "cards appear in a list" interface with a dynamic versus layout, flip card animations, smooth meter fills, and in-TV voting controls. When enabled, all legacy pop-up cards are suppressed in favor of integrated in-TV notifications.
 
 ## Features
 
 ### Visual Design
+- **In-TV Rendering**: The entire lv2 UI renders inside the #tv overlay using a responsive fit wrapper (.lv2-fit), not below in #panel
 - **Versus Layout**: Nominees displayed left vs right with large avatars (80px), names, and live vote counts
 - **Central Meter**: Animated distribution meter that fills from both sides as votes are revealed
 - **Flip Cards**: Each vote appears as a flipping card labeled with the voter's name, then flies to the chosen nominee's lane
+- **In-TV Voting CTAs**: Vote buttons appear at the bottom of the TV overlay with keyboard shortcuts (1/2)
+- **Turn Indicators**: "Your Turn" badge appears at the top of the TV when it's the player's turn to vote
+- **Result Banners**: Eviction results and tie notifications shown in-TV instead of pop-up cards
 - **Glassmorphism**: Semi-transparent panels with subtle borders, neon accents, and soft glows
 - **Winner Highlighting**: The leader/winner is highlighted with green glow at sequence end
 
+### Card Suppression
+When lv2 is active, the following legacy pop-up cards are **suppressed**:
+- Diary room "Your turn" cards → Replaced by in-TV turn indicator
+- Per-vote diary room reveal cards → Votes shown via flip/fly animations in lv2
+- Tiebreak announcement cards → Shown as in-TV status message
+- HOH tiebreak decision cards → Handled via in-TV CTA buttons
+- Final eviction result cards → Shown as in-TV result banner
+
+This eliminates UI duplication and keeps all interaction within the TV frame.
+
 ### Accessibility
-- **ARIA Live Regions**: Vote reveals and count updates are announced to screen readers
+- **ARIA Live Regions**: Vote reveals, count updates, and turn notifications announced to screen readers
+- **Keyboard Shortcuts**: Press 1 or 2 to quickly vote for left or right nominee
 - **High Contrast Support**: Readable colors that work with colorblind mode
+- **Focus Management**: CTAs properly focusable with visible focus indicators
 - **Reduced Motion**: Automatically detected via `prefers-reduced-motion` media query
   - When enabled: Cards fade in/out instead of flipping and flying
   - Counts update directly without odometer animation
@@ -25,6 +41,8 @@ The Modern Live Vote UI (internally called "lv2") is a cinematic, broadcast-styl
 - **No External Dependencies**: Pure vanilla JS with CSS transitions and `requestAnimationFrame`
 - **Optional Integration**: Completely optional via settings toggle; falls back to legacy UI when disabled
 - **Non-Breaking**: Does not alter existing game logic, timing, or eviction flow
+- **Responsive Fit**: Uses transform scaling via .lv2-fit wrapper to ensure UI stays within TV frame at all sizes
+- **Pointer Events**: Properly managed to allow interaction with CTAs while keeping overlay non-blocking
 
 ## How to Enable/Disable
 
@@ -55,7 +73,7 @@ Modern Live Vote UI is **enabled by default** for new games. The setting is pers
 Exposes a global API via `window.lv2`:
 
 ```javascript
-// Initialize with two nominees
+// Initialize with two nominees - renders inside #tv overlay
 lv2.init({
   leftName: 'Alice',
   rightName: 'Bob',
@@ -77,6 +95,31 @@ lv2.pushVote({
 // Mark as finished and highlight winner
 lv2.finish();
 
+// Create voting CTA bar inside TV
+lv2.createCtaBar({
+  enabled: true,
+  isTieBreak: false,  // true for HOH tiebreak
+  isFinal4: false,    // true for Final 4 sole vote
+  leftName: 'Alice',
+  rightName: 'Bob',
+  leftId: 1,
+  rightId: 2,
+  onVote: (pickId) => {
+    // Handle vote
+    console.log('Voted for:', pickId);
+  }
+});
+
+// Update CTA bar state
+lv2.updateCtaBar({ enabled: false });  // Disable buttons after vote
+
+// Show/hide turn indicator
+lv2.showTurnIndicator();  // Shows "Your Turn" badge at top of TV
+lv2.hideTurnIndicator();
+
+// Clean up and restore panel visibility
+lv2.cleanup();
+
 // Check if enabled
 console.log(lv2.enabled);  // reads from game.cfg.modernLiveVoteUI
 
@@ -88,8 +131,10 @@ console.log(lv2.reducedMotion);  // true if prefers-reduced-motion is set
 
 #### `renderLiveVotePanel()`
 - Checks if lv2 should be used (2 nominees + enabled in settings)
-- If yes: calls `lv2.init()` with nominee data
-- Legacy UI elements (info text, voter list, buttons) remain below the lv2 panel for compatibility
+- If yes: calls `lv2.init()` with nominee data and renders inside #tv
+- Creates in-TV CTA bar with voting buttons
+- #panel content is hidden to prevent duplicate UI
+- If no: uses legacy below-TV panel with info text, voter list, and buttons
 
 ```javascript
 const useLv2 = g.eviction.nominees.length === 2 
@@ -108,10 +153,32 @@ if (useLv2) {
 ```
 
 #### `beginDiaryRoomSequence()`
-- After each vote is resolved and the diary room card is shown, calls `lv2.pushVote()` to mirror the vote visually
+- Checks `useLv2` flag to determine if cards should be suppressed
+- When lv2 is active:
+  - Suppresses "Your turn" pop-up card → Shows `lv2.showTurnIndicator()` instead
+  - Suppresses per-vote diary room reveal cards → Reduced wait time
+  - Still calls `lv2.pushVote()` to animate votes in the versus layout
+- After each vote is resolved, calls `lv2.pushVote()` to mirror the vote visually
 - Uses optional chaining to ensure safety if lv2 is not loaded
 
 ```javascript
+const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+
+// Human turn notification
+if (!useLv2) {
+  global.showCard?.('Diary Room',['It's your turn...'],'live',2000,true);
+} else {
+  global.lv2?.showTurnIndicator?.();
+}
+
+// Vote reveal (skip card if lv2 active)
+if (!useLv2) {
+  showDiaryRoomWithAvatars(entry.voter, pick, message, 3000);
+  await sleep(3000);
+} else {
+  await sleep(1500);  // Shorter wait
+}
+
 // Hook: Push vote to lv2 if enabled and 2-nom mode
 if(twoMode && global.lv2?.pushVote){
   const [leftId, rightId] = noms;
@@ -124,13 +191,32 @@ if(twoMode && global.lv2?.pushVote){
 }
 ```
 
+#### `tieBreakTwo()`
+- Checks `useLv2` to suppress tiebreak cards
+- When lv2 is active:
+  - Updates in-TV status message instead of showing pop-up
+  - Uses `lv2.createCtaBar()` with `isTieBreak: true` for HOH decision
+  - No HOH decision result card shown
+
+#### `revealVotes()`
+- Checks `useLv2` to suppress final eviction result card
+- When lv2 is active:
+  - Updates in-TV status banner with eviction result
+  - No pop-up card shown
+
 #### After sequence completion
 - Calls `lv2.finish()` to highlight the winner
+- Calls `lv2.cleanup()` in `postEvictionRouting()` to remove lv2 UI and restore panel
 
 ```javascript
 // Hook: Mark lv2 as finished
 if(twoMode && global.lv2?.finish){
   global.lv2.finish();
+}
+
+// Clean up lv2 UI after eviction
+if (global.lv2?.cleanup) {
+  global.lv2.cleanup();
 }
 ```
 
@@ -173,7 +259,11 @@ The `lv2.reducedMotion` property reads from `window.matchMedia('(prefers-reduced
 
 All lv2 styles are prefixed with `lv2-` to avoid collisions with legacy styles:
 
-- `.lv2-panel` - Main container with glassmorphic background
+**In-TV Container:**
+- `.lv2-fit` - Responsive fit wrapper inside #tv overlay with absolute positioning
+- `.lv2-panel` - Main container with glassmorphic background (updated for in-TV rendering)
+
+**Versus Layout:**
 - `.lv2-versus` - Grid layout for left/meter/right
 - `.lv2-contestant` - Individual contestant card (left/right)
 - `.lv2-avatar` - Circular avatar (80px)
@@ -182,12 +272,18 @@ All lv2 styles are prefixed with `lv2-` to avoid collisions with legacy styles:
 - `.lv2-meter` - Central vertical meter
 - `.lv2-fill.left` / `.lv2-fill.right` - Meter fill bars
 - `.lv2-meter-glow` - Animated glow effect
+- `.lv2-contestant.winner` - Applied to winning contestant
+
+**Vote Animation:**
 - `.lv2-reveal` - Container for flip cards
 - `.lv2-card` - Individual flip card
 - `.lv2-card-inner` - Inner wrapper for 3D transform
 - `.lv2-face.front` / `.lv2-face.back` - Card faces
-- `.lv2-status` - Status text area
-- `.lv2-contestant.winner` - Applied to winning contestant
+
+**In-TV Controls:**
+- `.lv2-cta` - CTA bar for voting buttons (bottom-center in TV)
+- `.lv2-turn-indicator` - "Your Turn" badge (top-center in TV) with pulse animation
+- `.lv2-status` - Status text area (shows tie/result messages)
 
 ## Testing
 
@@ -204,13 +300,42 @@ Use `test_live_vote_ui.html` to iterate on the UI without entering the full game
 
 ### Integration Testing
 1. Start a new game in the main app
-2. Progress to Live Vote phase
-3. Observe the modern UI rendering with 2 nominees
-4. Watch votes reveal with flip and fly animations
-5. Check that legacy buttons and info text still work
-6. Verify winner highlighting at the end
+2. Progress to Live Vote phase with 2 nominees
+3. **Observe the modern UI rendering INSIDE the TV overlay** (not below in #panel)
+4. Verify voting CTA buttons appear at the bottom of the TV frame
+5. Test keyboard shortcuts: press 1 or 2 to vote
+6. Watch votes reveal with flip and fly animations
+7. Check that "Your Turn" indicator appears in TV when it's the player's turn
+8. Verify NO legacy pop-up cards appear during live vote
+9. Check tie-break flow uses in-TV CTA and status messages
+10. Verify eviction result shown as in-TV banner (no pop-up card)
+11. Verify winner highlighting at the end
+12. Confirm panel visibility restored after eviction complete
 
 ### Manual Testing Checklist
+**In-TV Rendering:**
+- [ ] Modern UI renders entirely inside #tv overlay (not in #panel)
+- [ ] #panel content hidden while lv2 is active
+- [ ] lv2 UI uses .lv2-fit wrapper for responsive scaling
+- [ ] UI stays within TV frame at all viewport sizes
+
+**Card Suppression:**
+- [ ] No "Your turn" pop-up card (shows in-TV indicator instead)
+- [ ] No per-vote diary room cards (flip/fly animation replaces them)
+- [ ] No tiebreak announcement card (in-TV status message instead)
+- [ ] No HOH decision card (in-TV CTA handles it)
+- [ ] No eviction result card (in-TV banner instead)
+
+**Voting CTAs:**
+- [ ] CTA buttons appear at bottom-center of TV
+- [ ] Buttons properly clickable and responsive
+- [ ] Keyboard shortcuts (1/2) work correctly
+- [ ] Tie-break shows "Break Tie: Evict X" wording
+- [ ] Final 4 shows single "Cast Sole Vote" button
+- [ ] Buttons disabled after vote cast
+- [ ] ARIA labels announced correctly
+
+**Core Functionality:**
 - [ ] Modern UI appears for 2-nominee evictions when enabled
 - [ ] Legacy UI appears when disabled or with 3+ nominees
 - [ ] Flip cards appear and flip on reveal
@@ -219,10 +344,10 @@ Use `test_live_vote_ui.html` to iterate on the UI without entering the full game
 - [ ] Meter fills from both sides
 - [ ] Winner is highlighted with green glow
 - [ ] Reduced motion mode works (fade instead of fly)
-- [ ] ARIA announcements work with screen readers
 - [ ] Setting toggle works in Settings modal
 - [ ] No console errors
 - [ ] No regressions to eviction logic or timing
+- [ ] Panel visibility restored after eviction
 
 ## Known Limitations
 

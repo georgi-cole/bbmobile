@@ -21,7 +21,11 @@
     cardHoldMs: 500,
     cardGapMs: 250,
     isProcessing: false,
-    container: null
+    container: null,
+    ctaBar: null,
+    humanTurn: false,
+    isTieBreak: false,
+    isFinal4: false
   };
 
   // Default pacing
@@ -69,19 +73,29 @@
     renderPanel();
   }
 
-  // Render the modern panel inside #panel
+  // Render the modern panel inside #tv
   function renderPanel() {
-    const panel = document.querySelector('#panel');
-    if (!panel) {
-      console.warn('[lv2] #panel element not found');
+    const tv = document.querySelector('#tv');
+    if (!tv) {
+      console.warn('[lv2] #tv element not found');
       return;
     }
+
+    // Hide #panel content during lv2 mode
+    const panel = document.querySelector('#panel');
+    if (panel) {
+      panel.style.display = 'none';
+    }
+
+    // Create fit wrapper for responsive scaling inside TV
+    const fitWrapper = document.createElement('div');
+    fitWrapper.className = 'lv2-fit';
+    fitWrapper.setAttribute('role', 'region');
+    fitWrapper.setAttribute('aria-label', 'Live Vote');
 
     // Create container
     const container = document.createElement('div');
     container.className = 'lv2-panel';
-    container.setAttribute('role', 'region');
-    container.setAttribute('aria-label', 'Live Vote');
 
     // Header
     const header = document.createElement('div');
@@ -121,14 +135,15 @@
     status.textContent = 'Waiting for votes...';
     container.appendChild(status);
 
+    fitWrapper.appendChild(container);
     state.container = container;
     
-    // Clear panel and add new UI
-    const existingLv2 = panel.querySelector('.lv2-panel');
+    // Clear any existing lv2 UI
+    const existingLv2 = tv.querySelector('.lv2-fit');
     if (existingLv2) existingLv2.remove();
     
-    // Append at the beginning of panel
-    panel.insertBefore(container, panel.firstChild);
+    // Append to TV
+    tv.appendChild(fitWrapper);
   }
 
   // Create contestant card (left or right)
@@ -408,6 +423,163 @@
     }
   }
 
+  // Create voting CTA bar inside TV
+  function createCtaBar(options = {}) {
+    const tv = document.querySelector('#tv');
+    if (!tv) return;
+
+    // Remove existing CTA bar
+    const existingCta = tv.querySelector('.lv2-cta');
+    if (existingCta) existingCta.remove();
+
+    const ctaBar = document.createElement('div');
+    ctaBar.className = 'lv2-cta';
+    ctaBar.setAttribute('role', 'group');
+    ctaBar.setAttribute('aria-label', 'Voting controls');
+
+    const {
+      enabled = false,
+      isTieBreak = false,
+      isFinal4 = false,
+      leftName = state.leftName,
+      rightName = state.rightName,
+      leftId = state.leftId,
+      rightId = state.rightId,
+      onVote = null
+    } = options;
+
+    if (isFinal4) {
+      // Final 4: Single vote button (sole vote)
+      const btn = document.createElement('button');
+      btn.textContent = `Cast Sole Vote`;
+      btn.disabled = !enabled;
+      btn.setAttribute('aria-label', 'Cast your sole vote');
+      btn.onclick = () => {
+        if (onVote) onVote(null); // Let the caller handle the UI for picking
+      };
+      ctaBar.appendChild(btn);
+    } else if (isTieBreak) {
+      // Tie-break: HOH wording
+      const btnLeft = document.createElement('button');
+      btnLeft.textContent = `Break Tie: Evict ${leftName}`;
+      btnLeft.disabled = !enabled;
+      btnLeft.setAttribute('aria-label', `Break tie by evicting ${leftName}`);
+      btnLeft.dataset.pick = leftId;
+      btnLeft.onclick = () => {
+        if (onVote) onVote(leftId);
+      };
+      ctaBar.appendChild(btnLeft);
+
+      const btnRight = document.createElement('button');
+      btnRight.textContent = `Break Tie: Evict ${rightName}`;
+      btnRight.disabled = !enabled;
+      btnRight.setAttribute('aria-label', `Break tie by evicting ${rightName}`);
+      btnRight.dataset.pick = rightId;
+      btnRight.onclick = () => {
+        if (onVote) onVote(rightId);
+      };
+      ctaBar.appendChild(btnRight);
+    } else {
+      // Normal vote: Two buttons
+      const btnLeft = document.createElement('button');
+      btnLeft.textContent = `Evict ${leftName}`;
+      btnLeft.disabled = !enabled;
+      btnLeft.setAttribute('aria-label', `Vote to evict ${leftName}`);
+      btnLeft.dataset.pick = leftId;
+      btnLeft.dataset.key = '1';
+      btnLeft.onclick = () => {
+        if (onVote) onVote(leftId);
+      };
+      ctaBar.appendChild(btnLeft);
+
+      const btnRight = document.createElement('button');
+      btnRight.textContent = `Evict ${rightName}`;
+      btnRight.disabled = !enabled;
+      btnRight.setAttribute('aria-label', `Vote to evict ${rightName}`);
+      btnRight.dataset.pick = rightId;
+      btnRight.dataset.key = '2';
+      btnRight.onclick = () => {
+        if (onVote) onVote(rightId);
+      };
+      ctaBar.appendChild(btnRight);
+    }
+
+    tv.appendChild(ctaBar);
+    state.ctaBar = ctaBar;
+    return ctaBar;
+  }
+
+  // Update CTA bar state
+  function updateCtaBar(options = {}) {
+    if (!state.ctaBar) return;
+
+    const { enabled = false } = options;
+    const buttons = state.ctaBar.querySelectorAll('button');
+    buttons.forEach(btn => {
+      btn.disabled = !enabled;
+    });
+  }
+
+  // Show "Your turn" indicator
+  function showTurnIndicator() {
+    const tv = document.querySelector('#tv');
+    if (!tv) return;
+
+    // Remove existing indicator
+    const existing = tv.querySelector('.lv2-turn-indicator');
+    if (existing) existing.remove();
+
+    const indicator = document.createElement('div');
+    indicator.className = 'lv2-turn-indicator';
+    indicator.textContent = 'Your Turn';
+    indicator.setAttribute('role', 'status');
+    indicator.setAttribute('aria-live', 'assertive');
+    indicator.setAttribute('aria-label', 'It is your turn to vote');
+
+    tv.appendChild(indicator);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      indicator.remove();
+    }, 3000);
+  }
+
+  // Hide "Your turn" indicator
+  function hideTurnIndicator() {
+    const tv = document.querySelector('#tv');
+    const indicator = tv?.querySelector('.lv2-turn-indicator');
+    if (indicator) indicator.remove();
+  }
+
+  // Clean up lv2 UI and restore panel visibility
+  function cleanup() {
+    // Remove lv2 UI from TV
+    const tv = document.querySelector('#tv');
+    const existingLv2 = tv?.querySelector('.lv2-fit');
+    if (existingLv2) existingLv2.remove();
+
+    // Remove CTA bar
+    const existingCta = tv?.querySelector('.lv2-cta');
+    if (existingCta) existingCta.remove();
+
+    // Remove turn indicator
+    const existingIndicator = tv?.querySelector('.lv2-turn-indicator');
+    if (existingIndicator) existingIndicator.remove();
+
+    // Restore panel visibility
+    const panel = document.querySelector('#panel');
+    if (panel) {
+      panel.style.display = '';
+    }
+
+    // Reset state
+    state.container = null;
+    state.ctaBar = null;
+    state.humanTurn = false;
+    state.isTieBreak = false;
+    state.isFinal4 = false;
+  }
+
   // Helper: sleep
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -418,11 +590,33 @@
     return t * (2 - t);
   }
 
+  // Keyboard shortcuts for voting (1 and 2 keys)
+  document.addEventListener('keydown', (e) => {
+    if (!state.ctaBar) return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    
+    const key = e.key;
+    if (key !== '1' && key !== '2') return;
+
+    const buttons = state.ctaBar.querySelectorAll('button');
+    buttons.forEach(btn => {
+      if (btn.dataset.key === key && !btn.disabled) {
+        btn.click();
+        e.preventDefault();
+      }
+    });
+  });
+
   // Public API exposed on window.lv2
   const lv2 = {
     init: init,
     pushVote: pushVote,
     finish: finish,
+    cleanup: cleanup,
+    createCtaBar: createCtaBar,
+    updateCtaBar: updateCtaBar,
+    showTurnIndicator: showTurnIndicator,
+    hideTurnIndicator: hideTurnIndicator,
     get enabled() {
       // Read from config if available
       return global.game?.cfg?.modernLiveVoteUI !== false;

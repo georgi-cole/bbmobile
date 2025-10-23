@@ -96,7 +96,7 @@
       && global.lv2?.enabled !== false;
 
     if (useLv2) {
-      // Use modern Live Vote 2.0 UI
+      // Use modern Live Vote 2.0 UI - render inside TV
       const [leftId, rightId] = g.eviction.nominees;
       global.lv2.init({
         leftName: global.safeName(leftId),
@@ -104,7 +104,33 @@
         leftId: leftId,
         rightId: rightId
       });
-      // Continue with legacy info and buttons below the lv2 panel
+
+      // Create CTA bar for voting inside TV
+      const you = global.getP?.(g.humanId);
+      const voters = eligibleVoters();
+      const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
+      const hasVoted = g.__human_vote != null;
+      const remain = global.alivePlayers().length;
+      const isFinal4 = remain === 4;
+
+      if (humanIsVoter && !hasVoted) {
+        global.lv2.createCtaBar({
+          enabled: true,
+          isFinal4: isFinal4,
+          isTieBreak: false,
+          leftName: global.safeName(leftId),
+          rightName: global.safeName(rightId),
+          leftId: leftId,
+          rightId: rightId,
+          onVote: (pickId) => {
+            lockHumanVote(pickId);
+            global.lv2.updateCtaBar({ enabled: false });
+          }
+        });
+      }
+
+      // Panel will be hidden by lv2.init, so we're done
+      return;
     }
 
     const box=document.createElement('div'); box.className='minigame-host'; 
@@ -441,6 +467,7 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
+    const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
 
@@ -455,9 +482,10 @@
       // Pause on human turn until they actually vote (no auto vote)
       if(entry.voter===g.humanId && entry.evict==null){
         markVoter(entry.voter,'your turn…');
-        global.showCard?.('Diary Room',['It’s your turn. Please cast your vote now.'],'live',2000,true);
+        if(!useLv2){ global.showCard?.('Diary Room',["It's your turn. Please cast your vote now."],'live',2000,true); } else{ global.lv2?.showTurnIndicator?.(); }
         try{ await waitForHumanVote(); }catch{}
         entry.evict = g.__human_vote;
+        if(useLv2){ global.lv2?.hideTurnIndicator?.(); }
       }
 
       const pick=entry.evict;
@@ -465,8 +493,9 @@
       markVoter(entry.voter,'voting…');
       
       // Issue #5: Show diary room with avatars
-      showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
+      if(!useLv2){ showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
       await sleep(3000);
+      } else { await sleep(1500); }
       try{ await global.cardQueueWaitIdle?.(); }catch{}
 
       // Hook: Push vote to lv2 if enabled and 2-nom mode
@@ -506,9 +535,23 @@
 
   /* ----- Tie Break (2 noms) ----- */
   async function tieBreakTwo([a,b],ca,cb){
+    const g=global.game;
+    const useLv2 = g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
     const hoh=global.getP(global.game.hohId);
-    global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
-    try{ await global.cardQueueWaitIdle?.(); }catch{}
+    
+    if (!useLv2) {
+      global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
+      try{ await global.cardQueueWaitIdle?.(); }catch{}
+    } else {
+      // Show in-TV tie message
+      const status = document.querySelector('.lv2-status');
+      if (status) {
+        status.textContent = 'Tie! HOH must break it.';
+        status.classList.remove('muted');
+        status.classList.add('warn');
+      }
+      await sleep(2000);
+    }
     
     // Hook: Log XP for tiebreaker
     if(global.ProgressionEvents?.onTiebreakerWin){
@@ -516,35 +559,57 @@
     }
     
     if(hoh?.human){
-      const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict');
+      const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict',useLv2);
       if(pick===a) ca++; else cb++;
-      global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],'live',3000,true);
-      try{ await global.cardQueueWaitIdle?.(); }catch{}
+      if (!useLv2) {
+        global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],'live',3000,true);
+        try{ await global.cardQueueWaitIdle?.(); }catch{}
+      }
       return {evId:pick,ca,cb};
     }
     const ha=(hoh.affinity[a]??0), hb=(hoh.affinity[b]??0);
     const evId = ha < hb ? a : b;
-    global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],'live',3000,true);
-    try{ await global.cardQueueWaitIdle?.(); }catch{}
+    if (!useLv2) {
+      global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],'live',3000,true);
+      try{ await global.cardQueueWaitIdle?.(); }catch{}
+    }
     if(evId===a) ca++; else cb++;
     return {evId,ca,cb};
   }
 
-  function awaitHumanTieBreakPick(cIds,title){
+  function awaitHumanTieBreakPick(cIds,title,useLv2=false){
     return new Promise(resolve=>{
       try{
-        const panel=document.querySelector('#panel');
-        const host=panel?.querySelector('.minigame-host')||panel||document.body;
-        const box=document.createElement('div'); box.className='col'; box.style.marginTop='8px';
-        const h=document.createElement('div'); h.className='tiny'; h.textContent=title||'Tiebreak';
-        const row=document.createElement('div'); row.className='row'; row.style.marginTop='6px';
-        cIds.forEach(id=>{
-          const b=document.createElement('button'); b.className='btn danger'; b.textContent=`Evict ${global.safeName(id)}`;
-          b.onclick=()=>{ cleanup(); resolve(id); };
-          row.appendChild(b);
-        });
-        box.appendChild(h); box.appendChild(row); host.appendChild(box);
-        function cleanup(){ try{ row.querySelectorAll('button').forEach(btn=>btn.disabled=true); box.remove(); }catch{} }
+        if (useLv2 && global.lv2?.createCtaBar) {
+          // Use lv2 CTA bar for tiebreak
+          const [leftId, rightId] = cIds;
+          global.lv2.createCtaBar({
+            enabled: true,
+            isTieBreak: true,
+            leftName: global.safeName(leftId),
+            rightName: global.safeName(rightId),
+            leftId: leftId,
+            rightId: rightId,
+            onVote: (pickId) => {
+              global.lv2.updateCtaBar({ enabled: false });
+              resolve(pickId);
+            }
+          });
+        } else {
+          // Legacy panel UI
+          const panel=document.querySelector('#panel');
+          const host=panel?.querySelector('.minigame-host')||panel||document.body;
+          const box=document.createElement('div'); box.className='col'; box.style.marginTop='8px';
+          const h=document.createElement('div'); h.className='tiny'; h.textContent=title||'Tiebreak';
+          const row=document.createElement('div'); row.className='row'; row.style.marginTop='6px';
+          cIds.forEach(id=>{
+            const b=document.createElement('button'); b.className='btn danger'; b.textContent=`Evict ${global.safeName(id)}`;
+            b.onclick=()=>{ cleanup(); resolve(id); };
+            row.appendChild(b);
+          });
+          box.appendChild(h); box.appendChild(row); host.appendChild(box);
+          function cleanup(){ try{ row.querySelectorAll('button').forEach(btn=>btn.disabled=true); box.remove(); }catch{} }
+        }
       }catch(e){ resolve(cIds[0]); }
     });
   }
@@ -558,6 +623,7 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
+    const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
 
     if(twoMode){
       let ca=preAorCounts, cb=preB;
@@ -589,8 +655,21 @@
       } else evId = (ca>cb? a : b);
 
       const evName=global.safeName(evId);
-      global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
-      try{ await global.cardQueueWaitIdle?.(); }catch{}
+      
+      if (!useLv2) {
+        global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
+        try{ await global.cardQueueWaitIdle?.(); }catch{}
+      } else {
+        // Show in-TV result banner
+        const status = document.querySelector('.lv2-status');
+        if (status) {
+          status.textContent = `${evName} evicted by ${finalA} to ${finalB}`;
+          status.classList.remove('muted', 'warn');
+          status.classList.add('danger');
+        }
+        await sleep(3000);
+      }
+      
       global.addLog?.(`Evicted: ${evName} (${finalA}–${finalB}).`,'danger');
       g.eviction.revealed=true; g.eviction.revealing=false; g.eviction.evicted=evId;
       
@@ -886,6 +965,12 @@
 
   function postEvictionRouting(){
     const g=global.game;
+    
+    // Clean up lv2 UI if it was active
+    if (global.lv2?.cleanup) {
+      global.lv2.cleanup();
+    }
+    
     const remain=global.alivePlayers();
     if(remain.length===2){ setTimeout(()=>global.startJuryVote?.(),700); global.updateHud?.(); return; }
     if(remain.length===3){ setTimeout(()=>global.startFinal3Flow?.(),700); global.updateHud?.(); return; }
