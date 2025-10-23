@@ -2,6 +2,7 @@
 (function(g){
   'use strict';
 
+  const DEFAULT_TV_BG = 'assets/videos/tvscreen.jpg';
   const LS_TYPE = 'bb_tv_media_type';   // 'image' | 'video'
   const LS_DATA = 'bb_tv_media_data';   // data URL
 
@@ -29,6 +30,12 @@
     host.style.setProperty('--tv-bg', `url("${src}")`);
     host.classList.add('hasTvBg');
     host.classList.remove('hasTvVideo');
+    // Add special class for default background to show it without overlay
+    if(src === DEFAULT_TV_BG){
+      host.classList.add('hasDefaultBg');
+    } else {
+      host.classList.remove('hasDefaultBg');
+    }
     const v = document.getElementById('tvBgVideo');
     if(v){ try{ v.pause(); }catch{} v.removeAttribute('src'); v.load(); v.remove(); }
   }
@@ -47,7 +54,7 @@
 
   function clearTvMedia(){
     const host = tv(); if(!host) return;
-    host.classList.remove('hasTvBg','hasTvVideo');
+    host.classList.remove('hasTvBg','hasTvVideo','hasDefaultBg');
     host.style.removeProperty('--tv-bg');
     const v = document.getElementById('tvBgVideo');
     if(v){ try{ v.pause(); }catch{} v.removeAttribute('src'); v.load(); v.remove(); }
@@ -55,6 +62,7 @@
       localStorage.removeItem(LS_TYPE);
       localStorage.removeItem(LS_DATA);
     }catch{}
+    setTvImage(DEFAULT_TV_BG);
   }
 
   function restoreTvMedia(){
@@ -63,7 +71,10 @@
       const d = localStorage.getItem(LS_DATA);
       if(t==='image' && d){ setTvImage(d); }
       else if(t==='video' && d){ setTvVideo(d); }
-    }catch{}
+      else{ setTvImage(DEFAULT_TV_BG); }
+    }catch{
+      setTvImage(DEFAULT_TV_BG);
+    }
   }
 
   function injectControlsIntoVisualPane(modal){
