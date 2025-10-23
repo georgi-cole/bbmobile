@@ -50,7 +50,20 @@
 .finalFaceoff .fo-tally{ display: none !important; }
 .finalFaceoff .fo-winner{ top: 12% !important; bottom: auto !important; }
 
-/* Competition completion panel - glassmorphism style matching Final Jury Vote panels */
+/* ============================================================================
+   Competition completion panel - glassmorphism style matching Final Jury Vote
+   ============================================================================
+   
+   Implements the same visual treatment as jury tally/winner panels:
+   - Glassmorphism: low-opacity cyan-tinted background with backdrop blur
+   - Compact footprint: ≈280px desktop, responsive for mobile
+   - Top-right placement on desktop (right: 12px, top: 12px)
+   - Top-center on mobile (≤768px) for better visibility
+   - Slide-in animation matching jury panel entrance
+   
+   Used by: js/competitions-flow.js showCompletionAnimation()
+   ============================================================================ */
+
 .ccPanel {
   position: absolute !important;
   right: 12px !important;

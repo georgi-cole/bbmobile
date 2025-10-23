@@ -282,6 +282,17 @@
   /**
    * Show completion animation with confetti and message
    * Enhanced: Use glassmorphism panel style matching Final Jury Vote panels
+   * 
+   * Implementation: Competition completion cards now use the same glassmorphism aesthetic
+   * and slide-in animation as the Final Jury Vote tally/winner panels. The panel is positioned
+   * at top-right on desktop (right: 12px, top: 12px) and centered top on mobile (≤768px).
+   * 
+   * Styling includes:
+   * - Glassmorphism: rgba(0, 224, 204, 0.12) with cyan tint, backdrop-filter blur
+   * - Compact width: ≈280px desktop; responsive clamp for mobile
+   * - Slide-in animation matching jury panels (ccPanelSlideIn)
+   * - No modal blocking; renders within fullscreen overlay
+   * 
    * @param {HTMLElement} overlay - The overlay element
    * @param {number} score - The achieved score
    * @param {number} previousBest - Previous best score (optional)
@@ -290,6 +301,7 @@
     const isNewRecord = previousBest !== undefined && score > previousBest;
     
     // Create animation container - positioned top-right (desktop) / top-center (mobile)
+    // Uses .ccPanel class for glassmorphism styling matching Final Jury Vote panels
     const animContainer = document.createElement('div');
     animContainer.className = 'ccPanel'; // Competition completion panel class
     animContainer.style.cssText = `
