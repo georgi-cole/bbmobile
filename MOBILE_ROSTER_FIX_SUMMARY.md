@@ -1,89 +1,73 @@
-# Mobile Roster & TV Background Fix - Implementation Summary
+# Card-Style Roster Placeholders - Implementation Summary
 
 ## Overview
-This PR successfully addresses two critical mobile UX issues:
-1. Pre-start roster on mobile now shows skeleton tiles instead of awkward BIG/BROTHER placeholders
-2. Faux TV viewport background has been restored with proper fallback chain
+This implementation provides card-style placeholder tiles with avatar silhouettes and "Guest" labels across all viewports.
 
 ## Problem Statement
 
-### Issue 1: Mobile Roster Placeholders
-**Before:** Mobile users saw large "BIG/BROTHER" letter tiles that looked odd and took up too much space
-**After:** Mobile users see a clean skeleton roster with question-mark avatar tiles that mirror the actual roster layout
-
-### Issue 2: Missing TV Background
-**Before:** TV viewport had no background, looking flat and inconsistent with the theme
-**After:** TV viewport has a textured background with proper fallback chain and text contrast overlay
+### Issue: Placeholder Design
+**Before:** Simple circular question-mark avatars with horizontal name bands
+**After:** Card-style placeholders with rounded square backgrounds, avatar silhouettes, and "Guest" labels that better match the final roster card design
 
 ## Implementation Details
 
-### A) roster-placeholders.js Changes
+### roster-placeholders.js Changes
 
-#### New Functions:
-- `isMobile()` - Detects viewport ≤700px using matchMedia
-- `getPlayerCount()` - Returns cfg.numPlayers or game.players.length (default: 12)
-- `createSkeletonTile(index)` - Creates question-mark avatar tiles for mobile
+#### Updated Structure:
+- `createSkeletonTile(index)` - Now creates card-style tiles with:
+  - Rounded square card container with gradient background
+  - Avatar silhouette icon (SVG) inside a darker rounded container
+  - "Guest" label below the card
+- All CSS updated to support card-style design with proper spacing and animations
 
-#### Updated Functions:
-- `findRosterContainer()` - Added #rosterBar to priority selector list
-- `renderPlaceholders()` - Conditional rendering based on viewport size
-- `injectPlaceholderCSS()` - Added comprehensive CSS for both desktop and mobile modes
-
-#### Mobile Skeleton Tiles:
-- Circular avatars with "?" character
-- Minimum 44px touch targets (accessibility compliant)
-- Theme-aware neutral backgrounds using color-mix
-- Flex grid layout with wrap and responsive gaps
+#### Card-Style Placeholder Tiles (All Viewports):
+- Rounded square cards with 0.75 aspect ratio
+- Avatar silhouette SVG (person icon) inside darker rounded container
+- "Guest" label below each card
+- Responsive sizing using clamp(80px, 15vw, 120px)
+- Gradient backgrounds with theme color integration
 - Pulse and shimmer animations (respects prefers-reduced-motion)
-- Uses clamp() for responsive sizing: clamp(44px, 12vw, 64px)
+- Larger gaps for better visual spacing (12-20px)
 
-#### Desktop Letter Tiles:
-- Unchanged behavior from previous implementation
-- Multi-row layout: "BIG" / "BROTHER"
-- Theme-aware gradients and effects retained
-- Responsive sizing with existing clamp() values
+### Updated CSS Structure
 
-### B) theme-bridge.css Changes
+The CSS has been updated to support card-style placeholder tiles:
 
-#### TV Viewport Background:
-```css
-.tvFrame .tvViewport {
-  background-image: 
-    linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.30)),
-    var(--tv-bg-url, url('/img/studio_bg.jpg')),
-    url('/avatars/tvstudio.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-```
+#### Card Container:
+- Rounded square design with 0.75 aspect ratio (portrait orientation)
+- Gradient background using theme colors
+- Border radius of 16px for smooth rounded corners
+- Box shadow for depth
 
-**Fallback Chain:**
-1. Custom CSS var: `var(--tv-bg-url)` (for theme customization)
-2. Primary fallback: `/img/studio_bg.jpg`
-3. Secondary fallback: `/avatars/tvstudio.jpg` (confirmed exists)
-4. Ultimate fallback: Theme gradient (in separate rule)
+#### Avatar Silhouette:
+- SVG person icon (head circle + body shape)
+- Contained in darker rounded container (60% of card size)
+- Subtle opacity for placeholder feel
 
-**Overlay:**
-- 30-35% opacity black gradient for text contrast
-- Ensures content remains readable on any background
-- Gradient from top to bottom for natural shadowing
+#### Guest Label:
+- Below each card
+- Theme-aware styling
+- Responsive font sizing
+
+#### Animations:
+- Pulse animation on entire tile
+- Shimmer effect on card
+- All animations respect prefers-reduced-motion
 
 ## Testing Results
 
 ### Mobile Testing (375px × 667px)
-✅ Skeleton roster renders with 12 question-mark tiles
-✅ Tiles arranged in responsive grid layout
-✅ Touch targets ≥44px (accessibility compliant)
-✅ Console log: "Mobile skeleton roster rendered: 12 tiles"
+✅ Card-style placeholders render with avatar silhouettes and "Guest" labels
+✅ Cards arranged in responsive grid layout
+✅ Cards are large enough for easy visibility
+✅ Console log: "Card-style skeleton roster rendered: 12 tiles"
 ✅ Placeholders auto-remove when roster revealed
-✅ TV background visible with good contrast
 
 ### Desktop Testing (1280px × 900px)
-✅ BIG/BROTHER letter tiles render as before
-✅ Multi-row layout maintained
-✅ Console log: "Desktop placeholders rendered: BIG BROTHER (10 tiles in 2 rows)"
-✅ TV background visible and properly scaled
+✅ Card-style placeholders render consistently with mobile
+✅ Same card design across all viewports
+✅ Console log: "Card-style skeleton roster rendered: 12 tiles"
+✅ Responsive layout adapts to larger viewport
 ✅ No visual regressions
 
 ### Responsive Testing
@@ -105,21 +89,26 @@ This PR successfully addresses two critical mobile UX issues:
 
 ## Files Modified
 
-1. **js/roster-placeholders.js** (+196 lines, comprehensive rewrite)
-   - Added mobile detection and skeleton roster system
-   - Enhanced CSS with both desktop and mobile modes
+1. **js/roster-placeholders.js** (updated from 330 lines)
+   - Updated createSkeletonTile() to create card-style placeholders with SVG avatar silhouettes
+   - Redesigned CSS for card-style tiles with rounded squares and "Guest" labels
+   - Enhanced animations for card shimmer effect
    - Maintained backward compatibility with existing integration
 
-2. **css/theme-bridge.css** (+25 lines)
-   - Added .tvViewport background with fallback chain
-   - Added overlay for text contrast
-   - Added ultimate fallback gradient rule
+2. **test_roster_placeholders_multirow.html** (updated)
+   - Updated test descriptions to reflect card-style placeholders
+   - Updated verification checklist
+   - Updated test result validation
 
-3. **test_mobile_roster_skeleton.html** (new file, +387 lines)
-   - Comprehensive test page for manual verification
-   - Tests both mobile and desktop modes
-   - Tests TV background fallback chain
-   - Interactive controls for testing all scenarios
+3. **test_mobile_roster_skeleton.html** (updated)
+   - Updated test descriptions to reflect card-style design
+   - Updated verification checklist
+   - Updated console log expectations
+
+4. **MOBILE_ROSTER_FIX_SUMMARY.md** (updated)
+   - Updated to reflect card-style placeholder design
+   - Documented SVG avatar silhouette implementation
+   - Updated testing results
 
 ## Configuration
 
@@ -128,16 +117,16 @@ This PR successfully addresses two critical mobile UX issues:
 2. `game.players.length` - Current players array length
 3. Default: 12 players
 
-### Mobile Breakpoint:
-- Set at 700px (matches problem statement requirement)
-- Uses matchMedia for precise detection
-- Consistent with mobile-first design principles
-
 ### Auto-Removal Integration:
 - Existing RosterVisibility system maintained
 - Watches data-roster-hidden attribute
 - Removes placeholders when roster becomes visible
 - Fade-out animation (300ms) for smooth transition
+
+### Viewport Consistency:
+- No breakpoint detection needed
+- Avatar-style tiles render consistently across all viewports
+- Responsive sizing adapts naturally via clamp() values
 
 ## Performance Impact
 
@@ -165,11 +154,12 @@ Potential improvements (not in scope for this PR):
 
 ## Conclusion
 
-This implementation successfully addresses both issues with minimal code changes:
-- Mobile users get a clean, professional-looking skeleton roster
-- TV viewport regains its background texture and visual depth
-- Desktop behavior remains unchanged
-- All accessibility and performance standards met
-- Comprehensive test coverage provided
+This implementation provides a polished card-style placeholder experience:
+- All users see consistent card-style placeholder tiles with avatar silhouettes
+- Card design better matches the final roster card aesthetic
+- "Guest" labels provide clear context for placeholder state
+- SVG avatar silhouettes are scalable and theme-aware
+- Code maintains backward compatibility (same API, same integration points)
+- Comprehensive test coverage updated
 
-The solution is production-ready and fully backward compatible.
+The solution is production-ready and provides a more polished pre-game experience.
