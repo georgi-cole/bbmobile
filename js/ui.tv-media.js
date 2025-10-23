@@ -2,6 +2,7 @@
 (function(g){
   'use strict';
 
+  const DEFAULT_TV_BG = 'assets/videos/tvscreen.jpg';
   const LS_TYPE = 'bb_tv_media_type';   // 'image' | 'video'
   const LS_DATA = 'bb_tv_media_data';   // data URL
 
@@ -55,6 +56,7 @@
       localStorage.removeItem(LS_TYPE);
       localStorage.removeItem(LS_DATA);
     }catch{}
+    setTvImage(DEFAULT_TV_BG);
   }
 
   function restoreTvMedia(){
@@ -63,7 +65,10 @@
       const d = localStorage.getItem(LS_DATA);
       if(t==='image' && d){ setTvImage(d); }
       else if(t==='video' && d){ setTvVideo(d); }
-    }catch{}
+      else{ setTvImage(DEFAULT_TV_BG); }
+    }catch{
+      setTvImage(DEFAULT_TV_BG);
+    }
   }
 
   function injectControlsIntoVisualPane(modal){
