@@ -49,3 +49,80 @@
 /* Finale overlays */
 .finalFaceoff .fo-tally{ display: none !important; }
 .finalFaceoff .fo-winner{ top: 12% !important; bottom: auto !important; }
+
+/* ============================================================================
+   Competition completion panel - glassmorphism style matching Final Jury Vote
+   ============================================================================
+   
+   Implements the same visual treatment as jury tally/winner panels:
+   - Glassmorphism: low-opacity cyan-tinted background with backdrop blur
+   - Compact footprint: ≈280px desktop, responsive for mobile
+   - Top-right placement on desktop (right: 12px, top: 12px)
+   - Top-center on mobile (≤768px) for better visibility
+   - Slide-in animation matching jury panel entrance
+   
+   Used by: js/competitions-flow.js showCompletionAnimation()
+   ============================================================================ */
+
+.ccPanel {
+  position: absolute !important;
+  right: 12px !important;
+  top: 12px !important;
+  z-index: 10002 !important;
+  pointer-events: none !important;
+  /* Glassmorphism matching jury tally/winner panels */
+  background: rgba(0, 224, 204, 0.12) !important;
+  backdrop-filter: blur(6px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(1.2) !important;
+  border: 1px solid rgba(0, 224, 204, 0.35) !important;
+  border-radius: 10px !important;
+  padding: 8px 14px !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15), 0 0 12px rgba(0, 224, 204, 0.2) !important;
+  /* Compact width matching jury panels */
+  max-width: min(280px, 35vw) !important;
+  width: auto !important;
+  word-wrap: break-word !important;
+  /* Slide-in animation matching jury panels */
+  animation: ccPanelSlideIn 0.4s cubic-bezier(0.25, 0.9, 0.25, 1) !important;
+  /* Text styling for readability */
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5) !important;
+}
+
+/* Slide-in animation for completion panel (matching jury panels) */
+@keyframes ccPanelSlideIn {
+  0% { 
+    opacity: 0; 
+    transform: translateX(20px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+/* Mobile responsive adjustments for completion panel */
+@media (max-width: 768px) {
+  .ccPanel {
+    /* On mobile, position at top-center instead of top-right */
+    right: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: min(45vw, 280px) !important;
+    font-size: clamp(11px, 3vw, 14px) !important;
+  }
+  
+  /* Adjust slide-in animation for centered mobile panel */
+  @keyframes ccPanelSlideIn {
+    0% { 
+      opacity: 0; 
+      transform: translateX(-50%) translateY(-10px); 
+    }
+    100% { 
+      opacity: 1; 
+      transform: translateX(-50%) translateY(0); 
+    }
+  }
+}
