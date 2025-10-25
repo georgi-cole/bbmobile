@@ -837,7 +837,7 @@
       clearTVOverlayContent();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
+      card.className = 'revealCard diaryRoomCard tvCardBody';
       if(tone) card.setAttribute('data-tone', tone);
       
       var h3 = document.createElement('h3');
@@ -883,7 +883,7 @@
       clearTVOverlayContent();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
+      card.className = 'revealCard diaryRoomCard tvCardBody';
       if(tone) card.setAttribute('data-tone', tone);
       
       // Build avatar row if actors/subjects provided
@@ -1019,7 +1019,7 @@
       clearTVOverlayContent();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
+      card.className = 'revealCard diaryRoomCard tvCardBody';
       
       var h3 = document.createElement('h3');
       h3.textContent = title;
@@ -1084,7 +1084,7 @@
       clearTVOverlayContent();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
+      card.className = 'revealCard diaryRoomCard tvCardBody';
       
       var h3 = document.createElement('h3');
       h3.textContent = title;
