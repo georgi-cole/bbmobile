@@ -1701,14 +1701,14 @@ button:focus-visible,.btn:focus-visible{
 
 /* 11b. MODERN LIVE VOTE UI (lv2) - Cinematic versus layout with flip cards */
 .lv2-panel{
-  background:linear-gradient(135deg, rgba(18,30,48,0.85) 0%, rgba(25,38,58,0.9) 100%);
+  background:transparent;
   border-radius:var(--radius-xl);
   padding:var(--pad-lg) var(--pad);
   margin-bottom:16px;
-  border:1px solid rgba(131,191,255,0.15);
-  box-shadow:0 8px 32px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+  border:none;
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
 }
 
 .lv2-header h3{
@@ -1722,16 +1722,25 @@ button:focus-visible,.btn:focus-visible{
   letter-spacing:-0.4px;
 }
 
-/* Grid layout - Left | Right (center removed) */
+/* Grid layout - Left | Center Stage | Right (v2.1.1) */
 .lv2-grid{
   display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:40px;
-  align-items:stretch;
+  grid-template-columns:1fr auto 1fr;
+  gap:clamp(20px, 4vw, 40px);
+  align-items:center;
   min-height:0;
   justify-content:center;
-  max-width:800px;
+  max-width:1000px;
   margin:0 auto;
+  position:relative;
+}
+
+/* Center stage container */
+.lv2-center-stage{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:120px;
 }
 
 /* Contestant cards - fully transparent background */
@@ -1756,18 +1765,21 @@ button:focus-visible,.btn:focus-visible{
 }
 
 .lv2-avatar{
-  width:80px;
-  height:80px;
+  width:clamp(120px, 18vw, 180px);
+  height:clamp(120px, 18vw, 180px);
   border-radius:50%;
-  border:3px solid rgba(131,191,255,0.3);
+  border:none;
   object-fit:cover;
-  box-shadow:0 4px 16px -6px rgba(0,0,0,0.5);
-  transition:transform 0.3s ease, border-color 0.3s ease;
+  box-shadow:0 6px 24px -8px rgba(0,0,0,0.6);
+  transition:transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  position:relative;
+  background:conic-gradient(from 45deg, rgba(131,191,255,0.4), rgba(102,217,255,0.2), rgba(131,191,255,0.4));
+  padding:3px;
 }
 
 .lv2-contestant.winner .lv2-avatar{
-  border-color:var(--good);
-  box-shadow:0 0 20px -5px var(--good);
+  background:conic-gradient(from 45deg, rgba(119,213,141,0.5), rgba(94,201,125,0.3), rgba(119,213,141,0.5));
+  box-shadow:0 0 32px -8px var(--good);
 }
 
 .lv2-name{
@@ -1779,16 +1791,35 @@ button:focus-visible,.btn:focus-visible{
 }
 
 .lv2-count{
-  font-size:2rem;
+  font-size:1.2rem;
   font-weight:700;
   color:#83bfff;
-  text-shadow:0 2px 12px rgba(131,191,255,0.4);
+  text-shadow:0 0 12px rgba(131,191,255,0.6);
+  background:linear-gradient(135deg, rgba(131,191,255,0.15), rgba(102,217,255,0.1));
+  border:1px solid rgba(131,191,255,0.3);
+  border-radius:16px;
+  padding:6px 16px;
   transition:all 0.4s ease;
+  min-width:48px;
+  text-align:center;
 }
 
 .lv2-contestant.winner .lv2-count{
   color:var(--good);
-  text-shadow:0 2px 12px rgba(119,213,141,0.6);
+  text-shadow:0 0 16px rgba(119,213,141,0.8);
+  background:linear-gradient(135deg, rgba(119,213,141,0.2), rgba(94,201,125,0.15));
+  border-color:rgba(119,213,141,0.4);
+}
+
+/* Bump animation for count capsule */
+.lv2-count.bump{
+  animation:count-bump 0.4s ease;
+}
+
+@keyframes count-bump{
+  0%{ transform:scale(1); }
+  50%{ transform:scale(1.15); }
+  100%{ transform:scale(1); }
 }
 
 /* Central meter in stage */
@@ -1945,6 +1976,7 @@ button:focus-visible,.btn:focus-visible{
   justify-content:center;
   pointer-events:none;
   overflow:hidden;
+  background:transparent;
 }
 
 /* LV2 Fit Wrapper - Fixed 1200x560 canvas scaled via ResizeObserver */
@@ -1967,7 +1999,7 @@ button:focus-visible,.btn:focus-visible{
   grid-template-rows:auto 1fr auto auto;
   gap:16px;
   overflow:hidden;
-  background:linear-gradient(135deg, rgba(18,30,48,0.92) 0%, rgba(25,38,58,0.95) 100%);
+  background:transparent;
 }
 
 /* Adjust header for compact TV rendering */
@@ -1976,17 +2008,77 @@ button:focus-visible,.btn:focus-visible{
   margin:0;
 }
 
-/* CTA Row - Reserved footer for buttons (never overlaps avatars) */
-.lv2-cta-row{
+/* CTA Side Pills - Under each nominee */
+.lv2-cta-side{
   display:flex;
-  gap:12px;
   justify-content:center;
+  margin-top:8px;
+}
+
+.lv2-cta-pill{
+  padding:10px 20px;
+  font-size:0.85rem;
+  font-weight:600;
+  letter-spacing:0.3px;
+  border-radius:20px;
+  border:1px solid rgba(131,191,255,0.25);
+  cursor:pointer;
+  transition:all 0.2s ease;
+  background:linear-gradient(135deg, rgba(131,191,255,0.15), rgba(102,217,255,0.1));
+  color:#83bfff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.3);
+  box-shadow:0 2px 8px -4px rgba(0,0,0,0.3);
+  min-height:44px;
+  min-width:100px;
+  display:flex;
   align-items:center;
-  padding:12px 16px;
-  background:rgba(13,21,35,0.5);
-  border-radius:var(--radius-lg);
-  border:1px solid rgba(131,191,255,0.15);
-  min-height:60px;
+  justify-content:center;
+}
+
+.lv2-cta-pill:hover:not(:disabled){
+  background:linear-gradient(135deg, rgba(131,191,255,0.25), rgba(102,217,255,0.2));
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px -4px rgba(131,191,255,0.4);
+  border-color:rgba(131,191,255,0.4);
+}
+
+.lv2-cta-pill:active:not(:disabled){
+  transform:translateY(0);
+  box-shadow:0 2px 6px -4px rgba(131,191,255,0.3);
+}
+
+.lv2-cta-pill:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
+  background:linear-gradient(135deg, rgba(131,191,255,0.08), rgba(102,217,255,0.05));
+}
+
+.lv2-cta-pill:focus{
+  outline:2px solid rgba(131,191,255,0.5);
+  outline-offset:2px;
+}
+
+/* Emphasized state when it's user's turn */
+.lv2-cta-pill.active{
+  box-shadow:0 2px 12px -2px rgba(131,191,255,0.5),
+              0 0 20px -6px rgba(131,191,255,0.4);
+  animation:pill-pulse 2s ease-in-out infinite;
+}
+
+@keyframes pill-pulse{
+  0%, 100%{ 
+    box-shadow:0 2px 12px -2px rgba(131,191,255,0.5),
+                0 0 20px -6px rgba(131,191,255,0.4);
+  }
+  50%{ 
+    box-shadow:0 4px 16px -2px rgba(131,191,255,0.7),
+                0 0 28px -4px rgba(131,191,255,0.6);
+  }
+}
+
+/* Legacy CTA row (hidden by default, kept for backwards compatibility) */
+.lv2-cta-row{
+  display:none;
 }
 
 .lv2-cta-btn{
@@ -2073,16 +2165,17 @@ button:focus-visible,.btn:focus-visible{
   }
 }
 
-/* Responsive adjustments for narrow TV */
-@media (max-width: 600px){
+/* Responsive adjustments for narrow TV and mobile */
+@media (max-width: 640px){
   .lv2-grid{
     grid-template-columns:1fr;
     grid-template-rows:auto auto auto;
-    gap:12px;
+    gap:16px;
   }
   
-  .lv2-stage{
+  .lv2-center-stage{
     order:2;
+    min-width:auto;
   }
   
   .lv2-contestant.left{
@@ -2091,6 +2184,11 @@ button:focus-visible,.btn:focus-visible{
   
   .lv2-contestant.right{
     order:3;
+  }
+  
+  .lv2-avatar {
+    width: clamp(100px, 30vw, 160px);
+    height: clamp(100px, 30vw, 160px);
   }
   
   .lv2-meter{
@@ -2122,6 +2220,18 @@ button:focus-visible,.btn:focus-visible{
     height:50px;
   }
   
+  .lv2-cta-pill {
+    min-height: 48px;
+    min-width: 120px;
+    padding: 12px 24px;
+  }
+  
+  .lv2-turn-tag {
+    font-size: 0.6rem;
+    padding: 3px 8px;
+  }
+  
+  /* Legacy CTA styles for backwards compatibility */
   .lv2-cta-row{
     flex-direction:column;
     gap:8px;
@@ -2134,51 +2244,57 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* ========================================================================
-   Live Vote 2.1 Visual Refinements
-   - Softer glass look with lighter borders
-   - Avatar gradient ring with ambient glow
-   - Count badges as neon capsules with bump animation
-   - Center Stage portal with pulse and SVG arc meter
-   - Refined CTA bar with turn emphasis
-   - Subtle top-center turn tag instead of large badge
+   Live Vote 2.1.1 Visual and UX Refinements
+   - Transparent overlay and panel (no heavy backplates)
+   - Larger, responsive avatars with gradient ring and clean glow
+   - Neon capsule counts with bump animation
+   - Lighter center portal and arcs
+   - Per-side Evict pill buttons under nominees
+   - Compact "Your Turn" tag that never overlaps portraits
+   - Mobile-friendly with clamp sizing and ≥44px tap targets
    ======================================================================== */
 
-/* Refined panel: increased opacity to show TV background, lighter borders, subtle inner shadows */
+/* Fully transparent panel - integrates with TV background */
 .lv2-fit .lv2-panel {
-  background: linear-gradient(135deg, rgba(18,30,48,0.5) 0%, rgba(25,38,58,0.55) 100%);
-  border: 1px solid rgba(131,191,255,0.1);
-  box-shadow: 0 8px 32px -12px rgba(0,0,0,0.4), 
-              inset 0 1px 0 rgba(255,255,255,0.03),
-              inset 0 -1px 0 rgba(0,0,0,0.2);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
-/* Avatar gradient ring with ambient glow */
+/* Enlarged avatars with clamp sizing and conic ring glow */
 .lv2-avatar {
-  border: 3px solid transparent;
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
-  background-image: linear-gradient(rgba(19,32,50,0.9), rgba(19,32,50,0.9)),
-                    linear-gradient(135deg, #83bfff, #66d9ff, #77efdd);
-  box-shadow: 0 4px 16px -6px rgba(0,0,0,0.5),
-              0 0 20px -8px rgba(131,191,255,0.3);
+  width: clamp(140px, 20vw, 200px);
+  height: clamp(140px, 20vw, 200px);
+  border: none;
+  background: conic-gradient(from 45deg, rgba(131,191,255,0.4), rgba(102,217,255,0.2), rgba(131,191,255,0.4));
+  padding: 4px;
+  box-shadow: 0 6px 24px -8px rgba(0,0,0,0.6),
+              0 0 24px -10px rgba(131,191,255,0.3);
+}
+
+.lv2-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .lv2-contestant.winner .lv2-avatar {
-  background-image: linear-gradient(rgba(19,32,50,0.9), rgba(19,32,50,0.9)),
-                    linear-gradient(135deg, #77d58d, #5ec97d, #77efdd);
-  box-shadow: 0 4px 16px -6px rgba(0,0,0,0.5),
-              0 0 24px -6px rgba(119,213,141,0.5);
+  background: conic-gradient(from 45deg, rgba(119,213,141,0.5), rgba(94,201,125,0.3), rgba(119,213,141,0.5));
+  box-shadow: 0 6px 24px -8px rgba(0,0,0,0.6),
+              0 0 32px -8px rgba(119,213,141,0.4);
 }
 
-/* Count badges as neon capsules with bump animation */
+/* Neon capsule counts */
 .lv2-count {
   background: linear-gradient(135deg, rgba(131,191,255,0.15), rgba(102,217,255,0.1));
   border: 1px solid rgba(131,191,255,0.3);
   border-radius: 20px;
-  padding: 6px 16px;
-  font-size: 1.8rem;
+  padding: 8px 18px;
+  font-size: 1.3rem;
   box-shadow: 0 0 16px -6px rgba(131,191,255,0.4),
-              inset 0 1px 0 rgba(255,255,255,0.1);
+              inset 0 1px 0 rgba(255,255,255,0.08);
+  min-width: 60px;
 }
 
 .lv2-count.bump {
@@ -2187,46 +2303,43 @@ button:focus-visible,.btn:focus-visible{
 
 @keyframes count-bump {
   0%, 100% { transform: scale(1); }
-  40% { transform: scale(1.2); }
-  70% { transform: scale(0.95); }
+  40% { transform: scale(1.15); }
+  70% { transform: scale(0.98); }
 }
 
 .lv2-contestant.winner .lv2-count {
   background: linear-gradient(135deg, rgba(119,213,141,0.2), rgba(94,201,125,0.15));
   border-color: rgba(119,213,141,0.4);
   box-shadow: 0 0 20px -6px rgba(119,213,141,0.5),
-              inset 0 1px 0 rgba(255,255,255,0.15);
+              inset 0 1px 0 rgba(255,255,255,0.12);
 }
 
-/* Center Stage portal node with pulse */
+/* Lighter center portal with reduced visual weight */
 .lv2-portal {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(131,191,255,0.3), transparent 70%);
-  border: 2px solid rgba(131,191,255,0.4);
-  box-shadow: 0 0 24px -6px rgba(131,191,255,0.6),
-              inset 0 0 16px -4px rgba(131,191,255,0.2);
-  animation: portal-pulse 2.5s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(131,191,255,0.2), transparent 70%);
+  border: 1px solid rgba(131,191,255,0.25);
+  box-shadow: 0 0 16px -8px rgba(131,191,255,0.4),
+              inset 0 0 12px -6px rgba(131,191,255,0.15);
+  animation: portal-pulse 3s ease-in-out infinite;
   pointer-events: none;
+  opacity: 0.7;
 }
 
 @keyframes portal-pulse {
   0%, 100% { 
     opacity: 0.6; 
     transform: translate(-50%, -50%) scale(1); 
-    box-shadow: 0 0 24px -6px rgba(131,191,255,0.6),
-                inset 0 0 16px -4px rgba(131,191,255,0.2);
   }
   50% { 
-    opacity: 0.9; 
-    transform: translate(-50%, -50%) scale(1.15); 
-    box-shadow: 0 0 32px -4px rgba(131,191,255,0.8),
-                inset 0 0 20px -2px rgba(131,191,255,0.3);
+    opacity: 0.8; 
+    transform: translate(-50%, -50%) scale(1.1); 
   }
 }
 
@@ -2238,6 +2351,7 @@ button:focus-visible,.btn:focus-visible{
   width: 100%;
   height: 100%;
   pointer-events: none;
+  opacity: 0.8;
 }
 
 .lv2-arc svg {
@@ -2248,31 +2362,31 @@ button:focus-visible,.btn:focus-visible{
   overflow: visible;
 }
 
-/* Arc meter paths */
+/* Arc meter paths with lighter stroke */
 .lv2-arc-path {
   fill: none;
-  stroke-width: 4;
+  stroke-width: 3;
   transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .lv2-arc-path.left {
   stroke: url(#leftGradient);
-  filter: drop-shadow(0 0 8px rgba(102,217,255,0.4));
+  filter: drop-shadow(0 0 6px rgba(102,217,255,0.3));
 }
 
 .lv2-arc-path.right {
   stroke: url(#rightGradient);
-  filter: drop-shadow(0 0 8px rgba(119,213,141,0.4));
+  filter: drop-shadow(0 0 6px rgba(119,213,141,0.3));
 }
 
 /* Vote pip animation */
 .lv2-pip {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(131,191,255,0.9), rgba(102,217,255,0.6));
-  box-shadow: 0 0 12px -2px rgba(131,191,255,0.8);
+  box-shadow: 0 0 10px -2px rgba(131,191,255,0.7);
   pointer-events: none;
   z-index: 10;
   transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
@@ -2287,62 +2401,39 @@ button:focus-visible,.btn:focus-visible{
 .lv2-drop-anchor.left,
 .lv2-drop-anchor.right {
   border-style: solid;
-  border-width: 2px;
-  border-color: rgba(131,191,255,0.2);
-  background: radial-gradient(circle, rgba(131,191,255,0.1), transparent 70%);
+  border-width: 1px;
+  border-color: rgba(131,191,255,0.15);
+  background: radial-gradient(circle, rgba(131,191,255,0.08), transparent 70%);
 }
 
-/* Subtle top-center turn tag */
+/* Compact top-center turn tag - small and unobtrusive */
 .lv2-turn-tag {
   position: absolute;
-  top: calc(var(--tv-safe-top, 10px) + 4px);
+  top: calc(var(--tv-safe-top, 10px) + 6px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 15;
-  padding: 4px 12px;
-  background: linear-gradient(135deg, rgba(131,191,255,0.2), rgba(102,217,255,0.15));
-  border-radius: 12px;
-  border: 1px solid rgba(131,191,255,0.3);
-  box-shadow: 0 2px 8px -4px rgba(0,0,0,0.3);
+  padding: 3px 10px;
+  background: linear-gradient(135deg, rgba(131,191,255,0.18), rgba(102,217,255,0.12));
+  border-radius: 10px;
+  border: 1px solid rgba(131,191,255,0.25);
+  box-shadow: 0 1px 6px -3px rgba(0,0,0,0.3);
   color: #83bfff;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   pointer-events: none;
-  opacity: 0.9;
+  opacity: 0.85;
 }
 
-/* CTA bar emphasis when it's user's turn */
-.lv2-cta-row.active {
-  background: linear-gradient(135deg, rgba(131,191,255,0.1), rgba(102,217,255,0.08));
-  border-color: rgba(131,191,255,0.25);
-  box-shadow: 0 0 20px -8px rgba(131,191,255,0.4),
-              inset 0 1px 0 rgba(255,255,255,0.05);
-}
+/* Removed old CTA bar active styles - using pill emphasis now */
 
-.lv2-cta-btn.active {
-  box-shadow: 0 2px 8px -2px rgba(217,79,79,0.4),
-              0 0 20px -6px rgba(131,191,255,0.5);
-  animation: cta-pulse 2s ease-in-out infinite;
-}
-
-@keyframes cta-pulse {
-  0%, 100% { 
-    box-shadow: 0 2px 8px -2px rgba(217,79,79,0.4),
-                0 0 20px -6px rgba(131,191,255,0.5);
-  }
-  50% { 
-    box-shadow: 0 4px 12px -2px rgba(217,79,79,0.6),
-                0 0 28px -4px rgba(131,191,255,0.7);
-  }
-}
-
-/* Reduced motion overrides for V2.1 */
+/* Reduced motion overrides for V2.1.1 */
 @media (prefers-reduced-motion: reduce) {
   .lv2-portal,
   .lv2-count.bump,
-  .lv2-cta-btn.active {
+  .lv2-cta-pill.active {
     animation: none !important;
   }
   
