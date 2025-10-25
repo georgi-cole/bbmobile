@@ -120,8 +120,23 @@
     return null;
   }
   
+  /**
+   * Get the veto type label for decision UI
+   * Returns "Power of Veto", "Golden POV", or "Diamond POV"
+   */
+  function getVetoTypeLabel(){
+    var g = global.game;
+    if(!g) return 'Power of Veto';
+    
+    if(g.activeVetoTwist === 'diamond') return 'Diamond POV';
+    if(g.activeVetoTwist === 'golden') return 'Golden POV';
+    
+    return 'Power of Veto';
+  }
+  
   global.decideVetoTwistForWeek = decideVetoTwistForWeek;
   global.getActiveVetoTwistName = getActiveVetoTwistName;
+  global.getVetoTypeLabel = getVetoTypeLabel;
 
   function sample(arr, k){
     var a = arr.slice();
@@ -1168,6 +1183,37 @@
   }
   
   /**
+   * Unified "Use POV?" decision prompt for all POV types
+   * Works for Standard POV, Golden POV, and Diamond POV
+   * @param {number} povId - The POV holder's player ID
+   * @returns {Promise<boolean>} true if user chooses to use POV, false otherwise
+   */
+  async function renderPOVUseDecision(povId){
+    var g = global.game;
+    var holder = getP(povId);
+    var holderName = holder ? holder.name : 'POV Holder';
+    
+    // Get the veto type label
+    var vetoLabel = getVetoTypeLabel();
+    
+    // Build short decision copy (max 2 lines)
+    var decisionCopy = holderName + ' holds the ' + vetoLabel + '.';
+    
+    // Show decision prompt
+    var decision = await showTVDecision({
+      title: 'Use ' + vetoLabel + '?',
+      message: decisionCopy,
+      buttons: [
+        { label: 'Yes — Use ' + vetoLabel, value: true, primary: true },
+        { label: 'No — Keep Nominations', value: false, primary: false }
+      ]
+    });
+    
+    return decision;
+  }
+  global.renderPOVUseDecision = renderPOVUseDecision;
+  
+  /**
    * Animate nomination transfer with badge movement
    * Shows old nominees → new nominees with NOM badge animation
    * @param {Object} options - Animation configuration
@@ -1743,64 +1789,35 @@
     if(typeof global.setPhase==='function')
       global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25, finalizeCeremony);
     
-    // Check for Diamond POV twist - skip save step and go straight to picking 2 replacements
-    if(g.activeVetoTwist === 'diamond'){
-      if(holder && holder.human){
-        // Human POV holder picks both replacements directly
-        await handleDiamondPOVCeremony(holder);
-      } else {
-        // AI POV holder
-        g.__vetoAutoTimer = setTimeout(function(){
-          var gg = global.game;
-          if(gg && gg.phase==='veto_ceremony' && !gg._awaitingReplacement && !gg.__vetoCeremonyResolved){
-            try{ handleDiamondPOVCeremony(getP(gg.vetoHolder)); }catch(e){}
-          }
-        }, 1200);
-      }
-      return;
-    }
-    
-    // For human POV holder, show Yes/No decision in TV
+    // For human POV holder, show unified "Use POV?" decision for all types
     if(holder && holder.human){
       // Set flag to prevent duplicate panel rendering
       g.__useTVCeremonyUI = true;
       
-      var noms = (g.nominees||[]).map(getP);
-      var nomsText = noms.map(function(n){ return n?n.name:'?'; }).join(', ');
-      
-      // Twist-aware message: Golden POV means POV holder picks replacement, not HOH
-      var isGoldenTwist = (g.activeVetoTwist === 'golden');
-      var vetoMessage = 'POV Holder: ' + holderName + '. Nominees: ' + nomsText + '.';
-      if(isGoldenTwist){
-        vetoMessage += ' Using the veto will allow you to choose the replacement nominee.';
-      } else {
-        vetoMessage += ' Using the veto will force the HOH to name a replacement nominee.';
-      }
-      
-      var decision = await showTVDecision({
-        title: 'Would you like to use the Power of Veto?',
-        message: vetoMessage,
-        buttons: [
-          { label: 'Yes — Use the Veto', value: true, primary: true },
-          { label: 'No — Keep Nominations the Same', value: false, primary: false }
-        ]
-      });
+      // Show unified decision prompt for Standard, Golden, or Diamond POV
+      var decision = await renderPOVUseDecision(g.vetoHolder);
       
       if(decision){
-        // User chose Yes - need to select which nominee to save
-        // Safety check: ensure nominees array exists and has at least one element
-        if(!g.nominees || g.nominees.length === 0){
-          console.warn('[veto] No nominees to save, treating as veto not used');
-          await finalizeCeremony({ used: false });
-        } else if(g.nominees.length > 1){
-          var savedId = await showTVNomineeSavePanel({
-            title: 'Save Which Nominee?',
-            nominees: g.nominees,
-            povId: g.vetoHolder
-          });
-          await finalizeCeremony({ used: true, savedId: savedId });
+        // User chose Yes - handle based on POV type
+        if(g.activeVetoTwist === 'diamond'){
+          // Diamond POV: Replace both nominees
+          await handleDiamondPOVCeremony(holder);
         } else {
-          await finalizeCeremony({ used: true, savedId: g.nominees[0] });
+          // Standard or Golden POV: Save one nominee
+          // Safety check: ensure nominees array exists and has at least one element
+          if(!g.nominees || g.nominees.length === 0){
+            console.warn('[veto] No nominees to save, treating as veto not used');
+            await finalizeCeremony({ used: false });
+          } else if(g.nominees.length > 1){
+            var savedId = await showTVNomineeSavePanel({
+              title: 'Save Which Nominee?',
+              nominees: g.nominees,
+              povId: g.vetoHolder
+            });
+            await finalizeCeremony({ used: true, savedId: savedId });
+          } else {
+            await finalizeCeremony({ used: true, savedId: g.nominees[0] });
+          }
         }
       } else {
         // User chose No
@@ -1811,7 +1828,12 @@
       g.__vetoAutoTimer = setTimeout(function(){
         var gg = global.game;
         if(gg && gg.phase==='veto_ceremony' && !gg._awaitingReplacement && !gg.__vetoCeremonyResolved){
-          try{ finalizeCeremony(); }catch(e){}
+          // Check for Diamond POV
+          if(gg.activeVetoTwist === 'diamond'){
+            try{ handleDiamondPOVCeremony(getP(gg.vetoHolder)); }catch(e){}
+          } else {
+            try{ finalizeCeremony(); }catch(e){}
+          }
         }
       }, 1200);
     }
