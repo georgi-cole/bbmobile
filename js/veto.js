@@ -2057,6 +2057,71 @@
   
   global.renderRiskSwapAnimation = renderRiskSwapAnimation;
 
+  /**
+   * Render replacement choice carousel (mobile-first picker)
+   * Single large avatar per slide with "Nominate [Name]" button
+   * Supports swipe, arrow buttons, ArrowLeft/Right keys, dots
+   * Strict in-TV containment
+   * @param {number} actorId - ID of player making the choice (HOH or POV holder)
+   * @param {number[]} eligibleIds - Array of eligible nominee IDs
+   * @param {Object} options - Configuration options
+   * @param {string} options.title - Optional title override
+   * @param {string} options.subtitle - Optional subtitle override
+   * @returns {Promise<number>} Selected nominee ID
+   */
+  function renderReplacementChoiceCarousel(actorId, eligibleIds, options){
+    options = options || {};
+    return new Promise(function(resolve){
+      if(!eligibleIds || eligibleIds.length === 0){
+        console.warn('[veto] renderReplacementChoiceCarousel called with empty eligibleIds');
+        resolve(null);
+        return;
+      }
+      
+      // Use rpPicker if available (modern carousel implementation)
+      if(typeof global.rpPicker !== 'undefined' && global.rpPicker.show){
+        var g = global.game;
+        var blockedIds = [];
+        
+        // Add HOH to blocked list
+        if(g.hohId != null) blockedIds.push(g.hohId);
+        
+        // Add current nominees to blocked list
+        if(g.nominees && g.nominees.length > 0){
+          for(var i=0; i<g.nominees.length; i++){
+            if(blockedIds.indexOf(g.nominees[i]) === -1){
+              blockedIds.push(g.nominees[i]);
+            }
+          }
+        }
+        
+        // Add veto holder to blocked list
+        if(g.vetoHolder != null && blockedIds.indexOf(g.vetoHolder) === -1){
+          blockedIds.push(g.vetoHolder);
+        }
+        
+        // Add saved player to blocked list
+        if(g.vetoSavedId != null && blockedIds.indexOf(g.vetoSavedId) === -1){
+          blockedIds.push(g.vetoSavedId);
+        }
+        
+        global.rpPicker.show({
+          eligibleIds: eligibleIds,
+          blockedIds: blockedIds,
+          viewMode: 'auto', // Auto-detect: carousel on mobile, grid on desktop
+          onConfirm: function(selectedId){
+            resolve(selectedId);
+          }
+        });
+      } else {
+        // Fallback to promptReplacementNominee
+        console.warn('[veto] rpPicker not available, using fallback');
+        promptReplacementNominee(eligibleIds).then(resolve);
+      }
+    });
+  }
+  global.renderReplacementChoiceCarousel = renderReplacementChoiceCarousel;
+  
   
   // Prompt for replacement nominee using avatar-first picker
   function promptReplacementNominee(eligibleIds){
