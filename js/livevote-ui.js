@@ -109,17 +109,13 @@
     header.innerHTML = '<h3>Live Vote</h3>';
     container.appendChild(header);
 
-    // Main content grid (left contestant | center stage | right contestant)
+    // Main content grid (left contestant | right contestant) - V2.2.1: Removed center stage
     const grid = document.createElement('div');
     grid.className = 'lv2-grid';
 
     // Left contestant with drop anchor
     const leftSide = createContestant('left', state.leftName, state.leftId);
     grid.appendChild(leftSide);
-
-    // Center stage with portal and arcs (v2.1 feature)
-    const centerStage = createCenterStage();
-    grid.appendChild(centerStage);
 
     // Right contestant with drop anchor
     const rightSide = createContestant('right', state.rightName, state.rightId);
@@ -136,6 +132,14 @@
     container.appendChild(stage);
 
     container.appendChild(grid);
+
+    // V2.2.1: Voter feed area - centered below the two photos
+    const voterFeed = document.createElement('div');
+    voterFeed.className = 'lv2-voter-feed';
+    voterFeed.setAttribute('role', 'log');
+    voterFeed.setAttribute('aria-live', 'polite');
+    voterFeed.setAttribute('aria-label', 'Voter feed');
+    container.appendChild(voterFeed);
 
     // Status text area
     const status = document.createElement('div');
@@ -210,118 +214,6 @@
     return contestant;
   }
 
-  // Create center stage with meter, portal, and arcs (v2.1)
-  function createCenterStage() {
-    const stage = document.createElement('div');
-    stage.className = 'lv2-center-stage';
-    
-    const meter = createMeter();
-    stage.appendChild(meter);
-    
-    return stage;
-  }
-
-  // Create central meter with V2.1 portal and SVG arcs
-  function createMeter() {
-    const meterContainer = document.createElement('div');
-    meterContainer.className = 'lv2-meter';
-    meterContainer.setAttribute('role', 'progressbar');
-    meterContainer.setAttribute('aria-label', 'Vote distribution');
-    meterContainer.setAttribute('aria-valuenow', '50');
-    meterContainer.setAttribute('aria-valuemin', '0');
-    meterContainer.setAttribute('aria-valuemax', '100');
-
-    const leftFill = document.createElement('div');
-    leftFill.className = 'lv2-fill left';
-    leftFill.style.height = '0%';
-    meterContainer.appendChild(leftFill);
-
-    const rightFill = document.createElement('div');
-    rightFill.className = 'lv2-fill right';
-    rightFill.style.width = '0%';
-    meterContainer.appendChild(rightFill);
-
-    const glow = document.createElement('div');
-    glow.className = 'lv2-meter-glow';
-    meterContainer.appendChild(glow);
-
-    // V2.1: Add portal node at center
-    const portal = document.createElement('div');
-    portal.className = 'lv2-portal';
-    meterContainer.appendChild(portal);
-
-    // V2.1: Add SVG arc meter overlay
-    const arcContainer = document.createElement('div');
-    arcContainer.className = 'lv2-arc';
-    
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '200');
-    svg.setAttribute('height', '200');
-    svg.setAttribute('viewBox', '0 0 200 200');
-    
-    // Define gradients for arcs
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    
-    const leftGrad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    leftGrad.setAttribute('id', 'leftGradient');
-    leftGrad.setAttribute('x1', '0%');
-    leftGrad.setAttribute('y1', '0%');
-    leftGrad.setAttribute('x2', '100%');
-    leftGrad.setAttribute('y2', '0%');
-    const leftStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    leftStop1.setAttribute('offset', '0%');
-    leftStop1.setAttribute('style', 'stop-color:#66d9ff;stop-opacity:1');
-    const leftStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    leftStop2.setAttribute('offset', '100%');
-    leftStop2.setAttribute('style', 'stop-color:#83bfff;stop-opacity:1');
-    leftGrad.appendChild(leftStop1);
-    leftGrad.appendChild(leftStop2);
-    defs.appendChild(leftGrad);
-    
-    const rightGrad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    rightGrad.setAttribute('id', 'rightGradient');
-    rightGrad.setAttribute('x1', '0%');
-    rightGrad.setAttribute('y1', '0%');
-    rightGrad.setAttribute('x2', '100%');
-    rightGrad.setAttribute('y2', '0%');
-    const rightStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    rightStop1.setAttribute('offset', '0%');
-    rightStop1.setAttribute('style', 'stop-color:#77d58d;stop-opacity:1');
-    const rightStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    rightStop2.setAttribute('offset', '100%');
-    rightStop2.setAttribute('style', 'stop-color:#5ec97d;stop-opacity:1');
-    rightGrad.appendChild(rightStop1);
-    rightGrad.appendChild(rightStop2);
-    defs.appendChild(rightGrad);
-    
-    svg.appendChild(defs);
-    
-    // Left arc (semicircle on left side)
-    const leftArc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    leftArc.setAttribute('id', 'leftArc');
-    leftArc.setAttribute('class', 'lv2-arc-path left');
-    leftArc.setAttribute('d', 'M 100,30 A 70,70 0 0,0 100,170');
-    const leftLength = 220; // Approximate path length
-    leftArc.setAttribute('stroke-dasharray', leftLength);
-    leftArc.setAttribute('stroke-dashoffset', leftLength);
-    svg.appendChild(leftArc);
-    
-    // Right arc (semicircle on right side)
-    const rightArc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    rightArc.setAttribute('id', 'rightArc');
-    rightArc.setAttribute('class', 'lv2-arc-path right');
-    rightArc.setAttribute('d', 'M 100,30 A 70,70 0 0,1 100,170');
-    const rightLength = 220; // Approximate path length
-    rightArc.setAttribute('stroke-dasharray', rightLength);
-    rightArc.setAttribute('stroke-dashoffset', rightLength);
-    svg.appendChild(rightArc);
-    
-    arcContainer.appendChild(svg);
-    meterContainer.appendChild(arcContainer);
-
-    return meterContainer;
-  }
-
   // Push a new vote to the queue
   function pushVote(vote) {
     if (!vote || !vote.voterId || !vote.voterName || !vote.pick) {
@@ -347,10 +239,10 @@
     state.isProcessing = true;
     const vote = state.voteQueue.shift();
 
-    // Create and animate vote card
+    // V2.2.1: Show chip, hold, fade out, THEN update counts
     await revealVoteCard(vote);
 
-    // Update counts and meter
+    // After chip fades out, update counts
     if (vote.pick === 'left') {
       state.leftCount++;
     } else if (vote.pick === 'right') {
@@ -358,7 +250,6 @@
     }
 
     updateCounts();
-    updateMeter();
 
     // Wait for gap before next vote
     await sleep(state.cardGapMs);
@@ -367,24 +258,24 @@
     processNextVote();
   }
 
-  // Reveal a vote card with flip animation - spawn from center, then fly to anchor
+  // Reveal a vote card - V2.2.1: Show chip in voter feed, hold ~1.2-1.5s, fade out
   async function revealVoteCard(vote) {
-    const stage = state.stage;
-    if (!stage) return;
+    const voterFeed = state.container?.querySelector('.lv2-voter-feed');
+    if (!voterFeed) return;
     
     // Determine target nominee name
     const targetName = vote.pick === 'left' ? state.leftName : state.rightName;
     
-    // Announce vote to screen readers only
+    // Announce vote to screen readers
     const announcement = `${vote.voterName} voted to evict ${targetName}`;
     const ariaAnnounce = document.createElement('div');
     ariaAnnounce.setAttribute('role', 'status');
     ariaAnnounce.setAttribute('aria-live', 'polite');
     ariaAnnounce.setAttribute('aria-label', announcement);
     ariaAnnounce.style.display = 'none';
-    stage.appendChild(ariaAnnounce);
+    voterFeed.appendChild(ariaAnnounce);
     
-    // V2.2: Create voter chip with avatar and text
+    // V2.2.1: Create voter chip with avatar and text
     const chip = document.createElement('div');
     chip.className = 'lv2-voter-chip';
     
@@ -400,49 +291,32 @@
     };
     chip.appendChild(avatar);
     
-    // Add vote text
+    // Add vote text - shorter format: "Alex: I vote to evict Mimi"
     const text = document.createElement('div');
     text.className = 'lv2-voter-chip-text';
-    text.textContent = `${vote.voterName} votes to evict ${targetName}`;
+    text.textContent = `${vote.voterName}: I vote to evict ${targetName}`;
     chip.appendChild(text);
     
-    // Position chip at center of grid
-    const grid = state.container?.querySelector('.lv2-grid');
-    if (!grid) return;
-    
-    chip.style.position = 'absolute';
-    chip.style.left = '50%';
-    chip.style.top = '50%';
-    chip.style.transform = 'translate(-50%, -50%)';
-    chip.style.zIndex = '20';
-    
-    grid.style.position = 'relative';
-    grid.appendChild(chip);
+    // Add chip to voter feed
+    voterFeed.appendChild(chip);
 
     if (!reducedMotion) {
+      // Fade in
       await sleep(50); // Small delay for DOM to settle
+      chip.style.opacity = '1';
       
-      // Fly chip to target drop anchor
-      const targetSide = vote.pick;
-      const targetAnchor = state.container?.querySelector(`.lv2-drop-anchor.${targetSide}`);
+      // Hold chip on screen for 1.2-1.5 seconds (using 1.3s average)
+      await sleep(1300);
       
-      if (targetAnchor) {
-        const chipRect = chip.getBoundingClientRect();
-        const anchorRect = targetAnchor.getBoundingClientRect();
-        const deltaX = anchorRect.left - chipRect.left + (anchorRect.width / 2) - (chipRect.width / 2);
-        const deltaY = anchorRect.top - chipRect.top + (anchorRect.height / 2) - (chipRect.height / 2);
-
-        // Apply fly animation
-        chip.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px)) scale(0.3)`;
-        chip.style.opacity = '0';
-        chip.classList.add('fly');
-        await sleep(600); // Travel animation duration
-      }
-
-      // Remove chip after animation
+      // Fade out
+      chip.style.transition = 'opacity 0.4s ease-out';
+      chip.style.opacity = '0';
+      await sleep(400); // Wait for fade out to complete
+      
+      // Remove chip after fade out completes
       chip.remove();
     } else {
-      // Reduced motion: just fade in and out
+      // Reduced motion: just show and hide with shorter duration
       chip.style.opacity = '1';
       await sleep(state.cardHoldMs);
       chip.style.opacity = '0';
@@ -508,55 +382,6 @@
     }
 
     requestAnimationFrame(animate);
-  }
-
-  // Update meter fill based on vote distribution
-  function updateMeter() {
-    const meter = state.container?.querySelector('.lv2-meter');
-    if (!meter) return;
-
-    const leftFill = meter.querySelector('.lv2-fill.left');
-    const rightFill = meter.querySelector('.lv2-fill.right');
-
-    const total = state.leftCount + state.rightCount;
-    if (total === 0) {
-      leftFill.style.width = '0%';
-      rightFill.style.width = '0%';
-      meter.setAttribute('aria-valuenow', '50');
-      
-      // Reset arcs
-      const leftArc = meter.querySelector('#leftArc');
-      const rightArc = meter.querySelector('#rightArc');
-      if (leftArc) leftArc.setAttribute('stroke-dashoffset', '220');
-      if (rightArc) rightArc.setAttribute('stroke-dashoffset', '220');
-      return;
-    }
-
-    const leftPct = (state.leftCount / total) * 100;
-    const rightPct = (state.rightCount / total) * 100;
-
-    leftFill.style.width = `${leftPct}%`;
-    rightFill.style.width = `${rightPct}%`;
-
-    // Update ARIA
-    const balance = Math.round(leftPct);
-    meter.setAttribute('aria-valuenow', String(balance));
-    meter.setAttribute('aria-label', `Vote distribution: ${state.leftName} ${leftPct.toFixed(0)}%, ${state.rightName} ${rightPct.toFixed(0)}%`);
-    
-    // V2.1: Update SVG arcs using strokeDashoffset
-    const leftArc = meter.querySelector('#leftArc');
-    const rightArc = meter.querySelector('#rightArc');
-    const arcLength = 220; // Total arc length
-    
-    if (leftArc) {
-      const leftOffset = arcLength - (arcLength * (leftPct / 100));
-      leftArc.setAttribute('stroke-dashoffset', String(leftOffset));
-    }
-    
-    if (rightArc) {
-      const rightOffset = arcLength - (arcLength * (rightPct / 100));
-      rightArc.setAttribute('stroke-dashoffset', String(rightOffset));
-    }
   }
 
   // Mark the winner/leader at the end

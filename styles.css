@@ -1722,25 +1722,17 @@ button:focus-visible,.btn:focus-visible{
   letter-spacing:-0.4px;
 }
 
-/* Grid layout - Left | Center Stage | Right (v2.1.1) */
+/* Grid layout - V2.2.1: Two columns only (Left | Right) */
 .lv2-grid{
   display:grid;
-  grid-template-columns:1fr auto 1fr;
-  gap:clamp(20px, 4vw, 40px);
+  grid-template-columns:1fr 1fr;
+  gap:clamp(8px, 2vw, 16px);
   align-items:center;
   min-height:0;
   justify-content:center;
-  max-width:1000px;
+  max-width:800px;
   margin:0 auto;
   position:relative;
-}
-
-/* Center stage container */
-.lv2-center-stage{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-width:120px;
 }
 
 /* Contestant cards - fully transparent background */
@@ -1820,58 +1812,6 @@ button:focus-visible,.btn:focus-visible{
   0%{ transform:scale(1); }
   50%{ transform:scale(1.15); }
   100%{ transform:scale(1); }
-}
-
-/* Central meter in stage */
-.lv2-meter{
-  position:relative;
-  width:120px;
-  height:240px;
-  background:rgba(13,21,35,0.8);
-  border:2px solid rgba(131,191,255,0.2);
-  border-radius:12px;
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
-  box-shadow:0 0 20px -8px rgba(0,0,0,0.7) inset;
-  flex-shrink:0;
-}
-
-.lv2-fill{
-  position:absolute;
-  left:0;
-  right:0;
-  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1), width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  height:0%;
-}
-
-.lv2-fill.left{
-  bottom:0;
-  background:linear-gradient(to top, #66d9ff, #83bfff);
-  box-shadow:0 0 16px -4px #66d9ff;
-}
-
-.lv2-fill.right{
-  top:0;
-  background:linear-gradient(to bottom, #77d58d, #5ec97d);
-  box-shadow:0 0 16px -4px #77d58d;
-}
-
-.lv2-meter-glow{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%, -50%);
-  width:40px;
-  height:40px;
-  background:radial-gradient(circle, rgba(131,191,255,0.3), transparent 70%);
-  pointer-events:none;
-  animation:pulse-glow 2s ease-in-out infinite;
-}
-
-@keyframes pulse-glow{
-  0%, 100%{ opacity:0.4; transform:translate(-50%, -50%) scale(1); }
-  50%{ opacity:0.7; transform:translate(-50%, -50%) scale(1.2); }
 }
 
 /* Center Stage - Hidden, only for ARIA announcements */
@@ -2151,17 +2091,11 @@ button:focus-visible,.btn:focus-visible{
 @media (prefers-reduced-motion: reduce){
   .lv2-avatar,
   .lv2-count,
-  .lv2-fill,
   .lv2-card,
   .lv2-card-inner,
   .lv2-contestant{
     transition:none !important;
     animation:none !important;
-  }
-  
-  .lv2-meter-glow{
-    animation:none;
-    opacity:0.4;
   }
 }
 
@@ -2169,13 +2103,8 @@ button:focus-visible,.btn:focus-visible{
 @media (max-width: 640px){
   .lv2-grid{
     grid-template-columns:1fr;
-    grid-template-rows:auto auto auto;
+    grid-template-rows:auto auto;
     gap:16px;
-  }
-  
-  .lv2-center-stage{
-    order:2;
-    min-width:auto;
   }
   
   .lv2-contestant.left{
@@ -2183,36 +2112,12 @@ button:focus-visible,.btn:focus-visible{
   }
   
   .lv2-contestant.right{
-    order:3;
+    order:2;
   }
   
   .lv2-avatar {
     width: clamp(100px, 30vw, 160px);
     height: clamp(100px, 30vw, 160px);
-  }
-  
-  .lv2-meter{
-    width:100%;
-    height:60px;
-    flex-direction:row;
-  }
-  
-  .lv2-fill.left{
-    top:0;
-    right:50%;
-    left:0;
-    height:100%;
-    width:0%;
-    background:linear-gradient(to right, #66d9ff, #83bfff);
-  }
-  
-  .lv2-fill.right{
-    top:0;
-    left:50%;
-    right:0;
-    height:100%;
-    width:0%;
-    background:linear-gradient(to left, #77d58d, #5ec97d);
   }
   
   .lv2-card{
@@ -2314,41 +2219,6 @@ button:focus-visible,.btn:focus-visible{
               inset 0 1px 0 rgba(255,255,255,0.12);
 }
 
-/* V2.2: Portal removed - voter chip replaces center visuals */
-.lv2-portal {
-  display: none;
-}
-
-/* V2.2: Arc meter removed - voter chip replaces center visuals */
-.lv2-arc {
-  display: none;
-}
-
-.lv2-arc svg {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  overflow: visible;
-}
-
-/* Arc meter paths with lighter stroke */
-.lv2-arc-path {
-  fill: none;
-  stroke-width: 3;
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.lv2-arc-path.left {
-  stroke: url(#leftGradient);
-  filter: drop-shadow(0 0 6px rgba(102,217,255,0.3));
-}
-
-.lv2-arc-path.right {
-  stroke: url(#rightGradient);
-  filter: drop-shadow(0 0 6px rgba(119,213,141,0.3));
-}
-
 /* Vote pip animation */
 .lv2-pip {
   position: absolute;
@@ -2367,26 +2237,36 @@ button:focus-visible,.btn:focus-visible{
   transform: scale(0.3);
 }
 
-/* V2.2: Voter chip with avatar and text */
-.lv2-voter-chip {
-  position: absolute;
+/* V2.2.1: Voter feed container - centered below grid */
+.lv2-voter-feed {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px 6px 6px;
+  justify-content: center;
+  min-height: 50px;
+  margin: 12px auto 8px;
+  max-width: 600px;
+  position: relative;
+}
+
+/* V2.2.1: Voter chip with avatar and text - shown in feed */
+.lv2-voter-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 8px 8px;
   background: linear-gradient(135deg, rgba(20,35,55,0.95), rgba(14,23,48,0.95));
   border: 1px solid rgba(131,191,255,0.3);
-  border-radius: 20px;
+  border-radius: 24px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 20px rgba(131,191,255,0.2);
   pointer-events: none;
-  z-index: 20;
-  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
+  opacity: 0;
+  transition: opacity 0.3s ease-in;
   white-space: nowrap;
 }
 
 .lv2-voter-chip-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 2px solid rgba(131,191,255,0.4);
   object-fit: cover;
@@ -2394,15 +2274,10 @@ button:focus-visible,.btn:focus-visible{
 }
 
 .lv2-voter-chip-text {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #e8f4ff;
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-}
-
-.lv2-voter-chip.fly {
-  opacity: 0;
-  transform: scale(0.3);
 }
 
 /* Drop anchor refinement for pip targeting */
@@ -2439,7 +2314,6 @@ button:focus-visible,.btn:focus-visible{
 
 /* Reduced motion overrides for V2.1.1 */
 @media (prefers-reduced-motion: reduce) {
-  .lv2-portal,
   .lv2-count.bump,
   .lv2-cta-pill.active {
     animation: none !important;
@@ -2448,10 +2322,6 @@ button:focus-visible,.btn:focus-visible{
   .lv2-pip,
   .lv2-voter-chip {
     transition: opacity 0.3s ease;
-  }
-  
-  .lv2-arc-path {
-    transition: stroke-dashoffset 0.3s ease;
   }
 }
 
