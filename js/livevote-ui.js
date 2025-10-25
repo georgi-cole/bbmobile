@@ -125,6 +125,11 @@
       overlay.classList.add('lv2-responsive');
     }
     
+    // Add carousel-on class if using carousel mode (Mobile Carousel 2.0)
+    if (state.useCarousel) {
+      overlay.classList.add('lv2-carousel-on');
+    }
+    
     overlay.setAttribute('role', 'region');
     overlay.setAttribute('aria-label', 'Live Vote');
 
@@ -159,10 +164,21 @@
     const rightSide = createContestant('right', state.rightName, state.rightId);
     grid.appendChild(rightSide);
     
-    // Add carousel navigation if in carousel mode
+    // Mobile Carousel 2.0: Add arrows hugging the portrait (inside grid)
     if (state.useCarousel) {
-      const carouselNav = createCarouselNav();
-      container.appendChild(carouselNav);
+      const prevArrow = document.createElement('button');
+      prevArrow.className = 'lv2-arrow prev';
+      prevArrow.setAttribute('aria-label', 'Show previous nominee');
+      prevArrow.innerHTML = '◀';
+      prevArrow.onclick = () => navigateCarousel('prev');
+      grid.appendChild(prevArrow);
+      
+      const nextArrow = document.createElement('button');
+      nextArrow.className = 'lv2-arrow next';
+      nextArrow.setAttribute('aria-label', 'Show next nominee');
+      nextArrow.innerHTML = '▶';
+      nextArrow.onclick = () => navigateCarousel('next');
+      grid.appendChild(nextArrow);
     }
     
     // Hidden stage for vote announcements (only for ARIA)
@@ -176,6 +192,21 @@
     container.appendChild(stage);
 
     container.appendChild(grid);
+    
+    // Mobile Carousel 2.0: CTA Dock (always visible at bottom)
+    if (state.useCarousel) {
+      const ctaDock = document.createElement('div');
+      ctaDock.className = 'lv2-cta-dock';
+      
+      const mainButton = document.createElement('button');
+      mainButton.className = 'lv2-cta-main';
+      mainButton.textContent = `Evict ${state.leftName}`;
+      mainButton.setAttribute('aria-label', `Vote to evict ${state.leftName}`);
+      mainButton.dataset.pick = state.leftId;
+      
+      ctaDock.appendChild(mainButton);
+      container.appendChild(ctaDock);
+    }
 
     // V2.2.1: Voter feed area - centered below the two photos
     const voterFeed = document.createElement('div');
@@ -242,6 +273,15 @@
     nameEl.className = 'lv2-name';
     nameEl.textContent = name;
     contestant.appendChild(nameEl);
+    
+    // Mobile Carousel 2.0: Index label ("1 of 2")
+    if (state.useCarousel) {
+      const indexLabel = document.createElement('div');
+      indexLabel.className = 'lv2-index';
+      const index = side === 'left' ? 1 : 2;
+      indexLabel.textContent = `${index} of 2`;
+      contestant.appendChild(indexLabel);
+    }
 
     // Count capsule
     const count = document.createElement('div');
@@ -250,6 +290,28 @@
     count.textContent = '0';
     count.setAttribute('aria-label', `${name}: 0 votes`);
     contestant.appendChild(count);
+    
+    // Mobile Carousel 2.0: Dots under portrait
+    if (state.useCarousel) {
+      const dots = document.createElement('div');
+      dots.className = 'lv2-dots';
+      
+      const dot1 = document.createElement('span');
+      dot1.className = side === 'left' ? 'dot active' : 'dot';
+      dots.appendChild(dot1);
+      
+      const dot2 = document.createElement('span');
+      dot2.className = side === 'right' ? 'dot active' : 'dot';
+      dots.appendChild(dot2);
+      
+      contestant.appendChild(dots);
+      
+      // Swipe hint
+      const hint = document.createElement('div');
+      hint.className = 'lv2-hint';
+      hint.textContent = 'Swipe to switch';
+      contestant.appendChild(hint);
+    }
 
     // CTA pill container under the nominee (v2.1.1)
     const ctaSide = document.createElement('div');
@@ -336,20 +398,30 @@
     if (!grid) return;
     
     const contestants = grid.querySelectorAll('.lv2-contestant');
-    const indicators = state.container.querySelectorAll('.lv2-carousel-dot');
     
     // Update visibility of contestants
     contestants.forEach((contestant, idx) => {
       if (idx === state.carouselIndex) {
         contestant.classList.add('active');
         contestant.classList.remove('hidden');
+        
+        // Mobile Carousel 2.0: Update dots within the active contestant
+        const dots = contestant.querySelectorAll('.lv2-dots .dot');
+        dots.forEach((dot, dotIdx) => {
+          if (dotIdx === state.carouselIndex) {
+            dot.classList.add('active');
+          } else {
+            dot.classList.remove('active');
+          }
+        });
       } else {
         contestant.classList.remove('active');
         contestant.classList.add('hidden');
       }
     });
     
-    // Update indicator dots
+    // Update legacy carousel indicators if they exist (for backwards compatibility)
+    const indicators = state.container.querySelectorAll('.lv2-carousel-dot');
     indicators.forEach((dot, idx) => {
       if (idx === state.carouselIndex) {
         dot.classList.add('active');
@@ -358,7 +430,10 @@
       }
     });
     
-    // Update contextual CTA button
+    // Mobile Carousel 2.0: Update CTA dock button
+    updateCarouselCTADock();
+    
+    // Update legacy contextual CTA button (for backwards compatibility)
     updateCarouselCTA();
   }
   
@@ -392,6 +467,38 @@
     btn.dataset.pick = currentId;
     btn.dataset.side = currentSide;
   }
+  
+  // Mobile Carousel 2.0: Update the CTA dock button to target the currently shown nominee
+  function updateCarouselCTADock() {
+    if (!state.useCarousel) return;
+    
+    const currentSide = state.carouselIndex === 0 ? 'left' : 'right';
+    const currentName = state.carouselIndex === 0 ? state.leftName : state.rightName;
+    const currentId = state.carouselIndex === 0 ? state.leftId : state.rightId;
+    
+    // Find CTA dock button
+    const ctaDock = state.container?.querySelector('.lv2-cta-dock');
+    if (!ctaDock) return;
+    
+    const btn = ctaDock.querySelector('.lv2-cta-main');
+    if (!btn) return;
+    
+    // Update button text and data
+    if (state.isTieBreak) {
+      btn.textContent = 'Break Tie';
+      btn.setAttribute('aria-label', `Break tie by evicting ${currentName}`);
+    } else if (state.isFinal4) {
+      btn.textContent = 'Cast Sole Vote';
+      btn.setAttribute('aria-label', `Cast sole vote to evict ${currentName}`);
+    } else {
+      btn.textContent = `Evict ${currentName}`;
+      btn.setAttribute('aria-label', `Vote to evict ${currentName}`);
+    }
+    
+    btn.dataset.pick = currentId;
+    btn.dataset.side = currentSide;
+  }
+
 
   // Push a new vote to the queue
   function pushVote(vote) {
@@ -715,6 +822,26 @@
   function createCarouselCTA(options = {}) {
     const { enabled = false, isTieBreak = false, isFinal4 = false, onVote = null } = options;
     
+    // Mobile Carousel 2.0: Wire up the CTA dock button
+    const ctaDock = state.container?.querySelector('.lv2-cta-dock');
+    if (ctaDock) {
+      const mainBtn = ctaDock.querySelector('.lv2-cta-main');
+      if (mainBtn && onVote) {
+        mainBtn.disabled = !enabled;
+        mainBtn.onclick = () => {
+          const targetId = mainBtn.dataset.pick;
+          if (onVote && targetId) {
+            onVote(targetId);
+          }
+        };
+      }
+      
+      // Store reference to CTA dock
+      state.ctaBar = { ctaDock };
+      return { ctaDock };
+    }
+    
+    // Legacy carousel CTA (for backwards compatibility)
     // Remove any existing carousel CTA
     const existingCTA = state.container?.querySelector('.lv2-carousel-cta');
     if (existingCTA) existingCTA.remove();
@@ -773,14 +900,27 @@
 
     const { enabled = false } = options;
     
-    // Handle carousel mode
+    // Handle carousel mode with CTA dock
     if (state.useCarousel) {
-      const { carouselCTA } = state.ctaBar;
-      const btn = carouselCTA?.querySelector('.lv2-carousel-btn');
-      if (btn) {
-        btn.disabled = !enabled;
+      // Mobile Carousel 2.0: Update CTA dock button
+      const { ctaDock, carouselCTA } = state.ctaBar;
+      
+      if (ctaDock) {
+        const mainBtn = ctaDock.querySelector('.lv2-cta-main');
+        if (mainBtn) {
+          mainBtn.disabled = !enabled;
+        }
+        return;
       }
-      return;
+      
+      // Legacy carousel CTA (backwards compatibility)
+      if (carouselCTA) {
+        const btn = carouselCTA.querySelector('.lv2-carousel-btn');
+        if (btn) {
+          btn.disabled = !enabled;
+        }
+        return;
+      }
     }
     
     // Handle normal mode
@@ -839,7 +979,20 @@
   function highlightCtaBar(active) {
     if (!state.ctaBar) return;
     
-    // Handle carousel mode differently
+    // Mobile Carousel 2.0: Handle CTA dock
+    if (state.useCarousel && state.ctaBar.ctaDock) {
+      const mainBtn = state.ctaBar.ctaDock.querySelector('.lv2-cta-main');
+      if (mainBtn) {
+        if (active && !mainBtn.disabled) {
+          mainBtn.classList.add('highlight');
+        } else {
+          mainBtn.classList.remove('highlight');
+        }
+      }
+      return;
+    }
+    
+    // Legacy carousel mode (backwards compatibility)
     if (state.useCarousel && state.ctaBar.carouselCTA) {
       const btn = state.ctaBar.carouselCTA.querySelector('.lv2-carousel-btn');
       if (btn) {

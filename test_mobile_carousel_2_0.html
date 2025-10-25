@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mobile Carousel 2.0 Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-header {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 12px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-header p {
+      margin: 6px 0;
+      font-size: 0.9rem;
+    }
+    
+    .viewport-info {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(131,191,255,0.1);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      border-left: 3px solid #83bfff;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      padding: 15px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+      font-size: 0.9rem;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #d94f4f);
+      color: white;
+    }
+    
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      height: 600px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, #1a2332 0%, #0f1a28 100%);
+      border-radius: 16px;
+      border: 3px solid rgba(143,211,255,0.3);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    
+    .info-box {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 16px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 8px;
+      border-left: 4px solid #00e0cc;
+    }
+    
+    .info-box h3 {
+      margin: 0 0 8px 0;
+      color: #00e0cc;
+    }
+    
+    .info-box ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    
+    /* Mobile test mode */
+    @media (max-width: 640px) {
+      body {
+        padding: 10px;
+      }
+      
+      #tv {
+        height: 70vh;
+        max-height: 600px;
+      }
+      
+      .test-header,
+      .test-controls {
+        padding: 12px;
+      }
+      
+      .test-header h1 {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>📱 Mobile Carousel 2.0 Test</h1>
+    <p><strong>Test Goal:</strong> Verify Mobile Carousel 2.0 features (CTA dock, arrows, index, dots, hint)</p>
+    <div class="viewport-info" id="viewportInfo">
+      Loading viewport info...
+    </div>
+  </div>
+
+  <div class="test-controls">
+    <button onclick="initLiveVote()">Initialize Live Vote</button>
+    <button onclick="addVote()">Add Random Vote</button>
+    <button onclick="addMultipleVotes()">Add 5 Votes</button>
+    <button onclick="enableVoting()">Enable Voting</button>
+    <button onclick="finishVoting()">Finish Vote</button>
+    <button class="danger" onclick="cleanup()">Cleanup</button>
+  </div>
+
+  <div id="tv"></div>
+
+  <div class="info-box">
+    <h3>✨ Mobile Carousel 2.0 Features to Verify:</h3>
+    <ul>
+      <li><strong>CTA Dock:</strong> Always-visible button at bottom, anchored inside TV safe area</li>
+      <li><strong>Arrows:</strong> Prev/Next arrows hugging the portrait (left/right), 48px tap targets</li>
+      <li><strong>Index Label:</strong> "1 of 2" or "2 of 2" showing under name</li>
+      <li><strong>Dots:</strong> Two indicator dots under the portrait, with active state</li>
+      <li><strong>Swipe Hint:</strong> Subtle "Swipe to switch" text below dots</li>
+      <li><strong>Grid Layout:</strong> Title | Content | CTA Dock | Feed (no transform scaling)</li>
+      <li><strong>Dynamic Updates:</strong> CTA button text changes to match current nominee</li>
+      <li><strong>Desktop Unchanged:</strong> On wide viewports (≥820px), desktop layout should be used</li>
+    </ul>
+  </div>
+
+  <script src="js/livevote-ui.js"></script>
+  
+  <script>
+    // Mock global namespace
+    window.game = {
+      cfg: {
+        modernLiveVoteUI: true,
+        cardHoldMs: 500,
+        cardGapMs: 250
+      }
+    };
+    
+    // Mock helper functions
+    window.safeName = function(id) {
+      const names = ['Alex', 'Mimi', 'Jordan', 'Taylor', 'Casey'];
+      return names[id % names.length];
+    };
+    
+    window.getP = function(id) {
+      return {
+        id: id,
+        name: window.safeName(id),
+        avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=${id}`
+      };
+    };
+    
+    window.resolveAvatar = function(player) {
+      if (typeof player === 'object' && player.avatar) return player.avatar;
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${player.id || player}`;
+    };
+    
+    window.addLog = function(msg, cls) {
+      console.log(`[LOG ${cls}] ${msg}`);
+    };
+    
+    // Update viewport info
+    function updateViewportInfo() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isPortrait = height > width;
+      const isNarrow = width < 820;
+      const isResponsive = isNarrow || isPortrait;
+      
+      const info = document.getElementById('viewportInfo');
+      info.innerHTML = `
+        <strong>Viewport:</strong> ${width}px × ${height}px<br>
+        <strong>Orientation:</strong> ${isPortrait ? 'Portrait 📱' : 'Landscape 💻'}<br>
+        <strong>Carousel Mode:</strong> ${isResponsive ? '✅ Enabled (Mobile Carousel 2.0)' : '❌ Disabled (Desktop layout)'}<br>
+        <strong>Reason:</strong> ${isNarrow ? 'Width < 820px' : isPortrait ? 'Portrait orientation' : 'Desktop viewport'}
+      `;
+    }
+    
+    updateViewportInfo();
+    window.addEventListener('resize', updateViewportInfo);
+    
+    // Test functions
+    let voteCount = 0;
+    
+    function initLiveVote() {
+      console.log('[TEST] Initializing Mobile Carousel 2.0');
+      
+      if (!window.lv2) {
+        console.error('[TEST] lv2 not available!');
+        return;
+      }
+      
+      window.lv2.init({
+        leftName: 'Alex',
+        rightName: 'Mimi',
+        leftId: 1,
+        rightId: 2
+      });
+      
+      console.log('[TEST] Live Vote initialized');
+      
+      // Check for Mobile Carousel 2.0 elements
+      setTimeout(() => {
+        const ctaDock = document.querySelector('.lv2-cta-dock');
+        const arrows = document.querySelectorAll('.lv2-arrow');
+        const index = document.querySelector('.lv2-index');
+        const dots = document.querySelector('.lv2-dots');
+        const hint = document.querySelector('.lv2-hint');
+        
+        console.log('[TEST] CTA Dock:', ctaDock ? '✅ Found' : '❌ Missing');
+        console.log('[TEST] Arrows:', arrows.length === 2 ? '✅ Found (2)' : `❌ Found (${arrows.length})`);
+        console.log('[TEST] Index Label:', index ? `✅ Found: "${index.textContent}"` : '❌ Missing');
+        console.log('[TEST] Dots:', dots ? '✅ Found' : '❌ Missing');
+        console.log('[TEST] Swipe Hint:', hint ? `✅ Found: "${hint.textContent}"` : '❌ Missing');
+      }, 100);
+    }
+    
+    function addVote() {
+      if (!window.lv2) {
+        console.error('[TEST] lv2 not initialized');
+        return;
+      }
+      
+      voteCount++;
+      const pick = Math.random() < 0.5 ? 'left' : 'right';
+      const voterName = window.safeName(voteCount + 10);
+      
+      window.lv2.pushVote({
+        voterId: voteCount + 10,
+        voterName: voterName,
+        pick: pick
+      });
+      
+      console.log(`[TEST] Added vote: ${voterName} -> ${pick}`);
+    }
+    
+    function addMultipleVotes() {
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => addVote(), i * 1500);
+      }
+    }
+    
+    function enableVoting() {
+      if (!window.lv2) {
+        console.error('[TEST] lv2 not initialized');
+        return;
+      }
+      
+      // Create CTA bar with voting enabled
+      window.lv2.createCtaBar({
+        enabled: true,
+        onVote: (playerId) => {
+          console.log(`[TEST] Vote cast for player ${playerId}`);
+          alert(`Vote cast for player ${playerId}`);
+        }
+      });
+      
+      // Enable turn indicator
+      window.lv2.setTurn(true);
+      
+      console.log('[TEST] Voting enabled');
+    }
+    
+    function finishVoting() {
+      if (!window.lv2) {
+        console.error('[TEST] lv2 not initialized');
+        return;
+      }
+      
+      window.lv2.finish();
+      console.log('[TEST] Voting finished');
+    }
+    
+    function cleanup() {
+      if (!window.lv2) {
+        console.error('[TEST] lv2 not initialized');
+        return;
+      }
+      
+      window.lv2.cleanup();
+      voteCount = 0;
+      console.log('[TEST] Cleaned up');
+    }
+    
+    // Auto-initialize for convenience
+    setTimeout(() => {
+      console.log('[TEST] Auto-initializing Live Vote...');
+      initLiveVote();
+    }, 500);
+  </script>
+</body>
+</html>
