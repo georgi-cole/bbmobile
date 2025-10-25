@@ -633,6 +633,10 @@
     const existingTag = tv?.querySelector('.lv2-turn-tag');
     if (existingTag) existingTag.remove();
 
+    // Remove any evictee visuals
+    const evicteeVisuals = tv?.querySelectorAll('.lv2-evictee');
+    evicteeVisuals?.forEach(el => el.remove());
+
     // Restore panel visibility
     const panel = document.querySelector('#panel');
     if (panel) {
