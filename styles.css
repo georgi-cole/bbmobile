@@ -910,6 +910,29 @@ button:focus-visible,.btn:focus-visible{
   font-size:0.92rem;
   font-weight:500;
 }
+
+/* TV containment: prevent overflow on mobile */
+#tvOverlay .revealCard .row,
+#tvOverlay .revealCard .veto-decision-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  max-width:100%;
+}
+#tvOverlay .revealCard button{
+  flex:1 1 auto;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+@media (max-width: 400px){
+  #tvOverlay .revealCard button{
+    font-size:0.8rem;
+    padding:8px 12px;
+  }
+}
 #confetti{
   position:absolute; z-index:11;
   inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
