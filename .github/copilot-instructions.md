@@ -18,7 +18,9 @@ BBMobile is a Big Brother mobile game featuring:
 - **Testing**: Custom test infrastructure with HTML test files
 - **Validation**: ESLint, custom validation scripts
 - **CI/CD**: GitHub Actions workflow for minigame validation
-- **Dependencies**: Minimal (GSAP for animations, TypeScript for progression module)
+- **Dependencies**: Minimal dependencies approach
+  - GSAP (animation library) - loaded via CDN
+  - TypeScript (dev dependency for progression module only)
 
 ## Repository Structure
 
@@ -193,9 +195,13 @@ try {
 ## CI/CD
 
 GitHub Actions workflow runs on:
-- Push to `main` branch
-- Pull requests
-- Validates minigame keys and dependencies
+- Push to `main` branch (for minigame-related files)
+- Pull requests (for minigame-related files)
+- Workflow steps:
+  1. Validates minigame key registration
+  2. Tests runtime resolution
+  3. Audits minigame keys (informational)
+  4. Validates E2E test structure
 - Located in `.github/workflows/validate-minigames.yml`
 
 ## Common Pitfalls to Avoid
@@ -232,7 +238,9 @@ GitHub Actions workflow runs on:
 - **Documentation**: Check `docs/README.md` first
 - **Examples**: Look for similar implementations in codebase
 - **Test files**: Often contain usage examples
-- **Debug tools**: Use `MinigameDebugPanel.show()` for minigame debugging
+- **Debug tools**: 
+  - Minigame debug panel: Press `Ctrl+Shift+D` to toggle (see `js/minigames/debug-panel.js`)
+  - Telemetry stats: `MinigameTelemetry.getStats()`
 - **Console**: Check browser console for detailed error messages
 
 ## Security Considerations
