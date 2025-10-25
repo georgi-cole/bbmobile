@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: NEW SEASON Button Fix</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #3563a7;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+    button:hover:not(:disabled) {
+      background: #4573b7;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    #testLog {
+      background: #111;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    .log-entry {
+      margin: 2px 0;
+    }
+    .log-info { color: #4af; }
+    .log-warn { color: #fa4; }
+    .log-error { color: #f44; }
+    .log-success { color: #4f4; }
+    .status-box {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    .status-pass { background: #2a4a2a; color: #4f4; }
+    .status-fail { background: #4a2a2a; color: #f44; }
+  </style>
+</head>
+<body>
+  <h1>NEW SEASON Button Fix Test</h1>
+  <p>This test validates that clicking NEW SEASON:</p>
+  <ul>
+    <li>Closes the winner overlay immediately</li>
+    <li>Only triggers once (button disabled + { once: true })</li>
+    <li>Shows only the Profile Modal (no stacked modals)</li>
+  </ul>
+  
+  <div class="test-section">
+    <h2>Automated Tests</h2>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Manual Test Controls</h2>
+    <button onclick="testShowFinale()">1. Show Finale Winner Modal</button>
+    <button onclick="testNewSeasonButtonClick()">2. Click NEW SEASON (Manual)</button>
+    <button onclick="testMultipleClicks()">3. Test Multiple Clicks Protection</button>
+    <button onclick="checkOverlayState()">4. Check Overlay State</button>
+    <button onclick="clearLog()">Clear Log</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Log</h2>
+    <div id="testLog"></div>
+  </div>
+
+  <!-- Load profile system -->
+  <script src="src/profile/profileStorage.js" onerror="console.error('Failed to load profileStorage.js')"></script>
+  <script src="src/profile/profileService.js" onerror="console.error('Failed to load profileService.js')"></script>
+  <script src="src/ui/ProfileModal.js" onerror="console.error('Failed to load ProfileModal.js')"></script>
+  <script src="js/player-profile-modal.js" onerror="console.error('Failed to load player-profile-modal.js')"></script>
+  
+  <!-- Load finale -->
+  <script src="js/finale.js" onerror="console.error('Failed to load finale.js')"></script>
+
+  <!-- Test script -->
+  <script>
+    // Set up minimal game environment
+    window.game = {
+      players: [
+        { id: 0, name: 'Alice', human: true, stats: { hohWins: 3, vetoWins: 2 }, nominatedCount: 1 },
+        { id: 1, name: 'Bob', stats: { hohWins: 1, vetoWins: 4 }, nominatedCount: 3 },
+        { id: 2, name: 'Charlie', stats: { hohWins: 2, vetoWins: 1 }, nominatedCount: 2 }
+      ],
+      humanId: 0
+    };
+    
+    window.safeName = (id) => window.game.players.find(p => p.id === id)?.name || 'Unknown';
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    
+    // Mock rebuildGame and startOpeningSequence
+    window.rebuildGame = function(preservePlayers) {
+      log('rebuildGame called with preservePlayers=' + preservePlayers, 'info');
+    };
+    
+    window.startOpeningSequence = function() {
+      log('startOpeningSequence called', 'info');
+    };
+
+    let clickCount = 0;
+    let testResults = [];
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry log-' + type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      
+      // Also log to console
+      console.log(`[test] ${message}`);
+    }
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '';
+      testResults = [];
+    }
+
+    function addTestResult(name, passed, message) {
+      testResults.push({ name, passed, message });
+      const resultsDiv = document.getElementById('testResults');
+      const resultBox = document.createElement('div');
+      resultBox.className = 'status-box ' + (passed ? 'status-pass' : 'status-fail');
+      resultBox.textContent = `${passed ? '✓' : '✗'} ${name}: ${message}`;
+      resultsDiv.appendChild(resultBox);
+    }
+
+    function testShowFinale() {
+      log('=== Testing Finale Modal ===', 'info');
+      
+      if (typeof window.showFinaleCinematic === 'function') {
+        log('showFinaleCinematic exists: YES', 'success');
+        log('Showing finale for winner ID 0 (Alice)...', 'info');
+        window.showFinaleCinematic(0);
+        log('Finale modal should now be visible', 'success');
+      } else {
+        log('showFinaleCinematic not found!', 'error');
+      }
+    }
+
+    function testNewSeasonButtonClick() {
+      log('=== Testing NEW SEASON Button Click ===', 'info');
+      
+      const newSeasonBtn = document.getElementById('cinNewSeason');
+      if (newSeasonBtn) {
+        log('NEW SEASON button found', 'success');
+        log('Clicking NEW SEASON button...', 'info');
+        clickCount++;
+        log(`Click count: ${clickCount}`, 'info');
+        newSeasonBtn.click();
+        
+        // Check if button is disabled after click
+        setTimeout(() => {
+          if (newSeasonBtn.disabled) {
+            log('✓ Button is disabled after click', 'success');
+          } else {
+            log('✗ Button is NOT disabled after click', 'error');
+          }
+        }, 100);
+      } else {
+        log('NEW SEASON button not found - show finale first', 'warn');
+      }
+    }
+
+    function testMultipleClicks() {
+      log('=== Testing Multiple Clicks Protection ===', 'info');
+      
+      // Show finale first
+      testShowFinale();
+      
+      setTimeout(() => {
+        const newSeasonBtn = document.getElementById('cinNewSeason');
+        if (!newSeasonBtn) {
+          log('NEW SEASON button not found', 'error');
+          return;
+        }
+        
+        log('Attempting to click NEW SEASON button 3 times...', 'info');
+        const initialClickCount = clickCount;
+        
+        newSeasonBtn.click();
+        log(`Click 1 - clickCount: ${clickCount}`, 'info');
+        
+        setTimeout(() => {
+          newSeasonBtn.click();
+          log(`Click 2 - clickCount: ${clickCount}`, 'info');
+        }, 50);
+        
+        setTimeout(() => {
+          newSeasonBtn.click();
+          log(`Click 3 - clickCount: ${clickCount}`, 'info');
+          
+          const totalClicks = clickCount - initialClickCount;
+          if (totalClicks === 1) {
+            log('✓ Only 1 click was processed (guard working)', 'success');
+          } else {
+            log(`✗ ${totalClicks} clicks were processed (guard NOT working)`, 'error');
+          }
+        }, 100);
+      }, 500);
+    }
+
+    function checkOverlayState() {
+      log('=== Checking Overlay State ===', 'info');
+      
+      const finaleOverlay = document.querySelector('.cinDim');
+      const profileModal = document.querySelector('.profile-modal-dim');
+      
+      log(`Finale overlay (.cinDim): ${finaleOverlay ? 'PRESENT' : 'NOT PRESENT'}`, 
+          finaleOverlay ? 'warn' : 'success');
+      log(`Profile modal (.profile-modal-dim): ${profileModal ? 'PRESENT' : 'NOT PRESENT'}`,
+          profileModal ? 'success' : 'info');
+      
+      if (finaleOverlay && profileModal) {
+        log('✗ BOTH overlays are present - STACKING ISSUE!', 'error');
+      } else if (!finaleOverlay && profileModal) {
+        log('✓ Only profile modal is present - CORRECT!', 'success');
+      } else if (finaleOverlay && !profileModal) {
+        log('Only finale overlay is present (expected before clicking NEW SEASON)', 'info');
+      } else {
+        log('No overlays present', 'info');
+      }
+    }
+
+    async function runAllTests() {
+      clearLog();
+      document.getElementById('testResults').innerHTML = '';
+      log('=== Running Automated Tests ===', 'info');
+      
+      // Test 1: Check that addEventListener with { once: true } is used
+      log('Test 1: Checking event listener implementation...', 'info');
+      const finaleCode = window.showFinaleCinematic.toString();
+      const ensureOverlayCode = finaleCode.includes('addEventListener') 
+        ? true 
+        : (await fetch('js/finale.js').then(r => r.text())).includes('addEventListener');
+      
+      if (ensureOverlayCode) {
+        const codeText = await fetch('js/finale.js').then(r => r.text());
+        const hasOnceTrue = codeText.includes('{ once: true }');
+        const hasDisabled = codeText.includes('newSeasonBtn.disabled = true');
+        const hasRemove = codeText.includes('dim.remove()');
+        
+        addTestResult(
+          'Event listener guard', 
+          hasOnceTrue,
+          hasOnceTrue ? 'Uses { once: true }' : 'Does NOT use { once: true }'
+        );
+        
+        addTestResult(
+          'Button disabled on click',
+          hasDisabled,
+          hasDisabled ? 'Button is disabled' : 'Button is NOT disabled'
+        );
+        
+        addTestResult(
+          'Overlay removal',
+          hasRemove,
+          hasRemove ? 'Overlay is removed before ProfileModal.show()' : 'Overlay is NOT removed'
+        );
+      }
+      
+      // Test 2: Manual click test
+      log('Test 2: Manual click test...', 'info');
+      testShowFinale();
+      
+      setTimeout(() => {
+        const overlayBefore = document.querySelector('.cinDim');
+        const hasFinaleBefore = !!overlayBefore;
+        
+        log(`Finale overlay present before click: ${hasFinaleBefore}`, 'info');
+        
+        const btn = document.getElementById('cinNewSeason');
+        if (btn) {
+          btn.click();
+          
+          setTimeout(() => {
+            const overlayAfter = document.querySelector('.cinDim');
+            const hasFinaleAfter = !!overlayAfter;
+            
+            addTestResult(
+              'Overlay removed after click',
+              !hasFinaleAfter,
+              hasFinaleAfter ? 'Overlay still present' : 'Overlay removed'
+            );
+            
+            addTestResult(
+              'Button disabled after click',
+              btn.disabled,
+              btn.disabled ? 'Button is disabled' : 'Button is still enabled'
+            );
+            
+            log('=== All Tests Complete ===', 'success');
+          }, 200);
+        }
+      }, 500);
+    }
+
+    // Override console methods to capture logs
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalInfo = console.info;
+    const originalError = console.error;
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      if (args[0] && typeof args[0] === 'string' && 
+          (args[0].includes('[finale]') || args[0].includes('[new-season]') || 
+           args[0].includes('[ProfileModal]') || args[0].includes('[profileService]'))) {
+        log(args.join(' '), 'info');
+      }
+    };
+    
+    console.info = function(...args) {
+      originalInfo.apply(console, args);
+      if (args[0] && typeof args[0] === 'string' && 
+          (args[0].includes('[finale]') || args[0].includes('[new-season]') || 
+           args[0].includes('[ProfileModal]') || args[0].includes('[profileService]'))) {
+        log(args.join(' '), 'info');
+      }
+    };
+    
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      if (args[0] && typeof args[0] === 'string' && 
+          (args[0].includes('[finale]') || args[0].includes('[new-season]') || 
+           args[0].includes('[ProfileModal]') || args[0].includes('[profileService]'))) {
+        log(args.join(' '), 'warn');
+      }
+    };
+    
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      if (args[0] && typeof args[0] === 'string' && 
+          (args[0].includes('[finale]') || args[0].includes('[new-season]') || 
+           args[0].includes('[ProfileModal]') || args[0].includes('[profileService]'))) {
+        log(args.join(' '), 'error');
+      }
+    };
+
+    // Auto-run tests on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('=== Test Page Loaded ===', 'success');
+      log('Click "Run All Tests" to start automated testing', 'info');
+    });
+  </script>
+</body>
+</html>
