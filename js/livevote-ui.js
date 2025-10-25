@@ -34,6 +34,12 @@
   const DEFAULT_HOLD_MS = 500;
   const DEFAULT_GAP_MS = 250;
 
+  // Evictee final portrait timing constants
+  const EVICTEE_FADE_IN_WAIT = 800; // Time to show portrait before B&W animation
+  const EVICTEE_REDUCED_MOTION_FACTOR = 0.6; // Factor for reduced motion timing
+  const EVICTEE_MIN_REDUCED_HOLD = 1000; // Minimum hold time in reduced motion mode
+  const EVICTEE_MIN_NORMAL_HOLD = 1200; // Minimum hold time in normal mode
+
   // Get avatar helper (fallback to global if available)
   function getAvatarUrl(playerId) {
     if (global.resolveAvatar) {
@@ -633,6 +639,10 @@
     const existingTag = tv?.querySelector('.lv2-turn-tag');
     if (existingTag) existingTag.remove();
 
+    // Remove any evictee visuals
+    const evicteeVisuals = tv?.querySelectorAll('.lv2-evictee');
+    evicteeVisuals?.forEach(el => el.remove());
+
     // Restore panel visibility
     const panel = document.querySelector('#panel');
     if (panel) {
@@ -708,6 +718,122 @@
     });
   });
 
+  // Result sequence functions for eviction flow
+  
+  /**
+   * Begin result card phase: fade out nominees/feed and lower overlay z-index
+   * so the Eviction Result card can appear on top
+   */
+  function beginResultCardPhase() {
+    const tv = document.querySelector('#tv');
+    const overlay = tv?.querySelector('.lv2-overlay');
+    
+    if (!overlay || !state.container) {
+      console.warn('[lv2] beginResultCardPhase: overlay or container not found');
+      return;
+    }
+    
+    // Add result-phase class to fade out nominees and feed
+    state.container.classList.add('lv2-result-phase');
+    
+    // Lower overlay z-index so cards appear on top
+    overlay.classList.remove('above-cards');
+    overlay.classList.add('below-cards');
+  }
+
+  /**
+   * End result card phase: restore overlay z-index to normal
+   * (after Eviction Result card has displayed)
+   */
+  function endResultCardPhase() {
+    const tv = document.querySelector('#tv');
+    const overlay = tv?.querySelector('.lv2-overlay');
+    
+    if (!overlay) {
+      console.warn('[lv2] endResultCardPhase: overlay not found');
+      return;
+    }
+    
+    // Restore overlay z-index
+    overlay.classList.remove('below-cards');
+    overlay.classList.add('above-cards');
+  }
+
+  /**
+   * Show centered final evictee portrait with black-and-white fade
+   * @param {Object} options - { evictedId, evictedName, holdMs }
+   */
+  async function showEvicteeFinal(options = {}) {
+    const { evictedId, evictedName, holdMs = 3500 } = options;
+    
+    if (!evictedId || !evictedName) {
+      console.warn('[lv2] showEvicteeFinal: missing evictedId or evictedName');
+      return;
+    }
+
+    const tv = document.querySelector('#tv');
+    if (!tv) {
+      console.warn('[lv2] showEvicteeFinal: TV element not found');
+      return;
+    }
+
+    // Create evictee visual container
+    const evicteeEl = document.createElement('div');
+    evicteeEl.className = 'lv2-evictee';
+
+    // Portrait container
+    const portraitEl = document.createElement('div');
+    portraitEl.className = 'lv2-evictee-portrait';
+
+    // Portrait image
+    const img = document.createElement('img');
+    img.src = getAvatarUrl(evictedId);
+    img.alt = evictedName;
+    img.onerror = function() {
+      console.warn(`[lv2] failed to load evictee avatar for ${evictedName}`);
+      this.onerror = null;
+      this.src = getDicebearUrl(evictedName);
+    };
+    portraitEl.appendChild(img);
+
+    // Name label
+    const nameEl = document.createElement('div');
+    nameEl.className = 'lv2-evictee-name';
+    nameEl.textContent = evictedName;
+
+    evicteeEl.appendChild(portraitEl);
+    evicteeEl.appendChild(nameEl);
+
+    // Append to TV (above overlay)
+    tv.appendChild(evicteeEl);
+
+    // Fade in
+    await sleep(100); // Allow DOM to settle
+    evicteeEl.classList.add('visible');
+
+    // Wait for portrait to be visible (part of the total hold time)
+    await sleep(EVICTEE_FADE_IN_WAIT);
+
+    // Animate to black-and-white
+    portraitEl.classList.add('grayscale');
+
+    // Hold the portrait (total hold time minus fade-in wait)
+    // In reduced motion, use shorter duration
+    const remainingHold = reducedMotion 
+      ? Math.max(holdMs * EVICTEE_REDUCED_MOTION_FACTOR, EVICTEE_MIN_REDUCED_HOLD)
+      : Math.max(holdMs - EVICTEE_FADE_IN_WAIT, EVICTEE_MIN_NORMAL_HOLD);
+    await sleep(remainingHold);
+
+    // Fade out
+    evicteeEl.style.transition = 'opacity 0.8s ease-out';
+    evicteeEl.style.opacity = '0';
+
+    await sleep(800);
+
+    // Remove from DOM
+    evicteeEl.remove();
+  }
+
   // Public API exposed on window.lv2
   const lv2 = {
     init: init,
@@ -719,6 +845,9 @@
     setTurn: setTurn,
     showTurnIndicator: showTurnIndicator,
     hideTurnIndicator: hideTurnIndicator,
+    beginResultCardPhase: beginResultCardPhase,
+    endResultCardPhase: endResultCardPhase,
+    showEvicteeFinal: showEvicteeFinal,
     get enabled() {
       // Read from config if available
       return global.game?.cfg?.modernLiveVoteUI !== false;

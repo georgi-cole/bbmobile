@@ -660,14 +660,25 @@
         global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       } else {
-        // Show in-TV result banner
-        const status = document.querySelector('.lv2-status');
-        if (status) {
-          status.textContent = `${evName} evicted by ${finalA} to ${finalB}`;
-          status.classList.remove('muted', 'warn');
-          status.classList.add('danger');
-        }
-        await sleep(3000);
+        // LV2 Result Sequence:
+        // 1. Begin result card phase (fade nominees/feed, lower overlay z-index)
+        global.lv2?.beginResultCardPhase?.();
+        
+        // 2. Show Eviction Result card (now appears above nominees)
+        global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
+        try{ await global.cardQueueWaitIdle?.(); }catch{}
+        
+        // 3. End result card phase (restore overlay z-index)
+        global.lv2?.endResultCardPhase?.();
+        
+        // 4. Show centered final evictee portrait with B&W fade
+        try{ 
+          await global.lv2?.showEvicteeFinal?.({
+            evictedId: evId,
+            evictedName: evName,
+            holdMs: 3500
+          });
+        }catch{}
       }
       
       global.addLog?.(`Evicted: ${evName} (${finalA}–${finalB}).`,'danger');

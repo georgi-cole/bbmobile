@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eviction Result Sequence Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+      color: white;
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    #tv {
+      position: relative;
+      margin: 20px auto;
+      width: min(90vw, 1200px);
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1a2332, #0e1620);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🎬 Eviction Result Sequence Test</h1>
+    
+    <div class="test-info">
+      <strong>Test Scenario:</strong> This test demonstrates the new eviction result sequence where:
+      <ol style="margin: 8px 0; padding-left: 20px;">
+        <li>Nominees and voter feed fade out</li>
+        <li>Eviction Result card appears ABOVE the nominees (not behind)</li>
+        <li>After card dismisses, centered evictee portrait appears</li>
+        <li>Portrait animates to black-and-white and fades out</li>
+      </ol>
+    </div>
+    
+    <button onclick="runFullSequence()">▶️ Run Full Eviction Sequence</button>
+    <button onclick="testResultPhase()">🎭 Test Result Phase Only</button>
+    <button onclick="testEvicteeFinal()">👤 Test Evictee Final Visual</button>
+    <button onclick="clearAll()">🗑️ Clear All</button>
+    
+    <div class="test-info" id="status">
+      <strong>Status:</strong> Ready
+    </div>
+  </div>
+
+  <div id="tv"></div>
+
+  <!-- Load game scripts -->
+  <script src="js/livevote-ui.js"></script>
+  
+  <script>
+    // Mock minimal game setup
+    window.game = {
+      cfg: {
+        modernLiveVoteUI: true
+      }
+    };
+
+    // Mock avatar resolver
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+
+    window.resolveAvatar = function(player) {
+      if (player && player.avatar) return player.avatar;
+      return window.getDicebearUrl(player?.name || 'player');
+    };
+
+    window.safeName = function(id) {
+      const names = { 1: 'Alex', 2: 'Taylor', 3: 'Jordan', 4: 'Morgan' };
+      return names[id] || `Player ${id}`;
+    };
+
+    window.getP = function(id) {
+      const players = {
+        1: { id: 1, name: 'Alex', avatar: null },
+        2: { id: 2, name: 'Taylor', avatar: null },
+        3: { id: 3, name: 'Jordan', avatar: null },
+        4: { id: 4, name: 'Morgan', avatar: null }
+      };
+      return players[id];
+    };
+
+    // Mock showCard function (simplified)
+    window.showCard = function(title, messages, type, duration, inTv) {
+      console.log(`[showCard] ${title}: ${messages.join(' ')}`);
+      
+      const tv = document.getElementById('tv');
+      let tvOverlay = document.getElementById('tvOverlay');
+      
+      if (!tvOverlay) {
+        tvOverlay = document.createElement('div');
+        tvOverlay.id = 'tvOverlay';
+        tv.appendChild(tvOverlay);
+      }
+
+      const card = document.createElement('div');
+      card.className = 'revealCard';
+      card.style.cssText = `
+        background: linear-gradient(135deg, rgba(28,43,62,0.95), rgba(12,22,36,0.95));
+        backdrop-filter: blur(16px);
+        border: 2px solid rgba(120,180,240,0.5);
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: 0 24px 64px -24px rgba(0,0,0,0.95);
+        max-width: 480px;
+        text-align: center;
+        pointer-events: auto;
+        margin: auto;
+      `;
+
+      const titleEl = document.createElement('div');
+      titleEl.textContent = title;
+      titleEl.style.cssText = 'font-size: 1.4rem; font-weight: 700; color: #ff6b6b; margin-bottom: 16px;';
+      card.appendChild(titleEl);
+
+      messages.forEach(msg => {
+        const msgEl = document.createElement('div');
+        msgEl.textContent = msg;
+        msgEl.style.cssText = 'font-size: 1.1rem; color: #e8f4ff; margin-bottom: 8px; line-height: 1.5;';
+        card.appendChild(msgEl);
+      });
+
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+
+      setTimeout(() => {
+        card.remove();
+        if (tvOverlay.children.length === 0) {
+          tvOverlay.innerHTML = '';
+        }
+      }, duration);
+    };
+
+    // Mock cardQueueWaitIdle
+    window.cardQueueWaitIdle = function() {
+      return new Promise(resolve => setTimeout(resolve, 100));
+    };
+
+    function updateStatus(msg) {
+      document.getElementById('status').innerHTML = `<strong>Status:</strong> ${msg}`;
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function runFullSequence() {
+      try {
+        updateStatus('Starting full eviction sequence...');
+        
+        // Initialize live vote UI
+        updateStatus('Initializing Live Vote UI...');
+        window.lv2.init({
+          leftName: 'Alex',
+          rightName: 'Taylor',
+          leftId: 1,
+          rightId: 2
+        });
+
+        await sleep(1000);
+
+        // Simulate some votes
+        updateStatus('Simulating votes...');
+        const voters = [
+          { voterId: 3, voterName: 'Jordan', pick: 'left' },
+          { voterId: 4, voterName: 'Morgan', pick: 'right' },
+          { voterId: 5, voterName: 'Sam', pick: 'left' },
+          { voterId: 6, voterName: 'Casey', pick: 'left' }
+        ];
+
+        for (const vote of voters) {
+          window.lv2.pushVote(vote);
+          await sleep(1500);
+        }
+
+        await sleep(1000);
+
+        // Mark as finished
+        window.lv2.finish();
+        await sleep(500);
+
+        // Begin result sequence
+        updateStatus('Beginning result card phase (fade out nominees/feed)...');
+        window.lv2.beginResultCardPhase();
+        await sleep(800);
+
+        // Show Eviction Result card
+        updateStatus('Showing Eviction Result card (now appears ABOVE nominees)...');
+        window.showCard(
+          'Eviction Result',
+          ['By a vote of 3 to 1, Alex, you have been evicted.'],
+          'evict',
+          3800,
+          true
+        );
+        await window.cardQueueWaitIdle();
+        await sleep(3800);
+
+        // End result card phase
+        updateStatus('Ending result card phase (restore overlay)...');
+        window.lv2.endResultCardPhase();
+        await sleep(300);
+
+        // Show final evictee visual
+        updateStatus('Showing centered evictee portrait with B&W fade...');
+        await window.lv2.showEvicteeFinal({
+          evictedId: 1,
+          evictedName: 'Alex',
+          holdMs: 3500
+        });
+
+        updateStatus('✅ Sequence complete! Cleaning up...');
+        await sleep(1000);
+
+        window.lv2.cleanup();
+        updateStatus('✅ All done! You can run the sequence again.');
+      } catch (err) {
+        console.error('Error in sequence:', err);
+        updateStatus(`❌ Error: ${err.message}`);
+      }
+    }
+
+    async function testResultPhase() {
+      try {
+        updateStatus('Testing result phase...');
+        
+        // Initialize if needed
+        if (!document.querySelector('.lv2-overlay')) {
+          window.lv2.init({
+            leftName: 'Alex',
+            rightName: 'Taylor',
+            leftId: 1,
+            rightId: 2
+          });
+          await sleep(500);
+        }
+
+        // Begin result phase
+        updateStatus('Begin result phase (fading nominees)...');
+        window.lv2.beginResultCardPhase();
+        await sleep(2000);
+
+        // Show card
+        updateStatus('Showing card (should be above nominees)...');
+        window.showCard(
+          'Test Card',
+          ['This card should appear ABOVE the faded nominees.'],
+          'live',
+          3000,
+          true
+        );
+        await sleep(3000);
+
+        // End result phase
+        updateStatus('Ending result phase (restoring overlay)...');
+        window.lv2.endResultCardPhase();
+        
+        updateStatus('✅ Result phase test complete!');
+      } catch (err) {
+        console.error('Error:', err);
+        updateStatus(`❌ Error: ${err.message}`);
+      }
+    }
+
+    async function testEvicteeFinal() {
+      try {
+        updateStatus('Testing evictee final visual...');
+        
+        await window.lv2.showEvicteeFinal({
+          evictedId: 1,
+          evictedName: 'Alex',
+          holdMs: 3500
+        });
+
+        updateStatus('✅ Evictee final visual complete!');
+      } catch (err) {
+        console.error('Error:', err);
+        updateStatus(`❌ Error: ${err.message}`);
+      }
+    }
+
+    function clearAll() {
+      window.lv2.cleanup();
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) tvOverlay.innerHTML = '';
+      
+      // Remove any evictee visuals
+      document.querySelectorAll('.lv2-evictee').forEach(el => el.remove());
+      
+      updateStatus('✅ Cleared!');
+    }
+
+    // Initial message
+    console.log('✅ Eviction Result Sequence Test loaded');
+    console.log('Click "Run Full Eviction Sequence" to see the new functionality');
+  </script>
+</body>
+</html>
