@@ -104,22 +104,16 @@
       display: flex;
       justify-content: center;
     }
-    /* Simplified TV frame for testing */
-    .tvFrame {
-      width: 100%;
-      max-width: 1200px;
-      background: #000;
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
-    }
+    /* Simplified TV for testing */
     .tv {
       width: 100%;
+      max-width: 1200px;
       height: 600px;
       background: linear-gradient(135deg, #1a2a40, #0f1a2a);
       border-radius: 12px;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
     }
     .tvViewport {
       width: 100%;
@@ -164,11 +158,9 @@
     </div>
 
     <div class="tv-wrapper">
-      <div class="tvFrame">
-        <div class="tv" id="tv">
-          <div class="tvViewport">
-            <p>TV ready. Click a test button above to show the picker.</p>
-          </div>
+      <div class="tv" id="tv">
+        <div class="tvViewport">
+          <p>TV ready. Click a test button above to show the picker.</p>
         </div>
       </div>
     </div>

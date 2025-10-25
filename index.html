@@ -126,25 +126,21 @@
     <h1>Houseguests</h1>
     <!-- Roster Bar (above TV) -->
     <div id="rosterBar"></div>
-    <div class="tvFrame">
-      <div class="tvBezel">
-        <div class="tv" id="tv">
-          <div class="tvHead">
-            <div class="tvTitle">House Network Live</div>
-            <div class="tvTimer" id="tvTimer">00:00</div>
-          </div>
-          <div class="tvViewport" data-sm-faux-tv>
-            <div id="tvNow" class="tvNow">Welcome to the season.</div>
-            <div id="tvOverlay" class="tvOverlay"></div>
-            <canvas id="confetti"></canvas>
-            <!-- Live badge for voting phases (INSIDE viewport) -->
-            <div class="liveBadge" id="liveBadge" aria-live="polite" aria-label="Live voting in progress" style="display:none;">LIVE</div>
-            <!-- Twist badge for active twists (INSIDE viewport, bottom-right) -->
-            <div class="twistBadge" id="twistBadge" aria-live="polite" aria-label="Active twist" style="display:none;">
-              <span class="twistBadgeDot"></span>
-              <span class="twistBadgeText">Triple Eviction</span>
-            </div>
-          </div>
+    <div class="tv" id="tv">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+        <div class="tvTimer" id="tvTimer">00:00</div>
+      </div>
+      <div class="tvViewport" data-sm-faux-tv>
+        <div id="tvNow" class="tvNow">Welcome to the season.</div>
+        <div id="tvOverlay" class="tvOverlay"></div>
+        <canvas id="confetti"></canvas>
+        <!-- Live badge for voting phases (INSIDE viewport) -->
+        <div class="liveBadge" id="liveBadge" aria-live="polite" aria-label="Live voting in progress" style="display:none;">LIVE</div>
+        <!-- Twist badge for active twists (INSIDE viewport, bottom-right) -->
+        <div class="twistBadge" id="twistBadge" aria-live="polite" aria-label="Active twist" style="display:none;">
+          <span class="twistBadgeDot"></span>
+          <span class="twistBadgeText">Triple Eviction</span>
         </div>
       </div>
     </div>
