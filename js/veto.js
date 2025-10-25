@@ -1810,7 +1810,7 @@
     
     await showTVCard({
       title: 'Veto Ceremony',
-      lines: ['This is the Veto ceremony. As ' + holderName + ' holds the Power of Veto, please stand and make your decision.'],
+      lines: [holderName + ' will decide whether to use the Power of Veto.'],
       tone: 'veto',
       duration: 2400
     });
@@ -2254,19 +2254,20 @@
       
       var hoh = getP(g.hohId);
       
-      // Show replacement required message
+      // Show replacement required message - concise for mobile
+      var isGoldenPOV = (g.activeVetoTwist === 'golden');
+      var replacerName = isGoldenPOV ? 'POV holder' : 'HOH';
       await showTVCard({
         title: 'Replacement Required',
-        lines: ['As I have vetoed one of your nominations, you must now select a replacement.'],
+        lines: ['The ' + replacerName + ' must now select a replacement nominee.'],
         tone: 'noms',
         duration: 3200
       });
 
       // Check for Golden POV twist - POV holder picks replacement instead of HOH
-      var isGoldenPOV = (g.activeVetoTwist === 'golden');
       var holder = getP(g.vetoHolder);
       var picker = isGoldenPOV ? holder : hoh;
-      var pickerName = picker ? picker.name : (isGoldenPOV ? 'POV Holder' : 'HOH');
+      var pickerName = picker ? picker.name : replacerName;
 
       if(picker && picker.human){
         g._awaitingReplacement = true;
