@@ -245,6 +245,41 @@ if (cssContent.includes('@keyframes fadeSlideIn') || cssContent.includes('animat
   fail('CSS fadeSlideIn animation not found');
 }
 
+// Test 26: Check for showTVCardWithAvatars function
+if (vetoContent.includes('function showTVCardWithAvatars(')) {
+  pass('showTVCardWithAvatars function exists');
+} else {
+  fail('showTVCardWithAvatars function not found');
+}
+
+// Test 27: Check that showTVCardWithAvatars is exported
+if (vetoContent.includes('global.showTVCardWithAvatars')) {
+  pass('showTVCardWithAvatars is exported to global');
+} else {
+  fail('showTVCardWithAvatars is not exported');
+}
+
+// Test 28: Check that avatar-enhanced cards are used in veto decision
+if (vetoContent.includes('showTVCardWithAvatars({') && vetoContent.includes('actorIds')) {
+  pass('Veto ceremony uses avatar-enhanced cards');
+} else {
+  fail('Veto ceremony does not use avatar-enhanced cards');
+}
+
+// Test 29: Check for avatar row rendering
+if (vetoContent.includes('tv-card-avatars') || vetoContent.includes('avatarRow')) {
+  pass('Avatar row rendering logic is present');
+} else {
+  fail('Avatar row rendering logic not found');
+}
+
+// Test 30: Check for subject avatars support
+if (vetoContent.includes('subjectIds')) {
+  pass('Subject avatars parameter is supported');
+} else {
+  fail('Subject avatars parameter not found');
+}
+
 // Summary
 console.log('\n=== Verification Summary ===');
 console.log(`Passed: ${GREEN}${passCount}${RESET}`);

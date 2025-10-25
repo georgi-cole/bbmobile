@@ -864,6 +864,153 @@
     });
   }
   
+  /**
+   * Enhanced TV card with avatar support
+   * @param {Object} options - Card configuration
+   * @param {string} options.title - Card title
+   * @param {string[]} options.lines - Card text lines
+   * @param {string} options.tone - Card tone/style
+   * @param {number} options.duration - Display duration in ms
+   * @param {number|number[]} options.actorIds - Actor player ID(s) to show avatars
+   * @param {number|number[]} options.subjectIds - Subject player ID(s) to show avatars
+   * @returns {Promise} Resolves when card is dismissed
+   */
+  function showTVCardWithAvatars({title, lines, tone, duration, actorIds, subjectIds}){
+    return new Promise(function(resolve){
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(); return; }
+      
+      clearTVOverlayContent();
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      if(tone) card.setAttribute('data-tone', tone);
+      
+      // Build avatar row if actors/subjects provided
+      var hasAvatars = (actorIds && actorIds !== null) || (subjectIds && subjectIds !== null);
+      if(hasAvatars){
+        var avatarRow = document.createElement('div');
+        avatarRow.className = 'tv-card-avatars';
+        avatarRow.style.display = 'flex';
+        avatarRow.style.gap = '12px';
+        avatarRow.style.justifyContent = 'center';
+        avatarRow.style.marginBottom = '16px';
+        avatarRow.style.flexWrap = 'wrap';
+        
+        // Add actor avatars
+        var actors = Array.isArray(actorIds) ? actorIds : (actorIds != null ? [actorIds] : []);
+        for(var i=0; i<actors.length; i++){
+          var actorId = actors[i];
+          var actor = getP(actorId);
+          if(actor){
+            var avatarWrap = document.createElement('div');
+            avatarWrap.style.display = 'flex';
+            avatarWrap.style.flexDirection = 'column';
+            avatarWrap.style.alignItems = 'center';
+            avatarWrap.style.gap = '6px';
+            
+            var img = document.createElement('img');
+            var resolveAvatar = (global.Game || global).resolveAvatar;
+            img.src = resolveAvatar ? resolveAvatar(actor) : (actor.avatar || actor.img || actor.photo);
+            if(!img.src){
+              img.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(actor.name);
+            }
+            img.alt = actor.name;
+            img.style.width = '64px';
+            img.style.height = '64px';
+            img.style.borderRadius = '12px';
+            img.style.border = '2px solid rgba(255,255,255,0.3)';
+            img.style.objectFit = 'cover';
+            avatarWrap.appendChild(img);
+            
+            var nameLabel = document.createElement('div');
+            nameLabel.className = 'tiny';
+            nameLabel.textContent = actor.name;
+            nameLabel.style.textAlign = 'center';
+            nameLabel.style.fontSize = '12px';
+            nameLabel.style.opacity = '0.9';
+            avatarWrap.appendChild(nameLabel);
+            
+            avatarRow.appendChild(avatarWrap);
+          }
+        }
+        
+        // Add arrow separator if both actors and subjects exist
+        if(actors.length > 0 && subjectIds){
+          var arrow = document.createElement('div');
+          arrow.textContent = '→';
+          arrow.style.fontSize = '32px';
+          arrow.style.alignSelf = 'center';
+          arrow.style.opacity = '0.7';
+          arrow.style.padding = '0 8px';
+          avatarRow.appendChild(arrow);
+        }
+        
+        // Add subject avatars
+        var subjects = Array.isArray(subjectIds) ? subjectIds : (subjectIds != null ? [subjectIds] : []);
+        for(var j=0; j<subjects.length; j++){
+          var subjectId = subjects[j];
+          var subject = getP(subjectId);
+          if(subject){
+            var subjectWrap = document.createElement('div');
+            subjectWrap.style.display = 'flex';
+            subjectWrap.style.flexDirection = 'column';
+            subjectWrap.style.alignItems = 'center';
+            subjectWrap.style.gap = '6px';
+            
+            var subjectImg = document.createElement('img');
+            var resolveAvatar2 = (global.Game || global).resolveAvatar;
+            subjectImg.src = resolveAvatar2 ? resolveAvatar2(subject) : (subject.avatar || subject.img || subject.photo);
+            if(!subjectImg.src){
+              subjectImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(subject.name);
+            }
+            subjectImg.alt = subject.name;
+            subjectImg.style.width = '64px';
+            subjectImg.style.height = '64px';
+            subjectImg.style.borderRadius = '12px';
+            subjectImg.style.border = '2px solid rgba(255,255,255,0.3)';
+            subjectImg.style.objectFit = 'cover';
+            subjectWrap.appendChild(subjectImg);
+            
+            var subjectLabel = document.createElement('div');
+            subjectLabel.className = 'tiny';
+            subjectLabel.textContent = subject.name;
+            subjectLabel.style.textAlign = 'center';
+            subjectLabel.style.fontSize = '12px';
+            subjectLabel.style.opacity = '0.9';
+            subjectWrap.appendChild(subjectLabel);
+            
+            avatarRow.appendChild(subjectWrap);
+          }
+        }
+        
+        card.appendChild(avatarRow);
+      }
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = title;
+      card.appendChild(h3);
+      
+      for(var k=0; k<lines.length; k++){
+        var p = document.createElement('p');
+        if(k === 0) p.className = 'big';
+        p.textContent = lines[k];
+        card.appendChild(p);
+      }
+      
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      setTimeout(function(){
+        clearTVOverlayContent();
+        if(tv) tv.classList.remove('tvTall');
+        resolve();
+      }, duration || 2400);
+    });
+  }
+  
   function showTVDecision({title, message, buttons}){
     return new Promise(function(resolve){
       var content = ensureTVOverlayScaffold();
@@ -1383,6 +1530,7 @@
   global.ensureTVOverlayScaffold = ensureTVOverlayScaffold;
   global.clearTVOverlayContent = clearTVOverlayContent;
   global.showTVCard = showTVCard;
+  global.showTVCardWithAvatars = showTVCardWithAvatars;
   global.showTVDecision = showTVDecision;
   global.showTVNomineeSavePanel = showTVNomineeSavePanel;
   global.renderHOHReplacementChoice = renderHOHReplacementChoice;
@@ -1666,12 +1814,13 @@
     
     var holderName = holder ? holder.name : 'POV Holder';
     
-    // Show Diamond POV announcement
-    await showTVCard({
+    // Show Diamond POV announcement with POV holder avatar
+    await showTVCardWithAvatars({
       title: 'Diamond Power of Veto',
       lines: [holderName + ' will now replace BOTH nominees.'],
       tone: 'veto',
-      duration: 3200
+      duration: 3200,
+      actorIds: holder ? holder.id : null
     });
     
     // Compute eligible replacement nominees (exclude HOH and POV holder)
@@ -1825,20 +1974,22 @@
       if(!g.__vetoNarrativeShown){
         g.__vetoNarrativeShown = true;
         
-        // Show veto decision card
-        await showTVCard({
+        // Show veto decision card with POV holder avatar
+        await showTVCardWithAvatars({
           title: 'Veto Decision',
           lines: [pickPhrase(VETO_USE_PHRASES)],
           tone: 'veto',
-          duration: 3200
+          duration: 3200,
+          actorIds: g.vetoHolder
         });
         
-        // Show saved player card
-        await showTVCard({
+        // Show saved player card with saved player avatar
+        await showTVCardWithAvatars({
           title: 'Saved',
           lines: [savedName + ' is saved from the block.'],
           tone: 'veto',
-          duration: 3200
+          duration: 3200,
+          subjectIds: savedId
         });
         
         // Log action
@@ -1940,12 +2091,13 @@
       // Veto NOT used
       try{ if(global.addLog) global.addLog('Veto not used.','muted'); }catch(e){}
       
-      // Show veto not used card
-      await showTVCard({
+      // Show veto not used card with POV holder avatar
+      await showTVCardWithAvatars({
         title: 'Veto Not Used',
         lines: [pickPhrase(VETO_NOT_USE_PHRASES)],
         tone: 'veto',
-        duration: 3600
+        duration: 3600,
+        actorIds: g.vetoHolder
       });
 
       // Show nominee reactions (they're still on the block)
@@ -2044,12 +2196,14 @@
       var announcerRole = isGoldenPOV ? 'POV Holder' : 'HOH';
       var announce = (announcer ? announcer.name : announcerRole)+': I name '+safeName(replacementId)+' as the replacement nominee.';
       
-      // Show announcement card with appropriate role
-      await showTVCard({
+      // Show announcement card with appropriate role and avatars
+      await showTVCardWithAvatars({
         title: announcerRole + ' Announcement',
         lines: [announce],
         tone: 'noms',
-        duration: 3400
+        duration: 3400,
+        actorIds: announcer ? announcer.id : null,
+        subjectIds: replacementId
       });
 
       try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by ' + announcerRole + ').','warn'); }catch(e){}
@@ -2057,10 +2211,14 @@
       // Show badge swap animation (visual representation of the swap)
       await renderBadgeSwap(savedId, replacementId);
       
-      // Show replacement nominee card
-      await showTVCard({
+      // Show replacement nominee card with replacement nominee avatar
+      await showTVCardWithAvatars({
         title: 'Replacement Nominee',
         lines: [safeName(replacementId) + ' is now on the block.'],
+        tone: 'replace',
+        duration: 3600,
+        subjectIds: replacementId
+      });
         tone: 'replace',
         duration: 3600
       });
@@ -2161,24 +2319,27 @@
       var announcerRole = announcer === 'POV' ? 'POV Holder' : 'HOH';
       var announcerName = announcerP ? announcerP.name : announcerRole;
       
-      // Show announcement card
+      // Show announcement card with announcer and subjects
       var namesStr = replacementIds.map(safeName).join(' and ');
-      await showTVCard({
+      await showTVCardWithAvatars({
         title: announcerRole + ' Announcement',
         lines: [announcerName + ' nominates ' + namesStr + ' for eviction.'],
         tone: 'noms',
-        duration: 3800
+        duration: 3800,
+        actorIds: announcerP ? announcerP.id : null,
+        subjectIds: replacementIds
       });
       
       try{ if(global.addLog) global.addLog('Diamond POV: ' + announcerName + ' nominates ' + namesStr + '.','warn'); }catch(e){}
       
-      // Show replacement cards for each nominee
+      // Show replacement cards for each nominee with their avatars
       for(var k=0; k<replacementIds.length; k++){
-        await showTVCard({
+        await showTVCardWithAvatars({
           title: 'Nominated',
           lines: [safeName(replacementIds[k]) + ' is on the block.'],
           tone: 'noms',
-          duration: 2800
+          duration: 2800,
+          subjectIds: replacementIds[k]
         });
       }
       
