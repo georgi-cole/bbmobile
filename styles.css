@@ -58,6 +58,18 @@
   --tv-safe-top:44px;
   --tv-safe-bottom:42px;
   --tv-safe-x:16px;
+  --tv-safe-gutter:8px; /* Additional gutter inside safe area */
+
+  /* TV Fit Contract - Global minimum requirements */
+  --tv-min-font-size:16px; /* Minimum readable font size */
+  --tv-min-tap-target:44px; /* Minimum tap target height */
+  --tv-min-tap-width:44px; /* Minimum tap target width */
+
+  /* Safe area with env() fallbacks for notch support */
+  --safe-inset-top:env(safe-area-inset-top, 0px);
+  --safe-inset-right:env(safe-area-inset-right, 0px);
+  --safe-inset-bottom:env(safe-area-inset-bottom, 0px);
+  --safe-inset-left:env(safe-area-inset-left, 0px);
 
   /* Theme texture overlays (optional, can be overridden by themes) */
   --texture-overlay:none;
@@ -684,11 +696,9 @@ button:focus-visible,.btn:focus-visible{
 
 /* 07. TV / SHOW PANEL (safe areas) ----------------------------------------- */
 .tv{
-  position:relative; height: clamp(340px, 52vh, 620px);
-  /* Default background with tvscreen.jpg and overlay for blending */
-  background:
-    linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    url('/assets/videos/tvscreen.jpg') center/cover;
+  position:relative; height:260px;
+  /* Default background with gradient (no network request) */
+  background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
   border:2px solid rgba(0,0,0,0.35); border-radius:18px; overflow:hidden;
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
@@ -701,7 +711,7 @@ button:focus-visible,.btn:focus-visible{
     var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
-/* Default background without overlay - shows tvscreen.jpg clearly */
+/* Default background without overlay - shows custom bg clearly */
 .tv.hasDefaultBg{
   background: var(--tv-bg) center/cover;
   background-color:#0e1730;
@@ -2929,9 +2939,12 @@ button:focus-visible,.btn:focus-visible{
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.5s ease-in-out;
-  /* Ensure it stays within safe areas */
-  margin-top: max(env(safe-area-inset-top, 0px), 0px);
-  margin-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
+  /* Ensure it stays within TV safe areas */
+  max-height: calc(100% - var(--tv-safe-top) - var(--tv-safe-bottom) - var(--tv-safe-gutter) * 4);
+  margin-top: max(env(safe-area-inset-top, 0px), var(--tv-safe-top));
+  margin-bottom: max(env(safe-area-inset-bottom, 0px), var(--tv-safe-bottom));
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .lv2-inline-card.visible {
@@ -2940,7 +2953,7 @@ button:focus-visible,.btn:focus-visible{
 
 .lv2-inline-card h3 {
   margin: 0 0 clamp(12px, 2dvh, 16px) 0;
-  font-size: clamp(1.2rem, 3dvh, 1.6rem);
+  font-size: max(var(--tv-min-font-size), clamp(1.2rem, 3dvh, 1.6rem));
   font-weight: 700;
   color: #83bfff;
   text-align: center;
@@ -2948,7 +2961,7 @@ button:focus-visible,.btn:focus-visible{
 }
 
 .lv2-inline-card-body {
-  font-size: clamp(0.95rem, 2.2dvh, 1.15rem);
+  font-size: max(var(--tv-min-font-size), clamp(0.95rem, 2.2dvh, 1.15rem));
   color: #e8f4ff;
   line-height: 1.5;
   text-align: center;
@@ -3242,6 +3255,46 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
 #castTbl td.state-col span{ display:inline-block; min-width:42px; text-align:center; }
 #dashboardCard h2.week-duplicate-heading{ display:none!important; }
 
+/* TV Fit Contract Utilities */
+.tv-safe-inset {
+  /* Apply TV safe area as inset */
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+}
+
+.tv-safe-padding {
+  /* Apply TV safe area as padding */
+  padding-top: calc(var(--tv-safe-top) + var(--tv-safe-gutter));
+  padding-right: calc(var(--tv-safe-x) + var(--tv-safe-gutter));
+  padding-bottom: calc(var(--tv-safe-bottom) + var(--tv-safe-gutter));
+  padding-left: calc(var(--tv-safe-x) + var(--tv-safe-gutter));
+}
+
+.tv-min-font {
+  /* Enforce minimum font size */
+  font-size: max(var(--tv-min-font-size), 1em);
+}
+
+.tv-min-tap {
+  /* Enforce minimum tap target size */
+  min-height: var(--tv-min-tap-target);
+  min-width: var(--tv-min-tap-width);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tv-no-scroll {
+  /* Prevent scrolling inside TV containers */
+  overflow: hidden;
+}
+
+.tv-fit-contain {
+  /* Ensure content fits within TV safe area */
+  max-width: calc(100% - var(--tv-safe-x) * 2 - var(--tv-safe-gutter) * 2);
+  max-height: calc(100% - var(--tv-safe-top) - var(--tv-safe-bottom) - var(--tv-safe-gutter) * 2);
+}
+
+
 /* 19. MEDIA QUERIES --------------------------------------------------------- */
 @media (max-width:1250px){
   .wrap{ grid-template-columns:280px minmax(420px,1fr); }
@@ -3344,10 +3397,8 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
 .tv{
   position:relative;
   height: clamp(280px, 42vh, 520px);
-  /* Default background with tvscreen.jpg and overlay for blending */
-  background:
-    linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    url('/assets/videos/tvscreen.jpg') center/cover;
+  /* Default background with gradient (no network request) */
+  background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
   border:2px solid #213349; border-radius:18px; overflow:hidden;
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
@@ -3360,7 +3411,7 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
     var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
-/* Default background without overlay - shows tvscreen.jpg clearly */
+/* Default background without overlay - shows custom bg clearly */
 .tv.hasDefaultBg{
   background: var(--tv-bg) center/cover;
   background-color:#0e1730;
@@ -3499,11 +3550,9 @@ img{ max-width:100%; display:block; }
 /* 07. TV / SHOW PANEL — TV Frame with Bezel and Viewport */
 .tv{
   position:relative;
-  height: clamp(340px, 52vh, 620px);
-  /* Default background with tvscreen.jpg and overlay for blending */
-  background:
-    linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    url('/assets/videos/tvscreen.jpg') center/cover;
+  height: clamp(280px, 42vh, 520px);
+  /* Default background with gradient (no network request) */
+  background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
   border:2px solid rgba(0,0,0,0.35); border-radius:16px; overflow:hidden;
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
@@ -3516,7 +3565,7 @@ img{ max-width:100%; display:block; }
     var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
-/* Default background without overlay - shows tvscreen.jpg clearly */
+/* Default background without overlay - shows custom bg clearly */
 .tv.hasDefaultBg{
   background: var(--tv-bg) center/cover;
   background-color:#0e1730;
@@ -3666,10 +3715,8 @@ img{ max-width:100%; display:block; }
 .tv{
   position:relative;
   height: clamp(300px, 44vh, 560px);
-  /* Default background with tvscreen.jpg and overlay for blending */
-  background:
-    linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    url('/assets/videos/tvscreen.jpg') center/cover;
+  /* Default background with gradient (no network request) */
+  background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
   border:2px solid #213349; border-radius:18px; overflow:hidden;
   display:flex; flex-direction:column; justify-content:flex-start; padding:0;
@@ -3682,7 +3729,7 @@ img{ max-width:100%; display:block; }
     var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
-/* Default background without overlay - shows tvscreen.jpg clearly */
+/* Default background without overlay - shows custom bg clearly */
 .tv.hasDefaultBg{
   background: var(--tv-bg) center/cover;
   background-color:#0e1730;
@@ -3835,10 +3882,8 @@ img{ max-width:100%; display:block; }
 .tv{
   position:relative;
   height: clamp(300px, 44vh, 560px);
-  /* Default background with tvscreen.jpg and overlay for blending */
-  background:
-    linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    url('/assets/videos/tvscreen.jpg') center/cover;
+  /* Default background with gradient (no network request) */
+  background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
   border:2px solid #213349; border-radius:18px; overflow:hidden;
   display:flex; flex-direction:column; justify-content:flex-start; padding:0;
@@ -3851,7 +3896,7 @@ img{ max-width:100%; display:block; }
     var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
-/* Default background without overlay - shows tvscreen.jpg clearly */
+/* Default background without overlay - shows custom bg clearly */
 .tv.hasDefaultBg{
   background: var(--tv-bg) center/cover;
   background-color:#0e1730;

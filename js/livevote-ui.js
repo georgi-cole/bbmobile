@@ -88,8 +88,14 @@
     renderPanel();
   }
 
-  // Detect if we should use responsive mode (mobile/narrow viewport)
+  // Detect responsive mode (narrow/portrait viewports)
   function detectResponsiveMode() {
+    // Use TVFit engine if available
+    if (global.TVFit) {
+      return global.TVFit.isNarrow() || global.TVFit.isMobile();
+    }
+    
+    // Fallback to existing logic
     const width = window.innerWidth;
     const height = window.innerHeight;
     const isPortrait = height > width;
@@ -128,6 +134,11 @@
     // Add carousel-on class if using carousel mode (Mobile Carousel 2.0)
     if (state.useCarousel) {
       overlay.classList.add('lv2-carousel-on');
+    }
+    
+    // Apply TV safe area constraints using TVFit if available
+    if (global.TVFit) {
+      global.TVFit.applySafeAreaConstraints(overlay);
     }
     
     overlay.setAttribute('role', 'region');
@@ -328,48 +339,6 @@
     return contestant;
   }
 
-  // Create carousel navigation controls (prev/next arrows)
-  function createCarouselNav() {
-    const nav = document.createElement('div');
-    nav.className = 'lv2-carousel-nav';
-    
-    // Previous button (left arrow)
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'lv2-carousel-arrow lv2-carousel-prev';
-    prevBtn.setAttribute('aria-label', 'Show previous nominee');
-    prevBtn.innerHTML = '◀'; // Left triangle
-    prevBtn.onclick = () => navigateCarousel('prev');
-    nav.appendChild(prevBtn);
-    
-    // Indicator dots
-    const indicators = document.createElement('div');
-    indicators.className = 'lv2-carousel-indicators';
-    
-    const dot1 = document.createElement('span');
-    dot1.className = 'lv2-carousel-dot active';
-    dot1.setAttribute('aria-label', `Show ${state.leftName}`);
-    dot1.onclick = () => setCarouselIndex(0);
-    indicators.appendChild(dot1);
-    
-    const dot2 = document.createElement('span');
-    dot2.className = 'lv2-carousel-dot';
-    dot2.setAttribute('aria-label', `Show ${state.rightName}`);
-    dot2.onclick = () => setCarouselIndex(1);
-    indicators.appendChild(dot2);
-    
-    nav.appendChild(indicators);
-    
-    // Next button (right arrow)
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'lv2-carousel-arrow lv2-carousel-next';
-    nextBtn.setAttribute('aria-label', 'Show next nominee');
-    nextBtn.innerHTML = '▶'; // Right triangle
-    nextBtn.onclick = () => navigateCarousel('next');
-    nav.appendChild(nextBtn);
-    
-    return nav;
-  }
-  
   // Navigate carousel (prev/next)
   function navigateCarousel(direction) {
     if (!state.useCarousel) return;
@@ -380,13 +349,6 @@
       state.carouselIndex = state.carouselIndex === 1 ? 0 : 1;
     }
     
-    updateCarouselView();
-  }
-  
-  // Set carousel to specific index
-  function setCarouselIndex(index) {
-    if (!state.useCarousel) return;
-    state.carouselIndex = index;
     updateCarouselView();
   }
   
@@ -1127,7 +1089,7 @@
     
     const key = e.key;
     
-    // Carousel mode: arrow keys for navigation, Enter to vote
+    // Carousel mode: arrow keys for navigation, Enter/Space to vote
     if (state.useCarousel) {
       if (key === 'ArrowLeft') {
         navigateCarousel('prev');
@@ -1140,14 +1102,29 @@
         return;
       }
       if (key === 'Enter' || key === ' ') {
-        const { carouselCTA } = state.ctaBar;
-        const btn = carouselCTA?.querySelector('.lv2-carousel-btn');
-        if (btn && !btn.disabled) {
-          btn.click();
-          e.preventDefault();
+        // Try CTA dock first (Mobile Carousel 2.0)
+        const { ctaDock, carouselCTA } = state.ctaBar;
+        
+        if (ctaDock) {
+          const btn = ctaDock.querySelector('.lv2-cta-main');
+          if (btn && !btn.disabled) {
+            btn.click();
+            e.preventDefault();
+            return;
+          }
         }
-        return;
+        
+        // Fallback to legacy carousel CTA
+        if (carouselCTA) {
+          const btn = carouselCTA.querySelector('.lv2-carousel-btn');
+          if (btn && !btn.disabled) {
+            btn.click();
+            e.preventDefault();
+            return;
+          }
+        }
       }
+      return;
     }
     
     // Normal mode: 1 and 2 keys
@@ -1285,9 +1262,16 @@
 
   /**
    * Check if inline card is supported (responsive mode)
+   * Uses TVFit engine if available, otherwise falls back to state.isResponsive
    * @returns {boolean}
    */
   function supportsInlineCard() {
+    // Use TVFit engine if available
+    if (global.TVFit) {
+      return global.TVFit.isMobile() || global.TVFit.isNarrow();
+    }
+    
+    // Fallback to state-based detection
     return state.isResponsive === true;
   }
 
