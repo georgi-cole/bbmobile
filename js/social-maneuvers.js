@@ -3125,6 +3125,12 @@
     // Finalize week for all players - compute next week seeds with unlimited carryover
     SocialResources.finalizeWeekForAll();
     
+    // Recompute allies/enemies after social phase
+    if(global.SocialRelations?.recomputeAllRelations){
+      console.info('[social-maneuvers] 🔄 Recomputing allies/enemies after social phase');
+      global.SocialRelations.recomputeAllRelations();
+    }
+    
     // Generate summary data (PR #266)
     const summary = generatePhaseSummary();
     

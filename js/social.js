@@ -73,6 +73,12 @@
       // Mark week as reset for legacy mode too
       g.__socialWeeklyResetWeek = currentWeek;
     }
+    
+    // Recompute allies/enemies after weekly reset
+    if(global.SocialRelations?.recomputeAllRelations){
+      console.info('[social.js] 🔄 Recomputing allies/enemies after weekly reset');
+      global.SocialRelations.recomputeAllRelations();
+    }
   }
   global.socialOnNewWeek = resetWeeklyCounters;
 
@@ -457,6 +463,12 @@
     clearDecisionDeck();
     // Unmask overlay
     const ov=document.getElementById('tvOverlay'); if(ov){ ov.__maskedBySocial = 0; ov.style.visibility=''; }
+    
+    // Recompute allies/enemies at end of social phase
+    if(global.SocialRelations?.recomputeAllRelations){
+      console.info('[social.js] 🔄 Recomputing allies/enemies after social phase');
+      global.SocialRelations.recomputeAllRelations();
+    }
   }
 
   // Public entry

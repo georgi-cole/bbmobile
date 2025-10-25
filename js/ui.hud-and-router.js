@@ -311,6 +311,41 @@ header.innerHTML = `
   }
   
   function computeAlliesEnemies(p){
+    const g = global.game;
+    const week = g?.week ?? 1;
+    
+    // Visibility gate: only show from Week 2 onwards
+    if(week < 2){
+      return { allies: [], enemies: [] };
+    }
+    
+    // Use new SocialRelations system if available
+    if(global.SocialRelations?.computeAlliesEnemies){
+      const result = global.SocialRelations.computeAlliesEnemies(p.id);
+      
+      // Convert to the format expected by renderBioContent
+      const allies = result.alliesIds.map(id => {
+        const other = g.players.find(pl => pl.id === id);
+        return {
+          id,
+          name: other?.name || '?',
+          affinity: p.affinity?.[id] ?? 0
+        };
+      });
+      
+      const enemies = result.enemiesIds.map(id => {
+        const other = g.players.find(pl => pl.id === id);
+        return {
+          id,
+          name: other?.name || '?',
+          affinity: p.affinity?.[id] ?? 0
+        };
+      });
+      
+      return { allies, enemies };
+    }
+    
+    // Fallback to legacy computation if SocialRelations not available
     const affinity = p.affinity || {};
     const ALLY_THRESHOLD = 0.50;
     const ENEMY_THRESHOLD = -0.50;
@@ -320,7 +355,7 @@ header.innerHTML = `
     
     for(const id in affinity){
       const val = affinity[id];
-      const other = (g.game?.players || []).find(pl => pl.id === parseInt(id));
+      const other = (g.players || []).find(pl => pl.id === parseInt(id));
       if(!other || other.evicted) continue;
       
       if(val > ALLY_THRESHOLD){
@@ -1761,6 +1796,29 @@ header.innerHTML = `
     ensureAlivePlayersPatched();
     sanitizeJuryConsistency(true);
     updateHud();
+    
+    // Listen for relations-updated events to refresh bio panel if open
+    window.addEventListener('relations-updated', (e) => {
+      const playerId = e.detail?.playerId;
+      if(playerId && currentBioPlayerId === playerId){
+        console.info('[bio] Refreshing bio panel for player', playerId, 'after relations update');
+        const player = g.game?.players?.find(p => p.id === playerId);
+        if(player){
+          const panel = document.getElementById('bioPanel');
+          if(panel && panel.style.display === 'block'){
+            panel.innerHTML = renderBioContent(player);
+            // Re-attach close button listener
+            const closeBtn = panel.querySelector('.bio-close-btn');
+            if(closeBtn){
+              closeBtn.addEventListener('click', (e)=>{
+                e.stopPropagation();
+                hideProfileTip();
+              });
+            }
+          }
+        }
+      }
+    });
   }
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', init, {once:true});
