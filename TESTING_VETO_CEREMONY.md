@@ -1,13 +1,13 @@
 # Veto Ceremony TV Experience - Testing Guide
 
 ## Overview
-This guide covers testing the modernized veto ceremony that renders all UI inside the faux TV with unified decision prompts, clear risk→safe→new-risk animation sequence, nomination validation, multi-eviction gating, and mobile-safe containment.
+This guide covers testing the modernized veto ceremony that renders all UI inside the faux TV with unified decision prompts, clear risk-to-safe-to-new-risk animation sequence, nomination validation, multi-eviction gating, and mobile-safe containment.
 
 ## Quick Test
 Open `test_veto_ceremony_tv.html` in a browser for a checklist of all test scenarios.
 
 ## New Features
-1. **Risk-Swap Animation**: Clear "risk → safe → new risk" sequence with GSAP timeline (CSS fallback)
+1. **Risk-Swap Animation**: Clear "risk to safe to new risk" sequence with GSAP timeline (CSS fallback)
 2. **Multi-Eviction Gating**: Golden/Diamond POV suspended during double/triple eviction weeks
 3. **Nomination Validation**: Prevents unchanged nominee pair (at most one can remain same)
 4. **Unified Decision**: Single in-TV prompt for all POV types with short copy
@@ -128,8 +128,8 @@ Open `test_veto_ceremony_tv.html` in a browser for a checklist of all test scena
 1. Start veto ceremony with human POV holder
 2. Use veto to save one nominee (e.g., Player A)
 3. As HOH (or POV holder if Golden), attempt to select the SAME player as replacement
-4. Verify error card appears: "Invalid Replacement"
-5. Verify message: "Final nominees cannot be the exact same pair. Please choose a different replacement."
+4. Verify error card appears with title: "Invalid Replacement"
+5. Verify error message: "Invalid Replacement - Final nominees cannot be the exact same pair. Please choose a different replacement."
 6. Verify replacement chooser re-opens automatically
 7. Select a different replacement nominee
 8. Verify ceremony continues normally
