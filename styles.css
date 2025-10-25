@@ -695,13 +695,12 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* 07. TV / SHOW PANEL (safe areas) ----------------------------------------- */
-.tvFrame{ position:relative; }
 .tv{
   position:relative; height:260px;
   /* Default background with gradient (no network request) */
   background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
-  border:2px solid #213349; border-radius:18px; overflow:hidden;
+  border:2px solid rgba(0,0,0,0.35); border-radius:18px; overflow:hidden;
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
   box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
 }
@@ -3549,30 +3548,13 @@ img{ max-width:100%; display:block; }
 ::-webkit-scrollbar-thumb:hover{ background:#31587a; }
 
 /* 07. TV / SHOW PANEL — TV Frame with Bezel and Viewport */
-.tvFrame{
-  position:relative;
-  padding:12px;
-  background:linear-gradient(145deg, #1a2939, #0f1b28);
-  border-radius:24px;
-  box-shadow:0 20px 50px -20px rgba(0,0,0,.85), 
-             inset 0 2px 4px rgba(255,255,255,.05),
-             inset 0 -2px 4px rgba(0,0,0,.25);
-}
-.tvBezel{
-  position:relative;
-  padding:8px;
-  background:linear-gradient(135deg, #141f2d, #0a1419);
-  border-radius:18px;
-  border:1px solid #24364b;
-  box-shadow:inset 0 0 24px rgba(0,0,0,.5);
-}
 .tv{
   position:relative;
   height: clamp(280px, 42vh, 520px);
   /* Default background with gradient (no network request) */
   background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
-  border:2px solid #213349; border-radius:16px; overflow:hidden;
+  border:2px solid rgba(0,0,0,0.35); border-radius:16px; overflow:hidden;
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
   box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
 }
@@ -3588,7 +3570,7 @@ img{ max-width:100%; display:block; }
   background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
-.tv.tvTall{ height: clamp(340px, 52vh, 600px); }
+.tv.tvTall{ height: clamp(400px, 62vh, 720px); }
 .tvViewport{
   position:relative;
   flex:1;
