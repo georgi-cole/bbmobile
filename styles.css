@@ -2448,6 +2448,170 @@ button:focus-visible,.btn:focus-visible{
   }
 }
 
+/* ========================================================================
+   Live Vote 2.3 - Responsive Mobile "Fill the TV" Mode
+   - On narrow/portrait viewports, remove transform scaling
+   - Fill TV container with safe-area insets
+   - Scale avatars, names, counts with dvh/dvw for mobile readability
+   - In-TV summary card that respects safe areas
+   ======================================================================== */
+
+/* Responsive mode: activated when .lv2-responsive is on overlay */
+.lv2-overlay.lv2-responsive {
+  /* Remove transform scaling wrapper and fill TV directly */
+}
+
+.lv2-overlay.lv2-responsive .lv2-fit {
+  /* In responsive mode, don't use fixed canvas - fill TV naturally */
+  width: auto;
+  height: auto;
+  position: absolute;
+  inset: env(safe-area-inset-top, 10px) 
+         env(safe-area-inset-right, 10px) 
+         env(safe-area-inset-bottom, 10px) 
+         env(safe-area-inset-left, 10px);
+  transform: none !important; /* Disable ResizeObserver scaling */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive mode: larger avatars scaled with viewport units */
+.lv2-overlay.lv2-responsive .lv2-avatar {
+  width: clamp(100px, 18dvh, 200px);
+  height: clamp(100px, 18dvh, 200px);
+}
+
+/* Responsive mode: larger name text */
+.lv2-overlay.lv2-responsive .lv2-name {
+  font-size: clamp(1rem, 2.5dvh, 1.4rem);
+  font-weight: 700;
+}
+
+/* Responsive mode: larger count capsule */
+.lv2-overlay.lv2-responsive .lv2-count {
+  font-size: clamp(1.3rem, 3dvh, 2rem);
+  padding: clamp(8px, 1.5dvh, 16px) clamp(16px, 3dvw, 24px);
+  min-width: clamp(60px, 12dvw, 100px);
+}
+
+/* Responsive mode: adjust grid for single column on very narrow screens */
+.lv2-overlay.lv2-responsive .lv2-grid {
+  gap: clamp(12px, 2dvh, 20px);
+  max-width: 100%;
+}
+
+/* Responsive mode: voter feed spacing */
+.lv2-overlay.lv2-responsive .lv2-voter-feed {
+  margin: clamp(8px, 2dvh, 16px) auto;
+  min-height: clamp(40px, 8dvh, 60px);
+}
+
+.lv2-overlay.lv2-responsive .lv2-voter-chip {
+  padding: clamp(6px, 1.5dvh, 10px) clamp(12px, 3dvw, 20px) clamp(6px, 1.5dvh, 10px) clamp(6px, 1.5dvw, 10px);
+}
+
+.lv2-overlay.lv2-responsive .lv2-voter-chip-avatar {
+  width: clamp(32px, 6dvh, 44px);
+  height: clamp(32px, 6dvh, 44px);
+}
+
+.lv2-overlay.lv2-responsive .lv2-voter-chip-text {
+  font-size: clamp(0.85rem, 2dvh, 1.05rem);
+}
+
+/* Responsive mode: adjust header */
+.lv2-overlay.lv2-responsive .lv2-header h3 {
+  font-size: clamp(1rem, 2.5dvh, 1.5rem);
+  margin-bottom: clamp(8px, 2dvh, 16px);
+}
+
+/* Responsive mode: adjust CTA pills */
+.lv2-overlay.lv2-responsive .lv2-cta-pill {
+  font-size: clamp(0.9rem, 2dvh, 1.1rem);
+  padding: clamp(10px, 2dvh, 14px) clamp(18px, 4dvw, 28px);
+  min-height: 48px;
+}
+
+/* Responsive mode: turn tag positioning */
+.lv2-overlay.lv2-responsive .lv2-turn-tag {
+  top: calc(env(safe-area-inset-top, 10px) + 8px);
+  font-size: clamp(0.65rem, 1.5dvh, 0.8rem);
+}
+
+/* In-TV summary card - contained within TV and respects safe areas */
+.lv2-inline-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  background: linear-gradient(135deg, rgba(20,35,55,0.98) 0%, rgba(14,23,48,0.98) 100%);
+  border: 2px solid rgba(131,191,255,0.4);
+  border-radius: 16px;
+  padding: clamp(20px, 4dvh, 32px) clamp(24px, 5dvw, 40px);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 0 60px rgba(131,191,255,0.3);
+  max-width: min(90%, 500px);
+  min-width: min(80%, 300px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease-in-out;
+  /* Ensure it stays within safe areas */
+  margin-top: max(env(safe-area-inset-top, 0px), 0px);
+  margin-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
+}
+
+.lv2-inline-card.visible {
+  opacity: 1;
+}
+
+.lv2-inline-card h3 {
+  margin: 0 0 clamp(12px, 2dvh, 16px) 0;
+  font-size: clamp(1.2rem, 3dvh, 1.6rem);
+  font-weight: 700;
+  color: #83bfff;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(131,191,255,0.5);
+}
+
+.lv2-inline-card-body {
+  font-size: clamp(0.95rem, 2.2dvh, 1.15rem);
+  color: #e8f4ff;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.lv2-inline-card-body div {
+  margin: clamp(6px, 1.5dvh, 10px) 0;
+}
+
+/* Tone variants for inline card */
+.lv2-inline-card.tone-evict {
+  border-color: rgba(255,107,107,0.5);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 0 60px rgba(255,107,107,0.4);
+}
+
+.lv2-inline-card.tone-evict h3 {
+  color: #ff6b6b;
+  text-shadow: 0 2px 8px rgba(255,107,107,0.6);
+}
+
+.lv2-inline-card.tone-live {
+  border-color: rgba(119,213,141,0.4);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 0 60px rgba(119,213,141,0.3);
+}
+
+.lv2-inline-card.tone-live h3 {
+  color: #77d58d;
+  text-shadow: 0 2px 8px rgba(119,213,141,0.5);
+}
+
+/* Reduced motion for inline card */
+@media (prefers-reduced-motion: reduce) {
+  .lv2-inline-card {
+    transition: opacity 0.3s ease;
+  }
+}
+
 /* 12. SETTINGS MODAL & FORMS ----------------------------------------------- */
 .modal-backdrop{
   position:fixed; inset:0; background:rgba(4,10,18,.72);

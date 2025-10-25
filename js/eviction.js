@@ -661,12 +661,23 @@
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       } else {
         // LV2 Result Sequence:
-        // 1. Begin result card phase (fade nominees/feed, lower overlay z-index)
+        // 1. Begin result card phase (fade nominees/feed, manage z-index)
         global.lv2?.beginResultCardPhase?.();
         
-        // 2. Show Eviction Result card (now appears above nominees)
-        global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
-        try{ await global.cardQueueWaitIdle?.(); }catch{}
+        // 2. Show result card - inline on mobile, page-level on desktop
+        if (global.lv2?.supportsInlineCard?.()) {
+          // Mobile: Use inline card within TV that respects safe areas
+          await global.lv2.showInlineCard({
+            title: 'Eviction Result',
+            body: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
+            duration: 3600,
+            tone: 'evict'
+          });
+        } else {
+          // Desktop: Use existing page-level card system
+          global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
+          try{ await global.cardQueueWaitIdle?.(); }catch{}
+        }
         
         // 3. End result card phase (restore overlay z-index)
         global.lv2?.endResultCardPhase?.();
