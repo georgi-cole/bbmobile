@@ -2135,16 +2135,17 @@ button:focus-visible,.btn:focus-visible{
   }
 }
 
-/* Responsive adjustments for narrow TV */
-@media (max-width: 600px){
+/* Responsive adjustments for narrow TV and mobile */
+@media (max-width: 640px){
   .lv2-grid{
     grid-template-columns:1fr;
     grid-template-rows:auto auto auto;
-    gap:12px;
+    gap:16px;
   }
   
-  .lv2-stage{
+  .lv2-center-stage{
     order:2;
+    min-width:auto;
   }
   
   .lv2-contestant.left{
@@ -2153,6 +2154,11 @@ button:focus-visible,.btn:focus-visible{
   
   .lv2-contestant.right{
     order:3;
+  }
+  
+  .lv2-avatar {
+    width: clamp(100px, 30vw, 160px);
+    height: clamp(100px, 30vw, 160px);
   }
   
   .lv2-meter{
@@ -2184,6 +2190,18 @@ button:focus-visible,.btn:focus-visible{
     height:50px;
   }
   
+  .lv2-cta-pill {
+    min-height: 48px;
+    min-width: 120px;
+    padding: 12px 24px;
+  }
+  
+  .lv2-turn-tag {
+    font-size: 0.6rem;
+    padding: 3px 8px;
+  }
+  
+  /* Legacy CTA styles for backwards compatibility */
   .lv2-cta-row{
     flex-direction:column;
     gap:8px;
@@ -2395,44 +2413,6 @@ button:focus-visible,.btn:focus-visible{
   
   .lv2-arc-path {
     transition: stroke-dashoffset 0.3s ease;
-  }
-}
-
-/* Mobile responsive adjustments - stack at ≤640px, maintain tap targets */
-@media (max-width: 640px) {
-  .lv2-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-    gap: 16px;
-  }
-  
-  .lv2-center-stage {
-    order: 2;
-    min-width: auto;
-  }
-  
-  .lv2-contestant.left {
-    order: 1;
-  }
-  
-  .lv2-contestant.right {
-    order: 3;
-  }
-  
-  .lv2-avatar {
-    width: clamp(100px, 30vw, 160px);
-    height: clamp(100px, 30vw, 160px);
-  }
-  
-  .lv2-cta-pill {
-    min-height: 48px;
-    min-width: 120px;
-    padding: 12px 24px;
-  }
-  
-  .lv2-turn-tag {
-    font-size: 0.6rem;
-    padding: 3px 8px;
   }
 }
 
