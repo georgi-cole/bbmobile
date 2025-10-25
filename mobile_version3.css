@@ -300,6 +300,104 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
   margin-bottom: clamp(8px, 1.2vh, 14px) !important;
 }
 
+/* ============================================================================
+   STABLE TV BACKGROUND SYSTEM
+   Background layer with consistent blur/opacity that never changes
+   ============================================================================ */
+
+:root {
+  --tv-bg-blur: 6px;
+  --tv-bg-opacity: 0.28;
+  --tv-overlay-opacity: 0.65;
+}
+
+/* Background layer - applies blur and reduced opacity to background image/video */
+.bb-tv-bg {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  background-image: var(--tv-bg-url, url('assets/videos/tvscreen.jpg')) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  filter: blur(var(--tv-bg-blur)) !important;
+  opacity: var(--tv-bg-opacity) !important;
+  pointer-events: none !important;
+}
+
+/* Darkening overlay sits above blurred background, below UI content */
+.bb-tv-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  background: linear-gradient(
+    to bottom, 
+    rgba(14, 23, 48, var(--tv-overlay-opacity)), 
+    rgba(14, 23, 48, calc(var(--tv-overlay-opacity) + 0.1))
+  ) !important;
+  pointer-events: none !important;
+}
+
+/* Video element styling - blurred and beneath overlay */
+#tvBgVideo {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  filter: blur(var(--tv-bg-blur)) !important;
+  opacity: var(--tv-bg-opacity) !important;
+  pointer-events: none !important;
+  display: none !important;
+}
+
+/* Show video when enabled */
+.tvViewport.hasTvVideo #tvBgVideo,
+.tvFrame.hasTvVideo #tvBgVideo,
+#tv.hasTvVideo #tvBgVideo {
+  display: block !important;
+}
+
+/* Ensure all TV content sits above background layers */
+.tvViewport > *:not(.bb-tv-bg):not(.bb-tv-overlay):not(#tvBgVideo),
+.tvFrame > *:not(.bb-tv-bg):not(.bb-tv-overlay):not(#tvBgVideo),
+#tv > *:not(.bb-tv-bg):not(.bb-tv-overlay):not(#tvBgVideo) {
+  position: relative;
+  z-index: 10;
+}
+
+/* Card headers and titles that appear over TV - add readability enhancement */
+.tvViewport .card h3,
+.tvViewport .revealCard h3,
+.tvOverlayContent h3,
+#tvOverlay .card h3,
+#tvOverlay .revealCard h3 {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 
+               0 0 20px rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 8px 12px !important;
+  background: linear-gradient(
+    135deg, 
+    rgba(13, 24, 38, 0.75), 
+    rgba(7, 14, 24, 0.65)
+  ) !important;
+  border-radius: 8px !important;
+}
+
+/* Ensure popups and modals above TV are readable */
+.tvViewport .modal,
+.tvViewport .card,
+.tvViewport .revealCard,
+#tvOverlay .modal,
+#tvOverlay .card,
+#tvOverlay .revealCard {
+  background: rgba(19, 33, 50, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
 @media (max-width: 700px) {
   #rosterBar { margin-bottom: 10px !important; }
   #topRoster.top-roster { margin-bottom: 10px !important; }
