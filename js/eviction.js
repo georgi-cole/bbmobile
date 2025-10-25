@@ -964,9 +964,14 @@
           console.error('[eviction] visual enhancement failed:', e);
         }
       }
+    } else {
+      // Modern UI path: Update HUD immediately since we skipped runEvictionVisual
+      if(typeof global.updateHud === 'function'){
+        global.updateHud();
+      }
     }
 
-    // Note: Suppression clearing and HUD update now handled by runEvictionVisual
+    // Note: Suppression clearing and HUD update now handled by runEvictionVisual (or above for modern UI)
 
     postEvictionRouting();
   }
