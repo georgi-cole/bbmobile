@@ -30,6 +30,11 @@
 
   /**
    * Locate the roster container using priority selectors.
+   * Priority order:
+   * 1. #rosterBar (preferred location above TV)
+   * 2. .top-roster (existing host element)
+   * 3. #topRoster (alternative ID)
+   * 4. .roster-strip, .cast-strip (fallback selectors)
    * @returns {HTMLElement|null} The roster container element
    */
   function findRosterContainer() {
@@ -48,11 +53,12 @@
    * @returns {string} Data URL containing the SVG
    */
   function createGenericAvatarDataURL() {
+    // Use encodeURIComponent for safe URI encoding (handles all characters including Unicode)
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
       <circle cx="12" cy="8" r="4" fill="currentColor" opacity="0.6"/>
       <path d="M12,14 C8,14 4,16 4,19 L4,22 L20,22 L20,19 C20,16 16,14 12,14 Z" fill="currentColor" opacity="0.6"/>
     </svg>`;
-    return 'data:image/svg+xml;base64,' + btoa(svg);
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
   }
 
   /**
@@ -156,7 +162,8 @@
       
       /* Generic avatar styling - neutral colored silhouette */
       .placeholder-avatar {
-        filter: grayscale(1) opacity(0.5);
+        filter: grayscale(1);
+        opacity: 0.5;
         background: var(--card, #1a2636);
       }
       
@@ -171,7 +178,8 @@
       }
       
       .placeholder-tile:hover .top-tile-avatar {
-        filter: grayscale(1) opacity(0.5);
+        filter: grayscale(1);
+        opacity: 0.5;
         transform: none;
       }
       
