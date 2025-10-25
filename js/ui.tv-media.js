@@ -27,9 +27,15 @@
 
   function setTvImage(src){
     const host = tv(); if(!host) return;
-    host.style.setProperty('--tv-bg-url', `url("${src}")`);
+    host.style.setProperty('--tv-bg', `url("${src}")`);
     host.classList.add('hasTvBg');
     host.classList.remove('hasTvVideo');
+    // Add special class for default background to show it without overlay
+    if(src === DEFAULT_TV_BG){
+      host.classList.add('hasDefaultBg');
+    } else {
+      host.classList.remove('hasDefaultBg');
+    }
     const v = document.getElementById('tvBgVideo');
     if(v){ try{ v.pause(); }catch{} v.removeAttribute('src'); v.load(); v.remove(); }
   }
@@ -38,7 +44,7 @@
     const host = tv(); if(!host) return;
     host.classList.add('hasTvVideo');
     host.classList.remove('hasTvBg');
-    host.style.removeProperty('--tv-bg-url');
+    host.style.removeProperty('--tv-bg');
     const v = ensureVideoEl();
     try{ v.pause(); }catch{}
     v.src = src;
@@ -48,8 +54,8 @@
 
   function clearTvMedia(){
     const host = tv(); if(!host) return;
-    host.classList.remove('hasTvBg','hasTvVideo');
-    host.style.removeProperty('--tv-bg-url');
+    host.classList.remove('hasTvBg','hasTvVideo','hasDefaultBg');
+    host.style.removeProperty('--tv-bg');
     const v = document.getElementById('tvBgVideo');
     if(v){ try{ v.pause(); }catch{} v.removeAttribute('src'); v.load(); v.remove(); }
     try{

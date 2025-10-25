@@ -372,16 +372,3 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
     text-align: center !important;
   }
 }
-
-/* TV overlay enhancements for better text readability */
-/* Card titles above TV get text-shadow for better contrast */
-#actionCard > h1 {
-  text-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.6);
-}
-
-/* Additional contrast layer for tvViewport content */
-.tvViewport .card,
-.tvViewport .card h3,
-.tvViewport .card .card-title {
-  text-shadow: 0 6px 18px rgba(0,0,0,0.6);
-}

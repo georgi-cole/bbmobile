@@ -695,11 +695,16 @@ button:focus-visible,.btn:focus-visible{
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
   box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
 }
-/* Custom TV background support (when user sets custom image) - overlay always applied */
+/* Custom TV background support (when user sets custom image) */
 .tv.hasTvBg{
   background:
     linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    var(--tv-bg-url) center/cover;
+    var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
 .tvHead{
@@ -743,20 +748,6 @@ button:focus-visible,.btn:focus-visible{
 .tvViewport{
   position:relative; flex:1 1 auto; overflow:hidden;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-}
-/* Overlay pseudo-element to darken background for better text contrast */
-.tvViewport::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  background:linear-gradient(to bottom, rgba(14,23,48,0.15), rgba(14,23,48,0.25));
-  z-index:1;
-  pointer-events:none;
-}
-/* Ensure content is above overlay */
-.tvViewport > *{
-  position:relative;
-  z-index:2;
 }
 
 /* LIVE Badge (inside TV viewport, bottom-right) */
@@ -2831,11 +2822,16 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
   box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
 }
-/* Custom TV background support (when user sets custom image) - overlay always applied */
+/* Custom TV background support (when user sets custom image) */
 .tv.hasTvBg{
   background:
     linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    var(--tv-bg-url) center/cover;
+    var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
 .tv.tvTall{
@@ -2999,11 +2995,16 @@ img{ max-width:100%; display:block; }
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
   box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
 }
-/* Custom TV background support (when user sets custom image) - overlay always applied */
+/* Custom TV background support (when user sets custom image) */
 .tv.hasTvBg{
   background:
     linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    var(--tv-bg-url) center/cover;
+    var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
 .tv.tvTall{ height: clamp(340px, 52vh, 600px); }
@@ -3013,20 +3014,6 @@ img{ max-width:100%; display:block; }
   overflow:hidden;
   display:flex;
   flex-direction:column;
-}
-/* Overlay pseudo-element to darken background for better text contrast */
-.tvViewport::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  background:linear-gradient(to bottom, rgba(14,23,48,0.15), rgba(14,23,48,0.25));
-  z-index:1;
-  pointer-events:none;
-}
-/* Ensure content is above overlay */
-.tvViewport > *{
-  position:relative;
-  z-index:2;
 }
 
 .tvHead{
@@ -3174,11 +3161,16 @@ img{ max-width:100%; display:block; }
   display:flex; flex-direction:column; justify-content:flex-start; padding:0;
   font-size:.72rem; box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
 }
-/* Custom TV background support (when user sets custom image) - overlay always applied */
+/* Custom TV background support (when user sets custom image) */
 .tv.hasTvBg{
   background:
     linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    var(--tv-bg-url) center/cover;
+    var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
 .tv.tvTall{ height: clamp(360px, 56vh, 640px); }
@@ -3338,11 +3330,16 @@ img{ max-width:100%; display:block; }
   display:flex; flex-direction:column; justify-content:flex-start; padding:0;
   font-size:.72rem; box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
 }
-/* Custom TV background support (when user sets custom image) - overlay always applied */
+/* Custom TV background support (when user sets custom image) */
 .tv.hasTvBg{
   background:
     linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
-    var(--tv-bg-url) center/cover;
+    var(--tv-bg) center/cover;
+  background-color:#0e1730;
+}
+/* Default background without overlay - shows tvscreen.jpg clearly */
+.tv.hasDefaultBg{
+  background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
 .tv.tvTall{ height: clamp(360px, 56vh, 640px); }
@@ -3352,7 +3349,7 @@ img{ max-width:100%; display:block; }
   content:'';
   position:absolute;
   inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
-  background-image: var(--tv-bg-url, none);
+  background-image: var(--tv-bg, none);
   background-size: cover;
   background-position: center;
   border-radius: 12px;
