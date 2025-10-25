@@ -2540,6 +2540,110 @@ button:focus-visible,.btn:focus-visible{
 
 /* ==================== CAROUSEL MODE ==================== */
 
+/* Mobile Carousel 2.0: carousel-on activates the new mobile layout */
+.lv2-overlay.lv2-carousel-on .lv2-fit {
+  /* Fill TV without transform scaling, using grid layout */
+  width: auto;
+  height: auto;
+  position: absolute;
+  inset: 0;
+  transform: none !important;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-areas:
+    "title"
+    "content"
+    "cta-dock"
+    "feed";
+  gap: 0;
+  padding: env(safe-area-inset-top, 12px) env(safe-area-inset-right, 12px) env(safe-area-inset-bottom, 12px) env(safe-area-inset-left, 12px);
+}
+
+.lv2-overlay.lv2-carousel-on .lv2-header {
+  grid-area: title;
+}
+
+.lv2-overlay.lv2-carousel-on .lv2-grid {
+  grid-area: content;
+}
+
+.lv2-overlay.lv2-carousel-on .lv2-voter-feed {
+  grid-area: feed;
+}
+
+/* Hide legacy per-side CTAs in carousel mode */
+.lv2-overlay.lv2-carousel-on .lv2-cta-side {
+  display: none;
+}
+
+/* CTA Dock - always visible at bottom, anchored to safe area */
+.lv2-cta-dock {
+  grid-area: cta-dock;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(12px, 2dvh, 20px) clamp(16px, 4dvw, 24px);
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.2) 100%);
+  margin-top: auto;
+  min-height: 72px;
+}
+
+/* Main CTA button inside dock */
+.lv2-cta-main {
+  background: linear-gradient(135deg, #e63946, #c1121f);
+  border: none;
+  border-radius: var(--radius-md, 12px);
+  padding: clamp(14px, 3dvh, 20px) clamp(32px, 8dvw, 56px);
+  color: white;
+  font-size: clamp(1.1rem, 2.5dvh, 1.5rem);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
+  min-width: clamp(200px, 70dvw, 360px);
+  min-height: 56px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lv2-cta-main:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f04e56, #d1232e);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(230, 57, 70, 0.5);
+}
+
+.lv2-cta-main:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(230, 57, 70, 0.4);
+}
+
+.lv2-cta-main:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #888, #666);
+  box-shadow: none;
+}
+
+.lv2-cta-main:focus {
+  outline: 3px solid rgba(230, 57, 70, 0.5);
+  outline-offset: 2px;
+}
+
+.lv2-cta-main.highlight {
+  animation: cta-pulse 2s ease-in-out infinite;
+}
+
+@keyframes cta-pulse {
+  0%, 100% {
+    box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
+  }
+  50% {
+    box-shadow: 0 8px 28px rgba(230, 57, 70, 0.7), 0 0 40px rgba(230, 57, 70, 0.4);
+  }
+}
+
 /* Carousel grid: single column with overflow hidden */
 .lv2-grid.lv2-carousel {
   grid-template-columns: 1fr;
@@ -2553,6 +2657,7 @@ button:focus-visible,.btn:focus-visible{
   grid-column: 1;
   grid-row: 1;
   transition: opacity 0.3s ease, transform 0.3s ease;
+  position: relative;
 }
 
 .lv2-grid.lv2-carousel .lv2-contestant.hidden {
@@ -2565,6 +2670,97 @@ button:focus-visible,.btn:focus-visible{
   opacity: 1;
   pointer-events: auto;
   transform: scale(1);
+}
+
+/* Arrows positioned next to portrait (hugging left/right) */
+.lv2-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, rgba(0, 224, 204, 0.9), rgba(0, 184, 163, 0.9));
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  color: var(--bg, #001a18);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 224, 204, 0.3);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 10;
+}
+
+.lv2-arrow.prev {
+  left: clamp(8px, 2dvw, 16px);
+}
+
+.lv2-arrow.next {
+  right: clamp(8px, 2dvw, 16px);
+}
+
+.lv2-arrow:hover {
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 224, 204, 0.5);
+}
+
+.lv2-arrow:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.lv2-arrow:focus {
+  outline: 2px solid var(--accent, #00e0cc);
+  outline-offset: 2px;
+}
+
+/* Index label ("1 of 2") positioned under name */
+.lv2-index {
+  font-size: clamp(0.8rem, 1.8dvh, 1rem);
+  font-weight: 600;
+  color: rgba(143, 211, 255, 0.7);
+  text-align: center;
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+}
+
+/* Dots container under portrait */
+.lv2-dots {
+  display: flex;
+  gap: clamp(8px, 2dvw, 12px);
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.lv2-dots .dot {
+  width: clamp(8px, 1.5dvw, 12px);
+  height: clamp(8px, 1.5dvw, 12px);
+  border-radius: 50%;
+  background: rgba(143, 211, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.lv2-dots .dot.active {
+  background: var(--accent, #00e0cc);
+  transform: scale(1.4);
+  box-shadow: 0 0 8px rgba(0, 224, 204, 0.6);
+}
+
+/* Swipe hint - subtle text below dots */
+.lv2-hint {
+  font-size: clamp(0.7rem, 1.5dvh, 0.85rem);
+  color: rgba(143, 211, 255, 0.5);
+  text-align: center;
+  margin-top: 8px;
+  font-style: italic;
+  letter-spacing: 0.2px;
+  opacity: 0.7;
 }
 
 /* Carousel navigation container */
@@ -2695,13 +2891,24 @@ button:focus-visible,.btn:focus-visible{
   .lv2-grid.lv2-carousel .lv2-contestant,
   .lv2-carousel-arrow,
   .lv2-carousel-dot,
-  .lv2-carousel-btn {
+  .lv2-carousel-btn,
+  .lv2-arrow,
+  .lv2-dots .dot,
+  .lv2-cta-main {
     transition: none;
+    animation: none;
   }
   
   .lv2-carousel-arrow:hover,
-  .lv2-carousel-btn:hover:not(:disabled) {
+  .lv2-carousel-btn:hover:not(:disabled),
+  .lv2-arrow:hover,
+  .lv2-cta-main:hover:not(:disabled) {
     transform: none;
+  }
+  
+  .lv2-arrow.prev,
+  .lv2-arrow.next {
+    transform: translateY(-50%);
   }
 }
 
