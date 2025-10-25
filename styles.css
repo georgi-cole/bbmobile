@@ -5809,3 +5809,200 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
     transform: none;
   }
 }
+
+/* ============================================================================
+   VETO CEREMONY - MODERN ANIMATIONS AND STYLES
+   ============================================================================ */
+
+/* Veto-specific animations for in-TV ceremony */
+@keyframes vetoRevealFadeGrow {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes vetoSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vetoBadgeSwapLeft {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-60px) scale(0.9);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes vetoBadgeSwapRight {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(60px) scale(0.9);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Nominee tile styles for save panel */
+.veto-nominee-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(28,43,62,0.4), rgba(12,22,36,0.3));
+  border: 2px solid rgba(110,160,220,0.2);
+  border-radius: var(--radius);
+  transition: all 0.25s ease;
+  animation: vetoRevealFadeGrow 0.4s ease-out backwards;
+}
+
+.veto-nominee-tile:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.veto-nominee-tile:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.veto-nominee-tile:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4), 0 0 20px rgba(131,191,255,0.2);
+}
+
+.veto-nominee-tile img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid rgba(131,191,255,0.3);
+  object-fit: cover;
+  transition: all 0.25s ease;
+}
+
+.veto-nominee-tile:hover img {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(131,191,255,0.4);
+}
+
+.veto-nominee-tile .name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Decision button row animations */
+.veto-decision-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  animation: vetoSlideUp 0.5s ease-out 0.3s backwards;
+}
+
+/* Badge swap container for visual animation */
+.veto-badge-swap-container {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  margin: 20px 0;
+}
+
+.veto-badge-swap-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(28,43,62,0.6), rgba(12,22,36,0.5));
+  border: 2px solid rgba(110,160,220,0.25);
+  border-radius: var(--radius-lg);
+  min-width: 140px;
+}
+
+.veto-badge-swap-tile.animating-left {
+  animation: vetoBadgeSwapLeft 1.4s ease-in-out;
+}
+
+.veto-badge-swap-tile.animating-right {
+  animation: vetoBadgeSwapRight 1.4s ease-in-out;
+}
+
+.veto-badge-swap-tile img {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 3px solid rgba(131,191,255,0.4);
+  object-fit: cover;
+}
+
+.veto-badge-swap-tile .name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+}
+
+.veto-badge-swap-tile .badge {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.veto-badge-swap-tile .badge.nom {
+  background: linear-gradient(135deg, #c23636, #e64a4a);
+  color: white;
+}
+
+.veto-badge-swap-arrow {
+  font-size: 2rem;
+  color: var(--accent);
+  animation: vetoSlideUp 0.6s ease-out 0.4s backwards;
+}
+
+/* Reduced motion: disable all veto animations */
+@media (prefers-reduced-motion: reduce) {
+  .veto-nominee-tile,
+  .veto-decision-row,
+  .veto-badge-swap-tile,
+  .veto-badge-swap-arrow {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .veto-nominee-tile:hover {
+    transform: none;
+  }
+  
+  .veto-badge-swap-tile.animating-left,
+  .veto-badge-swap-tile.animating-right {
+    animation: none !important;
+  }
+}

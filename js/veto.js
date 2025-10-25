@@ -32,7 +32,27 @@
     'The Power of Veto will not be used this week.',
     'I have chosen to leave the nominations as they are.',
     'I am not using the Veto.',
-    'The nominations will stay the same.'
+    'The nominations will stay the same.',
+    'I have decided to respect the HOH\'s nominations.'
+  ];
+
+  // Nominee reaction phrases (when veto is not used)
+  const NOMINEE_REACTION_PHRASES = [
+    'I\'ll campaign hard this week.',
+    'I\'m not out yet.',
+    'I need to hustle and make connections.',
+    'Time to fight for votes.',
+    'I\'m going to work my social game.',
+    'I won\'t give up without a fight.'
+  ];
+
+  // HOH replacement announcement phrases
+  const HOH_REPLACEMENT_PHRASES = [
+    'I have decided to choose {name} as the replacement nominee. Nothing personal, just a game move.',
+    'As HOH, I am nominating {name} as the replacement. This is a strategic decision.',
+    'I choose {name} to be the replacement nominee. It\'s purely game.',
+    '{name}, I\'m sorry, but I have to nominate you as the replacement.',
+    'My replacement nominee is {name}. This is the best move for my game.'
   ];
 
   function pickPhrase(arr){
@@ -672,6 +692,45 @@
     var content = document.querySelector('.tvOverlayContent');
     if(content) content.innerHTML = '';
   }
+
+  // Helper: Show nominee reactions (after veto not used)
+  async function showNomineeReactionsSimultaneously(nomineeIds){
+    if(!nomineeIds || nomineeIds.length === 0) return;
+    
+    // Use buildCardWithAvatars if available, otherwise fallback
+    if(typeof global.buildCardWithAvatars === 'function'){
+      for(var i=0; i<nomineeIds.length; i++){
+        var nomId = nomineeIds[i];
+        var nom = getP(nomId);
+        if(!nom) continue;
+        
+        var reaction = pickPhrase(NOMINEE_REACTION_PHRASES);
+        
+        try{
+          var card = global.buildCardWithAvatars({
+            title: nom.name,
+            lines: [reaction],
+            tone: 'neutral',
+            duration: 2400,
+            actorId: nomId,
+            type: 'reaction'
+          });
+          
+          if(card){
+            // Let the card show itself via the card queue system
+            if(typeof global.cardQueueWaitIdle === 'function'){
+              await global.cardQueueWaitIdle();
+            }
+          }
+        }catch(e){
+          console.warn('[veto] Failed to show nominee reaction for', nomId, e);
+        }
+        
+        // Small delay between reactions
+        await new Promise(function(r){ setTimeout(r, 600); });
+      }
+    }
+  }
   
   function showTVCard({title, lines, tone, duration}){
     return new Promise(function(resolve){
@@ -690,6 +749,7 @@
       
       for(var i=0; i<lines.length; i++){
         var p = document.createElement('p');
+        if(i === 0) p.className = 'big';
         p.textContent = lines[i];
         card.appendChild(p);
       }
@@ -727,9 +787,7 @@
       card.appendChild(p);
       
       var btnRow = document.createElement('div');
-      btnRow.className = 'row';
-      btnRow.style.gap = '10px';
-      btnRow.style.justifyContent = 'center';
+      btnRow.className = 'veto-decision-row';
       
       function disableAll(){
         var btns = btnRow.querySelectorAll('button');
@@ -741,6 +799,7 @@
           var b = document.createElement('button');
           b.className = btn.primary ? 'btn primary' : 'btn';
           b.textContent = btn.label;
+          b.setAttribute('aria-label', btn.label);
           b.onclick = function(){
             disableAll();
             clearTVOverlayContent();
@@ -794,7 +853,7 @@
       
       var grid = document.createElement('div');
       grid.className = 'row';
-      grid.style.gap = '10px';
+      grid.style.gap = '16px';
       grid.style.justifyContent = 'center';
       grid.style.flexWrap = 'wrap';
       
@@ -804,11 +863,34 @@
       }
       
       for(var i=0; i<nominees.length; i++){
-        (function(nomId){
+        (function(nomId, idx){
           var p = getP(nomId);
+          var tile = document.createElement('div');
+          tile.className = 'veto-nominee-tile';
+          tile.style.animationDelay = (idx * 0.15) + 's';
+          
+          // Avatar
+          var img = document.createElement('img');
+          var resolveAvatar = (global.Game || global).resolveAvatar;
+          img.src = resolveAvatar ? resolveAvatar(p || nomId) : (p ? (p.avatar || p.img || p.photo) : null);
+          if(!img.src){
+            // Fallback to dicebear
+            img.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(p ? p.name : String(nomId));
+          }
+          img.alt = p ? p.name : '?';
+          tile.appendChild(img);
+          
+          // Name
+          var name = document.createElement('div');
+          name.className = 'name';
+          name.textContent = p ? p.name : '?';
+          tile.appendChild(name);
+          
+          // Save button
           var b = document.createElement('button');
           b.className = 'btn primary';
-          b.textContent = 'Save ' + (p ? p.name : '?');
+          b.textContent = 'Save';
+          b.setAttribute('aria-label', 'Save ' + (p ? p.name : '?'));
           b.onclick = function(){
             disableAll();
             clearTVOverlayContent();
@@ -822,8 +904,10 @@
               b.click();
             }
           };
-          grid.appendChild(b);
-        })(nominees[i]);
+          tile.appendChild(b);
+          
+          grid.appendChild(tile);
+        })(nominees[i], i);
       }
       
       card.appendChild(grid);
@@ -836,6 +920,104 @@
         var firstBtn = grid.querySelector('button');
         if(firstBtn) firstBtn.focus();
       }, 100);
+    });
+  }
+  
+  // Render badge swap animation
+  function renderBadgeSwap(savedId, replacementId){
+    return new Promise(function(resolve){
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(); return; }
+      
+      clearTVOverlayContent();
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = 'Nominee Change';
+      card.appendChild(h3);
+      
+      var container = document.createElement('div');
+      container.className = 'veto-badge-swap-container';
+      
+      // Left tile: old nominee (being saved)
+      var savedP = getP(savedId);
+      var leftTile = document.createElement('div');
+      leftTile.className = 'veto-badge-swap-tile';
+      
+      var leftImg = document.createElement('img');
+      var resolveAvatar = (global.Game || global).resolveAvatar;
+      leftImg.src = resolveAvatar ? resolveAvatar(savedP || savedId) : (savedP ? (savedP.avatar || savedP.img || savedP.photo) : null);
+      if(!leftImg.src){
+        leftImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(savedP ? savedP.name : String(savedId));
+      }
+      leftImg.alt = savedP ? savedP.name : '?';
+      leftTile.appendChild(leftImg);
+      
+      var leftName = document.createElement('div');
+      leftName.className = 'name';
+      leftName.textContent = savedP ? savedP.name : '?';
+      leftTile.appendChild(leftName);
+      
+      var leftBadge = document.createElement('div');
+      leftBadge.className = 'badge nom';
+      leftBadge.textContent = 'NOM';
+      leftTile.appendChild(leftBadge);
+      
+      container.appendChild(leftTile);
+      
+      // Arrow
+      var arrow = document.createElement('div');
+      arrow.className = 'veto-badge-swap-arrow';
+      arrow.textContent = '⇄';
+      container.appendChild(arrow);
+      
+      // Right tile: new replacement
+      var repP = getP(replacementId);
+      var rightTile = document.createElement('div');
+      rightTile.className = 'veto-badge-swap-tile';
+      
+      var rightImg = document.createElement('img');
+      rightImg.src = resolveAvatar ? resolveAvatar(repP || replacementId) : (repP ? (repP.avatar || repP.img || repP.photo) : null);
+      if(!rightImg.src){
+        rightImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(repP ? repP.name : String(replacementId));
+      }
+      rightImg.alt = repP ? repP.name : '?';
+      rightTile.appendChild(rightImg);
+      
+      var rightName = document.createElement('div');
+      rightName.className = 'name';
+      rightName.textContent = repP ? repP.name : '?';
+      rightTile.appendChild(rightName);
+      
+      var rightBadge = document.createElement('div');
+      rightBadge.className = 'badge nom';
+      rightBadge.textContent = 'NOM';
+      rightTile.appendChild(rightBadge);
+      
+      container.appendChild(rightTile);
+      card.appendChild(container);
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      // Animate after a brief delay
+      setTimeout(function(){
+        leftTile.classList.add('animating-left');
+        rightTile.classList.add('animating-right');
+        
+        // After animation, swap badges
+        setTimeout(function(){
+          leftBadge.style.opacity = '0';
+          setTimeout(function(){
+            clearTVOverlayContent();
+            if(tv) tv.classList.remove('tvTall');
+            resolve();
+          }, 800);
+        }, 1400);
+      }, 300);
     });
   }
   
@@ -1384,6 +1566,19 @@
         duration: 3600
       });
 
+      // Show nominee reactions (they're still on the block)
+      if(g.nominees && g.nominees.length > 0){
+        await showNomineeReactionsSimultaneously(g.nominees);
+      }
+
+      // Show adjourn message
+      await showTVCard({
+        title: 'Veto Ceremony',
+        lines: ['This veto ceremony is adjourned.'],
+        tone: 'veto',
+        duration: 2800
+      });
+
       g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
       g.__vetoCeremonyResolved = true;
       g.__vetoDecisionInProgress = false;
@@ -1459,22 +1654,25 @@
       console.info('[nom] vetoApplied saved=' + JSON.stringify(savedIds) + ' replacement=' + JSON.stringify(replacementIds));
 
       var hoh = getP(g.hohId);
-      var announce = (hoh ? hoh.name : 'HOH')+': I name '+safeName(replacementId)+' as the replacement nominee.';
+      var hohPhrase = pickPhrase(HOH_REPLACEMENT_PHRASES).replace('{name}', safeName(replacementId));
       
       // Show HOH announcement card
       await showTVCard({
         title: 'HOH Announcement',
-        lines: [announce],
+        lines: [hohPhrase],
         tone: 'noms',
         duration: 3400
       });
 
       try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by HOH).','warn'); }catch(e){}
       
+      // Show badge swap animation (visual representation of the swap)
+      await renderBadgeSwap(savedId, replacementId);
+      
       // Show replacement nominee card
       await showTVCard({
         title: 'Replacement Nominee',
-        lines: [safeName(replacementId)],
+        lines: [safeName(replacementId) + ' is now on the block.'],
         tone: 'replace',
         duration: 3600
       });
