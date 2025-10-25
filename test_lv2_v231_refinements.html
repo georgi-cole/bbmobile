@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Vote 2.3.1 Refinements Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(30,45,65,0.5);
+      border-radius: 8px;
+    }
+    
+    .test-section h2 {
+      margin: 0 0 12px 0;
+      font-size: 1.1rem;
+      color: #8fd3ff;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .test-controls button.danger {
+      background: linear-gradient(135deg, #ff4757, #ee3344);
+      color: #fff;
+    }
+    
+    .status-display {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-family: monospace;
+    }
+    
+    .status-display .label {
+      font-weight: 700;
+      color: #00e0cc;
+    }
+    
+    .status-display .value {
+      color: #8fd3ff;
+    }
+    
+    .pass {
+      color: #77d58d !important;
+    }
+    
+    .fail {
+      color: #ff4757 !important;
+    }
+
+    /* Mock TV container */
+    .tv-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .tv {
+      position: relative;
+      height: 500px;
+      background:
+        linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8)),
+        url('assets/videos/tvscreen.jpg') center/cover;
+      background-color: #0e1730;
+      border: 2px solid #213349;
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 36px -22px rgba(0,0,0,.75);
+    }
+
+    #panel {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      background: rgba(20,35,55,0.6);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🎬 Live Vote 2.3.1 Refinements Test</h1>
+    
+    <div class="test-section">
+      <h2>Test 1: "Your Turn" UI Removal</h2>
+      <p style="font-size: 0.85rem; margin: 8px 0;">
+        ✅ Verify that no "Your Turn" label appears at any time during voting.
+      </p>
+      <button onclick="testYourTurnRemoval()">Run Test</button>
+      <div id="test1-status" class="status-display" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 2: Vote Session Gating</h2>
+      <p style="font-size: 0.85rem; margin: 8px 0;">
+        ✅ Verify that results don't show until all votes are received.
+      </p>
+      <button onclick="testVoteGating()">Run Test</button>
+      <div id="test2-status" class="status-display" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 3: Backward Compatibility</h2>
+      <p style="font-size: 0.85rem; margin: 8px 0;">
+        ✅ Verify setTurn() and related functions are no-ops (don't throw errors).
+      </p>
+      <button onclick="testBackwardCompatibility()">Run Test</button>
+      <div id="test3-status" class="status-display" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 4: Full Ceremony Simulation</h2>
+      <p style="font-size: 0.85rem; margin: 8px 0;">
+        ✅ Simulate a complete live vote ceremony with 6 voters.
+      </p>
+      <button onclick="testFullCeremony()">Run Test</button>
+      <button onclick="cleanup()" class="danger">Cleanup</button>
+      <div id="test4-status" class="status-display" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="tv-container">
+    <div id="tv" class="tv">
+      <!-- Live vote UI will render here -->
+    </div>
+  </div>
+
+  <div id="panel">
+    <p class="tiny muted">Panel area (hidden during lv2)</p>
+  </div>
+
+  <script src="js/livevote-ui.js"></script>
+  <script>
+    // Mock helpers
+    window.game = {
+      cfg: {
+        modernLiveVoteUI: true,
+        cardHoldMs: 500,
+        cardGapMs: 250
+      }
+    };
+
+    window.safeName = (id) => {
+      const names = { 1: 'Alice', 2: 'Bob', 3: 'Charlie', 4: 'Dana', 5: 'Eve', 6: 'Frank' };
+      return names[id] || `Player ${id}`;
+    };
+
+    window.getP = (id) => ({
+      id,
+      name: window.safeName(id),
+      avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=${window.safeName(id)}`
+    });
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function log(elementId, message, isPass = null) {
+      const el = document.getElementById(elementId);
+      el.style.display = 'block';
+      const statusClass = isPass === true ? 'pass' : isPass === false ? 'fail' : '';
+      el.innerHTML += `<div class="${statusClass}">${message}</div>`;
+    }
+
+    // Test 1: Verify "Your Turn" UI is never rendered
+    async function testYourTurnRemoval() {
+      const statusEl = document.getElementById('test1-status');
+      statusEl.innerHTML = '';
+      statusEl.style.display = 'block';
+      
+      log('test1-status', '<span class="label">Starting Test 1...</span>');
+      
+      // Initialize lv2
+      window.lv2.init({
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2
+      });
+      
+      await sleep(500);
+      
+      // Call setTurn(true) - should be no-op
+      window.lv2.setTurn(true);
+      await sleep(200);
+      
+      // Check if turn tag exists
+      const turnTag = document.querySelector('.lv2-turn-tag');
+      if (turnTag) {
+        log('test1-status', '❌ FAIL: .lv2-turn-tag found in DOM', false);
+      } else {
+        log('test1-status', '✅ PASS: No .lv2-turn-tag found in DOM', true);
+      }
+      
+      // Call setTurn(false) - should also be no-op
+      window.lv2.setTurn(false);
+      await sleep(200);
+      
+      const stillNoTag = !document.querySelector('.lv2-turn-tag');
+      log('test1-status', stillNoTag ? '✅ PASS: Still no tag after setTurn(false)' : '❌ FAIL: Tag appeared', stillNoTag);
+      
+      log('test1-status', '<span class="label">Test 1 Complete</span>');
+      
+      window.lv2.cleanup();
+    }
+
+    // Test 2: Verify results gating
+    async function testVoteGating() {
+      const statusEl = document.getElementById('test2-status');
+      statusEl.innerHTML = '';
+      statusEl.style.display = 'block';
+      
+      log('test2-status', '<span class="label">Starting Test 2...</span>');
+      
+      // Initialize lv2
+      window.lv2.init({
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2
+      });
+      
+      await sleep(300);
+      
+      // Start vote session with 5 expected votes
+      window.lv2.startVoteSession(5);
+      log('test2-status', '<span class="value">Started session: expecting 5 votes</span>');
+      
+      // Check canShowResults before any votes
+      let canShow = window.lv2.canShowResults();
+      log('test2-status', `canShowResults() before votes: ${canShow}`, !canShow);
+      
+      // Push 3 votes
+      for (let i = 0; i < 3; i++) {
+        window.lv2.pushVote({
+          voterId: i + 1,
+          voterName: window.safeName(i + 1),
+          pick: i % 2 === 0 ? 'left' : 'right'
+        });
+        await sleep(100);
+      }
+      
+      log('test2-status', '<span class="value">Pushed 3 votes</span>');
+      
+      // Check canShowResults after 3 votes
+      canShow = window.lv2.canShowResults();
+      log('test2-status', `canShowResults() after 3 votes: ${canShow}`, !canShow);
+      
+      // Push 2 more votes (total 5)
+      for (let i = 3; i < 5; i++) {
+        window.lv2.pushVote({
+          voterId: i + 1,
+          voterName: window.safeName(i + 1),
+          pick: i % 2 === 0 ? 'left' : 'right'
+        });
+        await sleep(100);
+      }
+      
+      log('test2-status', '<span class="value">Pushed 2 more votes (total 5)</span>');
+      
+      // Wait for all vote animations to complete
+      await sleep(2000);
+      
+      // Check canShowResults after all 5 votes
+      canShow = window.lv2.canShowResults();
+      log('test2-status', `canShowResults() after 5 votes: ${canShow}`, canShow);
+      
+      if (canShow) {
+        log('test2-status', '✅ PASS: Results gated until all votes received', true);
+      } else {
+        log('test2-status', '❌ FAIL: canShowResults still false after all votes', false);
+      }
+      
+      log('test2-status', '<span class="label">Test 2 Complete</span>');
+      
+      await sleep(500);
+      window.lv2.cleanup();
+    }
+
+    // Test 3: Backward compatibility
+    async function testBackwardCompatibility() {
+      const statusEl = document.getElementById('test3-status');
+      statusEl.innerHTML = '';
+      statusEl.style.display = 'block';
+      
+      log('test3-status', '<span class="label">Starting Test 3...</span>');
+      
+      let errorCount = 0;
+      
+      try {
+        window.lv2.setTurn(true);
+        log('test3-status', '✅ setTurn(true) executed without error', true);
+      } catch (e) {
+        errorCount++;
+        log('test3-status', `❌ setTurn(true) threw error: ${e.message}`, false);
+      }
+      
+      try {
+        window.lv2.setTurn(false);
+        log('test3-status', '✅ setTurn(false) executed without error', true);
+      } catch (e) {
+        errorCount++;
+        log('test3-status', `❌ setTurn(false) threw error: ${e.message}`, false);
+      }
+      
+      try {
+        window.lv2.showTurnIndicator();
+        log('test3-status', '✅ showTurnIndicator() executed without error', true);
+      } catch (e) {
+        errorCount++;
+        log('test3-status', `❌ showTurnIndicator() threw error: ${e.message}`, false);
+      }
+      
+      try {
+        window.lv2.hideTurnIndicator();
+        log('test3-status', '✅ hideTurnIndicator() executed without error', true);
+      } catch (e) {
+        errorCount++;
+        log('test3-status', `❌ hideTurnIndicator() threw error: ${e.message}`, false);
+      }
+      
+      if (errorCount === 0) {
+        log('test3-status', '✅ PASS: All legacy functions are backward compatible', true);
+      } else {
+        log('test3-status', `❌ FAIL: ${errorCount} function(s) threw errors`, false);
+      }
+      
+      log('test3-status', '<span class="label">Test 3 Complete</span>');
+    }
+
+    // Test 4: Full ceremony simulation
+    async function testFullCeremony() {
+      const statusEl = document.getElementById('test4-status');
+      statusEl.innerHTML = '';
+      statusEl.style.display = 'block';
+      
+      log('test4-status', '<span class="label">Starting Full Ceremony Simulation...</span>');
+      
+      // Initialize lv2
+      window.lv2.init({
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2
+      });
+      
+      log('test4-status', '✅ lv2 initialized');
+      await sleep(500);
+      
+      // Start vote session
+      const totalVotes = 6;
+      window.lv2.startVoteSession(totalVotes);
+      log('test4-status', `✅ Vote session started: ${totalVotes} voters`);
+      
+      // Simulate ceremony
+      log('test4-status', '<span class="value">--- Voting Sequence ---</span>');
+      
+      for (let i = 1; i <= totalVotes; i++) {
+        const voterName = window.safeName(i);
+        const pick = i <= 3 ? 'left' : 'right'; // 3 vote Alice, 3 vote Bob
+        
+        log('test4-status', `${voterName} votes to evict ${pick === 'left' ? 'Alice' : 'Bob'}`);
+        
+        window.lv2.pushVote({
+          voterId: i,
+          voterName: voterName,
+          pick: pick
+        });
+        
+        // Wait for chip animation
+        await sleep(1500);
+      }
+      
+      log('test4-status', '<span class="value">--- All Votes Cast ---</span>');
+      
+      // Wait a bit for animations
+      await sleep(1000);
+      
+      // Check if results can be shown
+      const canShow = window.lv2.canShowResults();
+      log('test4-status', `canShowResults(): ${canShow}`, canShow);
+      
+      if (canShow) {
+        log('test4-status', '✅ PASS: All votes received, ready to show results', true);
+        log('test4-status', '<span class="value">Simulating result display...</span>');
+        
+        // Simulate showing results
+        await sleep(500);
+        log('test4-status', '<span class="label">📊 RESULTS: Alice 3 - Bob 3 (TIE)</span>');
+        
+      } else {
+        log('test4-status', '❌ FAIL: canShowResults still false', false);
+      }
+      
+      log('test4-status', '<span class="label">Full Ceremony Complete</span>');
+      log('test4-status', '<span class="value">Note: Use Cleanup button to reset UI</span>');
+    }
+
+    function cleanup() {
+      if (window.lv2) {
+        window.lv2.cleanup();
+      }
+      document.querySelectorAll('.status-display').forEach(el => {
+        el.innerHTML = '';
+        el.style.display = 'none';
+      });
+    }
+
+    // Initial info
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Test Harness] Live Vote 2.3.1 Refinements Test Ready');
+      console.log('[Test Harness] lv2 available:', !!window.lv2);
+      console.log('[Test Harness] Feature flag:', window.game.cfg.modernLiveVoteUI);
+    });
+  </script>
+</body>
+</html>
