@@ -34,6 +34,12 @@
   const DEFAULT_HOLD_MS = 500;
   const DEFAULT_GAP_MS = 250;
 
+  // Evictee final portrait timing constants
+  const EVICTEE_FADE_IN_WAIT = 800; // Time to show portrait before B&W animation
+  const EVICTEE_REDUCED_MOTION_FACTOR = 0.6; // Factor for reduced motion timing
+  const EVICTEE_MIN_REDUCED_HOLD = 1000; // Minimum hold time in reduced motion mode
+  const EVICTEE_MIN_NORMAL_HOLD = 1200; // Minimum hold time in normal mode
+
   // Get avatar helper (fallback to global if available)
   function getAvatarUrl(playerId) {
     if (global.resolveAvatar) {
@@ -806,15 +812,16 @@
     evicteeEl.classList.add('visible');
 
     // Wait for portrait to be visible (part of the total hold time)
-    const fadeInWait = 800;
-    await sleep(fadeInWait);
+    await sleep(EVICTEE_FADE_IN_WAIT);
 
     // Animate to black-and-white
     portraitEl.classList.add('grayscale');
 
     // Hold the portrait (total hold time minus fade-in wait)
     // In reduced motion, use shorter duration
-    const remainingHold = reducedMotion ? Math.max(holdMs * 0.6, 1000) : Math.max(holdMs - fadeInWait, 1200);
+    const remainingHold = reducedMotion 
+      ? Math.max(holdMs * EVICTEE_REDUCED_MOTION_FACTOR, EVICTEE_MIN_REDUCED_HOLD)
+      : Math.max(holdMs - EVICTEE_FADE_IN_WAIT, EVICTEE_MIN_NORMAL_HOLD);
     await sleep(remainingHold);
 
     // Fade out
