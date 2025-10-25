@@ -1511,6 +1511,215 @@
     });
   }
   
+  /**
+   * Enhanced badge transfer animation with visible NOM pill movement
+   * Shows saved nominee with NOM → replacement nominee without NOM
+   * Animates single NOM pill from left to right
+   * Only commits game state AFTER animation completes
+   * Respects reduced-motion preference
+   * @param {number} savedId - ID of saved nominee (loses NOM)
+   * @param {number} replacementId - ID of replacement nominee (gains NOM)
+   * @returns {Promise} Resolves after animation and state commit
+   */
+  function renderBadgeTransfer(savedId, replacementId){
+    return new Promise(function(resolve){
+      var g = global.game;
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(); return; }
+      
+      clearTVOverlayContent();
+      
+      // Check for reduced motion preference
+      var prefersReducedMotion = false;
+      try{
+        prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      }catch(e){}
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard tvCardBody';
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = 'Badge Transfer';
+      card.appendChild(h3);
+      
+      var container = document.createElement('div');
+      container.style.display = 'flex';
+      container.style.gap = '24px';
+      container.style.justifyContent = 'center';
+      container.style.alignItems = 'center';
+      container.style.flexWrap = 'wrap';
+      container.style.marginTop = '16px';
+      container.style.position = 'relative';
+      
+      // Left: Saved nominee (starts WITH NOM badge)
+      var savedP = getP(savedId);
+      var leftTile = document.createElement('div');
+      leftTile.style.display = 'flex';
+      leftTile.style.flexDirection = 'column';
+      leftTile.style.alignItems = 'center';
+      leftTile.style.gap = '8px';
+      leftTile.style.position = 'relative';
+      
+      var leftImg = document.createElement('img');
+      var resolveAvatar = (global.Game || global).resolveAvatar;
+      leftImg.src = resolveAvatar ? resolveAvatar(savedP) : (savedP ? (savedP.avatar || savedP.img || savedP.photo) : null);
+      if(!leftImg.src){
+        leftImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(savedP ? savedP.name : String(savedId));
+      }
+      leftImg.style.width = '80px';
+      leftImg.style.height = '80px';
+      leftImg.style.borderRadius = '12px';
+      leftImg.style.objectFit = 'cover';
+      leftImg.style.border = '2px solid rgba(255,255,255,0.3)';
+      leftTile.appendChild(leftImg);
+      
+      var leftName = document.createElement('div');
+      leftName.textContent = savedP ? savedP.name : '?';
+      leftName.style.fontSize = '0.85rem';
+      leftName.style.fontWeight = '600';
+      leftTile.appendChild(leftName);
+      
+      // NOM badge on left (initially visible)
+      var nomPill = document.createElement('div');
+      nomPill.className = 'nom-pill-transfer';
+      nomPill.textContent = 'NOM';
+      nomPill.style.position = 'absolute';
+      nomPill.style.bottom = '-6px';
+      nomPill.style.left = '50%';
+      nomPill.style.transform = 'translateX(-50%)';
+      nomPill.style.padding = '4px 10px';
+      nomPill.style.borderRadius = '12px';
+      nomPill.style.background = 'linear-gradient(135deg, #ff6b6b, #ee5a6f)';
+      nomPill.style.color = '#fff';
+      nomPill.style.fontSize = '0.7rem';
+      nomPill.style.fontWeight = '700';
+      nomPill.style.textTransform = 'uppercase';
+      nomPill.style.boxShadow = '0 2px 8px rgba(238, 90, 111, 0.4)';
+      nomPill.style.zIndex = '10';
+      leftTile.appendChild(nomPill);
+      
+      container.appendChild(leftTile);
+      
+      // Arrow
+      var arrow = document.createElement('div');
+      arrow.textContent = '→';
+      arrow.style.fontSize = '32px';
+      arrow.style.opacity = '0.7';
+      container.appendChild(arrow);
+      
+      // Right: Replacement nominee (starts WITHOUT NOM badge)
+      var repP = getP(replacementId);
+      var rightTile = document.createElement('div');
+      rightTile.style.display = 'flex';
+      rightTile.style.flexDirection = 'column';
+      rightTile.style.alignItems = 'center';
+      rightTile.style.gap = '8px';
+      rightTile.style.position = 'relative';
+      
+      var rightImg = document.createElement('img');
+      rightImg.src = resolveAvatar ? resolveAvatar(repP) : (repP ? (repP.avatar || repP.img || repP.photo) : null);
+      if(!rightImg.src){
+        rightImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(repP ? repP.name : String(replacementId));
+      }
+      rightImg.style.width = '80px';
+      rightImg.style.height = '80px';
+      rightImg.style.borderRadius = '12px';
+      rightImg.style.objectFit = 'cover';
+      rightImg.style.border = '2px solid rgba(255,255,255,0.3)';
+      rightTile.appendChild(rightImg);
+      
+      var rightName = document.createElement('div');
+      rightName.textContent = repP ? repP.name : '?';
+      rightName.style.fontSize = '0.85rem';
+      rightName.style.fontWeight = '600';
+      rightTile.appendChild(rightName);
+      
+      container.appendChild(rightTile);
+      card.appendChild(container);
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      // Animate the NOM pill from left to right
+      if(!prefersReducedMotion && nomPill.animate){
+        // Get positions for animation
+        setTimeout(function(){
+          var leftRect = leftTile.getBoundingClientRect();
+          var rightRect = rightTile.getBoundingClientRect();
+          var deltaX = rightRect.left - leftRect.left;
+          
+          // Animate pill moving from left to right
+          var animation = nomPill.animate([
+            { transform: 'translateX(-50%)' },
+            { transform: 'translateX(calc(' + deltaX + 'px - 50%))' }
+          ], {
+            duration: 1400,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            fill: 'forwards'
+          });
+          
+          animation.onfinish = function(){
+            // Hold briefly at destination
+            setTimeout(function(){
+              // Commit game state AFTER pill arrives
+              commitBadgeTransferState(savedId, replacementId);
+              
+              // Clean up and resolve
+              setTimeout(function(){
+                clearTVOverlayContent();
+                if(tv) tv.classList.remove('tvTall');
+                resolve();
+              }, 800);
+            }, 800);
+          };
+        }, 300);
+      } else {
+        // Reduced motion: skip animation, commit state immediately
+        setTimeout(function(){
+          commitBadgeTransferState(savedId, replacementId);
+          clearTVOverlayContent();
+          if(tv) tv.classList.remove('tvTall');
+          resolve();
+        }, 1500);
+      }
+    });
+  }
+  
+  /**
+   * Commit badge transfer state changes to game
+   * Called AFTER the visual animation completes
+   */
+  function commitBadgeTransferState(savedId, replacementId){
+    var g = global.game;
+    if(!g) return;
+    
+    // Update saved player: remove nomination
+    var savedP = getP(savedId);
+    if(savedP){
+      savedP.nominated = false;
+      savedP.nominationState = 'none';
+    }
+    
+    // Update replacement player: add nomination
+    var repP = getP(replacementId);
+    if(repP){
+      repP.nominated = true;
+      repP.nominationState = 'nominated';
+    }
+    
+    // Sync badge states
+    try{
+      if(typeof global.syncPlayerBadgeStates === 'function'){
+        global.syncPlayerBadgeStates();
+      }
+    }catch(e){}
+    
+    console.info('[veto] Badge transfer state committed: saved=' + savedId + ' replacement=' + replacementId);
+  }
+  
+  global.renderBadgeTransfer = renderBadgeTransfer;
+  
   // Prompt for replacement nominee using avatar-first picker
   function promptReplacementNominee(eligibleIds){
     return new Promise(function(resolve){
@@ -2371,6 +2580,8 @@
 
     if(replacementId!=null){
       var savedId = g.vetoSavedId;
+      
+      // Update nominees array (add replacement, remove saved)
       g.nominees = (g.nominees||[]).filter(function(id){ return id!==savedId; });
       if(g.nominees.indexOf(replacementId)===-1) g.nominees.push(replacementId);
 
@@ -2394,37 +2605,6 @@
         }
       }
 
-      // Update nomination states after veto is applied
-      for(var i=0;i<g.players.length;i++){ 
-        var p = g.players[i];
-        if(p.id === savedId){
-          // Saved player - clear nomination and set state to 'saved'
-          p.nominated = false;
-          p.nominationState = 'saved';
-        } else if(p.id === replacementId){
-          // Replacement nominee - set state to 'replacement'
-          p.nominated = true;
-          p.nominationState = 'replacement';
-        } else if(g.nominees.indexOf(p.id) !== -1){
-          // Other nominees keep their state
-          p.nominated = true;
-        } else {
-          // Clear nomination for others
-          p.nominated = false;
-          if(p.nominationState === 'nominated' || p.nominationState === 'pendingSave'){
-            p.nominationState = 'none';
-          }
-        }
-      }
-
-      // Sync player badge states after updating nomination states
-      try{ if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates(); }catch(e){}
-
-      // Log the veto application with saved and replacement IDs
-      var savedIds = [savedId];
-      var replacementIds = [replacementId];
-      console.info('[nom] vetoApplied saved=' + JSON.stringify(savedIds) + ' replacement=' + JSON.stringify(replacementIds));
-
       // Determine who made the announcement (POV holder for Golden, HOH otherwise)
       var announcer = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
       var announcerRole = isGoldenPOV ? 'POV Holder' : 'HOH';
@@ -2442,13 +2622,8 @@
 
       try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by ' + announcerRole + ').','warn'); }catch(e){}
       
-      // Show badge transfer animation before applying state
-      // Old nominee loses badge, new nominee gains badge
-      await animateNominationTransfer({
-        fromIds: [savedId],
-        toIds: [replacementId],
-        duration: 4000
-      });
+      // Show badge transfer animation - state commits AFTER animation completes
+      await renderBadgeTransfer(savedId, replacementId);
       
       // Show replacement nominee card with replacement nominee avatar
       await showTVCardWithAvatars({
