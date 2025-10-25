@@ -109,17 +109,13 @@
     header.innerHTML = '<h3>Live Vote</h3>';
     container.appendChild(header);
 
-    // Main content grid (left contestant | center stage | right contestant)
+    // Main content grid (left contestant | right contestant) - V2.2.1: Removed center stage
     const grid = document.createElement('div');
     grid.className = 'lv2-grid';
 
     // Left contestant with drop anchor
     const leftSide = createContestant('left', state.leftName, state.leftId);
     grid.appendChild(leftSide);
-
-    // Center stage with portal and arcs (v2.1 feature)
-    const centerStage = createCenterStage();
-    grid.appendChild(centerStage);
 
     // Right contestant with drop anchor
     const rightSide = createContestant('right', state.rightName, state.rightId);
@@ -136,6 +132,14 @@
     container.appendChild(stage);
 
     container.appendChild(grid);
+
+    // V2.2.1: Voter feed area - centered below the two photos
+    const voterFeed = document.createElement('div');
+    voterFeed.className = 'lv2-voter-feed';
+    voterFeed.setAttribute('role', 'log');
+    voterFeed.setAttribute('aria-live', 'polite');
+    voterFeed.setAttribute('aria-label', 'Voter feed');
+    container.appendChild(voterFeed);
 
     // Status text area
     const status = document.createElement('div');
@@ -347,10 +351,10 @@
     state.isProcessing = true;
     const vote = state.voteQueue.shift();
 
-    // Create and animate vote card
+    // V2.2.1: Show chip, hold, fade out, THEN update counts
     await revealVoteCard(vote);
 
-    // Update counts and meter
+    // After chip fades out, update counts
     if (vote.pick === 'left') {
       state.leftCount++;
     } else if (vote.pick === 'right') {
@@ -358,7 +362,8 @@
     }
 
     updateCounts();
-    updateMeter();
+    // V2.2.1: No meter in compact layout
+    // updateMeter();
 
     // Wait for gap before next vote
     await sleep(state.cardGapMs);
@@ -367,24 +372,24 @@
     processNextVote();
   }
 
-  // Reveal a vote card with flip animation - spawn from center, then fly to anchor
+  // Reveal a vote card - V2.2.1: Show chip in voter feed, hold ~1.2-1.5s, fade out
   async function revealVoteCard(vote) {
-    const stage = state.stage;
-    if (!stage) return;
+    const voterFeed = state.container?.querySelector('.lv2-voter-feed');
+    if (!voterFeed) return;
     
     // Determine target nominee name
     const targetName = vote.pick === 'left' ? state.leftName : state.rightName;
     
-    // Announce vote to screen readers only
+    // Announce vote to screen readers
     const announcement = `${vote.voterName} voted to evict ${targetName}`;
     const ariaAnnounce = document.createElement('div');
     ariaAnnounce.setAttribute('role', 'status');
     ariaAnnounce.setAttribute('aria-live', 'polite');
     ariaAnnounce.setAttribute('aria-label', announcement);
     ariaAnnounce.style.display = 'none';
-    stage.appendChild(ariaAnnounce);
+    voterFeed.appendChild(ariaAnnounce);
     
-    // V2.2: Create voter chip with avatar and text
+    // V2.2.1: Create voter chip with avatar and text
     const chip = document.createElement('div');
     chip.className = 'lv2-voter-chip';
     
@@ -400,49 +405,32 @@
     };
     chip.appendChild(avatar);
     
-    // Add vote text
+    // Add vote text - shorter format: "Alex: I vote to evict Mimi"
     const text = document.createElement('div');
     text.className = 'lv2-voter-chip-text';
-    text.textContent = `${vote.voterName} votes to evict ${targetName}`;
+    text.textContent = `${vote.voterName}: I vote to evict ${targetName}`;
     chip.appendChild(text);
     
-    // Position chip at center of grid
-    const grid = state.container?.querySelector('.lv2-grid');
-    if (!grid) return;
-    
-    chip.style.position = 'absolute';
-    chip.style.left = '50%';
-    chip.style.top = '50%';
-    chip.style.transform = 'translate(-50%, -50%)';
-    chip.style.zIndex = '20';
-    
-    grid.style.position = 'relative';
-    grid.appendChild(chip);
+    // Add chip to voter feed
+    voterFeed.appendChild(chip);
 
     if (!reducedMotion) {
+      // Fade in
       await sleep(50); // Small delay for DOM to settle
+      chip.style.opacity = '1';
       
-      // Fly chip to target drop anchor
-      const targetSide = vote.pick;
-      const targetAnchor = state.container?.querySelector(`.lv2-drop-anchor.${targetSide}`);
+      // Hold chip on screen for 1.2-1.5 seconds (using 1.3s average)
+      await sleep(1300);
       
-      if (targetAnchor) {
-        const chipRect = chip.getBoundingClientRect();
-        const anchorRect = targetAnchor.getBoundingClientRect();
-        const deltaX = anchorRect.left - chipRect.left + (anchorRect.width / 2) - (chipRect.width / 2);
-        const deltaY = anchorRect.top - chipRect.top + (anchorRect.height / 2) - (chipRect.height / 2);
-
-        // Apply fly animation
-        chip.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px)) scale(0.3)`;
-        chip.style.opacity = '0';
-        chip.classList.add('fly');
-        await sleep(600); // Travel animation duration
-      }
-
-      // Remove chip after animation
+      // Fade out
+      chip.style.transition = 'opacity 0.4s ease-out';
+      chip.style.opacity = '0';
+      await sleep(400); // Wait for fade out to complete
+      
+      // Remove chip after fade out completes
       chip.remove();
     } else {
-      // Reduced motion: just fade in and out
+      // Reduced motion: just show and hide with shorter duration
       chip.style.opacity = '1';
       await sleep(state.cardHoldMs);
       chip.style.opacity = '0';
