@@ -87,7 +87,9 @@
             number('doubleChance', 'Double eviction chance (%)', 0, 100, 1),
             number('tripleChance', 'Triple eviction chance (%)', 0, 100, 1),
             number('returnChance', 'Juror return chance (%)', 0, 100, 1),
-            number('selfEvictChance', 'Self-eviction chance (%)', 0, 100, 0.5)
+            number('selfEvictChance', 'Self-eviction chance (%)', 0, 100, 0.5),
+            number('goldenPOVChance', 'Golden POV chance (%)', 0, 100, 1),
+            number('diamondPOVChance', 'Diamond POV chance (%)', 0, 100, 1)
           ]
         },
         {

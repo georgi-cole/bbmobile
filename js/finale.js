@@ -96,8 +96,15 @@
         }
       }
     };
-    panel.querySelector('#cinNewSeason').onclick=()=>{
+    const newSeasonBtn=panel.querySelector('#cinNewSeason');
+    newSeasonBtn.addEventListener('click', ()=>{
       console.info('[finale] NEW SEASON clicked, opening profile modal');
+      
+      // Disable button immediately to prevent multiple clicks
+      newSeasonBtn.disabled = true;
+      
+      // Close the winner overlay immediately before showing profile modal
+      try { dim.remove(); } catch(e) { console.warn('[finale] failed to remove overlay:', e); }
       
       // Defensive checks
       if (!g.ProfileService || !g.ProfileModal) {
@@ -126,7 +133,7 @@
           startNewSeasonFlow();
         }
       });
-    };
+    }, { once: true });
 
     return dim;
   }

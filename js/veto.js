@@ -59,6 +59,70 @@
     return arr[Math.floor(rng()*arr.length)];
   }
 
+  // ======= POV TWIST LOGIC =======
+  
+  /**
+   * Decide if a veto twist is active for the current week
+   * Only rolls once per week and persists the result
+   * Diamond outranks Golden if both hit
+   */
+  function decideVetoTwistForWeek(){
+    var g = global.game;
+    if(!g) return null;
+    
+    // Only decide once per week
+    if(g.__vetoTwistDecidedWeek === g.week){
+      return g.activeVetoTwist || null;
+    }
+    
+    // Reset twist state for new week
+    g.activeVetoTwist = null;
+    g.__vetoTwistDecidedWeek = g.week;
+    
+    // Get config chances (default to 0 if not set)
+    var diamondChance = Number(g.cfg?.diamondPOVChance || 0);
+    var goldenChance = Number(g.cfg?.goldenPOVChance || 0);
+    
+    // No twists configured
+    if(diamondChance <= 0 && goldenChance <= 0) return null;
+    
+    // Roll for Diamond first (priority)
+    if(diamondChance > 0){
+      var diamondRoll = rng() * 100;
+      if(diamondRoll < diamondChance){
+        g.activeVetoTwist = 'diamond';
+        return 'diamond';
+      }
+    }
+    
+    // Roll for Golden (independent roll)
+    if(goldenChance > 0){
+      var goldenRoll = rng() * 100;
+      if(goldenRoll < goldenChance){
+        g.activeVetoTwist = 'golden';
+        return 'golden';
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Get the active veto twist name for display
+   */
+  function getActiveVetoTwistName(){
+    var g = global.game;
+    if(!g || !g.activeVetoTwist) return null;
+    
+    if(g.activeVetoTwist === 'diamond') return 'Diamond Power of Veto';
+    if(g.activeVetoTwist === 'golden') return 'Golden Power of Veto';
+    
+    return null;
+  }
+  
+  global.decideVetoTwistForWeek = decideVetoTwistForWeek;
+  global.getActiveVetoTwistName = getActiveVetoTwistName;
+
   function sample(arr, k){
     var a = arr.slice();
     for(var i=a.length-1;i>0;i--){
@@ -165,6 +229,39 @@
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Competition');
     if(typeof global.phaseMusic==='function') global.phaseMusic('veto_comp');
     if(typeof global.setPhase==='function') global.setPhase('veto_comp', g.cfg && g.cfg.tVeto || 40, finishVetoComp);
+
+    // Decide and announce POV twist if active
+    var twist = decideVetoTwistForWeek();
+    if(twist && typeof global.showEventModal === 'function'){
+      var twistConfig = null;
+      
+      if(twist === 'diamond'){
+        twistConfig = {
+          title: 'Twist Alert!',
+          emojis: '💎✨',
+          subtitle: 'The Diamond Power of Veto is in play. The POV holder may replace both nominees. The HOH cannot be named as a replacement.',
+          tone: 'twist',
+          duration: 5000
+        };
+      } else if(twist === 'golden'){
+        twistConfig = {
+          title: 'Twist Alert!',
+          emojis: '🏆✨',
+          subtitle: 'The Golden Power of Veto is in play. The POV holder will choose the replacement nominee (not the HOH).',
+          tone: 'twist',
+          duration: 5000
+        };
+      }
+      
+      if(twistConfig){
+        // Show twist announcement (non-blocking)
+        setTimeout(function(){
+          if(typeof global.showEventModal === 'function'){
+            global.showEventModal(twistConfig);
+          }
+        }, 500);
+      }
+    }
 
     var panel = document.querySelector('#panel');
     if(panel){
@@ -1195,6 +1292,23 @@
     if(typeof global.setPhase==='function')
       global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25, finalizeCeremony);
     
+    // Check for Diamond POV twist - skip save step and go straight to picking 2 replacements
+    if(g.activeVetoTwist === 'diamond'){
+      if(holder && holder.human){
+        // Human POV holder picks both replacements directly
+        await handleDiamondPOVCeremony(holder);
+      } else {
+        // AI POV holder
+        g.__vetoAutoTimer = setTimeout(function(){
+          var gg = global.game;
+          if(gg && gg.phase==='veto_ceremony' && !gg._awaitingReplacement && !gg.__vetoCeremonyResolved){
+            try{ handleDiamondPOVCeremony(getP(gg.vetoHolder)); }catch(e){}
+          }
+        }, 1200);
+      }
+      return;
+    }
+    
     // For human POV holder, show Yes/No decision in TV
     if(holder && holder.human){
       var noms = (g.nominees||[]).map(getP);
@@ -1384,6 +1498,137 @@
   }
   global.showNomineeSelection = showNomineeSelection;
 
+  // ======= DIAMOND POV CEREMONY =======
+  async function handleDiamondPOVCeremony(holder){
+    var g = global.game;
+    if(g.__vetoCeremonyResolved) return;
+    
+    g.__vetoDecisionInProgress = true;
+    if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
+    
+    var holderName = holder ? holder.name : 'POV Holder';
+    
+    // Show Diamond POV announcement
+    await showTVCard({
+      title: 'Diamond Power of Veto',
+      lines: [holderName + ' will now replace BOTH nominees.'],
+      tone: 'veto',
+      duration: 3200
+    });
+    
+    // Compute eligible replacement nominees (exclude HOH and POV holder)
+    var eligibleIds = alivePlayers().filter(function(p){
+      return p.id !== g.hohId && p.id !== g.vetoHolder && !p.evicted;
+    }).map(function(p){ return p.id; });
+    
+    if(eligibleIds.length < 2){
+      console.warn('[veto] Not enough eligible players for Diamond POV');
+      await showTVCard({
+        title: 'Error',
+        lines: ['Not enough eligible players for Diamond POV.'],
+        tone: 'danger',
+        duration: 3000
+      });
+      g.__vetoCeremonyResolved = true;
+      g.__vetoDecisionInProgress = false;
+      setTimeout(function(){
+        if(typeof global.startSocial==='function'){
+          global.startSocial('veto', function(){
+            if(typeof global.startLiveVote==='function') global.startLiveVote();
+          });
+        } else if(typeof global.startLiveVote==='function'){
+          global.startLiveVote();
+        }
+      }, 200);
+      return;
+    }
+    
+    // Pick 2 nominees
+    var newNominees = [];
+    if(holder && holder.human){
+      // Human picks first nominee
+      var firstNom = await promptReplacementNominee(eligibleIds);
+      if(firstNom == null){
+        console.warn('[veto] Diamond POV first pick cancelled');
+        g.__vetoCeremonyResolved = true;
+        g.__vetoDecisionInProgress = false;
+        return;
+      }
+      newNominees.push(firstNom);
+      
+      // Remove first pick from eligible list for second pick
+      var eligibleForSecond = eligibleIds.filter(function(id){ return id !== firstNom; });
+      
+      if(eligibleForSecond.length === 0){
+        console.warn('[veto] No eligible players for second Diamond POV pick');
+        newNominees = [firstNom]; // Fall back to single nominee
+      } else {
+        // Human picks second nominee
+        var secondNom = await promptReplacementNominee(eligibleForSecond);
+        if(secondNom == null){
+          console.warn('[veto] Diamond POV second pick cancelled');
+          newNominees = [firstNom]; // Fall back to single nominee
+        } else {
+          newNominees.push(secondNom);
+        }
+      }
+    } else {
+      // AI picks 2 nominees based on lowest affinity
+      var hoh = getP(g.vetoHolder);
+      var scored = eligibleIds.map(function(id){
+        var aff = (hoh && hoh.affinity && typeof hoh.affinity[id]==='number') ? hoh.affinity[id] : 0;
+        var p = getP(id);
+        return { id: id, score: (-aff) + (p && p.threat ? p.threat : 0.5) };
+      }).sort(function(a,b){ return b.score - a.score; });
+      
+      newNominees = [scored[0].id];
+      if(scored.length > 1) newNominees.push(scored[1].id);
+    }
+    
+    // Apply Diamond POV: replace all nominees
+    g.nominees = newNominees;
+    for(var i=0;i<g.players.length;i++){
+      g.players[i].nominated = (g.nominees.indexOf(g.players[i].id) !== -1);
+      if(g.players[i].nominated){
+        g.players[i].nominationState = 'nominated';
+      } else {
+        g.players[i].nominationState = 'none';
+      }
+    }
+    
+    // Show announcement
+    await showTVCard({
+      title: 'Diamond POV Nominations',
+      lines: [holderName + ' nominates: ' + newNominees.map(safeName).join(' and ') + '.'],
+      tone: 'noms',
+      duration: 3600
+    });
+    
+    try{ if(global.addLog) global.addLog('Diamond POV: ' + holderName + ' replaces both nominees with ' + newNominees.map(safeName).join(' and ') + '.', 'warn'); }catch(e){}
+    try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
+    
+    // Adjourn ceremony
+    await showTVCard({
+      title: 'Veto Ceremony',
+      lines: ['This veto ceremony is adjourned.'],
+      tone: 'veto',
+      duration: 2800
+    });
+    
+    g.__vetoCeremonyResolved = true;
+    g.__vetoDecisionInProgress = false;
+    setTimeout(function(){
+      if(typeof global.startSocial==='function'){
+        global.startSocial('veto', function(){
+          if(typeof global.startLiveVote==='function') global.startLiveVote();
+        });
+      } else if(typeof global.startLiveVote==='function'){
+        global.startLiveVote();
+      }
+    }, 200);
+  }
+  global.handleDiamondPOVCeremony = handleDiamondPOVCeremony;
+
   function aiVetoDecision(){
     var g = global.game, holderId = g.vetoHolder;
     var holderP = getP(holderId);
@@ -1506,10 +1751,10 @@
         setTimeout(function(){ if(typeof global.startLiveVote==='function') global.startLiveVote(); }, 300);
         return;
       }
-
+      
       var hoh = getP(g.hohId);
       
-      // Show HOH must select replacement
+      // Show replacement required message
       await showTVCard({
         title: 'Replacement Required',
         lines: ['As I have vetoed one of your nominations, you must now select a replacement.'],
@@ -1517,9 +1762,14 @@
         duration: 3200
       });
 
-      if(hoh && hoh.human){
+      // Check for Golden POV twist - POV holder picks replacement instead of HOH
+      var isGoldenPOV = (g.activeVetoTwist === 'golden');
+      var picker = isGoldenPOV ? holder : hoh;
+      var pickerName = picker ? picker.name : (isGoldenPOV ? 'POV Holder' : 'HOH');
+
+      if(picker && picker.human){
         g._awaitingReplacement = true;
-        try{ if(global.addLog) global.addLog('Veto used. '+savedName+' is saved. HOH must choose a replacement.','warn'); }catch(e){}
+        try{ if(global.addLog) global.addLog('Veto used. '+savedName+' is saved. ' + (isGoldenPOV ? 'POV holder' : 'HOH') + ' must choose a replacement.','warn'); }catch(e){}
         // Show replacement choice panel in TV
         var repPool = alivePlayers().filter(function(p){
           return !p.hoh && g.nominees.indexOf(p.id)===-1 && p.id!==g.vetoHolder && p.id!==g.vetoSavedId;
@@ -1546,13 +1796,13 @@
           return;
         }
         
-        var replacementId = await renderHOHReplacementChoice(g.hohId, eligibleIds);
+        var replacementId = await renderHOHReplacementChoice(picker.id, eligibleIds);
         if(replacementId != null){
-          await applyReplacementAndContinue(replacementId);
+          await applyReplacementAndContinue(replacementId, isGoldenPOV);
         }
       } else {
         var replacementId = pickReplacementByHOH(savedId);
-        await applyReplacementAndContinue(replacementId);
+        await applyReplacementAndContinue(replacementId, isGoldenPOV);
       }
     } else {
       // Veto NOT used
@@ -1595,7 +1845,7 @@
   }
   global.finalizeCeremony = finalizeCeremony;
 
-  async function applyReplacementAndContinue(replacementId){
+  async function applyReplacementAndContinue(replacementId, isGoldenPOV){
     var g = global.game;
     if(g.__replacementApplied) return;
     g.__replacementApplied = true;
@@ -1656,18 +1906,20 @@
       var replacementIds = [replacementId];
       console.info('[nom] vetoApplied saved=' + JSON.stringify(savedIds) + ' replacement=' + JSON.stringify(replacementIds));
 
-      var hoh = getP(g.hohId);
-      var hohPhrase = pickPhrase(HOH_REPLACEMENT_PHRASES).replace('{name}', safeName(replacementId));
+      // Determine who made the announcement (POV holder for Golden, HOH otherwise)
+      var announcer = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
+      var announcerRole = isGoldenPOV ? 'POV Holder' : 'HOH';
+      var announce = (announcer ? announcer.name : announcerRole)+': I name '+safeName(replacementId)+' as the replacement nominee.';
       
-      // Show HOH announcement card
+      // Show announcement card with appropriate role
       await showTVCard({
-        title: 'HOH Announcement',
-        lines: [hohPhrase],
+        title: announcerRole + ' Announcement',
+        lines: [announce],
         tone: 'noms',
         duration: 3400
       });
 
-      try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by HOH).','warn'); }catch(e){}
+      try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by ' + announcerRole + ').','warn'); }catch(e){}
       
       // Show badge swap animation (visual representation of the swap)
       await renderBadgeSwap(savedId, replacementId);

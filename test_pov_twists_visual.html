@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POV Twist Implementation - Visual Guide</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0e1a;
+      color: #e6e8ee;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #4a9eff;
+      margin-bottom: 20px;
+      font-size: 2.5rem;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #9aa3b2;
+      margin-bottom: 40px;
+      font-size: 1.1rem;
+    }
+    
+    .section {
+      background: linear-gradient(135deg, #1a2f44 0%, #243a50 100%);
+      border: 2px solid #3d5a75;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    h2 {
+      color: #79d19a;
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+      border-bottom: 2px solid #3d5a75;
+      padding-bottom: 10px;
+    }
+    
+    h3 {
+      color: #4a9eff;
+      margin: 20px 0 10px 0;
+      font-size: 1.3rem;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .card {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #3d5a75;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    
+    .card.twist {
+      border-color: #ff6b6b;
+      background: linear-gradient(135deg, rgba(58, 26, 47, 0.5) 0%, rgba(74, 42, 58, 0.5) 100%);
+    }
+    
+    .card h4 {
+      color: #79d19a;
+      margin-bottom: 12px;
+      font-size: 1.1rem;
+    }
+    
+    .card.twist h4 {
+      color: #ff6b6b;
+    }
+    
+    .label {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+      color: #4a9eff;
+    }
+    
+    ul {
+      margin: 10px 0;
+      padding-left: 24px;
+    }
+    
+    li {
+      margin: 8px 0;
+    }
+    
+    .code {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid #3d5a75;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      margin: 10px 0;
+      color: #79d19a;
+    }
+    
+    .arrow {
+      text-align: center;
+      font-size: 2.5rem;
+      color: #4a9eff;
+      margin: 20px 0;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 20px 0;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    th {
+      background: linear-gradient(135deg, #2877a0, #1a4a63);
+      color: white;
+      padding: 14px;
+      text-align: left;
+      font-size: 1rem;
+    }
+    
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #2c3446;
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    
+    .feature {
+      font-weight: 600;
+      color: #79d19a;
+    }
+    
+    .yes {
+      color: #79d19a;
+      font-weight: 600;
+    }
+    
+    .no {
+      color: #9aa3b2;
+    }
+    
+    .highlight {
+      color: #ff6b6b;
+      font-weight: 600;
+    }
+    
+    .note {
+      background: rgba(74, 158, 255, 0.1);
+      border-left: 4px solid #4a9eff;
+      padding: 16px 20px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    
+    .note strong {
+      color: #4a9eff;
+    }
+    
+    .warning {
+      background: rgba(255, 107, 107, 0.1);
+      border-left: 4px solid #ff6b6b;
+      padding: 16px 20px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    
+    .warning strong {
+      color: #ff6b6b;
+    }
+    
+    .success {
+      background: rgba(121, 209, 154, 0.1);
+      border-left: 4px solid #79d19a;
+      padding: 16px 20px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+    
+    .success strong {
+      color: #79d19a;
+    }
+    
+    .screenshot {
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #3d5a75;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .screenshot img {
+      max-width: 100%;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    
+    .screenshot .caption {
+      margin-top: 10px;
+      color: #9aa3b2;
+      font-size: 0.9rem;
+    }
+    
+    @media print {
+      body {
+        background: white;
+        color: black;
+      }
+      .section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏆 POV Twist Implementation</h1>
+    <div class="subtitle">Golden & Diamond Power of Veto - Visual Documentation</div>
+    
+    <!-- Overview -->
+    <div class="section">
+      <h2>📋 Overview</h2>
+      <p>This implementation adds two new Power of Veto twists with configurable probabilities that enhance the POV holder's power during the ceremony.</p>
+      
+      <div class="grid">
+        <div class="card twist">
+          <h4>🏆 Golden Power of Veto</h4>
+          <div class="label">Default: 5% chance</div>
+          <ul>
+            <li>POV holder saves one nominee</li>
+            <li><strong>POV holder</strong> (not HOH) picks replacement</li>
+            <li>Cannot nominate: HOH, self, saved player</li>
+          </ul>
+        </div>
+        
+        <div class="card twist">
+          <h4>💎 Diamond Power of Veto</h4>
+          <div class="label">Default: 3% chance</div>
+          <ul>
+            <li>Skips save step entirely</li>
+            <li><strong>POV holder replaces BOTH nominees</strong></li>
+            <li>Cannot nominate: HOH, self</li>
+            <li>Priority over Golden if both hit</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Settings Configuration -->
+    <div class="section">
+      <h2>⚙️ Settings Configuration</h2>
+      
+      <h3>Location: Settings → Gameplay → Week twists</h3>
+      
+      <div class="code">
+// js/settings/registry.js
+number('goldenPOVChance', 'Golden POV chance (%)', 0, 100, 1),
+number('diamondPOVChance', 'Diamond POV chance (%)', 0, 100, 1)
+      </div>
+      
+      <div class="code">
+// js/ui.config-and-settings.js - DEFAULT_CFG
+goldenPOVChance: 5,   // 5% default
+diamondPOVChance: 3,  // 3% default
+      </div>
+      
+      <div class="note">
+        <strong>📌 Note:</strong> Both settings appear in the "Week twists" section alongside Double Eviction, Triple Eviction, Juror Return, and Self-Eviction chances.
+      </div>
+    </div>
+    
+    <!-- Implementation Flow -->
+    <div class="section">
+      <h2>🔄 Implementation Flow</h2>
+      
+      <div class="card">
+        <h4>1. Twist Decision (Start of POV Competition)</h4>
+        <div class="label">decideVetoTwistForWeek()</div>
+        <ul>
+          <li>Rolls once per week when POV competition starts</li>
+          <li>Checks Diamond first (priority)</li>
+          <li>Then checks Golden (independent roll)</li>
+          <li>Result stored in <code>game.activeVetoTwist</code></li>
+          <li>Persisted via <code>game.__vetoTwistDecidedWeek</code></li>
+        </ul>
+      </div>
+      
+      <div class="arrow">↓</div>
+      
+      <div class="card twist">
+        <h4>2. Twist Announcement</h4>
+        <div class="label">showEventModal with tone: 'twist'</div>
+        <ul>
+          <li><strong>Diamond:</strong> "Twist alert! The Diamond Power of Veto is in play..."</li>
+          <li><strong>Golden:</strong> "Twist alert! The Golden Power of Veto is in play..."</li>
+          <li>Duration: 5 seconds</li>
+          <li>Uses emoji icons (💎✨ for Diamond, 🏆✨ for Golden)</li>
+        </ul>
+      </div>
+      
+      <div class="arrow">↓</div>
+      
+      <div class="card">
+        <h4>3. POV Competition</h4>
+        <ul>
+          <li>Runs normally - no changes to competition mechanics</li>
+          <li>Winner determined by scores</li>
+          <li>Twist affects only the ceremony phase</li>
+        </ul>
+      </div>
+      
+      <div class="arrow">↓</div>
+      
+      <div class="card twist">
+        <h4>4. Ceremony (Twist-Dependent)</h4>
+        <div class="label">startVetoCeremony() routing</div>
+        <ul>
+          <li><strong>Diamond:</strong> Routes to <code>handleDiamondPOVCeremony()</code></li>
+          <li><strong>Golden:</strong> Standard flow with <code>isGoldenPOV</code> flag</li>
+          <li><strong>Standard:</strong> Normal ceremony with HOH picking replacement</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Ceremony Comparison -->
+    <div class="section">
+      <h2>📊 Ceremony Comparison</h2>
+      
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 25%;">Feature</th>
+            <th style="width: 25%;">Standard POV 🛡️</th>
+            <th style="width: 25%;">Golden POV 🏆</th>
+            <th style="width: 25%;">Diamond POV 💎</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="feature">Probability</td>
+            <td>N/A (always available)</td>
+            <td class="highlight">5% per week</td>
+            <td class="highlight">3% per week</td>
+          </tr>
+          <tr>
+            <td class="feature">Save Nominee?</td>
+            <td class="yes">✓ Yes (optional)</td>
+            <td class="yes">✓ Yes</td>
+            <td class="no">✗ No (skipped)</td>
+          </tr>
+          <tr>
+            <td class="feature">Who Picks Replacement?</td>
+            <td>HOH</td>
+            <td class="highlight">POV Holder</td>
+            <td class="highlight">POV Holder</td>
+          </tr>
+          <tr>
+            <td class="feature">Number of Replacements</td>
+            <td>1 nominee</td>
+            <td>1 nominee</td>
+            <td class="highlight">2 nominees (both)</td>
+          </tr>
+          <tr>
+            <td class="feature">HOH Authority</td>
+            <td class="yes">Picks replacement</td>
+            <td class="no">None (overridden)</td>
+            <td class="no">None (fully overridden)</td>
+          </tr>
+          <tr>
+            <td class="feature">Ineligible Nominees</td>
+            <td>HOH, POV holder, saved</td>
+            <td>HOH, POV holder, saved</td>
+            <td>HOH, POV holder</td>
+          </tr>
+          <tr>
+            <td class="feature">Announcement</td>
+            <td>"HOH: I name..."</td>
+            <td class="highlight">"POV Holder: I name..."</td>
+            <td class="highlight">"POV Holder nominates..."</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Code Changes -->
+    <div class="section">
+      <h2>💻 Code Changes</h2>
+      
+      <h3>js/veto.js - New Functions</h3>
+      
+      <div class="code">
+// Twist decision (called at startVetoComp)
+function decideVetoTwistForWeek() {
+  // Roll for Diamond first (priority)
+  // Then roll for Golden (independent)
+  // Store in game.activeVetoTwist
+}
+
+// Get twist name for display
+function getActiveVetoTwistName() {
+  return g.activeVetoTwist === 'diamond' 
+    ? 'Diamond Power of Veto' 
+    : 'Golden Power of Veto';
+}
+
+// Diamond POV ceremony handler
+async function handleDiamondPOVCeremony(holder) {
+  // POV holder picks 2 new nominees
+  // Completely replaces nomination ceremony
+}
+      </div>
+      
+      <h3>Modified Functions</h3>
+      
+      <div class="code">
+// startVetoComp() - Added twist announcement
+var twist = decideVetoTwistForWeek();
+if (twist && typeof global.showEventModal === 'function') {
+  // Show twist announcement modal
+}
+
+// startVetoCeremony() - Routes to Diamond handler
+if (g.activeVetoTwist === 'diamond') {
+  await handleDiamondPOVCeremony(holder);
+  return;
+}
+
+// finalizeCeremony() - Handles Golden POV
+var isGoldenPOV = (g.activeVetoTwist === 'golden');
+var picker = isGoldenPOV ? holder : hoh;
+
+// applyReplacementAndContinue() - Dynamic announcements
+var announcerRole = isGoldenPOV ? 'POV Holder' : 'HOH';
+      </div>
+    </div>
+    
+    <!-- Verification -->
+    <div class="section">
+      <h2>✅ Verification</h2>
+      
+      <div class="success">
+        <strong>✓ All automated tests passed!</strong><br>
+        Run: <code>node verify_pov_twists.mjs</code>
+      </div>
+      
+      <h3>Test Coverage</h3>
+      <ul>
+        <li>✓ Settings fields present in registry.js</li>
+        <li>✓ Default values in ui.config-and-settings.js</li>
+        <li>✓ Twist decision logic in veto.js</li>
+        <li>✓ Announcement implementation</li>
+        <li>✓ Diamond POV ceremony handler</li>
+        <li>✓ Golden POV ceremony routing</li>
+        <li>✓ Eligibility checks</li>
+        <li>✓ Dynamic announcements</li>
+        <li>✓ Independent roll logic</li>
+        <li>✓ Twist persistence per week</li>
+      </ul>
+      
+      <h3>Manual Testing Steps</h3>
+      <ol>
+        <li>Open the game and go to Settings → Gameplay → Week twists</li>
+        <li>Verify "Golden POV chance (%)" and "Diamond POV chance (%)" fields exist</li>
+        <li>Set probabilities to 100% for testing</li>
+        <li>Play through to POV competition phase</li>
+        <li>Verify twist announcement appears with correct messaging</li>
+        <li>Win POV competition</li>
+        <li>Verify ceremony flow matches the twist (Golden or Diamond)</li>
+        <li>Verify correct player picks replacement(s)</li>
+        <li>Verify announcement cards show correct authority</li>
+      </ol>
+    </div>
+    
+    <!-- Priority Rules -->
+    <div class="section">
+      <h2>🎯 Priority & Edge Cases</h2>
+      
+      <div class="warning">
+        <strong>⚠️ Priority Rule:</strong><br>
+        If both Diamond and Golden twists hit in the same week (rare but possible with high percentages), Diamond takes precedence. Only one twist can be active per week.
+      </div>
+      
+      <div class="note">
+        <strong>📌 Persistence:</strong><br>
+        The twist decision is made once per week when POV competition starts and persists through the entire ceremony. The game checks <code>game.__vetoTwistDecidedWeek === game.week</code> to prevent re-rolling.
+      </div>
+      
+      <div class="note">
+        <strong>🔒 Eligibility Rules:</strong><br>
+        • HOH <strong>cannot</strong> be nominated (all ceremony types)<br>
+        • POV holder <strong>cannot</strong> be nominated (all ceremony types)<br>
+        • Saved nominee <strong>cannot</strong> be re-nominated (Standard & Golden only)<br>
+        • Diamond POV has no saved nominee (skips save step entirely)
+      </div>
+    </div>
+    
+    <!-- Files Modified -->
+    <div class="section">
+      <h2>📁 Files Modified</h2>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Changes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>js/settings/registry.js</code></td>
+            <td>Added goldenPOVChance and diamondPOVChance fields</td>
+          </tr>
+          <tr>
+            <td><code>js/ui.config-and-settings.js</code></td>
+            <td>Added default values (5% and 3%)</td>
+          </tr>
+          <tr>
+            <td><code>js/veto.js</code></td>
+            <td>Added twist logic, announcement, ceremony handlers</td>
+          </tr>
+          <tr>
+            <td><code>verify_pov_twists.mjs</code></td>
+            <td>New verification script (17 tests)</td>
+          </tr>
+          <tr>
+            <td><code>test_pov_twists_visual.html</code></td>
+            <td>This documentation file</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

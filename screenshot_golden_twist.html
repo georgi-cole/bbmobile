@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Golden POV Twist Announcement</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0e1a;
+      color: #e6e8ee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .tv-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 10, 18, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .event-modal {
+      background: linear-gradient(135deg, #1a2f44 0%, #243a50 100%);
+      border: 3px solid #ffd700;
+      border-radius: 20px;
+      padding: 50px 60px;
+      text-align: center;
+      box-shadow: 
+        0 20px 60px -20px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(255, 215, 0, 0.3),
+        0 0 40px rgba(255, 215, 0, 0.2);
+      max-width: 600px;
+      width: 90%;
+      animation: slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    @keyframes slideUp {
+      from {
+        transform: translateY(30px) scale(0.9);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+    
+    .icons {
+      font-size: 4.5rem;
+      margin-bottom: 25px;
+      animation: bounce 1s ease infinite;
+    }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      color: #ffffff;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+    
+    .subtitle {
+      font-size: 1.3rem;
+      color: #ffd700;
+      line-height: 1.6;
+      margin-bottom: 15px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+    
+    .description {
+      font-size: 1.05rem;
+      color: #b2c2d5;
+      line-height: 1.5;
+      margin-top: 10px;
+    }
+    
+    .glow {
+      animation: glow 2s ease-in-out infinite;
+    }
+    
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+      50% { text-shadow: 0 0 40px rgba(255, 215, 0, 0.8); }
+    }
+  </style>
+</head>
+<body>
+  <div class="tv-overlay">
+    <div class="event-modal">
+      <div class="icons glow">🏆✨</div>
+      <h1>Twist Alert!</h1>
+      <div class="subtitle">
+        The Golden Power of Veto is in play.
+      </div>
+      <div class="description">
+        The POV holder will choose the replacement nominee (not the HOH).
+      </div>
+    </div>
+  </div>
+</body>
+</html>

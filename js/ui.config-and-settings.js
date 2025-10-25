@@ -151,6 +151,8 @@
     tripleChance: 7,
     returnChance: 10,
     selfEvictChance: 1,
+    goldenPOVChance: 5,
+    diamondPOVChance: 3,
     enablePublicFav: true,
     timerStyle: 'hourglass', // 'hourglass' | 'circular'
     tOpening: 90,
