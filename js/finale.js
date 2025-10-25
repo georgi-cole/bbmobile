@@ -22,11 +22,7 @@
     .cinBtns .btn:focus-visible{outline:2px solid #ffdc8b;outline-offset:2px;}
     .cinStats{margin-top:14px;text-align:left;font-size:.78rem;color:#d2e4f7;background:#101a2a;border:1px solid #203347;border-radius:14px;padding:14px 16px;display:none;max-height:320px;overflow:auto;}
     .cinStats h4{margin:0 0 8px;font-size:.7rem;letter-spacing:1px;color:#9bbdff;text-transform:uppercase;}
-    .cinProfile{display:none;margin-top:16px;padding-top:14px;border-top:1px dashed #2c4258;}
-    .cinFieldRow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;}
-    .cinFieldRow label{display:flex;flex-direction:column;gap:6px;font-size:.68rem;color:#cfe0f5;}
-    .cinFieldRow input{background:#122233;color:#eaf4ff;border:1px solid #2b4767;border-radius:10px;padding:8px 10px;font-size:.82rem;}
-    @media (max-width: 680px){.cinPanel{width:94vw;padding:28px 22px 30px;border-radius:20px;} .cinName{font-size:2.4rem;} .cinCup{width:96px;height:96px;} .cinCup:after{font-size:2.4rem;} .cinBtns{gap:10px;} .cinBtns .btn{padding:8px 14px;font-size:.72rem;} .cinFieldRow{grid-template-columns:1fr;} }
+    @media (max-width: 680px){.cinPanel{width:94vw;padding:28px 22px 30px;border-radius:20px;} .cinName{font-size:2.4rem;} .cinCup{width:96px;height:96px;} .cinCup:after{font-size:2.4rem;} .cinBtns{gap:10px;} .cinBtns .btn{padding:8px 14px;font-size:.72rem;} }
     `;
     const tag=document.createElement('style'); tag.id='cinStyles'; tag.textContent=css; document.head.appendChild(tag);
   }
@@ -68,21 +64,7 @@
         <button class="btn" id="cinCredits">CREDITS</button>
         <button class="btn danger" id="cinExit">EXIT</button>
       </div>
-      <div class="cinStats" id="cinStats">${statsHtml()}</div>
-      <div class="cinProfile" id="cinProfile">
-        <div class="tiny muted" style="margin-bottom:6px">Create your player profile for the next season.</div>
-        <div class="cinFieldRow">
-          <label>Name<input id="cinPName" placeholder="Your name"/></label>
-          <label>Age<input id="cinPAge" placeholder="Age"/></label>
-        </div>
-        <div class="cinFieldRow">
-          <label>Location<input id="cinPLoc" placeholder="City, Country"/></label>
-          <label>Occupation<input id="cinPOcc" placeholder="Occupation"/></label>
-        </div>
-        <div style="margin-top:12px;text-align:right">
-          <button class="btn primary" id="cinProfileStart">Start New Season</button>
-        </div>
-      </div>`;
+      <div class="cinStats" id="cinStats">${statsHtml()}</div>`;
     dim.appendChild(panel);
     document.body.appendChild(dim);
 
@@ -115,33 +97,87 @@
       }
     };
     panel.querySelector('#cinNewSeason').onclick=()=>{
-      const prof=panel.querySelector('#cinProfile'); prof.style.display='block';
-      const s=panel.querySelector('#cinStats'); if(s) s.style.display='block';
-    };
-    panel.querySelector('#cinProfileStart').onclick=()=>{
-      // Increment season before starting new season flow
-      try {
-        if (g.ProfileService && typeof g.ProfileService.incrementSeason === 'function') {
-          g.ProfileService.incrementSeason();
-        }
-      } catch (e) {
-        console.warn('[finale] failed to increment season:', e);
+      console.info('[finale] NEW SEASON clicked, opening profile modal');
+      
+      // Defensive checks
+      if (!g.ProfileService || !g.ProfileModal) {
+        console.warn('[finale] ProfileService or ProfileModal not available, falling back to guest mode');
+        startNewSeasonFlow();
+        return;
       }
       
-      const profile={
-        name:(panel.querySelector('#cinPName')?.value||'You').trim(),
-        age:(panel.querySelector('#cinPAge')?.value||'').trim(),
-        location:(panel.querySelector('#cinPLoc')?.value||'').trim(),
-        occupation:(panel.querySelector('#cinPOcc')?.value||'').trim()
-      };
-      try{ localStorage.setItem('bb_human_profile', JSON.stringify(profile)); }catch{}
-      // Clear logs for fresh season
-      ['log','logGame','logSocial','logVote','logJury'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=''; });
-      const resetBtn=document.getElementById('btnFinalReset')||document.getElementById('btnReset');
-      if(resetBtn){ resetBtn.click(); setTimeout(()=>location.reload(), 200); } else { location.reload(); }
+      // Show profile modal
+      g.ProfileModal.show({
+        autoCreate: false,
+        onSelect: (profile) => {
+          console.info('[finale] profile selected:', profile);
+          // Set current profile
+          g.ProfileService.setCurrentProfile(profile);
+          // Explicitly increment season for selected profile
+          g.ProfileService.incrementSeason();
+          // Start new season
+          startNewSeasonFlow();
+        },
+        onGuest: () => {
+          console.info('[finale] guest mode selected');
+          // Set guest mode (already starts at season 1)
+          g.ProfileService.setGuestMode();
+          // Start new season
+          startNewSeasonFlow();
+        }
+      });
     };
 
     return dim;
+  }
+
+  // Helper: Start new season flow without full reload
+  function startNewSeasonFlow() {
+    console.info('[new-season] starting new season flow');
+    
+    // Hide the finale modal
+    const dim = document.querySelector('.cinDim');
+    if (dim) {
+      try { dim.remove(); } catch(e) { console.warn('[new-season] failed to remove finale modal:', e); }
+    }
+    
+    // Clear logs for fresh season
+    ['log','logGame','logSocial','logVote','logJury'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.innerHTML='';
+    });
+    
+    // Try to use modern API for smooth restart
+    const API = g.Game || g;
+    
+    // Rebuild game
+    if (typeof API.rebuildGame === 'function') {
+      console.info('[new-season] calling rebuildGame(false)');
+      API.rebuildGame(false);
+    } else if (typeof API.buildCast === 'function') {
+      console.info('[new-season] calling buildCast()');
+      API.buildCast();
+    } else {
+      console.warn('[new-season] neither rebuildGame nor buildCast available, falling back to reset+reload');
+      const resetBtn=document.getElementById('btnFinalReset')||document.getElementById('btnReset');
+      if(resetBtn){
+        resetBtn.click();
+        setTimeout(()=>location.reload(), 200);
+      } else {
+        location.reload();
+      }
+      return;
+    }
+    
+    // Start opening sequence after a brief delay to let rebuild complete
+    setTimeout(() => {
+      if (typeof API.startOpeningSequence === 'function') {
+        console.info('[new-season] calling startOpeningSequence()');
+        API.startOpeningSequence();
+      } else {
+        console.warn('[new-season] startOpeningSequence not available');
+      }
+    }, 60);
   }
 
   function showFinaleCinematic(winnerId){
