@@ -471,6 +471,12 @@
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
 
+    // V2.3.1: Start vote session tracking
+    if(useLv2 && global.lv2?.startVoteSession){
+      const totalVotes = (g.eviction.planned || []).length;
+      global.lv2.startVoteSession(totalVotes);
+    }
+
     function markVoter(vId,text){
       const li=document.querySelector(`#liveVoteList li[data-voter-id="${vId}"]`);
       if(li) li.textContent=`${global.safeName(vId)} — ${text}`;
@@ -482,6 +488,7 @@
       // Pause on human turn until they actually vote (no auto vote)
       if(entry.voter===g.humanId && entry.evict==null){
         markVoter(entry.voter,'your turn…');
+        // V2.3.1: No longer shows "Your Turn" tag - setTurn is now a no-op
         if(!useLv2){ global.showCard?.('Diary Room',["It's your turn. Please cast your vote now."],'live',2000,true); } else{ global.lv2?.setTurn?.(true); }
         try{ await waitForHumanVote(); }catch{}
         entry.evict = g.__human_vote;
@@ -624,6 +631,22 @@
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
     const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+
+    // V2.3.1: Wait for all votes to be received before showing results
+    if(useLv2 && global.lv2?.canShowResults){
+      const FAILSAFE_TIMEOUT_MS = 30000; // 30 second fail-safe
+      const startWait = Date.now();
+      
+      while(!global.lv2.canShowResults() && (Date.now() - startWait) < FAILSAFE_TIMEOUT_MS){
+        await sleep(200); // Poll every 200ms
+      }
+      
+      if((Date.now() - startWait) >= FAILSAFE_TIMEOUT_MS){
+        console.warn('[eviction] Failsafe timeout reached waiting for all votes');
+      } else {
+        console.info('[eviction] All votes received, proceeding with results');
+      }
+    }
 
     if(twoMode){
       let ca=preAorCounts, cb=preB;

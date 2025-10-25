@@ -27,7 +27,10 @@
     resizeObserver: null,
     humanTurn: false,
     isTieBreak: false,
-    isFinal4: false
+    isFinal4: false,
+    // V2.3.1: Vote session tracking
+    expectedVotes: 0,
+    receivedVotes: 0
   };
 
   // Default pacing
@@ -72,6 +75,9 @@
     state.rightCount = 0;
     state.voteQueue = [];
     state.isProcessing = false;
+    // V2.3.1: Reset vote session tracking
+    state.expectedVotes = 0;
+    state.receivedVotes = 0;
 
     // Read pacing from settings if available
     const cfg = global.game?.cfg || {};
@@ -228,6 +234,8 @@
     }
 
     state.voteQueue.push(vote);
+    // V2.3.1: Increment received votes counter
+    state.receivedVotes++;
     
     // Start processing if not already
     if (!state.isProcessing) {
@@ -546,66 +554,27 @@
     });
   }
 
-  // V2.1: Set turn state - shows subtle tag and highlights CTA bar
+  // V2.1: Set turn state - DEPRECATED in V2.3.1 (no-op for backward compatibility)
   function setTurn(isActive) {
+    // V2.3.1: No longer shows "Your Turn" tag - kept as no-op for backward compatibility
     state.humanTurn = isActive;
-    
-    if (isActive) {
-      showTurnTag();
-      highlightCtaBar(true);
-    } else {
-      hideTurnTag();
-      highlightCtaBar(false);
-    }
+    // Removed: showTurnTag() / hideTurnTag() calls
+    // Removed: highlightCtaBar() calls
   }
 
-  // V2.1: Show subtle top-center turn tag
+  // V2.1: Show subtle top-center turn tag - DEPRECATED in V2.3.1 (no-op)
   function showTurnTag() {
-    const tv = document.querySelector('#tv');
-    if (!tv) return;
-
-    // Remove existing tag
-    const existing = tv.querySelector('.lv2-turn-tag');
-    if (existing) existing.remove();
-
-    const tag = document.createElement('div');
-    tag.className = 'lv2-turn-tag';
-    tag.textContent = 'Your Turn';
-    tag.setAttribute('role', 'status');
-    tag.setAttribute('aria-live', 'polite');
-    tag.setAttribute('aria-label', 'It is your turn to vote');
-
-    tv.appendChild(tag);
+    // V2.3.1: No-op - "Your Turn" tag no longer displayed
   }
 
-  // V2.1: Hide turn tag
+  // V2.1: Hide turn tag - DEPRECATED in V2.3.1 (no-op)
   function hideTurnTag() {
-    const tv = document.querySelector('#tv');
-    const tag = tv?.querySelector('.lv2-turn-tag');
-    if (tag) tag.remove();
+    // V2.3.1: No-op - "Your Turn" tag no longer displayed
   }
 
-  // V2.1.1: Highlight CTA pills when it's user's turn
+  // V2.1.1: Highlight CTA pills when it's user's turn - DEPRECATED in V2.3.1 (no-op)
   function highlightCtaBar(active) {
-    if (!state.ctaBar) return;
-    
-    const { leftCtaSide, rightCtaSide } = state.ctaBar;
-    const pills = [
-      ...(leftCtaSide?.querySelectorAll('.lv2-cta-pill') || []),
-      ...(rightCtaSide?.querySelectorAll('.lv2-cta-pill') || [])
-    ];
-    
-    if (active) {
-      pills.forEach(pill => {
-        if (!pill.disabled) {
-          pill.classList.add('active');
-        }
-      });
-    } else {
-      pills.forEach(pill => {
-        pill.classList.remove('active');
-      });
-    }
+    // V2.3.1: No-op - CTA highlighting removed
   }
 
   // Show "Your turn" indicator (legacy - kept for backward compatibility)
@@ -635,7 +604,7 @@
     const existingIndicator = tv?.querySelector('.lv2-turn-indicator');
     if (existingIndicator) existingIndicator.remove();
     
-    // V2.1: Remove turn tag
+    // V2.1/V2.3.1: Remove turn tag (if any lingering)
     const existingTag = tv?.querySelector('.lv2-turn-tag');
     if (existingTag) existingTag.remove();
 
@@ -656,6 +625,9 @@
     state.humanTurn = false;
     state.isTieBreak = false;
     state.isFinal4 = false;
+    // V2.3.1: Reset vote session tracking
+    state.expectedVotes = 0;
+    state.receivedVotes = 0;
   }
 
   // Helper: sleep
@@ -834,6 +806,33 @@
     evicteeEl.remove();
   }
 
+  // V2.3.1: Vote session tracking
+  /**
+   * Start a new vote session and set the expected number of votes
+   * @param {number} totalVotes - Total number of votes expected
+   */
+  function startVoteSession(totalVotes) {
+    if (typeof totalVotes !== 'number' || totalVotes < 1) {
+      console.warn('[lv2] startVoteSession: invalid totalVotes', totalVotes);
+      return;
+    }
+    state.expectedVotes = totalVotes;
+    state.receivedVotes = 0;
+    console.info(`[lv2] Vote session started: expecting ${totalVotes} votes`);
+  }
+
+  /**
+   * Check if all expected votes have been received
+   * @returns {boolean} true if all votes are in, false otherwise
+   */
+  function canShowResults() {
+    const allVotesIn = state.receivedVotes >= state.expectedVotes && state.expectedVotes > 0;
+    if (allVotesIn) {
+      console.info(`[lv2] All votes received (${state.receivedVotes}/${state.expectedVotes})`);
+    }
+    return allVotesIn;
+  }
+
   // Public API exposed on window.lv2
   const lv2 = {
     init: init,
@@ -848,6 +847,9 @@
     beginResultCardPhase: beginResultCardPhase,
     endResultCardPhase: endResultCardPhase,
     showEvicteeFinal: showEvicteeFinal,
+    // V2.3.1: Vote session tracking
+    startVoteSession: startVoteSession,
+    canShowResults: canShowResults,
     get enabled() {
       // Read from config if available
       return global.game?.cfg?.modernLiveVoteUI !== false;
