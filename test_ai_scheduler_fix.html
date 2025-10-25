@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Scheduler Fix Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0a1628;
+      color: #c8d5e6;
+    }
+    h1 { color: #78b4f0; }
+    .test-section {
+      background: #1c2b3e;
+      border: 1px solid #284061;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: inline-block;
+      margin: 5px 0;
+      font-weight: 600;
+    }
+    .pass { background: #2d5f3f; color: #7fd996; }
+    .fail { background: #5f2d2d; color: #ff7c7c; }
+    .info { background: #2d3d5f; color: #78b4f0; }
+    button {
+      background: #284061;
+      border: 1px solid #3a5a81;
+      color: #c8d5e6;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    button:hover { background: #3a5a81; }
+    #log {
+      background: #0f1f2d;
+      border: 1px solid #1d3042;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+    .log-pass { color: #7fd996; }
+    .log-fail { color: #ff7c7c; }
+    .log-info { color: #78b4f0; }
+  </style>
+</head>
+<body>
+  <h1>🔧 AI Scheduler Fix Verification</h1>
+  <p>Testing the fix for TypeError: Cannot read properties of undefined (reading 'influenceChange')</p>
+
+  <div class="test-section">
+    <h2>1. Module Loading</h2>
+    <div id="module-status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Mock Game Setup</h2>
+    <button onclick="setupGame()">Setup Mock Game</button>
+    <div id="game-status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Test AI Interaction</h2>
+    <button onclick="testSingleInteraction()">Test Single AI Interaction</button>
+    <button onclick="testMultipleInteractions()">Test 5 AI Interactions</button>
+    <button onclick="testDevHelper()">Test Dev Helper (__smDebug.runAiTickOnce)</button>
+    <div id="test-status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Output</h2>
+    <button onclick="clearLog()">Clear Log</button>
+    <div id="log"></div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="js/config/defaults.js"></script>
+  <script src="js/social-action-config.js"></script>
+  <script src="js/social-maneuvers.js"></script>
+  <script src="js/social-ai-scheduler.js"></script>
+
+  <script>
+    const logEl = document.getElementById('log');
+    
+    function log(msg, type = 'info') {
+      const line = document.createElement('div');
+      line.className = `log-${type}`;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(msg);
+    }
+
+    function clearLog() {
+      logEl.innerHTML = '';
+    }
+
+    // 1. Check modules
+    function checkModules() {
+      const status = document.getElementById('module-status');
+      const modules = [
+        { name: 'SocialManeuvers', obj: window.SocialManeuvers },
+        { name: 'SocialAIScheduler', obj: window.SocialAIScheduler },
+        { name: 'executeAction', obj: window.SocialManeuvers?.executeAction },
+        { name: 'computeActionCost', obj: window.SocialManeuvers?.computeActionCost },
+        { name: '__smDebug.runAiTickOnce', obj: window.__smDebug?.runAiTickOnce }
+      ];
+      
+      let html = '';
+      let allPass = true;
+      modules.forEach(m => {
+        const exists = !!m.obj;
+        if (!exists) allPass = false;
+        html += `<div class="status ${exists ? 'pass' : 'fail'}">
+          ${exists ? '✓' : '✗'} ${m.name}
+        </div>`;
+        log(`Module: ${m.name} - ${exists ? 'LOADED' : 'MISSING'}`, exists ? 'pass' : 'fail');
+      });
+      
+      status.innerHTML = html;
+      return allPass;
+    }
+
+    // 2. Setup mock game
+    function setupGame() {
+      log('Setting up mock game...', 'info');
+      
+      window.game = {
+        cfg: {
+          enableSocialManeuvers: true,
+          aiSocialEnabled: true,
+          aiSocialVerbose: false
+        },
+        week: 2,
+        humanId: 0,
+        players: []
+      };
+      
+      // Create 8 mock players
+      for (let i = 0; i < 8; i++) {
+        window.game.players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          affinity: {}
+        });
+      }
+      
+      // Mock helper functions
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+      window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      
+      // Initialize Social Maneuvers for all players
+      window.game.players.forEach(p => {
+        window.SocialManeuvers.SocialResources.init(p.id);
+        window.SocialManeuvers.SocialEnergyBank.init(p.id);
+        window.SocialManeuvers.SocialEnergyBank.set(p.id, 10);
+        window.SocialManeuvers.SocialResources.recomputePhaseEnergy(p.id);
+      });
+      
+      const status = document.getElementById('game-status');
+      status.innerHTML = `
+        <div class="status pass">✓ Game created with ${window.game.players.length} players</div>
+        <div class="status info">Week: ${window.game.week}</div>
+        <div class="status info">Human ID: ${window.game.humanId}</div>
+      `;
+      
+      log('Game setup complete', 'pass');
+    }
+
+    // 3. Test single interaction
+    let errorCount = 0;
+    let successCount = 0;
+
+    // Capture console errors
+    const originalError = console.error;
+    console.error = function(...args) {
+      const msg = args.join(' ');
+      if (msg.includes('influenceChange') || msg.includes('TypeError')) {
+        errorCount++;
+        log(`❌ ERROR: ${msg}`, 'fail');
+      }
+      originalError.apply(console, args);
+    };
+
+    // Listen for AI interaction events
+    window.addEventListener('sm-ai-interaction', (e) => {
+      const data = e.detail;
+      successCount++;
+      const actor = window.safeName?.(data.actorId) || data.actorId;
+      const targets = data.targetIds.map(id => window.safeName?.(id) || id).join(', ');
+      log(`✓ AI Interaction: ${actor} → ${data.actionId} → ${targets} (${data.success ? 'success' : 'fail'})`, 'pass');
+    });
+
+    function testSingleInteraction() {
+      if (!window.SocialAIScheduler) {
+        log('❌ SocialAIScheduler not loaded', 'fail');
+        return;
+      }
+      
+      log('Testing single AI interaction...', 'info');
+      errorCount = 0;
+      successCount = 0;
+      
+      setTimeout(() => {
+        window.SocialAIScheduler._performSingleInteraction();
+        
+        setTimeout(() => {
+          const status = document.getElementById('test-status');
+          if (errorCount === 0 && successCount > 0) {
+            status.innerHTML = `<div class="status pass">✓ Test PASSED: No TypeError, ${successCount} interaction(s) successful</div>`;
+            log(`✅ Test PASSED: No TypeError detected, ${successCount} interaction(s)`, 'pass');
+          } else if (errorCount > 0) {
+            status.innerHTML = `<div class="status fail">✗ Test FAILED: ${errorCount} error(s) detected</div>`;
+            log(`❌ Test FAILED: ${errorCount} error(s)`, 'fail');
+          } else {
+            status.innerHTML = `<div class="status info">No interactions occurred (may be expected if no eligible players/actions)</div>`;
+            log('ℹ️  No interactions (check console for details)', 'info');
+          }
+        }, 500);
+      }, 100);
+    }
+
+    function testMultipleInteractions() {
+      if (!window.SocialAIScheduler) {
+        log('❌ SocialAIScheduler not loaded', 'fail');
+        return;
+      }
+      
+      log('Testing 5 AI interactions...', 'info');
+      errorCount = 0;
+      successCount = 0;
+      
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          window.SocialAIScheduler._performSingleInteraction();
+          
+          if (i === 4) {
+            setTimeout(() => {
+              const status = document.getElementById('test-status');
+              if (errorCount === 0 && successCount > 0) {
+                status.innerHTML = `<div class="status pass">✓ Test PASSED: No TypeError, ${successCount} interaction(s) successful</div>`;
+                log(`✅ Multiple interactions test PASSED: No TypeError, ${successCount} interaction(s)`, 'pass');
+              } else if (errorCount > 0) {
+                status.innerHTML = `<div class="status fail">✗ Test FAILED: ${errorCount} error(s) detected</div>`;
+                log(`❌ Multiple interactions test FAILED: ${errorCount} error(s)`, 'fail');
+              } else {
+                status.innerHTML = `<div class="status info">No interactions occurred</div>`;
+                log('ℹ️  No interactions in multiple test', 'info');
+              }
+            }, 500);
+          }
+        }, i * 300);
+      }
+    }
+
+    function testDevHelper() {
+      if (!window.__smDebug?.runAiTickOnce) {
+        log('❌ __smDebug.runAiTickOnce not available', 'fail');
+        return;
+      }
+      
+      log('Testing dev helper...', 'info');
+      errorCount = 0;
+      successCount = 0;
+      
+      setTimeout(() => {
+        window.__smDebug.runAiTickOnce();
+        
+        setTimeout(() => {
+          const status = document.getElementById('test-status');
+          if (errorCount === 0) {
+            status.innerHTML = `<div class="status pass">✓ Dev helper test PASSED: No TypeError</div>`;
+            log('✅ Dev helper test PASSED', 'pass');
+          } else {
+            status.innerHTML = `<div class="status fail">✗ Dev helper test FAILED: ${errorCount} error(s)</div>`;
+            log(`❌ Dev helper test FAILED: ${errorCount} error(s)`, 'fail');
+          }
+        }, 500);
+      }, 100);
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const modulesOk = checkModules();
+        if (modulesOk) {
+          log('✅ All modules loaded successfully', 'pass');
+          log('📝 Next: Click "Setup Mock Game" then test AI interactions', 'info');
+        } else {
+          log('❌ Some modules failed to load', 'fail');
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>

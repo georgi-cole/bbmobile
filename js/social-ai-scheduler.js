@@ -190,10 +190,16 @@
       const extraTargets = targetIds.slice(1);
       const result = SM.executeAction?.(actorId, primaryTarget, action.id, extraTargets);
       
-      // Defensive: handle missing result
+      // Defensive: handle missing result or failed execution
       if (!result) {
         console.warn('[ai-scheduler] executeAction returned null/undefined');
         return null;
+      }
+      
+      // If action failed (e.g., insufficient resources), return early
+      if (!result.success) {
+        console.debug(`[ai-scheduler] Action failed: ${result.reason || 'unknown'}`);
+        return result;
       }
 
       // Track action count
@@ -351,14 +357,21 @@
     // Execute
     const result = executeAIAction(actor.id, targetIds, action);
     
-    if (result) {
+    if (result && result.success) {
       const actorName = global.safeName?.(actor.id) || `Player ${actor.id}`;
       const targetNames = targetIds.map(tid => 
         global.safeName?.(tid) || `Player ${tid}`
       ).join(', ');
       
+      const outcomeType = result.outcome?.type || 'unknown';
       console.info(
-        `[ai-scheduler] ${actorName} → ${action.label} → ${targetNames}: ${result.outcome.type}`
+        `[ai-scheduler] ${actorName} → ${action.label} → ${targetNames}: ${outcomeType}`
+      );
+    } else if (result && !result.success) {
+      // Action failed (e.g., insufficient resources)
+      const actorName = global.safeName?.(actor.id) || `Player ${actor.id}`;
+      console.debug(
+        `[ai-scheduler] ${actorName} → ${action.label}: failed (${result.reason || 'unknown'})`
       );
     }
   }
