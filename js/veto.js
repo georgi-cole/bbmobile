@@ -62,9 +62,40 @@
   // ======= POV TWIST LOGIC =======
   
   /**
+   * Check if multi-eviction week is active (double or triple eviction)
+   * @returns {boolean} true if multi-eviction week, false otherwise
+   */
+  function isMultiEvictionWeek(){
+    var g = global.game;
+    if(!g) return false;
+    
+    // Check for __twistMode flag (primary detection method)
+    if(g.__twistMode === 'double' || g.__twistMode === 'triple'){
+      return true;
+    }
+    
+    // Fallback: check legacy flags
+    if(g.doubleEvictionActive || g.tripleEvictionActive){
+      return true;
+    }
+    if(g.doubleEvictionWeek || g.tripleEvictionWeek){
+      return true;
+    }
+    
+    // Fallback: check evictions planned
+    if(g.evictionsThisWeek > 1){
+      return true;
+    }
+    
+    return false;
+  }
+  global.isMultiEvictionWeek = isMultiEvictionWeek;
+  
+  /**
    * Decide if a veto twist is active for the current week
    * Only rolls once per week and persists the result
    * Diamond outranks Golden if both hit
+   * GATING: Special POV twists are suspended during multi-eviction weeks
    */
   function decideVetoTwistForWeek(){
     var g = global.game;
@@ -78,6 +109,12 @@
     // Reset twist state for new week
     g.activeVetoTwist = null;
     g.__vetoTwistDecidedWeek = g.week;
+    
+    // GATING: Suspend special POV twists during multi-eviction weeks
+    if(isMultiEvictionWeek()){
+      console.info('[veto] Multi-eviction week detected - suspending special POV twists');
+      return null;
+    }
     
     // Get config chances (default to 0 if not set)
     var diamondChance = Number(g.cfg?.diamondPOVChance || 0);
@@ -122,7 +159,7 @@
   
   /**
    * Get the veto type label for decision UI
-   * Returns "Power of Veto", "Golden POV", or "Diamond POV"
+   * Returns "Power of Veto", "Golden POV", "Diamond POV", "Platinum POV", or "Coup d'état"
    */
   function getVetoTypeLabel(){
     var g = global.game;
@@ -130,6 +167,8 @@
     
     if(g.activeVetoTwist === 'diamond') return 'Diamond POV';
     if(g.activeVetoTwist === 'golden') return 'Golden POV';
+    if(g.activeVetoTwist === 'platinum') return 'Platinum POV';
+    if(g.activeVetoTwist === 'coup') return 'Coup d\'état';
     
     return 'Power of Veto';
   }
@@ -247,7 +286,21 @@
 
     // Decide and announce POV twist if active
     var twist = decideVetoTwistForWeek();
-    if(twist && typeof global.showEventModal === 'function'){
+    
+    // If multi-eviction week, show info card about twist suspension
+    if(isMultiEvictionWeek() && typeof global.showEventModal === 'function'){
+      setTimeout(function(){
+        if(typeof global.showEventModal === 'function'){
+          global.showEventModal({
+            title: 'Standard POV',
+            emojis: '🛡️',
+            subtitle: 'Special POV twist suspended for multi-eviction week. Standard Power of Veto is in play.',
+            tone: 'info',
+            duration: 5000
+          });
+        }
+      }, 500);
+    } else if(twist && typeof global.showEventModal === 'function'){
       var twistConfig = null;
       
       if(twist === 'diamond'){
@@ -1216,20 +1269,20 @@
   
   /**
    * Unified "Use POV?" decision prompt for all POV types
-   * Works for Standard POV, Golden POV, and Diamond POV
+   * Works for Standard POV, Golden POV, Diamond POV, and future Platinum/Coup d'état
+   * Short copy (max 2 lines) for mobile containment
    * @param {number} povId - The POV holder's player ID
    * @returns {Promise<boolean>} true if user chooses to use POV, false otherwise
    */
   async function renderPOVUseDecision(povId){
     var g = global.game;
     var holder = getP(povId);
-    var holderName = holder ? holder.name : 'POV Holder';
     
     // Get the veto type label
     var vetoLabel = getVetoTypeLabel();
     
     // Build short decision copy (max 2 lines)
-    var decisionCopy = holderName + ' holds the ' + vetoLabel + '.';
+    var decisionCopy = 'Using it removes a nominee. A replacement must be named.';
     
     // Show decision prompt
     var decision = await showTVDecision({
@@ -1719,6 +1772,240 @@
   }
   
   global.renderBadgeTransfer = renderBadgeTransfer;
+  
+  /**
+   * Render "risk → safe → new risk" animation sequence
+   * Shows clear visual transformation: current nominees at risk → saved nominee becomes safe → new replacement at risk
+   * Uses GSAP timeline if available; CSS fallback otherwise; respects reduced-motion
+   * @param {number} savedId - ID of saved nominee
+   * @param {number} replacementId - ID of replacement nominee
+   * @param {number} remainingNomId - ID of nominee who remains on block
+   * @returns {Promise} Resolves after animation and state commit
+   */
+  function renderRiskSwapAnimation(savedId, replacementId, remainingNomId){
+    return new Promise(function(resolve){
+      var g = global.game;
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(); return; }
+      
+      clearTVOverlayContent();
+      
+      // Check for reduced motion preference
+      var prefersReducedMotion = false;
+      try{
+        prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      }catch(e){}
+      
+      // Check for GSAP availability
+      var hasGSAP = !!(window.gsap && window.gsap.timeline);
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard tvCardBody';
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = 'Nomination Change';
+      card.appendChild(h3);
+      
+      var scene = document.createElement('div');
+      scene.className = 'veto-risk-swap-scene';
+      
+      // Stage 1: Current nominees "at risk"
+      var stage1 = document.createElement('div');
+      stage1.className = 'veto-risk-stage';
+      
+      var stage1Label = document.createElement('div');
+      stage1Label.className = 'veto-stage-label';
+      stage1Label.textContent = 'Current Nominees';
+      scene.appendChild(stage1Label);
+      
+      // Saved nominee (will become safe)
+      var savedP = getP(savedId);
+      var savedTile = createRiskPlayerTile(savedP || savedId, 'at-risk', 'RISK');
+      stage1.appendChild(savedTile);
+      
+      // Remaining nominee (stays at risk)
+      if(remainingNomId){
+        var remainingP = getP(remainingNomId);
+        var remainingTile = createRiskPlayerTile(remainingP || remainingNomId, 'at-risk', 'RISK');
+        stage1.appendChild(remainingTile);
+      }
+      
+      scene.appendChild(stage1);
+      
+      // Arrow
+      var arrow1 = document.createElement('div');
+      arrow1.className = 'veto-risk-arrow';
+      arrow1.textContent = '↓';
+      scene.appendChild(arrow1);
+      
+      // Stage 2: Saved nominee becomes "safe"
+      var stage2 = document.createElement('div');
+      stage2.className = 'veto-risk-stage';
+      stage2.style.opacity = '0';
+      
+      var stage2Label = document.createElement('div');
+      stage2Label.className = 'veto-stage-label';
+      stage2Label.textContent = 'POV Used';
+      scene.appendChild(stage2Label);
+      
+      var safeTile = createRiskPlayerTile(savedP || savedId, 'safe', 'SAFE');
+      stage2.appendChild(safeTile);
+      
+      if(remainingNomId){
+        var remainingTile2 = createRiskPlayerTile(remainingP || remainingNomId, 'at-risk', 'RISK');
+        stage2.appendChild(remainingTile2);
+      }
+      
+      scene.appendChild(stage2);
+      
+      // Arrow 2
+      var arrow2 = document.createElement('div');
+      arrow2.className = 'veto-risk-arrow';
+      arrow2.textContent = '↓';
+      arrow2.style.opacity = '0';
+      scene.appendChild(arrow2);
+      
+      // Stage 3: New replacement nominee "at risk"
+      var stage3 = document.createElement('div');
+      stage3.className = 'veto-risk-stage';
+      stage3.style.opacity = '0';
+      
+      var stage3Label = document.createElement('div');
+      stage3Label.className = 'veto-stage-label';
+      stage3Label.textContent = 'Replacement Named';
+      scene.appendChild(stage3Label);
+      
+      var repP = getP(replacementId);
+      var repTile = createRiskPlayerTile(repP || replacementId, 'new-risk', 'NOM');
+      stage3.appendChild(repTile);
+      
+      if(remainingNomId){
+        var remainingTile3 = createRiskPlayerTile(remainingP || remainingNomId, 'at-risk', 'RISK');
+        stage3.appendChild(remainingTile3);
+      }
+      
+      scene.appendChild(stage3);
+      
+      card.appendChild(scene);
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      // Animation sequence
+      if(prefersReducedMotion){
+        // Skip animation, show final state immediately
+        stage1.style.opacity = '0';
+        stage2.style.opacity = '0';
+        arrow1.style.opacity = '0';
+        arrow2.style.opacity = '1';
+        stage3.style.opacity = '1';
+        
+        setTimeout(function(){
+          commitBadgeTransferState(savedId, replacementId);
+          setTimeout(function(){
+            clearTVOverlayContent();
+            if(tv) tv.classList.remove('tvTall');
+            resolve();
+          }, 1500);
+        }, 800);
+      } else if(hasGSAP){
+        // Use GSAP timeline for smooth animation
+        var tl = gsap.timeline();
+        
+        // Stage 1: Hold for 1.2s
+        tl.to({}, { duration: 1.2 });
+        
+        // Stage 2: Fade to safe state
+        tl.to(stage1, { opacity: 0, duration: 0.6 }, '+=0.2');
+        tl.to(stage2, { opacity: 1, duration: 0.6 }, '-=0.4');
+        tl.to(arrow2, { opacity: 1, duration: 0.4 }, '-=0.2');
+        
+        // Stage 3: Show replacement
+        tl.to(stage2, { opacity: 0, duration: 0.6 }, '+=0.8');
+        tl.to(stage3, { opacity: 1, duration: 0.6 }, '-=0.4');
+        
+        // Commit state and cleanup
+        tl.call(function(){
+          commitBadgeTransferState(savedId, replacementId);
+        }, [], '+=0.6');
+        
+        tl.call(function(){
+          clearTVOverlayContent();
+          if(tv) tv.classList.remove('tvTall');
+          resolve();
+        }, [], '+=1');
+      } else {
+        // CSS fallback animation
+        setTimeout(function(){
+          // Fade to stage 2
+          stage1.style.transition = 'opacity 0.6s ease';
+          stage2.style.transition = 'opacity 0.6s ease';
+          arrow2.style.transition = 'opacity 0.4s ease';
+          
+          stage1.style.opacity = '0';
+          setTimeout(function(){
+            stage2.style.opacity = '1';
+            arrow2.style.opacity = '1';
+          }, 200);
+          
+          // Fade to stage 3
+          setTimeout(function(){
+            stage3.style.transition = 'opacity 0.6s ease';
+            stage2.style.opacity = '0';
+            setTimeout(function(){
+              stage3.style.opacity = '1';
+            }, 200);
+            
+            // Commit state
+            setTimeout(function(){
+              commitBadgeTransferState(savedId, replacementId);
+              
+              setTimeout(function(){
+                clearTVOverlayContent();
+                if(tv) tv.classList.remove('tvTall');
+                resolve();
+              }, 1200);
+            }, 800);
+          }, 1000);
+        }, 1200);
+      }
+    });
+  }
+  
+  /**
+   * Helper: Create a risk player tile
+   */
+  function createRiskPlayerTile(player, state, label){
+    var p = (typeof player === 'object') ? player : getP(player);
+    
+    var tile = document.createElement('div');
+    tile.className = 'veto-risk-player ' + state;
+    
+    var img = document.createElement('img');
+    var resolveAvatar = (global.Game || global).resolveAvatar;
+    img.src = resolveAvatar ? resolveAvatar(p || player) : (p ? (p.avatar || p.img || p.photo) : null);
+    if(!img.src){
+      img.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(p ? p.name : String(player));
+    }
+    img.alt = p ? p.name : '?';
+    tile.appendChild(img);
+    
+    var name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = p ? p.name : '?';
+    tile.appendChild(name);
+    
+    var statusLabel = document.createElement('div');
+    statusLabel.className = 'status-label';
+    statusLabel.textContent = label;
+    tile.appendChild(statusLabel);
+    
+    return tile;
+  }
+  
+  global.renderRiskSwapAnimation = renderRiskSwapAnimation;
+
   
   // Prompt for replacement nominee using avatar-first picker
   function promptReplacementNominee(eligibleIds){
@@ -2463,6 +2750,11 @@
       
       var hoh = getP(g.hohId);
       
+      // Capture original nominees for validation
+      if(!g.__originalNomineesBeforeVeto){
+        g.__originalNomineesBeforeVeto = g.nominees.slice();
+      }
+      
       // Show replacement required message - concise for mobile
       var isGoldenPOV = (g.activeVetoTwist === 'golden');
       var replacerName = isGoldenPOV ? 'POV holder' : 'HOH';
@@ -2572,14 +2864,107 @@
     }
   }
   global.finalizeCeremony = finalizeCeremony;
+  
+  /**
+   * Validate that the final nominees are different from the original pair
+   * At most one nominee can remain the same
+   * @param {number[]} originalNominees - Original nominee IDs
+   * @param {number} savedId - ID of saved nominee
+   * @param {number} replacementId - ID of replacement nominee
+   * @returns {boolean} true if valid (at least one changed), false if invalid (same pair)
+   */
+  function validateNomineeChange(originalNominees, savedId, replacementId){
+    if(!originalNominees || originalNominees.length === 0) return true;
+    
+    // Build final nominee pair
+    var finalNominees = originalNominees.filter(function(id){ return id !== savedId; });
+    if(finalNominees.indexOf(replacementId) === -1){
+      finalNominees.push(replacementId);
+    }
+    
+    // Check if exactly the same as original (both match)
+    if(finalNominees.length === originalNominees.length){
+      var allMatch = true;
+      for(var i=0; i<finalNominees.length; i++){
+        if(originalNominees.indexOf(finalNominees[i]) === -1){
+          allMatch = false;
+          break;
+        }
+      }
+      
+      if(allMatch){
+        return false; // Invalid: exact same pair
+      }
+    }
+    
+    return true; // Valid: at least one changed
+  }
+  global.validateNomineeChange = validateNomineeChange;
 
   async function applyReplacementAndContinue(replacementId, isGoldenPOV){
     var g = global.game;
     if(g.__replacementApplied) return;
-    g.__replacementApplied = true;
-
+    
     if(replacementId!=null){
       var savedId = g.vetoSavedId;
+      
+      // Store original nominees for validation
+      var originalNominees = g.__originalNomineesBeforeVeto || g.nominees.slice();
+      if(!g.__originalNomineesBeforeVeto){
+        g.__originalNomineesBeforeVeto = g.nominees.slice();
+      }
+      
+      // Validate nominee change (at most one can remain the same)
+      if(!validateNomineeChange(originalNominees, savedId, replacementId)){
+        // Invalid: same pair
+        console.warn('[veto] Invalid replacement - same pair as before');
+        
+        // Show error card
+        await showTVCard({
+          title: 'Invalid Replacement',
+          lines: ['Final nominees cannot be the exact same pair.', 'Please choose a different replacement.'],
+          tone: 'danger',
+          duration: 3200
+        });
+        
+        // Re-open replacement chooser
+        var repPool = alivePlayers().filter(function(p){
+          return !p.hoh && g.nominees.indexOf(p.id)===-1 && p.id!==g.vetoHolder && p.id!==g.vetoSavedId;
+        });
+        var eligibleIds = repPool.map(function(p){ return p.id; });
+        
+        var picker = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
+        var pickerName = picker ? picker.name : (isGoldenPOV ? 'POV holder' : 'HOH');
+        
+        if(picker && picker.human){
+          // Human picks again
+          if(isGoldenPOV){
+            replacementId = await renderReplacementChoiceBy(eligibleIds, {
+              multi: 1,
+              title: 'Select Replacement Nominee',
+              pickerName: pickerName
+            });
+          } else {
+            replacementId = await renderHOHReplacementChoice(picker.id, eligibleIds);
+          }
+          
+          // Recursively call with new selection
+          return applyReplacementAndContinue(replacementId, isGoldenPOV);
+        } else {
+          // AI picks again (filter out invalid choice)
+          var validChoices = eligibleIds.filter(function(id){ 
+            return id !== replacementId; 
+          });
+          if(validChoices.length > 0){
+            replacementId = pickReplacementByHOH(savedId);
+            // Recursively call with new selection
+            return applyReplacementAndContinue(replacementId, isGoldenPOV);
+          }
+        }
+      }
+      
+      // Valid replacement - proceed
+      g.__replacementApplied = true;
       
       // Update nominees array (add replacement, remove saved)
       g.nominees = (g.nominees||[]).filter(function(id){ return id!==savedId; });
