@@ -71,7 +71,8 @@
       width: tvRect.width,
       height: tvRect.height,
       innerWidth: innerWidth,
-      innerHeight: innerHeight
+      innerHeight: innerHeight,
+      aspectRatio: innerWidth / innerHeight
     };
 
     safeAreaCache = safeArea;
