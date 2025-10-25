@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Replacement Nominee Picker</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #83bfff;
+      margin-bottom: 10px;
+    }
+    .description {
+      color: #95a9c0;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      background: #132132;
+      border: 1px solid #24364b;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-section h2 {
+      color: #a3c7ff;
+      margin-top: 0;
+    }
+    .test-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    button {
+      background: #3563a7;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #4876c2;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #3563a7, #4876c2);
+    }
+    button.danger {
+      background: linear-gradient(135deg, #c23636, #e64a4a);
+    }
+    .log {
+      background: #0a0f16;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #1a2535;
+    }
+    .log-entry.success {
+      color: #77d58d;
+    }
+    .log-entry.error {
+      color: #ff6d6d;
+    }
+    .log-entry.info {
+      color: #83bfff;
+    }
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    .checklist li {
+      padding: 8px 0;
+      padding-left: 30px;
+      position: relative;
+    }
+    .checklist li:before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #77d58d;
+      font-weight: bold;
+    }
+    .tv-wrapper {
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+    /* Simplified TV frame for testing */
+    .tvFrame {
+      width: 100%;
+      max-width: 1200px;
+      background: #000;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+    }
+    .tv {
+      width: 100%;
+      height: 600px;
+      background: linear-gradient(135deg, #1a2a40, #0f1a2a);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .tvViewport {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #95a9c0;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Replacement Nominee Picker</h1>
+    <p class="description">
+      Testing the new avatar-first grid picker for selecting replacement nominees during veto ceremonies.
+    </p>
+
+    <div class="test-section">
+      <h2>✨ Features Being Tested</h2>
+      <ul class="checklist">
+        <li><strong>Avatar Grid:</strong> Responsive grid of eligible houseguests with large tappable tiles</li>
+        <li><strong>Disabled States:</strong> Ineligible players (HOH, nominees, veto holder) appear disabled</li>
+        <li><strong>Tap-to-Confirm:</strong> Selecting an avatar shows confirm screen with Back/OK buttons</li>
+        <li><strong>Keyboard Navigation:</strong> Arrow keys, Enter, and Space work for accessibility</li>
+        <li><strong>Mobile-First:</strong> Clamp() sizing and ≥44px tap targets</li>
+        <li><strong>No Inner Scroll:</strong> Content scales to fit TV viewport using ResizeObserver</li>
+        <li><strong>Reduced Motion:</strong> Respects prefers-reduced-motion for animations</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>🎮 Test Controls</h2>
+      <div class="test-controls">
+        <button class="primary" onclick="testBasicScenario()">Test Basic Scenario (8 eligible, 4 blocked)</button>
+        <button onclick="testSmallGroup()">Test Small Group (4 eligible, 2 blocked)</button>
+        <button onclick="testLargeGroup()">Test Large Group (12 eligible, 4 blocked)</button>
+        <button class="danger" onclick="hidePicker()">Hide Picker</button>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+
+    <div class="tv-wrapper">
+      <div class="tvFrame">
+        <div class="tv" id="tv">
+          <div class="tvViewport">
+            <p>TV ready. Click a test button above to show the picker.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>📋 Manual Verification Checklist</h2>
+      <ul>
+        <li>[ ] Grid displays all players with avatars and names</li>
+        <li>[ ] Blocked players appear disabled (dimmed, not clickable)</li>
+        <li>[ ] Clicking an eligible player shows confirm view</li>
+        <li>[ ] Confirm view shows large avatar, name, and Back/OK buttons</li>
+        <li>[ ] Back button returns to grid</li>
+        <li>[ ] OK button logs selection and hides picker</li>
+        <li>[ ] Keyboard navigation works (Tab, Arrow keys, Enter, Space)</li>
+        <li>[ ] No scrollbars appear inside the TV</li>
+        <li>[ ] Content scales properly on window resize</li>
+        <li>[ ] Works on mobile viewport (resize browser to ~375px wide)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Load required scripts -->
+  <script src="js/avatar.js"></script>
+  <script src="js/replacement-picker.js"></script>
+  
+  <script>
+    // Mock game data for testing
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: './avatars/1.png', hoh: true },
+        { id: 2, name: 'Bob', avatar: './avatars/2.png' },
+        { id: 3, name: 'Charlie', avatar: './avatars/3.png' },
+        { id: 4, name: 'Diana', avatar: './avatars/4.png' },
+        { id: 5, name: 'Eve', avatar: './avatars/5.png' },
+        { id: 6, name: 'Frank', avatar: './avatars/6.png' },
+        { id: 7, name: 'Grace', avatar: './avatars/7.png' },
+        { id: 8, name: 'Henry', avatar: './avatars/8.png' },
+        { id: 9, name: 'Iris', avatar: './avatars/9.png' },
+        { id: 10, name: 'Jack', avatar: './avatars/10.png' },
+        { id: 11, name: 'Karen', avatar: './avatars/11.png' },
+        { id: 12, name: 'Leo', avatar: './avatars/12.png' }
+      ],
+      hohId: 1,
+      nominees: [2, 3],
+      vetoHolder: 4,
+      vetoSavedId: 2
+    };
+
+    // Helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      var p = window.getP(id);
+      return p ? p.name : 'Player ' + id;
+    };
+
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+
+    // Logging
+    function addLog(message, type = 'info') {
+      var log = document.getElementById('log');
+      var entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + message;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Test scenarios
+    function testBasicScenario() {
+      addLog('Testing basic scenario: 8 eligible, 4 blocked', 'info');
+      
+      var eligible = [5, 6, 7, 8, 9, 10, 11, 12];
+      var blocked = [1, 2, 3, 4]; // HOH, nominees, veto holder
+      
+      window.rpPicker.show({
+        eligibleIds: eligible,
+        blockedIds: blocked,
+        onConfirm: function(selectedId) {
+          addLog('Player selected: ' + window.safeName(selectedId) + ' (ID: ' + selectedId + ')', 'success');
+        }
+      });
+      
+      addLog('Picker shown with ' + eligible.length + ' eligible and ' + blocked.length + ' blocked players');
+    }
+
+    function testSmallGroup() {
+      addLog('Testing small group: 4 eligible, 2 blocked', 'info');
+      
+      var eligible = [5, 6, 7, 8];
+      var blocked = [1, 2];
+      
+      window.rpPicker.show({
+        eligibleIds: eligible,
+        blockedIds: blocked,
+        onConfirm: function(selectedId) {
+          addLog('Player selected: ' + window.safeName(selectedId) + ' (ID: ' + selectedId + ')', 'success');
+        }
+      });
+      
+      addLog('Picker shown with small group');
+    }
+
+    function testLargeGroup() {
+      addLog('Testing large group: 12 eligible, 4 blocked', 'info');
+      
+      // Add more mock players for large group test
+      for (var i = 13; i <= 20; i++) {
+        window.game.players.push({
+          id: i,
+          name: 'Player' + i,
+          avatar: './avatars/' + i + '.png'
+        });
+      }
+      
+      var eligible = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+      var blocked = [1, 2, 3, 4];
+      
+      window.rpPicker.show({
+        eligibleIds: eligible,
+        blockedIds: blocked,
+        onConfirm: function(selectedId) {
+          addLog('Player selected: ' + window.safeName(selectedId) + ' (ID: ' + selectedId + ')', 'success');
+        }
+      });
+      
+      addLog('Picker shown with large group');
+    }
+
+    function hidePicker() {
+      window.rpPicker.hide();
+      addLog('Picker hidden', 'info');
+    }
+
+    // Initialize
+    addLog('Test page loaded. Click a test button to begin.', 'info');
+  </script>
+</body>
+</html>

@@ -5578,3 +5578,225 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
     line-height: 1.35;
   }
 }
+
+/* ============================================================================
+   REPLACEMENT NOMINEE PICKER
+   Avatar-first grid picker for veto ceremonies
+   ============================================================================ */
+
+/* Overlay container - fills TV safe area */
+.rp-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: none; /* Hidden by default */
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(14,23,48,0.92), rgba(10,16,28,0.94));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+/* Content container - fixed design canvas that scales */
+.rp-fit {
+  width: 1200px;
+  height: 560px;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: clamp(16px, 3vw, 32px);
+  box-sizing: border-box;
+  transition: transform 0.2s ease-out;
+}
+
+/* Title */
+.rp-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: clamp(20px, 4vh, 32px);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+
+/* Avatar Grid */
+.rp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(100px, 12vw, 140px), 1fr));
+  gap: clamp(12px, 2vw, 20px);
+  width: 100%;
+  max-width: 900px;
+  justify-items: center;
+  align-content: start;
+  overflow-y: auto;
+  max-height: 100%;
+  padding: 8px;
+}
+
+/* Avatar Tile */
+.rp-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 1vh, 10px);
+  padding: clamp(12px, 2vh, 16px);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, 
+    rgba(28,43,62,0.5), 
+    rgba(19,33,50,0.6)
+  );
+  border: 2px solid rgba(110,160,220,0.25);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px; /* Accessibility tap target */
+  min-width: 44px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.rp-tile:hover:not(.rp-tile-disabled) {
+  background: linear-gradient(135deg, 
+    rgba(53,99,167,0.4), 
+    rgba(40,72,102,0.5)
+  );
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(131,191,255,0.3);
+}
+
+.rp-tile:focus:not(.rp-tile-disabled) {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
+
+/* Disabled tile state */
+.rp-tile-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+  pointer-events: none;
+}
+
+/* Avatar within tile */
+.rp-avatar {
+  width: clamp(60px, 10vw, 100px);
+  height: clamp(60px, 10vw, 100px);
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(131,191,255,0.4);
+  background: var(--card);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+
+.rp-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Name label */
+.rp-name {
+  font-size: clamp(0.75rem, 1.5vw, 0.95rem);
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Confirm View */
+.rp-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 3vh, 24px);
+  width: 100%;
+  max-width: 500px;
+  padding: clamp(20px, 4vh, 40px);
+  background: linear-gradient(135deg, 
+    rgba(28,43,62,0.75), 
+    rgba(12,22,36,0.72)
+  );
+  border: 2px solid rgba(110,160,220,0.3);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+}
+
+/* Large avatar in confirm view */
+.rp-avatar-large {
+  width: clamp(120px, 20vw, 180px);
+  height: clamp(120px, 20vw, 180px);
+  border-width: 4px;
+  border-color: var(--accent);
+}
+
+/* Large name in confirm view */
+.rp-name-large {
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Question text */
+.rp-question {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  color: var(--muted-2);
+  text-align: center;
+  margin: 8px 0;
+}
+
+/* Action buttons row */
+.rp-actions {
+  display: flex;
+  gap: clamp(12px, 2vw, 16px);
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Back button */
+.rp-back {
+  min-height: 44px; /* Accessibility tap target */
+  min-width: 100px;
+  padding: 12px 24px;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(31,52,77,0.9), rgba(40,72,102,0.9));
+  border: 2px solid rgba(110,160,220,0.3);
+}
+
+.rp-back:hover {
+  background: linear-gradient(135deg, rgba(40,72,102,0.9), rgba(53,99,167,0.9));
+  border-color: var(--accent);
+}
+
+/* OK button */
+.rp-ok {
+  min-height: 44px; /* Accessibility tap target */
+  min-width: 100px;
+  padding: 12px 24px;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  font-weight: 600;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .rp-tile,
+  .rp-fit,
+  .rp-overlay {
+    transition: none;
+  }
+  
+  .rp-tile:hover:not(.rp-tile-disabled) {
+    transform: none;
+  }
+}
