@@ -66,13 +66,13 @@
   </div>
 
   <!-- Load profile system -->
-  <script src="src/profile/profileStorage.js"></script>
-  <script src="src/profile/profileService.js"></script>
-  <script src="src/ui/ProfileModal.js"></script>
-  <script src="js/player-profile-modal.js"></script>
+  <script src="src/profile/profileStorage.js" onerror="console.error('Failed to load profileStorage.js')"></script>
+  <script src="src/profile/profileService.js" onerror="console.error('Failed to load profileService.js')"></script>
+  <script src="src/ui/ProfileModal.js" onerror="console.error('Failed to load ProfileModal.js')"></script>
+  <script src="js/player-profile-modal.js" onerror="console.error('Failed to load player-profile-modal.js')"></script>
   
   <!-- Load finale -->
-  <script src="js/finale.js"></script>
+  <script src="js/finale.js" onerror="console.error('Failed to load finale.js')"></script>
 
   <!-- Test script -->
   <script>

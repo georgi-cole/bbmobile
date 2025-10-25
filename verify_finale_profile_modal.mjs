@@ -49,7 +49,13 @@ function checkFileContent(filepath, checks) {
     
     return results;
   } catch (e) {
-    log(`Error reading ${filepath}: ${e.message}`, 'error');
+    if (e.code === 'ENOENT') {
+      log(`File not found: ${filepath}`, 'error');
+    } else if (e.code === 'EACCES') {
+      log(`Permission denied reading ${filepath}`, 'error');
+    } else {
+      log(`Error reading ${filepath}: ${e.message}`, 'error');
+    }
     return [];
   }
 }
