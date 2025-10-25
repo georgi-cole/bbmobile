@@ -1284,11 +1284,7 @@
       
       var grid = document.createElement('div');
       grid.className = 'veto-replacement-grid';
-      grid.style.display = 'grid';
-      grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))';
-      grid.style.gap = '16px';
-      grid.style.justifyContent = 'center';
-      grid.style.marginBottom = '20px';
+      // CSS handles all grid layout - no inline styles needed
       
       var selectedIds = [];
       
@@ -1317,8 +1313,10 @@
         (function(nomId, idx){
           var p = getP(nomId);
           var tile = document.createElement('div');
-          tile.className = 'veto-nominee-tile veto-replacement-tile';
-          tile.style.cursor = 'pointer';
+          tile.className = 'veto-replacement-tile';
+          tile.setAttribute('tabindex', '0');
+          tile.setAttribute('role', 'button');
+          tile.setAttribute('aria-label', 'Select ' + (p ? p.name : '?'));
           tile.style.animationDelay = (idx * 0.1) + 's';
           
           // Avatar
@@ -1337,9 +1335,15 @@
           name.textContent = p ? p.name : '?';
           tile.appendChild(name);
           
-          // Click handler for selection
+          // Click and keyboard handler for selection
           tile.onclick = function(){
             updateSelection(nomId, tile);
+          };
+          tile.onkeydown = function(e){
+            if(e.key === 'Enter' || e.key === ' '){
+              e.preventDefault();
+              updateSelection(nomId, tile);
+            }
           };
           
           grid.appendChild(tile);
@@ -1350,18 +1354,15 @@
       
       // Selection counter
       var counter = document.createElement('div');
-      counter.className = 'tiny';
-      counter.style.textAlign = 'center';
-      counter.style.marginBottom = '16px';
+      counter.className = 'veto-selection-counter';
       counter.textContent = 'Selected: 0 / ' + multi;
       card.appendChild(counter);
       
       // Confirm button
       var confirmBtn = document.createElement('button');
-      confirmBtn.className = 'btn primary';
+      confirmBtn.className = 'btn primary veto-confirm-btn';
       confirmBtn.textContent = 'Confirm ' + (multi === 2 ? 'Nominees' : 'Nominee');
       confirmBtn.disabled = true;
-      confirmBtn.style.width = '100%';
       confirmBtn.onclick = function(){
         clearTVOverlayContent();
         var tv = document.getElementById('tv');

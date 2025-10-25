@@ -83,10 +83,10 @@ if (vetoContent.includes('var multi = options.multi')) {
 }
 
 // Test 6: Check for grid layout in renderReplacementChoiceBy
-if (vetoContent.includes('grid.style.gridTemplateColumns')) {
-  pass('renderReplacementChoiceBy uses CSS grid layout');
+if (vetoContent.includes('veto-replacement-grid') && vetoContent.includes('grid.className')) {
+  pass('renderReplacementChoiceBy uses CSS grid layout with proper class');
 } else {
-  fail('renderReplacementChoiceBy does not use CSS grid layout');
+  fail('renderReplacementChoiceBy does not use CSS grid layout properly');
 }
 
 // Test 7: Check for confirm button logic
@@ -167,15 +167,27 @@ if (vetoContent.includes('var announcer = options.announcer')) {
   fail('applyReplacementAndContinueMulti announcer parameter not found');
 }
 
-// Read CSS file
-const cssPath = join(__dirname, '..', 'css', 'nominations.css');
-let cssContent;
+// Read CSS files - check both nominations.css and veto-twists.css
+const nominationsCssPath = join(__dirname, '..', 'css', 'nominations.css');
+const vetoTwistsCssPath = join(__dirname, '..', 'css', 'veto-twists.css');
+let nominationsCssContent = '';
+let vetoTwistsCssContent = '';
+
 try {
-  cssContent = readFileSync(cssPath, 'utf8');
+  nominationsCssContent = readFileSync(nominationsCssPath, 'utf8');
 } catch (e) {
-  fail('Could not read css/nominations.css');
+  // nominations.css is optional for veto twists tests
+}
+
+try {
+  vetoTwistsCssContent = readFileSync(vetoTwistsCssPath, 'utf8');
+} catch (e) {
+  fail('Could not read css/veto-twists.css');
   process.exit(1);
 }
+
+// Combine CSS content for checking
+const cssContent = nominationsCssContent + vetoTwistsCssContent;
 
 // Test 18: Check for veto-replacement-grid CSS class
 if (cssContent.includes('.veto-replacement-grid')) {
@@ -196,6 +208,41 @@ if (cssContent.includes('.veto-replacement-tile.selected')) {
   pass('CSS for selected state is present');
 } else {
   fail('CSS for selected state not found');
+}
+
+// Test 21: Check for responsive breakpoints
+if (cssContent.includes('@media (max-width: 767px)') || cssContent.includes('@media (max-width: 768px)')) {
+  pass('CSS has mobile breakpoints');
+} else {
+  fail('CSS mobile breakpoints not found');
+}
+
+// Test 22: Check for desktop breakpoints
+if (cssContent.includes('@media (min-width: 1025px)') || cssContent.includes('@media (min-width: 1024px)')) {
+  pass('CSS has desktop breakpoints');
+} else {
+  fail('CSS desktop breakpoints not found');
+}
+
+// Test 23: Check for veto-selection-counter class
+if (cssContent.includes('.veto-selection-counter')) {
+  pass('CSS for .veto-selection-counter is present');
+} else {
+  fail('CSS for .veto-selection-counter not found');
+}
+
+// Test 24: Check for veto-confirm-btn class
+if (cssContent.includes('.veto-confirm-btn')) {
+  pass('CSS for .veto-confirm-btn is present');
+} else {
+  fail('CSS for .veto-confirm-btn not found');
+}
+
+// Test 25: Check for fadeSlideIn animation
+if (cssContent.includes('@keyframes fadeSlideIn') || cssContent.includes('animation: fadeSlideIn')) {
+  pass('CSS has fadeSlideIn animation');
+} else {
+  fail('CSS fadeSlideIn animation not found');
 }
 
 // Summary
