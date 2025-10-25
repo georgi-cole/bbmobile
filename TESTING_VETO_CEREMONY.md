@@ -129,7 +129,7 @@ Open `test_veto_ceremony_tv.html` in a browser for a checklist of all test scena
 2. Use veto to save one nominee (e.g., Player A)
 3. As HOH (or POV holder if Golden), attempt to select the SAME player as replacement
 4. Verify error card appears with title: "Invalid Replacement"
-5. Verify error message: "Invalid Replacement - Final nominees cannot be the exact same pair. Please choose a different replacement."
+5. Verify error message: "Final nominees cannot be the exact same pair. Please choose a different replacement."
 6. Verify replacement chooser re-opens automatically
 7. Select a different replacement nominee
 8. Verify ceremony continues normally
