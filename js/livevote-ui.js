@@ -28,7 +28,9 @@
     humanTurn: false,
     isTieBreak: false,
     isFinal4: false,
-    isResponsive: false
+    isResponsive: false,
+    carouselIndex: 0, // Current nominee shown in carousel (0=left, 1=right)
+    useCarousel: false // Whether to use carousel layout
   };
 
   // Default pacing
@@ -73,6 +75,7 @@
     state.rightCount = 0;
     state.voteQueue = [];
     state.isProcessing = false;
+    state.carouselIndex = 0; // Reset carousel to first nominee
 
     // Read pacing from settings if available
     const cfg = global.game?.cfg || {};
@@ -91,6 +94,10 @@
     const height = window.innerHeight;
     const isPortrait = height > width;
     const isNarrow = width < 820;
+    
+    // Use carousel on very narrow or portrait screens
+    const useCarousel = isNarrow || isPortrait;
+    state.useCarousel = useCarousel;
     
     return isNarrow || isPortrait;
   }
@@ -138,6 +145,11 @@
     // Main content grid (left contestant | right contestant) - V2.2.1: Removed center stage
     const grid = document.createElement('div');
     grid.className = 'lv2-grid';
+    
+    // Add carousel class if using carousel mode
+    if (state.useCarousel) {
+      grid.classList.add('lv2-carousel');
+    }
 
     // Left contestant with drop anchor
     const leftSide = createContestant('left', state.leftName, state.leftId);
@@ -146,6 +158,12 @@
     // Right contestant with drop anchor
     const rightSide = createContestant('right', state.rightName, state.rightId);
     grid.appendChild(rightSide);
+    
+    // Add carousel navigation if in carousel mode
+    if (state.useCarousel) {
+      const carouselNav = createCarouselNav();
+      container.appendChild(carouselNav);
+    }
     
     // Hidden stage for vote announcements (only for ARIA)
     const stage = document.createElement('div');
@@ -193,6 +211,14 @@
 
     // Setup ResizeObserver for responsive scaling
     setupResizeObserver(tv, fitWrapper);
+    
+    // Initialize carousel view if in carousel mode
+    if (state.useCarousel) {
+      // Set initial carousel index to 0 (left nominee)
+      state.carouselIndex = 0;
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => updateCarouselView(), 50);
+    }
   }
 
   // Create contestant card (left or right)
@@ -238,6 +264,133 @@
     contestant.appendChild(anchor);
 
     return contestant;
+  }
+
+  // Create carousel navigation controls (prev/next arrows)
+  function createCarouselNav() {
+    const nav = document.createElement('div');
+    nav.className = 'lv2-carousel-nav';
+    
+    // Previous button (left arrow)
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'lv2-carousel-arrow lv2-carousel-prev';
+    prevBtn.setAttribute('aria-label', 'Previous nominee');
+    prevBtn.innerHTML = '◀'; // Left triangle
+    prevBtn.onclick = () => navigateCarousel('prev');
+    nav.appendChild(prevBtn);
+    
+    // Indicator dots
+    const indicators = document.createElement('div');
+    indicators.className = 'lv2-carousel-indicators';
+    
+    const dot1 = document.createElement('span');
+    dot1.className = 'lv2-carousel-dot active';
+    dot1.setAttribute('aria-label', 'Nominee 1');
+    dot1.onclick = () => setCarouselIndex(0);
+    indicators.appendChild(dot1);
+    
+    const dot2 = document.createElement('span');
+    dot2.className = 'lv2-carousel-dot';
+    dot2.setAttribute('aria-label', 'Nominee 2');
+    dot2.onclick = () => setCarouselIndex(1);
+    indicators.appendChild(dot2);
+    
+    nav.appendChild(indicators);
+    
+    // Next button (right arrow)
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'lv2-carousel-arrow lv2-carousel-next';
+    nextBtn.setAttribute('aria-label', 'Next nominee');
+    nextBtn.innerHTML = '▶'; // Right triangle
+    nextBtn.onclick = () => navigateCarousel('next');
+    nav.appendChild(nextBtn);
+    
+    return nav;
+  }
+  
+  // Navigate carousel (prev/next)
+  function navigateCarousel(direction) {
+    if (!state.useCarousel) return;
+    
+    if (direction === 'prev') {
+      state.carouselIndex = state.carouselIndex === 0 ? 1 : 0;
+    } else if (direction === 'next') {
+      state.carouselIndex = state.carouselIndex === 1 ? 0 : 1;
+    }
+    
+    updateCarouselView();
+  }
+  
+  // Set carousel to specific index
+  function setCarouselIndex(index) {
+    if (!state.useCarousel) return;
+    state.carouselIndex = index;
+    updateCarouselView();
+  }
+  
+  // Update carousel view based on current index
+  function updateCarouselView() {
+    if (!state.container) return;
+    
+    const grid = state.container.querySelector('.lv2-grid');
+    if (!grid) return;
+    
+    const contestants = grid.querySelectorAll('.lv2-contestant');
+    const indicators = state.container.querySelectorAll('.lv2-carousel-dot');
+    
+    // Update visibility of contestants
+    contestants.forEach((contestant, idx) => {
+      if (idx === state.carouselIndex) {
+        contestant.classList.add('active');
+        contestant.classList.remove('hidden');
+      } else {
+        contestant.classList.remove('active');
+        contestant.classList.add('hidden');
+      }
+    });
+    
+    // Update indicator dots
+    indicators.forEach((dot, idx) => {
+      if (idx === state.carouselIndex) {
+        dot.classList.add('active');
+      } else {
+        dot.classList.remove('active');
+      }
+    });
+    
+    // Update contextual CTA button
+    updateCarouselCTA();
+  }
+  
+  // Update the CTA button to target the currently shown nominee
+  function updateCarouselCTA() {
+    if (!state.useCarousel || !state.ctaBar) return;
+    
+    const currentSide = state.carouselIndex === 0 ? 'left' : 'right';
+    const currentName = state.carouselIndex === 0 ? state.leftName : state.rightName;
+    const currentId = state.carouselIndex === 0 ? state.leftId : state.rightId;
+    
+    // Find carousel CTA button
+    const carouselCTA = state.container?.querySelector('.lv2-carousel-cta');
+    if (!carouselCTA) return;
+    
+    const btn = carouselCTA.querySelector('button');
+    if (!btn) return;
+    
+    // Update button text and data
+    if (state.isTieBreak) {
+      btn.textContent = 'Break Tie';
+      btn.setAttribute('aria-label', `Break tie by evicting ${currentName}`);
+    } else if (state.isFinal4) {
+      btn.textContent = 'Cast Sole Vote';
+      btn.setAttribute('aria-label', `Cast sole vote to evict ${currentName}`);
+    } else {
+      btn.textContent = `Evict ${currentName}`;
+      btn.setAttribute('aria-label', `Vote to evict ${currentName}`);
+    }
+    
+    btn.dataset.pick = currentId;
+    btn.dataset.side = currentSide;
   }
 
   // Push a new vote to the queue
@@ -454,6 +607,15 @@
       rightId = state.rightId,
       onVote = null
     } = options;
+    
+    // Store tie-break and final4 flags for carousel CTA updates
+    state.isTieBreak = isTieBreak;
+    state.isFinal4 = isFinal4;
+
+    // If using carousel mode, create single large contextual button
+    if (state.useCarousel) {
+      return createCarouselCTA({ enabled, isTieBreak, isFinal4, onVote });
+    }
 
     // Find CTA side containers under each contestant
     const leftCtaSide = state.container?.querySelector('.lv2-cta-side[data-side="left"]');
@@ -548,12 +710,80 @@
     state.ctaBar = { leftCtaSide, rightCtaSide };
     return { leftCtaSide, rightCtaSide };
   }
+  
+  // Create single large contextual CTA button for carousel mode
+  function createCarouselCTA(options = {}) {
+    const { enabled = false, isTieBreak = false, isFinal4 = false, onVote = null } = options;
+    
+    // Remove any existing carousel CTA
+    const existingCTA = state.container?.querySelector('.lv2-carousel-cta');
+    if (existingCTA) existingCTA.remove();
+    
+    // Create carousel CTA container
+    const carouselCTA = document.createElement('div');
+    carouselCTA.className = 'lv2-carousel-cta';
+    
+    // Create large button
+    const btn = document.createElement('button');
+    btn.className = 'lv2-carousel-btn';
+    btn.disabled = !enabled;
+    
+    // Initial text for first nominee
+    const currentName = state.carouselIndex === 0 ? state.leftName : state.rightName;
+    const currentId = state.carouselIndex === 0 ? state.leftId : state.rightId;
+    
+    if (isTieBreak) {
+      btn.textContent = 'Break Tie';
+      btn.setAttribute('aria-label', `Break tie by evicting ${currentName}`);
+    } else if (isFinal4) {
+      btn.textContent = 'Cast Sole Vote';
+      btn.setAttribute('aria-label', `Cast sole vote to evict ${currentName}`);
+    } else {
+      btn.textContent = `Evict ${currentName}`;
+      btn.setAttribute('aria-label', `Vote to evict ${currentName}`);
+    }
+    
+    btn.dataset.pick = currentId;
+    btn.onclick = () => {
+      if (onVote) {
+        const targetId = btn.dataset.pick;
+        onVote(targetId);
+      }
+    };
+    
+    carouselCTA.appendChild(btn);
+    
+    // Insert after status element
+    const status = state.container?.querySelector('.lv2-status');
+    if (status && status.parentNode) {
+      status.parentNode.insertBefore(carouselCTA, status.nextSibling);
+    } else {
+      state.container?.appendChild(carouselCTA);
+    }
+    
+    // Store reference
+    state.ctaBar = { carouselCTA };
+    
+    return { carouselCTA };
+  }
 
   // Update CTA bar state
   function updateCtaBar(options = {}) {
     if (!state.ctaBar) return;
 
     const { enabled = false } = options;
+    
+    // Handle carousel mode
+    if (state.useCarousel) {
+      const { carouselCTA } = state.ctaBar;
+      const btn = carouselCTA?.querySelector('.lv2-carousel-btn');
+      if (btn) {
+        btn.disabled = !enabled;
+      }
+      return;
+    }
+    
+    // Handle normal mode
     const { leftCtaSide, rightCtaSide } = state.ctaBar;
     
     const buttons = [
@@ -721,12 +951,37 @@
     state.resizeObserver = observer;
   }
 
-  // Keyboard shortcuts for voting (1 and 2 keys)
+  // Keyboard shortcuts for voting (1 and 2 keys, arrow keys for carousel)
   document.addEventListener('keydown', (e) => {
     if (!state.ctaBar) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     
     const key = e.key;
+    
+    // Carousel mode: arrow keys for navigation, Enter to vote
+    if (state.useCarousel) {
+      if (key === 'ArrowLeft') {
+        navigateCarousel('prev');
+        e.preventDefault();
+        return;
+      }
+      if (key === 'ArrowRight') {
+        navigateCarousel('next');
+        e.preventDefault();
+        return;
+      }
+      if (key === 'Enter' || key === ' ') {
+        const { carouselCTA } = state.ctaBar;
+        const btn = carouselCTA?.querySelector('.lv2-carousel-btn');
+        if (btn && !btn.disabled) {
+          btn.click();
+          e.preventDefault();
+        }
+        return;
+      }
+    }
+    
+    // Normal mode: 1 and 2 keys
     if (key !== '1' && key !== '2') return;
 
     const { leftCtaSide, rightCtaSide } = state.ctaBar;
