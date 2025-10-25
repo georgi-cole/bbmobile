@@ -1,6 +1,7 @@
 /* roster-placeholders.js
- * Displays avatar-style placeholder tiles in the roster area before the game starts.
- * - Shows skeleton roster with question-mark avatar tiles on all viewports
+ * Displays placeholder tiles in the roster area before the game starts.
+ * - Shows normal-looking roster tiles with generic avatar silhouettes
+ * - Uses same markup structure as real roster tiles for seamless transition
  * These placeholders are removed when the actual roster becomes visible.
  */
 (function(g) {
@@ -11,7 +12,7 @@
   const ATTR_PLACEHOLDERS_VISIBLE = 'data-roster-placeholders-visible';
 
   /**
-   * Get the number of players to show in skeleton roster
+   * Get the number of players to show in placeholder roster
    * @returns {number} Number of placeholder tiles to render
    */
   function getPlayerCount() {
@@ -32,7 +33,7 @@
    * @returns {HTMLElement|null} The roster container element
    */
   function findRosterContainer() {
-    const selectors = ['.top-roster', '#topRoster', '#rosterBar', '.roster-strip', '.cast-strip'];
+    const selectors = ['#rosterBar', '.top-roster', '#topRoster', '.roster-strip', '.cast-strip'];
     
     for (const selector of selectors) {
       const el = document.querySelector(selector);
@@ -43,56 +44,57 @@
   }
 
   /**
-   * Create a card-style placeholder tile with avatar silhouette
-   * @param {number} index - Tile index for stagger animation
-   * @returns {HTMLElement} The skeleton tile element
+   * Create SVG data URL for generic avatar silhouette
+   * @returns {string} Data URL containing the SVG
    */
-  function createSkeletonTile(index) {
-    const tile = document.createElement('div');
-    tile.className = 'roster-placeholder-skeleton';
-    tile.style.setProperty('--tile-index', index);
+  function createGenericAvatarDataURL() {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4" fill="currentColor" opacity="0.6"/>
+      <path d="M12,14 C8,14 4,16 4,19 L4,22 L20,22 L20,19 C20,16 16,14 12,14 Z" fill="currentColor" opacity="0.6"/>
+    </svg>`;
+    return 'data:image/svg+xml;base64,' + btoa(svg);
+  }
 
-    // Card container with rounded square background
-    const card = document.createElement('div');
-    card.className = 'roster-placeholder-card';
+  /**
+   * Create a normal-looking placeholder tile matching the real roster structure
+   * @param {number} index - Tile index (0-based) for aria-label
+   * @param {number} total - Total number of tiles for aria-label
+   * @returns {HTMLElement} The placeholder tile element
+   */
+  function createPlaceholderTile(index, total) {
+    // Create tile with same structure as real roster tiles
+    const tile = document.createElement('div');
+    tile.className = 'top-roster-tile placeholder-tile';
+    tile.setAttribute('tabindex', '0');
+    tile.setAttribute('role', 'img');
+    tile.setAttribute('aria-label', `Guest placeholder ${index + 1} of ${total}`);
+
+    // Avatar wrap container
+    const wrap = document.createElement('div');
+    wrap.className = 'top-tile-avatar-wrap';
+    wrap.style.position = 'relative';
+
+    // Avatar image - use inline SVG data URL (no network request)
+    const img = document.createElement('img');
+    img.className = 'top-tile-avatar placeholder-avatar';
+    img.src = createGenericAvatarDataURL();
+    img.alt = 'Guest';
+    wrap.appendChild(img);
+
+    // Name label
+    const name = document.createElement('div');
+    name.className = 'top-tile-name';
+    name.textContent = 'Guest';
+
+    tile.appendChild(wrap);
+    tile.appendChild(name);
     
-    // Avatar icon container (silhouette)
-    const avatarIcon = document.createElement('div');
-    avatarIcon.className = 'roster-placeholder-avatar-icon';
-    
-    // Create SVG avatar silhouette
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('class', 'avatar-silhouette');
-    
-    // Head circle
-    const headCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    headCircle.setAttribute('cx', '12');
-    headCircle.setAttribute('cy', '8');
-    headCircle.setAttribute('r', '4');
-    
-    // Body path
-    const bodyPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    bodyPath.setAttribute('d', 'M12,14 C8,14 4,16 4,19 L4,22 L20,22 L20,19 C20,16 16,14 12,14 Z');
-    
-    svg.appendChild(headCircle);
-    svg.appendChild(bodyPath);
-    avatarIcon.appendChild(svg);
-    
-    card.appendChild(avatarIcon);
-    
-    // Guest label
-    const label = document.createElement('div');
-    label.className = 'roster-placeholder-label';
-    label.textContent = 'Guest';
-    
-    tile.appendChild(card);
-    tile.appendChild(label);
     return tile;
   }
 
   /**
-   * Inject CSS for avatar-style placeholder tiles.
+   * Inject minimal CSS for placeholder tiles.
+   * Placeholder tiles reuse existing .top-roster-tile styles with minor adjustments.
    */
   function injectPlaceholderCSS() {
     if (document.getElementById('bbRosterPlaceholderCSS')) return;
@@ -100,18 +102,24 @@
     const style = document.createElement('style');
     style.id = 'bbRosterPlaceholderCSS';
     style.textContent = `
-      /* Placeholder overlay container - flexible layout for avatar tiles */
+      /* Placeholder overlay container - matches real roster layout */
       #${PLACEHOLDER_OVERLAY_ID} {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: clamp(12px, 2vw, 20px);
-        align-items: flex-start;
-        justify-content: center;
-        padding: clamp(12px, 2vw, 24px);
+        display: block;
         position: relative;
         z-index: 1;
         animation: bbPlaceholderFadeIn 400ms ease-out;
+      }
+      
+      /* Single row container matching real roster */
+      #${PLACEHOLDER_OVERLAY_ID} .top-roster-row {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
       }
       
       @keyframes bbPlaceholderFadeIn {
@@ -125,115 +133,47 @@
         }
       }
       
-      /* ============ Avatar-Style Skeleton Tiles ============ */
-      
-      .roster-placeholder-skeleton {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        width: clamp(80px, 15vw, 120px);
+      /* Placeholder-specific adjustments */
+      .placeholder-tile {
+        /* Subtle pulse to indicate loading state */
+        opacity: 0.85;
       }
       
-      /* Card container with rounded square background */
-      .roster-placeholder-card {
-        width: 100%;
-        aspect-ratio: 0.75;
-        background: linear-gradient(135deg,
-          color-mix(in srgb, var(--accent, #4a90e2) 70%, var(--card, #2a3f5f)),
-          color-mix(in srgb, var(--accent, #4a90e2) 50%, var(--card-2, #1f3248)));
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4),
-                    inset 0 1px 2px rgba(255,255,255,0.1);
-        position: relative;
-        overflow: hidden;
-        border: 2px solid color-mix(in srgb, var(--accent, #4a90e2) 60%, transparent);
-      }
-      
-      /* Avatar icon container */
-      .roster-placeholder-avatar-icon {
-        width: 60%;
-        height: 60%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 12px;
-        padding: 12%;
-      }
-      
-      /* SVG avatar silhouette */
-      .avatar-silhouette {
-        width: 100%;
-        height: 100%;
-        fill: color-mix(in srgb, var(--muted-2, #7a8fa5) 70%, var(--ink, #e8f1ff));
-        opacity: 0.8;
-      }
-      
-      /* Guest label */
-      .roster-placeholder-label {
-        width: 100%;
-        padding: 6px 12px;
-        background: color-mix(in srgb, var(--card-2, #1f3248) 90%, var(--bg, #0d1623));
-        border-radius: 8px;
-        text-align: center;
-        font-family: 'Oswald', 'Montserrat', sans-serif;
-        font-size: clamp(12px, 2.5vw, 16px);
-        font-weight: 600;
-        color: color-mix(in srgb, var(--muted-2, #7a8fa5) 90%, var(--ink, #e8f1ff));
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      }
-      
-      /* Pulse animation for skeleton tiles (respects reduced motion) */
       @media (prefers-reduced-motion: no-preference) {
-        .roster-placeholder-skeleton {
-          animation: bbSkeletonPulse 2s ease-in-out infinite;
-          animation-delay: calc(var(--tile-index, 0) * 0.08s);
+        .placeholder-tile {
+          animation: bbPlaceholderPulse 2s ease-in-out infinite;
         }
       }
       
-      @keyframes bbSkeletonPulse {
+      @keyframes bbPlaceholderPulse {
         0%, 100% {
-          opacity: 0.85;
+          opacity: 0.75;
         }
         50% {
-          opacity: 1;
+          opacity: 0.95;
         }
       }
       
-      /* Shimmer effect for card */
-      @media (prefers-reduced-motion: no-preference) {
-        .roster-placeholder-card::before {
-          content: '';
-          position: absolute;
-          top: -50%;
-          left: -150%;
-          width: 100%;
-          height: 200%;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(255,255,255,0.15) 50%,
-            transparent 100%
-          );
-          animation: bbCardShimmer 2.5s ease-in-out infinite;
-          animation-delay: calc(var(--tile-index, 0) * 0.1s);
-        }
+      /* Generic avatar styling - neutral colored silhouette */
+      .placeholder-avatar {
+        filter: grayscale(1) opacity(0.5);
+        background: var(--card, #1a2636);
       }
       
-      @keyframes bbCardShimmer {
-        0% {
-          left: -150%;
-        }
-        100% {
-          left: 150%;
-        }
+      /* Prevent hover effects on placeholders */
+      .placeholder-tile:hover {
+        transform: none;
+        box-shadow: var(--roster-glow, 0 0 20px rgba(0,0,0,0.4));
       }
       
-      /* ============ SHARED STYLES ============ */
+      .placeholder-tile:hover .top-tile-avatar-wrap {
+        transform: none;
+      }
+      
+      .placeholder-tile:hover .top-tile-avatar {
+        filter: grayscale(1) opacity(0.5);
+        transform: none;
+      }
       
       /* Hide when real roster is visible */
       body:not([${ATTR_PLACEHOLDERS_VISIBLE}="true"]) #${PLACEHOLDER_OVERLAY_ID} {
@@ -260,7 +200,7 @@
   }
 
   /**
-   * Render avatar-style placeholder tiles in the roster container.
+   * Render placeholder tiles matching the normal roster structure.
    */
   function renderPlaceholders() {
     const container = findRosterContainer();
@@ -273,17 +213,23 @@
     let overlay = document.getElementById(PLACEHOLDER_OVERLAY_ID);
     if (overlay) return true; // Already rendered
 
-    // Create overlay
+    // Create overlay container
     overlay = document.createElement('div');
     overlay.id = PLACEHOLDER_OVERLAY_ID;
 
-    // Render skeleton roster with question-mark avatar tiles
+    // Create row container matching real roster structure
+    const row = document.createElement('div');
+    row.className = 'top-roster-row';
+
+    // Render placeholder tiles
     const playerCount = getPlayerCount();
     for (let i = 0; i < playerCount; i++) {
-      const tile = createSkeletonTile(i);
-      overlay.appendChild(tile);
+      const tile = createPlaceholderTile(i, playerCount);
+      row.appendChild(tile);
     }
-    console.log('[RosterPlaceholders] Card-style skeleton roster rendered:', playerCount, 'tiles');
+    
+    overlay.appendChild(row);
+    console.log('[RosterPlaceholders] Normal-looking placeholder roster rendered:', playerCount, 'tiles');
 
     // Append to container
     // If container is #rosterBar, prepend; otherwise append
