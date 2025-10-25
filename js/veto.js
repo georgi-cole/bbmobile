@@ -643,6 +643,290 @@
     try{ if(typeof global.updateHud === 'function') global.updateHud(); }catch(e){}
   }
 
+  /* ===== TV Overlay Helpers for Contained Veto Ceremony UI ===== */
+  
+  function ensureTVOverlayScaffold(){
+    var tvOverlay = document.getElementById('tvOverlay');
+    if(!tvOverlay) return null;
+    
+    // Check if scaffold already exists
+    var dim = tvOverlay.querySelector('.tvDim');
+    var content = tvOverlay.querySelector('.tvOverlayContent');
+    
+    if(!dim){
+      dim = document.createElement('div');
+      dim.className = 'tvDim';
+      tvOverlay.appendChild(dim);
+    }
+    
+    if(!content){
+      content = document.createElement('div');
+      content.className = 'tvOverlayContent';
+      tvOverlay.appendChild(content);
+    }
+    
+    return content;
+  }
+  
+  function clearTVOverlayContent(){
+    var content = document.querySelector('.tvOverlayContent');
+    if(content) content.innerHTML = '';
+  }
+  
+  function showTVCard({title, lines, tone, duration}){
+    return new Promise(function(resolve){
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(); return; }
+      
+      clearTVOverlayContent();
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      if(tone) card.setAttribute('data-tone', tone);
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = title;
+      card.appendChild(h3);
+      
+      for(var i=0; i<lines.length; i++){
+        var p = document.createElement('p');
+        p.textContent = lines[i];
+        card.appendChild(p);
+      }
+      
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      setTimeout(function(){
+        clearTVOverlayContent();
+        if(tv) tv.classList.remove('tvTall');
+        resolve();
+      }, duration || 2400);
+    });
+  }
+  
+  function showTVDecision({title, message, buttons}){
+    return new Promise(function(resolve){
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(null); return; }
+      
+      clearTVOverlayContent();
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = title;
+      card.appendChild(h3);
+      
+      var p = document.createElement('p');
+      p.textContent = message;
+      p.style.marginBottom = '20px';
+      card.appendChild(p);
+      
+      var btnRow = document.createElement('div');
+      btnRow.className = 'row';
+      btnRow.style.gap = '10px';
+      btnRow.style.justifyContent = 'center';
+      
+      function disableAll(){
+        var btns = btnRow.querySelectorAll('button');
+        for(var i=0; i<btns.length; i++){ btns[i].disabled = true; }
+      }
+      
+      for(var i=0; i<buttons.length; i++){
+        (function(btn){
+          var b = document.createElement('button');
+          b.className = btn.primary ? 'btn primary' : 'btn';
+          b.textContent = btn.label;
+          b.onclick = function(){
+            disableAll();
+            clearTVOverlayContent();
+            var tv = document.getElementById('tv');
+            if(tv) tv.classList.remove('tvTall');
+            resolve(btn.value);
+          };
+          // Keyboard accessibility
+          b.onkeydown = function(e){
+            if(e.key === 'Enter' || e.key === ' '){
+              e.preventDefault();
+              b.click();
+            }
+          };
+          btnRow.appendChild(b);
+        })(buttons[i]);
+      }
+      
+      card.appendChild(btnRow);
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      // Focus first button for accessibility
+      setTimeout(function(){
+        var firstBtn = btnRow.querySelector('button');
+        if(firstBtn) firstBtn.focus();
+      }, 100);
+    });
+  }
+  
+  function showTVNomineeSavePanel({title, nominees, povId}){
+    return new Promise(function(resolve){
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(null); return; }
+      
+      clearTVOverlayContent();
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = title;
+      card.appendChild(h3);
+      
+      var info = document.createElement('p');
+      info.textContent = 'Select which nominee to save with the Power of Veto.';
+      info.style.marginBottom = '20px';
+      card.appendChild(info);
+      
+      var grid = document.createElement('div');
+      grid.className = 'row';
+      grid.style.gap = '10px';
+      grid.style.justifyContent = 'center';
+      grid.style.flexWrap = 'wrap';
+      
+      function disableAll(){
+        var btns = grid.querySelectorAll('button');
+        for(var i=0; i<btns.length; i++){ btns[i].disabled = true; }
+      }
+      
+      for(var i=0; i<nominees.length; i++){
+        (function(nomId){
+          var p = getP(nomId);
+          var b = document.createElement('button');
+          b.className = 'btn primary';
+          b.textContent = 'Save ' + (p ? p.name : '?');
+          b.onclick = function(){
+            disableAll();
+            clearTVOverlayContent();
+            var tv = document.getElementById('tv');
+            if(tv) tv.classList.remove('tvTall');
+            resolve(nomId);
+          };
+          b.onkeydown = function(e){
+            if(e.key === 'Enter' || e.key === ' '){
+              e.preventDefault();
+              b.click();
+            }
+          };
+          grid.appendChild(b);
+        })(nominees[i]);
+      }
+      
+      card.appendChild(grid);
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      setTimeout(function(){
+        var firstBtn = grid.querySelector('button');
+        if(firstBtn) firstBtn.focus();
+      }, 100);
+    });
+  }
+  
+  function renderHOHReplacementChoice(hohId, eligibleIds){
+    return new Promise(function(resolve){
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(null); return; }
+      
+      // Safety check: handle empty eligible list
+      if(!eligibleIds || eligibleIds.length === 0){
+        console.warn('[veto] renderHOHReplacementChoice called with empty eligibleIds');
+        resolve(null);
+        return;
+      }
+      
+      clearTVOverlayContent();
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = 'Select Replacement Nominee';
+      card.appendChild(h3);
+      
+      var info = document.createElement('p');
+      info.textContent = 'As HOH, you must select a replacement nominee.';
+      info.style.marginBottom = '16px';
+      card.appendChild(info);
+      
+      var listWrap = document.createElement('div');
+      listWrap.style.maxHeight = '200px';
+      listWrap.style.overflowY = 'auto';
+      listWrap.style.marginBottom = '16px';
+      
+      var list = document.createElement('div');
+      list.style.display = 'flex';
+      list.style.flexDirection = 'column';
+      list.style.gap = '8px';
+      
+      function disableAll(){
+        var btns = list.querySelectorAll('button');
+        for(var i=0; i<btns.length; i++){ btns[i].disabled = true; }
+      }
+      
+      for(var i=0; i<eligibleIds.length; i++){
+        (function(repId){
+          var p = getP(repId);
+          var b = document.createElement('button');
+          b.className = 'btn';
+          b.textContent = p ? p.name : '?';
+          b.style.width = '100%';
+          b.onclick = function(){
+            disableAll();
+            clearTVOverlayContent();
+            var tv = document.getElementById('tv');
+            if(tv) tv.classList.remove('tvTall');
+            resolve(repId);
+          };
+          b.onkeydown = function(e){
+            if(e.key === 'Enter' || e.key === ' '){
+              e.preventDefault();
+              b.click();
+            }
+          };
+          list.appendChild(b);
+        })(eligibleIds[i]);
+      }
+      
+      listWrap.appendChild(list);
+      card.appendChild(listWrap);
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      setTimeout(function(){
+        var firstBtn = list.querySelector('button');
+        if(firstBtn) firstBtn.focus();
+      }, 100);
+    });
+  }
+  
+  global.ensureTVOverlayScaffold = ensureTVOverlayScaffold;
+  global.clearTVOverlayContent = clearTVOverlayContent;
+  global.showTVCard = showTVCard;
+  global.showTVDecision = showTVDecision;
+  global.showTVNomineeSavePanel = showTVNomineeSavePanel;
+  global.renderHOHReplacementChoice = renderHOHReplacementChoice;
+  
+  /* ===== Veto Ceremony Flow ===== */
+
   async function startVetoCeremony(){
     var g = global.game;
     g.vetoSavedId = null;
@@ -658,52 +942,61 @@
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Ceremony');
     if(typeof global.phaseMusic==='function') global.phaseMusic('nominations');
 
-    // Step 1: Ceremony Intro (faux TV) - POV holder avatar
+    // Step 1: Ceremony Intro - use TV contained card
     var holder = getP(g.vetoHolder);
     var holderName = holder ? holder.name : 'POV Holder';
     
-    if(global.buildCardWithAvatars){
-      // Use buildCardWithAvatars to show POV holder avatar
-      await new Promise(function(resolve){
-        var card = global.buildCardWithAvatars({
-          title: 'Veto Ceremony',
-          lines: ['This is the Veto ceremony. As ' + holderName + ' holds the Power of Veto, please stand and make your decision.'],
-          tone: 'veto',
-          duration: 2400,
-          actorId: g.vetoHolder,
-          targetIds: [],
-          type: 'vetoCeremonyIntro'
-        });
-        
-        // Manually remove card after duration
-        setTimeout(function(){
-          var host = document.getElementById('tvOverlay');
-          if(host) host.innerHTML = '';
-          document.getElementById('tv')?.classList.remove('tvTall');
-          resolve();
-        }, 2400);
-      });
-    } else {
-      // Fallback to regular showCard
-      try{ if(typeof global.showCard==='function') global.showCard('Veto Ceremony', ['This is the Veto ceremony. As ' + holderName + ' holds the Power of Veto, please stand and make your decision.'],'veto', 2400, true); }catch(e){}
-      if(typeof global.cardQueueWaitIdle==='function'){
-        try{ await global.cardQueueWaitIdle(); }catch(e){}
-      }
-    }
+    await showTVCard({
+      title: 'Veto Ceremony',
+      lines: ['This is the Veto ceremony. As ' + holderName + ' holds the Power of Veto, please stand and make your decision.'],
+      tone: 'veto',
+      duration: 2400
+    });
 
     // Log action
     try{ 
       if(global.addLog) global.addLog(holderName + ' stands to make the veto decision.', 'tiny'); 
     }catch(e){}
 
-    // Step 2: Set phase and render decision panel
+    // Step 2: Set phase and show decision panel
     if(typeof global.setPhase==='function')
       global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25, finalizeCeremony);
     
-    setTimeout(function(){ renderVetoCeremonyPanel(); }, 50);
-
-    // AI auto-decision after brief delay
-    if(holder && !holder.human){
+    // For human POV holder, show Yes/No decision in TV
+    if(holder && holder.human){
+      var noms = (g.nominees||[]).map(getP);
+      var nomsText = noms.map(function(n){ return n?n.name:'?'; }).join(', ');
+      var decision = await showTVDecision({
+        title: 'Would you like to use the Power of Veto?',
+        message: 'POV Holder: ' + holderName + '. Nominees: ' + nomsText + '. Using the veto will force the HOH to name a replacement nominee.',
+        buttons: [
+          { label: 'Yes — Use the Veto', value: true, primary: true },
+          { label: 'No — Keep Nominations the Same', value: false, primary: false }
+        ]
+      });
+      
+      if(decision){
+        // User chose Yes - need to select which nominee to save
+        // Safety check: ensure nominees array exists and has at least one element
+        if(!g.nominees || g.nominees.length === 0){
+          console.warn('[veto] No nominees to save, treating as veto not used');
+          await finalizeCeremony({ used: false });
+        } else if(g.nominees.length > 1){
+          var savedId = await showTVNomineeSavePanel({
+            title: 'Save Which Nominee?',
+            nominees: g.nominees,
+            povId: g.vetoHolder
+          });
+          await finalizeCeremony({ used: true, savedId: savedId });
+        } else {
+          await finalizeCeremony({ used: true, savedId: g.nominees[0] });
+        }
+      } else {
+        // User chose No
+        await finalizeCeremony({ used: false });
+      }
+    } else {
+      // AI auto-decision after brief delay
       g.__vetoAutoTimer = setTimeout(function(){
         var gg = global.game;
         if(gg && gg.phase==='veto_ceremony' && !gg._awaitingReplacement && !gg.__vetoCeremonyResolved){
@@ -929,7 +1222,7 @@
       var savedP = getP(savedId);
       if(savedP){ 
         savedP.nominationState = 'pendingSave'; 
-        console.info(`[nom] pendingSave player=${savedId}`);
+        console.info('[nom] pendingSave player=' + savedId);
         // Don't clear nominated flag yet - wait for veto application
         try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){} 
       }
@@ -937,55 +1230,21 @@
       if(!g.__vetoNarrativeShown){
         g.__vetoNarrativeShown = true;
         
-        // Show veto decision with POV holder avatar
-        if(global.buildCardWithAvatars){
-          await new Promise(function(resolve){
-            var card = global.buildCardWithAvatars({
-              title: 'Veto Decision',
-              lines: [pickPhrase(VETO_USE_PHRASES)],
-              tone: 'veto',
-              duration: 3200,
-              actorId: g.vetoHolder,
-              targetIds: [],
-              type: 'vetoDecision'
-            });
-            
-            setTimeout(function(){
-              var host = document.getElementById('tvOverlay');
-              if(host) host.innerHTML = '';
-              document.getElementById('tv')?.classList.remove('tvTall');
-              resolve();
-            }, 3200);
-          });
-        } else {
-          try{ if(typeof global.showCard==='function') global.showCard('Veto Decision', [pickPhrase(VETO_USE_PHRASES)], 'veto', 3200, true); }catch(e){}
-          if(typeof global.cardQueueWaitIdle==='function'){ try{ await global.cardQueueWaitIdle(); }catch(e){} }
-        }
+        // Show veto decision card
+        await showTVCard({
+          title: 'Veto Decision',
+          lines: [pickPhrase(VETO_USE_PHRASES)],
+          tone: 'veto',
+          duration: 3200
+        });
         
-        // Show saved player with avatar arrow (POV holder -> Saved player)
-        if(global.buildCardWithAvatars){
-          await new Promise(function(resolve){
-            var card = global.buildCardWithAvatars({
-              title: 'Saved',
-              lines: [savedName + ' is saved from the block.'],
-              tone: 'veto',
-              duration: 3200,
-              actorId: g.vetoHolder,
-              targetIds: [savedId],
-              type: 'vetoSaved'
-            });
-            
-            setTimeout(function(){
-              var host = document.getElementById('tvOverlay');
-              if(host) host.innerHTML = '';
-              document.getElementById('tv')?.classList.remove('tvTall');
-              resolve();
-            }, 3200);
-          });
-        } else {
-          try{ if(typeof global.showCard==='function') global.showCard('Saved', [savedName+' is saved.'], 'veto', 3200, true); }catch(e){}
-          if(typeof global.cardQueueWaitIdle==='function'){ try{ await global.cardQueueWaitIdle(); }catch(e){} }
-        }
+        // Show saved player card
+        await showTVCard({
+          title: 'Saved',
+          lines: [savedName + ' is saved from the block.'],
+          tone: 'veto',
+          duration: 3200
+        });
         
         // Log action
         try{ if(global.addLog) global.addLog(safeName(g.vetoHolder) + ' has used the Power of Veto to save ' + savedName + '.', 'warn'); }catch(e){}
@@ -1003,10 +1262,12 @@
           try{ if(typeof global.syncPlayerBadgeStates==='function') global.syncPlayerBadgeStates(); }catch(e){}
           try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
         }
-        try{ if(typeof global.showCard==='function') global.showCard('Final 4', ['As the veto holder, you are the sole vote to evict.'], 'warn', 3200, true); }catch(e){}
-        if(typeof global.cardQueueWaitIdle==='function'){
-          try{ await global.cardQueueWaitIdle(); }catch(e){}
-        }
+        await showTVCard({
+          title: 'Final 4',
+          lines: ['As the veto holder, you are the sole vote to evict.'],
+          tone: 'warn',
+          duration: 3200
+        });
         g.__vetoCeremonyResolved = true;
         g.__vetoDecisionInProgress = false;
         setTimeout(function(){ if(typeof global.startLiveVote==='function') global.startLiveVote(); }, 300);
@@ -1015,37 +1276,47 @@
 
       var hoh = getP(g.hohId);
       
-      // Show HOH must select replacement with HOH avatar
-      if(global.buildCardWithAvatars){
-        await new Promise(function(resolve){
-          var card = global.buildCardWithAvatars({
-            title: 'Replacement Required',
-            lines: ['As I have vetoed one of your nominations, you must now select a replacement.'],
-            tone: 'noms',
-            duration: 3200,
-            actorId: g.hohId,
-            targetIds: [],
-            type: 'replacementRequired'
-          });
-          
-          setTimeout(function(){
-            var host = document.getElementById('tvOverlay');
-            if(host) host.innerHTML = '';
-            document.getElementById('tv')?.classList.remove('tvTall');
-            resolve();
-          }, 3200);
-        });
-      } else {
-        try{ if(typeof global.showCard==='function') global.showCard('HOH', ['As I have vetoed one of your nominations, you must now select a replacement.'],'noms', 3200, true); }catch(e){}
-        if(typeof global.cardQueueWaitIdle==='function'){
-          try{ await global.cardQueueWaitIdle(); }catch(e){}
-        }
-      }
+      // Show HOH must select replacement
+      await showTVCard({
+        title: 'Replacement Required',
+        lines: ['As I have vetoed one of your nominations, you must now select a replacement.'],
+        tone: 'noms',
+        duration: 3200
+      });
 
       if(hoh && hoh.human){
         g._awaitingReplacement = true;
         try{ if(global.addLog) global.addLog('Veto used. '+savedName+' is saved. HOH must choose a replacement.','warn'); }catch(e){}
-        setTimeout(function(){ if(typeof global.renderVetoCeremonyPanel==='function') global.renderVetoCeremonyPanel(); }, 100);
+        // Show replacement choice panel in TV
+        var repPool = alivePlayers().filter(function(p){
+          return !p.hoh && g.nominees.indexOf(p.id)===-1 && p.id!==g.vetoHolder && p.id!==g.vetoSavedId;
+        });
+        var eligibleIds = repPool.map(function(p){ return p.id; });
+        
+        // Safety check: ensure there are eligible replacements
+        if(eligibleIds.length === 0){
+          console.warn('[veto] No eligible replacements available');
+          try{ if(global.addLog) global.addLog('No eligible replacements available.','danger'); }catch(e){}
+          // Proceed without replacement (edge case)
+          g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
+          g.__vetoCeremonyResolved = true;
+          g.__vetoDecisionInProgress = false;
+          setTimeout(function(){
+            if(typeof global.startSocial==='function'){
+              global.startSocial('veto', function(){
+                if(typeof global.startLiveVote==='function') global.startLiveVote();
+              });
+            } else if(typeof global.startLiveVote==='function'){
+              global.startLiveVote();
+            }
+          }, 200);
+          return;
+        }
+        
+        var replacementId = await renderHOHReplacementChoice(g.hohId, eligibleIds);
+        if(replacementId != null){
+          await applyReplacementAndContinue(replacementId);
+        }
       } else {
         var replacementId = pickReplacementByHOH(savedId);
         await applyReplacementAndContinue(replacementId);
@@ -1054,32 +1325,13 @@
       // Veto NOT used
       try{ if(global.addLog) global.addLog('Veto not used.','muted'); }catch(e){}
       
-      // Show veto not used with POV holder avatar
-      if(global.buildCardWithAvatars){
-        await new Promise(function(resolve){
-          var card = global.buildCardWithAvatars({
-            title: 'Veto Not Used',
-            lines: [pickPhrase(VETO_NOT_USE_PHRASES)],
-            tone: 'veto',
-            duration: 3600,
-            actorId: g.vetoHolder,
-            targetIds: [],
-            type: 'vetoNotUsed'
-          });
-          
-          setTimeout(function(){
-            var host = document.getElementById('tvOverlay');
-            if(host) host.innerHTML = '';
-            document.getElementById('tv')?.classList.remove('tvTall');
-            resolve();
-          }, 3600);
-        });
-      } else {
-        try{ if(typeof global.showCard==='function') global.showCard('Veto Not Used',[pickPhrase(VETO_NOT_USE_PHRASES)],'veto',3600,true); }catch(e){}
-        if(typeof global.cardQueueWaitIdle==='function'){
-          try{ await global.cardQueueWaitIdle(); }catch(e){}
-        }
-      }
+      // Show veto not used card
+      await showTVCard({
+        title: 'Veto Not Used',
+        lines: [pickPhrase(VETO_NOT_USE_PHRASES)],
+        tone: 'veto',
+        duration: 3600
+      });
 
       g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
       g.__vetoCeremonyResolved = true;
@@ -1158,67 +1410,37 @@
       var hoh = getP(g.hohId);
       var announce = (hoh ? hoh.name : 'HOH')+': I name '+safeName(replacementId)+' as the replacement nominee.';
       
-      // Show HOH announcement with avatar (HOH -> Replacement)
-      if(global.buildCardWithAvatars){
-        await new Promise(function(resolve){
-          var card = global.buildCardWithAvatars({
-            title: 'HOH Announcement',
-            lines: [announce],
-            tone: 'noms',
-            duration: 3400,
-            actorId: g.hohId,
-            targetIds: [replacementId],
-            type: 'hohAnnouncement'
-          });
-          
-          setTimeout(function(){
-            var host = document.getElementById('tvOverlay');
-            if(host) host.innerHTML = '';
-            document.getElementById('tv')?.classList.remove('tvTall');
-            resolve();
-          }, 3400);
-        });
-      } else {
-        try{ if(typeof global.showCard==='function') global.showCard('HOH Announcement',[announce],'noms',3400,true); }catch(e){}
-        if(typeof global.cardQueueWaitIdle==='function'){
-          try{ await global.cardQueueWaitIdle(); }catch(e){}
-        }
-      }
+      // Show HOH announcement card
+      await showTVCard({
+        title: 'HOH Announcement',
+        lines: [announce],
+        tone: 'noms',
+        duration: 3400
+      });
 
       try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by HOH).','warn'); }catch(e){}
       
       // Show replacement nominee card
-      if(global.buildCardWithAvatars){
-        await new Promise(function(resolve){
-          var card = global.buildCardWithAvatars({
-            title: 'Replacement Nominee',
-            lines: [safeName(replacementId)],
-            tone: 'replace',
-            duration: 3600,
-            actorId: replacementId,
-            targetIds: [],
-            type: 'replacement'
-          });
-          
-          setTimeout(function(){
-            var host = document.getElementById('tvOverlay');
-            if(host) host.innerHTML = '';
-            document.getElementById('tv')?.classList.remove('tvTall');
-            resolve();
-          }, 3600);
-        });
-      } else {
-        try{ if(typeof global.showCard==='function') global.showCard('Replacement',[safeName(replacementId)],'replace',3600,true); }catch(e){}
-        if(typeof global.cardQueueWaitIdle==='function'){
-          try{ await global.cardQueueWaitIdle(); }catch(e){}
-        }
-      }
+      await showTVCard({
+        title: 'Replacement Nominee',
+        lines: [safeName(replacementId)],
+        tone: 'replace',
+        duration: 3600
+      });
 
       try{ g.__twistNomineeSnapshot = g.nominees.slice(); }catch(e){}
       try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
     } else {
       try{ if(global.addLog) global.addLog('Veto used, but no valid replacement available.','danger'); }catch(e){}
     }
+
+    // Show adjourn message
+    await showTVCard({
+      title: 'Veto Ceremony',
+      lines: ['This veto ceremony is adjourned.'],
+      tone: 'veto',
+      duration: 2800
+    });
 
     // Proceed to next phase
     g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
