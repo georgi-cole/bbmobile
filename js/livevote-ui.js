@@ -372,8 +372,11 @@
     const stage = state.stage;
     if (!stage) return;
     
+    // Determine target nominee name
+    const targetName = vote.pick === 'left' ? state.leftName : state.rightName;
+    
     // Announce vote to screen readers only
-    const announcement = `${vote.voterName} voted to evict ${vote.pick === 'left' ? state.leftName : state.rightName}`;
+    const announcement = `${vote.voterName} voted to evict ${targetName}`;
     const ariaAnnounce = document.createElement('div');
     ariaAnnounce.setAttribute('role', 'status');
     ariaAnnounce.setAttribute('aria-live', 'polite');
@@ -381,52 +384,66 @@
     ariaAnnounce.style.display = 'none';
     stage.appendChild(ariaAnnounce);
     
-    // V2.1: Spawn small pip at grid center
-    const pip = document.createElement('div');
-    pip.className = 'lv2-pip';
+    // V2.2: Create voter chip with avatar and text
+    const chip = document.createElement('div');
+    chip.className = 'lv2-voter-chip';
     
-    // Position pip at center of grid
+    // Add voter avatar
+    const avatar = document.createElement('img');
+    avatar.className = 'lv2-voter-chip-avatar';
+    avatar.src = getAvatarUrl(vote.voterId);
+    avatar.alt = vote.voterName;
+    avatar.loading = 'eager';
+    chip.appendChild(avatar);
+    
+    // Add vote text
+    const text = document.createElement('div');
+    text.className = 'lv2-voter-chip-text';
+    text.textContent = `votes to evict ${targetName}`;
+    chip.appendChild(text);
+    
+    // Position chip at center of grid
     const grid = state.container?.querySelector('.lv2-grid');
     if (!grid) return;
     
-    pip.style.position = 'absolute';
-    pip.style.left = '50%';
-    pip.style.top = '50%';
-    pip.style.transform = 'translate(-50%, -50%)';
-    pip.style.zIndex = '20';
+    chip.style.position = 'absolute';
+    chip.style.left = '50%';
+    chip.style.top = '50%';
+    chip.style.transform = 'translate(-50%, -50%)';
+    chip.style.zIndex = '20';
     
     grid.style.position = 'relative';
-    grid.appendChild(pip);
+    grid.appendChild(chip);
 
     if (!reducedMotion) {
       await sleep(50); // Small delay for DOM to settle
       
-      // Fly pip to target drop anchor
+      // Fly chip to target drop anchor
       const targetSide = vote.pick;
       const targetAnchor = state.container?.querySelector(`.lv2-drop-anchor.${targetSide}`);
       
       if (targetAnchor) {
-        const pipRect = pip.getBoundingClientRect();
+        const chipRect = chip.getBoundingClientRect();
         const anchorRect = targetAnchor.getBoundingClientRect();
-        const deltaX = anchorRect.left - pipRect.left + (anchorRect.width / 2) - (pipRect.width / 2);
-        const deltaY = anchorRect.top - pipRect.top + (anchorRect.height / 2) - (pipRect.height / 2);
+        const deltaX = anchorRect.left - chipRect.left + (anchorRect.width / 2) - (chipRect.width / 2);
+        const deltaY = anchorRect.top - chipRect.top + (anchorRect.height / 2) - (chipRect.height / 2);
 
         // Apply fly animation
-        pip.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px)) scale(0.3)`;
-        pip.style.opacity = '0';
-        pip.classList.add('fly');
+        chip.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px)) scale(0.3)`;
+        chip.style.opacity = '0';
+        chip.classList.add('fly');
         await sleep(600); // Travel animation duration
       }
 
-      // Remove pip after animation
-      pip.remove();
+      // Remove chip after animation
+      chip.remove();
     } else {
       // Reduced motion: just fade in and out
-      pip.style.opacity = '1';
+      chip.style.opacity = '1';
       await sleep(state.cardHoldMs);
-      pip.style.opacity = '0';
+      chip.style.opacity = '0';
       await sleep(300);
-      pip.remove();
+      chip.remove();
     }
     
     // Clean up aria announcement
