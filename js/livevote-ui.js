@@ -274,7 +274,7 @@
     // Previous button (left arrow)
     const prevBtn = document.createElement('button');
     prevBtn.className = 'lv2-carousel-arrow lv2-carousel-prev';
-    prevBtn.setAttribute('aria-label', 'Previous nominee');
+    prevBtn.setAttribute('aria-label', 'Show previous nominee');
     prevBtn.innerHTML = '◀'; // Left triangle
     prevBtn.onclick = () => navigateCarousel('prev');
     nav.appendChild(prevBtn);
@@ -285,13 +285,13 @@
     
     const dot1 = document.createElement('span');
     dot1.className = 'lv2-carousel-dot active';
-    dot1.setAttribute('aria-label', 'Nominee 1');
+    dot1.setAttribute('aria-label', `Show ${state.leftName}`);
     dot1.onclick = () => setCarouselIndex(0);
     indicators.appendChild(dot1);
     
     const dot2 = document.createElement('span');
     dot2.className = 'lv2-carousel-dot';
-    dot2.setAttribute('aria-label', 'Nominee 2');
+    dot2.setAttribute('aria-label', `Show ${state.rightName}`);
     dot2.onclick = () => setCarouselIndex(1);
     indicators.appendChild(dot2);
     
@@ -300,7 +300,7 @@
     // Next button (right arrow)
     const nextBtn = document.createElement('button');
     nextBtn.className = 'lv2-carousel-arrow lv2-carousel-next';
-    nextBtn.setAttribute('aria-label', 'Next nominee');
+    nextBtn.setAttribute('aria-label', 'Show next nominee');
     nextBtn.innerHTML = '▶'; // Right triangle
     nextBtn.onclick = () => navigateCarousel('next');
     nav.appendChild(nextBtn);
@@ -839,6 +839,20 @@
   function highlightCtaBar(active) {
     if (!state.ctaBar) return;
     
+    // Handle carousel mode differently
+    if (state.useCarousel && state.ctaBar.carouselCTA) {
+      const btn = state.ctaBar.carouselCTA.querySelector('.lv2-carousel-btn');
+      if (btn) {
+        if (active && !btn.disabled) {
+          btn.classList.add('highlight');
+        } else {
+          btn.classList.remove('highlight');
+        }
+      }
+      return;
+    }
+    
+    // Normal mode: handle left/right pills
     const { leftCtaSide, rightCtaSide } = state.ctaBar;
     const pills = [
       ...(leftCtaSide?.querySelectorAll('.lv2-cta-pill') || []),
@@ -906,6 +920,8 @@
     state.humanTurn = false;
     state.isTieBreak = false;
     state.isFinal4 = false;
+    state.carouselIndex = 0;
+    state.useCarousel = false;
   }
 
   // Helper: sleep
