@@ -28,7 +28,7 @@
 /* TV Container - Use theme card colors and remove/adapt border */
 .tvFrame .tv {
   background: linear-gradient(to bottom, var(--card), color-mix(in srgb, var(--card) 90%, var(--bg))),
-              url('assets/videos/tvscreen.jpg') center/cover;
+              url('/assets/videos/tvscreen.jpg') center/cover;
   background-color: var(--card);
   /* Use theme line color for border, or remove entirely by setting to transparent */
   border: 2px solid var(--line);

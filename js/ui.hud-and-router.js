@@ -1608,6 +1608,9 @@ header.innerHTML = `
         }
       }
       if(phase === 'veto_ceremony'){
+        // Call modern in-TV ceremony instead of legacy diary room sequence
+        if(typeof g.startVetoCeremony === 'function') return g.startVetoCeremony();
+        // Fallback to diary room sequence if modern ceremony not available
         if(typeof g.beginDiaryRoomSequence === 'function') return g.beginDiaryRoomSequence();
       }
       if(phase === 'livevote'){

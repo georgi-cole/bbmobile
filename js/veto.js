@@ -862,6 +862,57 @@
   }
   global.hideLegacyPOVPanels = hideLegacyPOVPanels;
   
+  /**
+   * Install MutationObserver to block legacy veto panels during ceremony
+   * Immediately removes any veto-related nodes that appear under #panel
+   */
+  function installLegacyVetoPanelBlocker(){
+    // Remove any existing observer
+    if(global.__vetoLegacyPanelObserver){
+      try{
+        global.__vetoLegacyPanelObserver.disconnect();
+      }catch(e){}
+    }
+    
+    var panel = document.querySelector('#panel');
+    if(!panel) return;
+    
+    // Create observer to watch for legacy panel additions
+    var observer = new MutationObserver(function(mutations){
+      var g = global.game;
+      if(!g || !g.__disableLegacyVetoUI) return;
+      
+      mutations.forEach(function(mutation){
+        mutation.addedNodes.forEach(function(node){
+          if(node.nodeType !== 1) return; // Element nodes only
+          
+          // Check if it's a veto-related panel
+          if(node.classList && node.classList.contains('minigame-host')){
+            var heading = node.querySelector('h3');
+            if(heading && (
+              heading.textContent.includes('Veto') ||
+              heading.textContent.includes('Power of Veto') ||
+              heading.textContent.includes('Replacement') ||
+              heading.textContent.includes('Save Which Nominee')
+            )){
+              console.warn('[veto] Blocking legacy panel injection during modern ceremony');
+              node.remove();
+            }
+          }
+        });
+      });
+    });
+    
+    // Observe #panel for child additions
+    observer.observe(panel, {
+      childList: true,
+      subtree: true
+    });
+    
+    global.__vetoLegacyPanelObserver = observer;
+  }
+  global.installLegacyVetoPanelBlocker = installLegacyVetoPanelBlocker;
+  
   function ensureTVOverlayScaffold(){
     var tvOverlay = document.getElementById('tvOverlay');
     if(!tvOverlay) return null;
@@ -2006,6 +2057,78 @@
   
   global.renderRiskSwapAnimation = renderRiskSwapAnimation;
 
+  /**
+   * Helper: Build blocked IDs list for replacement nominee selection
+   * @returns {number[]} Array of blocked player IDs
+   */
+  function getBlockedReplacementIds(){
+    var g = global.game;
+    var blockedIds = [];
+    
+    // Add HOH to blocked list
+    if(g.hohId != null) blockedIds.push(g.hohId);
+    
+    // Add current nominees to blocked list
+    if(g.nominees && g.nominees.length > 0){
+      for(var i=0; i<g.nominees.length; i++){
+        if(blockedIds.indexOf(g.nominees[i]) === -1){
+          blockedIds.push(g.nominees[i]);
+        }
+      }
+    }
+    
+    // Add veto holder to blocked list
+    if(g.vetoHolder != null && blockedIds.indexOf(g.vetoHolder) === -1){
+      blockedIds.push(g.vetoHolder);
+    }
+    
+    // Add saved player to blocked list
+    if(g.vetoSavedId != null && blockedIds.indexOf(g.vetoSavedId) === -1){
+      blockedIds.push(g.vetoSavedId);
+    }
+    
+    return blockedIds;
+  }
+
+  /**
+   * Render replacement choice carousel (mobile-first picker)
+   * Single large avatar per slide with "Nominate [Name]" button
+   * Supports swipe, arrow buttons, ArrowLeft/Right keys, dots
+   * Strict in-TV containment
+   * @param {number[]} eligibleIds - Array of eligible nominee IDs
+   * @param {Object} options - Configuration options
+   * @param {string} options.title - Optional title override
+   * @param {string} options.subtitle - Optional subtitle override
+   * @returns {Promise<number>} Selected nominee ID
+   */
+  function renderReplacementChoiceCarousel(eligibleIds, options){
+    options = options || {};
+    return new Promise(function(resolve){
+      if(!eligibleIds || eligibleIds.length === 0){
+        console.warn('[veto] renderReplacementChoiceCarousel called with empty eligibleIds');
+        resolve(null);
+        return;
+      }
+      
+      // Use rpPicker if available (modern carousel implementation)
+      if(typeof global.rpPicker !== 'undefined' && global.rpPicker.show){
+        global.rpPicker.show({
+          eligibleIds: eligibleIds,
+          blockedIds: getBlockedReplacementIds(),
+          viewMode: 'auto', // Auto-detect: carousel on mobile, grid on desktop
+          onConfirm: function(selectedId){
+            resolve(selectedId);
+          }
+        });
+      } else {
+        // Fallback to promptReplacementNominee
+        console.warn('[veto] rpPicker not available, using fallback');
+        promptReplacementNominee(eligibleIds).then(resolve);
+      }
+    });
+  }
+  global.renderReplacementChoiceCarousel = renderReplacementChoiceCarousel;
+  
   
   // Prompt for replacement nominee using avatar-first picker
   function promptReplacementNominee(eligibleIds){
@@ -2017,37 +2140,11 @@
         return;
       }
       
-      // Calculate blocked IDs (ineligible players)
-      var g = global.game;
-      var blockedIds = [];
-      
-      // Add HOH to blocked list
-      if(g.hohId != null) blockedIds.push(g.hohId);
-      
-      // Add current nominees to blocked list
-      if(g.nominees && g.nominees.length > 0){
-        for(var i=0; i<g.nominees.length; i++){
-          if(blockedIds.indexOf(g.nominees[i]) === -1){
-            blockedIds.push(g.nominees[i]);
-          }
-        }
-      }
-      
-      // Add veto holder to blocked list
-      if(g.vetoHolder != null && blockedIds.indexOf(g.vetoHolder) === -1){
-        blockedIds.push(g.vetoHolder);
-      }
-      
-      // Add saved player to blocked list
-      if(g.vetoSavedId != null && blockedIds.indexOf(g.vetoSavedId) === -1){
-        blockedIds.push(g.vetoSavedId);
-      }
-      
       // Use replacement picker if available
       if(typeof global.rpPicker !== 'undefined' && global.rpPicker.show){
         global.rpPicker.show({
           eligibleIds: eligibleIds,
-          blockedIds: blockedIds,
+          blockedIds: getBlockedReplacementIds(),
           viewMode: 'auto', // Auto-detect: carousel on mobile, grid on desktop
           onConfirm: function(selectedId){
             resolve(selectedId);
@@ -2295,8 +2392,15 @@
     g.__useTVCeremonyUI = false;
     if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
 
+    // Set legacy UI disable flags BEFORE any async UI
+    g.__disableLegacyVetoUI = true;
+    global.__disableLegacyVetoUI = true;
+
     // Hide legacy below-TV decision panel
     hideLegacyPOVPanels();
+    
+    // Install MutationObserver to immediately remove any legacy veto panel nodes
+    installLegacyVetoPanelBlocker();
 
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Ceremony');
     if(typeof global.phaseMusic==='function') global.phaseMusic('nominations');
