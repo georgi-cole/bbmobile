@@ -2048,6 +2048,7 @@
         global.rpPicker.show({
           eligibleIds: eligibleIds,
           blockedIds: blockedIds,
+          viewMode: 'auto', // Auto-detect: carousel on mobile, grid on desktop
           onConfirm: function(selectedId){
             resolve(selectedId);
           }
@@ -2800,22 +2801,10 @@
           return;
         }
         
-        // For Golden POV, use renderReplacementChoiceBy with single-select
-        if(isGoldenPOV){
-          var replacementId = await renderReplacementChoiceBy(eligibleIds, {
-            multi: 1,
-            title: 'Select Replacement Nominee',
-            pickerName: pickerName
-          });
-          if(replacementId != null){
-            await applyReplacementAndContinue(replacementId, isGoldenPOV);
-          }
-        } else {
-          // Standard HOH replacement
-          var replacementId = await renderHOHReplacementChoice(picker.id, eligibleIds);
-          if(replacementId != null){
-            await applyReplacementAndContinue(replacementId, isGoldenPOV);
-          }
+        // Use carousel picker (rpPicker) for all single-select replacements
+        var replacementId = await promptReplacementNominee(eligibleIds);
+        if(replacementId != null){
+          await applyReplacementAndContinue(replacementId, isGoldenPOV);
         }
       } else {
         var replacementId = pickReplacementByHOH(savedId);
@@ -2937,16 +2926,8 @@
         var pickerName = picker ? picker.name : (isGoldenPOV ? 'POV holder' : 'HOH');
         
         if(picker && picker.human){
-          // Human picks again
-          if(isGoldenPOV){
-            replacementId = await renderReplacementChoiceBy(eligibleIds, {
-              multi: 1,
-              title: 'Select Replacement Nominee',
-              pickerName: pickerName
-            });
-          } else {
-            replacementId = await renderHOHReplacementChoice(picker.id, eligibleIds);
-          }
+          // Human picks again - use carousel picker (rpPicker)
+          replacementId = await promptReplacementNominee(eligibleIds);
           
           // Recursively call with new selection
           return applyReplacementAndContinue(replacementId, isGoldenPOV);

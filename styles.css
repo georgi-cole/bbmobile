@@ -6570,6 +6570,32 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   max-width: 100%;
 }
 
+@media (max-width: 400px) {
+  .veto-risk-swap-scene {
+    gap: 16px;
+    padding: 12px 8px;
+  }
+  
+  .veto-risk-stage {
+    gap: 12px;
+  }
+  
+  .veto-risk-player {
+    padding: 12px;
+    min-width: 90px;
+    max-width: 120px;
+  }
+  
+  .veto-risk-player img {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .veto-risk-arrow {
+    font-size: 1.5rem;
+  }
+}
+
 .veto-risk-stage {
   display: flex;
   gap: 16px;
@@ -6802,27 +6828,21 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   .veto-decision-row,
   .veto-badge-swap-arrow,
   .veto-replacement-tile,
-  .veto-risk-player {
+  .veto-risk-player,
+  .veto-badge-swap-tile {
     animation: none !important;
+    transition: none !important;
   }
   
   .veto-risk-player.at-risk,
   .veto-risk-player.new-risk {
     animation: none !important;
   }
-}
-  .veto-badge-swap-tile,
-  .veto-badge-swap-arrow {
-    animation: none !important;
-    transition: none !important;
-  }
   
-  .veto-nominee-tile:hover {
-    transform: none;
-  }
-  
+  .veto-nominee-tile:hover,
   .veto-badge-swap-tile.animating-left,
   .veto-badge-swap-tile.animating-right {
     animation: none !important;
+    transform: none;
   }
 }
