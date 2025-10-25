@@ -316,7 +316,7 @@ button.btn, .tab-btn { min-height: 40px; padding: 8px 12px; }
   position: absolute !important;
   inset: 0 !important;
   z-index: 0 !important;
-  background-image: var(--tv-bg-url, url('assets/videos/tvscreen.jpg')) !important;
+  background-image: var(--tv-bg-url, url('/assets/videos/tvscreen.jpg')) !important;
   background-size: cover !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
