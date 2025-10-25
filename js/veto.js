@@ -864,6 +864,153 @@
     });
   }
   
+  /**
+   * Enhanced TV card with avatar support
+   * @param {Object} options - Card configuration
+   * @param {string} options.title - Card title
+   * @param {string[]} options.lines - Card text lines
+   * @param {string} options.tone - Card tone/style
+   * @param {number} options.duration - Display duration in ms
+   * @param {number|number[]} options.actorIds - Actor player ID(s) to show avatars
+   * @param {number|number[]} options.subjectIds - Subject player ID(s) to show avatars
+   * @returns {Promise} Resolves when card is dismissed
+   */
+  function showTVCardWithAvatars({title, lines, tone, duration, actorIds, subjectIds}){
+    return new Promise(function(resolve){
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(); return; }
+      
+      clearTVOverlayContent();
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      if(tone) card.setAttribute('data-tone', tone);
+      
+      // Build avatar row if actors/subjects provided
+      var hasAvatars = (actorIds && actorIds !== null) || (subjectIds && subjectIds !== null);
+      if(hasAvatars){
+        var avatarRow = document.createElement('div');
+        avatarRow.className = 'tv-card-avatars';
+        avatarRow.style.display = 'flex';
+        avatarRow.style.gap = '12px';
+        avatarRow.style.justifyContent = 'center';
+        avatarRow.style.marginBottom = '16px';
+        avatarRow.style.flexWrap = 'wrap';
+        
+        // Add actor avatars
+        var actors = Array.isArray(actorIds) ? actorIds : (actorIds != null ? [actorIds] : []);
+        for(var i=0; i<actors.length; i++){
+          var actorId = actors[i];
+          var actor = getP(actorId);
+          if(actor){
+            var avatarWrap = document.createElement('div');
+            avatarWrap.style.display = 'flex';
+            avatarWrap.style.flexDirection = 'column';
+            avatarWrap.style.alignItems = 'center';
+            avatarWrap.style.gap = '6px';
+            
+            var img = document.createElement('img');
+            var resolveAvatar = (global.Game || global).resolveAvatar;
+            img.src = resolveAvatar ? resolveAvatar(actor) : (actor.avatar || actor.img || actor.photo);
+            if(!img.src){
+              img.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(actor.name);
+            }
+            img.alt = actor.name;
+            img.style.width = '64px';
+            img.style.height = '64px';
+            img.style.borderRadius = '12px';
+            img.style.border = '2px solid rgba(255,255,255,0.3)';
+            img.style.objectFit = 'cover';
+            avatarWrap.appendChild(img);
+            
+            var nameLabel = document.createElement('div');
+            nameLabel.className = 'tiny';
+            nameLabel.textContent = actor.name;
+            nameLabel.style.textAlign = 'center';
+            nameLabel.style.fontSize = '12px';
+            nameLabel.style.opacity = '0.9';
+            avatarWrap.appendChild(nameLabel);
+            
+            avatarRow.appendChild(avatarWrap);
+          }
+        }
+        
+        // Add arrow separator if both actors and subjects exist
+        if(actors.length > 0 && subjectIds){
+          var arrow = document.createElement('div');
+          arrow.textContent = '→';
+          arrow.style.fontSize = '32px';
+          arrow.style.alignSelf = 'center';
+          arrow.style.opacity = '0.7';
+          arrow.style.padding = '0 8px';
+          avatarRow.appendChild(arrow);
+        }
+        
+        // Add subject avatars
+        var subjects = Array.isArray(subjectIds) ? subjectIds : (subjectIds != null ? [subjectIds] : []);
+        for(var j=0; j<subjects.length; j++){
+          var subjectId = subjects[j];
+          var subject = getP(subjectId);
+          if(subject){
+            var subjectWrap = document.createElement('div');
+            subjectWrap.style.display = 'flex';
+            subjectWrap.style.flexDirection = 'column';
+            subjectWrap.style.alignItems = 'center';
+            subjectWrap.style.gap = '6px';
+            
+            var subjectImg = document.createElement('img');
+            var resolveAvatar2 = (global.Game || global).resolveAvatar;
+            subjectImg.src = resolveAvatar2 ? resolveAvatar2(subject) : (subject.avatar || subject.img || subject.photo);
+            if(!subjectImg.src){
+              subjectImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(subject.name);
+            }
+            subjectImg.alt = subject.name;
+            subjectImg.style.width = '64px';
+            subjectImg.style.height = '64px';
+            subjectImg.style.borderRadius = '12px';
+            subjectImg.style.border = '2px solid rgba(255,255,255,0.3)';
+            subjectImg.style.objectFit = 'cover';
+            subjectWrap.appendChild(subjectImg);
+            
+            var subjectLabel = document.createElement('div');
+            subjectLabel.className = 'tiny';
+            subjectLabel.textContent = subject.name;
+            subjectLabel.style.textAlign = 'center';
+            subjectLabel.style.fontSize = '12px';
+            subjectLabel.style.opacity = '0.9';
+            subjectWrap.appendChild(subjectLabel);
+            
+            avatarRow.appendChild(subjectWrap);
+          }
+        }
+        
+        card.appendChild(avatarRow);
+      }
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = title;
+      card.appendChild(h3);
+      
+      for(var k=0; k<lines.length; k++){
+        var p = document.createElement('p');
+        if(k === 0) p.className = 'big';
+        p.textContent = lines[k];
+        card.appendChild(p);
+      }
+      
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      setTimeout(function(){
+        clearTVOverlayContent();
+        if(tv) tv.classList.remove('tvTall');
+        resolve();
+      }, duration || 2400);
+    });
+  }
+  
   function showTVDecision({title, message, buttons}){
     return new Promise(function(resolve){
       var content = ensureTVOverlayScaffold();
@@ -1017,6 +1164,174 @@
         var firstBtn = grid.querySelector('button');
         if(firstBtn) firstBtn.focus();
       }, 100);
+    });
+  }
+  
+  /**
+   * Animate nomination transfer with badge movement
+   * Shows old nominees → new nominees with NOM badge animation
+   * @param {Object} options - Animation configuration
+   * @param {number[]} options.fromIds - Old nominee IDs (losing NOM badge)
+   * @param {number[]} options.toIds - New nominee IDs (gaining NOM badge)
+   * @param {number} options.duration - Animation duration in ms (default 4000)
+   * @returns {Promise} Resolves when animation completes
+   */
+  function animateNominationTransfer({fromIds, toIds, duration}){
+    return new Promise(function(resolve){
+      // Validate parameters
+      if(!fromIds && !toIds){
+        console.warn('[veto] animateNominationTransfer called without fromIds or toIds');
+        resolve();
+        return;
+      }
+      
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(); return; }
+      
+      clearTVOverlayContent();
+      
+      var animDuration = duration || 4000;
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = 'Nomination Change';
+      card.appendChild(h3);
+      
+      var scene = document.createElement('div');
+      scene.className = 'transfer-scene';
+      
+      // Left group: old nominees (FROM)
+      if(fromIds && fromIds.length > 0){
+        var fromGroup = document.createElement('div');
+        fromGroup.className = 'transfer-group';
+        
+        var fromLabel = document.createElement('div');
+        fromLabel.className = 'transfer-group-label';
+        fromLabel.textContent = 'Saved';
+        fromGroup.appendChild(fromLabel);
+        
+        var fromPlayers = document.createElement('div');
+        fromPlayers.className = 'transfer-players';
+        
+        for(var i=0; i<fromIds.length; i++){
+          var fromId = fromIds[i];
+          var fromP = getP(fromId);
+          
+          var fromTile = document.createElement('div');
+          fromTile.className = 'transfer-player';
+          
+          var fromImg = document.createElement('img');
+          var resolveAvatar = (global.Game || global).resolveAvatar;
+          fromImg.src = resolveAvatar ? resolveAvatar(fromP || fromId) : (fromP ? (fromP.avatar || fromP.img || fromP.photo) : null);
+          if(!fromImg.src){
+            fromImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(fromP ? fromP.name : String(fromId));
+          }
+          fromImg.alt = fromP ? fromP.name : '?';
+          fromTile.appendChild(fromImg);
+          
+          var fromName = document.createElement('div');
+          fromName.className = 'name';
+          fromName.textContent = fromP ? fromP.name : '?';
+          fromTile.appendChild(fromName);
+          
+          // Badge that will animate out
+          var fromBadge = document.createElement('div');
+          fromBadge.className = 'badge nom';
+          fromBadge.textContent = 'NOM';
+          fromTile.appendChild(fromBadge);
+          
+          fromPlayers.appendChild(fromTile);
+          
+          // Trigger badge swap-out animation after brief delay
+          (function(badge){
+            setTimeout(function(){
+              badge.classList.add('swapping-out');
+            }, 800);
+          })(fromBadge);
+        }
+        
+        fromGroup.appendChild(fromPlayers);
+        scene.appendChild(fromGroup);
+      }
+      
+      // Arrow(s) between groups
+      var arrowContainer = document.createElement('div');
+      if(toIds && toIds.length > 1){
+        arrowContainer.className = 'transfer-multi-arrow';
+        for(var j=0; j<toIds.length; j++){
+          var arrow = document.createElement('div');
+          arrow.className = 'transfer-arrow';
+          arrow.textContent = '→';
+          arrow.style.setProperty('--arrow-index', j);
+          arrowContainer.appendChild(arrow);
+        }
+      } else {
+        arrowContainer.className = 'transfer-arrow';
+        arrowContainer.textContent = '→';
+      }
+      scene.appendChild(arrowContainer);
+      
+      // Right group: new nominees (TO)
+      if(toIds && toIds.length > 0){
+        var toGroup = document.createElement('div');
+        toGroup.className = 'transfer-group';
+        
+        var toLabel = document.createElement('div');
+        toLabel.className = 'transfer-group-label';
+        toLabel.textContent = 'Nominated';
+        toGroup.appendChild(toLabel);
+        
+        var toPlayers = document.createElement('div');
+        toPlayers.className = 'transfer-players';
+        
+        for(var k=0; k<toIds.length; k++){
+          var toId = toIds[k];
+          var toP = getP(toId);
+          
+          var toTile = document.createElement('div');
+          toTile.className = 'transfer-player new-nominee';
+          
+          var toImg = document.createElement('img');
+          var resolveAvatar2 = (global.Game || global).resolveAvatar;
+          toImg.src = resolveAvatar2 ? resolveAvatar2(toP || toId) : (toP ? (toP.avatar || toP.img || toP.photo) : null);
+          if(!toImg.src){
+            toImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(toP ? toP.name : String(toId));
+          }
+          toImg.alt = toP ? toP.name : '?';
+          toTile.appendChild(toImg);
+          
+          var toName = document.createElement('div');
+          toName.className = 'name';
+          toName.textContent = toP ? toP.name : '?';
+          toTile.appendChild(toName);
+          
+          // Badge that will animate in
+          var toBadge = document.createElement('div');
+          toBadge.className = 'badge nom swapping-in';
+          toBadge.textContent = 'NOM';
+          toTile.appendChild(toBadge);
+          
+          toPlayers.appendChild(toTile);
+        }
+        
+        toGroup.appendChild(toPlayers);
+        scene.appendChild(toGroup);
+      }
+      
+      card.appendChild(scene);
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      // Resolve after animation completes
+      setTimeout(function(){
+        clearTVOverlayContent();
+        if(tv) tv.classList.remove('tvTall');
+        resolve();
+      }, animDuration);
     });
   }
   
@@ -1284,11 +1599,7 @@
       
       var grid = document.createElement('div');
       grid.className = 'veto-replacement-grid';
-      grid.style.display = 'grid';
-      grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))';
-      grid.style.gap = '16px';
-      grid.style.justifyContent = 'center';
-      grid.style.marginBottom = '20px';
+      // CSS handles all grid layout - no inline styles needed
       
       var selectedIds = [];
       
@@ -1317,8 +1628,10 @@
         (function(nomId, idx){
           var p = getP(nomId);
           var tile = document.createElement('div');
-          tile.className = 'veto-nominee-tile veto-replacement-tile';
-          tile.style.cursor = 'pointer';
+          tile.className = 'veto-replacement-tile';
+          tile.setAttribute('tabindex', '0');
+          tile.setAttribute('role', 'button');
+          tile.setAttribute('aria-label', 'Select ' + (p ? p.name : '?'));
           tile.style.animationDelay = (idx * 0.1) + 's';
           
           // Avatar
@@ -1337,9 +1650,15 @@
           name.textContent = p ? p.name : '?';
           tile.appendChild(name);
           
-          // Click handler for selection
+          // Click and keyboard handler for selection
           tile.onclick = function(){
             updateSelection(nomId, tile);
+          };
+          tile.onkeydown = function(e){
+            if(e.key === 'Enter' || e.key === ' '){
+              e.preventDefault();
+              updateSelection(nomId, tile);
+            }
           };
           
           grid.appendChild(tile);
@@ -1350,18 +1669,15 @@
       
       // Selection counter
       var counter = document.createElement('div');
-      counter.className = 'tiny';
-      counter.style.textAlign = 'center';
-      counter.style.marginBottom = '16px';
+      counter.className = 'veto-selection-counter';
       counter.textContent = 'Selected: 0 / ' + multi;
       card.appendChild(counter);
       
       // Confirm button
       var confirmBtn = document.createElement('button');
-      confirmBtn.className = 'btn primary';
+      confirmBtn.className = 'btn primary veto-confirm-btn';
       confirmBtn.textContent = 'Confirm ' + (multi === 2 ? 'Nominees' : 'Nominee');
       confirmBtn.disabled = true;
-      confirmBtn.style.width = '100%';
       confirmBtn.onclick = function(){
         clearTVOverlayContent();
         var tv = document.getElementById('tv');
@@ -1378,10 +1694,12 @@
   }
   
   global.renderReplacementChoiceBy = renderReplacementChoiceBy;
+  global.animateNominationTransfer = animateNominationTransfer;
   
   global.ensureTVOverlayScaffold = ensureTVOverlayScaffold;
   global.clearTVOverlayContent = clearTVOverlayContent;
   global.showTVCard = showTVCard;
+  global.showTVCardWithAvatars = showTVCardWithAvatars;
   global.showTVDecision = showTVDecision;
   global.showTVNomineeSavePanel = showTVNomineeSavePanel;
   global.renderHOHReplacementChoice = renderHOHReplacementChoice;
@@ -1449,9 +1767,19 @@
       
       var noms = (g.nominees||[]).map(getP);
       var nomsText = noms.map(function(n){ return n?n.name:'?'; }).join(', ');
+      
+      // Twist-aware message: Golden POV means POV holder picks replacement, not HOH
+      var isGoldenTwist = (g.activeVetoTwist === 'golden');
+      var vetoMessage = 'POV Holder: ' + holderName + '. Nominees: ' + nomsText + '.';
+      if(isGoldenTwist){
+        vetoMessage += ' Using the veto will allow you to choose the replacement nominee.';
+      } else {
+        vetoMessage += ' Using the veto will force the HOH to name a replacement nominee.';
+      }
+      
       var decision = await showTVDecision({
         title: 'Would you like to use the Power of Veto?',
-        message: 'POV Holder: ' + holderName + '. Nominees: ' + nomsText + '. Using the veto will force the HOH to name a replacement nominee.',
+        message: vetoMessage,
         buttons: [
           { label: 'Yes — Use the Veto', value: true, primary: true },
           { label: 'No — Keep Nominations the Same', value: false, primary: false }
@@ -1655,12 +1983,13 @@
     
     var holderName = holder ? holder.name : 'POV Holder';
     
-    // Show Diamond POV announcement
-    await showTVCard({
+    // Show Diamond POV announcement with POV holder avatar
+    await showTVCardWithAvatars({
       title: 'Diamond Power of Veto',
       lines: [holderName + ' will now replace BOTH nominees.'],
       tone: 'veto',
-      duration: 3200
+      duration: 3200,
+      actorIds: holder ? holder.id : null
     });
     
     // Compute eligible replacement nominees (exclude HOH and POV holder)
@@ -1814,20 +2143,22 @@
       if(!g.__vetoNarrativeShown){
         g.__vetoNarrativeShown = true;
         
-        // Show veto decision card
-        await showTVCard({
+        // Show veto decision card with POV holder avatar
+        await showTVCardWithAvatars({
           title: 'Veto Decision',
           lines: [pickPhrase(VETO_USE_PHRASES)],
           tone: 'veto',
-          duration: 3200
+          duration: 3200,
+          actorIds: g.vetoHolder
         });
         
-        // Show saved player card
-        await showTVCard({
+        // Show saved player card with saved player avatar
+        await showTVCardWithAvatars({
           title: 'Saved',
           lines: [savedName + ' is saved from the block.'],
           tone: 'veto',
-          duration: 3200
+          duration: 3200,
+          subjectIds: savedId
         });
         
         // Log action
@@ -1929,12 +2260,13 @@
       // Veto NOT used
       try{ if(global.addLog) global.addLog('Veto not used.','muted'); }catch(e){}
       
-      // Show veto not used card
-      await showTVCard({
+      // Show veto not used card with POV holder avatar
+      await showTVCardWithAvatars({
         title: 'Veto Not Used',
         lines: [pickPhrase(VETO_NOT_USE_PHRASES)],
         tone: 'veto',
-        duration: 3600
+        duration: 3600,
+        actorIds: g.vetoHolder
       });
 
       // Show nominee reactions (they're still on the block)
@@ -2033,25 +2365,33 @@
       var announcerRole = isGoldenPOV ? 'POV Holder' : 'HOH';
       var announce = (announcer ? announcer.name : announcerRole)+': I name '+safeName(replacementId)+' as the replacement nominee.';
       
-      // Show announcement card with appropriate role
-      await showTVCard({
+      // Show announcement card with appropriate role and avatars
+      await showTVCardWithAvatars({
         title: announcerRole + ' Announcement',
         lines: [announce],
         tone: 'noms',
-        duration: 3400
+        duration: 3400,
+        actorIds: announcer ? announcer.id : null,
+        subjectIds: replacementId
       });
 
       try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by ' + announcerRole + ').','warn'); }catch(e){}
       
-      // Show badge swap animation (visual representation of the swap)
-      await renderBadgeSwap(savedId, replacementId);
+      // Show badge transfer animation before applying state
+      // Old nominee loses badge, new nominee gains badge
+      await animateNominationTransfer({
+        fromIds: [savedId],
+        toIds: [replacementId],
+        duration: 4000
+      });
       
-      // Show replacement nominee card
-      await showTVCard({
+      // Show replacement nominee card with replacement nominee avatar
+      await showTVCardWithAvatars({
         title: 'Replacement Nominee',
         lines: [safeName(replacementId) + ' is now on the block.'],
         tone: 'replace',
-        duration: 3600
+        duration: 3600,
+        subjectIds: replacementId
       });
 
       try{ g.__twistNomineeSnapshot = g.nominees.slice(); }catch(e){}
@@ -2113,6 +2453,9 @@
     
     // For Diamond POV, replace ALL nominees with the new ones
     if(diamond){
+      // Capture old nominees before replacement for badge transfer animation
+      var oldNominees = g.nominees ? g.nominees.slice() : [];
+      
       g.nominees = replacementIds.slice();
       
       // Update nomination states
@@ -2150,24 +2493,36 @@
       var announcerRole = announcer === 'POV' ? 'POV Holder' : 'HOH';
       var announcerName = announcerP ? announcerP.name : announcerRole;
       
-      // Show announcement card
+      // Show announcement card with announcer and subjects
       var namesStr = replacementIds.map(safeName).join(' and ');
-      await showTVCard({
+      await showTVCardWithAvatars({
         title: announcerRole + ' Announcement',
         lines: [announcerName + ' nominates ' + namesStr + ' for eviction.'],
         tone: 'noms',
-        duration: 3800
+        duration: 3800,
+        actorIds: announcerP ? announcerP.id : null,
+        subjectIds: replacementIds
       });
       
       try{ if(global.addLog) global.addLog('Diamond POV: ' + announcerName + ' nominates ' + namesStr + '.','warn'); }catch(e){}
       
-      // Show replacement cards for each nominee
+      // Show badge transfer animation: old nominees → new nominees
+      if(oldNominees.length > 0 && replacementIds.length > 0){
+        await animateNominationTransfer({
+          fromIds: oldNominees,
+          toIds: replacementIds,
+          duration: 4500
+        });
+      }
+      
+      // Show replacement cards for each nominee with their avatars
       for(var k=0; k<replacementIds.length; k++){
-        await showTVCard({
+        await showTVCardWithAvatars({
           title: 'Nominated',
           lines: [safeName(replacementIds[k]) + ' is on the block.'],
           tone: 'noms',
-          duration: 2800
+          duration: 2800,
+          subjectIds: replacementIds[k]
         });
       }
       
