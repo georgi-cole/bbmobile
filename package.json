@@ -13,6 +13,7 @@
     "test:e2e": "node scripts/test-e2e-competitions.mjs",
     "test:jurors": "node scripts/test-jurors-return-challenge.mjs",
     "test:social": "node verify_social_phase_requirements.mjs",
+    "test:veto-twists": "node tests/verify_veto_twists.mjs",
     "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e && npm run test:social",
     "build:progression": "cd src/progression && tsc",
     "typecheck:progression": "cd src/progression && tsc --noEmit"

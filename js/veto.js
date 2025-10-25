@@ -1247,6 +1247,138 @@
     return promptReplacementNominee(eligibleIds);
   }
   
+  // Render replacement choice UI with multi-select support for Diamond POV
+  function renderReplacementChoiceBy(eligibleIds, options){
+    options = options || {};
+    var multi = options.multi || 1;
+    var title = options.title || (multi === 2 ? 'Select two replacement nominees' : 'Select Replacement Nominee');
+    var pickerName = options.pickerName || 'POV Holder';
+    
+    return new Promise(function(resolve){
+      if(!eligibleIds || eligibleIds.length === 0){
+        console.warn('[veto] renderReplacementChoiceBy called with empty eligibleIds');
+        resolve(null);
+        return;
+      }
+      
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(null); return; }
+      
+      clearTVOverlayContent();
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = title;
+      card.appendChild(h3);
+      
+      var info = document.createElement('p');
+      if(multi === 2){
+        info.textContent = pickerName + ', you must select exactly two replacement nominees.';
+      } else {
+        info.textContent = pickerName + ', you must select a replacement nominee.';
+      }
+      info.style.marginBottom = '20px';
+      card.appendChild(info);
+      
+      var grid = document.createElement('div');
+      grid.className = 'veto-replacement-grid';
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))';
+      grid.style.gap = '16px';
+      grid.style.justifyContent = 'center';
+      grid.style.marginBottom = '20px';
+      
+      var selectedIds = [];
+      
+      function updateSelection(id, tile){
+        var idx = selectedIds.indexOf(id);
+        if(idx !== -1){
+          // Deselect
+          selectedIds.splice(idx, 1);
+          tile.classList.remove('selected');
+        } else {
+          // Select
+          if(selectedIds.length < multi){
+            selectedIds.push(id);
+            tile.classList.add('selected');
+          }
+        }
+        
+        // Update confirm button state
+        confirmBtn.disabled = (selectedIds.length !== multi);
+        
+        // Update selection counter
+        counter.textContent = 'Selected: ' + selectedIds.length + ' / ' + multi;
+      }
+      
+      for(var i=0; i<eligibleIds.length; i++){
+        (function(nomId, idx){
+          var p = getP(nomId);
+          var tile = document.createElement('div');
+          tile.className = 'veto-nominee-tile veto-replacement-tile';
+          tile.style.cursor = 'pointer';
+          tile.style.animationDelay = (idx * 0.1) + 's';
+          
+          // Avatar
+          var img = document.createElement('img');
+          var resolveAvatar = (global.Game || global).resolveAvatar;
+          img.src = resolveAvatar ? resolveAvatar(p || nomId) : (p ? (p.avatar || p.img || p.photo) : null);
+          if(!img.src){
+            img.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(p ? p.name : String(nomId));
+          }
+          img.alt = p ? p.name : '?';
+          tile.appendChild(img);
+          
+          // Name
+          var name = document.createElement('div');
+          name.className = 'name';
+          name.textContent = p ? p.name : '?';
+          tile.appendChild(name);
+          
+          // Click handler for selection
+          tile.onclick = function(){
+            updateSelection(nomId, tile);
+          };
+          
+          grid.appendChild(tile);
+        })(eligibleIds[i], i);
+      }
+      
+      card.appendChild(grid);
+      
+      // Selection counter
+      var counter = document.createElement('div');
+      counter.className = 'tiny';
+      counter.style.textAlign = 'center';
+      counter.style.marginBottom = '16px';
+      counter.textContent = 'Selected: 0 / ' + multi;
+      card.appendChild(counter);
+      
+      // Confirm button
+      var confirmBtn = document.createElement('button');
+      confirmBtn.className = 'btn primary';
+      confirmBtn.textContent = 'Confirm ' + (multi === 2 ? 'Nominees' : 'Nominee');
+      confirmBtn.disabled = true;
+      confirmBtn.style.width = '100%';
+      confirmBtn.onclick = function(){
+        clearTVOverlayContent();
+        var tv = document.getElementById('tv');
+        if(tv) tv.classList.remove('tvTall');
+        resolve(multi === 1 ? selectedIds[0] : selectedIds);
+      };
+      card.appendChild(confirmBtn);
+      
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+    });
+  }
+  
+  global.renderReplacementChoiceBy = renderReplacementChoiceBy;
+  
   global.ensureTVOverlayScaffold = ensureTVOverlayScaffold;
   global.clearTVOverlayContent = clearTVOverlayContent;
   global.showTVCard = showTVCard;
@@ -1267,6 +1399,7 @@
     g.__vetoDecisionInProgress = false;
     g.__replacementCommitted = false;
     g.__replacementApplied = false;
+    g.__useTVCeremonyUI = false;
     if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
 
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Ceremony');
@@ -1311,6 +1444,9 @@
     
     // For human POV holder, show Yes/No decision in TV
     if(holder && holder.human){
+      // Set flag to prevent duplicate panel rendering
+      g.__useTVCeremonyUI = true;
+      
       var noms = (g.nominees||[]).map(getP);
       var nomsText = noms.map(function(n){ return n?n.name:'?'; }).join(', ');
       var decision = await showTVDecision({
@@ -1361,6 +1497,16 @@
     var box = document.createElement('div'); box.className='minigame-host';
     var holder = getP(g.vetoHolder);
     var noms = (g.nominees||[]).map(getP);
+
+    // If using TV ceremony UI, show placeholder instead of interactive controls
+    if(g.__useTVCeremonyUI){
+      box.innerHTML = '<h3>Veto Ceremony</h3>';
+      var tvNote = document.createElement('div'); tvNote.className='tiny muted';
+      tvNote.textContent = 'Decision in progress…';
+      box.appendChild(tvNote);
+      panel.appendChild(box);
+      return;
+    }
 
     if(g.__vetoCeremonyResolved){
       box.innerHTML = '<h3>Veto Ceremony</h3>';
@@ -1504,6 +1650,7 @@
     if(g.__vetoCeremonyResolved) return;
     
     g.__vetoDecisionInProgress = true;
+    g.__useTVCeremonyUI = true;
     if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
     
     var holderName = holder ? holder.name : 'POV Holder';
@@ -1531,6 +1678,7 @@
       });
       g.__vetoCeremonyResolved = true;
       g.__vetoDecisionInProgress = false;
+      g.__useTVCeremonyUI = false;
       setTimeout(function(){
         if(typeof global.startSocial==='function'){
           global.startSocial('veto', function(){
@@ -1546,37 +1694,31 @@
     // Pick 2 nominees
     var newNominees = [];
     if(holder && holder.human){
-      // Human picks first nominee
-      var firstNom = await promptReplacementNominee(eligibleIds);
-      if(firstNom == null){
-        console.warn('[veto] Diamond POV first pick cancelled');
-        g.__vetoCeremonyResolved = true;
-        g.__vetoDecisionInProgress = false;
-        return;
-      }
-      newNominees.push(firstNom);
+      // Human picks both nominees using multi-select UI
+      newNominees = await renderReplacementChoiceBy(eligibleIds, {
+        multi: 2,
+        title: 'Select two replacement nominees',
+        pickerName: holderName
+      });
       
-      // Remove first pick from eligible list for second pick
-      var eligibleForSecond = eligibleIds.filter(function(id){ return id !== firstNom; });
-      
-      if(eligibleForSecond.length === 0){
-        console.warn('[veto] No eligible players for second Diamond POV pick');
-        newNominees = [firstNom]; // Fall back to single nominee
-      } else {
-        // Human picks second nominee
-        var secondNom = await promptReplacementNominee(eligibleForSecond);
-        if(secondNom == null){
-          console.warn('[veto] Diamond POV second pick cancelled');
-          newNominees = [firstNom]; // Fall back to single nominee
-        } else {
-          newNominees.push(secondNom);
-        }
+      if(!newNominees || newNominees.length !== 2){
+        console.warn('[veto] Diamond POV selection incomplete or cancelled');
+        // Fall back to AI selection
+        var povHolder = getP(g.vetoHolder);
+        var scored = eligibleIds.map(function(id){
+          var aff = (povHolder && povHolder.affinity && typeof povHolder.affinity[id]==='number') ? povHolder.affinity[id] : 0;
+          var p = getP(id);
+          return { id: id, score: (-aff) + (p && p.threat ? p.threat : 0.5) };
+        }).sort(function(a,b){ return b.score - a.score; });
+        
+        newNominees = [scored[0].id];
+        if(scored.length > 1) newNominees.push(scored[1].id);
       }
     } else {
       // AI picks 2 nominees based on lowest affinity
-      var hoh = getP(g.vetoHolder);
+      var povHolder = getP(g.vetoHolder);
       var scored = eligibleIds.map(function(id){
-        var aff = (hoh && hoh.affinity && typeof hoh.affinity[id]==='number') ? hoh.affinity[id] : 0;
+        var aff = (povHolder && povHolder.affinity && typeof povHolder.affinity[id]==='number') ? povHolder.affinity[id] : 0;
         var p = getP(id);
         return { id: id, score: (-aff) + (p && p.threat ? p.threat : 0.5) };
       }).sort(function(a,b){ return b.score - a.score; });
@@ -1585,47 +1727,11 @@
       if(scored.length > 1) newNominees.push(scored[1].id);
     }
     
-    // Apply Diamond POV: replace all nominees
-    g.nominees = newNominees;
-    for(var i=0;i<g.players.length;i++){
-      g.players[i].nominated = (g.nominees.indexOf(g.players[i].id) !== -1);
-      if(g.players[i].nominated){
-        g.players[i].nominationState = 'nominated';
-      } else {
-        g.players[i].nominationState = 'none';
-      }
-    }
-    
-    // Show announcement
-    await showTVCard({
-      title: 'Diamond POV Nominations',
-      lines: [holderName + ' nominates: ' + newNominees.map(safeName).join(' and ') + '.'],
-      tone: 'noms',
-      duration: 3600
+    // Apply Diamond POV using the multi-replacement function
+    await applyReplacementAndContinueMulti(newNominees, {
+      announcer: 'POV',
+      diamond: true
     });
-    
-    try{ if(global.addLog) global.addLog('Diamond POV: ' + holderName + ' replaces both nominees with ' + newNominees.map(safeName).join(' and ') + '.', 'warn'); }catch(e){}
-    try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
-    
-    // Adjourn ceremony
-    await showTVCard({
-      title: 'Veto Ceremony',
-      lines: ['This veto ceremony is adjourned.'],
-      tone: 'veto',
-      duration: 2800
-    });
-    
-    g.__vetoCeremonyResolved = true;
-    g.__vetoDecisionInProgress = false;
-    setTimeout(function(){
-      if(typeof global.startSocial==='function'){
-        global.startSocial('veto', function(){
-          if(typeof global.startLiveVote==='function') global.startLiveVote();
-        });
-      } else if(typeof global.startLiveVote==='function'){
-        global.startLiveVote();
-      }
-    }, 200);
   }
   global.handleDiamondPOVCeremony = handleDiamondPOVCeremony;
 
@@ -1764,6 +1870,7 @@
 
       // Check for Golden POV twist - POV holder picks replacement instead of HOH
       var isGoldenPOV = (g.activeVetoTwist === 'golden');
+      var holder = getP(g.vetoHolder);
       var picker = isGoldenPOV ? holder : hoh;
       var pickerName = picker ? picker.name : (isGoldenPOV ? 'POV Holder' : 'HOH');
 
@@ -1784,6 +1891,7 @@
           g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
           g.__vetoCeremonyResolved = true;
           g.__vetoDecisionInProgress = false;
+          g.__useTVCeremonyUI = false;
           setTimeout(function(){
             if(typeof global.startSocial==='function'){
               global.startSocial('veto', function(){
@@ -1796,9 +1904,22 @@
           return;
         }
         
-        var replacementId = await renderHOHReplacementChoice(picker.id, eligibleIds);
-        if(replacementId != null){
-          await applyReplacementAndContinue(replacementId, isGoldenPOV);
+        // For Golden POV, use renderReplacementChoiceBy with single-select
+        if(isGoldenPOV){
+          var replacementId = await renderReplacementChoiceBy(eligibleIds, {
+            multi: 1,
+            title: 'Select Replacement Nominee',
+            pickerName: pickerName
+          });
+          if(replacementId != null){
+            await applyReplacementAndContinue(replacementId, isGoldenPOV);
+          }
+        } else {
+          // Standard HOH replacement
+          var replacementId = await renderHOHReplacementChoice(picker.id, eligibleIds);
+          if(replacementId != null){
+            await applyReplacementAndContinue(replacementId, isGoldenPOV);
+          }
         }
       } else {
         var replacementId = pickReplacementByHOH(savedId);
@@ -1832,6 +1953,7 @@
       g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
       g.__vetoCeremonyResolved = true;
       g.__vetoDecisionInProgress = false;
+      g.__useTVCeremonyUI = false;
       setTimeout(function(){
         if(typeof global.startSocial==='function'){
           global.startSocial('veto', function(){
@@ -1950,6 +2072,7 @@
     g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
     g.__vetoCeremonyResolved = true;
     g.__vetoDecisionInProgress = false;
+    g.__useTVCeremonyUI = false;
     setTimeout(function(){
       if(typeof global.startSocial==='function'){
         global.startSocial('veto', function(){
@@ -1961,5 +2084,120 @@
     }, 200);
   }
   global.applyReplacementAndContinue = applyReplacementAndContinue;
+  
+  // Apply multiple replacements for Diamond POV and continue
+  async function applyReplacementAndContinueMulti(replacementIds, options){
+    var g = global.game;
+    options = options || {};
+    var announcer = options.announcer || 'POV';
+    var diamond = options.diamond || false;
+    
+    if(g.__replacementApplied) return;
+    g.__replacementApplied = true;
+    
+    if(!replacementIds || replacementIds.length === 0){
+      console.warn('[veto] applyReplacementAndContinueMulti called with empty replacementIds');
+      g.__vetoCeremonyResolved = true;
+      g.__vetoDecisionInProgress = false;
+      setTimeout(function(){
+        if(typeof global.startSocial==='function'){
+          global.startSocial('veto', function(){
+            if(typeof global.startLiveVote==='function') global.startLiveVote();
+          });
+        } else if(typeof global.startLiveVote==='function'){
+          global.startLiveVote();
+        }
+      }, 200);
+      return;
+    }
+    
+    // For Diamond POV, replace ALL nominees with the new ones
+    if(diamond){
+      g.nominees = replacementIds.slice();
+      
+      // Update nomination states
+      for(var i=0;i<g.players.length;i++){
+        var p = g.players[i];
+        if(replacementIds.indexOf(p.id) !== -1){
+          p.nominated = true;
+          p.nominationState = 'nominated';
+        } else {
+          p.nominated = false;
+          p.nominationState = 'none';
+        }
+      }
+      
+      // Social Maneuvers: Record replacement nominations
+      if(global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.recordWeeklyEvent){
+        for(var j=0; j<replacementIds.length; j++){
+          try{
+            global.SocialManeuvers.recordWeeklyEvent(replacementIds[j], { nominated: true });
+            console.info('[veto.js] ✓ Recorded nomination event for player', replacementIds[j]);
+          }catch(e){
+            console.error('[veto.js] Failed to record nomination event:', e);
+          }
+        }
+      }
+      
+      // Sync player badge states
+      try{ if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates(); }catch(e){}
+      
+      // Log the action
+      console.info('[nom] diamondPOVApplied nominees=' + JSON.stringify(replacementIds));
+      
+      // Determine announcer
+      var announcerP = announcer === 'POV' ? getP(g.vetoHolder) : getP(g.hohId);
+      var announcerRole = announcer === 'POV' ? 'POV Holder' : 'HOH';
+      var announcerName = announcerP ? announcerP.name : announcerRole;
+      
+      // Show announcement card
+      var namesStr = replacementIds.map(safeName).join(' and ');
+      await showTVCard({
+        title: announcerRole + ' Announcement',
+        lines: [announcerName + ' nominates ' + namesStr + ' for eviction.'],
+        tone: 'noms',
+        duration: 3800
+      });
+      
+      try{ if(global.addLog) global.addLog('Diamond POV: ' + announcerName + ' nominates ' + namesStr + '.','warn'); }catch(e){}
+      
+      // Show replacement cards for each nominee
+      for(var k=0; k<replacementIds.length; k++){
+        await showTVCard({
+          title: 'Nominated',
+          lines: [safeName(replacementIds[k]) + ' is on the block.'],
+          tone: 'noms',
+          duration: 2800
+        });
+      }
+      
+      try{ g.__twistNomineeSnapshot = g.nominees.slice(); }catch(e){}
+      try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
+    }
+    
+    // Show adjourn message
+    await showTVCard({
+      title: 'Veto Ceremony',
+      lines: ['This veto ceremony is adjourned.'],
+      tone: 'veto',
+      duration: 2800
+    });
+    
+    // Proceed to next phase
+    g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
+    g.__vetoCeremonyResolved = true;
+    g.__vetoDecisionInProgress = false;
+    g.__useTVCeremonyUI = false;
+    setTimeout(function(){
+      if(typeof global.startSocial==='function'){
+        global.startSocial('veto', function(){
+          if(typeof global.startLiveVote==='function') global.startLiveVote();
+        });
+      } else if(typeof global.startLiveVote==='function'){
+        global.startLiveVote();
+      }
+    }, 200);
+  }
+  global.applyReplacementAndContinueMulti = applyReplacementAndContinueMulti;
 
 })(window);

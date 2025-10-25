@@ -181,3 +181,99 @@
     animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards !important;
   }
 }
+
+/* ============================================================================
+   VETO REPLACEMENT PICKER - Multi-Select Grid UI
+   ============================================================================ */
+
+/* Replacement grid container - responsive layout */
+.veto-replacement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+/* Replacement tile with selection state */
+.veto-replacement-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid rgba(110, 160, 220, 0.3);
+  border-radius: 12px;
+  background: rgba(28, 43, 62, 0.5);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.veto-replacement-tile:hover {
+  border-color: rgba(110, 160, 220, 0.6);
+  background: rgba(28, 43, 62, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.veto-replacement-tile.selected {
+  border-color: var(--primary-color, #4a9eff);
+  background: rgba(74, 158, 255, 0.2);
+  box-shadow: 0 0 20px rgba(74, 158, 255, 0.4);
+}
+
+.veto-replacement-tile img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.veto-replacement-tile.selected img {
+  border-color: var(--primary-color, #4a9eff);
+}
+
+.veto-replacement-tile .name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  color: #fff;
+  margin-top: 4px;
+}
+
+/* Animation for tile entrance */
+@keyframes tileSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.veto-replacement-tile {
+  animation: tileSlideIn 0.4s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+  opacity: 0;
+}
+
+/* Mobile optimization for replacement picker */
+@media (max-width: 768px) {
+  .veto-replacement-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+  }
+  
+  .veto-replacement-tile img {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .veto-replacement-tile .name {
+    font-size: 0.8rem;
+  }
+}

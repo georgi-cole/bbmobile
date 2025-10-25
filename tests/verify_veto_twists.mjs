@@ -1,0 +1,212 @@
+#!/usr/bin/env node
+
+/**
+ * POV Twist Verification Script
+ * Verifies that the POV twist regression fixes are implemented correctly
+ */
+
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Colors for console output
+const RESET = '\x1b[0m';
+const GREEN = '\x1b[32m';
+const RED = '\x1b[31m';
+const YELLOW = '\x1b[33m';
+
+let passCount = 0;
+let failCount = 0;
+
+function pass(msg) {
+  console.log(`${GREEN}✓${RESET} ${msg}`);
+  passCount++;
+}
+
+function fail(msg) {
+  console.log(`${RED}✗${RESET} ${msg}`);
+  failCount++;
+}
+
+function info(msg) {
+  console.log(`${YELLOW}ℹ${RESET} ${msg}`);
+}
+
+console.log('\n=== POV Twist Regression Fixes Verification ===\n');
+
+// Read veto.js
+const vetoPath = join(__dirname, '..', 'js', 'veto.js');
+let vetoContent;
+try {
+  vetoContent = readFileSync(vetoPath, 'utf8');
+} catch (e) {
+  fail('Could not read js/veto.js');
+  process.exit(1);
+}
+
+// Test 1: Check for __useTVCeremonyUI guard flag
+if (vetoContent.includes('g.__useTVCeremonyUI')) {
+  pass('__useTVCeremonyUI guard flag is present');
+} else {
+  fail('__useTVCeremonyUI guard flag not found');
+}
+
+// Test 2: Check that __useTVCeremonyUI is set to true for human POV holder
+if (vetoContent.includes('g.__useTVCeremonyUI = true')) {
+  pass('__useTVCeremonyUI is set to true for human POV holder');
+} else {
+  fail('__useTVCeremonyUI not set to true');
+}
+
+// Test 3: Check that renderVetoCeremonyPanel uses the guard flag
+if (vetoContent.includes('if(g.__useTVCeremonyUI)')) {
+  pass('renderVetoCeremonyPanel checks __useTVCeremonyUI flag');
+} else {
+  fail('renderVetoCeremonyPanel does not check __useTVCeremonyUI flag');
+}
+
+// Test 4: Check for renderReplacementChoiceBy function
+if (vetoContent.includes('function renderReplacementChoiceBy(')) {
+  pass('renderReplacementChoiceBy function exists');
+} else {
+  fail('renderReplacementChoiceBy function not found');
+}
+
+// Test 5: Check for multi-select support in renderReplacementChoiceBy
+if (vetoContent.includes('var multi = options.multi')) {
+  pass('renderReplacementChoiceBy supports multi-select parameter');
+} else {
+  fail('renderReplacementChoiceBy does not support multi-select');
+}
+
+// Test 6: Check for grid layout in renderReplacementChoiceBy
+if (vetoContent.includes('grid.style.gridTemplateColumns')) {
+  pass('renderReplacementChoiceBy uses CSS grid layout');
+} else {
+  fail('renderReplacementChoiceBy does not use CSS grid layout');
+}
+
+// Test 7: Check for confirm button logic
+if (vetoContent.includes('confirmBtn.disabled = (selectedIds.length !== multi)')) {
+  pass('Confirm button is disabled until correct number of selections');
+} else {
+  fail('Confirm button logic not found');
+}
+
+// Test 8: Check for "Select two replacement nominees" title
+if (vetoContent.includes('Select two replacement nominees')) {
+  pass('Title "Select two replacement nominees" is present');
+} else {
+  fail('Title "Select two replacement nominees" not found');
+}
+
+// Test 9: Check for applyReplacementAndContinueMulti function
+if (vetoContent.includes('function applyReplacementAndContinueMulti(')) {
+  pass('applyReplacementAndContinueMulti function exists');
+} else {
+  fail('applyReplacementAndContinueMulti function not found');
+}
+
+// Test 10: Check that applyReplacementAndContinueMulti is exported
+if (vetoContent.includes('global.applyReplacementAndContinueMulti')) {
+  pass('applyReplacementAndContinueMulti is exported to global');
+} else {
+  fail('applyReplacementAndContinueMulti is not exported');
+}
+
+// Test 11: Check that Diamond POV uses renderReplacementChoiceBy
+if (vetoContent.includes('renderReplacementChoiceBy(eligibleIds, {')) {
+  pass('Diamond POV uses renderReplacementChoiceBy');
+} else {
+  fail('Diamond POV does not use renderReplacementChoiceBy');
+}
+
+// Test 12: Check for multi: 2 in Diamond POV ceremony
+if (vetoContent.includes('multi: 2')) {
+  pass('Diamond POV ceremony requests 2 selections');
+} else {
+  fail('Diamond POV ceremony does not request 2 selections');
+}
+
+// Test 13: Check that Golden POV uses renderReplacementChoiceBy with multi: 1
+if (vetoContent.includes('multi: 1')) {
+  pass('Golden POV uses single-select mode');
+} else {
+  fail('Golden POV single-select mode not found');
+}
+
+// Test 14: Check that Diamond POV uses applyReplacementAndContinueMulti
+if (vetoContent.includes('applyReplacementAndContinueMulti(newNominees')) {
+  pass('Diamond POV calls applyReplacementAndContinueMulti');
+} else {
+  fail('Diamond POV does not call applyReplacementAndContinueMulti');
+}
+
+// Test 15: Check that __useTVCeremonyUI is reset after ceremony
+const resetMatches = vetoContent.match(/g\.__useTVCeremonyUI = false/g);
+if (resetMatches && resetMatches.length >= 2) {
+  pass('__useTVCeremonyUI is reset after ceremony completes');
+} else {
+  fail('__useTVCeremonyUI reset not found or insufficient');
+}
+
+// Test 16: Check that Golden POV replacement picker is shown for POV holder
+if (vetoContent.includes('isGoldenPOV')) {
+  pass('Golden POV twist check is present in finalizeCeremony');
+} else {
+  fail('Golden POV twist check not found');
+}
+
+// Test 17: Check for announcer parameter in applyReplacementAndContinueMulti
+if (vetoContent.includes('var announcer = options.announcer')) {
+  pass('applyReplacementAndContinueMulti accepts announcer parameter');
+} else {
+  fail('applyReplacementAndContinueMulti announcer parameter not found');
+}
+
+// Read CSS file
+const cssPath = join(__dirname, '..', 'css', 'nominations.css');
+let cssContent;
+try {
+  cssContent = readFileSync(cssPath, 'utf8');
+} catch (e) {
+  fail('Could not read css/nominations.css');
+  process.exit(1);
+}
+
+// Test 18: Check for veto-replacement-grid CSS class
+if (cssContent.includes('.veto-replacement-grid')) {
+  pass('CSS for .veto-replacement-grid is present');
+} else {
+  fail('CSS for .veto-replacement-grid not found');
+}
+
+// Test 19: Check for veto-replacement-tile CSS class
+if (cssContent.includes('.veto-replacement-tile')) {
+  pass('CSS for .veto-replacement-tile is present');
+} else {
+  fail('CSS for .veto-replacement-tile not found');
+}
+
+// Test 20: Check for selected state CSS
+if (cssContent.includes('.veto-replacement-tile.selected')) {
+  pass('CSS for selected state is present');
+} else {
+  fail('CSS for selected state not found');
+}
+
+// Summary
+console.log('\n=== Verification Summary ===');
+console.log(`Passed: ${GREEN}${passCount}${RESET}`);
+console.log(`Failed: ${RED}${failCount}${RESET}`);
+
+if (failCount === 0) {
+  console.log(`\n${GREEN}✓ All tests passed!${RESET}\n`);
+  process.exit(0);
+} else {
+  console.log(`\n${RED}✗ Some tests failed${RESET}\n`);
+  process.exit(1);
+}
