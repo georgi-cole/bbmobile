@@ -197,6 +197,7 @@
       }
       
       // If action failed (e.g., insufficient resources), return early
+      // Note: Failed actions are not counted toward rate limiting since they consume no resources
       if (!result.success) {
         console.debug(`[ai-scheduler] Action failed: ${result.reason || 'unknown'}`);
         return result;
@@ -363,12 +364,13 @@
         global.safeName?.(tid) || `Player ${tid}`
       ).join(', ');
       
+      // Use safe navigation for outcome type (already normalized in executeAIAction)
       const outcomeType = result.outcome?.type || 'unknown';
       console.info(
         `[ai-scheduler] ${actorName} → ${action.label} → ${targetNames}: ${outcomeType}`
       );
     } else if (result && !result.success) {
-      // Action failed (e.g., insufficient resources)
+      // Action failed (e.g., insufficient resources) - log at debug level
       const actorName = global.safeName?.(actor.id) || `Player ${actor.id}`;
       console.debug(
         `[ai-scheduler] ${actorName} → ${action.label}: failed (${result.reason || 'unknown'})`
