@@ -27,7 +27,8 @@
     resizeObserver: null,
     humanTurn: false,
     isTieBreak: false,
-    isFinal4: false
+    isFinal4: false,
+    isResponsive: false
   };
 
   // Default pacing
@@ -78,7 +79,20 @@
     state.cardHoldMs = config.pacing?.holdMs ?? cfg.cardHoldMs ?? DEFAULT_HOLD_MS;
     state.cardGapMs = config.pacing?.gapMs ?? cfg.cardGapMs ?? DEFAULT_GAP_MS;
 
+    // Detect responsive mode (narrow/portrait viewports)
+    state.isResponsive = detectResponsiveMode();
+
     renderPanel();
+  }
+
+  // Detect if we should use responsive mode (mobile/narrow viewport)
+  function detectResponsiveMode() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const isPortrait = height > width;
+    const isNarrow = width < 820;
+    
+    return isNarrow || isPortrait;
   }
 
   // Render the modern panel inside #tv with fixed canvas and ResizeObserver scaling
@@ -98,6 +112,12 @@
     // Create overlay wrapper with overflow:hidden
     const overlay = document.createElement('div');
     overlay.className = 'lv2-overlay';
+    
+    // Add responsive class if needed
+    if (state.isResponsive) {
+      overlay.classList.add('lv2-responsive');
+    }
+    
     overlay.setAttribute('role', 'region');
     overlay.setAttribute('aria-label', 'Live Vote');
 
@@ -670,6 +690,11 @@
 
   // Setup ResizeObserver for responsive scaling (fixed 1200x560 canvas)
   function setupResizeObserver(tv, fitWrapper) {
+    // In responsive mode, skip transform scaling
+    if (state.isResponsive) {
+      return;
+    }
+    
     const CANVAS_WIDTH = 1200;
     const CANVAS_HEIGHT = 560;
 
@@ -834,6 +859,79 @@
     evicteeEl.remove();
   }
 
+  /**
+   * Check if inline card is supported (responsive mode)
+   * @returns {boolean}
+   */
+  function supportsInlineCard() {
+    return state.isResponsive === true;
+  }
+
+  /**
+   * Show inline summary card inside the TV overlay (for mobile)
+   * @param {Object} options - { title, body, duration, tone }
+   */
+  async function showInlineCard(options = {}) {
+    const { 
+      title = 'Result', 
+      body = [], 
+      duration = 3800,
+      tone = 'neutral'
+    } = options;
+
+    const tv = document.querySelector('#tv');
+    if (!tv) {
+      console.warn('[lv2] showInlineCard: TV element not found');
+      return;
+    }
+
+    // Remove any existing inline card
+    const existing = tv.querySelector('.lv2-inline-card');
+    if (existing) existing.remove();
+
+    // Create inline card
+    const card = document.createElement('div');
+    card.className = 'lv2-inline-card';
+    
+    // Add tone class
+    if (tone === 'evict' || tone === 'live') {
+      card.classList.add(`tone-${tone}`);
+    }
+
+    // Title
+    const h3 = document.createElement('h3');
+    h3.textContent = title;
+    card.appendChild(h3);
+
+    // Body content
+    const bodyDiv = document.createElement('div');
+    bodyDiv.className = 'lv2-inline-card-body';
+    const bodyLines = Array.isArray(body) ? body : [body];
+    bodyLines.forEach(line => {
+      const lineDiv = document.createElement('div');
+      lineDiv.textContent = line;
+      bodyDiv.appendChild(lineDiv);
+    });
+    card.appendChild(bodyDiv);
+
+    // Append to TV
+    tv.appendChild(card);
+
+    // Fade in
+    await sleep(50);
+    card.classList.add('visible');
+
+    // Hold for duration
+    await sleep(duration);
+
+    // Fade out
+    card.classList.remove('visible');
+    await sleep(500);
+
+    // Remove from DOM
+    card.remove();
+  }
+
   // Public API exposed on window.lv2
   const lv2 = {
     init: init,
@@ -848,6 +946,8 @@
     beginResultCardPhase: beginResultCardPhase,
     endResultCardPhase: endResultCardPhase,
     showEvicteeFinal: showEvicteeFinal,
+    supportsInlineCard: supportsInlineCard,
+    showInlineCard: showInlineCard,
     get enabled() {
       // Read from config if available
       return global.game?.cfg?.modernLiveVoteUI !== false;
