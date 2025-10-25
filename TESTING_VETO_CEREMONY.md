@@ -1,7 +1,7 @@
 # Veto Ceremony TV Experience - Testing Guide
 
 ## Overview
-This guide covers testing the modernized veto ceremony that renders all UI inside the faux TV with unified decision prompts, clear risk-to-safe-to-new-risk animation sequence, nomination validation, multi-eviction gating, and mobile-safe containment.
+This guide covers testing the modernized veto ceremony that renders all UI inside the faux TV with unified decision prompts, clear risk-to-safe-to-new-risk animation sequence, nomination validation, multi-eviction gating, mobile-safe containment, and a responsive replacement picker (carousel on mobile, grid on desktop).
 
 ## Quick Test
 Open `test_veto_ceremony_tv.html` in a browser for a checklist of all test scenarios.
@@ -12,6 +12,8 @@ Open `test_veto_ceremony_tv.html` in a browser for a checklist of all test scena
 3. **Nomination Validation**: Prevents unchanged nominee pair (at most one can remain same)
 4. **Unified Decision**: Single in-TV prompt for all POV types with short copy
 5. **Comprehensive Hooks**: onPOVUsed, onVetoUsedOnSelf/Other, onSavedByVeto
+6. **Mobile Carousel Picker**: One avatar per slide with swipe, arrows, dots, keyboard navigation
+7. **Desktop Grid Picker**: Responsive grid showing all nominees at once on wider screens
 
 ## Test Scenarios
 
@@ -256,6 +258,97 @@ Open `test_veto_ceremony_tv.html` in a browser for a checklist of all test scena
 - [ ] onVetoUsedOnSelf fires when POV saves self
 - [ ] onVetoUsedOnOther fires when POV saves other
 - [ ] onSavedByVeto fires for saved player
+- [ ] Badges sync correctly after replacement
+- [ ] HUD updates correctly
+- [ ] Social Maneuvers records replacement nomination event
+
+### Replacement Picker Modes
+- [ ] Mobile (< 768px): Carousel mode shows one avatar per slide
+- [ ] Desktop (>= 768px): Grid mode shows all nominees at once
+- [ ] Carousel: Left/right arrow buttons work
+- [ ] Carousel: Arrow buttons disable at boundaries
+- [ ] Carousel: Navigation dots appear and work
+- [ ] Carousel: Active dot is highlighted
+- [ ] Carousel: Counter shows position (e.g., "3 / 7")
+- [ ] Carousel: ArrowLeft/ArrowRight keyboard navigation works
+- [ ] Carousel: Home/End keys jump to first/last
+- [ ] Carousel: Touch/swipe gestures work (50px threshold)
+- [ ] Carousel: "Nominate [Name]" button selects nominee
+- [ ] Grid: All eligible nominees displayed
+- [ ] Grid: Click nominee → confirm screen appears
+- [ ] Grid: Confirm screen shows large avatar + "Back" and "OK" buttons
+- [ ] Grid: Keyboard arrow navigation works between tiles
+
+## Replacement Picker Architecture
+
+The replacement picker (`rpPicker`) supports two view modes:
+
+### Carousel Mode (Mobile < 768px)
+- **One avatar per slide** with large display
+- **Left/right arrow buttons** for navigation (disable at boundaries)
+- **Navigation dots** below carousel (active dot highlighted)
+- **Counter display** showing current position (e.g., "3 / 7")
+- **Touch/swipe support** with 50px minimum swipe threshold
+- **Keyboard navigation**: ArrowLeft, ArrowRight, Home, End
+- **Action button**: "Nominate [Name]" directly on card
+- **Accessibility**: Full ARIA support, focus management
+
+### Grid Mode (Desktop >= 768px)
+- **Responsive grid** showing all eligible nominees
+- **Tile-based layout** with hover states
+- **Two-step selection**: Click tile → confirm screen
+- **Confirm screen**: Large avatar, name, Back/OK buttons
+- **Keyboard navigation**: Arrow keys between tiles
+- **Accessibility**: ARIA roles, tabindex management
+
+### Auto-Responsive
+The picker automatically switches between modes based on viewport width:
+- `< 768px`: Carousel mode
+- `>= 768px`: Grid mode
+
+Manual override available via `viewMode` option:
+```javascript
+rpPicker.show({
+  eligibleIds: [1, 2, 3],
+  blockedIds: [4],
+  viewMode: 'carousel', // 'auto', 'grid', or 'carousel'
+  onConfirm: function(selectedId) { /* ... */ }
+});
+```
+
+## Known Limitations
+1. Carousel swipe requires touch events (not available in desktop mouse simulation)
+2. Grid mode shows blocked players as disabled (to maintain visual context)
+3. Reduced motion disables slide animations but maintains functionality
+
+## Troubleshooting
+
+**Carousel not appearing on mobile:**
+- Check viewport width is < 768px
+- Verify `viewMode` is not forced to 'grid'
+- Check browser console for warnings
+
+**Swipe not working:**
+- Ensure using real touch device (not mouse simulation)
+- Check swipe distance is > 50px
+- Verify touch events are not blocked by parent
+
+**Grid not responding to clicks:**
+- Check if player is in `blockedIds` array
+- Verify no JavaScript errors in console
+- Check if `eligibleIds` is populated
+
+**Animation not showing:**
+- Check if GSAP is loaded (window.gsap exists)
+- Check prefers-reduced-motion setting
+- Verify game state allows animation
+
+## Browser Compatibility
+- **Chrome/Edge**: Full support (GSAP + touch)
+- **Firefox**: Full support (GSAP + touch)
+- **Safari**: Full support (GSAP + touch)
+- **Mobile Safari**: Full support (native touch events)
+- **Mobile Chrome**: Full support (native touch events)
 - [ ] Social Maneuvers records veto events
 - [ ] Progression system records XP
 - [ ] Badge states sync correctly
