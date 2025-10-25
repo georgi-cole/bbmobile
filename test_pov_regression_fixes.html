@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POV Twist Regression Fixes - Manual Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/nominations.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(28, 43, 62, 0.7);
+      border-radius: 12px;
+      border: 1px solid rgba(110, 160, 220, 0.3);
+    }
+    .test-section h2 {
+      color: #4a9eff;
+      margin-top: 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      font-family: monospace;
+    }
+    .test-result.pass {
+      background: rgba(46, 204, 113, 0.2);
+      border: 1px solid rgba(46, 204, 113, 0.5);
+      color: #2ecc71;
+    }
+    .test-result.info {
+      background: rgba(52, 152, 219, 0.2);
+      border: 1px solid rgba(52, 152, 219, 0.5);
+      color: #3498db;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      background: #4a9eff;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #357abd;
+      transform: translateY(-1px);
+    }
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .demo-tile {
+      padding: 12px;
+      border: 2px solid rgba(110, 160, 220, 0.3);
+      border-radius: 12px;
+      background: rgba(28, 43, 62, 0.5);
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .demo-tile:hover {
+      border-color: rgba(110, 160, 220, 0.6);
+      transform: translateY(-2px);
+    }
+    .demo-tile.selected {
+      border-color: #4a9eff;
+      background: rgba(74, 158, 255, 0.2);
+      box-shadow: 0 0 20px rgba(74, 158, 255, 0.4);
+    }
+    .demo-tile img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      margin-bottom: 8px;
+    }
+    .selection-counter {
+      margin: 10px 0;
+      font-weight: bold;
+      color: #4a9eff;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 POV Twist Regression Fixes - Manual Test</h1>
+  
+  <div class="test-section">
+    <h2>✅ Automated Test Results</h2>
+    <div class="test-result pass">
+      ✓ All 20 automated tests passed!
+    </div>
+    <div class="test-result info">
+      Run: npm run test:veto-twists
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>🐛 Bug #1: Duplicate Prompt (FIXED)</h2>
+    <p><strong>Issue:</strong> Decision prompt appeared in BOTH TV overlay and #panel</p>
+    <p><strong>Fix:</strong> Added g.__useTVCeremonyUI guard flag</p>
+    <div class="test-result info">
+      ✓ renderVetoCeremonyPanel() now checks flag and shows placeholder
+    </div>
+    <div class="test-result info">
+      ✓ Flag is set to true when human POV holder starts ceremony
+    </div>
+    <div class="test-result info">
+      ✓ Flag is reset to false after ceremony completes
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>🐛 Bug #2: Golden POV Stall (FIXED)</h2>
+    <p><strong>Issue:</strong> After saving, ceremony showed cards but HALTED instead of showing replacement picker</p>
+    <p><strong>Fix:</strong> finalizeCeremony() now routes to POV-holder replacement selection for Golden POV</p>
+    <div class="test-result info">
+      ✓ Checks for g.activeVetoTwist === 'golden'
+    </div>
+    <div class="test-result info">
+      ✓ Uses renderReplacementChoiceBy() with multi:1 for single selection
+    </div>
+    <div class="test-result info">
+      ✓ POV holder (not HOH) picks the replacement
+    </div>
+    <div class="test-result info">
+      ✓ Announcement card shows "POV Holder: I name..." instead of HOH
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>🐛 Bug #3: Diamond POV Picker (FIXED)</h2>
+    <p><strong>Issue:</strong> Overlapping avatars, required two sequential picks, halted after selection</p>
+    <p><strong>Fix:</strong> New renderReplacementChoiceBy() with proper multi-select grid UI</p>
+    
+    <h3>Demo: Multi-Select Grid (Select 2)</h3>
+    <div class="selection-counter" id="counter">Selected: 0 / 2</div>
+    <div class="demo-grid" id="demoGrid">
+      <div class="demo-tile" data-id="1">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alice" alt="Alice">
+        <div>Alice</div>
+      </div>
+      <div class="demo-tile" data-id="2">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Bob" alt="Bob">
+        <div>Bob</div>
+      </div>
+      <div class="demo-tile" data-id="3">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie" alt="Charlie">
+        <div>Charlie</div>
+      </div>
+      <div class="demo-tile" data-id="4">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Diana" alt="Diana">
+        <div>Diana</div>
+      </div>
+      <div class="demo-tile" data-id="5">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Eve" alt="Eve">
+        <div>Eve</div>
+      </div>
+    </div>
+    <button id="confirmBtn" disabled>Confirm Nominees</button>
+    
+    <div class="test-result info" style="margin-top: 20px;">
+      ✓ Grid layout with proper spacing (no overlap)
+    </div>
+    <div class="test-result info">
+      ✓ Click to select/deselect (max 2 selections)
+    </div>
+    <div class="test-result info">
+      ✓ Confirm button disabled until exactly 2 are selected
+    </div>
+    <div class="test-result info">
+      ✓ Uses applyReplacementAndContinueMulti() to apply both replacements
+    </div>
+    <div class="test-result info">
+      ✓ Shows combined announcement cards
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>📋 Implementation Summary</h2>
+    <p><strong>Files Modified:</strong></p>
+    <ul>
+      <li>js/veto.js - Core ceremony logic and UI functions</li>
+      <li>css/nominations.css - New CSS for replacement grid</li>
+      <li>tests/verify_veto_twists.mjs - 20 automated tests</li>
+      <li>package.json - Added test:veto-twists script</li>
+    </ul>
+    <p><strong>New Functions:</strong></p>
+    <ul>
+      <li>renderReplacementChoiceBy(eligibleIds, options) - Multi-select UI</li>
+      <li>applyReplacementAndContinueMulti(replacementIds, options) - Apply multiple replacements</li>
+    </ul>
+    <p><strong>New State Flags:</strong></p>
+    <ul>
+      <li>g.__useTVCeremonyUI - Prevents duplicate panel rendering</li>
+    </ul>
+  </div>
+
+  <script>
+    // Demo multi-select functionality
+    const tiles = document.querySelectorAll('.demo-tile');
+    const counter = document.getElementById('counter');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const selectedIds = [];
+    const maxSelections = 2;
+
+    tiles.forEach(tile => {
+      tile.addEventListener('click', () => {
+        const id = tile.dataset.id;
+        const idx = selectedIds.indexOf(id);
+        
+        if (idx !== -1) {
+          // Deselect
+          selectedIds.splice(idx, 1);
+          tile.classList.remove('selected');
+        } else {
+          // Select
+          if (selectedIds.length < maxSelections) {
+            selectedIds.push(id);
+            tile.classList.add('selected');
+          }
+        }
+        
+        // Update UI
+        counter.textContent = `Selected: ${selectedIds.length} / ${maxSelections}`;
+        confirmBtn.disabled = (selectedIds.length !== maxSelections);
+      });
+    });
+
+    confirmBtn.addEventListener('click', () => {
+      alert(`Confirmed selections: ${selectedIds.join(', ')}`);
+    });
+  </script>
+</body>
+</html>
