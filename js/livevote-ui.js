@@ -392,14 +392,18 @@
     const avatar = document.createElement('img');
     avatar.className = 'lv2-voter-chip-avatar';
     avatar.src = getAvatarUrl(vote.voterId);
-    avatar.alt = vote.voterName;
+    avatar.alt = `${vote.voterName}'s avatar`;
     avatar.loading = 'eager';
+    // Handle image load errors gracefully
+    avatar.onerror = () => {
+      avatar.src = getDicebearUrl(vote.voterName);
+    };
     chip.appendChild(avatar);
     
     // Add vote text
     const text = document.createElement('div');
     text.className = 'lv2-voter-chip-text';
-    text.textContent = `votes to evict ${targetName}`;
+    text.textContent = `${vote.voterName} votes to evict ${targetName}`;
     chip.appendChild(text);
     
     // Position chip at center of grid
