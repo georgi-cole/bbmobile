@@ -242,7 +242,7 @@ Use `test_veto_ceremony_tv.html` to validate:
 ## Technical Details
 
 ### Carousel Auto-Detection
-The `viewMode: 'auto'` parameter in `rpPicker.show()` triggers automatic detection:
+The `viewMode: 'auto'` parameter in `rpPicker.show()` triggers automatic detection based on TV element width (which adapts to viewport):
 ```javascript
 // In replacement-picker.js
 function determineViewMode() {
@@ -250,6 +250,7 @@ function determineViewMode() {
   if (state.viewMode === 'carousel') return 'carousel';
   
   // Auto mode: use carousel on mobile (width < 768px)
+  // TV element width adapts to viewport via responsive CSS
   var tv = document.getElementById('tv');
   if (tv) {
     var width = tv.offsetWidth;
@@ -259,6 +260,7 @@ function determineViewMode() {
   return 'grid'; // Default
 }
 ```
+**Note:** The TV element is responsive and scales with viewport, so its width accurately reflects the available space.
 
 ### Risk-Swap Animation Timeline
 When GSAP is available:
@@ -284,7 +286,7 @@ When reduced-motion: Skip animation, commit state directly
 
 1. **Carousel vs Grid Threshold**: 768px breakpoint may need adjustment based on testing
 2. **Diamond POV Multi-Select**: Currently uses grid on all screen sizes (no carousel for multi-select)
-3. **Legacy Map**: Some code paths may still reference old implementation; fully replaced at runtime
+3. **Legacy Code Paths**: Some older code paths in renderVetoCeremonyPanel() are preserved but unused when modern TV-based UI is active via the __disableLegacyVetoUI flag
 
 ---
 
