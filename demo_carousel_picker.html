@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carousel Picker Demo</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #0a1018, #0e1728);
+      font-family: system-ui, -apple-system, sans-serif;
+      color: white;
+    }
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .demo-section {
+      margin: 40px 0;
+      padding: 20px;
+      background: rgba(28,43,62,0.5);
+      border-radius: 8px;
+    }
+    h1 {
+      color: #71bfff;
+      text-align: center;
+    }
+    h2 {
+      color: #94c3ff;
+      margin-bottom: 16px;
+    }
+    .demo-info {
+      color: rgba(255,255,255,0.8);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .demo-tv {
+      width: 100%;
+      max-width: 800px;
+      height: 500px;
+      margin: 20px auto;
+      background: #000;
+      border: 8px solid #333;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    button.demo-btn {
+      padding: 12px 24px;
+      margin: 8px;
+      background: #4695ff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    button.demo-btn:hover {
+      background: #5aa5ff;
+    }
+    .controls {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .feature-list {
+      list-style: none;
+      padding: 0;
+    }
+    .feature-list li {
+      padding: 8px 0;
+      padding-left: 24px;
+      position: relative;
+    }
+    .feature-list li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #4ade80;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1>🎠 Replacement Picker Carousel Demo</h1>
+    
+    <div class="demo-section">
+      <h2>Overview</h2>
+      <p class="demo-info">
+        The replacement picker automatically switches between two modes based on viewport width:
+      </p>
+      <ul class="feature-list">
+        <li><strong>Mobile (&lt; 768px):</strong> Carousel mode - one avatar per slide</li>
+        <li><strong>Desktop (≥ 768px):</strong> Grid mode - all nominees at once</li>
+      </ul>
+    </div>
+
+    <div class="demo-section">
+      <h2>Carousel Features</h2>
+      <ul class="feature-list">
+        <li>Large avatar display with player name</li>
+        <li>Left/right arrow buttons (disable at boundaries)</li>
+        <li>Navigation dots showing position</li>
+        <li>Counter display (e.g., "3 / 7")</li>
+        <li>Touch/swipe gestures (50px threshold)</li>
+        <li>Keyboard navigation: ArrowLeft, ArrowRight, Home, End</li>
+        <li>"Nominate [Name]" action button</li>
+        <li>Full ARIA accessibility support</li>
+        <li>Reduced motion support</li>
+      </ul>
+    </div>
+
+    <div class="demo-section">
+      <h2>Interactive Demo</h2>
+      <p class="demo-info">
+        Click the button below to launch the replacement picker. Resize your browser window to see it switch between modes!
+      </p>
+      
+      <div id="tv" class="demo-tv">
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255,255,255,0.5);">
+          <p>Click "Launch Picker" to see the carousel in action</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="demo-btn" onclick="launchCarousel()">Launch Picker (Carousel Mode)</button>
+        <button class="demo-btn" onclick="launchGrid()">Launch Picker (Grid Mode)</button>
+        <button class="demo-btn" onclick="launchAuto()">Launch Picker (Auto Mode)</button>
+      </div>
+
+      <p class="demo-info" style="text-align: center; margin-top: 20px;">
+        <strong>Try:</strong> Resize your browser window to < 768px width to see carousel mode, or ≥ 768px for grid mode (in Auto mode).
+      </p>
+    </div>
+
+    <div class="demo-section">
+      <h2>Testing Instructions</h2>
+      <div class="demo-info">
+        <p><strong>Carousel Mode:</strong></p>
+        <ul>
+          <li>Click left/right arrows to navigate</li>
+          <li>Click navigation dots to jump to specific player</li>
+          <li>Use ArrowLeft/ArrowRight keys to navigate</li>
+          <li>Use Home/End keys to jump to first/last</li>
+          <li>On touch device: Swipe left/right</li>
+          <li>Click "Nominate [Name]" to select</li>
+        </ul>
+
+        <p><strong>Grid Mode:</strong></p>
+        <ul>
+          <li>Click any player tile</li>
+          <li>Confirm screen shows large avatar</li>
+          <li>Click "Back" to return or "OK" to confirm</li>
+          <li>Use arrow keys to navigate between tiles</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/replacement-picker.js"></script>
+  <script>
+    // Mock game environment
+    window.game = {
+      players: [
+        { id: 1, name: 'Alex', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex' },
+        { id: 2, name: 'Blake', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Blake' },
+        { id: 3, name: 'Casey', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Casey' },
+        { id: 4, name: 'Drew', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Drew' },
+        { id: 5, name: 'Eli', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eli' },
+        { id: 6, name: 'Finn', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Finn' },
+        { id: 7, name: 'Grey', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grey' },
+        { id: 8, name: 'Harper', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Harper' }
+      ]
+    };
+
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      var p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+
+    window.resolveAvatar = function(player) {
+      if (typeof player === 'object' && player.avatar) return player.avatar;
+      var p = window.getP(player);
+      return p ? p.avatar : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + player;
+    };
+
+    window.getDicebearUrl = function(name) {
+      return 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(name);
+    };
+
+    function launchCarousel() {
+      if (!window.rpPicker) {
+        alert('rpPicker not loaded. Please check that replacement-picker.js is included.');
+        return;
+      }
+
+      window.rpPicker.show({
+        eligibleIds: [1, 2, 3, 4, 5, 6, 7, 8],
+        blockedIds: [],
+        viewMode: 'carousel',
+        onConfirm: function(selectedId) {
+          alert('Selected player: ' + window.safeName(selectedId) + ' (ID: ' + selectedId + ')');
+        }
+      });
+    }
+
+    function launchGrid() {
+      if (!window.rpPicker) {
+        alert('rpPicker not loaded. Please check that replacement-picker.js is included.');
+        return;
+      }
+
+      window.rpPicker.show({
+        eligibleIds: [1, 2, 3, 4, 5],
+        blockedIds: [6, 7, 8],
+        viewMode: 'grid',
+        onConfirm: function(selectedId) {
+          alert('Selected player: ' + window.safeName(selectedId) + ' (ID: ' + selectedId + ')');
+        }
+      });
+    }
+
+    function launchAuto() {
+      if (!window.rpPicker) {
+        alert('rpPicker not loaded. Please check that replacement-picker.js is included.');
+        return;
+      }
+
+      window.rpPicker.show({
+        eligibleIds: [1, 2, 3, 4, 5, 6],
+        blockedIds: [7, 8],
+        viewMode: 'auto',
+        onConfirm: function(selectedId) {
+          alert('Selected player: ' + window.safeName(selectedId) + ' (ID: ' + selectedId + ')');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
