@@ -2402,7 +2402,21 @@ button:focus-visible,.btn:focus-visible{
 @media (max-width: 640px) {
   .lv2-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    grid-template-rows: auto auto auto;
+    gap: 16px;
+  }
+  
+  .lv2-center-stage {
+    order: 2;
+    min-width: auto;
+  }
+  
+  .lv2-contestant.left {
+    order: 1;
+  }
+  
+  .lv2-contestant.right {
+    order: 3;
   }
   
   .lv2-avatar {
