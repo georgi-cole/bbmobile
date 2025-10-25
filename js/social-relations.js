@@ -248,6 +248,18 @@
     }
 
     const week = g.week ?? 1;
+    
+    // Week 1 gate: Don't compute relations in week 1
+    if (week < 2) {
+      console.info(`[relations] ⏸️ Skipping relations recompute - week ${week} (need week 2+)`);
+      // Clear any existing relations
+      const alivePlayers = g.players.filter(p => !p.evicted);
+      for (const player of alivePlayers) {
+        player.allies = [];
+        player.enemies = [];
+      }
+      return;
+    }
 
     // Initialize history storage if needed
     if (!g.__relationsHistory) {
