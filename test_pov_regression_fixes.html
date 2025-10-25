@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>POV Twist Regression Fixes - Manual Test</title>
-  <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="css/nominations.css">
   <style>
     body {
@@ -146,24 +145,24 @@
     <h3>Demo: Multi-Select Grid (Select 2)</h3>
     <div class="selection-counter" id="counter">Selected: 0 / 2</div>
     <div class="demo-grid" id="demoGrid">
-      <div class="demo-tile" data-id="1">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alice" alt="Alice">
+      <div class="demo-tile" data-id="1" tabindex="0" role="button" aria-label="Select Alice">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%234a9eff' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='white' font-size='24' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E" alt="Alice">
         <div>Alice</div>
       </div>
-      <div class="demo-tile" data-id="2">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Bob" alt="Bob">
+      <div class="demo-tile" data-id="2" tabindex="0" role="button" aria-label="Select Bob">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%233498db' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='white' font-size='24' font-weight='bold'%3EB%3C/text%3E%3C/svg%3E" alt="Bob">
         <div>Bob</div>
       </div>
-      <div class="demo-tile" data-id="3">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie" alt="Charlie">
+      <div class="demo-tile" data-id="3" tabindex="0" role="button" aria-label="Select Charlie">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%2395a5a6' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='white' font-size='24' font-weight='bold'%3EC%3C/text%3E%3C/svg%3E" alt="Charlie">
         <div>Charlie</div>
       </div>
-      <div class="demo-tile" data-id="4">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Diana" alt="Diana">
+      <div class="demo-tile" data-id="4" tabindex="0" role="button" aria-label="Select Diana">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23e74c3c' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='white' font-size='24' font-weight='bold'%3ED%3C/text%3E%3C/svg%3E" alt="Diana">
         <div>Diana</div>
       </div>
-      <div class="demo-tile" data-id="5">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Eve" alt="Eve">
+      <div class="demo-tile" data-id="5" tabindex="0" role="button" aria-label="Select Eve">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%239b59b6' width='60' height='60'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='white' font-size='24' font-weight='bold'%3EE%3C/text%3E%3C/svg%3E" alt="Eve">
         <div>Eve</div>
       </div>
     </div>
@@ -207,33 +206,51 @@
   </div>
 
   <script>
-    // Demo multi-select functionality
+    // Demo multi-select functionality with keyboard accessibility
     const tiles = document.querySelectorAll('.demo-tile');
     const counter = document.getElementById('counter');
     const confirmBtn = document.getElementById('confirmBtn');
     const selectedIds = [];
     const maxSelections = 2;
 
-    tiles.forEach(tile => {
-      tile.addEventListener('click', () => {
-        const id = tile.dataset.id;
-        const idx = selectedIds.indexOf(id);
-        
-        if (idx !== -1) {
-          // Deselect
-          selectedIds.splice(idx, 1);
-          tile.classList.remove('selected');
-        } else {
-          // Select
-          if (selectedIds.length < maxSelections) {
-            selectedIds.push(id);
-            tile.classList.add('selected');
-          }
+    function toggleSelection(tile) {
+      const id = tile.dataset.id;
+      const idx = selectedIds.indexOf(id);
+      
+      if (idx !== -1) {
+        // Deselect
+        selectedIds.splice(idx, 1);
+        tile.classList.remove('selected');
+        tile.setAttribute('aria-pressed', 'false');
+      } else {
+        // Select
+        if (selectedIds.length < maxSelections) {
+          selectedIds.push(id);
+          tile.classList.add('selected');
+          tile.setAttribute('aria-pressed', 'true');
         }
-        
-        // Update UI
-        counter.textContent = `Selected: ${selectedIds.length} / ${maxSelections}`;
-        confirmBtn.disabled = (selectedIds.length !== maxSelections);
+      }
+      
+      // Update UI
+      counter.textContent = `Selected: ${selectedIds.length} / ${maxSelections}`;
+      confirmBtn.disabled = (selectedIds.length !== maxSelections);
+    }
+
+    tiles.forEach(tile => {
+      // Initialize aria-pressed state
+      tile.setAttribute('aria-pressed', 'false');
+      
+      // Click handler
+      tile.addEventListener('click', () => {
+        toggleSelection(tile);
+      });
+
+      // Keyboard handler
+      tile.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleSelection(tile);
+        }
       });
     });
 
