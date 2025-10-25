@@ -2983,10 +2983,22 @@
       // Hook: Log XP for veto usage
       if(global.ProgressionEvents){
         var vetoWinner = g.vetoHolder;
+        
+        // Fire onPOVUsed hook
+        if(global.ProgressionEvents.onPOVUsed){
+          global.ProgressionEvents.onPOVUsed(vetoWinner, savedId);
+        }
+        
+        // Fire specific usage hooks
         if(savedId === vetoWinner){
           if(global.ProgressionEvents.onVetoUsedOnSelf) global.ProgressionEvents.onVetoUsedOnSelf(vetoWinner);
         } else {
           if(global.ProgressionEvents.onVetoUsedOnOther) global.ProgressionEvents.onVetoUsedOnOther(vetoWinner, savedId);
+        }
+        
+        // Fire onSavedByVeto hook for saved player
+        if(global.ProgressionEvents.onSavedByVeto){
+          global.ProgressionEvents.onSavedByVeto(savedId, vetoWinner);
         }
       }
 
@@ -3007,8 +3019,13 @@
 
       try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by ' + announcerRole + ').','warn'); }catch(e){}
       
-      // Show badge transfer animation - state commits AFTER animation completes
-      await renderBadgeTransfer(savedId, replacementId);
+      // Determine remaining nominee (the one who stays on block)
+      var remainingNomIds = g.nominees.filter(function(id){ return id !== savedId; });
+      var remainingNomId = remainingNomIds.length > 0 ? remainingNomIds[0] : null;
+      
+      // Show risk-swap animation: current risk → saved becomes safe → new risk
+      // Uses GSAP timeline if available, CSS fallback, respects reduced-motion
+      await renderRiskSwapAnimation(savedId, replacementId, remainingNomId);
       
       // Show replacement nominee card with replacement nominee avatar
       await showTVCardWithAvatars({
