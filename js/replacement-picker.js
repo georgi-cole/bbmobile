@@ -41,7 +41,11 @@
     blockedIds: [],
     selectedId: null,
     onConfirm: null,
-    view: 'grid' // 'grid' or 'confirm'
+    view: 'grid', // 'grid', 'carousel', or 'confirm'
+    viewMode: 'auto', // 'auto', 'grid', or 'carousel'
+    carouselIndex: 0,
+    touchStartX: 0,
+    touchEndX: 0
   };
 
   // DOM elements
@@ -189,6 +193,237 @@
     container.appendChild(grid);
   }
 
+  // Build carousel view (mobile-first, one avatar per slide)
+  function buildCarouselView() {
+    container.innerHTML = '';
+
+    // Only show eligible players in carousel
+    var carouselIds = state.eligibleIds.slice();
+    if (carouselIds.length === 0) {
+      console.warn('[rpPicker] No eligible players for carousel');
+      return;
+    }
+
+    // Ensure carousel index is in bounds
+    if (state.carouselIndex < 0) state.carouselIndex = 0;
+    if (state.carouselIndex >= carouselIds.length) state.carouselIndex = carouselIds.length - 1;
+
+    var currentId = carouselIds[state.carouselIndex];
+
+    // Title
+    var title = document.createElement('div');
+    title.className = 'rp-title';
+    title.textContent = 'Select Replacement Nominee';
+    container.appendChild(title);
+
+    // Carousel container
+    var carouselContainer = document.createElement('div');
+    carouselContainer.className = 'rp-carousel';
+    carouselContainer.setAttribute('role', 'region');
+    carouselContainer.setAttribute('aria-label', 'Replacement nominee carousel');
+
+    // Navigation buttons
+    var navContainer = document.createElement('div');
+    navContainer.className = 'rp-carousel-nav';
+
+    // Left arrow
+    var leftBtn = document.createElement('button');
+    leftBtn.className = 'rp-carousel-arrow rp-carousel-arrow-left';
+    leftBtn.innerHTML = '&#8249;'; // ‹
+    leftBtn.setAttribute('aria-label', 'Previous nominee');
+    leftBtn.disabled = (state.carouselIndex === 0);
+    leftBtn.onclick = function() {
+      if (state.carouselIndex > 0) {
+        state.carouselIndex--;
+        buildCarouselView();
+      }
+    };
+
+    // Current player card
+    var playerCard = document.createElement('div');
+    playerCard.className = 'rp-carousel-card';
+    
+    // Avatar
+    var avatarWrapper = document.createElement('div');
+    avatarWrapper.className = 'rp-carousel-avatar';
+    var avatarImg = document.createElement('img');
+    avatarImg.src = resolveAvatar(currentId);
+    avatarImg.alt = safeName(currentId);
+    avatarImg.onerror = function() {
+      if (typeof global.getDicebearUrl === 'function') {
+        this.src = global.getDicebearUrl(safeName(currentId));
+      }
+    };
+    avatarWrapper.appendChild(avatarImg);
+    playerCard.appendChild(avatarWrapper);
+
+    // Name
+    var nameLabel = document.createElement('div');
+    nameLabel.className = 'rp-carousel-name';
+    nameLabel.textContent = safeName(currentId);
+    playerCard.appendChild(nameLabel);
+
+    // Action button
+    var nominateBtn = document.createElement('button');
+    nominateBtn.className = 'btn primary rp-carousel-nominate';
+    nominateBtn.textContent = 'Nominate ' + safeName(currentId);
+    nominateBtn.setAttribute('aria-label', 'Nominate ' + safeName(currentId) + ' as replacement');
+    nominateBtn.onclick = function() {
+      selectPlayer(currentId);
+    };
+    playerCard.appendChild(nominateBtn);
+
+    // Right arrow
+    var rightBtn = document.createElement('button');
+    rightBtn.className = 'rp-carousel-arrow rp-carousel-arrow-right';
+    rightBtn.innerHTML = '&#8250;'; // ›
+    rightBtn.setAttribute('aria-label', 'Next nominee');
+    rightBtn.disabled = (state.carouselIndex === carouselIds.length - 1);
+    rightBtn.onclick = function() {
+      if (state.carouselIndex < carouselIds.length - 1) {
+        state.carouselIndex++;
+        buildCarouselView();
+      }
+    };
+
+    navContainer.appendChild(leftBtn);
+    navContainer.appendChild(playerCard);
+    navContainer.appendChild(rightBtn);
+    carouselContainer.appendChild(navContainer);
+
+    // Navigation dots
+    if (carouselIds.length > 1) {
+      var dotsContainer = document.createElement('div');
+      dotsContainer.className = 'rp-carousel-dots';
+      dotsContainer.setAttribute('role', 'tablist');
+
+      for (var i = 0; i < carouselIds.length; i++) {
+        (function(index) {
+          var dot = document.createElement('button');
+          dot.className = 'rp-carousel-dot';
+          if (index === state.carouselIndex) {
+            dot.classList.add('active');
+          }
+          dot.setAttribute('role', 'tab');
+          dot.setAttribute('aria-label', 'Go to nominee ' + (index + 1));
+          dot.setAttribute('aria-selected', index === state.carouselIndex ? 'true' : 'false');
+          dot.onclick = function() {
+            state.carouselIndex = index;
+            buildCarouselView();
+          };
+          dotsContainer.appendChild(dot);
+        })(i);
+      }
+
+      carouselContainer.appendChild(dotsContainer);
+    }
+
+    // Counter (e.g., "3 / 7")
+    var counter = document.createElement('div');
+    counter.className = 'rp-carousel-counter';
+    counter.textContent = (state.carouselIndex + 1) + ' / ' + carouselIds.length;
+    carouselContainer.appendChild(counter);
+
+    container.appendChild(carouselContainer);
+
+    // Keyboard navigation
+    container.addEventListener('keydown', handleCarouselKeyboard);
+    
+    // Touch/swipe support
+    carouselContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+    carouselContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+    
+    // Focus nominate button
+    setTimeout(function() {
+      nominateBtn.focus();
+    }, 50);
+  }
+
+  // Handle keyboard navigation in carousel
+  function handleCarouselKeyboard(e) {
+    if (state.view !== 'carousel') return;
+    
+    var carouselIds = state.eligibleIds.slice();
+    
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (state.carouselIndex > 0) {
+        state.carouselIndex--;
+        buildCarouselView();
+      }
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (state.carouselIndex < carouselIds.length - 1) {
+        state.carouselIndex++;
+        buildCarouselView();
+      }
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      state.carouselIndex = 0;
+      buildCarouselView();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      state.carouselIndex = carouselIds.length - 1;
+      buildCarouselView();
+    }
+  }
+
+  // Handle touch start for swipe
+  function handleTouchStart(e) {
+    if (e.touches && e.touches.length > 0) {
+      state.touchStartX = e.touches[0].clientX;
+    }
+  }
+
+  // Handle touch end for swipe
+  function handleTouchEnd(e) {
+    if (e.changedTouches && e.changedTouches.length > 0) {
+      state.touchEndX = e.changedTouches[0].clientX;
+      handleSwipe();
+    }
+  }
+
+  // Detect swipe direction and navigate
+  function handleSwipe() {
+    var swipeThreshold = 50; // Minimum swipe distance in pixels
+    var diff = state.touchStartX - state.touchEndX;
+    
+    if (Math.abs(diff) > swipeThreshold) {
+      var carouselIds = state.eligibleIds.slice();
+      
+      if (diff > 0) {
+        // Swipe left (next)
+        if (state.carouselIndex < carouselIds.length - 1) {
+          state.carouselIndex++;
+          buildCarouselView();
+        }
+      } else {
+        // Swipe right (previous)
+        if (state.carouselIndex > 0) {
+          state.carouselIndex--;
+          buildCarouselView();
+        }
+      }
+    }
+  }
+
+  // Determine which view mode to use
+  function determineViewMode() {
+    // If viewMode is explicitly set, use it
+    if (state.viewMode === 'grid') return 'grid';
+    if (state.viewMode === 'carousel') return 'carousel';
+    
+    // Auto mode: use carousel on mobile (width < 768px)
+    var tv = document.getElementById('tv');
+    if (tv) {
+      var width = tv.offsetWidth;
+      return (width < 768) ? 'carousel' : 'grid';
+    }
+    
+    // Default to grid if can't determine
+    return 'grid';
+  }
+
   // Focus management for keyboard navigation
   function focusNextTile(currentTile) {
     var tiles = Array.from(container.querySelectorAll('.rp-tile:not(.rp-tile-disabled)'));
@@ -253,12 +488,17 @@
     var backBtn = document.createElement('button');
     backBtn.className = 'btn rp-back';
     backBtn.textContent = 'Back';
-    backBtn.setAttribute('aria-label', 'Go back to grid');
+    backBtn.setAttribute('aria-label', 'Go back to selection');
     backBtn.onclick = function() {
-      state.view = 'grid';
       state.selectedId = null;
-      buildGridView();
-      focusFirstTile();
+      var viewMode = determineViewMode();
+      state.view = viewMode;
+      if (viewMode === 'carousel') {
+        buildCarouselView();
+      } else {
+        buildGridView();
+        focusFirstTile();
+      }
     };
 
     var okBtn = document.createElement('button');
@@ -313,10 +553,19 @@
     state.eligibleIds = options.eligibleIds || [];
     state.blockedIds = options.blockedIds || [];
     state.onConfirm = options.onConfirm || null;
-    state.view = 'grid';
+    state.viewMode = options.viewMode || 'auto';
+    state.carouselIndex = 0;
     state.selectedId = null;
 
-    buildGridView();
+    // Determine which view to show
+    var viewMode = determineViewMode();
+    state.view = viewMode;
+
+    if (viewMode === 'carousel') {
+      buildCarouselView();
+    } else {
+      buildGridView();
+    }
     
     overlay.style.display = 'flex';
     
@@ -326,7 +575,9 @@
       scaleContent(tv.offsetWidth, tv.offsetHeight);
     }
 
-    focusFirstTile();
+    if (viewMode === 'grid') {
+      focusFirstTile();
+    }
   }
 
   // Hide picker
@@ -336,10 +587,17 @@
     state.blockedIds = [];
     state.onConfirm = null;
     state.view = 'grid';
+    state.viewMode = 'auto';
     state.selectedId = null;
+    state.carouselIndex = 0;
 
     if (overlay) {
       overlay.style.display = 'none';
+    }
+    
+    // Clean up event listeners
+    if (container) {
+      container.removeEventListener('keydown', handleCarouselKeyboard);
     }
   }
 
