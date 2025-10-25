@@ -2158,58 +2158,6 @@
     });
   }
   
-    return new Promise(function(resolve){
-      // Safety check: handle empty eligible list
-      if(!eligibleIds || eligibleIds.length === 0){
-        console.warn('[veto] promptReplacementNominee called with empty eligibleIds');
-        resolve(null);
-        return;
-      }
-      
-      // Calculate blocked IDs (ineligible players)
-      var g = global.game;
-      var blockedIds = [];
-      
-      // Add HOH to blocked list
-      if(g.hohId != null) blockedIds.push(g.hohId);
-      
-      // Add current nominees to blocked list
-      if(g.nominees && g.nominees.length > 0){
-        for(var i=0; i<g.nominees.length; i++){
-          if(blockedIds.indexOf(g.nominees[i]) === -1){
-            blockedIds.push(g.nominees[i]);
-          }
-        }
-      }
-      
-      // Add veto holder to blocked list
-      if(g.vetoHolder != null && blockedIds.indexOf(g.vetoHolder) === -1){
-        blockedIds.push(g.vetoHolder);
-      }
-      
-      // Add saved player to blocked list
-      if(g.vetoSavedId != null && blockedIds.indexOf(g.vetoSavedId) === -1){
-        blockedIds.push(g.vetoSavedId);
-      }
-      
-      // Use replacement picker if available
-      if(typeof global.rpPicker !== 'undefined' && global.rpPicker.show){
-        global.rpPicker.show({
-          eligibleIds: eligibleIds,
-          blockedIds: blockedIds,
-          viewMode: 'auto', // Auto-detect: carousel on mobile, grid on desktop
-          onConfirm: function(selectedId){
-            resolve(selectedId);
-          }
-        });
-      } else {
-        // Fallback to old scrollable list
-        console.warn('[veto] rpPicker not available, using fallback');
-        renderHOHReplacementChoiceFallback(eligibleIds, resolve);
-      }
-    });
-  }
-  
   // Fallback replacement choice UI (old scrollable list)
   function renderHOHReplacementChoiceFallback(eligibleIds, resolve){
     var content = ensureTVOverlayScaffold();
