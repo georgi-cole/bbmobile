@@ -910,10 +910,17 @@
     ev.finalRank = aliveCount;
     console.info(`[eviction] assigned finalRank=${ev.finalRank} to ${ev.name}`);
 
+    // Check if modern Live Vote UI was used (to avoid duplicate cards/animations)
+    const usedModernLiveVoteUI = g.eviction?.nominees?.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
+
     if(reason==='self'){
       global.showCard('Self-Evicted',[ev.name],'evict',3800,true);
       global.addLog?.(`Self-eviction: <b>${ev.name}</b> has left the game.`,'danger');
-    } else {
+    } else if (!usedModernLiveVoteUI) {
+      // Only show legacy "Evicted" card if NOT using modern UI
+      // (modern UI already showed "Eviction Result" card + B&W vanish)
       global.showCard('Evicted',[ev.name],'evict',3600,true);
       global.addLog?.(`Evicted: <b>${ev.name}</b>.`,'danger');
     }
@@ -941,22 +948,30 @@
 
     if(!g.__twistMode) global.twists?.afterPhase?.('eviction');
 
-    // Notify visual system to suppress red X during animation
-    if(typeof global.notifyEvictedForVisual === 'function'){
-      global.notifyEvictedForVisual(evId);
-    }
+    // Skip duplicate visual animation if modern UI already handled it
+    if (!usedModernLiveVoteUI) {
+      // Notify visual system to suppress red X during animation
+      if(typeof global.notifyEvictedForVisual === 'function'){
+        global.notifyEvictedForVisual(evId);
+      }
 
-    // Run eviction visual enhancement (avatar animation)
-    // Defer routing until animation completes
-    if(typeof global.runEvictionVisual === 'function'){
-      try{
-        await global.runEvictionVisual(evId, { reason });
-      }catch(e){
-        console.error('[eviction] visual enhancement failed:', e);
+      // Run eviction visual enhancement (avatar animation)
+      // Defer routing until animation completes
+      if(typeof global.runEvictionVisual === 'function'){
+        try{
+          await global.runEvictionVisual(evId, { reason });
+        }catch(e){
+          console.error('[eviction] visual enhancement failed:', e);
+        }
+      }
+    } else {
+      // Modern UI path: Update HUD immediately since we skipped runEvictionVisual
+      if(typeof global.updateHud === 'function'){
+        global.updateHud();
       }
     }
 
-    // Note: Suppression clearing and HUD update now handled by runEvictionVisual
+    // Note: Suppression clearing and HUD update now handled by runEvictionVisual (or above for modern UI)
 
     postEvictionRouting();
   }
