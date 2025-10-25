@@ -839,83 +839,133 @@
     });
   }
   
-  function renderHOHReplacementChoice(hohId, eligibleIds){
+  // Prompt for replacement nominee using avatar-first picker
+  function promptReplacementNominee(eligibleIds){
     return new Promise(function(resolve){
-      var content = ensureTVOverlayScaffold();
-      if(!content){ resolve(null); return; }
-      
       // Safety check: handle empty eligible list
       if(!eligibleIds || eligibleIds.length === 0){
-        console.warn('[veto] renderHOHReplacementChoice called with empty eligibleIds');
+        console.warn('[veto] promptReplacementNominee called with empty eligibleIds');
         resolve(null);
         return;
       }
       
-      clearTVOverlayContent();
+      // Calculate blocked IDs (ineligible players)
+      var g = global.game;
+      var blockedIds = [];
       
-      var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
+      // Add HOH to blocked list
+      if(g.hohId != null) blockedIds.push(g.hohId);
       
-      var h3 = document.createElement('h3');
-      h3.textContent = 'Select Replacement Nominee';
-      card.appendChild(h3);
-      
-      var info = document.createElement('p');
-      info.textContent = 'As HOH, you must select a replacement nominee.';
-      info.style.marginBottom = '16px';
-      card.appendChild(info);
-      
-      var listWrap = document.createElement('div');
-      listWrap.style.maxHeight = '200px';
-      listWrap.style.overflowY = 'auto';
-      listWrap.style.marginBottom = '16px';
-      
-      var list = document.createElement('div');
-      list.style.display = 'flex';
-      list.style.flexDirection = 'column';
-      list.style.gap = '8px';
-      
-      function disableAll(){
-        var btns = list.querySelectorAll('button');
-        for(var i=0; i<btns.length; i++){ btns[i].disabled = true; }
+      // Add current nominees to blocked list
+      if(g.nominees && g.nominees.length > 0){
+        for(var i=0; i<g.nominees.length; i++){
+          if(blockedIds.indexOf(g.nominees[i]) === -1){
+            blockedIds.push(g.nominees[i]);
+          }
+        }
       }
       
-      for(var i=0; i<eligibleIds.length; i++){
-        (function(repId){
-          var p = getP(repId);
-          var b = document.createElement('button');
-          b.className = 'btn';
-          b.textContent = p ? p.name : '?';
-          b.style.width = '100%';
-          b.onclick = function(){
-            disableAll();
-            clearTVOverlayContent();
-            var tv = document.getElementById('tv');
-            if(tv) tv.classList.remove('tvTall');
-            resolve(repId);
-          };
-          b.onkeydown = function(e){
-            if(e.key === 'Enter' || e.key === ' '){
-              e.preventDefault();
-              b.click();
-            }
-          };
-          list.appendChild(b);
-        })(eligibleIds[i]);
+      // Add veto holder to blocked list
+      if(g.vetoHolder != null && blockedIds.indexOf(g.vetoHolder) === -1){
+        blockedIds.push(g.vetoHolder);
       }
       
-      listWrap.appendChild(list);
-      card.appendChild(listWrap);
-      content.appendChild(card);
+      // Add saved player to blocked list
+      if(g.vetoSavedId != null && blockedIds.indexOf(g.vetoSavedId) === -1){
+        blockedIds.push(g.vetoSavedId);
+      }
       
-      var tv = document.getElementById('tv');
-      if(tv) tv.classList.add('tvTall');
-      
-      setTimeout(function(){
-        var firstBtn = list.querySelector('button');
-        if(firstBtn) firstBtn.focus();
-      }, 100);
+      // Use replacement picker if available
+      if(typeof global.rpPicker !== 'undefined' && global.rpPicker.show){
+        global.rpPicker.show({
+          eligibleIds: eligibleIds,
+          blockedIds: blockedIds,
+          onConfirm: function(selectedId){
+            resolve(selectedId);
+          }
+        });
+      } else {
+        // Fallback to old scrollable list
+        console.warn('[veto] rpPicker not available, using fallback');
+        renderHOHReplacementChoiceFallback(eligibleIds, resolve);
+      }
     });
+  }
+  
+  // Fallback replacement choice UI (old scrollable list)
+  function renderHOHReplacementChoiceFallback(eligibleIds, resolve){
+    var content = ensureTVOverlayScaffold();
+    if(!content){ resolve(null); return; }
+    
+    clearTVOverlayContent();
+    
+    var card = document.createElement('div');
+    card.className = 'revealCard diaryRoomCard';
+    
+    var h3 = document.createElement('h3');
+    h3.textContent = 'Select Replacement Nominee';
+    card.appendChild(h3);
+    
+    var info = document.createElement('p');
+    info.textContent = 'As HOH, you must select a replacement nominee.';
+    info.style.marginBottom = '16px';
+    card.appendChild(info);
+    
+    var listWrap = document.createElement('div');
+    listWrap.style.maxHeight = '200px';
+    listWrap.style.overflowY = 'auto';
+    listWrap.style.marginBottom = '16px';
+    
+    var list = document.createElement('div');
+    list.style.display = 'flex';
+    list.style.flexDirection = 'column';
+    list.style.gap = '8px';
+    
+    function disableAll(){
+      var btns = list.querySelectorAll('button');
+      for(var i=0; i<btns.length; i++){ btns[i].disabled = true; }
+    }
+    
+    for(var i=0; i<eligibleIds.length; i++){
+      (function(repId){
+        var p = getP(repId);
+        var b = document.createElement('button');
+        b.className = 'btn';
+        b.textContent = p ? p.name : '?';
+        b.style.width = '100%';
+        b.onclick = function(){
+          disableAll();
+          clearTVOverlayContent();
+          var tv = document.getElementById('tv');
+          if(tv) tv.classList.remove('tvTall');
+          resolve(repId);
+        };
+        b.onkeydown = function(e){
+          if(e.key === 'Enter' || e.key === ' '){
+            e.preventDefault();
+            b.click();
+          }
+        };
+        list.appendChild(b);
+      })(eligibleIds[i]);
+    }
+    
+    listWrap.appendChild(list);
+    card.appendChild(listWrap);
+    content.appendChild(card);
+    
+    var tv = document.getElementById('tv');
+    if(tv) tv.classList.add('tvTall');
+    
+    setTimeout(function(){
+      var firstBtn = list.querySelector('button');
+      if(firstBtn) firstBtn.focus();
+    }, 100);
+  }
+  
+  // Legacy function - now delegates to promptReplacementNominee
+  function renderHOHReplacementChoice(hohId, eligibleIds){
+    return promptReplacementNominee(eligibleIds);
   }
   
   global.ensureTVOverlayScaffold = ensureTVOverlayScaffold;
@@ -924,6 +974,7 @@
   global.showTVDecision = showTVDecision;
   global.showTVNomineeSavePanel = showTVNomineeSavePanel;
   global.renderHOHReplacementChoice = renderHOHReplacementChoice;
+  global.promptReplacementNominee = promptReplacementNominee;
   
   /* ===== Veto Ceremony Flow ===== */
 
