@@ -6144,10 +6144,256 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   animation: vetoSlideUp 0.6s ease-out 0.4s backwards;
 }
 
+/* Risk → Safe → New Risk Animation Styles */
+.veto-risk-swap-scene {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px 12px;
+  max-width: 100%;
+}
+
+.veto-risk-stage {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.veto-risk-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(28,43,62,0.5), rgba(12,22,36,0.4));
+  border: 2px solid rgba(110,160,220,0.2);
+  border-radius: var(--radius-lg);
+  min-width: 110px;
+  max-width: 140px;
+  position: relative;
+  transition: all 0.4s ease;
+}
+
+.veto-risk-player img {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  border: 2px solid rgba(131,191,255,0.3);
+  object-fit: cover;
+  transition: all 0.4s ease;
+}
+
+.veto-risk-player .name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--ink);
+}
+
+.veto-risk-player .status-label {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 1;
+}
+
+/* Risk state: red pulse */
+.veto-risk-player.at-risk {
+  border-color: rgba(255,107,107,0.4);
+  animation: riskPulse 2s ease-in-out infinite;
+}
+
+.veto-risk-player.at-risk img {
+  border-color: rgba(255,107,107,0.5);
+}
+
+.veto-risk-player.at-risk .status-label {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+  color: #fff;
+}
+
+@keyframes riskPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255,107,107,0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 8px rgba(255,107,107,0.2);
+  }
+}
+
+/* Safe state: green calm */
+.veto-risk-player.safe {
+  border-color: rgba(76,217,100,0.5);
+  box-shadow: 0 0 20px rgba(76,217,100,0.15);
+  animation: safeGlow 0.6s ease-out;
+}
+
+.veto-risk-player.safe img {
+  border-color: rgba(76,217,100,0.6);
+}
+
+.veto-risk-player.safe .status-label {
+  background: linear-gradient(135deg, #4cd964, #2ecc71);
+  color: #fff;
+}
+
+@keyframes safeGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76,217,100,0);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(76,217,100,0.15);
+  }
+}
+
+/* New risk state: slide in + danger pulse */
+.veto-risk-player.new-risk {
+  border-color: rgba(255,107,107,0.5);
+  animation: newRiskEntry 0.8s ease-out, riskPulse 2s ease-in-out 0.8s infinite;
+}
+
+.veto-risk-player.new-risk img {
+  border-color: rgba(255,107,107,0.6);
+}
+
+.veto-risk-player.new-risk .status-label {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+  color: #fff;
+}
+
+@keyframes newRiskEntry {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.veto-risk-arrow {
+  font-size: 2rem;
+  color: var(--accent);
+  opacity: 0.7;
+  align-self: center;
+}
+
+.veto-stage-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+
+/* Replacement nominee grid styles */
+.veto-replacement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  max-width: 100%;
+  margin: 20px 0;
+}
+
+@media (max-width: 400px) {
+  .veto-replacement-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+  }
+}
+
+.veto-replacement-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(28,43,62,0.4), rgba(12,22,36,0.3));
+  border: 2px solid rgba(110,160,220,0.2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  animation: vetoRevealFadeGrow 0.4s ease-out backwards;
+}
+
+.veto-replacement-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4), 0 0 16px rgba(131,191,255,0.2);
+}
+
+.veto-replacement-tile.selected {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(70,150,255,0.2), rgba(50,120,200,0.15));
+  box-shadow: 0 0 20px rgba(70,150,255,0.3);
+}
+
+.veto-replacement-tile img {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  border: 2px solid rgba(131,191,255,0.3);
+  object-fit: cover;
+  transition: all 0.25s ease;
+}
+
+.veto-replacement-tile:hover img,
+.veto-replacement-tile.selected img {
+  border-color: var(--accent);
+}
+
+.veto-replacement-tile .name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+}
+
+.veto-selection-counter {
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 12px 0;
+}
+
+.veto-confirm-btn {
+  width: 100%;
+  margin-top: 12px;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
 /* Reduced motion: disable all veto animations */
 @media (prefers-reduced-motion: reduce) {
   .veto-nominee-tile,
   .veto-decision-row,
+  .veto-badge-swap-arrow,
+  .veto-replacement-tile,
+  .veto-risk-player {
+    animation: none !important;
+  }
+  
+  .veto-risk-player.at-risk,
+  .veto-risk-player.new-risk {
+    animation: none !important;
+  }
+}
   .veto-badge-swap-tile,
   .veto-badge-swap-arrow {
     animation: none !important;

@@ -32,7 +32,7 @@
     </div>
     <div class="test-case">
       <strong>✓ Unified "Use POV?" Decision</strong>
-      <p class="info">Works for Standard POV, Golden POV, and Diamond POV with correct labels</p>
+      <p class="info">Works for Standard POV, Golden POV, Diamond POV, and future Platinum/Coup d'état with correct labels</p>
     </div>
     <div class="test-case">
       <strong>✓ Legacy Panel Removal</strong>
@@ -40,15 +40,23 @@
     </div>
     <div class="test-case">
       <strong>✓ Concise Copy</strong>
-      <p class="info">All decision text shortened for mobile: intro, decision prompt, replacement required</p>
+      <p class="info">Decision text: "Using it removes a nominee. A replacement must be named." (2 lines max)</p>
     </div>
     <div class="test-case">
       <strong>✓ Action Card Avatars</strong>
       <p class="info">POV holder on not-use/save/adjourn; HOH/POV on replacement; nominee on reactions</p>
     </div>
     <div class="test-case">
-      <strong>✓ Badge Transfer Animation</strong>
-      <p class="info">NOM pill visibly moves from saved nominee to replacement; state commits AFTER animation</p>
+      <strong>✓ Risk-Swap Animation</strong>
+      <p class="info">Clear "risk → safe → new risk" sequence with GSAP timeline; CSS fallback; reduced-motion safe</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Nomination Validation</strong>
+      <p class="info">Final nominees cannot match original pair; error card + re-prompt on invalid</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Multi-Eviction Gating</strong>
+      <p class="info">Golden/Diamond POV suspended during double/triple eviction weeks with info card</p>
     </div>
     <div class="test-case">
       <strong>✓ Mobile Containment</strong>
@@ -56,7 +64,7 @@
     </div>
     <div class="test-case">
       <strong>✓ Reduced Motion Support</strong>
-      <p class="info">Badge transfer respects prefers-reduced-motion; still commits state without animation</p>
+      <p class="info">Risk-swap animation respects prefers-reduced-motion; still commits state without animation</p>
     </div>
     <div class="test-case">
       <strong>✓ Hooks Preserved</strong>
@@ -76,13 +84,14 @@
       <ol class="info">
         <li>Start veto ceremony with human POV holder</li>
         <li>Verify "Use Power of Veto?" prompt appears in TV</li>
+        <li>Verify short copy: "Using it removes a nominee. A replacement must be named."</li>
         <li>Click "Yes — Use Power of Veto"</li>
         <li>Select nominee to save</li>
         <li>Verify "Veto Decision" card shows POV holder avatar</li>
         <li>Verify "Saved" card shows saved player avatar</li>
         <li>Verify "Replacement Required" card shows HOH avatar</li>
         <li>Select replacement nominee</li>
-        <li>Verify badge transfer: NOM pill moves from saved to replacement</li>
+        <li>Verify risk-swap animation: Stage 1 (both at risk) → Stage 2 (saved becomes safe) → Stage 3 (new replacement at risk)</li>
         <li>Verify replacement nominee card appears</li>
         <li>Verify adjourn card shows POV holder avatar</li>
         <li>Verify no legacy panel appears below TV</li>
@@ -104,13 +113,15 @@
       <h3>Scenario 3: Golden POV (Human, Used)</h3>
       <ol class="info">
         <li>Set goldenPOVChance to 100 in config</li>
+        <li>Ensure NOT in double/triple eviction week</li>
         <li>Start veto ceremony with human POV holder</li>
+        <li>Verify twist alert: "The Golden Power of Veto is in play..."</li>
         <li>Verify "Use Golden POV?" prompt appears in TV</li>
         <li>Click "Yes — Use Golden POV"</li>
         <li>Select nominee to save</li>
         <li>Verify "Replacement Required" shows POV holder avatar (not HOH)</li>
         <li>POV holder selects replacement (not HOH)</li>
-        <li>Verify badge transfer animation</li>
+        <li>Verify risk-swap animation</li>
       </ol>
     </div>
 
@@ -118,39 +129,76 @@
       <h3>Scenario 4: Diamond POV (Human, Used)</h3>
       <ol class="info">
         <li>Set diamondPOVChance to 100 in config</li>
+        <li>Ensure NOT in double/triple eviction week</li>
         <li>Start veto ceremony with human POV holder</li>
+        <li>Verify twist alert: "The Diamond Power of Veto is in play..."</li>
         <li>Verify "Use Diamond POV?" prompt appears in TV</li>
         <li>Click "Yes — Use Diamond POV"</li>
         <li>Select 2 replacement nominees</li>
-        <li>Verify both nominees replaced</li>
-        <li>Verify badge transfer shows transition for all nominees</li>
+        <li>Verify both old nominees replaced</li>
+        <li>Verify risk-swap shows transition for multiple nominees</li>
       </ol>
     </div>
 
     <div class="test-case">
-      <h3>Scenario 5: Mobile (375px width)</h3>
+      <h3>Scenario 5: Multi-Eviction Week Gating</h3>
+      <ol class="info">
+        <li>Set goldenPOVChance or diamondPOVChance to 100</li>
+        <li>Enable double or triple eviction (set __twistMode to 'double' or 'triple')</li>
+        <li>Start veto ceremony</li>
+        <li>Verify info card: "Special POV twist suspended for multi-eviction week."</li>
+        <li>Verify ceremony uses Standard POV flow (not Golden/Diamond)</li>
+        <li>Verify "Use Power of Veto?" prompt (not Golden/Diamond)</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 6: Same-Pair Validation</h3>
+      <ol class="info">
+        <li>Start veto ceremony with human POV holder</li>
+        <li>Use veto to save one nominee</li>
+        <li>As HOH, select the SAME player as replacement</li>
+        <li>Verify error card: "Invalid Replacement" with message about same pair</li>
+        <li>Verify replacement chooser re-opens</li>
+        <li>Select different replacement</li>
+        <li>Verify ceremony continues normally</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 7: Mobile (375px width)</h3>
       <ol class="info">
         <li>Resize browser to 375px width</li>
         <li>Start veto ceremony</li>
         <li>Verify all cards fit within TV bounds</li>
         <li>Verify buttons wrap properly without overflow</li>
+        <li>Verify decision copy is readable (2 lines max)</li>
         <li>Verify internal scroll works if card is tall</li>
       </ol>
     </div>
 
     <div class="test-case">
-      <h3>Scenario 6: Reduced Motion</h3>
+      <h3>Scenario 8: Reduced Motion</h3>
       <ol class="info">
         <li>Enable prefers-reduced-motion in browser/OS</li>
         <li>Use POV to save a nominee</li>
-        <li>Verify badge transfer card appears but animation is skipped</li>
+        <li>Verify risk-swap card appears but animations are skipped</li>
         <li>Verify game state still commits correctly</li>
         <li>Verify replacement nominee receives NOM badge</li>
       </ol>
     </div>
 
     <div class="test-case">
-      <h3>Scenario 7: AI POV Holder</h3>
+      <h3>Scenario 9: GSAP vs Fallback</h3>
+      <ol class="info">
+        <li>Test with GSAP loaded: Verify smooth timeline animation</li>
+        <li>Test without GSAP (or block window.gsap): Verify CSS fallback works</li>
+        <li>Both should show same visual stages, just different animation method</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 10: AI POV Holder</h3>
       <ol class="info">
         <li>Start veto ceremony with AI POV holder</li>
         <li>Verify AI makes decision automatically</li>
@@ -172,15 +220,23 @@
     </div>
     <div class="test-case">
       <strong class="pass">✓ Decision prompt works for all POV types</strong>
-      <p class="info">Label shows "Power of Veto", "Golden POV", or "Diamond POV"</p>
+      <p class="info">Label shows "Power of Veto", "Golden POV", "Diamond POV", "Platinum POV", or "Coup d'état"</p>
     </div>
     <div class="test-case">
       <strong class="pass">✓ No legacy panel ever appears</strong>
       <p class="info">Below-TV panel is permanently disabled</p>
     </div>
     <div class="test-case">
-      <strong class="pass">✓ Badge transfer is clear and visible</strong>
-      <p class="info">NOM pill moves from saved to replacement; state updates after arrival</p>
+      <strong class="pass">✓ Risk-swap animation is clear and visible</strong>
+      <p class="info">Three stages show: at risk → safe → new risk; state updates after completion</p>
+    </div>
+    <div class="test-case">
+      <strong class="pass">✓ Nomination validation works</strong>
+      <p class="info">Same pair blocked with error card and re-prompt</p>
+    </div>
+    <div class="test-case">
+      <strong class="pass">✓ Multi-eviction gating works</strong>
+      <p class="info">Special POV twists suspended during double/triple eviction</p>
     </div>
     <div class="test-case">
       <strong class="pass">✓ Mobile layout is safe</strong>
@@ -205,6 +261,9 @@
     <p class="info">
       <strong>Reduced Motion:</strong> In Chrome: DevTools → Rendering → Emulate CSS media feature prefers-reduced-motion.
       In macOS: System Settings → Accessibility → Display → Reduce motion.
+    </p>
+    <p class="info">
+      <strong>Multi-Eviction Week:</strong> Set game.__twistMode = 'double' or 'triple' before ceremony to test gating.
     </p>
   </div>
 
