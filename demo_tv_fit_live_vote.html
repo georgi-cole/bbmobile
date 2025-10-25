@@ -131,8 +131,7 @@
       margin: 0 auto;
       background: 
         linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 10%, transparent 90%, rgba(0,0,0,0.3) 100%),
-        url('/assets/videos/tvscreen.jpg') center/cover,
-        #000;
+        linear-gradient(135deg, #0a0a12 0%, #1a1a28 100%);
       border-radius: 12px;
       position: relative;
       overflow: hidden;
@@ -315,7 +314,13 @@
     
     function startLiveVote() {
       if (!window.lv2) {
-        alert('Live Vote UI not loaded yet. Please wait a moment.');
+        console.warn('[demo] Live Vote UI not loaded yet. Please wait a moment.');
+        const controls = document.querySelector('.controls');
+        const warning = document.createElement('div');
+        warning.style.cssText = 'margin-top: 12px; padding: 12px; background: rgba(255,193,7,0.2); border-radius: 6px; color: #ffc107;';
+        warning.textContent = '⚠️ Live Vote UI is still loading. Please wait a moment and try again.';
+        controls.appendChild(warning);
+        setTimeout(() => warning.remove(), 3000);
         return;
       }
       
@@ -354,7 +359,7 @@
     
     function simulateVote(side) {
       if (!window.lv2) {
-        alert('Please start Live Vote first');
+        console.warn('[demo] Please start Live Vote first');
         return;
       }
       
@@ -394,7 +399,7 @@
     
     async function showInlineResult() {
       if (!window.lv2?.showInlineCard) {
-        alert('Inline card feature not available');
+        console.warn('[demo] Inline card feature not available');
         return;
       }
       
