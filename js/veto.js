@@ -1648,6 +1648,9 @@
         }
       }
 
+      // Sync player badge states after updating nomination states
+      try{ if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates(); }catch(e){}
+
       // Log the veto application with saved and replacement IDs
       var savedIds = [savedId];
       var replacementIds = [replacementId];
