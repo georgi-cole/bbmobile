@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings Modal - Week Twists</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0e1a;
+      color: #e6e8ee;
+      padding: 20px;
+    }
+    
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .55);
+    }
+    
+    .modal {
+      background: #0f1320;
+      border: 1px solid #273041;
+      border-radius: 12px;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, .6);
+      padding: 12px 14px;
+      width: min(980px, 96vw);
+      max-height: 92vh;
+      overflow: auto;
+      position: relative;
+    }
+    
+    .modal h2 {
+      margin: 6px 2px 8px;
+      font-size: 1.12rem;
+    }
+    
+    .closeX {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      border: 0;
+      background: #232a39;
+      color: #e6e8ee;
+      border: 1px solid #2c3446;
+      border-radius: 8px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    
+    .tabBar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 4px 0 8px;
+      padding: 6px 0 8px;
+      border-bottom: 1px solid #2c3446;
+    }
+    
+    .tab-btn {
+      background: #172034;
+      border: 1px solid #2c3446;
+      color: #e6e8ee;
+      border-radius: 999px;
+      padding: 5px 9px;
+      cursor: pointer;
+      font-size: .7rem;
+      line-height: 1;
+    }
+    
+    .tab-btn.active {
+      background: linear-gradient(135deg, #2877a0, #1a4a63);
+      border-color: #2d8ab4;
+    }
+    
+    .settingsTabPane {
+      display: none;
+    }
+    
+    .settingsTabPane.active {
+      display: block;
+    }
+    
+    .settingsGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    
+    .card {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: .92rem;
+      letter-spacing: .4px;
+    }
+    
+    .toggleRow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: space-between;
+      margin: 4px 0;
+    }
+    
+    .toggleRow input[type="number"] {
+      background: #10151d;
+      color: #e6e8ee;
+      border: 1px solid #2c3446;
+      border-radius: 10px;
+      padding: 6px 8px;
+      font-size: .7rem;
+      width: 80px;
+      text-align: center;
+    }
+    
+    .highlight {
+      background: rgba(255, 107, 107, 0.1);
+      border: 2px solid #ff6b6b !important;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
+      50% { box-shadow: 0 0 0 4px rgba(255, 107, 107, 0); }
+    }
+    
+    .new-badge {
+      display: inline-block;
+      background: #ff6b6b;
+      color: white;
+      font-size: 0.6rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="modal-backdrop">
+    <div class="modal">
+      <button class="closeX">✕</button>
+      <h2>⚙️ Settings</h2>
+      
+      <div class="tabBar">
+        <button class="tab-btn">General</button>
+        <button class="tab-btn">Cast</button>
+        <button class="tab-btn active">Gameplay</button>
+        <button class="tab-btn">Timing</button>
+        <button class="tab-btn">Visual</button>
+        <button class="tab-btn">Audio</button>
+        <button class="tab-btn">Advanced</button>
+        <button class="tab-btn">Debug</button>
+      </div>
+      
+      <div class="settingsTabPane active" data-pane="gameplay">
+        <div class="settingsGrid">
+          <div class="card">
+            <h3>Features</h3>
+            <label class="toggleRow">
+              <span>Enable Jury House</span>
+              <input type="checkbox" checked>
+            </label>
+            <label class="toggleRow">
+              <span>Fans' favourite mode</span>
+              <input type="checkbox" checked>
+            </label>
+            <label class="toggleRow">
+              <span>Enable XP and leveling system</span>
+              <input type="checkbox">
+            </label>
+          </div>
+          
+          <div class="card highlight">
+            <h3>Week twists <span class="new-badge">NEW</span></h3>
+            <label class="toggleRow">
+              <span>Double eviction chance (%)</span>
+              <input type="number" value="18" min="0" max="100" step="1">
+            </label>
+            <label class="toggleRow">
+              <span>Triple eviction chance (%)</span>
+              <input type="number" value="7" min="0" max="100" step="1">
+            </label>
+            <label class="toggleRow">
+              <span>Juror return chance (%)</span>
+              <input type="number" value="10" min="0" max="100" step="1">
+            </label>
+            <label class="toggleRow">
+              <span>Self-eviction chance (%)</span>
+              <input type="number" value="1" min="0" max="100" step="0.5">
+            </label>
+            <label class="toggleRow" style="background: rgba(255, 215, 0, 0.15); padding: 4px; border-radius: 6px;">
+              <span>🏆 Golden POV chance (%)</span>
+              <input type="number" value="5" min="0" max="100" step="1" style="border-color: #ffd700;">
+            </label>
+            <label class="toggleRow" style="background: rgba(100, 200, 255, 0.15); padding: 4px; border-radius: 6px;">
+              <span>💎 Diamond POV chance (%)</span>
+              <input type="number" value="3" min="0" max="100" step="1" style="border-color: #64c8ff;">
+            </label>
+          </div>
+          
+          <div class="card">
+            <h3>Minigame settings</h3>
+            <label class="toggleRow">
+              <span>Minigame mode</span>
+              <select style="background: #10151d; color: #e6e8ee; border: 1px solid #2c3446; border-radius: 10px; padding: 6px 8px; font-size: .7rem;">
+                <option>Random</option>
+                <option>Clicker only</option>
+                <option>Cycle through all</option>
+              </select>
+            </label>
+            <label class="toggleRow">
+              <span>Challenge timer duration (s)</span>
+              <input type="number" value="180" min="30" max="600" step="10">
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
