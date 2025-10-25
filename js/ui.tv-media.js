@@ -6,44 +6,9 @@
   const LS_TYPE = 'bb_tv_media_type';   // 'image' | 'video'
   const LS_DATA = 'bb_tv_media_data';   // data URL
 
-  // Robust host selector: try tvViewport, tvFrame, then #tv as fallback
-  function getTvHost(){
-    return document.querySelector('.tvViewport') 
-      || document.querySelector('.tvFrame') 
-      || document.getElementById('tv');
-  }
-
-  // Ensure background and overlay DOM elements exist
-  function ensureBackgroundLayers(){
-    const host = getTvHost();
-    if(!host) return { bg: null, overlay: null };
-
-    let bg = host.querySelector('.bb-tv-bg');
-    if(!bg){
-      bg = document.createElement('div');
-      bg.className = 'bb-tv-bg';
-      host.insertBefore(bg, host.firstChild);
-    }
-
-    let overlay = host.querySelector('.bb-tv-overlay');
-    if(!overlay){
-      overlay = document.createElement('div');
-      overlay.className = 'bb-tv-overlay';
-      // Insert after bg but before other content
-      if(bg.nextSibling){
-        host.insertBefore(overlay, bg.nextSibling);
-      } else {
-        host.appendChild(overlay);
-      }
-    }
-
-    return { bg, overlay };
-  }
+  function tv(){ return document.getElementById('tv'); }
 
   function ensureVideoEl(){
-    const host = getTvHost();
-    if(!host) return null;
-
     let v = document.getElementById('tvBgVideo');
     if (!v) {
       v = document.createElement('video');
@@ -54,88 +19,49 @@
       v.playsInline = true;
       v.setAttribute('playsinline','');
       v.setAttribute('webkit-playsinline','');
-      
-      // Insert video between bg layer and overlay
-      const { bg } = ensureBackgroundLayers();
-      if(bg && bg.nextSibling){
-        host.insertBefore(v, bg.nextSibling);
-      } else {
-        host.appendChild(v);
-      }
+      const host = tv();
+      if (host) host.appendChild(v);
     }
     return v;
   }
 
   function setTvImage(src){
-    const host = getTvHost(); 
-    if(!host) return;
-    
-    ensureBackgroundLayers();
-    
-    // Set CSS variable for background image
-    host.style.setProperty('--tv-bg-url', `url("${src}")`);
+    const host = tv(); if(!host) return;
+    host.style.setProperty('--tv-bg', `url("${src}")`);
     host.classList.add('hasTvBg');
     host.classList.remove('hasTvVideo');
-    
-    // Remove default background class for non-default images
+    // Add special class for default background to show it without overlay
     if(src === DEFAULT_TV_BG){
       host.classList.add('hasDefaultBg');
     } else {
       host.classList.remove('hasDefaultBg');
     }
-    
-    // Stop and remove video if present
     const v = document.getElementById('tvBgVideo');
-    if(v){ 
-      try{ v.pause(); } catch(e) { console.warn('Failed to pause video:', e); }
-      v.removeAttribute('src'); 
-      v.load(); 
-      v.style.display = 'none';
-    }
+    if(v){ try{ v.pause(); }catch{} v.removeAttribute('src'); v.load(); v.remove(); }
   }
 
   function setTvVideo(src){
-    const host = getTvHost(); 
-    if(!host) return;
-    
-    ensureBackgroundLayers();
-    
+    const host = tv(); if(!host) return;
     host.classList.add('hasTvVideo');
     host.classList.remove('hasTvBg');
-    
-    // Keep background for fallback but video will be on top
+    host.style.removeProperty('--tv-bg');
     const v = ensureVideoEl();
-    if(!v) return;
-    
-    try{ v.pause(); } catch(e) { console.warn('Failed to pause video:', e); }
+    try{ v.pause(); }catch{}
     v.src = src;
     v.currentTime = 0;
-    v.style.display = 'block';
     v.play().catch(()=>{});
   }
 
   function clearTvMedia(){
-    const host = getTvHost(); 
-    if(!host) return;
-    
+    const host = tv(); if(!host) return;
     host.classList.remove('hasTvBg','hasTvVideo','hasDefaultBg');
-    host.style.removeProperty('--tv-bg-url');
-    
+    host.style.removeProperty('--tv-bg');
     const v = document.getElementById('tvBgVideo');
-    if(v){ 
-      try{ v.pause(); } catch(e) { console.warn('Failed to pause video:', e); }
-      v.removeAttribute('src'); 
-      v.load(); 
-      v.style.display = 'none';
-    }
-    
+    if(v){ try{ v.pause(); }catch{} v.removeAttribute('src'); v.load(); v.remove(); }
     try{
       localStorage.removeItem(LS_TYPE);
       localStorage.removeItem(LS_DATA);
-    } catch(e) {
-      console.warn('Failed to clear localStorage:', e);
-    }
-    
+    }catch{}
     setTvImage(DEFAULT_TV_BG);
   }
 
@@ -143,15 +69,10 @@
     try{
       const t = localStorage.getItem(LS_TYPE);
       const d = localStorage.getItem(LS_DATA);
-      if(t==='image' && d){ 
-        setTvImage(d);
-      } else if(t==='video' && d){ 
-        setTvVideo(d);
-      } else{ 
-        setTvImage(DEFAULT_TV_BG);
-      }
-    } catch(e) {
-      console.warn('Failed to restore TV media:', e);
+      if(t==='image' && d){ setTvImage(d); }
+      else if(t==='video' && d){ setTvVideo(d); }
+      else{ setTvImage(DEFAULT_TV_BG); }
+    }catch{
       setTvImage(DEFAULT_TV_BG);
     }
   }
@@ -172,7 +93,7 @@
         <input type="file" id="tvMediaUpload" accept="image/*,video/*">
       </div>
       <div class="toggleRow">
-        <span class="tiny muted">Images persist; videos up to ~3.5 MB persist. Larger videos play but won't persist after reload.</span>
+        <span class="tiny muted">Images persist; videos up to ~3.5 MB persist. Larger videos play but won’t persist after reload.</span>
         <button class="btn" id="tvMediaClear">Remove</button>
       </div>
     `;
@@ -193,12 +114,7 @@
           const fr = new FileReader();
           fr.onload = ()=>{
             const data = String(fr.result||'');
-            try{ 
-              localStorage.setItem(LS_TYPE,'image'); 
-              localStorage.setItem(LS_DATA,data); 
-            } catch(e) {
-              console.warn('Failed to save image to localStorage:', e);
-            }
+            try{ localStorage.setItem(LS_TYPE,'image'); localStorage.setItem(LS_DATA,data); }catch{}
             setTvImage(data); g.addLog?.('TV image set.','ok');
           };
           fr.readAsDataURL(f);
@@ -207,23 +123,13 @@
             const fr = new FileReader();
             fr.onload = ()=>{
               const data = String(fr.result||'');
-              try{ 
-                localStorage.setItem(LS_TYPE,'video'); 
-                localStorage.setItem(LS_DATA,data); 
-              } catch(e) {
-                console.warn('Failed to save video to localStorage:', e);
-              }
+              try{ localStorage.setItem(LS_TYPE,'video'); localStorage.setItem(LS_DATA,data); }catch{}
               setTvVideo(data); g.addLog?.('TV video set.','ok');
             };
             fr.readAsDataURL(f);
           } else {
             const url = URL.createObjectURL(f);
-            try{ 
-              localStorage.setItem(LS_TYPE,'video'); 
-              localStorage.removeItem(LS_DATA); 
-            } catch(e) {
-              console.warn('Failed to save video type to localStorage:', e);
-            }
+            try{ localStorage.setItem(LS_TYPE,'video'); localStorage.removeItem(LS_DATA); }catch{}
             setTvVideo(url);
             g.addLog?.('Large video will play but will not persist after reload.','warn');
           }
