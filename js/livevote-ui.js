@@ -88,8 +88,14 @@
     renderPanel();
   }
 
-  // Detect if we should use responsive mode (mobile/narrow viewport)
+  // Detect responsive mode (narrow/portrait viewports)
   function detectResponsiveMode() {
+    // Use TVFit engine if available
+    if (global.TVFit) {
+      return global.TVFit.isNarrow() || global.TVFit.isMobile();
+    }
+    
+    // Fallback to existing logic
     const width = window.innerWidth;
     const height = window.innerHeight;
     const isPortrait = height > width;
@@ -128,6 +134,11 @@
     // Add carousel-on class if using carousel mode (Mobile Carousel 2.0)
     if (state.useCarousel) {
       overlay.classList.add('lv2-carousel-on');
+    }
+    
+    // Apply TV safe area constraints using TVFit if available
+    if (global.TVFit) {
+      global.TVFit.applySafeAreaConstraints(overlay);
     }
     
     overlay.setAttribute('role', 'region');
