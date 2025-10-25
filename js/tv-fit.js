@@ -42,7 +42,7 @@
 
   /**
    * Get TV safe area dimensions
-   * @returns {Object} { top, right, bottom, left, width, height, innerWidth, innerHeight }
+   * @returns {Object} { top, right, bottom, left, width, height, innerWidth, innerHeight, aspectRatio }
    */
   function getTVSafeArea() {
     const tv = document.getElementById('tv');
@@ -72,7 +72,7 @@
       height: tvRect.height,
       innerWidth: innerWidth,
       innerHeight: innerHeight,
-      aspectRatio: innerWidth / innerHeight
+      aspectRatio: innerHeight > 0 ? innerWidth / innerHeight : 0
     };
 
     safeAreaCache = safeArea;
