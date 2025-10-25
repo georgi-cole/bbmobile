@@ -777,6 +777,38 @@
 
   /* ===== TV Overlay Helpers for Contained Veto Ceremony UI ===== */
   
+  /**
+   * Hide/disable legacy below-TV veto decision panel
+   * Sets a global flag to prevent old UI from rendering
+   */
+  function hideLegacyPOVPanels(){
+    var g = global.game;
+    if(!g) return;
+    
+    // Set global flag to disable legacy veto UI
+    g.__disableLegacyVetoUI = true;
+    global.__disableLegacyVetoUI = true;
+    
+    // Clear any legacy panel content
+    var panel = document.querySelector('#panel');
+    if(panel){
+      var legacyHost = panel.querySelector('.minigame-host');
+      if(legacyHost){
+        // Check if it's a veto-related panel
+        var heading = legacyHost.querySelector('h3');
+        if(heading && (
+          heading.textContent.includes('Veto') ||
+          heading.textContent.includes('Power of Veto') ||
+          heading.textContent.includes('Replacement')
+        )){
+          // Remove the legacy panel
+          panel.innerHTML = '';
+        }
+      }
+    }
+  }
+  global.hideLegacyPOVPanels = hideLegacyPOVPanels;
+  
   function ensureTVOverlayScaffold(){
     var tvOverlay = document.getElementById('tvOverlay');
     if(!tvOverlay) return null;
@@ -1766,6 +1798,9 @@
     g.__useTVCeremonyUI = false;
     if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
 
+    // Hide legacy below-TV decision panel
+    hideLegacyPOVPanels();
+
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Ceremony');
     if(typeof global.phaseMusic==='function') global.phaseMusic('nominations');
 
@@ -1842,6 +1877,12 @@
 
   function renderVetoCeremonyPanel(){
     var g = global.game;
+    
+    // Check if legacy UI is disabled
+    if(g && (g.__disableLegacyVetoUI || global.__disableLegacyVetoUI)){
+      return; // Do not render legacy panel
+    }
+    
     var panel = document.querySelector('#panel'); if(!panel) return;
     panel.innerHTML = '';
     var box = document.createElement('div'); box.className='minigame-host';
