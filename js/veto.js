@@ -844,6 +844,13 @@
       var content = ensureTVOverlayScaffold();
       if(!content){ resolve(null); return; }
       
+      // Safety check: handle empty eligible list
+      if(!eligibleIds || eligibleIds.length === 0){
+        console.warn('[veto] renderHOHReplacementChoice called with empty eligibleIds');
+        resolve(null);
+        return;
+      }
+      
       clearTVOverlayContent();
       
       var card = document.createElement('div');
@@ -970,7 +977,11 @@
       
       if(decision){
         // User chose Yes - need to select which nominee to save
-        if(g.nominees.length > 1){
+        // Safety check: ensure nominees array exists and has at least one element
+        if(!g.nominees || g.nominees.length === 0){
+          console.warn('[veto] No nominees to save, treating as veto not used');
+          await finalizeCeremony({ used: false });
+        } else if(g.nominees.length > 1){
           var savedId = await showTVNomineeSavePanel({
             title: 'Save Which Nominee?',
             nominees: g.nominees,
@@ -1281,6 +1292,27 @@
           return !p.hoh && g.nominees.indexOf(p.id)===-1 && p.id!==g.vetoHolder && p.id!==g.vetoSavedId;
         });
         var eligibleIds = repPool.map(function(p){ return p.id; });
+        
+        // Safety check: ensure there are eligible replacements
+        if(eligibleIds.length === 0){
+          console.warn('[veto] No eligible replacements available');
+          try{ if(global.addLog) global.addLog('No eligible replacements available.','danger'); }catch(e){}
+          // Proceed without replacement (edge case)
+          g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
+          g.__vetoCeremonyResolved = true;
+          g.__vetoDecisionInProgress = false;
+          setTimeout(function(){
+            if(typeof global.startSocial==='function'){
+              global.startSocial('veto', function(){
+                if(typeof global.startLiveVote==='function') global.startLiveVote();
+              });
+            } else if(typeof global.startLiveVote==='function'){
+              global.startLiveVote();
+            }
+          }, 200);
+          return;
+        }
+        
         var replacementId = await renderHOHReplacementChoice(g.hohId, eligibleIds);
         if(replacementId != null){
           await applyReplacementAndContinue(replacementId);
