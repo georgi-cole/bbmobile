@@ -524,6 +524,7 @@
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   .transfer-arrow,
+  .transfer-multi-arrow .transfer-arrow,
   .transfer-player .badge.swapping-out,
   .transfer-player .badge.swapping-in,
   .transfer-player.new-nominee {

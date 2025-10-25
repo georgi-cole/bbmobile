@@ -1178,6 +1178,13 @@
    */
   function animateNominationTransfer({fromIds, toIds, duration}){
     return new Promise(function(resolve){
+      // Validate parameters
+      if(!fromIds && !toIds){
+        console.warn('[veto] animateNominationTransfer called without fromIds or toIds');
+        resolve();
+        return;
+      }
+      
       var content = ensureTVOverlayScaffold();
       if(!content){ resolve(); return; }
       

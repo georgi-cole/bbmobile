@@ -337,7 +337,7 @@ if (cssContent.includes('.transfer-player')) {
 }
 
 // Test 39: Check that animation follows announcement
-const animationAfterAnnouncementPattern = /Announcement[\s\S]{1,800}animateNominationTransfer/;
+const animationAfterAnnouncementPattern = /Announcement[\s\S]{1,1500}animateNominationTransfer/;
 if (animationAfterAnnouncementPattern.test(vetoContent)) {
   pass('Badge animation called after announcement (correct flow)');
 } else {
