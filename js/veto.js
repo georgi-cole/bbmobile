@@ -1449,9 +1449,19 @@
       
       var noms = (g.nominees||[]).map(getP);
       var nomsText = noms.map(function(n){ return n?n.name:'?'; }).join(', ');
+      
+      // Twist-aware message: Golden POV means POV holder picks replacement, not HOH
+      var isGoldenTwist = (g.activeVetoTwist === 'golden');
+      var vetoMessage = 'POV Holder: ' + holderName + '. Nominees: ' + nomsText + '.';
+      if(isGoldenTwist){
+        vetoMessage += ' Using the veto will allow you to choose the replacement nominee.';
+      } else {
+        vetoMessage += ' Using the veto will force the HOH to name a replacement nominee.';
+      }
+      
       var decision = await showTVDecision({
         title: 'Would you like to use the Power of Veto?',
-        message: 'POV Holder: ' + holderName + '. Nominees: ' + nomsText + '. Using the veto will force the HOH to name a replacement nominee.',
+        message: vetoMessage,
         buttons: [
           { label: 'Yes — Use the Veto', value: true, primary: true },
           { label: 'No — Keep Nominations the Same', value: false, primary: false }
