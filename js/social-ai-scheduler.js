@@ -16,7 +16,8 @@
     tickIntervalMax: 1800,            // Maximum tick interval (ms)
     maxActionsPerTick: 2,             // 0-2 interactions per tick
     emptyEnergyBurstCount: 3,         // Total AI interactions during empty-energy skip
-    emptyEnergyBurstDelay: 800        // Delay between burst interactions (ms)
+    emptyEnergyBurstDelay: 800,       // Delay between burst interactions (ms)
+    verbose: false                     // Verbose logging for debugging
   };
 
   function getConfig() {
@@ -31,7 +32,8 @@
       maxActionsPerTick: DEFAULT_CONFIG.maxActionsPerTick,
       emptyEnergyBurstCount: DEFAULT_CONFIG.emptyEnergyBurstCount,
       emptyEnergyBurstDelay: DEFAULT_CONFIG.emptyEnergyBurstDelay,
-      highlightsEnabled: cfg.socialHighlightsEnabled ?? true
+      highlightsEnabled: cfg.socialHighlightsEnabled ?? true,
+      verbose: cfg.aiSocialVerbose ?? DEFAULT_CONFIG.verbose
     };
   }
 
@@ -183,9 +185,14 @@
       }
 
       // Execute action using existing engine
-      const result = SM.executeAction?.(actorId, targetIds, action.id);
+      // executeAction signature: executeAction(actorId, targetId, actionId, extraTargetIds)
+      const primaryTarget = targetIds[0];
+      const extraTargets = targetIds.slice(1);
+      const result = SM.executeAction?.(actorId, primaryTarget, action.id, extraTargets);
+      
+      // Defensive: handle missing result
       if (!result) {
-        console.warn('[ai-scheduler] executeAction failed');
+        console.warn('[ai-scheduler] executeAction returned null/undefined');
         return null;
       }
 
@@ -193,22 +200,65 @@
       incrementActionCount(actorId);
       markPairing(actorId, targetIds);
 
-      // Calculate deltas from result (align with human action version in social-maneuvers.js)
-      const outcome = result.outcome;
+      // ============================================================================
+      // NORMALIZE OUTCOME STRUCTURE
+      // ============================================================================
+      // The Social Maneuvers engine returns:
+      // { success, action, outcome, evaluation, succeeded, telemetry, resources, affinityDelta }
+      // Where outcome is: { type, message, affinityChange, traitModifiers, memoryModifiers, succeeded }
+      //
+      // Normalize to extract deltas from multiple possible sources:
+      const outcome = result.outcome || {};
+      
+      // Build normalized deltas object
       const deltas = {
-        influence: outcome.influenceChange || 0,
-        affinity: outcome.affinityChange || result.affinityDelta || 0,
-        information: outcome.informationGain || 0
+        // Energy delta: computed from resources before/after (if available)
+        energy: 0,
+        
+        // Information delta: not directly in outcome, check resources if needed
+        information: 0,
+        
+        // Influence delta: comes from pairwise influence system, not top-level
+        // The influence is tracked per actor-target pair via SocialResources.adjustInfluence
+        influence: 0
       };
+
+      // Extract affinity change (relationship delta)
+      // This can come from outcome.affinityChange or result.affinityDelta
+      const affinityChange = outcome.affinityChange ?? result.affinityDelta ?? 0;
+      
+      // Build pairwise deltas for all targets
+      // Format: { targetId: { affinity: delta, influence: delta } }
+      const pairwise = {};
+      targetIds.forEach(targetId => {
+        pairwise[targetId] = {
+          affinity: affinityChange,
+          influence: 0  // Influence is tracked separately in SocialResources
+        };
+      });
+
+      // Log verbose output for debugging (behind config flag)
+      const config = getConfig();
+      if (config.verbose || global.game?.cfg?.aiSocialVerbose) {
+        console.log('[ai-scheduler] Normalized outcome:', {
+          actionId: action.id,
+          actorId,
+          targetIds,
+          deltas,
+          pairwise,
+          rawOutcome: outcome
+        });
+      }
 
       // Emit event for UI refresh and highlights
       emitAIInteractionEvent({
         actorId,
         targetIds,
         actionId: action.id,
-        success: outcome.type === 'success' || outcome.type === 'positive',
+        success: result.success && (outcome.type === 'success' || outcome.type === 'positive'),
         outcome,
-        deltas
+        deltas,
+        pairwise
       });
 
       return result;
@@ -398,6 +448,46 @@
     _getEligibleAIPlayers: getEligibleAIPlayers
   };
 
+  // ============================================================================
+  // DEV HELPERS
+  // ============================================================================
+  if (!global.__smDebug) {
+    global.__smDebug = {};
+  }
+  
+  // Add AI scheduler debug helper
+  global.__smDebug.runAiTickOnce = function() {
+    console.group('[__smDebug] Running single AI tick');
+    
+    const config = getConfig();
+    console.log('Config:', config);
+    
+    const eligible = getEligibleAIPlayers();
+    console.log('Eligible AI players:', eligible.length, eligible.map(p => p.name || p.id));
+    
+    if (eligible.length < 2) {
+      console.warn('Need at least 2 AI players for interactions');
+      console.groupEnd();
+      return;
+    }
+    
+    // Perform a single interaction with verbose logging
+    const oldVerbose = global.game?.cfg?.aiSocialVerbose;
+    if (global.game && global.game.cfg) {
+      global.game.cfg.aiSocialVerbose = true;
+    }
+    
+    performSingleInteraction();
+    
+    if (global.game && global.game.cfg) {
+      global.game.cfg.aiSocialVerbose = oldVerbose;
+    }
+    
+    console.log('Action counts:', Object.fromEntries(actionCounts));
+    console.groupEnd();
+  };
+
   console.info('[social-ai-scheduler] ✓ Module loaded');
+  console.info('[social-ai-scheduler] ✓ Dev helper: window.__smDebug.runAiTickOnce()');
 
 })(window);
