@@ -36,8 +36,8 @@
   const SAFE_AREA_GUTTER = 8;    // Additional gutter inside safe area
 
   // Cache for measurements
-  let cachedSafeArea = null;
-  let cachedViewportType = null;
+  let safeAreaCache = null;
+  let viewportTypeCache = null;
   let resizeDebounceTimer = null;
 
   /**
@@ -71,11 +71,10 @@
       width: tvRect.width,
       height: tvRect.height,
       innerWidth: innerWidth,
-      innerHeight: innerHeight,
-      aspectRatio: innerWidth / innerHeight
+      innerHeight: innerHeight
     };
 
-    cachedSafeArea = safeArea;
+    safeAreaCache = safeArea;
     return safeArea;
   }
 
@@ -275,8 +274,8 @@
 
       resizeDebounceTimer = setTimeout(() => {
         // Invalidate cache
-        cachedSafeArea = null;
-        cachedViewportType = null;
+        safeAreaCache = null;
+        viewportTypeCache = null;
 
         // Dispatch event for modules to respond to layout changes
         const event = new CustomEvent('tvfit:resize', {

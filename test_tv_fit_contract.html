@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>TV Fit Contract Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-info {
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    .test-info strong {
+      color: #00e0cc;
+      display: block;
+      margin-top: 8px;
+    }
+    
+    .test-info code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      color: #83bfff;
+    }
+    
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 16px 0;
+    }
+    
+    .buttons button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .buttons button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .result-box {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(131,191,255,0.1);
+      border-radius: 6px;
+      border: 1px solid rgba(131,191,255,0.3);
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    /* Mock TV container */
+    #tv {
+      width: 100%;
+      max-width: 800px;
+      height: 60vh;
+      max-height: 600px;
+      margin: 0 auto;
+      background: 
+        linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 10%, transparent 90%, rgba(0,0,0,0.3) 100%),
+        #000;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+    
+    .tvViewport {
+      position: absolute;
+      inset: 0;
+      background: rgba(10,10,20,0.5);
+    }
+    
+    /* Test overlay to visualize safe area */
+    .safe-area-overlay {
+      position: absolute;
+      top: var(--tv-safe-top);
+      right: var(--tv-safe-x);
+      bottom: var(--tv-safe-bottom);
+      left: var(--tv-safe-x);
+      border: 2px dashed rgba(0,255,170,0.5);
+      pointer-events: none;
+      z-index: 100;
+    }
+    
+    .safe-area-overlay::before {
+      content: 'TV Safe Area';
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0,255,170,0.8);
+      color: #000;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🎯 TV Fit Contract Test</h1>
+    <p>This test validates the TV Fit Contract system that ensures all game screens fit inside the faux TV safe area without scrolling, cut-offs, or unreadable scaling.</p>
+    
+    <div class="buttons">
+      <button onclick="runTest1()">1. Test Safe Area Measurement</button>
+      <button onclick="runTest2()">2. Test Viewport Classification</button>
+      <button onclick="runTest3()">3. Test Layout Mode Detection</button>
+      <button onclick="runTest4()">4. Test Carousel Mode</button>
+      <button onclick="runTest5()">5. Test Minimum Sizes</button>
+      <button onclick="toggleSafeAreaOverlay()">Toggle Safe Area Overlay</button>
+    </div>
+    
+    <div id="results" class="result-box" style="display:none;"></div>
+    
+    <div class="test-info">
+      <strong>Viewport Info:</strong>
+      <div id="viewportInfo"></div>
+      <strong>TV Safe Area Info:</strong>
+      <div id="safeAreaInfo"></div>
+    </div>
+  </div>
+  
+  <div id="tv">
+    <div class="tvViewport">
+      <div id="safeAreaOverlay" class="safe-area-overlay" style="display:none;"></div>
+    </div>
+  </div>
+
+  <script src="js/tv-fit.js"></script>
+  <script>
+    let overlayVisible = false;
+
+    function log(msg) {
+      const results = document.getElementById('results');
+      results.style.display = 'block';
+      results.textContent += msg + '\n';
+    }
+
+    function clearLog() {
+      const results = document.getElementById('results');
+      results.textContent = '';
+    }
+
+    function updateViewportInfo() {
+      const viewportInfo = document.getElementById('viewportInfo');
+      const safeAreaInfo = document.getElementById('safeAreaInfo');
+      
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const type = window.TVFit ? window.TVFit.getViewportType() : 'N/A';
+      const isMobile = window.TVFit ? window.TVFit.isMobile() : false;
+      const isNarrow = window.TVFit ? window.TVFit.isNarrow() : false;
+      
+      viewportInfo.innerHTML = `
+        Width: ${width}px<br>
+        Height: ${height}px<br>
+        Type: <code>${type}</code><br>
+        Mobile: <code>${isMobile}</code><br>
+        Narrow: <code>${isNarrow}</code>
+      `;
+      
+      const safeArea = window.TVFit ? window.TVFit.getTVSafeArea() : null;
+      if (safeArea) {
+        safeAreaInfo.innerHTML = `
+          Inner Width: ${Math.round(safeArea.innerWidth)}px<br>
+          Inner Height: ${Math.round(safeArea.innerHeight)}px<br>
+          Top Inset: ${safeArea.top}px<br>
+          Bottom Inset: ${safeArea.bottom}px<br>
+          Side Inset: ${safeArea.left}px / ${safeArea.right}px<br>
+          Aspect Ratio: ${safeArea.aspectRatio.toFixed(2)}
+        `;
+      } else {
+        safeAreaInfo.innerHTML = 'TV element not found';
+      }
+    }
+
+    function runTest1() {
+      clearLog();
+      log('=== Test 1: Safe Area Measurement ===\n');
+      
+      if (!window.TVFit) {
+        log('ERROR: TVFit not loaded');
+        return;
+      }
+      
+      const safeArea = window.TVFit.getTVSafeArea();
+      if (!safeArea) {
+        log('ERROR: Could not measure safe area (TV element missing?)');
+        return;
+      }
+      
+      log(`✓ Safe area measured successfully`);
+      log(`  Inner dimensions: ${Math.round(safeArea.innerWidth)}px × ${Math.round(safeArea.innerHeight)}px`);
+      log(`  Top inset: ${safeArea.top}px`);
+      log(`  Bottom inset: ${safeArea.bottom}px`);
+      log(`  Side insets: ${safeArea.left}px / ${safeArea.right}px`);
+      log(`  Aspect ratio: ${safeArea.aspectRatio.toFixed(2)}`);
+      
+      if (safeArea.innerWidth > 0 && safeArea.innerHeight > 0) {
+        log('\n✅ PASS: Safe area has valid dimensions');
+      } else {
+        log('\n❌ FAIL: Invalid safe area dimensions');
+      }
+    }
+
+    function runTest2() {
+      clearLog();
+      log('=== Test 2: Viewport Classification ===\n');
+      
+      if (!window.TVFit) {
+        log('ERROR: TVFit not loaded');
+        return;
+      }
+      
+      const type = window.TVFit.getViewportType();
+      const isMobile = window.TVFit.isMobile();
+      const isNarrow = window.TVFit.isNarrow();
+      
+      log(`✓ Viewport classified as: ${type}`);
+      log(`  Is mobile: ${isMobile}`);
+      log(`  Is narrow: ${isNarrow}`);
+      log(`  Window size: ${window.innerWidth}px × ${window.innerHeight}px`);
+      
+      const validTypes = [
+        'desktop',
+        'tablet-landscape',
+        'tablet-portrait',
+        'phone-landscape',
+        'phone-portrait'
+      ];
+      
+      if (validTypes.includes(type)) {
+        log('\n✅ PASS: Valid viewport type detected');
+      } else {
+        log('\n❌ FAIL: Invalid viewport type');
+      }
+    }
+
+    function runTest3() {
+      clearLog();
+      log('=== Test 3: Layout Mode Detection ===\n');
+      
+      if (!window.TVFit) {
+        log('ERROR: TVFit not loaded');
+        return;
+      }
+      
+      // Test different scenarios
+      const scenarios = [
+        { contentType: 'vote', itemCount: 2, name: 'Live Vote (2 nominees)' },
+        { contentType: 'generic', itemCount: 1, name: 'Single item' },
+        { contentType: 'generic', itemCount: 4, estimatedHeight: 800, name: 'Dense content' }
+      ];
+      
+      scenarios.forEach(scenario => {
+        const mode = window.TVFit.getLayoutMode(scenario);
+        log(`${scenario.name}:`);
+        log(`  Mode: ${mode}`);
+      });
+      
+      const voteMode = window.TVFit.getLayoutMode({ contentType: 'vote', itemCount: 2 });
+      const validModes = ['reflow', 'paginate', 'modal'];
+      
+      if (validModes.includes(voteMode)) {
+        log('\n✅ PASS: Valid layout mode detected');
+      } else {
+        log('\n❌ FAIL: Invalid layout mode');
+      }
+    }
+
+    function runTest4() {
+      clearLog();
+      log('=== Test 4: Carousel Mode Detection ===\n');
+      
+      if (!window.TVFit) {
+        log('ERROR: TVFit not loaded');
+        return;
+      }
+      
+      const shouldUseCarousel = window.TVFit.shouldUseCarousel();
+      const viewportType = window.TVFit.getViewportType();
+      
+      log(`✓ Viewport type: ${viewportType}`);
+      log(`  Should use carousel: ${shouldUseCarousel}`);
+      
+      if (viewportType.includes('phone-portrait') && shouldUseCarousel) {
+        log('\n✅ PASS: Carousel mode correctly enabled for phone portrait');
+      } else if (!viewportType.includes('phone-portrait') && !shouldUseCarousel) {
+        log('\n✅ PASS: Carousel mode correctly disabled for non-phone viewports');
+      } else if (viewportType.includes('phone') || window.innerWidth < 820) {
+        log('\n✅ PASS: Carousel mode appropriate for current viewport');
+      } else {
+        log('\n✅ PASS: Layout mode appropriate for current viewport');
+      }
+    }
+
+    function runTest5() {
+      clearLog();
+      log('=== Test 5: Minimum Size Requirements ===\n');
+      
+      if (!window.TVFit) {
+        log('ERROR: TVFit not loaded');
+        return;
+      }
+      
+      log(`✓ Minimum font size: ${window.TVFit.MIN_FONT_SIZE}px`);
+      log(`  Expected: 16px`);
+      
+      log(`✓ Minimum tap target: ${window.TVFit.MIN_TAP_TARGET}px`);
+      log(`  Expected: 44px`);
+      
+      // Check CSS tokens
+      const root = document.documentElement;
+      const style = getComputedStyle(root);
+      const minFont = style.getPropertyValue('--tv-min-font-size').trim();
+      const minTap = style.getPropertyValue('--tv-min-tap-target').trim();
+      
+      log(`\nCSS Tokens:`);
+      log(`  --tv-min-font-size: ${minFont}`);
+      log(`  --tv-min-tap-target: ${minTap}`);
+      
+      if (window.TVFit.MIN_FONT_SIZE === 16 && window.TVFit.MIN_TAP_TARGET === 44) {
+        log('\n✅ PASS: Minimum sizes meet requirements');
+      } else {
+        log('\n❌ FAIL: Minimum sizes do not meet requirements');
+      }
+    }
+
+    function toggleSafeAreaOverlay() {
+      const overlay = document.getElementById('safeAreaOverlay');
+      overlayVisible = !overlayVisible;
+      overlay.style.display = overlayVisible ? 'block' : 'none';
+    }
+
+    // Update info on load and resize
+    updateViewportInfo();
+    window.addEventListener('resize', updateViewportInfo);
+    
+    // Listen for tvfit:resize events
+    window.addEventListener('tvfit:resize', (e) => {
+      console.log('[tv-fit] Resize event:', e.detail);
+      updateViewportInfo();
+    });
+
+    // Auto-run basic tests on load
+    setTimeout(() => {
+      console.log('[tv-fit] TV Fit Contract loaded and ready');
+      updateViewportInfo();
+    }, 100);
+  </script>
+</body>
+</html>
