@@ -115,19 +115,17 @@
 
     // Left contestant with drop anchor
     const leftSide = createContestant('left', state.leftName, state.leftId);
-    const leftAnchor = document.createElement('div');
-    leftAnchor.className = 'lv2-drop-anchor left';
-    leftSide.appendChild(leftAnchor);
     grid.appendChild(leftSide);
+
+    // Center stage with portal and arcs (v2.1 feature)
+    const centerStage = createCenterStage();
+    grid.appendChild(centerStage);
 
     // Right contestant with drop anchor
     const rightSide = createContestant('right', state.rightName, state.rightId);
-    const rightAnchor = document.createElement('div');
-    rightAnchor.className = 'lv2-drop-anchor right';
-    rightSide.appendChild(rightAnchor);
     grid.appendChild(rightSide);
     
-    // Hidden stage for vote announcements (no visual display)
+    // Hidden stage for vote announcements (only for ARIA)
     const stage = document.createElement('div');
     stage.className = 'lv2-stage';
     stage.setAttribute('role', 'log');
@@ -145,7 +143,7 @@
     status.textContent = 'Waiting for votes...';
     container.appendChild(status);
 
-    // CTA footer row (reserved for buttons, never overlaps avatars)
+    // CTA footer row (legacy, now hidden by default)
     const ctaRow = document.createElement('div');
     ctaRow.className = 'lv2-cta-row';
     container.appendChild(ctaRow);
@@ -173,13 +171,15 @@
     contestant.className = `lv2-contestant ${side}`;
     contestant.dataset.side = side;
 
-    // Avatar
+    // Avatar with gradient ring
+    const avatarWrapper = document.createElement('div');
+    avatarWrapper.className = 'lv2-avatar';
     const avatar = document.createElement('img');
-    avatar.className = 'lv2-avatar';
     avatar.src = getAvatarUrl(playerId);
     avatar.alt = name;
     avatar.loading = 'lazy';
-    contestant.appendChild(avatar);
+    avatarWrapper.appendChild(avatar);
+    contestant.appendChild(avatarWrapper);
 
     // Name
     const nameEl = document.createElement('div');
@@ -187,7 +187,7 @@
     nameEl.textContent = name;
     contestant.appendChild(nameEl);
 
-    // Count
+    // Count capsule
     const count = document.createElement('div');
     count.className = 'lv2-count';
     count.dataset.count = '0';
@@ -195,7 +195,30 @@
     count.setAttribute('aria-label', `${name}: 0 votes`);
     contestant.appendChild(count);
 
+    // CTA pill container under the nominee (v2.1.1)
+    const ctaSide = document.createElement('div');
+    ctaSide.className = 'lv2-cta-side';
+    ctaSide.dataset.side = side;
+    ctaSide.dataset.playerId = playerId;
+    contestant.appendChild(ctaSide);
+
+    // Drop anchor for vote pip animation
+    const anchor = document.createElement('div');
+    anchor.className = `lv2-drop-anchor ${side}`;
+    contestant.appendChild(anchor);
+
     return contestant;
+  }
+
+  // Create center stage with meter, portal, and arcs (v2.1)
+  function createCenterStage() {
+    const stage = document.createElement('div');
+    stage.className = 'lv2-center-stage';
+    
+    const meter = createMeter();
+    stage.appendChild(meter);
+    
+    return stage;
   }
 
   // Create central meter with V2.1 portal and SVG arcs
@@ -547,14 +570,8 @@
     }
   }
 
-  // Create voting CTA bar in reserved footer row (never overlaps avatars)
+  // Create voting CTA pills under each nominee (v2.1.1)
   function createCtaBar(options = {}) {
-    const ctaRow = state.container?.querySelector('.lv2-cta-row');
-    if (!ctaRow) return;
-
-    // Clear existing buttons
-    ctaRow.innerHTML = '';
-
     const {
       enabled = false,
       isTieBreak = false,
@@ -566,48 +583,73 @@
       onVote = null
     } = options;
 
-    ctaRow.setAttribute('role', 'group');
-    ctaRow.setAttribute('aria-label', 'Voting controls');
+    // Find CTA side containers under each contestant
+    const leftCtaSide = state.container?.querySelector('.lv2-cta-side[data-side="left"]');
+    const rightCtaSide = state.container?.querySelector('.lv2-cta-side[data-side="right"]');
+    
+    if (!leftCtaSide || !rightCtaSide) return;
+
+    // Clear existing pills
+    leftCtaSide.innerHTML = '';
+    rightCtaSide.innerHTML = '';
 
     if (isFinal4) {
-      // Final 4: Single vote button (sole vote)
-      const btn = document.createElement('button');
-      btn.className = 'lv2-cta-btn';
-      btn.textContent = `Cast Sole Vote`;
-      btn.disabled = !enabled;
-      btn.setAttribute('aria-label', 'Cast your sole vote');
-      btn.onclick = () => {
-        if (onVote) onVote(null); // Let the caller handle the UI for picking
-      };
-      ctaRow.appendChild(btn);
+      // Final 4: Show prompt on both sides but only allow one vote
+      const infoText = document.createElement('div');
+      infoText.className = 'tiny muted';
+      infoText.textContent = 'Cast sole vote';
+      infoText.style.textAlign = 'center';
+      leftCtaSide.appendChild(infoText);
+      
+      const infoText2 = document.createElement('div');
+      infoText2.className = 'tiny muted';
+      infoText2.textContent = 'Cast sole vote';
+      infoText2.style.textAlign = 'center';
+      rightCtaSide.appendChild(infoText2);
+      
+      // Add onclick to the contestant areas for Final 4
+      const leftContestant = state.container?.querySelector('.lv2-contestant.left');
+      const rightContestant = state.container?.querySelector('.lv2-contestant.right');
+      if (enabled && onVote) {
+        if (leftContestant) {
+          leftContestant.style.cursor = 'pointer';
+          leftContestant.onclick = () => onVote(leftId);
+        }
+        if (rightContestant) {
+          rightContestant.style.cursor = 'pointer';
+          rightContestant.onclick = () => onVote(rightId);
+        }
+      }
     } else if (isTieBreak) {
       // Tie-break: HOH wording
       const btnLeft = document.createElement('button');
-      btnLeft.className = 'lv2-cta-btn';
-      btnLeft.textContent = `Break Tie: Evict ${leftName}`;
+      btnLeft.className = 'lv2-cta-pill';
+      btnLeft.textContent = 'Break Tie';
       btnLeft.disabled = !enabled;
       btnLeft.setAttribute('aria-label', `Break tie by evicting ${leftName}`);
       btnLeft.dataset.pick = leftId;
+      btnLeft.dataset.key = '1';
       btnLeft.onclick = () => {
         if (onVote) onVote(leftId);
       };
-      ctaRow.appendChild(btnLeft);
+      leftCtaSide.appendChild(btnLeft);
 
       const btnRight = document.createElement('button');
-      btnRight.className = 'lv2-cta-btn';
-      btnRight.textContent = `Break Tie: Evict ${rightName}`;
+      btnRight.className = 'lv2-cta-pill';
+      btnRight.textContent = 'Break Tie';
       btnRight.disabled = !enabled;
       btnRight.setAttribute('aria-label', `Break tie by evicting ${rightName}`);
       btnRight.dataset.pick = rightId;
+      btnRight.dataset.key = '2';
       btnRight.onclick = () => {
         if (onVote) onVote(rightId);
       };
-      ctaRow.appendChild(btnRight);
+      rightCtaSide.appendChild(btnRight);
     } else {
-      // Normal vote: Two buttons
+      // Normal vote: Pill under each nominee
       const btnLeft = document.createElement('button');
-      btnLeft.className = 'lv2-cta-btn';
-      btnLeft.textContent = `Evict ${leftName}`;
+      btnLeft.className = 'lv2-cta-pill';
+      btnLeft.textContent = 'Evict';
       btnLeft.disabled = !enabled;
       btnLeft.setAttribute('aria-label', `Vote to evict ${leftName}. Press 1 to select.`);
       btnLeft.dataset.pick = leftId;
@@ -615,11 +657,11 @@
       btnLeft.onclick = () => {
         if (onVote) onVote(leftId);
       };
-      ctaRow.appendChild(btnLeft);
+      leftCtaSide.appendChild(btnLeft);
 
       const btnRight = document.createElement('button');
-      btnRight.className = 'lv2-cta-btn';
-      btnRight.textContent = `Evict ${rightName}`;
+      btnRight.className = 'lv2-cta-pill';
+      btnRight.textContent = 'Evict';
       btnRight.disabled = !enabled;
       btnRight.setAttribute('aria-label', `Vote to evict ${rightName}. Press 2 to select.`);
       btnRight.dataset.pick = rightId;
@@ -627,11 +669,12 @@
       btnRight.onclick = () => {
         if (onVote) onVote(rightId);
       };
-      ctaRow.appendChild(btnRight);
+      rightCtaSide.appendChild(btnRight);
     }
 
-    state.ctaBar = ctaRow;
-    return ctaRow;
+    // Store reference for later updates
+    state.ctaBar = { leftCtaSide, rightCtaSide };
+    return { leftCtaSide, rightCtaSide };
   }
 
   // Update CTA bar state
@@ -639,7 +682,13 @@
     if (!state.ctaBar) return;
 
     const { enabled = false } = options;
-    const buttons = state.ctaBar.querySelectorAll('.lv2-cta-btn');
+    const { leftCtaSide, rightCtaSide } = state.ctaBar;
+    
+    const buttons = [
+      ...(leftCtaSide?.querySelectorAll('.lv2-cta-pill') || []),
+      ...(rightCtaSide?.querySelectorAll('.lv2-cta-pill') || [])
+    ];
+    
     buttons.forEach(btn => {
       btn.disabled = !enabled;
     });
@@ -684,18 +733,26 @@
     if (tag) tag.remove();
   }
 
-  // V2.1: Highlight CTA bar when it's user's turn
+  // V2.1.1: Highlight CTA pills when it's user's turn
   function highlightCtaBar(active) {
     if (!state.ctaBar) return;
     
+    const { leftCtaSide, rightCtaSide } = state.ctaBar;
+    const pills = [
+      ...(leftCtaSide?.querySelectorAll('.lv2-cta-pill') || []),
+      ...(rightCtaSide?.querySelectorAll('.lv2-cta-pill') || [])
+    ];
+    
     if (active) {
-      state.ctaBar.classList.add('active');
-      const buttons = state.ctaBar.querySelectorAll('.lv2-cta-btn:not(:disabled)');
-      buttons.forEach(btn => btn.classList.add('active'));
+      pills.forEach(pill => {
+        if (!pill.disabled) {
+          pill.classList.add('active');
+        }
+      });
     } else {
-      state.ctaBar.classList.remove('active');
-      const buttons = state.ctaBar.querySelectorAll('.lv2-cta-btn');
-      buttons.forEach(btn => btn.classList.remove('active'));
+      pills.forEach(pill => {
+        pill.classList.remove('active');
+      });
     }
   }
 
@@ -791,10 +848,15 @@
     const key = e.key;
     if (key !== '1' && key !== '2') return;
 
-    const buttons = state.ctaBar.querySelectorAll('.lv2-cta-btn');
-    buttons.forEach(btn => {
-      if (btn.dataset.key === key && !btn.disabled) {
-        btn.click();
+    const { leftCtaSide, rightCtaSide } = state.ctaBar;
+    const pills = [
+      ...(leftCtaSide?.querySelectorAll('.lv2-cta-pill') || []),
+      ...(rightCtaSide?.querySelectorAll('.lv2-cta-pill') || [])
+    ];
+    
+    pills.forEach(pill => {
+      if (pill.dataset.key === key && !pill.disabled) {
+        pill.click();
         e.preventDefault();
       }
     });
