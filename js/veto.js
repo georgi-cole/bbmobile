@@ -2257,17 +2257,17 @@
       // Show replacement required message - concise for mobile
       var isGoldenPOV = (g.activeVetoTwist === 'golden');
       var replacerName = isGoldenPOV ? 'POV holder' : 'HOH';
-      await showTVCard({
-        title: 'Replacement Required',
-        lines: ['The ' + replacerName + ' must now select a replacement nominee.'],
-        tone: 'noms',
-        duration: 3200
-      });
-
-      // Check for Golden POV twist - POV holder picks replacement instead of HOH
       var holder = getP(g.vetoHolder);
       var picker = isGoldenPOV ? holder : hoh;
       var pickerName = picker ? picker.name : replacerName;
+      
+      await showTVCardWithAvatars({
+        title: 'Replacement Required',
+        lines: ['The ' + replacerName + ' must now select a replacement nominee.'],
+        tone: 'noms',
+        duration: 3200,
+        actorIds: picker ? picker.id : null
+      });
 
       if(picker && picker.human){
         g._awaitingReplacement = true;
@@ -2338,12 +2338,13 @@
         await showNomineeReactionsSimultaneously(g.nominees);
       }
 
-      // Show adjourn message
-      await showTVCard({
+      // Show adjourn message with POV holder avatar
+      await showTVCardWithAvatars({
         title: 'Veto Ceremony',
         lines: ['This veto ceremony is adjourned.'],
         tone: 'veto',
-        duration: 2800
+        duration: 2800,
+        actorIds: g.vetoHolder
       });
 
       g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
@@ -2464,12 +2465,13 @@
       try{ if(global.addLog) global.addLog('Veto used, but no valid replacement available.','danger'); }catch(e){}
     }
 
-    // Show adjourn message
-    await showTVCard({
+    // Show adjourn message with POV holder avatar
+    await showTVCardWithAvatars({
       title: 'Veto Ceremony',
       lines: ['This veto ceremony is adjourned.'],
       tone: 'veto',
-      duration: 2800
+      duration: 2800,
+      actorIds: g.vetoHolder
     });
 
     // Proceed to next phase
@@ -2594,12 +2596,13 @@
       try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
     }
     
-    // Show adjourn message
-    await showTVCard({
+    // Show adjourn message with POV holder avatar
+    await showTVCardWithAvatars({
       title: 'Veto Ceremony',
       lines: ['This veto ceremony is adjourned.'],
       tone: 'veto',
-      duration: 2800
+      duration: 2800,
+      actorIds: g.vetoHolder
     });
     
     // Proceed to next phase
