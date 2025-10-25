@@ -120,8 +120,23 @@
     return null;
   }
   
+  /**
+   * Get the veto type label for decision UI
+   * Returns "Power of Veto", "Golden POV", or "Diamond POV"
+   */
+  function getVetoTypeLabel(){
+    var g = global.game;
+    if(!g) return 'Power of Veto';
+    
+    if(g.activeVetoTwist === 'diamond') return 'Diamond POV';
+    if(g.activeVetoTwist === 'golden') return 'Golden POV';
+    
+    return 'Power of Veto';
+  }
+  
   global.decideVetoTwistForWeek = decideVetoTwistForWeek;
   global.getActiveVetoTwistName = getActiveVetoTwistName;
+  global.getVetoTypeLabel = getVetoTypeLabel;
 
   function sample(arr, k){
     var a = arr.slice();
@@ -762,6 +777,38 @@
 
   /* ===== TV Overlay Helpers for Contained Veto Ceremony UI ===== */
   
+  /**
+   * Hide/disable legacy below-TV veto decision panel
+   * Sets a global flag to prevent old UI from rendering
+   */
+  function hideLegacyPOVPanels(){
+    var g = global.game;
+    if(!g) return;
+    
+    // Set global flag to disable legacy veto UI
+    g.__disableLegacyVetoUI = true;
+    global.__disableLegacyVetoUI = true;
+    
+    // Clear any legacy panel content
+    var panel = document.querySelector('#panel');
+    if(panel){
+      var legacyHost = panel.querySelector('.minigame-host');
+      if(legacyHost){
+        // Check if it's a veto-related panel
+        var heading = legacyHost.querySelector('h3');
+        if(heading && (
+          heading.textContent.includes('Veto') ||
+          heading.textContent.includes('Power of Veto') ||
+          heading.textContent.includes('Replacement')
+        )){
+          // Remove the legacy panel
+          panel.innerHTML = '';
+        }
+      }
+    }
+  }
+  global.hideLegacyPOVPanels = hideLegacyPOVPanels;
+  
   function ensureTVOverlayScaffold(){
     var tvOverlay = document.getElementById('tvOverlay');
     if(!tvOverlay) return null;
@@ -837,7 +884,7 @@
       clearTVOverlayContent();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
+      card.className = 'revealCard diaryRoomCard tvCardBody';
       if(tone) card.setAttribute('data-tone', tone);
       
       var h3 = document.createElement('h3');
@@ -883,7 +930,7 @@
       clearTVOverlayContent();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
+      card.className = 'revealCard diaryRoomCard tvCardBody';
       if(tone) card.setAttribute('data-tone', tone);
       
       // Build avatar row if actors/subjects provided
@@ -1019,7 +1066,7 @@
       clearTVOverlayContent();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
+      card.className = 'revealCard diaryRoomCard tvCardBody';
       
       var h3 = document.createElement('h3');
       h3.textContent = title;
@@ -1084,7 +1131,7 @@
       clearTVOverlayContent();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
+      card.className = 'revealCard diaryRoomCard tvCardBody';
       
       var h3 = document.createElement('h3');
       h3.textContent = title;
@@ -1166,6 +1213,37 @@
       }, 100);
     });
   }
+  
+  /**
+   * Unified "Use POV?" decision prompt for all POV types
+   * Works for Standard POV, Golden POV, and Diamond POV
+   * @param {number} povId - The POV holder's player ID
+   * @returns {Promise<boolean>} true if user chooses to use POV, false otherwise
+   */
+  async function renderPOVUseDecision(povId){
+    var g = global.game;
+    var holder = getP(povId);
+    var holderName = holder ? holder.name : 'POV Holder';
+    
+    // Get the veto type label
+    var vetoLabel = getVetoTypeLabel();
+    
+    // Build short decision copy (max 2 lines)
+    var decisionCopy = holderName + ' holds the ' + vetoLabel + '.';
+    
+    // Show decision prompt
+    var decision = await showTVDecision({
+      title: 'Use ' + vetoLabel + '?',
+      message: decisionCopy,
+      buttons: [
+        { label: 'Yes — Use ' + vetoLabel, value: true, primary: true },
+        { label: 'No — Keep Nominations', value: false, primary: false }
+      ]
+    });
+    
+    return decision;
+  }
+  global.renderPOVUseDecision = renderPOVUseDecision;
   
   /**
    * Animate nomination transfer with badge movement
@@ -1432,6 +1510,215 @@
       }, 300);
     });
   }
+  
+  /**
+   * Enhanced badge transfer animation with visible NOM pill movement
+   * Shows saved nominee with NOM → replacement nominee without NOM
+   * Animates single NOM pill from left to right
+   * Only commits game state AFTER animation completes
+   * Respects reduced-motion preference
+   * @param {number} savedId - ID of saved nominee (loses NOM)
+   * @param {number} replacementId - ID of replacement nominee (gains NOM)
+   * @returns {Promise} Resolves after animation and state commit
+   */
+  function renderBadgeTransfer(savedId, replacementId){
+    return new Promise(function(resolve){
+      var g = global.game;
+      var content = ensureTVOverlayScaffold();
+      if(!content){ resolve(); return; }
+      
+      clearTVOverlayContent();
+      
+      // Check for reduced motion preference
+      var prefersReducedMotion = false;
+      try{
+        prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      }catch(e){}
+      
+      var card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard tvCardBody';
+      
+      var h3 = document.createElement('h3');
+      h3.textContent = 'Badge Transfer';
+      card.appendChild(h3);
+      
+      var container = document.createElement('div');
+      container.style.display = 'flex';
+      container.style.gap = '24px';
+      container.style.justifyContent = 'center';
+      container.style.alignItems = 'center';
+      container.style.flexWrap = 'wrap';
+      container.style.marginTop = '16px';
+      container.style.position = 'relative';
+      
+      // Left: Saved nominee (starts WITH NOM badge)
+      var savedP = getP(savedId);
+      var leftTile = document.createElement('div');
+      leftTile.style.display = 'flex';
+      leftTile.style.flexDirection = 'column';
+      leftTile.style.alignItems = 'center';
+      leftTile.style.gap = '8px';
+      leftTile.style.position = 'relative';
+      
+      var leftImg = document.createElement('img');
+      var resolveAvatar = (global.Game || global).resolveAvatar;
+      leftImg.src = resolveAvatar ? resolveAvatar(savedP) : (savedP ? (savedP.avatar || savedP.img || savedP.photo) : null);
+      if(!leftImg.src){
+        leftImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(savedP ? savedP.name : String(savedId));
+      }
+      leftImg.style.width = '80px';
+      leftImg.style.height = '80px';
+      leftImg.style.borderRadius = '12px';
+      leftImg.style.objectFit = 'cover';
+      leftImg.style.border = '2px solid rgba(255,255,255,0.3)';
+      leftTile.appendChild(leftImg);
+      
+      var leftName = document.createElement('div');
+      leftName.textContent = savedP ? savedP.name : '?';
+      leftName.style.fontSize = '0.85rem';
+      leftName.style.fontWeight = '600';
+      leftTile.appendChild(leftName);
+      
+      // NOM badge on left (initially visible)
+      var nomPill = document.createElement('div');
+      nomPill.className = 'nom-pill-transfer';
+      nomPill.textContent = 'NOM';
+      nomPill.style.position = 'absolute';
+      nomPill.style.bottom = '-6px';
+      nomPill.style.left = '50%';
+      nomPill.style.transform = 'translateX(-50%)';
+      nomPill.style.padding = '4px 10px';
+      nomPill.style.borderRadius = '12px';
+      nomPill.style.background = 'linear-gradient(135deg, #ff6b6b, #ee5a6f)';
+      nomPill.style.color = '#fff';
+      nomPill.style.fontSize = '0.7rem';
+      nomPill.style.fontWeight = '700';
+      nomPill.style.textTransform = 'uppercase';
+      nomPill.style.boxShadow = '0 2px 8px rgba(238, 90, 111, 0.4)';
+      nomPill.style.zIndex = '10';
+      leftTile.appendChild(nomPill);
+      
+      container.appendChild(leftTile);
+      
+      // Arrow
+      var arrow = document.createElement('div');
+      arrow.textContent = '→';
+      arrow.style.fontSize = '32px';
+      arrow.style.opacity = '0.7';
+      container.appendChild(arrow);
+      
+      // Right: Replacement nominee (starts WITHOUT NOM badge)
+      var repP = getP(replacementId);
+      var rightTile = document.createElement('div');
+      rightTile.style.display = 'flex';
+      rightTile.style.flexDirection = 'column';
+      rightTile.style.alignItems = 'center';
+      rightTile.style.gap = '8px';
+      rightTile.style.position = 'relative';
+      
+      var rightImg = document.createElement('img');
+      rightImg.src = resolveAvatar ? resolveAvatar(repP) : (repP ? (repP.avatar || repP.img || repP.photo) : null);
+      if(!rightImg.src){
+        rightImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(repP ? repP.name : String(replacementId));
+      }
+      rightImg.style.width = '80px';
+      rightImg.style.height = '80px';
+      rightImg.style.borderRadius = '12px';
+      rightImg.style.objectFit = 'cover';
+      rightImg.style.border = '2px solid rgba(255,255,255,0.3)';
+      rightTile.appendChild(rightImg);
+      
+      var rightName = document.createElement('div');
+      rightName.textContent = repP ? repP.name : '?';
+      rightName.style.fontSize = '0.85rem';
+      rightName.style.fontWeight = '600';
+      rightTile.appendChild(rightName);
+      
+      container.appendChild(rightTile);
+      card.appendChild(container);
+      content.appendChild(card);
+      
+      var tv = document.getElementById('tv');
+      if(tv) tv.classList.add('tvTall');
+      
+      // Animate the NOM pill from left to right
+      if(!prefersReducedMotion && nomPill.animate){
+        // Get positions for animation
+        setTimeout(function(){
+          var leftRect = leftTile.getBoundingClientRect();
+          var rightRect = rightTile.getBoundingClientRect();
+          var deltaX = rightRect.left - leftRect.left;
+          
+          // Animate pill moving from left to right
+          var animation = nomPill.animate([
+            { transform: 'translateX(-50%)' },
+            { transform: 'translateX(calc(' + deltaX + 'px - 50%))' }
+          ], {
+            duration: 1400,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            fill: 'forwards'
+          });
+          
+          animation.onfinish = function(){
+            // Hold briefly at destination
+            setTimeout(function(){
+              // Commit game state AFTER pill arrives
+              commitBadgeTransferState(savedId, replacementId);
+              
+              // Clean up and resolve
+              setTimeout(function(){
+                clearTVOverlayContent();
+                if(tv) tv.classList.remove('tvTall');
+                resolve();
+              }, 800);
+            }, 800);
+          };
+        }, 300);
+      } else {
+        // Reduced motion: skip animation, commit state immediately
+        setTimeout(function(){
+          commitBadgeTransferState(savedId, replacementId);
+          clearTVOverlayContent();
+          if(tv) tv.classList.remove('tvTall');
+          resolve();
+        }, 1500);
+      }
+    });
+  }
+  
+  /**
+   * Commit badge transfer state changes to game
+   * Called AFTER the visual animation completes
+   */
+  function commitBadgeTransferState(savedId, replacementId){
+    var g = global.game;
+    if(!g) return;
+    
+    // Update saved player: remove nomination
+    var savedP = getP(savedId);
+    if(savedP){
+      savedP.nominated = false;
+      savedP.nominationState = 'none';
+    }
+    
+    // Update replacement player: add nomination
+    var repP = getP(replacementId);
+    if(repP){
+      repP.nominated = true;
+      repP.nominationState = 'nominated';
+    }
+    
+    // Sync badge states
+    try{
+      if(typeof global.syncPlayerBadgeStates === 'function'){
+        global.syncPlayerBadgeStates();
+      }
+    }catch(e){}
+    
+    console.info('[veto] Badge transfer state committed: saved=' + savedId + ' replacement=' + replacementId);
+  }
+  
+  global.renderBadgeTransfer = renderBadgeTransfer;
   
   // Prompt for replacement nominee using avatar-first picker
   function promptReplacementNominee(eligibleIds){
@@ -1720,6 +2007,9 @@
     g.__useTVCeremonyUI = false;
     if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
 
+    // Hide legacy below-TV decision panel
+    hideLegacyPOVPanels();
+
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Ceremony');
     if(typeof global.phaseMusic==='function') global.phaseMusic('nominations');
 
@@ -1729,7 +2019,7 @@
     
     await showTVCard({
       title: 'Veto Ceremony',
-      lines: ['This is the Veto ceremony. As ' + holderName + ' holds the Power of Veto, please stand and make your decision.'],
+      lines: [holderName + ' will decide whether to use the Power of Veto.'],
       tone: 'veto',
       duration: 2400
     });
@@ -1743,64 +2033,35 @@
     if(typeof global.setPhase==='function')
       global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25, finalizeCeremony);
     
-    // Check for Diamond POV twist - skip save step and go straight to picking 2 replacements
-    if(g.activeVetoTwist === 'diamond'){
-      if(holder && holder.human){
-        // Human POV holder picks both replacements directly
-        await handleDiamondPOVCeremony(holder);
-      } else {
-        // AI POV holder
-        g.__vetoAutoTimer = setTimeout(function(){
-          var gg = global.game;
-          if(gg && gg.phase==='veto_ceremony' && !gg._awaitingReplacement && !gg.__vetoCeremonyResolved){
-            try{ handleDiamondPOVCeremony(getP(gg.vetoHolder)); }catch(e){}
-          }
-        }, 1200);
-      }
-      return;
-    }
-    
-    // For human POV holder, show Yes/No decision in TV
+    // For human POV holder, show unified "Use POV?" decision for all types
     if(holder && holder.human){
       // Set flag to prevent duplicate panel rendering
       g.__useTVCeremonyUI = true;
       
-      var noms = (g.nominees||[]).map(getP);
-      var nomsText = noms.map(function(n){ return n?n.name:'?'; }).join(', ');
-      
-      // Twist-aware message: Golden POV means POV holder picks replacement, not HOH
-      var isGoldenTwist = (g.activeVetoTwist === 'golden');
-      var vetoMessage = 'POV Holder: ' + holderName + '. Nominees: ' + nomsText + '.';
-      if(isGoldenTwist){
-        vetoMessage += ' Using the veto will allow you to choose the replacement nominee.';
-      } else {
-        vetoMessage += ' Using the veto will force the HOH to name a replacement nominee.';
-      }
-      
-      var decision = await showTVDecision({
-        title: 'Would you like to use the Power of Veto?',
-        message: vetoMessage,
-        buttons: [
-          { label: 'Yes — Use the Veto', value: true, primary: true },
-          { label: 'No — Keep Nominations the Same', value: false, primary: false }
-        ]
-      });
+      // Show unified decision prompt for Standard, Golden, or Diamond POV
+      var decision = await renderPOVUseDecision(g.vetoHolder);
       
       if(decision){
-        // User chose Yes - need to select which nominee to save
-        // Safety check: ensure nominees array exists and has at least one element
-        if(!g.nominees || g.nominees.length === 0){
-          console.warn('[veto] No nominees to save, treating as veto not used');
-          await finalizeCeremony({ used: false });
-        } else if(g.nominees.length > 1){
-          var savedId = await showTVNomineeSavePanel({
-            title: 'Save Which Nominee?',
-            nominees: g.nominees,
-            povId: g.vetoHolder
-          });
-          await finalizeCeremony({ used: true, savedId: savedId });
+        // User chose Yes - handle based on POV type
+        if(g.activeVetoTwist === 'diamond'){
+          // Diamond POV: Replace both nominees
+          await handleDiamondPOVCeremony(holder);
         } else {
-          await finalizeCeremony({ used: true, savedId: g.nominees[0] });
+          // Standard or Golden POV: Save one nominee
+          // Safety check: ensure nominees array exists and has at least one element
+          if(!g.nominees || g.nominees.length === 0){
+            console.warn('[veto] No nominees to save, treating as veto not used');
+            await finalizeCeremony({ used: false });
+          } else if(g.nominees.length > 1){
+            var savedId = await showTVNomineeSavePanel({
+              title: 'Save Which Nominee?',
+              nominees: g.nominees,
+              povId: g.vetoHolder
+            });
+            await finalizeCeremony({ used: true, savedId: savedId });
+          } else {
+            await finalizeCeremony({ used: true, savedId: g.nominees[0] });
+          }
         }
       } else {
         // User chose No
@@ -1811,7 +2072,12 @@
       g.__vetoAutoTimer = setTimeout(function(){
         var gg = global.game;
         if(gg && gg.phase==='veto_ceremony' && !gg._awaitingReplacement && !gg.__vetoCeremonyResolved){
-          try{ finalizeCeremony(); }catch(e){}
+          // Check for Diamond POV
+          if(gg.activeVetoTwist === 'diamond'){
+            try{ handleDiamondPOVCeremony(getP(gg.vetoHolder)); }catch(e){}
+          } else {
+            try{ finalizeCeremony(); }catch(e){}
+          }
         }
       }, 1200);
     }
@@ -1820,6 +2086,12 @@
 
   function renderVetoCeremonyPanel(){
     var g = global.game;
+    
+    // Check if legacy UI is disabled
+    if(g && (g.__disableLegacyVetoUI || global.__disableLegacyVetoUI)){
+      return; // Do not render legacy panel
+    }
+    
     var panel = document.querySelector('#panel'); if(!panel) return;
     panel.innerHTML = '';
     var box = document.createElement('div'); box.className='minigame-host';
@@ -2191,19 +2463,20 @@
       
       var hoh = getP(g.hohId);
       
-      // Show replacement required message
-      await showTVCard({
-        title: 'Replacement Required',
-        lines: ['As I have vetoed one of your nominations, you must now select a replacement.'],
-        tone: 'noms',
-        duration: 3200
-      });
-
-      // Check for Golden POV twist - POV holder picks replacement instead of HOH
+      // Show replacement required message - concise for mobile
       var isGoldenPOV = (g.activeVetoTwist === 'golden');
+      var replacerName = isGoldenPOV ? 'POV holder' : 'HOH';
       var holder = getP(g.vetoHolder);
       var picker = isGoldenPOV ? holder : hoh;
-      var pickerName = picker ? picker.name : (isGoldenPOV ? 'POV Holder' : 'HOH');
+      var pickerName = picker ? picker.name : replacerName;
+      
+      await showTVCardWithAvatars({
+        title: 'Replacement Required',
+        lines: ['The ' + replacerName + ' must now select a replacement nominee.'],
+        tone: 'noms',
+        duration: 3200,
+        actorIds: picker ? picker.id : null
+      });
 
       if(picker && picker.human){
         g._awaitingReplacement = true;
@@ -2274,12 +2547,13 @@
         await showNomineeReactionsSimultaneously(g.nominees);
       }
 
-      // Show adjourn message
-      await showTVCard({
+      // Show adjourn message with POV holder avatar
+      await showTVCardWithAvatars({
         title: 'Veto Ceremony',
         lines: ['This veto ceremony is adjourned.'],
         tone: 'veto',
-        duration: 2800
+        duration: 2800,
+        actorIds: g.vetoHolder
       });
 
       g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
@@ -2306,6 +2580,8 @@
 
     if(replacementId!=null){
       var savedId = g.vetoSavedId;
+      
+      // Update nominees array (add replacement, remove saved)
       g.nominees = (g.nominees||[]).filter(function(id){ return id!==savedId; });
       if(g.nominees.indexOf(replacementId)===-1) g.nominees.push(replacementId);
 
@@ -2329,37 +2605,6 @@
         }
       }
 
-      // Update nomination states after veto is applied
-      for(var i=0;i<g.players.length;i++){ 
-        var p = g.players[i];
-        if(p.id === savedId){
-          // Saved player - clear nomination and set state to 'saved'
-          p.nominated = false;
-          p.nominationState = 'saved';
-        } else if(p.id === replacementId){
-          // Replacement nominee - set state to 'replacement'
-          p.nominated = true;
-          p.nominationState = 'replacement';
-        } else if(g.nominees.indexOf(p.id) !== -1){
-          // Other nominees keep their state
-          p.nominated = true;
-        } else {
-          // Clear nomination for others
-          p.nominated = false;
-          if(p.nominationState === 'nominated' || p.nominationState === 'pendingSave'){
-            p.nominationState = 'none';
-          }
-        }
-      }
-
-      // Sync player badge states after updating nomination states
-      try{ if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates(); }catch(e){}
-
-      // Log the veto application with saved and replacement IDs
-      var savedIds = [savedId];
-      var replacementIds = [replacementId];
-      console.info('[nom] vetoApplied saved=' + JSON.stringify(savedIds) + ' replacement=' + JSON.stringify(replacementIds));
-
       // Determine who made the announcement (POV holder for Golden, HOH otherwise)
       var announcer = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
       var announcerRole = isGoldenPOV ? 'POV Holder' : 'HOH';
@@ -2377,13 +2622,8 @@
 
       try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by ' + announcerRole + ').','warn'); }catch(e){}
       
-      // Show badge transfer animation before applying state
-      // Old nominee loses badge, new nominee gains badge
-      await animateNominationTransfer({
-        fromIds: [savedId],
-        toIds: [replacementId],
-        duration: 4000
-      });
+      // Show badge transfer animation - state commits AFTER animation completes
+      await renderBadgeTransfer(savedId, replacementId);
       
       // Show replacement nominee card with replacement nominee avatar
       await showTVCardWithAvatars({
@@ -2400,12 +2640,13 @@
       try{ if(global.addLog) global.addLog('Veto used, but no valid replacement available.','danger'); }catch(e){}
     }
 
-    // Show adjourn message
-    await showTVCard({
+    // Show adjourn message with POV holder avatar
+    await showTVCardWithAvatars({
       title: 'Veto Ceremony',
       lines: ['This veto ceremony is adjourned.'],
       tone: 'veto',
-      duration: 2800
+      duration: 2800,
+      actorIds: g.vetoHolder
     });
 
     // Proceed to next phase
@@ -2530,12 +2771,13 @@
       try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
     }
     
-    // Show adjourn message
-    await showTVCard({
+    // Show adjourn message with POV holder avatar
+    await showTVCardWithAvatars({
       title: 'Veto Ceremony',
       lines: ['This veto ceremony is adjourned.'],
       tone: 'veto',
-      duration: 2800
+      duration: 2800,
+      actorIds: g.vetoHolder
     });
     
     // Proceed to next phase

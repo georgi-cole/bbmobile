@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Ceremony TV Test</title>
+  <style>
+    body { font-family: system-ui; padding: 20px; background: #0e1a28; color: #fff; }
+    h1 { color: #71bfff; }
+    .test-section { margin: 20px 0; padding: 15px; background: rgba(28,43,62,0.5); border-radius: 8px; }
+    .test-case { margin: 10px 0; padding: 10px; background: rgba(12,22,36,0.5); border-radius: 4px; }
+    .pass { color: #4ade80; }
+    .fail { color: #f87171; }
+    .info { color: #94a3b8; font-size: 0.9rem; }
+    button { padding: 8px 16px; margin: 4px; border: none; border-radius: 4px; cursor: pointer; }
+    button.primary { background: #4695ff; color: white; }
+    button.secondary { background: #334155; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Veto Ceremony TV Experience Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Coverage</h2>
+    <div class="test-case">
+      <strong>✓ In-TV Containment</strong>
+      <p class="info">All cards/panels render inside #tvOverlay with proper max-width (520px) and max-height (78%)</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Typography Parity</strong>
+      <p class="info">Body text: 0.86rem, Titles: 0.95rem, matching other ceremonies</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Unified "Use POV?" Decision</strong>
+      <p class="info">Works for Standard POV, Golden POV, and Diamond POV with correct labels</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Legacy Panel Removal</strong>
+      <p class="info">Below-TV decision panel permanently hidden via __disableLegacyVetoUI flag</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Concise Copy</strong>
+      <p class="info">All decision text shortened for mobile: intro, decision prompt, replacement required</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Action Card Avatars</strong>
+      <p class="info">POV holder on not-use/save/adjourn; HOH/POV on replacement; nominee on reactions</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Badge Transfer Animation</strong>
+      <p class="info">NOM pill visibly moves from saved nominee to replacement; state commits AFTER animation</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Mobile Containment</strong>
+      <p class="info">Buttons/grids clamped with flex-wrap; no overflow on 375px width; internal scroll works</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Reduced Motion Support</strong>
+      <p class="info">Badge transfer respects prefers-reduced-motion; still commits state without animation</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Hooks Preserved</strong>
+      <p class="info">onPOVUsed, onVetoUsedOnSelf/Other, onSavedByVeto fire at correct points</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Final 4 Bypass</strong>
+      <p class="info">Final 4 logic unchanged; self-eviction handling preserved</p>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Manual Testing Scenarios</h2>
+    
+    <div class="test-case">
+      <h3>Scenario 1: Standard POV (Human, Used)</h3>
+      <ol class="info">
+        <li>Start veto ceremony with human POV holder</li>
+        <li>Verify "Use Power of Veto?" prompt appears in TV</li>
+        <li>Click "Yes — Use Power of Veto"</li>
+        <li>Select nominee to save</li>
+        <li>Verify "Veto Decision" card shows POV holder avatar</li>
+        <li>Verify "Saved" card shows saved player avatar</li>
+        <li>Verify "Replacement Required" card shows HOH avatar</li>
+        <li>Select replacement nominee</li>
+        <li>Verify badge transfer: NOM pill moves from saved to replacement</li>
+        <li>Verify replacement nominee card appears</li>
+        <li>Verify adjourn card shows POV holder avatar</li>
+        <li>Verify no legacy panel appears below TV</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 2: Standard POV (Human, Not Used)</h3>
+      <ol class="info">
+        <li>Start veto ceremony with human POV holder</li>
+        <li>Click "No — Keep Nominations"</li>
+        <li>Verify "Veto Not Used" card shows POV holder avatar</li>
+        <li>Verify nominee reaction cards appear (if nominees present)</li>
+        <li>Verify adjourn card shows POV holder avatar</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 3: Golden POV (Human, Used)</h3>
+      <ol class="info">
+        <li>Set goldenPOVChance to 100 in config</li>
+        <li>Start veto ceremony with human POV holder</li>
+        <li>Verify "Use Golden POV?" prompt appears in TV</li>
+        <li>Click "Yes — Use Golden POV"</li>
+        <li>Select nominee to save</li>
+        <li>Verify "Replacement Required" shows POV holder avatar (not HOH)</li>
+        <li>POV holder selects replacement (not HOH)</li>
+        <li>Verify badge transfer animation</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 4: Diamond POV (Human, Used)</h3>
+      <ol class="info">
+        <li>Set diamondPOVChance to 100 in config</li>
+        <li>Start veto ceremony with human POV holder</li>
+        <li>Verify "Use Diamond POV?" prompt appears in TV</li>
+        <li>Click "Yes — Use Diamond POV"</li>
+        <li>Select 2 replacement nominees</li>
+        <li>Verify both nominees replaced</li>
+        <li>Verify badge transfer shows transition for all nominees</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 5: Mobile (375px width)</h3>
+      <ol class="info">
+        <li>Resize browser to 375px width</li>
+        <li>Start veto ceremony</li>
+        <li>Verify all cards fit within TV bounds</li>
+        <li>Verify buttons wrap properly without overflow</li>
+        <li>Verify internal scroll works if card is tall</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 6: Reduced Motion</h3>
+      <ol class="info">
+        <li>Enable prefers-reduced-motion in browser/OS</li>
+        <li>Use POV to save a nominee</li>
+        <li>Verify badge transfer card appears but animation is skipped</li>
+        <li>Verify game state still commits correctly</li>
+        <li>Verify replacement nominee receives NOM badge</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 7: AI POV Holder</h3>
+      <ol class="info">
+        <li>Start veto ceremony with AI POV holder</li>
+        <li>Verify AI makes decision automatically</li>
+        <li>Verify all cards appear in TV</li>
+        <li>Verify ceremony completes without user interaction</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Expected Behaviors</h2>
+    <div class="test-case">
+      <strong class="pass">✓ All cards render inside TV overlay</strong>
+      <p class="info">No cards appear below or outside the TV frame</p>
+    </div>
+    <div class="test-case">
+      <strong class="pass">✓ Typography is consistent and readable</strong>
+      <p class="info">Text sizes match nomination ceremony; no oversized fonts</p>
+    </div>
+    <div class="test-case">
+      <strong class="pass">✓ Decision prompt works for all POV types</strong>
+      <p class="info">Label shows "Power of Veto", "Golden POV", or "Diamond POV"</p>
+    </div>
+    <div class="test-case">
+      <strong class="pass">✓ No legacy panel ever appears</strong>
+      <p class="info">Below-TV panel is permanently disabled</p>
+    </div>
+    <div class="test-case">
+      <strong class="pass">✓ Badge transfer is clear and visible</strong>
+      <p class="info">NOM pill moves from saved to replacement; state updates after arrival</p>
+    </div>
+    <div class="test-case">
+      <strong class="pass">✓ Mobile layout is safe</strong>
+      <p class="info">No overflow on narrow screens; internal scroll works</p>
+    </div>
+    <div class="test-case">
+      <strong class="pass">✓ Hooks fire correctly</strong>
+      <p class="info">Progression events trigger at appropriate times</p>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Notes</h2>
+    <p class="info">
+      <strong>Testing in Browser:</strong> Load index.html, start a new game, advance to veto ceremony phase.
+      Use browser DevTools to inspect elements and verify positioning.
+    </p>
+    <p class="info">
+      <strong>Config Tweaks:</strong> Adjust tVetoDec in game config to control decision timer.
+      Set goldenPOVChance/diamondPOVChance to 100 for guaranteed twist testing.
+    </p>
+    <p class="info">
+      <strong>Reduced Motion:</strong> In Chrome: DevTools → Rendering → Emulate CSS media feature prefers-reduced-motion.
+      In macOS: System Settings → Accessibility → Display → Reduce motion.
+    </p>
+  </div>
+
+</body>
+</html>
