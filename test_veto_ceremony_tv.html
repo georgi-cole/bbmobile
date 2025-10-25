@@ -63,6 +63,14 @@
       <p class="info">Buttons/grids clamped with flex-wrap; no overflow on 375px width; internal scroll works</p>
     </div>
     <div class="test-case">
+      <strong>✓ Mobile Carousel Picker</strong>
+      <p class="info">One avatar per slide with swipe support, arrow buttons, dots, keyboard navigation (ArrowLeft/Right)</p>
+    </div>
+    <div class="test-case">
+      <strong>✓ Desktop Grid Picker</strong>
+      <p class="info">Responsive grid showing all eligible nominees on wider screens (>=768px)</p>
+    </div>
+    <div class="test-case">
       <strong>✓ Reduced Motion Support</strong>
       <p class="info">Risk-swap animation respects prefers-reduced-motion; still commits state without animation</p>
     </div>
@@ -204,6 +212,42 @@
         <li>Verify AI makes decision automatically</li>
         <li>Verify all cards appear in TV</li>
         <li>Verify ceremony completes without user interaction</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 11: Mobile Carousel Replacement Picker</h3>
+      <ol class="info">
+        <li>Resize browser to < 768px width (or use mobile device)</li>
+        <li>Start veto ceremony with human POV holder</li>
+        <li>Use veto to save a nominee</li>
+        <li>Verify replacement picker shows in carousel mode (one avatar at a time)</li>
+        <li>Verify left/right arrow buttons appear</li>
+        <li>Verify arrow buttons disable at boundaries (left disabled at first, right disabled at last)</li>
+        <li>Verify navigation dots appear below carousel</li>
+        <li>Verify active dot is highlighted</li>
+        <li>Verify counter shows current position (e.g., "3 / 7")</li>
+        <li>Click right arrow to navigate to next nominee</li>
+        <li>Click left arrow to navigate to previous nominee</li>
+        <li>Click a dot to jump to that nominee</li>
+        <li>Verify keyboard navigation works: ArrowLeft, ArrowRight, Home, End</li>
+        <li>On touch device: swipe left/right to navigate</li>
+        <li>Click "Nominate [Name]" button to select nominee</li>
+        <li>Verify ceremony continues normally</li>
+      </ol>
+    </div>
+
+    <div class="test-case">
+      <h3>Scenario 12: Desktop Grid Replacement Picker</h3>
+      <ol class="info">
+        <li>Resize browser to >= 768px width</li>
+        <li>Start veto ceremony with human POV holder</li>
+        <li>Use veto to save a nominee</li>
+        <li>Verify replacement picker shows in grid mode (multiple avatars)</li>
+        <li>Verify all eligible nominees displayed in grid</li>
+        <li>Click on a nominee tile</li>
+        <li>Verify confirm screen appears with selected player's large avatar</li>
+        <li>Click "Back" to return to grid, or "OK" to confirm</li>
       </ol>
     </div>
   </div>
