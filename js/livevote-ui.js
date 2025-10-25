@@ -1262,9 +1262,16 @@
 
   /**
    * Check if inline card is supported (responsive mode)
+   * Uses TVFit engine if available, otherwise falls back to state.isResponsive
    * @returns {boolean}
    */
   function supportsInlineCard() {
+    // Use TVFit engine if available
+    if (global.TVFit) {
+      return global.TVFit.isMobile() || global.TVFit.isNarrow();
+    }
+    
+    // Fallback to state-based detection
     return state.isResponsive === true;
   }
 

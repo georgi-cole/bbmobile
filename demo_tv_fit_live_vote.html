@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>TV Fit Contract - Live Vote Demo</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-header {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 24px;
+      background: rgba(20,35,55,0.9);
+      border-radius: 12px;
+      border: 2px solid rgba(0,224,204,0.3);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 12px 0;
+      color: #00e0cc;
+      font-size: 1.8rem;
+      text-shadow: 0 2px 8px rgba(0,224,204,0.4);
+    }
+    
+    .test-header p {
+      margin: 8px 0;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+    
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    
+    .status-card {
+      background: rgba(0,224,204,0.1);
+      border: 1px solid rgba(0,224,204,0.3);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    
+    .status-card h3 {
+      margin: 0 0 8px 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #00e0cc;
+      opacity: 0.8;
+    }
+    
+    .status-card .value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .status-card .sub {
+      font-size: 0.75rem;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+    
+    .controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .controls h2 {
+      margin: 0 0 16px 0;
+      font-size: 1.2rem;
+      color: #83bfff;
+    }
+    
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 16px 0;
+    }
+    
+    .button-group button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    
+    .button-group button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,224,204,0.4);
+    }
+    
+    .button-group button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .button-group button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+      color: white;
+    }
+    
+    /* TV container - mobile responsive */
+    #tv {
+      width: 100%;
+      max-width: 800px;
+      height: 70vh;
+      max-height: 600px;
+      margin: 0 auto;
+      background: 
+        linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 10%, transparent 90%, rgba(0,0,0,0.3) 100%),
+        url('/assets/videos/tvscreen.jpg') center/cover,
+        #000;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+    }
+    
+    .tvViewport {
+      position: absolute;
+      inset: 0;
+    }
+    
+    #panel {
+      display: none;
+    }
+    
+    /* Instructions */
+    .instructions {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: rgba(131,191,255,0.1);
+      border-radius: 12px;
+      border: 1px solid rgba(131,191,255,0.3);
+    }
+    
+    .instructions h2 {
+      margin: 0 0 12px 0;
+      color: #83bfff;
+      font-size: 1.1rem;
+    }
+    
+    .instructions ul {
+      margin: 12px 0;
+      padding-left: 24px;
+      line-height: 1.8;
+    }
+    
+    .instructions li {
+      margin: 8px 0;
+    }
+    
+    .instructions code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      color: #00e0cc;
+    }
+    
+    @media (max-width: 640px) {
+      #tv {
+        height: 80vh;
+        max-height: none;
+      }
+      
+      .status-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>🎯 TV Fit Contract - Live Vote Demo</h1>
+    <p>This demo showcases the TV Fit Contract system ensuring Live Vote UI fits perfectly inside the TV safe area on all devices, especially mobile.</p>
+    
+    <div class="status-grid">
+      <div class="status-card">
+        <h3>Viewport Type</h3>
+        <div class="value" id="viewportType">Loading...</div>
+        <div class="sub" id="viewportSize"></div>
+      </div>
+      <div class="status-card">
+        <h3>Layout Mode</h3>
+        <div class="value" id="layoutMode">Loading...</div>
+        <div class="sub">Detected by TVFit</div>
+      </div>
+      <div class="status-card">
+        <h3>Carousel Mode</h3>
+        <div class="value" id="carouselMode">Loading...</div>
+        <div class="sub">Mobile pagination</div>
+      </div>
+      <div class="status-card">
+        <h3>Safe Area</h3>
+        <div class="value" id="safeArea">Loading...</div>
+        <div class="sub" id="safeAreaRatio"></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <h2>Demo Controls</h2>
+    <div class="button-group">
+      <button onclick="startLiveVote()">▶ Start Live Vote</button>
+      <button onclick="simulateVote('left')">Vote Alex (Left)</button>
+      <button onclick="simulateVote('right')">Vote Jamie (Right)</button>
+      <button onclick="showInlineResult()">Show Result Card</button>
+      <button onclick="cleanup()" class="danger">Reset</button>
+    </div>
+  </div>
+  
+  <div id="tv">
+    <div class="tvViewport"></div>
+  </div>
+  <div id="panel"></div>
+  
+  <div class="instructions">
+    <h2>✨ Features Demonstrated</h2>
+    <ul>
+      <li><strong>TV Safe Area Enforcement:</strong> All content stays within the TV safe zone (no cut-offs)</li>
+      <li><strong>Responsive Layout:</strong> Desktop shows two-up, mobile switches to carousel</li>
+      <li><strong>Keyboard Navigation:</strong> Use <code>ArrowLeft</code>/<code>ArrowRight</code> to navigate, <code>Enter</code>/<code>Space</code> to vote</li>
+      <li><strong>Minimum Sizes:</strong> Font ≥16px, tap targets ≥44px height</li>
+      <li><strong>Safe Scrolling:</strong> No inner scrolling needed - everything fits!</li>
+      <li><strong>Accessibility:</strong> Full ARIA labels, screen reader support</li>
+      <li><strong>Reduced Motion:</strong> Respects <code>prefers-reduced-motion</code> setting</li>
+    </ul>
+    
+    <h2>📱 Testing Instructions</h2>
+    <ul>
+      <li><strong>Desktop:</strong> See two-up layout with both nominees side-by-side</li>
+      <li><strong>Mobile:</strong> Resize browser to &lt;820px width to see carousel mode</li>
+      <li><strong>iPhone Simulation:</strong> Use DevTools device toolbar to simulate iPhone 15/15 Pro</li>
+      <li><strong>Portrait/Landscape:</strong> Rotate device to see layout adaptation</li>
+    </ul>
+  </div>
+
+  <!-- Core dependencies -->
+  <script src="js/tv-fit.js"></script>
+  <script src="js/livevote-ui.js"></script>
+  
+  <!-- Mock globals for demo -->
+  <script>
+    // Mock window.game
+    window.game = {
+      cfg: {
+        modernLiveVoteUI: true,
+        cardHoldMs: 500,
+        cardGapMs: 250
+      }
+    };
+    
+    // Mock helpers
+    window.getP = (id) => {
+      const players = {
+        1: { id: 1, name: 'Alex', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alex' },
+        2: { id: 2, name: 'Jamie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Jamie' }
+      };
+      return players[id];
+    };
+    
+    window.safeName = (id) => window.getP(id)?.name || 'Player';
+    window.resolveAvatar = (player) => player.avatar;
+    
+    let voteCounter = 0;
+    
+    function updateStatus() {
+      if (!window.TVFit) {
+        setTimeout(updateStatus, 100);
+        return;
+      }
+      
+      const viewportType = window.TVFit.getViewportType();
+      const layoutMode = window.TVFit.getLayoutMode({ contentType: 'vote', itemCount: 2 });
+      const useCarousel = window.TVFit.shouldUseCarousel();
+      const safeArea = window.TVFit.getTVSafeArea();
+      
+      document.getElementById('viewportType').textContent = viewportType;
+      document.getElementById('viewportSize').textContent = `${window.innerWidth}×${window.innerHeight}px`;
+      document.getElementById('layoutMode').textContent = layoutMode;
+      document.getElementById('carouselMode').textContent = useCarousel ? 'Enabled' : 'Disabled';
+      
+      if (safeArea) {
+        document.getElementById('safeArea').textContent = 
+          `${Math.round(safeArea.innerWidth)}×${Math.round(safeArea.innerHeight)}px`;
+        document.getElementById('safeAreaRatio').textContent = 
+          `Usable area within TV`;
+      }
+    }
+    
+    function startLiveVote() {
+      if (!window.lv2) {
+        alert('Live Vote UI not loaded yet. Please wait a moment.');
+        return;
+      }
+      
+      // Initialize Live Vote UI
+      window.lv2.init({
+        leftName: 'Alex',
+        rightName: 'Jamie',
+        leftId: 1,
+        rightId: 2
+      });
+      
+      // Create voting UI
+      setTimeout(() => {
+        window.lv2.createCtaBar({
+          enabled: true,
+          isTieBreak: false,
+          isFinal4: false,
+          leftName: 'Alex',
+          rightName: 'Jamie',
+          leftId: 1,
+          rightId: 2,
+          onVote: (playerId) => {
+            console.log('Vote cast for:', playerId);
+            window.lv2.updateCtaBar({ enabled: false });
+            
+            // Simulate AI votes after human vote
+            setTimeout(() => simulateAIVotes(), 500);
+          }
+        });
+        
+        window.lv2.setTurn(true);
+      }, 100);
+      
+      console.log('✅ Live Vote started');
+    }
+    
+    function simulateVote(side) {
+      if (!window.lv2) {
+        alert('Please start Live Vote first');
+        return;
+      }
+      
+      voteCounter++;
+      const voters = ['Chris', 'Dana', 'Morgan', 'Riley', 'Sam', 'Taylor'];
+      const voterName = voters[voteCounter % voters.length];
+      const voterId = voteCounter + 10;
+      
+      window.lv2.pushVote({
+        voterId: voterId,
+        voterName: voterName,
+        pick: side
+      });
+      
+      console.log(`📊 ${voterName} voted to evict ${side === 'left' ? 'Alex' : 'Jamie'}`);
+    }
+    
+    function simulateAIVotes() {
+      const sides = ['left', 'right'];
+      let delay = 0;
+      
+      // Simulate 5 AI votes
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          const side = sides[Math.floor(Math.random() * sides.length)];
+          simulateVote(side);
+        }, delay);
+        delay += 1800; // Stagger votes
+      }
+      
+      // Finish after all votes
+      setTimeout(() => {
+        window.lv2.finish();
+        console.log('✅ Voting complete');
+      }, delay + 500);
+    }
+    
+    async function showInlineResult() {
+      if (!window.lv2?.showInlineCard) {
+        alert('Inline card feature not available');
+        return;
+      }
+      
+      await window.lv2.showInlineCard({
+        title: 'Eviction Result',
+        body: [
+          'By a vote of 3 to 2,',
+          'Alex has been evicted.',
+          '',
+          'The houseguests have spoken.'
+        ],
+        duration: 3500,
+        tone: 'evict'
+      });
+      
+      console.log('✅ Result card shown');
+    }
+    
+    function cleanup() {
+      if (window.lv2) {
+        window.lv2.cleanup();
+        voteCounter = 0;
+        console.log('✅ UI reset');
+      }
+    }
+    
+    // Update status on load and resize
+    updateStatus();
+    window.addEventListener('resize', updateStatus);
+    window.addEventListener('tvfit:resize', updateStatus);
+    
+    // Auto-start demo after a moment
+    setTimeout(() => {
+      console.log('🎬 TV Fit Contract Demo Ready');
+      console.log('💡 Click "Start Live Vote" to begin');
+    }, 500);
+  </script>
+</body>
+</html>
