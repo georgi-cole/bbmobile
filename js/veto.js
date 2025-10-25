@@ -3234,14 +3234,23 @@
       
       try{ if(global.addLog) global.addLog('Diamond POV: ' + announcerName + ' nominates ' + namesStr + '.','warn'); }catch(e){}
       
-      // Show badge transfer animation: old nominees → new nominees
-      if(oldNominees.length > 0 && replacementIds.length > 0){
-        await animateNominationTransfer({
-          fromIds: oldNominees,
-          toIds: replacementIds,
-          duration: 4500
-        });
+      // Commit badge states immediately (no grotesque scrollable animation)
+      // Diamond POV replaces both nominees simultaneously
+      for(var m=0; m<oldNominees.length; m++){
+        var oldP = getP(oldNominees[m]);
+        if(oldP){
+          oldP.nominated = false;
+          oldP.nominationState = 'none';
+        }
       }
+      for(var n=0; n<replacementIds.length; n++){
+        var newP = getP(replacementIds[n]);
+        if(newP){
+          newP.nominated = true;
+          newP.nominationState = 'nominated';
+        }
+      }
+      try{ if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates(); }catch(e){}
       
       // Show replacement cards for each nominee with their avatars
       for(var k=0; k<replacementIds.length; k++){
