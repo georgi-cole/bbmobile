@@ -805,14 +805,17 @@
     await sleep(100); // Allow DOM to settle
     evicteeEl.classList.add('visible');
 
-    // Wait for portrait to be visible
-    await sleep(800);
+    // Wait for portrait to be visible (part of the total hold time)
+    const fadeInWait = 800;
+    await sleep(fadeInWait);
 
     // Animate to black-and-white
     portraitEl.classList.add('grayscale');
 
-    // Hold the B&W portrait
-    await sleep(reducedMotion ? 1500 : 2000);
+    // Hold the portrait (total hold time minus fade-in wait)
+    // In reduced motion, use shorter duration
+    const remainingHold = reducedMotion ? Math.max(holdMs * 0.6, 1000) : Math.max(holdMs - fadeInWait, 1200);
+    await sleep(remainingHold);
 
     // Fade out
     evicteeEl.style.transition = 'opacity 0.8s ease-out';
