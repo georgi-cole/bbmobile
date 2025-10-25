@@ -280,6 +280,77 @@ if (vetoContent.includes('subjectIds')) {
   fail('Subject avatars parameter not found');
 }
 
+// Test 31: Check for animateNominationTransfer function
+if (vetoContent.includes('function animateNominationTransfer(')) {
+  pass('animateNominationTransfer function exists');
+} else {
+  fail('animateNominationTransfer function not found');
+}
+
+// Test 32: Check that animateNominationTransfer is exported
+if (vetoContent.includes('global.animateNominationTransfer')) {
+  pass('animateNominationTransfer is exported to global');
+} else {
+  fail('animateNominationTransfer is not exported');
+}
+
+// Test 33: Check for badge transfer animation usage in Golden POV
+if (vetoContent.includes('animateNominationTransfer({')) {
+  pass('Badge transfer animation is called in veto ceremony');
+} else {
+  fail('Badge transfer animation not called');
+}
+
+// Test 34: Check for arrowPulse animation
+if (cssContent.includes('@keyframes arrowPulse')) {
+  pass('CSS has arrowPulse animation');
+} else {
+  fail('CSS arrowPulse animation not found');
+}
+
+// Test 35: Check for badgeSwapOut animation
+if (cssContent.includes('@keyframes badgeSwapOut')) {
+  pass('CSS has badgeSwapOut animation');
+} else {
+  fail('CSS badgeSwapOut animation not found');
+}
+
+// Test 36: Check for badgeSwapIn animation
+if (cssContent.includes('@keyframes badgeSwapIn')) {
+  pass('CSS has badgeSwapIn animation');
+} else {
+  fail('CSS badgeSwapIn animation not found');
+}
+
+// Test 37: Check for transfer-scene CSS class
+if (cssContent.includes('.transfer-scene')) {
+  pass('CSS for .transfer-scene is present');
+} else {
+  fail('CSS for .transfer-scene not found');
+}
+
+// Test 38: Check for transfer-player CSS class
+if (cssContent.includes('.transfer-player')) {
+  pass('CSS for .transfer-player is present');
+} else {
+  fail('CSS for .transfer-player not found');
+}
+
+// Test 39: Check that animation follows announcement
+const animationAfterAnnouncementPattern = /Announcement[\s\S]{1,800}animateNominationTransfer/;
+if (animationAfterAnnouncementPattern.test(vetoContent)) {
+  pass('Badge animation called after announcement (correct flow)');
+} else {
+  fail('Badge animation flow may be incorrect');
+}
+
+// Test 40: Check Diamond POV uses multi-nominee animation
+if (vetoContent.includes('oldNominees') && vetoContent.includes('diamondPOVApplied')) {
+  pass('Diamond POV captures old nominees for animation');
+} else {
+  fail('Diamond POV old nominee capture not found');
+}
+
 // Summary
 console.log('\n=== Verification Summary ===');
 console.log(`Passed: ${GREEN}${passCount}${RESET}`);
