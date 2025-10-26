@@ -27,5 +27,8 @@
   "license": "ISC",
   "devDependencies": {
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "jsdom": "^27.0.1"
   }
 }

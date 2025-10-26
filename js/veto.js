@@ -2332,10 +2332,17 @@
             resolve(selectedId);
           }
         });
+      } else if(typeof window.openCarouselPicker === 'function'){
+        // Fallback: use openCarouselPicker directly
+        window.openCarouselPicker({
+          ids: eligibleIds,
+          title: 'Select replacement nominee',
+          actionLabel: 'Nominate',
+          blockIds: []
+        }).then(resolve);
       } else {
-        // Fallback to promptReplacementNominee
-        console.warn('[veto] rpPicker not available, using fallback');
-        promptReplacementNominee(eligibleIds).then(resolve);
+        console.error('[veto] No replacement picker available');
+        resolve(null);
       }
     });
   }
