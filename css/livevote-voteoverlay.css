@@ -15,6 +15,9 @@
   height: 100vh; /* Fallback for older browsers */
   overscroll-behavior: contain;
   
+  /* Ensure overlay accepts pointer events */
+  pointer-events: auto;
+  
   /* Safe area support */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -66,6 +69,11 @@
   transform: scale(0.75);
   filter: blur(2px);
   cursor: pointer;
+  
+  /* Ensure interactive */
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .lv-overlay__nominee.center {
@@ -146,6 +154,11 @@
   transition: all 0.2s ease;
   z-index: 10;
   
+  /* Ensure interactive */
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  
   /* Minimum tap target */
   min-width: 44px;
   min-height: 44px;
@@ -194,6 +207,11 @@
     0 6px 20px rgba(255, 107, 107, 0.5),
     0 0 0 1px rgba(255, 107, 107, 0.2);
   
+  /* Ensure interactive */
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  
   /* Minimum tap target */
   min-height: 44px;
   min-width: 160px;
@@ -235,6 +253,11 @@
   cursor: pointer;
   transition: all 0.2s ease;
   z-index: 20;
+  
+  /* Ensure interactive */
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   
   /* Minimum tap target */
   min-width: 44px;
