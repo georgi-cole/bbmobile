@@ -220,7 +220,7 @@ Visual testing:
 ## Future Enhancements
 
 Potential improvements (not required):
-- Swipe gestures for mobile (currently arrow tap only)
+- Swipe gestures for mobile (currently uses touch-friendly arrow tap buttons)
 - Animation prefers-reduced-motion support
 - Gamepad D-pad support
 - Voice control integration
@@ -233,3 +233,4 @@ Potential improvements (not required):
 - Replacement-picker.js (grid-based) still exists for backward compatibility
 - TV cards are still used for confirmation between steps (not replaced)
 - Carousel is the primary UI for all POV selections going forward
+- **Mobile interaction**: Users tap the large arrow buttons (48px × 48px) for navigation, providing a touch-friendly alternative to swipe gestures
