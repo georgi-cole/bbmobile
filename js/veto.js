@@ -1465,6 +1465,68 @@
    * @param {string} options.title - Title text
    * @returns {Promise<number|number[]>} Selected player ID(s)
    */
+  /**
+   * Wrapper to install click-bubbling guards during picker operation
+   * Prevents global click delegation from routing/HUD during carousel interaction
+   * @param {Function} fn - Async function that returns a picker result
+   * @returns {Promise} Result from fn
+   */
+  async function __withRpPickerGuard(fn){
+    var guards = [];
+    var overlay = null;
+    
+    // Find or wait for carousel overlay to appear
+    function findOverlay(){
+      return document.querySelector('.carousel-picker-overlay') || 
+             document.querySelector('.fullscreen-pov-selector');
+    }
+    
+    // Guard function to prevent global click delegation
+    function guardEvent(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation){
+        e.stopImmediatePropagation();
+      }
+    }
+    
+    // Install guards on overlay when it appears
+    function installGuards(){
+      overlay = findOverlay();
+      if(!overlay) return;
+      
+      // Install bubble-phase event guards
+      overlay.addEventListener('click', guardEvent, false);
+      overlay.addEventListener('mousedown', guardEvent, false);
+      overlay.addEventListener('touchstart', guardEvent, false);
+      guards.push({ el: overlay, type: 'click', handler: guardEvent });
+      guards.push({ el: overlay, type: 'mousedown', handler: guardEvent });
+      guards.push({ el: overlay, type: 'touchstart', handler: guardEvent });
+    }
+    
+    // Uninstall all guards
+    function uninstallGuards(){
+      for(var i=0; i<guards.length; i++){
+        var guard = guards[i];
+        try{
+          guard.el.removeEventListener(guard.type, guard.handler, false);
+        }catch(e){}
+      }
+      guards = [];
+      overlay = null;
+    }
+    
+    // Wait for overlay and install guards
+    setTimeout(function(){ installGuards(); }, 50);
+    
+    try{
+      var result = await fn();
+      return result;
+    }finally{
+      uninstallGuards();
+    }
+  }
+  
   function showFullscreenReplacementSelector(options){
     options = options || {};
     var eligibleIds = options.eligibleIds || [];
@@ -3031,11 +3093,17 @@
     // === FIRST REPLACEMENT PICK ===
     var firstReplacement = null;
     if(holder && holder.human){
-      // Human picks first nominee using full-screen replacement selector
-      firstReplacement = await showFullscreenReplacementSelector({
-        eligibleIds: baseEligible,
-        count: 1,
-        title: 'Select first replacement nominee'
+      // Human picks first nominee using carousel picker (Golden POV parity)
+      // Compute blocked IDs: original nominees are still visually blocked during first pick
+      var blockedForFirst = [g.hohId, g.vetoHolder].concat(originalNominees);
+      
+      firstReplacement = await __withRpPickerGuard(function(){
+        return openCarouselPicker({
+          ids: baseEligible,
+          title: 'Select first replacement nominee',
+          actionLabel: 'Nominate',
+          blockIds: blockedForFirst
+        });
       });
       
       if(firstReplacement == null){
@@ -3147,11 +3215,17 @@
     
     var secondReplacement = null;
     if(holder && holder.human){
-      // Human picks second nominee using full-screen replacement selector
-      secondReplacement = await showFullscreenReplacementSelector({
-        eligibleIds: secondEligible,
-        count: 1,
-        title: 'Select second replacement nominee'
+      // Human picks second nominee using carousel picker (Golden POV parity)
+      // Compute blocked IDs: HOH, POV, first replacement, and remaining original
+      var blockedForSecond = [g.hohId, g.vetoHolder, firstReplacement, remainingOriginal];
+      
+      secondReplacement = await __withRpPickerGuard(function(){
+        return openCarouselPicker({
+          ids: secondEligible,
+          title: 'Select second replacement nominee',
+          actionLabel: 'Nominate',
+          blockIds: blockedForSecond
+        });
       });
       
       if(secondReplacement == null){
@@ -3711,6 +3785,14 @@
       
       // Log the action
       console.info('[nom] diamondPOVApplied nominees=' + JSON.stringify(replacementIds));
+      
+      // === ANIMATION: Show nomination transfer from old to new nominees ===
+      // Mirror Golden POV animation pattern, adapted for two simultaneous targets
+      await animateNominationTransfer({
+        fromIds: oldNominees,
+        toIds: replacementIds,
+        duration: 4000
+      });
       
       // Determine announcer
       var announcerP = announcer === 'POV' ? getP(g.vetoHolder) : getP(g.hohId);
