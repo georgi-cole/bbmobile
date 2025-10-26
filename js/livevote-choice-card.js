@@ -42,6 +42,9 @@
       return null;
     }
 
+    // Lock body scroll when choice card is shown
+    lockBodyScroll();
+
     // Create card element
     const card = document.createElement('div');
     card.className = 'lv-choice-card';
@@ -113,12 +116,58 @@
     if (card) {
       card.remove();
     }
+    
+    // Unlock body scroll when choice card is hidden
+    unlockBodyScroll();
+  }
+
+  // Lock body scroll (prevent background scrolling on mobile)
+  function lockBodyScroll() {
+    const body = document.body;
+    if (!body) return;
+    
+    // Store current scroll position
+    const scrollY = window.scrollY;
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.width = '100%';
+    body.dataset.scrollLocked = 'true';
+    body.dataset.scrollY = String(scrollY);
+  }
+
+  // Unlock body scroll
+  function unlockBodyScroll() {
+    const body = document.body;
+    if (!body || body.dataset.scrollLocked !== 'true') return;
+    
+    const scrollY = parseInt(body.dataset.scrollY || '0', 10);
+    body.style.position = '';
+    body.style.top = '';
+    body.style.width = '';
+    delete body.dataset.scrollLocked;
+    delete body.dataset.scrollY;
+    window.scrollTo(0, scrollY);
   }
 
   // Export public API
   global.LiveVoteChoiceCard = {
     show,
     hide
+  };
+
+  // Shared function to force close all vote UI
+  // Called immediately before vote submission to ensure clean state
+  global.closeAllVoteUI = function() {
+    // Close choice card
+    hide();
+    
+    // Close vote overlay if it exists
+    if (global.LiveVoteOverlay) {
+      global.LiveVoteOverlay.hide();
+    }
+    
+    // Ensure body scroll is unlocked
+    unlockBodyScroll();
   };
 
 })(window);
