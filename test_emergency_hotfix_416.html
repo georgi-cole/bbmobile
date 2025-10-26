@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Test: Emergency Hotfix Post-PR #416</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <link rel="stylesheet" href="css/livevote-ceremony-overlay.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0f16;
+      color: #e8f4ff;
+      min-height: 100vh;
+    }
+    
+    .test-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #ffd96b;
+      margin-bottom: 1rem;
+      font-size: 1.8rem;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #8fb3d3;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+    
+    .test-section {
+      background: rgba(20, 35, 55, 0.5);
+      border: 1px solid rgba(143, 211, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #00e0cc;
+      margin-top: 0;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+    
+    .test-section p {
+      font-size: 0.9rem;
+      color: #8fb3d3;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc, #00b3a6);
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 8px 8px 8px 0;
+      font-size: 1rem;
+      min-width: 120px;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.4);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #d63031);
+    }
+    
+    button.warn {
+      background: linear-gradient(135deg, #ffd96b, #f39c12);
+    }
+    
+    .status {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0, 224, 204, 0.1);
+      border-left: 3px solid #00e0cc;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .status.success {
+      background: rgba(124, 255, 173, 0.1);
+      border-color: #7cffad;
+      color: #7cffad;
+    }
+    
+    .status.error {
+      background: rgba(255, 107, 107, 0.1);
+      border-color: #ff6b6b;
+      color: #ff6b6b;
+    }
+    
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      height: 500px;
+      margin: 20px auto;
+      background: linear-gradient(135deg, #0e1a28, #142337);
+      border: 2px solid rgba(143, 211, 255, 0.3);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+    
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+      margin: 1rem 0;
+    }
+    
+    .checklist li {
+      padding: 6px 0;
+      padding-left: 28px;
+      position: relative;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    .checklist li::before {
+      content: '☐';
+      position: absolute;
+      left: 0;
+      color: #8fb3d3;
+      font-size: 1.2rem;
+    }
+    
+    .checklist li.checked::before {
+      content: '☑';
+      color: #7cffad;
+    }
+    
+    .flag-status {
+      background: rgba(255, 217, 107, 0.1);
+      border-left: 3px solid #ffd96b;
+      border-radius: 4px;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 0.9rem;
+    }
+    
+    .flag-status code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🚨 Emergency Hotfix Test</h1>
+    <p class="subtitle">Post-PR #416: Mobile Live Vote UI Fixes</p>
+    
+    <!-- Feature Flag Status -->
+    <div class="test-section">
+      <h2>Feature Flag Status</h2>
+      <div id="flagStatus" class="flag-status">
+        Loading flag status...
+      </div>
+      <button onclick="enableCeremonyOverlay()">Enable Ceremony Overlay</button>
+      <button onclick="disableCeremonyOverlay()" class="warn">Disable Ceremony Overlay</button>
+      <button onclick="location.href='?ceremony=1'" class="warn">Add ?ceremony=1 to URL</button>
+    </div>
+    
+    <!-- Test 1: Part 1 Vote Modal Scoping -->
+    <div class="test-section">
+      <h2>Test 1: Part 1 Vote Modal (User Voting)</h2>
+      <p>Tests that the vote modal is properly scoped and doesn't leak CSS.</p>
+      <ul class="checklist">
+        <li>Modal should be full-screen with fixed positioning</li>
+        <li>Modal should use <code>.lv2-vote-modal</code> class</li>
+        <li>All child elements should use <code>.lv2-vote-modal__*</code> classes</li>
+        <li>Modal should respect safe-area insets on notched devices</li>
+        <li>Body scroll should be locked when modal is open</li>
+        <li>No oversizing or misalignment on mobile</li>
+      </ul>
+      <button onclick="testVoteModal()">Test Vote Modal</button>
+      <button onclick="closeVoteModal()" class="danger">Close Modal</button>
+      <div id="test1Status" class="status" style="display:none;"></div>
+    </div>
+    
+    <!-- Test 2: Part 2 Ceremony Overlay Scoping -->
+    <div class="test-section">
+      <h2>Test 2: Part 2 Ceremony Overlay (Post-Vote)</h2>
+      <p>Tests that the ceremony overlay is properly scoped and respects the feature flag.</p>
+      <ul class="checklist">
+        <li>Overlay should only show when flag is enabled</li>
+        <li>Overlay should use <code>.ceremony-overlay</code> class</li>
+        <li>All child elements should use <code>.ceremony-overlay__*</code> classes</li>
+        <li>Overlay should be full-screen with fixed positioning</li>
+        <li>Overlay should hide legacy LV1 elements while active</li>
+        <li>Only one step should show at a time</li>
+      </ul>
+      <button onclick="testCeremonyOverlay()">Test Ceremony Overlay</button>
+      <button onclick="closeCeremonyOverlay()" class="danger">Close Overlay</button>
+      <div id="test2Status" class="status" style="display:none;"></div>
+    </div>
+    
+    <!-- Test 3: CSS Isolation -->
+    <div class="test-section">
+      <h2>Test 3: CSS Isolation</h2>
+      <p>Verifies that styles from one overlay don't affect the other.</p>
+      <ul class="checklist">
+        <li>Vote modal classes should not exist in ceremony overlay</li>
+        <li>Ceremony overlay classes should not exist in vote modal</li>
+        <li>No global CSS leaks (check z-index stacking)</li>
+        <li>Safe-area padding should work in both overlays</li>
+      </ul>
+      <button onclick="testCSSIsolation()">Test CSS Isolation</button>
+      <div id="test3Status" class="status" style="display:none;"></div>
+    </div>
+    
+    <!-- Test 4: Mobile Viewport Simulation -->
+    <div class="test-section">
+      <h2>Test 4: Mobile Viewport (iPhone 15 Pro)</h2>
+      <p>Tests in a simulated iPhone 15 Pro portrait viewport (393x852).</p>
+      <ul class="checklist">
+        <li>Vote modal should fill entire screen</li>
+        <li>No content should be cut off by notches</li>
+        <li>All tap targets should be at least 44px</li>
+        <li>Font sizes should be readable (min 16px)</li>
+        <li>Ceremony overlay should show (if flag enabled)</li>
+      </ul>
+      <button onclick="simulateMobile()">Simulate iPhone 15 Pro</button>
+      <button onclick="resetViewport()" class="warn">Reset Viewport</button>
+      <div id="test4Status" class="status" style="display:none;"></div>
+    </div>
+    
+    <!-- Manual Verification Checklist -->
+    <div class="test-section">
+      <h2>Manual Verification</h2>
+      <p>Check these items manually after running tests:</p>
+      <ul class="checklist">
+        <li>Open DevTools and check element classes</li>
+        <li>Verify no console errors</li>
+        <li>Check computed styles for fixed positioning</li>
+        <li>Verify z-index layering (vote modal: 200, ceremony: 180)</li>
+        <li>Test on actual iPhone 15/15 Pro if possible</li>
+        <li>Test with reduced motion preference enabled</li>
+        <li>Test with different viewport sizes</li>
+        <li>Verify body scroll lock works</li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- TV Container for testing -->
+  <div id="tv"></div>
+  
+  <!-- Scripts -->
+  <script src="js/livevote-voteoverlay.js"></script>
+  <script src="js/livevote-ceremony-overlay.js"></script>
+  
+  <script>
+    // Mock player data
+    window.getP = function(id) {
+      const players = {
+        1: { id: 1, name: 'Alice', avatar: null },
+        2: { id: 2, name: 'Bob', avatar: null },
+        3: { id: 3, name: 'Charlie', avatar: null }
+      };
+      return players[id];
+    };
+    
+    window.safeName = function(id) {
+      const player = window.getP(id);
+      return player ? player.name : 'Unknown';
+    };
+    
+    // Initialize flags
+    if (!window.lv2Flags) {
+      window.lv2Flags = {};
+    }
+    
+    // Update flag status display
+    function updateFlagStatus() {
+      const status = document.getElementById('flagStatus');
+      const flag = window.lv2Flags.ceremonyOverlayMobile;
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlFlag = urlParams.get('ceremony') === '1';
+      
+      status.innerHTML = `
+        <strong>Feature Flag Status:</strong><br>
+        <code>window.lv2Flags.ceremonyOverlayMobile</code>: <strong>${flag ? 'true ✅' : 'false ❌'}</strong><br>
+        URL Parameter <code>?ceremony=1</code>: <strong>${urlFlag ? 'present ✅' : 'absent ❌'}</strong><br>
+        <br>
+        <em>${flag ? 'Ceremony overlay is ENABLED' : 'Ceremony overlay is DISABLED (default for stability)'}</em>
+      `;
+    }
+    
+    function enableCeremonyOverlay() {
+      window.lv2Flags.ceremonyOverlayMobile = true;
+      updateFlagStatus();
+      log('Ceremony overlay enabled');
+    }
+    
+    function disableCeremonyOverlay() {
+      window.lv2Flags.ceremonyOverlayMobile = false;
+      updateFlagStatus();
+      log('Ceremony overlay disabled');
+    }
+    
+    // Test 1: Vote Modal
+    function testVoteModal() {
+      log('Testing vote modal...');
+      
+      if (!window.LiveVoteOverlay) {
+        showStatus('test1Status', 'LiveVoteOverlay not loaded', 'error');
+        return;
+      }
+      
+      const modal = window.LiveVoteOverlay.show({
+        nominees: [1, 2, 3],
+        isTieBreak: false,
+        onSubmit: (id) => {
+          log(`Vote submitted: Player ${id}`);
+          showStatus('test1Status', `Vote submitted for ${window.safeName(id)}`, 'success');
+        }
+      });
+      
+      if (modal) {
+        // Check class name
+        const className = modal.className;
+        if (className.includes('lv2-vote-modal')) {
+          log('✅ Modal uses correct class: lv2-vote-modal');
+        } else {
+          log('❌ Modal uses incorrect class: ' + className);
+        }
+        
+        // Check positioning
+        const styles = window.getComputedStyle(modal);
+        const position = styles.position;
+        if (position === 'fixed') {
+          log('✅ Modal uses fixed positioning');
+        } else {
+          log('❌ Modal uses incorrect positioning: ' + position);
+        }
+        
+        // Check z-index
+        const zIndex = styles.zIndex;
+        if (zIndex === '200') {
+          log('✅ Modal has correct z-index: 200');
+        } else {
+          log('⚠️ Modal z-index: ' + zIndex);
+        }
+        
+        showStatus('test1Status', 'Vote modal opened. Check console for details.', 'success');
+      } else {
+        showStatus('test1Status', 'Failed to open vote modal', 'error');
+      }
+    }
+    
+    function closeVoteModal() {
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.hide();
+        log('Vote modal closed');
+      }
+    }
+    
+    // Test 2: Ceremony Overlay
+    function testCeremonyOverlay() {
+      log('Testing ceremony overlay...');
+      
+      if (!window.LiveVoteCeremonyOverlay) {
+        showStatus('test2Status', 'LiveVoteCeremonyOverlay not loaded', 'error');
+        return;
+      }
+      
+      const shouldShow = window.LiveVoteCeremonyOverlay.shouldUseCeremonyOverlay();
+      log(`shouldUseCeremonyOverlay(): ${shouldShow}`);
+      
+      if (!window.lv2Flags.ceremonyOverlayMobile) {
+        showStatus('test2Status', 'Ceremony overlay disabled by feature flag. Enable it first.', 'error');
+        return;
+      }
+      
+      const overlay = window.LiveVoteCeremonyOverlay.show();
+      
+      if (overlay) {
+        // Check class name
+        const className = overlay.className;
+        if (className.includes('ceremony-overlay')) {
+          log('✅ Overlay uses correct class: ceremony-overlay');
+        } else {
+          log('❌ Overlay uses incorrect class: ' + className);
+        }
+        
+        // Check positioning
+        const styles = window.getComputedStyle(overlay);
+        const position = styles.position;
+        if (position === 'fixed') {
+          log('✅ Overlay uses fixed positioning');
+        } else {
+          log('❌ Overlay uses incorrect positioning: ' + position);
+        }
+        
+        // Check z-index
+        const zIndex = styles.zIndex;
+        if (zIndex === '180') {
+          log('✅ Overlay has correct z-index: 180');
+        } else {
+          log('⚠️ Overlay z-index: ' + zIndex);
+        }
+        
+        // Show a test step
+        window.LiveVoteCeremonyOverlay.showRolloutStep({
+          expectedVotes: 5,
+          nominees: [1, 2]
+        });
+        
+        showStatus('test2Status', 'Ceremony overlay opened. Check console for details.', 'success');
+      } else {
+        showStatus('test2Status', 'Failed to open ceremony overlay (check flag or viewport)', 'error');
+      }
+    }
+    
+    function closeCeremonyOverlay() {
+      if (window.LiveVoteCeremonyOverlay) {
+        window.LiveVoteCeremonyOverlay.hide();
+        log('Ceremony overlay closed');
+      }
+    }
+    
+    // Test 3: CSS Isolation
+    function testCSSIsolation() {
+      log('Testing CSS isolation...');
+      
+      const voteModal = document.createElement('div');
+      voteModal.className = 'lv2-vote-modal';
+      document.body.appendChild(voteModal);
+      
+      const ceremonyOverlay = document.createElement('div');
+      ceremonyOverlay.className = 'ceremony-overlay';
+      document.body.appendChild(ceremonyOverlay);
+      
+      const voteStyles = window.getComputedStyle(voteModal);
+      const ceremonyStyles = window.getComputedStyle(ceremonyOverlay);
+      
+      // Check z-index
+      const voteZ = parseInt(voteStyles.zIndex);
+      const ceremonyZ = parseInt(ceremonyStyles.zIndex);
+      
+      log(`Vote modal z-index: ${voteZ}`);
+      log(`Ceremony overlay z-index: ${ceremonyZ}`);
+      
+      if (voteZ === 200 && ceremonyZ === 180) {
+        log('✅ Z-index stacking is correct (vote: 200, ceremony: 180)');
+      } else {
+        log('❌ Z-index stacking is incorrect');
+      }
+      
+      // Check positioning
+      if (voteStyles.position === 'fixed' && ceremonyStyles.position === 'fixed') {
+        log('✅ Both use fixed positioning');
+      } else {
+        log('❌ Positioning is incorrect');
+      }
+      
+      // Cleanup
+      voteModal.remove();
+      ceremonyOverlay.remove();
+      
+      showStatus('test3Status', 'CSS isolation test complete. Check console for details.', 'success');
+    }
+    
+    // Test 4: Mobile Viewport
+    function simulateMobile() {
+      log('Simulating iPhone 15 Pro (393x852)...');
+      
+      // Note: Can't actually resize the window via JS for security reasons
+      // This is informational only
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      log(`Current viewport: ${width}x${height}`);
+      
+      if (width <= 420 && height >= 800) {
+        log('✅ Viewport appears to be mobile-sized');
+      } else {
+        log('⚠️ Viewport is not mobile-sized. Use DevTools device emulation.');
+      }
+      
+      showStatus('test4Status', 
+        `Current viewport: ${width}x${height}. Use DevTools to simulate iPhone 15 Pro (393x852).`, 
+        width <= 420 ? 'success' : 'error');
+    }
+    
+    function resetViewport() {
+      log('Viewport cannot be reset via JavaScript. Use DevTools.');
+      showStatus('test4Status', 'Use DevTools to change viewport size.', '');
+    }
+    
+    // Utility functions
+    function showStatus(id, message, type) {
+      const el = document.getElementById(id);
+      el.textContent = message;
+      el.className = 'status' + (type ? ' ' + type : '');
+      el.style.display = 'block';
+    }
+    
+    function log(message) {
+      console.log('[Test] ' + message);
+    }
+    
+    // Initialize
+    updateFlagStatus();
+    log('Test page loaded. Feature flag default: ' + window.lv2Flags.ceremonyOverlayMobile);
+    
+    // Check for URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('ceremony') === '1') {
+      log('✅ URL parameter ?ceremony=1 detected - overlay enabled');
+    }
+  </script>
+</body>
+</html>
