@@ -1,7 +1,7 @@
 /* livevote-rollout.css
  * Styles for the centered "Voting in progress" rollout overlay
- * Shows progress pill and single feed line during live vote
- * Safe-area aware and mobile-first
+ * Shows progress pill (N/M) and single feed line during live vote
+ * Safe-area aware, mobile-first, tv-card pattern
  */
 
 .lv-rollout-overlay {
@@ -12,7 +12,7 @@
   background: linear-gradient(135deg, rgba(20, 35, 55, 0.95), rgba(14, 23, 40, 0.98));
   border: 2px solid rgba(143, 211, 255, 0.3);
   border-radius: 20px;
-  padding: 28px 32px;
+  padding: clamp(24px, 5vw, 32px);
   max-width: min(480px, calc(100% - 32px));
   width: 100%;
   box-shadow: 
@@ -21,11 +21,11 @@
   z-index: 150;
   text-align: center;
   
-  /* Safe area support */
-  margin-left: env(safe-area-inset-left);
-  margin-right: env(safe-area-inset-right);
-  margin-top: env(safe-area-inset-top);
-  margin-bottom: env(safe-area-inset-bottom);
+  /* Safe area support - internal gutters (6-10px) */
+  padding-left: max(clamp(24px, 5vw, 32px), calc(6px + env(safe-area-inset-left)));
+  padding-right: max(clamp(24px, 5vw, 32px), calc(6px + env(safe-area-inset-right)));
+  padding-top: max(clamp(24px, 5vw, 32px), calc(6px + env(safe-area-inset-top)));
+  padding-bottom: max(clamp(24px, 5vw, 32px), calc(10px + env(safe-area-inset-bottom)));
   
   /* Fade in */
   opacity: 1;
@@ -108,8 +108,8 @@
 /* Mobile portrait optimizations */
 @media (max-width: 767px) and (orientation: portrait) {
   .lv-rollout-overlay {
-    padding: 24px 20px;
     max-width: calc(100% - 24px);
+    padding: clamp(20px, 4.5vw, 28px);
   }
   
   .lv-rollout__header {
@@ -152,15 +152,46 @@
   }
 }
 
+/* Landscape mobile */
+@media (max-width: 896px) and (orientation: landscape) {
+  .lv-rollout-overlay {
+    padding: 20px 24px;
+    max-height: 80vh;
+  }
+}
+
 /* Accessibility: respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .lv-rollout-overlay,
   .lv-rollout__feed-item {
-    transition: none;
+    transition: opacity 0.15s linear;
   }
   
   .lv-rollout__feed-item {
-    opacity: 1;
     transform: none;
+  }
+}
+
+/* TV phase management - hide/show based on phase */
+#tv.lv-phase-rollout .lv-rollout-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#tv:not(.lv-phase-rollout) .lv-rollout-overlay {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Clamp content within safe areas on notched devices */
+@supports (padding: max(0px)) {
+  .lv-rollout-overlay {
+    /* Ensure card never gets clipped by notches */
+    max-width: min(480px, calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  }
+  
+  .lv-rollout__feed {
+    /* Clamp feed line to safe area */
+    max-width: calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right));
   }
 }

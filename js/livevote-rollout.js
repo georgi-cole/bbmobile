@@ -52,9 +52,17 @@
     state.receivedVotes = 0;
     state.nominees = nominees;
 
-    // Create overlay element
+    // Hide legacy LV1 elements (panel content, tally bars, voter lists)
+    hideLegacyLV1Elements();
+
+    // Set phase to 'rollout' to manage TV classes
+    if (global.lv2 && global.lv2.setPhase) {
+      global.lv2.setPhase('rollout');
+    }
+
+    // Create overlay element - tv-card pattern
     const overlay = document.createElement('div');
-    overlay.className = 'lv-rollout-overlay';
+    overlay.className = 'lv-rollout-overlay tv-card';
     overlay.setAttribute('role', 'status');
     overlay.setAttribute('aria-live', 'polite');
     overlay.setAttribute('aria-label', 'Voting in progress');
@@ -72,10 +80,10 @@
     header.textContent = 'Voting in progress';
     overlay.appendChild(header);
 
-    // Progress pill
+    // Progress pill (N/M format)
     const progress = document.createElement('div');
     progress.className = 'lv-rollout__progress';
-    progress.textContent = `Waiting for votes… ${state.receivedVotes}/${state.expectedVotes}`;
+    progress.textContent = `${state.receivedVotes}/${state.expectedVotes}`;
     overlay.appendChild(progress);
 
     // Feed container (single line at bottom)
@@ -96,6 +104,68 @@
     return overlay;
   }
 
+  // Hide legacy LV1 elements (tally bars, voter lists, old panels)
+  function hideLegacyLV1Elements() {
+    // Hide panel content if it contains legacy vote UI
+    const panel = document.querySelector('#panel');
+    if (panel) {
+      // Hide tally bars and voter lists
+      const tallyBars = panel.querySelectorAll('.lvBarWrap, .lvBar, #lvMultiList, #liveVoteList');
+      tallyBars.forEach(el => {
+        el.style.display = 'none';
+      });
+      
+      // Hide any legacy vote UI containers
+      const legacyContainers = panel.querySelectorAll('.lvCol, .minigame-host');
+      legacyContainers.forEach(el => {
+        // Only hide if it contains vote-related content
+        if (el.textContent.includes('Live Tally') || el.textContent.includes('Voters:')) {
+          el.style.display = 'none';
+        }
+      });
+    }
+    
+    // Hide any lv2 overlay elements that might be lingering
+    const lv2Overlay = document.querySelector('.lv2-overlay');
+    if (lv2Overlay) {
+      // Hide nominees and feed during rollout
+      const nominees = lv2Overlay.querySelectorAll('.lv2-contestant');
+      const voterFeed = lv2Overlay.querySelector('.lv2-voter-feed');
+      nominees.forEach(el => {
+        el.style.opacity = '0.3';
+        el.style.pointerEvents = 'none';
+      });
+      if (voterFeed) {
+        voterFeed.style.opacity = '0.3';
+      }
+    }
+  }
+
+  // Restore legacy LV1 elements when rollout is hidden
+  function restoreLegacyLV1Elements() {
+    const panel = document.querySelector('#panel');
+    if (panel) {
+      const hiddenElements = panel.querySelectorAll('[style*="display: none"]');
+      hiddenElements.forEach(el => {
+        el.style.display = '';
+      });
+    }
+    
+    // Restore lv2 overlay elements
+    const lv2Overlay = document.querySelector('.lv2-overlay');
+    if (lv2Overlay) {
+      const nominees = lv2Overlay.querySelectorAll('.lv2-contestant');
+      const voterFeed = lv2Overlay.querySelector('.lv2-voter-feed');
+      nominees.forEach(el => {
+        el.style.opacity = '';
+        el.style.pointerEvents = '';
+      });
+      if (voterFeed) {
+        voterFeed.style.opacity = '';
+      }
+    }
+  }
+
   // Handle keyboard interactions
   function handleKeyboard(event) {
     if (!state.overlay) return;
@@ -106,7 +176,7 @@
     }
   }
 
-  // Update progress count
+  // Update progress count (N/M format)
   function updateProgress(received) {
     if (!state.overlay) return;
 
@@ -114,7 +184,7 @@
 
     const progress = state.overlay.querySelector('.lv-rollout__progress');
     if (progress) {
-      progress.textContent = `Waiting for votes… ${state.receivedVotes}/${state.expectedVotes}`;
+      progress.textContent = `${state.receivedVotes}/${state.expectedVotes}`;
     }
   }
 
@@ -176,6 +246,14 @@
           state.overlay = null;
         }
       }, 300);
+    }
+
+    // Restore legacy LV1 elements
+    restoreLegacyLV1Elements();
+
+    // Clear phase
+    if (global.lv2 && global.lv2.setPhase) {
+      global.lv2.setPhase(null);
     }
 
     // Reset state
