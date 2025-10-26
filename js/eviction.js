@@ -90,6 +90,43 @@
       return;
     }
 
+    // Check if we should use two-step mobile voting flow
+    const you = global.getP?.(g.humanId);
+    const voters = eligibleVoters();
+    const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
+    const hasVoted = g.__human_vote != null;
+    const useTwoStep = humanIsVoter && !hasVoted && global.LiveVoteChoiceCard && global.LiveVoteOverlay;
+
+    if (useTwoStep) {
+      // Use two-step mobile voting flow
+      // Hide panel for cleaner TV display
+      if (panel) panel.style.display = 'none';
+
+      // Show Choice Card
+      if (global.LiveVoteChoiceCard) {
+        global.LiveVoteChoiceCard.show({
+          nominees: g.eviction.nominees,
+          onVoteClick: (nominees) => {
+            // Hide Choice Card
+            global.LiveVoteChoiceCard.hide();
+            
+            // Show Voting Overlay
+            if (global.LiveVoteOverlay) {
+              global.LiveVoteOverlay.show({
+                nominees: nominees,
+                isTieBreak: false,
+                onSubmit: (selectedId) => {
+                  lockHumanVote(selectedId);
+                  // Overlay will close itself
+                }
+              });
+            }
+          }
+        });
+      }
+      return;
+    }
+
     // Check if we should use modern lv2 UI (2 nominees only, enabled in settings)
     const useLv2 = g.eviction.nominees.length === 2 
       && g.cfg?.modernLiveVoteUI !== false 
@@ -106,10 +143,6 @@
       });
 
       // Create CTA bar for voting inside TV
-      const you = global.getP?.(g.humanId);
-      const voters = eligibleVoters();
-      const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
-      const hasVoted = g.__human_vote != null;
       const remain = global.alivePlayers().length;
       const isFinal4 = remain === 4;
 
@@ -580,7 +613,18 @@
   function awaitHumanTieBreakPick(cIds,title,useLv2=false){
     return new Promise(resolve=>{
       try{
-        if (useLv2 && global.lv2?.createCtaBar) {
+        // Check if two-step overlay is available
+        if (global.LiveVoteOverlay && !useLv2) {
+          // Use two-step voting overlay for tie-break
+          global.LiveVoteOverlay.show({
+            nominees: cIds,
+            isTieBreak: true,
+            onSubmit: (pickId) => {
+              resolve(pickId);
+              // Overlay will close itself
+            }
+          });
+        } else if (useLv2 && global.lv2?.createCtaBar) {
           // Use lv2 CTA bar for tiebreak
           const [leftId, rightId] = cIds;
           global.lv2.createCtaBar({
@@ -1002,6 +1046,14 @@
 
   function postEvictionRouting(){
     const g=global.game;
+    
+    // Clean up two-step voting UI if it was active
+    if (global.LiveVoteChoiceCard) {
+      global.LiveVoteChoiceCard.hide();
+    }
+    if (global.LiveVoteOverlay) {
+      global.LiveVoteOverlay.hide();
+    }
     
     // Clean up lv2 UI if it was active
     if (global.lv2?.cleanup) {
