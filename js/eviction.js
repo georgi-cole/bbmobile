@@ -125,29 +125,7 @@
                   lockHumanVote(selectedId);
                   
                   // Show rollout overlay to display remaining votes
-                  // Use CeremonyOverlay on mobile, LiveVoteRollout on desktop
-                  if (global.LiveVoteCeremonyOverlay?.shouldUseCeremonyOverlay?.()) {
-                    // Mobile: Use CeremonyOverlay for Part 2 (post-user vote)
-                    const expectedVotes = voters.length;
-                    global.LiveVoteCeremonyOverlay.show();
-                    global.LiveVoteCeremonyOverlay.showRolloutStep({
-                      expectedVotes: expectedVotes,
-                      nominees: g.eviction.nominees
-                    });
-                    
-                    // Mark user vote as first vote in rollout
-                    const userPlayer = global.getP?.(g.humanId);
-                    const targetPlayer = global.getP?.(selectedId);
-                    if (userPlayer && targetPlayer) {
-                      global.LiveVoteCeremonyOverlay.addVoteToRollout({
-                        voterId: g.humanId,
-                        voterName: userPlayer.name,
-                        targetId: selectedId,
-                        targetName: targetPlayer.name
-                      });
-                    }
-                  } else if (global.LiveVoteRollout) {
-                    // Desktop: Use existing LiveVoteRollout
+                  if (global.LiveVoteRollout) {
                     const expectedVotes = voters.length;
                     global.LiveVoteRollout.show({
                       expectedVotes: expectedVotes,
@@ -587,15 +565,7 @@
       }
       
       // Hook: Push vote to rollout overlay if it's showing
-      // Use CeremonyOverlay on mobile, LiveVoteRollout on desktop
-      if(global.LiveVoteCeremonyOverlay?.isShowing?.()){
-        global.LiveVoteCeremonyOverlay.addVoteToRollout({
-          voterId: entry.voter,
-          voterName: nameV,
-          targetId: pick,
-          targetName: namePick
-        });
-      } else if(global.LiveVoteRollout?.isShowing?.()){
+      if(global.LiveVoteRollout?.isShowing?.()){
         global.LiveVoteRollout.addVote({
           voterId: entry.voter,
           voterName: nameV,
@@ -619,11 +589,7 @@
     g.eviction.sequenceDone=true;
 
     // Hook: Hide rollout overlay before showing result
-    // Handle both CeremonyOverlay and LiveVoteRollout
-    if(global.LiveVoteCeremonyOverlay?.isShowing?.()){
-      // CeremonyOverlay will handle its own transitions to announcement step
-      // Don't hide it here
-    } else if(global.LiveVoteRollout?.isShowing?.()){
+    if(global.LiveVoteRollout?.isShowing?.()){
       global.LiveVoteRollout.hide();
     }
 
@@ -664,14 +630,7 @@
     
     if(hoh?.human){
       // Show rollout overlay for HOH tie-break (expected=1)
-      // Use CeremonyOverlay on mobile if already showing, else LiveVoteRollout
-      if (global.LiveVoteCeremonyOverlay?.isShowing?.()) {
-        // Already showing CeremonyOverlay, update it for tie-break
-        global.LiveVoteCeremonyOverlay.showRolloutStep({
-          expectedVotes: 1,
-          nominees: [a, b]
-        });
-      } else if (global.LiveVoteRollout && !useLv2) {
+      if (global.LiveVoteRollout && !useLv2) {
         global.LiveVoteRollout.show({
           expectedVotes: 1,
           nominees: [a, b]
@@ -682,17 +641,7 @@
       if(pick===a) ca++; else cb++;
       
       // Add HOH vote to rollout
-      if (global.LiveVoteCeremonyOverlay?.isShowing?.()) {
-        global.LiveVoteCeremonyOverlay.addVoteToRollout({
-          voterId: hoh.id,
-          voterName: hoh.name,
-          targetId: pick,
-          targetName: global.safeName(pick)
-        });
-        
-        // Hold briefly to show HOH vote
-        await sleep(1500);
-      } else if (global.LiveVoteRollout?.isShowing?.()) {
+      if (global.LiveVoteRollout?.isShowing?.()) {
         global.LiveVoteRollout.addVote({
           voterId: hoh.id,
           voterName: hoh.name,
@@ -814,29 +763,7 @@
 
       const evName=global.safeName(evId);
       
-      // Check if we're using CeremonyOverlay
-      const usingCeremonyOverlay = global.LiveVoteCeremonyOverlay?.isShowing?.();
-      
-      if (usingCeremonyOverlay) {
-        // Mobile: Use CeremonyOverlay for announcement and final steps
-        // Step 2: Announcement
-        await global.LiveVoteCeremonyOverlay.showAnnouncementStep({
-          title: 'Eviction Result',
-          body: [`By a vote of ${finalA} to ${finalB}`, `${evName} has been evicted.`],
-          duration: 3600,
-          tone: 'evict'
-        });
-        
-        // Step 3: Final portrait with B&W fade
-        await global.LiveVoteCeremonyOverlay.showFinalStep({
-          evictedId: evId,
-          evictedName: evName,
-          holdMs: 3500
-        });
-        
-        // Clean up ceremony overlay
-        global.LiveVoteCeremonyOverlay.hide();
-      } else if (!useLv2) {
+      if (!useLv2) {
         global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       } else {
