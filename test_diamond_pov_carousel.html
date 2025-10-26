@@ -192,10 +192,8 @@
         log('Showing interstitial confirmation...', 'info');
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Determine remaining original
-        const remainingOriginal = originalNominees[0] === firstReplacement 
-          ? originalNominees[1] 
-          : originalNominees[0];
+        // Determine remaining original - find the nominee that wasn't picked as first replacement
+        const remainingOriginal = originalNominees.find(id => id !== firstReplacement) || originalNominees[0];
         
         log(`Remaining original nominee: ${window.safeName(remainingOriginal)}`, 'info');
         
@@ -269,7 +267,7 @@
         
         // Replacement selection
         const eligibleForReplacement = window.alivePlayers()
-          .filter(p => !p.hoh && nominees.indexOf(p.id) === -1 && p.id !== g.vetoHolder && p.id !== savedId)
+          .filter(p => !p.hoh && !nominees.includes(p.id) && p.id !== g.vetoHolder && p.id !== savedId)
           .map(p => p.id);
         
         log(`Eligible for replacement: ${eligibleForReplacement.map(id => window.safeName(id)).join(', ')}`);
