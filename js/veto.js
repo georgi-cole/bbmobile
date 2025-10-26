@@ -3212,17 +3212,13 @@
           return;
         }
         
-        // Use full-screen selector for Golden POV, carousel picker otherwise
-        var replacementId;
-        if(isGoldenPOV){
-          replacementId = await showFullscreenReplacementSelector({
-            eligibleIds: eligibleIds,
-            count: 1,
-            title: 'Select replacement nominee'
-          });
-        } else {
-          replacementId = await promptReplacementNominee(eligibleIds);
-        }
+        // Use full-screen selector for all POV types (Standard, Golden, Diamond)
+        var replacementId = await showFullscreenReplacementSelector({
+          eligibleIds: eligibleIds,
+          count: 1,
+          title: 'Select replacement nominee'
+        });
+        
         if(replacementId != null){
           await applyReplacementAndContinue(replacementId, isGoldenPOV);
         }

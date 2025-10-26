@@ -1,13 +1,13 @@
 # Full-Screen Avatar-First POV Flows - Implementation Summary
 
 ## Overview
-Successfully implemented full-screen, avatar-first ceremony flows for Golden and Diamond Power of Veto as specified in requirements. The implementation provides an immersive, mobile-first experience with immediate badge updates and smooth transitions.
+Successfully implemented full-screen, avatar-first ceremony flows for all Power of Veto types (Standard, Golden, and Diamond). The implementation provides an immersive, mobile-first experience with immediate badge updates and smooth transitions.
 
 ## What Was Delivered
 
-### 1. Full-Screen Golden POV Flow
+### 1. Full-Screen Standard POV Flow
 **Step 0: Decision**
-- In-TV prompt: "Use the Golden Power of Veto?" 
+- In-TV prompt: "Use the Power of Veto?" 
 - Yes/No buttons (no duplicate lower panel)
 - Clear, concise copy
 
@@ -25,7 +25,27 @@ Successfully implemented full-screen, avatar-first ceremony flows for Golden and
 - Single-select with clear feedback
 - Returns to TV with confirmation
 
-### 2. Full-Screen Diamond POV Flow
+### 2. Full-Screen Golden POV Flow
+**Step 0: Decision**
+- In-TV prompt: "Use the Golden Power of Veto?" 
+- Yes/No buttons (no duplicate lower panel)
+- Clear, concise copy
+
+**Step 1: Save Nominee**
+- Full-screen overlay with only nominee avatars
+- Large, prominent avatars (120px)
+- Clear "Save" buttons below each avatar
+- **Immediate badge removal** on click
+- **Top roster updates** automatically
+- Returns to TV with confirmation card
+
+**Step 2: Select Replacement**
+- Full-screen replacement selector (POV holder picks, not HOH)
+- Shows all eligible players
+- Single-select with clear feedback
+- Returns to TV with confirmation
+
+### 3. Full-Screen Diamond POV Flow
 **Step 0: Decision**
 - In-TV prompt: "Use the Diamond Power of Veto?"
 - Yes/No buttons
