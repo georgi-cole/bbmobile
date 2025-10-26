@@ -1527,172 +1527,8 @@
     }
   }
   
-  function showFullscreenReplacementSelector(options){
-    options = options || {};
-    var eligibleIds = options.eligibleIds || [];
-    var count = options.count || 1;
-    var title = options.title || (count === 2 ? 'Select two replacement nominees' : 'Select replacement nominee');
-    
-    return new Promise(function(resolve){
-      if(!eligibleIds || eligibleIds.length === 0){
-        console.warn('[veto] showFullscreenReplacementSelector called with no eligible IDs');
-        resolve(count === 1 ? null : []);
-        return;
-      }
-      
-      // Create fullscreen overlay
-      var overlay = document.createElement('div');
-      overlay.className = 'fullscreen-pov-selector';
-      overlay.setAttribute('role', 'dialog');
-      overlay.setAttribute('aria-label', 'Select replacement nominees');
-      
-      // Guard function to prevent global click delegation
-      function guardEvent(e){
-        e.preventDefault();
-        e.stopPropagation();
-        if(e.stopImmediatePropagation){
-          e.stopImmediatePropagation();
-        }
-      }
-      
-      // Install bubble-phase event guards to prevent routing/HUD click handlers
-      overlay.addEventListener('click', guardEvent, false);
-      overlay.addEventListener('mousedown', guardEvent, false);
-      overlay.addEventListener('touchstart', guardEvent, false);
-      
-      // Header
-      var header = document.createElement('div');
-      header.className = 'fs-header';
-      
-      var titleEl = document.createElement('div');
-      titleEl.className = 'fs-title';
-      titleEl.textContent = title;
-      header.appendChild(titleEl);
-      
-      var subtitle = document.createElement('div');
-      subtitle.className = 'fs-subtitle';
-      subtitle.textContent = count === 2 ? 'Tap to select two players' : 'Tap to select one player';
-      header.appendChild(subtitle);
-      
-      overlay.appendChild(header);
-      
-      // Content container
-      var content = document.createElement('div');
-      content.className = 'fs-content';
-      
-      // Player grid
-      var grid = document.createElement('div');
-      grid.className = 'fs-player-grid';
-      
-      var selectedIds = [];
-      
-      function updateSelection(id, card){
-        var idx = selectedIds.indexOf(id);
-        if(idx !== -1){
-          // Deselect
-          selectedIds.splice(idx, 1);
-          card.classList.remove('selected');
-          card.style.borderColor = '';
-        } else {
-          // Select
-          if(selectedIds.length < count){
-            selectedIds.push(id);
-            card.classList.add('selected');
-            card.style.borderColor = 'var(--accent)';
-          }
-        }
-        
-        // Update confirm button
-        confirmBtn.disabled = (selectedIds.length !== count);
-        counter.textContent = 'Selected: ' + selectedIds.length + ' / ' + count;
-      }
-      
-      // Create player cards
-      for(var i=0; i<eligibleIds.length; i++){
-        (function(playerId, idx){
-          var p = getP(playerId);
-          if(!p) return;
-          
-          var card = document.createElement('div');
-          card.className = 'fs-player-card';
-          card.setAttribute('tabindex', '0');
-          card.setAttribute('role', 'button');
-          card.setAttribute('aria-label', 'Select ' + p.name);
-          
-          // Avatar
-          var avatar = document.createElement('img');
-          avatar.className = 'fs-player-avatar';
-          var resolveAvatar = (global.Game || global).resolveAvatar;
-          avatar.src = resolveAvatar ? resolveAvatar(p) : (p.avatar || p.img || p.photo);
-          if(!avatar.src){
-            avatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(p.name);
-          }
-          avatar.alt = p.name;
-          card.appendChild(avatar);
-          
-          // Name
-          var name = document.createElement('div');
-          name.className = 'fs-player-name';
-          name.textContent = p.name;
-          card.appendChild(name);
-          
-          // Click handler for selection
-          card.onclick = function(e){
-            guardEvent(e); // Guard before handling
-            updateSelection(playerId, card);
-          };
-          card.onkeydown = function(e){
-            if(e.key === 'Enter' || e.key === ' '){
-              guardEvent(e); // Guard before handling
-              updateSelection(playerId, card);
-            }
-          };
-          
-          grid.appendChild(card);
-        })(eligibleIds[i], i);
-      }
-      
-      content.appendChild(grid);
-      
-      // Selection counter
-      var counter = document.createElement('div');
-      counter.className = 'veto-selection-counter';
-      counter.textContent = 'Selected: 0 / ' + count;
-      counter.style.fontSize = '1.1rem';
-      counter.style.marginTop = '20px';
-      content.appendChild(counter);
-      
-      // Confirm button
-      var confirmBtn = document.createElement('button');
-      confirmBtn.className = 'fs-save-btn veto-confirm-btn';
-      confirmBtn.textContent = 'Confirm ' + (count === 2 ? 'Nominees' : 'Nominee');
-      confirmBtn.disabled = true;
-      confirmBtn.onclick = function(e){
-        guardEvent(e); // Guard before handling
-        // Remove overlay
-        overlay.classList.add('removing');
-        setTimeout(function(){
-          if(overlay.parentNode){
-            overlay.parentNode.removeChild(overlay);
-          }
-          resolve(count === 1 ? selectedIds[0] : selectedIds);
-        }, 200);
-      };
-      content.appendChild(confirmBtn);
-      
-      overlay.appendChild(content);
-      
-      // Add to body
-      document.body.appendChild(overlay);
-      
-      // Focus first card for accessibility
-      setTimeout(function(){
-        var firstCard = grid.querySelector('.fs-player-card');
-        if(firstCard) firstCard.focus();
-      }, 400);
-    });
-  }
-  global.showFullscreenReplacementSelector = showFullscreenReplacementSelector;
+  // Legacy function removed - use openCarouselPicker instead
+  // function showFullscreenReplacementSelector was here - deprecated and removed
   
   /**
    * Unified "Use POV?" decision prompt for all POV types
@@ -2487,7 +2323,7 @@
       }
       
       // Use rpPicker if available (modern carousel implementation)
-      if(typeof global.rpPicker !== 'undefined' && global.rpPicker.show){
+      if (typeof global.rpPicker !== 'undefined' && global.rpPicker.show) {
         global.rpPicker.show({
           eligibleIds: eligibleIds,
           blockedIds: getBlockedReplacementIds(),
@@ -2496,252 +2332,30 @@
             resolve(selectedId);
           }
         });
+      } else if (typeof window.openCarouselPicker === 'function') {
+        // Fallback: use openCarouselPicker directly
+        window.openCarouselPicker({
+          ids: eligibleIds,
+          title: 'Select replacement nominee',
+          actionLabel: 'Nominate',
+          blockIds: []
+        }).then(resolve);
       } else {
-        // Fallback to promptReplacementNominee
-        console.warn('[veto] rpPicker not available, using fallback');
-        promptReplacementNominee(eligibleIds).then(resolve);
+        console.error('[veto] No replacement picker available');
+        resolve(null);
       }
     });
   }
   global.renderReplacementChoiceCarousel = renderReplacementChoiceCarousel;
   
+  // ===== LEGACY FUNCTIONS REMOVED =====
+  // The following functions have been removed as they showed legacy UIs with huge avatars:
+  // - promptReplacementNominee (replaced with openCarouselPicker)
+  // - renderHOHReplacementChoiceFallback (replaced with openCarouselPicker)
+  // - renderHOHReplacementChoice (replaced with openCarouselPicker)
+  // - renderReplacementChoiceBy (replaced with openCarouselPicker)
+  // All calls now use the modern carousel picker from js/ui/carousel-picker.js
   
-  // Prompt for replacement nominee using avatar-first picker
-  function promptReplacementNominee(eligibleIds){
-    return new Promise(function(resolve){
-      // Safety check: handle empty eligible list
-      if(!eligibleIds || eligibleIds.length === 0){
-        console.warn('[veto] promptReplacementNominee called with empty eligibleIds');
-        resolve(null);
-        return;
-      }
-      
-      // Use replacement picker if available
-      if(typeof global.rpPicker !== 'undefined' && global.rpPicker.show){
-        global.rpPicker.show({
-          eligibleIds: eligibleIds,
-          blockedIds: getBlockedReplacementIds(),
-          viewMode: 'auto', // Auto-detect: carousel on mobile, grid on desktop
-          onConfirm: function(selectedId){
-            resolve(selectedId);
-          }
-        });
-      } else {
-        // Fallback to old scrollable list
-        console.warn('[veto] rpPicker not available, using fallback');
-        renderHOHReplacementChoiceFallback(eligibleIds, resolve);
-      }
-    });
-  }
-  
-  // Fallback replacement choice UI (old scrollable list)
-  function renderHOHReplacementChoiceFallback(eligibleIds, resolve){
-    var content = ensureTVOverlayScaffold();
-    if(!content){ resolve(null); return; }
-    
-    clearTVOverlayContent();
-    
-    var card = document.createElement('div');
-    card.className = 'revealCard diaryRoomCard';
-    
-    var h3 = document.createElement('h3');
-    h3.textContent = 'Select Replacement Nominee';
-    card.appendChild(h3);
-    
-    var info = document.createElement('p');
-    info.textContent = 'As HOH, you must select a replacement nominee.';
-    info.style.marginBottom = '16px';
-    card.appendChild(info);
-    
-    var listWrap = document.createElement('div');
-    listWrap.style.maxHeight = '200px';
-    listWrap.style.overflowY = 'auto';
-    listWrap.style.marginBottom = '16px';
-    
-    var list = document.createElement('div');
-    list.style.display = 'flex';
-    list.style.flexDirection = 'column';
-    list.style.gap = '8px';
-    
-    function disableAll(){
-      var btns = list.querySelectorAll('button');
-      for(var i=0; i<btns.length; i++){ btns[i].disabled = true; }
-    }
-    
-    for(var i=0; i<eligibleIds.length; i++){
-      (function(repId){
-        var p = getP(repId);
-        var b = document.createElement('button');
-        b.className = 'btn';
-        b.textContent = p ? p.name : '?';
-        b.style.width = '100%';
-        b.onclick = function(){
-          disableAll();
-          clearTVOverlayContent();
-          var tv = document.getElementById('tv');
-          if(tv) tv.classList.remove('tvTall');
-          resolve(repId);
-        };
-        b.onkeydown = function(e){
-          if(e.key === 'Enter' || e.key === ' '){
-            e.preventDefault();
-            b.click();
-          }
-        };
-        list.appendChild(b);
-      })(eligibleIds[i]);
-    }
-    
-    listWrap.appendChild(list);
-    card.appendChild(listWrap);
-    content.appendChild(card);
-    
-    var tv = document.getElementById('tv');
-    if(tv) tv.classList.add('tvTall');
-    
-    setTimeout(function(){
-      var firstBtn = list.querySelector('button');
-      if(firstBtn) firstBtn.focus();
-    }, 100);
-  }
-  
-  // Legacy function - now delegates to promptReplacementNominee
-  function renderHOHReplacementChoice(hohId, eligibleIds){
-    return promptReplacementNominee(eligibleIds);
-  }
-  
-  // Render replacement choice UI with multi-select support for Diamond POV
-  function renderReplacementChoiceBy(eligibleIds, options){
-    options = options || {};
-    var multi = options.multi || 1;
-    var title = options.title || (multi === 2 ? 'Select two replacement nominees' : 'Select Replacement Nominee');
-    var pickerName = options.pickerName || 'POV Holder';
-    
-    return new Promise(function(resolve){
-      if(!eligibleIds || eligibleIds.length === 0){
-        console.warn('[veto] renderReplacementChoiceBy called with empty eligibleIds');
-        resolve(null);
-        return;
-      }
-      
-      var content = ensureTVOverlayScaffold();
-      if(!content){ resolve(null); return; }
-      
-      clearTVOverlayContent();
-      
-      var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
-      
-      var h3 = document.createElement('h3');
-      h3.textContent = title;
-      card.appendChild(h3);
-      
-      var info = document.createElement('p');
-      if(multi === 2){
-        info.textContent = pickerName + ', you must select exactly two replacement nominees.';
-      } else {
-        info.textContent = pickerName + ', you must select a replacement nominee.';
-      }
-      info.style.marginBottom = '20px';
-      card.appendChild(info);
-      
-      var grid = document.createElement('div');
-      grid.className = 'veto-replacement-grid';
-      // CSS handles all grid layout - no inline styles needed
-      
-      var selectedIds = [];
-      
-      function updateSelection(id, tile){
-        var idx = selectedIds.indexOf(id);
-        if(idx !== -1){
-          // Deselect
-          selectedIds.splice(idx, 1);
-          tile.classList.remove('selected');
-        } else {
-          // Select
-          if(selectedIds.length < multi){
-            selectedIds.push(id);
-            tile.classList.add('selected');
-          }
-        }
-        
-        // Update confirm button state
-        confirmBtn.disabled = (selectedIds.length !== multi);
-        
-        // Update selection counter
-        counter.textContent = 'Selected: ' + selectedIds.length + ' / ' + multi;
-      }
-      
-      for(var i=0; i<eligibleIds.length; i++){
-        (function(nomId, idx){
-          var p = getP(nomId);
-          var tile = document.createElement('div');
-          tile.className = 'veto-replacement-tile';
-          tile.setAttribute('tabindex', '0');
-          tile.setAttribute('role', 'button');
-          tile.setAttribute('aria-label', 'Select ' + (p ? p.name : '?'));
-          tile.style.animationDelay = (idx * 0.1) + 's';
-          
-          // Avatar
-          var img = document.createElement('img');
-          var resolveAvatar = (global.Game || global).resolveAvatar;
-          img.src = resolveAvatar ? resolveAvatar(p || nomId) : (p ? (p.avatar || p.img || p.photo) : null);
-          if(!img.src){
-            img.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(p ? p.name : String(nomId));
-          }
-          img.alt = p ? p.name : '?';
-          tile.appendChild(img);
-          
-          // Name
-          var name = document.createElement('div');
-          name.className = 'name';
-          name.textContent = p ? p.name : '?';
-          tile.appendChild(name);
-          
-          // Click and keyboard handler for selection
-          tile.onclick = function(){
-            updateSelection(nomId, tile);
-          };
-          tile.onkeydown = function(e){
-            if(e.key === 'Enter' || e.key === ' '){
-              e.preventDefault();
-              updateSelection(nomId, tile);
-            }
-          };
-          
-          grid.appendChild(tile);
-        })(eligibleIds[i], i);
-      }
-      
-      card.appendChild(grid);
-      
-      // Selection counter
-      var counter = document.createElement('div');
-      counter.className = 'veto-selection-counter';
-      counter.textContent = 'Selected: 0 / ' + multi;
-      card.appendChild(counter);
-      
-      // Confirm button
-      var confirmBtn = document.createElement('button');
-      confirmBtn.className = 'btn primary veto-confirm-btn';
-      confirmBtn.textContent = 'Confirm ' + (multi === 2 ? 'Nominees' : 'Nominee');
-      confirmBtn.disabled = true;
-      confirmBtn.onclick = function(){
-        clearTVOverlayContent();
-        var tv = document.getElementById('tv');
-        if(tv) tv.classList.remove('tvTall');
-        resolve(multi === 1 ? selectedIds[0] : selectedIds);
-      };
-      card.appendChild(confirmBtn);
-      
-      content.appendChild(card);
-      
-      var tv = document.getElementById('tv');
-      if(tv) tv.classList.add('tvTall');
-    });
-  }
-  
-  global.renderReplacementChoiceBy = renderReplacementChoiceBy;
   global.animateNominationTransfer = animateNominationTransfer;
   
   global.ensureTVOverlayScaffold = ensureTVOverlayScaffold;
@@ -2750,8 +2364,7 @@
   global.showTVCardWithAvatars = showTVCardWithAvatars;
   global.showTVDecision = showTVDecision;
   global.showTVNomineeSavePanel = showTVNomineeSavePanel;
-  global.renderHOHReplacementChoice = renderHOHReplacementChoice;
-  global.promptReplacementNominee = promptReplacementNominee;
+  // Legacy exports removed: renderHOHReplacementChoice, promptReplacementNominee
   
   /* ===== Veto Ceremony Flow ===== */
 
@@ -3681,8 +3294,13 @@
         var pickerName = picker ? picker.name : (isGoldenPOV ? 'POV holder' : 'HOH');
         
         if(picker && picker.human){
-          // Human picks again - use carousel picker (rpPicker)
-          replacementId = await promptReplacementNominee(eligibleIds);
+          // Human picks again - use carousel picker
+          replacementId = await openCarouselPicker({
+            ids: eligibleIds,
+            title: 'Select different replacement',
+            actionLabel: 'Nominate',
+            blockIds: [g.hohId, g.vetoHolder, g.vetoSavedId]
+          });
           
           // Recursively call with new selection
           return applyReplacementAndContinue(replacementId, isGoldenPOV);

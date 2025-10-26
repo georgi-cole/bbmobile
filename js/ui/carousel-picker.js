@@ -130,13 +130,22 @@
     leftArrow.setAttribute('aria-label', 'Previous');
     leftArrow.disabled = (state.currentIndex === 0);
     leftArrow.onclick = function(e) {
-      e.stopPropagation();
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }
       if (state.currentIndex > 0) {
         state.currentIndex--;
         if (state.onIndexChange) state.onIndexChange(state.currentIndex);
         render();
       }
     };
+    leftArrow.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }, true);
     middleSection.appendChild(leftArrow);
 
     // Avatar container (tappable to select)
@@ -151,11 +160,21 @@
       avatarContainer.setAttribute('tabindex', '0');
       avatarContainer.setAttribute('role', 'button');
       avatarContainer.setAttribute('aria-label', 'Select ' + safeName(currentId));
-      avatarContainer.onclick = function() {
+      avatarContainer.onclick = function(e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+        }
         if (!isBlocked) {
           close(currentId);
         }
       };
+      avatarContainer.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }, true);
       avatarContainer.onkeydown = function(e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -202,13 +221,22 @@
     rightArrow.setAttribute('aria-label', 'Next');
     rightArrow.disabled = (state.currentIndex === state.ids.length - 1);
     rightArrow.onclick = function(e) {
-      e.stopPropagation();
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }
       if (state.currentIndex < state.ids.length - 1) {
         state.currentIndex++;
         if (state.onIndexChange) state.onIndexChange(state.currentIndex);
         render();
       }
     };
+    rightArrow.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }, true);
     middleSection.appendChild(rightArrow);
 
     overlay.appendChild(middleSection);
@@ -226,11 +254,18 @@
     cancelBtn.textContent = 'Cancel';
     cancelBtn.setAttribute('aria-label', 'Cancel selection');
     cancelBtn.onclick = function(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }
+      close(null);
+    };
+    cancelBtn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      close(null);
-    };
+    }, true);
     buttonRow.appendChild(cancelBtn);
 
     // Confirm button
@@ -240,13 +275,20 @@
     confirmBtn.setAttribute('aria-label', state.actionLabel + ' ' + safeName(currentId));
     confirmBtn.disabled = isBlocked;
     confirmBtn.onclick = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }
       if (!isBlocked) {
         close(currentId);
       }
     };
+    confirmBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }, true);
     buttonRow.appendChild(confirmBtn);
 
     bottomSection.appendChild(buttonRow);
@@ -263,19 +305,35 @@
     document.body.appendChild(overlay);
 
     // Install overlay-level event guards to prevent bubbling to router/HUD
-    // Use capture phase (true) to intercept events before they reach router/HUD
-    // Do NOT call preventDefault to allow internal button handlers to work
+    // CRITICAL: Must use capture phase (true) to intercept before router sees events
+    // stopPropagation prevents events from reaching any parent handlers
     overlay.addEventListener('click', function(e) {
       e.stopPropagation();
+      e.stopImmediatePropagation();
     }, true);
     overlay.addEventListener('mousedown', function(e) {
       e.stopPropagation();
+      e.stopImmediatePropagation();
+    }, true);
+    overlay.addEventListener('mouseup', function(e) {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
     }, true);
     overlay.addEventListener('touchstart', function(e) {
       e.stopPropagation();
-    }, { passive: true, capture: true });
+      e.stopImmediatePropagation();
+    }, { passive: false, capture: true });
+    overlay.addEventListener('touchend', function(e) {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }, { passive: false, capture: true });
     overlay.addEventListener('pointerdown', function(e) {
       e.stopPropagation();
+      e.stopImmediatePropagation();
+    }, true);
+    overlay.addEventListener('pointerup', function(e) {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
     }, true);
 
     // Animate in
