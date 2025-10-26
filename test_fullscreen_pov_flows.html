@@ -206,6 +206,9 @@
       vetoHolder: 4
     };
     
+    // Shared player ID map for tests
+    var PLAYER_MAP = { Alice: 1, Bob: 2, Carol: 3, Dave: 4, Eve: 5, Frank: 6 };
+    
     window.getP = function(id) {
       return window.game.players.find(p => p.id === id);
     };
@@ -246,8 +249,8 @@
           title: 'Please make your choice'
         });
         
-        if (savedId === null) {
-          resultDiv.textContent = '❌ Test cancelled or returned null';
+        if (savedId === null || savedId === undefined || typeof savedId !== 'number') {
+          resultDiv.textContent = '❌ Test cancelled or returned invalid value';
           resultDiv.className = 'test-result error';
           return;
         }
@@ -255,10 +258,14 @@
         resultDiv.className = 'test-result success';
         resultDiv.textContent = '✅ Test passed! Selected: ' + window.safeName(savedId);
         
-        // Update preview
+        // Update preview - use shared PLAYER_MAP
         var preview = document.getElementById('test1-preview');
+        
         preview.querySelectorAll('.player-mini').forEach(function(el) {
-          var id = el.querySelector('img').alt === 'Alice' ? 1 : 2;
+          var img = el.querySelector('img');
+          var name = img.alt;
+          var id = PLAYER_MAP[name];
+          
           if (id === savedId) {
             el.classList.remove('nominated');
             var badge = el.querySelector('.badge');
@@ -289,7 +296,7 @@
           title: 'Select two replacement nominees'
         });
         
-        if (!selectedIds || selectedIds.length !== 2) {
+        if (!selectedIds || !Array.isArray(selectedIds) || selectedIds.length !== 2) {
           resultDiv.textContent = '❌ Test cancelled or invalid selection';
           resultDiv.className = 'test-result error';
           return;
@@ -301,16 +308,18 @@
         
         // Update preview
         var preview = document.getElementById('test2-preview');
-        preview.querySelectorAll('.player-mini').forEach(function(el) {
+        var images = preview.querySelectorAll('.player-mini');
+        
+        // Use shared PLAYER_MAP
+        images.forEach(function(el) {
           el.classList.remove('nominated');
           var badge = el.querySelector('.badge');
           if (badge) badge.remove();
-        });
-        
-        var nameMap = { Carol: 3, Dave: 4, Eve: 5, Frank: 6 };
-        preview.querySelectorAll('.player-mini').forEach(function(el) {
-          var name = el.querySelector('div').textContent.trim();
-          var id = nameMap[name];
+          
+          var img = el.querySelector('img');
+          var name = img.alt;
+          var id = PLAYER_MAP[name];
+          
           if (selectedIds.indexOf(id) !== -1) {
             el.classList.add('nominated');
             var div = el.querySelector('div');
@@ -341,8 +350,8 @@
           title: 'Select replacement nominee'
         });
         
-        if (selectedId === null) {
-          resultDiv.textContent = '❌ Test cancelled or returned null';
+        if (selectedId === null || selectedId === undefined || typeof selectedId !== 'number') {
+          resultDiv.textContent = '❌ Test cancelled or returned invalid value';
           resultDiv.className = 'test-result error';
           return;
         }
