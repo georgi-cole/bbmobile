@@ -226,9 +226,7 @@
     cancelBtn.onclick = function(e) {
       e.preventDefault();
       e.stopPropagation();
-      if (e.stopImmediatePropagation) {
-        e.stopImmediatePropagation();
-      }
+      e.stopImmediatePropagation();
       close(null);
     };
     buttonRow.appendChild(cancelBtn);
@@ -242,9 +240,7 @@
     confirmBtn.onclick = function(e) {
       e.preventDefault();
       e.stopPropagation();
-      if (e.stopImmediatePropagation) {
-        e.stopImmediatePropagation();
-      }
+      e.stopImmediatePropagation();
       if (!isBlocked) {
         close(currentId);
       }

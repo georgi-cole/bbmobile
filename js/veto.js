@@ -3102,9 +3102,34 @@
         return { id: id, score: (-aff) + (p && p.threat ? p.threat : 0.5) };
       }).sort(function(a,b){ return b.score - a.score; });
       
-      // Pick top 2 by score
+      // Pick top 2 by score with validation
       var firstReplacement = scored[0].id;
-      var secondReplacement = scored.length > 1 ? scored[1].id : baseEligible.find(function(id){ return id !== firstReplacement; });
+      var secondReplacement = null;
+      if(scored.length > 1){
+        secondReplacement = scored[1].id;
+      } else {
+        // Fallback: find any eligible ID different from first
+        var fallback = baseEligible.find(function(id){ return id !== firstReplacement; });
+        secondReplacement = fallback !== undefined ? fallback : baseEligible[0];
+      }
+      
+      // Validate we have two distinct nominees
+      if(!firstReplacement || !secondReplacement || firstReplacement === secondReplacement){
+        console.error('[veto] AI Diamond POV: Unable to select two distinct nominees');
+        g.__vetoCeremonyResolved = true;
+        g.__vetoDecisionInProgress = false;
+        g.__useTVCeremonyUI = false;
+        setTimeout(function(){
+          if(typeof global.startSocial==='function'){
+            global.startSocial('veto', function(){
+              if(typeof global.startLiveVote==='function') global.startLiveVote();
+            });
+          } else if(typeof global.startLiveVote==='function'){
+            global.startLiveVote();
+          }
+        }, 200);
+        return;
+      }
       
       // Apply animation and replacements
       var newNominees = [firstReplacement, secondReplacement];
@@ -3256,6 +3281,23 @@
     if(secondReplacement == null){
       // User cancelled - fall back to AI selection
       console.warn('[veto] Diamond POV second selection cancelled, falling back to AI');
+      if(secondEligible.length === 0){
+        console.error('[veto] No eligible players for second Diamond POV nominee - aborting');
+        g.__vetoCeremonyResolved = true;
+        g.__vetoDecisionInProgress = false;
+        g.__useTVCeremonyUI = false;
+        setTimeout(function(){
+          if(typeof global.startSocial==='function'){
+            global.startSocial('veto', function(){
+              if(typeof global.startLiveVote==='function') global.startLiveVote();
+            });
+          } else if(typeof global.startLiveVote==='function'){
+            global.startLiveVote();
+          }
+        }, 200);
+        return;
+      }
+      
       var povHolder3 = getP(g.vetoHolder);
       var scored3 = secondEligible.map(function(id){
         var aff = (povHolder3 && povHolder3.affinity && typeof povHolder3.affinity[id]==='number') ? povHolder3.affinity[id] : 0;
@@ -3264,6 +3306,24 @@
       }).sort(function(a,b){ return b.score - a.score; });
       
       secondReplacement = scored3.length > 0 ? scored3[0].id : secondEligible[0];
+    }
+    
+    // Validate we have two distinct nominees before applying
+    if(!secondReplacement || firstReplacement === secondReplacement){
+      console.error('[veto] Human Diamond POV: Unable to select two distinct nominees');
+      g.__vetoCeremonyResolved = true;
+      g.__vetoDecisionInProgress = false;
+      g.__useTVCeremonyUI = false;
+      setTimeout(function(){
+        if(typeof global.startSocial==='function'){
+          global.startSocial('veto', function(){
+            if(typeof global.startLiveVote==='function') global.startLiveVote();
+          });
+        } else if(typeof global.startLiveVote==='function'){
+          global.startLiveVote();
+        }
+      }, 200);
+      return;
     }
     
     // === Apply both replacements ===
