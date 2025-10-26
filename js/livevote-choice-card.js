@@ -157,17 +157,35 @@
 
   // Shared function to force close all vote UI
   // Called immediately before vote submission to ensure clean state
+  // Removes in-TV nudge card, full-screen modal, detaches listeners, unlocks scroll
   global.closeAllVoteUI = function() {
-    // Close choice card
+    // Close choice card (in-TV nudge card)
     hide();
     
-    // Close vote overlay if it exists
+    // Close vote overlay (full-screen modal) if it exists
     if (global.LiveVoteOverlay) {
       global.LiveVoteOverlay.hide();
     }
     
+    // Close rollout overlay if showing
+    if (global.LiveVoteRollout && global.LiveVoteRollout.isShowing && global.LiveVoteRollout.isShowing()) {
+      global.LiveVoteRollout.hide();
+    }
+    
+    // Remove any lingering lv2 turn indicators
+    const tv = document.querySelector('#tv');
+    if (tv) {
+      const turnTag = tv.querySelector('.lv2-turn-tag');
+      if (turnTag) turnTag.remove();
+    }
+    
     // Ensure body scroll is unlocked
     unlockBodyScroll();
+    
+    // Clear any phase classes
+    if (global.lv2 && global.lv2.setPhase) {
+      global.lv2.setPhase(null);
+    }
   };
 
 })(window);
