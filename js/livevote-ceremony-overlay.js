@@ -194,7 +194,7 @@
     const feed = state.container.querySelector('.lv-ceremony__feed');
     if (!feed) return;
 
-    const { voterId, voterName, targetId, targetName } = vote;
+    const { voterId, voterName, targetName } = vote;
 
     // Clear previous feed item (only show one at a time)
     feed.innerHTML = '';
