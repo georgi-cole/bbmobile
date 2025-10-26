@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carousel Picker Demo</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/carousel-picker.css">
+  <style>
+    body {
+      padding: 40px;
+      background: #1a1a2e;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .demo-section {
+      margin-bottom: 40px;
+    }
+    .demo-button {
+      background: linear-gradient(145deg, rgba(52, 152, 219, 0.3), rgba(41, 128, 185, 0.3));
+      border: 2px solid rgba(52, 152, 219, 0.5);
+      color: white;
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin: 8px;
+    }
+    .demo-button:hover {
+      background: linear-gradient(145deg, rgba(52, 152, 219, 0.5), rgba(41, 128, 185, 0.5));
+      border-color: rgba(52, 152, 219, 0.8);
+      transform: translateY(-2px);
+    }
+    .demo-result {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(52, 152, 219, 0.1);
+      border: 1px solid rgba(52, 152, 219, 0.3);
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Carousel Picker Demo</h1>
+  <p>This demo shows the carousel picker for POV ceremonies.</p>
+
+  <div class="demo-section">
+    <h2>Scenario 1: Golden POV Save Selection</h2>
+    <p>Choose which nominee to save (2 nominees available)</p>
+    <button class="demo-button" onclick="testGoldenSave()">Open Carousel</button>
+    <div id="result1" class="demo-result"></div>
+  </div>
+
+  <div class="demo-section">
+    <h2>Scenario 2: Replacement Nominee Selection</h2>
+    <p>Choose a replacement nominee (5 eligible, some blocked)</p>
+    <button class="demo-button" onclick="testReplacement()">Open Carousel</button>
+    <div id="result2" class="demo-result"></div>
+  </div>
+
+  <div class="demo-section">
+    <h2>Scenario 3: Diamond POV (First Nominee)</h2>
+    <p>Choose first replacement nominee for Diamond POV</p>
+    <button class="demo-button" onclick="testDiamondFirst()">Open Carousel</button>
+    <div id="result3" class="demo-result"></div>
+  </div>
+
+  <div class="demo-section">
+    <h2>Scenario 4: Large List (All 8 Players)</h2>
+    <p>Carousel with many options to test navigation</p>
+    <button class="demo-button" onclick="testLargeList()">Open Carousel</button>
+    <div id="result4" class="demo-result"></div>
+  </div>
+
+  <!-- Mock player data -->
+  <script>
+    // Mock game data
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' },
+        { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana' },
+        { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve' },
+        { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Frank' },
+        { id: 7, name: 'Grace', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace' },
+        { id: 8, name: 'Henry', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Henry' }
+      ]
+    };
+
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      var p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+
+    window.resolveAvatar = function(id) {
+      var p = window.getP(id);
+      return p ? p.avatar : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + id;
+    };
+
+    // Demo functions
+    async function testGoldenSave() {
+      var result = await window.openCarouselPicker({
+        ids: [1, 2],
+        title: 'Save which nominee?',
+        actionLabel: 'Save',
+        blockIds: []
+      });
+      
+      document.getElementById('result1').innerHTML = result != null
+        ? 'Selected: <strong>' + window.safeName(result) + '</strong> (ID: ' + result + ')'
+        : 'Cancelled';
+    }
+
+    async function testReplacement() {
+      var result = await window.openCarouselPicker({
+        ids: [1, 2, 3, 4, 5],
+        title: 'Select replacement nominee',
+        actionLabel: 'Nominate',
+        blockIds: [1, 3] // Alice and Charlie are blocked (HOH and current nominee)
+      });
+      
+      document.getElementById('result2').innerHTML = result != null
+        ? 'Selected: <strong>' + window.safeName(result) + '</strong> (ID: ' + result + ')'
+        : 'Cancelled';
+    }
+
+    async function testDiamondFirst() {
+      var result = await window.openCarouselPicker({
+        ids: [1, 2, 3, 4, 5, 6],
+        title: 'Select first replacement nominee',
+        actionLabel: 'Nominate',
+        blockIds: []
+      });
+      
+      document.getElementById('result3').innerHTML = result != null
+        ? 'Selected: <strong>' + window.safeName(result) + '</strong> (ID: ' + result + ')'
+        : 'Cancelled';
+    }
+
+    async function testLargeList() {
+      var result = await window.openCarouselPicker({
+        ids: [1, 2, 3, 4, 5, 6, 7, 8],
+        title: 'Make your choice',
+        actionLabel: 'Confirm',
+        blockIds: [],
+        startId: 4 // Start at Diana
+      });
+      
+      document.getElementById('result4').innerHTML = result != null
+        ? 'Selected: <strong>' + window.safeName(result) + '</strong> (ID: ' + result + ')'
+        : 'Cancelled';
+    }
+  </script>
+
+  <!-- Carousel Picker Script -->
+  <script src="js/ui/carousel-picker.js"></script>
+</body>
+</html>
