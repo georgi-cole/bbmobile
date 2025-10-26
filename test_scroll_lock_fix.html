@@ -183,7 +183,11 @@
   <div class="spacer">↓ Scroll down to test ↓</div>
 
   <div class="tv-container">
-    <div id="tv"></div>
+    <div id="tv">
+      <div id="tvOverlay" style="pointer-events: none; display: none;">
+        <!-- This mimics the real app's tvOverlay container that has pointer-events: none -->
+      </div>
+    </div>
   </div>
 
   <div class="spacer">↑ Scroll up ↑</div>
