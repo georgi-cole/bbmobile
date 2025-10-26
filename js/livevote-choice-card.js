@@ -117,8 +117,13 @@
       card.remove();
     }
     
-    // Unlock body scroll when choice card is hidden
-    unlockBodyScroll();
+    // Use global helper to unlock body scroll
+    if (global.unlockBodyScroll) {
+      global.unlockBodyScroll();
+    } else {
+      // Fallback if helper not loaded yet
+      unlockBodyScroll();
+    }
   }
 
   // Lock body scroll (prevent background scrolling on mobile)
@@ -153,21 +158,6 @@
   global.LiveVoteChoiceCard = {
     show,
     hide
-  };
-
-  // Shared function to force close all vote UI
-  // Called immediately before vote submission to ensure clean state
-  global.closeAllVoteUI = function() {
-    // Close choice card
-    hide();
-    
-    // Close vote overlay if it exists
-    if (global.LiveVoteOverlay) {
-      global.LiveVoteOverlay.hide();
-    }
-    
-    // Ensure body scroll is unlocked
-    unlockBodyScroll();
   };
 
 })(window);

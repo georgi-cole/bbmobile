@@ -84,6 +84,12 @@
 
   function renderLiveVotePanel(){
     const g=global.game; const panel=document.querySelector('#panel'); if(!panel) return;
+    
+    // Clear any stale vote UI and unlock scroll before starting new flow
+    if (global.closeAllVoteUI) {
+      global.closeAllVoteUI();
+    }
+    
     panel.innerHTML='';
     if(!g.eviction){
       panel.innerHTML='<div class="tiny muted">Eviction flow not initialized.</div>';
@@ -99,12 +105,9 @@
 
     if (useTwoStep) {
       // Use two-step mobile voting flow
-      // Hide panel for cleaner TV display
-      if (panel) panel.style.display = 'none';
-
-      // Show Choice Card
+      // Show Choice Card first
       if (global.LiveVoteChoiceCard) {
-        global.LiveVoteChoiceCard.show({
+        const choiceCard = global.LiveVoteChoiceCard.show({
           nominees: g.eviction.nominees,
           onVoteClick: (nominees) => {
             // Hide Choice Card
@@ -149,6 +152,11 @@
             }
           }
         });
+        
+        // Only hide panel after choice card is successfully shown
+        if (choiceCard && panel) {
+          panel.style.display = 'none';
+        }
       }
       return;
     }
@@ -823,6 +831,11 @@
         }
       }
       
+      // Clean up any remaining vote UI
+      if (global.closeAllVoteUI) {
+        global.closeAllVoteUI();
+      }
+      
       setTimeout(()=>finalizeEviction(),220);
     } else {
       let counts=preAorCounts;
@@ -869,6 +882,12 @@
         try{ await global.cardQueueWaitIdle?.(); }catch{}
         global.addLog?.(`Evicted: ${global.safeName(evId)}. Votes — ${parts}`,'danger');
         g.eviction.revealed=true; g.eviction.revealing=false; g.eviction.evicted=evId;
+        
+        // Clean up any remaining vote UI
+        if (global.closeAllVoteUI) {
+          global.closeAllVoteUI();
+        }
+        
         setTimeout(()=>finalizeEviction(),220);
         return;
       }
@@ -1007,6 +1026,11 @@
     }
 
     // Note: Suppression clearing and HUD update now handled by runEvictionVisual
+    
+    // Clean up any remaining vote UI after multi-eviction
+    if (global.closeAllVoteUI) {
+      global.closeAllVoteUI();
+    }
 
     postEvictionRouting();
   }
@@ -1090,6 +1114,11 @@
     }
 
     // Note: Suppression clearing and HUD update now handled by runEvictionVisual (or above for modern UI)
+    
+    // Belt-and-suspenders: ensure all vote UI is closed
+    if (global.closeAllVoteUI) {
+      global.closeAllVoteUI();
+    }
 
     postEvictionRouting();
   }
@@ -1110,12 +1139,9 @@
   function postEvictionRouting(){
     const g=global.game;
     
-    // Clean up two-step voting UI if it was active
-    if (global.LiveVoteChoiceCard) {
-      global.LiveVoteChoiceCard.hide();
-    }
-    if (global.LiveVoteOverlay) {
-      global.LiveVoteOverlay.hide();
+    // Clean up all vote UI using global helper
+    if (global.closeAllVoteUI) {
+      global.closeAllVoteUI();
     }
     
     // Clean up lv2 UI if it was active

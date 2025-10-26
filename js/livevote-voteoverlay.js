@@ -362,8 +362,13 @@
       state.overlay = null;
     }
     
-    // Unlock body scroll when modal closes
-    unlockBodyScroll();
+    // Use global helper to unlock body scroll
+    if (global.unlockBodyScroll) {
+      global.unlockBodyScroll();
+    } else {
+      // Fallback if helper not loaded yet
+      unlockBodyScroll();
+    }
     
     // Reset state
     state.nominees = [];
