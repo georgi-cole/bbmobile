@@ -1014,6 +1014,26 @@
       }
     }
     
+    // ==================== Apply action rewards (influence, information) ====================
+    // Actions can have rewards defined that are earned on success
+    if(succeeded && action.rewards) {
+      const rewards = {};
+      if(action.rewards.influence > 0) {
+        rewards.influence = action.rewards.influence;
+      }
+      if(action.rewards.information > 0) {
+        rewards.information = action.rewards.information;
+      }
+      if(action.rewards.energy > 0) {
+        rewards.energy = action.rewards.energy;
+      }
+      
+      if(Object.keys(rewards).length > 0) {
+        SocialResources.earn(actorId, rewards);
+        console.info(`[social-maneuvers] Applied action rewards:`, rewards);
+      }
+    }
+    
     // Apply in-phase energy refunds
     if(succeeded) {
       if(action.id === 'compliment' && SocialResources.canRefundEnergy(actorId, 'compliment-' + targetId)) {
@@ -1038,7 +1058,14 @@
     
     recordActionInMemory(actorId, targetId, action, outcomeType);
     applyTraitEffects(actorId, targetId, action);
-    return { type: outcomeType, message, affinityChange, traitModifiers, memoryModifiers, succeeded };
+    
+    // Calculate influence change for outcome reporting
+    let influenceChange = 0;
+    if(succeeded && action.rewards?.influence) {
+      influenceChange = action.rewards.influence;
+    }
+    
+    return { type: outcomeType, message, affinityChange, influenceChange, traitModifiers, memoryModifiers, succeeded };
   }
 
   // High-impact: Spread Rumor
