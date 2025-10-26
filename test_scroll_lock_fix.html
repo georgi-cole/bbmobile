@@ -233,6 +233,9 @@
       }
     }
 
+    // Constants
+    const SCROLL_CHECK_DELAY = 100; // ms to wait before checking scroll lock after cleanup
+
     // Check scroll lock status
     function checkScrollLock() {
       const body = document.body;
@@ -243,7 +246,6 @@
       const top = body.style.top;
       const overflow = body.style.overflow;
       const scrollY = body.dataset.scrollY;
-      const canScroll = window.scrollY !== undefined;
       
       let html = '<h3 style="margin-top:0">Current Scroll Lock State:</h3>';
       html += '<ul style="margin:0;padding-left:20px">';
@@ -307,7 +309,7 @@
       console.log('[Test] Calling closeAllVoteUI()');
       if (window.closeAllVoteUI) {
         window.closeAllVoteUI();
-        setTimeout(checkScrollLock, 100);
+        setTimeout(checkScrollLock, SCROLL_CHECK_DELAY);
       }
     });
 
