@@ -176,7 +176,6 @@
     info.textContent=`Nominees: ${global.fmtList(g.eviction.nominees)}. HOH: ${global.safeName(g.hohId)}${remain===4?' (does not vote at Final 4)':' (votes in tie only)'}.`;
     box.appendChild(info);
 
-    const voters=eligibleVoters();
     const list=document.createElement('div'); list.className='tiny muted'; list.style.marginTop='6px';
     list.textContent=`Voters: ${voters.length? voters.map(p=>p.name).join(', ') : 'none'}`;
     box.appendChild(list);
@@ -232,9 +231,6 @@
     }
 
     // Human voting UI (2-nom or multi-nom), locked after vote
-    const you=global.getP?.(g.humanId);
-    const humanIsVoter = !!(you && voters.some(v=>v.id===you.id));
-    const hasVoted = g.__human_vote != null;
     const votedName = hasVoted ? global.safeName(g.__human_vote) : null;
 
     if(you && humanIsVoter){
