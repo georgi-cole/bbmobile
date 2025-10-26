@@ -1319,6 +1319,304 @@
   }
   
   /**
+   * Show full-screen avatar-first nominee save selector for Golden POV
+   * Shows only the nominee avatars full-screen with prominent 'Save' buttons
+   * Immediately removes NOM badge on click and updates top roster
+   * Returns to TV with confirmation card
+   * @param {Object} options - Configuration
+   * @param {number[]} options.nominees - Array of nominee player IDs
+   * @param {string} options.title - Title text (default: "Please make your choice")
+   * @returns {Promise<number>} Selected nominee ID to save
+   */
+  function showFullscreenNomineeSaveSelector(options){
+    options = options || {};
+    var nominees = options.nominees || [];
+    var title = options.title || 'Please make your choice';
+    
+    return new Promise(function(resolve){
+      if(!nominees || nominees.length === 0){
+        console.warn('[veto] showFullscreenNomineeSaveSelector called with no nominees');
+        resolve(null);
+        return;
+      }
+      
+      // Create fullscreen overlay
+      var overlay = document.createElement('div');
+      overlay.className = 'fullscreen-pov-selector';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-label', 'Select nominee to save');
+      
+      // Header
+      var header = document.createElement('div');
+      header.className = 'fs-header';
+      
+      var titleEl = document.createElement('div');
+      titleEl.className = 'fs-title';
+      titleEl.textContent = title;
+      header.appendChild(titleEl);
+      
+      overlay.appendChild(header);
+      
+      // Content container
+      var content = document.createElement('div');
+      content.className = 'fs-content';
+      
+      // Player grid
+      var grid = document.createElement('div');
+      grid.className = 'fs-player-grid';
+      
+      function disableAll(){
+        var btns = grid.querySelectorAll('.fs-save-btn');
+        for(var i=0; i<btns.length; i++){ btns[i].disabled = true; }
+      }
+      
+      // Create player cards
+      for(var i=0; i<nominees.length; i++){
+        (function(nomId, idx){
+          var p = getP(nomId);
+          if(!p) return;
+          
+          var card = document.createElement('div');
+          card.className = 'fs-player-card';
+          
+          // Avatar
+          var avatar = document.createElement('img');
+          avatar.className = 'fs-player-avatar';
+          var resolveAvatar = (global.Game || global).resolveAvatar;
+          avatar.src = resolveAvatar ? resolveAvatar(p) : (p.avatar || p.img || p.photo);
+          if(!avatar.src){
+            avatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(p.name);
+          }
+          avatar.alt = p.name;
+          card.appendChild(avatar);
+          
+          // Name
+          var name = document.createElement('div');
+          name.className = 'fs-player-name';
+          name.textContent = p.name;
+          card.appendChild(name);
+          
+          // Save button
+          var btn = document.createElement('button');
+          btn.className = 'fs-save-btn';
+          btn.textContent = 'Save';
+          btn.setAttribute('aria-label', 'Save ' + p.name);
+          btn.onclick = function(){
+            disableAll();
+            
+            // Immediately remove NOM badge from saved player
+            p.nominated = false;
+            p.nominationState = 'none';
+            
+            // Update HUD and sync badges
+            try{
+              if(typeof global.syncPlayerBadgeStates === 'function'){
+                global.syncPlayerBadgeStates();
+              }
+              if(typeof global.updateHud === 'function'){
+                global.updateHud();
+              }
+            }catch(e){
+              console.error('[veto] Failed to sync badges:', e);
+            }
+            
+            // Remove overlay
+            overlay.classList.add('removing');
+            setTimeout(function(){
+              if(overlay.parentNode){
+                overlay.parentNode.removeChild(overlay);
+              }
+              resolve(nomId);
+            }, 200);
+          };
+          btn.onkeydown = function(e){
+            if(e.key === 'Enter' || e.key === ' '){
+              e.preventDefault();
+              btn.click();
+            }
+          };
+          card.appendChild(btn);
+          
+          grid.appendChild(card);
+        })(nominees[i], i);
+      }
+      
+      content.appendChild(grid);
+      overlay.appendChild(content);
+      
+      // Add to body
+      document.body.appendChild(overlay);
+      
+      // Focus first button for accessibility
+      setTimeout(function(){
+        var firstBtn = grid.querySelector('.fs-save-btn');
+        if(firstBtn) firstBtn.focus();
+      }, 400);
+    });
+  }
+  global.showFullscreenNomineeSaveSelector = showFullscreenNomineeSaveSelector;
+  
+  /**
+   * Show full-screen avatar-first replacement selector for Diamond POV
+   * Shows eligible players full-screen with multi-select support
+   * @param {Object} options - Configuration
+   * @param {number[]} options.eligibleIds - Array of eligible player IDs
+   * @param {number} options.count - Number of nominees to select (1 or 2)
+   * @param {string} options.title - Title text
+   * @returns {Promise<number|number[]>} Selected player ID(s)
+   */
+  function showFullscreenReplacementSelector(options){
+    options = options || {};
+    var eligibleIds = options.eligibleIds || [];
+    var count = options.count || 1;
+    var title = options.title || (count === 2 ? 'Select two replacement nominees' : 'Select replacement nominee');
+    
+    return new Promise(function(resolve){
+      if(!eligibleIds || eligibleIds.length === 0){
+        console.warn('[veto] showFullscreenReplacementSelector called with no eligible IDs');
+        resolve(count === 1 ? null : []);
+        return;
+      }
+      
+      // Create fullscreen overlay
+      var overlay = document.createElement('div');
+      overlay.className = 'fullscreen-pov-selector';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-label', 'Select replacement nominees');
+      
+      // Header
+      var header = document.createElement('div');
+      header.className = 'fs-header';
+      
+      var titleEl = document.createElement('div');
+      titleEl.className = 'fs-title';
+      titleEl.textContent = title;
+      header.appendChild(titleEl);
+      
+      var subtitle = document.createElement('div');
+      subtitle.className = 'fs-subtitle';
+      subtitle.textContent = count === 2 ? 'Tap to select two players' : 'Tap to select one player';
+      header.appendChild(subtitle);
+      
+      overlay.appendChild(header);
+      
+      // Content container
+      var content = document.createElement('div');
+      content.className = 'fs-content';
+      
+      // Player grid
+      var grid = document.createElement('div');
+      grid.className = 'fs-player-grid';
+      
+      var selectedIds = [];
+      
+      function updateSelection(id, card){
+        var idx = selectedIds.indexOf(id);
+        if(idx !== -1){
+          // Deselect
+          selectedIds.splice(idx, 1);
+          card.classList.remove('selected');
+          card.style.borderColor = '';
+        } else {
+          // Select
+          if(selectedIds.length < count){
+            selectedIds.push(id);
+            card.classList.add('selected');
+            card.style.borderColor = 'var(--accent)';
+          }
+        }
+        
+        // Update confirm button
+        confirmBtn.disabled = (selectedIds.length !== count);
+        counter.textContent = 'Selected: ' + selectedIds.length + ' / ' + count;
+      }
+      
+      // Create player cards
+      for(var i=0; i<eligibleIds.length; i++){
+        (function(playerId, idx){
+          var p = getP(playerId);
+          if(!p) return;
+          
+          var card = document.createElement('div');
+          card.className = 'fs-player-card';
+          card.setAttribute('tabindex', '0');
+          card.setAttribute('role', 'button');
+          card.setAttribute('aria-label', 'Select ' + p.name);
+          
+          // Avatar
+          var avatar = document.createElement('img');
+          avatar.className = 'fs-player-avatar';
+          var resolveAvatar = (global.Game || global).resolveAvatar;
+          avatar.src = resolveAvatar ? resolveAvatar(p) : (p.avatar || p.img || p.photo);
+          if(!avatar.src){
+            avatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(p.name);
+          }
+          avatar.alt = p.name;
+          card.appendChild(avatar);
+          
+          // Name
+          var name = document.createElement('div');
+          name.className = 'fs-player-name';
+          name.textContent = p.name;
+          card.appendChild(name);
+          
+          // Click handler for selection
+          card.onclick = function(){
+            updateSelection(playerId, card);
+          };
+          card.onkeydown = function(e){
+            if(e.key === 'Enter' || e.key === ' '){
+              e.preventDefault();
+              updateSelection(playerId, card);
+            }
+          };
+          
+          grid.appendChild(card);
+        })(eligibleIds[i], i);
+      }
+      
+      content.appendChild(grid);
+      
+      // Selection counter
+      var counter = document.createElement('div');
+      counter.className = 'veto-selection-counter';
+      counter.textContent = 'Selected: 0 / ' + count;
+      counter.style.fontSize = '1.1rem';
+      counter.style.marginTop = '20px';
+      content.appendChild(counter);
+      
+      // Confirm button
+      var confirmBtn = document.createElement('button');
+      confirmBtn.className = 'fs-save-btn veto-confirm-btn';
+      confirmBtn.textContent = 'Confirm ' + (count === 2 ? 'Nominees' : 'Nominee');
+      confirmBtn.disabled = true;
+      confirmBtn.onclick = function(){
+        // Remove overlay
+        overlay.classList.add('removing');
+        setTimeout(function(){
+          if(overlay.parentNode){
+            overlay.parentNode.removeChild(overlay);
+          }
+          resolve(count === 1 ? selectedIds[0] : selectedIds);
+        }, 200);
+      };
+      content.appendChild(confirmBtn);
+      
+      overlay.appendChild(content);
+      
+      // Add to body
+      document.body.appendChild(overlay);
+      
+      // Focus first card for accessibility
+      setTimeout(function(){
+        var firstCard = grid.querySelector('.fs-player-card');
+        if(firstCard) firstCard.focus();
+      }, 400);
+    });
+  }
+  global.showFullscreenReplacementSelector = showFullscreenReplacementSelector;
+  
+  /**
    * Unified "Use POV?" decision prompt for all POV types
    * Works for Standard POV, Golden POV, Diamond POV, and future Platinum/Coup d'état
    * Short copy (max 2 lines) for mobile containment
@@ -2445,11 +2743,20 @@
             console.warn('[veto] No nominees to save, treating as veto not used');
             await finalizeCeremony({ used: false });
           } else if(g.nominees.length > 1){
-            var savedId = await showTVNomineeSavePanel({
-              title: 'Save Which Nominee?',
+            // Use full-screen avatar-first selector for Golden/Standard POV
+            var savedId = await showFullscreenNomineeSaveSelector({
               nominees: g.nominees,
-              povId: g.vetoHolder
+              title: 'Please make your choice'
             });
+            
+            // Show confirmation card after save
+            await showTVCard({
+              title: safeName(savedId) + ' is safe',
+              lines: ['The nomination has been removed.'],
+              tone: 'veto',
+              duration: 2800
+            });
+            
             await finalizeCeremony({ used: true, savedId: savedId });
           } else {
             await finalizeCeremony({ used: true, savedId: g.nominees[0] });
@@ -2687,11 +2994,11 @@
     // Pick 2 nominees
     var newNominees = [];
     if(holder && holder.human){
-      // Human picks both nominees using multi-select UI
-      newNominees = await renderReplacementChoiceBy(eligibleIds, {
-        multi: 2,
-        title: 'Select two replacement nominees',
-        pickerName: holderName
+      // Human picks both nominees using full-screen multi-select UI
+      newNominees = await showFullscreenReplacementSelector({
+        eligibleIds: eligibleIds,
+        count: 2,
+        title: 'Select two replacement nominees'
       });
       
       if(!newNominees || newNominees.length !== 2){
@@ -2905,8 +3212,13 @@
           return;
         }
         
-        // Use carousel picker (rpPicker) for all single-select replacements
-        var replacementId = await promptReplacementNominee(eligibleIds);
+        // Use full-screen selector for all POV types (Standard, Golden, Diamond)
+        var replacementId = await showFullscreenReplacementSelector({
+          eligibleIds: eligibleIds,
+          count: 1,
+          title: 'Select replacement nominee'
+        });
+        
         if(replacementId != null){
           await applyReplacementAndContinue(replacementId, isGoldenPOV);
         }
