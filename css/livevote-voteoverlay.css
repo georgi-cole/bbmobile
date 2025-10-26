@@ -1,0 +1,394 @@
+/* livevote-voteoverlay.css
+ * Styles for the full-screen (in-TV) voting overlay
+ * Features center-emphasis carousel, nominee selection, and Evict pill
+ * Mobile-first with safe-area support
+ */
+
+.lv-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(10, 15, 22, 0.97), rgba(20, 35, 55, 0.98));
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+  /* Safe area support */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.lv-overlay__header {
+  text-align: center;
+  padding: 20px 16px 16px;
+  color: #ffd96b;
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
+  flex-shrink: 0;
+}
+
+.lv-overlay__carousel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 20px 16px;
+  min-height: 0; /* Allow flex child to shrink */
+}
+
+.lv-overlay__track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0 60px; /* Space for arrows */
+}
+
+.lv-overlay__nominee {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.4;
+  transform: scale(0.75);
+  filter: blur(2px);
+  cursor: pointer;
+}
+
+.lv-overlay__nominee.center {
+  opacity: 1;
+  transform: scale(1);
+  filter: blur(0);
+}
+
+.lv-overlay__nominee.selected {
+  opacity: 1;
+}
+
+.lv-overlay__avatar-container {
+  position: relative;
+  width: clamp(120px, 30vw, 200px);
+  height: clamp(120px, 30vw, 200px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lv-overlay__nominee.center .lv-overlay__avatar-container {
+  width: clamp(160px, 38vw, 240px);
+  height: clamp(160px, 38vw, 240px);
+}
+
+.lv-overlay__avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 107, 107, 0.5);
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  background: rgba(20, 35, 55, 0.8);
+  transition: all 0.3s ease;
+}
+
+.lv-overlay__nominee.selected .lv-overlay__avatar {
+  border-color: #00e0cc;
+  border-width: 4px;
+  box-shadow: 
+    0 0 0 4px rgba(0, 224, 204, 0.3),
+    0 0 24px rgba(0, 224, 204, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.lv-overlay__nominee-name {
+  font-size: clamp(1rem, 3vw, 1.2rem);
+  font-weight: 600;
+  color: #e8f4ff;
+  transition: all 0.3s ease;
+  text-align: center;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lv-overlay__nominee.center .lv-overlay__nominee-name {
+  font-size: clamp(1.1rem, 3.5vw, 1.4rem);
+  color: #ffd96b;
+}
+
+/* Navigation arrows */
+.lv-overlay__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(20, 35, 55, 0.9);
+  border: 2px solid rgba(143, 211, 255, 0.3);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #e8f4ff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+  
+  /* Minimum tap target */
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.lv-overlay__arrow:hover {
+  background: rgba(20, 35, 55, 1);
+  border-color: rgba(143, 211, 255, 0.5);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.lv-overlay__arrow:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.lv-overlay__arrow.prev {
+  left: 8px;
+}
+
+.lv-overlay__arrow.next {
+  right: 8px;
+}
+
+/* Action dock at bottom */
+.lv-overlay__dock {
+  padding: 20px 16px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.lv-overlay__evict-btn {
+  background: linear-gradient(135deg, #ff6b6b, #d63031);
+  border: none;
+  border-radius: 28px;
+  padding: 16px 48px;
+  font-size: clamp(1.1rem, 3.5vw, 1.3rem);
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 6px 20px rgba(255, 107, 107, 0.5),
+    0 0 0 1px rgba(255, 107, 107, 0.2);
+  
+  /* Minimum tap target */
+  min-height: 44px;
+  min-width: 160px;
+}
+
+.lv-overlay__evict-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 24px rgba(255, 107, 107, 0.6),
+    0 0 0 1px rgba(255, 107, 107, 0.3);
+}
+
+.lv-overlay__evict-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.lv-overlay__evict-btn:disabled {
+  background: linear-gradient(135deg, rgba(100, 100, 100, 0.5), rgba(80, 80, 80, 0.5));
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+/* Close button (top-right) */
+.lv-overlay__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(20, 35, 55, 0.9);
+  border: 2px solid rgba(143, 211, 255, 0.3);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #e8f4ff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 20;
+  
+  /* Minimum tap target */
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.lv-overlay__close:hover {
+  background: rgba(20, 35, 55, 1);
+  border-color: rgba(143, 211, 255, 0.5);
+  transform: scale(1.05);
+}
+
+.lv-overlay__close:active {
+  transform: scale(0.95);
+}
+
+/* Status message area */
+.lv-overlay__status {
+  padding: 12px 16px;
+  text-align: center;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  color: #8fb3d3;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile portrait optimizations */
+@media (max-width: 767px) and (orientation: portrait) {
+  .lv-overlay__header {
+    padding: 16px 12px 12px;
+  }
+  
+  .lv-overlay__carousel {
+    padding: 16px 12px;
+  }
+  
+  .lv-overlay__track {
+    padding: 0 48px; /* Tighter spacing for arrows */
+  }
+  
+  .lv-overlay__arrow {
+    width: 44px;
+    height: 44px;
+    font-size: 1.2rem;
+  }
+  
+  .lv-overlay__arrow.prev {
+    left: 4px;
+  }
+  
+  .lv-overlay__arrow.next {
+    right: 4px;
+  }
+  
+  .lv-overlay__dock {
+    padding: 16px 12px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  
+  .lv-overlay__evict-btn {
+    padding: 14px 40px;
+    width: 100%;
+    max-width: 280px;
+  }
+}
+
+/* Landscape mobile (rotate to landscape on phone) */
+@media (max-width: 896px) and (orientation: landscape) {
+  .lv-overlay__header {
+    padding: 12px 16px 8px;
+    font-size: 1.1rem;
+  }
+  
+  .lv-overlay__carousel {
+    padding: 12px 16px;
+  }
+  
+  .lv-overlay__avatar-container {
+    width: clamp(100px, 25vw, 140px);
+    height: clamp(100px, 25vw, 140px);
+  }
+  
+  .lv-overlay__nominee.center .lv-overlay__avatar-container {
+    width: clamp(120px, 30vw, 160px);
+    height: clamp(120px, 30vw, 160px);
+  }
+  
+  .lv-overlay__dock {
+    padding: 12px 16px;
+  }
+}
+
+/* Very narrow screens (iPhone SE, etc.) */
+@media (max-width: 390px) {
+  .lv-overlay__header {
+    font-size: 1.1rem;
+  }
+  
+  .lv-overlay__track {
+    gap: 16px;
+    padding: 0 40px;
+  }
+  
+  .lv-overlay__avatar-container {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .lv-overlay__nominee.center .lv-overlay__avatar-container {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .lv-overlay__arrow {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  .lv-overlay__evict-btn {
+    padding: 12px 32px;
+  }
+}
+
+/* Accessibility: respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .lv-overlay__track,
+  .lv-overlay__nominee,
+  .lv-overlay__avatar-container,
+  .lv-overlay__avatar,
+  .lv-overlay__nominee-name {
+    transition: none;
+  }
+  
+  .lv-overlay__arrow:hover,
+  .lv-overlay__arrow:active,
+  .lv-overlay__evict-btn:hover,
+  .lv-overlay__evict-btn:active,
+  .lv-overlay__close:hover,
+  .lv-overlay__close:active {
+    transform: none;
+  }
+}
+
+/* Accessibility: high contrast mode support */
+@media (prefers-contrast: high) {
+  .lv-overlay__avatar {
+    border-width: 4px;
+  }
+  
+  .lv-overlay__nominee.selected .lv-overlay__avatar {
+    border-width: 6px;
+  }
+  
+  .lv-overlay__arrow,
+  .lv-overlay__close {
+    border-width: 3px;
+  }
+}
