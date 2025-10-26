@@ -1,0 +1,362 @@
+/* ============================================================================
+   CAROUSEL PICKER - Full-Screen POV Selection UI
+   Single-focus carousel with left/right arrows and explicit Confirm button
+   ============================================================================ */
+
+/* ===== Overlay (Full-Screen) ===== */
+.carousel-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.carousel-picker-overlay.carousel-picker-visible {
+  opacity: 1;
+}
+
+/* ===== Top Section (Title) ===== */
+.carousel-picker-top {
+  width: 100%;
+  max-width: 800px;
+  text-align: center;
+}
+
+.carousel-picker-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text, #ffffff);
+  margin: 0;
+  padding: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Responsive title sizing */
+@media (max-width: 768px) {
+  .carousel-picker-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-picker-title {
+    font-size: 1.25rem;
+  }
+}
+
+/* ===== Middle Section (Avatar + Arrows) ===== */
+.carousel-picker-middle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  width: 100%;
+  max-width: 900px;
+  flex: 1;
+}
+
+/* Reduce gap on mobile */
+@media (max-width: 768px) {
+  .carousel-picker-middle {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-picker-middle {
+    gap: 12px;
+  }
+}
+
+/* ===== Arrow Buttons ===== */
+.carousel-picker-arrow {
+  background: linear-gradient(145deg, rgba(52, 152, 219, 0.3), rgba(41, 128, 185, 0.3));
+  border: 2px solid rgba(52, 152, 219, 0.5);
+  border-radius: 50%;
+  width: 72px;
+  height: 72px;
+  font-size: 3rem;
+  color: var(--accent, #3498db);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.carousel-picker-arrow:hover:not(:disabled) {
+  background: linear-gradient(145deg, rgba(52, 152, 219, 0.5), rgba(41, 128, 185, 0.5));
+  border-color: rgba(52, 152, 219, 0.8);
+  transform: scale(1.1);
+}
+
+.carousel-picker-arrow:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.carousel-picker-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  background: linear-gradient(145deg, rgba(100, 100, 100, 0.2), rgba(80, 80, 80, 0.2));
+  border-color: rgba(100, 100, 100, 0.3);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Responsive arrow sizing */
+@media (max-width: 768px) {
+  .carousel-picker-arrow {
+    width: 56px;
+    height: 56px;
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-picker-arrow {
+    width: 48px;
+    height: 48px;
+    font-size: 2rem;
+  }
+}
+
+/* ===== Avatar Container ===== */
+.carousel-picker-avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px;
+  background: linear-gradient(145deg, rgba(28, 43, 62, 0.6), rgba(12, 22, 36, 0.6));
+  border: 3px solid rgba(110, 160, 220, 0.3);
+  border-radius: 24px;
+  min-width: 280px;
+  transition: all 0.25s ease;
+}
+
+.carousel-picker-avatar-selectable {
+  cursor: pointer;
+  border-color: rgba(52, 152, 219, 0.5);
+}
+
+.carousel-picker-avatar-selectable:hover {
+  background: linear-gradient(145deg, rgba(52, 152, 219, 0.3), rgba(41, 128, 185, 0.3));
+  border-color: rgba(52, 152, 219, 0.8);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(52, 152, 219, 0.4);
+}
+
+.carousel-picker-avatar-selectable:active {
+  transform: translateY(-2px);
+}
+
+.carousel-picker-avatar-blocked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+/* Responsive avatar container */
+@media (max-width: 768px) {
+  .carousel-picker-avatar-container {
+    padding: 24px;
+    min-width: 220px;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-picker-avatar-container {
+    padding: 16px;
+    min-width: 180px;
+    gap: 10px;
+  }
+}
+
+/* ===== Avatar Image ===== */
+.carousel-picker-avatar {
+  width: 200px;
+  height: 200px;
+  border-radius: 20px;
+  object-fit: cover;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s ease;
+}
+
+.carousel-picker-avatar-selectable:hover .carousel-picker-avatar {
+  border-color: rgba(52, 152, 219, 0.8);
+  transform: scale(1.05);
+}
+
+/* Responsive avatar sizing */
+@media (max-width: 768px) {
+  .carousel-picker-avatar {
+    width: 160px;
+    height: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-picker-avatar {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* ===== Name Label ===== */
+.carousel-picker-name {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text, #ffffff);
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Responsive name sizing */
+@media (max-width: 768px) {
+  .carousel-picker-name {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-picker-name {
+    font-size: 1.25rem;
+  }
+}
+
+/* ===== Blocked Label ===== */
+.carousel-picker-blocked-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--danger, #e74c3c);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 16px;
+  background: rgba(231, 76, 60, 0.2);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-radius: 8px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* ===== Bottom Section (Buttons + Counter) ===== */
+.carousel-picker-bottom {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ===== Button Row ===== */
+.carousel-picker-button-row {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Responsive button row */
+@media (max-width: 480px) {
+  .carousel-picker-button-row {
+    gap: 12px;
+  }
+}
+
+/* ===== Cancel Button ===== */
+.carousel-picker-cancel {
+  min-width: 140px;
+  padding: 14px 28px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: rgba(100, 100, 100, 0.3);
+  border: 2px solid rgba(200, 200, 200, 0.4);
+  color: var(--text, #ffffff);
+}
+
+.carousel-picker-cancel:hover {
+  background: rgba(100, 100, 100, 0.5);
+  border-color: rgba(200, 200, 200, 0.6);
+}
+
+/* Responsive cancel button */
+@media (max-width: 480px) {
+  .carousel-picker-cancel {
+    min-width: 100px;
+    padding: 12px 20px;
+    font-size: 1rem;
+  }
+}
+
+/* ===== Confirm Button ===== */
+.carousel-picker-confirm {
+  min-width: 140px;
+  padding: 14px 28px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.carousel-picker-confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Responsive confirm button */
+@media (max-width: 480px) {
+  .carousel-picker-confirm {
+    min-width: 100px;
+    padding: 12px 20px;
+    font-size: 1rem;
+  }
+}
+
+/* ===== Counter ===== */
+.carousel-picker-counter {
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* ===== Accessibility & Keyboard Focus ===== */
+.carousel-picker-arrow:focus,
+.carousel-picker-avatar-selectable:focus,
+.carousel-picker-cancel:focus,
+.carousel-picker-confirm:focus {
+  outline: 3px solid var(--accent, #3498db);
+  outline-offset: 4px;
+}
+
+/* ===== Animations ===== */
+@keyframes carouselFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.carousel-picker-avatar-container {
+  animation: carouselFadeIn 0.3s ease-out;
+}
