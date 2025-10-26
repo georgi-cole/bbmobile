@@ -855,8 +855,8 @@ header.innerHTML = `
       
       // Initialize label variables with fallback to player name
       // This ensures we always have a valid label even if no special status applies
-      const nameLabel = (typeof global.safeName === 'function') 
-        ? global.safeName(p.id) 
+      const nameLabel = (typeof g.safeName === 'function') 
+        ? g.safeName(p.id) 
         : (p.name || `Player ${p.id}`);
       let labelText = nameLabel;
       let statusClass = '';
