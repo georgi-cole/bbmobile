@@ -709,6 +709,13 @@
   function getAvailableActions(playerId, targetId){
     const actor = global.getP?.(playerId);
     const target = targetId ? global.getP?.(targetId) : null;
+    
+    // Block actions if actor or target is evicted
+    if(actor?.evicted || target?.evicted){
+      console.info('[social-maneuvers] getAvailableActions: actor or target is evicted - returning empty array');
+      return [];
+    }
+    
     return SOCIAL_ACTIONS.map(action => {
       const canAfford = SocialResources.canAfford(playerId, action.costs);
       let evaluation = null;
@@ -730,6 +737,16 @@
     const actor = global.getP?.(actorId);
     const target = global.getP?.(targetId);
     if(!actor || !target){ return { success: false, reason: 'player_not_found' }; }
+    
+    // Block actions involving evicted players
+    if(actor.evicted){ 
+      console.warn('[social-maneuvers] Actor is evicted - blocking action');
+      return { success: false, reason: 'actor_evicted', message: 'Evicted players cannot perform social actions' }; 
+    }
+    if(target.evicted){ 
+      console.warn('[social-maneuvers] Target is evicted - blocking action');
+      return { success: false, reason: 'target_evicted', message: 'Cannot target evicted players' }; 
+    }
 
     // Build complete target list (primary + extra targets)
     // Always respect extraTargetIds for group pricing, regardless of multiTarget flag
@@ -997,6 +1014,26 @@
       }
     }
     
+    // ==================== Apply action rewards (influence, information) ====================
+    // Actions can have rewards defined that are earned on success
+    if(succeeded && action.rewards) {
+      const rewards = {};
+      if(action.rewards.influence > 0) {
+        rewards.influence = action.rewards.influence;
+      }
+      if(action.rewards.information > 0) {
+        rewards.information = action.rewards.information;
+      }
+      if(action.rewards.energy > 0) {
+        rewards.energy = action.rewards.energy;
+      }
+      
+      if(Object.keys(rewards).length > 0) {
+        SocialResources.earn(actorId, rewards);
+        console.info(`[social-maneuvers] Applied action rewards:`, rewards);
+      }
+    }
+    
     // Apply in-phase energy refunds
     if(succeeded) {
       if(action.id === 'compliment' && SocialResources.canRefundEnergy(actorId, 'compliment-' + targetId)) {
@@ -1021,7 +1058,14 @@
     
     recordActionInMemory(actorId, targetId, action, outcomeType);
     applyTraitEffects(actorId, targetId, action);
-    return { type: outcomeType, message, affinityChange, traitModifiers, memoryModifiers, succeeded };
+    
+    // Calculate influence change for outcome reporting
+    let influenceChange = 0;
+    if(succeeded && action.rewards?.influence) {
+      influenceChange = action.rewards.influence;
+    }
+    
+    return { type: outcomeType, message, affinityChange, influenceChange, traitModifiers, memoryModifiers, succeeded };
   }
 
   // High-impact: Spread Rumor
@@ -1991,9 +2035,7 @@
     if(energyRemaining === 0){
       console.info(`[social-maneuvers] 🎯 Player ${playerId} has depleted all energy (0 remaining)`);
       
-      // Show feedback message
-      global.addLog?.('All social energy spent! Phase will advance shortly...', 'ok');
-      
+      // Note: No redundant popup here - summary will be shown on phase end
       // Use guarded shim: window.scheduleFastAdvance (installed at module load) or fallback
       const scheduleFn = window.scheduleFastAdvance || scheduleFastAdvanceFallback;
       scheduleFn(800); // 800ms delay as specified in requirements
@@ -3492,6 +3534,35 @@
         card.remove();
         if(deck && deck.childElementCount === 0){
           deck.remove();
+        }
+        
+        // Check if human player has 0 energy and auto-advance if so
+        const g = global.game;
+        if(g){
+          const humanId = g.humanId;
+          const humanEnergy = SocialResources.get(humanId, 'energy');
+          
+          if(humanEnergy === 0){
+            console.info('[social-maneuvers] ⏩ Human has 0 energy - stopping timer and advancing phase');
+            
+            // Stop phase timer
+            if(typeof stopSocialPhaseTimer === 'function'){
+              stopSocialPhaseTimer();
+            }
+            
+            // Advance to next phase immediately
+            if(typeof global.startNominations === 'function'){
+              global.startNominations();
+              console.info('[social-maneuvers] ✓ Advanced to nominations');
+            } else if(typeof global.setPhase === 'function'){
+              global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
+                if(typeof global.startVeto === 'function') global.startVeto();
+                else if(typeof global.startVetoComp === 'function') global.startVetoComp();
+              });
+              global.renderPanel?.();
+              console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
+            }
+          }
         }
       }, 400);
     };
