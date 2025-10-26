@@ -225,7 +225,11 @@
       // Waiting status - visible after user's vote until all votes are in
       const waitingStatus = document.createElement('div');
       waitingStatus.className = 'lv2-waiting-status';
-      waitingStatus.innerHTML = 'Waiting for votes... <span class="progress">0/0</span>';
+      waitingStatus.textContent = 'Waiting for votes... ';
+      const progressSpan = document.createElement('span');
+      progressSpan.className = 'progress';
+      progressSpan.textContent = '0';
+      waitingStatus.appendChild(progressSpan);
       waitingStatus.setAttribute('role', 'status');
       waitingStatus.setAttribute('aria-live', 'polite');
       statusRow.appendChild(waitingStatus);

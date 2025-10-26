@@ -2581,6 +2581,9 @@ button:focus-visible,.btn:focus-visible{
   justify-content: center;
   position: relative;
   overflow: visible; /* Allow arrows to be positioned outside */
+  /* Ensure stage doesn't overflow into other grid areas */
+  min-height: 0;
+  max-height: 100%;
 }
 
 /* Status row area (below stage, above CTA) */
@@ -2620,6 +2623,8 @@ button:focus-visible,.btn:focus-visible{
   background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.2) 100%);
   margin-top: auto;
   min-height: 72px;
+  position: relative;
+  z-index: 10; /* Ensure CTA is above other elements */
 }
 
 /* Main CTA button inside dock */
@@ -2698,6 +2703,9 @@ button:focus-visible,.btn:focus-visible{
   align-items: center;
   justify-content: center;
   gap: clamp(8px, 1.5dvh, 12px);
+  /* Ensure contestant card doesn't overflow the grid area */
+  max-height: 100%;
+  overflow: visible; /* Allow arrows outside but constrain card content */
 }
 
 .lv2-grid.lv2-carousel .lv2-contestant.hidden {
@@ -2793,6 +2801,7 @@ button:focus-visible,.btn:focus-visible{
   align-items: center;
   justify-content: center;
   margin-top: 8px;
+  pointer-events: none; /* Don't intercept clicks */
 }
 
 .lv2-dots .dot {
@@ -2818,6 +2827,7 @@ button:focus-visible,.btn:focus-visible{
   font-style: italic;
   letter-spacing: 0.2px;
   opacity: 0.7;
+  pointer-events: none; /* Don't intercept clicks */
 }
 
 /* Status Row - positioned below stage, above CTA dock */
