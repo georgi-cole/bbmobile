@@ -2323,7 +2323,7 @@
       }
       
       // Use rpPicker if available (modern carousel implementation)
-      if(typeof global.rpPicker !== 'undefined' && global.rpPicker.show){
+      if (typeof global.rpPicker !== 'undefined' && global.rpPicker.show) {
         global.rpPicker.show({
           eligibleIds: eligibleIds,
           blockedIds: getBlockedReplacementIds(),
@@ -2332,7 +2332,7 @@
             resolve(selectedId);
           }
         });
-      } else if(typeof window.openCarouselPicker === 'function'){
+      } else if (typeof window.openCarouselPicker === 'function') {
         // Fallback: use openCarouselPicker directly
         window.openCarouselPicker({
           ids: eligibleIds,
