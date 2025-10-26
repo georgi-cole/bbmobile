@@ -595,6 +595,114 @@ header.innerHTML = `
     if(p) showProfileFor(p, null);
   };
 
+  // ------------ Top Roster Helpers ------------
+  /**
+   * Get current POV twist type from game state.
+   * @returns {'golden'|'diamond'|''} The active POV twist, or empty string if none.
+   */
+  function getCurrentPovTwist(){
+    const game = g.game;
+    if(!game) return '';
+    
+    // Check global activeVetoTwist first (set by veto.js)
+    if(g.activeVetoTwist === 'diamond') return 'diamond';
+    if(g.activeVetoTwist === 'golden') return 'golden';
+    
+    // Check week-level twist flags
+    const week = game.weeks?.[game.week - 1] || game.weekData || {};
+    if(week.twists){
+      if(week.twists.diamondPOVActive) return 'diamond';
+      if(week.twists.goldenPOVActive) return 'golden';
+    }
+    
+    // Check week.povTwist property
+    if(week.povTwist === 'diamond') return 'diamond';
+    if(week.povTwist === 'golden') return 'golden';
+    
+    // Check cfg.twists fallback
+    if(game.cfg?.twists){
+      if(game.cfg.twists.diamondPOVActive) return 'diamond';
+      if(game.cfg.twists.goldenPOVActive) return 'golden';
+    }
+    
+    return '';
+  }
+
+  /**
+   * Check if player is active (not evicted).
+   */
+  function isActive(p){
+    return p && !p.evicted;
+  }
+
+  /**
+   * Check if player is the human player.
+   */
+  function isHuman(p){
+    const game = g.game;
+    return p && game && (p.id === game.humanId || p.human === true);
+  }
+
+  /**
+   * Check if player is HOH.
+   */
+  function isHOH(p){
+    const game = g.game;
+    if(!p || !game) return false;
+    
+    // Check player.hoh flag
+    if(p.hoh) return true;
+    
+    // Check game.hohId
+    if(game.hohId === p.id) return true;
+    
+    // Check game.hohIds array (for dual HOH)
+    if(Array.isArray(game.hohIds) && game.hohIds.includes(p.id)) return true;
+    
+    return false;
+  }
+
+  /**
+   * Check if player is POV holder.
+   */
+  function isPOV(p){
+    const game = g.game;
+    if(!p || !game) return false;
+    
+    // Check game.vetoHolder
+    if(game.vetoHolder === p.id) return true;
+    
+    // Check game.povId
+    if(game.povId === p.id) return true;
+    
+    // Check game.povIds array (for multiple POV holders)
+    if(Array.isArray(game.povIds) && game.povIds.includes(p.id)) return true;
+    
+    return false;
+  }
+
+  /**
+   * Check if player is a nominee.
+   */
+  function isNominee(p){
+    const game = g.game;
+    if(!p || !game) return false;
+    
+    // Check player.nominated flag
+    if(p.nominated && !p.evicted) return true;
+    
+    // Check game.nominees array
+    if(Array.isArray(game.nominees) && game.nominees.includes(p.id)) return true;
+    
+    // Check game.noms array (alternative)
+    if(Array.isArray(game.noms) && game.noms.includes(p.id)) return true;
+    
+    // Check game.nom (single nominee)
+    if(game.nom === p.id) return true;
+    
+    return false;
+  }
+
   // ------------ Top Roster ------------
   function renderTopRoster(){
     try{
@@ -614,7 +722,7 @@ header.innerHTML = `
       const row=document.createElement('div'); row.className='top-roster-row';
       host.appendChild(row);
 
-      // Reorder players: active players first (original order), then evicted (by eviction order)
+      // Reorder players with dynamic priority: human, HOH, nominees, POV, others, then evicted
       const allPlayers = (game.players||[]).slice();
       const activePlayers = [];
       const evictedPlayers = [];
@@ -631,7 +739,50 @@ header.innerHTML = `
       // Sort evicted by weekEvicted (earliest eviction first)
       evictedPlayers.sort((a, b) => (a.weekEvicted || 0) - (b.weekEvicted || 0));
       
-      const orderedPlayers = [...activePlayers, ...evictedPlayers];
+      // Build ordered active players with priority: human, HOH, nominees, POV, remaining
+      const orderedActive = [];
+      const added = new Set(); // Track which players have been added
+      
+      // 1. Human first if active
+      const humanPlayer = activePlayers.find(p => isHuman(p));
+      if(humanPlayer){
+        orderedActive.push(humanPlayer);
+        added.add(humanPlayer.id);
+      }
+      
+      // 2. HOH after human (unless human is HOH, then already added)
+      activePlayers.forEach(p => {
+        if(!added.has(p.id) && isHOH(p)){
+          orderedActive.push(p);
+          added.add(p.id);
+        }
+      });
+      
+      // 3. Nominees after HOH
+      activePlayers.forEach(p => {
+        if(!added.has(p.id) && isNominee(p)){
+          orderedActive.push(p);
+          added.add(p.id);
+        }
+      });
+      
+      // 4. POV holder after nominees
+      activePlayers.forEach(p => {
+        if(!added.has(p.id) && isPOV(p)){
+          orderedActive.push(p);
+          added.add(p.id);
+        }
+      });
+      
+      // 5. Remaining active players in original order
+      activePlayers.forEach(p => {
+        if(!added.has(p.id)){
+          orderedActive.push(p);
+          added.add(p.id);
+        }
+      });
+      
+      const orderedPlayers = [...orderedActive, ...evictedPlayers];
 
       orderedPlayers.forEach((p, displayIndex)=>{
       const tile=document.createElement('div'); tile.className='top-roster-tile';
@@ -726,7 +877,7 @@ header.innerHTML = `
         statusClass = 'status-nom';
         ariaLabel = `${nameLabel} (Nominated)`;
       } else if(hasHOH && hasVeto){
-        // Both HOH and POV - show both icons side by side
+        // Both HOH and POV - show both icons side by side (no twist badge in dual mode)
         name.innerHTML = '<span class="icon-hoh">👑</span><span class="icon-veto">🛡</span>';
         statusClass = 'status-icon-label hoh-pov-icons';
         ariaLabel = `${nameLabel} (Head of Household and Veto Holder)`;
@@ -735,9 +886,21 @@ header.innerHTML = `
         statusClass = 'status-hoh';
         ariaLabel = `${nameLabel} (Head of Household)`;
       } else if(hasVeto){
-        labelText = 'POV';
-        statusClass = 'status-pov';
-        ariaLabel = `${nameLabel} (Veto Holder)`;
+        // POV with potential twist badge
+        const twist = getCurrentPovTwist();
+        if(twist === 'diamond'){
+          labelText = 'POV 💎';
+          statusClass = 'status-pov status-pov-diamond';
+          ariaLabel = `${nameLabel} (Diamond Power of Veto)`;
+        } else if(twist === 'golden'){
+          labelText = 'POV ⭐';
+          statusClass = 'status-pov status-pov-golden';
+          ariaLabel = `${nameLabel} (Golden Power of Veto)`;
+        } else {
+          labelText = 'POV';
+          statusClass = 'status-pov';
+          ariaLabel = `${nameLabel} (Veto Holder)`;
+        }
       }
       
       if(!(hasHOH && hasVeto)){
