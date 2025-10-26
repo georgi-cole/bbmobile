@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scroll Lock Fix Validation Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/livevote-choice-card.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 200vh; /* Make page scrollable */
+    }
+    
+    .test-panel {
+      max-width: 800px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.9);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-panel h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-panel h2 {
+      margin: 20px 0 12px 0;
+      color: #ffd96b;
+      font-size: 1.2rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #d63031);
+      color: #fff;
+    }
+    
+    .status-box {
+      margin: 16px 0;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      border-left: 3px solid #00e0cc;
+    }
+    
+    .status-box.error {
+      background: rgba(255,107,107,0.1);
+      border-left-color: #ff6b6b;
+    }
+    
+    .status-box.success {
+      background: rgba(0,224,204,0.15);
+      border-left-color: #00e0cc;
+    }
+    
+    .check-item {
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .check-icon {
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .check-icon.pass::before {
+      content: '✓';
+      color: #00e0cc;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    
+    .check-icon.fail::before {
+      content: '✗';
+      color: #ff6b6b;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    .tv-container {
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    #tv {
+      position: relative;
+      height: 500px;
+      background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
+      background-color: #0e1730;
+      border: 2px solid rgba(0,0,0,0.35);
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .spacer {
+      height: 800px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.3;
+      font-size: 3rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-panel">
+    <h1>🔒 Mobile Live Vote Scroll Lock Fix - Validation Test</h1>
+    
+    <p>This test validates that the scroll lock fix is working correctly. Scroll down the page, then test the buttons below.</p>
+    
+    <h2>Test Controls</h2>
+    <div class="test-controls">
+      <button id="btn-show-choice-card">Show Choice Card</button>
+      <button id="btn-show-overlay">Show Voting Overlay</button>
+      <button id="btn-close-all">Close All Vote UI (Test Cleanup)</button>
+      <button class="danger" id="btn-check-scroll">Check Scroll Lock Status</button>
+    </div>
+    
+    <h2>Scroll Lock Status</h2>
+    <div id="status-display" class="status-box">
+      Click "Check Scroll Lock Status" to see the current state.
+    </div>
+    
+    <h2>Test Checklist</h2>
+    <div class="status-box success">
+      <div class="check-item">
+        <span class="check-icon" id="check-helpers"></span>
+        <span>livevote-helpers.js loaded with closeAllVoteUI()</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon" id="check-unlock"></span>
+        <span>unlockBodyScroll() function available</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon" id="check-choicecard"></span>
+        <span>LiveVoteChoiceCard module loaded</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon" id="check-overlay"></span>
+        <span>LiveVoteOverlay module loaded</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer">↓ Scroll down to test ↓</div>
+
+  <div class="tv-container">
+    <div id="tv"></div>
+  </div>
+
+  <div class="spacer">↑ Scroll up ↑</div>
+
+  <div class="test-panel">
+    <h2>Expected Behavior</h2>
+    <ul>
+      <li><strong>Choice Card:</strong> Should lock body scroll when shown, unlock when hidden</li>
+      <li><strong>Voting Overlay:</strong> Should lock body scroll, be scrollable inside modal, unlock when closed</li>
+      <li><strong>Close All:</strong> Should always unlock scroll regardless of current state (idempotent)</li>
+      <li><strong>High Z-Index:</strong> Overlay should appear above all other elements (z-index: 2147483640)</li>
+      <li><strong>Mobile Scroll:</strong> Overlay content should be scrollable on mobile (overflow-y: auto)</li>
+    </ul>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/livevote-helpers.js"></script>
+  <script src="js/livevote-choice-card.js"></script>
+  <script src="js/livevote-voteoverlay.js"></script>
+
+  <script>
+    // Mock global functions needed by the modules
+    window.getP = function(id) {
+      const mockPlayers = {
+        1: { id: 1, name: 'Alice', avatar: null },
+        2: { id: 2, name: 'Bob', avatar: null },
+        3: { id: 3, name: 'Charlie', avatar: null },
+        4: { id: 4, name: 'Diana', avatar: null }
+      };
+      return mockPlayers[id];
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+
+    // Check module availability
+    function checkModules() {
+      const checks = {
+        'check-helpers': typeof window.closeAllVoteUI === 'function',
+        'check-unlock': typeof window.unlockBodyScroll === 'function',
+        'check-choicecard': typeof window.LiveVoteChoiceCard === 'object',
+        'check-overlay': typeof window.LiveVoteOverlay === 'object'
+      };
+
+      for (const [id, passed] of Object.entries(checks)) {
+        const icon = document.getElementById(id);
+        if (icon) {
+          icon.className = 'check-icon ' + (passed ? 'pass' : 'fail');
+        }
+      }
+    }
+
+    // Constants
+    const SCROLL_CHECK_DELAY = 100; // ms to wait before checking scroll lock after cleanup
+
+    // Check scroll lock status
+    function checkScrollLock() {
+      const body = document.body;
+      const status = document.getElementById('status-display');
+      
+      const locked = body.dataset.scrollLocked === 'true';
+      const position = body.style.position;
+      const top = body.style.top;
+      const overflow = body.style.overflow;
+      const scrollY = body.dataset.scrollY;
+      
+      let html = '<h3 style="margin-top:0">Current Scroll Lock State:</h3>';
+      html += '<ul style="margin:0;padding-left:20px">';
+      html += `<li><strong>Locked:</strong> ${locked ? '🔒 YES' : '🔓 NO'}</li>`;
+      html += `<li><strong>Position:</strong> ${position || '(default)'}</li>`;
+      html += `<li><strong>Top:</strong> ${top || '(default)'}</li>`;
+      html += `<li><strong>Overflow:</strong> ${overflow || '(default)'}</li>`;
+      html += `<li><strong>Saved scrollY:</strong> ${scrollY || '(none)'}</li>`;
+      html += `<li><strong>Current window.scrollY:</strong> ${window.scrollY}px</li>`;
+      html += '</ul>';
+      
+      if (locked) {
+        html += '<p style="margin-top:12px;color:#ff6b6b;font-weight:bold">⚠️ WARNING: Body scroll is currently locked!</p>';
+        status.className = 'status-box error';
+      } else {
+        html += '<p style="margin-top:12px;color:#00e0cc;font-weight:bold">✓ Body scroll is unlocked (as expected)</p>';
+        status.className = 'status-box success';
+      }
+      
+      status.innerHTML = html;
+    }
+
+    // Event handlers
+    document.getElementById('btn-show-choice-card').addEventListener('click', () => {
+      console.log('[Test] Showing Choice Card');
+      if (window.LiveVoteChoiceCard) {
+        window.LiveVoteChoiceCard.show({
+          nominees: [1, 2, 3],
+          onVoteClick: (nominees) => {
+            console.log('[Test] Vote button clicked, opening overlay');
+            window.LiveVoteChoiceCard.hide();
+            
+            if (window.LiveVoteOverlay) {
+              window.LiveVoteOverlay.show({
+                nominees: nominees,
+                onSubmit: (selectedId) => {
+                  console.log('[Test] Vote submitted for:', selectedId);
+                  alert(`Vote cast for: ${window.safeName(selectedId)}`);
+                }
+              });
+            }
+          }
+        });
+      }
+    });
+
+    document.getElementById('btn-show-overlay').addEventListener('click', () => {
+      console.log('[Test] Showing Voting Overlay directly');
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.show({
+          nominees: [1, 2, 3, 4],
+          onSubmit: (selectedId) => {
+            console.log('[Test] Vote submitted for:', selectedId);
+            alert(`Vote cast for: ${window.safeName(selectedId)}`);
+          }
+        });
+      }
+    });
+
+    document.getElementById('btn-close-all').addEventListener('click', () => {
+      console.log('[Test] Calling closeAllVoteUI()');
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+        setTimeout(checkScrollLock, SCROLL_CHECK_DELAY);
+      }
+    });
+
+    document.getElementById('btn-check-scroll').addEventListener('click', checkScrollLock);
+
+    // Initialize on load
+    window.addEventListener('load', () => {
+      checkModules();
+      checkScrollLock();
+      console.log('[Test] Scroll lock fix validation test loaded');
+      console.log('[Test] Available functions:', {
+        closeAllVoteUI: typeof window.closeAllVoteUI,
+        unlockBodyScroll: typeof window.unlockBodyScroll,
+        LiveVoteChoiceCard: typeof window.LiveVoteChoiceCard,
+        LiveVoteOverlay: typeof window.LiveVoteOverlay
+      });
+    });
+  </script>
+</body>
+</html>

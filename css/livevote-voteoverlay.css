@@ -5,16 +5,15 @@
  */
 
 .lv-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: fixed;
+  inset: 0;
   background: linear-gradient(135deg, rgba(10, 15, 22, 0.97), rgba(20, 35, 55, 0.98));
-  z-index: 200;
+  z-index: 2147483640;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  height: 100svh;
+  height: 100vh; /* Fallback for older browsers */
+  overscroll-behavior: contain;
   
   /* Safe area support */
   padding-top: env(safe-area-inset-top);
@@ -40,7 +39,9 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: 20px 16px;
   min-height: 0; /* Allow flex child to shrink */
 }
@@ -174,6 +175,9 @@
   padding-bottom: max(20px, env(safe-area-inset-bottom));
   text-align: center;
   flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(to bottom, transparent, rgba(10, 15, 22, 0.98) 20%);
 }
 
 .lv-overlay__evict-btn {
