@@ -2008,9 +2008,7 @@
     if(energyRemaining === 0){
       console.info(`[social-maneuvers] 🎯 Player ${playerId} has depleted all energy (0 remaining)`);
       
-      // Show feedback message
-      global.addLog?.('All social energy spent! Phase will advance shortly...', 'ok');
-      
+      // Note: No redundant popup here - summary will be shown on phase end
       // Use guarded shim: window.scheduleFastAdvance (installed at module load) or fallback
       const scheduleFn = window.scheduleFastAdvance || scheduleFastAdvanceFallback;
       scheduleFn(800); // 800ms delay as specified in requirements
@@ -3509,6 +3507,35 @@
         card.remove();
         if(deck && deck.childElementCount === 0){
           deck.remove();
+        }
+        
+        // Check if human player has 0 energy and auto-advance if so
+        const g = global.game;
+        if(g){
+          const humanId = g.humanId;
+          const humanEnergy = SocialResources.get(humanId, 'energy');
+          
+          if(humanEnergy === 0){
+            console.info('[social-maneuvers] ⏩ Human has 0 energy - stopping timer and advancing phase');
+            
+            // Stop phase timer
+            if(typeof stopSocialPhaseTimer === 'function'){
+              stopSocialPhaseTimer();
+            }
+            
+            // Advance to next phase immediately
+            if(typeof global.startNominations === 'function'){
+              global.startNominations();
+              console.info('[social-maneuvers] ✓ Advanced to nominations');
+            } else if(typeof global.setPhase === 'function'){
+              global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
+                if(typeof global.startVeto === 'function') global.startVeto();
+                else if(typeof global.startVetoComp === 'function') global.startVetoComp();
+              });
+              global.renderPanel?.();
+              console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
+            }
+          }
         }
       }, 400);
     };
