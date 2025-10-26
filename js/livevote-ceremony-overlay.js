@@ -185,7 +185,6 @@
    * @param {Object} vote - Vote details
    * @param {number} vote.voterId - Voter's player ID
    * @param {string} vote.voterName - Voter's name
-   * @param {number} vote.targetId - Target nominee ID
    * @param {string} vote.targetName - Target nominee name
    */
   async function addVote(vote) {
