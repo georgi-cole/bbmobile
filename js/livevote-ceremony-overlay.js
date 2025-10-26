@@ -2,9 +2,31 @@
 // Full-screen Ceremony Overlay for mobile Live Vote Part 2 (post-user vote)
 // Manages three sequential steps: rollout → announcement → final
 // Safe-area aware, hides legacy LV1 elements, prevents overlap/cutoff on mobile
+//
+// FEATURE FLAG: window.lv2Flags.ceremonyOverlayMobile (default: false)
+// Can be enabled via URL parameter: ?ceremony=1
 
 (function(global) {
   'use strict';
+
+  // Initialize feature flags if not present
+  if (!global.lv2Flags) {
+    global.lv2Flags = {};
+  }
+  
+  // Default: ceremony overlay disabled for stability
+  if (global.lv2Flags.ceremonyOverlayMobile === undefined) {
+    global.lv2Flags.ceremonyOverlayMobile = false;
+  }
+  
+  // Check URL parameter for override
+  if (typeof URLSearchParams !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('ceremony') === '1') {
+      global.lv2Flags.ceremonyOverlayMobile = true;
+      console.log('[CeremonyOverlay] Enabled via URL parameter');
+    }
+  }
 
   // State
   const state = {
@@ -44,8 +66,13 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
   }
 
-  // Detect if we should use ceremony overlay (mobile only by default)
+  // Detect if we should use ceremony overlay
   function shouldUseCeremonyOverlay() {
+    // Check feature flag first
+    if (!global.lv2Flags?.ceremonyOverlayMobile) {
+      return false;
+    }
+    
     // Use TVFit engine if available for mobile detection
     if (global.TVFit) {
       return global.TVFit.isMobile() || global.TVFit.isNarrow();
@@ -66,7 +93,7 @@
 
     // Check if we should use ceremony overlay
     if (!shouldUseCeremonyOverlay()) {
-      console.log('[CeremonyOverlay] Skipping on desktop/wide viewport');
+      console.log('[CeremonyOverlay] Skipping (flag disabled or desktop viewport)');
       return null;
     }
 
@@ -82,7 +109,7 @@
 
     // Create overlay element - full-screen with safe-area padding
     const overlay = document.createElement('div');
-    overlay.className = 'lv-ceremony-overlay';
+    overlay.className = 'ceremony-overlay';
     overlay.setAttribute('role', 'region');
     overlay.setAttribute('aria-label', 'Live vote ceremony');
 
@@ -94,7 +121,7 @@
 
     // Step container (holds current step content)
     const stepContainer = document.createElement('div');
-    stepContainer.className = 'lv-ceremony__step-container';
+    stepContainer.className = 'ceremony-overlay__step-container';
     overlay.appendChild(stepContainer);
 
     // Add to container
@@ -178,7 +205,7 @@
       nominees
     };
 
-    const stepContainer = state.overlay.querySelector('.lv-ceremony__step-container');
+    const stepContainer = state.overlay.querySelector('.ceremony-overlay__step-container');
     if (!stepContainer) return;
 
     // Clear previous step content
@@ -186,19 +213,19 @@
 
     // Create rollout step content
     const rolloutStep = document.createElement('div');
-    rolloutStep.className = 'lv-ceremony__step lv-ceremony__rollout';
+    rolloutStep.className = 'ceremony-overlay__step ceremony-overlay__rollout';
     rolloutStep.setAttribute('role', 'status');
     rolloutStep.setAttribute('aria-live', 'polite');
 
     // Header
     const header = document.createElement('div');
-    header.className = 'lv-ceremony__header';
+    header.className = 'ceremony-overlay__header';
     header.textContent = 'Voting in progress';
     rolloutStep.appendChild(header);
 
     // Progress pill (N/M format)
     const progress = document.createElement('div');
-    progress.className = 'lv-ceremony__progress';
+    progress.className = 'ceremony-overlay__progress';
     progress.setAttribute('aria-label', `Vote progress: ${state.rolloutData.receivedVotes} of ${state.rolloutData.expectedVotes} votes received`);
     progress.innerHTML = `
       <span class="progress-label">Waiting for votes...</span>
@@ -208,7 +235,7 @@
 
     // Feed container (single line)
     const feed = document.createElement('div');
-    feed.className = 'lv-ceremony__feed';
+    feed.className = 'ceremony-overlay__feed';
     feed.setAttribute('role', 'log');
     feed.setAttribute('aria-live', 'polite');
     rolloutStep.appendChild(feed);
@@ -227,7 +254,7 @@
 
     state.rolloutData.receivedVotes = receivedVotes;
 
-    const progress = state.overlay?.querySelector('.lv-ceremony__progress');
+    const progress = state.overlay?.querySelector('.ceremony-overlay__progress');
     if (progress) {
       const countSpan = progress.querySelector('.progress-count');
       if (countSpan) {
@@ -241,7 +268,7 @@
   function addVoteToRollout(vote) {
     if (state.currentStep !== 'rollout') return;
 
-    const feed = state.overlay?.querySelector('.lv-ceremony__feed');
+    const feed = state.overlay?.querySelector('.ceremony-overlay__feed');
     if (!feed) return;
 
     const { voterId, voterName, targetName } = vote;
@@ -251,11 +278,11 @@
 
     // Create feed item
     const item = document.createElement('div');
-    item.className = 'lv-ceremony__feed-item';
+    item.className = 'ceremony-overlay__feed-item';
 
     // Voter avatar
     const avatar = document.createElement('img');
-    avatar.className = 'lv-ceremony__avatar';
+    avatar.className = 'ceremony-overlay__avatar';
     avatar.src = getAvatarUrl(voterId);
     avatar.alt = `${voterName}'s avatar`;
     avatar.loading = 'eager';
@@ -266,7 +293,7 @@
 
     // Vote text
     const text = document.createElement('div');
-    text.className = 'lv-ceremony__text';
+    text.className = 'ceremony-overlay__text';
     text.textContent = `${voterName}: I vote to evict ${targetName}`;
     item.appendChild(text);
 
@@ -299,11 +326,11 @@
     state.currentStep = 'announcement';
     state.announcementData = { title, body, tone };
 
-    const stepContainer = state.overlay.querySelector('.lv-ceremony__step-container');
+    const stepContainer = state.overlay.querySelector('.ceremony-overlay__step-container');
     if (!stepContainer) return;
 
     // Fade out previous step
-    const previousStep = stepContainer.querySelector('.lv-ceremony__step');
+    const previousStep = stepContainer.querySelector('.ceremony-overlay__step');
     if (previousStep) {
       previousStep.classList.remove('visible');
       await sleep(300);
@@ -312,7 +339,7 @@
 
     // Create announcement step content
     const announcementStep = document.createElement('div');
-    announcementStep.className = 'lv-ceremony__step lv-ceremony__announcement';
+    announcementStep.className = 'ceremony-overlay__step ceremony-overlay__announcement';
     announcementStep.setAttribute('role', 'status');
     announcementStep.setAttribute('aria-live', 'polite');
 
@@ -323,17 +350,17 @@
 
     // Title
     const titleEl = document.createElement('h3');
-    titleEl.className = 'lv-ceremony__title';
+    titleEl.className = 'ceremony-overlay__title';
     titleEl.textContent = title;
     announcementStep.appendChild(titleEl);
 
     // Body content
     const bodyDiv = document.createElement('div');
-    bodyDiv.className = 'lv-ceremony__body';
+    bodyDiv.className = 'ceremony-overlay__body';
     const bodyLines = Array.isArray(body) ? body : [body];
     bodyLines.forEach(line => {
       const lineDiv = document.createElement('div');
-      lineDiv.className = 'lv-ceremony__line';
+      lineDiv.className = 'ceremony-overlay__line';
       lineDiv.textContent = line;
       bodyDiv.appendChild(lineDiv);
     });
@@ -370,11 +397,11 @@
     state.currentStep = 'final';
     state.finalData = { evictedId, evictedName };
 
-    const stepContainer = state.overlay.querySelector('.lv-ceremony__step-container');
+    const stepContainer = state.overlay.querySelector('.ceremony-overlay__step-container');
     if (!stepContainer) return;
 
     // Fade out previous step
-    const previousStep = stepContainer.querySelector('.lv-ceremony__step');
+    const previousStep = stepContainer.querySelector('.ceremony-overlay__step');
     if (previousStep) {
       previousStep.classList.remove('visible');
       await sleep(300);
@@ -383,17 +410,17 @@
 
     // Create final step content
     const finalStep = document.createElement('div');
-    finalStep.className = 'lv-ceremony__step lv-ceremony__final';
+    finalStep.className = 'ceremony-overlay__step ceremony-overlay__final';
     finalStep.setAttribute('role', 'status');
     finalStep.setAttribute('aria-label', `${evictedName} has been evicted`);
 
     // Portrait container
     const portraitContainer = document.createElement('div');
-    portraitContainer.className = 'lv-ceremony__portrait-container';
+    portraitContainer.className = 'ceremony-overlay__portrait-container';
 
     // Portrait image
     const portrait = document.createElement('img');
-    portrait.className = 'lv-ceremony__portrait';
+    portrait.className = 'ceremony-overlay__portrait';
     portrait.src = getAvatarUrl(evictedId);
     portrait.alt = `${evictedName}'s portrait`;
     portrait.onerror = function() {
@@ -407,7 +434,7 @@
 
     // Name label
     const nameLabel = document.createElement('div');
-    nameLabel.className = 'lv-ceremony__name';
+    nameLabel.className = 'ceremony-overlay__name';
     nameLabel.textContent = evictedName;
     finalStep.appendChild(nameLabel);
 

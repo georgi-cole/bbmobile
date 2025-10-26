@@ -1,18 +1,23 @@
 /* livevote-ceremony-overlay.css
- * Styles for the full-screen Ceremony Overlay (mobile-only)
+ * Styles for the full-screen Ceremony Overlay (mobile-only, Part 2: post-user vote)
  * Manages three sequential steps: rollout → announcement → final
  * Safe-area aware with 6-10px internal gutters, prevents overlap/cutoff
+ * 
+ * SCOPED UNDER .ceremony-overlay TO PREVENT CSS LEAKAGE
+ * Feature flag: window.lv2Flags.ceremonyOverlayMobile (default: false)
  */
 
-/* Main overlay container - full-screen with safe-area padding */
-.lv-ceremony-overlay {
-  position: absolute;
+/* Main overlay container - full-screen fixed positioning */
+.ceremony-overlay {
+  position: fixed;
+  inset: 0;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  
   background: linear-gradient(135deg, rgba(10, 15, 22, 0.97), rgba(20, 35, 55, 0.98));
-  z-index: 180; /* Above lv2-overlay (150) and rollout (150), below voteoverlay (200) */
+  z-index: 180; /* Above lv2-overlay (150), below vote modal (200) */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -31,7 +36,7 @@
 }
 
 /* Step container - holds current step content */
-.lv-ceremony__step-container {
+.ceremony-overlay__step-container {
   width: 100%;
   height: 100%;
   display: flex;
@@ -40,7 +45,7 @@
 }
 
 /* Base step styles */
-.lv-ceremony__step {
+.ceremony-overlay__step {
   width: 100%;
   max-width: min(480px, calc(100% - 32px));
   background: linear-gradient(135deg, rgba(20, 35, 55, 0.95), rgba(14, 23, 40, 0.98));
@@ -58,17 +63,17 @@
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-.lv-ceremony__step.visible {
+.ceremony-overlay__step.visible {
   opacity: 1;
   transform: translateY(0);
 }
 
 /* ===== STEP 1: ROLLOUT ===== */
-.lv-ceremony__rollout {
+.ceremony-overlay__rollout {
   /* Inherits base step styles */
 }
 
-.lv-ceremony__header {
+.ceremony-overlay__header {
   font-size: clamp(1.2rem, 4vw, 1.4rem);
   font-weight: 700;
   color: #ffd96b;
@@ -77,7 +82,7 @@
   text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
 }
 
-.lv-ceremony__progress {
+.ceremony-overlay__progress {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -88,19 +93,19 @@
   border-radius: 20px;
 }
 
-.lv-ceremony__progress .progress-label {
+.ceremony-overlay__progress .progress-label {
   font-size: clamp(0.85rem, 2.5vw, 0.95rem);
   color: #8fb3d3;
   font-weight: 500;
 }
 
-.lv-ceremony__progress .progress-count {
+.ceremony-overlay__progress .progress-count {
   font-size: clamp(0.95rem, 2.8vw, 1.05rem);
   color: #e8f4ff;
   font-weight: 600;
 }
 
-.lv-ceremony__feed {
+.ceremony-overlay__feed {
   min-height: 60px;
   display: flex;
   flex-direction: column;
@@ -108,7 +113,7 @@
   justify-content: center;
 }
 
-.lv-ceremony__feed-item {
+.ceremony-overlay__feed-item {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -124,12 +129,12 @@
   transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 }
 
-.lv-ceremony__feed-item.visible {
+.ceremony-overlay__feed-item.visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-.lv-ceremony__avatar {
+.ceremony-overlay__avatar {
   width: clamp(40px, 10vw, 48px);
   height: clamp(40px, 10vw, 48px);
   border-radius: 50%;
@@ -140,7 +145,7 @@
   flex-shrink: 0;
 }
 
-.lv-ceremony__text {
+.ceremony-overlay__text {
   font-size: clamp(0.85rem, 2.5vw, 0.95rem);
   color: #e8f4ff;
   text-align: left;
@@ -154,19 +159,19 @@
 }
 
 /* ===== STEP 2: ANNOUNCEMENT ===== */
-.lv-ceremony__announcement {
+.ceremony-overlay__announcement {
   /* Inherits base step styles */
 }
 
-.lv-ceremony__announcement.tone-evict {
+.ceremony-overlay__announcement.tone-evict {
   border-color: rgba(255, 107, 107, 0.4);
 }
 
-.lv-ceremony__announcement.tone-live {
+.ceremony-overlay__announcement.tone-live {
   border-color: rgba(124, 255, 173, 0.4);
 }
 
-.lv-ceremony__title {
+.ceremony-overlay__title {
   font-size: clamp(1.2rem, 4vw, 1.4rem);
   font-weight: 700;
   color: #ffd96b;
@@ -175,23 +180,23 @@
   text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
 }
 
-.lv-ceremony__announcement.tone-evict .lv-ceremony__title {
+.ceremony-overlay__announcement.tone-evict .ceremony-overlay__title {
   color: #ff6b6b;
   text-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
 }
 
-.lv-ceremony__announcement.tone-live .lv-ceremony__title {
+.ceremony-overlay__announcement.tone-live .ceremony-overlay__title {
   color: #7cffad;
   text-shadow: 0 2px 8px rgba(124, 255, 173, 0.3);
 }
 
-.lv-ceremony__body {
+.ceremony-overlay__body {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.lv-ceremony__line {
+.ceremony-overlay__line {
   font-size: clamp(0.95rem, 2.8vw, 1.05rem);
   color: #e8f4ff;
   line-height: 1.5;
@@ -199,7 +204,7 @@
 }
 
 /* ===== STEP 3: FINAL ===== */
-.lv-ceremony__final {
+.ceremony-overlay__final {
   /* Override base padding/background for centered portrait */
   background: transparent;
   border: none;
@@ -212,18 +217,18 @@
   gap: 20px;
 }
 
-.lv-ceremony__portrait-container {
+.ceremony-overlay__portrait-container {
   position: relative;
   width: clamp(160px, 38vw, 240px);
   height: clamp(160px, 38vw, 240px);
   transition: filter 1.2s ease;
 }
 
-.lv-ceremony__portrait-container.grayscale {
+.ceremony-overlay__portrait-container.grayscale {
   filter: grayscale(100%);
 }
 
-.lv-ceremony__portrait {
+.ceremony-overlay__portrait {
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -235,7 +240,7 @@
   background: rgba(20, 35, 55, 0.8);
 }
 
-.lv-ceremony__name {
+.ceremony-overlay__name {
   font-size: clamp(1.2rem, 4vw, 1.5rem);
   font-weight: 700;
   color: #e8f4ff;
@@ -252,96 +257,96 @@
 
 /* Mobile portrait optimizations */
 @media (max-width: 767px) and (orientation: portrait) {
-  .lv-ceremony__step {
+  .ceremony-overlay__step {
     max-width: calc(100% - 24px);
     padding: clamp(20px, 4.5vw, 28px);
   }
   
-  .lv-ceremony__header {
+  .ceremony-overlay__header {
     margin-bottom: 16px;
   }
   
-  .lv-ceremony__progress {
+  .ceremony-overlay__progress {
     margin-bottom: 20px;
     padding: 10px 14px;
   }
   
-  .lv-ceremony__feed-item {
+  .ceremony-overlay__feed-item {
     padding: 10px 14px;
     gap: 10px;
   }
   
-  .lv-ceremony__title {
+  .ceremony-overlay__title {
     margin-bottom: 16px;
   }
   
-  .lv-ceremony__body {
+  .ceremony-overlay__body {
     gap: 8px;
   }
 }
 
 /* Very narrow screens (iPhone SE, etc.) */
 @media (max-width: 390px) {
-  .lv-ceremony-overlay {
+  .ceremony-overlay {
     padding: 16px 12px;
   }
   
-  .lv-ceremony__step {
+  .ceremony-overlay__step {
     padding: 20px 16px;
   }
   
-  .lv-ceremony__header {
+  .ceremony-overlay__header {
     font-size: 1.1rem;
   }
   
-  .lv-ceremony__progress .progress-label {
+  .ceremony-overlay__progress .progress-label {
     font-size: 0.8rem;
   }
   
-  .lv-ceremony__progress .progress-count {
+  .ceremony-overlay__progress .progress-count {
     font-size: 0.9rem;
   }
   
-  .lv-ceremony__avatar {
+  .ceremony-overlay__avatar {
     width: 36px;
     height: 36px;
   }
   
-  .lv-ceremony__text {
+  .ceremony-overlay__text {
     font-size: 0.8rem;
   }
   
-  .lv-ceremony__title {
+  .ceremony-overlay__title {
     font-size: 1.1rem;
     margin-bottom: 14px;
   }
   
-  .lv-ceremony__line {
+  .ceremony-overlay__line {
     font-size: 0.9rem;
   }
   
-  .lv-ceremony__portrait-container {
+  .ceremony-overlay__portrait-container {
     width: 140px;
     height: 140px;
   }
   
-  .lv-ceremony__name {
+  .ceremony-overlay__name {
     font-size: 1.1rem;
   }
 }
 
 /* Landscape mobile */
 @media (max-width: 896px) and (orientation: landscape) {
-  .lv-ceremony-overlay {
+  .ceremony-overlay {
     padding: 16px 20px;
   }
   
-  .lv-ceremony__step {
+  .ceremony-overlay__step {
     padding: 20px 24px;
     max-height: 80vh;
   }
   
-  .lv-ceremony__portrait-container {
+  .ceremony-overlay__portrait-container {
     width: clamp(120px, 30vw, 160px);
     height: clamp(120px, 30vw, 160px);
   }
@@ -349,29 +354,29 @@
 
 /* Accessibility: respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .lv-ceremony-overlay,
-  .lv-ceremony__step,
-  .lv-ceremony__feed-item,
+  .ceremony-overlay,
+  .ceremony-overlay__step,
+  .ceremony-overlay__feed-item,
   .ceremony-dimmed {
     transition: opacity 0.15s linear;
   }
   
-  .lv-ceremony__step {
+  .ceremony-overlay__step {
     transform: none !important;
   }
   
-  .lv-ceremony__feed-item {
+  .ceremony-overlay__feed-item {
     transform: none;
   }
   
-  .lv-ceremony__portrait-container {
+  .ceremony-overlay__portrait-container {
     transition: filter 0.6s linear;
   }
 }
 
 /* Clamp content within safe areas on notched devices */
 @supports (padding: max(0px)) {
-  .lv-ceremony__step {
+  .ceremony-overlay__step {
     /* Ensure card never gets clipped by notches */
     max-width: min(480px, calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));
   }

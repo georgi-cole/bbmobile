@@ -63,9 +63,9 @@
     state.onSubmit = onSubmit;
     state.isTieBreak = isTieBreak;
 
-    // Create overlay element
+    // Create overlay element with scoped class name
     const overlay = document.createElement('div');
-    overlay.className = 'lv-overlay';
+    overlay.className = 'lv2-vote-modal';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-label', isTieBreak ? 'Break tie vote' : 'Cast your vote to evict');
     overlay.setAttribute('aria-modal', 'true');
@@ -78,26 +78,26 @@
 
     // Header
     const header = document.createElement('div');
-    header.className = 'lv-overlay__header';
+    header.className = 'lv2-vote-modal__header';
     header.textContent = isTieBreak ? 'Break the tie.' : 'Cast your vote to evict.';
     overlay.appendChild(header);
 
     // Carousel container
     const carousel = document.createElement('div');
-    carousel.className = 'lv-overlay__carousel';
+    carousel.className = 'lv2-vote-modal__carousel';
     carousel.setAttribute('role', 'group');
     carousel.setAttribute('aria-label', 'Nominee carousel');
 
     // Track (contains all nominees)
     const track = document.createElement('div');
-    track.className = 'lv-overlay__track';
+    track.className = 'lv2-vote-modal__track';
 
     nominees.forEach((nomineeId, index) => {
       const player = global.getP?.(nomineeId);
       if (!player) return;
 
       const nomineeEl = document.createElement('div');
-      nomineeEl.className = 'lv-overlay__nominee';
+      nomineeEl.className = 'lv2-vote-modal__nominee';
       nomineeEl.dataset.index = index;
       nomineeEl.dataset.nomineeId = nomineeId;
       nomineeEl.setAttribute('role', 'button');
@@ -111,11 +111,11 @@
 
       // Avatar container
       const avatarContainer = document.createElement('div');
-      avatarContainer.className = 'lv-overlay__avatar-container';
+      avatarContainer.className = 'lv2-vote-modal__avatar-container';
 
       // Avatar image
       const avatar = document.createElement('img');
-      avatar.className = 'lv-overlay__avatar';
+      avatar.className = 'lv2-vote-modal__avatar';
       avatar.src = getAvatarUrl(nomineeId);
       avatar.alt = `${player.name}'s avatar`;
       avatar.loading = 'eager';
@@ -127,7 +127,7 @@
 
       // Name
       const name = document.createElement('div');
-      name.className = 'lv-overlay__nominee-name';
+      name.className = 'lv2-vote-modal__nominee-name';
       name.textContent = player.name;
       nomineeEl.appendChild(name);
 
@@ -142,14 +142,14 @@
     // Navigation arrows
     if (nominees.length > 1) {
       const prevArrow = document.createElement('button');
-      prevArrow.className = 'lv-overlay__arrow prev';
+      prevArrow.className = 'lv2-vote-modal__arrow prev';
       prevArrow.innerHTML = '◀';
       prevArrow.setAttribute('aria-label', 'Show previous nominee');
       prevArrow.onclick = () => navigateCarousel(-1);
       carousel.appendChild(prevArrow);
 
       const nextArrow = document.createElement('button');
-      nextArrow.className = 'lv-overlay__arrow next';
+      nextArrow.className = 'lv2-vote-modal__arrow next';
       nextArrow.innerHTML = '▶';
       nextArrow.setAttribute('aria-label', 'Show next nominee');
       nextArrow.onclick = () => navigateCarousel(1);
@@ -160,7 +160,7 @@
 
     // Status message area (for accessibility announcements)
     const status = document.createElement('div');
-    status.className = 'lv-overlay__status';
+    status.className = 'lv2-vote-modal__status';
     status.setAttribute('role', 'status');
     status.setAttribute('aria-live', 'polite');
     status.textContent = 'Select a nominee to evict';
@@ -168,10 +168,10 @@
 
     // Action dock with Evict button
     const dock = document.createElement('div');
-    dock.className = 'lv-overlay__dock';
+    dock.className = 'lv2-vote-modal__dock';
 
     const evictBtn = document.createElement('button');
-    evictBtn.className = 'lv-overlay__evict-btn';
+    evictBtn.className = 'lv2-vote-modal__evict-btn';
     evictBtn.textContent = 'Evict';
     evictBtn.disabled = true; // Disabled until selection is made
     evictBtn.setAttribute('aria-label', 'Vote to evict selected nominee');
@@ -182,7 +182,7 @@
 
     // Close button
     const closeBtn = document.createElement('button');
-    closeBtn.className = 'lv-overlay__close';
+    closeBtn.className = 'lv2-vote-modal__close';
     closeBtn.innerHTML = '×';
     closeBtn.setAttribute('aria-label', 'Close voting overlay');
     closeBtn.onclick = hide;
@@ -196,7 +196,7 @@
     state.overlay = overlay;
 
     // Focus the first nominee
-    const firstNominee = track.querySelector('.lv-overlay__nominee[data-index="0"]');
+    const firstNominee = track.querySelector('.lv2-vote-modal__nominee[data-index="0"]');
     if (firstNominee) {
       setTimeout(() => firstNominee.focus(), 100);
     }
@@ -208,7 +208,7 @@
   function navigateCarousel(direction) {
     if (!state.overlay || state.nominees.length <= 1) return;
 
-    const track = state.overlay.querySelector('.lv-overlay__track');
+    const track = state.overlay.querySelector('.lv2-vote-modal__track');
     if (!track) return;
 
     // Update selected index
@@ -219,7 +219,7 @@
     state.selectedIndex = newIndex;
 
     // Update center class
-    const nominees = track.querySelectorAll('.lv-overlay__nominee');
+    const nominees = track.querySelectorAll('.lv2-vote-modal__nominee');
     nominees.forEach((nominee, index) => {
       if (index === newIndex) {
         nominee.classList.add('center');
@@ -233,7 +233,7 @@
     // Announce to screen readers
     const player = global.getP?.(state.nominees[newIndex]);
     if (player) {
-      const status = state.overlay.querySelector('.lv-overlay__status');
+      const status = state.overlay.querySelector('.lv2-vote-modal__status');
       if (status) {
         status.textContent = `Now showing ${player.name}`;
       }
@@ -244,10 +244,10 @@
   function selectNominee(index) {
     if (!state.overlay) return;
 
-    const track = state.overlay.querySelector('.lv-overlay__track');
+    const track = state.overlay.querySelector('.lv2-vote-modal__track');
     if (!track) return;
 
-    const nominees = track.querySelectorAll('.lv-overlay__nominee');
+    const nominees = track.querySelectorAll('.lv2-vote-modal__nominee');
     const clickedNominee = nominees[index];
     if (!clickedNominee) return;
 
@@ -266,7 +266,7 @@
       updateEvictButton();
       
       // Announce deselection
-      const status = state.overlay.querySelector('.lv-overlay__status');
+      const status = state.overlay.querySelector('.lv2-vote-modal__status');
       const player = global.getP?.(nomineeId);
       if (status && player) {
         status.textContent = `${player.name} deselected`;
@@ -279,7 +279,7 @@
       updateEvictButton();
       
       // Announce selection
-      const status = state.overlay.querySelector('.lv-overlay__status');
+      const status = state.overlay.querySelector('.lv2-vote-modal__status');
       const player = global.getP?.(nomineeId);
       if (status && player) {
         status.textContent = `${player.name} selected. Press Evict to confirm.`;
@@ -291,7 +291,7 @@
   function updateEvictButton() {
     if (!state.overlay) return;
 
-    const evictBtn = state.overlay.querySelector('.lv-overlay__evict-btn');
+    const evictBtn = state.overlay.querySelector('.lv2-vote-modal__evict-btn');
     if (!evictBtn) return;
 
     if (state.selectedNominee !== null) {
@@ -342,10 +342,10 @@
       case ' ':
         event.preventDefault();
         // If focus is on a nominee, select it
-        if (document.activeElement.classList.contains('lv-overlay__nominee')) {
+        if (document.activeElement.classList.contains('lv2-vote-modal__nominee')) {
           const index = parseInt(document.activeElement.dataset.index);
           selectNominee(index);
-        } else if (document.activeElement.classList.contains('lv-overlay__evict-btn')) {
+        } else if (document.activeElement.classList.contains('lv2-vote-modal__evict-btn')) {
           // If focus is on evict button and it's enabled, click it
           handleEvictClick();
         }
