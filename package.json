@@ -14,7 +14,8 @@
     "test:jurors": "node scripts/test-jurors-return-challenge.mjs",
     "test:social": "node verify_social_phase_requirements.mjs",
     "test:veto-twists": "node tests/verify_veto_twists.mjs",
-    "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e && npm run test:social",
+    "test:pov-carousel": "node tests/verify_pov_carousel.mjs",
+    "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e && npm run test:social && npm run test:pov-carousel",
     "build:progression": "cd src/progression && tsc",
     "typecheck:progression": "cd src/progression && tsc --noEmit"
   },
