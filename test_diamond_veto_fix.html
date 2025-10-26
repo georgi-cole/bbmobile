@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diamond Veto Fix Verification</title>
+  <link rel="stylesheet" href="css/carousel-picker.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: white;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      border-bottom: 2px solid rgba(255,255,255,0.3);
+      padding-bottom: 10px;
+    }
+    button {
+      background: linear-gradient(145deg, #4CAF50, #45a049);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .status {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    .status-item {
+      margin: 8px 0;
+      padding: 8px;
+      border-left: 4px solid #4CAF50;
+      padding-left: 12px;
+      background: rgba(255,255,255,0.05);
+    }
+    .status-item.success {
+      border-left-color: #4CAF50;
+    }
+    .status-item.info {
+      border-left-color: #2196F3;
+    }
+    .status-item.warning {
+      border-left-color: #FF9800;
+    }
+    .status-item.error {
+      border-left-color: #f44336;
+    }
+    .z-index-info {
+      background: rgba(33, 150, 243, 0.2);
+      border: 2px solid rgba(33, 150, 243, 0.4);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+    .z-index-info h3 {
+      margin-top: 0;
+      color: #64B5F6;
+    }
+    .z-index-list {
+      list-style: none;
+      padding: 0;
+    }
+    .z-index-list li {
+      padding: 6px 10px;
+      margin: 4px 0;
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+    }
+    .highlight {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Diamond Veto Fix Verification</h1>
+
+    <div class="test-section">
+      <h2>Issue Summary</h2>
+      <p><strong>Problem:</strong> During Diamond Veto Twist ceremony, the nominee replacement modal was completely unresponsive - arrows, buttons, and all UI elements didn't react to taps or gestures.</p>
+      <p><strong>Root Cause:</strong> The carousel-picker-overlay had z-index: 10000, but other game elements had higher z-index values (up to 99999), blocking user interactions.</p>
+      <p><strong>Fix:</strong> Increased z-index from 10000 to 100000 to ensure the modal always appears on top.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Z-Index Hierarchy</h2>
+      <div class="z-index-info">
+        <h3>Current Z-Index Values</h3>
+        <ul class="z-index-list">
+          <li><span class="highlight">carousel-picker-overlay: 100000</span> (FIXED - Now highest)</li>
+          <li>fullscreen-pov-selector: 99999</li>
+          <li>creditsRoot: 99990</li>
+          <li>Various modals: 9999-450</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Interactive Test</h2>
+      <p>Click the button below to open a simulated Diamond Veto nominee replacement modal. Verify that:</p>
+      <ul>
+        <li>✅ Modal appears on top of everything</li>
+        <li>✅ Left/Right arrows respond to clicks</li>
+        <li>✅ Cancel button is clickable</li>
+        <li>✅ Nominate button is clickable</li>
+        <li>✅ Player cards are interactive</li>
+      </ul>
+      <button id="testModalBtn">Open Diamond Veto Modal</button>
+      <button id="testWithBlockerBtn">Test with High Z-Index Blocker</button>
+      <button id="removeBlockerBtn" style="display:none;">Remove Blocker</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Status</h2>
+      <div id="status" class="status">
+        <div class="status-item info">Ready to test. Click the button above to verify the fix.</div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Expected Behavior (Per Screenshot)</h2>
+      <ul>
+        <li>Title: "Select first replacement nominee" visible at top</li>
+        <li>Player card with avatar in center (e.g., "Finn")</li>
+        <li>Left/Right navigation arrows on sides</li>
+        <li>"Cancel" and "Nominate" buttons at bottom</li>
+        <li>Counter showing "X / Y" at bottom</li>
+        <li><strong>All elements should be interactive and responsive</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Mock Player Data -->
+  <script>
+    // Mock player data
+    window.game = {
+      hohId: 1,
+      vetoHolder: 2,
+      nominees: [3, 4]
+    };
+
+    window.players = [
+      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+      { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' },
+      { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana' },
+      { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve' },
+      { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Frank' },
+      { id: 7, name: 'Grace', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace' },
+      { id: 8, name: 'Henry', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Henry' }
+    ];
+
+    window.getP = function(id) {
+      return window.players.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+
+    window.resolveAvatar = function(id) {
+      const p = window.getP(id);
+      return p ? p.avatar : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + id;
+    };
+
+    function addStatus(message, type = 'info') {
+      const status = document.getElementById('status');
+      const item = document.createElement('div');
+      item.className = 'status-item ' + type;
+      item.textContent = message;
+      status.appendChild(item);
+      status.scrollTop = status.scrollHeight;
+    }
+  </script>
+
+  <!-- Load carousel picker -->
+  <script src="js/ui/carousel-picker.js"></script>
+
+  <script>
+    // Test 1: Normal modal test
+    document.getElementById('testModalBtn').addEventListener('click', async function() {
+      addStatus('Opening Diamond Veto replacement modal...', 'info');
+      
+      // Eligible IDs (exclude HOH and POV holder)
+      const eligibleIds = [5, 6, 7, 8]; // Eve, Frank, Grace, Henry
+      const blockedIds = [1, 2, 3, 4]; // HOH, POV holder, nominees
+
+      try {
+        const result = await window.openCarouselPicker({
+          ids: eligibleIds.concat(blockedIds),
+          title: 'Select first replacement nominee',
+          actionLabel: 'Nominate',
+          blockIds: blockedIds
+        });
+
+        if (result) {
+          addStatus('✅ SUCCESS: User selected ' + window.safeName(result), 'success');
+          addStatus('Modal was interactive and responsive!', 'success');
+        } else {
+          addStatus('⚠️ User cancelled selection', 'warning');
+        }
+      } catch (error) {
+        addStatus('❌ ERROR: ' + error.message, 'error');
+      }
+    });
+
+    // Test 2: Test with high z-index blocker
+    let blockerElement = null;
+    
+    document.getElementById('testWithBlockerBtn').addEventListener('click', function() {
+      addStatus('Creating high z-index blocker (z-index: 50000)...', 'warning');
+      
+      // Create blocker
+      blockerElement = document.createElement('div');
+      blockerElement.style.position = 'fixed';
+      blockerElement.style.inset = '0';
+      blockerElement.style.zIndex = '50000';
+      blockerElement.style.background = 'rgba(255, 0, 0, 0.3)';
+      blockerElement.style.display = 'flex';
+      blockerElement.style.alignItems = 'center';
+      blockerElement.style.justifyContent = 'center';
+      blockerElement.style.pointerEvents = 'none'; // Don't block clicks, just visual
+      blockerElement.innerHTML = '<div style="background: rgba(255,0,0,0.8); padding: 20px; border-radius: 10px; pointer-events: none;">Blocker Layer (z-index: 50000)</div>';
+      document.body.appendChild(blockerElement);
+      
+      document.getElementById('testWithBlockerBtn').style.display = 'none';
+      document.getElementById('removeBlockerBtn').style.display = 'inline-block';
+      
+      addStatus('Blocker created. Now test the modal - it should still appear on top and be interactive.', 'info');
+      addStatus('Click "Open Diamond Veto Modal" to verify the fix works.', 'info');
+    });
+
+    document.getElementById('removeBlockerBtn').addEventListener('click', function() {
+      if (blockerElement) {
+        blockerElement.remove();
+        blockerElement = null;
+        addStatus('Blocker removed.', 'info');
+        document.getElementById('testWithBlockerBtn').style.display = 'inline-block';
+        document.getElementById('removeBlockerBtn').style.display = 'none';
+      }
+    });
+
+    // Initial status
+    addStatus('Test page loaded successfully', 'success');
+    addStatus('Z-index fix applied: carousel-picker-overlay now uses z-index: 100000', 'success');
+    addStatus('Click "Open Diamond Veto Modal" to test interactivity', 'info');
+  </script>
+</body>
+</html>
