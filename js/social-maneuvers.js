@@ -709,6 +709,13 @@
   function getAvailableActions(playerId, targetId){
     const actor = global.getP?.(playerId);
     const target = targetId ? global.getP?.(targetId) : null;
+    
+    // Block actions if actor or target is evicted
+    if(actor?.evicted || target?.evicted){
+      console.info('[social-maneuvers] getAvailableActions: actor or target is evicted - returning empty array');
+      return [];
+    }
+    
     return SOCIAL_ACTIONS.map(action => {
       const canAfford = SocialResources.canAfford(playerId, action.costs);
       let evaluation = null;
@@ -730,6 +737,16 @@
     const actor = global.getP?.(actorId);
     const target = global.getP?.(targetId);
     if(!actor || !target){ return { success: false, reason: 'player_not_found' }; }
+    
+    // Block actions involving evicted players
+    if(actor.evicted){ 
+      console.warn('[social-maneuvers] Actor is evicted - blocking action');
+      return { success: false, reason: 'actor_evicted', message: 'Evicted players cannot perform social actions' }; 
+    }
+    if(target.evicted){ 
+      console.warn('[social-maneuvers] Target is evicted - blocking action');
+      return { success: false, reason: 'target_evicted', message: 'Cannot target evicted players' }; 
+    }
 
     // Build complete target list (primary + extra targets)
     // Always respect extraTargetIds for group pricing, regardless of multiTarget flag

@@ -215,6 +215,40 @@
       openBtn.disabled = res.energy <= 0;
       openBtn.textContent = res.energy > 0 ? 'Socialize' : 'No Energy';
     }
+    
+    // Check if player is evicted and disable card
+    const g = global.game || {};
+    const humanId = g.humanId;
+    const human = global.getP?.(humanId);
+    if (human?.evicted) {
+      disableSocialCard();
+    }
+  }
+  
+  function disableSocialCard() {
+    const launcher = $('#socializeLauncher');
+    const card = $('[data-sm-social-card]');
+    const openBtn = $('#socializeOpenBtn');
+    
+    if (card) {
+      card.setAttribute('aria-disabled', 'true');
+      card.style.opacity = '0.5';
+      card.style.pointerEvents = 'none';
+    }
+    
+    if (openBtn) {
+      openBtn.disabled = true;
+      openBtn.textContent = 'Evicted';
+      openBtn.setAttribute('aria-disabled', 'true');
+      openBtn.style.opacity = '0.5';
+      openBtn.style.cursor = 'not-allowed';
+    }
+    
+    if (launcher) {
+      launcher.setAttribute('aria-disabled', 'true');
+    }
+    
+    console.info('[socialize-mobile] Social card disabled for evicted player');
   }
 
   function showResourceHelp() {
@@ -1610,6 +1644,7 @@
     hide: hideLauncher,
     isInSocialPhase: isInSocialPhase,
     initPlayerGrid: initPlayerGrid, // New: re-bind handlers on grid re-render
+    disableSocialCard: disableSocialCard, // New: disable card for evicted players
     state: SocializeMobile.state, // Expose state for testing/debugging
     isTouchDevice: isTouchDevice // Expose for testing
   };
