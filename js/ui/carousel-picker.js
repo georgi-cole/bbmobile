@@ -223,7 +223,10 @@
     cancelBtn.className = 'btn carousel-picker-cancel';
     cancelBtn.textContent = 'Cancel';
     cancelBtn.setAttribute('aria-label', 'Cancel selection');
-    cancelBtn.onclick = function() {
+    cancelBtn.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       close(null);
     };
     buttonRow.appendChild(cancelBtn);
@@ -234,7 +237,10 @@
     confirmBtn.textContent = state.actionLabel;
     confirmBtn.setAttribute('aria-label', state.actionLabel + ' ' + safeName(currentId));
     confirmBtn.disabled = isBlocked;
-    confirmBtn.onclick = function() {
+    confirmBtn.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       if (!isBlocked) {
         close(currentId);
       }
@@ -253,6 +259,18 @@
 
     // Add to body
     document.body.appendChild(overlay);
+
+    // Install overlay-level event guards to prevent bubbling to router/HUD
+    // Use bubble phase (false) to catch events after button handlers
+    overlay.addEventListener('click', function(e) {
+      e.stopPropagation();
+    }, false);
+    overlay.addEventListener('mousedown', function(e) {
+      e.stopPropagation();
+    }, false);
+    overlay.addEventListener('touchstart', function(e) {
+      e.stopPropagation();
+    }, false);
 
     // Animate in
     requestAnimationFrame(function() {
