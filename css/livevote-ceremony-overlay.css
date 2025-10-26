@@ -1,0 +1,378 @@
+/* livevote-ceremony-overlay.css
+ * Styles for the full-screen Ceremony Overlay (mobile-only)
+ * Manages three sequential steps: rollout → announcement → final
+ * Safe-area aware with 6-10px internal gutters, prevents overlap/cutoff
+ */
+
+/* Main overlay container - full-screen with safe-area padding */
+.lv-ceremony-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(10, 15, 22, 0.97), rgba(20, 35, 55, 0.98));
+  z-index: 180; /* Above lv2-overlay (150) and rollout (150), below voteoverlay (200) */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  
+  /* Safe area support - internal gutters (6-10px) */
+  padding-top: max(20px, calc(6px + env(safe-area-inset-top)));
+  padding-bottom: max(20px, calc(10px + env(safe-area-inset-bottom)));
+  padding-left: max(16px, calc(6px + env(safe-area-inset-left)));
+  padding-right: max(16px, calc(6px + env(safe-area-inset-right)));
+  
+  /* Fade in */
+  opacity: 1;
+  transition: opacity 0.3s ease-in;
+}
+
+/* Step container - holds current step content */
+.lv-ceremony__step-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Base step styles */
+.lv-ceremony__step {
+  width: 100%;
+  max-width: min(480px, calc(100% - 32px));
+  background: linear-gradient(135deg, rgba(20, 35, 55, 0.95), rgba(14, 23, 40, 0.98));
+  border: 2px solid rgba(143, 211, 255, 0.3);
+  border-radius: 20px;
+  padding: clamp(24px, 5vw, 32px);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(143, 211, 255, 0.1);
+  text-align: center;
+  
+  /* Fade in/out */
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.lv-ceremony__step.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== STEP 1: ROLLOUT ===== */
+.lv-ceremony__rollout {
+  /* Inherits base step styles */
+}
+
+.lv-ceremony__header {
+  font-size: clamp(1.2rem, 4vw, 1.4rem);
+  font-weight: 700;
+  color: #ffd96b;
+  margin-bottom: 20px;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
+}
+
+.lv-ceremony__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: rgba(20, 35, 55, 0.6);
+  border: 1px solid rgba(143, 211, 255, 0.2);
+  border-radius: 20px;
+}
+
+.lv-ceremony__progress .progress-label {
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  color: #8fb3d3;
+  font-weight: 500;
+}
+
+.lv-ceremony__progress .progress-count {
+  font-size: clamp(0.95rem, 2.8vw, 1.05rem);
+  color: #e8f4ff;
+  font-weight: 600;
+}
+
+.lv-ceremony__feed {
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.lv-ceremony__feed-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(20, 35, 55, 0.5);
+  border: 1px solid rgba(143, 211, 255, 0.15);
+  border-radius: 16px;
+  max-width: 100%;
+  
+  /* Fade in animation */
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.lv-ceremony__feed-item.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lv-ceremony__avatar {
+  width: clamp(40px, 10vw, 48px);
+  height: clamp(40px, 10vw, 48px);
+  border-radius: 50%;
+  border: 2px solid rgba(124, 255, 173, 0.5);
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(124, 255, 173, 0.3);
+  background: rgba(20, 35, 55, 0.8);
+  flex-shrink: 0;
+}
+
+.lv-ceremony__text {
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  color: #e8f4ff;
+  text-align: left;
+  line-height: 1.4;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ===== STEP 2: ANNOUNCEMENT ===== */
+.lv-ceremony__announcement {
+  /* Inherits base step styles */
+}
+
+.lv-ceremony__announcement.tone-evict {
+  border-color: rgba(255, 107, 107, 0.4);
+}
+
+.lv-ceremony__announcement.tone-live {
+  border-color: rgba(124, 255, 173, 0.4);
+}
+
+.lv-ceremony__title {
+  font-size: clamp(1.2rem, 4vw, 1.4rem);
+  font-weight: 700;
+  color: #ffd96b;
+  margin: 0 0 20px 0;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
+}
+
+.lv-ceremony__announcement.tone-evict .lv-ceremony__title {
+  color: #ff6b6b;
+  text-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.lv-ceremony__announcement.tone-live .lv-ceremony__title {
+  color: #7cffad;
+  text-shadow: 0 2px 8px rgba(124, 255, 173, 0.3);
+}
+
+.lv-ceremony__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lv-ceremony__line {
+  font-size: clamp(0.95rem, 2.8vw, 1.05rem);
+  color: #e8f4ff;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+/* ===== STEP 3: FINAL ===== */
+.lv-ceremony__final {
+  /* Override base padding/background for centered portrait */
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.lv-ceremony__portrait-container {
+  position: relative;
+  width: clamp(160px, 38vw, 240px);
+  height: clamp(160px, 38vw, 240px);
+  transition: filter 1.2s ease;
+}
+
+.lv-ceremony__portrait-container.grayscale {
+  filter: grayscale(100%);
+}
+
+.lv-ceremony__portrait {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 107, 107, 0.6);
+  object-fit: cover;
+  box-shadow: 
+    0 0 0 4px rgba(255, 107, 107, 0.2),
+    0 12px 40px rgba(0, 0, 0, 0.7);
+  background: rgba(20, 35, 55, 0.8);
+}
+
+.lv-ceremony__name {
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+  font-weight: 700;
+  color: #e8f4ff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.02em;
+}
+
+/* Dimming other UI elements during ceremony */
+.ceremony-dimmed {
+  opacity: 0.3;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+/* Mobile portrait optimizations */
+@media (max-width: 767px) and (orientation: portrait) {
+  .lv-ceremony__step {
+    max-width: calc(100% - 24px);
+    padding: clamp(20px, 4.5vw, 28px);
+  }
+  
+  .lv-ceremony__header {
+    margin-bottom: 16px;
+  }
+  
+  .lv-ceremony__progress {
+    margin-bottom: 20px;
+    padding: 10px 14px;
+  }
+  
+  .lv-ceremony__feed-item {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  
+  .lv-ceremony__title {
+    margin-bottom: 16px;
+  }
+  
+  .lv-ceremony__body {
+    gap: 8px;
+  }
+}
+
+/* Very narrow screens (iPhone SE, etc.) */
+@media (max-width: 390px) {
+  .lv-ceremony-overlay {
+    padding: 16px 12px;
+  }
+  
+  .lv-ceremony__step {
+    padding: 20px 16px;
+  }
+  
+  .lv-ceremony__header {
+    font-size: 1.1rem;
+  }
+  
+  .lv-ceremony__progress .progress-label {
+    font-size: 0.8rem;
+  }
+  
+  .lv-ceremony__progress .progress-count {
+    font-size: 0.9rem;
+  }
+  
+  .lv-ceremony__avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .lv-ceremony__text {
+    font-size: 0.8rem;
+  }
+  
+  .lv-ceremony__title {
+    font-size: 1.1rem;
+    margin-bottom: 14px;
+  }
+  
+  .lv-ceremony__line {
+    font-size: 0.9rem;
+  }
+  
+  .lv-ceremony__portrait-container {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .lv-ceremony__name {
+    font-size: 1.1rem;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 896px) and (orientation: landscape) {
+  .lv-ceremony-overlay {
+    padding: 16px 20px;
+  }
+  
+  .lv-ceremony__step {
+    padding: 20px 24px;
+    max-height: 80vh;
+  }
+  
+  .lv-ceremony__portrait-container {
+    width: clamp(120px, 30vw, 160px);
+    height: clamp(120px, 30vw, 160px);
+  }
+}
+
+/* Accessibility: respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .lv-ceremony-overlay,
+  .lv-ceremony__step,
+  .lv-ceremony__feed-item,
+  .ceremony-dimmed {
+    transition: opacity 0.15s linear;
+  }
+  
+  .lv-ceremony__step {
+    transform: none !important;
+  }
+  
+  .lv-ceremony__feed-item {
+    transform: none;
+  }
+  
+  .lv-ceremony__portrait-container {
+    transition: filter 0.6s linear;
+  }
+}
+
+/* Clamp content within safe areas on notched devices */
+@supports (padding: max(0px)) {
+  .lv-ceremony__step {
+    /* Ensure card never gets clipped by notches */
+    max-width: min(480px, calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  }
+}
