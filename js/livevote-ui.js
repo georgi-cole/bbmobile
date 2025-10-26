@@ -209,6 +209,34 @@
 
     container.appendChild(grid);
     
+    // Mobile Carousel 2.0: Status Row (below stage, above CTA dock)
+    if (state.useCarousel) {
+      const statusRow = document.createElement('div');
+      statusRow.className = 'lv2-status-row';
+      
+      // YOUR TURN pill - visible only when voting is enabled
+      const yourTurnPill = document.createElement('div');
+      yourTurnPill.className = 'lv2-your-turn-pill';
+      yourTurnPill.textContent = 'Your Turn';
+      yourTurnPill.setAttribute('role', 'status');
+      yourTurnPill.setAttribute('aria-live', 'polite');
+      statusRow.appendChild(yourTurnPill);
+      
+      // Waiting status - visible after user's vote until all votes are in
+      const waitingStatus = document.createElement('div');
+      waitingStatus.className = 'lv2-waiting-status';
+      waitingStatus.textContent = 'Waiting for votes... ';
+      const progressSpan = document.createElement('span');
+      progressSpan.className = 'progress';
+      progressSpan.textContent = '0';
+      waitingStatus.appendChild(progressSpan);
+      waitingStatus.setAttribute('role', 'status');
+      waitingStatus.setAttribute('aria-live', 'polite');
+      statusRow.appendChild(waitingStatus);
+      
+      container.appendChild(statusRow);
+    }
+    
     // Mobile Carousel 2.0: CTA Dock (always visible at bottom)
     if (state.useCarousel) {
       const ctaDock = document.createElement('div');
@@ -592,6 +620,36 @@
     if (rightCountEl) {
       animateCount(rightCountEl, state.rightCount, state.rightName);
     }
+    
+    // Update waiting status in carousel mode
+    updateWaitingStatus();
+  }
+  
+  // Update waiting status with vote progress (carousel mode)
+  function updateWaitingStatus() {
+    if (!state.useCarousel) return;
+    
+    const statusRow = state.container?.querySelector('.lv2-status-row');
+    if (!statusRow) return;
+    
+    const waitingStatus = statusRow.querySelector('.lv2-waiting-status');
+    if (!waitingStatus) return;
+    
+    // Calculate total votes cast
+    const totalVotes = state.leftCount + state.rightCount;
+    
+    // If user has voted and votes are still being cast, show waiting status
+    if (!state.humanTurn && totalVotes > 0) {
+      const progressSpan = waitingStatus.querySelector('.progress');
+      if (progressSpan) {
+        // For now, we don't know the total expected votes, so just show current count
+        // This can be enhanced later if we track expected voter count
+        progressSpan.textContent = `${totalVotes}`;
+      }
+      waitingStatus.classList.add('visible');
+    } else {
+      waitingStatus.classList.remove('visible');
+    }
   }
 
   // Animate count with odometer effect and V2.1 bump animation
@@ -916,8 +974,26 @@
     }
   }
 
-  // V2.1: Show subtle top-center turn tag
+  // V2.1: Show subtle top-center turn tag (or YOUR TURN pill in carousel mode)
   function showTurnTag() {
+    // In carousel mode, show YOUR TURN pill in status row
+    if (state.useCarousel) {
+      const statusRow = state.container?.querySelector('.lv2-status-row');
+      if (statusRow) {
+        const yourTurnPill = statusRow.querySelector('.lv2-your-turn-pill');
+        if (yourTurnPill) {
+          yourTurnPill.classList.add('visible');
+        }
+        // Hide waiting status when showing your turn
+        const waitingStatus = statusRow.querySelector('.lv2-waiting-status');
+        if (waitingStatus) {
+          waitingStatus.classList.remove('visible');
+        }
+      }
+      return;
+    }
+    
+    // Legacy mode: show turn tag at top
     const tv = document.querySelector('#tv');
     if (!tv) return;
 
@@ -935,8 +1011,21 @@
     tv.appendChild(tag);
   }
 
-  // V2.1: Hide turn tag
+  // V2.1: Hide turn tag (or YOUR TURN pill in carousel mode)
   function hideTurnTag() {
+    // In carousel mode, hide YOUR TURN pill in status row
+    if (state.useCarousel) {
+      const statusRow = state.container?.querySelector('.lv2-status-row');
+      if (statusRow) {
+        const yourTurnPill = statusRow.querySelector('.lv2-your-turn-pill');
+        if (yourTurnPill) {
+          yourTurnPill.classList.remove('visible');
+        }
+      }
+      return;
+    }
+    
+    // Legacy mode: remove turn tag
     const tv = document.querySelector('#tv');
     const tag = tv?.querySelector('.lv2-turn-tag');
     if (tag) tag.remove();
