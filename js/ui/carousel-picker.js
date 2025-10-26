@@ -129,7 +129,8 @@
     leftArrow.innerHTML = '&#8249;'; // ‹
     leftArrow.setAttribute('aria-label', 'Previous');
     leftArrow.disabled = (state.currentIndex === 0);
-    leftArrow.onclick = function() {
+    leftArrow.onclick = function(e) {
+      e.stopPropagation();
       if (state.currentIndex > 0) {
         state.currentIndex--;
         if (state.onIndexChange) state.onIndexChange(state.currentIndex);
@@ -200,7 +201,8 @@
     rightArrow.innerHTML = '&#8250;'; // ›
     rightArrow.setAttribute('aria-label', 'Next');
     rightArrow.disabled = (state.currentIndex === state.ids.length - 1);
-    rightArrow.onclick = function() {
+    rightArrow.onclick = function(e) {
+      e.stopPropagation();
       if (state.currentIndex < state.ids.length - 1) {
         state.currentIndex++;
         if (state.onIndexChange) state.onIndexChange(state.currentIndex);
@@ -261,16 +263,20 @@
     document.body.appendChild(overlay);
 
     // Install overlay-level event guards to prevent bubbling to router/HUD
-    // Use bubble phase (false) to catch events after button handlers
+    // Use capture phase (true) to intercept events before they reach router/HUD
+    // Do NOT call preventDefault to allow internal button handlers to work
     overlay.addEventListener('click', function(e) {
       e.stopPropagation();
-    }, false);
+    }, true);
     overlay.addEventListener('mousedown', function(e) {
       e.stopPropagation();
-    }, false);
+    }, true);
     overlay.addEventListener('touchstart', function(e) {
       e.stopPropagation();
-    }, false);
+    }, { passive: true, capture: true });
+    overlay.addEventListener('pointerdown', function(e) {
+      e.stopPropagation();
+    }, true);
 
     // Animate in
     requestAnimationFrame(function() {

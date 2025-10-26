@@ -3159,13 +3159,12 @@
     // Compute blocked IDs for first pick: HOH, POV holder, and original nominees (visually blocked but shown)
     var blockedForFirst = [g.hohId, g.vetoHolder].concat(originalNominees);
     
-    firstReplacement = await __withRpPickerGuard(function(){
-      return openCarouselPicker({
-        ids: baseEligible,
-        title: 'Select first replacement nominee',
-        actionLabel: 'Nominate',
-        blockIds: blockedForFirst
-      });
+    // Note: carousel-picker handles event containment internally with stopPropagation
+    firstReplacement = await openCarouselPicker({
+      ids: baseEligible,
+      title: 'Select first replacement nominee',
+      actionLabel: 'Nominate',
+      blockIds: blockedForFirst
     });
     
     if(firstReplacement == null){
@@ -3269,13 +3268,12 @@
     // Compute blocked IDs for second pick: HOH, POV, first replacement, and remaining original
     var blockedForSecond = [g.hohId, g.vetoHolder, firstReplacement, remainingOriginal];
     
-    secondReplacement = await __withRpPickerGuard(function(){
-      return openCarouselPicker({
-        ids: secondEligible,
-        title: 'Select second replacement nominee',
-        actionLabel: 'Nominate',
-        blockIds: blockedForSecond
-      });
+    // Note: carousel-picker handles event containment internally with stopPropagation
+    secondReplacement = await openCarouselPicker({
+      ids: secondEligible,
+      title: 'Select second replacement nominee',
+      actionLabel: 'Nominate',
+      blockIds: blockedForSecond
     });
     
     if(secondReplacement == null){
