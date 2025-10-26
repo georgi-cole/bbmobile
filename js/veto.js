@@ -1484,6 +1484,20 @@
       overlay.setAttribute('role', 'dialog');
       overlay.setAttribute('aria-label', 'Select replacement nominees');
       
+      // Guard function to prevent global click delegation
+      function guardEvent(e){
+        e.preventDefault();
+        e.stopPropagation();
+        if(e.stopImmediatePropagation){
+          e.stopImmediatePropagation();
+        }
+      }
+      
+      // Install bubble-phase event guards to prevent routing/HUD click handlers
+      overlay.addEventListener('click', guardEvent, false);
+      overlay.addEventListener('mousedown', guardEvent, false);
+      overlay.addEventListener('touchstart', guardEvent, false);
+      
       // Header
       var header = document.createElement('div');
       header.className = 'fs-header';
@@ -1561,12 +1575,13 @@
           card.appendChild(name);
           
           // Click handler for selection
-          card.onclick = function(){
+          card.onclick = function(e){
+            guardEvent(e); // Guard before handling
             updateSelection(playerId, card);
           };
           card.onkeydown = function(e){
             if(e.key === 'Enter' || e.key === ' '){
-              e.preventDefault();
+              guardEvent(e); // Guard before handling
               updateSelection(playerId, card);
             }
           };
@@ -1590,7 +1605,8 @@
       confirmBtn.className = 'fs-save-btn veto-confirm-btn';
       confirmBtn.textContent = 'Confirm ' + (count === 2 ? 'Nominees' : 'Nominee');
       confirmBtn.disabled = true;
-      confirmBtn.onclick = function(){
+      confirmBtn.onclick = function(e){
+        guardEvent(e); // Guard before handling
         // Remove overlay
         overlay.classList.add('removing');
         setTimeout(function(){
@@ -2972,6 +2988,9 @@
     
     var holderName = holder ? holder.name : 'POV Holder';
     
+    // Store original nominees for reference
+    var originalNominees = g.nominees ? g.nominees.slice() : [];
+    
     // Show Diamond POV announcement with POV holder avatar
     await showTVCardWithAvatars({
       title: 'Diamond Power of Veto',
@@ -2981,12 +3000,12 @@
       actorIds: holder ? holder.id : null
     });
     
-    // Compute eligible replacement nominees (exclude HOH and POV holder)
-    var eligibleIds = alivePlayers().filter(function(p){
+    // Compute eligible replacement nominees for FIRST pick (exclude HOH and POV holder)
+    var baseEligible = alivePlayers().filter(function(p){
       return p.id !== g.hohId && p.id !== g.vetoHolder && !p.evicted;
     }).map(function(p){ return p.id; });
     
-    if(eligibleIds.length < 2){
+    if(baseEligible.length < 2){
       console.warn('[veto] Not enough eligible players for Diamond POV');
       await showTVCard({
         title: 'Error',
@@ -3009,20 +3028,19 @@
       return;
     }
     
-    // Pick 2 nominees
-    var newNominees = [];
+    // === FIRST REPLACEMENT PICK ===
+    var firstReplacement = null;
     if(holder && holder.human){
-      // Human picks first nominee using carousel picker
-      var firstNominee = await openCarouselPicker({
-        ids: eligibleIds,
-        title: 'Select first replacement nominee',
-        actionLabel: 'Nominate',
-        blockIds: []
+      // Human picks first nominee using full-screen replacement selector
+      firstReplacement = await showFullscreenReplacementSelector({
+        eligibleIds: baseEligible,
+        count: 1,
+        title: 'Select first replacement nominee'
       });
       
-      if(firstNominee == null){
+      if(firstReplacement == null){
         // User cancelled - abort ceremony
-        console.warn('[veto] Diamond POV selection cancelled');
+        console.warn('[veto] Diamond POV first selection cancelled');
         g.__vetoCeremonyResolved = true;
         g.__vetoDecisionInProgress = false;
         g.__useTVCeremonyUI = false;
@@ -3037,60 +3055,131 @@
         }, 200);
         return;
       }
-      
-      newNominees.push(firstNominee);
-      
-      // Filter out first nominee from eligible list
-      var remainingEligible = eligibleIds.filter(function(id){ return id !== firstNominee; });
-      
-      if(remainingEligible.length === 0){
-        console.warn('[veto] No remaining eligible players for second Diamond POV nominee');
-        // Fall back to AI selection
-        var povHolder = getP(g.vetoHolder);
-        var scored = eligibleIds.filter(function(id){ return id !== firstNominee; }).map(function(id){
-          var aff = (povHolder && povHolder.affinity && typeof povHolder.affinity[id]==='number') ? povHolder.affinity[id] : 0;
-          var p = getP(id);
-          return { id: id, score: (-aff) + (p && p.threat ? p.threat : 0.5) };
-        }).sort(function(a,b){ return b.score - a.score; });
-        
-        if(scored.length > 0) newNominees.push(scored[0].id);
-      } else {
-        // Human picks second nominee using carousel picker
-        var secondNominee = await openCarouselPicker({
-          ids: remainingEligible,
-          title: 'Select second replacement nominee',
-          actionLabel: 'Nominate',
-          blockIds: []
-        });
-        
-        if(secondNominee == null){
-          // User cancelled - fall back to AI selection for second
-          var povHolder2 = getP(g.vetoHolder);
-          var scored2 = remainingEligible.map(function(id){
-            var aff = (povHolder2 && povHolder2.affinity && typeof povHolder2.affinity[id]==='number') ? povHolder2.affinity[id] : 0;
-            var p = getP(id);
-            return { id: id, score: (-aff) + (p && p.threat ? p.threat : 0.5) };
-          }).sort(function(a,b){ return b.score - a.score; });
-          
-          if(scored2.length > 0) newNominees.push(scored2[0].id);
-        } else {
-          newNominees.push(secondNominee);
-        }
-      }
     } else {
-      // AI picks 2 nominees based on lowest affinity
+      // AI picks first nominee based on lowest affinity
       var povHolder = getP(g.vetoHolder);
-      var scored = eligibleIds.map(function(id){
+      var scored = baseEligible.map(function(id){
         var aff = (povHolder && povHolder.affinity && typeof povHolder.affinity[id]==='number') ? povHolder.affinity[id] : 0;
         var p = getP(id);
         return { id: id, score: (-aff) + (p && p.threat ? p.threat : 0.5) };
       }).sort(function(a,b){ return b.score - a.score; });
       
-      newNominees = [scored[0].id];
-      if(scored.length > 1) newNominees.push(scored[1].id);
+      firstReplacement = scored[0].id;
     }
     
-    // Apply Diamond POV using the multi-replacement function
+    // === INTERSTITIAL: Update roster with first replacement temporarily ===
+    // Remove NOM from one original nominee, add NOM to first replacement
+    var remainingOriginal = originalNominees[0] === firstReplacement ? originalNominees[1] : originalNominees[0];
+    if(originalNominees.indexOf(remainingOriginal) === -1 && originalNominees.length > 0){
+      remainingOriginal = originalNominees[0];
+    }
+    
+    // Clear nominated flag from the nominee being replaced
+    for(var i=0; i<originalNominees.length; i++){
+      if(originalNominees[i] !== remainingOriginal){
+        var removedP = getP(originalNominees[i]);
+        if(removedP){
+          removedP.nominated = false;
+          removedP.nominationState = 'none';
+        }
+      }
+    }
+    
+    // Add nominated flag to first replacement
+    var firstRepP = getP(firstReplacement);
+    if(firstRepP){
+      firstRepP.nominated = true;
+      firstRepP.nominationState = 'nominated';
+    }
+    
+    // Update g.nominees temporarily to [firstReplacement, remainingOriginal]
+    g.nominees = [firstReplacement, remainingOriginal];
+    
+    // Sync badges and HUD
+    try{ if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates(); }catch(e){}
+    try{ if(typeof global.updateHud === 'function') global.updateHud(); }catch(e){}
+    
+    // Show confirmation card for first replacement
+    await showTVCardWithAvatars({
+      title: 'First Replacement Confirmed',
+      lines: [safeName(firstReplacement) + ' is now nominated.', 'Select the second replacement.'],
+      tone: 'noms',
+      duration: 3200,
+      subjectIds: firstReplacement
+    });
+    
+    // Show interstitial confirmation (OK button)
+    var confirmResult = null;
+    if(typeof window.showConfirm === 'function'){
+      // Use modern confirm modal if available
+      confirmResult = await window.showConfirm('First replacement confirmed. Proceed to second selection?', {
+        title: 'Diamond POV',
+        confirmText: 'Continue',
+        cancelText: null, // No cancel option
+        tone: 'veto'
+      });
+    } else {
+      // Fallback: use showTVDecision with OK button only
+      confirmResult = await showTVDecision({
+        title: 'Diamond POV',
+        message: 'First replacement confirmed. Continue to second selection.',
+        buttons: [
+          { label: 'OK', value: true, primary: true }
+        ]
+      });
+    }
+    
+    // === SECOND REPLACEMENT PICK ===
+    // Compute second eligible: exclude HOH, POV, firstReplacement, and remainingOriginal
+    var secondEligible = alivePlayers().filter(function(p){
+      return p.id !== g.hohId && 
+             p.id !== g.vetoHolder && 
+             p.id !== firstReplacement && 
+             p.id !== remainingOriginal &&
+             !p.evicted;
+    }).map(function(p){ return p.id; });
+    
+    if(secondEligible.length === 0){
+      console.warn('[veto] No eligible players for second Diamond POV nominee');
+      // Fall back: pick from baseEligible excluding first
+      secondEligible = baseEligible.filter(function(id){ return id !== firstReplacement; });
+    }
+    
+    var secondReplacement = null;
+    if(holder && holder.human){
+      // Human picks second nominee using full-screen replacement selector
+      secondReplacement = await showFullscreenReplacementSelector({
+        eligibleIds: secondEligible,
+        count: 1,
+        title: 'Select second replacement nominee'
+      });
+      
+      if(secondReplacement == null){
+        // User cancelled - fall back to AI selection
+        console.warn('[veto] Diamond POV second selection cancelled, falling back to AI');
+        var povHolder3 = getP(g.vetoHolder);
+        var scored3 = secondEligible.map(function(id){
+          var aff = (povHolder3 && povHolder3.affinity && typeof povHolder3.affinity[id]==='number') ? povHolder3.affinity[id] : 0;
+          var p = getP(id);
+          return { id: id, score: (-aff) + (p && p.threat ? p.threat : 0.5) };
+        }).sort(function(a,b){ return b.score - a.score; });
+        
+        secondReplacement = scored3.length > 0 ? scored3[0].id : secondEligible[0];
+      }
+    } else {
+      // AI picks second nominee
+      var povHolder2 = getP(g.vetoHolder);
+      var scored2 = secondEligible.map(function(id){
+        var aff = (povHolder2 && povHolder2.affinity && typeof povHolder2.affinity[id]==='number') ? povHolder2.affinity[id] : 0;
+        var p = getP(id);
+        return { id: id, score: (-aff) + (p && p.threat ? p.threat : 0.5) };
+      }).sort(function(a,b){ return b.score - a.score; });
+      
+      secondReplacement = scored2.length > 0 ? scored2[0].id : secondEligible[0];
+    }
+    
+    // === Apply both replacements ===
+    var newNominees = [firstReplacement, secondReplacement];
     await applyReplacementAndContinueMulti(newNominees, {
       announcer: 'POV',
       diamond: true
