@@ -164,9 +164,9 @@ if (badgeUpdateAfterReplace.test(vetoContent)) {
   fail('Badge update after replacement not found');
 }
 
-// Test 16: Check that Diamond POV uses showFullscreenReplacementSelector twice
-const diamondFullscreenCalls = vetoContent.match(/showFullscreenReplacementSelector\(\{/g);
-if (diamondFullscreenCalls && diamondFullscreenCalls.length >= 2) {
+// Test 16: Check that Diamond POV uses openCarouselPicker twice
+const diamondCarouselCalls = vetoContent.match(/openCarouselPicker\(\{[\s\S]*?title:\s*['"]Select (first|second) replacement nominee['"]/g);
+if (diamondCarouselCalls && diamondCarouselCalls.length >= 2) {
   pass('Diamond POV uses openCarouselPicker for multiple selections');
 } else {
   fail('Diamond POV does not use openCarouselPicker correctly');
