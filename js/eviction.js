@@ -116,8 +116,34 @@
                 nominees: nominees,
                 isTieBreak: false,
                 onSubmit: (selectedId) => {
+                  // Close all vote UI immediately
+                  if (global.closeAllVoteUI) {
+                    global.closeAllVoteUI();
+                  }
+                  
+                  // Lock the vote
                   lockHumanVote(selectedId);
-                  // Overlay will close itself
+                  
+                  // Show rollout overlay to display remaining votes
+                  if (global.LiveVoteRollout) {
+                    const expectedVotes = voters.length;
+                    global.LiveVoteRollout.show({
+                      expectedVotes: expectedVotes,
+                      nominees: g.eviction.nominees
+                    });
+                    
+                    // Mark user vote as first vote in rollout
+                    const userPlayer = global.getP?.(g.humanId);
+                    const targetPlayer = global.getP?.(selectedId);
+                    if (userPlayer && targetPlayer) {
+                      global.LiveVoteRollout.addVote({
+                        voterId: g.humanId,
+                        voterName: userPlayer.name,
+                        targetId: selectedId,
+                        targetName: targetPlayer.name
+                      });
+                    }
+                  }
                 }
               });
             }
@@ -537,6 +563,16 @@
           pick: votePick
         });
       }
+      
+      // Hook: Push vote to rollout overlay if it's showing
+      if(global.LiveVoteRollout?.isShowing?.()){
+        global.LiveVoteRollout.addVote({
+          voterId: entry.voter,
+          voterName: nameV,
+          targetId: pick,
+          targetName: namePick
+        });
+      }
 
       if(twoMode){
         const [A,B]=noms;
@@ -551,6 +587,11 @@
     }
 
     g.eviction.sequenceDone=true;
+
+    // Hook: Hide rollout overlay before showing result
+    if(global.LiveVoteRollout?.isShowing?.()){
+      global.LiveVoteRollout.hide();
+    }
 
     // Hook: Mark lv2 as finished
     if(twoMode && global.lv2?.finish){
@@ -588,8 +629,31 @@
     }
     
     if(hoh?.human){
+      // Show rollout overlay for HOH tie-break (expected=1)
+      if (global.LiveVoteRollout && !useLv2) {
+        global.LiveVoteRollout.show({
+          expectedVotes: 1,
+          nominees: [a, b]
+        });
+      }
+      
       const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict',useLv2);
       if(pick===a) ca++; else cb++;
+      
+      // Add HOH vote to rollout
+      if (global.LiveVoteRollout?.isShowing?.()) {
+        global.LiveVoteRollout.addVote({
+          voterId: hoh.id,
+          voterName: hoh.name,
+          targetId: pick,
+          targetName: global.safeName(pick)
+        });
+        
+        // Hide rollout after showing HOH vote
+        await sleep(1500);
+        global.LiveVoteRollout.hide();
+      }
+      
       if (!useLv2) {
         global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],'live',3000,true);
         try{ await global.cardQueueWaitIdle?.(); }catch{}
@@ -616,8 +680,11 @@
             nominees: cIds,
             isTieBreak: true,
             onSubmit: (pickId) => {
+              // Close all vote UI immediately before resolving
+              if (global.closeAllVoteUI) {
+                global.closeAllVoteUI();
+              }
               resolve(pickId);
-              // Overlay will close itself
             }
           });
         } else if (useLv2 && global.lv2?.createCtaBar) {

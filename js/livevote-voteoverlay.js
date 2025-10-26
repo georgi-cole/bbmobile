@@ -6,7 +6,7 @@
   'use strict';
 
   // State
-  let state = {
+  const state = {
     nominees: [],
     selectedIndex: 0,
     selectedNominee: null,
@@ -53,6 +53,9 @@
       return null;
     }
 
+    // Lock body scroll when modal opens
+    lockBodyScroll();
+
     // Initialize state
     state.nominees = nominees;
     state.selectedIndex = 0;
@@ -66,6 +69,12 @@
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-label', isTieBreak ? 'Break tie vote' : 'Cast your vote to evict');
     overlay.setAttribute('aria-modal', 'true');
+
+    // Check for reduced motion preference
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      overlay.classList.add('reduce-motion');
+    }
 
     // Header
     const header = document.createElement('div');
@@ -303,13 +312,17 @@
   function handleEvictClick() {
     if (state.selectedNominee === null) return;
 
-    // Submit the vote
-    if (state.onSubmit) {
-      state.onSubmit(state.selectedNominee);
-    }
+    const selectedId = state.selectedNominee;
+    const callback = state.onSubmit;
 
-    // Close the overlay
+    // Close the overlay IMMEDIATELY before submitting
+    // This ensures UI disappears before any re-rendering happens
     hide();
+
+    // Submit the vote after UI is closed
+    if (callback) {
+      callback(selectedId);
+    }
   }
 
   // Handle keyboard navigation
@@ -332,19 +345,16 @@
         if (document.activeElement.classList.contains('lv-overlay__nominee')) {
           const index = parseInt(document.activeElement.dataset.index);
           selectNominee(index);
-        }
-        // If focus is on evict button and it's enabled, click it
-        else if (document.activeElement.classList.contains('lv-overlay__evict-btn')) {
+        } else if (document.activeElement.classList.contains('lv-overlay__evict-btn')) {
+          // If focus is on evict button and it's enabled, click it
           handleEvictClick();
         }
-        break;
-      case 'Escape':
+        break;      case 'Escape':
         event.preventDefault();
         hide();
         break;
     }
   }
-
   // Remove the overlay
   function hide() {
     if (state.overlay) {
@@ -352,11 +362,42 @@
       state.overlay = null;
     }
     
+    // Unlock body scroll when modal closes
+    unlockBodyScroll();
+    
     // Reset state
     state.nominees = [];
     state.selectedIndex = 0;
     state.selectedNominee = null;
     state.onSubmit = null;
+  }
+
+  // Lock body scroll (prevent background scrolling on mobile)
+  function lockBodyScroll() {
+    const body = document.body;
+    if (!body) return;
+    
+    // Store current scroll position
+    const scrollY = window.scrollY;
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.width = '100%';
+    body.dataset.scrollLocked = 'true';
+    body.dataset.scrollY = String(scrollY);
+  }
+
+  // Unlock body scroll
+  function unlockBodyScroll() {
+    const body = document.body;
+    if (!body || body.dataset.scrollLocked !== 'true') return;
+    
+    const scrollY = parseInt(body.dataset.scrollY || '0', 10);
+    body.style.position = '';
+    body.style.top = '';
+    body.style.width = '';
+    delete body.dataset.scrollLocked;
+    delete body.dataset.scrollY;
+    window.scrollTo(0, scrollY);
   }
 
   // Export public API
