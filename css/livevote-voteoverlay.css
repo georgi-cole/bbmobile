@@ -1,7 +1,7 @@
 /* livevote-voteoverlay.css
  * Styles for the full-screen (in-TV) voting overlay
  * Features center-emphasis carousel, nominee selection, and Evict pill
- * Mobile-first with unified safe-area support (6-10px internal gutters)
+ * Mobile-first with safe-area support
  */
 
 .lv-overlay {
@@ -16,16 +16,16 @@
   flex-direction: column;
   overflow: hidden;
   
-  /* Safe area support - internal gutters (6-10px) */
-  padding-top: max(20px, calc(6px + env(safe-area-inset-top)));
-  padding-bottom: max(20px, calc(10px + env(safe-area-inset-bottom)));
-  padding-left: max(16px, calc(6px + env(safe-area-inset-left)));
-  padding-right: max(16px, calc(6px + env(safe-area-inset-right)));
+  /* Safe area support */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 .lv-overlay__header {
   text-align: center;
-  padding: 0 16px 16px;
+  padding: 20px 16px 16px;
   color: #ffd96b;
   font-size: clamp(1.2rem, 4vw, 1.5rem);
   font-weight: 700;
@@ -168,10 +168,10 @@
   right: 8px;
 }
 
-/* Action dock at bottom - clamped to safe area */
+/* Action dock at bottom */
 .lv-overlay__dock {
   padding: 20px 16px;
-  padding-bottom: 0; /* Handled by overlay padding */
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
   text-align: center;
   flex-shrink: 0;
 }
@@ -262,7 +262,7 @@
 /* Mobile portrait optimizations */
 @media (max-width: 767px) and (orientation: portrait) {
   .lv-overlay__header {
-    padding: 0 12px 12px;
+    padding: 16px 12px 12px;
   }
   
   .lv-overlay__carousel {
@@ -288,7 +288,8 @@
   }
   
   .lv-overlay__dock {
-    padding: 16px 12px 0;
+    padding: 16px 12px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
   
   .lv-overlay__evict-btn {
@@ -301,7 +302,7 @@
 /* Landscape mobile (rotate to landscape on phone) */
 @media (max-width: 896px) and (orientation: landscape) {
   .lv-overlay__header {
-    padding: 0 16px 8px;
+    padding: 12px 16px 8px;
     font-size: 1.1rem;
   }
   
@@ -320,7 +321,7 @@
   }
   
   .lv-overlay__dock {
-    padding: 12px 16px 0;
+    padding: 12px 16px;
   }
 }
 
@@ -356,15 +357,14 @@
   }
 }
 
-/* Accessibility: respect reduced motion - fade-only transitions */
+/* Accessibility: respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .lv-overlay__track,
   .lv-overlay__nominee,
   .lv-overlay__avatar-container,
   .lv-overlay__avatar,
   .lv-overlay__nominee-name {
-    transition: opacity 0.15s linear;
-    transform: none !important;
+    transition: none;
   }
   
   .lv-overlay__arrow:hover,

@@ -771,12 +771,12 @@
         // 1. Begin result card phase (fade nominees/feed, manage z-index)
         global.lv2?.beginResultCardPhase?.();
         
-        // 2. Show result card - use LiveVoteSummary on mobile, page-level on desktop
-        if (global.lv2?.supportsInlineCard?.() && global.LiveVoteSummary) {
-          // Mobile: Use LiveVoteSummary tv-card within TV that respects safe areas
-          await global.LiveVoteSummary.show({
+        // 2. Show result card - inline on mobile, page-level on desktop
+        if (global.lv2?.supportsInlineCard?.()) {
+          // Mobile: Use inline card within TV that respects safe areas
+          await global.lv2.showInlineCard({
             title: 'Eviction Result',
-            body: [`By a vote of ${finalA} to ${finalB}`, `${evName} has been evicted.`],
+            body: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
             duration: 3600,
             tone: 'evict'
           });

@@ -1434,24 +1434,6 @@
     card.remove();
   }
 
-  /**
-   * Central phase controller: sets TV classes to manage live vote UI phases
-   * Ensures only one safe-area-contained UI is visible per phase
-   * @param {string} phase - 'voting'|'rollout'|'summary'|'final'|null (null clears all)
-   */
-  function setPhase(phase) {
-    const tv = document.querySelector('#tv');
-    if (!tv) return;
-    
-    // Remove all phase classes
-    tv.classList.remove('lv-phase-voting', 'lv-phase-rollout', 'lv-phase-summary', 'lv-phase-final');
-    
-    // Add new phase class if specified
-    if (phase) {
-      tv.classList.add(`lv-phase-${phase}`);
-    }
-  }
-
   // Public API exposed on window.lv2
   const lv2 = {
     init: init,
@@ -1468,7 +1450,6 @@
     showEvicteeFinal: showEvicteeFinal,
     supportsInlineCard: supportsInlineCard,
     showInlineCard: showInlineCard,
-    setPhase: setPhase,
     get enabled() {
       // Read from config if available
       return global.game?.cfg?.modernLiveVoteUI !== false;
