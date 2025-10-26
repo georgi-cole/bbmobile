@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top Roster Priority & POV Twist Badge Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .test-section {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .control-group {
+      background: var(--card-2);
+      padding: 15px;
+      border-radius: var(--radius-s);
+    }
+    .control-group h4 {
+      margin-top: 0;
+      color: var(--accent);
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+    .control-group label {
+      display: block;
+      margin: 8px 0;
+      font-size: 0.85rem;
+    }
+    .control-group input[type="checkbox"] {
+      margin-right: 8px;
+    }
+    .control-group select, .control-group input[type="number"] {
+      width: 100%;
+      padding: 6px;
+      margin-top: 5px;
+      background: var(--bg);
+      color: var(--ink);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+    }
+    .presets {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .preset-btn {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-s);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .preset-btn:hover {
+      opacity: 0.8;
+    }
+    #rosterBar {
+      margin: 20px 0;
+      min-height: 120px;
+    }
+    .debug-output {
+      background: var(--bg);
+      padding: 15px;
+      border-radius: var(--radius-s);
+      font-family: monospace;
+      font-size: 0.85rem;
+      margin-top: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .player-row {
+      padding: 8px;
+      margin: 4px 0;
+      background: var(--card-2);
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .player-row.human { border-left: 3px solid #4a9eff; }
+    .player-row.hoh { border-left: 3px solid #ffd700; }
+    .player-row.nominee { border-left: 3px solid #ff6b6b; }
+    .player-row.pov { border-left: 3px solid #79d19a; }
+    .player-row.evicted { opacity: 0.5; }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      margin-left: 5px;
+    }
+    .badge.human { background: #4a9eff; }
+    .badge.hoh { background: #ffd700; color: #000; }
+    .badge.nominee { background: #ff6b6b; }
+    .badge.pov { background: #79d19a; color: #000; }
+    .badge.evicted { background: #666; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 Top Roster Priority & POV Twist Badge Test</h1>
+    
+    <div class="test-section">
+      <h3>Quick Presets</h3>
+      <div class="presets">
+        <button class="preset-btn" onclick="preset_humanActive()">Human Active + HOH</button>
+        <button class="preset-btn" onclick="preset_humanIsHOH()">Human is HOH</button>
+        <button class="preset-btn" onclick="preset_nominees()">With Nominees</button>
+        <button class="preset-btn" onclick="preset_povHolder()">With POV</button>
+        <button class="preset-btn" onclick="preset_goldenPOV()">Golden POV</button>
+        <button class="preset-btn" onclick="preset_diamondPOV()">Diamond POV</button>
+        <button class="preset-btn" onclick="preset_humanEvicted()">Human Evicted</button>
+        <button class="preset-btn" onclick="preset_complex()">Complex Scenario</button>
+        <button class="preset-btn" onclick="resetGame()">Reset</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h3>Manual Controls</h3>
+      <div class="test-controls">
+        <div class="control-group">
+          <h4>Human Player</h4>
+          <label>
+            Human ID:
+            <select id="humanIdSelect" onchange="updateGame()">
+              <option value="">None</option>
+            </select>
+          </label>
+          <label>
+            <input type="checkbox" id="humanEvicted" onchange="updateGame()">
+            Human Evicted
+          </label>
+        </div>
+
+        <div class="control-group">
+          <h4>HOH</h4>
+          <label>
+            HOH:
+            <select id="hohSelect" onchange="updateGame()">
+              <option value="">None</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="control-group">
+          <h4>Nominees</h4>
+          <label>
+            <input type="checkbox" class="nominee-check" value="p1" onchange="updateGame()"> Player 1
+          </label>
+          <label>
+            <input type="checkbox" class="nominee-check" value="p2" onchange="updateGame()"> Player 2
+          </label>
+          <label>
+            <input type="checkbox" class="nominee-check" value="p3" onchange="updateGame()"> Player 3
+          </label>
+          <label>
+            <input type="checkbox" class="nominee-check" value="p4" onchange="updateGame()"> Player 4
+          </label>
+        </div>
+
+        <div class="control-group">
+          <h4>POV Holder</h4>
+          <label>
+            POV:
+            <select id="povSelect" onchange="updateGame()">
+              <option value="">None</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="control-group">
+          <h4>POV Twist</h4>
+          <label>
+            <input type="radio" name="povTwist" value="" checked onchange="updateGame()"> None
+          </label>
+          <label>
+            <input type="radio" name="povTwist" value="golden" onchange="updateGame()"> Golden POV ⭐
+          </label>
+          <label>
+            <input type="radio" name="povTwist" value="diamond" onchange="updateGame()"> Diamond POV 💎
+          </label>
+        </div>
+
+        <div class="control-group">
+          <h4>Evictions</h4>
+          <label>
+            <input type="checkbox" class="evict-check" value="p5" onchange="updateGame()"> Evict Player 5
+          </label>
+          <label>
+            <input type="checkbox" class="evict-check" value="p6" onchange="updateGame()"> Evict Player 6
+          </label>
+          <label>
+            <input type="checkbox" class="evict-check" value="p7" onchange="updateGame()"> Evict Player 7
+          </label>
+          <label>
+            <input type="checkbox" class="evict-check" value="p8" onchange="updateGame()"> Evict Player 8
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h3>Top Roster (Visual)</h3>
+      <div id="rosterBar"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Ordering Debug</h3>
+      <div id="orderingDebug" class="debug-output"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test Log</h3>
+      <div id="testLog" class="debug-output"></div>
+    </div>
+  </div>
+
+  <script>
+    // Mock minimal game setup
+    window.game = null;
+    window.UI = { FALLBACK_AVATAR: 'https://api.dicebear.com/6.x/bottts/svg?seed=Guest' };
+    window.g = window.g || {};
+
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.insertBefore(entry, logEl.firstChild);
+    }
+
+    function initGame() {
+      window.game = {
+        week: 1,
+        humanId: 'p1',
+        hohId: null,
+        vetoHolder: null,
+        nominees: [],
+        players: [
+          { id: 'p1', name: 'Alice', evicted: false, human: true },
+          { id: 'p2', name: 'Bob', evicted: false },
+          { id: 'p3', name: 'Charlie', evicted: false },
+          { id: 'p4', name: 'Diana', evicted: false },
+          { id: 'p5', name: 'Eve', evicted: false },
+          { id: 'p6', name: 'Frank', evicted: false },
+          { id: 'p7', name: 'Grace', evicted: false },
+          { id: 'p8', name: 'Henry', evicted: false }
+        ],
+        cfg: { showTopRoster: true }
+      };
+      window.g.game = window.game;
+      window.g.activeVetoTwist = '';
+      window.activeVetoTwist = ''; // Also set on window directly for IIFE compatibility
+      
+      // Populate dropdowns
+      const selects = ['humanIdSelect', 'hohSelect', 'povSelect'];
+      selects.forEach(id => {
+        const select = document.getElementById(id);
+        select.innerHTML = '<option value="">None</option>';
+        window.game.players.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          select.appendChild(opt);
+        });
+      });
+      
+      log('Game initialized with 8 players');
+    }
+
+    function updateGame() {
+      if (!window.game) return;
+      
+      // Update human
+      const humanId = document.getElementById('humanIdSelect').value;
+      window.game.humanId = humanId || null;
+      window.game.players.forEach(p => {
+        p.human = (p.id === humanId);
+        if (p.human && document.getElementById('humanEvicted').checked) {
+          p.evicted = true;
+          p.weekEvicted = 1;
+        }
+      });
+      
+      // Update HOH
+      const hohId = document.getElementById('hohSelect').value;
+      window.game.hohId = hohId || null;
+      window.game.players.forEach(p => {
+        p.hoh = (p.id === hohId);
+      });
+      
+      // Update nominees
+      const nominees = Array.from(document.querySelectorAll('.nominee-check:checked')).map(cb => cb.value);
+      window.game.nominees = nominees;
+      window.game.players.forEach(p => {
+        p.nominated = nominees.includes(p.id);
+      });
+      
+      // Update POV
+      const povId = document.getElementById('povSelect').value;
+      window.game.vetoHolder = povId || null;
+      
+      // Update POV twist
+      const twist = document.querySelector('input[name="povTwist"]:checked').value;
+      window.g.activeVetoTwist = twist;
+      window.activeVetoTwist = twist; // Also set on window directly for IIFE compatibility
+      
+      // Update evictions
+      const evicted = Array.from(document.querySelectorAll('.evict-check:checked')).map(cb => cb.value);
+      window.game.players.forEach(p => {
+        if (evicted.includes(p.id)) {
+          p.evicted = true;
+          p.weekEvicted = evicted.indexOf(p.id) + 2; // Start from week 2
+        } else if (!p.human || !document.getElementById('humanEvicted').checked) {
+          p.evicted = false;
+          p.weekEvicted = null;
+        }
+      });
+      
+      refreshRoster();
+      updateOrderingDebug();
+    }
+
+    function refreshRoster() {
+      if (!window.game || !window.renderTopRoster) {
+        log('renderTopRoster not available', 'error');
+        return;
+      }
+      window.renderTopRoster();
+      log('Roster refreshed');
+    }
+
+    function updateOrderingDebug() {
+      const debugEl = document.getElementById('orderingDebug');
+      if (!window.game) return;
+      
+      debugEl.innerHTML = '';
+      
+      // Get actual rendered order from DOM
+      const tiles = document.querySelectorAll('.top-roster-tile');
+      const renderedOrder = Array.from(tiles).map(tile => tile.dataset.playerId);
+      
+      // Display ordering
+      renderedOrder.forEach((id, idx) => {
+        const player = window.game.players.find(p => p.id === id);
+        if (!player) return;
+        
+        const row = document.createElement('div');
+        row.className = 'player-row';
+        
+        const badges = [];
+        if (player.human) {
+          row.classList.add('human');
+          badges.push('<span class="badge human">HUMAN</span>');
+        }
+        if (player.hoh) {
+          row.classList.add('hoh');
+          badges.push('<span class="badge hoh">HOH</span>');
+        }
+        if (window.game.nominees.includes(player.id)) {
+          row.classList.add('nominee');
+          badges.push('<span class="badge nominee">NOM</span>');
+        }
+        if (window.game.vetoHolder === player.id) {
+          row.classList.add('pov');
+          const twist = window.g.activeVetoTwist;
+          const label = twist === 'diamond' ? 'POV 💎' : twist === 'golden' ? 'POV ⭐' : 'POV';
+          badges.push(`<span class="badge pov">${label}</span>`);
+        }
+        if (player.evicted) {
+          row.classList.add('evicted');
+          badges.push(`<span class="badge evicted">EVICTED (Wk${player.weekEvicted || '?'})</span>`);
+        }
+        
+        row.innerHTML = `
+          <div>
+            <strong>${idx + 1}.</strong> ${player.name} ${badges.join(' ')}
+          </div>
+        `;
+        
+        debugEl.appendChild(row);
+      });
+    }
+
+    // Preset scenarios
+    function preset_humanActive() {
+      resetGame();
+      document.getElementById('humanIdSelect').value = 'p1';
+      document.getElementById('hohSelect').value = 'p2';
+      updateGame();
+      log('Preset: Human active + separate HOH');
+    }
+
+    function preset_humanIsHOH() {
+      resetGame();
+      document.getElementById('humanIdSelect').value = 'p1';
+      document.getElementById('hohSelect').value = 'p1';
+      updateGame();
+      log('Preset: Human is HOH');
+    }
+
+    function preset_nominees() {
+      resetGame();
+      document.getElementById('humanIdSelect').value = 'p1';
+      document.getElementById('hohSelect').value = 'p2';
+      document.querySelectorAll('.nominee-check')[0].checked = true; // p1
+      document.querySelectorAll('.nominee-check')[2].checked = true; // p3
+      updateGame();
+      log('Preset: With nominees');
+    }
+
+    function preset_povHolder() {
+      resetGame();
+      document.getElementById('humanIdSelect').value = 'p1';
+      document.getElementById('hohSelect').value = 'p2';
+      document.querySelectorAll('.nominee-check')[2].checked = true; // p3
+      document.querySelectorAll('.nominee-check')[3].checked = true; // p4
+      document.getElementById('povSelect').value = 'p3';
+      updateGame();
+      log('Preset: With POV holder');
+    }
+
+    function preset_goldenPOV() {
+      preset_povHolder();
+      document.querySelector('input[name="povTwist"][value="golden"]').checked = true;
+      updateGame();
+      log('Preset: Golden POV active');
+    }
+
+    function preset_diamondPOV() {
+      preset_povHolder();
+      document.querySelector('input[name="povTwist"][value="diamond"]').checked = true;
+      updateGame();
+      log('Preset: Diamond POV active');
+    }
+
+    function preset_humanEvicted() {
+      resetGame();
+      document.getElementById('humanIdSelect').value = 'p1';
+      document.getElementById('humanEvicted').checked = true;
+      document.getElementById('hohSelect').value = 'p2';
+      updateGame();
+      log('Preset: Human evicted, HOH first');
+    }
+
+    function preset_complex() {
+      resetGame();
+      document.getElementById('humanIdSelect').value = 'p1';
+      document.getElementById('hohSelect').value = 'p2';
+      document.querySelectorAll('.nominee-check')[2].checked = true; // p3
+      document.querySelectorAll('.nominee-check')[3].checked = true; // p4
+      document.getElementById('povSelect').value = 'p4';
+      document.querySelector('input[name="povTwist"][value="diamond"]').checked = true;
+      document.querySelectorAll('.evict-check')[0].checked = true; // p5
+      document.querySelectorAll('.evict-check')[1].checked = true; // p6
+      updateGame();
+      log('Preset: Complex scenario with Diamond POV and evictions');
+    }
+
+    function resetGame() {
+      initGame();
+      document.getElementById('humanEvicted').checked = false;
+      document.querySelectorAll('.nominee-check').forEach(cb => cb.checked = false);
+      document.querySelectorAll('.evict-check').forEach(cb => cb.checked = false);
+      document.querySelector('input[name="povTwist"][value=""]').checked = true;
+      updateGame();
+      log('Game reset');
+    }
+
+    // Initialize on load
+    window.addEventListener('load', () => {
+      initGame();
+      log('Test page loaded');
+      
+      // Set default human
+      document.getElementById('humanIdSelect').value = 'p1';
+      updateGame();
+    });
+  </script>
+
+  <!-- Load the actual game scripts -->
+  <script>
+    // Mock functions needed by ui.hud-and-router.js
+    window.UI.escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[m]);
+
+    window.getDicebearUrl = (seed) => {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Guest')}`;
+    };
+
+    window.safeName = (id) => {
+      const p = window.game?.players?.find(p => p.id === id);
+      return p ? p.name : id;
+    };
+    
+    window.g.safeName = window.safeName;
+
+    window.showProfileFor = () => {};
+    window.hideProfileTip = () => {};
+  </script>
+  
+  <script src="js/ui.hud-and-router.js"></script>
+</body>
+</html>
