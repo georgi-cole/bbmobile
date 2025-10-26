@@ -6,7 +6,7 @@
   'use strict';
 
   // State
-  let state = {
+  const state = {
     nominees: [],
     selectedIndex: 0,
     selectedNominee: null,
@@ -69,6 +69,12 @@
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-label', isTieBreak ? 'Break tie vote' : 'Cast your vote to evict');
     overlay.setAttribute('aria-modal', 'true');
+
+    // Check for reduced motion preference
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      overlay.classList.add('reduce-motion');
+    }
 
     // Header
     const header = document.createElement('div');
@@ -339,19 +345,16 @@
         if (document.activeElement.classList.contains('lv-overlay__nominee')) {
           const index = parseInt(document.activeElement.dataset.index);
           selectNominee(index);
-        }
-        // If focus is on evict button and it's enabled, click it
-        else if (document.activeElement.classList.contains('lv-overlay__evict-btn')) {
+        } else if (document.activeElement.classList.contains('lv-overlay__evict-btn')) {
+          // If focus is on evict button and it's enabled, click it
           handleEvictClick();
         }
-        break;
-      case 'Escape':
+        break;      case 'Escape':
         event.preventDefault();
         hide();
         break;
     }
   }
-
   // Remove the overlay
   function hide() {
     if (state.overlay) {

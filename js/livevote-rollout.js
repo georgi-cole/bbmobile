@@ -7,7 +7,7 @@
   'use strict';
 
   // State
-  let state = {
+  const state = {
     overlay: null,
     expectedVotes: 0,
     receivedVotes: 0,
@@ -58,6 +58,13 @@
     overlay.setAttribute('role', 'status');
     overlay.setAttribute('aria-live', 'polite');
     overlay.setAttribute('aria-label', 'Voting in progress');
+    overlay.setAttribute('tabindex', '0');
+
+    // Check for reduced motion preference
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      overlay.classList.add('reduce-motion');
+    }
 
     // Header
     const header = document.createElement('div');
@@ -78,12 +85,25 @@
     feed.setAttribute('aria-live', 'polite');
     overlay.appendChild(feed);
 
+    // Add keyboard handler
+    overlay.addEventListener('keydown', handleKeyboard);
+
     // Add to container
     targetContainer.appendChild(overlay);
     state.overlay = overlay;
     state.container = targetContainer;
 
     return overlay;
+  }
+
+  // Handle keyboard interactions
+  function handleKeyboard(event) {
+    if (!state.overlay) return;
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      hide();
+    }
   }
 
   // Update progress count
@@ -105,7 +125,7 @@
     const feed = state.overlay.querySelector('.lv-rollout__feed');
     if (!feed) return;
 
-    const { voterId, voterName, targetId, targetName } = vote;
+    const { voterId, voterName, targetName } = vote;
 
     // Clear previous feed item (only show one at a time)
     feed.innerHTML = '';
