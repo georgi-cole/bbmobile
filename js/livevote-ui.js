@@ -90,22 +90,27 @@
 
   // Detect responsive mode (narrow/portrait viewports)
   function detectResponsiveMode() {
+    let isResponsive;
+    
     // Use TVFit engine if available
     if (global.TVFit) {
-      return global.TVFit.isNarrow() || global.TVFit.isMobile();
+      isResponsive = global.TVFit.isNarrow() || global.TVFit.isMobile();
+      // Also determine if we should use carousel mode (single-item pagination)
+      state.useCarousel = global.TVFit.shouldUseCarousel();
+    } else {
+      // Fallback to existing logic
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isPortrait = height > width;
+      const isNarrow = width < 820;
+      
+      // Use carousel on very narrow or portrait screens
+      const useCarousel = isNarrow || isPortrait;
+      state.useCarousel = useCarousel;
+      isResponsive = isNarrow || isPortrait;
     }
     
-    // Fallback to existing logic
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const isPortrait = height > width;
-    const isNarrow = width < 820;
-    
-    // Use carousel on very narrow or portrait screens
-    const useCarousel = isNarrow || isPortrait;
-    state.useCarousel = useCarousel;
-    
-    return isNarrow || isPortrait;
+    return isResponsive;
   }
 
   // Render the modern panel inside #tv with fixed canvas and ResizeObserver scaling
