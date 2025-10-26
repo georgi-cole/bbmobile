@@ -1,0 +1,345 @@
+/* livevote-ceremony-overlay.css
+ * Styles for the full-screen ceremony overlay (mobile live vote Part 2)
+ * Shows post-vote rollout, announcement, and evictee reveal in sequential steps
+ * Mobile-first, safe-area aware, never overlaps or gets cut off on phones
+ */
+
+/* Full-screen overlay with dimmed backdrop */
+.lv-ceremony-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 15, 22, 0.95);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Lock scroll */
+  overflow: hidden;
+  
+  /* Fade in/out */
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: none;
+}
+
+.lv-ceremony-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Content container - centered, safe-area aware */
+.lv-ceremony__content {
+  position: relative;
+  width: 100%;
+  max-width: min(480px, calc(100% - 32px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Safe area support - external margins (avoid notch cutoff) */
+  margin-left: max(16px, env(safe-area-inset-left));
+  margin-right: max(16px, env(safe-area-inset-right));
+  margin-top: max(16px, env(safe-area-inset-top));
+  margin-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+/* Card container (reusable for all steps) */
+.lv-ceremony__card {
+  background: linear-gradient(135deg, rgba(20, 35, 55, 0.95), rgba(14, 23, 40, 0.98));
+  border: 2px solid rgba(143, 211, 255, 0.3);
+  border-radius: 20px;
+  padding: clamp(24px, 5vw, 32px);
+  width: 100%;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(143, 211, 255, 0.1);
+  text-align: center;
+  
+  /* Safe area support - internal padding */
+  padding-left: max(clamp(24px, 5vw, 32px), calc(6px + env(safe-area-inset-left)));
+  padding-right: max(clamp(24px, 5vw, 32px), calc(6px + env(safe-area-inset-right)));
+  padding-top: max(clamp(24px, 5vw, 32px), calc(6px + env(safe-area-inset-top)));
+  padding-bottom: max(clamp(24px, 5vw, 32px), calc(10px + env(safe-area-inset-bottom)));
+  
+  /* Fade in/out */
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.lv-ceremony__card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Tone variants */
+.lv-ceremony__card.tone-evict {
+  border-color: rgba(255, 107, 107, 0.4);
+}
+
+.lv-ceremony__card.tone-live {
+  border-color: rgba(124, 255, 173, 0.4);
+}
+
+/* Step 1: Rollout styles */
+.lv-ceremony__header {
+  font-size: clamp(1.2rem, 4vw, 1.4rem);
+  font-weight: 700;
+  color: #ffd96b;
+  margin-bottom: 20px;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
+}
+
+.lv-ceremony__progress {
+  font-size: clamp(0.95rem, 2.8vw, 1.05rem);
+  color: #8fb3d3;
+  margin-bottom: 24px;
+  padding: 10px 16px;
+  background: rgba(20, 35, 55, 0.6);
+  border: 1px solid rgba(143, 211, 255, 0.2);
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.lv-ceremony__feed {
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.lv-ceremony__feed-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(20, 35, 55, 0.5);
+  border: 1px solid rgba(143, 211, 255, 0.15);
+  border-radius: 16px;
+  max-width: 100%;
+  
+  /* Fade in animation */
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.lv-ceremony__feed-item.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lv-ceremony__avatar {
+  width: clamp(40px, 10vw, 48px);
+  height: clamp(40px, 10vw, 48px);
+  border-radius: 50%;
+  border: 2px solid rgba(124, 255, 173, 0.5);
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(124, 255, 173, 0.3);
+  background: rgba(20, 35, 55, 0.8);
+  flex-shrink: 0;
+}
+
+.lv-ceremony__text {
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  color: #e8f4ff;
+  text-align: left;
+  line-height: 1.4;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Step 2: Announcement styles */
+.lv-ceremony__title {
+  font-size: clamp(1.2rem, 4vw, 1.4rem);
+  font-weight: 700;
+  color: #ffd96b;
+  margin: 0 0 20px 0;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
+}
+
+.lv-ceremony__card.tone-evict .lv-ceremony__title {
+  color: #ff6b6b;
+  text-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.lv-ceremony__card.tone-live .lv-ceremony__title {
+  color: #7cffad;
+  text-shadow: 0 2px 8px rgba(124, 255, 173, 0.3);
+}
+
+.lv-ceremony__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lv-ceremony__line {
+  font-size: clamp(0.95rem, 2.8vw, 1.05rem);
+  color: #e8f4ff;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+/* Step 3: Evictee reveal styles */
+.lv-ceremony__evictee-card {
+  padding: clamp(32px, 6vw, 48px);
+}
+
+.lv-ceremony__portrait {
+  width: clamp(160px, 40vw, 240px);
+  height: clamp(160px, 40vw, 240px);
+  margin: 0 auto 24px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 107, 107, 0.6);
+  overflow: hidden;
+  box-shadow: 
+    0 8px 24px rgba(255, 107, 107, 0.4),
+    0 0 0 2px rgba(255, 107, 107, 0.2);
+  
+  /* Grayscale transition */
+  transition: filter 2s ease-in-out;
+}
+
+.lv-ceremony__portrait.grayscale {
+  filter: grayscale(100%);
+}
+
+.lv-ceremony__portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lv-ceremony__evictee-name {
+  font-size: clamp(1.2rem, 4vw, 1.6rem);
+  font-weight: 700;
+  color: #e8f4ff;
+  text-shadow: 0 2px 8px rgba(232, 244, 255, 0.3);
+}
+
+/* Mobile portrait optimizations */
+@media (max-width: 767px) and (orientation: portrait) {
+  .lv-ceremony__content {
+    max-width: calc(100% - 24px);
+  }
+  
+  .lv-ceremony__card {
+    padding: clamp(20px, 4.5vw, 28px);
+  }
+  
+  .lv-ceremony__header {
+    margin-bottom: 16px;
+  }
+  
+  .lv-ceremony__progress {
+    margin-bottom: 20px;
+    padding: 8px 14px;
+  }
+  
+  .lv-ceremony__feed-item {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  
+  .lv-ceremony__title {
+    margin-bottom: 16px;
+  }
+  
+  .lv-ceremony__body {
+    gap: 8px;
+  }
+}
+
+/* Very narrow screens (iPhone SE, etc.) */
+@media (max-width: 390px) {
+  .lv-ceremony__card {
+    padding: 20px 16px;
+  }
+  
+  .lv-ceremony__header,
+  .lv-ceremony__title {
+    font-size: 1.1rem;
+  }
+  
+  .lv-ceremony__progress {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+  }
+  
+  .lv-ceremony__avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .lv-ceremony__text,
+  .lv-ceremony__line {
+    font-size: 0.85rem;
+  }
+  
+  .lv-ceremony__portrait {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .lv-ceremony__evictee-name {
+    font-size: 1.1rem;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 896px) and (orientation: landscape) {
+  .lv-ceremony__card {
+    padding: 20px 24px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .lv-ceremony__evictee-card {
+    padding: 24px;
+  }
+  
+  .lv-ceremony__portrait {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 16px;
+  }
+}
+
+/* Accessibility: respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .lv-ceremony-overlay,
+  .lv-ceremony__card,
+  .lv-ceremony__feed-item {
+    transition: opacity 0.15s linear;
+  }
+  
+  .lv-ceremony__card,
+  .lv-ceremony__feed-item {
+    transform: none;
+  }
+  
+  .lv-ceremony__portrait {
+    transition: filter 0.8s linear;
+  }
+}
+
+/* Clamp content within safe areas on notched devices */
+@supports (padding: max(0px)) {
+  .lv-ceremony__content {
+    /* Ensure content never gets clipped by notches */
+    max-width: min(480px, calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  }
+}

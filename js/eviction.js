@@ -523,8 +523,24 @@
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
     const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    
+    // Check if we should use ceremony overlay (mobile)
+    const useCeremonyOverlay = global.LiveVoteCeremonyOverlay?.shouldUseCeremonyOverlay?.();
+    
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
+
+    // If using ceremony overlay, show it now with rollout step
+    if (useCeremonyOverlay && global.LiveVoteCeremonyOverlay) {
+      const voters = eligibleVoters();
+      global.LiveVoteCeremonyOverlay.show({
+        expectedVotes: voters.length,
+        nominees: noms
+      });
+      global.LiveVoteCeremonyOverlay.showRollout({
+        expectedVotes: voters.length
+      });
+    }
 
     function markVoter(vId,text){
       const li=document.querySelector(`#liveVoteList li[data-voter-id="${vId}"]`);
@@ -547,10 +563,13 @@
       const nameV=global.safeName(entry.voter), namePick=global.safeName(pick);
       markVoter(entry.voter,'voting…');
       
-      // Issue #5: Show diary room with avatars
-      if(!useLv2){ showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
-      await sleep(3000);
-      } else { await sleep(1500); }
+      // Issue #5: Show diary room with avatars (skip if using ceremony overlay)
+      if(!useLv2 && !useCeremonyOverlay){ 
+        showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
+        await sleep(3000);
+      } else { 
+        await sleep(1500); 
+      }
       try{ await global.cardQueueWaitIdle?.(); }catch{}
 
       // Hook: Push vote to lv2 if enabled and 2-nom mode
@@ -564,7 +583,17 @@
         });
       }
       
-      // Hook: Push vote to rollout overlay if it's showing
+      // Hook: Push vote to ceremony overlay if it's showing
+      if(useCeremonyOverlay && global.LiveVoteCeremonyOverlay?.isShowing?.()){
+        global.LiveVoteCeremonyOverlay.addVote({
+          voterId: entry.voter,
+          voterName: nameV,
+          targetId: pick,
+          targetName: namePick
+        });
+      }
+      
+      // Hook: Push vote to rollout overlay if it's showing (legacy)
       if(global.LiveVoteRollout?.isShowing?.()){
         global.LiveVoteRollout.addVote({
           voterId: entry.voter,
@@ -588,7 +617,7 @@
 
     g.eviction.sequenceDone=true;
 
-    // Hook: Hide rollout overlay before showing result
+    // Hook: Hide rollout overlay before showing result (legacy)
     if(global.LiveVoteRollout?.isShowing?.()){
       global.LiveVoteRollout.hide();
     }
@@ -763,7 +792,34 @@
 
       const evName=global.safeName(evId);
       
-      if (!useLv2) {
+      // Check if we should use ceremony overlay (mobile)
+      const useCeremonyOverlay = global.LiveVoteCeremonyOverlay?.shouldUseCeremonyOverlay?.();
+      
+      if (useCeremonyOverlay && global.LiveVoteCeremonyOverlay?.isShowing?.()) {
+        // Mobile: Use Ceremony Overlay for announcement and evictee reveal
+        
+        // Step 2: Show announcement
+        await global.LiveVoteCeremonyOverlay.showAnnouncement({
+          title: 'Eviction Result',
+          body: [`By a vote of ${finalA} to ${finalB}`, `${evName} has been evicted.`],
+          duration: 3600,
+          tone: 'evict'
+        });
+        
+        // Step 3: Show evictee reveal
+        try {
+          await global.LiveVoteCeremonyOverlay.showEvictee({
+            evictedId: evId,
+            evictedName: evName,
+            holdMs: 3500
+          });
+        } catch(e) {
+          console.error('[Eviction] Error showing evictee:', e);
+        }
+        
+        // Hide ceremony overlay after sequence completes
+        global.LiveVoteCeremonyOverlay.hide();
+      } else if (!useLv2) {
         global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       } else {
