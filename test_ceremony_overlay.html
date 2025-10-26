@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Test: Live Vote Ceremony Overlay</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <link rel="stylesheet" href="css/livevote-ceremony-overlay.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0f16;
+      color: #e8f4ff;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #ffd96b;
+      margin-bottom: 1rem;
+      font-size: 1.8rem;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #8fb3d3;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+    
+    .test-section {
+      background: rgba(20, 35, 55, 0.5);
+      border: 1px solid rgba(143, 211, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #00e0cc;
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    
+    .test-section p {
+      margin: 0 0 12px 0;
+      color: #b0d0e8;
+      font-size: 0.9rem;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc, #00b3a6);
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 8px 8px 8px 0;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.4);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff6b6b, #d63031);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .status {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0, 224, 204, 0.1);
+      border-left: 3px solid #00e0cc;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      height: 600px;
+      margin: 20px auto;
+      background: #0e1a28;
+      border: 2px solid rgba(143, 211, 255, 0.3);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+    
+    .info-box {
+      background: rgba(255, 217, 107, 0.1);
+      border: 1px solid rgba(255, 217, 107, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .info-box h3 {
+      margin: 0 0 8px 0;
+      color: #ffd96b;
+      font-size: 1rem;
+    }
+    
+    .info-box ul {
+      margin: 8px 0 0 20px;
+      padding: 0;
+      color: #e8f4ff;
+      font-size: 0.9rem;
+    }
+    
+    .info-box li {
+      margin-bottom: 4px;
+    }
+    
+    /* Mobile simulation toggle */
+    .viewport-toggle {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .viewport-toggle label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #8fb3d3;
+      font-size: 0.9rem;
+    }
+    
+    .viewport-toggle input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎭 Live Vote Ceremony Overlay Test</h1>
+    <p class="subtitle">Mobile-only full-screen ceremony for post-vote experience</p>
+    
+    <div class="info-box">
+      <h3>📋 About This Test</h3>
+      <ul>
+        <li><strong>Mobile-only:</strong> Ceremony overlay only shows on narrow/mobile viewports</li>
+        <li><strong>Three steps:</strong> Rollout → Announcement → Final</li>
+        <li><strong>Safe-area aware:</strong> Respects notches and insets (6-10px gutters)</li>
+        <li><strong>Legacy suppression:</strong> Hides old LV1 elements during ceremony</li>
+      </ul>
+    </div>
+    
+    <div class="viewport-toggle">
+      <label>
+        <input type="checkbox" id="mobileSimToggle" checked>
+        Force mobile mode (narrower viewport simulation)
+      </label>
+    </div>
+    
+    <div id="tv"></div>
+    
+    <div class="test-section">
+      <h2>Step 1: Rollout</h2>
+      <p>Shows "Voting in progress" with N/M progress pill and single feed line.</p>
+      <button id="btnShowRollout">Show Rollout Step</button>
+      <button id="btnAddVote">Add Vote</button>
+      <div class="status" id="statusRollout" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Step 2: Announcement</h2>
+      <p>Shows centered summary card with vote results.</p>
+      <button id="btnShowAnnouncement">Show Announcement Step</button>
+      <div class="status" id="statusAnnouncement" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Step 3: Final</h2>
+      <p>Shows centered evictee portrait with black-and-white fade effect.</p>
+      <button id="btnShowFinal">Show Final Step</button>
+      <div class="status" id="statusFinal" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Full Flow</h2>
+      <p>Run all three steps in sequence (simulates actual eviction ceremony).</p>
+      <button id="btnFullFlow" class="danger">Run Full Ceremony Flow</button>
+      <button id="btnHide">Hide Ceremony</button>
+      <div class="status" id="statusFull" style="display: none;"></div>
+    </div>
+  </div>
+  
+  <script src="js/livevote-ceremony-overlay.js"></script>
+  <script>
+    // Mock global functions for avatar resolution
+    window.getP = (id) => {
+      const mockPlayers = {
+        1: { id: 1, name: 'Alex', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alex' },
+        2: { id: 2, name: 'Mimi', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Mimi' },
+        3: { id: 3, name: 'Jordan', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Jordan' },
+        4: { id: 4, name: 'Sam', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Sam' },
+        5: { id: 5, name: 'Taylor', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Taylor' }
+      };
+      return mockPlayers[id] || { id, name: `Player ${id}`, avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=Player${id}` };
+    };
+    
+    window.safeName = (id) => window.getP(id).name;
+    
+    window.resolveAvatar = (player) => player?.avatar;
+    
+    // Mock TVFit for mobile detection
+    let forceMobile = true;
+    window.TVFit = {
+      isMobile: () => forceMobile || window.innerWidth < 768,
+      isNarrow: () => forceMobile || window.innerWidth < 820
+    };
+    
+    // Toggle mobile simulation
+    document.getElementById('mobileSimToggle').addEventListener('change', (e) => {
+      forceMobile = e.target.checked;
+      updateStatus('statusFull', `Mobile mode: ${forceMobile ? 'ON' : 'OFF (desktop viewport)'}`);
+    });
+    
+    // Vote counter for demo
+    let voteCount = 0;
+    const totalVotes = 5;
+    
+    // Test: Show Rollout Step
+    document.getElementById('btnShowRollout').addEventListener('click', () => {
+      voteCount = 0;
+      
+      if (!window.LiveVoteCeremonyOverlay.shouldUseCeremonyOverlay()) {
+        updateStatus('statusRollout', '⚠️ Ceremony overlay only shows on mobile. Enable "Force mobile mode" above.', 'warn');
+        return;
+      }
+      
+      window.LiveVoteCeremonyOverlay.show();
+      window.LiveVoteCeremonyOverlay.showRolloutStep({
+        expectedVotes: totalVotes,
+        nominees: [1, 2] // Alex and Mimi
+      });
+      
+      updateStatus('statusRollout', '✓ Rollout step shown. Click "Add Vote" to simulate votes.', 'success');
+      
+      // Enable Add Vote button
+      document.getElementById('btnAddVote').disabled = false;
+    });
+    
+    // Test: Add Vote
+    document.getElementById('btnAddVote').addEventListener('click', () => {
+      if (!window.LiveVoteCeremonyOverlay.isShowing()) {
+        updateStatus('statusRollout', '⚠️ Please show rollout step first.', 'warn');
+        return;
+      }
+      
+      if (voteCount >= totalVotes) {
+        updateStatus('statusRollout', '⚠️ All votes have been cast.', 'warn');
+        return;
+      }
+      
+      voteCount++;
+      const voters = [
+        { id: 3, name: 'Jordan', target: 1, targetName: 'Alex' },
+        { id: 4, name: 'Sam', target: 2, targetName: 'Mimi' },
+        { id: 5, name: 'Taylor', target: 1, targetName: 'Alex' },
+        { id: 1, name: 'Alex', target: 2, targetName: 'Mimi' },
+        { id: 2, name: 'Mimi', target: 1, targetName: 'Alex' }
+      ];
+      
+      const vote = voters[voteCount - 1];
+      window.LiveVoteCeremonyOverlay.addVoteToRollout({
+        voterId: vote.id,
+        voterName: vote.name,
+        targetId: vote.target,
+        targetName: vote.targetName
+      });
+      
+      updateStatus('statusRollout', `✓ Vote ${voteCount}/${totalVotes} added: ${vote.name} voted to evict ${vote.targetName}.`, 'success');
+      
+      if (voteCount >= totalVotes) {
+        document.getElementById('btnAddVote').disabled = true;
+        setTimeout(() => {
+          updateStatus('statusRollout', '✓ All votes received. Ready to proceed to announcement.', 'success');
+        }, 500);
+      }
+    });
+    
+    // Test: Show Announcement Step
+    document.getElementById('btnShowAnnouncement').addEventListener('click', async () => {
+      if (!window.LiveVoteCeremonyOverlay.shouldUseCeremonyOverlay()) {
+        updateStatus('statusAnnouncement', '⚠️ Ceremony overlay only shows on mobile. Enable "Force mobile mode" above.', 'warn');
+        return;
+      }
+      
+      if (!window.LiveVoteCeremonyOverlay.isShowing()) {
+        window.LiveVoteCeremonyOverlay.show();
+      }
+      
+      updateStatus('statusAnnouncement', '▶️ Showing announcement step...', 'info');
+      
+      await window.LiveVoteCeremonyOverlay.showAnnouncementStep({
+        title: 'Eviction Result',
+        body: ['By a vote of 3 to 2', 'Alex has been evicted.'],
+        duration: 3600,
+        tone: 'evict'
+      });
+      
+      updateStatus('statusAnnouncement', '✓ Announcement step complete.', 'success');
+    });
+    
+    // Test: Show Final Step
+    document.getElementById('btnShowFinal').addEventListener('click', async () => {
+      if (!window.LiveVoteCeremonyOverlay.shouldUseCeremonyOverlay()) {
+        updateStatus('statusFinal', '⚠️ Ceremony overlay only shows on mobile. Enable "Force mobile mode" above.', 'warn');
+        return;
+      }
+      
+      if (!window.LiveVoteCeremonyOverlay.isShowing()) {
+        window.LiveVoteCeremonyOverlay.show();
+      }
+      
+      updateStatus('statusFinal', '▶️ Showing final step with B&W fade...', 'info');
+      
+      await window.LiveVoteCeremonyOverlay.showFinalStep({
+        evictedId: 1,
+        evictedName: 'Alex',
+        holdMs: 3500
+      });
+      
+      updateStatus('statusFinal', '✓ Final step complete. Portrait faded to black and white.', 'success');
+    });
+    
+    // Test: Full Flow
+    document.getElementById('btnFullFlow').addEventListener('click', async () => {
+      if (!window.LiveVoteCeremonyOverlay.shouldUseCeremonyOverlay()) {
+        updateStatus('statusFull', '⚠️ Ceremony overlay only shows on mobile. Enable "Force mobile mode" above.', 'warn');
+        return;
+      }
+      
+      const btn = document.getElementById('btnFullFlow');
+      btn.disabled = true;
+      
+      try {
+        updateStatus('statusFull', '▶️ Starting full ceremony flow...', 'info');
+        
+        // Step 1: Rollout
+        updateStatus('statusFull', '▶️ Step 1/3: Rollout - showing votes coming in...', 'info');
+        window.LiveVoteCeremonyOverlay.show();
+        window.LiveVoteCeremonyOverlay.showRolloutStep({
+          expectedVotes: 5,
+          nominees: [1, 2]
+        });
+        
+        // Simulate votes coming in
+        const voters = [
+          { id: 3, name: 'Jordan', target: 1, targetName: 'Alex' },
+          { id: 4, name: 'Sam', target: 2, targetName: 'Mimi' },
+          { id: 5, name: 'Taylor', target: 1, targetName: 'Alex' },
+          { id: 1, name: 'Alex', target: 2, targetName: 'Mimi' },
+          { id: 2, name: 'Mimi', target: 1, targetName: 'Alex' }
+        ];
+        
+        for (const vote of voters) {
+          await sleep(1200);
+          window.LiveVoteCeremonyOverlay.addVoteToRollout({
+            voterId: vote.id,
+            voterName: vote.name,
+            targetId: vote.target,
+            targetName: vote.targetName
+          });
+        }
+        
+        await sleep(800);
+        
+        // Step 2: Announcement
+        updateStatus('statusFull', '▶️ Step 2/3: Announcement - showing results...', 'info');
+        await window.LiveVoteCeremonyOverlay.showAnnouncementStep({
+          title: 'Eviction Result',
+          body: ['By a vote of 3 to 2', 'Alex has been evicted.'],
+          duration: 3600,
+          tone: 'evict'
+        });
+        
+        // Step 3: Final
+        updateStatus('statusFull', '▶️ Step 3/3: Final - showing evictee portrait...', 'info');
+        await window.LiveVoteCeremonyOverlay.showFinalStep({
+          evictedId: 1,
+          evictedName: 'Alex',
+          holdMs: 3500
+        });
+        
+        // Cleanup
+        window.LiveVoteCeremonyOverlay.hide();
+        
+        updateStatus('statusFull', '✅ Full ceremony flow complete! All steps executed successfully.', 'success');
+      } catch (error) {
+        updateStatus('statusFull', `❌ Error: ${error.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    
+    // Test: Hide Ceremony
+    document.getElementById('btnHide').addEventListener('click', () => {
+      window.LiveVoteCeremonyOverlay.hide();
+      updateStatus('statusFull', '✓ Ceremony hidden. Legacy elements restored.', 'success');
+      voteCount = 0;
+      document.getElementById('btnAddVote').disabled = false;
+    });
+    
+    // Helper: Update status display
+    function updateStatus(elementId, message, type = 'info') {
+      const statusEl = document.getElementById(elementId);
+      statusEl.textContent = message;
+      statusEl.style.display = 'block';
+      statusEl.style.borderLeftColor = 
+        type === 'success' ? '#00e0cc' :
+        type === 'warn' ? '#ffd96b' :
+        type === 'error' ? '#ff6b6b' : '#8fb3d3';
+    }
+    
+    // Helper: Sleep
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    // Initialize
+    updateStatus('statusFull', `Mobile mode: ${forceMobile ? 'ON' : 'OFF (desktop viewport)'}`, 'info');
+  </script>
+</body>
+</html>
