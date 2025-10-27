@@ -154,11 +154,6 @@
       Click "Check Scroll Lock Status" to see the current state.
     </div>
     
-    <h2>Console Log (Mobile Interaction Test)</h2>
-    <div id="console-log" class="status-box" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;">
-      Console logs will appear here...
-    </div>
-    
     <h2>Test Checklist</h2>
     <div class="status-box success">
       <div class="check-item">
@@ -183,11 +178,7 @@
   <div class="spacer">↓ Scroll down to test ↓</div>
 
   <div class="tv-container">
-    <div id="tv">
-      <div id="tvOverlay" style="pointer-events: none; display: none;">
-        <!-- This mimics the real app's tvOverlay container that has pointer-events: none -->
-      </div>
-    </div>
+    <div id="tv"></div>
   </div>
 
   <div class="spacer">↑ Scroll up ↑</div>
@@ -200,8 +191,6 @@
       <li><strong>Close All:</strong> Should always unlock scroll regardless of current state (idempotent)</li>
       <li><strong>High Z-Index:</strong> Overlay should appear above all other elements (z-index: 2147483640)</li>
       <li><strong>Mobile Scroll:</strong> Overlay content should be scrollable on mobile (overflow-y: auto)</li>
-      <li><strong>Pointer Events:</strong> Overlay should set pointer-events: auto on mount container and restore on close</li>
-      <li><strong>Mobile Interactions:</strong> Arrows (◀/▶), close (×), and Evict button should all respond to taps</li>
     </ul>
   </div>
 
@@ -211,21 +200,6 @@
   <script src="js/livevote-voteoverlay.js"></script>
 
   <script>
-    // Capture console.info messages for visual display
-    const consoleLog = document.getElementById('console-log');
-    const originalInfo = console.info;
-    console.info = function(...args) {
-      originalInfo.apply(console, args);
-      if (consoleLog && args[0] && args[0].includes('[VoteOverlay]')) {
-        const logEntry = document.createElement('div');
-        logEntry.style.marginBottom = '4px';
-        logEntry.style.color = '#00e0cc';
-        logEntry.textContent = args.join(' ');
-        consoleLog.appendChild(logEntry);
-        consoleLog.scrollTop = consoleLog.scrollHeight;
-      }
-    };
-    
     // Mock global functions needed by the modules
     window.getP = function(id) {
       const mockPlayers = {
