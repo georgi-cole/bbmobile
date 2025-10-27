@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carousel Picker Responsiveness Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background: #d4edda;
+      color: #155724;
+    }
+    .test-result.fail {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .test-result.pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 14px;
+      cursor: pointer;
+      border: 1px solid #007bff;
+      background: #007bff;
+      color: white;
+      border-radius: 4px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #console-log {
+      background: #f8f9fa;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 2px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Carousel Picker Responsiveness Test</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Basic Arrow Navigation</h2>
+    <p>Click the button below to open the carousel picker. Try clicking the left/right arrows.</p>
+    <button onclick="testBasicNavigation()">Open Carousel (5 players)</button>
+    <div id="test1-result" class="test-result pending">Waiting for test...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Keyboard Navigation</h2>
+    <p>Open the carousel and use Arrow Left/Right keys to navigate. Press Enter to confirm.</p>
+    <button onclick="testKeyboardNavigation()">Open Carousel (Keyboard Test)</button>
+    <div id="test2-result" class="test-result pending">Waiting for test...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Blocked IDs</h2>
+    <p>Open the carousel. Player 2 should be marked "Not Eligible".</p>
+    <button onclick="testBlockedIds()">Open Carousel (Player 2 blocked)</button>
+    <div id="test3-result" class="test-result pending">Waiting for test...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Cancel Button</h2>
+    <p>Open the carousel and click Cancel. Should return null.</p>
+    <button onclick="testCancel()">Open Carousel (Cancel Test)</button>
+    <div id="test4-result" class="test-result pending">Waiting for test...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Touch/Mobile Simulation</h2>
+    <p>Open the carousel and test with mouse clicks simulating touch events.</p>
+    <button onclick="testTouchEvents()">Open Carousel (Touch Test)</button>
+    <div id="test5-result" class="test-result pending">Waiting for test...</div>
+  </div>
+
+  <div id="console-log">
+    <strong>Console Log:</strong>
+    <div id="console-entries"></div>
+  </div>
+
+  <script src="js/ui/carousel-picker.js"></script>
+  <script>
+    // Mock player data
+    const mockPlayers = [
+      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+      { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' },
+      { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana' },
+      { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve' }
+    ];
+
+    // Set up global helpers for carousel-picker
+    window.getP = function(id) {
+      return mockPlayers.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      const player = window.getP(id);
+      return player ? player.name : String(id);
+    };
+
+    window.resolveAvatar = function(id) {
+      const player = window.getP(id);
+      return player ? player.avatar : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + id;
+    };
+
+    // Console logging
+    const consoleEntries = document.getElementById('console-entries');
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = `[${type.toUpperCase()}] ${message}`;
+      consoleEntries.appendChild(entry);
+      consoleEntries.scrollTop = consoleEntries.scrollHeight;
+    }
+
+    // Test functions
+    async function testBasicNavigation() {
+      log('Test 1: Opening carousel with 5 players...');
+      const result = await window.openCarouselPicker({
+        ids: [1, 2, 3, 4, 5],
+        title: 'Select a player (Arrow Test)',
+        actionLabel: 'Confirm',
+        blockIds: []
+      });
+      
+      const resultDiv = document.getElementById('test1-result');
+      if (result !== null) {
+        log(`Test 1: Selected player ID ${result} (${window.safeName(result)})`, 'success');
+        resultDiv.textContent = `✓ PASS: Selected player ${window.safeName(result)} (ID: ${result})`;
+        resultDiv.className = 'test-result pass';
+      } else {
+        log('Test 1: Cancelled', 'warn');
+        resultDiv.textContent = '✗ CANCELLED: User cancelled selection';
+        resultDiv.className = 'test-result fail';
+      }
+    }
+
+    async function testKeyboardNavigation() {
+      log('Test 2: Opening carousel for keyboard test...');
+      const result = await window.openCarouselPicker({
+        ids: [1, 2, 3, 4, 5],
+        title: 'Use Arrow Keys + Enter',
+        actionLabel: 'Confirm',
+        blockIds: []
+      });
+      
+      const resultDiv = document.getElementById('test2-result');
+      if (result !== null) {
+        log(`Test 2: Selected player ID ${result} via keyboard`, 'success');
+        resultDiv.textContent = `✓ PASS: Selected player ${window.safeName(result)} (ID: ${result})`;
+        resultDiv.className = 'test-result pass';
+      } else {
+        log('Test 2: Cancelled', 'warn');
+        resultDiv.textContent = '✗ CANCELLED: User cancelled selection';
+        resultDiv.className = 'test-result fail';
+      }
+    }
+
+    async function testBlockedIds() {
+      log('Test 3: Opening carousel with player 2 blocked...');
+      const result = await window.openCarouselPicker({
+        ids: [1, 2, 3, 4, 5],
+        title: 'Player 2 is Not Eligible',
+        actionLabel: 'Confirm',
+        blockIds: [2]
+      });
+      
+      const resultDiv = document.getElementById('test3-result');
+      if (result === 2) {
+        log('Test 3: ERROR - Blocked player was selected!', 'error');
+        resultDiv.textContent = '✗ FAIL: Blocked player 2 was selected (should be disabled)';
+        resultDiv.className = 'test-result fail';
+      } else if (result !== null) {
+        log(`Test 3: Selected non-blocked player ID ${result}`, 'success');
+        resultDiv.textContent = `✓ PASS: Selected player ${window.safeName(result)} (ID: ${result}, not blocked)`;
+        resultDiv.className = 'test-result pass';
+      } else {
+        log('Test 3: Cancelled', 'warn');
+        resultDiv.textContent = '✗ CANCELLED: User cancelled selection';
+        resultDiv.className = 'test-result fail';
+      }
+    }
+
+    async function testCancel() {
+      log('Test 4: Opening carousel for cancel test...');
+      const result = await window.openCarouselPicker({
+        ids: [1, 2, 3],
+        title: 'Click Cancel Button',
+        actionLabel: 'Confirm',
+        blockIds: []
+      });
+      
+      const resultDiv = document.getElementById('test4-result');
+      if (result === null) {
+        log('Test 4: Cancel worked correctly', 'success');
+        resultDiv.textContent = '✓ PASS: Cancel returned null as expected';
+        resultDiv.className = 'test-result pass';
+      } else {
+        log(`Test 4: Selected player ${result} instead of cancelling`, 'warn');
+        resultDiv.textContent = `✗ PARTIAL: Selected player ${window.safeName(result)} (expected cancel)`;
+        resultDiv.className = 'test-result fail';
+      }
+    }
+
+    async function testTouchEvents() {
+      log('Test 5: Opening carousel for touch event test...');
+      log('Test 5: Click arrows and buttons with mouse (simulates touch)', 'info');
+      const result = await window.openCarouselPicker({
+        ids: [1, 2, 3, 4, 5],
+        title: 'Touch/Click Test',
+        actionLabel: 'Confirm',
+        blockIds: []
+      });
+      
+      const resultDiv = document.getElementById('test5-result');
+      if (result !== null) {
+        log(`Test 5: Touch events worked - selected player ID ${result}`, 'success');
+        resultDiv.textContent = `✓ PASS: Touch/click events work - selected ${window.safeName(result)}`;
+        resultDiv.className = 'test-result pass';
+      } else {
+        log('Test 5: Cancelled', 'warn');
+        resultDiv.textContent = '✗ CANCELLED: User cancelled selection';
+        resultDiv.className = 'test-result fail';
+      }
+    }
+
+    // Initial log
+    log('Carousel Picker Responsiveness Test loaded', 'info');
+    log('Click any test button to begin testing', 'info');
+  </script>
+</body>
+</html>
