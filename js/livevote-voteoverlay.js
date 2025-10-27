@@ -12,9 +12,7 @@
     selectedNominee: null,
     onSubmit: null,
     overlay: null,
-    isTieBreak: false,
-    _container: null,        // Mount container element
-    _prevPE: null            // Previous pointer-events value
+    isTieBreak: false
   };
 
   // Get avatar helper (fallback to global if available)
@@ -48,26 +46,12 @@
       return null;
     }
 
-    // Find container: prioritize #tvOverlay, fallback to #tv, then document.body
-    const targetContainer = container || 
-                           document.querySelector('#tvOverlay') || 
-                           document.querySelector('#tv') || 
-                           document.body;
+    // Find container (either provided or default to TV)
+    const targetContainer = container || document.querySelector('#tv');
     if (!targetContainer) {
       console.warn('[VoteOverlay] No container found');
       return null;
     }
-    
-    console.info('[VoteOverlay] Mount target:', targetContainer.id || targetContainer.tagName);
-    
-    // Store container and cache its current pointer-events state
-    state._container = targetContainer;
-    state._prevPE = targetContainer.style.pointerEvents || '';
-    console.info('[VoteOverlay] Previous pointer-events:', state._prevPE || '(default)');
-    
-    // Enable pointer events on container while overlay is open
-    targetContainer.style.pointerEvents = 'auto';
-    console.info('[VoteOverlay] Set pointer-events: auto');
 
     // Lock body scroll when modal opens
     lockBodyScroll();
@@ -147,11 +131,8 @@
       name.textContent = player.name;
       nomineeEl.appendChild(name);
 
-      // Click handler (use pointerup for better mobile reliability)
-      nomineeEl.addEventListener('pointerup', (e) => {
-        e.preventDefault();
-        selectNominee(index);
-      }, { passive: false });
+      // Click handler
+      nomineeEl.onclick = () => selectNominee(index);
 
       track.appendChild(nomineeEl);
     });
@@ -164,20 +145,14 @@
       prevArrow.className = 'lv-overlay__arrow prev';
       prevArrow.innerHTML = '◀';
       prevArrow.setAttribute('aria-label', 'Show previous nominee');
-      prevArrow.addEventListener('pointerup', (e) => {
-        e.preventDefault();
-        navigateCarousel(-1);
-      }, { passive: false });
+      prevArrow.onclick = () => navigateCarousel(-1);
       carousel.appendChild(prevArrow);
 
       const nextArrow = document.createElement('button');
       nextArrow.className = 'lv-overlay__arrow next';
       nextArrow.innerHTML = '▶';
       nextArrow.setAttribute('aria-label', 'Show next nominee');
-      nextArrow.addEventListener('pointerup', (e) => {
-        e.preventDefault();
-        navigateCarousel(1);
-      }, { passive: false });
+      nextArrow.onclick = () => navigateCarousel(1);
       carousel.appendChild(nextArrow);
     }
 
@@ -200,10 +175,7 @@
     evictBtn.textContent = 'Evict';
     evictBtn.disabled = true; // Disabled until selection is made
     evictBtn.setAttribute('aria-label', 'Vote to evict selected nominee');
-    evictBtn.addEventListener('pointerup', (e) => {
-      e.preventDefault();
-      handleEvictClick();
-    }, { passive: false });
+    evictBtn.onclick = handleEvictClick;
     dock.appendChild(evictBtn);
 
     overlay.appendChild(dock);
@@ -213,10 +185,7 @@
     closeBtn.className = 'lv-overlay__close';
     closeBtn.innerHTML = '×';
     closeBtn.setAttribute('aria-label', 'Close voting overlay');
-    closeBtn.addEventListener('pointerup', (e) => {
-      e.preventDefault();
-      hide();
-    }, { passive: false });
+    closeBtn.onclick = hide;
     overlay.appendChild(closeBtn);
 
     // Add keyboard support
@@ -388,19 +357,9 @@
   }
   // Remove the overlay
   function hide() {
-    console.info('[VoteOverlay] Hiding overlay');
-    
     if (state.overlay) {
       state.overlay.remove();
       state.overlay = null;
-    }
-    
-    // Restore container's previous pointer-events state
-    if (state._container) {
-      state._container.style.pointerEvents = state._prevPE;
-      console.info('[VoteOverlay] Restored pointer-events:', state._prevPE || '(default)');
-      state._container = null;
-      state._prevPE = null;
     }
     
     // Use global helper to unlock body scroll
