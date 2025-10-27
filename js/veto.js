@@ -1456,79 +1456,9 @@
   }
   global.showFullscreenNomineeSaveSelector = showFullscreenNomineeSaveSelector;
   
-  /**
-   * Show full-screen avatar-first replacement selector for Diamond POV
-   * Shows eligible players full-screen with multi-select support
-   * @param {Object} options - Configuration
-   * @param {number[]} options.eligibleIds - Array of eligible player IDs
-   * @param {number} options.count - Number of nominees to select (1 or 2)
-   * @param {string} options.title - Title text
-   * @returns {Promise<number|number[]>} Selected player ID(s)
-   */
-  /**
-   * Wrapper to install click-bubbling guards during picker operation
-   * Prevents global click delegation from routing/HUD during carousel interaction
-   * @param {Function} fn - Async function that returns a picker result
-   * @returns {Promise} Result from fn
-   */
-  async function __withRpPickerGuard(fn){
-    var guards = [];
-    var overlay = null;
-    
-    // Find or wait for carousel overlay to appear
-    function findOverlay(){
-      return document.querySelector('.carousel-picker-overlay') || 
-             document.querySelector('.fullscreen-pov-selector');
-    }
-    
-    // Guard function to prevent global click delegation
-    function guardEvent(e){
-      e.preventDefault();
-      e.stopPropagation();
-      if(e.stopImmediatePropagation){
-        e.stopImmediatePropagation();
-      }
-    }
-    
-    // Install guards on overlay when it appears
-    function installGuards(){
-      overlay = findOverlay();
-      if(!overlay) return;
-      
-      // Install bubble-phase event guards
-      overlay.addEventListener('click', guardEvent, false);
-      overlay.addEventListener('mousedown', guardEvent, false);
-      overlay.addEventListener('touchstart', guardEvent, false);
-      guards.push({ el: overlay, type: 'click', handler: guardEvent });
-      guards.push({ el: overlay, type: 'mousedown', handler: guardEvent });
-      guards.push({ el: overlay, type: 'touchstart', handler: guardEvent });
-    }
-    
-    // Uninstall all guards
-    function uninstallGuards(){
-      for(var i=0; i<guards.length; i++){
-        var guard = guards[i];
-        try{
-          guard.el.removeEventListener(guard.type, guard.handler, false);
-        }catch(e){}
-      }
-      guards = [];
-      overlay = null;
-    }
-    
-    // Wait for overlay and install guards
-    setTimeout(function(){ installGuards(); }, 50);
-    
-    try{
-      var result = await fn();
-      return result;
-    }finally{
-      uninstallGuards();
-    }
-  }
-  
-  // Legacy function removed - use openCarouselPicker instead
-  // function showFullscreenReplacementSelector was here - deprecated and removed
+  // ===== LEGACY GUARD FUNCTIONS REMOVED =====
+  // __withRpPickerGuard removed - carousel-picker.js now handles event containment internally
+  // No document-level or overlay-level guards needed - picker uses stopPropagation only
   
   /**
    * Unified "Use POV?" decision prompt for all POV types
