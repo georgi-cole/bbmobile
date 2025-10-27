@@ -131,9 +131,7 @@
     leftArrow.disabled = (state.currentIndex === 0);
     leftArrow.onclick = function(e) {
       if (e) {
-        e.preventDefault();
         e.stopPropagation();
-        e.stopImmediatePropagation();
       }
       if (state.currentIndex > 0) {
         state.currentIndex--;
@@ -141,11 +139,6 @@
         render();
       }
     };
-    leftArrow.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }, true);
     middleSection.appendChild(leftArrow);
 
     // Avatar container (tappable to select)
@@ -162,19 +155,12 @@
       avatarContainer.setAttribute('aria-label', 'Select ' + safeName(currentId));
       avatarContainer.onclick = function(e) {
         if (e) {
-          e.preventDefault();
           e.stopPropagation();
-          e.stopImmediatePropagation();
         }
         if (!isBlocked) {
           close(currentId);
         }
       };
-      avatarContainer.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-      }, true);
       avatarContainer.onkeydown = function(e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -222,9 +208,7 @@
     rightArrow.disabled = (state.currentIndex === state.ids.length - 1);
     rightArrow.onclick = function(e) {
       if (e) {
-        e.preventDefault();
         e.stopPropagation();
-        e.stopImmediatePropagation();
       }
       if (state.currentIndex < state.ids.length - 1) {
         state.currentIndex++;
@@ -232,11 +216,6 @@
         render();
       }
     };
-    rightArrow.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }, true);
     middleSection.appendChild(rightArrow);
 
     overlay.appendChild(middleSection);
@@ -261,11 +240,6 @@
       }
       close(null);
     };
-    cancelBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }, true);
     buttonRow.appendChild(cancelBtn);
 
     // Confirm button
@@ -284,11 +258,6 @@
         close(currentId);
       }
     };
-    confirmBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }, true);
     buttonRow.appendChild(confirmBtn);
 
     bottomSection.appendChild(buttonRow);
@@ -304,36 +273,19 @@
     // Add to body
     document.body.appendChild(overlay);
 
-    // Install overlay-level event guards to prevent bubbling to router/HUD
-    // CRITICAL: Must use capture phase (true) to intercept before router sees events
-    // stopPropagation prevents events from reaching any parent handlers
+    // Prevent events from bubbling to router/HUD - no preventDefault here
+    // Only stopPropagation to contain events, allowing button handlers to work
     overlay.addEventListener('click', function(e) {
       e.stopPropagation();
-      e.stopImmediatePropagation();
-    }, true);
-    overlay.addEventListener('mousedown', function(e) {
-      e.stopPropagation();
-      e.stopImmediatePropagation();
     }, true);
     overlay.addEventListener('mouseup', function(e) {
       e.stopPropagation();
-      e.stopImmediatePropagation();
     }, true);
-    overlay.addEventListener('touchstart', function(e) {
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }, { passive: false, capture: true });
     overlay.addEventListener('touchend', function(e) {
       e.stopPropagation();
-      e.stopImmediatePropagation();
-    }, { passive: false, capture: true });
-    overlay.addEventListener('pointerdown', function(e) {
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }, true);
+    }, { passive: true, capture: true });
     overlay.addEventListener('pointerup', function(e) {
       e.stopPropagation();
-      e.stopImmediatePropagation();
     }, true);
 
     // Animate in
