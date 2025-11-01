@@ -21,6 +21,8 @@
   padding: 24px;
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
+  /* Allow pointer events on interactive controls */
+  pointer-events: auto;
 }
 
 .carousel-picker-overlay.carousel-picker-visible {
@@ -97,6 +99,9 @@
   flex-shrink: 0;
   user-select: none;
   -webkit-user-select: none;
+  /* Ensure buttons are interactive */
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .carousel-picker-arrow:hover:not(:disabled) {
@@ -289,6 +294,9 @@
   background: rgba(100, 100, 100, 0.3);
   border: 2px solid rgba(200, 200, 200, 0.4);
   color: var(--text, #ffffff);
+  /* Ensure buttons are interactive */
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .carousel-picker-cancel:hover {
@@ -311,6 +319,9 @@
   padding: 14px 28px;
   font-size: 1.1rem;
   font-weight: 600;
+  /* Ensure buttons are interactive */
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .carousel-picker-confirm:disabled {
