@@ -457,9 +457,13 @@
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2) translateY(-10px);
+  }
   100% {
     opacity: 0;
-    transform: scale(0.8) translateY(-10px);
+    transform: scale(0.8) translateY(-20px);
   }
 }
 
@@ -467,7 +471,11 @@
 @keyframes badgeSwapIn {
   0% {
     opacity: 0;
-    transform: scale(0.6) translateY(-10px);
+    transform: scale(0.6) translateY(-20px);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.3) translateY(-5px);
   }
   100% {
     opacity: 1;
@@ -475,14 +483,14 @@
   }
 }
 
-/* Apply animations to badges - using shorter, subtler animations */
+/* Apply animations to badges */
 .transfer-player .badge.swapping-out {
-  animation: badgeSwapOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: badgeSwapOut 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .transfer-player .badge.swapping-in {
-  animation: badgeSwapIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  animation-delay: 0.2s;
+  animation: badgeSwapIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.4s;
   opacity: 0;
 }
 
