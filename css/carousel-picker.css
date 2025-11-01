@@ -155,19 +155,8 @@
 }
 
 .carousel-picker-avatar-selectable {
-  cursor: pointer;
+  /* Avatar is display-only, no cursor pointer or hover effects */
   border-color: rgba(52, 152, 219, 0.5);
-}
-
-.carousel-picker-avatar-selectable:hover {
-  background: linear-gradient(145deg, rgba(52, 152, 219, 0.3), rgba(41, 128, 185, 0.3));
-  border-color: rgba(52, 152, 219, 0.8);
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(52, 152, 219, 0.4);
-}
-
-.carousel-picker-avatar-selectable:active {
-  transform: translateY(-2px);
 }
 
 .carousel-picker-avatar-blocked {
@@ -202,11 +191,6 @@
   border: 4px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   transition: all 0.25s ease;
-}
-
-.carousel-picker-avatar-selectable:hover .carousel-picker-avatar {
-  border-color: rgba(52, 152, 219, 0.8);
-  transform: scale(1.05);
 }
 
 /* Responsive avatar sizing */

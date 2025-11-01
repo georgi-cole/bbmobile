@@ -141,7 +141,7 @@
     };
     middleSection.appendChild(leftArrow);
 
-    // Avatar container (tappable to select)
+    // Avatar container (visual display only, no tap-to-confirm)
     var currentId = state.ids[state.currentIndex];
     var isBlocked = state.blockIds.indexOf(currentId) !== -1;
     var player = getP(currentId);
@@ -150,25 +150,8 @@
     avatarContainer.className = 'carousel-picker-avatar-container';
     if (!isBlocked) {
       avatarContainer.classList.add('carousel-picker-avatar-selectable');
-      avatarContainer.setAttribute('tabindex', '0');
-      avatarContainer.setAttribute('role', 'button');
-      avatarContainer.setAttribute('aria-label', 'Select ' + safeName(currentId));
-      avatarContainer.onclick = function(e) {
-        if (e) {
-          e.stopPropagation();
-        }
-        if (!isBlocked) {
-          close(currentId);
-        }
-      };
-      avatarContainer.onkeydown = function(e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          if (!isBlocked) {
-            close(currentId);
-          }
-        }
-      };
+      // Remove tap-to-confirm behavior - avatar is now display-only
+      // Selection is confirmed via explicit Confirm button only
     } else {
       avatarContainer.classList.add('carousel-picker-avatar-blocked');
       avatarContainer.setAttribute('aria-disabled', 'true');
