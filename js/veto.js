@@ -1537,7 +1537,10 @@
       try{
         if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
         if(typeof global.updateHud === 'function') global.updateHud();
-      }catch(e){}
+      }catch(e){
+        // Ignore badge sync errors during animation removal - non-critical for UX improvement
+        console.warn('[veto] Badge sync error during animation:', e);
+      }
       
       // Resolve immediately (no animation delay)
       resolve();

@@ -424,8 +424,8 @@
   outline-offset: 4px;
 }
 
-/* Ensure checkmark is not cut off by overflow */
-.carousel-picker-avatar-container {
+/* Ensure checkmark is not cut off by overflow (needed for selected state indicator) */
+.carousel-picker-avatar-container.carousel-picker-avatar-selected {
   overflow: visible;
 }
 

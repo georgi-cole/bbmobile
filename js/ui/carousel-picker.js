@@ -269,8 +269,8 @@
     confirmBtn.className = 'btn primary carousel-picker-confirm';
     confirmBtn.textContent = state.actionLabel;
     
-    // Determine which ID to confirm (selectedId if set, otherwise currentId)
-    var confirmId = state.selectedId !== null ? state.selectedId : currentId;
+    // Determine which ID to confirm (selectedId if explicitly selected, otherwise current player in view)
+    var confirmId = (state.selectedId !== null) ? state.selectedId : currentId;
     var confirmPlayer = getP(confirmId);
     var confirmBlocked = state.blockIds.indexOf(confirmId) !== -1;
     
