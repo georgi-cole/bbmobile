@@ -1509,153 +1509,38 @@
         return;
       }
       
-      var content = ensureTVOverlayScaffold();
-      if(!content){ resolve(); return; }
+      // UX IMPROVEMENT: Remove jarring post-confirmation animation per UX requirements
+      // Apply changes instantly with immediate badge state commit
       
-      clearTVOverlayContent();
-      
-      var animDuration = duration || 4000;
-      
-      var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
-      
-      var h3 = document.createElement('h3');
-      h3.textContent = 'Nomination Change';
-      card.appendChild(h3);
-      
-      var scene = document.createElement('div');
-      scene.className = 'transfer-scene';
-      
-      // Left group: old nominees (FROM)
+      // For veto ceremony: commit badge changes immediately without animation
       if(fromIds && fromIds.length > 0){
-        var fromGroup = document.createElement('div');
-        fromGroup.className = 'transfer-group';
-        
-        var fromLabel = document.createElement('div');
-        fromLabel.className = 'transfer-group-label';
-        fromLabel.textContent = 'Saved';
-        fromGroup.appendChild(fromLabel);
-        
-        var fromPlayers = document.createElement('div');
-        fromPlayers.className = 'transfer-players';
-        
         for(var i=0; i<fromIds.length; i++){
-          var fromId = fromIds[i];
-          var fromP = getP(fromId);
-          
-          var fromTile = document.createElement('div');
-          fromTile.className = 'transfer-player';
-          
-          var fromImg = document.createElement('img');
-          var resolveAvatar = (global.Game || global).resolveAvatar;
-          fromImg.src = resolveAvatar ? resolveAvatar(fromP || fromId) : (fromP ? (fromP.avatar || fromP.img || fromP.photo) : null);
-          if(!fromImg.src){
-            fromImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(fromP ? fromP.name : String(fromId));
+          var fromP = getP(fromIds[i]);
+          if(fromP){
+            fromP.nominated = false;
+            fromP.nominationState = 'none';
           }
-          fromImg.alt = fromP ? fromP.name : '?';
-          fromTile.appendChild(fromImg);
-          
-          var fromName = document.createElement('div');
-          fromName.className = 'name';
-          fromName.textContent = fromP ? fromP.name : '?';
-          fromTile.appendChild(fromName);
-          
-          // Badge that will animate out
-          var fromBadge = document.createElement('div');
-          fromBadge.className = 'badge nom';
-          fromBadge.textContent = 'NOM';
-          fromTile.appendChild(fromBadge);
-          
-          fromPlayers.appendChild(fromTile);
-          
-          // Trigger badge swap-out animation after brief delay
-          (function(badge){
-            setTimeout(function(){
-              badge.classList.add('swapping-out');
-            }, 800);
-          })(fromBadge);
         }
-        
-        fromGroup.appendChild(fromPlayers);
-        scene.appendChild(fromGroup);
       }
       
-      // Arrow(s) between groups
-      var arrowContainer = document.createElement('div');
-      if(toIds && toIds.length > 1){
-        arrowContainer.className = 'transfer-multi-arrow';
-        for(var j=0; j<toIds.length; j++){
-          var arrow = document.createElement('div');
-          arrow.className = 'transfer-arrow';
-          arrow.textContent = '→';
-          arrow.style.setProperty('--arrow-index', j);
-          arrowContainer.appendChild(arrow);
-        }
-      } else {
-        arrowContainer.className = 'transfer-arrow';
-        arrowContainer.textContent = '→';
-      }
-      scene.appendChild(arrowContainer);
-      
-      // Right group: new nominees (TO)
       if(toIds && toIds.length > 0){
-        var toGroup = document.createElement('div');
-        toGroup.className = 'transfer-group';
-        
-        var toLabel = document.createElement('div');
-        toLabel.className = 'transfer-group-label';
-        toLabel.textContent = 'Nominated';
-        toGroup.appendChild(toLabel);
-        
-        var toPlayers = document.createElement('div');
-        toPlayers.className = 'transfer-players';
-        
-        for(var k=0; k<toIds.length; k++){
-          var toId = toIds[k];
-          var toP = getP(toId);
-          
-          var toTile = document.createElement('div');
-          toTile.className = 'transfer-player new-nominee';
-          
-          var toImg = document.createElement('img');
-          var resolveAvatar2 = (global.Game || global).resolveAvatar;
-          toImg.src = resolveAvatar2 ? resolveAvatar2(toP || toId) : (toP ? (toP.avatar || toP.img || toP.photo) : null);
-          if(!toImg.src){
-            toImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(toP ? toP.name : String(toId));
+        for(var j=0; j<toIds.length; j++){
+          var toP = getP(toIds[j]);
+          if(toP){
+            toP.nominated = true;
+            toP.nominationState = 'nominated';
           }
-          toImg.alt = toP ? toP.name : '?';
-          toTile.appendChild(toImg);
-          
-          var toName = document.createElement('div');
-          toName.className = 'name';
-          toName.textContent = toP ? toP.name : '?';
-          toTile.appendChild(toName);
-          
-          // Badge that will animate in
-          var toBadge = document.createElement('div');
-          toBadge.className = 'badge nom swapping-in';
-          toBadge.textContent = 'NOM';
-          toTile.appendChild(toBadge);
-          
-          toPlayers.appendChild(toTile);
         }
-        
-        toGroup.appendChild(toPlayers);
-        scene.appendChild(toGroup);
       }
       
-      card.appendChild(scene);
-      content.appendChild(card);
+      // Sync badge states immediately
+      try{
+        if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
+        if(typeof global.updateHud === 'function') global.updateHud();
+      }catch(e){}
       
-      var tv = document.getElementById('tv');
-      if(tv) tv.classList.add('tvTall');
-      
-      // Resolve after animation completes
-      setTimeout(function(){
-        clearTVOverlayContent();
-        if(tv) tv.classList.remove('tvTall');
-        resolve();
-      }, animDuration);
+      // Resolve immediately (no animation delay)
+      resolve();
     });
   }
   
@@ -1978,191 +1863,15 @@
   function renderRiskSwapAnimation(savedId, replacementId, remainingNomId){
     return new Promise(function(resolve){
       var g = global.game;
-      var content = ensureTVOverlayScaffold();
-      if(!content){ resolve(); return; }
       
-      clearTVOverlayContent();
+      // UX IMPROVEMENT: Remove jarring post-confirmation animation per UX requirements
+      // Apply changes instantly with immediate badge state commit
       
-      // Check for reduced motion preference
-      var prefersReducedMotion = false;
-      try{
-        prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      }catch(e){}
+      // Commit badge transfer state immediately (no animation)
+      commitBadgeTransferState(savedId, replacementId);
       
-      // Check for GSAP availability
-      var hasGSAP = !!(window.gsap && window.gsap.timeline);
-      
-      var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard tvCardBody';
-      
-      var h3 = document.createElement('h3');
-      h3.textContent = 'Nomination Change';
-      card.appendChild(h3);
-      
-      var scene = document.createElement('div');
-      scene.className = 'veto-risk-swap-scene';
-      
-      // Stage 1: Current nominees "at risk"
-      var stage1 = document.createElement('div');
-      stage1.className = 'veto-risk-stage';
-      
-      var stage1Label = document.createElement('div');
-      stage1Label.className = 'veto-stage-label';
-      stage1Label.textContent = 'Current Nominees';
-      scene.appendChild(stage1Label);
-      
-      // Saved nominee (will become safe)
-      var savedP = getP(savedId);
-      var savedTile = createRiskPlayerTile(savedP || savedId, 'at-risk', 'RISK');
-      stage1.appendChild(savedTile);
-      
-      // Remaining nominee (stays at risk)
-      if(remainingNomId){
-        var remainingP = getP(remainingNomId);
-        var remainingTile = createRiskPlayerTile(remainingP || remainingNomId, 'at-risk', 'RISK');
-        stage1.appendChild(remainingTile);
-      }
-      
-      scene.appendChild(stage1);
-      
-      // Arrow
-      var arrow1 = document.createElement('div');
-      arrow1.className = 'veto-risk-arrow';
-      arrow1.textContent = '↓';
-      scene.appendChild(arrow1);
-      
-      // Stage 2: Saved nominee becomes "safe"
-      var stage2 = document.createElement('div');
-      stage2.className = 'veto-risk-stage';
-      stage2.style.opacity = '0';
-      
-      var stage2Label = document.createElement('div');
-      stage2Label.className = 'veto-stage-label';
-      stage2Label.textContent = 'POV Used';
-      scene.appendChild(stage2Label);
-      
-      var safeTile = createRiskPlayerTile(savedP || savedId, 'safe', 'SAFE');
-      stage2.appendChild(safeTile);
-      
-      if(remainingNomId){
-        var remainingTile2 = createRiskPlayerTile(remainingP || remainingNomId, 'at-risk', 'RISK');
-        stage2.appendChild(remainingTile2);
-      }
-      
-      scene.appendChild(stage2);
-      
-      // Arrow 2
-      var arrow2 = document.createElement('div');
-      arrow2.className = 'veto-risk-arrow';
-      arrow2.textContent = '↓';
-      arrow2.style.opacity = '0';
-      scene.appendChild(arrow2);
-      
-      // Stage 3: New replacement nominee "at risk"
-      var stage3 = document.createElement('div');
-      stage3.className = 'veto-risk-stage';
-      stage3.style.opacity = '0';
-      
-      var stage3Label = document.createElement('div');
-      stage3Label.className = 'veto-stage-label';
-      stage3Label.textContent = 'Replacement Named';
-      scene.appendChild(stage3Label);
-      
-      var repP = getP(replacementId);
-      var repTile = createRiskPlayerTile(repP || replacementId, 'new-risk', 'NOM');
-      stage3.appendChild(repTile);
-      
-      if(remainingNomId){
-        var remainingTile3 = createRiskPlayerTile(remainingP || remainingNomId, 'at-risk', 'RISK');
-        stage3.appendChild(remainingTile3);
-      }
-      
-      scene.appendChild(stage3);
-      
-      card.appendChild(scene);
-      content.appendChild(card);
-      
-      var tv = document.getElementById('tv');
-      if(tv) tv.classList.add('tvTall');
-      
-      // Animation sequence
-      if(prefersReducedMotion){
-        // Skip animation, show final state immediately
-        stage1.style.opacity = '0';
-        stage2.style.opacity = '0';
-        arrow1.style.opacity = '0';
-        arrow2.style.opacity = '1';
-        stage3.style.opacity = '1';
-        
-        setTimeout(function(){
-          commitBadgeTransferState(savedId, replacementId);
-          setTimeout(function(){
-            clearTVOverlayContent();
-            if(tv) tv.classList.remove('tvTall');
-            resolve();
-          }, 1500);
-        }, 800);
-      } else if(hasGSAP){
-        // Use GSAP timeline for smooth animation
-        var tl = gsap.timeline();
-        
-        // Stage 1: Hold for 1.2s
-        tl.to({}, { duration: 1.2 });
-        
-        // Stage 2: Fade to safe state
-        tl.to(stage1, { opacity: 0, duration: 0.6 }, '+=0.2');
-        tl.to(stage2, { opacity: 1, duration: 0.6 }, '-=0.4');
-        tl.to(arrow2, { opacity: 1, duration: 0.4 }, '-=0.2');
-        
-        // Stage 3: Show replacement
-        tl.to(stage2, { opacity: 0, duration: 0.6 }, '+=0.8');
-        tl.to(stage3, { opacity: 1, duration: 0.6 }, '-=0.4');
-        
-        // Commit state and cleanup
-        tl.call(function(){
-          commitBadgeTransferState(savedId, replacementId);
-        }, [], '+=0.6');
-        
-        tl.call(function(){
-          clearTVOverlayContent();
-          if(tv) tv.classList.remove('tvTall');
-          resolve();
-        }, [], '+=1');
-      } else {
-        // CSS fallback animation
-        setTimeout(function(){
-          // Fade to stage 2
-          stage1.style.transition = 'opacity 0.6s ease';
-          stage2.style.transition = 'opacity 0.6s ease';
-          arrow2.style.transition = 'opacity 0.4s ease';
-          
-          stage1.style.opacity = '0';
-          setTimeout(function(){
-            stage2.style.opacity = '1';
-            arrow2.style.opacity = '1';
-          }, 200);
-          
-          // Fade to stage 3
-          setTimeout(function(){
-            stage3.style.transition = 'opacity 0.6s ease';
-            stage2.style.opacity = '0';
-            setTimeout(function(){
-              stage3.style.opacity = '1';
-            }, 200);
-            
-            // Commit state
-            setTimeout(function(){
-              commitBadgeTransferState(savedId, replacementId);
-              
-              setTimeout(function(){
-                clearTVOverlayContent();
-                if(tv) tv.classList.remove('tvTall');
-                resolve();
-              }, 1200);
-            }, 800);
-          }, 1000);
-        }, 1200);
-      }
+      // Resolve immediately (no animation delay)
+      resolve();
     });
   }
   

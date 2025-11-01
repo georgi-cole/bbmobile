@@ -44,6 +44,7 @@
     startId: null,
     blockIds: [],
     currentIndex: 0,
+    selectedId: null, // Track selected ID without immediately closing
     onIndexChange: null,
     resolver: null
   };
@@ -77,6 +78,7 @@
       state.onIndexChange = options.onIndexChange || null;
       state.resolver = resolve;
       state.isOpen = true;
+      state.selectedId = null; // Reset selected ID
 
       // Find starting index
       if (state.startId != null) {
@@ -153,25 +155,36 @@
       avatarContainer.setAttribute('tabindex', '0');
       avatarContainer.setAttribute('role', 'button');
       avatarContainer.setAttribute('aria-label', 'Select ' + safeName(currentId));
+      
+      // Avatar tap should ONLY select/highlight, NOT execute (per UX requirements)
       avatarContainer.onclick = function(e) {
         if (e) {
           e.stopPropagation();
         }
         if (!isBlocked) {
-          close(currentId);
+          // Mark as selected and re-render to show visual highlight
+          state.selectedId = currentId;
+          render();
         }
       };
       avatarContainer.onkeydown = function(e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           if (!isBlocked) {
-            close(currentId);
+            // Mark as selected and re-render to show visual highlight
+            state.selectedId = currentId;
+            render();
           }
         }
       };
     } else {
       avatarContainer.classList.add('carousel-picker-avatar-blocked');
       avatarContainer.setAttribute('aria-disabled', 'true');
+    }
+    
+    // Add visual highlight if this player is selected
+    if (state.selectedId === currentId) {
+      avatarContainer.classList.add('carousel-picker-avatar-selected');
     }
 
     // Avatar image
@@ -189,6 +202,15 @@
     nameLabel.className = 'carousel-picker-name';
     nameLabel.textContent = safeName(currentId);
     avatarContainer.appendChild(nameLabel);
+    
+    // Selection indicator (checkmark when selected)
+    if (state.selectedId === currentId) {
+      var checkmark = document.createElement('div');
+      checkmark.className = 'carousel-picker-checkmark';
+      checkmark.innerHTML = '✓';
+      checkmark.setAttribute('aria-label', 'Selected');
+      avatarContainer.appendChild(checkmark);
+    }
 
     // Blocked label (if applicable)
     if (isBlocked) {
@@ -246,16 +268,23 @@
     var confirmBtn = document.createElement('button');
     confirmBtn.className = 'btn primary carousel-picker-confirm';
     confirmBtn.textContent = state.actionLabel;
-    confirmBtn.setAttribute('aria-label', state.actionLabel + ' ' + safeName(currentId));
-    confirmBtn.disabled = isBlocked;
+    
+    // Determine which ID to confirm (selectedId if set, otherwise currentId)
+    var confirmId = state.selectedId !== null ? state.selectedId : currentId;
+    var confirmPlayer = getP(confirmId);
+    var confirmBlocked = state.blockIds.indexOf(confirmId) !== -1;
+    
+    confirmBtn.setAttribute('aria-label', state.actionLabel + ' ' + safeName(confirmId));
+    confirmBtn.disabled = confirmBlocked;
     confirmBtn.onclick = function(e) {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
       }
-      if (!isBlocked) {
-        close(currentId);
+      if (!confirmBlocked) {
+        // Execute action with selectedId (or currentId if no selection made)
+        close(confirmId);
       }
     };
     buttonRow.appendChild(confirmBtn);
