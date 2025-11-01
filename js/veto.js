@@ -2677,11 +2677,11 @@
       // Apply animation and replacements
       var newNominees = [firstReplacement, secondReplacement];
       
-      // Animate nomination transfer from old to new
+      // Use subtle fade instead of elaborate animation (600ms instead of 4000ms)
       await animateNominationTransfer({
         fromIds: originalNominees,
         toIds: newNominees,
-        duration: 4000
+        duration: 600
       });
       
       // Apply both replacements
@@ -2870,11 +2870,11 @@
     // === Apply both replacements ===
     var newNominees = [firstReplacement, secondReplacement];
     
-    // Animate nomination transfer from old to new
+    // Use subtle fade instead of elaborate animation (600ms instead of 4000ms)
     await animateNominationTransfer({
       fromIds: originalNominees,
       toIds: newNominees,
-      duration: 4000
+      duration: 600
     });
     
     // Apply both replacements
