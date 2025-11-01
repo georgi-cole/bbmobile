@@ -273,20 +273,50 @@
     // Add to body
     document.body.appendChild(overlay);
 
-    // Prevent events from bubbling to router/HUD - no preventDefault here
-    // Only stopPropagation to contain events, allowing button handlers to work
+    // Prevent events from bubbling to router/HUD while allowing interaction with controls
+    // Strategy: Only stopPropagation on non-interactive targets to prevent HUD/router interference
+    // For interactive targets (buttons, inputs), let events bubble to their handlers
+    
+    var isInteractiveFn = global.isInteractiveEvent || function(e) {
+      if (!e || !e.target) return false;
+      return !!e.target.closest('button, [role="button"], a, input, select, textarea, [data-action]');
+    };
+
+    // Handle click events
     overlay.addEventListener('click', function(e) {
-      e.stopPropagation();
+      // Let clicks on interactive controls bubble to their handlers
+      if (!isInteractiveFn(e)) {
+        e.stopPropagation();
+      }
     }, true);
-    overlay.addEventListener('mouseup', function(e) {
-      e.stopPropagation();
+
+    // Handle pointer events (unified mouse/touch/pen)
+    overlay.addEventListener('pointerdown', function(e) {
+      if (!isInteractiveFn(e)) {
+        e.stopPropagation();
+      }
     }, true);
-    overlay.addEventListener('touchend', function(e) {
-      e.stopPropagation();
-    }, { passive: true, capture: true });
+
     overlay.addEventListener('pointerup', function(e) {
-      e.stopPropagation();
+      if (!isInteractiveFn(e)) {
+        e.stopPropagation();
+      }
     }, true);
+
+    // Handle touch events with proper passive flag
+    overlay.addEventListener('touchstart', function(e) {
+      // Don't prevent default on interactive controls to allow click synthesis
+      if (!isInteractiveFn(e)) {
+        e.stopPropagation();
+      }
+    }, { passive: true, capture: true });
+
+    overlay.addEventListener('touchend', function(e) {
+      // Don't prevent default on interactive controls to allow click synthesis
+      if (!isInteractiveFn(e)) {
+        e.stopPropagation();
+      }
+    }, { passive: true, capture: true });
 
     // Animate in
     requestAnimationFrame(function() {

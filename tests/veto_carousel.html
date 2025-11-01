@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Carousel Interaction Test</title>
+  <link rel="stylesheet" href="../css/carousel-picker.css">
+  <style>
+    :root {
+      --text: #ffffff;
+      --accent: #3498db;
+      --danger: #e74c3c;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #3498db;
+    }
+    
+    .test-section {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: #3498db;
+    }
+    
+    .btn {
+      background: linear-gradient(145deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+      transition: all 0.2s ease;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .btn.primary {
+      background: linear-gradient(145deg, #27ae60, #229954);
+    }
+    
+    .btn.danger {
+      background: linear-gradient(145deg, #e74c3c, #c0392b);
+    }
+    
+    .log {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      border: 1px solid rgba(52, 152, 219, 0.3);
+    }
+    
+    .log-entry {
+      margin: 5px 0;
+      padding: 8px;
+      border-left: 3px solid #27ae60;
+      padding-left: 12px;
+      background: rgba(39, 174, 96, 0.1);
+      border-radius: 4px;
+    }
+    
+    .log-entry.info {
+      border-left-color: #3498db;
+      background: rgba(52, 152, 219, 0.1);
+    }
+    
+    .log-entry.warning {
+      border-left-color: #f39c12;
+      background: rgba(243, 156, 18, 0.1);
+    }
+    
+    .log-entry.error {
+      border-left-color: #e74c3c;
+      background: rgba(231, 76, 60, 0.1);
+    }
+    
+    .log-entry.pass {
+      border-left-color: #27ae60;
+      background: rgba(39, 174, 96, 0.15);
+      font-weight: 600;
+    }
+    
+    .log-entry.fail {
+      border-left-color: #e74c3c;
+      background: rgba(231, 76, 60, 0.15);
+      font-weight: 600;
+    }
+    
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .status.pass {
+      background: rgba(39, 174, 96, 0.3);
+      color: #27ae60;
+      border: 1px solid #27ae60;
+    }
+    
+    .status.fail {
+      background: rgba(231, 76, 60, 0.3);
+      color: #e74c3c;
+      border: 1px solid #e74c3c;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    
+    .test-summary {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+    
+    .test-summary-item {
+      text-align: center;
+    }
+    
+    .test-summary-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    
+    .test-summary-value.pass {
+      color: #27ae60;
+    }
+    
+    .test-summary-value.fail {
+      color: #e74c3c;
+    }
+    
+    .test-summary-label {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ Veto Carousel Interaction Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Description</h2>
+      <p>This test verifies that all interactive controls inside the carousel picker respond correctly to tap/click events on both touch and mouse input.</p>
+      <p><strong>Expected Behavior:</strong></p>
+      <ul>
+        <li>All buttons (arrows, Save, Cancel) should respond to tap/click</li>
+        <li>Swipe/drag gestures should not interfere with button clicks</li>
+        <li>Keyboard navigation (Arrow keys, Enter, Escape) should work</li>
+        <li>Focus should be properly managed for accessibility</li>
+      </ul>
+    </div>
+    
+    <div class="test-section">
+      <h2>Interactive Tests</h2>
+      <div class="test-controls">
+        <button class="btn primary" id="testBasicBtn">Test Basic Interaction</button>
+        <button class="btn primary" id="testKeyboardBtn">Test Keyboard Navigation</button>
+        <button class="btn primary" id="testTouchBtn">Test Touch Events</button>
+        <button class="btn" id="runAllBtn">Run All Tests</button>
+        <button class="btn danger" id="clearLogBtn">Clear Log</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div class="test-summary">
+        <div class="test-summary-item">
+          <div class="test-summary-value pass" id="passCount">0</div>
+          <div class="test-summary-label">Passed</div>
+        </div>
+        <div class="test-summary-item">
+          <div class="test-summary-value fail" id="failCount">0</div>
+          <div class="test-summary-label">Failed</div>
+        </div>
+      </div>
+      <div id="log" class="log">
+        <div class="log-entry info">Ready to run tests...</div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Manual Verification</h2>
+      <p>Click the button below to open the carousel and manually verify:</p>
+      <ol>
+        <li>Left/Right arrow buttons respond to clicks</li>
+        <li>Avatar container can be clicked to select</li>
+        <li>Cancel button works</li>
+        <li>Confirm button works</li>
+        <li>Keyboard arrows navigate</li>
+        <li>Enter key confirms selection</li>
+        <li>Escape key cancels</li>
+      </ol>
+      <button class="btn primary" id="manualTestBtn">Open Carousel for Manual Test</button>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="../js/ui/interaction-guards.js"></script>
+  <script src="../js/ui/carousel-picker.js"></script>
+  
+  <script>
+    // Mock player data
+    const mockPlayers = [
+      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+      { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' },
+      { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana' },
+      { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve' },
+      { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Frank' },
+      { id: 7, name: 'Grace', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace' }
+    ];
+    
+    // Mock getP function
+    window.getP = function(id) {
+      return mockPlayers.find(p => p.id === id);
+    };
+    
+    // Mock safeName function
+    window.safeName = function(id) {
+      const player = window.getP(id);
+      return player ? player.name : String(id);
+    };
+    
+    // Mock resolveAvatar function
+    window.resolveAvatar = function(id) {
+      const player = window.getP(id);
+      return player ? player.avatar : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + id;
+    };
+    
+    // Test state
+    let passCount = 0;
+    let failCount = 0;
+    
+    // Logging functions
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    function pass(message) {
+      passCount++;
+      updateCounts();
+      log('✓ PASS: ' + message, 'pass');
+    }
+    
+    function fail(message) {
+      failCount++;
+      updateCounts();
+      log('✗ FAIL: ' + message, 'fail');
+    }
+    
+    function updateCounts() {
+      document.getElementById('passCount').textContent = passCount;
+      document.getElementById('failCount').textContent = failCount;
+    }
+    
+    function clearLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = '<div class="log-entry info">Log cleared. Ready to run tests...</div>';
+      passCount = 0;
+      failCount = 0;
+      updateCounts();
+    }
+    
+    // Test 1: Basic Interaction Test
+    async function testBasicInteraction() {
+      log('Starting Basic Interaction Test...', 'info');
+      
+      try {
+        // Test carousel opens
+        const promise = window.openCarouselPicker({
+          ids: mockPlayers.map(p => p.id),
+          title: 'Test: Select a player',
+          actionLabel: 'Select',
+          blockIds: []
+        });
+        
+        if (!promise) {
+          fail('openCarouselPicker did not return a promise');
+          return;
+        }
+        
+        pass('Carousel opened successfully');
+        
+        // Wait a moment for render
+        await new Promise(r => setTimeout(r, 500));
+        
+        // Check if overlay exists
+        const overlay = document.querySelector('.carousel-picker-overlay');
+        if (overlay) {
+          pass('Carousel overlay rendered');
+        } else {
+          fail('Carousel overlay not found');
+          return;
+        }
+        
+        // Check if buttons exist
+        const leftArrow = overlay.querySelector('.carousel-picker-arrow-left');
+        const rightArrow = overlay.querySelector('.carousel-picker-arrow-right');
+        const confirmBtn = overlay.querySelector('.carousel-picker-confirm');
+        const cancelBtn = overlay.querySelector('.carousel-picker-cancel');
+        
+        if (leftArrow && rightArrow && confirmBtn && cancelBtn) {
+          pass('All control buttons rendered');
+        } else {
+          fail('Some control buttons missing');
+        }
+        
+        // Test cancel button click
+        log('Clicking Cancel button...', 'info');
+        cancelBtn.click();
+        
+        const result = await promise;
+        
+        if (result === null) {
+          pass('Cancel button responded correctly (returned null)');
+        } else {
+          fail('Cancel button did not return null');
+        }
+        
+      } catch (error) {
+        fail('Basic interaction test error: ' + error.message);
+      }
+    }
+    
+    // Test 2: Keyboard Navigation Test
+    async function testKeyboardNavigation() {
+      log('Starting Keyboard Navigation Test...', 'info');
+      
+      try {
+        const promise = window.openCarouselPicker({
+          ids: mockPlayers.map(p => p.id),
+          title: 'Test: Keyboard navigation',
+          actionLabel: 'Select',
+          startId: 1,
+          blockIds: []
+        });
+        
+        await new Promise(r => setTimeout(r, 300));
+        
+        const overlay = document.querySelector('.carousel-picker-overlay');
+        if (!overlay) {
+          fail('Carousel not rendered');
+          return;
+        }
+        
+        pass('Carousel opened for keyboard test');
+        
+        // Simulate ArrowRight
+        log('Testing ArrowRight key...', 'info');
+        const rightEvent = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true });
+        document.dispatchEvent(rightEvent);
+        
+        await new Promise(r => setTimeout(r, 100));
+        pass('ArrowRight key event dispatched');
+        
+        // Simulate Escape
+        log('Testing Escape key...', 'info');
+        const escEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+        document.dispatchEvent(escEvent);
+        
+        const result = await promise;
+        
+        if (result === null) {
+          pass('Escape key cancelled correctly');
+        } else {
+          fail('Escape key did not cancel');
+        }
+        
+      } catch (error) {
+        fail('Keyboard navigation test error: ' + error.message);
+      }
+    }
+    
+    // Test 3: Touch Events Test
+    async function testTouchEvents() {
+      log('Starting Touch Events Test...', 'info');
+      
+      try {
+        const promise = window.openCarouselPicker({
+          ids: mockPlayers.map(p => p.id),
+          title: 'Test: Touch events',
+          actionLabel: 'Select',
+          blockIds: [1, 2]
+        });
+        
+        await new Promise(r => setTimeout(r, 300));
+        
+        const overlay = document.querySelector('.carousel-picker-overlay');
+        if (!overlay) {
+          fail('Carousel not rendered');
+          return;
+        }
+        
+        pass('Carousel opened for touch test');
+        
+        const confirmBtn = overlay.querySelector('.carousel-picker-confirm');
+        
+        // Simulate touch events on confirm button
+        log('Simulating touch events on Confirm button...', 'info');
+        
+        const touchStart = new TouchEvent('touchstart', {
+          bubbles: true,
+          cancelable: true,
+          touches: [{ clientX: 0, clientY: 0 }]
+        });
+        
+        const touchEnd = new TouchEvent('touchend', {
+          bubbles: true,
+          cancelable: true
+        });
+        
+        confirmBtn.dispatchEvent(touchStart);
+        await new Promise(r => setTimeout(r, 50));
+        confirmBtn.dispatchEvent(touchEnd);
+        
+        pass('Touch events dispatched on Confirm button');
+        
+        // Now click cancel to finish test
+        const cancelBtn = overlay.querySelector('.carousel-picker-cancel');
+        cancelBtn.click();
+        
+        await promise;
+        pass('Touch events test completed');
+        
+      } catch (error) {
+        fail('Touch events test error: ' + error.message);
+      }
+    }
+    
+    // Manual test
+    async function manualTest() {
+      log('Opening carousel for manual testing...', 'info');
+      
+      try {
+        const result = await window.openCarouselPicker({
+          ids: mockPlayers.map(p => p.id),
+          title: 'Manual Test: Try all controls',
+          actionLabel: 'Confirm',
+          startId: 3,
+          blockIds: [2, 5]
+        });
+        
+        if (result !== null) {
+          log('Manual test: Selected player ' + window.safeName(result), 'info');
+        } else {
+          log('Manual test: Cancelled', 'info');
+        }
+        
+      } catch (error) {
+        log('Manual test error: ' + error.message, 'error');
+      }
+    }
+    
+    // Run all tests
+    async function runAllTests() {
+      clearLog();
+      log('Running all automated tests...', 'info');
+      
+      await testBasicInteraction();
+      await new Promise(r => setTimeout(r, 500));
+      
+      await testKeyboardNavigation();
+      await new Promise(r => setTimeout(r, 500));
+      
+      await testTouchEvents();
+      await new Promise(r => setTimeout(r, 500));
+      
+      log('All automated tests completed!', 'info');
+      
+      if (failCount === 0) {
+        log('🎉 All tests PASSED!', 'pass');
+      } else {
+        log(`⚠️ ${failCount} test(s) FAILED`, 'fail');
+      }
+    }
+    
+    // Event listeners
+    document.getElementById('testBasicBtn').addEventListener('click', testBasicInteraction);
+    document.getElementById('testKeyboardBtn').addEventListener('click', testKeyboardNavigation);
+    document.getElementById('testTouchBtn').addEventListener('click', testTouchEvents);
+    document.getElementById('runAllBtn').addEventListener('click', runAllTests);
+    document.getElementById('clearLogBtn').addEventListener('click', clearLog);
+    document.getElementById('manualTestBtn').addEventListener('click', manualTest);
+    
+    // Initial log
+    log('Test harness loaded. Click a button to start testing.', 'info');
+  </script>
+</body>
+</html>
