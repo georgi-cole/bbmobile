@@ -418,6 +418,27 @@
   outline-offset: 4px;
 }
 
+/* Focus on avatar container when selected */
+.carousel-picker-avatar-selected:focus {
+  outline: 3px solid rgba(52, 152, 219, 0.9);
+  outline-offset: 4px;
+}
+
+/* Ensure checkmark is not cut off by overflow */
+.carousel-picker-avatar-container {
+  overflow: visible;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .carousel-picker-checkmark {
+    animation: none;
+  }
+  .carousel-picker-avatar-container {
+    animation: none;
+  }
+}
+
 /* ===== Animations ===== */
 @keyframes carouselFadeIn {
   from {
