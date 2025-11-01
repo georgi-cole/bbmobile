@@ -148,12 +148,27 @@
 
     var avatarContainer = document.createElement('div');
     avatarContainer.className = 'carousel-picker-avatar-container';
-    avatarContainer.setAttribute('data-select', 'true'); // Mark as selection target (not action)
     if (!isBlocked) {
       avatarContainer.classList.add('carousel-picker-avatar-selectable');
-      // Avatar is now only for visual selection, not for committing the action
-      // Remove tabindex, role, onclick, and onkeydown - these made it auto-commit
-      // The confirm button is the only way to commit the selection
+      avatarContainer.setAttribute('tabindex', '0');
+      avatarContainer.setAttribute('role', 'button');
+      avatarContainer.setAttribute('aria-label', 'Select ' + safeName(currentId));
+      avatarContainer.onclick = function(e) {
+        if (e) {
+          e.stopPropagation();
+        }
+        if (!isBlocked) {
+          close(currentId);
+        }
+      };
+      avatarContainer.onkeydown = function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (!isBlocked) {
+            close(currentId);
+          }
+        }
+      };
     } else {
       avatarContainer.classList.add('carousel-picker-avatar-blocked');
       avatarContainer.setAttribute('aria-disabled', 'true');
@@ -231,7 +246,6 @@
     var confirmBtn = document.createElement('button');
     confirmBtn.className = 'btn primary carousel-picker-confirm';
     confirmBtn.textContent = state.actionLabel;
-    confirmBtn.setAttribute('data-confirm', 'true'); // Mark as action confirmation
     confirmBtn.setAttribute('aria-label', state.actionLabel + ' ' + safeName(currentId));
     confirmBtn.disabled = isBlocked;
     confirmBtn.onclick = function(e) {
@@ -256,23 +270,8 @@
 
     overlay.appendChild(bottomSection);
 
-    // Mount carousel to appropriate container based on viewport
-    // On mobile, mount inside TV container for containment
-    // On desktop/tablet, mount to body for fullscreen experience
-    var mountTarget = document.body;
-    var isMobile = window.innerWidth <= 767;
-    
-    if (isMobile) {
-      // Try to mount inside TV container for mobile containment
-      var tvContainer = document.getElementById('tv');
-      if (tvContainer) {
-        mountTarget = tvContainer;
-        // Add class to indicate TV-contained mode
-        overlay.classList.add('carousel-picker-tv-contained');
-      }
-    }
-    
-    mountTarget.appendChild(overlay);
+    // Add to body
+    document.body.appendChild(overlay);
 
     // Prevent events from bubbling to router/HUD while allowing interaction with controls
     // Strategy: Only stopPropagation on non-interactive targets to prevent HUD/router interference
