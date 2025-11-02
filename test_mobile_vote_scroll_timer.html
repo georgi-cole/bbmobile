@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Vote Scroll & Timer Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/livevote-choice-card.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <link rel="stylesheet" href="css/livevote-rollout.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 200vh; /* Force scrolling */
+    }
+    
+    .test-controls {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 10000;
+      padding: 15px;
+      background: rgba(20,35,55,0.95);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.3);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 12px 0;
+      color: #00e0cc;
+      font-size: 1.2rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 4px;
+      font-size: 0.85rem;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-controls button.danger {
+      background: linear-gradient(135deg, #ff4d4d, #cc0000);
+      color: white;
+    }
+    
+    .test-info {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    
+    .status {
+      margin: 8px 0;
+      padding: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-family: monospace;
+    }
+    
+    .spacer {
+      height: 800px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      opacity: 0.3;
+    }
+    
+    #tv {
+      margin: 900px auto 100px;
+      max-width: 600px;
+      background: #1a2332;
+      border: 2px solid #00e0cc;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 400px;
+    }
+    
+    .tv-label {
+      text-align: center;
+      color: #00e0cc;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>📱 Mobile Vote Scroll & Timer Test</h1>
+    
+    <div>
+      <button onclick="scrollToTop()">📍 Scroll to Top</button>
+      <button onclick="scrollToBottom()">📍 Scroll to Bottom</button>
+      <button onclick="testTwoStepFlow()">🎬 Test Two-Step Vote (Choice → Overlay)</button>
+      <button onclick="testDirectOverlay()">🎬 Test Direct Overlay</button>
+      <button class="danger" onclick="closeAll()">❌ Close All</button>
+    </div>
+    
+    <div class="test-info">
+      <strong>Test Scenarios:</strong>
+      <ol style="margin: 8px 0; padding-left: 20px; font-size: 0.8rem;">
+        <li><strong>Scroll Lock Fix:</strong> Scroll to top/bottom, trigger vote UI. TV should auto-center before body scroll locks.</li>
+        <li><strong>30s Countdown:</strong> Open overlay and wait 30 seconds without voting. Vote should auto-cast using affinity logic.</li>
+        <li><strong>Manual Vote:</strong> Open overlay and vote before 30s expires. Countdown should clear.</li>
+        <li><strong>Overlay Close:</strong> Open overlay and close it (X or Escape). Countdown should clear, scroll should unlock.</li>
+      </ol>
+    </div>
+    
+    <div class="status" id="status">
+      Status: Ready
+    </div>
+  </div>
+
+  <div class="spacer">⬇️ Scroll down to TV area ⬇️</div>
+
+  <div id="tv">
+    <div class="tv-label">📺 TV Area (Live Vote Target)</div>
+    <div class="tvViewport" style="min-height: 300px; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 20px; display: flex; align-items: center; justify-content: center; color: #666;">
+      Vote UI will appear here
+    </div>
+  </div>
+
+  <div class="spacer">⬆️ Scroll up to controls ⬆️</div>
+
+  <!-- Load dependencies -->
+  <script src="js/livevote-helpers.js"></script>
+  <script src="js/livevote-choice-card.js"></script>
+  <script src="js/livevote-voteoverlay.js"></script>
+  <script src="js/livevote-rollout.js"></script>
+
+  <script>
+    // Mock game data
+    window.game = {
+      humanId: 1,
+      __human_vote: null,
+      eviction: {
+        nominees: [2, 3],
+        _countdownInterval: null,
+        _countdownTimeout: null
+      },
+      cfg: {}
+    };
+
+    // Mock player data
+    const mockPlayers = {
+      1: { id: 1, name: 'You (Human)', human: true, affinity: { 2: 0.3, 3: 0.7 }, avatar: null },
+      2: { id: 2, name: 'Alice', human: false, threat: 0.6, avatar: null },
+      3: { id: 3, name: 'Bob', human: false, threat: 0.4, avatar: null }
+    };
+
+    window.getP = (id) => mockPlayers[id];
+    window.safeName = (id) => mockPlayers[id]?.name || `Player ${id}`;
+    window.getDicebearUrl = (seed) => `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    window.resolveAvatar = (player) => player?.avatar || window.getDicebearUrl(player?.name);
+
+    function updateStatus(msg) {
+      document.getElementById('status').textContent = `Status: ${msg}`;
+      console.log('[Test]', msg);
+    }
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      updateStatus('Scrolled to top');
+    }
+
+    function scrollToBottom() {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      updateStatus('Scrolled to bottom');
+    }
+
+    function closeAll() {
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+      }
+      window.game.__human_vote = null;
+      updateStatus('Closed all vote UI');
+    }
+
+    async function testTwoStepFlow() {
+      closeAll();
+      updateStatus('Starting two-step flow (Choice Card → Overlay)...');
+
+      // Show Choice Card
+      const choiceCard = window.LiveVoteChoiceCard.show({
+        nominees: [2, 3],
+        onVoteClick: async (nominees) => {
+          updateStatus('Choice Card clicked, showing overlay...');
+          window.LiveVoteChoiceCard.hide();
+
+          // Show Overlay with countdown
+          await window.LiveVoteOverlay.show({
+            nominees: nominees,
+            isTieBreak: false,
+            onSubmit: (selectedId) => {
+              updateStatus(`Vote submitted: ${window.safeName(selectedId)}`);
+              
+              // Clear countdown using shared helper if available
+              if (window.clearVoteCountdown) {
+                window.clearVoteCountdown();
+              }
+              
+              window.game.__human_vote = selectedId;
+              closeAll();
+            }
+          });
+
+          // Start countdown after overlay shows
+          startMockCountdown(30, nominees);
+        }
+      });
+
+      if (!choiceCard) {
+        updateStatus('ERROR: Failed to show Choice Card');
+      }
+    }
+
+    async function testDirectOverlay() {
+      closeAll();
+      updateStatus('Starting direct overlay test...');
+
+      await window.LiveVoteOverlay.show({
+        nominees: [2, 3],
+        isTieBreak: false,
+        onSubmit: (selectedId) => {
+          updateStatus(`Vote submitted: ${window.safeName(selectedId)}`);
+          
+          // Clear countdown using shared helper if available
+          if (window.clearVoteCountdown) {
+            window.clearVoteCountdown();
+          }
+          
+          window.game.__human_vote = selectedId;
+          closeAll();
+        }
+      });
+
+      // Start countdown after overlay shows
+      startMockCountdown(30, [2, 3]);
+    }
+
+    function startMockCountdown(seconds, nominees) {
+      let timeLeft = seconds;
+
+      const updateCountdown = () => {
+        const overlayHeader = document.querySelector('.lv-overlay .lv-overlay__header');
+        if (overlayHeader && timeLeft > 0) {
+          // Use shared time formatting helper
+          const timeStr = window.formatCountdownTime(timeLeft);
+          overlayHeader.textContent = `Cast your vote to evict. ${timeStr}`;
+        }
+      };
+
+      updateCountdown();
+
+      window.game.eviction._countdownInterval = setInterval(() => {
+        timeLeft--;
+        
+        if (timeLeft <= 0) {
+          clearInterval(window.game.eviction._countdownInterval);
+          window.game.eviction._countdownInterval = null;
+        } else {
+          updateCountdown();
+        }
+      }, 1000);
+
+      window.game.eviction._countdownTimeout = setTimeout(() => {
+        if (window.game.__human_vote != null) {
+          return;
+        }
+
+        updateStatus('⏰ Countdown expired! Auto-voting based on affinity...');
+
+        // Simple affinity-based auto-pick
+        const humanPlayer = window.getP(window.game.humanId);
+        const [a, b] = nominees;
+        const affinityA = humanPlayer.affinity[a] || 0;
+        const affinityB = humanPlayer.affinity[b] || 0;
+        
+        // Vote against the player with lower affinity (less liked)
+        const autoPick = affinityA < affinityB ? a : b;
+        
+        window.game.__human_vote = autoPick;
+        updateStatus(`✅ Auto-voted: ${window.safeName(autoPick)} (affinity: A=${affinityA.toFixed(2)}, B=${affinityB.toFixed(2)})`);
+        
+        closeAll();
+      }, seconds * 1000);
+
+      updateStatus(`⏱️ Countdown started: ${seconds} seconds`);
+    }
+
+    // Test centerTVInViewport on load
+    window.addEventListener('load', () => {
+      updateStatus('Page loaded. Scroll to test auto-centering!');
+      
+      // Test the helper function
+      if (window.centerTVInViewport) {
+        console.log('[Test] centerTVInViewport function is available ✓');
+      } else {
+        console.error('[Test] centerTVInViewport function is NOT available ✗');
+      }
+    });
+  </script>
+</body>
+</html>

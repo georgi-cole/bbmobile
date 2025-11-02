@@ -23,7 +23,7 @@
   }
 
   // Create and show the Choice Card
-  function show(options = {}) {
+  async function show(options = {}) {
     const {
       nominees = [],
       onVoteClick = null,
@@ -42,7 +42,20 @@
       return null;
     }
 
-    // Lock body scroll when choice card is shown
+    // Center TV in viewport before locking scroll
+    // If scroll is already locked, temporarily unlock it
+    const tvElement = document.querySelector('#tv');
+    const wasLocked = document.body.dataset.scrollLocked === 'true';
+    if (wasLocked && global.unlockBodyScroll) {
+      global.unlockBodyScroll();
+    }
+    
+    // Wait for TV to be centered
+    if (global.centerTVInViewport) {
+      await global.centerTVInViewport(tvElement);
+    }
+    
+    // Now lock body scroll when choice card is shown
     lockBodyScroll();
 
     // Create card element
