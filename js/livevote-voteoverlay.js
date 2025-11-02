@@ -369,14 +369,9 @@
   }
   // Remove the overlay
   function hide() {
-    // Clear countdown timer if it exists
-    if (global.game?.eviction?._countdownInterval) {
-      clearInterval(global.game.eviction._countdownInterval);
-      global.game.eviction._countdownInterval = null;
-    }
-    if (global.game?.eviction?._countdownTimeout) {
-      clearTimeout(global.game.eviction._countdownTimeout);
-      global.game.eviction._countdownTimeout = null;
+    // Clear countdown timer using shared helper
+    if (global.clearVoteCountdown) {
+      global.clearVoteCountdown();
     }
     
     if (state.overlay) {

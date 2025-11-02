@@ -214,14 +214,9 @@
             onSubmit: (selectedId) => {
               updateStatus(`Vote submitted: ${window.safeName(selectedId)}`);
               
-              // Clear countdown
-              if (window.game.eviction._countdownInterval) {
-                clearInterval(window.game.eviction._countdownInterval);
-                window.game.eviction._countdownInterval = null;
-              }
-              if (window.game.eviction._countdownTimeout) {
-                clearTimeout(window.game.eviction._countdownTimeout);
-                window.game.eviction._countdownTimeout = null;
+              // Clear countdown using shared helper if available
+              if (window.clearVoteCountdown) {
+                window.clearVoteCountdown();
               }
               
               window.game.__human_vote = selectedId;
@@ -249,14 +244,9 @@
         onSubmit: (selectedId) => {
           updateStatus(`Vote submitted: ${window.safeName(selectedId)}`);
           
-          // Clear countdown
-          if (window.game.eviction._countdownInterval) {
-            clearInterval(window.game.eviction._countdownInterval);
-            window.game.eviction._countdownInterval = null;
-          }
-          if (window.game.eviction._countdownTimeout) {
-            clearTimeout(window.game.eviction._countdownTimeout);
-            window.game.eviction._countdownTimeout = null;
+          // Clear countdown using shared helper if available
+          if (window.clearVoteCountdown) {
+            window.clearVoteCountdown();
           }
           
           window.game.__human_vote = selectedId;
@@ -274,9 +264,10 @@
       const updateCountdown = () => {
         const overlayHeader = document.querySelector('.lv-overlay .lv-overlay__header');
         if (overlayHeader && timeLeft > 0) {
-          const minutes = Math.floor(timeLeft / 60);
-          const secs = timeLeft % 60;
-          const timeStr = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+          // Use shared time formatting helper if available
+          const timeStr = window.formatCountdownTime ? 
+            window.formatCountdownTime(timeLeft) :
+            `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`;
           overlayHeader.textContent = `Cast your vote to evict. ${timeStr}`;
         }
       };

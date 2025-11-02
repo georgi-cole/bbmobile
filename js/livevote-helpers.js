@@ -6,6 +6,34 @@
   'use strict';
 
   /**
+   * Format time in MM:SS format
+   * @param {number} seconds - Total seconds
+   * @returns {string} Formatted time string (e.g., "00:30")
+   */
+  function formatCountdownTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  /**
+   * Clear vote countdown timer
+   * Safely clears both interval and timeout handles
+   */
+  function clearVoteCountdown() {
+    if (global.game?.eviction?._countdownInterval) {
+      clearInterval(global.game.eviction._countdownInterval);
+      global.game.eviction._countdownInterval = null;
+      console.debug('[livevote-helpers] Countdown interval cleared');
+    }
+    if (global.game?.eviction?._countdownTimeout) {
+      clearTimeout(global.game.eviction._countdownTimeout);
+      global.game.eviction._countdownTimeout = null;
+      console.debug('[livevote-helpers] Countdown timeout cleared');
+    }
+  }
+
+  /**
    * Centers the TV area in the viewport if it's not fully visible
    * Waits for scroll animation to complete before resolving
    * @param {HTMLElement|null} container - Optional container element (defaults to #tv)
@@ -40,13 +68,29 @@
         });
         
         // Wait for scroll animation to complete
-        // Use requestAnimationFrame + setTimeout for smooth wait
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            console.debug('[livevote-helpers] TV centered');
+        // Use scrollend event if available (modern browsers), fallback to setTimeout
+        if ('onscrollend' in window) {
+          const scrollEndHandler = () => {
+            window.removeEventListener('scrollend', scrollEndHandler);
+            console.debug('[livevote-helpers] TV centered (scrollend)');
             resolve();
-          }, 250);
-        });
+          };
+          window.addEventListener('scrollend', scrollEndHandler, { once: true });
+          
+          // Fallback timeout in case scrollend doesn't fire
+          setTimeout(() => {
+            window.removeEventListener('scrollend', scrollEndHandler);
+            resolve();
+          }, 500);
+        } else {
+          // Fallback: Use requestAnimationFrame + setTimeout for older browsers
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              console.debug('[livevote-helpers] TV centered (timeout fallback)');
+              resolve();
+            }, 250);
+          });
+        }
       } else {
         console.debug('[livevote-helpers] TV already visible');
         resolve();
@@ -96,17 +140,8 @@
   function closeAllVoteUI() {
     console.debug('[livevote-helpers] closeAllVoteUI called');
 
-    // Clear countdown timer if it exists
-    if (global.game?.eviction?._countdownInterval) {
-      clearInterval(global.game.eviction._countdownInterval);
-      global.game.eviction._countdownInterval = null;
-      console.debug('[livevote-helpers] Countdown interval cleared');
-    }
-    if (global.game?.eviction?._countdownTimeout) {
-      clearTimeout(global.game.eviction._countdownTimeout);
-      global.game.eviction._countdownTimeout = null;
-      console.debug('[livevote-helpers] Countdown timeout cleared');
-    }
+    // Clear countdown timer
+    clearVoteCountdown();
 
     // Close Choice Card if present
     try {
@@ -146,6 +181,8 @@
   }
 
   // Export to global scope
+  global.formatCountdownTime = formatCountdownTime;
+  global.clearVoteCountdown = clearVoteCountdown;
   global.centerTVInViewport = centerTVInViewport;
   global.unlockBodyScroll = unlockBodyScroll;
   global.closeAllVoteUI = closeAllVoteUI;

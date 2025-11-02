@@ -119,14 +119,9 @@
                 nominees: nominees,
                 isTieBreak: false,
                 onSubmit: (selectedId) => {
-                  // Clear countdown timer if running
-                  if (g.eviction._countdownInterval) {
-                    clearInterval(g.eviction._countdownInterval);
-                    g.eviction._countdownInterval = null;
-                  }
-                  if (g.eviction._countdownTimeout) {
-                    clearTimeout(g.eviction._countdownTimeout);
-                    g.eviction._countdownTimeout = null;
+                  // Clear countdown timer using shared helper
+                  if (global.clearVoteCountdown) {
+                    global.clearVoteCountdown();
                   }
                   
                   // Close all vote UI immediately
@@ -403,9 +398,10 @@
     const updateCountdown = () => {
       const overlayHeader = document.querySelector('.lv-overlay .lv-overlay__header');
       if(overlayHeader && timeLeft > 0){
-        const minutes = Math.floor(timeLeft / 60);
-        const secs = timeLeft % 60;
-        const timeStr = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        // Use shared time formatting helper if available
+        const timeStr = global.formatCountdownTime ? 
+          global.formatCountdownTime(timeLeft) :
+          `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`;
         overlayHeader.textContent = `Cast your vote to evict. ${timeStr}`;
       }
     };
