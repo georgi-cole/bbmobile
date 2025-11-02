@@ -219,13 +219,16 @@
 
     console.log('[Mobile Scroll Debug] Initializing diagnostics...');
     
+    // Check for debug mode query param
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldEnableDebugMode = urlParams.get('scroll_debug') === '1';
+    
     // Run diagnostics after a short delay to let the page fully render
     setTimeout(() => {
       runDiagnostics();
       
       // Auto-enable debug mode if query param is present
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('scroll_debug') === '1') {
+      if (shouldEnableDebugMode) {
         toggleDebugMode(true);
       }
     }, 1000);
@@ -243,7 +246,9 @@
       
       if (shouldRescan) {
         // Debounce: Clear previous timeout and set new one
-        clearTimeout(rescanTimeout);
+        if (rescanTimeout) {
+          clearTimeout(rescanTimeout);
+        }
         rescanTimeout = setTimeout(() => {
           console.log('[Mobile Scroll Debug] DOM changed, re-scanning...');
           runDiagnostics();
