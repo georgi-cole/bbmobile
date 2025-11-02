@@ -10,10 +10,16 @@
  * ======================================== */
 
 /* Ensure .tvViewport is transparent when #tv has background */
+/* Primary: class-based detection (.hasTvBg) */
 .tv.hasTvBg .tvViewport,
-#tv[style*="--tv-bg"] .tvViewport,
 .tv.hasTvBg .tvViewport::before,
-.tv.hasTvBg .tvViewport::after,
+.tv.hasTvBg .tvViewport::after {
+  background: none !important;
+}
+
+/* Fallback: attribute-based detection for --tv-bg CSS variable */
+/* Note: This selector matches when style attribute contains "--tv-bg" */
+#tv[style*="--tv-bg"] .tvViewport,
 #tv[style*="--tv-bg"] .tvViewport::before,
 #tv[style*="--tv-bg"] .tvViewport::after {
   background: none !important;

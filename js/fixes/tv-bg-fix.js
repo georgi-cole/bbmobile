@@ -38,11 +38,7 @@
       viewport.classList.add('no-faux-bg');
       
       // Remove legacy faux TV attribute if present
-      try {
-        viewport.removeAttribute('data-sm-faux-tv');
-      } catch (e) {
-        // Silent fail - attribute may not exist
-      }
+      viewport.removeAttribute('data-sm-faux-tv');
       
       // Ensure hasTvBg class is present on TV
       tv.classList.add('hasTvBg');
@@ -56,12 +52,15 @@
   window.addEventListener('load', apply);
 
   // Watch for changes to TV element (style or class changes)
-  const tvElement = document.getElementById('tv');
-  if (tvElement) {
-    const observer = new MutationObserver(apply);
-    observer.observe(tvElement, {
-      attributes: true,
-      attributeFilter: ['style', 'class']
-    });
-  }
+  // Set up observer after DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    const tvElement = document.getElementById('tv');
+    if (tvElement) {
+      const observer = new MutationObserver(apply);
+      observer.observe(tvElement, {
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+    }
+  });
 })();
