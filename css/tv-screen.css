@@ -115,17 +115,7 @@
 /* Modern browsers: tighten spacing when only guest avatars present */
 @supports selector(:has(*)) {
   /* When roster has avatar faces but no full player tiles */
-  #actionCard #rosterBar:has(.rc-face) {
-    padding-bottom: 6px;
-    margin-bottom: 0;
-  }
-  
-  #actionCard #rosterBar:has(img) {
-    padding-bottom: 6px;
-    margin-bottom: 0;
-  }
-  
-  #actionCard #rosterBar:has(.hg) {
+  #actionCard #rosterBar:has(.rc-face, img, .hg) {
     padding-bottom: 6px;
     margin-bottom: 0;
   }
