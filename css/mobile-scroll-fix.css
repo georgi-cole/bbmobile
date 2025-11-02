@@ -1,0 +1,127 @@
+/* mobile-scroll-fix.css
+ * DEBUG/TEMPORARY FIX for mobile scrolling issues during live vote
+ * 
+ * This file is loaded conditionally via ?scroll_debug=1 query parameter
+ * It applies minimal CSS overrides to enable native touch scrolling
+ * 
+ * Issue: Mobile users cannot scroll during live vote - browser chrome overlaps UI
+ * Root causes suspected:
+ *   1. overflow:hidden on containers blocking scroll
+ *   2. Missing safe-area-inset-bottom padding
+ *   3. Touch event handlers calling preventDefault
+ * 
+ * To revert: Remove from index.html or delete this file
+ */
+
+/* Enable native scrolling on html/body */
+html,
+body {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+}
+
+/* Scrollable panel/container classes */
+.scrollable,
+.panel--scrollable,
+.vote-panel,
+.game-panel,
+.lv2-panel,
+.lv2-overlay,
+.lv-overlay,
+.tvViewport {
+  max-height: calc(100vh - 120px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+  padding-bottom: env(safe-area-inset-bottom, 20px) !important;
+}
+
+/* Live vote carousel - ensure it's scrollable */
+.lv-overlay__carousel,
+.lv2-fit,
+.lv2-stage {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+}
+
+/* Fixed bottom elements - ensure safe area padding */
+.app-fixed-bottom,
+.bottom-toolbar,
+.lv-overlay__footer,
+.lv2-footer,
+[style*="position: fixed"][style*="bottom"] {
+  pointer-events: auto !important;
+  padding-bottom: env(safe-area-inset-bottom, 20px) !important;
+}
+
+/* Quick disable for any overlay that blocks touches */
+.touch-blocker {
+  pointer-events: none !important;
+}
+
+/* Debug: Highlight scrollable containers (remove in production) */
+body.scroll-debug-active .scrollable,
+body.scroll-debug-active .panel--scrollable,
+body.scroll-debug-active .vote-panel,
+body.scroll-debug-active .game-panel {
+  outline: 2px dashed rgba(0, 255, 0, 0.5) !important;
+  outline-offset: -2px !important;
+}
+
+/* Ensure TV/panel containers respect viewport height on mobile */
+@media (max-width: 768px) {
+  .tv,
+  .tvViewport,
+  .lv2-overlay,
+  .lv-overlay {
+    max-height: 100vh !important;
+    max-height: 100svh !important; /* Use small viewport height on iOS */
+    overflow-y: auto !important;
+  }
+  
+  /* Ensure content doesn't get hidden behind mobile browser chrome */
+  .wrap,
+  .card,
+  #panel {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
+  }
+}
+
+/* iOS-specific fixes for rubber-band scrolling */
+@supports (-webkit-touch-callout: none) {
+  body {
+    /* Prevent page bounce on iOS */
+    overscroll-behavior-y: none !important;
+  }
+  
+  /* But allow it on scrollable containers */
+  .scrollable,
+  .panel--scrollable,
+  .vote-panel,
+  .game-panel,
+  .lv2-panel,
+  .lv2-overlay,
+  .lv-overlay,
+  .tvViewport {
+    overscroll-behavior-y: contain !important;
+  }
+}
+
+/* Debug info banner */
+body.scroll-debug-active::before {
+  content: '🔧 SCROLL DEBUG MODE ACTIVE';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 165, 0, 0.9);
+  color: black;
+  padding: 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 12px;
+  z-index: 2147483647;
+  pointer-events: none;
+}
