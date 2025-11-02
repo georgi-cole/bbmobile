@@ -69,24 +69,35 @@
         
         // Wait for scroll animation to complete
         // Use scrollend event if available (modern browsers), fallback to setTimeout
-        if ('onscrollend' in window) {
+        const hasScrollEnd = typeof window.onscrollend !== 'undefined';
+        
+        if (hasScrollEnd) {
+          let scrollEnded = false;
+          
           const scrollEndHandler = () => {
-            window.removeEventListener('scrollend', scrollEndHandler);
-            console.debug('[livevote-helpers] TV centered (scrollend)');
-            resolve();
+            if (!scrollEnded) {
+              scrollEnded = true;
+              console.debug('[livevote-helpers] TV centered (scrollend)');
+              resolve();
+            }
           };
+          
           window.addEventListener('scrollend', scrollEndHandler, { once: true });
           
           // Fallback timeout in case scrollend doesn't fire
           setTimeout(() => {
-            window.removeEventListener('scrollend', scrollEndHandler);
-            resolve();
+            if (!scrollEnded) {
+              scrollEnded = true;
+              window.removeEventListener('scrollend', scrollEndHandler);
+              console.debug('[livevote-helpers] TV centered (timeout fallback)');
+              resolve();
+            }
           }, 500);
         } else {
           // Fallback: Use requestAnimationFrame + setTimeout for older browsers
           requestAnimationFrame(() => {
             setTimeout(() => {
-              console.debug('[livevote-helpers] TV centered (timeout fallback)');
+              console.debug('[livevote-helpers] TV centered (timeout)');
               resolve();
             }, 250);
           });

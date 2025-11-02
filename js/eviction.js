@@ -398,10 +398,8 @@
     const updateCountdown = () => {
       const overlayHeader = document.querySelector('.lv-overlay .lv-overlay__header');
       if(overlayHeader && timeLeft > 0){
-        // Use shared time formatting helper if available
-        const timeStr = global.formatCountdownTime ? 
-          global.formatCountdownTime(timeLeft) :
-          `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`;
+        // Use shared time formatting helper
+        const timeStr = global.formatCountdownTime(timeLeft);
         overlayHeader.textContent = `Cast your vote to evict. ${timeStr}`;
       }
     };
