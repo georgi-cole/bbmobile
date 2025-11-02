@@ -1,0 +1,89 @@
+/* 
+ * TV Background & Roster Skeleton Fixes (2025-11-02)
+ * 
+ * 1. Single-source TV background: ensure .tvViewport is transparent when #tv has BG
+ * 2. Remove transient "gap" for skeleton roster placeholders
+ */
+
+/* ========================================
+ * 1) Single-source TV background
+ * ======================================== */
+
+/* Ensure .tvViewport is transparent when #tv has background */
+.tv.hasTvBg .tvViewport,
+#tv[style*="--tv-bg"] .tvViewport,
+.tv.hasTvBg .tvViewport::before,
+.tv.hasTvBg .tvViewport::after,
+#tv[style*="--tv-bg"] .tvViewport::before,
+#tv[style*="--tv-bg"] .tvViewport::after {
+  background: none !important;
+}
+
+/* Layering and legibility for in-TV UI */
+.tv .tvViewport {
+  position: relative;
+}
+
+.tv .tvViewport #tvOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Theme-aware scrim for readable overlays (adjust as needed) */
+:root {
+  --tv-scrim: linear-gradient(
+    to bottom,
+    rgba(8, 14, 24, 0.30),
+    rgba(8, 14, 24, 0.15) 40%,
+    rgba(8, 14, 24, 0.40)
+  );
+}
+
+.tv .tvViewport #tvOverlay {
+  background: var(--tv-scrim);
+}
+
+/* Make in-TV content sit above the scrim */
+.tv .tvViewport .card,
+.tv .tvViewport .lv2-fit,
+.tv .tvViewport .rc-card {
+  position: relative;
+  z-index: 4;
+}
+
+/* ========================================
+ * 2) Remove transient "gap" for skeleton roster
+ * ======================================== */
+
+/* Remove extra spacing on skeleton placeholders */
+#rosterBar .rc-skeleton,
+#rosterBar .rp-skeleton,
+#rosterBar [data-skeleton] {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Keep the "Guest" label inside the card so it doesn't increase block height */
+#rosterBar .rc-skeleton .rc-card,
+#rosterBar .rp-skeleton .rp-card,
+#rosterBar [data-skeleton] .rp-card,
+#rosterBar [data-skeleton] .rc-card {
+  position: relative;
+}
+
+#rosterBar .rc-skeleton .rc-label,
+#rosterBar .rp-skeleton .rp-label,
+#rosterBar [data-skeleton] .rc-label,
+#rosterBar [data-skeleton] .rp-label {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  margin: 0 !important;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.1;
+  opacity: 0.9;
+}
