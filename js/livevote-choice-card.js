@@ -165,9 +165,14 @@
     // Restore scroll position if saved
     const scrollY = parseInt(body.dataset.scrollY || '0', 10);
     
-    // Clear overflow lock
+    // Clear new overflow-based lock
     body.style.overflow = '';
     html.style.overscrollBehavior = '';
+    
+    // Clear old position-based lock (backwards compatibility)
+    body.style.position = '';
+    body.style.top = '';
+    body.style.width = '';
     
     // Clear dataset flags
     delete body.dataset.scrollLocked;
