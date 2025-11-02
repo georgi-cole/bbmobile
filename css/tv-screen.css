@@ -48,7 +48,7 @@
   filter: saturate(0.8) brightness(0.9) contrast(0.9);
   
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 /* When default background is explicitly set via ui.tv-media.js */
@@ -70,7 +70,7 @@
   filter: saturate(0.85) brightness(0.95);
   
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 /* Vignette and scanline effects - applied via ::after for subtle theme blending */
@@ -87,13 +87,15 @@
   
   mix-blend-mode: normal;
   pointer-events: none;
-  z-index: 1;
+  z-index: -1;
 }
 
 /* Ensure all child content renders above backdrop layers */
+/* Note: Using z-index: auto instead of explicit value to avoid creating
+   unnecessary stacking contexts that could interfere with internal layering */
 .tv-screen > * {
   position: relative;
-  z-index: 2;
+  z-index: auto;
 }
 
 /* ============================================================================
