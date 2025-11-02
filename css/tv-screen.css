@@ -15,16 +15,16 @@
   --tv-surface: #0b121a;
   --tv-border: rgba(255, 255, 255, 0.06);
   --tv-highlight: rgba(255, 255, 255, 0.09);
-  --tv-bg-opacity: 0.18;
-  --tv-vignette-opacity: 0.35;
+  --tv-bg-opacity: 0.28;
+  --tv-vignette-opacity: 0.38;
 }
 
 /* Light theme adjustments */
 @media (prefers-color-scheme: light) {
   :root {
     --tv-surface: #11151b;
-    --tv-bg-opacity: 0.14;
-    --tv-vignette-opacity: 0.28;
+    --tv-bg-opacity: 0.20;
+    --tv-vignette-opacity: 0.32;
   }
 }
 
@@ -35,8 +35,13 @@
   position: absolute;
   inset: 0;
   
-  /* Single reference to placeholder background - relative path for portability */
-  background: url("../assets/videos/tvscreen.jpg") center/cover no-repeat;
+  /* Theme-aware gradient blend prepended to single image reference */
+  background: 
+    linear-gradient(180deg, 
+      color-mix(in srgb, var(--card, #0d1b2a) 15%, transparent),
+      color-mix(in srgb, var(--bg, #0a1018) 12%, transparent)
+    ),
+    url("../assets/videos/tvscreen.jpg") center/cover no-repeat;
   
   /* Keep subdued to maintain foreground readability */
   opacity: var(--tv-bg-opacity);
@@ -52,11 +57,16 @@
   position: absolute;
   inset: 0;
   
-  /* Use the --tv-bg variable set by ui.tv-media.js - relative path fallback */
-  background: var(--tv-bg, url("../assets/videos/tvscreen.jpg")) center/cover no-repeat;
+  /* Theme-aware gradient blend prepended to single image reference */
+  background: 
+    linear-gradient(180deg, 
+      color-mix(in srgb, var(--card, #0d1b2a) 15%, transparent),
+      color-mix(in srgb, var(--bg, #0a1018) 12%, transparent)
+    ),
+    var(--tv-bg, url("../assets/videos/tvscreen.jpg")) center/cover no-repeat;
   
-  /* Show default background more clearly (no overlay gradient) */
-  opacity: 0.22;
+  /* Show default background more clearly with slightly higher opacity */
+  opacity: 0.32;
   filter: saturate(0.85) brightness(0.95);
   
   pointer-events: none;
@@ -84,5 +94,45 @@
 .tv-screen > * {
   position: relative;
   z-index: 2;
+}
+
+/* ============================================================================
+   ROSTER BAR SPACING ADJUSTMENTS
+   
+   Purpose: Remove empty gap between roster bar and TV screen when only
+            guest avatars are present (no player tiles).
+   
+   Approach: Use CSS :has() selector for modern browsers with safe fallback.
+             Reduces min-height and padding when roster contains only avatar
+             images (.rc-face, img, .hg) without breaking interactivity.
+   ============================================================================ */
+
+/* Baseline: reduce default gap slightly (safe for all browsers) */
+#actionCard #rosterBar {
+  min-height: auto;
+}
+
+/* Modern browsers: tighten spacing when only guest avatars present */
+@supports selector(:has(*)) {
+  /* When roster has avatar faces but no full player tiles */
+  #actionCard #rosterBar:has(.rc-face) {
+    padding-bottom: 6px;
+    margin-bottom: 0;
+  }
+  
+  #actionCard #rosterBar:has(img) {
+    padding-bottom: 6px;
+    margin-bottom: 0;
+  }
+  
+  #actionCard #rosterBar:has(.hg) {
+    padding-bottom: 6px;
+    margin-bottom: 0;
+  }
+  
+  /* Single row optimization */
+  #actionCard #rosterBar .rc-row:only-child {
+    margin-bottom: 0;
+  }
 }
 
