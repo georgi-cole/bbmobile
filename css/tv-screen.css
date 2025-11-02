@@ -35,8 +35,8 @@
   position: absolute;
   inset: 0;
   
-  /* Single reference to placeholder background */
-  background: url("/assets/videos/tvscreen.jpg") center/cover no-repeat;
+  /* Single reference to placeholder background - relative path for portability */
+  background: url("../assets/videos/tvscreen.jpg") center/cover no-repeat;
   
   /* Keep subdued to maintain foreground readability */
   opacity: var(--tv-bg-opacity);
@@ -52,8 +52,8 @@
   position: absolute;
   inset: 0;
   
-  /* Use the --tv-bg variable set by ui.tv-media.js */
-  background: var(--tv-bg, url("/assets/videos/tvscreen.jpg")) center/cover no-repeat;
+  /* Use the --tv-bg variable set by ui.tv-media.js - relative path fallback */
+  background: var(--tv-bg, url("../assets/videos/tvscreen.jpg")) center/cover no-repeat;
   
   /* Show default background more clearly (no overlay gradient) */
   opacity: 0.22;

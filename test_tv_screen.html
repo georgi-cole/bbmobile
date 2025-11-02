@@ -261,8 +261,10 @@
       document.querySelectorAll('.tv-screen').forEach((tv, idx) => {
         console.log(`TV ${idx + 1}:`, tv);
         console.log('  Classes:', tv.className);
-        console.log('  ::before pseudo-element exists:', window.getComputedStyle(tv, '::before').content !== 'none');
-        console.log('  ::after pseudo-element exists:', window.getComputedStyle(tv, '::after').content !== 'none');
+        const beforeBg = window.getComputedStyle(tv, '::before').backgroundImage;
+        const afterBg = window.getComputedStyle(tv, '::after').backgroundImage;
+        console.log('  ::before background-image:', beforeBg);
+        console.log('  ::after background-image:', afterBg);
         console.log('  --tv-bg variable:', tv.style.getPropertyValue('--tv-bg'));
         
         // Check for background duplication
