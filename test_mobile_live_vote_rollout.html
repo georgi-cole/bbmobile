@@ -148,6 +148,20 @@
     <div class="status" id="status4"></div>
   </div>
   
+  <div class="test-section">
+    <h2>Test 5: Race Condition Fix</h2>
+    <p>Tests that isShowing() returns false immediately after hide() is called (no race condition).</p>
+    <button onclick="testRaceCondition()">Test Race Condition Fix</button>
+    <div class="status" id="status5"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 6: Cleanup After Rollout</h2>
+    <p>Tests that no ghost UI elements remain after rollout closes (simulates the reported bug).</p>
+    <button onclick="testGhostUICleanup()">Test Ghost UI Cleanup</button>
+    <div class="status" id="status6"></div>
+  </div>
+  
   <div id="tv"></div>
   
   <div class="log" id="log">
@@ -369,7 +383,138 @@ function testCloseAll() {
 
 // Initial log
 log('Test page loaded successfully', 'ok');
-log('Available functions: testFullFlow(), testRolloutOnly(), testScrollLock(), testCloseAll()', 'ok');
+log('Available functions: testFullFlow(), testRolloutOnly(), testScrollLock(), testCloseAll(), testRaceCondition(), testGhostUICleanup()', 'ok');
+
+// Test 5: Race condition fix
+function testRaceCondition() {
+  log('Testing race condition fix...', 'ok');
+  setStatus('status5', 'Testing...', 'ok');
+  
+  // Show rollout
+  LiveVoteRollout.show({
+    expectedVotes: 3,
+    nominees: [2, 3]
+  });
+  
+  log('Rollout shown, isShowing() = ' + LiveVoteRollout.isShowing(), 'ok');
+  
+  // Hide rollout
+  LiveVoteRollout.hide();
+  
+  // Check immediately if isShowing() returns false
+  const isShowingAfterHide = LiveVoteRollout.isShowing();
+  
+  if (isShowingAfterHide) {
+    log('FAIL: isShowing() still returns true immediately after hide()', 'danger');
+    setStatus('status5', '❌ Race condition detected!', 'danger');
+  } else {
+    log('PASS: isShowing() correctly returns false immediately after hide()', 'ok');
+    setStatus('status5', '✓ Race condition fixed!', 'ok');
+  }
+  
+  // Verify overlay is fading out but will be removed
+  setTimeout(() => {
+    const overlayElements = document.querySelectorAll('.lv-rollout-overlay');
+    log(`Checking for overlay elements during fade: ${overlayElements.length} found`, overlayElements.length > 0 ? 'ok' : 'ok');
+  }, 50);
+  
+  // Verify overlay is completely removed after fade completes
+  setTimeout(() => {
+    const overlayElements = document.querySelectorAll('.lv-rollout-overlay');
+    if (overlayElements.length === 0) {
+      log('PASS: Overlay completely removed after fade', 'ok');
+    } else {
+      log(`FAIL: ${overlayElements.length} overlay element(s) still in DOM`, 'danger');
+      setStatus('status5', '❌ Overlay not cleaned up properly', 'danger');
+    }
+  }, 400);
+}
+
+// Test 6: Ghost UI cleanup (simulates the reported bug)
+function testGhostUICleanup() {
+  log('Testing ghost UI cleanup (simulates reported bug)...', 'ok');
+  setStatus('status6', 'Running ghost UI test...', 'ok');
+  
+  // Step 1: Show choice card (simulating vote setup)
+  log('Step 1: Showing choice card', 'ok');
+  LiveVoteChoiceCard.show({
+    nominees: [2, 3],
+    onVoteClick: () => {}
+  });
+  
+  setTimeout(() => {
+    // Step 2: Show vote overlay (simulating user clicking Vote button)
+    log('Step 2: Showing vote overlay', 'ok');
+    LiveVoteOverlay.show({
+      nominees: [2, 3],
+      isTieBreak: false,
+      onSubmit: () => {}
+    });
+    
+    setTimeout(() => {
+      // Step 3: Simulate user voting and triggering rollout
+      log('Step 3: User votes, showing rollout', 'ok');
+      
+      // This should clean up choice card and overlay
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+        log('closeAllVoteUI() called', 'ok');
+      }
+      
+      // Show rollout
+      LiveVoteRollout.show({
+        expectedVotes: 3,
+        nominees: [2, 3]
+      });
+      
+      // Add some mock votes
+      LiveVoteRollout.addVote({
+        voterId: 1,
+        voterName: 'You',
+        targetId: 2,
+        targetName: 'Alice'
+      });
+      
+      setTimeout(() => {
+        log('Step 4: Hiding rollout (simulating end of vote)', 'ok');
+        LiveVoteRollout.hide();
+        
+        // Check for ghost UI elements immediately after hide
+        setTimeout(() => {
+          const choiceCards = document.querySelectorAll('.lv-choice-card');
+          const overlays = document.querySelectorAll('.lv-overlay');
+          const rollouts = document.querySelectorAll('.lv-rollout-overlay');
+          
+          log(`Ghost UI check: ${choiceCards.length} choice cards, ${overlays.length} overlays, ${rollouts.length} rollouts`, 'ok');
+          
+          const totalGhosts = choiceCards.length + overlays.length;
+          
+          if (totalGhosts === 0) {
+            log('PASS: No ghost UI elements found!', 'ok');
+            setStatus('status6', '✓ No ghost UI - bug is fixed!', 'ok');
+          } else {
+            log(`FAIL: Found ${totalGhosts} ghost UI element(s)`, 'danger');
+            setStatus('status6', `❌ Found ${totalGhosts} ghost element(s)`, 'danger');
+          }
+          
+          // Verify rollout overlay is still fading out (should be removed soon)
+          if (rollouts.length > 0) {
+            log('Note: Rollout overlay still fading out (expected)', 'ok');
+            setTimeout(() => {
+              const finalRollouts = document.querySelectorAll('.lv-rollout-overlay');
+              if (finalRollouts.length === 0) {
+                log('PASS: Rollout overlay completely removed after fade', 'ok');
+              } else {
+                log(`FAIL: Rollout overlay still present after fade: ${finalRollouts.length}`, 'danger');
+              }
+            }, 350);
+          }
+        }, 50);
+      }, 1500);
+    }, 500);
+  }, 500);
+}
+
 </script>
 
 </body>
