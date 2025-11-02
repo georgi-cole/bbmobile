@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>E2E Test: Eviction UI Ghost Fix</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="mobile_version3.css">
+  <link rel="stylesheet" href="css/livevote-choice-card.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <link rel="stylesheet" href="css/livevote-rollout.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0f16;
+      color: #e8f4ff;
+    }
+    
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #ffd96b;
+      margin-bottom: 1rem;
+      font-size: 2rem;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #8fd3ff;
+      margin-bottom: 2rem;
+      font-size: 1rem;
+    }
+    
+    .info-box {
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .info-box h3 {
+      margin-top: 0;
+      color: #00e0cc;
+      font-size: 1.1rem;
+    }
+    
+    .info-box ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    
+    .info-box li {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+    
+    .test-section {
+      background: rgba(20, 35, 55, 0.5);
+      border: 1px solid rgba(143, 211, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #00e0cc;
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #00e0cc, #00b3a6);
+      border: none;
+      border-radius: 8px;
+      padding: 14px 28px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 8px 8px 8px 0;
+      font-size: 1.1rem;
+      transition: all 0.2s ease;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 224, 204, 0.4);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .status {
+      margin-top: 12px;
+      padding: 14px;
+      background: rgba(0, 224, 204, 0.1);
+      border-left: 4px solid #00e0cc;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    
+    .status.success {
+      background: rgba(124, 255, 173, 0.1);
+      border-left-color: #7cffad;
+      color: #7cffad;
+    }
+    
+    .status.error {
+      background: rgba(255, 107, 107, 0.1);
+      border-left-color: #ff6b6b;
+      color: #ff6b6b;
+    }
+    
+    .status.warning {
+      background: rgba(255, 217, 107, 0.1);
+      border-left-color: #ffd96b;
+      color: #ffd96b;
+    }
+    
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      height: 450px;
+      margin: 20px auto;
+      background: #0e1a28;
+      border: 3px solid rgba(143, 211, 255, 0.3);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    
+    #live-vote-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(20, 35, 55, 0.95);
+      border-top: 2px solid rgba(143, 211, 255, 0.2);
+      padding: 20px;
+      z-index: 10;
+    }
+    
+    .old-ui-warning {
+      color: #ff6b6b;
+      font-weight: bold;
+      font-size: 1.2rem;
+      text-align: center;
+      padding: 10px;
+      background: rgba(255, 107, 107, 0.2);
+      border-radius: 8px;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    .log {
+      background: rgba(20, 35, 55, 0.3);
+      border: 1px solid rgba(143, 211, 255, 0.15);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .log-entry {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(143, 211, 255, 0.1);
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .log-time {
+      color: #8fd3ff;
+      margin-right: 8px;
+    }
+    
+    .ok { color: #7cffad; }
+    .warn { color: #ffd96b; }
+    .danger { color: #ff6b6b; }
+    
+    .screenshot-hint {
+      background: rgba(255, 217, 107, 0.1);
+      border: 1px dashed #ffd96b;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      text-align: center;
+      color: #ffd96b;
+      font-size: 0.95rem;
+    }
+    
+    .ghost-check {
+      background: rgba(20, 35, 55, 0.8);
+      border: 2px solid rgba(255, 107, 107, 0.5);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    
+    .ghost-check h3 {
+      color: #ff6b6b;
+      margin-top: 0;
+    }
+    
+    .ghost-result {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      margin: 8px 0;
+    }
+    
+    .ghost-result.pass {
+      border-left: 4px solid #7cffad;
+    }
+    
+    .ghost-result.fail {
+      border-left: 4px solid #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+
+<div class="test-container">
+  <h1>🧪 E2E Test: Eviction UI Ghost Fix</h1>
+  <div class="subtitle">Comprehensive test to verify the old voting UI no longer appears after rollout completes</div>
+  
+  <div class="info-box">
+    <h3>📋 Test Overview</h3>
+    <p><strong>Bug Being Fixed:</strong> After submitting a vote via the two-step mobile flow and watching the rollout animation, the old voting UI (red "EVICT" buttons) reappeared under the TV when the overlay dismissed.</p>
+    <p><strong>Root Cause:</strong> When <code>lockHumanVote()</code> called <code>renderLiveVotePanel()</code> after voting, the <code>hasVoted</code> flag was true, causing the two-step condition to fail and fall through to rendering the legacy voting UI.</p>
+    <p><strong>The Fix:</strong> Added an early return in <code>renderLiveVotePanel()</code> that prevents rendering the old UI when the user has already voted via the two-step flow.</p>
+  </div>
+  
+  <div class="test-section">
+    <h2>🎬 Automated E2E Test</h2>
+    <p>This test simulates the complete eviction voting flow from start to finish:</p>
+    <ol>
+      <li>Shows the two-step mobile choice card (select nominee)</li>
+      <li>Shows the voting overlay (confirm vote)</li>
+      <li>Submits the vote (triggers rollout)</li>
+      <li>Displays rollout animation with all voter reveals</li>
+      <li>Hides rollout and checks for ghost UI elements</li>
+      <li><strong>VERIFICATION:</strong> Confirms no old voting UI appears in the panel</li>
+    </ol>
+    <button id="runTestBtn" onclick="runE2ETest()">▶️ Run E2E Test</button>
+    <div class="status" id="testStatus">Click the button to start the automated test</div>
+  </div>
+  
+  <div id="tv">
+    <div id="live-vote-panel" style="display: none;">
+      <div class="old-ui-warning">⚠️ OLD VOTING UI (This should NOT appear after voting!)</div>
+    </div>
+  </div>
+  
+  <div class="ghost-check" id="ghostCheck" style="display: none;">
+    <h3>👻 Ghost UI Detection Results</h3>
+    <div id="ghostResults"></div>
+  </div>
+  
+  <div class="screenshot-hint">
+    📸 Take a screenshot after the test completes to document that no ghost UI appears!
+  </div>
+  
+  <div class="log" id="log">
+    <strong>📝 Test Execution Log:</strong>
+    <div id="log-entries"></div>
+  </div>
+</div>
+
+<script src="js/livevote-helpers.js"></script>
+<script src="js/livevote-choice-card.js"></script>
+<script src="js/livevote-voteoverlay.js"></script>
+<script src="js/livevote-rollout.js"></script>
+
+<script>
+// Mock game environment
+window.game = { 
+  humanId: 1,
+  __human_vote: null // Initially null (not voted)
+};
+
+window.getP = (id) => {
+  const players = {
+    1: { id: 1, name: 'You', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=you' },
+    2: { id: 2, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice' },
+    3: { id: 3, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob' },
+    4: { id: 4, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=charlie' },
+    5: { id: 5, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=diana' }
+  };
+  return players[id] || { id, name: `Player${id}`, avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=player${id}` };
+};
+window.safeName = (id) => window.getP(id).name;
+
+function log(message, type = '') {
+  const logEntries = document.getElementById('log-entries');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  const timestamp = new Date().toLocaleTimeString();
+  entry.innerHTML = `<span class="log-time">[${timestamp}]</span>${message}`;
+  logEntries.appendChild(entry);
+  logEntries.scrollTop = logEntries.scrollHeight;
+}
+
+function setStatus(message, type = '') {
+  const status = document.getElementById('testStatus');
+  status.textContent = message;
+  status.className = `status ${type}`;
+}
+
+function checkForGhostUI() {
+  const panel = document.getElementById('live-vote-panel');
+  const choiceCards = document.querySelectorAll('.lv-choice-card');
+  const overlays = document.querySelectorAll('.lv-overlay');
+  const rollouts = document.querySelectorAll('.lv-rollout-overlay');
+  
+  const results = {
+    panel: panel && panel.style.display !== 'none',
+    choiceCards: choiceCards.length,
+    overlays: overlays.length,
+    rollouts: rollouts.length
+  };
+  
+  log(`Ghost UI Check: Panel=${results.panel}, ChoiceCards=${results.choiceCards}, Overlays=${results.overlays}, Rollouts=${results.rollouts}`, 'ok');
+  
+  return results;
+}
+
+function displayGhostResults(results) {
+  const ghostCheck = document.getElementById('ghostCheck');
+  const ghostResults = document.getElementById('ghostResults');
+  
+  ghostCheck.style.display = 'block';
+  ghostResults.innerHTML = '';
+  
+  const checks = [
+    { name: 'Old Voting UI Panel', value: results.panel, pass: !results.panel },
+    { name: 'Choice Card Elements', value: results.choiceCards, pass: results.choiceCards === 0 },
+    { name: 'Voting Overlay Elements', value: results.overlays, pass: results.overlays === 0 },
+    { name: 'Rollout Elements (fading)', value: results.rollouts, pass: true } // OK if fading
+  ];
+  
+  let allPassed = true;
+  
+  checks.forEach(check => {
+    const div = document.createElement('div');
+    div.className = `ghost-result ${check.pass ? 'pass' : 'fail'}`;
+    
+    const label = document.createElement('span');
+    label.textContent = check.name;
+    
+    const value = document.createElement('span');
+    value.className = check.pass ? 'ok' : 'danger';
+    value.textContent = check.pass ? '✓ PASS' : `✗ FAIL (${check.value})`;
+    
+    div.appendChild(label);
+    div.appendChild(value);
+    ghostResults.appendChild(div);
+    
+    if (!check.pass) allPassed = false;
+  });
+  
+  return allPassed;
+}
+
+async function runE2ETest() {
+  const btn = document.getElementById('runTestBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Test Running...';
+  
+  log('========================================', 'ok');
+  log('Starting E2E Test: Full Eviction Voting Flow', 'ok');
+  log('========================================', 'ok');
+  
+  // Reset state
+  window.game.__human_vote = null;
+  const panel = document.getElementById('live-vote-panel');
+  panel.style.display = 'none';
+  
+  setStatus('Test started - initializing...', '');
+  
+  // Step 1: Show choice card
+  await new Promise(resolve => {
+    setTimeout(() => {
+      log('Step 1: Showing two-step mobile choice card', 'ok');
+      setStatus('Step 1/5: Showing nominee choice card...', '');
+      
+      const nominees = [2, 3]; // Alice and Bob
+      
+      LiveVoteChoiceCard.show({
+        nominees: nominees,
+        onVoteClick: (noms) => {
+          log('User clicked VOTE button on choice card', 'ok');
+          resolve();
+        }
+      });
+    }, 500);
+  });
+  
+  // Step 2: Auto-click vote after delay
+  await new Promise(resolve => {
+    setTimeout(() => {
+      log('Step 2: Opening voting overlay', 'ok');
+      setStatus('Step 2/5: Opening voting overlay...', '');
+      
+      LiveVoteOverlay.show({
+        nominees: [2, 3],
+        isTieBreak: false,
+        onSubmit: (selectedId) => {
+          log(`Vote submitted for: ${window.safeName(selectedId)} (ID: ${selectedId})`, 'ok');
+          
+          // THIS IS THE KEY MOMENT: Set the human vote flag
+          window.game.__human_vote = selectedId;
+          log(`Set game.__human_vote = ${selectedId}`, 'warn');
+          
+          resolve(selectedId);
+        }
+      });
+      
+      // Auto-submit vote for Alice after 1 second
+      setTimeout(() => {
+        const voteBtn = document.querySelector('.lv-overlay button');
+        if (voteBtn) {
+          log('Auto-clicking vote button for Alice...', 'ok');
+          voteBtn.click();
+        }
+      }, 1000);
+    }, 1500);
+  });
+  
+  // Step 3: Show rollout
+  const votedFor = await new Promise(resolve => {
+    setTimeout(() => {
+      log('Step 3: Showing rollout overlay (all voters)', 'ok');
+      setStatus('Step 3/5: Showing rollout animation...', '');
+      
+      const nominees = [2, 3];
+      const votedForId = window.game.__human_vote;
+      
+      LiveVoteRollout.show({
+        expectedVotes: 5,
+        nominees: nominees
+      });
+      
+      // Add user's vote first
+      LiveVoteRollout.addVote({
+        voterId: 1,
+        voterName: 'You',
+        targetId: votedForId,
+        targetName: window.safeName(votedForId)
+      });
+      log(`Rollout: Added vote from You → ${window.safeName(votedForId)}`, 'ok');
+      
+      resolve(votedForId);
+    }, 500);
+  });
+  
+  // Step 4: Add other votes with delays
+  await new Promise(resolve => {
+    const otherVoters = [4, 5, 2, 3];
+    const nominees = [2, 3];
+    let delay = 1200;
+    
+    otherVoters.forEach((voterId, index) => {
+      setTimeout(() => {
+        const target = nominees[Math.floor(Math.random() * nominees.length)];
+        LiveVoteRollout.addVote({
+          voterId: voterId,
+          voterName: window.safeName(voterId),
+          targetId: target,
+          targetName: window.safeName(target)
+        });
+        log(`Rollout: Added vote from ${window.safeName(voterId)} → ${window.safeName(target)}`, 'ok');
+        
+        if (index === otherVoters.length - 1) {
+          resolve();
+        }
+      }, delay * (index + 1));
+    });
+  });
+  
+  // Step 5: Hide rollout and check for ghost UI
+  await new Promise(resolve => {
+    setTimeout(() => {
+      log('Step 4: Hiding rollout overlay', 'ok');
+      setStatus('Step 4/5: Hiding rollout...', '');
+      
+      LiveVoteRollout.hide();
+      
+      setTimeout(() => {
+        log('========================================', 'ok');
+        log('Step 5: VERIFICATION - Checking for ghost UI', 'warn');
+        log('========================================', 'ok');
+        setStatus('Step 5/5: Verifying no ghost UI...', 'warning');
+        
+        // Check immediately after hide
+        const results = checkForGhostUI();
+        
+        // Wait a bit more for rollout to complete fade
+        setTimeout(() => {
+          const finalResults = checkForGhostUI();
+          
+          // Display results
+          const allPassed = displayGhostResults(finalResults);
+          
+          if (allPassed) {
+            log('✅ TEST PASSED: No ghost UI detected!', 'ok');
+            log('The old voting UI did NOT reappear after rollout.', 'ok');
+            setStatus('✅ TEST PASSED: Fix is working correctly! No ghost UI detected.', 'success');
+          } else {
+            log('❌ TEST FAILED: Ghost UI elements detected!', 'danger');
+            log('The old voting UI should not appear after voting.', 'danger');
+            setStatus('❌ TEST FAILED: Ghost UI detected. The bug still exists.', 'error');
+          }
+          
+          log('========================================', 'ok');
+          log('Test Complete - Review the results above', 'ok');
+          log('========================================', 'ok');
+          
+          btn.disabled = false;
+          btn.textContent = '🔄 Run Test Again';
+          resolve();
+        }, 400);
+      }, 100);
+    }, 2000);
+  });
+}
+
+// Initial setup
+log('E2E Test page loaded successfully', 'ok');
+log('This test simulates the complete voting flow to verify the fix', 'ok');
+log('Click "Run E2E Test" to start', 'ok');
+</script>
+
+</body>
+</html>

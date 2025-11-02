@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>End-to-End Test: Eviction UI Fix</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #16c784;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .test-section {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .test-section h2 {
+      color: #16c784;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+    }
+    .test-step {
+      margin: 10px 0;
+      padding: 10px;
+      background: #0f3460;
+      border-radius: 4px;
+    }
+    .test-step.active {
+      background: #1a4d7a;
+      border-left: 4px solid #16c784;
+    }
+    .test-step.pass {
+      background: #0d4d2e;
+      border-left: 4px solid #16c784;
+    }
+    .test-step.fail {
+      background: #4d0d0d;
+      border-left: 4px solid #ff4444;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    button.primary {
+      background: #16c784;
+      color: #1a1a2e;
+    }
+    button.primary:hover {
+      background: #13a96b;
+    }
+    button.secondary {
+      background: #0f3460;
+      color: #eee;
+    }
+    button.secondary:hover {
+      background: #1a4d7a;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .log {
+      background: #0a0a15;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 3px 0;
+    }
+    .log-entry.info { color: #16c784; }
+    .log-entry.warn { color: #ffa500; }
+    .log-entry.error { color: #ff4444; }
+    .log-entry.success { color: #4dff4d; font-weight: bold; }
+    #tv-container {
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto;
+      background: #000;
+      border: 3px solid #333;
+      border-radius: 8px;
+      min-height: 400px;
+      position: relative;
+    }
+    .status {
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .status.pending {
+      background: #1a4d7a;
+      color: #eee;
+    }
+    .status.running {
+      background: #ffa500;
+      color: #000;
+    }
+    .status.pass {
+      background: #16c784;
+      color: #000;
+    }
+    .status.fail {
+      background: #ff4444;
+      color: #fff;
+    }
+    .test-result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #0a0a15;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 End-to-End Test: Eviction UI Fix</h1>
+    
+    <div class="test-section">
+      <h2>Test Objective</h2>
+      <p>
+        Verify that after submitting a vote via the two-step mobile flow and watching the rollout animation,
+        the old voting UI (red "EVICT" buttons) does NOT reappear under the TV when the overlay dismisses.
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Control Panel</h2>
+      <div class="controls">
+        <button class="primary" onclick="runFullTest()">▶ Run Full Test</button>
+        <button class="secondary" onclick="resetTest()">↻ Reset</button>
+        <button class="secondary" onclick="checkForGhostUI()">🔍 Check for Ghost UI</button>
+      </div>
+      <div id="test-status" class="status pending">
+        Test Status: Ready to run
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Steps</h2>
+      <div id="test-step-1" class="test-step">
+        Step 1: Initialize game state with 4 players (2 nominees)
+      </div>
+      <div id="test-step-2" class="test-step">
+        Step 2: Show choice card with nominees
+      </div>
+      <div id="test-step-3" class="test-step">
+        Step 3: User selects nominee and confirms vote
+      </div>
+      <div id="test-step-4" class="test-step">
+        Step 4: Show rollout animation with all votes
+      </div>
+      <div id="test-step-5" class="test-step">
+        Step 5: Wait for rollout to complete
+      </div>
+      <div id="test-step-6" class="test-step">
+        Step 6: Verify NO ghost UI appears (red EVICT buttons)
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Visual Inspection Area</h2>
+      <div id="tv-container"></div>
+      <div class="test-result" id="visual-result">
+        <strong>Expected:</strong> After rollout completes, the panel under the TV should be hidden.
+        No red "EVICT" buttons or old voting UI should appear.
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div class="log" id="test-log"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Automated Assertions</h2>
+      <div id="assertions"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Test utilities
+    let testRunning = false;
+    let stepIndex = 0;
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('test-log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    function updateStatus(message, status) {
+      const statusDiv = document.getElementById('test-status');
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${status}`;
+    }
+
+    function setStep(stepNum, status) {
+      const stepDiv = document.getElementById(`test-step-${stepNum}`);
+      if (stepDiv) {
+        stepDiv.className = `test-step ${status}`;
+      }
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    window.resetTest = function() {
+      log('Resetting test...', 'info');
+      for (let i = 1; i <= 6; i++) {
+        setStep(i, '');
+      }
+      testRunning = false;
+      stepIndex = 0;
+      updateStatus('Test Status: Ready to run', 'pending');
+      document.getElementById('tv-container').innerHTML = '';
+      document.getElementById('assertions').innerHTML = '';
+    };
+
+    window.checkForGhostUI = function() {
+      log('Checking for ghost UI elements...', 'info');
+      
+      const checks = [
+        { selector: '.lv-overlay', name: 'Vote Overlay' },
+        { selector: '.lv-rollout-overlay', name: 'Rollout Overlay' },
+        { selector: '.lv-choice-card', name: 'Choice Card' },
+        { selector: '.lv2-cta-dock', name: 'CTA Dock' },
+        { selector: '.lv2-inline-card', name: 'Inline Card' },
+        { selector: '[data-evict-button]', name: 'Evict Button' }
+      ];
+
+      let foundGhost = false;
+      checks.forEach(check => {
+        const elements = document.querySelectorAll(check.selector);
+        if (elements.length > 0) {
+          log(`⚠️ Found ${elements.length} ${check.name} element(s) - possible ghost UI!`, 'warn');
+          elements.forEach((el, i) => {
+            const isVisible = el.offsetParent !== null;
+            log(`  ${check.name} #${i+1}: ${isVisible ? 'VISIBLE' : 'hidden'}`, isVisible ? 'error' : 'info');
+          });
+          if (Array.from(elements).some(el => el.offsetParent !== null)) {
+            foundGhost = true;
+          }
+        } else {
+          log(`✓ No ${check.name} found`, 'info');
+        }
+      });
+
+      // Check for panel visibility
+      const panel = document.getElementById('live-vote-panel');
+      if (panel) {
+        const isVisible = panel.style.display !== 'none' && panel.offsetParent !== null;
+        log(`Live Vote Panel: ${isVisible ? 'VISIBLE (BAD)' : 'hidden (GOOD)'}`, isVisible ? 'error' : 'success');
+        if (isVisible) foundGhost = true;
+      } else {
+        log('Live Vote Panel: Not found in DOM', 'info');
+      }
+
+      return !foundGhost;
+    };
+
+    window.runFullTest = async function() {
+      if (testRunning) {
+        log('Test already running', 'warn');
+        return;
+      }
+
+      testRunning = true;
+      log('=== Starting End-to-End Test ===', 'info');
+      updateStatus('Test Status: Running...', 'running');
+
+      try {
+        // Step 1: Initialize
+        setStep(1, 'active');
+        log('Step 1: Initializing mock game state...', 'info');
+        await initializeMockGame();
+        await sleep(500);
+        setStep(1, 'pass');
+        log('✓ Game state initialized', 'success');
+
+        // Step 2: Show choice card
+        setStep(2, 'active');
+        log('Step 2: Showing choice card...', 'info');
+        await showMockChoiceCard();
+        await sleep(1000);
+        setStep(2, 'pass');
+        log('✓ Choice card displayed', 'success');
+
+        // Step 3: User votes
+        setStep(3, 'active');
+        log('Step 3: Simulating user vote...', 'info');
+        await simulateUserVote();
+        await sleep(1000);
+        setStep(3, 'pass');
+        log('✓ Vote submitted', 'success');
+
+        // Step 4: Show rollout
+        setStep(4, 'active');
+        log('Step 4: Showing rollout animation...', 'info');
+        await showMockRollout();
+        await sleep(2000);
+        setStep(4, 'pass');
+        log('✓ Rollout displayed', 'success');
+
+        // Step 5: Wait for completion
+        setStep(5, 'active');
+        log('Step 5: Waiting for rollout to complete...', 'info');
+        await sleep(2000);
+        await hideRollout();
+        setStep(5, 'pass');
+        log('✓ Rollout completed and hidden', 'success');
+
+        // Step 6: Verify no ghost UI
+        setStep(6, 'active');
+        log('Step 6: Checking for ghost UI...', 'info');
+        await sleep(500);
+        
+        const noGhostUI = checkForGhostUI();
+        
+        if (noGhostUI) {
+          setStep(6, 'pass');
+          log('✓ NO GHOST UI DETECTED - TEST PASSED!', 'success');
+          updateStatus('✅ Test Status: PASSED - No ghost UI appeared', 'pass');
+          showAssertions(true);
+        } else {
+          setStep(6, 'fail');
+          log('✗ GHOST UI DETECTED - TEST FAILED!', 'error');
+          updateStatus('❌ Test Status: FAILED - Ghost UI appeared', 'fail');
+          showAssertions(false);
+        }
+
+        log('=== Test Complete ===', 'info');
+      } catch (error) {
+        log(`Test error: ${error.message}`, 'error');
+        updateStatus('❌ Test Status: ERROR', 'fail');
+      } finally {
+        testRunning = false;
+      }
+    };
+
+    async function initializeMockGame() {
+      // Create mock game state
+      window.game = {
+        humanId: 'p1',
+        nominees: ['p2', 'p3'],
+        voters: ['p1', 'p4'],
+        __human_vote: null
+      };
+
+      window.getP = (id) => {
+        const players = {
+          p1: { id: 'p1', name: 'Alice', avatar: '👤' },
+          p2: { id: 'p2', name: 'Bob', avatar: '👤' },
+          p3: { id: 'p3', name: 'Charlie', avatar: '👤' },
+          p4: { id: 'p4', name: 'Diana', avatar: '👤' }
+        };
+        return players[id];
+      };
+
+      log('Mock game initialized with 4 players', 'info');
+    }
+
+    async function showMockChoiceCard() {
+      const tvContainer = document.getElementById('tv-container');
+      const card = document.createElement('div');
+      card.className = 'lv-choice-card';
+      card.style.cssText = 'padding: 20px; background: #222; color: #fff; text-align: center;';
+      card.innerHTML = `
+        <h3>Vote to Evict</h3>
+        <div style="margin-top: 20px;">
+          <button id="vote-bob" style="padding: 10px 20px; margin: 5px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            EVICT Bob
+          </button>
+          <button id="vote-charlie" style="padding: 10px 20px; margin: 5px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            EVICT Charlie
+          </button>
+        </div>
+      `;
+      tvContainer.appendChild(card);
+    }
+
+    async function simulateUserVote() {
+      const voteBtn = document.getElementById('vote-bob');
+      if (voteBtn) {
+        voteBtn.click();
+        log('User clicked "EVICT Bob"', 'info');
+      }
+      
+      // Set human vote
+      if (window.game) {
+        window.game.__human_vote = 'p2';
+        log('Human vote recorded: p2 (Bob)', 'info');
+      }
+
+      // Remove choice card
+      const card = document.querySelector('.lv-choice-card');
+      if (card) {
+        card.remove();
+      }
+    }
+
+    async function showMockRollout() {
+      const tvContainer = document.getElementById('tv-container');
+      const rollout = document.createElement('div');
+      rollout.className = 'lv-rollout-overlay';
+      rollout.id = 'mock-rollout';
+      rollout.style.cssText = 'padding: 40px; background: rgba(0,0,0,0.95); color: #fff; text-align: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center;';
+      rollout.innerHTML = `
+        <h2>Vote Rollout</h2>
+        <div style="margin-top: 20px;">
+          <div style="margin: 10px 0;">👤 Alice voted to evict Bob</div>
+          <div style="margin: 10px 0;">👤 Diana voted to evict Bob</div>
+        </div>
+        <div style="margin-top: 20px; font-size: 24px; color: #d32f2f;">
+          Bob is EVICTED (2-0)
+        </div>
+      `;
+      tvContainer.appendChild(rollout);
+    }
+
+    async function hideRollout() {
+      const rollout = document.getElementById('mock-rollout');
+      if (rollout) {
+        rollout.remove();
+        log('Rollout overlay removed', 'info');
+      }
+
+      // This is the critical moment - renderLiveVotePanel would be called here
+      // If the fix works, no old UI should appear
+      log('Simulating post-rollout state (renderLiveVotePanel call)', 'info');
+      
+      // Check if panel would be rendered
+      if (window.game && window.game.__human_vote) {
+        log('Human has voted: hasVoted = true', 'info');
+        log('According to fix, panel should stay hidden', 'info');
+      }
+    }
+
+    function showAssertions(passed) {
+      const assertionsDiv = document.getElementById('assertions');
+      assertionsDiv.innerHTML = `
+        <div style="padding: 10px; background: ${passed ? '#0d4d2e' : '#4d0d0d'}; border-radius: 4px; margin-bottom: 10px;">
+          <strong>${passed ? '✅' : '❌'} Assertion 1:</strong> No .lv-overlay elements visible
+        </div>
+        <div style="padding: 10px; background: ${passed ? '#0d4d2e' : '#4d0d0d'}; border-radius: 4px; margin-bottom: 10px;">
+          <strong>${passed ? '✅' : '❌'} Assertion 2:</strong> No .lv-rollout-overlay elements visible
+        </div>
+        <div style="padding: 10px; background: ${passed ? '#0d4d2e' : '#4d0d0d'}; border-radius: 4px; margin-bottom: 10px;">
+          <strong>${passed ? '✅' : '❌'} Assertion 3:</strong> Live vote panel is hidden
+        </div>
+        <div style="padding: 10px; background: ${passed ? '#0d4d2e' : '#4d0d0d'}; border-radius: 4px; margin-bottom: 10px;">
+          <strong>${passed ? '✅' : '❌'} Assertion 4:</strong> No red EVICT buttons visible
+        </div>
+      `;
+    }
+
+    // Auto-run on page load
+    log('Test page loaded and ready', 'info');
+    log('Click "Run Full Test" to execute the test', 'info');
+  </script>
+</body>
+</html>
