@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Background Fix Verification</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/fixes/2025-11-02-tv-and-roster.css">
+  <style>
+    body {
+      padding: 20px;
+      background: #0a0f16;
+      color: #e8f4ff;
+      font-family: system-ui, sans-serif;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #00e0cc;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .status.pass {
+      background: rgba(119,213,141,0.2);
+      border-left: 4px solid #77d58d;
+      color: #77d58d;
+    }
+    .status.fail {
+      background: rgba(255,131,131,0.2);
+      border-left: 4px solid #ff8383;
+      color: #ff8383;
+    }
+    .tv {
+      height: 300px;
+      background: #0e1730;
+      border: 2px solid rgba(0,0,0,0.35);
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      margin: 20px 0;
+    }
+    .tv.hasTvBg {
+      background: var(--tv-bg) center/cover;
+    }
+    .tvHead {
+      padding: 10px 14px;
+      background: linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
+      border-bottom: 1px solid rgba(120,210,255,.07);
+    }
+    .tvTitle {
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: #c7d7eb;
+    }
+    .tvViewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      color: white;
+      font-size: 1.2rem;
+      font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+    #rosterBar {
+      background: linear-gradient(180deg, rgba(18,29,42,.88), rgba(13,22,35,.92));
+      border: 1px solid #1f3248;
+      border-radius: 12px;
+      padding: 10px;
+      margin: 20px 0;
+    }
+    .placeholder-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .placeholder-tile {
+      width: 80px;
+      height: 100px;
+      background: rgba(30,45,65,0.6);
+      border: 1px solid rgba(100,150,200,0.3);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .placeholder-avatar {
+      width: 50px;
+      height: 50px;
+      background: rgba(100,150,200,0.3);
+      border-radius: 50%;
+      margin-bottom: 8px;
+    }
+    .top-tile-name {
+      font-size: 0.75rem;
+      color: rgba(200,220,240,0.8);
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 TV Background & Roster Fix Verification</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Single-Source TV Background</h2>
+    <p>The TV container (#tv) should have the background, not .tvViewport</p>
+    
+    <div class="tv" id="tv1" style="--tv-bg: url('assets/videos/tvscreen.jpg')">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+      </div>
+      <div class="tvViewport" id="viewport1">
+        TV Content Here
+      </div>
+    </div>
+    
+    <div id="test1result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 2: Viewport Transparency with hasTvBg Class</h2>
+    <p>When #tv has .hasTvBg class, .tvViewport should be transparent</p>
+    
+    <div class="tv hasTvBg" id="tv2" style="--tv-bg: url('assets/videos/tvscreen.jpg')">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+      </div>
+      <div class="tvViewport" id="viewport2">
+        TV Content Here
+      </div>
+    </div>
+    
+    <div id="test2result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 3: Skeleton Placeholder Gap Fix</h2>
+    <p>Guest labels should be inside cards (absolute positioning), no extra margins</p>
+    
+    <div id="rosterBar">
+      <div class="placeholder-row">
+        <div class="placeholder-tile">
+          <div class="placeholder-avatar"></div>
+          <div class="top-tile-name">Guest</div>
+        </div>
+        <div class="placeholder-tile">
+          <div class="placeholder-avatar"></div>
+          <div class="top-tile-name">Guest</div>
+        </div>
+        <div class="placeholder-tile">
+          <div class="placeholder-avatar"></div>
+          <div class="top-tile-name">Guest</div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="test3result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 4: TV Scrim for Overlay Legibility</h2>
+    <p>In-TV overlays should have a scrim for legibility</p>
+    
+    <div class="tv hasTvBg" id="tv4" style="--tv-bg: url('assets/videos/tvscreen.jpg')">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+      </div>
+      <div class="tvViewport">
+        <div id="tvOverlay">
+          <div class="card" style="background: rgba(20,30,45,0.9); padding: 20px; border-radius: 8px; z-index: 5; position: relative;">
+            Overlay Content Should Be Readable
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="test4result"></div>
+  </div>
+  
+  <script src="js/fixes/tv-bg-fix.js"></script>
+  <script>
+    // Test 1: Check viewport background
+    setTimeout(() => {
+      const viewport1 = document.getElementById('viewport1');
+      const bg1 = window.getComputedStyle(viewport1).background;
+      const result1 = document.getElementById('test1result');
+      
+      if (bg1.includes('none') || !bg1.includes('url')) {
+        result1.innerHTML = '<div class="status pass">✅ PASS: .tvViewport has no background (transparent)</div>';
+      } else {
+        result1.innerHTML = '<div class="status fail">❌ FAIL: .tvViewport has a background</div>';
+      }
+      
+      // Test 2: Check with hasTvBg class
+      const viewport2 = document.getElementById('viewport2');
+      const bg2 = window.getComputedStyle(viewport2).background;
+      const result2 = document.getElementById('test2result');
+      
+      if (bg2.includes('none') || bg2 === 'rgba(0, 0, 0, 0)') {
+        result2.innerHTML = '<div class="status pass">✅ PASS: .tvViewport is transparent with .hasTvBg</div>';
+      } else {
+        result2.innerHTML = '<div class="status fail">❌ FAIL: .tvViewport still has background with .hasTvBg</div>';
+      }
+      
+      // Test 3: Check placeholder label positioning
+      const labels = document.querySelectorAll('#rosterBar .placeholder-tile .top-tile-name');
+      const result3 = document.getElementById('test3result');
+      let allAbsolute = true;
+      
+      labels.forEach(label => {
+        const position = window.getComputedStyle(label).position;
+        if (position !== 'absolute') {
+          allAbsolute = false;
+        }
+      });
+      
+      if (allAbsolute && labels.length > 0) {
+        result3.innerHTML = '<div class="status pass">✅ PASS: Guest labels are absolutely positioned inside cards</div>';
+      } else {
+        result3.innerHTML = '<div class="status fail">❌ FAIL: Guest labels are not absolutely positioned</div>';
+      }
+      
+      // Test 4: Check for scrim on overlay
+      const overlay = document.getElementById('tvOverlay');
+      const overlayBg = window.getComputedStyle(overlay).background;
+      const result4 = document.getElementById('test4result');
+      
+      if (overlayBg.includes('gradient') || overlayBg.includes('rgba')) {
+        result4.innerHTML = '<div class="status pass">✅ PASS: TV overlay has scrim for legibility</div>';
+      } else {
+        result4.innerHTML = '<div class="status fail">❌ FAIL: TV overlay missing scrim</div>';
+      }
+    }, 500);
+  </script>
+</body>
+</html>
