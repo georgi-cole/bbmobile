@@ -60,26 +60,15 @@
   color: var(--ink);
 }
 
-/* TV Viewport - Restore background with fallback chain and overlay for text contrast */
+/* TV Viewport - Removed duplicated background images to use centralized tv-screen approach */
 .tvFrame .tvViewport {
-  background-image: 
-    linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.35),
-      rgba(0, 0, 0, 0.30)
-    ),
-    var(--tv-bg-url, url('/img/studio_bg.jpg')),
-    url('/avatars/tvstudio.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: linear-gradient(135deg, 
-    color-mix(in srgb, var(--card, #2a3f5f) 85%, var(--bg, #0d1623)),
-    color-mix(in srgb, var(--card-2, #1f3248) 90%, var(--bg, #0d1623)));
+  /* Background now controlled by parent .tv-screen class */
+  /* Fallback gradient only if no parent .tv-screen class is present */
+  background: transparent;
 }
 
-/* Fallback: If no images load, use theme gradient */
-.tvFrame .tvViewport:not([style*="background-image"]) {
+/* Legacy fallback: If no .tv-screen class is present, use theme gradient */
+.tvFrame .tv:not(.tv-screen) .tvViewport {
   background: linear-gradient(135deg, 
     color-mix(in srgb, var(--card, #2a3f5f) 85%, var(--bg, #0d1623)),
     color-mix(in srgb, var(--card-2, #1f3248) 90%, var(--bg, #0d1623)));

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Screen Background Test - Deduplication Verification</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  <link rel="stylesheet" href="css/theme-bridge.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-section {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-section h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-section h2 {
+      margin: 24px 0 12px 0;
+      color: #83bfff;
+      font-size: 1.2rem;
+    }
+    
+    .test-info {
+      margin: 12px 0;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .test-info.success {
+      background: rgba(119,213,141,0.2);
+      color: #77d58d;
+    }
+
+    .test-info.warning {
+      background: rgba(255,193,7,0.2);
+      color: #ffdd57;
+    }
+
+    .tv-container {
+      margin: 20px 0;
+      position: relative;
+    }
+
+    .tv {
+      position: relative;
+      height: 350px;
+      margin-bottom: 20px;
+    }
+
+    /* Sample cards to test readability */
+    .sample-card {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 30px;
+      background: rgba(20, 35, 55, 0.95);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.3);
+      color: #e8f4ff;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      z-index: 10;
+    }
+
+    .sample-card h3 {
+      margin: 0 0 8px 0;
+      color: #00e0cc;
+    }
+
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .comparison-item {
+      padding: 15px;
+      background: rgba(30,45,65,0.6);
+      border-radius: 8px;
+      border: 1px solid rgba(143,211,255,0.15);
+    }
+
+    .comparison-item h4 {
+      margin: 0 0 10px 0;
+      color: #ffdd57;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-section">
+    <h1>🖼️ TV Screen Background Deduplication Test</h1>
+    
+    <div class="test-info">
+      <strong>Test Purpose:</strong> Verify that the TV screen background is no longer duplicated and displays a single, subdued placeholder image (tvscreen.jpg) that maintains content readability.
+    </div>
+
+    <div class="test-info success">
+      <strong>✅ Expected Behavior:</strong>
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li>Single background layer visible (no stacking/duplication)</li>
+        <li>Background is subdued and doesn't overpower foreground content</li>
+        <li>Cards and text remain clearly readable</li>
+        <li>Subtle vignette and scanlines blend with the theme</li>
+        <li>Mobile responsive and theme-friendly</li>
+      </ul>
+    </div>
+
+    <h2>Test Cases</h2>
+
+    <div class="comparison">
+      <div class="comparison-item">
+        <h4>1. Default State (with .tv-screen class)</h4>
+        <p>This TV container has the new .tv-screen class applied. It should display tvscreen.jpg as a single, subdued background.</p>
+        <div class="tv-container">
+          <div class="tv tv-screen" id="tv1">
+            <div class="tvHead">
+              <div class="tvTitle">House Network Live</div>
+              <div class="tvTimer">00:00</div>
+            </div>
+            <div class="tvViewport">
+              <div class="sample-card">
+                <h3>Sample Content</h3>
+                <p>This text should be clearly readable against the background.</p>
+                <p style="font-size: 0.85rem; opacity: 0.8;">Background should be subtle and not distracting.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comparison-item">
+        <h4>2. With Custom Background (hasDefaultBg class)</h4>
+        <p>This simulates when ui.tv-media.js sets the default background explicitly.</p>
+        <div class="tv-container">
+          <div class="tv tv-screen hasDefaultBg" id="tv2" style="--tv-bg: url('/assets/videos/tvscreen.jpg')">
+            <div class="tvHead">
+              <div class="tvTitle">House Network Live</div>
+              <div class="tvTimer">00:15</div>
+            </div>
+            <div class="tvViewport">
+              <div class="sample-card">
+                <h3>With hasDefaultBg</h3>
+                <p>Background set via CSS variable</p>
+                <p style="font-size: 0.85rem; opacity: 0.8;">Should look similar to Test 1</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comparison-item">
+        <h4>3. Stacked Cards Test</h4>
+        <p>Multiple cards should all remain readable against the background.</p>
+        <div class="tv-container">
+          <div class="tv tv-screen" id="tv3">
+            <div class="tvHead">
+              <div class="tvTitle">House Network Live</div>
+              <div class="tvTimer">01:30</div>
+            </div>
+            <div class="tvViewport">
+              <div style="position: absolute; top: 20px; left: 20px; padding: 12px 20px; background: rgba(20,35,55,0.92); border-radius: 8px; border: 1px solid rgba(143,211,255,0.25); z-index: 10;">
+                <strong style="color: #00e0cc;">Card 1</strong>
+                <p style="margin: 4px 0; font-size: 0.85rem;">Should be readable</p>
+              </div>
+              <div style="position: absolute; bottom: 20px; right: 20px; padding: 12px 20px; background: rgba(20,35,55,0.92); border-radius: 8px; border: 1px solid rgba(143,211,255,0.25); z-index: 10;">
+                <strong style="color: #00e0cc;">Card 2</strong>
+                <p style="margin: 4px 0; font-size: 0.85rem;">Also readable</p>
+              </div>
+              <div class="sample-card" style="top: 50%; left: 50%;">
+                <h3>Center Card</h3>
+                <p>All cards visible and readable</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2>Visual Verification Checklist</h2>
+    <div class="test-info warning">
+      <strong>Manual Checks:</strong>
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li>✓ Only ONE background image is visible (not stacked/duplicated)</li>
+        <li>✓ Background is subtle and doesn't overpower content</li>
+        <li>✓ All cards and text are clearly readable</li>
+        <li>✓ Vignette adds subtle depth without being too dark</li>
+        <li>✓ Scanlines are barely visible (subtle texture)</li>
+        <li>✓ Consistent appearance across all three test cases</li>
+        <li>✓ Mobile viewport: Resize window to check responsiveness</li>
+      </ul>
+    </div>
+
+    <div class="test-controls">
+      <h2>Interactive Tests</h2>
+      <button onclick="toggleVignette()">Toggle Vignette</button>
+      <button onclick="toggleBackgroundOpacity()">Adjust Background Opacity</button>
+      <button onclick="inspectLayers()">Inspect Layers (Console)</button>
+      <button onclick="testMobile()">Test Mobile View</button>
+    </div>
+  </div>
+
+  <script>
+    // Interactive test helpers
+    function toggleVignette() {
+      document.querySelectorAll('.tv-screen').forEach(tv => {
+        const current = getComputedStyle(document.documentElement).getPropertyValue('--tv-vignette-opacity');
+        const newValue = current === '0.35' ? '0' : '0.35';
+        document.documentElement.style.setProperty('--tv-vignette-opacity', newValue);
+      });
+      console.log('Vignette toggled');
+    }
+
+    function toggleBackgroundOpacity() {
+      const current = getComputedStyle(document.documentElement).getPropertyValue('--tv-bg-opacity');
+      let newValue = '0.18';
+      if (current === '0.18') newValue = '0.3';
+      else if (current === '0.3') newValue = '0.1';
+      document.documentElement.style.setProperty('--tv-bg-opacity', newValue);
+      console.log('Background opacity set to:', newValue);
+    }
+
+    function inspectLayers() {
+      console.group('TV Screen Layer Inspection');
+      document.querySelectorAll('.tv-screen').forEach((tv, idx) => {
+        console.log(`TV ${idx + 1}:`, tv);
+        console.log('  Classes:', tv.className);
+        const beforeBg = window.getComputedStyle(tv, '::before').backgroundImage;
+        const afterBg = window.getComputedStyle(tv, '::after').backgroundImage;
+        console.log('  ::before background-image:', beforeBg);
+        console.log('  ::after background-image:', afterBg);
+        console.log('  --tv-bg variable:', tv.style.getPropertyValue('--tv-bg'));
+        
+        // Check for background duplication
+        const viewport = tv.querySelector('.tvViewport');
+        if (viewport) {
+          const bgImage = window.getComputedStyle(viewport).backgroundImage;
+          console.log('  .tvViewport background-image:', bgImage);
+          if (bgImage !== 'none' && !bgImage.includes('gradient')) {
+            console.warn('  ⚠ WARNING: .tvViewport has a background image - possible duplication!');
+          }
+        }
+      });
+      console.groupEnd();
+    }
+
+    function testMobile() {
+      const width = window.innerWidth > 768 ? 375 : 1024;
+      alert(`Current viewport: ${window.innerWidth}px. Manually resize window to ${width}px to test mobile view.`);
+    }
+
+    // Auto-inspect on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('=== TV Screen Background Deduplication Test ===');
+      console.log('Asset path: /assets/videos/tvscreen.jpg');
+      console.log('Run inspectLayers() to check for background duplication');
+      
+      // Check if tvscreen.jpg is accessible
+      const img = new Image();
+      img.onload = () => console.log('✅ tvscreen.jpg loaded successfully');
+      img.onerror = () => console.error('❌ tvscreen.jpg failed to load - check asset path');
+      img.src = '/assets/videos/tvscreen.jpg';
+      
+      setTimeout(inspectLayers, 500);
+    });
+  </script>
+</body>
+</html>
