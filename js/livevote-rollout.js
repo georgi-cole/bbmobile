@@ -165,24 +165,35 @@
 
   // Remove the rollout overlay
   function hide() {
-    if (state.overlay) {
-      // Fade out before removing
-      state.overlay.style.opacity = '0';
-      state.overlay.style.transition = 'opacity 0.3s ease-out';
-      
-      setTimeout(() => {
-        if (state.overlay) {
-          state.overlay.remove();
-          state.overlay = null;
-        }
-      }, 300);
+    if (!state.overlay) {
+      // Already hidden, just reset state to be safe
+      state.expectedVotes = 0;
+      state.receivedVotes = 0;
+      state.nominees = [];
+      state.container = null;
+      return;
     }
 
-    // Reset state
+    // Store reference to overlay before clearing state
+    const overlayToRemove = state.overlay;
+    
+    // Immediately clear state so isShowing() returns false
+    state.overlay = null;
     state.expectedVotes = 0;
     state.receivedVotes = 0;
     state.nominees = [];
     state.container = null;
+    
+    // Fade out before removing from DOM
+    overlayToRemove.style.opacity = '0';
+    overlayToRemove.style.transition = 'opacity 0.3s ease-out';
+    
+    setTimeout(() => {
+      // Remove from DOM after fade completes
+      if (overlayToRemove.parentNode) {
+        overlayToRemove.remove();
+      }
+    }, 300);
   }
 
   // Export public API

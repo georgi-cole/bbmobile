@@ -47,34 +47,42 @@
   function closeAllVoteUI() {
     console.debug('[livevote-helpers] closeAllVoteUI called');
 
-    // Close Choice Card if present
+    // Close Choice Card if present (check all possible locations)
     try {
-      const choiceCard = document.querySelector('.lv-choice-card');
-      if (choiceCard) {
-        choiceCard.remove();
+      const choiceCards = document.querySelectorAll('.lv-choice-card');
+      choiceCards.forEach(card => {
+        card.remove();
         console.debug('[livevote-helpers] Choice card removed');
-      }
+      });
     } catch (e) {
       console.warn('[livevote-helpers] Error removing choice card:', e);
     }
 
-    // Close Vote Overlay if present
+    // Close Vote Overlay if present (check all possible locations)
     try {
-      const overlay = document.querySelector('.lv-overlay');
-      if (overlay) {
+      const overlays = document.querySelectorAll('.lv-overlay');
+      overlays.forEach(overlay => {
         overlay.remove();
         console.debug('[livevote-helpers] Vote overlay removed');
-      }
+      });
     } catch (e) {
       console.warn('[livevote-helpers] Error removing overlay:', e);
     }
 
     // Close Rollout UI if showing
     try {
+      // First check via API
       if (global.LiveVoteRollout?.isShowing?.()) {
         global.LiveVoteRollout.hide();
-        console.debug('[livevote-helpers] Rollout hidden');
+        console.debug('[livevote-helpers] Rollout hidden via API');
       }
+      
+      // Also do a direct DOM cleanup in case of stale elements
+      const rolloutOverlays = document.querySelectorAll('.lv-rollout-overlay');
+      rolloutOverlays.forEach(rollout => {
+        rollout.remove();
+        console.debug('[livevote-helpers] Rollout overlay removed from DOM');
+      });
     } catch (e) {
       console.warn('[livevote-helpers] Error hiding rollout:', e);
     }
