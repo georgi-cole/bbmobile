@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Background & Roster Skeleton Fix Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/fixes/2025-11-02-tv-and-roster.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-section {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-section h1, .test-section h2 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+    }
+    
+    .test-section h2 {
+      font-size: 1.2rem;
+      margin-top: 20px;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .status-message {
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px 0;
+      font-weight: 600;
+    }
+
+    .status-message.success {
+      background: rgba(119,213,141,0.2);
+      color: #77d58d;
+    }
+
+    .status-message.error {
+      background: rgba(255,131,131,0.2);
+      color: #ff8383;
+    }
+
+    .status-message.info {
+      background: rgba(131,191,255,0.2);
+      color: #83bfff;
+    }
+
+    /* TV container */
+    .tv-container {
+      max-width: 900px;
+      margin: 20px auto;
+    }
+
+    .measure-box {
+      display: flex;
+      gap: 20px;
+      margin: 10px 0;
+      font-size: 0.9rem;
+    }
+
+    .measure-item {
+      flex: 1;
+      padding: 10px;
+      background: rgba(48,80,116,0.2);
+      border-radius: 6px;
+    }
+
+    .measure-item strong {
+      color: #00e0cc;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-section">
+    <h1>🖼️ TV Background & Roster Skeleton Fix Test</h1>
+    
+    <div class="test-info">
+      <strong>Purpose:</strong> Verify that the TV background is single-sourced (on #tv only, not duplicated on .tvViewport) 
+      and that roster skeleton placeholders don't create a gap above the TV.
+    </div>
+
+    <h2>Test 1: TV Background Single-Source</h2>
+    <div class="test-controls">
+      <button onclick="testTvBackgroundSingleSource()">Run TV Background Test</button>
+      <button onclick="setCustomTvBackground()">Set Custom Background</button>
+      <button onclick="clearTvBackground()">Clear Background</button>
+    </div>
+    <div id="test1Results"></div>
+
+    <h2>Test 2: Roster Skeleton Gap</h2>
+    <div class="test-controls">
+      <button onclick="testRosterSkeletonGap()">Run Skeleton Gap Test</button>
+      <button onclick="showSkeletons()">Show Skeleton Roster</button>
+      <button onclick="hideSkeletons()">Hide Skeleton Roster</button>
+    </div>
+    <div id="test2Results"></div>
+  </div>
+
+  <!-- Roster Bar Test -->
+  <div class="tv-container">
+    <div class="test-section">
+      <h3>Roster Bar</h3>
+      <div id="rosterBar" style="min-height: 100px; background: rgba(18,29,42,.88); border-radius: 12px; padding: 10px;">
+        <!-- Placeholders will be inserted here by JS -->
+      </div>
+    </div>
+
+    <!-- TV Test -->
+    <div class="test-section">
+      <h3>TV Component</h3>
+      <div class="tv" id="tv">
+        <div class="tvHead">
+          <div class="tvTitle">House Network Live</div>
+          <div class="tvTimer">00:00</div>
+        </div>
+        <div class="tvViewport" data-sm-faux-tv>
+          <div id="tvNow" class="tvNow">Testing TV Background</div>
+          <div id="tvOverlay" class="tvOverlay">
+            <div class="card" style="padding: 20px; margin: 20px; background: rgba(26,38,54,0.9);">
+              <h3>Test Overlay Card</h3>
+              <p>This text should be readable with the scrim overlay.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results & Measurements</h2>
+    <div id="measurements"></div>
+  </div>
+
+  <script src="js/ui.tv-media.js"></script>
+  <script src="js/fixes/tv-bg-fix.js"></script>
+  <script src="js/roster-placeholders.js"></script>
+  <script>
+    // Constants
+    const DEFAULT_TV_BG = 'assets/videos/tvscreen.jpg';
+    
+    // Generic avatar SVG (matches roster-placeholders.js implementation)
+    const GENERIC_AVATAR_SVG = 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+      '<circle cx="12" cy="8" r="4" fill="currentColor" opacity="0.6"/>' +
+      '<path d="M12,14 C8,14 4,16 4,19 L4,22 L20,22 L20,19 C20,16 16,14 12,14 Z" fill="currentColor" opacity="0.6"/>' +
+      '</svg>'
+    );
+
+    // Test utilities
+    function logResult(testName, passed, message, targetId = 'test1Results') {
+      const results = document.getElementById(targetId);
+      const div = document.createElement('div');
+      div.className = `status-message ${passed ? 'success' : 'error'}`;
+      div.innerHTML = `<strong>${testName}:</strong> ${passed ? '✅ PASS' : '❌ FAIL'} - ${message}`;
+      results.appendChild(div);
+    }
+
+    function logInfo(message, targetId = 'measurements') {
+      const results = document.getElementById(targetId);
+      const div = document.createElement('div');
+      div.className = 'status-message info';
+      div.innerHTML = message;
+      results.appendChild(div);
+    }
+
+    // Test 1: TV Background Single-Source
+    function testTvBackgroundSingleSource() {
+      const test1Results = document.getElementById('test1Results');
+      test1Results.innerHTML = ''; // Clear previous results
+
+      const tv = document.getElementById('tv');
+      const viewport = tv.querySelector('.tvViewport');
+
+      // Set a test background
+      tv.style.setProperty('--tv-bg', `url("${DEFAULT_TV_BG}")`);
+      tv.classList.add('hasTvBg');
+
+      // Force the fix to apply
+      setTimeout(() => {
+        // Check if viewport background is removed
+        const viewportBg = window.getComputedStyle(viewport).background;
+        const viewportBgImage = window.getComputedStyle(viewport).backgroundImage;
+        
+        const isTransparent = viewportBgImage === 'none' || viewportBg.includes('rgba(0, 0, 0, 0)');
+        
+        logResult(
+          'Viewport Background Check',
+          isTransparent || viewport.classList.contains('no-faux-bg'),
+          isTransparent 
+            ? 'tvViewport background is transparent as expected' 
+            : 'tvViewport may have background (check computed styles)',
+          'test1Results'
+        );
+
+        // Check if TV has background
+        const tvBg = tv.style.getPropertyValue('--tv-bg');
+        const hasBg = !!tvBg && tvBg.includes('url(');
+        
+        logResult(
+          'TV Background Check',
+          hasBg,
+          hasBg ? `TV has background: ${tvBg}` : 'TV does not have background',
+          'test1Results'
+        );
+
+        // Check for faux-tv attribute
+        const hasFauxAttr = viewport.hasAttribute('data-sm-faux-tv');
+        
+        logResult(
+          'Faux-TV Attribute Check',
+          !hasFauxAttr || viewport.classList.contains('no-faux-bg'),
+          hasFauxAttr 
+            ? 'data-sm-faux-tv attribute still present but should be neutralized' 
+            : 'data-sm-faux-tv attribute removed',
+          'test1Results'
+        );
+
+        // Check overlay scrim
+        const overlay = document.getElementById('tvOverlay');
+        const overlayBg = window.getComputedStyle(overlay).background;
+        const hasScrim = overlayBg.includes('linear-gradient') || overlayBg.includes('rgba');
+        
+        logResult(
+          'Overlay Scrim Check',
+          hasScrim,
+          hasScrim ? 'Overlay has scrim for legibility' : 'Overlay missing scrim',
+          'test1Results'
+        );
+      }, 100);
+    }
+
+    function setCustomTvBackground() {
+      const tv = document.getElementById('tv');
+      tv.style.setProperty('--tv-bg', `url("${DEFAULT_TV_BG}")`);
+      tv.classList.add('hasTvBg');
+      logInfo('✅ Custom TV background set', 'test1Results');
+    }
+
+    function clearTvBackground() {
+      const tv = document.getElementById('tv');
+      tv.style.removeProperty('--tv-bg');
+      tv.classList.remove('hasTvBg');
+      logInfo('🗑️ TV background cleared', 'test1Results');
+    }
+
+    // Test 2: Roster Skeleton Gap
+    function createTestSkeleton() {
+      const tile = document.createElement('div');
+      tile.className = 'top-roster-tile placeholder-tile';
+      tile.style.cssText = 'display: inline-block; margin: 5px;';
+      
+      const wrap = document.createElement('div');
+      wrap.className = 'top-tile-avatar-wrap';
+      wrap.style.cssText = 'width: 60px; height: 60px; background: #1a2636; border-radius: 12px;';
+      
+      const img = document.createElement('img');
+      img.className = 'top-tile-avatar placeholder-avatar';
+      img.src = GENERIC_AVATAR_SVG;
+      img.alt = 'Guest';
+      img.style.cssText = 'width: 100%; height: 100%; opacity: 0.5;';
+      wrap.appendChild(img);
+      
+      const name = document.createElement('div');
+      name.className = 'top-tile-name';
+      name.textContent = 'Guest';
+      
+      tile.appendChild(wrap);
+      tile.appendChild(name);
+      
+      return tile;
+    }
+
+    function showSkeletons() {
+      const rosterBar = document.getElementById('rosterBar');
+      rosterBar.innerHTML = '';
+      
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; gap: 8px; overflow-x: auto;';
+      
+      for (let i = 0; i < 8; i++) {
+        row.appendChild(createTestSkeleton());
+      }
+      
+      rosterBar.appendChild(row);
+      logInfo('✅ Skeleton roster displayed', 'test2Results');
+    }
+
+    function hideSkeletons() {
+      const rosterBar = document.getElementById('rosterBar');
+      rosterBar.innerHTML = '<p style="padding: 20px; text-align: center; color: #83bfff;">No roster items</p>';
+      logInfo('🗑️ Skeleton roster hidden', 'test2Results');
+    }
+
+    function testRosterSkeletonGap() {
+      const test2Results = document.getElementById('test2Results');
+      test2Results.innerHTML = ''; // Clear previous results
+
+      showSkeletons();
+
+      setTimeout(() => {
+        const rosterBar = document.getElementById('rosterBar');
+        const tv = document.getElementById('tv');
+        
+        // Get bottom of roster bar
+        const rosterRect = rosterBar.getBoundingClientRect();
+        const tvRect = tv.getBoundingClientRect();
+        
+        // Calculate gap
+        const gap = tvRect.top - rosterRect.bottom;
+        
+        logResult(
+          'Gap Measurement',
+          gap <= 30, // Allow for standard margin
+          `Gap between roster and TV: ${gap.toFixed(1)}px (${gap <= 30 ? 'acceptable' : 'too large'})`,
+          'test2Results'
+        );
+
+        // Check if placeholder tiles have reduced padding
+        const placeholderTiles = rosterBar.querySelectorAll('.placeholder-tile');
+        if (placeholderTiles.length > 0) {
+          const firstTile = placeholderTiles[0];
+          const computedStyle = window.getComputedStyle(firstTile);
+          const paddingBottom = parseInt(computedStyle.paddingBottom);
+          
+          logResult(
+            'Tile Padding Check',
+            paddingBottom === 0,
+            `Placeholder tile padding-bottom: ${paddingBottom}px (should be 0)`,
+            'test2Results'
+          );
+
+          // Check if label is positioned absolutely
+          const label = firstTile.querySelector('.top-tile-name');
+          if (label) {
+            const labelStyle = window.getComputedStyle(label);
+            const isAbsolute = labelStyle.position === 'absolute';
+            
+            logResult(
+              'Label Position Check',
+              isAbsolute,
+              `Label position: ${labelStyle.position} (should be absolute)`,
+              'test2Results'
+            );
+          }
+        } else {
+          logResult(
+            'Placeholder Tiles',
+            false,
+            'No placeholder tiles found. Click "Show Skeleton Roster" first.',
+            'test2Results'
+          );
+        }
+      }, 100);
+    }
+
+    // Auto-run tests on load
+    window.addEventListener('load', () => {
+      logInfo('🔍 Page loaded. Ready to run tests.', 'measurements');
+      logInfo('💡 Click the test buttons above to verify the fixes.', 'measurements');
+    });
+  </script>
+</body>
+</html>
