@@ -101,11 +101,12 @@
     const voters = eligibleVoters();
     const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
     const hasVoted = g.__human_vote != null;
-    const useTwoStep = humanIsVoter && !hasVoted && global.LiveVoteChoiceCard && global.LiveVoteOverlay;
+    const hasTwoStepFlow = !!(global.LiveVoteChoiceCard && global.LiveVoteOverlay);
+    const useTwoStep = humanIsVoter && !hasVoted && hasTwoStepFlow;
 
     // If user has already voted via two-step flow, don't render old UI
     // This prevents the old voting buttons from appearing after rollout finishes
-    if (hasVoted && humanIsVoter && global.LiveVoteChoiceCard && global.LiveVoteOverlay) {
+    if (hasVoted && humanIsVoter && hasTwoStepFlow) {
       // User voted via two-step flow, panel should stay hidden
       if (panel) {
         panel.style.display = 'none';
