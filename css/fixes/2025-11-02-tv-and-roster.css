@@ -12,7 +12,12 @@
 .tv .tvViewport { position: relative; }
 .tv .tvViewport #tvOverlay { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 
-/* Theme-aware scrim for readable overlays (adjust as needed) */
+/* Theme-aware scrim for readable overlays */
+/* Gradient provides:
+   - Top: 30% dark overlay for header area
+   - Middle (40%): 15% overlay for main content visibility
+   - Bottom: 40% dark overlay for footer/control area
+   This ensures text and UI elements remain readable against any TV background */
 :root {
   --tv-scrim: linear-gradient(
     to bottom,
@@ -42,6 +47,7 @@
 
 /* Keep the "Guest" label inside the placeholder tile using absolute positioning */
 /* This prevents it from adding to the block height */
+/* 5px left/right matches tile padding, 8px bottom provides clearance */
 #rosterBar .placeholder-tile .top-tile-name {
   position: absolute;
   left: 5px; right: 5px; bottom: 8px;

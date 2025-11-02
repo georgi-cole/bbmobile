@@ -28,9 +28,21 @@
   document.addEventListener('DOMContentLoaded', apply);
   window.addEventListener('load', apply);
 
-  const tv = document.getElementById('tv');
-  if (tv) {
-    const obs = new MutationObserver(apply);
-    obs.observe(tv, { attributes: true, attributeFilter: ['style', 'class'] });
+  // Set up mutation observer after DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function setupObserver() {
+      const tv = document.getElementById('tv');
+      if (tv) {
+        const obs = new MutationObserver(apply);
+        obs.observe(tv, { attributes: true, attributeFilter: ['style', 'class'] });
+      }
+    }, { once: true });
+  } else {
+    // DOM already loaded
+    const tv = document.getElementById('tv');
+    if (tv) {
+      const obs = new MutationObserver(apply);
+      obs.observe(tv, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
   }
 })();
