@@ -1,0 +1,88 @@
+/* ============================================================================
+   TV SCREEN BACKDROP MODULE
+   
+   Purpose: Provides a single, controlled background image for the faux TV
+            screen container to eliminate duplicated/stacked background layers.
+   
+   Approach: Uses ::before pseudo-element for the background image and ::after
+             for vignette/scanline effects to prevent future duplication.
+   
+   Usage: Apply .tv-screen class to the TV container element.
+          Compatible with .hasTvBg and .hasDefaultBg classes for custom images.
+   ============================================================================ */
+
+:root {
+  --tv-surface: #0b121a;
+  --tv-border: rgba(255, 255, 255, 0.06);
+  --tv-highlight: rgba(255, 255, 255, 0.09);
+  --tv-bg-opacity: 0.18;
+  --tv-vignette-opacity: 0.35;
+}
+
+/* Light theme adjustments */
+@media (prefers-color-scheme: light) {
+  :root {
+    --tv-surface: #11151b;
+    --tv-bg-opacity: 0.14;
+    --tv-vignette-opacity: 0.28;
+  }
+}
+
+/* Background image layer - applied via ::before to maintain single source */
+/* Only applied when NOT using custom background (.hasTvBg) */
+.tv-screen:not(.hasTvBg):not(.hasDefaultBg)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  
+  /* Single reference to placeholder background */
+  background: url("/assets/videos/tvscreen.jpg") center/cover no-repeat;
+  
+  /* Keep subdued to maintain foreground readability */
+  opacity: var(--tv-bg-opacity);
+  filter: saturate(0.8) brightness(0.9) contrast(0.9);
+  
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* When default background is explicitly set via ui.tv-media.js */
+.tv-screen.hasDefaultBg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  
+  /* Use the --tv-bg variable set by ui.tv-media.js */
+  background: var(--tv-bg, url("/assets/videos/tvscreen.jpg")) center/cover no-repeat;
+  
+  /* Show default background more clearly (no overlay gradient) */
+  opacity: 0.22;
+  filter: saturate(0.85) brightness(0.95);
+  
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Vignette and scanline effects - applied via ::after for subtle theme blending */
+/* Only when NOT using custom images (those manage their own overlay) */
+.tv-screen:not(.hasTvBg)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  
+  /* Radial vignette + horizontal scanlines */
+  background: 
+    radial-gradient(80% 65% at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0, var(--tv-vignette-opacity)) 100%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 2px);
+  
+  mix-blend-mode: normal;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Ensure all child content renders above backdrop layers */
+.tv-screen > * {
+  position: relative;
+  z-index: 2;
+}
+
