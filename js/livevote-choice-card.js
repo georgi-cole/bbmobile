@@ -22,6 +22,12 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
   }
 
+  // Detect if device is mobile
+  function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768);
+  }
+
   // Create and show the Choice Card
   async function show(options = {}) {
     const {
@@ -42,17 +48,19 @@
       return null;
     }
 
-    // Center TV in viewport before locking scroll
-    // If scroll is already locked, temporarily unlock it
+    // Center TV in viewport before locking scroll (mobile-only)
     const tvElement = document.querySelector('#tv');
-    const wasLocked = document.body.dataset.scrollLocked === 'true';
-    if (wasLocked && global.unlockBodyScroll) {
-      global.unlockBodyScroll();
-    }
-    
-    // Wait for TV to be centered
-    if (global.centerTVInViewport) {
-      await global.centerTVInViewport(tvElement);
+    if (isMobileDevice() && tvElement) {
+      // If scroll is already locked, temporarily unlock it
+      const wasLocked = document.body.dataset.scrollLocked === 'true';
+      if (wasLocked && global.unlockBodyScroll) {
+        global.unlockBodyScroll();
+      }
+      
+      // Wait for TV to be centered
+      if (global.centerTVInViewport) {
+        await global.centerTVInViewport(tvElement);
+      }
     }
     
     // Now lock body scroll when choice card is shown

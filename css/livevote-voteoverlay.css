@@ -31,6 +31,47 @@
   letter-spacing: 0.03em;
   text-shadow: 0 2px 8px rgba(255, 217, 107, 0.3);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Timer badge */
+.lv-timer-badge {
+  display: inline-block;
+  background: rgba(0, 224, 204, 0.15);
+  border: 1px solid rgba(0, 224, 204, 0.4);
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+  font-weight: 600;
+  color: #00e0cc;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px rgba(0, 224, 204, 0.2);
+  transition: all 0.3s ease;
+}
+
+.lv-timer-badge.warning {
+  background: rgba(255, 107, 107, 0.15);
+  border-color: rgba(255, 107, 107, 0.5);
+  color: #ff6b6b;
+  box-shadow: 
+    0 2px 8px rgba(255, 107, 107, 0.3),
+    0 0 12px rgba(255, 107, 107, 0.2);
+  animation: pulse-warning 1s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 .lv-overlay__carousel {

@@ -32,6 +32,12 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
   }
 
+  // Detect if device is mobile
+  function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768);
+  }
+
   // Create and show the voting overlay
   async function show(options = {}) {
     const {
@@ -53,16 +59,18 @@
       return null;
     }
 
-    // Center TV in viewport before locking scroll
-    // If scroll is already locked, temporarily unlock it
-    const wasLocked = document.body.dataset.scrollLocked === 'true';
-    if (wasLocked && global.unlockBodyScroll) {
-      global.unlockBodyScroll();
-    }
-    
-    // Wait for TV to be centered
-    if (global.centerTVInViewport) {
-      await global.centerTVInViewport(targetContainer);
+    // Center TV in viewport before locking scroll (mobile-only)
+    if (isMobileDevice()) {
+      // If scroll is already locked, temporarily unlock it
+      const wasLocked = document.body.dataset.scrollLocked === 'true';
+      if (wasLocked && global.unlockBodyScroll) {
+        global.unlockBodyScroll();
+      }
+      
+      // Wait for TV to be centered
+      if (global.centerTVInViewport) {
+        await global.centerTVInViewport(targetContainer);
+      }
     }
     
     // Now lock body scroll when modal opens
@@ -92,6 +100,15 @@
     const header = document.createElement('div');
     header.className = 'lv-overlay__header';
     header.textContent = isTieBreak ? 'Break the tie.' : 'Cast your vote to evict.';
+    
+    // Timer badge (will be populated by countdown)
+    const timerBadge = document.createElement('div');
+    timerBadge.className = 'lv-timer-badge';
+    timerBadge.setAttribute('role', 'timer');
+    timerBadge.setAttribute('aria-live', 'polite');
+    timerBadge.style.display = 'none'; // Hidden until countdown starts
+    header.appendChild(timerBadge);
+    
     overlay.appendChild(header);
 
     // Carousel container
@@ -213,7 +230,141 @@
       setTimeout(() => firstNominee.focus(), 100);
     }
 
+    // Start 30-second countdown timer for human voters (mobile only)
+    if (isMobileDevice() && global.game?.humanId && !isTieBreak) {
+      startCountdownTimer(30);
+    }
+
     return overlay;
+  }
+
+  // Start countdown timer with badge display
+  function startCountdownTimer(seconds) {
+    if (!state.overlay) return;
+    
+    const g = global.game;
+    if (!g || !g.eviction) return;
+    
+    let timeLeft = seconds;
+    const timerBadge = state.overlay.querySelector('.lv-timer-badge');
+    
+    if (!timerBadge) return;
+    
+    // Show badge
+    timerBadge.style.display = 'inline-block';
+    
+    const updateTimer = () => {
+      if (!state.overlay || !timerBadge) {
+        clearCountdownTimer();
+        return;
+      }
+      
+      const minutes = Math.floor(timeLeft / 60);
+      const secs = timeLeft % 60;
+      const timeStr = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      timerBadge.textContent = timeStr;
+      
+      // Change color when time is running out
+      if (timeLeft <= 10) {
+        timerBadge.classList.add('warning');
+      }
+    };
+    
+    // Initial update
+    updateTimer();
+    
+    // Update every second
+    const intervalId = setInterval(() => {
+      timeLeft--;
+      
+      if (timeLeft <= 0) {
+        clearInterval(intervalId);
+        handleAutoVote();
+      } else {
+        updateTimer();
+      }
+    }, 1000);
+    
+    // Store interval ID for cleanup
+    if (g.eviction) {
+      g.eviction._countdownInterval = intervalId;
+    }
+  }
+  
+  // Handle auto-vote when timer expires
+  function handleAutoVote() {
+    const g = global.game;
+    if (!g || !g.eviction || g.__human_vote != null) {
+      return; // Already voted
+    }
+    
+    console.info('[VoteOverlay] Auto-voting: timer expired');
+    
+    // Compute auto-pick using affinity/threat logic
+    const nominees = state.nominees;
+    let autoPick;
+    
+    if (nominees.length === 2) {
+      // For 2 nominees: pick by lower affinity (less liked) with small tolerance
+      const [a, b] = nominees;
+      const you = global.getP?.(g.humanId);
+      if (you) {
+        const affA = you.affinity?.[a] || 0.5;
+        const affB = you.affinity?.[b] || 0.5;
+        const tolerance = 0.02;
+        
+        if (Math.abs(affA - affB) < tolerance) {
+          // Affinities are close, use threat
+          const threatA = global.getP?.(a)?.threat || 0;
+          const threatB = global.getP?.(b)?.threat || 0;
+          autoPick = threatA > threatB ? a : b;
+        } else {
+          // Pick the one with lower affinity
+          autoPick = affA < affB ? a : b;
+        }
+      } else {
+        autoPick = nominees[0];
+      }
+    } else {
+      // For >2 nominees: minimize (affinity - 0.06*threat)
+      const you = global.getP?.(g.humanId);
+      let bestScore = Infinity;
+      autoPick = nominees[0];
+      
+      for (const nid of nominees) {
+        const aff = you?.affinity?.[nid] || 0.5;
+        const threat = global.getP?.(nid)?.threat || 0;
+        const score = aff - (0.06 * threat);
+        
+        if (score < bestScore) {
+          bestScore = score;
+          autoPick = nid;
+        }
+      }
+    }
+    
+    // Hide overlay first
+    hide();
+    
+    // Submit the auto-vote using the stored callback
+    // This will call lockHumanVote and show the rollout overlay
+    if (state.onSubmit) {
+      state.onSubmit(autoPick);
+    }
+    
+    // Log the auto-vote
+    if (global.addLog) {
+      global.addLog(`Auto-voted to evict ${global.safeName(autoPick)} (timer expired).`, 'warn');
+    }
+  }
+  
+  // Clear countdown timer
+  function clearCountdownTimer() {
+    const g = global.game;
+    if (g?.eviction?._countdownInterval) {
+      clearInterval(g.eviction._countdownInterval);
+      g.eviction._countdownInterval = null;
+    }
   }
 
   // Navigate carousel (swipe or arrow)
@@ -327,6 +478,9 @@
     const selectedId = state.selectedNominee;
     const callback = state.onSubmit;
 
+    // Clear countdown timer before closing
+    clearCountdownTimer();
+
     // Close the overlay IMMEDIATELY before submitting
     // This ensures UI disappears before any re-rendering happens
     hide();
@@ -369,7 +523,10 @@
   }
   // Remove the overlay
   function hide() {
-    // Clear countdown timer using shared helper
+    // Clear countdown timer
+    clearCountdownTimer();
+    
+    // Clear countdown timer using shared helper (for compatibility)
     if (global.clearVoteCountdown) {
       global.clearVoteCountdown();
     }
