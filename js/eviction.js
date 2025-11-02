@@ -103,6 +103,16 @@
     const hasVoted = g.__human_vote != null;
     const useTwoStep = humanIsVoter && !hasVoted && global.LiveVoteChoiceCard && global.LiveVoteOverlay;
 
+    // If user has already voted via two-step flow, don't render old UI
+    // This prevents the old voting buttons from appearing after rollout finishes
+    if (hasVoted && humanIsVoter && global.LiveVoteChoiceCard && global.LiveVoteOverlay) {
+      // User voted via two-step flow, panel should stay hidden
+      if (panel) {
+        panel.style.display = 'none';
+      }
+      return;
+    }
+
     if (useTwoStep) {
       // Use two-step mobile voting flow
       // Show Choice Card first
