@@ -1,0 +1,109 @@
+/**
+ * mobile-scroll-fix.css
+ * 
+ * DEBUG ASSET - Temporary mobile scrolling fix for testing
+ * Can be safely removed after issue is resolved
+ * 
+ * Loaded conditionally via ?scroll_debug=1 query parameter
+ * 
+ * Purpose:
+ * - Enable native touch scrolling on panels
+ * - Add safe-area padding for iOS notch/toolbar
+ * - Provide debug helpers to identify scroll blockers
+ */
+
+/* Allow native scrolling on html/body */
+html.scroll-debug-active,
+body.scroll-debug-active {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Enable scrolling on common panel/viewport containers */
+.scroll-debug-active .scrollable,
+.scroll-debug-active .panel--scrollable,
+.scroll-debug-active .vote-panel,
+.scroll-debug-active .game-panel,
+.scroll-debug-active #panel {
+  max-height: calc(100vh - 120px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 20px)) !important;
+}
+
+/* Fix for TV viewport and overlays during live vote */
+.scroll-debug-active .tvViewport,
+.scroll-debug-active .lv-overlay,
+.scroll-debug-active .lv2-overlay {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+}
+
+/* Ensure fixed bottom elements respect safe area */
+.scroll-debug-active .app-fixed-bottom,
+.scroll-debug-active .bottom-toolbar,
+.scroll-debug-active .lv-overlay__dock {
+  pointer-events: auto !important;
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 20px)) !important;
+  position: sticky !important;
+  bottom: 0 !important;
+}
+
+/* Debug helper: disable pointer-events on potential blockers */
+.scroll-debug-active .touch-blocker {
+  pointer-events: none !important;
+  opacity: 0.5 !important;
+  outline: 2px dashed red !important;
+}
+
+/* Debug visual indicator - top banner */
+.scroll-debug-active::before {
+  content: "SCROLL DEBUG MODE ACTIVE";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #ff6b6b;
+  color: white;
+  text-align: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  z-index: 999999;
+  pointer-events: none;
+  letter-spacing: 0.5px;
+}
+
+/* Ensure cards and buttons remain tappable */
+.scroll-debug-active .lv-choice-card,
+.scroll-debug-active .lv-overlay__nominee,
+.scroll-debug-active .lv-overlay__evict-btn,
+.scroll-debug-active button {
+  pointer-events: auto !important;
+}
+
+/* Safe area inset padding for wrapper */
+.scroll-debug-active .wrap {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile viewport height fix */
+.scroll-debug-active .card {
+  max-height: none !important;
+}
+
+/* Prevent body lock during overlays */
+.scroll-debug-active.modal-open,
+.scroll-debug-active.overlay-open {
+  overflow: auto !important;
+}
+
+/* Debug outline for elements with touch handlers */
+.scroll-debug-active [ontouchstart],
+.scroll-debug-active [ontouchmove],
+.scroll-debug-active [ontouchend] {
+  outline: 1px solid rgba(255, 200, 0, 0.5) !important;
+}

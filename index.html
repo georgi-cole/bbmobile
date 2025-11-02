@@ -24,6 +24,26 @@
 <link rel="stylesheet" href="css/livevote-voteoverlay.css">
 <link rel="stylesheet" href="css/livevote-rollout.css">
 
+<!-- DEBUG: Mobile Scroll Fix (conditionally loaded via ?scroll_debug=1) -->
+<!-- These assets can be safely removed after testing/debugging is complete -->
+<script>
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('scroll_debug') === '1') {
+      console.info('[Debug] Loading mobile scroll debug assets...');
+      
+      // Load debug CSS
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'css/mobile-scroll-fix.css';
+      document.head.appendChild(link);
+      
+      // Flag for JS to detect
+      window.SCROLL_DEBUG_ENABLED = true;
+    }
+  })();
+</script>
+
 <!-- Global shim for resilience against stray global references -->
 <script>window.global = window;</script>
 
@@ -705,6 +725,19 @@
   // Expose updateTimerHeader globally so it can be called from ui.hud-and-router.js
   window.updateTimerHeader = updateTimerHeader;
 })();
+</script>
+
+<!-- DEBUG: Mobile Scroll Debug JS (conditionally loaded via ?scroll_debug=1) -->
+<!-- This asset can be safely removed after testing/debugging is complete -->
+<script>
+  (function() {
+    if (window.SCROLL_DEBUG_ENABLED) {
+      console.info('[Debug] Loading mobile scroll debug JavaScript...');
+      const script = document.createElement('script');
+      script.src = 'js/debug/mobile-scroll-debug.js';
+      document.body.appendChild(script);
+    }
+  })();
 </script>
 
 </body>
