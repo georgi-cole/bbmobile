@@ -394,13 +394,13 @@
     
     let timeLeft = seconds;
     
-    // Find the overlay header to display countdown
+    // Find the timer badge to display countdown
     const updateCountdown = () => {
-      const overlayHeader = document.querySelector('.lv-overlay .lv-overlay__header');
-      if(overlayHeader && timeLeft > 0){
+      const timerBadge = document.querySelector('.lv-overlay .lv-timer-badge');
+      if(timerBadge && timeLeft > 0){
         // Use shared time formatting helper
         const timeStr = global.formatCountdownTime(timeLeft);
-        overlayHeader.textContent = `Cast your vote to evict. ${timeStr}`;
+        timerBadge.textContent = timeStr;
       }
     };
     
