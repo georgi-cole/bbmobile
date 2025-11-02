@@ -343,11 +343,18 @@
       }
     }
     
+    // Hide overlay first
+    hide();
+    
     // Submit the auto-vote using the stored callback
+    // This will call lockHumanVote and show the rollout overlay
     if (state.onSubmit) {
-      hide(); // Close overlay first
       state.onSubmit(autoPick);
-      global.addLog?.(`Auto-voted to evict ${global.safeName(autoPick)} (timer expired).`, 'warn');
+    }
+    
+    // Log the auto-vote
+    if (global.addLog) {
+      global.addLog(`Auto-voted to evict ${global.safeName(autoPick)} (timer expired).`, 'warn');
     }
   }
   
