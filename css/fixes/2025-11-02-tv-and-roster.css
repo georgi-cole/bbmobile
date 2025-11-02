@@ -32,14 +32,37 @@
 }
 
 /* 2) Remove transient "gap" for skeleton roster */
+/* Target the placeholder tiles specifically */
+/* Reduce bottom padding since label will be positioned absolutely inside the tile */
+#rosterBar .placeholder-tile,
+#rosterBar .top-roster-tile.placeholder-tile {
+  padding-bottom: 0 !important;
+  position: relative;
+}
+
+/* Keep the "Guest" label inside the placeholder tile using absolute positioning */
+/* This prevents it from adding to the block height */
+#rosterBar .placeholder-tile .top-tile-name {
+  position: absolute;
+  left: 5px; right: 5px; bottom: 8px;
+  margin: 0 !important;
+  text-align: center;
+  font-size: 0.56rem;
+  line-height: 1.1;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Also handle any skeleton class variants that might exist */
 #rosterBar .rc-skeleton,
 #rosterBar .rp-skeleton,
 #rosterBar [data-skeleton] {
   margin-bottom: 0 !important;
   padding-bottom: 0 !important;
+  position: relative;
 }
 
-/* Keep the "Guest" label inside the card so it doesn't increase block height */
 #rosterBar .rc-skeleton .rc-card,
 #rosterBar .rp-skeleton .rp-card,
 #rosterBar [data-skeleton] .rp-card,
@@ -58,4 +81,5 @@
   font-size: 12px;
   line-height: 1.1;
   opacity: 0.9;
+  z-index: 2;
 }
