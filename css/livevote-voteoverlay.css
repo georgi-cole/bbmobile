@@ -11,9 +11,9 @@
   z-index: 2147483640;
   display: flex;
   flex-direction: column;
+  height: 100vh; /* Fallback for older browsers */
   min-height: 100dvh; /* Dynamic viewport height */
   min-height: 100svh; /* Small viewport height (stable, preferred) */
-  height: 100vh; /* Fallback for older browsers */
   overscroll-behavior: contain;
   
   /* Safe area support */

@@ -160,7 +160,7 @@
   function unlockBodyScroll() {
     const body = document.body;
     const html = document.documentElement;
-    if (!body) return;
+    if (!body || !html) return;
     
     // Restore scroll position if saved
     const scrollY = parseInt(body.dataset.scrollY || '0', 10);
