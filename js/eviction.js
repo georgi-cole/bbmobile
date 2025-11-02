@@ -119,6 +119,16 @@
                 nominees: nominees,
                 isTieBreak: false,
                 onSubmit: (selectedId) => {
+                  // Clear countdown timer if running
+                  if (g.eviction._countdownInterval) {
+                    clearInterval(g.eviction._countdownInterval);
+                    g.eviction._countdownInterval = null;
+                  }
+                  if (g.eviction._countdownTimeout) {
+                    clearTimeout(g.eviction._countdownTimeout);
+                    g.eviction._countdownTimeout = null;
+                  }
+                  
                   // Close all vote UI immediately
                   if (global.closeAllVoteUI) {
                     global.closeAllVoteUI();
@@ -148,6 +158,9 @@
                     }
                   }
                 }
+              }).then(() => {
+                // Start 30-second countdown timer after overlay is shown
+                startVoteCountdown(30, nominees, voters);
               });
             }
           }
@@ -377,6 +390,89 @@
       const handler=()=>{ window.removeEventListener('bb:livevote:humanVoted', handler); resolve(); };
       window.addEventListener('bb:livevote:humanVoted', handler, { once:true });
     });
+  }
+
+  /* ----- 30-Second Auto-Vote Countdown ----- */
+  function startVoteCountdown(seconds, nominees, voters){
+    const g = global.game;
+    if(!g || !g.eviction) return;
+    
+    let timeLeft = seconds;
+    
+    // Find the overlay header to display countdown
+    const updateCountdown = () => {
+      const overlayHeader = document.querySelector('.lv-overlay .lv-overlay__header');
+      if(overlayHeader && timeLeft > 0){
+        const minutes = Math.floor(timeLeft / 60);
+        const secs = timeLeft % 60;
+        const timeStr = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        overlayHeader.textContent = `Cast your vote to evict. ${timeStr}`;
+      }
+    };
+    
+    // Update countdown immediately
+    updateCountdown();
+    
+    // Set up interval to update every second
+    g.eviction._countdownInterval = setInterval(() => {
+      timeLeft--;
+      
+      if(timeLeft <= 0){
+        clearInterval(g.eviction._countdownInterval);
+        g.eviction._countdownInterval = null;
+      } else {
+        updateCountdown();
+      }
+    }, 1000);
+    
+    // Set up timeout for auto-vote
+    g.eviction._countdownTimeout = setTimeout(() => {
+      // Check if human has already voted
+      if(g.__human_vote != null) {
+        return;
+      }
+      
+      console.info('[Eviction] Auto-voting: time expired');
+      
+      // Compute auto-pick based on affinity/threat logic
+      let autoPick;
+      if(nominees.length === 2){
+        autoPick = voteFor2(g.humanId, nominees);
+      } else {
+        autoPick = voteForMulti(g.humanId, nominees);
+      }
+      
+      // Close all vote UI
+      if(global.closeAllVoteUI){
+        global.closeAllVoteUI();
+      }
+      
+      // Lock the auto-vote
+      lockHumanVote(autoPick);
+      
+      // Show rollout overlay to display remaining votes
+      if(global.LiveVoteRollout){
+        const expectedVotes = voters.length;
+        global.LiveVoteRollout.show({
+          expectedVotes: expectedVotes,
+          nominees: nominees
+        });
+        
+        // Mark user auto-vote as first vote in rollout
+        const userPlayer = global.getP?.(g.humanId);
+        const targetPlayer = global.getP?.(autoPick);
+        if(userPlayer && targetPlayer){
+          global.LiveVoteRollout.addVote({
+            voterId: g.humanId,
+            voterName: userPlayer.name,
+            targetId: autoPick,
+            targetName: targetPlayer.name
+          });
+        }
+      }
+      
+      global.addLog?.(`Auto-voted to evict ${global.safeName(autoPick)} (time expired).`, 'warn');
+    }, seconds * 1000);
   }
 
   // Helper to show diary room card with avatars (Issue #5)

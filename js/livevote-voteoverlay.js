@@ -33,7 +33,7 @@
   }
 
   // Create and show the voting overlay
-  function show(options = {}) {
+  async function show(options = {}) {
     const {
       nominees = [],
       onSubmit = null,
@@ -53,7 +53,19 @@
       return null;
     }
 
-    // Lock body scroll when modal opens
+    // Center TV in viewport before locking scroll
+    // If scroll is already locked, temporarily unlock it
+    const wasLocked = document.body.dataset.scrollLocked === 'true';
+    if (wasLocked && global.unlockBodyScroll) {
+      global.unlockBodyScroll();
+    }
+    
+    // Wait for TV to be centered
+    if (global.centerTVInViewport) {
+      await global.centerTVInViewport(targetContainer);
+    }
+    
+    // Now lock body scroll when modal opens
     lockBodyScroll();
 
     // Initialize state
@@ -357,6 +369,16 @@
   }
   // Remove the overlay
   function hide() {
+    // Clear countdown timer if it exists
+    if (global.game?.eviction?._countdownInterval) {
+      clearInterval(global.game.eviction._countdownInterval);
+      global.game.eviction._countdownInterval = null;
+    }
+    if (global.game?.eviction?._countdownTimeout) {
+      clearTimeout(global.game.eviction._countdownTimeout);
+      global.game.eviction._countdownTimeout = null;
+    }
+    
     if (state.overlay) {
       state.overlay.remove();
       state.overlay = null;

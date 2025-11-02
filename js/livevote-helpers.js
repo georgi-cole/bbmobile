@@ -6,6 +6,55 @@
   'use strict';
 
   /**
+   * Centers the TV area in the viewport if it's not fully visible
+   * Waits for scroll animation to complete before resolving
+   * @param {HTMLElement|null} container - Optional container element (defaults to #tv)
+   * @returns {Promise<void>}
+   */
+  function centerTVInViewport(container = null) {
+    return new Promise((resolve) => {
+      const targetContainer = container || document.querySelector('#tv');
+      if (!targetContainer) {
+        console.warn('[livevote-helpers] No container found to center');
+        resolve();
+        return;
+      }
+
+      const rect = targetContainer.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      
+      // Consider safe areas (top nav bar, bottom safe area on mobile)
+      const safeTop = 60; // Approximate height of top bar
+      const safeBottom = viewportHeight - 20; // Small bottom margin
+      
+      // Check if TV is fully visible
+      const isFullyVisible = rect.top >= safeTop && rect.bottom <= safeBottom;
+      
+      if (!isFullyVisible) {
+        console.debug('[livevote-helpers] TV not fully visible, centering...');
+        
+        // Scroll to center the TV
+        targetContainer.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        
+        // Wait for scroll animation to complete
+        // Use requestAnimationFrame + setTimeout for smooth wait
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            console.debug('[livevote-helpers] TV centered');
+            resolve();
+          }, 250);
+        });
+      } else {
+        console.debug('[livevote-helpers] TV already visible');
+        resolve();
+      }
+    });
+  }
+
+  /**
    * Forcefully unlock body scroll regardless of current state
    * This is idempotent and safe to call multiple times
    */
@@ -47,6 +96,18 @@
   function closeAllVoteUI() {
     console.debug('[livevote-helpers] closeAllVoteUI called');
 
+    // Clear countdown timer if it exists
+    if (global.game?.eviction?._countdownInterval) {
+      clearInterval(global.game.eviction._countdownInterval);
+      global.game.eviction._countdownInterval = null;
+      console.debug('[livevote-helpers] Countdown interval cleared');
+    }
+    if (global.game?.eviction?._countdownTimeout) {
+      clearTimeout(global.game.eviction._countdownTimeout);
+      global.game.eviction._countdownTimeout = null;
+      console.debug('[livevote-helpers] Countdown timeout cleared');
+    }
+
     // Close Choice Card if present
     try {
       const choiceCard = document.querySelector('.lv-choice-card');
@@ -85,6 +146,7 @@
   }
 
   // Export to global scope
+  global.centerTVInViewport = centerTVInViewport;
   global.unlockBodyScroll = unlockBodyScroll;
   global.closeAllVoteUI = closeAllVoteUI;
 
