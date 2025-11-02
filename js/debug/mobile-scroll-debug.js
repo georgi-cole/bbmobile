@@ -27,8 +27,8 @@
   function addPassiveTouchListener() {
     if (state.passiveListenerAdded) return;
 
-    const gameRoot = document.querySelector('.game-root') || 
-                     document.querySelector('.wrap') || 
+    const gameRoot = document.querySelector('.game-root') ||
+                     document.querySelector('.wrap') ||
                      document.body;
 
     if (!gameRoot) {
@@ -231,6 +231,8 @@
     }, 1000);
 
     // Re-scan when new elements are added (e.g., modals, overlays)
+    // Use debouncing to avoid performance issues with frequent DOM changes
+    let rescanTimeout;
     const observer = new MutationObserver((mutations) => {
       let shouldRescan = false;
       mutations.forEach(mutation => {
@@ -240,8 +242,12 @@
       });
       
       if (shouldRescan) {
-        console.log('[Mobile Scroll Debug] DOM changed, re-scanning...');
-        setTimeout(runDiagnostics, 500);
+        // Debounce: Clear previous timeout and set new one
+        clearTimeout(rescanTimeout);
+        rescanTimeout = setTimeout(() => {
+          console.log('[Mobile Scroll Debug] DOM changed, re-scanning...');
+          runDiagnostics();
+        }, 1000); // Wait 1s after last DOM change
       }
     });
 
