@@ -154,8 +154,8 @@
                   }
                 }
               }).then(() => {
-                // Timer countdown is now handled directly by LiveVoteOverlay
-                // for mobile devices - no need to start it here
+                // Start 30-second countdown timer after overlay is shown
+                startVoteCountdown(30, nominees, voters);
               });
             }
           }
