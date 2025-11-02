@@ -60,7 +60,9 @@
 /* Remove extra spacing on skeleton placeholders */
 #rosterBar .rc-skeleton,
 #rosterBar .rp-skeleton,
-#rosterBar [data-skeleton] {
+#rosterBar [data-skeleton],
+#rosterBar .placeholder-tile,
+#bbRosterPlaceholderOverlay .placeholder-tile {
   margin-bottom: 0 !important;
   padding-bottom: 0 !important;
 }
@@ -69,14 +71,18 @@
 #rosterBar .rc-skeleton .rc-card,
 #rosterBar .rp-skeleton .rp-card,
 #rosterBar [data-skeleton] .rp-card,
-#rosterBar [data-skeleton] .rc-card {
+#rosterBar [data-skeleton] .rc-card,
+#rosterBar .placeholder-tile,
+#bbRosterPlaceholderOverlay .placeholder-tile {
   position: relative;
 }
 
 #rosterBar .rc-skeleton .rc-label,
 #rosterBar .rp-skeleton .rp-label,
 #rosterBar [data-skeleton] .rc-label,
-#rosterBar [data-skeleton] .rp-label {
+#rosterBar [data-skeleton] .rp-label,
+#rosterBar .placeholder-tile .top-tile-name,
+#bbRosterPlaceholderOverlay .placeholder-tile .top-tile-name {
   position: absolute;
   left: 8px;
   right: 8px;
