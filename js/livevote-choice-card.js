@@ -140,31 +140,43 @@
   }
 
   // Lock body scroll (prevent background scrolling on mobile)
+  // iOS-safe: uses overflow:hidden instead of position:fixed
   function lockBodyScroll() {
     const body = document.body;
+    const html = document.documentElement;
     if (!body) return;
     
     // Store current scroll position
     const scrollY = window.scrollY;
-    body.style.position = 'fixed';
-    body.style.top = `-${scrollY}px`;
-    body.style.width = '100%';
-    body.dataset.scrollLocked = 'true';
     body.dataset.scrollY = String(scrollY);
+    body.dataset.scrollLocked = 'true';
+    
+    // Use overflow-based lock (iOS-safe)
+    body.style.overflow = 'hidden';
+    html.style.overscrollBehavior = 'contain';
   }
 
   // Unlock body scroll
   function unlockBodyScroll() {
     const body = document.body;
-    if (!body || body.dataset.scrollLocked !== 'true') return;
+    const html = document.documentElement;
+    if (!body) return;
     
+    // Restore scroll position if saved
     const scrollY = parseInt(body.dataset.scrollY || '0', 10);
-    body.style.position = '';
-    body.style.top = '';
-    body.style.width = '';
+    
+    // Clear overflow lock
+    body.style.overflow = '';
+    html.style.overscrollBehavior = '';
+    
+    // Clear dataset flags
     delete body.dataset.scrollLocked;
     delete body.dataset.scrollY;
-    window.scrollTo(0, scrollY);
+    
+    // Restore scroll position
+    if (scrollY > 0) {
+      window.scrollTo(0, scrollY);
+    }
   }
 
   // Export public API

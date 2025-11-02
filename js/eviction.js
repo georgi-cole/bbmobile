@@ -392,6 +392,11 @@
     const g = global.game;
     if(!g || !g.eviction) return;
     
+    // Clear any existing countdown first (idempotent)
+    if(global.clearVoteCountdown){
+      global.clearVoteCountdown();
+    }
+    
     let timeLeft = seconds;
     
     // Find the timer badge to display countdown
