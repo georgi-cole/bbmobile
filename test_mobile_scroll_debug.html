@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Scroll Debug Test</title>
+  <link rel="stylesheet" href="css/mobile-scroll-fix.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #0a0f16;
+      color: #e8f4ff;
+    }
+    
+    .test-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: rgba(20, 35, 55, 0.8);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    
+    h1 {
+      color: #ffd96b;
+      margin-top: 0;
+    }
+    
+    h2 {
+      color: #8fb3d3;
+      margin-top: 24px;
+      font-size: 1.2rem;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+      background: rgba(0, 224, 204, 0.1);
+      border: 1px solid rgba(0, 224, 204, 0.3);
+    }
+    
+    .status.error {
+      background: rgba(255, 107, 107, 0.1);
+      border-color: rgba(255, 107, 107, 0.3);
+    }
+    
+    button {
+      background: linear-gradient(135deg, #4d8dff, #79d7ff);
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 8px 8px 8px 0;
+    }
+    
+    button:active {
+      transform: scale(0.95);
+    }
+    
+    .tall-content {
+      height: 2000px;
+      background: linear-gradient(to bottom, 
+        rgba(77, 141, 255, 0.1) 0%, 
+        rgba(121, 215, 255, 0.1) 50%,
+        rgba(255, 107, 107, 0.1) 100%);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+      position: relative;
+    }
+    
+    .marker {
+      position: absolute;
+      left: 20px;
+      background: rgba(255, 217, 107, 0.8);
+      color: #0a0f16;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    
+    code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>📱 Mobile Scroll Debug Test</h1>
+    
+    <div id="debugStatus" class="status">
+      Initializing...
+    </div>
+    
+    <h2>Test Actions</h2>
+    <button onclick="testToggle()">Toggle Debug Mode</button>
+    <button onclick="testScan()">Scan DOM</button>
+    <button onclick="testScroll()">Scroll to Bottom</button>
+    <button onclick="showConsoleHelp()">Console Help</button>
+    
+    <h2>Test Instructions</h2>
+    <ol>
+      <li>Open this page with <code>?scroll_debug=1</code> parameter</li>
+      <li>You should see a red banner at the top</li>
+      <li>Try scrolling this page (should work)</li>
+      <li>Toggle debug mode on/off</li>
+      <li>Check browser console for debug logs</li>
+      <li>Try on mobile device for best results</li>
+    </ol>
+    
+    <h2>Expected Behavior</h2>
+    <ul>
+      <li>✅ Red "SCROLL DEBUG MODE ACTIVE" banner visible</li>
+      <li>✅ Page is scrollable</li>
+      <li>✅ Console shows debug logs for touch events</li>
+      <li>✅ <code>window.MobileScrollDebug</code> API available</li>
+      <li>✅ Ctrl+Shift+S toggles debug mode</li>
+    </ul>
+    
+    <h2>Console API</h2>
+    <pre><code>// Check status
+MobileScrollDebug.isActive();
+
+// Toggle debug mode
+MobileScrollDebug.toggle();
+
+// Scan DOM for handlers
+MobileScrollDebug.scan();
+
+// Get detected handlers
+MobileScrollDebug.getHandlers();</code></pre>
+  </div>
+  
+  <div class="test-container tall-content">
+    <div class="marker" style="top: 20px;">Top of tall content</div>
+    <div class="marker" style="top: 50%;">Middle of tall content</div>
+    <div class="marker" style="bottom: 20px;">Bottom of tall content - If you can see this, scrolling works! ✅</div>
+  </div>
+
+  <script src="js/debug/mobile-scroll-debug.js"></script>
+  <script>
+    function updateStatus() {
+      const statusEl = document.getElementById('debugStatus');
+      const isLoaded = typeof MobileScrollDebug !== 'undefined';
+      const isActive = isLoaded && MobileScrollDebug.isActive();
+      
+      if (!isLoaded) {
+        statusEl.className = 'status error';
+        statusEl.innerHTML = '❌ Debug script not loaded. Add <code>?scroll_debug=1</code> to URL.';
+      } else if (isActive) {
+        statusEl.className = 'status';
+        statusEl.innerHTML = '✅ Debug mode ACTIVE. Scroll debug CSS applied.';
+      } else {
+        statusEl.className = 'status';
+        statusEl.innerHTML = '⚠️ Debug script loaded but INACTIVE. Click "Toggle Debug Mode" to enable.';
+      }
+    }
+    
+    function testToggle() {
+      if (typeof MobileScrollDebug !== 'undefined') {
+        MobileScrollDebug.toggle();
+        updateStatus();
+        console.log('[Test] Toggled debug mode. Active:', MobileScrollDebug.isActive());
+      } else {
+        alert('Debug script not loaded. Add ?scroll_debug=1 to URL.');
+      }
+    }
+    
+    function testScan() {
+      if (typeof MobileScrollDebug !== 'undefined') {
+        MobileScrollDebug.scan();
+        const handlers = MobileScrollDebug.getHandlers();
+        console.log('[Test] Scan complete. Found', handlers.length, 'handlers:', handlers);
+        alert('Scan complete. Found ' + handlers.length + ' handlers. Check console.');
+      } else {
+        alert('Debug script not loaded. Add ?scroll_debug=1 to URL.');
+      }
+    }
+    
+    function testScroll() {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+    
+    function showConsoleHelp() {
+      console.log('%c Mobile Scroll Debug API', 'font-size: 16px; font-weight: bold; color: #ffd96b');
+      console.log('MobileScrollDebug.isActive()  - Check if debug mode is active');
+      console.log('MobileScrollDebug.toggle()    - Toggle debug mode on/off');
+      console.log('MobileScrollDebug.enable()    - Enable debug mode');
+      console.log('MobileScrollDebug.disable()   - Disable debug mode');
+      console.log('MobileScrollDebug.scan()      - Re-scan DOM for handlers');
+      console.log('MobileScrollDebug.getHandlers() - Get list of detected handlers');
+      
+      if (typeof MobileScrollDebug !== 'undefined') {
+        console.log('\n✅ API is available. Current status:', MobileScrollDebug.isActive() ? 'ACTIVE' : 'INACTIVE');
+      } else {
+        console.log('\n❌ API not loaded. Add ?scroll_debug=1 to URL and reload.');
+      }
+    }
+    
+    // Update status on load and periodically
+    setTimeout(updateStatus, 500);
+    setInterval(updateStatus, 3000);
+    
+    // Show initial help
+    setTimeout(() => {
+      console.log('[Test Page] Mobile Scroll Debug test page loaded');
+      console.log('[Test Page] Add ?scroll_debug=1 to URL to load debug assets');
+      if (typeof MobileScrollDebug !== 'undefined') {
+        console.log('[Test Page] ✅ Debug script loaded successfully');
+      }
+    }, 100);
+  </script>
+</body>
+</html>
