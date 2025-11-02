@@ -11,8 +11,9 @@
   z-index: 2147483640;
   display: flex;
   flex-direction: column;
-  height: 100svh;
   height: 100vh; /* Fallback for older browsers */
+  min-height: 100dvh; /* Dynamic viewport height */
+  min-height: 100svh; /* Small viewport height (stable, preferred) */
   overscroll-behavior: contain;
   
   /* Safe area support */
@@ -45,12 +46,21 @@
   color: #ff6b6b;
   font-family: 'Courier New', monospace;
   letter-spacing: 0.05em;
+  min-width: 60px;
+  text-align: center;
 }
 
 /* Hide timer badge on desktop/wider viewports */
 @media (min-width: 820px) {
   .lv-timer-badge {
     display: none;
+  }
+}
+
+/* Ensure timer badge is visible on mobile */
+@media (max-width: 819px) {
+  .lv-timer-badge {
+    display: inline-block;
   }
 }
 
@@ -193,7 +203,7 @@
 /* Action dock at bottom */
 .lv-overlay__dock {
   padding: 20px 16px;
-  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
   text-align: center;
   flex-shrink: 0;
   position: sticky;
@@ -314,7 +324,7 @@
   
   .lv-overlay__dock {
     padding: 16px 12px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
   
   .lv-overlay__evict-btn {
