@@ -7498,18 +7498,14 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
+  max-height: 78% !important;        /* respect TV safe area */
+  padding-top: 22px;                 /* avoids avatar overlap with top radius */
 }
 
 /* Never clip TV-contained cards; allow internal scroll on touch */
 #tvOverlay .revealCard{
   overflow: auto !important;         /* avoid hover-only scroll pattern */
   -webkit-overflow-scrolling: touch;
-}
-
-/* Keep the TV height cap but provide breathing room for top avatars */
-#tvOverlay .revealCard.diaryRoomCard{
-  max-height: 78% !important;        /* respect TV safe area */
-  padding-top: 22px;                 /* avoids avatar overlap with top radius */
 }
 
 /* If an avatar row is present, keep it off the top edge */
