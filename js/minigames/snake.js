@@ -4,6 +4,169 @@
 (function(g){
   'use strict';
 
+  function injectStyles() {
+    // Check if styles already exist in DOM
+    if(document.querySelector('style[data-snake-nokia-styles]')) return;
+
+    const styleTag = document.createElement('style');
+    styleTag.setAttribute('data-snake-nokia-styles', 'true');
+    styleTag.textContent = `
+      .snake-nokia-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+      }
+
+      .snake-nokia-title {
+        margin: 0;
+        font-size: 1.3rem;
+        color: #e3ecf5;
+        font-family: 'Courier New', monospace;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .snake-nokia-instructions {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #95a9c0;
+        text-align: center;
+        font-family: 'Courier New', monospace;
+      }
+
+      .snake-nokia-canvas-container {
+        position: relative;
+        background: #2a2a2a;
+        padding: 16px;
+        border-radius: 8px;
+        box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7),
+                    0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .snake-nokia-canvas {
+        display: block;
+        background: #b7d378;
+        border: 2px solid #1a1a1a;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      .snake-nokia-status {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        font-weight: bold;
+        color: #1a1a1a;
+        background: rgba(183, 211, 120, 0.85);
+        padding: 2px 6px;
+        border-radius: 2px;
+        letter-spacing: 1px;
+      }
+
+      .snake-nokia-scanlines {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0.05) 0px,
+          rgba(0, 0, 0, 0.05) 1px,
+          transparent 1px,
+          transparent 2px
+        );
+      }
+
+      .snake-nokia-dpad {
+        display: grid;
+        grid-template-columns: repeat(3, 70px);
+        grid-template-rows: repeat(3, 70px);
+        gap: 4px;
+        margin-top: 10px;
+      }
+
+      .snake-nokia-dpad-btn {
+        position: relative;
+        background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+        border: 2px solid #4a4a4a;
+        border-radius: 8px;
+        cursor: pointer;
+        padding: 0;
+        transition: all 0.1s ease;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3),
+                    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+      }
+
+      .snake-nokia-dpad-btn:hover {
+        background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
+        border-color: #5a5a5a;
+      }
+
+      .snake-nokia-dpad-btn:active,
+      .snake-nokia-dpad-pressed {
+        background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5),
+                    inset 0 2px 4px rgba(0, 0, 0, 0.4);
+        transform: translateY(2px);
+      }
+
+      .snake-nokia-dpad-btn::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 0;
+        height: 0;
+        border-style: solid;
+      }
+
+      .snake-nokia-dpad-up::after {
+        border-width: 0 12px 16px 12px;
+        border-color: transparent transparent #b7d378 transparent;
+      }
+
+      .snake-nokia-dpad-down::after {
+        border-width: 16px 12px 0 12px;
+        border-color: #b7d378 transparent transparent transparent;
+      }
+
+      .snake-nokia-dpad-left::after {
+        border-width: 12px 16px 12px 0;
+        border-color: transparent #b7d378 transparent transparent;
+      }
+
+      .snake-nokia-dpad-right::after {
+        border-width: 12px 0 12px 16px;
+        border-color: transparent transparent transparent #b7d378;
+      }
+
+      .snake-nokia-dpad-center {
+        background: radial-gradient(circle, #1a1a1a 0%, #2a2a2a 100%);
+        border: 2px solid #3a3a3a;
+        border-radius: 50%;
+      }
+
+      @media (max-width: 480px) {
+        .snake-nokia-dpad {
+          grid-template-columns: repeat(3, 60px);
+          grid-template-rows: repeat(3, 60px);
+        }
+
+        .snake-nokia-canvas-container {
+          padding: 12px;
+        }
+      }
+    `;
+    document.head.appendChild(styleTag);
+  }
+
   /**
    * Snake minigame
    * Control snake to eat food and grow
@@ -25,20 +188,23 @@
     
     const portalMode = variant === 'portal';
     
+    // Inject styles
+    injectStyles();
+    
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;';
+    wrapper.className = 'snake-nokia-wrapper';
     
     const title = document.createElement('h3');
     title.textContent = portalMode ? 'Snake (Portal Mode)' : 'Snake';
-    title.style.cssText = 'margin:0;font-size:1.3rem;color:#e3ecf5;';
+    title.className = 'snake-nokia-title';
     
     const instructions = document.createElement('p');
     instructions.textContent = portalMode ? 'Eat food, grow, edges wrap around!' : 'Eat food, avoid walls and yourself!';
-    instructions.style.cssText = 'margin:0;font-size:0.9rem;color:#95a9c0;text-align:center;';
+    instructions.className = 'snake-nokia-instructions';
     
-    const scoreDiv = document.createElement('div');
-    scoreDiv.textContent = 'Length: 3 | Food: 0';
-    scoreDiv.style.cssText = 'font-size:1.2rem;font-weight:bold;color:#83bfff;';
+    // Canvas container with bezel
+    const canvasContainer = document.createElement('div');
+    canvasContainer.className = 'snake-nokia-canvas-container';
     
     // Canvas for game
     const canvas = document.createElement('canvas');
@@ -46,37 +212,57 @@
     const tileSize = 15;
     canvas.width = gridSize * tileSize;
     canvas.height = gridSize * tileSize;
-    canvas.style.cssText = 'border:3px solid #3d4f64;background:#1a2332;border-radius:4px;';
+    canvas.className = 'snake-nokia-canvas';
     const ctx = canvas.getContext('2d');
     
-    // Control buttons for mobile
+    // Status line overlay
+    const statusLine = document.createElement('div');
+    statusLine.className = 'snake-nokia-status';
+    statusLine.textContent = 'LEN 3  F 0';
+    
+    // Scanline overlay
+    const scanlines = document.createElement('div');
+    scanlines.className = 'snake-nokia-scanlines';
+    
+    canvasContainer.appendChild(canvas);
+    canvasContainer.appendChild(statusLine);
+    canvasContainer.appendChild(scanlines);
+    
+    // D-pad controls
     const controlsDiv = document.createElement('div');
-    controlsDiv.style.cssText = 'display:grid;grid-template-columns:repeat(3,60px);gap:5px;margin-top:10px;';
+    controlsDiv.className = 'snake-nokia-dpad';
     
-    const btnUp = createControlBtn('▲');
-    const btnLeft = createControlBtn('◀');
-    const btnDown = createControlBtn('▼');
-    const btnRight = createControlBtn('▶');
+    const btnUp = createDPadBtn('up');
+    const btnLeft = createDPadBtn('left');
+    const btnDown = createDPadBtn('down');
+    const btnRight = createDPadBtn('right');
     
-    controlsDiv.appendChild(document.createElement('div')); // spacer
+    const spacer1 = document.createElement('div');
+    const spacer2 = document.createElement('div');
+    const spacer3 = document.createElement('div');
+    const center = document.createElement('div');
+    center.className = 'snake-nokia-dpad-center';
+    
+    controlsDiv.appendChild(spacer1);
     controlsDiv.appendChild(btnUp);
-    controlsDiv.appendChild(document.createElement('div')); // spacer
+    controlsDiv.appendChild(spacer2);
     controlsDiv.appendChild(btnLeft);
-    controlsDiv.appendChild(btnDown);
+    controlsDiv.appendChild(center);
     controlsDiv.appendChild(btnRight);
+    controlsDiv.appendChild(spacer3);
+    controlsDiv.appendChild(btnDown);
+    controlsDiv.appendChild(document.createElement('div')); // bottom-right spacer
     
-    function createControlBtn(text){
+    function createDPadBtn(direction){
       const btn = document.createElement('button');
-      btn.textContent = text;
-      btn.className = 'btn';
-      btn.style.cssText = 'width:60px;height:60px;font-size:1.5rem;padding:0;';
+      btn.className = 'snake-nokia-dpad-btn snake-nokia-dpad-' + direction;
+      btn.setAttribute('aria-label', direction);
       return btn;
     }
     
     wrapper.appendChild(title);
     wrapper.appendChild(instructions);
-    wrapper.appendChild(scoreDiv);
-    wrapper.appendChild(canvas);
+    wrapper.appendChild(canvasContainer);
     wrapper.appendChild(controlsDiv);
     container.appendChild(wrapper);
     
@@ -140,7 +326,7 @@
       // Check food
       if(newHead.x === food.x && newHead.y === food.y){
         foodEaten++;
-        scoreDiv.textContent = `Length: ${snake.length} | Food: ${foodEaten}`;
+        statusLine.textContent = `LEN ${snake.length}  F ${foodEaten}`;
         placeFood();
       } else {
         snake.pop();
@@ -150,18 +336,18 @@
     }
     
     function draw(){
-      // Clear
-      ctx.fillStyle = '#1a2332';
+      // Clear with Nokia green background
+      ctx.fillStyle = '#b7d378';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Draw snake
+      // Draw snake with near-black pixels
       snake.forEach((seg, i) => {
-        ctx.fillStyle = i === 0 ? '#83bfff' : '#6fd3ff';
+        ctx.fillStyle = i === 0 ? '#1a1a1a' : '#2d2d2d';
         ctx.fillRect(seg.x * tileSize, seg.y * tileSize, tileSize - 1, tileSize - 1);
       });
       
-      // Draw food
-      ctx.fillStyle = '#f7b955';
+      // Draw food with near-black
+      ctx.fillStyle = '#1a1a1a';
       ctx.fillRect(food.x * tileSize, food.y * tileSize, tileSize - 1, tileSize - 1);
     }
     
@@ -200,7 +386,7 @@
       setTimeout(() => onComplete(finalScore), 1500);
     }
     
-    // Controls
+    // Controls - Keyboard
     document.addEventListener('keydown', (e) => {
       if(gameOver) return;
       
@@ -219,10 +405,80 @@
       }
     });
     
-    btnUp.addEventListener('click', () => setDirection({x:0, y:-1}));
-    btnDown.addEventListener('click', () => setDirection({x:0, y:1}));
-    btnLeft.addEventListener('click', () => setDirection({x:-1, y:0}));
-    btnRight.addEventListener('click', () => setDirection({x:1, y:0}));
+    // D-pad button handlers with haptic feedback
+    function addDPadHandler(btn, dir) {
+      const handler = (e) => {
+        if(!gameOver) {
+          e.preventDefault();
+          setDirection(dir);
+          btn.classList.add('snake-nokia-dpad-pressed');
+          setTimeout(() => btn.classList.remove('snake-nokia-dpad-pressed'), 100);
+          
+          // Haptic feedback
+          if(navigator.vibrate) {
+            navigator.vibrate(10);
+          }
+        }
+      };
+      
+      btn.addEventListener('pointerdown', handler);
+      btn.addEventListener('click', handler);
+    }
+    
+    addDPadHandler(btnUp, {x:0, y:-1});
+    addDPadHandler(btnDown, {x:0, y:1});
+    addDPadHandler(btnLeft, {x:-1, y:0});
+    addDPadHandler(btnRight, {x:1, y:0});
+    
+    // Swipe controls on canvas
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    canvas.addEventListener('touchstart', (e) => {
+      if(!e.touches || !e.touches[0]) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    });
+    
+    canvas.addEventListener('touchend', (e) => {
+      if(gameOver) return;
+      if(!e.changedTouches || !e.changedTouches[0]) return;
+      e.preventDefault();
+      
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+      const absDeltaX = Math.abs(deltaX);
+      const absDeltaY = Math.abs(deltaY);
+      
+      // Minimum swipe distance threshold
+      const minSwipeDistance = 30;
+      
+      if(absDeltaX > minSwipeDistance || absDeltaY > minSwipeDistance) {
+        if(absDeltaX > absDeltaY) {
+          // Horizontal swipe
+          if(deltaX > 0) {
+            setDirection({x:1, y:0});
+          } else {
+            setDirection({x:-1, y:0});
+          }
+        } else {
+          // Vertical swipe
+          if(deltaY > 0) {
+            setDirection({x:0, y:1});
+          } else {
+            setDirection({x:0, y:-1});
+          }
+        }
+        
+        // Haptic feedback
+        if(navigator.vibrate) {
+          navigator.vibrate(10);
+        }
+      }
+    });
     
     // Start game
     placeFood();

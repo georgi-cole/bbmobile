@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Visual Test - Nokia 3310 UI</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e3ecf5;
+    }
+    h1 { 
+      color: #4a90e2; 
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .description {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .description h2 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    .description ul {
+      line-height: 1.8;
+    }
+    .description code {
+      background: #0f1419;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #83bfff;
+    }
+    .test-section {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+      text-align: center;
+    }
+    button {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    #gameContainer {
+      display: flex;
+      justify-content: center;
+      min-height: 500px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐍 Snake - Nokia 3310 UI Showcase</h1>
+  
+  <div class="description">
+    <h2>✨ New Nokia 3310-Inspired Features</h2>
+    <ul>
+      <li><strong>LCD Green Monochrome Display:</strong> Authentic <code>#b7d378</code> background with near-black pixels</li>
+      <li><strong>Dark Bezel:</strong> Canvas surrounded by a realistic dark bezel with inset shadow</li>
+      <li><strong>Scanline Overlay:</strong> Subtle horizontal scanlines for LCD authenticity</li>
+      <li><strong>Status Line:</strong> Top-left overlay showing <code>LEN X  F Y</code> (length and food count)</li>
+      <li><strong>Custom D-Pad:</strong> 3×3 grid with CSS-only arrow chevrons (no font dependencies)</li>
+      <li><strong>Pressed State:</strong> Visual feedback with translateY and shadow changes</li>
+      <li><strong>Haptic Feedback:</strong> Optional vibration on button press (mobile devices)</li>
+      <li><strong>Swipe Controls:</strong> Touch gestures on canvas for mobile play</li>
+      <li><strong>Keyboard Support:</strong> Arrow keys and WASD still work</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <button onclick="startNormal()">▶ Start Normal Snake</button>
+    <button onclick="startPortal()">▶ Start Portal Mode</button>
+    <div id="gameContainer"></div>
+  </div>
+
+  <script src="js/minigames/snake.js"></script>
+  <script>
+    function startNormal() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+      
+      window.MiniGames.snake.render(container, (score) => {
+        console.log('Normal game ended. Score:', score);
+      }, { variant: 'normal', debugMode: true });
+    }
+
+    function startPortal() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+      
+      window.MiniGames.snake.render(container, (score) => {
+        console.log('Portal game ended. Score:', score);
+      }, { variant: 'portal', debugMode: true });
+    }
+    
+    // Auto-start for visual testing
+    window.addEventListener('load', () => {
+      setTimeout(startNormal, 500);
+    });
+  </script>
+</body>
+</html>

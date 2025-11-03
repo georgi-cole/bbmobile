@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Minigame Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e3ecf5;
+    }
+    h1 { color: #4a90e2; }
+    .test-section {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    button {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    #gameContainer {
+      min-height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐍 Snake Minigame Test</h1>
+  
+  <div class="test-section">
+    <h2>Normal Mode</h2>
+    <button onclick="testNormal()">Start Normal Snake</button>
+    <div id="gameContainer"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Portal Mode</h2>
+    <button onclick="testPortal()">Start Portal Snake</button>
+    <div id="gameContainerPortal"></div>
+  </div>
+
+  <script src="js/minigames/snake.js"></script>
+  <script>
+    function testNormal() {
+      const container = document.getElementById('gameContainer');
+      container.innerHTML = '';
+      
+      window.MiniGames.snake.render(container, (score) => {
+        console.log('Normal game ended. Score:', score);
+        alert('Game Over! Score: ' + score);
+      }, { variant: 'normal', debugMode: true });
+    }
+
+    function testPortal() {
+      const container = document.getElementById('gameContainerPortal');
+      container.innerHTML = '';
+      
+      window.MiniGames.snake.render(container, (score) => {
+        console.log('Portal game ended. Score:', score);
+        alert('Game Over! Score: ' + score);
+      }, { variant: 'portal', debugMode: true });
+    }
+  </script>
+</body>
+</html>
