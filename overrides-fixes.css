@@ -137,3 +137,26 @@
     }
   }
 }
+
+/* === Safety net: ensure no TV-area dim/blur can return via later overrides === */
+#tvOverlay .tvDim{
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Keep TV-contained cards free of blur/shadows (fullscreen overlays unaffected) */
+#tvOverlay .revealCard.diaryRoomCard{
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+/* TV cards must never rely on :hover to reveal scroll */
+#tvOverlay .revealCard{
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Maintain containment cap */
+#tvOverlay .revealCard.diaryRoomCard{ max-height: 78% !important; }

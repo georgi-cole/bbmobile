@@ -34,3 +34,5 @@ coverage/
 test_players_total_live.html
 test_player_count_deferred.html
 test_color_match_slider_default.html
+test_tv_overlay_fix.html
+screenshots/tv-overlay-fix/
