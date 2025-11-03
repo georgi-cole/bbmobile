@@ -10,9 +10,10 @@ After the "Evicted" card:
 ## Key Files
 
 ```
-js/eviction-visuals.js       - Core module (TV animation only)
-styles.css                   - Animation CSS only
-test_eviction_visuals.html   - Test page
+js/eviction-visuals.js         - Core module (TV animation only)
+styles.css                     - Animation CSS with mobile centering fixes
+test_eviction_visuals.html     - Test page
+test_eviction_centering.html   - Centering verification test (with crosshairs)
 ```
 
 ## Main Function
@@ -39,11 +40,18 @@ runEvictionVisual(evictedId, context)
 ## CSS Classes
 
 ```css
-.eviction-visual-avatar          /* Container */
+.eviction-visual-avatar          /* Container (centered with vmin sizing) */
 .eviction-visual-avatar.zoom-in  /* Phase 1 */
 .eviction-visual-avatar.grayscale /* Phase 2 */
 .eviction-visual-avatar.fade-out  /* Phase 3 */
+.eviction-visual-group           /* Optional: Multi-eviction group layout */
 ```
+
+**Centering improvements**:
+- Uses `transform-origin: center` for proper scaling
+- Size based on `vmin` (38vmin) instead of `vw` for better mobile sizing
+- Ensures `pointer-events: none` to prevent interaction issues
+- TV containers have `position: relative` and `overflow: hidden`
 
 **Removed** (as of selective revert):
 - `.finishing-badge` - removed
@@ -51,6 +59,21 @@ runEvictionVisual(evictedId, context)
 - `.avatar-rank-badge` - removed
 - `.avatar-bw-dim` - removed
 - `body.evict-visual-in-progress` - removed
+
+## TV Container Detection
+
+The module searches for TV containers in this priority order:
+1. `[data-faux-tv]` - Data attribute selector
+2. `[data-sm-faux-tv]` - Social Maneuvers data attribute
+3. `.tvViewport` - Viewport class (preferred)
+4. `#tv` - TV ID
+5. `.tv` - TV class
+6. `.faux-tv` - Alternative class
+7. `.tv-screen` - Screen class
+
+Runtime safeguards ensure the container has:
+- `position: relative` (for absolute positioning context)
+- `overflow: hidden` (to clip animations)
 
 ## Guards
 
@@ -89,14 +112,18 @@ open test_eviction_visuals.html
 
 | Issue | Solution |
 |-------|----------|
-| No animation | Check TV container exists (`#tv`) |
+| No animation | Check TV container exists (`.tvViewport`, `[data-sm-faux-tv]`, or `#tv`) |
 | Runs twice | Check guard: `game.__evictVisualDone[id]` |
+| Avatar not centered | Ensure TV container has `position: relative` and `overflow: hidden` |
+| Avatar too large on mobile | Updated to use `vmin` instead of `vw` for proper sizing |
 
 ## Quick Checklist
 
 - [x] Module loaded: `typeof window.runEvictionVisual === 'function'`
-- [x] TV container: `document.getElementById('tv')` exists
+- [x] TV container: `.tvViewport` or `#tv` exists (robust selector chain)
 - [x] Guard set: `game.__evictVisualDone[id] === true`
+- [x] Positioning: Container has `position: relative` (set at runtime if needed)
+- [x] Clipping: Container has `overflow: hidden` (set at runtime if needed)
 
 ## Example Usage
 
