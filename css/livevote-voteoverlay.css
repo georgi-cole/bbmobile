@@ -317,6 +317,14 @@
   }
 }
 
+/* Hide navigation arrows on mobile/coarse pointers */
+/* Defensive rule for backwards compatibility with cached JS */
+@media (max-width: 820px), (pointer: coarse) {
+  .lv-overlay__arrow {
+    display: none !important;
+  }
+}
+
 /* Landscape mobile (rotate to landscape on phone) */
 @media (max-width: 896px) and (orientation: landscape) {
   .lv-overlay__header {
