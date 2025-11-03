@@ -93,6 +93,50 @@
   global.notifyEvictedForVisual = notifyEvictedForVisual;
 
   /**
+   * Get TV container element with robust selector priority.
+   * Ensures positioning context and overflow clipping are set.
+   * @returns {HTMLElement|null} - The TV container element
+   */
+  function getTvContainer() {
+    // Try selectors in priority order
+    const selectors = [
+      '[data-faux-tv]',
+      '[data-sm-faux-tv]',
+      '.tvViewport',
+      '#tv',
+      '.tv',
+      '.faux-tv',
+      '.tv-screen'
+    ];
+    
+    let container = null;
+    for (const selector of selectors) {
+      container = document.querySelector(selector);
+      if (container) break;
+    }
+    
+    if (!container) {
+      console.warn('[eviction-visuals] No TV container found');
+      return null;
+    }
+    
+    // Ensure positioning context (non-destructive)
+    const computedStyle = window.getComputedStyle(container);
+    if (computedStyle.position === 'static') {
+      container.style.position = 'relative';
+      console.info('[eviction-visuals] Set position:relative on TV container');
+    }
+    
+    // Ensure overflow clipping (non-destructive)
+    if (computedStyle.overflow !== 'hidden') {
+      container.style.overflow = 'hidden';
+      console.info('[eviction-visuals] Set overflow:hidden on TV container');
+    }
+    
+    return container;
+  }
+
+  /**
    * Animate evicted player's avatar in faux TV
    * Sequence: zoom-in (0.6s) → grayscale (0.4s) → fade out (0.6s)
    * Total: ~1.6s
@@ -101,11 +145,8 @@
     const player = global.getP?.(evictedId);
     if(!player) return;
 
-    // Find TV container - resilient to different selector variants
-    const tvContainer = document.getElementById('tv') || 
-                        document.querySelector('.tv') ||
-                        document.querySelector('.faux-tv') ||
-                        document.querySelector('.tv-screen');
+    // Find TV container with robust detection
+    const tvContainer = getTvContainer();
     
     if(!tvContainer){
       console.warn('[eviction-visuals] TV container not found, skipping animation');

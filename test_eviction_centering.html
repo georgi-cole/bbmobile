@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eviction Centering Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(20, 30, 45, 0.9);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #83bfff;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #f2ce7b;
+      margin-bottom: 30px;
+      font-size: 0.95rem;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(13, 21, 31, 0.5);
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .test-section h2 {
+      color: #f2ce7b;
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+    .btn {
+      background: linear-gradient(135deg, #4a6fa5 0%, #2d5aa0 100%);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 5px;
+      font-size: 0.9rem;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #5a7fb5 0%, #3d6ab0 100%);
+    }
+    .btn.danger {
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    }
+    .btn.danger:hover {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+    .btn.primary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    .btn.primary:hover {
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    }
+    .status {
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 5px 5px 5px 0;
+      font-size: 0.85rem;
+    }
+    .status.pass {
+      background: #22c55e;
+      color: #fff;
+    }
+    .status.fail {
+      background: #dc2626;
+      color: #fff;
+    }
+    .status.pending {
+      background: #f2ce7b;
+      color: #000;
+    }
+    .status.info {
+      background: #3b82f6;
+      color: #fff;
+    }
+    .tv-wrapper {
+      position: relative;
+      max-width: 600px;
+      margin: 20px auto;
+    }
+    /* Centering guides (optional visual aids) */
+    .centering-guides {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 200;
+      display: none;
+    }
+    .centering-guides.active {
+      display: block;
+    }
+    .centering-guides::before,
+    .centering-guides::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 0, 0, 0.5);
+    }
+    .centering-guides::before {
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      transform: translateX(-1px);
+    }
+    .centering-guides::after {
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      transform: translateY(-1px);
+    }
+    .log {
+      background: rgba(13, 21, 31, 0.7);
+      padding: 15px;
+      border-radius: 6px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    .info-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .info-box h3 {
+      margin-top: 0;
+      color: #60a5fa;
+      font-size: 1.1rem;
+    }
+    .info-box ul {
+      margin: 10px 0 0 0;
+      padding-left: 20px;
+    }
+    .info-box li {
+      margin: 5px 0;
+    }
+  </style>
+  
+  <!-- Load required CSS from main app -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Eviction Visual Centering Test</h1>
+    <div class="subtitle">
+      Tests portrait centering within TV viewport for single, double, and triple eviction flows
+    </div>
+    
+    <div class="info-box">
+      <h3>📋 Test Instructions</h3>
+      <ul>
+        <li><strong>Setup:</strong> Click "Setup Game" to initialize 12 players</li>
+        <li><strong>Single Eviction:</strong> Click any "Evict Player" button to test single eviction centering</li>
+        <li><strong>Double Eviction:</strong> Click "Simulate Double Eviction" to test sequential centering</li>
+        <li><strong>Triple Eviction:</strong> Click "Simulate Triple Eviction" to test sequential centering</li>
+        <li><strong>Visual Aids:</strong> Toggle "Show Centering Guides" to see crosshairs for precise centering validation</li>
+        <li><strong>Mobile Testing:</strong> Resize browser window or use responsive mode to test on different viewport sizes</li>
+      </ul>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div style="margin-bottom: 15px;">
+        <button class="btn primary" onclick="setupGame()">Setup Game (12 players)</button>
+        <button class="btn" onclick="toggleGuides()">Toggle Centering Guides</button>
+        <button class="btn" onclick="clearLog()">Clear Log</button>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <strong>Single Evictions:</strong><br>
+        <button class="btn danger" onclick="simulateEviction(1)">Evict Player 1</button>
+        <button class="btn danger" onclick="simulateEviction(2)">Evict Player 2</button>
+        <button class="btn danger" onclick="simulateEviction(3)">Evict Player 3</button>
+        <button class="btn danger" onclick="simulateEviction(4)">Evict Player 4</button>
+      </div>
+      <div>
+        <strong>Multiple Evictions:</strong><br>
+        <button class="btn danger" onclick="simulateDoubleEviction()">Simulate Double Eviction (Players 5 & 6)</button>
+        <button class="btn danger" onclick="simulateTripleEviction()">Simulate Triple Eviction (Players 7, 8 & 9)</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Status</h2>
+      <div id="status">
+        <span class="status pending">Not Started</span>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>TV Viewport (Animation Container)</h2>
+      <div class="tv-wrapper">
+        <!-- Live TV structure matching index.html -->
+        <div class="tv tv-screen" id="tv">
+          <div class="tvHead">
+            <div class="tvTitle">House Network Live</div>
+            <div class="tvTimer">00:00</div>
+          </div>
+          <div class="tvViewport" data-sm-faux-tv>
+            <div id="tvNow" class="tvNow" style="padding: 20px; text-align: center; color: #fff;">
+              TV Screen - Eviction animations will appear here
+            </div>
+            <!-- Confetti canvas (part of live structure) -->
+            <canvas id="confetti" width="600" height="400"></canvas>
+          </div>
+        </div>
+        <!-- Optional centering guides -->
+        <div class="centering-guides" id="centeringGuides"></div>
+      </div>
+      <div style="text-align: center; margin-top: 10px; color: #94a3b8; font-size: 0.85rem;">
+        ℹ️ Portrait should remain centered within TV viewport at all times
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+  
+  <!-- Load required scripts -->
+  <script src="js/avatar.js"></script>
+  <script src="js/eviction-visuals.js"></script>
+  
+  <script>
+    // Mock game state
+    window.game = {
+      players: [],
+      week: 1,
+      __evictVisualDone: {},
+      __pendingEvictionVisuals: new Set()
+    };
+    
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+    
+    window.cardQueueWaitIdle = function() {
+      return new Promise(resolve => setTimeout(resolve, 100));
+    };
+    
+    window.updateHud = function() {
+      log('HUD updated');
+    };
+    
+    // Logging
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const timestamp = new Date().toLocaleTimeString();
+      const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+      entry.textContent = `${prefix} [${timestamp}] ${message}`;
+      logDiv.insertBefore(entry, logDiv.firstChild);
+    }
+    
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+      log('Log cleared');
+    }
+    
+    // Toggle centering guides
+    function toggleGuides() {
+      const guides = document.getElementById('centeringGuides');
+      guides.classList.toggle('active');
+      const isActive = guides.classList.contains('active');
+      log(isActive ? 'Centering guides enabled' : 'Centering guides disabled');
+      updateStatus(isActive ? 'Centering guides: ON' : 'Centering guides: OFF', 'info');
+    }
+    
+    // Setup game
+    function setupGame() {
+      window.game.players = [];
+      for(let i = 1; i <= 12; i++) {
+        window.game.players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=player${i}`,
+          finalRank: null
+        });
+      }
+      window.game.__evictVisualDone = {};
+      window.game.__pendingEvictionVisuals = new Set();
+      updateStatus('Game setup with 12 players', 'pass');
+      log('Game initialized with 12 players', 'success');
+    }
+    
+    // Simulate single eviction
+    async function simulateEviction(playerId) {
+      const player = window.getP(playerId);
+      if(!player) {
+        updateStatus(`Player ${playerId} not found`, 'fail');
+        log(`ERROR: Player ${playerId} not found`, 'error');
+        return;
+      }
+      
+      if(player.evicted) {
+        updateStatus(`Player ${playerId} already evicted`, 'fail');
+        log(`ERROR: Player ${playerId} already evicted`, 'error');
+        return;
+      }
+      
+      updateStatus(`Evicting ${player.name}...`, 'pending');
+      log(`Starting single eviction for ${player.name}`);
+      
+      // Mark as evicted
+      player.evicted = true;
+      player.weekEvicted = window.game.week;
+      
+      // Calculate finalRank
+      const aliveCount = window.alivePlayers().length + 1;
+      player.finalRank = aliveCount;
+      
+      log(`${player.name} marked as evicted, rank: ${player.finalRank}`);
+      
+      // Run visual enhancement
+      try {
+        if(typeof window.runEvictionVisual === 'function') {
+          await window.runEvictionVisual(playerId, { reason: 'vote' });
+          updateStatus(`${player.name} evicted successfully`, 'pass');
+          log(`Visual animation completed for ${player.name}`, 'success');
+        } else {
+          updateStatus('runEvictionVisual not found', 'fail');
+          log('ERROR: runEvictionVisual function not found', 'error');
+        }
+      } catch(e) {
+        updateStatus(`Error: ${e.message}`, 'fail');
+        log(`ERROR: ${e.message}`, 'error');
+      }
+      
+      window.game.week++;
+    }
+    
+    // Simulate double eviction (sequential)
+    async function simulateDoubleEviction() {
+      updateStatus('Starting double eviction...', 'pending');
+      log('=== DOUBLE EVICTION TEST ===');
+      
+      const player5 = window.getP(5);
+      const player6 = window.getP(6);
+      
+      if (!player5 || !player6) {
+        updateStatus('Players 5 or 6 not found', 'fail');
+        log('ERROR: Players not found', 'error');
+        return;
+      }
+      
+      if (player5.evicted || player6.evicted) {
+        updateStatus('One or both players already evicted', 'fail');
+        log('ERROR: Players already evicted', 'error');
+        return;
+      }
+      
+      try {
+        // First eviction
+        log(`Evicting ${player5.name}...`);
+        await simulateEviction(5);
+        
+        // Wait between evictions
+        await sleep(500);
+        
+        // Second eviction
+        log(`Evicting ${player6.name}...`);
+        await simulateEviction(6);
+        
+        updateStatus('Double eviction complete', 'pass');
+        log('=== DOUBLE EVICTION COMPLETE ===', 'success');
+      } catch(e) {
+        updateStatus(`Double eviction error: ${e.message}`, 'fail');
+        log(`ERROR: ${e.message}`, 'error');
+      }
+    }
+    
+    // Simulate triple eviction (sequential)
+    async function simulateTripleEviction() {
+      updateStatus('Starting triple eviction...', 'pending');
+      log('=== TRIPLE EVICTION TEST ===');
+      
+      const player7 = window.getP(7);
+      const player8 = window.getP(8);
+      const player9 = window.getP(9);
+      
+      if (!player7 || !player8 || !player9) {
+        updateStatus('Players 7, 8, or 9 not found', 'fail');
+        log('ERROR: Players not found', 'error');
+        return;
+      }
+      
+      if (player7.evicted || player8.evicted || player9.evicted) {
+        updateStatus('One or more players already evicted', 'fail');
+        log('ERROR: Players already evicted', 'error');
+        return;
+      }
+      
+      try {
+        // First eviction
+        log(`Evicting ${player7.name}...`);
+        await simulateEviction(7);
+        
+        // Wait between evictions
+        await sleep(500);
+        
+        // Second eviction
+        log(`Evicting ${player8.name}...`);
+        await simulateEviction(8);
+        
+        // Wait between evictions
+        await sleep(500);
+        
+        // Third eviction
+        log(`Evicting ${player9.name}...`);
+        await simulateEviction(9);
+        
+        updateStatus('Triple eviction complete', 'pass');
+        log('=== TRIPLE EVICTION COMPLETE ===', 'success');
+      } catch(e) {
+        updateStatus(`Triple eviction error: ${e.message}`, 'fail');
+        log(`ERROR: ${e.message}`, 'error');
+      }
+    }
+    
+    // Update status display
+    function updateStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<span class="status ${type}">${message}</span>`;
+    }
+    
+    // Sleep helper
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    // Initialize
+    log('Test page loaded');
+    log('Click "Setup Game" to begin testing');
+  </script>
+</body>
+</html>
