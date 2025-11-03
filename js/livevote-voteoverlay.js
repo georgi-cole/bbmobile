@@ -15,6 +15,16 @@
     isTieBreak: false
   };
 
+  // Mobile detection helper
+  // Returns true if device has coarse pointer (touchscreen) OR viewport is narrow (<820px)
+  function isMobile() {
+    // Check for coarse pointer (mobile/tablet touchscreen)
+    const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    // Check viewport width
+    const isNarrowViewport = window.innerWidth < 820;
+    return hasCoarsePointer || isNarrowViewport;
+  }
+
   // Get avatar helper (fallback to global if available)
   function getAvatarUrl(playerId) {
     if (global.resolveAvatar) {
@@ -152,8 +162,9 @@
 
     carousel.appendChild(track);
 
-    // Navigation arrows
-    if (nominees.length > 1) {
+    // Navigation arrows (desktop only)
+    // On mobile, rely on tap-to-select and natural touch scrolling
+    if (nominees.length > 1 && !isMobile()) {
       const prevArrow = document.createElement('button');
       prevArrow.className = 'lv-overlay__arrow prev';
       prevArrow.innerHTML = '◀';

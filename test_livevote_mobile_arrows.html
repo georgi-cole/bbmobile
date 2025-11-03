@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Vote Mobile Arrows Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    
+    .status-display {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(255, 217, 107, 0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      border-left: 3px solid #ffd96b;
+    }
+    
+    .status-display strong {
+      color: #ffd96b;
+    }
+    
+    #tv {
+      max-width: 600px;
+      margin: 20px auto;
+      min-height: 400px;
+      background: rgba(20,35,55,0.5);
+      border-radius: 12px;
+      border: 2px solid rgba(143,211,255,0.2);
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>📱 Live Vote Mobile Arrows Test</h1>
+    
+    <button onclick="showVoteOverlay2()">Show Vote Overlay (2 Nominees)</button>
+    <button onclick="showVoteOverlay4()">Show Vote Overlay (4 Nominees)</button>
+    <button onclick="closeOverlay()">Close Overlay</button>
+    
+    <div class="status-display">
+      <strong>Current Status:</strong>
+      <div id="statusText">No overlay open</div>
+      <div style="margin-top: 8px;">
+        <strong>Viewport Width:</strong> <span id="viewportWidth">-</span>px<br>
+        <strong>Pointer Type:</strong> <span id="pointerType">-</span><br>
+        <strong>Is Mobile (JS):</strong> <span id="isMobile">-</span><br>
+        <strong>Arrows Should Show:</strong> <span id="arrowsExpected">-</span>
+      </div>
+    </div>
+    
+    <div class="test-info">
+      <strong>Test Instructions:</strong>
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li>✅ On <strong>mobile/touch devices</strong> (or viewport &lt; 820px): Arrows should NOT be visible</li>
+        <li>✅ On <strong>desktop</strong> (pointer: fine, viewport ≥ 820px): Arrows SHOULD be visible</li>
+        <li>✅ Tap nominees to select them (works on both mobile and desktop)</li>
+        <li>✅ Keyboard navigation (arrows keys) still works on desktop</li>
+        <li>✅ Resize browser window to test responsive behavior</li>
+      </ul>
+      <p><strong>Testing Approach:</strong></p>
+      <ol style="margin: 8px 0; padding-left: 20px;">
+        <li>Open this page on mobile phone → Verify NO arrows visible</li>
+        <li>Open this page on desktop → Verify arrows ARE visible</li>
+        <li>On desktop, resize browser to &lt; 820px wide → Arrows should disappear</li>
+        <li>Expand browser back → Arrows should reappear (after reopening overlay)</li>
+      </ol>
+    </div>
+  </div>
+  
+  <div id="tv"></div>
+  
+  <script>
+    // Mock global helpers
+    window.game = {
+      cfg: {}
+    };
+    
+    const mockPlayers = {
+      1: { id: 1, name: 'Alice', avatar: null },
+      2: { id: 2, name: 'Bob', avatar: null },
+      3: { id: 3, name: 'Charlie', avatar: null },
+      4: { id: 4, name: 'Diana', avatar: null }
+    };
+    
+    window.getP = function(id) {
+      return mockPlayers[id];
+    };
+    
+    window.safeName = function(id) {
+      return mockPlayers[id]?.name || 'Unknown';
+    };
+    
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    // Mock scroll lock helpers
+    window.lockBodyScroll = function() {
+      document.body.style.overflow = 'hidden';
+    };
+    
+    window.unlockBodyScroll = function() {
+      document.body.style.overflow = '';
+    };
+    
+    window.centerTVInViewport = function() {
+      return Promise.resolve();
+    };
+    
+    // Update status display
+    function updateStatus() {
+      const viewport = window.innerWidth;
+      const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      const hasFinePointer = window.matchMedia('(pointer: fine)').matches;
+      const isMobileView = viewport < 820 || hasCoarsePointer;
+      
+      document.getElementById('viewportWidth').textContent = viewport;
+      
+      let pointerText = 'unknown';
+      if (hasCoarsePointer) pointerText = 'coarse (touch)';
+      else if (hasFinePointer) pointerText = 'fine (mouse)';
+      document.getElementById('pointerType').textContent = pointerText;
+      
+      document.getElementById('isMobile').textContent = isMobileView ? 'YES' : 'NO';
+      document.getElementById('arrowsExpected').textContent = isMobileView ? 'NO (hidden)' : 'YES (visible)';
+    }
+    
+    function showVoteOverlay2() {
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.show({
+          nominees: [1, 2],
+          onSubmit: (id) => {
+            console.log('Vote submitted:', id);
+            document.getElementById('statusText').textContent = `Vote cast for ${window.getP(id).name}`;
+          },
+          isTieBreak: false,
+          container: document.getElementById('tv')
+        });
+        document.getElementById('statusText').textContent = 'Overlay open with 2 nominees';
+        updateStatus();
+      } else {
+        alert('LiveVoteOverlay not loaded');
+      }
+    }
+    
+    function showVoteOverlay4() {
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.show({
+          nominees: [1, 2, 3, 4],
+          onSubmit: (id) => {
+            console.log('Vote submitted:', id);
+            document.getElementById('statusText').textContent = `Vote cast for ${window.getP(id).name}`;
+          },
+          isTieBreak: false,
+          container: document.getElementById('tv')
+        });
+        document.getElementById('statusText').textContent = 'Overlay open with 4 nominees';
+        updateStatus();
+      } else {
+        alert('LiveVoteOverlay not loaded');
+      }
+    }
+    
+    function closeOverlay() {
+      if (window.LiveVoteOverlay) {
+        window.LiveVoteOverlay.hide();
+        document.getElementById('statusText').textContent = 'Overlay closed';
+      }
+    }
+    
+    // Update status on load and resize
+    updateStatus();
+    window.addEventListener('resize', updateStatus);
+  </script>
+  
+  <!-- Load the vote overlay module -->
+  <script src="js/livevote-voteoverlay.js"></script>
+</body>
+</html>
