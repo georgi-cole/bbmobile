@@ -7485,3 +7485,32 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   max-height: none !important;
   overflow: visible !important;
 }
+
+/* === TV-only: remove blur/dim INSIDE the faux TV === */
+#tvOverlay .tvDim{
+  background: transparent;           /* no tinted layer over TV */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* TV-contained cards should not blur or cast heavy shadows on the TV surface */
+#tvOverlay .revealCard.diaryRoomCard{
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+/* Never clip TV-contained cards; allow internal scroll on touch */
+#tvOverlay .revealCard{
+  overflow: auto !important;         /* avoid hover-only scroll pattern */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Keep the TV height cap but provide breathing room for top avatars */
+#tvOverlay .revealCard.diaryRoomCard{
+  max-height: 78% !important;        /* respect TV safe area */
+  padding-top: 22px;                 /* avoids avatar overlap with top radius */
+}
+
+/* If an avatar row is present, keep it off the top edge */
+#tvOverlay .revealCard.diaryRoomCard .rc-face-row{ margin-top: 8px; }
