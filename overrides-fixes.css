@@ -51,6 +51,76 @@
 .finalFaceoff .fo-winner{ top: 12% !important; bottom: auto !important; }
 
 /* ============================================================================
+   SAFETY: Disable risky backdrop-blur on overlay/dim wrappers
+   ============================================================================
+   
+   Issue: Backdrop-blur on full-screen overlays can intercept pointer events
+   and make buttons/cards unclickable. This section removes blur from wrapper
+   layers while preserving card-level glassmorphism.
+   
+   Strategy:
+   - Disable theme-driven backdrop-filter via --popup-backdrop-blur: 0px
+   - Explicitly remove backdrop-filter from known overlay/dim shells
+   - DO NOT override background colors to avoid visual artifacts
+   - Enforce pointer-events: none on wrappers, pointer-events: auto on content
+   - Preserve blur on actual cards/panels for glassmorphism effect
+   
+   CRITICAL: #tv must maintain overflow control to prevent card persistence
+   ============================================================================ */
+
+:root {
+  --popup-backdrop-blur: 0px !important; /* Disable theme-driven backdrop blur */
+}
+
+/* Disable backdrop-filter on overlay wrappers to prevent click interception */
+#tvOverlay,
+#tvOverlay .tvDim,
+#decisionDeck,
+.cinDim,
+.results-modal-overlay,
+.announcement-overlay,
+.pfModalHost,
+.carousel-picker-overlay,
+.lv-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  /* DO NOT override background - let each overlay keep its own styling */
+}
+
+/* CRITICAL: Keep TV container overflow hidden to prevent card bleed */
+#tv {
+  position: relative !important;
+  overflow: hidden !important; /* Changed from visible to hidden */
+}
+
+/* Enforce pointer-events pass-through on wrapper layers */
+#tvOverlay,
+#decisionDeck {
+  pointer-events: none !important;
+}
+
+/* Ensure interactive content remains clickable */
+#tvOverlay .revealCard,
+#decisionDeck .revealCard,
+.results-modal-overlay .modal,
+.announcement-overlay .modal,
+.announcement-overlay .card,
+.pfModalHost .pfModal,
+.pfModalHost .pfPanel,
+.carousel-picker-overlay button,
+.carousel-picker-overlay .carousel-picker-arrow,
+.carousel-picker-overlay .carousel-picker-confirm,
+.carousel-picker-overlay .carousel-picker-cancel,
+.carousel-picker-overlay .carousel-picker-avatar-container,
+.lv-overlay button,
+.lv-overlay .lv-overlay__arrow,
+.lv-overlay .lv-overlay__evict-btn,
+.lv-overlay .lv-overlay__close,
+.lv-overlay .lv-overlay__nominee {
+  pointer-events: auto !important;
+}
+
+/* ============================================================================
    Competition completion panel - glassmorphism style matching Final Jury Vote
    ============================================================================
    
