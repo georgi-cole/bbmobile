@@ -143,7 +143,8 @@
       console.debug('[ChoiceCard] Modal root removed');
     }
 
-    // Fallback: remove legacy card if present
+    // Fallback: remove legacy card if present (only if new modal system wasn't used)
+    // This handles backwards compatibility with older code that may have created cards directly
     const card = document.querySelector('.lv-choice-card');
     if (card && !root) {
       card.remove();
@@ -164,7 +165,7 @@
   function lockBodyScroll() {
     const body = document.body;
     const html = document.documentElement;
-    if (!body) return;
+    if (!body || !html) return;
     
     // Store current scroll position
     const scrollY = window.scrollY;
