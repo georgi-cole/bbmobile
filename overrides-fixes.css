@@ -157,7 +157,8 @@
   /* Keep dark background for modal focus */
   background: rgba(0, 0, 0, 0.92) !important;
 }
-.carousel-picker-overlay * {
+.carousel-picker-overlay button,
+.carousel-picker-overlay .carousel-picker-avatar-container {
   pointer-events: auto !important;
 }
 
@@ -174,13 +175,20 @@
 }
 
 /* Ensure content within overlays is always interactive */
-.revealCard,
-.modal,
-.card,
-.cinPanel,
-.pfModal,
-.pfPanel,
-.confirm-modal {
+#tvOverlay .revealCard,
+#tvOverlay .modal,
+#tvOverlay .card,
+#decisionDeck .revealCard,
+#decisionDeck .modal,
+#decisionDeck .card,
+.results-modal-overlay .modal,
+.results-modal-overlay .card,
+.announcement-overlay .modal,
+.announcement-overlay .card,
+.pfModalHost .pfModal,
+.pfModalHost .pfPanel,
+.cinDim .cinPanel,
+.confirm-modal-overlay .confirm-modal {
   pointer-events: auto !important;
 }
 
