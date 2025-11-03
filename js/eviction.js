@@ -153,10 +153,12 @@
                     }
                   }
                 }
-              }).then(() => {
-                // Start 30-second countdown timer after overlay is shown
-                startVoteCountdown(30, nominees, voters);
               });
+              
+              // Start countdown immediately (not via .then()) to align with HUD timer
+              // Use same duration as phase timer (tVote) for synchronization
+              const liveVoteSeconds = g.cfg?.tVote || 30;
+              startVoteCountdown(liveVoteSeconds, nominees, voters);
             }
           }
         });
@@ -399,28 +401,16 @@
     
     let timeLeft = seconds;
     
-    // Find the timer badge to display countdown
-    const updateCountdown = () => {
-      const timerBadge = document.querySelector('.lv-overlay .lv-timer-badge');
-      if(timerBadge && timeLeft > 0){
-        // Use shared time formatting helper
-        const timeStr = global.formatCountdownTime(timeLeft);
-        timerBadge.textContent = timeStr;
-      }
-    };
+    // No UI timer in overlay - central HUD timer is the single source of truth
+    // This countdown logic handles auto-vote only
     
-    // Update countdown immediately
-    updateCountdown();
-    
-    // Set up interval to update every second
+    // Set up interval to track remaining time
     g.eviction._countdownInterval = setInterval(() => {
       timeLeft--;
       
       if(timeLeft <= 0){
         clearInterval(g.eviction._countdownInterval);
         g.eviction._countdownInterval = null;
-      } else {
-        updateCountdown();
       }
     }, 1000);
     

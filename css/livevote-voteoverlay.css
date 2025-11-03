@@ -34,36 +34,6 @@
   flex-shrink: 0;
 }
 
-.lv-timer-badge {
-  display: inline-block;
-  margin-left: 12px;
-  padding: 4px 12px;
-  background: rgba(255, 107, 107, 0.2);
-  border: 1px solid rgba(255, 107, 107, 0.4);
-  border-radius: 16px;
-  font-size: clamp(0.9rem, 3vw, 1.1rem);
-  font-weight: 600;
-  color: #ff6b6b;
-  font-family: 'Courier New', monospace;
-  letter-spacing: 0.05em;
-  min-width: 60px;
-  text-align: center;
-}
-
-/* Hide timer badge on desktop/wider viewports */
-@media (min-width: 820px) {
-  .lv-timer-badge {
-    display: none;
-  }
-}
-
-/* Ensure timer badge is visible on mobile */
-@media (max-width: 819px) {
-  .lv-timer-badge {
-    display: inline-block;
-  }
-}
-
 .lv-overlay__carousel {
   flex: 1;
   display: flex;

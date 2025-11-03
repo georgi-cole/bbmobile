@@ -88,17 +88,10 @@
       overlay.classList.add('reduce-motion');
     }
 
-    // Header with countdown badge
+    // Header
     const header = document.createElement('div');
     header.className = 'lv-overlay__header';
     header.textContent = isTieBreak ? 'Break the tie.' : 'Cast your vote to evict.';
-    
-    // Add countdown badge (will be populated by countdown timer)
-    const timerBadge = document.createElement('span');
-    timerBadge.className = 'lv-timer-badge';
-    timerBadge.setAttribute('aria-live', 'polite');
-    timerBadge.setAttribute('aria-atomic', 'true');
-    header.appendChild(timerBadge);
     
     overlay.appendChild(header);
 
