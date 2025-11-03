@@ -4,14 +4,12 @@
 (function(g){
   'use strict';
 
-  // Track if styles have been injected
-  let stylesInjected = false;
-
   function injectStyles() {
-    if(stylesInjected) return;
-    stylesInjected = true;
+    // Check if styles already exist in DOM
+    if(document.querySelector('style[data-snake-nokia-styles]')) return;
 
     const styleTag = document.createElement('style');
+    styleTag.setAttribute('data-snake-nokia-styles', 'true');
     styleTag.textContent = `
       .snake-nokia-wrapper {
         display: flex;
@@ -409,8 +407,9 @@
     
     // D-pad button handlers with haptic feedback
     function addDPadHandler(btn, dir) {
-      const handler = () => {
+      const handler = (e) => {
         if(!gameOver) {
+          e.preventDefault();
           setDirection(dir);
           btn.classList.add('snake-nokia-dpad-pressed');
           setTimeout(() => btn.classList.remove('snake-nokia-dpad-pressed'), 100);
@@ -423,6 +422,7 @@
       };
       
       btn.addEventListener('pointerdown', handler);
+      btn.addEventListener('click', handler);
     }
     
     addDPadHandler(btnUp, {x:0, y:-1});
@@ -435,6 +435,7 @@
     let touchStartY = 0;
     
     canvas.addEventListener('touchstart', (e) => {
+      if(!e.touches || !e.touches[0]) return;
       e.preventDefault();
       const touch = e.touches[0];
       touchStartX = touch.clientX;
@@ -443,6 +444,7 @@
     
     canvas.addEventListener('touchend', (e) => {
       if(gameOver) return;
+      if(!e.changedTouches || !e.changedTouches[0]) return;
       e.preventDefault();
       
       const touch = e.changedTouches[0];
