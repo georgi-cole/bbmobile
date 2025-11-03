@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Blur Removal Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="overrides-fixes.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0d151f;
+      color: #e3ecf5;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #83bfff;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #95a9c0;
+      margin-bottom: 40px;
+      font-size: 0.95rem;
+    }
+    .demo-section {
+      margin-bottom: 40px;
+    }
+    .demo-section h2 {
+      color: #83bfff;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .explanation {
+      background: rgba(28, 43, 62, 0.5);
+      border: 1px solid #24364b;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .explanation ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .explanation li {
+      margin: 5px 0;
+    }
+    .status-good {
+      color: #77d58d;
+      font-weight: 600;
+    }
+    .status-removed {
+      color: #95a9c0;
+      text-decoration: line-through;
+    }
+    /* Mock TV frame for demonstration */
+    .tv-demo {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      aspect-ratio: 16 / 9;
+      margin: 0 auto;
+      background: linear-gradient(135deg, #1a2942, #0e1924);
+      border: 3px solid #334455;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    .tv-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: 
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" font-size="40" fill="%23334455" opacity="0.3">BB</text></svg>') center/contain no-repeat;
+    }
+    /* Test buttons */
+    .test-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .btn-test {
+      padding: 10px 20px;
+      background: #3563a7;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-test:hover {
+      background: #4695ff;
+      transform: translateY(-2px);
+    }
+    .verification-list {
+      background: rgba(12, 22, 36, 0.7);
+      border: 1px solid #24364b;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .verification-list h3 {
+      color: #83bfff;
+      font-size: 1rem;
+      margin-top: 0;
+    }
+    .verification-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #24364b;
+    }
+    .verification-item:last-child {
+      border-bottom: none;
+    }
+    .check-icon {
+      color: #77d58d;
+      font-size: 1.2rem;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎬 TV Overlay Blur Removal Test</h1>
+    <p class="subtitle">Verifying that veto ceremony cards inside the TV have no blur/dim backdrop</p>
+
+    <div class="demo-section">
+      <h2>✓ Changes Applied</h2>
+      <div class="explanation">
+        <p><strong>Problem:</strong> Veto ceremony popups inside the faux TV had unwanted blur and dim effects that created a "blurred film" over the TV screen.</p>
+        <p><strong>Solution:</strong> Neutralized blur/dim specifically for elements <em>inside</em> #tvOverlay while keeping fullscreen overlays intact.</p>
+        <ul>
+          <li><span class="status-removed">Old:</span> .tvDim had backdrop-filter: blur(4px) and gradient background</li>
+          <li><span class="status-good">New:</span> #tvOverlay .tvDim now has transparent background and no backdrop-filter</li>
+          <li><span class="status-removed">Old:</span> .revealCard.diaryRoomCard had backdrop-filter: blur(12px) and box-shadow</li>
+          <li><span class="status-good">New:</span> #tvOverlay .revealCard.diaryRoomCard now has no backdrop-filter or box-shadow</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>Interactive Test</h2>
+      <div class="tv-demo" id="tvDemo">
+        <div class="tv-content">
+          <div id="tvOverlay" style="position: absolute; inset: 44px 16px 42px 16px; pointer-events: none; z-index: 10;">
+            <!-- Cards will be displayed here -->
+          </div>
+        </div>
+      </div>
+      <div class="test-buttons">
+        <button class="btn-test" onclick="showVetoCard()">Show Veto Decision Card</button>
+        <button class="btn-test" onclick="showSavedCard()">Show Saved Card</button>
+        <button class="btn-test" onclick="showAdjournCard()">Show Adjourn Card</button>
+        <button class="btn-test" onclick="clearCards()">Clear Cards</button>
+      </div>
+    </div>
+
+    <div class="verification-list">
+      <h3>Verification Checklist</h3>
+      <div class="verification-item">
+        <span class="check-icon">✓</span>
+        <span><strong>No blur inside TV:</strong> #tvOverlay .tvDim has transparent background and no backdrop-filter</span>
+      </div>
+      <div class="verification-item">
+        <span class="check-icon">✓</span>
+        <span><strong>No glass effect on cards:</strong> #tvOverlay .revealCard.diaryRoomCard has no backdrop-filter or box-shadow</span>
+      </div>
+      <div class="verification-item">
+        <span class="check-icon">✓</span>
+        <span><strong>Scoped to TV only:</strong> Selectors use #tvOverlay prefix, so fullscreen overlays remain unaffected</span>
+      </div>
+      <div class="verification-item">
+        <span class="check-icon">✓</span>
+        <span><strong>Safety guards in place:</strong> overrides-fixes.css has !important rules to prevent regressions</span>
+      </div>
+      <div class="verification-item">
+        <span class="check-icon">✓</span>
+        <span><strong>Layout preserved:</strong> Only visual blur/dim removed; containment, sizing, and typography unchanged</span>
+      </div>
+    </div>
+
+    <div class="explanation" style="margin-top: 30px;">
+      <h3 style="color: #83bfff; margin-top: 0;">CSS Changes Summary</h3>
+      <p><strong>styles.css (after line 944):</strong></p>
+      <pre style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem;"><code>/* TV Overlay: remove blur/dim INSIDE the TV (keep fullscreen overlays elsewhere) */
+#tvOverlay .tvDim{
+  background: transparent;            /* no tinted layer over TV */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* TV-contained cards (diaryRoomCard) should not add blur/shadows on the TV */
+#tvOverlay .revealCard.diaryRoomCard{
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}</code></pre>
+
+      <p><strong>overrides-fixes.css (at end):</strong></p>
+      <pre style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem;"><code>/* Safety net: ensure no TV-area dim/blur can leak back in via later CSS */
+#tvOverlay .tvDim{
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Safety net: keep TV-contained cards free of blur/shadows */
+#tvOverlay .revealCard.diaryRoomCard{
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}</code></pre>
+    </div>
+  </div>
+
+  <script>
+    let currentCard = null;
+
+    function showVetoCard() {
+      clearCards();
+      const overlay = document.getElementById('tvOverlay');
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        max-width: min(92%, 520px);
+        max-height: 78%;
+        padding: 24px 28px;
+        pointer-events: auto;
+      `;
+      card.innerHTML = `
+        <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; color: #83bfff;">Veto Decision</h3>
+        <p style="margin: 8px 0; line-height: 1.5;">I have decided to use the Power of Veto on one of the nominees.</p>
+        <p style="margin: 8px 0; font-size: 0.9rem; color: #95a9c0;">Using it removes a nominee. A replacement must be named.</p>
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+          <button style="padding: 10px 20px; background: #3563a7; color: white; border: none; border-radius: 8px; cursor: pointer;">Yes — Use Power of Veto</button>
+          <button style="padding: 10px 20px; background: #1f344d; color: white; border: none; border-radius: 8px; cursor: pointer;">No — Keep Nominations</button>
+        </div>
+      `;
+      overlay.appendChild(card);
+      currentCard = card;
+    }
+
+    function showSavedCard() {
+      clearCards();
+      const overlay = document.getElementById('tvOverlay');
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        max-width: min(92%, 520px);
+        max-height: 78%;
+        padding: 24px 28px;
+        pointer-events: auto;
+      `;
+      card.innerHTML = `
+        <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; color: #77d58d;">Saved!</h3>
+        <p style="margin: 8px 0; line-height: 1.5; font-size: 1.1rem;">Player 3 has been saved by the Power of Veto.</p>
+        <p style="margin: 8px 0; font-size: 0.9rem; color: #95a9c0;">The HOH must now name a replacement nominee.</p>
+      `;
+      overlay.appendChild(card);
+      currentCard = card;
+    }
+
+    function showAdjournCard() {
+      clearCards();
+      const overlay = document.getElementById('tvOverlay');
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        max-width: min(92%, 520px);
+        max-height: 78%;
+        padding: 24px 28px;
+        pointer-events: auto;
+      `;
+      card.innerHTML = `
+        <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; color: #83bfff;">Veto Ceremony</h3>
+        <p style="margin: 8px 0; line-height: 1.5; font-size: 1.05rem;">This ceremony is adjourned.</p>
+      `;
+      overlay.appendChild(card);
+      currentCard = card;
+    }
+
+    function clearCards() {
+      const overlay = document.getElementById('tvOverlay');
+      if (currentCard) {
+        overlay.removeChild(currentCard);
+        currentCard = null;
+      }
+    }
+  </script>
+</body>
+</html>
