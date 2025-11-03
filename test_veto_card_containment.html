@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Card Containment Test</title>
+  
+  <!-- Load CSS in the same order as main app -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="overrides-fixes.css">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #83bfff;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .controls {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(28, 43, 62, 0.5);
+      border-radius: 8px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #4695ff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    button:hover {
+      background: #3580e8;
+    }
+    
+    .info {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #95a9c0;
+    }
+    
+    /* Mock TV container for testing */
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      aspect-ratio: 16 / 9;
+      background: linear-gradient(135deg, #1a2940 0%, #0e1620 100%);
+      border: 3px solid #356089;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+    
+    /* Debug outline to show TV safe area */
+    #tv::after {
+      content: '';
+      position: absolute;
+      inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+      border: 2px dashed rgba(131, 191, 255, 0.3);
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    /* Hidden by default */
+    #tvOverlay {
+      display: none;
+    }
+    
+    #tvOverlay.active {
+      display: grid;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Veto Ceremony Card Containment Test</h1>
+    
+    <p class="info">
+      This test verifies that veto ceremony cards are properly contained within the TV safe area.<br>
+      The dashed blue line shows the TV safe area boundaries.
+    </p>
+    
+    <div class="controls">
+      <button onclick="showCard('short')">Show Short Card</button>
+      <button onclick="showCard('medium')">Show Medium Card</button>
+      <button onclick="showCard('tall')">Show Tall Card (Scrollable)</button>
+      <button onclick="showCard('buttons')">Show Card with Buttons</button>
+      <button onclick="showCard('big')">Show Big Announce Card</button>
+      <button onclick="hideCard()">Hide Card</button>
+    </div>
+    
+    <div id="tv">
+      <div id="tvOverlay">
+        <!-- Cards will be injected here -->
+      </div>
+    </div>
+    
+    <div class="info" style="margin-top: 20px;">
+      <p><strong>Test at different viewport sizes:</strong></p>
+      <ul style="list-style: none; padding: 0;">
+        <li>✓ 375px (iPhone SE) - narrow mobile</li>
+        <li>✓ 414px (iPhone Pro Max) - wide mobile</li>
+        <li>✓ 768px (tablet portrait)</li>
+        <li>✓ 1024px (desktop)</li>
+      </ul>
+    </div>
+  </div>
+  
+  <script>
+    const tvOverlay = document.getElementById('tvOverlay');
+    
+    function showCard(type) {
+      let cardHTML = '';
+      
+      switch(type) {
+        case 'short':
+          cardHTML = `
+            <div class="revealCard diaryRoomCard">
+              <h3>Veto Ceremony</h3>
+              <p>This veto ceremony is now open.</p>
+              <div class="btn-row">
+                <button>Continue</button>
+              </div>
+            </div>
+          `;
+          break;
+          
+        case 'medium':
+          cardHTML = `
+            <div class="revealCard diaryRoomCard">
+              <h3>Use Power of Veto?</h3>
+              <p>You have the Power of Veto. Using it removes a nominee from the block.</p>
+              <p>A replacement nominee must be named by the Head of Household.</p>
+              <div class="veto-decision-row">
+                <button>Yes — Use Power of Veto</button>
+                <button>No — Keep Nominations</button>
+              </div>
+            </div>
+          `;
+          break;
+          
+        case 'tall':
+          cardHTML = `
+            <div class="revealCard diaryRoomCard">
+              <h3>Veto Rules</h3>
+              <p>The Power of Veto is one of the most important powers in the Big Brother house.</p>
+              <p>If you win the Power of Veto competition, you have the option to use it to save one of the nominees from eviction.</p>
+              <p>If you choose to use the veto, the Head of Household must then name a replacement nominee.</p>
+              <p>The veto holder can also choose not to use the power, in which case the nominations remain the same.</p>
+              <p>Special veto powers may have different rules:</p>
+              <ul style="text-align: left; max-width: 400px; margin: 10px auto;">
+                <li><strong>Golden POV:</strong> Holder names the replacement</li>
+                <li><strong>Diamond POV:</strong> Can replace both nominees</li>
+                <li><strong>Platinum POV:</strong> Extra features TBD</li>
+              </ul>
+              <p>This is additional content to make the card tall enough to require scrolling on mobile devices.</p>
+              <p>More content here to test internal scrolling behavior.</p>
+              <div class="btn-row">
+                <button>I Understand</button>
+              </div>
+            </div>
+          `;
+          break;
+          
+        case 'buttons':
+          cardHTML = `
+            <div class="revealCard diaryRoomCard">
+              <h3>Choose Replacement Nominee</h3>
+              <p>Select a houseguest to nominate for eviction:</p>
+              <div class="choice-row">
+                <button>Player A</button>
+                <button>Player B</button>
+                <button>Player C</button>
+                <button>Player D</button>
+                <button>Player E</button>
+              </div>
+            </div>
+          `;
+          break;
+          
+        case 'big':
+          cardHTML = `
+            <div class="revealCard bigAnnounce">
+              <h3>🏆 Competition Winner!</h3>
+              <p style="font-size: 1.1rem; font-weight: 600;">Congratulations, you have won the Power of Veto!</p>
+              <p>This is a fullscreen announcement card that should NOT be constrained by the TV safe area rules.</p>
+              <div class="btn-row">
+                <button>Continue</button>
+              </div>
+            </div>
+          `;
+          break;
+      }
+      
+      tvOverlay.innerHTML = cardHTML;
+      tvOverlay.classList.add('active');
+    }
+    
+    function hideCard() {
+      tvOverlay.classList.remove('active');
+      tvOverlay.innerHTML = '';
+    }
+  </script>
+</body>
+</html>
