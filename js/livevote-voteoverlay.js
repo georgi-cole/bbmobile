@@ -88,17 +88,10 @@
       overlay.classList.add('reduce-motion');
     }
 
-    // Header with countdown badge
+    // Header
     const header = document.createElement('div');
     header.className = 'lv-overlay__header';
     header.textContent = isTieBreak ? 'Break the tie.' : 'Cast your vote to evict.';
-    
-    // Add countdown badge (will be populated by countdown timer)
-    const timerBadge = document.createElement('span');
-    timerBadge.className = 'lv-timer-badge';
-    timerBadge.setAttribute('aria-live', 'polite');
-    timerBadge.setAttribute('aria-atomic', 'true');
-    header.appendChild(timerBadge);
     
     overlay.appendChild(header);
 
@@ -224,6 +217,37 @@
     return overlay;
   }
 
+  // Helper: Scroll carousel to center a nominee
+  function scrollToNomineeCenter(index, immediate = false) {
+    if (!state.overlay) return;
+
+    const carousel = state.overlay.querySelector('.lv-overlay__carousel');
+    const track = state.overlay.querySelector('.lv-overlay__track');
+    if (!carousel || !track) return;
+
+    const nominees = track.querySelectorAll('.lv-overlay__nominee');
+    const targetNominee = nominees[index];
+    if (!targetNominee) return;
+
+    // Calculate the delta to center the nominee
+    const carouselRect = carousel.getBoundingClientRect();
+    const nomineeRect = targetNominee.getBoundingClientRect();
+    
+    // Calculate the center of the carousel
+    const carouselCenter = carouselRect.left + carouselRect.width / 2;
+    // Calculate the center of the nominee
+    const nomineeCenter = nomineeRect.left + nomineeRect.width / 2;
+    
+    // Calculate the delta needed to center the nominee
+    const delta = nomineeCenter - carouselCenter;
+    
+    // Scroll the carousel by the delta
+    carousel.scrollTo({
+      left: carousel.scrollLeft + delta,
+      behavior: immediate ? 'auto' : 'smooth'
+    });
+  }
+
   // Navigate carousel (swipe or arrow)
   function navigateCarousel(direction) {
     if (!state.overlay || state.nominees.length <= 1) return;
@@ -237,6 +261,9 @@
     if (newIndex >= state.nominees.length) newIndex = 0;
 
     state.selectedIndex = newIndex;
+
+    // Center the new nominee in the carousel
+    scrollToNomineeCenter(newIndex);
 
     // Update center class
     const nominees = track.querySelectorAll('.lv-overlay__nominee');
@@ -273,9 +300,21 @@
 
     const nomineeId = parseInt(clickedNominee.dataset.nomineeId);
 
-    // If clicked nominee is not centered, navigate to it first
+    // Always center the nominee in the carousel first
+    scrollToNomineeCenter(index);
+
+    // If clicked nominee is not centered, update selectedIndex and center class
     if (index !== state.selectedIndex) {
-      navigateCarousel(index - state.selectedIndex);
+      state.selectedIndex = index;
+      nominees.forEach((nominee, i) => {
+        if (i === index) {
+          nominee.classList.add('center');
+          nominee.setAttribute('tabindex', '0');
+        } else {
+          nominee.classList.remove('center');
+          nominee.setAttribute('tabindex', '-1');
+        }
+      });
     }
 
     // Toggle selection

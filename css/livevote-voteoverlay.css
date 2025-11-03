@@ -34,36 +34,6 @@
   flex-shrink: 0;
 }
 
-.lv-timer-badge {
-  display: inline-block;
-  margin-left: 12px;
-  padding: 4px 12px;
-  background: rgba(255, 107, 107, 0.2);
-  border: 1px solid rgba(255, 107, 107, 0.4);
-  border-radius: 16px;
-  font-size: clamp(0.9rem, 3vw, 1.1rem);
-  font-weight: 600;
-  color: #ff6b6b;
-  font-family: 'Courier New', monospace;
-  letter-spacing: 0.05em;
-  min-width: 60px;
-  text-align: center;
-}
-
-/* Hide timer badge on desktop/wider viewports */
-@media (min-width: 820px) {
-  .lv-timer-badge {
-    display: none;
-  }
-}
-
-/* Ensure timer badge is visible on mobile */
-@media (max-width: 819px) {
-  .lv-timer-badge {
-    display: inline-block;
-  }
-}
-
 .lv-overlay__carousel {
   flex: 1;
   display: flex;
@@ -71,10 +41,21 @@
   justify-content: center;
   position: relative;
   overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: auto; /* Enable horizontal scrolling */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  scroll-behavior: smooth; /* Smooth scrolling behavior */
+  scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
   padding: 20px 16px;
   min-height: 0; /* Allow flex child to shrink */
+  
+  /* Hide scrollbars visually while keeping functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbars in Webkit browsers */
+.lv-overlay__carousel::-webkit-scrollbar {
+  display: none;
 }
 
 .lv-overlay__track {
@@ -87,7 +68,8 @@
 }
 
 .lv-overlay__nominee {
-  flex-shrink: 0;
+  flex-shrink: 0; /* Don't shrink nominees */
+  flex: 0 0 auto; /* Fixed size, don't grow or shrink */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -97,6 +79,7 @@
   transform: scale(0.75);
   filter: blur(2px);
   cursor: pointer;
+  scroll-snap-align: center; /* Snap to center of carousel */
 }
 
 .lv-overlay__nominee.center {

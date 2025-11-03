@@ -1377,13 +1377,8 @@ header.innerHTML = `
     const game = g.game;
     if(!game || !game.humanId) return false;
     
-    // Check if human needs to vote in this phase
-    if(phase === 'livevote'){
-      // Check if human is eligible voter (not HOH, not nominated, not evicted)
-      const human = game.players?.find(p => p.id === game.humanId);
-      if(!human || human.evicted || human.hoh || human.nominated) return false;
-      return true;
-    }
+    // Livevote phase: timer starts immediately (no wait for vote)
+    // The auto-vote countdown in the overlay handles the 30s timer
     
     if(phase === 'jury'){
       // Check if human is in jury

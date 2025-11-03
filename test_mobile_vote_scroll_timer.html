@@ -261,16 +261,8 @@
     function startMockCountdown(seconds, nominees) {
       let timeLeft = seconds;
 
-      const updateCountdown = () => {
-        const timerBadge = document.querySelector('.lv-overlay .lv-timer-badge');
-        if (timerBadge && timeLeft > 0) {
-          // Use shared time formatting helper
-          const timeStr = window.formatCountdownTime(timeLeft);
-          timerBadge.textContent = timeStr;
-        }
-      };
-
-      updateCountdown();
+      // No UI timer badge in overlay - central HUD timer shows countdown
+      // This countdown logic handles auto-vote only
 
       window.game.eviction._countdownInterval = setInterval(() => {
         timeLeft--;
@@ -278,8 +270,6 @@
         if (timeLeft <= 0) {
           clearInterval(window.game.eviction._countdownInterval);
           window.game.eviction._countdownInterval = null;
-        } else {
-          updateCountdown();
         }
       }, 1000);
 
