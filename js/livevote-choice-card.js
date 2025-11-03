@@ -26,8 +26,7 @@
   async function show(options = {}) {
     const {
       nominees = [],
-      onVoteClick = null,
-      container = null
+      onVoteClick = null
     } = options;
 
     if (!Array.isArray(nominees) || nominees.length === 0) {
@@ -35,28 +34,37 @@
       return null;
     }
 
-    // Find container (either provided or default to TV viewport)
-    const targetContainer = container || document.querySelector('#tv .tvViewport') || document.querySelector('#tv');
-    if (!targetContainer) {
-      console.warn('[ChoiceCard] No container found');
-      return null;
+    // Pre-clean any prior UI using unified cleanup
+    if (global.closeAllVoteUI) {
+      global.closeAllVoteUI();
     }
 
     // Center TV in viewport before locking scroll
-    // If scroll is already locked, temporarily unlock it
     const tvElement = document.querySelector('#tv');
-    const wasLocked = document.body.dataset.scrollLocked === 'true';
-    if (wasLocked && global.unlockBodyScroll) {
-      global.unlockBodyScroll();
-    }
-    
-    // Wait for TV to be centered
     if (global.centerTVInViewport) {
       await global.centerTVInViewport(tvElement);
     }
-    
-    // Now lock body scroll when choice card is shown
-    lockBodyScroll();
+
+    // Lock body scroll when choice card is shown (using ref-counted helper)
+    if (global.lockBodyScroll) {
+      global.lockBodyScroll();
+    } else {
+      // Fallback if helper not loaded yet
+      lockBodyScroll();
+    }
+
+    // Create modal root container
+    const root = document.createElement('div');
+    root.className = 'lv-root';
+
+    // Create backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'lv-backdrop';
+    backdrop.onclick = () => {
+      // Optional: close on backdrop click
+      // For now, we'll leave this empty to require explicit Vote button interaction
+    };
+    root.appendChild(backdrop);
 
     // Create card element
     const card = document.createElement('div');
@@ -117,17 +125,29 @@
     };
     card.appendChild(voteBtn);
 
-    // Add to container
-    targetContainer.appendChild(card);
+    // Add card to root
+    root.appendChild(card);
+
+    // Mount to document.body (not #tv)
+    document.body.appendChild(root);
 
     return card;
   }
 
   // Remove the Choice Card
   function hide() {
+    // Remove the entire modal root (includes backdrop and card)
+    const root = document.querySelector('.lv-root');
+    if (root) {
+      root.remove();
+      console.debug('[ChoiceCard] Modal root removed');
+    }
+
+    // Fallback: remove legacy card if present
     const card = document.querySelector('.lv-choice-card');
-    if (card) {
+    if (card && !root) {
       card.remove();
+      console.debug('[ChoiceCard] Legacy card removed');
     }
     
     // Use global helper to unlock body scroll

@@ -109,32 +109,84 @@
     });
   }
 
-  /**
-   * Forcefully unlock body scroll regardless of current state
-   * This is idempotent and safe to call multiple times
-   */
-  function unlockBodyScroll() {
-    const body = document.body;
-    if (!body) return;
+  // Module-private scroll lock counter for reference-counted locking
+  let __scrollLockCount = 0;
 
-    // Clear all scroll lock properties
-    const scrollY = parseInt(body.dataset.scrollY || '0', 10);
-    
-    body.style.position = '';
-    body.style.top = '';
-    body.style.width = '';
-    body.style.overflow = '';
-    
-    // Clear dataset flags
-    delete body.dataset.scrollLocked;
-    delete body.dataset.scrollY;
-    
-    // Restore scroll position if it was saved
-    if (scrollY > 0) {
-      window.scrollTo(0, scrollY);
+  /**
+   * Lock body scroll with reference counting
+   * Multiple components can call this safely - scroll is only locked on first call
+   * iOS-safe: uses overflow:hidden instead of position:fixed
+   */
+  function lockBodyScroll() {
+    const body = document.body;
+    const html = document.documentElement;
+    if (!body || !html) return;
+
+    __scrollLockCount++;
+    console.debug(`[livevote-helpers] lockBodyScroll called (count: ${__scrollLockCount})`);
+
+    // Only lock on first call
+    if (__scrollLockCount === 1) {
+      // Store current scroll position
+      const scrollY = window.scrollY;
+      body.dataset.scrollY = String(scrollY);
+      body.dataset.scrollLocked = 'true';
+
+      // Use overflow-based lock (iOS-safe)
+      body.style.overflow = 'hidden';
+      body.style.touchAction = 'none';
+      html.style.overflow = 'hidden';
+      html.style.overscrollBehavior = 'contain';
+
+      console.debug('[livevote-helpers] Body scroll locked');
     }
-    
-    console.debug('[livevote-helpers] Body scroll unlocked');
+  }
+
+  /**
+   * Unlock body scroll with reference counting
+   * Only unlocks when all callers have called unlock (count reaches 0)
+   * @param {boolean} force - If true, immediately unlocks regardless of count
+   */
+  function unlockBodyScroll(force = false) {
+    const body = document.body;
+    const html = document.documentElement;
+    if (!body || !html) return;
+
+    if (force) {
+      __scrollLockCount = 0;
+      console.debug('[livevote-helpers] Body scroll force unlocked');
+    } else {
+      __scrollLockCount = Math.max(0, __scrollLockCount - 1);
+      console.debug(`[livevote-helpers] unlockBodyScroll called (count: ${__scrollLockCount})`);
+    }
+
+    // Only unlock when count reaches 0
+    if (__scrollLockCount === 0) {
+      // Restore scroll position if saved
+      const scrollY = parseInt(body.dataset.scrollY || '0', 10);
+
+      // Clear overflow-based lock
+      body.style.overflow = '';
+      body.style.touchAction = '';
+      html.style.overflow = '';
+      html.style.overscrollBehavior = '';
+
+      // Clear old position-based lock (backwards compatibility)
+      body.style.position = '';
+      body.style.top = '';
+      body.style.width = '';
+
+      // Clear dataset flags
+      delete body.dataset.scrollLocked;
+      delete body.dataset.scrollY;
+
+      // Restore scroll position
+      if (scrollY > 0) {
+        window.scrollTo(0, scrollY);
+      }
+
+      console.debug('[livevote-helpers] Body scroll unlocked');
+    }
   }
 
   /**
@@ -154,27 +206,26 @@
     // Clear countdown timer
     clearVoteCountdown();
 
-    // Close Choice Card if present
-    try {
-      const choiceCard = document.querySelector('.lv-choice-card');
-      if (choiceCard) {
-        choiceCard.remove();
-        console.debug('[livevote-helpers] Choice card removed');
-      }
-    } catch (e) {
-      console.warn('[livevote-helpers] Error removing choice card:', e);
-    }
+    // Remove all known overlay types
+    const overlaySelectors = [
+      '.lv-root',              // Live vote modal root
+      '.lv-choice-card',       // Live vote choice card (legacy)
+      '.lv-overlay',           // Live vote overlay
+      '.carousel-picker-overlay', // POV carousel picker
+      '.fullscreen-pov-selector'  // POV fullscreen selector
+    ];
 
-    // Close Vote Overlay if present
-    try {
-      const overlay = document.querySelector('.lv-overlay');
-      if (overlay) {
-        overlay.remove();
-        console.debug('[livevote-helpers] Vote overlay removed');
+    overlaySelectors.forEach(selector => {
+      try {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          el.remove();
+          console.debug(`[livevote-helpers] Removed ${selector}`);
+        });
+      } catch (e) {
+        console.warn(`[livevote-helpers] Error removing ${selector}:`, e);
       }
-    } catch (e) {
-      console.warn('[livevote-helpers] Error removing overlay:', e);
-    }
+    });
 
     // Close Rollout UI if showing
     try {
@@ -186,15 +237,17 @@
       console.warn('[livevote-helpers] Error hiding rollout:', e);
     }
 
-    // Always unlock body scroll as final step
+    // Always force-unlock body scroll as final step
     // This ensures scroll is restored even if UI elements are already gone
-    unlockBodyScroll();
+    // and handles mismatched lock/unlock calls
+    unlockBodyScroll(true);
   }
 
   // Export to global scope
   global.formatCountdownTime = formatCountdownTime;
   global.clearVoteCountdown = clearVoteCountdown;
   global.centerTVInViewport = centerTVInViewport;
+  global.lockBodyScroll = lockBodyScroll;
   global.unlockBodyScroll = unlockBodyScroll;
   global.closeAllVoteUI = closeAllVoteUI;
 
