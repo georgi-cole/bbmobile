@@ -1686,7 +1686,12 @@ button:focus-visible,.btn:focus-visible{
 }
 
 /* Eviction Visual Enhancement - Avatar Animation in Faux TV */
-/* Ensure TV containers provide positioning context and clip overflow */
+/* 
+ * Fix: Eviction portraits were not centered on mobile (iOS Safari).
+ * These selectors ensure fallback TV containers provide positioning context
+ * and clip overflow, preventing portraits from drifting outside the TV frame.
+ * Primary containers (.tv, .tvViewport) already have these styles.
+ */
 .tv-screen, .faux-tv {
   position: relative;
   overflow: hidden;

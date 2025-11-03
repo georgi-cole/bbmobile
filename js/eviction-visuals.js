@@ -98,7 +98,12 @@
    * @returns {HTMLElement|null} - The TV container element
    */
   function getTvContainer() {
-    // Try selectors in priority order
+    // Try selectors in priority order:
+    // 1. Data attributes (most specific, used in live markup)
+    // 2. .tvViewport (primary viewport container)
+    // 3. #tv (main TV element ID)
+    // 4. .tv (common TV class)
+    // 5. .faux-tv, .tv-screen (legacy/fallback selectors)
     const selectors = [
       '[data-faux-tv]',
       '[data-sm-faux-tv]',
