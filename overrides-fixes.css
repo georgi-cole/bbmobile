@@ -1,3 +1,23 @@
+/* ============================================================================
+   BACKDROP BLUR FIX - Prevent overlay blur from blocking clicks
+   ============================================================================
+   
+   Issue: Backdrop-blur on full-screen overlay wrappers can intercept clicks
+          and make buttons/cards unclickable.
+   
+   Solution: 
+   1. Disable backdrop-blur on overlay wrappers (set --popup-backdrop-blur to 0)
+   2. Keep subtle background tint for visual consistency
+   3. Enforce pointer-events: none on wrappers, pointer-events: auto on content
+   4. Preserve card-level glassmorphism (blur on actual cards/panels)
+   
+   ============================================================================ */
+
+/* Override theme-driven backdrop blur variable to 0 */
+:root {
+  --popup-backdrop-blur: 0px !important;
+}
+
 /* Rules card body: scroll inside the card, not dismiss */
 .revealCard .rules-body{
   text-align: left;
@@ -17,10 +37,25 @@
   position: absolute; inset: 0;
   display: grid; place-items: center;
   padding: 12px;
-  pointer-events: none; /* allow underlying clicks unless a card is present */
+  pointer-events: none !important; /* allow underlying clicks unless a card is present */
   z-index: 10;
+  /* Remove backdrop blur - keep subtle tint only */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  /* Keep subtle background tint from theme */
+  background: color-mix(in srgb, var(--bg, #0d1623) 20%, transparent) !important;
 }
-#tvOverlay .revealCard{ pointer-events: auto; }
+#tvOverlay .revealCard{ pointer-events: auto !important; }
+
+/* Remove blur from tvDim wrapper as well */
+#tvOverlay .tvDim,
+.tvDim {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: none !important;
+  /* Keep subtle background tint */
+  background: color-mix(in srgb, var(--bg, #0d1623) 15%, transparent) !important;
+}
 
 /* Social decisions deck (social.js) */
 #decisionDeck{
@@ -28,9 +63,14 @@
   display: grid; place-items: center;
   padding: 12px;
   z-index: 11;
-  pointer-events: none;
+  pointer-events: none !important;
+  /* Remove backdrop blur - keep subtle tint only */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  /* Keep subtle background tint from theme */
+  background: color-mix(in srgb, var(--bg, #0d1623) 20%, transparent) !important;
 }
-#decisionDeck .revealCard{ pointer-events: auto; }
+#decisionDeck .revealCard{ pointer-events: auto !important; }
 
 /* Social / reveal cards: center and constrain without modifying #panel */
 .revealCard{
@@ -49,6 +89,108 @@
 /* Finale overlays */
 .finalFaceoff .fo-tally{ display: none !important; }
 .finalFaceoff .fo-winner{ top: 12% !important; bottom: auto !important; }
+
+/* ============================================================================
+   ADDITIONAL OVERLAY BACKDROP BLUR FIXES
+   ============================================================================
+   Remove backdrop blur from all overlay wrappers to prevent click blocking.
+   Keep subtle background tints for visual consistency.
+   ============================================================================ */
+
+/* Results modal overlay */
+.results-modal-overlay[role="dialog"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: auto; /* Modal itself needs to capture clicks for dismissal */
+  /* Keep subtle background tint from theme-bridge.css */
+  background: color-mix(in srgb, var(--bg, #0d1623) 75%, transparent) !important;
+}
+.results-modal-overlay .modal {
+  pointer-events: auto !important;
+}
+
+/* Announcement overlay */
+.announcement-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: auto; /* Modal itself needs to capture clicks for dismissal */
+  /* Keep subtle background tint from theme-bridge.css */
+  background: color-mix(in srgb, var(--bg, #0d1623) 75%, transparent) !important;
+}
+.announcement-overlay .modal,
+.announcement-overlay .card {
+  pointer-events: auto !important;
+}
+
+/* Public Favorite modal */
+.pfModalHost {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: auto; /* Modal itself needs to capture clicks for dismissal */
+  /* Keep subtle background tint from theme-bridge.css */
+  background: color-mix(in srgb, var(--bg, #0d1623) 75%, transparent) !important;
+}
+.pfModalHost .pfModal,
+.pfModalHost .pfPanel {
+  pointer-events: auto !important;
+}
+
+/* Finale panel (cinDim) */
+.cinDim {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: none !important;
+  /* Keep subtle background from theme-bridge.css */
+  background: radial-gradient(120% 120% at 50% 10%, 
+              color-mix(in srgb, var(--bg, #0d1623) 92%, black), 
+              color-mix(in srgb, var(--bg, #0d1623) 97%, black)) !important;
+}
+.cinDim .cinPanel {
+  pointer-events: auto !important;
+}
+
+/* Carousel picker overlay */
+.carousel-picker-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: auto; /* Needs to capture clicks */
+  /* Keep dark background for modal focus */
+  background: rgba(0, 0, 0, 0.92) !important;
+}
+.carousel-picker-overlay button,
+.carousel-picker-overlay .carousel-picker-avatar-container {
+  pointer-events: auto !important;
+}
+
+/* Confirm modal overlay */
+.confirm-modal-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: auto; /* Modal itself needs to capture clicks for dismissal */
+  /* Keep subtle background tint */
+  background: color-mix(in srgb, var(--bg, #0d1623) 75%, transparent) !important;
+}
+.confirm-modal-overlay .confirm-modal {
+  pointer-events: auto !important;
+}
+
+/* Ensure content within overlays is always interactive */
+#tvOverlay .revealCard,
+#tvOverlay .modal,
+#tvOverlay .card,
+#decisionDeck .revealCard,
+#decisionDeck .modal,
+#decisionDeck .card,
+.results-modal-overlay .modal,
+.results-modal-overlay .card,
+.announcement-overlay .modal,
+.announcement-overlay .card,
+.pfModalHost .pfModal,
+.pfModalHost .pfPanel,
+.cinDim .cinPanel,
+.confirm-modal-overlay .confirm-modal {
+  pointer-events: auto !important;
+}
 
 /* ============================================================================
    Competition completion panel - glassmorphism style matching Final Jury Vote
