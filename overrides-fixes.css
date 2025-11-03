@@ -12,9 +12,10 @@
 /* Center overlays and prevent cutoffs */
 #tv{ position: relative; overflow: visible; }
 
-/* Reveal cards overlay (showCard) */
+/* Reveal cards overlay (showCard) - Respect TV safe insets */
 #tvOverlay{
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
   display: grid; place-items: center;
   padding: 12px;
   pointer-events: none; /* allow underlying clicks unless a card is present */
@@ -32,9 +33,19 @@
 }
 #decisionDeck .revealCard{ pointer-events: auto; }
 
-/* Social / reveal cards: center and constrain without modifying #panel */
-.revealCard{
+/* Scope the generic page-level card width to the settings/info panel only */
+#panel .revealCard{
   width: min(680px, 92vw);
+  margin: 0 auto;
+}
+
+/* TV inline cards: width/height containment to guarantee no cutoff */
+#tvOverlay .revealCard.diaryRoomCard{
+  width: auto;
+  max-width: min(92%, 520px);
+  max-height: 78%;
+  overflow-y: auto;
+  overflow-x: hidden;
   margin: 0 auto;
 }
 .revealCard .actions,

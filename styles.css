@@ -7430,3 +7430,58 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
     opacity: 0;
   }
 }
+
+/* ==== Veto/ceremony inline card containment (TV-only) ==== */
+/* Keep the overlay inside the TV safe area and center content */
+#tvOverlay {
+  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+}
+#tvOverlay .tvOverlayContent {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+}
+
+/* Inline cards inside TV: contain height/width and allow internal scroll */
+#tvOverlay .revealCard.diaryRoomCard {
+  width: auto !important;                  /* defeat any global width */
+  max-width: min(92%, 520px) !important;   /* match TV guidelines */
+  max-height: 78% !important;              /* stay within TV; scroll if tall */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  margin: 0 auto !important;
+  text-align: center;
+}
+
+/* Button rows: inline, wrap, and stay centered */
+#tvOverlay .revealCard .veto-decision-row,
+#tvOverlay .revealCard .btn-row,
+#tvOverlay .revealCard .choice-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+}
+#tvOverlay .revealCard button {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+@media (max-width: 400px) {
+  #tvOverlay .revealCard button {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+  }
+}
+
+/* Make sure full-screen "big announce" cards are not affected */
+#tvOverlay .revealCard.bigAnnounce {
+  max-width: none !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
