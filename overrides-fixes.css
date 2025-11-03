@@ -61,9 +61,11 @@
    Strategy:
    - Disable theme-driven backdrop-filter via --popup-backdrop-blur: 0px
    - Explicitly remove backdrop-filter from known overlay/dim shells
-   - Keep subtle theme tint via background color-mix for visual consistency
+   - DO NOT override background colors to avoid visual artifacts
    - Enforce pointer-events: none on wrappers, pointer-events: auto on content
    - Preserve blur on actual cards/panels for glassmorphism effect
+   
+   CRITICAL: #tv must maintain overflow control to prevent card persistence
    ============================================================================ */
 
 :root {
@@ -78,17 +80,17 @@
 .results-modal-overlay,
 .announcement-overlay,
 .pfModalHost,
-.carousel-picker-overlay {
+.carousel-picker-overlay,
+.lv-overlay {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  /* Keep subtle theme tint for visual consistency */
-  background: color-mix(in srgb, var(--bg, #0d151f) 85%, transparent) !important;
+  /* DO NOT override background - let each overlay keep its own styling */
 }
 
-/* Ensure TV container allows proper positioning and doesn't clip overlays */
+/* CRITICAL: Keep TV container overflow hidden to prevent card bleed */
 #tv {
   position: relative !important;
-  overflow: visible !important;
+  overflow: hidden !important; /* Changed from visible to hidden */
 }
 
 /* Enforce pointer-events pass-through on wrapper layers */
@@ -109,7 +111,12 @@
 .carousel-picker-overlay .carousel-picker-arrow,
 .carousel-picker-overlay .carousel-picker-confirm,
 .carousel-picker-overlay .carousel-picker-cancel,
-.carousel-picker-overlay .carousel-picker-avatar-container {
+.carousel-picker-overlay .carousel-picker-avatar-container,
+.lv-overlay button,
+.lv-overlay .lv-overlay__arrow,
+.lv-overlay .lv-overlay__evict-btn,
+.lv-overlay .lv-overlay__close,
+.lv-overlay .lv-overlay__nominee {
   pointer-events: auto !important;
 }
 

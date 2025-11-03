@@ -164,12 +164,23 @@
     <div class="test-section">
       <h2>Test 5: Interactive Click Test</h2>
       <div class="test-info">
-        Test that buttons in overlays are clickable
+        Test that buttons in overlays are clickable (including live vote overlay)
       </div>
       <button class="test-button" onclick="showTestOverlay('tvOverlay')">Test #tvOverlay</button>
       <button class="test-button" onclick="showTestOverlay('decisionDeck')">Test #decisionDeck</button>
       <button class="test-button" onclick="showTestOverlay('results-modal-overlay')">Test .results-modal-overlay</button>
+      <button class="test-button" onclick="showTestOverlay('lv-overlay')">Test .lv-overlay (Live Vote)</button>
       <div id="test5-result" class="test-result" style="display: none;"></div>
+    </div>
+
+    <!-- Test 6: TV Overflow Test -->
+    <div class="test-section">
+      <h2>Test 6: TV Container Overflow</h2>
+      <div class="test-info">
+        Checking if #tv has overflow:hidden to prevent card persistence
+      </div>
+      <div id="test6-result" class="test-result"></div>
+      <div id="test6-details"></div>
     </div>
   </div>
 
@@ -198,6 +209,14 @@
     </div>
   </div>
 
+  <div class="lv-overlay test-overlay">
+    <div class="test-card" style="max-width: 600px;">
+      <h3>Live Vote Overlay Test</h3>
+      <p>If you can click this button, the live vote overlay is not blocking pointer events!</p>
+      <button class="test-button" onclick="closeTestOverlay('lv-overlay')">✓ Close (Click Works!)</button>
+    </div>
+  </div>
+
   <script>
     // Test 1: Check CSS variable
     function test1() {
@@ -221,7 +240,8 @@
         '#decisionDeck',
         '.results-modal-overlay',
         '.announcement-overlay',
-        '.pfModalHost'
+        '.pfModalHost',
+        '.lv-overlay'
       ];
 
       const result = document.getElementById('test2-result');
@@ -329,6 +349,34 @@
       result.textContent = `✓ INFO: .revealCard backdrop-filter = ${backdropFilter} (expected to use --popup-backdrop-blur which is now 0px for safety)`;
     }
 
+    // Test 6: Check TV container overflow
+    function test6() {
+      const result = document.getElementById('test6-result');
+      const details = document.getElementById('test6-details');
+
+      let elem = document.getElementById('tv');
+      if (!elem) {
+        // Create a test element if it doesn't exist
+        elem = document.createElement('div');
+        elem.id = 'tv';
+        document.body.appendChild(elem);
+      }
+
+      const style = getComputedStyle(elem);
+      const overflow = style.overflow;
+      const position = style.position;
+      
+      details.innerHTML = `<div class="computed-style">#tv: overflow = ${overflow}, position = ${position}</div>`;
+
+      if (overflow === 'hidden' && position === 'relative') {
+        result.className = 'test-result pass';
+        result.textContent = `✓ PASS: #tv has overflow:hidden and position:relative (prevents card persistence)`;
+      } else {
+        result.className = 'test-result fail';
+        result.textContent = `✗ FAIL: #tv has overflow:${overflow} and position:${position} (expected hidden and relative)`;
+      }
+    }
+
     // Interactive test functions
     function showTestOverlay(overlayId) {
       const overlay = document.getElementById(overlayId) || document.querySelector('.' + overlayId);
@@ -354,6 +402,7 @@
       test2();
       test3();
       test4();
+      test6();
     });
   </script>
 </body>
