@@ -942,6 +942,21 @@ button:focus-visible,.btn:focus-visible{
     padding:8px 12px;
   }
 }
+
+/* TV Overlay: remove blur/dim INSIDE the TV (keep fullscreen overlays elsewhere) */
+#tvOverlay .tvDim{
+  background: transparent;            /* no tinted layer over TV */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* TV-contained cards (diaryRoomCard) should not add blur/shadows on the TV */
+#tvOverlay .revealCard.diaryRoomCard{
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
 #confetti{
   position:absolute; z-index:11;
   inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
