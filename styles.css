@@ -759,7 +759,9 @@ button:focus-visible,.btn:focus-visible{
   display:flex; flex-direction:column; align-items:center; justify-content:center;
 }
 
-/* Ensure TV container variants have positioning context for eviction animations */
+/* Ensure TV container variants have positioning context for eviction animations
+   CSS fallback for runtime safeguards in js/eviction-visuals.js
+   Provides baseline positioning even if JS hasn't run yet */
 .tv-screen, .faux-tv, [data-faux-tv], [data-sm-faux-tv]{
   position:relative;
   overflow:hidden;

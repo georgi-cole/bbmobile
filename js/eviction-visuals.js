@@ -97,18 +97,12 @@
    * Prioritizes viewport containers with positioning context
    */
   function getTvContainer(){
-    // Try data attributes first (most specific)
-    let container = document.querySelector('[data-faux-tv]') || 
-                    document.querySelector('[data-sm-faux-tv]');
-    
-    // Try viewport class
-    if(!container) container = document.querySelector('.tvViewport');
+    // Try data attributes and viewport class first (most specific)
+    let container = document.querySelector('[data-faux-tv], [data-sm-faux-tv], .tvViewport');
     
     // Fallback to TV container IDs/classes
     if(!container) container = document.getElementById('tv');
-    if(!container) container = document.querySelector('.tv');
-    if(!container) container = document.querySelector('.faux-tv');
-    if(!container) container = document.querySelector('.tv-screen');
+    if(!container) container = document.querySelector('.tv, .faux-tv, .tv-screen');
     
     if(!container){
       console.warn('[eviction-visuals] No TV container found');
