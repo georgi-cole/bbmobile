@@ -444,10 +444,9 @@
       global.clearVoteCountdown();
     }
     
-    if (state.overlay) {
-      state.overlay.remove();
-      state.overlay = null;
-    }
+    // Remove the overlay
+    state.overlay.remove();
+    state.overlay = null;
     
     // Use global helper to unlock body scroll
     if (global.unlockBodyScroll) {

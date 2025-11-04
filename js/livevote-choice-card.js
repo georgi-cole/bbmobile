@@ -171,7 +171,7 @@
     // Fallback: remove legacy card if present (only if new modal system wasn't used)
     // This handles backwards compatibility with older code that may have created cards directly
     const card = document.querySelector('.lv-choice-card');
-    if (card) {
+    if (card && !_modalRoot) {
       card.remove();
       console.debug('[ChoiceCard] Legacy card removed');
     }
