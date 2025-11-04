@@ -237,7 +237,7 @@
     // Determine chunk size based on viewport
     const viewportWidth = window.innerWidth || 420;
     const isNarrow = viewportWidth < 420;
-    const chunkSize = isNarrow ? 2 : 2; // 2 per page on mobile portrait, 2-3 on wider
+    const chunkSize = 2; // 2 per page for mobile, could be expanded for wider screens if needed
     
     // Chunk nominees into groups
     const chunks = [];

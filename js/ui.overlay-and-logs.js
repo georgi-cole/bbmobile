@@ -495,16 +495,23 @@
     const step = 0.05;
     let scale = 1.0;
     
-    // Check if card is taller than container
     // Use requestAnimationFrame to ensure layout is complete
     requestAnimationFrame(() => {
-      while(scale >= minScale && card.scrollHeight > parent.clientHeight){
+      // Cache initial measurements to avoid repeated reflows
+      let scrollHeight = card.scrollHeight;
+      let clientHeight = parent.clientHeight;
+      
+      // Check if card is taller than container and scale down if needed
+      while(scale >= minScale && scrollHeight > clientHeight){
         scale -= step;
         card.style.fontSize = `${scale * 100}%`;
+        
+        // Force reflow once per iteration to get updated scrollHeight
+        scrollHeight = card.scrollHeight;
       }
       
       // If still doesn't fit at minimum, rely on internal scroll
-      if(card.scrollHeight > parent.clientHeight){
+      if(scrollHeight > clientHeight){
         card.style.overflowY = 'auto';
       }
     });
