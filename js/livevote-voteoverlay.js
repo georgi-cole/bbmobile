@@ -44,6 +44,12 @@
 
   // Create and show the voting overlay
   async function show(options = {}) {
+    // Idempotency guard: if already open, return early (no-op)
+    if (state.overlay !== null) {
+      console.debug('[VoteOverlay] Already open, skipping duplicate show()');
+      return state.overlay;
+    }
+    
     const {
       nominees = [],
       onSubmit = null,
@@ -427,15 +433,20 @@
   }
   // Remove the overlay
   function hide() {
+    // Idempotent: if already closed, return early
+    if (!state.overlay) {
+      console.debug('[VoteOverlay] Already closed, skipping duplicate hide()');
+      return;
+    }
+    
     // Clear countdown timer using shared helper
     if (global.clearVoteCountdown) {
       global.clearVoteCountdown();
     }
     
-    if (state.overlay) {
-      state.overlay.remove();
-      state.overlay = null;
-    }
+    // Remove the overlay
+    state.overlay.remove();
+    state.overlay = null;
     
     // Use global helper to unlock body scroll
     if (global.unlockBodyScroll) {

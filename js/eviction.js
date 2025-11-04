@@ -105,16 +105,25 @@
 
     if (useTwoStep) {
       // Use two-step mobile voting flow
+      // Check if either modal is already open (prevents duplicate modals)
+      const choiceCardOpen = global.LiveVoteChoiceCard?.isOpen?.() || false;
+      const overlayOpen = global.LiveVoteOverlay?.isOpen?.() || false;
+      
+      if (choiceCardOpen || overlayOpen) {
+        console.debug('[eviction] Skipping Choice Card show: modal already open');
+        return;
+      }
+      
       // Show Choice Card first
       if (global.LiveVoteChoiceCard) {
         const choiceCard = global.LiveVoteChoiceCard.show({
           nominees: g.eviction.nominees,
           onVoteClick: (nominees) => {
-            // Hide Choice Card
+            // Hide Choice Card (idempotent)
             global.LiveVoteChoiceCard.hide();
             
-            // Show Voting Overlay
-            if (global.LiveVoteOverlay) {
+            // Show Voting Overlay only if not already open
+            if (global.LiveVoteOverlay && !global.LiveVoteOverlay.isOpen?.()) {
               global.LiveVoteOverlay.show({
                 nominees: nominees,
                 isTieBreak: false,

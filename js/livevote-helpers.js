@@ -205,8 +205,27 @@
 
     // Clear countdown timer
     clearVoteCountdown();
+    
+    // Call hide() on modals to ensure their internal state is reset
+    try {
+      if (global.LiveVoteChoiceCard?.isOpen?.()) {
+        global.LiveVoteChoiceCard.hide();
+        console.debug('[livevote-helpers] Choice Card hidden via API');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error hiding Choice Card via API:', e);
+    }
+    
+    try {
+      if (global.LiveVoteOverlay?.isOpen?.()) {
+        global.LiveVoteOverlay.hide();
+        console.debug('[livevote-helpers] Vote Overlay hidden via API');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error hiding Vote Overlay via API:', e);
+    }
 
-    // Remove all known overlay types
+    // Remove all known overlay types (belt-and-suspenders cleanup)
     const overlaySelectors = [
       '.lv-root',              // Live vote modal root
       '.lv-choice-card',       // Live vote choice card (legacy)

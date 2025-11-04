@@ -22,8 +22,17 @@
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
   }
 
+  // Singleton state tracking
+  let _modalRoot = null;
+  let _isOpen = false;
+
   // Create and show the Choice Card
   async function show(options = {}) {
+    // Idempotency guard: if already open, return early (no-op)
+    if (_isOpen) {
+      console.debug('[ChoiceCard] Already open, skipping duplicate show()');
+      return _modalRoot?.querySelector('.lv-choice-card') || null;
+    }
     const {
       nominees = [],
       onVoteClick = null
@@ -56,6 +65,10 @@
     // Create modal root container
     const root = document.createElement('div');
     root.className = 'lv-root';
+    
+    // Store reference and mark as open
+    _modalRoot = root;
+    _isOpen = true;
 
     // Create backdrop
     const backdrop = document.createElement('div');
@@ -136,20 +149,36 @@
 
   // Remove the Choice Card
   function hide() {
+    // Idempotent: if already closed, return early
+    if (!_isOpen && !_modalRoot) {
+      console.debug('[ChoiceCard] Already closed, skipping duplicate hide()');
+      return;
+    }
+    
     // Remove the entire modal root (includes backdrop and card)
+    if (_modalRoot) {
+      _modalRoot.remove();
+      console.debug('[ChoiceCard] Modal root removed');
+    }
+    
+    // Fallback: remove any stray elements if modal root reference was lost
     const root = document.querySelector('.lv-root');
     if (root) {
       root.remove();
-      console.debug('[ChoiceCard] Modal root removed');
+      console.debug('[ChoiceCard] Stray modal root removed');
     }
 
     // Fallback: remove legacy card if present (only if new modal system wasn't used)
     // This handles backwards compatibility with older code that may have created cards directly
     const card = document.querySelector('.lv-choice-card');
-    if (card && !root) {
+    if (card && !_modalRoot) {
       card.remove();
       console.debug('[ChoiceCard] Legacy card removed');
     }
+    
+    // Reset singleton state
+    _modalRoot = null;
+    _isOpen = false;
     
     // Use global helper to unlock body scroll
     if (global.unlockBodyScroll) {
@@ -208,7 +237,8 @@
   // Export public API
   global.LiveVoteChoiceCard = {
     show,
-    hide
+    hide,
+    isOpen: () => _isOpen
   };
 
 })(window);
