@@ -114,6 +114,15 @@
         return;
       }
       
+      // Clear any lingering TV overlay content before showing vote UI
+      try { 
+        if (typeof global.clearTVOverlayContent === 'function') {
+          global.clearTVOverlayContent(); 
+        }
+      } catch (e) { 
+        console.warn('[LiveVote] clearTVOverlayContent failed', e); 
+      }
+      
       // Show Choice Card first
       if (global.LiveVoteChoiceCard) {
         const choiceCard = global.LiveVoteChoiceCard.show({
@@ -186,6 +195,15 @@
       && global.lv2?.enabled !== false;
 
     if (useLv2) {
+      // Clear any lingering TV overlay content before showing lv2 UI
+      try { 
+        if (typeof global.clearTVOverlayContent === 'function') {
+          global.clearTVOverlayContent(); 
+        }
+      } catch (e) { 
+        console.warn('[LiveVote] clearTVOverlayContent failed', e); 
+      }
+      
       // Use modern Live Vote 2.0 UI - render inside TV
       const [leftId, rightId] = g.eviction.nominees;
       global.lv2.init({

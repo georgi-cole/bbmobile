@@ -12,7 +12,9 @@
     selectedNominee: null,
     onSubmit: null,
     overlay: null,
-    isTieBreak: false
+    isTieBreak: false,
+    allowClose: false,
+    onCancel: null
   };
 
   // Mobile detection helper
@@ -54,7 +56,9 @@
       nominees = [],
       onSubmit = null,
       isTieBreak = false,
-      container = null
+      container = null,
+      allowClose = false,
+      onCancel = null
     } = options;
 
     if (!Array.isArray(nominees) || nominees.length === 0) {
@@ -90,6 +94,8 @@
     state.selectedNominee = null;
     state.onSubmit = onSubmit;
     state.isTieBreak = isTieBreak;
+    state.allowClose = allowClose;
+    state.onCancel = onCancel;
 
     // Create overlay element
     const overlay = document.createElement('div');
@@ -210,13 +216,24 @@
 
     overlay.appendChild(dock);
 
-    // Close button
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'lv-overlay__close';
-    closeBtn.innerHTML = '×';
-    closeBtn.setAttribute('aria-label', 'Close voting overlay');
-    closeBtn.onclick = hide;
-    overlay.appendChild(closeBtn);
+    // Close button - only render if explicitly allowed via options.allowClose
+    if (allowClose) {
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'lv-overlay__close';
+      closeBtn.innerHTML = '×';
+      closeBtn.setAttribute('aria-label', 'Close voting overlay');
+      closeBtn.onclick = () => {
+        try {
+          if (typeof onCancel === 'function') {
+            onCancel();
+          }
+        } catch (e) {
+          console.warn('[VoteOverlay] onCancel callback failed', e);
+        }
+        hide();
+      };
+      overlay.appendChild(closeBtn);
+    }
 
     // Add keyboard support
     overlay.addEventListener('keydown', handleKeyboard);
@@ -427,7 +444,17 @@
         }
         break;      case 'Escape':
         event.preventDefault();
-        hide();
+        // Only allow Escape to close if allowClose is true
+        if (state.allowClose) {
+          if (state.onCancel && typeof state.onCancel === 'function') {
+            try {
+              state.onCancel();
+            } catch (e) {
+              console.warn('[VoteOverlay] onCancel callback failed', e);
+            }
+          }
+          hide();
+        }
         break;
     }
   }
@@ -461,6 +488,9 @@
     state.selectedIndex = 0;
     state.selectedNominee = null;
     state.onSubmit = null;
+    state.isTieBreak = false;
+    state.allowClose = false;
+    state.onCancel = null;
   }
 
   // Lock body scroll (prevent background scrolling on mobile)
