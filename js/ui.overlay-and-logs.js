@@ -282,6 +282,15 @@
       host.innerHTML=''; host.appendChild(card);
       document.getElementById('tv')?.classList.add('tvTall');
 
+      // Add .has-wide-avatars if more than 2 avatars (actor + shown targets)
+      const totalAvatars = (actorId ? 1 : 0) + shownTargets.length;
+      if(totalAvatars > 2){
+        card.classList.add('has-wide-avatars');
+      }
+
+      // Downscale font if card is too tall
+      fitTVCardText(card);
+
       return card;
     }
     
@@ -473,12 +482,49 @@
     writeToPane(getLogPaneByKey('jury'),msg,cls);
   }
 
+  /**
+   * Global utility: downscale TV card text if it overflows vertically
+   * Reduces font-size in 5% steps (95% → 90% → 85% min) until card fits or reaches minimum
+   * @param {HTMLElement} card - The card element to fit
+   */
+  function fitTVCardText(card){
+    if(!card || !card.parentElement) return;
+    
+    const parent = card.parentElement;
+    const minScale = 0.85;
+    const step = 0.05;
+    let scale = 1.0;
+    
+    // Use requestAnimationFrame to ensure layout is complete
+    requestAnimationFrame(() => {
+      // Cache initial measurements to avoid repeated reflows
+      let scrollHeight = card.scrollHeight;
+      let clientHeight = parent.clientHeight;
+      
+      // Check if card is taller than container and scale down if needed
+      while(scale >= minScale && scrollHeight > clientHeight){
+        scale -= step;
+        card.style.fontSize = `${scale * 100}%`;
+        
+        // Force reflow once per iteration to get updated scrollHeight
+        scrollHeight = card.scrollHeight;
+      }
+      
+      // If still doesn't fit at minimum, rely on internal scroll
+      if(scrollHeight > clientHeight){
+        card.style.overflowY = 'auto';
+      }
+    });
+  }
+
   // Exports
   UI.showCard=showCard; UI.showBigCard=showBigCard;
   UI.cardQueueWaitIdle=CardQueue.waitIdle; UI.activateSkipCascade=activateSkipCascade;
   UI.addLog=addLog; UI.addJuryLog=addJuryLog; UI.selectLogTabForPhase=selectLogTabForPhase;
+  UI.fitTVCardText=fitTVCardText;
   g.showCard=showCard; g.showBigCard=showBigCard; g.cardQueueWaitIdle=CardQueue.waitIdle; g.activateSkipCascade=activateSkipCascade;
   g.addLog=addLog; g.addJuryLog=addJuryLog; g.selectLogTabForPhase=selectLogTabForPhase;
+  g.fitTVCardText=fitTVCardText;
 
   document.addEventListener('DOMContentLoaded',()=>{
     observeDashboard();

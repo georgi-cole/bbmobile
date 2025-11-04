@@ -7532,3 +7532,33 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 
 /* If an avatar row is present, keep it off the top edge */
 #tvOverlay .revealCard.diaryRoomCard .rc-face-row{ margin-top: 8px; }
+
+/* ============================================================================
+   UNIFIED TV OVERLAY TYPOGRAPHY & LAYOUT (PR #462 follow-up)
+   ============================================================================ */
+
+/* Unified, downscale-only typography inside TV */
+#tvOverlay .revealCard.diaryRoomCard, #tvOverlay .revealCard.tvCardBody{
+  /* base medium size, can shrink but not grow */
+  --tv-body: 0.86rem; 
+  --tv-title: 0.95rem;
+  --tv-big: 0.92rem;
+  font-size: var(--tv-body);
+}
+#tvOverlay .revealCard h3{ font-size: clamp(0.82rem, 2.5vw, var(--tv-title)); }
+#tvOverlay .revealCard p, #tvOverlay .revealCard div{ font-size: clamp(0.78rem, 2.3vw, var(--tv-body)); }
+#tvOverlay .revealCard .big{ font-size: clamp(0.8rem, 2.4vw, var(--tv-big)); }
+
+/* Ensure rc-face-row layout is tight and centered */
+#tvOverlay .revealCard .rc-face-row{ 
+  margin-top: 8px; 
+  justify-content: center; 
+  align-items: center; 
+  gap: 12px; 
+}
+
+/* Widen multi-avatar cards up to TV safe area */
+#tvOverlay .revealCard.diaryRoomCard.has-wide-avatars{ max-width: 92% !important; }
+
+/* Decision buttons: consistent sizing */
+#tvOverlay .revealCard .veto-decision-row button{ min-height: 44px; font-weight: 700; letter-spacing: .3px; }
