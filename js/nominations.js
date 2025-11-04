@@ -219,7 +219,7 @@
   }
 
   /**
-   * Show all nominee reaction popups simultaneously in a grid layout (2x2 for 3-4 nominees, 1 row for 2)
+   * Show nominee reaction popups one at a time (1-by-1) in the TV overlay
    * @param {Array<number>} nomineeIds - Array of nominee player IDs
    * @returns {Promise} Resolves when all popups are closed
    */
@@ -234,110 +234,79 @@
       return;
     }
 
-    // Determine chunk size based on viewport
-    const viewportWidth = window.innerWidth || 420;
-    const isNarrow = viewportWidth < 420;
-    const chunkSize = 2; // 2 per page for mobile, could be expanded for wider screens if needed
-    
-    // Chunk nominees into groups
-    const chunks = [];
-    for(let i = 0; i < nomineeIds.length; i += chunkSize){
-      chunks.push(nomineeIds.slice(i, i + chunkSize));
-    }
+    // Get fitTVCardText function for downscaling if needed
+    const fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
 
-    // Show each chunk sequentially
-    for(let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++){
-      const chunk = chunks[chunkIndex];
-      
+    // Show each nominee reaction one at a time
+    for(let i = 0; i < nomineeIds.length; i++){
+      const playerId = nomineeIds[i];
+      const player = global.getP(playerId);
+      if(!player) continue;
+
       // Clear existing content
       host.innerHTML = '';
-      
-      // Create flex column container for this page
-      const container = document.createElement('div');
-      container.className = 'nominee-reactions-container';
-      container.setAttribute('data-nom-speeches', '');
-      container.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
+
+      // Pick a unique random reaction quote
+      const quote = NOMINEE_REACTIONS[Math.floor((global.rng?.()||Math.random())*NOMINEE_REACTIONS.length)];
+
+      // Create reaction card
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard nominee-reaction-card';
+      card.setAttribute('data-nom-speech-card', '');
+      card.style.cssText = `
         max-width: 92%;
         max-height: 78%;
-        padding: 16px;
-        box-sizing: border-box;
         margin: 0 auto;
+        padding: 12px 16px;
+        animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       `;
 
-      // Create reaction card for each nominee in this chunk
-      chunk.forEach((playerId) => {
-        const player = global.getP(playerId);
-        if(!player) return;
+      // Title with nominee name
+      const title = document.createElement('h3');
+      title.textContent = player.name;
+      title.style.marginBottom = '8px';
+      title.style.fontSize = '0.95rem';
+      card.appendChild(title);
 
-        // Pick a unique random reaction quote
-        const quote = NOMINEE_REACTIONS[Math.floor((global.rng?.()||Math.random())*NOMINEE_REACTIONS.length)];
+      // Quote
+      const quoteDiv = document.createElement('div');
+      quoteDiv.className = 'big';
+      quoteDiv.textContent = `"${quote}"`;
+      quoteDiv.style.fontSize = '0.85rem';
+      quoteDiv.style.lineHeight = '1.4';
+      card.appendChild(quoteDiv);
 
-        // Create reaction card
-        const card = document.createElement('div');
-        card.className = 'revealCard diaryRoomCard nominee-reaction-card';
-        card.setAttribute('data-nom-speech-card', '');
-        card.style.cssText = `
-          width: 100%;
-          margin: 0;
-          padding: 12px 16px;
-          animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        `;
+      // Avatar
+      const avatarRow = document.createElement('div');
+      avatarRow.className = 'rc-face-row';
+      avatarRow.style.marginTop = '10px';
+      
+      const img = document.createElement('img');
+      img.className = 'rc-face';
+      img.alt = player.name;
+      const resolveAvatar = (global.Game || global).resolveAvatar;
+      const getDicebearUrl = global.getDicebearUrl || function(seed) {
+        return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+      };
+      img.src = resolveAvatar?.(player || playerId) || player?.avatar || player?.img || player?.photo || getDicebearUrl(player?.name || String(playerId));
+      avatarRow.appendChild(img);
+      card.appendChild(avatarRow);
 
-        // Title with nominee name
-        const title = document.createElement('h3');
-        title.textContent = player.name;
-        title.style.marginBottom = '8px';
-        title.style.fontSize = '0.95rem';
-        card.appendChild(title);
-
-        // Quote
-        const quoteDiv = document.createElement('div');
-        quoteDiv.className = 'big';
-        quoteDiv.textContent = `"${quote}"`;
-        quoteDiv.style.fontSize = '0.85rem';
-        quoteDiv.style.lineHeight = '1.4';
-        card.appendChild(quoteDiv);
-
-        // Avatar
-        const avatarRow = document.createElement('div');
-        avatarRow.className = 'rc-face-row';
-        avatarRow.style.marginTop = '10px';
-        
-        const img = document.createElement('img');
-        img.className = 'rc-face';
-        img.alt = player.name;
-        const resolveAvatar = (global.Game || global).resolveAvatar;
-        const getDicebearUrl = global.getDicebearUrl || function(seed) {
-          return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
-        };
-        img.src = resolveAvatar?.(player || playerId) || player?.avatar || player?.img || player?.photo || getDicebearUrl(player?.name || String(playerId));
-        avatarRow.appendChild(img);
-        card.appendChild(avatarRow);
-
-        container.appendChild(card);
-      });
-
-      host.appendChild(container);
+      host.appendChild(card);
       document.getElementById('tv')?.classList.add('tvTall');
 
-      // Progressive enhancement: trigger stagger animation on mobile/touch devices
-      if(global.initNomineeStagger) global.initNomineeStagger(container);
+      // Call fitTVCardText to minimize need for scrolling
+      if(fitTVCardText) fitTVCardText(card);
 
-      // Wait before showing next page (or resolve if last page)
-      const pageDelay = 1800; // 1.8s per page
-      await new Promise(pageResolve => setTimeout(pageResolve, pageDelay));
+      // Wait before showing next card (or resolve if last card)
+      const cardDelay = 1800; // 1.8s per card
+      await new Promise(resolve => setTimeout(resolve, cardDelay));
     }
 
-    // Clean up after all pages shown
+    // Clean up after all cards shown
     host.innerHTML = '';
     document.getElementById('tv')?.classList.remove('tvTall');
   }

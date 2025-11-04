@@ -3003,14 +3003,25 @@
       var announcerRole = isGoldenPOV ? 'POV Holder' : 'HOH';
       var announce = (announcer ? announcer.name : announcerRole)+': I name '+safeName(replacementId)+' as the replacement nominee.';
       
-      // Show announcement card with appropriate role and avatars
+      // Show announcement in two sequential cards to prevent overflow
+      // Card A: Avatar/title only
       await showTVCardWithAvatars({
         title: announcerRole + ' Announcement',
-        lines: [announce],
+        lines: [],
         tone: 'noms',
-        duration: 3400,
+        duration: 1200,
         actorIds: announcer ? announcer.id : null,
         subjectIds: replacementId
+      });
+      
+      // Card B: Message text only
+      await showTVCardWithAvatars({
+        title: '',
+        lines: [announce],
+        tone: 'noms',
+        duration: 2400,
+        actorIds: null,
+        subjectIds: null
       });
 
       try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by ' + announcerRole + ').','warn'); }catch(e){}
