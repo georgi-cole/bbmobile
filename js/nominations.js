@@ -223,71 +223,67 @@
    * @param {Array<number>} nomineeIds - Array of nominee player IDs
    * @returns {Promise} Resolves when all popups are closed
    */
-  function showNomineeReactionsSimultaneously(nomineeIds){
-    return new Promise((resolve) => {
-      if(!nomineeIds || nomineeIds.length === 0){
-        resolve();
-        return;
-      }
+  async function showNomineeReactionsSimultaneouslyInternal(nomineeIds){
+    if(!nomineeIds || nomineeIds.length === 0){
+      return;
+    }
 
-      // Create container for reactions
-      const host = document.getElementById('tvOverlay');
-      if(!host){
-        resolve();
-        return;
-      }
+    // Create container for reactions
+    const host = document.getElementById('tvOverlay');
+    if(!host){
+      return;
+    }
 
+    // Determine chunk size based on viewport
+    const viewportWidth = window.innerWidth || 420;
+    const isNarrow = viewportWidth < 420;
+    const chunkSize = isNarrow ? 2 : 2; // 2 per page on mobile portrait, 2-3 on wider
+    
+    // Chunk nominees into groups
+    const chunks = [];
+    for(let i = 0; i < nomineeIds.length; i += chunkSize){
+      chunks.push(nomineeIds.slice(i, i + chunkSize));
+    }
+
+    // Show each chunk sequentially
+    for(let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++){
+      const chunk = chunks[chunkIndex];
+      
       // Clear existing content
       host.innerHTML = '';
-
-      // Determine layout: 2 nominees = 1 row, 3-4 nominees = 2x2 grid
-      const isGrid = nomineeIds.length >= 3;
       
-      // Create grid or row container with data hooks
+      // Create flex column container for this page
       const container = document.createElement('div');
       container.className = 'nominee-reactions-container';
       container.setAttribute('data-nom-speeches', '');
-      container.style.cssText = isGrid 
-        ? `
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-          align-items: center;
-          justify-content: center;
-          width: 100%;
-          max-width: 92%;
-          padding: 16px;
-          box-sizing: border-box;
-          margin: 0 auto;
-        `
-        : `
-          display: flex;
-          flex-direction: row;
-          gap: 12px;
-          align-items: center;
-          justify-content: center;
-          width: 100%;
-          max-width: 92%;
-          padding: 16px;
-          box-sizing: border-box;
-          margin: 0 auto;
-        `;
+      container.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        max-width: 92%;
+        max-height: 78%;
+        padding: 16px;
+        box-sizing: border-box;
+        margin: 0 auto;
+      `;
 
-      // Create reaction card for each nominee
-      nomineeIds.forEach((playerId) => {
+      // Create reaction card for each nominee in this chunk
+      chunk.forEach((playerId) => {
         const player = global.getP(playerId);
         if(!player) return;
 
         // Pick a unique random reaction quote
         const quote = NOMINEE_REACTIONS[Math.floor((global.rng?.()||Math.random())*NOMINEE_REACTIONS.length)];
 
-        // Create reaction card with data hook
+        // Create reaction card
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard nominee-reaction-card';
         card.setAttribute('data-nom-speech-card', '');
         card.style.cssText = `
           width: 100%;
-          max-width: ${isGrid ? '100%' : '45%'};
           margin: 0;
           padding: 12px 16px;
           animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
@@ -300,14 +296,14 @@
         const title = document.createElement('h3');
         title.textContent = player.name;
         title.style.marginBottom = '8px';
-        title.style.fontSize = isGrid ? '0.95rem' : '1.05rem';
+        title.style.fontSize = '0.95rem';
         card.appendChild(title);
 
         // Quote
         const quoteDiv = document.createElement('div');
         quoteDiv.className = 'big';
         quoteDiv.textContent = `"${quote}"`;
-        quoteDiv.style.fontSize = isGrid ? '0.75rem' : '0.85rem';
+        quoteDiv.style.fontSize = '0.85rem';
         quoteDiv.style.lineHeight = '1.4';
         card.appendChild(quoteDiv);
 
@@ -317,7 +313,7 @@
         avatarRow.style.marginTop = '10px';
         
         const img = document.createElement('img');
-        img.className = isGrid ? 'rc-face small' : 'rc-face';
+        img.className = 'rc-face';
         img.alt = player.name;
         const resolveAvatar = (global.Game || global).resolveAvatar;
         const getDicebearUrl = global.getDicebearUrl || function(seed) {
@@ -336,14 +332,18 @@
       // Progressive enhancement: trigger stagger animation on mobile/touch devices
       if(global.initNomineeStagger) global.initNomineeStagger(container);
 
-      // Remove after duration
-      const duration = 3500;
-      setTimeout(() => {
-        host.innerHTML = '';
-        document.getElementById('tv')?.classList.remove('tvTall');
-        resolve();
-      }, duration);
-    });
+      // Wait before showing next page (or resolve if last page)
+      const pageDelay = 1800; // 1.8s per page
+      await new Promise(pageResolve => setTimeout(pageResolve, pageDelay));
+    }
+
+    // Clean up after all pages shown
+    host.innerHTML = '';
+    document.getElementById('tv')?.classList.remove('tvTall');
+  }
+
+  function showNomineeReactionsSimultaneously(nomineeIds){
+    return showNomineeReactionsSimultaneouslyInternal(nomineeIds);
   }
 
   async function finalizeNoms(){

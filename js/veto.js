@@ -1007,6 +1007,10 @@
       var tv = document.getElementById('tv');
       if(tv) tv.classList.add('tvTall');
       
+      // Downscale font if card is too tall
+      var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+      if(fitTVCardText) fitTVCardText(card);
+      
       setTimeout(function(){
         clearTVOverlayContent();
         if(tv) tv.classList.remove('tvTall');
@@ -1154,6 +1158,20 @@
       var tv = document.getElementById('tv');
       if(tv) tv.classList.add('tvTall');
       
+      // Count total avatars and add .has-wide-avatars if > 2
+      if(hasAvatars){
+        var actors = Array.isArray(actorIds) ? actorIds : (actorIds != null ? [actorIds] : []);
+        var subjects = Array.isArray(subjectIds) ? subjectIds : (subjectIds != null ? [subjectIds] : []);
+        var totalAvatars = actors.length + subjects.length;
+        if(totalAvatars > 2){
+          card.classList.add('has-wide-avatars');
+        }
+      }
+      
+      // Downscale font if card is too tall
+      var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+      if(fitTVCardText) fitTVCardText(card);
+      
       setTimeout(function(){
         clearTVOverlayContent();
         if(tv) tv.classList.remove('tvTall');
@@ -1194,7 +1212,8 @@
           var b = document.createElement('button');
           b.className = btn.primary ? 'btn primary' : 'btn';
           b.textContent = btn.label;
-          b.setAttribute('aria-label', btn.label);
+          // Use ariaLabel if provided, otherwise fall back to label
+          b.setAttribute('aria-label', btn.ariaLabel || btn.label);
           b.onclick = function(){
             disableAll();
             clearTVOverlayContent();
@@ -1218,6 +1237,10 @@
       
       var tv = document.getElementById('tv');
       if(tv) tv.classList.add('tvTall');
+      
+      // Downscale font if card is too tall
+      var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+      if(fitTVCardText) fitTVCardText(card);
       
       // Focus first button for accessibility
       setTimeout(function(){
@@ -1477,13 +1500,23 @@
     // Build short decision copy (max 2 lines)
     var decisionCopy = 'Using it removes a nominee. A replacement must be named.';
     
-    // Show decision prompt
+    // Show decision prompt with short button labels but full aria-labels
     var decision = await showTVDecision({
       title: 'Use ' + vetoLabel + '?',
       message: decisionCopy,
       buttons: [
-        { label: 'Yes — Use ' + vetoLabel, value: true, primary: true },
-        { label: 'No — Keep Nominations', value: false, primary: false }
+        { 
+          label: 'YES', 
+          ariaLabel: 'Yes — Use ' + vetoLabel,
+          value: true, 
+          primary: true 
+        },
+        { 
+          label: 'NO', 
+          ariaLabel: 'No — Keep Nominations',
+          value: false, 
+          primary: false 
+        }
       ]
     });
     
