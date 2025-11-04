@@ -917,6 +917,7 @@ button:focus-visible,.btn:focus-visible{
   max-height:78%;
   overflow-y:auto;
   overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
 }
 
 /* TV Card Body - Typography parity with other ceremonies */
