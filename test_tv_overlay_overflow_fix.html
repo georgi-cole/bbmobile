@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Overlay Overflow Fix Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .test-section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .test-section h2 {
+      color: var(--accent);
+      font-size: 1.1rem;
+      margin-top: 0;
+    }
+    .test-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn {
+      padding: 10px 20px;
+      background: var(--accent);
+      color: var(--card);
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .info {
+      margin-top: 10px;
+      padding: 12px;
+      background: var(--primary-1);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .viewport-indicator {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 8px 16px;
+      background: var(--accent);
+      color: white;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-indicator" id="viewportIndicator">Viewport: --</div>
+  
+  <div class="test-container">
+    <h1>🎬 TV Overlay Overflow Fix Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Scenario 1: Nominee Reactions (1-by-1)</h2>
+      <p class="info">
+        <strong>What to check:</strong> Nominee reactions should appear one at a time (not stacked). 
+        Each card should fit fully in the TV overlay without clipping on mobile (375-414px width).
+      </p>
+      <div class="test-buttons">
+        <button class="btn" onclick="testTwoNomineeReactions()">Test 2 Nominees</button>
+        <button class="btn" onclick="testThreeNomineeReactions()">Test 3 Nominees</button>
+        <button class="btn" onclick="testFourNomineeReactions()">Test 4 Nominees</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenario 2: HOH Replacement Announcement (Split Cards)</h2>
+      <p class="info">
+        <strong>What to check:</strong> HOH replacement announcement should appear as two sequential cards:
+        Card A (avatars + title), then Card B (message text). No overflow or scrollbars should appear.
+      </p>
+      <div class="test-buttons">
+        <button class="btn" onclick="testHOHReplacement()">Test HOH Replacement</button>
+        <button class="btn" onclick="testGoldenPOVReplacement()">Test Golden POV Replacement</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenario 3: Stress Test (Long Content)</h2>
+      <p class="info">
+        <strong>What to check:</strong> Cards with very long player names or content should still fit 
+        using fitTVCardText downscaling. If content is still too large, internal scroll should work smoothly.
+      </p>
+      <div class="test-buttons">
+        <button class="btn" onclick="testLongNomineeNames()">Test Long Names</button>
+        <button class="btn" onclick="testLongAnnouncementText()">Test Long Announcement</button>
+      </div>
+    </div>
+
+    <!-- TV Frame -->
+    <div id="tv" style="position: relative; width: 100%; max-width: 600px; margin: 40px auto; background: var(--primary-1); border-radius: 12px; padding: 20px; min-height: 400px;">
+      <div id="tvOverlay" style="position: absolute; inset: 0; pointer-events: auto;"></div>
+      <div id="tvNow" style="text-align: center; padding: 40px; color: var(--ink); font-size: 1.2rem;">TV Screen Ready</div>
+    </div>
+  </div>
+
+  <!-- Load necessary scripts -->
+  <script src="js/state.js"></script>
+  <script src="js/config/defaults.js"></script>
+  <script src="js/ui.overlay-and-logs.js"></script>
+  <script src="js/cards-queue.js"></script>
+  <script src="js/veto.js"></script>
+
+  <script>
+    // Mock player data
+    const mockPlayers = [
+      { id: 0, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice', human: true },
+      { id: 1, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob', hoh: true },
+      { id: 2, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' },
+      { id: 3, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana' },
+      { id: 4, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve' },
+      { id: 5, name: 'Frank', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Frank' },
+      { id: 6, name: 'Christopher Alexander Johnson III', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Christopher' },
+      { id: 7, name: 'Anastasia Beauregard Wellington', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anastasia' }
+    ];
+
+    // Initialize game object
+    if (!window.game) {
+      window.game = {
+        cfg: window.initGameConfig ? window.initGameConfig() : {},
+        players: mockPlayers,
+        humanId: 0,
+        hohId: 1,
+        vetoHolder: 2,
+        nominees: [2, 3],
+        vetoSavedId: 2
+      };
+    }
+
+    // Helper functions
+    window.getP = function(id) {
+      return mockPlayers.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+
+    window.alivePlayers = function() {
+      return mockPlayers;
+    };
+
+    window.rng = Math.random;
+
+    window.Game = window.Game || {};
+    window.Game.resolveAvatar = function(player) {
+      if (typeof player === 'object' && player) {
+        return player.avatar || player.img || player.photo;
+      }
+      const p = window.getP(player);
+      return p ? (p.avatar || p.img || p.photo) : null;
+    };
+
+    // Nominee reactions phrases
+    const NOMINEE_REACTIONS = [
+      "I'll campaign hard this week.",
+      "I'm not out yet.",
+      "I need to hustle and make connections.",
+      "Time to fight for votes.",
+      "I'm going to work my social game.",
+      "I won't give up without a fight."
+    ];
+
+    // Test function for nominee reactions (1-by-1)
+    async function showNomineeReactions1by1(nomineeIds) {
+      const host = document.getElementById('tvOverlay');
+      if (!host) return;
+
+      const fitTVCardText = window.fitTVCardText || (window.UI && window.UI.fitTVCardText);
+
+      for (let i = 0; i < nomineeIds.length; i++) {
+        const playerId = nomineeIds[i];
+        const player = window.getP(playerId);
+        if (!player) continue;
+
+        host.innerHTML = '';
+
+        const quote = NOMINEE_REACTIONS[Math.floor(Math.random() * NOMINEE_REACTIONS.length)];
+
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard nominee-reaction-card';
+        card.style.cssText = `
+          max-width: 92%;
+          max-height: 78%;
+          margin: 0 auto;
+          padding: 12px 16px;
+          animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        `;
+
+        const title = document.createElement('h3');
+        title.textContent = player.name;
+        title.style.marginBottom = '8px';
+        title.style.fontSize = '0.95rem';
+        card.appendChild(title);
+
+        const quoteDiv = document.createElement('div');
+        quoteDiv.className = 'big';
+        quoteDiv.textContent = `"${quote}"`;
+        quoteDiv.style.fontSize = '0.85rem';
+        quoteDiv.style.lineHeight = '1.4';
+        card.appendChild(quoteDiv);
+
+        const avatarRow = document.createElement('div');
+        avatarRow.className = 'rc-face-row';
+        avatarRow.style.marginTop = '10px';
+        
+        const img = document.createElement('img');
+        img.className = 'rc-face';
+        img.alt = player.name;
+        img.src = player.avatar;
+        avatarRow.appendChild(img);
+        card.appendChild(avatarRow);
+
+        host.appendChild(card);
+        document.getElementById('tv').classList.add('tvTall');
+
+        if (fitTVCardText) fitTVCardText(card);
+
+        await new Promise(resolve => setTimeout(resolve, 1800));
+      }
+
+      host.innerHTML = '';
+      document.getElementById('tv').classList.remove('tvTall');
+    }
+
+    function testTwoNomineeReactions() {
+      showNomineeReactions1by1([2, 3]);
+    }
+
+    function testThreeNomineeReactions() {
+      showNomineeReactions1by1([2, 3, 4]);
+    }
+
+    function testFourNomineeReactions() {
+      showNomineeReactions1by1([2, 3, 4, 5]);
+    }
+
+    function testLongNomineeNames() {
+      showNomineeReactions1by1([6, 7]);
+    }
+
+    // Test HOH replacement announcement (split cards)
+    async function testHOHReplacement() {
+      if (typeof window.showTVCardWithAvatars !== 'function') {
+        console.error('showTVCardWithAvatars not available');
+        return;
+      }
+
+      const announcer = window.getP(1); // Bob (HOH)
+      const replacementId = 4; // Eve
+
+      // Card A: Avatar/title only
+      await window.showTVCardWithAvatars({
+        title: 'HOH Announcement',
+        lines: [],
+        tone: 'noms',
+        duration: 1200,
+        actorIds: announcer.id,
+        subjectIds: replacementId
+      });
+
+      // Card B: Message text only
+      await window.showTVCardWithAvatars({
+        title: '',
+        lines: [`${announcer.name}: I name ${window.safeName(replacementId)} as the replacement nominee.`],
+        tone: 'noms',
+        duration: 2400,
+        actorIds: null,
+        subjectIds: null
+      });
+    }
+
+    async function testGoldenPOVReplacement() {
+      if (typeof window.showTVCardWithAvatars !== 'function') {
+        console.error('showTVCardWithAvatars not available');
+        return;
+      }
+
+      const announcer = window.getP(2); // Charlie (POV holder)
+      const replacementId = 5; // Frank
+
+      // Card A: Avatar/title only
+      await window.showTVCardWithAvatars({
+        title: 'POV Holder Announcement',
+        lines: [],
+        tone: 'noms',
+        duration: 1200,
+        actorIds: announcer.id,
+        subjectIds: replacementId
+      });
+
+      // Card B: Message text only
+      await window.showTVCardWithAvatars({
+        title: '',
+        lines: [`${announcer.name}: I name ${window.safeName(replacementId)} as the replacement nominee.`],
+        tone: 'noms',
+        duration: 2400,
+        actorIds: null,
+        subjectIds: null
+      });
+    }
+
+    async function testLongAnnouncementText() {
+      if (typeof window.showTVCardWithAvatars !== 'function') {
+        console.error('showTVCardWithAvatars not available');
+        return;
+      }
+
+      const announcer = window.getP(6); // Long name
+      const replacementId = 7; // Another long name
+
+      // Card A: Avatar/title only
+      await window.showTVCardWithAvatars({
+        title: 'HOH Announcement',
+        lines: [],
+        tone: 'noms',
+        duration: 1200,
+        actorIds: announcer.id,
+        subjectIds: replacementId
+      });
+
+      // Card B: Message text only with extra long content
+      await window.showTVCardWithAvatars({
+        title: '',
+        lines: [
+          `${announcer.name}: After much consideration and strategic deliberation with my alliance members, I have decided to name ${window.safeName(replacementId)} as the replacement nominee for this week's eviction ceremony. This is purely a game move and nothing personal.`
+        ],
+        tone: 'noms',
+        duration: 3000,
+        actorIds: null,
+        subjectIds: null
+      });
+    }
+
+    // Update viewport indicator
+    function updateViewportIndicator() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const indicator = document.getElementById('viewportIndicator');
+      indicator.textContent = `Viewport: ${width}×${height}px`;
+      
+      // Color code based on viewport size
+      if (width <= 414) {
+        indicator.style.background = '#e74c3c'; // Red for narrow (mobile)
+      } else if (width <= 768) {
+        indicator.style.background = '#f39c12'; // Orange for tablet
+      } else {
+        indicator.style.background = '#2ecc71'; // Green for desktop
+      }
+    }
+
+    window.addEventListener('resize', updateViewportIndicator);
+    window.addEventListener('load', updateViewportIndicator);
+  </script>
+</body>
+</html>
