@@ -442,7 +442,8 @@
           // If focus is on evict button and it's enabled, click it
           handleEvictClick();
         }
-        break;      case 'Escape':
+        break;
+      case 'Escape':
         event.preventDefault();
         // Only allow Escape to close if allowClose is true
         if (state.allowClose) {
