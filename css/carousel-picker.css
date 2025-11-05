@@ -397,7 +397,13 @@
     animation: none;
   }
   
-  @keyframes swapFromLeft,
+  @keyframes swapFromLeft {
+    from, to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
   @keyframes swapFromRight {
     from, to {
       opacity: 1;
