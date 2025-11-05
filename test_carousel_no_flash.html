@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carousel Picker - No Flash Verification</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/carousel-picker.css">
+  <style>
+    body {
+      padding: 40px;
+      background: #1a1a2e;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .test-section {
+      margin-bottom: 40px;
+      padding: 30px;
+      background: rgba(52, 152, 219, 0.1);
+      border: 1px solid rgba(52, 152, 219, 0.3);
+      border-radius: 12px;
+    }
+    h1 {
+      margin-bottom: 10px;
+      color: #3498db;
+    }
+    .subtitle {
+      color: #95a5a6;
+      margin-bottom: 30px;
+    }
+    .demo-button {
+      background: linear-gradient(145deg, rgba(52, 152, 219, 0.3), rgba(41, 128, 185, 0.3));
+      border: 2px solid rgba(52, 152, 219, 0.5);
+      color: white;
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin: 8px;
+    }
+    .demo-button:hover {
+      background: linear-gradient(145deg, rgba(52, 152, 219, 0.5), rgba(41, 128, 185, 0.5));
+      border-color: rgba(52, 152, 219, 0.8);
+      transform: translateY(-2px);
+    }
+    .instructions {
+      background: rgba(46, 204, 113, 0.1);
+      border: 1px solid rgba(46, 204, 113, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .instructions h3 {
+      color: #2ecc71;
+      margin-top: 0;
+    }
+    .instructions ol {
+      margin-left: 20px;
+    }
+    .instructions li {
+      margin-bottom: 10px;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(52, 152, 219, 0.1);
+      border: 1px solid rgba(52, 152, 219, 0.3);
+      border-radius: 8px;
+      display: none;
+    }
+    .result.success {
+      display: block;
+      border-color: rgba(46, 204, 113, 0.5);
+      background: rgba(46, 204, 113, 0.1);
+      color: #2ecc71;
+    }
+  </style>
+</head>
+<body>
+  <h1>Carousel Picker - No Flash Verification</h1>
+  <p class="subtitle">This test verifies that navigating the carousel does not cause a flash to the underlying screen</p>
+
+  <div class="test-section">
+    <h2>Visual Verification Test</h2>
+    <p>This test demonstrates that the overlay stays mounted during navigation.</p>
+    
+    <button class="demo-button" onclick="runTest()">Open Carousel Test</button>
+    
+    <div class="instructions">
+      <h3>Testing Instructions:</h3>
+      <ol>
+        <li>Click the "Open Carousel Test" button above</li>
+        <li>When the carousel opens, rapidly press the <strong>Right Arrow (→)</strong> button multiple times</li>
+        <li>Also try using keyboard arrow keys (← and →) to navigate</li>
+        <li>Try the <strong>Home</strong> and <strong>End</strong> keys</li>
+        <li><strong>EXPECTED:</strong> The dimmed overlay should remain visible at all times - NO flash to the background</li>
+        <li><strong>PREVIOUS BUG:</strong> Would briefly show this page's background between each player</li>
+        <li>Watch for smooth transitions with a subtle slide effect</li>
+      </ol>
+      
+      <h3>What to Look For:</h3>
+      <ul>
+        <li>✅ <strong>PASS:</strong> Overlay stays dark throughout navigation</li>
+        <li>✅ <strong>PASS:</strong> Avatar/name/buttons update smoothly</li>
+        <li>✅ <strong>PASS:</strong> Counter updates correctly (1/8, 2/8, etc.)</li>
+        <li>✅ <strong>PASS:</strong> Arrow buttons disable at start/end</li>
+        <li>❌ <strong>FAIL:</strong> Brief flash of white/page background visible</li>
+        <li>❌ <strong>FAIL:</strong> Overlay blinks or disappears momentarily</li>
+      </ul>
+    </div>
+    
+    <div id="result" class="result"></div>
+  </div>
+
+  <!-- Mock player data -->
+  <script>
+    // Mock game data - 8 players for thorough testing
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' },
+        { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana' },
+        { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve' },
+        { id: 6, name: 'Frank', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Frank' },
+        { id: 7, name: 'Grace', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace' },
+        { id: 8, name: 'Henry', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Henry' }
+      ]
+    };
+
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : String(id);
+    };
+
+    window.resolveAvatar = function(id) {
+      const p = window.getP(id);
+      return p ? p.avatar : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + id;
+    };
+
+    // Test function
+    async function runTest() {
+      console.log('Opening carousel picker with 8 players...');
+      console.log('Watch for any flashes during navigation!');
+      
+      const result = await window.openCarouselPicker({
+        ids: [1, 2, 3, 4, 5, 6, 7, 8],
+        title: 'Navigate rapidly - watch for flash!',
+        actionLabel: 'Select',
+        blockIds: [3], // Charlie is blocked to test blocked state
+        startId: 4 // Start at Diana
+      });
+      
+      const resultDiv = document.getElementById('result');
+      resultDiv.className = 'result success';
+      
+      if (result !== null && result !== undefined) {
+        resultDiv.innerHTML = `
+          <strong>✅ Test Complete!</strong><br>
+          Selected: ${window.safeName(result)} (ID: ${result})<br><br>
+          <strong>Verification Checklist:</strong><br>
+          Did you see any flash of the background during navigation? (Should be NO)<br>
+          Did the overlay stay mounted throughout? (Should be YES)<br>
+          Did the transitions look smooth? (Should be YES)
+        `;
+      } else {
+        resultDiv.innerHTML = `
+          <strong>Test Cancelled</strong><br>
+          You pressed Cancel or Escape. Try again to verify the fix!
+        `;
+      }
+    }
+  </script>
+
+  <!-- Carousel Picker Script -->
+  <script src="js/ui/interaction-guards.js"></script>
+  <script src="js/ui/carousel-picker.js"></script>
+</body>
+</html>
