@@ -59,7 +59,12 @@
     blockedLabel: null,
     confirmBtn: null,
     cancelBtn: null,
-    counter: null
+    counter: null,
+    // Side preview avatars for carousel effect
+    prevAvatarContainer: null,
+    prevAvatarImg: null,
+    nextAvatarContainer: null,
+    nextAvatarImg: null
   };
 
   let keyboardHandler = null;
@@ -155,6 +160,14 @@
     };
     middleSection.appendChild(refs.leftArrow);
 
+    // Previous player preview (left side, blurred)
+    refs.prevAvatarContainer = document.createElement('div');
+    refs.prevAvatarContainer.className = 'carousel-picker-side-preview carousel-picker-side-preview-left';
+    refs.prevAvatarImg = document.createElement('img');
+    refs.prevAvatarImg.className = 'carousel-picker-side-avatar';
+    refs.prevAvatarContainer.appendChild(refs.prevAvatarImg);
+    middleSection.appendChild(refs.prevAvatarContainer);
+
     // Avatar container (visual display only, no tap-to-confirm)
     refs.avatarContainer = document.createElement('div');
     refs.avatarContainer.className = 'carousel-picker-avatar-container';
@@ -180,6 +193,14 @@
     refs.avatarContainer.appendChild(refs.blockedLabel);
 
     middleSection.appendChild(refs.avatarContainer);
+
+    // Next player preview (right side, blurred)
+    refs.nextAvatarContainer = document.createElement('div');
+    refs.nextAvatarContainer.className = 'carousel-picker-side-preview carousel-picker-side-preview-right';
+    refs.nextAvatarImg = document.createElement('img');
+    refs.nextAvatarImg.className = 'carousel-picker-side-avatar';
+    refs.nextAvatarContainer.appendChild(refs.nextAvatarImg);
+    middleSection.appendChild(refs.nextAvatarContainer);
 
     // Right arrow
     refs.rightArrow = document.createElement('button');
@@ -351,6 +372,31 @@
 
     // Update counter
     refs.counter.textContent = (state.currentIndex + 1) + ' / ' + state.ids.length;
+
+    // Update side preview avatars (carousel effect)
+    // Previous player preview
+    if (state.currentIndex > 0) {
+      const prevId = state.ids[state.currentIndex - 1];
+      refs.prevAvatarImg.src = resolveAvatar(prevId);
+      refs.prevAvatarImg.alt = safeName(prevId);
+      refs.prevAvatarContainer.style.visibility = 'visible';
+      refs.prevAvatarContainer.style.opacity = '1';
+    } else {
+      refs.prevAvatarContainer.style.visibility = 'hidden';
+      refs.prevAvatarContainer.style.opacity = '0';
+    }
+
+    // Next player preview
+    if (state.currentIndex < state.ids.length - 1) {
+      const nextId = state.ids[state.currentIndex + 1];
+      refs.nextAvatarImg.src = resolveAvatar(nextId);
+      refs.nextAvatarImg.alt = safeName(nextId);
+      refs.nextAvatarContainer.style.visibility = 'visible';
+      refs.nextAvatarContainer.style.opacity = '1';
+    } else {
+      refs.nextAvatarContainer.style.visibility = 'hidden';
+      refs.nextAvatarContainer.style.opacity = '0';
+    }
   }
 
   /**
