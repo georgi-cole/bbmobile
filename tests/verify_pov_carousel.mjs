@@ -78,8 +78,8 @@ if (carouselPickerContent.includes('return new Promise')) {
   fail('openCarouselPicker does not return a Promise');
 }
 
-// Test 4: Check for carousel rendering
-if (carouselPickerContent.includes('function render(')) {
+// Test 4: Check for carousel rendering functions (refactored to prevent flicker)
+if (carouselPickerContent.includes('function buildOverlayOnce(') && carouselPickerContent.includes('function updateUI(')) {
   pass('Carousel rendering function exists');
 } else {
   fail('Carousel rendering function not found');
