@@ -97,7 +97,6 @@ export function mountTvHud(root) {
   
   // Internal state
   let skipCallback = null;
-  let currentSeconds = 0;
   
   // Skip button handler
   skipBtn.addEventListener('click', () => {
@@ -169,7 +168,6 @@ export function mountTvHud(root) {
    * @param {number} seconds - Time in seconds
    */
   function setTimer(seconds) {
-    currentSeconds = seconds;
     timerDiv.textContent = formatTime(seconds);
   }
   

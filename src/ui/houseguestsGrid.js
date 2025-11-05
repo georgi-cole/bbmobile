@@ -31,7 +31,7 @@ export function mountHouseguestsGrid(container, options = {}) {
   /**
    * Handle pointer/touch start
    */
-  function handlePointerDown(player, event) {
+  function handlePointerDown(player, _event) {
     if (player.evicted) return;
     
     longPressTriggered = false;
@@ -53,7 +53,7 @@ export function mountHouseguestsGrid(container, options = {}) {
   /**
    * Handle pointer/touch end
    */
-  function handlePointerUp(player, event) {
+  function handlePointerUp(player, _event) {
     if (player.evicted) return;
     
     // Clear long-press timer
