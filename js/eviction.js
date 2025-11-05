@@ -189,6 +189,38 @@
       return;
     }
 
+    // Get nominees data for UI rendering
+    const nominees = (g.eviction?.nominees || [])
+      .map(id => ({ id, name: global.safeName?.(id) || 'Unknown' }))
+      .filter(n => n.id != null);
+
+    // Check if we should use triple 3-up UI (3 nominees, enabled in settings)
+    const useTriple = nominees.length === 3 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && typeof global.lv2?.initTriple === 'function';
+
+    if (useTriple) {
+      // Clear any lingering TV overlay content before showing triple UI
+      try { 
+        if (typeof global.clearTVOverlayContent === 'function') {
+          global.clearTVOverlayContent(); 
+        }
+      } catch (e) { 
+        console.warn('[LiveVote] clearTVOverlayContent failed', e); 
+      }
+      
+      // Use modern Live Vote 2.0 triple UI - render inside TV
+      global.lv2.initTriple({
+        nominees: nominees,
+        onVote: (pickId) => {
+          lockHumanVote(pickId);
+        }
+      });
+
+      // Panel will be hidden by initTriple, so we're done
+      return;
+    }
+
     // Check if we should use modern lv2 UI (2 nominees only, enabled in settings)
     const useLv2 = g.eviction.nominees.length === 2 
       && g.cfg?.modernLiveVoteUI !== false 
@@ -1259,6 +1291,11 @@
     // Clean up lv2 UI if it was active
     if (global.lv2?.cleanup) {
       global.lv2.cleanup();
+    }
+    
+    // Clean up triple UI if it was active
+    if (global.lv2?.cleanupTriple) {
+      global.lv2.cleanupTriple();
     }
     
     const remain=global.alivePlayers();

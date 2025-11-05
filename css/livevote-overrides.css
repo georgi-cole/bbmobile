@@ -1,0 +1,157 @@
+/* Live Vote V2 - Override Styles to Prevent Legacy Panel Overlap */
+/* Hides legacy live vote/summary panel elements while lv2 is active */
+
+/* Hide legacy live-vote summary panel while lv2 is active */
+body.lv-active-livevote #panel .live-vote,
+body.lv-active-livevote #panel .liveVote,
+body.lv-active-livevote #panel .vote-summary,
+body.lv-active-livevote #panel .legacy-live-vote {
+  display: none !important;
+}
+
+/* Ensure in-TV CTA bar is always on top */
+#tv .lv2-cta-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(8px, 2.2vw, 16px);
+  z-index: 160; /* above overlays inside TV */
+}
+
+/* Optional: dock mode if we want panel visible below TV instead of hidden */
+body.lv-dock-livevote #panel .live-vote,
+body.lv-dock-livevote #panel .liveVote,
+body.lv-dock-livevote #panel .vote-summary,
+body.lv-dock-livevote #panel .legacy-live-vote {
+  display: block !important;
+  position: static !important;
+  max-height: none !important;
+  margin-top: 12px;
+  z-index: 1; /* below TV overlay */
+}
+
+/* Styles for triple nominee layout */
+.lv2-3up {
+  /* 3-up container uses grid with 2 rows: nominees grid + CTA row */
+  display: grid !important;
+  grid-template-rows: 1fr auto;
+  gap: clamp(8px, 1.5vw, 12px);
+}
+
+.lv2-3up-grid {
+  /* 3-column grid for nominees */
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(10px, 1.6vw, 18px);
+  align-items: center;
+  justify-items: center;
+}
+
+.lv2-contestant {
+  /* Individual nominee card in 3-up layout */
+  display: grid;
+  grid-template-rows: auto auto;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.lv2-avatar {
+  /* Avatar styling for triple layout */
+  width: clamp(72px, 12vw, 96px);
+  height: clamp(72px, 12vw, 96px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #1b2b44, #0f1a2d);
+  box-shadow: 0 0 0 3px rgba(143, 211, 255, 0.4), 0 4px 18px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.lv2-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lv2-name {
+  /* Nominee name label in 3-up layout */
+  font-weight: 700;
+  color: #d9ecff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  text-align: center;
+}
+
+.lv2-cta-row.triple {
+  /* CTA row for triple eviction */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(8px, 1.4vw, 16px);
+  align-items: center;
+  justify-items: center;
+  margin-top: clamp(6px, 1.2vw, 10px);
+}
+
+.lv2-cta-row.triple .lv2-cta-btn {
+  /* Triple eviction buttons */
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #19314f, #0e223b);
+  border: 1px solid rgba(143, 211, 255, 0.3);
+  color: #e9f4ff;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: clamp(0.8rem, 1.8vw, 0.95rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.2s ease;
+  width: 100%;
+  max-width: 180px;
+}
+
+.lv2-cta-row.triple .lv2-cta-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #234d7a, #153252);
+  border-color: rgba(143, 211, 255, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.lv2-cta-row.triple .lv2-cta-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.lv2-cta-row.triple .lv2-cta-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  background: linear-gradient(135deg, #19314f, #0e223b);
+}
+
+/* Responsive adjustments for triple layout */
+@media (max-width: 768px) {
+  .lv2-3up-grid {
+    gap: clamp(8px, 1.4vw, 14px);
+  }
+  
+  .lv2-cta-row.triple {
+    grid-template-columns: 1fr;
+    gap: clamp(6px, 1.2vw, 10px);
+  }
+  
+  .lv2-cta-row.triple .lv2-cta-btn {
+    max-width: 100%;
+    font-size: clamp(0.85rem, 2vw, 1rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .lv2-avatar {
+    width: clamp(60px, 14vw, 80px);
+    height: clamp(60px, 14vw, 80px);
+  }
+  
+  .lv2-name {
+    font-size: clamp(0.75rem, 2.2vw, 0.9rem);
+  }
+}
