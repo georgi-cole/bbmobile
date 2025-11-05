@@ -24,7 +24,7 @@
     if (typeof global.resolveAvatar === 'function') {
       return global.resolveAvatar(id);
     }
-    var p = getP(id);
+    const p = getP(id);
     if (p && p.avatar) return p.avatar;
     if (p && p.img) return p.img;
     if (p && p.photo) return p.photo;
@@ -36,7 +36,7 @@
   }
 
   // State management
-  var state = {
+  const state = {
     isOpen: false,
     ids: [],
     title: 'Make your choice',
@@ -48,8 +48,26 @@
     resolver: null
   };
 
-  var overlay = null;
-  var keyboardHandler = null;
+  // Persistent DOM references to prevent re-mounting flicker
+  const refs = {
+    overlay: null,
+    leftArrow: null,
+    rightArrow: null,
+    avatarContainer: null,
+    avatarImg: null,
+    nameLabel: null,
+    blockedLabel: null,
+    confirmBtn: null,
+    cancelBtn: null,
+    counter: null,
+    // Side preview avatars for carousel effect
+    prevAvatarContainer: null,
+    prevAvatarImg: null,
+    nextAvatarContainer: null,
+    nextAvatarImg: null
+  };
+
+  let keyboardHandler = null;
 
   /**
    * Open carousel picker
@@ -72,150 +90,150 @@
       state.ids = options.ids.slice();
       state.title = options.title || 'Make your choice';
       state.actionLabel = options.actionLabel || 'Confirm';
-      state.startId = options.startId != null ? options.startId : null;
+      state.startId = options.startId !== null && options.startId !== undefined ? options.startId : null;
       state.blockIds = options.blockIds || [];
       state.onIndexChange = options.onIndexChange || null;
       state.resolver = resolve;
       state.isOpen = true;
 
       // Find starting index
-      if (state.startId != null) {
-        var startIdx = state.ids.indexOf(state.startId);
+      if (state.startId !== null && state.startId !== undefined) {
+        const startIdx = state.ids.indexOf(state.startId);
         state.currentIndex = startIdx >= 0 ? startIdx : 0;
       } else {
         state.currentIndex = 0;
       }
 
-      render();
+      buildOverlayOnce();
       attachEventListeners();
     });
   }
 
   /**
-   * Render the carousel picker UI
+   * Build the carousel picker UI once (avoids re-mount flicker)
+   * This function creates the overlay and stores persistent DOM references.
+   * Content updates happen via updateUI() to prevent the flash caused by removing/re-adding the overlay.
    */
-  function render() {
+  function buildOverlayOnce() {
     // Remove existing overlay if present
-    if (overlay && overlay.parentNode) {
-      overlay.parentNode.removeChild(overlay);
-      overlay = null;
+    if (refs.overlay && refs.overlay.parentNode) {
+      refs.overlay.parentNode.removeChild(refs.overlay);
+      refs.overlay = null;
     }
 
     // Create overlay
-    overlay = document.createElement('div');
-    overlay.className = 'carousel-picker-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-label', state.title);
-    overlay.setAttribute('aria-modal', 'true');
+    refs.overlay = document.createElement('div');
+    refs.overlay.className = 'carousel-picker-overlay';
+    refs.overlay.setAttribute('role', 'dialog');
+    refs.overlay.setAttribute('aria-label', state.title);
+    refs.overlay.setAttribute('aria-modal', 'true');
 
     // Top section: Title
-    var topSection = document.createElement('div');
+    const topSection = document.createElement('div');
     topSection.className = 'carousel-picker-top';
     
-    var titleEl = document.createElement('h2');
+    const titleEl = document.createElement('h2');
     titleEl.className = 'carousel-picker-title';
     titleEl.textContent = state.title;
     topSection.appendChild(titleEl);
     
-    overlay.appendChild(topSection);
+    refs.overlay.appendChild(topSection);
 
     // Middle section: Avatar with left/right arrows
-    var middleSection = document.createElement('div');
+    const middleSection = document.createElement('div');
     middleSection.className = 'carousel-picker-middle';
 
     // Left arrow
-    var leftArrow = document.createElement('button');
-    leftArrow.className = 'carousel-picker-arrow carousel-picker-arrow-left';
-    leftArrow.innerHTML = '&#8249;'; // ‹
-    leftArrow.setAttribute('aria-label', 'Previous');
-    leftArrow.disabled = (state.currentIndex === 0);
-    leftArrow.onclick = function(e) {
+    refs.leftArrow = document.createElement('button');
+    refs.leftArrow.className = 'carousel-picker-arrow carousel-picker-arrow-left';
+    refs.leftArrow.innerHTML = '&#8249;'; // ‹
+    refs.leftArrow.setAttribute('aria-label', 'Previous');
+    refs.leftArrow.onclick = function(e) {
       if (e) {
         e.stopPropagation();
       }
       if (state.currentIndex > 0) {
         state.currentIndex--;
         if (state.onIndexChange) state.onIndexChange(state.currentIndex);
-        render();
+        smoothSwap('left');
       }
     };
-    middleSection.appendChild(leftArrow);
+    middleSection.appendChild(refs.leftArrow);
+
+    // Previous player preview (left side, blurred)
+    refs.prevAvatarContainer = document.createElement('div');
+    refs.prevAvatarContainer.className = 'carousel-picker-side-preview carousel-picker-side-preview-left';
+    refs.prevAvatarImg = document.createElement('img');
+    refs.prevAvatarImg.className = 'carousel-picker-side-avatar';
+    refs.prevAvatarContainer.appendChild(refs.prevAvatarImg);
+    middleSection.appendChild(refs.prevAvatarContainer);
 
     // Avatar container (visual display only, no tap-to-confirm)
-    var currentId = state.ids[state.currentIndex];
-    var isBlocked = state.blockIds.indexOf(currentId) !== -1;
-    var player = getP(currentId);
-
-    var avatarContainer = document.createElement('div');
-    avatarContainer.className = 'carousel-picker-avatar-container';
-    if (!isBlocked) {
-      avatarContainer.classList.add('carousel-picker-avatar-selectable');
-      // Remove tap-to-confirm behavior - avatar is now display-only
-      // Selection is confirmed via explicit Confirm button only
-    } else {
-      avatarContainer.classList.add('carousel-picker-avatar-blocked');
-      avatarContainer.setAttribute('aria-disabled', 'true');
-    }
+    refs.avatarContainer = document.createElement('div');
+    refs.avatarContainer.className = 'carousel-picker-avatar-container';
 
     // Avatar image
-    var avatarImg = document.createElement('img');
-    avatarImg.className = 'carousel-picker-avatar';
-    avatarImg.src = resolveAvatar(currentId);
-    avatarImg.alt = safeName(currentId);
-    avatarImg.onerror = function() {
+    refs.avatarImg = document.createElement('img');
+    refs.avatarImg.className = 'carousel-picker-avatar';
+    refs.avatarImg.onerror = function() {
       // Fallback already handled in resolveAvatar
     };
-    avatarContainer.appendChild(avatarImg);
+    refs.avatarContainer.appendChild(refs.avatarImg);
 
     // Name under avatar
-    var nameLabel = document.createElement('div');
-    nameLabel.className = 'carousel-picker-name';
-    nameLabel.textContent = safeName(currentId);
-    avatarContainer.appendChild(nameLabel);
+    refs.nameLabel = document.createElement('div');
+    refs.nameLabel.className = 'carousel-picker-name';
+    refs.avatarContainer.appendChild(refs.nameLabel);
 
-    // Blocked label (if applicable)
-    if (isBlocked) {
-      var blockedLabel = document.createElement('div');
-      blockedLabel.className = 'carousel-picker-blocked-label';
-      blockedLabel.textContent = 'Not Eligible';
-      avatarContainer.appendChild(blockedLabel);
-    }
+    // Blocked label (created but may be hidden)
+    refs.blockedLabel = document.createElement('div');
+    refs.blockedLabel.className = 'carousel-picker-blocked-label';
+    refs.blockedLabel.textContent = 'Not Eligible';
+    refs.blockedLabel.style.display = 'none'; // Hidden by default
+    refs.avatarContainer.appendChild(refs.blockedLabel);
 
-    middleSection.appendChild(avatarContainer);
+    middleSection.appendChild(refs.avatarContainer);
+
+    // Next player preview (right side, blurred)
+    refs.nextAvatarContainer = document.createElement('div');
+    refs.nextAvatarContainer.className = 'carousel-picker-side-preview carousel-picker-side-preview-right';
+    refs.nextAvatarImg = document.createElement('img');
+    refs.nextAvatarImg.className = 'carousel-picker-side-avatar';
+    refs.nextAvatarContainer.appendChild(refs.nextAvatarImg);
+    middleSection.appendChild(refs.nextAvatarContainer);
 
     // Right arrow
-    var rightArrow = document.createElement('button');
-    rightArrow.className = 'carousel-picker-arrow carousel-picker-arrow-right';
-    rightArrow.innerHTML = '&#8250;'; // ›
-    rightArrow.setAttribute('aria-label', 'Next');
-    rightArrow.disabled = (state.currentIndex === state.ids.length - 1);
-    rightArrow.onclick = function(e) {
+    refs.rightArrow = document.createElement('button');
+    refs.rightArrow.className = 'carousel-picker-arrow carousel-picker-arrow-right';
+    refs.rightArrow.innerHTML = '&#8250;'; // ›
+    refs.rightArrow.setAttribute('aria-label', 'Next');
+    refs.rightArrow.onclick = function(e) {
       if (e) {
         e.stopPropagation();
       }
       if (state.currentIndex < state.ids.length - 1) {
         state.currentIndex++;
         if (state.onIndexChange) state.onIndexChange(state.currentIndex);
-        render();
+        smoothSwap('right');
       }
     };
-    middleSection.appendChild(rightArrow);
+    middleSection.appendChild(refs.rightArrow);
 
-    overlay.appendChild(middleSection);
+    refs.overlay.appendChild(middleSection);
 
     // Bottom section: Cancel + Confirm buttons
-    var bottomSection = document.createElement('div');
+    const bottomSection = document.createElement('div');
     bottomSection.className = 'carousel-picker-bottom';
 
-    var buttonRow = document.createElement('div');
+    const buttonRow = document.createElement('div');
     buttonRow.className = 'carousel-picker-button-row';
 
     // Cancel button
-    var cancelBtn = document.createElement('button');
-    cancelBtn.className = 'btn carousel-picker-cancel';
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.setAttribute('aria-label', 'Cancel selection');
-    cancelBtn.onclick = function(e) {
+    refs.cancelBtn = document.createElement('button');
+    refs.cancelBtn.className = 'btn carousel-picker-cancel';
+    refs.cancelBtn.textContent = 'Cancel';
+    refs.cancelBtn.setAttribute('aria-label', 'Cancel selection');
+    refs.cancelBtn.onclick = function(e) {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -223,50 +241,48 @@
       }
       close(null);
     };
-    buttonRow.appendChild(cancelBtn);
+    buttonRow.appendChild(refs.cancelBtn);
 
     // Confirm button
-    var confirmBtn = document.createElement('button');
-    confirmBtn.className = 'btn primary carousel-picker-confirm';
-    confirmBtn.textContent = state.actionLabel;
-    confirmBtn.setAttribute('aria-label', state.actionLabel + ' ' + safeName(currentId));
-    confirmBtn.disabled = isBlocked;
-    confirmBtn.onclick = function(e) {
+    refs.confirmBtn = document.createElement('button');
+    refs.confirmBtn.className = 'btn primary carousel-picker-confirm';
+    refs.confirmBtn.onclick = function(e) {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
       }
+      const currentId = state.ids[state.currentIndex];
+      const isBlocked = state.blockIds.indexOf(currentId) !== -1;
       if (!isBlocked) {
         close(currentId);
       }
     };
-    buttonRow.appendChild(confirmBtn);
+    buttonRow.appendChild(refs.confirmBtn);
 
     bottomSection.appendChild(buttonRow);
 
     // Counter (e.g., "3 / 7")
-    var counter = document.createElement('div');
-    counter.className = 'carousel-picker-counter';
-    counter.textContent = (state.currentIndex + 1) + ' / ' + state.ids.length;
-    bottomSection.appendChild(counter);
+    refs.counter = document.createElement('div');
+    refs.counter.className = 'carousel-picker-counter';
+    bottomSection.appendChild(refs.counter);
 
-    overlay.appendChild(bottomSection);
+    refs.overlay.appendChild(bottomSection);
 
     // Add to body
-    document.body.appendChild(overlay);
+    document.body.appendChild(refs.overlay);
 
     // Prevent events from bubbling to router/HUD while allowing interaction with controls
     // Strategy: Only stopPropagation on non-interactive targets to prevent HUD/router interference
     // For interactive targets (buttons, inputs), let events bubble to their handlers
     
-    var isInteractiveFn = global.isInteractiveEvent || function(e) {
+    const isInteractiveFn = global.isInteractiveEvent || function(e) {
       if (!e || !e.target) return false;
       return !!e.target.closest('button, [role="button"], a, input, select, textarea, [data-action]');
     };
 
     // Handle click events
-    overlay.addEventListener('click', function(e) {
+    refs.overlay.addEventListener('click', function(e) {
       // Let clicks on interactive controls bubble to their handlers
       if (!isInteractiveFn(e)) {
         e.stopPropagation();
@@ -274,42 +290,144 @@
     }, true);
 
     // Handle pointer events (unified mouse/touch/pen)
-    overlay.addEventListener('pointerdown', function(e) {
+    refs.overlay.addEventListener('pointerdown', function(e) {
       if (!isInteractiveFn(e)) {
         e.stopPropagation();
       }
     }, true);
 
-    overlay.addEventListener('pointerup', function(e) {
+    refs.overlay.addEventListener('pointerup', function(e) {
       if (!isInteractiveFn(e)) {
         e.stopPropagation();
       }
     }, true);
 
     // Handle touch events with proper passive flag
-    overlay.addEventListener('touchstart', function(e) {
+    refs.overlay.addEventListener('touchstart', function(e) {
       // Don't prevent default on interactive controls to allow click synthesis
       if (!isInteractiveFn(e)) {
         e.stopPropagation();
       }
     }, { passive: true, capture: true });
 
-    overlay.addEventListener('touchend', function(e) {
+    refs.overlay.addEventListener('touchend', function(e) {
       // Don't prevent default on interactive controls to allow click synthesis
       if (!isInteractiveFn(e)) {
         e.stopPropagation();
       }
     }, { passive: true, capture: true });
+
+    // Update UI with initial content
+    updateUI();
 
     // Animate in
     requestAnimationFrame(function() {
-      overlay.classList.add('carousel-picker-visible');
+      refs.overlay.classList.add('carousel-picker-visible');
     });
 
     // Focus confirm button
     setTimeout(function() {
-      confirmBtn.focus();
+      refs.confirmBtn.focus();
     }, 100);
+  }
+
+  /**
+   * Update the UI in place without re-mounting the overlay
+   * This is the key to preventing flicker - we only update the dynamic content
+   */
+  function updateUI() {
+    if (!refs.overlay) return;
+
+    const currentId = state.ids[state.currentIndex];
+    const isBlocked = state.blockIds.indexOf(currentId) !== -1;
+
+    // Update avatar image and alt text
+    refs.avatarImg.src = resolveAvatar(currentId);
+    refs.avatarImg.alt = safeName(currentId);
+
+    // Update name label
+    refs.nameLabel.textContent = safeName(currentId);
+
+    // Update blocked state
+    if (isBlocked) {
+      refs.avatarContainer.classList.remove('carousel-picker-avatar-selectable');
+      refs.avatarContainer.classList.add('carousel-picker-avatar-blocked');
+      refs.avatarContainer.setAttribute('aria-disabled', 'true');
+      refs.blockedLabel.style.display = 'block';
+    } else {
+      refs.avatarContainer.classList.remove('carousel-picker-avatar-blocked');
+      refs.avatarContainer.classList.add('carousel-picker-avatar-selectable');
+      refs.avatarContainer.removeAttribute('aria-disabled');
+      refs.blockedLabel.style.display = 'none';
+    }
+
+    // Update confirm button
+    refs.confirmBtn.textContent = state.actionLabel;
+    refs.confirmBtn.setAttribute('aria-label', state.actionLabel + ' ' + safeName(currentId));
+    refs.confirmBtn.disabled = isBlocked;
+
+    // Update arrow states
+    refs.leftArrow.disabled = (state.currentIndex === 0);
+    refs.rightArrow.disabled = (state.currentIndex === state.ids.length - 1);
+
+    // Update counter
+    refs.counter.textContent = (state.currentIndex + 1) + ' / ' + state.ids.length;
+
+    // Update side preview avatars (carousel effect)
+    // Previous player preview
+    if (state.currentIndex > 0) {
+      const prevId = state.ids[state.currentIndex - 1];
+      refs.prevAvatarImg.src = resolveAvatar(prevId);
+      refs.prevAvatarImg.alt = safeName(prevId);
+      refs.prevAvatarContainer.style.visibility = 'visible';
+      refs.prevAvatarContainer.style.opacity = '1';
+    } else {
+      refs.prevAvatarContainer.style.visibility = 'hidden';
+      refs.prevAvatarContainer.style.opacity = '0';
+    }
+
+    // Next player preview
+    if (state.currentIndex < state.ids.length - 1) {
+      const nextId = state.ids[state.currentIndex + 1];
+      refs.nextAvatarImg.src = resolveAvatar(nextId);
+      refs.nextAvatarImg.alt = safeName(nextId);
+      refs.nextAvatarContainer.style.visibility = 'visible';
+      refs.nextAvatarContainer.style.opacity = '1';
+    } else {
+      refs.nextAvatarContainer.style.visibility = 'hidden';
+      refs.nextAvatarContainer.style.opacity = '0';
+    }
+  }
+
+  /**
+   * Smooth transition between players (optional visual enhancement)
+   * Adds/removes CSS classes for animation without removing the overlay
+   */
+  function smoothSwap(direction) {
+    if (!refs.avatarContainer) return;
+
+    // Remove any existing swap classes
+    refs.avatarContainer.classList.remove('swap-left', 'swap-right');
+
+    // Trigger reflow to restart animation
+    void refs.avatarContainer.offsetWidth;
+
+    // Add direction class for animation (optional - CSS can handle this)
+    if (direction === 'left') {
+      refs.avatarContainer.classList.add('swap-left');
+    } else if (direction === 'right') {
+      refs.avatarContainer.classList.add('swap-right');
+    }
+
+    // Update UI content
+    updateUI();
+
+    // Remove swap class after animation completes
+    setTimeout(function() {
+      if (refs.avatarContainer) {
+        refs.avatarContainer.classList.remove('swap-left', 'swap-right');
+      }
+    }, 300);
   }
 
   /**
@@ -330,19 +448,19 @@
         if (state.currentIndex > 0) {
           state.currentIndex--;
           if (state.onIndexChange) state.onIndexChange(state.currentIndex);
-          render();
+          smoothSwap('left');
         }
       } else if (e.key === 'ArrowRight' || e.key === 'Right') {
         e.preventDefault();
         if (state.currentIndex < state.ids.length - 1) {
           state.currentIndex++;
           if (state.onIndexChange) state.onIndexChange(state.currentIndex);
-          render();
+          smoothSwap('right');
         }
       } else if (e.key === 'Enter') {
         // Confirm current selection if not blocked
-        var currentId = state.ids[state.currentIndex];
-        var isBlocked = state.blockIds.indexOf(currentId) !== -1;
+        const currentId = state.ids[state.currentIndex];
+        const isBlocked = state.blockIds.indexOf(currentId) !== -1;
         if (!isBlocked) {
           e.preventDefault();
           close(currentId);
@@ -354,12 +472,12 @@
         e.preventDefault();
         state.currentIndex = 0;
         if (state.onIndexChange) state.onIndexChange(state.currentIndex);
-        render();
+        smoothSwap('left');
       } else if (e.key === 'End') {
         e.preventDefault();
         state.currentIndex = state.ids.length - 1;
         if (state.onIndexChange) state.onIndexChange(state.currentIndex);
-        render();
+        smoothSwap('right');
       }
     };
 
@@ -380,13 +498,13 @@
     }
 
     // Animate out
-    if (overlay) {
-      overlay.classList.remove('carousel-picker-visible');
+    if (refs.overlay) {
+      refs.overlay.classList.remove('carousel-picker-visible');
       setTimeout(function() {
-        if (overlay && overlay.parentNode) {
-          overlay.parentNode.removeChild(overlay);
+        if (refs.overlay && refs.overlay.parentNode) {
+          refs.overlay.parentNode.removeChild(refs.overlay);
         }
-        overlay = null;
+        refs.overlay = null;
       }, 300);
     }
 

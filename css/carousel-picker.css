@@ -182,6 +182,41 @@
   }
 }
 
+/* ===== Side Preview Avatars (Carousel Effect) ===== */
+.carousel-picker-side-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none; /* Not interactive, just visual preview */
+}
+
+.carousel-picker-side-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  filter: blur(2px) brightness(0.6);
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+/* Responsive side preview sizing */
+@media (max-width: 768px) {
+  .carousel-picker-side-avatar {
+    width: 90px;
+    height: 90px;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-picker-side-preview {
+    display: none; /* Hide side previews on very small screens */
+  }
+}
+
 /* ===== Avatar Image ===== */
 .carousel-picker-avatar {
   width: 200px;
@@ -354,4 +389,60 @@
 
 .carousel-picker-avatar-container {
   animation: carouselFadeIn 0.3s ease-out;
+}
+
+/* ===== Optional Swap Animations (Smooth Transitions) ===== */
+/* These classes are added during navigation to provide smooth visual feedback */
+/* The overlay remains mounted - only the avatar content swaps */
+
+.carousel-picker-avatar-container.swap-left {
+  animation: swapFromLeft 0.3s ease-out;
+}
+
+.carousel-picker-avatar-container.swap-right {
+  animation: swapFromRight 0.3s ease-out;
+}
+
+@keyframes swapFromLeft {
+  from {
+    opacity: 0.7;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes swapFromRight {
+  from {
+    opacity: 0.7;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .carousel-picker-avatar-container.swap-left,
+  .carousel-picker-avatar-container.swap-right {
+    animation: none;
+  }
+  
+  @keyframes swapFromLeft {
+    from, to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes swapFromRight {
+    from, to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
 }
