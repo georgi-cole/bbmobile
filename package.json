@@ -17,8 +17,7 @@
     "test:pov-carousel": "node tests/verify_pov_carousel.mjs",
     "test:all": "npm run test:minigames && npm run test:runtime-helpers && npm run test:e2e && npm run test:social && npm run test:pov-carousel",
     "build:progression": "cd src/progression && tsc",
-    "typecheck:progression": "cd src/progression && tsc --noEmit",
-    "screenshot:houseguests": "node scripts/capture_houseguests_grid.mjs"
+    "typecheck:progression": "cd src/progression && tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -28,7 +27,6 @@
   "license": "ISC",
   "devDependencies": {
     "eslint": "^8.57.1",
-    "playwright": "^1.40.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {
