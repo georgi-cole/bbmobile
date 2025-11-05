@@ -758,7 +758,11 @@
         });
         
         // Log HOH speech
-        try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch(e){ /* ignore */ }
+        try{ 
+          global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); 
+        }catch(e){ 
+          // Logging is optional, ignore failures
+        }
         
         // Step 2: Show nominee reactions
         if(ids.length > 0){
@@ -838,21 +842,38 @@
         } else {
           // Fallback to regular showCard
           global.showCard?.('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
-          try{ await global.cardQueueWaitIdle?.(); }catch(e){ /* ignore */ }
+          try{ 
+            await global.cardQueueWaitIdle?.(); 
+          }catch(e){ 
+            // Card queue is optional, continue if not available
+          }
         }
         
-        try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch(e){ /* ignore */ }
+        try{ 
+          global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); 
+        }catch(e){ 
+          // Logging is optional, ignore failures
+        }
 
         // Step 2: Nominee reveals (faux TV)
         for(let i=0; i<ids.length; i++){
           const label = ids.length>2 ? `Nominee #${i+1}` : (i===0 ? 'First Nominee' : 'Second Nominee');
           global.showCard?.(label, [global.safeName(ids[i])], 'noms', 2200, true);
-          try{ await global.cardQueueWaitIdle?.(); }catch(e){ /* ignore */ }
+          try{ 
+            await global.cardQueueWaitIdle?.(); 
+          }catch(e){ 
+            // Card queue is optional, continue if not available
+          }
         }
 
         // Step 3: Show nominee reaction popups simultaneously (2x2 grid for 3-4, row for 2)
         if(ids.length > 0){
-          await showNomineeReactionsSimultaneously(ids);
+          try{
+            await showNomineeReactionsSimultaneously(ids);
+          }catch(e){
+            // Reactions are optional, continue if they fail
+            console.warn('[noms] Nominee reactions failed:', e);
+          }
         }
         
         // Step 4: Show ceremony conclusion message (faux TV styled like nominee cards)
@@ -905,7 +926,9 @@
       try{
         const names = ids.map(global.safeName).join(', ');
         global.addLog?.(`Nominations locked: ${names}.`, 'warn');
-      }catch(e){ /* ignore */ }
+      }catch(e){ 
+        // Logging is optional, ignore failures
+      }
 
       setTimeout(()=>global.startVetoComp?.(),600);
     })();
