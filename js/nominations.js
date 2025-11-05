@@ -37,7 +37,7 @@
     console.log('[noms-pick] Ensuring TV overlay host exists');
     
     // Prefer global scaffold function if available (from veto.js)
-    if(typeof global.ensureTVOverlayScaffold === 'function'){
+    if(global && typeof global.ensureTVOverlayScaffold === 'function'){
       console.log('[noms-pick] Using global.ensureTVOverlayScaffold()');
       const content = global.ensureTVOverlayScaffold();
       if(content){
