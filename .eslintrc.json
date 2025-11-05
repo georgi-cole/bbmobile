@@ -76,12 +76,6 @@
       "globals": {
         "g": "readonly"
       }
-    },
-    {
-      "files": ["src/ui/*.js"],
-      "parserOptions": {
-        "sourceType": "module"
-      }
     }
   ]
 }
