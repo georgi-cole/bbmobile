@@ -6,8 +6,6 @@
 (function(global){
   // Browser global alias for modules that expect window.global
   if (!global.global) global.global = global;
-  
-  const $=global.$;
 
   function aliveIds(){ return global.alivePlayers().map(p=>p.id); }
   function eligibleNomIds(){ const g=global.game; return aliveIds().filter(id=>id!==g.hohId); }
@@ -28,6 +26,312 @@
     return picks;
   }
 
+  // ========== NEW: Pick Mode for Human HOH Nomination UX ==========
+  
+  /**
+   * Inject CSS for nomination pick mode (dimming, selection rings, confirm bar)
+   */
+  function injectPickModeStyles(){
+    if(document.getElementById('bb-noms-pick-styles')) return; // Already injected
+    
+    const style = document.createElement('style');
+    style.id = 'bb-noms-pick-styles';
+    style.textContent = `
+      /* Dim entire page except roster during pick mode */
+      body.bb-noms-pick-mode::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 999;
+        pointer-events: none;
+      }
+      
+      /* Keep roster interactive and above dim */
+      body.bb-noms-pick-mode #rosterBar,
+      body.bb-noms-pick-mode .top-roster,
+      body.bb-noms-pick-mode #topRoster {
+        position: relative;
+        z-index: 1000;
+        pointer-events: auto;
+      }
+      
+      /* Selection ring on tiles */
+      .top-roster-tile.bb-selected {
+        outline: 3px solid var(--ok, #4ade80);
+        outline-offset: 2px;
+        box-shadow: 0 0 12px var(--ok, #4ade80);
+      }
+      
+      /* Hover state during pick mode */
+      body.bb-noms-pick-mode .top-roster-tile:not(.evicted):hover {
+        cursor: pointer;
+        transform: scale(1.05);
+        transition: transform 0.15s ease;
+      }
+      
+      /* Floating confirm bar */
+      #bb-noms-confirm-bar {
+        position: fixed;
+        top: calc(var(--roster-bottom, 120px) + 10px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1001;
+        background: var(--card, #1e293b);
+        border: 1px solid var(--sep, #475569);
+        border-radius: 8px;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(8px);
+      }
+      
+      #bb-noms-count-text {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--fg, #f1f5f9);
+      }
+      
+      #bb-noms-confirm-btn {
+        padding: 8px 24px;
+        background: var(--ok, #4ade80);
+        color: #000;
+        border: none;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.1s;
+      }
+      
+      #bb-noms-confirm-btn:hover:not(:disabled) {
+        transform: scale(1.05);
+      }
+      
+      #bb-noms-confirm-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      
+      /* Reduced motion support */
+      @media (prefers-reduced-motion: reduce) {
+        body.bb-noms-pick-mode .top-roster-tile:hover {
+          transform: none;
+        }
+        #bb-noms-confirm-btn:hover:not(:disabled) {
+          transform: none;
+        }
+        .top-roster-tile.bb-selected {
+          transition: none;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  /**
+   * State for pick mode
+   */
+  const pickModeState = {
+    active: false,
+    selectedIds: [],
+    required: 0,
+    escapeHandler: null,
+    clickHandlers: new Map()
+  };
+  
+  /**
+   * Enter pick mode: dim UI, enable roster selection, show confirm bar
+   */
+  function enterPickMode(){
+    if(pickModeState.active) return; // Already active
+    
+    injectPickModeStyles();
+    
+    pickModeState.active = true;
+    pickModeState.selectedIds = [];
+    pickModeState.required = requiredSlots();
+    
+    // Add body class for dimming
+    document.body.classList.add('bb-noms-pick-mode');
+    
+    // Intercept Escape/Backspace to prevent exit
+    pickModeState.escapeHandler = (e) => {
+      if(e.key === 'Escape' || e.key === 'Backspace'){
+        e.preventDefault();
+        e.stopPropagation();
+        // Optionally show a message that they must complete selection
+        return false;
+      }
+    };
+    document.addEventListener('keydown', pickModeState.escapeHandler, true);
+    
+    // Attach click handlers to roster tiles
+    const tiles = document.querySelectorAll('.top-roster-tile');
+    tiles.forEach(tile => {
+      const playerId = parseInt(tile.dataset.playerId);
+      if(!playerId || isNaN(playerId)) return;
+      
+      const handler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSelection(playerId);
+      };
+      
+      tile.addEventListener('click', handler);
+      pickModeState.clickHandlers.set(playerId, { tile, handler });
+    });
+    
+    // Create and show confirm bar
+    createConfirmBar();
+    updateConfirmBar();
+  }
+  
+  /**
+   * Exit pick mode: remove dim, selection rings, confirm bar
+   */
+  function exitPickMode(){
+    if(!pickModeState.active) return;
+    
+    pickModeState.active = false;
+    
+    // Remove body class
+    document.body.classList.remove('bb-noms-pick-mode');
+    
+    // Remove escape handler
+    if(pickModeState.escapeHandler){
+      document.removeEventListener('keydown', pickModeState.escapeHandler, true);
+      pickModeState.escapeHandler = null;
+    }
+    
+    // Remove click handlers
+    pickModeState.clickHandlers.forEach(({ tile, handler }) => {
+      tile.removeEventListener('click', handler);
+      tile.classList.remove('bb-selected');
+    });
+    pickModeState.clickHandlers.clear();
+    
+    // Remove confirm bar
+    const bar = document.getElementById('bb-noms-confirm-bar');
+    if(bar) bar.remove();
+    
+    // Clear state
+    pickModeState.selectedIds = [];
+    pickModeState.required = 0;
+  }
+  
+  /**
+   * Toggle selection of a roster tile
+   */
+  function toggleSelection(playerId){
+    const g = global.game;
+    const player = global.getP(playerId);
+    
+    // Check eligibility
+    if(!player || player.evicted || playerId === g.hohId){
+      // Not eligible - ignore click
+      return;
+    }
+    
+    const idx = pickModeState.selectedIds.indexOf(playerId);
+    const tile = document.querySelector(`.top-roster-tile[data-player-id="${playerId}"]`);
+    
+    if(idx >= 0){
+      // Deselect
+      pickModeState.selectedIds.splice(idx, 1);
+      if(tile) tile.classList.remove('bb-selected');
+    } else {
+      // Select
+      pickModeState.selectedIds.push(playerId);
+      if(tile) tile.classList.add('bb-selected');
+    }
+    
+    updateConfirmBar();
+  }
+  
+  /**
+   * Create floating confirm bar
+   */
+  function createConfirmBar(){
+    if(document.getElementById('bb-noms-confirm-bar')) return; // Already exists
+    
+    const bar = document.createElement('div');
+    bar.id = 'bb-noms-confirm-bar';
+    
+    const countText = document.createElement('span');
+    countText.id = 'bb-noms-count-text';
+    countText.setAttribute('aria-live', 'polite');
+    countText.setAttribute('aria-atomic', 'true');
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.id = 'bb-noms-confirm-btn';
+    confirmBtn.textContent = 'CONFIRM';
+    confirmBtn.disabled = true;
+    
+    confirmBtn.addEventListener('click', () => {
+      if(pickModeState.selectedIds.length === pickModeState.required){
+        commitNominations();
+      }
+    });
+    
+    // Keyboard support
+    confirmBtn.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        confirmBtn.click();
+      }
+    });
+    
+    bar.appendChild(countText);
+    bar.appendChild(confirmBtn);
+    document.body.appendChild(bar);
+    
+    // Calculate roster bottom position for bar placement
+    const rosterBar = document.getElementById('rosterBar');
+    if(rosterBar){
+      const rect = rosterBar.getBoundingClientRect();
+      document.documentElement.style.setProperty('--roster-bottom', `${rect.bottom}px`);
+    }
+  }
+  
+  /**
+   * Update confirm bar count and button state
+   */
+  function updateConfirmBar(){
+    const countText = document.getElementById('bb-noms-count-text');
+    const confirmBtn = document.getElementById('bb-noms-confirm-btn');
+    
+    if(!countText || !confirmBtn) return;
+    
+    const selected = pickModeState.selectedIds.length;
+    const required = pickModeState.required;
+    
+    countText.textContent = `${selected} / ${required} selected`;
+    
+    confirmBtn.disabled = (selected !== required);
+  }
+  
+  /**
+   * Commit nominations from pick mode
+   */
+  function commitNominations(){
+    const g = global.game;
+    
+    // Set pending noms and trigger finalize
+    g._pendingNoms = pickModeState.selectedIds.slice();
+    
+    // Exit pick mode
+    exitPickMode();
+    
+    // Finalize nominations
+    finalizeNoms();
+  }
+
   function renderNomsPanel(){
     const g=global.game; global.tv.say('Nominations');
 
@@ -38,64 +342,128 @@
       g._pendingNoms = null;
     }
 
-    const panel=document.querySelector('#panel'); if(!panel) return; panel.innerHTML='';
-    const box=document.createElement('div'); box.className='minigame-host'; box.innerHTML='<h3>Nominations</h3>';
-    const hoh=global.getP(g.hohId); const pool=eligibleNomIds();
+    const hoh=global.getP(g.hohId);
     const need = requiredSlots();
 
-    // If already locked/committed, just show info
+    // If already locked/committed, show in-TV message
     if(g.nomsLocked || g.__nomsCommitInProgress || g.__nomsCommitted){
       const names = (g.nominees||[]).map(global.safeName).join(', ') || '—';
-      const info=document.createElement('div'); info.className='tiny ok';
-      info.textContent=`Locked. Nominees: ${names}.`;
-      box.appendChild(info);
-      panel.appendChild(box);
+      // Show a simple in-TV card
+      const host = document.getElementById('tvOverlay');
+      if(host){
+        host.innerHTML = '';
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard';
+        card.style.cssText = 'max-width: 92%; padding: 16px; margin: 0 auto; text-align: center;';
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Nominations';
+        title.style.marginBottom = '8px';
+        card.appendChild(title);
+        
+        const info = document.createElement('div');
+        info.className = 'big';
+        info.textContent = `Locked. Nominees: ${names}.`;
+        card.appendChild(info);
+        
+        host.appendChild(card);
+        document.getElementById('tv')?.classList.add('tvTall');
+      }
       return;
     }
 
+    // ========== NEW: Human HOH In-TV Pick Mode Flow ==========
     if(hoh && hoh.human){
-      const row=document.createElement('div'); row.className='row';
-      const selects=[];
-      for(let i=0;i<need;i++){
-        const sel=document.createElement('select'); sel.dataset.idx=String(i);
-        sel.disabled = !!g.__nomsCommitInProgress;
-        function fill(){
-          sel.innerHTML='';
-          pool.forEach(id=>{
-            const p=global.getP(id);
-            const o=document.createElement('option'); o.value=id; o.textContent=p.name; sel.appendChild(o);
-          });
-        }
-        fill(); selects.push(sel); row.appendChild(sel);
-      }
-      const lock=document.createElement('button'); lock.className='btn primary'; lock.textContent='Lock Nominations';
-      if(g.__nomsCommitInProgress) lock.disabled = true;
-      row.append(lock); box.appendChild(row);
-      const hint=document.createElement('div'); hint.className='tiny muted';
-      hint.textContent = need>2 ? `Pick ${need} different houseguests. Reveal will follow.` : 'Pick two different houseguests. Reveal will follow.';
-      box.appendChild(hint);
-
-      lock.onclick=()=>{
-        if(g.__nomsCommitInProgress || g.nomsLocked || g.__nomsCommitted) return;
-        const values = selects.map(s=>+s.value);
-        const unique = [...new Set(values)].filter(v=>v && v!==g.hohId);
-        if(unique.length !== need) return alert(`Pick ${need} different nominees (HOH excluded).`);
-        // Disable UI immediately
-        g.__nomsCommitInProgress = true;
-        lock.disabled = true; selects.forEach(s=>s.disabled=true);
-        g._pendingNoms=unique.slice();
-        finalizeNoms();
-      };
+      // Show in-TV "Nomination Ceremony" intro card with NOMINATE button
+      const host = document.getElementById('tvOverlay');
+      if(!host) return;
+      
+      host.innerHTML = '';
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        max-width: 92%;
+        max-height: 78%;
+        margin: 0 auto;
+        padding: 20px 24px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      `;
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Nomination Ceremony';
+      title.style.marginBottom = '4px';
+      title.style.fontSize = '1.1rem';
+      card.appendChild(title);
+      
+      const bodyText = document.createElement('div');
+      bodyText.className = 'big';
+      bodyText.style.fontSize = '0.85rem';
+      bodyText.style.lineHeight = '1.5';
+      bodyText.style.marginBottom = '8px';
+      
+      const countText = need > 2 
+        ? `You must nominate ${need} houseguests for eviction.`
+        : 'You must nominate two houseguests for eviction.';
+      bodyText.textContent = `${hoh.name}, as Head of Household, it is time to make your nominations. ${countText}`;
+      card.appendChild(bodyText);
+      
+      const nominateBtn = document.createElement('button');
+      nominateBtn.className = 'btn primary';
+      nominateBtn.textContent = 'NOMINATE';
+      nominateBtn.style.cssText = `
+        padding: 12px 32px;
+        font-size: 1rem;
+        font-weight: 700;
+        margin-top: 8px;
+      `;
+      
+      nominateBtn.addEventListener('click', () => {
+        // Clear TV and enter pick mode
+        host.innerHTML = '';
+        document.getElementById('tv')?.classList.remove('tvTall');
+        enterPickMode();
+      });
+      
+      card.appendChild(nominateBtn);
+      host.appendChild(card);
+      document.getElementById('tv')?.classList.add('tvTall');
+      
+      return; // Do NOT render legacy panel
     } else {
-      // AI hoh
+      // AI HOH - use existing AI logic
       if(!g.__nomsCommitInProgress && !g.nomsLocked){
         g._pendingNoms=aiPickNominees(need);
         g.__nomsCommitInProgress = true;
         setTimeout(finalizeNoms, 120);
       }
-      const info=document.createElement('div'); info.className='tiny muted'; info.textContent='HOH is considering nominations…'; box.appendChild(info);
+      
+      // Show simple in-TV message for AI
+      const host = document.getElementById('tvOverlay');
+      if(host){
+        host.innerHTML = '';
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard';
+        card.style.cssText = 'max-width: 92%; padding: 16px; margin: 0 auto; text-align: center;';
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Nominations';
+        title.style.marginBottom = '8px';
+        card.appendChild(title);
+        
+        const info = document.createElement('div');
+        info.className = 'tiny muted';
+        info.textContent = 'HOH is considering nominations…';
+        card.appendChild(info);
+        
+        host.appendChild(card);
+        document.getElementById('tv')?.classList.add('tvTall');
+      }
     }
-    panel.appendChild(box);
   }
 
   function ensureValidDistinct(){
@@ -336,61 +704,27 @@
       const ids=(g.nominees||[]).slice();
       g.__suppressNomBadges = true; global.updateHud?.();
 
-      // Step 1: HOH addresses the house (faux TV) - only show HOH avatar
-      // This must appear first and complete before any nominee popups
-      if(global.buildCardWithAvatars){
-        // Use buildCardWithAvatars to explicitly show only HOH avatar
-        const hohName = hoh?.name || 'HOH';
+      // NEW: Check if this was a human HOH pick-mode nomination
+      const wasHumanPickMode = hoh && hoh.human;
+      
+      if(wasHumanPickMode){
+        // ========== NEW HUMAN HOH CEREMONY FLOW ==========
+        
+        // Step 1: Show single summary card with all nominees
         await new Promise((resolve) => {
-          const card = global.buildCardWithAvatars({
-            title: 'Nomination Ceremony',
-            lines: [`${hohName} addresses the house.`],
-            tone: 'noms',
-            duration: 2400,
-            actorId: hoh?.id,
-            targetIds: [], // No nominee avatars in initial popup
-            type: 'hohSpeech'
-          });
-          
-          // Manually remove card after duration
-          setTimeout(() => {
-            const host = document.getElementById('tvOverlay');
-            if(host) host.innerHTML = '';
-            document.getElementById('tv')?.classList.remove('tvTall');
+          const host = document.getElementById('tvOverlay');
+          if(!host) {
             resolve();
-          }, 2400);
-        });
-      } else {
-        // Fallback to regular showCard
-        global.showCard?.('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
-        try{ await global.cardQueueWaitIdle?.(); }catch{}
-      }
-      
-      try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch{}
-
-      // Step 2: Nominee reveals (faux TV)
-      for(let i=0; i<ids.length; i++){
-        const label = ids.length>2 ? `Nominee #${i+1}` : (i===0 ? 'First Nominee' : 'Second Nominee');
-        global.showCard?.(label, [global.safeName(ids[i])], 'noms', 2200, true);
-        try{ await global.cardQueueWaitIdle?.(); }catch{}
-      }
-
-      // Step 3: Show nominee reaction popups simultaneously (2x2 grid for 3-4, row for 2)
-      if(ids.length > 0){
-        await showNomineeReactionsSimultaneously(ids);
-      }
-      
-      // Step 4: Show ceremony conclusion message (faux TV styled like nominee cards)
-      await new Promise((resolve) => {
-        const host = document.getElementById('tvOverlay');
-        if(host){
+            return;
+          }
+          
           host.innerHTML = '';
           
           const card = document.createElement('div');
           card.className = 'revealCard diaryRoomCard';
           card.style.cssText = `
-            width: 90%;
-            max-width: 450px;
+            max-width: 92%;
+            max-height: 78%;
             margin: 0 auto;
             padding: 20px 24px;
             text-align: center;
@@ -398,30 +732,172 @@
           `;
           
           const title = document.createElement('h3');
-          title.textContent = 'Nomination Ceremony';
+          title.textContent = 'Nominations';
           title.style.marginBottom = '12px';
+          title.style.fontSize = '1.1rem';
           card.appendChild(title);
           
-          const message = document.createElement('div');
-          message.className = 'big';
-          message.textContent = 'This ceremony is adjourned.';
-          message.style.fontSize = '0.9rem';
-          card.appendChild(message);
+          const nomineesList = document.createElement('div');
+          nomineesList.className = 'big';
+          nomineesList.style.fontSize = '0.95rem';
+          nomineesList.style.lineHeight = '1.6';
+          nomineesList.style.fontWeight = '600';
+          
+          // Format: "Alice • Bob • Carol"
+          const names = ids.map(id => global.safeName(id)).join(' • ');
+          nomineesList.textContent = names;
+          card.appendChild(nomineesList);
           
           host.appendChild(card);
           document.getElementById('tv')?.classList.add('tvTall');
           
           setTimeout(() => {
-            host.innerHTML = '';
-            document.getElementById('tv')?.classList.remove('tvTall');
+            // Don't clear yet - reactions will clear it
             resolve();
-          }, 2000);
-        } else {
-          // Fallback
-          global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
-          setTimeout(resolve, 2000);
+          }, 2200);
+        });
+        
+        // Log HOH speech
+        try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch(e){ /* ignore */ }
+        
+        // Step 2: Show nominee reactions
+        if(ids.length > 0){
+          await showNomineeReactionsSimultaneously(ids);
         }
-      });
+        
+        // Step 3: Show ceremony conclusion
+        await new Promise((resolve) => {
+          const host = document.getElementById('tvOverlay');
+          if(host){
+            host.innerHTML = '';
+            
+            const card = document.createElement('div');
+            card.className = 'revealCard diaryRoomCard';
+            card.style.cssText = `
+              max-width: 92%;
+              margin: 0 auto;
+              padding: 20px 24px;
+              text-align: center;
+              animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+            `;
+            
+            const title = document.createElement('h3');
+            title.textContent = 'Nomination Ceremony';
+            title.style.marginBottom = '12px';
+            card.appendChild(title);
+            
+            const message = document.createElement('div');
+            message.className = 'big';
+            message.textContent = 'This ceremony is adjourned.';
+            message.style.fontSize = '0.9rem';
+            card.appendChild(message);
+            
+            host.appendChild(card);
+            document.getElementById('tv')?.classList.add('tvTall');
+            
+            setTimeout(() => {
+              host.innerHTML = '';
+              document.getElementById('tv')?.classList.remove('tvTall');
+              resolve();
+            }, 2000);
+          } else {
+            // Fallback
+            global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
+            setTimeout(resolve, 2000);
+          }
+        });
+        
+      } else {
+        // ========== ORIGINAL AI HOH CEREMONY FLOW ==========
+        
+        // Step 1: HOH addresses the house (faux TV) - only show HOH avatar
+        // This must appear first and complete before any nominee popups
+        if(global.buildCardWithAvatars){
+          // Use buildCardWithAvatars to explicitly show only HOH avatar
+          const hohName = hoh?.name || 'HOH';
+          await new Promise((resolve) => {
+            // buildCardWithAvatars handles DOM insertion
+            global.buildCardWithAvatars({
+              title: 'Nomination Ceremony',
+              lines: [`${hohName} addresses the house.`],
+              tone: 'noms',
+              duration: 2400,
+              actorId: hoh?.id,
+              targetIds: [], // No nominee avatars in initial popup
+              type: 'hohSpeech'
+            });
+            
+            // Manually remove card after duration
+            setTimeout(() => {
+              const host = document.getElementById('tvOverlay');
+              if(host) host.innerHTML = '';
+              document.getElementById('tv')?.classList.remove('tvTall');
+              resolve();
+            }, 2400);
+          });
+        } else {
+          // Fallback to regular showCard
+          global.showCard?.('Nomination Ceremony', [`${hoh?.name || 'HOH'} addresses the house.`],'noms', 2400, true);
+          try{ await global.cardQueueWaitIdle?.(); }catch(e){ /* ignore */ }
+        }
+        
+        try{ global.addLog?.(hohSpeech(hoh, g.nominees), 'tiny'); }catch(e){ /* ignore */ }
+
+        // Step 2: Nominee reveals (faux TV)
+        for(let i=0; i<ids.length; i++){
+          const label = ids.length>2 ? `Nominee #${i+1}` : (i===0 ? 'First Nominee' : 'Second Nominee');
+          global.showCard?.(label, [global.safeName(ids[i])], 'noms', 2200, true);
+          try{ await global.cardQueueWaitIdle?.(); }catch(e){ /* ignore */ }
+        }
+
+        // Step 3: Show nominee reaction popups simultaneously (2x2 grid for 3-4, row for 2)
+        if(ids.length > 0){
+          await showNomineeReactionsSimultaneously(ids);
+        }
+        
+        // Step 4: Show ceremony conclusion message (faux TV styled like nominee cards)
+        await new Promise((resolve) => {
+          const host = document.getElementById('tvOverlay');
+          if(host){
+            host.innerHTML = '';
+            
+            const card = document.createElement('div');
+            card.className = 'revealCard diaryRoomCard';
+            card.style.cssText = `
+              width: 90%;
+              max-width: 450px;
+              margin: 0 auto;
+              padding: 20px 24px;
+              text-align: center;
+              animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+            `;
+            
+            const title = document.createElement('h3');
+            title.textContent = 'Nomination Ceremony';
+            title.style.marginBottom = '12px';
+            card.appendChild(title);
+            
+            const message = document.createElement('div');
+            message.className = 'big';
+            message.textContent = 'This ceremony is adjourned.';
+            message.style.fontSize = '0.9rem';
+            card.appendChild(message);
+            
+            host.appendChild(card);
+            document.getElementById('tv')?.classList.add('tvTall');
+            
+            setTimeout(() => {
+              host.innerHTML = '';
+              document.getElementById('tv')?.classList.remove('tvTall');
+              resolve();
+            }, 2000);
+          } else {
+            // Fallback
+            global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
+            setTimeout(resolve, 2000);
+          }
+        });
+      }
 
       // TV screen cards disappear, nominee tags update, game advances
       g.__suppressNomBadges = false; global.updateHud?.();
@@ -429,7 +905,7 @@
       try{
         const names = ids.map(global.safeName).join(', ');
         global.addLog?.(`Nominations locked: ${names}.`, 'warn');
-      }catch{}
+      }catch(e){ /* ignore */ }
 
       setTimeout(()=>global.startVetoComp?.(),600);
     })();
