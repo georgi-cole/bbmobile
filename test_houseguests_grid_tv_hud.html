@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Houseguests Grid & TV HUD Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  <link rel="stylesheet" href="css/houseguests-grid.css">
+  <link rel="stylesheet" href="css/tv-hud.css">
+  <link rel="stylesheet" href="css/theme-bridge.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    
+    .test-header h1 {
+      margin: 0 0 8px 0;
+      color: #00e0cc;
+      font-size: 1.8rem;
+    }
+    
+    .test-header p {
+      margin: 0;
+      color: #83bfff;
+      font-size: 0.95rem;
+    }
+    
+    /* TV container wrapper */
+    .tv-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 450px;
+      margin: 0 auto 20px;
+    }
+    
+    /* TV screen container */
+    .tv {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9/16;
+      background: var(--tv-surface, #0b121a);
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+    
+    .tv-viewport {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    /* Control panel */
+    .controls {
+      background: rgba(20, 35, 55, 0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143, 211, 255, 0.2);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .controls h3 {
+      margin: 0 0 12px 0;
+      color: #00e0cc;
+      font-size: 1.1rem;
+    }
+    
+    .control-group {
+      margin-bottom: 12px;
+    }
+    
+    .control-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+      color: #83bfff;
+    }
+    
+    .control-group button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      color: #001a18;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 4px 4px 4px 0;
+      transition: transform 0.2s;
+      font-size: 0.9rem;
+    }
+    
+    .control-group button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .control-group button:active {
+      transform: translateY(0);
+    }
+    
+    .control-group button.danger {
+      background: linear-gradient(135deg, #ff4444, #cc0000);
+      color: white;
+    }
+    
+    .status-info {
+      background: rgba(0, 224, 204, 0.1);
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    
+    .status-info strong {
+      color: #00e0cc;
+    }
+    
+    /* Info panel */
+    .info-panel {
+      background: rgba(20, 35, 55, 0.6);
+      border-radius: 8px;
+      border: 1px solid rgba(143, 211, 255, 0.15);
+      padding: 12px;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    
+    .info-panel h4 {
+      margin: 0 0 8px 0;
+      color: #ffdd57;
+      font-size: 0.95rem;
+    }
+    
+    .info-panel ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    
+    .info-panel li {
+      margin: 4px 0;
+    }
+    
+    @media (max-width: 500px) {
+      body {
+        padding: 12px;
+      }
+      
+      .test-container {
+        padding: 12px;
+      }
+      
+      .test-header h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🏠 Houseguests Grid & TV HUD</h1>
+      <p>Compact 4×4 mobile grid with HUD overlay test</p>
+    </div>
+    
+    <div class="controls">
+      <h3>Controls</h3>
+      
+      <div class="control-group">
+        <label>HUD State:</label>
+        <button onclick="toggleBusy()">Toggle Busy (Fade HUD)</button>
+        <button onclick="incrementTimer()">Increment Timer</button>
+      </div>
+      
+      <div class="control-group">
+        <label>Player Actions:</label>
+        <button onclick="toggleRandomPlayer()">Toggle Random Player Status</button>
+        <button onclick="evictPlayer()">Evict Random Player</button>
+        <button onclick="resetPlayers()">Reset All Players</button>
+      </div>
+      
+      <div class="status-info">
+        <strong>Instructions:</strong>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          <li>Resize browser to test mobile viewports (375px, 390px, 414px)</li>
+          <li>Tap houseguest cards to see tap callback</li>
+          <li>Long-press cards (500ms) to see long-press callback</li>
+          <li>Use controls to test HUD states and player changes</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="tv-wrapper">
+      <div class="tv tv-screen">
+        <div class="tv-viewport" id="tvViewport">
+          <!-- HUD and grid will be mounted here -->
+          <div id="gridContainer"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="info-panel">
+      <h4>Test Checklist</h4>
+      <ul>
+        <li>✓ 4×4 grid displays 16 houseguests</li>
+        <li>✓ HOH and NOM pills visible in top-right corner</li>
+        <li>✓ Colored status rings on HOH/NOM cards</li>
+        <li>✓ Evicted guests are grayscale and non-interactive</li>
+        <li>✓ Names displayed with ellipsis for overflow</li>
+        <li>✓ HUD shows Skip, Timer, Players bar, Season/Week, Mode</li>
+        <li>✓ Timer updates correctly (MM:SS format)</li>
+        <li>✓ Busy state fades HUD</li>
+        <li>✓ Responsive at 375px, 390px, 414px widths</li>
+      </ul>
+    </div>
+  </div>
+
+  <script type="module">
+    import { mountHouseguestsGrid } from './src/ui/houseguestsGrid.js';
+    import { mountTvHud } from './src/ui/tvHud.js';
+    
+    // Mock player data - 16 houseguests for 4×4 grid
+    let players = [
+      { id: 'aria', name: 'Aria', avatar: 'avatars/Aria.png', hoh: true, nom: false, evicted: false },
+      { id: 'ash', name: 'Ash', avatar: 'avatars/Ash.png', hoh: false, nom: true, evicted: false },
+      { id: 'bea', name: 'Bea', avatar: 'avatars/Bea.png', hoh: false, nom: true, evicted: false },
+      { id: 'blue', name: 'Blue', avatar: 'avatars/Blue.png', hoh: false, nom: false, evicted: false },
+      { id: 'dex', name: 'Dex', avatar: 'avatars/Dex.png', hoh: false, nom: false, evicted: false },
+      { id: 'echo', name: 'Echo', avatar: 'avatars/Echo.png', hoh: false, nom: false, evicted: false },
+      { id: 'finn', name: 'Finn', avatar: 'avatars/Finn.png', hoh: false, nom: false, evicted: false },
+      { id: 'ivy', name: 'Ivy', avatar: 'avatars/Ivy.png', hoh: false, nom: false, evicted: false },
+      { id: 'jax', name: 'Jax', avatar: 'avatars/Jax.png', hoh: false, nom: false, evicted: false },
+      { id: 'kai', name: 'Kai', avatar: 'avatars/Kai.png', hoh: false, nom: false, evicted: false },
+      { id: 'lux', name: 'Lux', avatar: 'avatars/Lux.png', hoh: false, nom: false, evicted: false },
+      { id: 'mimi', name: 'Mimi', avatar: 'avatars/Mimi.png', hoh: false, nom: false, evicted: false },
+      { id: 'nico', name: 'Nico', avatar: 'avatars/Nico.png', hoh: false, nom: false, evicted: false },
+      { id: 'nova', name: 'Nova', avatar: 'avatars/Nova.png', hoh: false, nom: false, evicted: true },
+      { id: 'quinn', name: 'Quinn', avatar: 'avatars/Quinn.png', hoh: false, nom: false, evicted: false },
+      { id: 'echo2', name: 'Riley', avatar: 'avatars/Echo.png', hoh: false, nom: false, evicted: false }
+    ];
+    
+    // Initialize grid
+    const gridContainer = document.getElementById('gridContainer');
+    const grid = mountHouseguestsGrid(gridContainer, {
+      onTap: (player) => {
+        console.log('Tap:', player.name);
+        alert(`Tapped: ${player.name}`);
+      },
+      onLongPress: (player) => {
+        console.log('Long-press:', player.name);
+        alert(`Long-pressed: ${player.name}\n(Hold for 500ms to trigger)`);
+      }
+    });
+    
+    // Initial render
+    grid.render(players);
+    
+    // Initialize HUD
+    const tvViewport = document.getElementById('tvViewport');
+    const hud = mountTvHud(tvViewport);
+    
+    // Configure HUD
+    hud.setSeasonWeek(1, 3);
+    hud.setMode('Live Ceremony');
+    hud.setProgress(players.filter(p => !p.evicted).length, 16);
+    hud.setTimer(0);
+    hud.onSkip(() => {
+      alert('Skip button clicked!');
+      console.log('Skip requested');
+    });
+    
+    // Timer state
+    let timerSeconds = 0;
+    let timerInterval = null;
+    
+    // Start auto-incrementing timer
+    function startTimer() {
+      if (timerInterval) return;
+      
+      timerInterval = setInterval(() => {
+        timerSeconds++;
+        hud.setTimer(timerSeconds);
+      }, 1000);
+    }
+    
+    // Stop timer
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+    
+    // Start timer on load
+    startTimer();
+    
+    // Global control functions
+    let isBusy = false;
+    window.toggleBusy = function() {
+      isBusy = !isBusy;
+      hud.setBusy(isBusy);
+      console.log('Busy state:', isBusy);
+    };
+    
+    window.incrementTimer = function() {
+      timerSeconds += 10;
+      hud.setTimer(timerSeconds);
+      console.log('Timer incremented to:', timerSeconds);
+    };
+    
+    window.toggleRandomPlayer = function() {
+      const activePlayers = players.filter(p => !p.evicted);
+      if (activePlayers.length === 0) return;
+      
+      const randomPlayer = activePlayers[Math.floor(Math.random() * activePlayers.length)];
+      
+      // Toggle status
+      if (randomPlayer.hoh) {
+        randomPlayer.hoh = false;
+      } else if (randomPlayer.nom) {
+        randomPlayer.nom = false;
+      } else {
+        // Randomly assign HOH or NOM
+        if (Math.random() > 0.5) {
+          randomPlayer.hoh = true;
+        } else {
+          randomPlayer.nom = true;
+        }
+      }
+      
+      grid.render(players);
+      console.log('Toggled status for:', randomPlayer.name);
+    };
+    
+    window.evictPlayer = function() {
+      const activePlayers = players.filter(p => !p.evicted);
+      if (activePlayers.length === 0) {
+        alert('No active players to evict!');
+        return;
+      }
+      
+      const randomPlayer = activePlayers[Math.floor(Math.random() * activePlayers.length)];
+      randomPlayer.evicted = true;
+      randomPlayer.hoh = false;
+      randomPlayer.nom = false;
+      
+      grid.render(players);
+      
+      // Update progress bar
+      const activeCount = players.filter(p => !p.evicted).length;
+      hud.setProgress(activeCount, 16);
+      
+      console.log('Evicted:', randomPlayer.name);
+      alert(`${randomPlayer.name} has been evicted!`);
+    };
+    
+    window.resetPlayers = function() {
+      // Reset all players
+      players = [
+        { id: 'aria', name: 'Aria', avatar: 'avatars/Aria.png', hoh: true, nom: false, evicted: false },
+        { id: 'ash', name: 'Ash', avatar: 'avatars/Ash.png', hoh: false, nom: true, evicted: false },
+        { id: 'bea', name: 'Bea', avatar: 'avatars/Bea.png', hoh: false, nom: true, evicted: false },
+        { id: 'blue', name: 'Blue', avatar: 'avatars/Blue.png', hoh: false, nom: false, evicted: false },
+        { id: 'dex', name: 'Dex', avatar: 'avatars/Dex.png', hoh: false, nom: false, evicted: false },
+        { id: 'echo', name: 'Echo', avatar: 'avatars/Echo.png', hoh: false, nom: false, evicted: false },
+        { id: 'finn', name: 'Finn', avatar: 'avatars/Finn.png', hoh: false, nom: false, evicted: false },
+        { id: 'ivy', name: 'Ivy', avatar: 'avatars/Ivy.png', hoh: false, nom: false, evicted: false },
+        { id: 'jax', name: 'Jax', avatar: 'avatars/Jax.png', hoh: false, nom: false, evicted: false },
+        { id: 'kai', name: 'Kai', avatar: 'avatars/Kai.png', hoh: false, nom: false, evicted: false },
+        { id: 'lux', name: 'Lux', avatar: 'avatars/Lux.png', hoh: false, nom: false, evicted: false },
+        { id: 'mimi', name: 'Mimi', avatar: 'avatars/Mimi.png', hoh: false, nom: false, evicted: false },
+        { id: 'nico', name: 'Nico', avatar: 'avatars/Nico.png', hoh: false, nom: false, evicted: false },
+        { id: 'nova', name: 'Nova', avatar: 'avatars/Nova.png', hoh: false, nom: false, evicted: true },
+        { id: 'quinn', name: 'Quinn', avatar: 'avatars/Quinn.png', hoh: false, nom: false, evicted: false },
+        { id: 'echo2', name: 'Riley', avatar: 'avatars/Echo.png', hoh: false, nom: false, evicted: false }
+      ];
+      
+      grid.render(players);
+      hud.setProgress(players.filter(p => !p.evicted).length, 16);
+      timerSeconds = 0;
+      hud.setTimer(0);
+      
+      console.log('Players reset');
+    };
+    
+    console.log('=== Houseguests Grid & TV HUD Test ===');
+    console.log('Grid mounted with', players.length, 'players');
+    console.log('Active players:', players.filter(p => !p.evicted).length);
+    console.log('Use browser DevTools to test responsive viewports');
+  </script>
+</body>
+</html>
