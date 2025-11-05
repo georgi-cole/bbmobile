@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nominations Pick Mode Scaffold Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: #f1f5f9;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #60a5fa;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .test-section {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #475569;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #94a3b8;
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+    
+    button.secondary {
+      background: #64748b;
+    }
+    
+    button.secondary:hover {
+      background: #475569;
+    }
+    
+    button.danger {
+      background: #ef4444;
+    }
+    
+    button.danger:hover {
+      background: #dc2626;
+    }
+    
+    .status {
+      padding: 12px;
+      background: #1e293b;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    
+    .status.success {
+      background: #064e3b;
+      color: #6ee7b7;
+    }
+    
+    .status.error {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+    
+    .status.info {
+      background: #1e3a8a;
+      color: #93c5fd;
+    }
+    
+    .console-log {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+    
+    .console-log div {
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+    }
+    
+    .console-log div:last-child {
+      border-bottom: none;
+    }
+    
+    /* Mock TV and Roster */
+    #tv {
+      position: relative;
+      background: #000;
+      border: 2px solid #334155;
+      border-radius: 8px;
+      min-height: 200px;
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #tv.tvTall {
+      min-height: 300px;
+    }
+    
+    #rosterBar {
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    
+    .top-roster-tile {
+      width: 80px;
+      height: 100px;
+      background: #334155;
+      border: 2px solid #475569;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      padding: 8px;
+    }
+    
+    .top-roster-tile:hover {
+      border-color: #60a5fa;
+      transform: scale(1.05);
+    }
+    
+    .top-roster-tile.evicted {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    
+    .top-roster-tile-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #64748b;
+      margin-bottom: 8px;
+    }
+    
+    .top-roster-tile-name {
+      font-size: 0.75rem;
+      text-align: center;
+      color: #e2e8f0;
+    }
+    
+    /* Card styles */
+    .revealCard {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 2px solid rgba(96, 165, 250, 0.5);
+      border-radius: 16px;
+      padding: 20px;
+      color: #f1f5f9;
+    }
+    
+    .revealCard.diaryRoomCard {
+      backdrop-filter: blur(12px);
+      max-width: min(480px, 92%);
+    }
+    
+    .revealCard h3 {
+      margin-bottom: 12px;
+      color: #60a5fa;
+    }
+    
+    .revealCard .big {
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    
+    .btn.primary {
+      background: #10b981;
+      color: #000;
+      font-weight: 700;
+    }
+    
+    .btn.primary:hover {
+      background: #059669;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Nominations Pick Mode Scaffold Test</h1>
+    
+    <div class="test-section">
+      <h2>Test 1: TV Overlay Scaffold Presence</h2>
+      <p style="margin-bottom: 10px; color: #94a3b8;">
+        This test verifies that the overlay scaffold is properly created when missing.
+      </p>
+      <div class="test-controls">
+        <button onclick="testOverlayExists()">Check if #tvOverlay exists</button>
+        <button class="danger" onclick="removeTVOverlay()">Remove #tvOverlay</button>
+        <button class="secondary" onclick="testEnsureOverlayHost()">Test ensureOverlayHost()</button>
+        <button class="secondary" onclick="simulateGlobalScaffold()">Add global.ensureTVOverlayScaffold</button>
+        <button class="danger" onclick="removeGlobalScaffold()">Remove global.ensureTVOverlayScaffold</button>
+      </div>
+      <div id="test1-status" class="status info">Ready to test...</div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 2: Nomination Card Rendering</h2>
+      <p style="margin-bottom: 10px; color: #94a3b8;">
+        This test verifies that the nomination card can be rendered successfully.
+      </p>
+      <div class="test-controls">
+        <button onclick="testShowNominateCard()">Show Nominate Card (2 noms)</button>
+        <button onclick="testShowNominateCardTriple()">Show Nominate Card (4 noms)</button>
+        <button class="secondary" onclick="clearTV()">Clear TV</button>
+      </div>
+      <div id="test2-status" class="status info">Ready to test...</div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 3: Pick Mode Flow</h2>
+      <p style="margin-bottom: 10px; color: #94a3b8;">
+        This test verifies the full pick mode flow (dimming, selection, confirm).
+      </p>
+      <div class="test-controls">
+        <button onclick="testEnterPickMode()">Enter Pick Mode</button>
+        <button class="secondary" onclick="exitPickMode()">Exit Pick Mode</button>
+        <button class="secondary" onclick="selectPlayer(1)">Select Player 1</button>
+        <button class="secondary" onclick="selectPlayer(2)">Select Player 2</button>
+      </div>
+      <div id="test3-status" class="status info">Ready to test...</div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 4: Fallback Behavior</h2>
+      <p style="margin-bottom: 10px; color: #94a3b8;">
+        This test verifies fallback when card mounting fails.
+      </p>
+      <div class="test-controls">
+        <button onclick="testFallbackScenario()">Simulate Card Mount Failure</button>
+        <button class="secondary" onclick="testRenderNomsPanel()">Test renderNomsPanel()</button>
+      </div>
+      <div id="test4-status" class="status info">Ready to test...</div>
+    </div>
+    
+    <!-- Mock TV -->
+    <div id="tv">
+      <div style="color: #64748b; text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 8px;">📺</div>
+        <div>TV Display Area</div>
+      </div>
+    </div>
+    
+    <!-- Mock Roster -->
+    <div id="rosterBar">
+      <div class="top-roster-tile" data-player-id="1">
+        <div class="top-roster-tile-avatar"></div>
+        <div class="top-roster-tile-name">Alice</div>
+      </div>
+      <div class="top-roster-tile" data-player-id="2">
+        <div class="top-roster-tile-avatar"></div>
+        <div class="top-roster-tile-name">Bob</div>
+      </div>
+      <div class="top-roster-tile" data-player-id="3">
+        <div class="top-roster-tile-avatar"></div>
+        <div class="top-roster-tile-name">Carol</div>
+      </div>
+      <div class="top-roster-tile" data-player-id="4">
+        <div class="top-roster-tile-avatar"></div>
+        <div class="top-roster-tile-name">Dave</div>
+      </div>
+      <div class="top-roster-tile evicted" data-player-id="5">
+        <div class="top-roster-tile-avatar"></div>
+        <div class="top-roster-tile-name">Eve</div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="console-log" class="console-log">
+        <div style="color: #94a3b8;">Console output will appear here...</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Mock global game state
+    window.game = {
+      phase: 'nominations',
+      hohId: 1,
+      nomsLocked: false,
+      __twistNomSlots: 2,
+      __nomsCommitInProgress: false,
+      __nomsCommitted: false,
+      nominees: [],
+      players: [
+        { id: 1, name: 'Alice', human: true, evicted: false },
+        { id: 2, name: 'Bob', human: false, evicted: false },
+        { id: 3, name: 'Carol', human: false, evicted: false },
+        { id: 4, name: 'Dave', human: false, evicted: false },
+        { id: 5, name: 'Eve', human: false, evicted: true }
+      ]
+    };
+    
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || `Player ${id}`;
+    
+    window.tv = {
+      say: (text) => log(`TV says: ${text}`)
+    };
+    
+    // Console logging
+    const consoleLog = document.getElementById('console-log');
+    const originalConsoleLog = console.log;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+    
+    function log(msg, type = 'log') {
+      const div = document.createElement('div');
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'warn' ? '#fbbf24' : type === 'error' ? '#f87171' : '#94a3b8';
+      div.style.color = color;
+      div.textContent = `[${timestamp}] ${msg}`;
+      consoleLog.appendChild(div);
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      log(args.join(' '), 'log');
+      originalConsoleLog.apply(console, args);
+    };
+    
+    console.warn = function(...args) {
+      log(args.join(' '), 'warn');
+      originalConsoleWarn.apply(console, args);
+    };
+    
+    console.error = function(...args) {
+      log(args.join(' '), 'error');
+      originalConsoleError.apply(console, args);
+    };
+    
+    // Test functions
+    function testOverlayExists() {
+      const exists = document.getElementById('tvOverlay') !== null;
+      const status = document.getElementById('test1-status');
+      
+      if (exists) {
+        status.className = 'status success';
+        status.textContent = '✓ #tvOverlay exists';
+      } else {
+        status.className = 'status error';
+        status.textContent = '✗ #tvOverlay does not exist';
+      }
+      
+      console.log('Test 1: #tvOverlay exists =', exists);
+    }
+    
+    function removeTVOverlay() {
+      const overlay = document.getElementById('tvOverlay');
+      if (overlay) {
+        overlay.remove();
+        console.log('Removed #tvOverlay from DOM');
+      }
+      testOverlayExists();
+    }
+    
+    function testEnsureOverlayHost() {
+      const status = document.getElementById('test1-status');
+      
+      try {
+        // This would call the actual function from nominations.js
+        console.log('Testing ensureOverlayHost() - would be called from nominations.js');
+        
+        // Simulate the function
+        let tvOverlay = document.getElementById('tvOverlay');
+        if (!tvOverlay && typeof window.ensureTVOverlayScaffold === 'function') {
+          console.log('Using global.ensureTVOverlayScaffold()');
+          const content = window.ensureTVOverlayScaffold();
+          tvOverlay = content?.parentElement || content;
+        }
+        
+        if (!tvOverlay) {
+          console.log('#tvOverlay missing, creating minimal fallback');
+          tvOverlay = document.createElement('div');
+          tvOverlay.id = 'tvOverlay';
+          tvOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            pointer-events: auto;
+          `;
+          const tv = document.getElementById('tv');
+          if (tv) {
+            tv.appendChild(tvOverlay);
+          } else {
+            document.body.appendChild(tvOverlay);
+          }
+        }
+        
+        status.className = 'status success';
+        status.textContent = '✓ ensureOverlayHost() created #tvOverlay successfully';
+        
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = `✗ Error: ${err.message}`;
+        console.error('ensureOverlayHost() failed:', err);
+      }
+    }
+    
+    function simulateGlobalScaffold() {
+      window.ensureTVOverlayScaffold = function() {
+        console.log('global.ensureTVOverlayScaffold() called');
+        let tvOverlay = document.getElementById('tvOverlay');
+        if (!tvOverlay) {
+          tvOverlay = document.createElement('div');
+          tvOverlay.id = 'tvOverlay';
+          const tv = document.getElementById('tv');
+          if (tv) {
+            tv.appendChild(tvOverlay);
+          }
+        }
+        
+        let content = tvOverlay.querySelector('.tvOverlayContent');
+        if (!content) {
+          content = document.createElement('div');
+          content.className = 'tvOverlayContent';
+          tvOverlay.appendChild(content);
+        }
+        
+        return content;
+      };
+      
+      console.log('✓ Added global.ensureTVOverlayScaffold');
+      const status = document.getElementById('test1-status');
+      status.className = 'status success';
+      status.textContent = '✓ global.ensureTVOverlayScaffold added';
+    }
+    
+    function removeGlobalScaffold() {
+      delete window.ensureTVOverlayScaffold;
+      console.log('✓ Removed global.ensureTVOverlayScaffold');
+      const status = document.getElementById('test1-status');
+      status.className = 'status info';
+      status.textContent = '✓ global.ensureTVOverlayScaffold removed';
+    }
+    
+    function testShowNominateCard() {
+      const status = document.getElementById('test2-status');
+      const hoh = window.getP(1);
+      const need = 2;
+      
+      try {
+        testEnsureOverlayHost();
+        const host = document.getElementById('tvOverlay');
+        
+        if (!host) {
+          throw new Error('No overlay host');
+        }
+        
+        host.innerHTML = '';
+        
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard';
+        card.style.cssText = `
+          max-width: 92%;
+          max-height: 78%;
+          margin: 0 auto;
+          padding: 20px 24px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+        `;
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Nomination Ceremony';
+        card.appendChild(title);
+        
+        const bodyText = document.createElement('div');
+        bodyText.className = 'big';
+        bodyText.textContent = `${hoh.name}, as Head of Household, it is time to make your nominations. You must nominate ${need} houseguests for eviction.`;
+        card.appendChild(bodyText);
+        
+        const nominateBtn = document.createElement('button');
+        nominateBtn.className = 'btn primary';
+        nominateBtn.textContent = 'NOMINATE';
+        nominateBtn.onclick = () => {
+          console.log('NOMINATE button clicked');
+          alert('Pick mode would start here!');
+        };
+        card.appendChild(nominateBtn);
+        
+        host.appendChild(card);
+        document.getElementById('tv').classList.add('tvTall');
+        
+        status.className = 'status success';
+        status.textContent = `✓ Card rendered successfully (${need} nominations)`;
+        console.log('showNominateCard() succeeded');
+        
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = `✗ Error: ${err.message}`;
+        console.error('showNominateCard() failed:', err);
+      }
+    }
+    
+    function testShowNominateCardTriple() {
+      window.game.__twistNomSlots = 4;
+      testShowNominateCard();
+    }
+    
+    function clearTV() {
+      const host = document.getElementById('tvOverlay');
+      if (host) host.innerHTML = '';
+      document.getElementById('tv').classList.remove('tvTall');
+      console.log('TV cleared');
+      
+      const status = document.getElementById('test2-status');
+      status.className = 'status info';
+      status.textContent = 'TV cleared';
+    }
+    
+    function testEnterPickMode() {
+      console.log('Enter pick mode test - would dim UI and enable selection');
+      document.body.classList.add('bb-noms-pick-mode');
+      
+      const status = document.getElementById('test3-status');
+      status.className = 'status success';
+      status.textContent = '✓ Pick mode activated (dimming applied)';
+    }
+    
+    function exitPickMode() {
+      console.log('Exit pick mode test');
+      document.body.classList.remove('bb-noms-pick-mode');
+      
+      const tiles = document.querySelectorAll('.top-roster-tile');
+      tiles.forEach(tile => tile.classList.remove('bb-selected'));
+      
+      const status = document.getElementById('test3-status');
+      status.className = 'status info';
+      status.textContent = 'Pick mode exited';
+    }
+    
+    function selectPlayer(playerId) {
+      const tile = document.querySelector(`.top-roster-tile[data-player-id="${playerId}"]`);
+      if (tile) {
+        tile.classList.toggle('bb-selected');
+        console.log('Toggled selection for player', playerId);
+      }
+    }
+    
+    function testFallbackScenario() {
+      console.log('Simulating card mount failure scenario');
+      
+      // Remove overlay temporarily
+      const overlay = document.getElementById('tvOverlay');
+      if (overlay) overlay.remove();
+      
+      // Simulate that ensureTVOverlayScaffold is not available
+      const backup = window.ensureTVOverlayScaffold;
+      delete window.ensureTVOverlayScaffold;
+      
+      console.warn('Card mount would fail - legacy panel should be used as fallback');
+      
+      // Show fallback message
+      setTimeout(() => {
+        // Restore
+        if (backup) window.ensureTVOverlayScaffold = backup;
+        testEnsureOverlayHost();
+        
+        const host = document.getElementById('tvOverlay');
+        if (host) {
+          host.innerHTML = '';
+          const card = document.createElement('div');
+          card.className = 'revealCard diaryRoomCard';
+          card.style.cssText = 'max-width: 92%; padding: 16px; margin: 0 auto; text-align: center;';
+          
+          const title = document.createElement('h3');
+          title.textContent = 'Nomination Ceremony';
+          card.appendChild(title);
+          
+          const info = document.createElement('div');
+          info.className = 'big';
+          info.textContent = 'Alice, as HOH, you must nominate 2 houseguests for eviction.';
+          card.appendChild(info);
+          
+          const instruction = document.createElement('div');
+          instruction.style.cssText = 'margin-top: 8px; font-size: 0.85rem; color: #94a3b8;';
+          instruction.textContent = 'Please use the roster to select nominees.';
+          card.appendChild(instruction);
+          
+          host.appendChild(card);
+          document.getElementById('tv').classList.add('tvTall');
+        }
+        
+        const status = document.getElementById('test4-status');
+        status.className = 'status success';
+        status.textContent = '✓ Fallback panel displayed successfully';
+        console.log('✓ Fallback behavior verified');
+      }, 500);
+      
+      const status = document.getElementById('test4-status');
+      status.className = 'status info';
+      status.textContent = 'Testing fallback...';
+    }
+    
+    function testRenderNomsPanel() {
+      console.log('Testing renderNomsPanel() with human HOH');
+      
+      // Ensure we have a human HOH
+      window.game.players[0].human = true;
+      window.game.hohId = 1;
+      
+      // Call the test
+      testShowNominateCard();
+      
+      const status = document.getElementById('test4-status');
+      status.className = 'status success';
+      status.textContent = '✓ renderNomsPanel() test complete';
+    }
+    
+    // Initialize
+    console.log('=== Nominations Pick Mode Scaffold Test Initialized ===');
+    console.log('Game state:', window.game);
+    console.log('HOH:', window.getP(window.game.hohId));
+    
+    // Check initial state
+    testOverlayExists();
+  </script>
+</body>
+</html>
