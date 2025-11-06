@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nomination Grid Picker Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      background: var(--bg, #0f172a);
+      color: var(--fg, #f1f5f9);
+    }
+    
+    .test-header {
+      background: var(--card, #1e293b);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border: 1px solid var(--sep, #475569);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 10px 0;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls {
+      background: var(--card, #1e293b);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid var(--sep, #475569);
+    }
+    
+    .test-controls h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    
+    .test-controls button {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--ok, #4ade80);
+      color: #000;
+    }
+    
+    .test-controls button.secondary {
+      background: var(--card-accent, #334155);
+      color: var(--fg, #f1f5f9);
+    }
+    
+    .test-controls button.danger {
+      background: var(--danger, #ef4444);
+      color: #fff;
+    }
+    
+    .test-info {
+      background: var(--card-accent, #334155);
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    .test-layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 20px;
+      align-items: start;
+    }
+    
+    @media (max-width: 1024px) {
+      .test-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .tv-container {
+      background: var(--card, #1e293b);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--sep, #475569);
+    }
+    
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, #1c2b3e, #0e1a28);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--sep, #475569);
+    }
+    
+    #tv.tvTall {
+      min-height: 500px;
+    }
+    
+    .tvViewport {
+      min-height: 400px;
+      padding: 20px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #tvNow {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--fg, #f1f5f9);
+      text-align: center;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      pointer-events: auto;
+    }
+    
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .status-panel, .log-panel {
+      background: var(--card, #1e293b);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--sep, #475569);
+    }
+    
+    .status-panel h3, .log-panel h3 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+    
+    #status {
+      font-size: 0.85rem;
+      line-height: 1.8;
+    }
+    
+    #log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: var(--bg, #0f172a);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .log-entry.ok {
+      color: var(--ok, #4ade80);
+    }
+    
+    .log-entry.warn {
+      color: var(--warn, #fbbf24);
+    }
+    
+    .log-entry.error {
+      color: var(--danger, #ef4444);
+    }
+    
+    .success-indicator {
+      display: inline-block;
+      color: var(--ok, #4ade80);
+      font-weight: 600;
+    }
+    
+    .fail-indicator {
+      display: inline-block;
+      color: var(--danger, #ef4444);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>✨ Nomination Grid Picker Test</h1>
+    <p>Test the new in-TV grid picker for human HOH nominations</p>
+  </div>
+  
+  <div class="test-controls">
+    <h2>Test Scenarios</h2>
+    
+    <div class="button-group">
+      <button onclick="setupStandardWeek()">📋 Standard Week (2 noms)</button>
+      <button onclick="setupDoubleWeek()">📋📋 Double Eviction (3 noms)</button>
+      <button onclick="setupTripleWeek()">📋📋📋 Triple Eviction (4 noms)</button>
+      <button class="secondary" onclick="setupAIHOH()">🤖 AI HOH (should auto-nominate)</button>
+      <button class="secondary" onclick="testFallback()">⚠️ Test Fallback Mode</button>
+      <button class="danger" onclick="resetTest()">🔄 Reset</button>
+    </div>
+    
+    <div class="test-info">
+      <strong>📖 Test Instructions:</strong>
+      <ol style="margin: 8px 0 0 20px; padding: 0;">
+        <li><strong>Click a scenario</strong> above to set up the test</li>
+        <li><strong>Intro Card:</strong> You'll see a "Nomination Ceremony" card with a NOMINATE button</li>
+        <li><strong>Grid Picker:</strong> Click NOMINATE to open the avatar grid</li>
+        <li><strong>Select Nominees:</strong> Click avatars to select/deselect (watch header update)</li>
+        <li><strong>Keyboard Navigation:</strong> Use Arrow keys to move, Enter/Space to toggle</li>
+        <li><strong>Confirm:</strong> Button enables only when exact count reached</li>
+        <li><strong>Escape Test:</strong> Try pressing ESC - it should NOT exit (no cancel path)</li>
+        <li><strong>Summary:</strong> After confirm, see summary card → reactions → adjournment</li>
+      </ol>
+    </div>
+  </div>
+  
+  <div class="test-layout">
+    <div class="tv-container">
+      <div id="tv">
+        <div class="tvViewport">
+          <div id="tvNow">Select a test scenario to begin</div>
+          <div id="tvOverlay"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="side-panel">
+      <div class="status-panel">
+        <h3>📊 Status</h3>
+        <div id="status">Ready</div>
+      </div>
+      
+      <div class="log-panel">
+        <h3>📝 Console Log</h3>
+        <div id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Minimal game state setup
+    window.game = {
+      phase: 'nominations',
+      week: 1,
+      hohId: 1,
+      humanId: 1,
+      nominees: [],
+      nomsLocked: false,
+      __nomsCommitInProgress: false,
+      __nomsCommitted: false,
+      players: [
+        { id: 1, name: 'Alice', human: true, hoh: true, evicted: false, affinity: {} },
+        { id: 2, name: 'Bob', evicted: false, affinity: {} },
+        { id: 3, name: 'Carol', evicted: false, affinity: {} },
+        { id: 4, name: 'David', evicted: false, affinity: {} },
+        { id: 5, name: 'Emma', evicted: false, affinity: {} },
+        { id: 6, name: 'Frank', evicted: false, affinity: {} },
+        { id: 7, name: 'Grace', evicted: false, affinity: {} },
+        { id: 8, name: 'Henry', evicted: false, affinity: {} }
+      ]
+    };
+    
+    // Global helpers
+    window.alivePlayers = () => game.players.filter(p => !p.evicted);
+    window.getP = (id) => game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    
+    window.addLog = (msg, cls) => {
+      const log = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${cls || ''}`;
+      const time = new Date().toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      });
+      entry.textContent = `[${time}] ${msg}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    };
+    
+    window.updateHud = () => {
+      const status = document.getElementById('status');
+      const g = game;
+      const hohPlayer = getP(g.hohId);
+      const nomineeNames = g.nominees.length > 0 
+        ? g.nominees.map(id => {
+            const p = getP(id);
+            return p ? p.name : `#${id}`;
+          }).join(', ')
+        : '<em>None</em>';
+      
+      status.innerHTML = `
+        <strong>Phase:</strong> ${g.phase}<br>
+        <strong>Week:</strong> ${g.week}<br>
+        <strong>HOH:</strong> ${hohPlayer?.name || '?'} ${hohPlayer?.human ? '(Human)' : '(AI)'}<br>
+        <strong>Nominees:</strong> ${nomineeNames}<br>
+        <strong>Locked:</strong> ${g.nomsLocked ? '<span class="success-indicator">✓ Yes</span>' : 'No'}<br>
+        <strong>Twist Mode:</strong> ${g.__twistMode || 'Standard'}<br>
+        <strong>Nom Slots:</strong> ${g.__twistNomSlots || 2}
+      `;
+    };
+    
+    window.syncPlayerBadgeStates = () => {
+      addLog('Badge states synced', 'ok');
+    };
+    
+    window.startVetoComp = () => {
+      addLog('✓ Veto competition starting...', 'ok');
+      setTimeout(() => {
+        const host = document.getElementById('tvOverlay');
+        if(host) host.innerHTML = '';
+        document.getElementById('tvNow').textContent = '✓ Ceremony complete! Veto phase would begin.';
+        document.getElementById('tv').classList.remove('tvTall');
+      }, 100);
+    };
+    
+    // TV helpers
+    window.tv = {
+      say: (msg) => {
+        document.getElementById('tvNow').textContent = msg;
+        addLog(`TV: ${msg}`);
+      }
+    };
+    
+    // Avatar resolver
+    window.getDicebearUrl = (seed) => {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    const Game = {
+      resolveAvatar: (playerOrId) => {
+        const p = typeof playerOrId === 'object' ? playerOrId : getP(playerOrId);
+        if(!p) return getDicebearUrl('unknown');
+        return p.avatar || p.img || p.photo || getDicebearUrl(p.name || String(p.id));
+      }
+    };
+    window.Game = Game;
+    
+    // Progression hook (optional)
+    window.ProgressionEvents = {
+      onNominations: (nomineeIds) => {
+        addLog(`XP: Nomination event for ${nomineeIds.length} nominees`, 'ok');
+      }
+    };
+    
+    // Test scenario functions
+    window.setupStandardWeek = () => {
+      resetGame();
+      game.__twistMode = null;
+      game.__twistNomSlots = 2;
+      startNominations();
+      addLog('🎯 Standard week setup (2 nominations)', 'ok');
+      updateHud();
+    };
+    
+    window.setupDoubleWeek = () => {
+      resetGame();
+      game.__twistMode = 'double';
+      game.__twistNomSlots = 3;
+      startNominations();
+      addLog('🎯 Double eviction week setup (3 nominations)', 'ok');
+      updateHud();
+    };
+    
+    window.setupTripleWeek = () => {
+      resetGame();
+      game.__twistMode = 'triple';
+      game.__twistNomSlots = 4;
+      startNominations();
+      addLog('🎯 Triple eviction week setup (4 nominations)', 'ok');
+      updateHud();
+    };
+    
+    window.setupAIHOH = () => {
+      resetGame();
+      game.hohId = 2; // Bob is AI
+      game.humanId = 1; // Alice is human
+      const hoh = getP(2);
+      if(hoh) {
+        hoh.human = false;
+        hoh.hoh = true;
+      }
+      const alice = getP(1);
+      if(alice) {
+        alice.human = true;
+        alice.hoh = false;
+      }
+      startNominations();
+      addLog('🤖 AI HOH setup - should auto-nominate', 'ok');
+      updateHud();
+    };
+    
+    window.testFallback = () => {
+      resetGame();
+      // Temporarily break renderIntroCard by hiding tvOverlay
+      const overlay = document.getElementById('tvOverlay');
+      overlay.style.display = 'none';
+      setTimeout(() => {
+        startNominations();
+        addLog('⚠️ Fallback mode test - intro card mount should fail', 'warn');
+        updateHud();
+        setTimeout(() => {
+          overlay.style.display = '';
+        }, 1000);
+      }, 100);
+    };
+    
+    window.resetTest = () => {
+      resetGame();
+      const host = document.getElementById('tvOverlay');
+      if(host) host.innerHTML = '';
+      document.getElementById('tvNow').textContent = 'Select a test scenario to begin';
+      document.getElementById('tv').classList.remove('tvTall');
+      document.getElementById('log').innerHTML = '';
+      addLog('System reset', 'ok');
+      updateHud();
+    };
+    
+    function resetGame() {
+      game.phase = 'nominations';
+      game.week = 1;
+      game.hohId = 1;
+      game.humanId = 1;
+      game.nominees = [];
+      game.nomsLocked = false;
+      game.__nomsCommitInProgress = false;
+      game.__nomsCommitted = false;
+      game.__twistMode = null;
+      game.__twistNomSlots = 2;
+      game._pendingNoms = null;
+      game.__suppressNomBadges = false;
+      
+      // Reset all players
+      game.players.forEach((p, idx) => {
+        p.evicted = false;
+        p.nominated = false;
+        p.hoh = (idx === 0);
+        p.human = (idx === 0);
+        p.affinity = {};
+      });
+    }
+    
+    // Load nominations.js
+    const script = document.createElement('script');
+    script.src = 'js/nominations.js';
+    script.onload = () => {
+      addLog('✓ nominations.js loaded', 'ok');
+      updateHud();
+    };
+    script.onerror = () => {
+      addLog('✗ Failed to load nominations.js', 'error');
+    };
+    document.body.appendChild(script);
+    
+    // Initial status
+    updateHud();
+  </script>
+</body>
+</html>
