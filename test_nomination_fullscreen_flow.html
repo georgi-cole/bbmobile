@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fullscreen Nomination Ceremony Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-controls {
+      background: var(--card, #1e293b);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid var(--sep, #475569);
+    }
+    .test-controls h2 {
+      margin-top: 0;
+      color: var(--fg, #f1f5f9);
+    }
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    .test-controls button {
+      padding: 12px 24px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--ok, #4ade80);
+      color: #000;
+    }
+    .test-controls button.secondary {
+      background: var(--card-accent, #334155);
+      color: var(--fg, #f1f5f9);
+    }
+    .test-controls button.danger {
+      background: var(--err, #ef4444);
+      color: #fff;
+    }
+    .test-info {
+      background: var(--card-accent, #334155);
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--fg, #f1f5f9);
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .status.success {
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid var(--ok, #4ade80);
+      color: var(--ok, #4ade80);
+    }
+    .status.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--err, #ef4444);
+      color: var(--err, #ef4444);
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 2px solid currentColor;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h2>🎬 Fullscreen Nomination Ceremony Test</h2>
+    
+    <div class="test-info">
+      <strong>Purpose:</strong> Test the new fullscreen nomination ceremony UX for human HOH.
+      <br>
+      <strong>Expected Behavior:</strong>
+      <ol>
+        <li>Click "Setup Human HOH" to create a game with human as HOH</li>
+        <li>Click "Start Nominations" to trigger the ceremony</li>
+        <li>You should see: Intro card → NOMINATE button → Fullscreen selector → Confirm → Ceremony</li>
+        <li>AI HOH test should use the original flow (no fullscreen selector)</li>
+      </ol>
+    </div>
+
+    <div class="button-group">
+      <button id="setupHumanHOH">Setup Human HOH</button>
+      <button id="setupAIHOH" class="secondary">Setup AI HOH</button>
+      <button id="setupDoubleWeek" class="secondary">Setup Double Week (3 noms)</button>
+      <button id="setupTripleWeek" class="secondary">Setup Triple Week (4 noms)</button>
+    </div>
+
+    <div class="button-group">
+      <button id="startNominations">Start Nominations</button>
+      <button id="checkState" class="secondary">Check Game State</button>
+      <button id="clearLogs" class="secondary">Clear Logs</button>
+      <button id="testFallback" class="danger">Test Fallback (Force Error)</button>
+    </div>
+
+    <div id="status" class="status success">
+      <div class="log-entry">Ready to test. Click "Setup Human HOH" to begin.</div>
+    </div>
+  </div>
+
+  <!-- TV overlay container -->
+  <div id="tv" style="display: none;">
+    <div id="tvOverlay"></div>
+  </div>
+
+  <!-- Top roster for selection -->
+  <div id="rosterBar" style="display: none;">
+    <div id="topRoster"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/state.js"></script>
+  <script>
+    // Pre-setup: Create minimal global namespace before loading nominations
+    window.global = window;
+    window.game = window.game || {};
+    
+    // Mock Game object reference (used by resolveAvatar)
+    window.Game = window;
+  </script>
+  <script src="js/nominations.js"></script>
+  <script src="js/nominations-grid-fullscreen.js"></script>
+
+  <script>
+    // Test harness
+    const statusEl = document.getElementById('status');
+    const logs = [];
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = `[${timestamp}] ${message}`;
+      logs.push(entry);
+      
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.textContent = entry;
+      statusEl.appendChild(logEntry);
+      statusEl.scrollTop = statusEl.scrollHeight;
+      
+      console.log(message);
+    }
+
+    function clearLogs() {
+      logs.length = 0;
+      statusEl.innerHTML = '';
+      log('Logs cleared');
+    }
+
+    // Intercept console.log to capture [noms-fs] logs
+    const originalConsoleLog = console.log;
+    console.log = function(...args) {
+      const message = args.join(' ');
+      if (message.includes('[noms-fs]') || message.includes('[noms-pick]') || message.includes('[noms]')) {
+        log(message);
+      }
+      originalConsoleLog.apply(console, args);
+    };
+
+    // Mock minimal game setup
+    function createMockGame(isHumanHOH = true, twistMode = null) {
+      // Create mock players
+      const players = [];
+      const getDicebearUrl = function(seed) {
+        return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+      };
+      
+      for (let i = 1; i <= 10; i++) {
+        players.push({
+          id: i,
+          name: `Player ${i}`,
+          human: i === 1 && isHumanHOH,
+          evicted: false,
+          jury: false,
+          avatar: getDicebearUrl(`player${i}`)
+        });
+      }
+
+      // Create game object
+      window.game = {
+        players: players,
+        hohId: 1,
+        phase: 'nominations',
+        nomsLocked: false,
+        nominees: [],
+        __nomsCommitInProgress: false,
+        __nomsCommitted: false,
+        _pendingNoms: null
+      };
+
+      // Set twist mode if specified
+      if (twistMode === 'double') {
+        window.game.__twistMode = 'double';
+        window.game.__twistNomSlots = 3;
+      } else if (twistMode === 'triple') {
+        window.game.__twistMode = 'triple';
+        window.game.__twistNomSlots = 4;
+      }
+
+      // Mock helper functions
+      window.getP = function(id) {
+        return window.game.players.find(p => p.id === id);
+      };
+
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted && !p.jury);
+      };
+
+      window.safeName = function(id) {
+        const p = window.getP(id);
+        return p ? p.name : String(id);
+      };
+
+      window.updateHud = function() {
+        log('updateHud() called');
+      };
+
+      window.syncPlayerBadgeStates = function() {
+        log('syncPlayerBadgeStates() called');
+      };
+
+      window.startVetoComp = function() {
+        log('startVetoComp() called - proceeding to POV');
+      };
+
+      window.addLog = function(message, type) {
+        log(`Game log: ${message}`);
+      };
+
+      // Mock TV utilities
+      document.getElementById('tv').style.display = 'block';
+      
+      const hohType = isHumanHOH ? 'Human' : 'AI';
+      const twistInfo = twistMode ? ` (${twistMode} week)` : '';
+      log(`✓ Game created: ${hohType} HOH${twistInfo}, ${window.game.players.length} players`);
+    }
+
+    // Event handlers
+    document.getElementById('setupHumanHOH').addEventListener('click', () => {
+      clearLogs();
+      createMockGame(true);
+      log('Ready to start nominations');
+    });
+
+    document.getElementById('setupAIHOH').addEventListener('click', () => {
+      clearLogs();
+      createMockGame(false);
+      log('Ready to start nominations (AI HOH - should use original flow)');
+    });
+
+    document.getElementById('setupDoubleWeek').addEventListener('click', () => {
+      clearLogs();
+      createMockGame(true, 'double');
+      log('Ready to start nominations (requires 3 nominees)');
+    });
+
+    document.getElementById('setupTripleWeek').addEventListener('click', () => {
+      clearLogs();
+      createMockGame(true, 'triple');
+      log('Ready to start nominations (requires 4 nominees)');
+    });
+
+    document.getElementById('startNominations').addEventListener('click', () => {
+      if (!window.game) {
+        log('❌ No game setup. Click a setup button first.', 'error');
+        return;
+      }
+      log('Calling renderNomsPanel()...');
+      
+      if (window.renderNomsPanel) {
+        window.renderNomsPanel();
+      } else {
+        log('❌ renderNomsPanel not found', 'error');
+      }
+    });
+
+    document.getElementById('checkState').addEventListener('click', () => {
+      if (!window.game) {
+        log('❌ No game setup', 'error');
+        return;
+      }
+      
+      log('=== Game State ===');
+      log(`Phase: ${window.game.phase}`);
+      log(`HOH: ${window.safeName(window.game.hohId)} (${window.getP(window.game.hohId).human ? 'Human' : 'AI'})`);
+      log(`Nominees: ${window.game.nominees.length > 0 ? window.game.nominees.map(window.safeName).join(', ') : 'None'}`);
+      log(`Locked: ${window.game.nomsLocked}`);
+      log(`Twist mode: ${window.game.__twistMode || 'none'}`);
+      log(`Required slots: ${window.game.__twistNomSlots || 2}`);
+    });
+
+    document.getElementById('clearLogs').addEventListener('click', clearLogs);
+
+    document.getElementById('testFallback').addEventListener('click', () => {
+      if (!window.game) {
+        log('❌ No game setup. Click a setup button first.', 'error');
+        return;
+      }
+      
+      log('⚠ Forcing error in intro card to test fallback...');
+      
+      // Temporarily break ensureTVOverlay to force fallback
+      const original = window.NomsFullscreenInterceptor.showIntroCard;
+      window.NomsFullscreenInterceptor.showIntroCard = function() {
+        return Promise.resolve(false); // Force failure
+      };
+      
+      window.renderNomsPanel();
+      
+      setTimeout(() => {
+        window.NomsFullscreenInterceptor.showIntroCard = original;
+        log('✓ Fallback test complete. Function restored.');
+      }, 1000);
+    });
+
+    // Initialize
+    log('Test harness loaded. Click "Setup Human HOH" to begin.');
+  </script>
+</body>
+</html>
