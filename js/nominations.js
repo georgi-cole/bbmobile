@@ -9,18 +9,7 @@
 
   function aliveIds(){ return global.alivePlayers().map(p=>p.id); }
   function eligibleNomIds(){ const g=global.game; return aliveIds().filter(id=>id!==g.hohId); }
-  function requiredSlots(){ 
-    const g = global.game;
-    // Prefer explicit __twistNomSlots (check for valid number, not just truthy)
-    if(typeof g?.__twistNomSlots === 'number' && g.__twistNomSlots > 0) {
-      return Math.max(2, Math.min(4, g.__twistNomSlots));
-    }
-    // Fallback: map __twistMode to slots
-    if(g?.__twistMode === 'triple') return 4;
-    if(g?.__twistMode === 'double') return 3;
-    // Default: 2 nominees
-    return 2;
-  }
+  function requiredSlots(){ return Math.max(2, Math.min(4, global.game?.__twistNomSlots || 2)); }
 
   function aiPickNominees(count=2){
     const g=global.game; const hoh=global.getP(g.hohId);
@@ -45,14 +34,14 @@
    * @returns {HTMLElement|null} The tvOverlay element or its content container
    */
   function ensureOverlayHost(){
-    console.log('[noms-grid] Ensuring TV overlay host exists');
+    console.log('[noms-pick] Ensuring TV overlay host exists');
     
     // Prefer global scaffold function if available (from veto.js)
     if(global && typeof global.ensureTVOverlayScaffold === 'function'){
-      console.log('[noms-grid] Using global.ensureTVOverlayScaffold()');
+      console.log('[noms-pick] Using global.ensureTVOverlayScaffold()');
       const content = global.ensureTVOverlayScaffold();
       if(content){
-        console.log('[noms-grid] ✓ Scaffold created successfully');
+        console.log('[noms-pick] ✓ Scaffold created successfully');
         return content.parentElement || content; // Return parent #tvOverlay if possible
       }
     }
@@ -60,7 +49,7 @@
     // Fallback: create minimal #tvOverlay if missing
     let tvOverlay = document.getElementById('tvOverlay');
     if(!tvOverlay){
-      console.log('[noms-grid] #tvOverlay missing, creating minimal fallback');
+      console.log('[noms-pick] #tvOverlay missing, creating minimal fallback');
       tvOverlay = document.createElement('div');
       tvOverlay.id = 'tvOverlay';
       tvOverlay.style.cssText = `
@@ -82,181 +71,116 @@
       } else {
         document.body.appendChild(tvOverlay);
       }
-      console.log('[noms-grid] ✓ Minimal #tvOverlay created');
+      console.log('[noms-pick] ✓ Minimal #tvOverlay created');
     } else {
-      console.log('[noms-grid] ✓ #tvOverlay already exists');
+      console.log('[noms-pick] ✓ #tvOverlay already exists');
     }
     
     return tvOverlay;
   }
   
-  // ========== NEW: In-TV Grid Picker for Human HOH Nominations ==========
+  // ========== NEW: Pick Mode for Human HOH Nomination UX ==========
   
   /**
-   * Inject CSS for in-TV nomination grid picker
+   * Inject CSS for nomination pick mode (dimming, selection rings, confirm bar)
    */
-  function injectGridPickerStyles(){
-    if(document.getElementById('bb-noms-grid-styles')) return; // Already injected
+  function injectPickModeStyles(){
+    if(document.getElementById('bb-noms-pick-styles')) return; // Already injected
     
     const style = document.createElement('style');
-    style.id = 'bb-noms-grid-styles';
+    style.id = 'bb-noms-pick-styles';
     style.textContent = `
-      /* Grid picker container - centered in TV, matching Social modal style */
-      .bb-noms-grid-container {
-        max-width: 92%;
-        max-height: 78%;
-        margin: 0 auto;
-        background: linear-gradient(135deg, #2d3e50 0%, #1a2332 100%);
-        border-radius: 20px;
-        padding: 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
-      }
-      
-      /* Header with count */
-      .bb-noms-grid-header {
-        text-align: center;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #e2e8f0;
-        letter-spacing: 0.5px;
-      }
-      
-      /* Avatar grid */
-      .bb-noms-avatar-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-        gap: 16px;
-        overflow-y: auto;
-        max-height: 50vh;
-        padding: 8px;
-      }
-      
-      /* Avatar tile */
-      .bb-noms-avatar-tile {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        padding: 12px;
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.05);
-        cursor: pointer;
-        transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-        user-select: none;
-      }
-      
-      .bb-noms-avatar-tile:hover {
-        transform: scale(1.05);
-        border-color: rgba(96, 165, 250, 0.5);
-        background: rgba(255, 255, 255, 0.08);
-      }
-      
-      .bb-noms-avatar-tile:focus {
-        outline: 2px solid #60a5fa;
-        outline-offset: 2px;
-      }
-      
-      .bb-noms-avatar-tile.selected {
-        border-color: #4ade80;
-        background: rgba(74, 222, 128, 0.15);
-        box-shadow: 0 0 16px rgba(74, 222, 128, 0.3);
-      }
-      
-      .bb-noms-avatar-tile.ineligible {
-        opacity: 0.4;
-        cursor: not-allowed;
+      /* Dim entire page except roster during pick mode */
+      body.bb-noms-pick-mode::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 999;
         pointer-events: none;
       }
       
-      /* Avatar image */
-      .bb-noms-avatar-img {
-        width: 72px;
-        height: 72px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid rgba(255, 255, 255, 0.2);
+      /* Keep roster interactive and above dim */
+      body.bb-noms-pick-mode #rosterBar,
+      body.bb-noms-pick-mode .top-roster,
+      body.bb-noms-pick-mode #topRoster {
+        position: relative;
+        z-index: 1000;
+        pointer-events: auto;
       }
       
-      .bb-noms-avatar-tile.selected .bb-noms-avatar-img {
-        border-color: #4ade80;
-        box-shadow: 0 0 12px rgba(74, 222, 128, 0.4);
+      /* Selection ring on tiles */
+      .top-roster-tile.bb-selected {
+        outline: 3px solid var(--ok, #4ade80);
+        outline-offset: 2px;
+        box-shadow: 0 0 12px var(--ok, #4ade80);
       }
       
-      /* Name label */
-      .bb-noms-avatar-name {
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-align: center;
-        color: #e2e8f0;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+      /* Hover state during pick mode */
+      body.bb-noms-pick-mode .top-roster-tile:not(.evicted):hover {
+        cursor: pointer;
+        transform: scale(1.05);
+        transition: transform 0.15s ease;
       }
       
-      /* Footer with confirm button */
-      .bb-noms-grid-footer {
+      /* Floating confirm bar */
+      #bb-noms-confirm-bar {
+        position: fixed;
+        top: calc(var(--roster-bottom, 120px) + 10px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1001;
+        background: var(--card, #1e293b);
+        border: 1px solid var(--sep, #475569);
+        border-radius: 8px;
+        padding: 12px 20px;
         display: flex;
-        justify-content: center;
-        padding-top: 12px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(8px);
       }
       
-      .bb-noms-confirm-btn {
-        padding: 14px 40px;
-        background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+      #bb-noms-count-text {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--fg, #f1f5f9);
+      }
+      
+      #bb-noms-confirm-btn {
+        padding: 8px 24px;
+        background: var(--ok, #4ade80);
         color: #000;
         border: none;
-        border-radius: 10px;
+        border-radius: 6px;
         font-weight: 700;
-        font-size: 1rem;
+        font-size: 0.9rem;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
         transition: opacity 0.2s, transform 0.1s;
       }
       
-      .bb-noms-confirm-btn:hover:not(:disabled) {
+      #bb-noms-confirm-btn:hover:not(:disabled) {
         transform: scale(1.05);
-        box-shadow: 0 6px 16px rgba(74, 222, 128, 0.4);
       }
       
-      .bb-noms-confirm-btn:disabled {
+      #bb-noms-confirm-btn:disabled {
         opacity: 0.4;
         cursor: not-allowed;
-        box-shadow: none;
       }
       
       /* Reduced motion support */
       @media (prefers-reduced-motion: reduce) {
-        .bb-noms-grid-container {
-          animation: none;
-        }
-        .bb-noms-avatar-tile:hover {
+        body.bb-noms-pick-mode .top-roster-tile:hover {
           transform: none;
         }
-        .bb-noms-confirm-btn:hover:not(:disabled) {
+        #bb-noms-confirm-btn:hover:not(:disabled) {
           transform: none;
         }
-      }
-      
-      /* Mobile optimization */
-      @media (max-width: 640px) {
-        .bb-noms-grid-container {
-          padding: 18px;
-          max-width: calc(100vw - 32px);
-        }
-        .bb-noms-avatar-grid {
-          grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
-          gap: 12px;
-        }
-        .bb-noms-avatar-img {
-          width: 60px;
-          height: 60px;
+        .top-roster-tile.bb-selected {
+          transition: none;
         }
       }
     `;
@@ -264,238 +188,216 @@
   }
   
   /**
-   * State for grid picker
+   * State for pick mode
    */
-  const gridPickerState = {
+  const pickModeState = {
     active: false,
     selectedIds: [],
     required: 0,
     escapeHandler: null,
-    confirmBtn: null
+    clickHandlers: new Map()
   };
   
   /**
-   * Render in-TV grid picker for nominations
-   * @param {number} need - Number of nominations required
+   * Enter pick mode: dim UI, enable roster selection, show confirm bar
    */
-  function renderGridPicker(need){
-    const host = ensureOverlayHost();
-    if(!host) return;
+  function enterPickMode(){
+    if(pickModeState.active) {
+      console.log('[noms-pick] Pick mode already active, skipping');
+      return; // Already active
+    }
     
-    console.log('[noms-grid] Rendering grid picker, need:', need);
+    console.log('[noms-pick] Entering pick mode');
     
-    injectGridPickerStyles();
+    injectPickModeStyles();
     
-    // Clear existing content
-    host.innerHTML = '';
+    pickModeState.active = true;
+    pickModeState.selectedIds = [];
+    pickModeState.required = requiredSlots();
     
-    // Create container
-    const container = document.createElement('div');
-    container.className = 'bb-noms-grid-container';
-    container.setAttribute('role', 'dialog');
-    container.setAttribute('aria-label', 'Nomination Selection');
+    console.log('[noms-pick] Required selections:', pickModeState.required);
     
-    // Header with count
-    const header = document.createElement('div');
-    header.className = 'bb-noms-grid-header';
-    header.setAttribute('aria-live', 'polite');
-    header.setAttribute('aria-atomic', 'true');
-    header.textContent = `0 / ${need} selected`;
-    container.appendChild(header);
+    // Add body class for dimming
+    document.body.classList.add('bb-noms-pick-mode');
     
-    // Grid of avatars
-    const grid = document.createElement('div');
-    grid.className = 'bb-noms-avatar-grid';
-    grid.setAttribute('role', 'group');
-    grid.setAttribute('aria-label', 'Select nominees');
-    
-    const eligibleIds = eligibleNomIds();
-    let firstTile = null;
-    
-    eligibleIds.forEach(playerId => {
-      const player = global.getP(playerId);
-      if(!player || player.evicted) return;
-      
-      const tile = document.createElement('div');
-      tile.className = 'bb-noms-avatar-tile';
-      tile.setAttribute('role', 'button');
-      tile.setAttribute('tabindex', firstTile ? '-1' : '0');
-      tile.setAttribute('aria-pressed', 'false');
-      tile.dataset.playerId = playerId;
-      
-      // Avatar image
-      const img = document.createElement('img');
-      img.className = 'bb-noms-avatar-img';
-      img.alt = player.name;
-      
-      // Use resolveAvatar if available, otherwise fallback to getDicebearUrl
-      const resolveAvatar = (global.Game || global).resolveAvatar;
-      if(resolveAvatar){
-        img.src = resolveAvatar(player || playerId);
-      } else {
-        const getDicebearUrl = global.getDicebearUrl || function(seed) {
-          return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
-        };
-        img.src = player?.avatar || player?.img || player?.photo || getDicebearUrl(player?.name || String(playerId));
+    // Intercept Escape/Backspace to prevent exit
+    pickModeState.escapeHandler = (e) => {
+      if(e.key === 'Escape' || e.key === 'Backspace'){
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[noms-pick] Escape/Backspace blocked - must complete selection');
+        // Optionally show a message that they must complete selection
+        return false;
       }
-      tile.appendChild(img);
+    };
+    document.addEventListener('keydown', pickModeState.escapeHandler, true);
+    
+    // Attach click handlers to roster tiles
+    const tiles = document.querySelectorAll('.top-roster-tile');
+    console.log('[noms-pick] Found', tiles.length, 'roster tiles');
+    
+    tiles.forEach(tile => {
+      const playerId = parseInt(tile.dataset.playerId);
+      if(!playerId || isNaN(playerId)) return;
       
-      // Name label
-      const name = document.createElement('div');
-      name.className = 'bb-noms-avatar-name';
-      name.textContent = player.name;
-      tile.appendChild(name);
+      const handler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSelection(playerId);
+      };
       
-      // Click handler
-      tile.addEventListener('click', () => toggleGridSelection(tile, playerId, need, header));
-      
-      // Keyboard handler
-      tile.addEventListener('keydown', (e) => {
-        if(e.key === 'Enter' || e.key === ' '){
-          e.preventDefault();
-          toggleGridSelection(tile, playerId, need, header);
-        } else if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){
-          e.preventDefault();
-          const next = tile.nextElementSibling;
-          if(next) next.focus();
-        } else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){
-          e.preventDefault();
-          const prev = tile.previousElementSibling;
-          if(prev) prev.focus();
-        }
-      });
-      
-      grid.appendChild(tile);
-      if(!firstTile) firstTile = tile;
+      tile.addEventListener('click', handler);
+      pickModeState.clickHandlers.set(playerId, { tile, handler });
     });
     
-    container.appendChild(grid);
+    // Create and show confirm bar
+    createConfirmBar();
+    updateConfirmBar();
     
-    // Footer with confirm button
-    const footer = document.createElement('div');
-    footer.className = 'bb-noms-grid-footer';
+    console.log('[noms-pick] ✓ Pick mode active');
+  }
+  
+  /**
+   * Exit pick mode: remove dim, selection rings, confirm bar
+   */
+  function exitPickMode(){
+    if(!pickModeState.active) return;
+    
+    pickModeState.active = false;
+    
+    // Remove body class
+    document.body.classList.remove('bb-noms-pick-mode');
+    
+    // Remove escape handler
+    if(pickModeState.escapeHandler){
+      document.removeEventListener('keydown', pickModeState.escapeHandler, true);
+      pickModeState.escapeHandler = null;
+    }
+    
+    // Remove click handlers
+    pickModeState.clickHandlers.forEach(({ tile, handler }) => {
+      tile.removeEventListener('click', handler);
+      tile.classList.remove('bb-selected');
+    });
+    pickModeState.clickHandlers.clear();
+    
+    // Remove confirm bar
+    const bar = document.getElementById('bb-noms-confirm-bar');
+    if(bar) bar.remove();
+    
+    // Clear state
+    pickModeState.selectedIds = [];
+    pickModeState.required = 0;
+  }
+  
+  /**
+   * Toggle selection of a roster tile
+   */
+  function toggleSelection(playerId){
+    const g = global.game;
+    const player = global.getP(playerId);
+    
+    // Check eligibility
+    if(!player || player.evicted || playerId === g.hohId){
+      // Not eligible - ignore click
+      console.log('[noms-pick] Player', playerId, 'not eligible (evicted or HOH)');
+      return;
+    }
+    
+    const idx = pickModeState.selectedIds.indexOf(playerId);
+    const tile = document.querySelector(`.top-roster-tile[data-player-id="${playerId}"]`);
+    
+    if(idx >= 0){
+      // Deselect
+      pickModeState.selectedIds.splice(idx, 1);
+      if(tile) tile.classList.remove('bb-selected');
+      console.log('[noms-pick] Deselected player', playerId, '- now', pickModeState.selectedIds.length, '/', pickModeState.required);
+    } else {
+      // Select
+      pickModeState.selectedIds.push(playerId);
+      if(tile) tile.classList.add('bb-selected');
+      console.log('[noms-pick] Selected player', playerId, '- now', pickModeState.selectedIds.length, '/', pickModeState.required);
+    }
+    
+    updateConfirmBar();
+  }
+  
+  /**
+   * Create floating confirm bar
+   */
+  function createConfirmBar(){
+    if(document.getElementById('bb-noms-confirm-bar')) return; // Already exists
+    
+    const bar = document.createElement('div');
+    bar.id = 'bb-noms-confirm-bar';
+    
+    const countText = document.createElement('span');
+    countText.id = 'bb-noms-count-text';
+    countText.setAttribute('aria-live', 'polite');
+    countText.setAttribute('aria-atomic', 'true');
     
     const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'bb-noms-confirm-btn';
+    confirmBtn.id = 'bb-noms-confirm-btn';
     confirmBtn.textContent = 'CONFIRM';
     confirmBtn.disabled = true;
     
     confirmBtn.addEventListener('click', () => {
-      if(gridPickerState.selectedIds.length === need){
-        commitGridNominations();
+      if(pickModeState.selectedIds.length === pickModeState.required){
+        commitNominations();
       }
     });
     
-    footer.appendChild(confirmBtn);
-    container.appendChild(footer);
-    
-    // Store reference in state
-    gridPickerState.confirmBtn = confirmBtn;
-    
-    host.appendChild(container);
-    document.getElementById('tv')?.classList.add('tvTall');
-    
-    // Initialize state
-    gridPickerState.active = true;
-    gridPickerState.selectedIds = [];
-    gridPickerState.required = need;
-    
-    // Block Escape key
-    gridPickerState.escapeHandler = (e) => {
-      if(e.key === 'Escape'){
+    // Keyboard support
+    confirmBtn.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){
         e.preventDefault();
-        e.stopPropagation();
-        console.log('[noms-grid] Escape blocked - must complete selection');
-        return false;
+        confirmBtn.click();
       }
-    };
-    document.addEventListener('keydown', gridPickerState.escapeHandler, true);
+    });
     
-    // Focus first tile
-    if(firstTile){
-      setTimeout(() => firstTile.focus(), 100);
+    bar.appendChild(countText);
+    bar.appendChild(confirmBtn);
+    document.body.appendChild(bar);
+    
+    // Calculate roster bottom position for bar placement
+    const rosterBar = document.getElementById('rosterBar');
+    if(rosterBar){
+      const rect = rosterBar.getBoundingClientRect();
+      document.documentElement.style.setProperty('--roster-bottom', `${rect.bottom}px`);
     }
-    
-    console.log('[noms-grid] ✓ Grid picker rendered');
   }
   
   /**
-   * Toggle selection in grid picker
+   * Update confirm bar count and button state
    */
-  function toggleGridSelection(tile, playerId, need, header){
-    const idx = gridPickerState.selectedIds.indexOf(playerId);
+  function updateConfirmBar(){
+    const countText = document.getElementById('bb-noms-count-text');
+    const confirmBtn = document.getElementById('bb-noms-confirm-btn');
     
-    if(idx >= 0){
-      // Deselect
-      gridPickerState.selectedIds.splice(idx, 1);
-      tile.classList.remove('selected');
-      tile.setAttribute('aria-pressed', 'false');
-      console.log('[noms-grid] Deselected', playerId);
-    } else {
-      // Select
-      gridPickerState.selectedIds.push(playerId);
-      tile.classList.add('selected');
-      tile.setAttribute('aria-pressed', 'true');
-      console.log('[noms-grid] Selected', playerId);
-    }
+    if(!countText || !confirmBtn) return;
     
-    // Update header count
-    const selected = gridPickerState.selectedIds.length;
-    header.textContent = `${selected} / ${need} selected`;
+    const selected = pickModeState.selectedIds.length;
+    const required = pickModeState.required;
     
-    // Update confirm button (use stored reference)
-    if(gridPickerState.confirmBtn){
-      gridPickerState.confirmBtn.disabled = (selected !== need);
-    }
+    countText.textContent = `${selected} / ${required} selected`;
+    
+    confirmBtn.disabled = (selected !== required);
   }
   
   /**
-   * Commit nominations from grid picker
-   */
-  function commitGridNominations(){
-    const g = global.game;
-    
-    console.log('[noms-grid] Committing nominations:', gridPickerState.selectedIds);
-    
-    // Set pending noms
-    g._pendingNoms = gridPickerState.selectedIds.slice();
-    
-    // Clear grid and cleanup
-    const host = ensureOverlayHost();
-    if(host) host.innerHTML = '';
-    document.getElementById('tv')?.classList.remove('tvTall');
-    
-    // Remove escape handler
-    if(gridPickerState.escapeHandler){
-      document.removeEventListener('keydown', gridPickerState.escapeHandler, true);
-      gridPickerState.escapeHandler = null;
-    }
-    
-    gridPickerState.active = false;
-    gridPickerState.selectedIds = [];
-    gridPickerState.required = 0;
-    gridPickerState.confirmBtn = null;
-    
-    console.log('[noms-grid] Grid cleared, triggering finalize');
-    
-    // Finalize nominations
-    finalizeNoms();
-  }
-  
-  /**
-   * Show in-TV "Nomination Ceremony" intro card with NOMINATE button.
+   * Show in-TV "Nomination Ceremony" card with NOMINATE button.
    * @param {object} hoh - The Head of Household player object
    * @param {number} need - Number of nominations required
    * @returns {boolean} True if card was successfully mounted, false otherwise
    */
-  function renderIntroCard(hoh, need){
-    console.log('[noms-grid] Attempting to show intro card');
+  function showNominateCard(hoh, need){
+    console.log('[noms-pick] Attempting to show nominate card');
     
     try {
       // Ensure overlay host exists
       const host = ensureOverlayHost();
       if(!host){
-        console.warn('[noms-grid] Failed to create overlay host');
+        console.warn('[noms-pick] Failed to create overlay host');
         return false;
       }
       
@@ -546,21 +448,44 @@
       `;
       
       nominateBtn.addEventListener('click', () => {
-        console.log('[noms-grid] NOMINATE button clicked, opening grid picker');
-        renderGridPicker(need);
+        console.log('[noms-pick] NOMINATE button clicked, entering pick mode');
+        // Clear TV and enter pick mode
+        host.innerHTML = '';
+        document.getElementById('tv')?.classList.remove('tvTall');
+        enterPickMode();
       });
       
       card.appendChild(nominateBtn);
       host.appendChild(card);
       document.getElementById('tv')?.classList.add('tvTall');
       
-      console.log('[noms-grid] ✓ Intro card successfully mounted');
+      console.log('[noms-pick] ✓ Nominate card successfully mounted');
       return true;
       
     } catch(err) {
-      console.error('[noms-grid] Error mounting intro card:', err);
+      console.error('[noms-pick] Error mounting nominate card:', err);
       return false;
     }
+  }
+  
+  /**
+   * Commit nominations from pick mode
+   */
+  function commitNominations(){
+    const g = global.game;
+    
+    console.log('[noms-pick] Committing nominations:', pickModeState.selectedIds);
+    
+    // Set pending noms and trigger finalize
+    g._pendingNoms = pickModeState.selectedIds.slice();
+    
+    // Exit pick mode
+    exitPickMode();
+    
+    console.log('[noms-pick] Pick mode exited, triggering finalize');
+    
+    // Finalize nominations
+    finalizeNoms();
   }
 
   function renderNomsPanel(){
@@ -603,20 +528,20 @@
       return;
     }
 
-    // ========== NEW: Human HOH In-TV Grid Picker Flow ==========
+    // ========== NEW: Human HOH In-TV Pick Mode Flow ==========
     if(hoh && hoh.human){
-      console.log('[noms-grid] Human HOH detected, attempting in-TV intro card');
+      console.log('[noms-pick] Human HOH detected, attempting in-TV card');
       
-      // Try to show in-TV intro card
-      const cardMounted = renderIntroCard(hoh, need);
+      // Try to show in-TV card
+      const cardMounted = showNominateCard(hoh, need);
       
       if(cardMounted){
         // Card successfully mounted - suppress legacy panel
-        console.log('[noms-grid] ✓ In-TV intro card active, legacy panel suppressed');
+        console.log('[noms-pick] ✓ In-TV card active, legacy panel suppressed');
         return;
       } else {
         // Card mount failed - fall through to legacy panel as safety
-        console.warn('[noms-grid] ⚠ Intro card mount failed, falling back to legacy panel');
+        console.warn('[noms-pick] ⚠ Card mount failed, falling back to legacy panel');
         // Continue to legacy panel rendering below (do NOT return)
       }
     }
@@ -653,8 +578,8 @@
       }
     } else {
       // Human HOH fallback: render legacy panel
-      // This code path is only reached if renderIntroCard failed
-      console.log('[noms-grid] Rendering legacy panel for human HOH (fallback mode)');
+      // This code path is only reached if showNominateCard failed
+      console.log('[noms-pick] Rendering legacy panel for human HOH (fallback mode)');
       
       // Legacy panel code would go here if it existed
       // For now, show a simple fallback message
@@ -784,6 +709,30 @@
 
 
   /**
+   * Show nominee reaction popup with quote (uses faux TV showCard)
+   * @param {number} playerId - Player ID of nominee
+   * @returns {Promise} Resolves when popup is closed
+   */
+  function showNomineeReaction(playerId){
+    return new Promise((resolve) => {
+      const player = global.getP(playerId);
+      if(!player){
+        resolve();
+        return;
+      }
+
+      // Pick a random reaction quote
+      const quote = NOMINEE_REACTIONS[Math.floor((global.rng?.()||Math.random())*NOMINEE_REACTIONS.length)];
+
+      // Use faux TV showCard
+      if(global.showCard){
+        global.showCard(player.name, [`"${quote}"`], 'noms', 2800, true);
+      }
+      setTimeout(resolve, 2800);
+    });
+  }
+
+  /**
    * Show nominee reaction popups one at a time (1-by-1) in the TV overlay
    * @param {Array<number>} nomineeIds - Array of nominee player IDs
    * @returns {Promise} Resolves when all popups are closed
@@ -906,13 +855,13 @@
       
       if(wasHumanPickMode){
         // ========== NEW HUMAN HOH CEREMONY FLOW ==========
-        console.log('[noms-grid] Starting human HOH ceremony for nominees:', ids);
+        console.log('[noms-pick] Starting human HOH ceremony for nominees:', ids);
         
         // Step 1: Show single summary card with all nominees
         await new Promise((resolve) => {
           const host = document.getElementById('tvOverlay');
           if(!host) {
-            console.warn('[noms-grid] No tvOverlay for summary card');
+            console.warn('[noms-pick] No tvOverlay for summary card');
             resolve();
             return;
           }
@@ -950,7 +899,7 @@
           host.appendChild(card);
           document.getElementById('tv')?.classList.add('tvTall');
           
-          console.log('[noms-grid] ✓ Summary card shown');
+          console.log('[noms-pick] ✓ Summary card shown');
           
           setTimeout(() => {
             // Don't clear yet - reactions will clear it
@@ -967,9 +916,9 @@
         
         // Step 2: Show nominee reactions
         if(ids.length > 0){
-          console.log('[noms-grid] Showing nominee reactions');
+          console.log('[noms-pick] Showing nominee reactions');
           await showNomineeReactionsSimultaneously(ids);
-          console.log('[noms-grid] ✓ Nominee reactions complete');
+          console.log('[noms-pick] ✓ Nominee reactions complete');
         }
         
         // Step 3: Show ceremony conclusion
@@ -1002,12 +951,12 @@
             host.appendChild(card);
             document.getElementById('tv')?.classList.add('tvTall');
             
-            console.log('[noms-grid] ✓ Adjournment card shown');
+            console.log('[noms-pick] ✓ Adjournment card shown');
             
             setTimeout(() => {
               host.innerHTML = '';
               document.getElementById('tv')?.classList.remove('tvTall');
-              console.log('[noms-grid] ✓ Ceremony complete');
+              console.log('[noms-pick] ✓ Ceremony complete');
               resolve();
             }, 2000);
           } else {
