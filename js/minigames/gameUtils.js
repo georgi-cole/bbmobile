@@ -1,15 +1,29 @@
 // MODULE: minigames/gameUtils.js
 // Unified game utilities for win probability, competition results, and anti-cheat measures
+//
+// EVALUATION ORDER (evaluateOutcome):
+// 1. Check debug override (cfg.debugAlwaysWin) - if true, always win
+// 2. Check failure state - if failed, cheated, score becomes 0 and cannot win
+// 3. Apply skip penalty if used
+// 4. Check eligibility threshold (>= 60% of maxScore)
+// 5. Roll win probability (20% chance) for eligible players
 
 (function(g){
   'use strict';
 
-  // Win probability constant - human players win ~25% of the time when they succeed
-  const PLAYER_WIN_CHANCE = 0.25;
+  // Win probability constant - human players win ~20% of the time when eligible (new golden rule)
+  const PLAYER_WIN_CHANCE = 0.20;
+  
+  // New outcome logic constants
+  const SKIP_PENALTY = 10;        // Score penalty for using Skip action
+  const MIN_ELIGIBLE_PCT = 0.60;  // 60% of maxScore required to be eligible for win
+  const LOSS_FLOOR = 30;          // Minimum score when forcing success to loss
+  const LOSS_SPAN = 25;           // Range for forced loss scores (30-55)
 
   /**
-   * Determine game result with win probability bias
-   * In competition mode, even if player succeeds, they only win ~25% of the time
+   * [LEGACY] Determine game result with win probability bias
+   * DEPRECATED: Use evaluateOutcome() for new implementations.
+   * In competition mode, even if player succeeds, they only win ~20% of the time (updated from 25%)
    * In debug/test mode, actual success is shown without bias
    * 
    * @param {boolean} playerSucceeded - Whether the player completed the game successfully
@@ -27,9 +41,108 @@
       return true;
     }
     
-    // Apply 25% win probability
+    // Apply 20% win probability (updated from 25%)
     const rng = g.rng || Math.random;
     return rng() < PLAYER_WIN_CHANCE;
+  }
+
+  /**
+   * Evaluate minigame/competition outcome with new golden rule logic
+   * 
+   * Golden rule: Player has 20% chance of winning when eligible (score >= 60% of maxScore)
+   * 
+   * @param {number} rawScore - Player's raw score before penalties
+   * @param {number} maxScore - Maximum possible score (typically 100)
+   * @param {Object} options - Evaluation options
+   * @param {boolean} [options.usedSkip=false] - Whether player used Skip action (-10 penalty)
+   * @param {boolean} [options.failed=false] - Whether player failed the challenge (score -> 0)
+   * @param {boolean} [options.cheated=false] - Whether anti-cheat flagged cheating (score -> 0)
+   * @returns {Object} Result object with { finalScore, didWin, winChance, reasons[] }
+   */
+  function evaluateOutcome(rawScore, maxScore, options = {}){
+    const { usedSkip = false, failed = false, cheated = false } = options;
+    const reasons = [];
+    const cfg = (g.game && g.game.cfg) || g.cfg || {};
+    
+    // 1. Check debug override first
+    if(cfg.debugAlwaysWin === true){
+      reasons.push('Debug override: Always win enabled');
+      return {
+        finalScore: rawScore,
+        didWin: true,
+        winChance: 1.0,
+        reasons
+      };
+    }
+    
+    // 2. Check failure states
+    if(failed){
+      reasons.push('Player failed the challenge');
+      return {
+        finalScore: 0,
+        didWin: false,
+        winChance: 0,
+        reasons
+      };
+    }
+    
+    if(cheated){
+      reasons.push('Anti-cheat flagged cheating');
+      return {
+        finalScore: 0,
+        didWin: false,
+        winChance: 0,
+        reasons
+      };
+    }
+    
+    // 3. Apply skip penalty
+    let finalScore = rawScore;
+    if(usedSkip){
+      finalScore = Math.max(0, rawScore - SKIP_PENALTY);
+      reasons.push(`Skip penalty applied: ${rawScore} - ${SKIP_PENALTY} = ${finalScore}`);
+    }
+    
+    // 4. Check eligibility threshold
+    const eligibilityThreshold = maxScore * MIN_ELIGIBLE_PCT;
+    if(finalScore < eligibilityThreshold){
+      reasons.push(`Score ${finalScore.toFixed(1)} below eligibility threshold ${eligibilityThreshold.toFixed(1)} (${(MIN_ELIGIBLE_PCT * 100)}% of ${maxScore})`);
+      return {
+        finalScore,
+        didWin: false,
+        winChance: 0,
+        reasons
+      };
+    }
+    
+    // 5. Roll win probability for eligible players
+    const rng = g.rng || Math.random;
+    const roll = rng();
+    const didWin = roll < PLAYER_WIN_CHANCE;
+    
+    reasons.push(`Eligible for win (score >= ${eligibilityThreshold.toFixed(1)})`);
+    reasons.push(`Win roll: ${(roll * 100).toFixed(1)}% vs ${(PLAYER_WIN_CHANCE * 100)}% threshold`);
+    reasons.push(didWin ? 'Result: WIN' : 'Result: LOSS');
+    
+    return {
+      finalScore,
+      didWin,
+      winChance: PLAYER_WIN_CHANCE,
+      reasons
+    };
+  }
+
+  /**
+   * Coerce a success score to the loss range (30-55)
+   * Used when player succeeded (>= 60) but didn't win the probability roll
+   * Maintains existing UX of forced losses appearing in loss band
+   * 
+   * @param {number} _successScore - Original success score (typically >= 60) - not used in calculation
+   * @returns {number} Score in loss range (30-55)
+   */
+  function coerceSuccessToLossScore(_successScore){
+    const rng = g.rng || Math.random;
+    return Math.round(LOSS_FLOOR + rng() * LOSS_SPAN);
   }
 
   /**
@@ -160,11 +273,20 @@
   g.GameUtils = {
     PLAYER_WIN_CHANCE,
     determineGameResult,
+    evaluateOutcome,
+    coerceSuccessToLossScore,
     generateCompetitionResults,
     getAntiCopyStyles,
     disableCopyPaste,
     generateRandomSequence,
-    getDifficultySettings
+    getDifficultySettings,
+    consts: {
+      PLAYER_WIN_CHANCE,
+      SKIP_PENALTY,
+      MIN_ELIGIBLE_PCT,
+      LOSS_FLOOR,
+      LOSS_SPAN
+    }
   };
 
   console.info('[GameUtils] Module loaded - Player win chance:', PLAYER_WIN_CHANCE);

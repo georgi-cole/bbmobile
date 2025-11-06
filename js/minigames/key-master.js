@@ -147,14 +147,32 @@
           
           setTimeout(() => {
             const rawScore = Math.max(40, 100 - (attempts - 1) * 15);
+            const maxScore = 100;
+            
+            // Determine if player succeeded (legacy threshold for backward compatibility)
             const playerSucceeded = rawScore >= 60;
             
+            // Apply new centralized outcome logic in competition mode
             let finalScore = rawScore;
-            if(g.GameUtils && !debugMode && competitionMode){
-              const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-              if(!shouldWin && playerSucceeded){
-                finalScore = Math.round(30 + Math.random() * 25);
-                console.log('[KeyMaster] Win probability applied: success forced to loss');
+            if(g.GameUtils && g.GameUtils.evaluateOutcome && !debugMode && competitionMode){
+              const outcome = g.GameUtils.evaluateOutcome(rawScore, maxScore, {
+                usedSkip: false,
+                failed: !playerSucceeded,
+                cheated: false
+              });
+              
+              finalScore = outcome.finalScore;
+              
+              // If player succeeded but didn't win, coerce to loss band for consistent UX
+              if(rawScore >= 60 && !outcome.didWin && !g.cfg?.debugAlwaysWin){
+                finalScore = g.GameUtils.coerceSuccessToLossScore(finalScore);
+                console.log('[KeyMaster] Win probability applied: success forced to loss, score:', finalScore);
+              }
+              
+              if(outcome.didWin){
+                console.log('[KeyMaster] Player won! Reasons:', outcome.reasons.join('; '));
+              } else {
+                console.log('[KeyMaster] Player lost. Reasons:', outcome.reasons.join('; '));
               }
             }
             

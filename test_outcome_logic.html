@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Minigame Outcome Logic</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: #0f1320;
+      color: #e6e8ee;
+    }
+    h1 { color: #6fd3ff; }
+    h2 { color: #83bfff; margin-top: 2rem; }
+    .test-section {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+    }
+    .result {
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      border-radius: 4px;
+      background: #1d2734;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .pass { border-left: 4px solid #74e48b; }
+    .fail { border-left: 4px solid #ff6b6b; }
+    .info { border-left: 4px solid #6fd3ff; }
+    button {
+      background: linear-gradient(135deg, #2877a0, #1a4a63);
+      border: 1px solid #2d8ab4;
+      color: #e6e8ee;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+    }
+    button:hover {
+      background: linear-gradient(135deg, #3088b0, #2a5a73);
+    }
+    label {
+      display: block;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    input[type="checkbox"] {
+      margin-right: 0.5rem;
+      transform: scale(1.2);
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Minigame Outcome Logic Test</h1>
+  
+  <div class="test-section">
+    <h2>Configuration</h2>
+    <label>
+      <input type="checkbox" id="debugAlwaysWin">
+      <strong>Always win (testing)</strong> - Force 100% win rate
+    </label>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Basic Outcome Evaluation</h2>
+    <button onclick="runTest1()">Run Test 1</button>
+    <div id="test1-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Eligibility Threshold (60%)</h2>
+    <button onclick="runTest2()">Run Test 2</button>
+    <div id="test2-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Skip Penalty</h2>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div id="test3-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Failure States</h2>
+    <button onclick="runTest4()">Run Test 4</button>
+    <div id="test4-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Win Probability (~20%)</h2>
+    <button onclick="runTest5()">Run Test 5 (50 trials)</button>
+    <div id="test5-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: Debug Override</h2>
+    <button onclick="runTest6()">Run Test 6</button>
+    <div id="test6-results"></div>
+  </div>
+
+  <script src="js/minigames/gameUtils.js"></script>
+  <script>
+    // Setup game config
+    window.game = { cfg: { debugAlwaysWin: false } };
+    window.cfg = window.game.cfg;
+
+    // Sync checkbox with config
+    const checkbox = document.getElementById('debugAlwaysWin');
+    checkbox.addEventListener('change', (e) => {
+      window.game.cfg.debugAlwaysWin = e.target.checked;
+      console.log('debugAlwaysWin:', window.game.cfg.debugAlwaysWin);
+    });
+
+    function addResult(containerId, text, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `result ${type}`;
+      div.textContent = text;
+      container.appendChild(div);
+    }
+
+    function clearResults(containerId) {
+      document.getElementById(containerId).innerHTML = '';
+    }
+
+    function runTest1() {
+      clearResults('test1-results');
+      addResult('test1-results', 'Testing basic outcome evaluation with various scores...', 'info');
+
+      const testCases = [
+        { rawScore: 100, maxScore: 100, desc: 'Perfect score (100/100)' },
+        { rawScore: 80, maxScore: 100, desc: 'High score (80/100)' },
+        { rawScore: 60, maxScore: 100, desc: 'Minimum eligible (60/100)' },
+        { rawScore: 50, maxScore: 100, desc: 'Below threshold (50/100)' }
+      ];
+
+      testCases.forEach(tc => {
+        const outcome = window.GameUtils.evaluateOutcome(tc.rawScore, tc.maxScore, {});
+        const msg = `${tc.desc}: finalScore=${outcome.finalScore}, didWin=${outcome.didWin}, winChance=${(outcome.winChance * 100)}%`;
+        addResult('test1-results', msg, outcome.finalScore > 0 ? 'pass' : 'info');
+        addResult('test1-results', `  Reasons: ${outcome.reasons.join('; ')}`, 'info');
+      });
+    }
+
+    function runTest2() {
+      clearResults('test2-results');
+      addResult('test2-results', 'Testing 60% eligibility threshold...', 'info');
+
+      const outcomes = [];
+      for (let score = 55; score <= 65; score += 5) {
+        const outcome = window.GameUtils.evaluateOutcome(score, 100, {});
+        outcomes.push({ score, outcome });
+        const eligible = score >= 60 ? 'ELIGIBLE' : 'NOT ELIGIBLE';
+        const msg = `Score ${score}: ${eligible}, winChance=${(outcome.winChance * 100)}%`;
+        const type = score >= 60 ? 'pass' : 'fail';
+        addResult('test2-results', msg, type);
+      }
+
+      // Verify threshold is exactly 60
+      const at59 = window.GameUtils.evaluateOutcome(59, 100, {});
+      const at60 = window.GameUtils.evaluateOutcome(60, 100, {});
+      
+      if (at59.winChance === 0 && at60.winChance === 0.20) {
+        addResult('test2-results', '✓ Threshold correctly set at 60%', 'pass');
+      } else {
+        addResult('test2-results', '✗ Threshold verification failed', 'fail');
+      }
+    }
+
+    function runTest3() {
+      clearResults('test3-results');
+      addResult('test3-results', 'Testing skip penalty (-10 points)...', 'info');
+
+      const rawScore = 70;
+      const withoutSkip = window.GameUtils.evaluateOutcome(rawScore, 100, { usedSkip: false });
+      const withSkip = window.GameUtils.evaluateOutcome(rawScore, 100, { usedSkip: true });
+
+      addResult('test3-results', `Raw score: ${rawScore}`, 'info');
+      addResult('test3-results', `Without skip: finalScore=${withoutSkip.finalScore}`, 'pass');
+      addResult('test3-results', `With skip: finalScore=${withSkip.finalScore}`, withSkip.finalScore === 60 ? 'pass' : 'fail');
+      
+      if (withSkip.finalScore === rawScore - 10) {
+        addResult('test3-results', '✓ Skip penalty correctly applied (-10)', 'pass');
+      } else {
+        addResult('test3-results', '✗ Skip penalty incorrect', 'fail');
+      }
+    }
+
+    function runTest4() {
+      clearResults('test4-results');
+      addResult('test4-results', 'Testing failure states...', 'info');
+
+      const tests = [
+        { opts: { failed: true }, desc: 'Player failed' },
+        { opts: { cheated: true }, desc: 'Anti-cheat flagged' }
+      ];
+
+      tests.forEach(test => {
+        const outcome = window.GameUtils.evaluateOutcome(100, 100, test.opts);
+        const msg = `${test.desc}: score=${outcome.finalScore}, canWin=${outcome.didWin}, winChance=${(outcome.winChance * 100)}%`;
+        const type = (outcome.finalScore === 0 && !outcome.didWin && outcome.winChance === 0) ? 'pass' : 'fail';
+        addResult('test4-results', msg, type);
+      });
+    }
+
+    function runTest5() {
+      clearResults('test5-results');
+      addResult('test5-results', 'Running 50 trials with score=80...', 'info');
+
+      const trials = 50;
+      let wins = 0;
+      const rawScore = 80;
+
+      for (let i = 0; i < trials; i++) {
+        const outcome = window.GameUtils.evaluateOutcome(rawScore, 100, {});
+        if (outcome.didWin) wins++;
+      }
+
+      const winRate = (wins / trials * 100).toFixed(1);
+      addResult('test5-results', `Wins: ${wins}/${trials} = ${winRate}%`, 'info');
+      addResult('test5-results', `Expected: ~20% (10 wins)`, 'info');
+      
+      // Accept 10-30% as reasonable (binomial distribution variance)
+      if (winRate >= 10 && winRate <= 30) {
+        addResult('test5-results', '✓ Win rate within expected range (10-30%)', 'pass');
+      } else {
+        addResult('test5-results', `⚠ Win rate outside expected range: ${winRate}%`, 'fail');
+      }
+    }
+
+    function runTest6() {
+      clearResults('test6-results');
+      addResult('test6-results', 'Testing debug override...', 'info');
+
+      // Save original state
+      const originalDebug = window.game.cfg.debugAlwaysWin;
+
+      // Test with debug enabled
+      window.game.cfg.debugAlwaysWin = true;
+      const trials = 10;
+      let wins = 0;
+
+      for (let i = 0; i < trials; i++) {
+        const outcome = window.GameUtils.evaluateOutcome(60, 100, {});
+        if (outcome.didWin) wins++;
+      }
+
+      addResult('test6-results', `Debug ON: ${wins}/${trials} wins`, wins === trials ? 'pass' : 'fail');
+
+      if (wins === trials) {
+        addResult('test6-results', '✓ Debug override works: 100% win rate', 'pass');
+      } else {
+        addResult('test6-results', '✗ Debug override failed', 'fail');
+      }
+
+      // Test that even failures win with debug override enabled
+      const failOutcome = window.GameUtils.evaluateOutcome(30, 100, { failed: true });
+      if (failOutcome.didWin) {
+        addResult('test6-results', '✓ Debug override works even for failures', 'pass');
+      } else {
+        addResult('test6-results', '✗ Debug override should work even for failures', 'fail');
+      }
+
+      // Restore original state
+      window.game.cfg.debugAlwaysWin = originalDebug;
+    }
+
+    // Run basic validation on load
+    window.addEventListener('load', () => {
+      console.log('GameUtils loaded:', window.GameUtils);
+      console.log('Constants:', window.GameUtils.consts);
+      
+      // Verify constants
+      if (window.GameUtils.consts.PLAYER_WIN_CHANCE === 0.20) {
+        console.log('✓ PLAYER_WIN_CHANCE = 0.20 (20%)');
+      }
+      if (window.GameUtils.consts.MIN_ELIGIBLE_PCT === 0.60) {
+        console.log('✓ MIN_ELIGIBLE_PCT = 0.60 (60%)');
+      }
+      if (window.GameUtils.consts.SKIP_PENALTY === 10) {
+        console.log('✓ SKIP_PENALTY = 10');
+      }
+      if (window.GameUtils.consts.LOSS_FLOOR === 30 && window.GameUtils.consts.LOSS_SPAN === 25) {
+        console.log('✓ Loss band = [30, 55]');
+      }
+    });
+  </script>
+</body>
+</html>
