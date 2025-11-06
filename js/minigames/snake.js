@@ -371,15 +371,32 @@
       }
       
       rawScore = Math.min(100, Math.round(rawScore));
+      const maxScore = 100;
       
+      // Determine if player succeeded (legacy threshold for backward compatibility)
       const playerSucceeded = rawScore >= 60;
       
-      // Apply win probability logic
+      // Apply new centralized outcome logic in competition mode
       let finalScore = rawScore;
-      if(g.GameUtils && !debugMode && competitionMode){
-        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-        if(!shouldWin && playerSucceeded){
-          finalScore = Math.round(30 + Math.random() * 25);
+      if(g.GameUtils && g.GameUtils.evaluateOutcome && !debugMode && competitionMode){
+        const outcome = g.GameUtils.evaluateOutcome(rawScore, maxScore, {
+          usedSkip: false,
+          failed: !playerSucceeded,
+          cheated: false
+        });
+        
+        finalScore = outcome.finalScore;
+        
+        // If player succeeded but didn't win, coerce to loss band for consistent UX
+        if(rawScore >= 60 && !outcome.didWin && !g.cfg?.debugAlwaysWin){
+          finalScore = g.GameUtils.coerceSuccessToLossScore(finalScore);
+          console.log('[Snake] Win probability applied: success forced to loss, score:', finalScore);
+        }
+        
+        if(outcome.didWin){
+          console.log('[Snake] Player won! Reasons:', outcome.reasons.join('; '));
+        } else {
+          console.log('[Snake] Player lost. Reasons:', outcome.reasons.join('; '));
         }
       }
       

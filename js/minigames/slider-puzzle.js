@@ -69,18 +69,32 @@
       
       // Calculate raw score: perfect = 100, decreases 5 points per unit difference
       const rawScore = Math.max(0, 100 - (difference * 5));
+      const maxScore = 100;
       
-      // Determine if player succeeded
-      const playerSucceeded = rawScore >= 60; // 60% threshold for success
+      // Determine if player succeeded (legacy threshold for backward compatibility)
+      const playerSucceeded = rawScore >= 60;
       
-      // Apply win probability logic
+      // Apply new centralized outcome logic in competition mode
       let finalScore = rawScore;
-      if(g.GameUtils && !debugMode && competitionMode){
-        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-        if(!shouldWin && playerSucceeded){
-          // Force loss despite success (25% win rate)
-          finalScore = Math.round(30 + Math.random() * 25); // 30-55 range
-          console.log('[SliderPuzzle] Win probability applied: success forced to loss');
+      if(g.GameUtils && g.GameUtils.evaluateOutcome && !debugMode && competitionMode){
+        const outcome = g.GameUtils.evaluateOutcome(rawScore, maxScore, {
+          usedSkip: false,
+          failed: !playerSucceeded,
+          cheated: false
+        });
+        
+        finalScore = outcome.finalScore;
+        
+        // If player succeeded but didn't win, coerce to loss band for consistent UX
+        if(rawScore >= 60 && !outcome.didWin && !g.cfg?.debugAlwaysWin){
+          finalScore = g.GameUtils.coerceSuccessToLossScore(finalScore);
+          console.log('[SliderPuzzle] Win probability applied: success forced to loss, score:', finalScore);
+        }
+        
+        if(outcome.didWin){
+          console.log('[SliderPuzzle] Player won! Reasons:', outcome.reasons.join('; '));
+        } else {
+          console.log('[SliderPuzzle] Player lost. Reasons:', outcome.reasons.join('; '));
         }
       }
       
