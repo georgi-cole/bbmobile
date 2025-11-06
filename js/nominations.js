@@ -101,34 +101,35 @@
     const style = document.createElement('style');
     style.id = 'bb-noms-grid-styles';
     style.textContent = `
-      /* Grid picker container - centered in TV */
+      /* Grid picker container - centered in TV, matching Social modal style */
       .bb-noms-grid-container {
         max-width: 92%;
         max-height: 78%;
         margin: 0 auto;
-        background: var(--card, #1e293b);
-        border: 2px solid var(--sep, #475569);
-        border-radius: 16px;
-        padding: 20px;
+        background: linear-gradient(135deg, #2d3e50 0%, #1a2332 100%);
+        border-radius: 20px;
+        padding: 24px;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
       }
       
       /* Header with count */
       .bb-noms-grid-header {
         text-align: center;
-        font-size: 1rem;
+        font-size: 1.1rem;
         font-weight: 600;
-        color: var(--fg, #f1f5f9);
+        color: #e2e8f0;
+        letter-spacing: 0.5px;
       }
       
       /* Avatar grid */
       .bb-noms-avatar-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+        gap: 16px;
         overflow-y: auto;
         max-height: 50vh;
         padding: 8px;
@@ -139,30 +140,31 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 6px;
-        padding: 10px;
-        border: 2px solid transparent;
-        border-radius: 12px;
-        background: var(--card-accent, #334155);
+        gap: 8px;
+        padding: 12px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.05);
         cursor: pointer;
-        transition: transform 0.15s ease, border-color 0.15s ease;
+        transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
         user-select: none;
       }
       
       .bb-noms-avatar-tile:hover {
         transform: scale(1.05);
-        border-color: var(--accent, #60a5fa);
+        border-color: rgba(96, 165, 250, 0.5);
+        background: rgba(255, 255, 255, 0.08);
       }
       
       .bb-noms-avatar-tile:focus {
-        outline: 2px solid var(--accent, #60a5fa);
+        outline: 2px solid #60a5fa;
         outline-offset: 2px;
       }
       
       .bb-noms-avatar-tile.selected {
-        border-color: var(--ok, #4ade80);
+        border-color: #4ade80;
         background: rgba(74, 222, 128, 0.15);
-        box-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
+        box-shadow: 0 0 16px rgba(74, 222, 128, 0.3);
       }
       
       .bb-noms-avatar-tile.ineligible {
@@ -173,23 +175,24 @@
       
       /* Avatar image */
       .bb-noms-avatar-img {
-        width: 64px;
-        height: 64px;
+        width: 72px;
+        height: 72px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid var(--sep, #475569);
+        border: 3px solid rgba(255, 255, 255, 0.2);
       }
       
       .bb-noms-avatar-tile.selected .bb-noms-avatar-img {
-        border-color: var(--ok, #4ade80);
+        border-color: #4ade80;
+        box-shadow: 0 0 12px rgba(74, 222, 128, 0.4);
       }
       
       /* Name label */
       .bb-noms-avatar-name {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         font-weight: 600;
         text-align: center;
-        color: var(--fg, #f1f5f9);
+        color: #e2e8f0;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -200,29 +203,32 @@
       .bb-noms-grid-footer {
         display: flex;
         justify-content: center;
-        padding-top: 8px;
-        border-top: 1px solid var(--sep, #475569);
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
       }
       
       .bb-noms-confirm-btn {
-        padding: 12px 36px;
-        background: var(--ok, #4ade80);
+        padding: 14px 40px;
+        background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
         color: #000;
         border: none;
-        border-radius: 8px;
+        border-radius: 10px;
         font-weight: 700;
         font-size: 1rem;
         cursor: pointer;
+        box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
         transition: opacity 0.2s, transform 0.1s;
       }
       
       .bb-noms-confirm-btn:hover:not(:disabled) {
         transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(74, 222, 128, 0.4);
       }
       
       .bb-noms-confirm-btn:disabled {
         opacity: 0.4;
         cursor: not-allowed;
+        box-shadow: none;
       }
       
       /* Reduced motion support */
@@ -241,16 +247,16 @@
       /* Mobile optimization */
       @media (max-width: 640px) {
         .bb-noms-grid-container {
-          padding: 16px;
+          padding: 18px;
           max-width: calc(100vw - 32px);
         }
         .bb-noms-avatar-grid {
-          grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-          gap: 10px;
+          grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
+          gap: 12px;
         }
         .bb-noms-avatar-img {
-          width: 56px;
-          height: 56px;
+          width: 60px;
+          height: 60px;
         }
       }
     `;
