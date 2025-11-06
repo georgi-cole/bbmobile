@@ -11,8 +11,10 @@
   function eligibleNomIds(){ const g=global.game; return aliveIds().filter(id=>id!==g.hohId); }
   function requiredSlots(){ 
     const g = global.game;
-    // Prefer explicit __twistNomSlots
-    if(g?.__twistNomSlots) return Math.max(2, Math.min(4, g.__twistNomSlots));
+    // Prefer explicit __twistNomSlots (check for valid number, not just truthy)
+    if(typeof g?.__twistNomSlots === 'number' && g.__twistNomSlots > 0) {
+      return Math.max(2, Math.min(4, g.__twistNomSlots));
+    }
     // Fallback: map __twistMode to slots
     if(g?.__twistMode === 'triple') return 4;
     if(g?.__twistMode === 'double') return 3;
@@ -262,7 +264,8 @@
     active: false,
     selectedIds: [],
     required: 0,
-    escapeHandler: null
+    escapeHandler: null,
+    confirmBtn: null
   };
   
   /**
@@ -318,11 +321,17 @@
       const img = document.createElement('img');
       img.className = 'bb-noms-avatar-img';
       img.alt = player.name;
+      
+      // Use resolveAvatar if available, otherwise fallback to getDicebearUrl
       const resolveAvatar = (global.Game || global).resolveAvatar;
-      const getDicebearUrl = global.getDicebearUrl || function(seed) {
-        return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
-      };
-      img.src = resolveAvatar?.(player || playerId) || player?.avatar || player?.img || player?.photo || getDicebearUrl(player?.name || String(playerId));
+      if(resolveAvatar){
+        img.src = resolveAvatar(player || playerId);
+      } else {
+        const getDicebearUrl = global.getDicebearUrl || function(seed) {
+          return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+        };
+        img.src = player?.avatar || player?.img || player?.photo || getDicebearUrl(player?.name || String(playerId));
+      }
       tile.appendChild(img);
       
       // Name label
@@ -364,7 +373,6 @@
     confirmBtn.className = 'bb-noms-confirm-btn';
     confirmBtn.textContent = 'CONFIRM';
     confirmBtn.disabled = true;
-    confirmBtn.dataset.confirmBtn = 'true';
     
     confirmBtn.addEventListener('click', () => {
       if(gridPickerState.selectedIds.length === need){
@@ -374,6 +382,9 @@
     
     footer.appendChild(confirmBtn);
     container.appendChild(footer);
+    
+    // Store reference in state
+    gridPickerState.confirmBtn = confirmBtn;
     
     host.appendChild(container);
     document.getElementById('tv')?.classList.add('tvTall');
@@ -426,10 +437,9 @@
     const selected = gridPickerState.selectedIds.length;
     header.textContent = `${selected} / ${need} selected`;
     
-    // Update confirm button
-    const confirmBtn = document.querySelector('[data-confirm-btn]');
-    if(confirmBtn){
-      confirmBtn.disabled = (selected !== need);
+    // Update confirm button (use stored reference)
+    if(gridPickerState.confirmBtn){
+      gridPickerState.confirmBtn.disabled = (selected !== need);
     }
   }
   
@@ -458,6 +468,7 @@
     gridPickerState.active = false;
     gridPickerState.selectedIds = [];
     gridPickerState.required = 0;
+    gridPickerState.confirmBtn = null;
     
     console.log('[noms-grid] Grid cleared, triggering finalize');
     
