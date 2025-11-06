@@ -422,11 +422,12 @@
     // Close selector
     closeSelector();
     
-    // Trigger finalize (this will handle the ceremony sequence)
-    if(global.finalizeNoms){
-      global.finalizeNoms();
+    // Trigger finalize using the global function
+    if(global.lockNominationsAndProceed){
+      console.log('[noms-grid] Calling lockNominationsAndProceed');
+      global.lockNominationsAndProceed();
     } else {
-      console.error('[noms-grid] finalizeNoms not found on global');
+      console.error('[noms-grid] lockNominationsAndProceed not found on global');
     }
   }
 
