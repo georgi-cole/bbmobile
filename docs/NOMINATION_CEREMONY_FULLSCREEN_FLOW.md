@@ -398,7 +398,8 @@ Requires:
 - ES6 (async/await, arrow functions, template strings)
 - CSS Grid
 - CSS Custom Properties
-- IntersectionObserver (for enhancer module, not required for core flow)
+
+Note: The enhancer module (`nominations-enhancer.js`) uses IntersectionObserver for progressive enhancement of nominee speech animations on mobile devices, but this is separate from the fullscreen selector functionality and not required for the core nomination flow.
 
 ## Performance Considerations
 

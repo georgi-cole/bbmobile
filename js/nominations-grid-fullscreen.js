@@ -590,6 +590,8 @@
         overlay.appendChild(confirmBtn);
         
         // Block Escape and Backspace
+        // Note: This is intentional per game design - nominations must be completed once started
+        // There is no "cancel" option as the ceremony is already in progress
         selectorState.escapeHandler = (e) => {
           if (e.key === 'Escape' || e.key === 'Backspace') {
             e.preventDefault();

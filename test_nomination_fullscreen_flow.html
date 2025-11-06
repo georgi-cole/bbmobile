@@ -127,6 +127,14 @@
   <!-- Scripts -->
   <script src="js/bbGameBus.js"></script>
   <script src="js/state.js"></script>
+  <script>
+    // Pre-setup: Create minimal global namespace before loading nominations
+    window.global = window;
+    window.game = window.game || {};
+    
+    // Mock Game object reference (used by resolveAvatar)
+    window.Game = window;
+  </script>
   <script src="js/nominations.js"></script>
   <script src="js/nominations-grid-fullscreen.js"></script>
 
@@ -169,6 +177,10 @@
     function createMockGame(isHumanHOH = true, twistMode = null) {
       // Create mock players
       const players = [];
+      const getDicebearUrl = function(seed) {
+        return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+      };
+      
       for (let i = 1; i <= 10; i++) {
         players.push({
           id: i,
@@ -176,7 +188,7 @@
           human: i === 1 && isHumanHOH,
           evicted: false,
           jury: false,
-          avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=player${i}`
+          avatar: getDicebearUrl(`player${i}`)
         });
       }
 
