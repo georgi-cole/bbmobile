@@ -1,4 +1,4 @@
-// MODULE: nominations-grid-fullscreen.js
+// MODULE: nominations-fullscreen-ceremony.js
 // Full-screen nomination ceremony UX for human HOH
 // Intercepts renderNomsPanel to show intro card → full-screen selector → summary ceremony
 // Falls back to legacy UI if mounting fails at any step
@@ -388,7 +388,7 @@
             ? 'three houseguests' 
             : 'four houseguests';
         
-        body.textContent = `${hoh.name}, as Head of Household, you must nominate ${countText} for eviction.`;
+        body.textContent = `You must nominate ${countText}.`;
         card.appendChild(body);
         
         // NOMINATE button
@@ -596,8 +596,6 @@
         overlay.appendChild(confirmBtn);
         
         // Block Escape and Backspace
-        // Note: This is intentional per game design - nominations must be completed once started
-        // There is no "cancel" option as the ceremony is already in progress
         selectorState.escapeHandler = (e) => {
           if (e.key === 'Escape' || e.key === 'Backspace') {
             e.preventDefault();
@@ -880,16 +878,9 @@
       // Prefer finalizeNoms if available
       if (global.finalizeNoms && typeof global.finalizeNoms === 'function') {
         console.log(LOG_PREFIX, 'Calling finalizeNoms()');
-        
-        // Set flag to prevent ceremony duplication
-        g.__nomsFromFullscreenSelector = true;
-        
         global.finalizeNoms();
       } else if (global.lockNominationsAndProceed && typeof global.lockNominationsAndProceed === 'function') {
         console.log(LOG_PREFIX, 'Calling lockNominationsAndProceed()');
-        
-        g.__nomsFromFullscreenSelector = true;
-        
         global.lockNominationsAndProceed();
       } else {
         // Manual commit (fallback)
@@ -946,48 +937,78 @@
    * Wraps global.renderNomsPanel with our custom flow
    */
   function installInterceptor() {
+    console.log(LOG_PREFIX, 'Attempting to install interceptor');
+    
+    // Check if renderNomsPanel exists
+    if (!global.renderNomsPanel || typeof global.renderNomsPanel !== 'function') {
+      console.warn(LOG_PREFIX, 'renderNomsPanel not yet available');
+      return false;
+    }
+    
     // Safeguard: only install once
     if (global.__nomsFsInstalled) {
       console.log(LOG_PREFIX, 'Interceptor already installed, skipping');
-      return;
+      return true;
     }
-    
-    // Set flag immediately to prevent double installation attempts
-    // Note: Flag is set BEFORE checking for renderNomsPanel to prevent retry loops.
-    // This module auto-installs with a delay, which should be sufficient for
-    // nominations.js to load. If renderNomsPanel is still missing, it indicates
-    // a module loading order issue that should be fixed at the root cause.
-    global.__nomsFsInstalled = true;
     
     console.log(LOG_PREFIX, 'Installing interceptor');
     
     // Store original renderNomsPanel
-    if (global.renderNomsPanel && typeof global.renderNomsPanel === 'function') {
-      originalRenderNomsPanel = global.renderNomsPanel;
-      console.log(LOG_PREFIX, 'Original renderNomsPanel stored');
+    originalRenderNomsPanel = global.renderNomsPanel;
+    console.log(LOG_PREFIX, 'Original renderNomsPanel stored');
+    
+    // Replace with intercepted version
+    global.renderNomsPanel = interceptedRenderNomsPanel;
+    
+    // Set flag
+    global.__nomsFsInstalled = true;
+    
+    console.log(LOG_PREFIX, '✓ Interceptor installed successfully');
+    return true;
+  }
+
+  /**
+   * Install with retry logic
+   */
+  function installWithRetry() {
+    let attempts = 0;
+    const maxAttempts = 5;
+    const retryDelay = 200; // ms
+    
+    function tryInstall() {
+      attempts++;
+      console.log(LOG_PREFIX, `Installation attempt ${attempts}/${maxAttempts}`);
       
-      // Replace with intercepted version
-      global.renderNomsPanel = interceptedRenderNomsPanel;
-      console.log(LOG_PREFIX, '✓ Interceptor installed');
-    } else {
-      console.warn(LOG_PREFIX, 'No renderNomsPanel found to intercept');
-      console.warn(LOG_PREFIX, 'This may indicate a module loading order issue');
+      if (installInterceptor()) {
+        console.log(LOG_PREFIX, '✓ Installation successful');
+        return;
+      }
+      
+      if (attempts < maxAttempts) {
+        console.log(LOG_PREFIX, `Retrying in ${retryDelay}ms...`);
+        setTimeout(tryInstall, retryDelay);
+      } else {
+        console.warn(LOG_PREFIX, 'Installation failed after', maxAttempts, 'attempts');
+        console.warn(LOG_PREFIX, 'Legacy nomination flow will be used');
+      }
     }
+    
+    tryInstall();
   }
 
   // Auto-install when this module loads
   // Wait for DOM ready to ensure other modules are loaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(installInterceptor, 100);
+      setTimeout(installWithRetry, 100);
     });
   } else {
     // DOM already loaded
-    setTimeout(installInterceptor, 100);
+    setTimeout(installWithRetry, 100);
   }
 
   // Expose for debugging
-  global.NomsFullscreenInterceptor = {
+  global.NomsFullscreenCeremony = {
     install: installInterceptor,
     showIntroCard,
     showFullscreenSelector,
