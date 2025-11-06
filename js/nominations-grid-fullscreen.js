@@ -529,6 +529,12 @@
               tile.setAttribute('aria-pressed', 'false');
               console.log(LOG_PREFIX, 'Deselected:', player.name, '- now', selectorState.selectedIds.length, '/', required);
             } else {
+              // Selection rules: cannot exceed required count
+              if (selectorState.selectedIds.length >= required) {
+                console.log(LOG_PREFIX, 'Cannot select', player.name, '- already at max', required);
+                return; // Ignore selection attempt when at max
+              }
+              
               // Select
               selectorState.selectedIds.push(playerId);
               tile.classList.add('selected');
@@ -940,6 +946,12 @@
    * Wraps global.renderNomsPanel with our custom flow
    */
   function installInterceptor() {
+    // Safeguard: only install once
+    if (global.__nomsFsInstalled) {
+      console.log(LOG_PREFIX, 'Interceptor already installed, skipping');
+      return;
+    }
+    
     console.log(LOG_PREFIX, 'Installing interceptor');
     
     // Store original renderNomsPanel
@@ -953,6 +965,10 @@
     
     // Replace with intercepted version
     global.renderNomsPanel = interceptedRenderNomsPanel;
+    
+    // Set installation flag
+    global.__nomsFsInstalled = true;
+    
     console.log(LOG_PREFIX, '✓ Interceptor installed');
   }
 
