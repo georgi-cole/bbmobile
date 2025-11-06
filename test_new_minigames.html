@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test New Minigames</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a2a3a 0%, #0f1a25 100%);
+      color: #e3ecf5;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #5bd68a;
+      font-size: 2rem;
+    }
+    
+    .test-section {
+      background: #0f1a25;
+      border: 2px solid #5bd68a;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #ff6b9d;
+      margin-bottom: 15px;
+      font-size: 1.3rem;
+    }
+    
+    .test-section p {
+      color: #95a9c0;
+      margin-bottom: 15px;
+      line-height: 1.6;
+    }
+    
+    button {
+      min-height: 50px;
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, #5bd68a 0%, #4db878 100%);
+      color: #1a1a1a;
+      border: 2px solid #4db878;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      touch-action: manipulation;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 214, 138, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .game-container {
+      margin-top: 20px;
+      min-height: 400px;
+      background: #1a2a3a;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #2a3a4a;
+      border-radius: 8px;
+      border-left: 4px solid #5bd68a;
+    }
+    
+    .result.hidden {
+      display: none;
+    }
+    
+    .features {
+      margin-top: 10px;
+      padding-left: 20px;
+    }
+    
+    .features li {
+      margin-bottom: 8px;
+      color: #83bfff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 New Minigames Test</h1>
+    
+    <div class="test-section">
+      <h2>1. Hangman</h2>
+      <p>Classic word guessing game with Big Brother themed words.</p>
+      <ul class="features">
+        <li>On-screen A-Z keyboard with >=44px touch targets</li>
+        <li>Score based on accuracy (fewer wrong guesses) and speed</li>
+        <li>ARIA live regions for accessibility</li>
+        <li>Give Up button option</li>
+      </ul>
+      <button onclick="testHangman()">Test Hangman</button>
+      <div id="hangman-container" class="game-container"></div>
+      <div id="hangman-result" class="result hidden"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>2. Tilt Labyrinth</h2>
+      <p>Tilt your device to move a ball through a maze to the goal.</p>
+      <ul class="features">
+        <li>DeviceOrientation API with iOS permission flow</li>
+        <li>Swipe/drag fallback when motion sensors unavailable</li>
+        <li>Canvas-based physics simulation</li>
+        <li>Score based on completion time</li>
+      </ul>
+      <button onclick="testTiltLabyrinth()">Test Tilt Labyrinth</button>
+      <div id="tilt-container" class="game-container"></div>
+      <div id="tilt-result" class="result hidden"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>3. Three Digits Quiz</h2>
+      <p>Answer three sequential digit questions (0-9) with intelligent hints.</p>
+      <ul class="features">
+        <li>Graded hints: "Almost", "Higher/Lower", "Much Higher/Lower"</li>
+        <li>Visual feedback on wrong guesses</li>
+        <li>Score based on accuracy and speed (capped to 100)</li>
+        <li>Touch-friendly digit buttons >=44px</li>
+      </ul>
+      <button onclick="testThreeDigits()">Test Three Digits Quiz</button>
+      <div id="digits-container" class="game-container"></div>
+      <div id="digits-result" class="result hidden"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>All Tests Summary</h2>
+      <div id="summary" style="color: #95a9c0; font-size: 0.95rem;">
+        No tests run yet. Click the buttons above to test each minigame.
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load minigame modules -->
+  <script src="js/minigames/hangman.js"></script>
+  <script src="js/minigames/tilt-labyrinth.js"></script>
+  <script src="js/minigames/three-digits-quiz.js"></script>
+  
+  <script>
+    // Track test results
+    const results = {
+      hangman: null,
+      tiltLabyrinth: null,
+      threeDigits: null
+    };
+    
+    function updateSummary() {
+      const summary = document.getElementById('summary');
+      const completed = Object.values(results).filter(r => r !== null).length;
+      
+      if (completed === 0) {
+        return;
+      }
+      
+      let html = `<strong>Tests Completed: ${completed}/3</strong><br><br>`;
+      
+      if (results.hangman !== null) {
+        html += `✓ Hangman: Score ${results.hangman}<br>`;
+      }
+      if (results.tiltLabyrinth !== null) {
+        html += `✓ Tilt Labyrinth: Score ${results.tiltLabyrinth}<br>`;
+      }
+      if (results.threeDigits !== null) {
+        html += `✓ Three Digits Quiz: Score ${results.threeDigits}<br>`;
+      }
+      
+      if (completed === 3) {
+        const avgScore = Math.round((results.hangman + results.tiltLabyrinth + results.threeDigits) / 3);
+        html += `<br><strong style="color: #5bd68a;">All tests completed! Average score: ${avgScore}</strong>`;
+      }
+      
+      summary.innerHTML = html;
+    }
+    
+    function testHangman() {
+      const container = document.getElementById('hangman-container');
+      const resultDiv = document.getElementById('hangman-result');
+      container.innerHTML = '';
+      resultDiv.classList.add('hidden');
+      
+      if (!window.MiniGames || !window.MiniGames.hangman) {
+        container.innerHTML = '<p style="color: #ff6b9d;">Error: Hangman module not loaded!</p>';
+        return;
+      }
+      
+      window.MiniGames.hangman.render(container, (score) => {
+        results.hangman = score;
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `<strong>Game Complete!</strong><br>Score: ${score}`;
+        updateSummary();
+      }, { debugMode: false });
+    }
+    
+    function testTiltLabyrinth() {
+      const container = document.getElementById('tilt-container');
+      const resultDiv = document.getElementById('tilt-result');
+      container.innerHTML = '';
+      resultDiv.classList.add('hidden');
+      
+      if (!window.MiniGames || !window.MiniGames.tiltLabyrinth) {
+        container.innerHTML = '<p style="color: #ff6b9d;">Error: Tilt Labyrinth module not loaded!</p>';
+        return;
+      }
+      
+      window.MiniGames.tiltLabyrinth.render(container, (score) => {
+        results.tiltLabyrinth = score;
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `<strong>Game Complete!</strong><br>Score: ${score}`;
+        updateSummary();
+      }, { debugMode: false });
+    }
+    
+    function testThreeDigits() {
+      const container = document.getElementById('digits-container');
+      const resultDiv = document.getElementById('digits-result');
+      container.innerHTML = '';
+      resultDiv.classList.add('hidden');
+      
+      if (!window.MiniGames || !window.MiniGames.threeDigitsQuiz) {
+        container.innerHTML = '<p style="color: #ff6b9d;">Error: Three Digits Quiz module not loaded!</p>';
+        return;
+      }
+      
+      window.MiniGames.threeDigitsQuiz.render(container, (score) => {
+        results.threeDigits = score;
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `<strong>Game Complete!</strong><br>Score: ${score}`;
+        updateSummary();
+      }, { debugMode: false });
+    }
+    
+    // Log module availability on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('Available minigames:', window.MiniGames ? Object.keys(window.MiniGames) : 'None');
+    });
+  </script>
+</body>
+</html>

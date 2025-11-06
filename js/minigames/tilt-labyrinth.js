@@ -195,8 +195,14 @@
         const [x1, y1, x2, y2] = wall;
         
         // Check if ball intersects with wall segment
-        const closestX = Math.max(Math.min(x1, x2), Math.min(newX, Math.max(x1, x2)));
-        const closestY = Math.max(Math.min(y1, y2), Math.min(newY, Math.max(y1, y2)));
+        // Clamp the ball position to the line segment bounds
+        const minX = Math.min(x1, x2);
+        const maxX = Math.max(x1, x2);
+        const minY = Math.min(y1, y2);
+        const maxY = Math.max(y1, y2);
+        
+        const closestX = Math.max(minX, Math.min(maxX, newX));
+        const closestY = Math.max(minY, Math.min(maxY, newY));
         
         const dx = newX - closestX;
         const dy = newY - closestY;
