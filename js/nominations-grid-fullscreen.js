@@ -952,24 +952,27 @@
       return;
     }
     
+    // Set flag immediately to prevent double installation attempts
+    // Note: Flag is set BEFORE checking for renderNomsPanel to prevent retry loops.
+    // This module auto-installs with a delay, which should be sufficient for
+    // nominations.js to load. If renderNomsPanel is still missing, it indicates
+    // a module loading order issue that should be fixed at the root cause.
+    global.__nomsFsInstalled = true;
+    
     console.log(LOG_PREFIX, 'Installing interceptor');
     
     // Store original renderNomsPanel
     if (global.renderNomsPanel && typeof global.renderNomsPanel === 'function') {
       originalRenderNomsPanel = global.renderNomsPanel;
       console.log(LOG_PREFIX, 'Original renderNomsPanel stored');
+      
+      // Replace with intercepted version
+      global.renderNomsPanel = interceptedRenderNomsPanel;
+      console.log(LOG_PREFIX, '✓ Interceptor installed');
     } else {
       console.warn(LOG_PREFIX, 'No renderNomsPanel found to intercept');
-      return;
+      console.warn(LOG_PREFIX, 'This may indicate a module loading order issue');
     }
-    
-    // Replace with intercepted version
-    global.renderNomsPanel = interceptedRenderNomsPanel;
-    
-    // Set installation flag
-    global.__nomsFsInstalled = true;
-    
-    console.log(LOG_PREFIX, '✓ Interceptor installed');
   }
 
   // Auto-install when this module loads

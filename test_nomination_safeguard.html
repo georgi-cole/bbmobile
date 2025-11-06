@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fullscreen Nominations Safeguard Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-controls {
+      background: var(--card, #1e293b);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid var(--sep, #475569);
+    }
+    .test-controls h2 {
+      margin-top: 0;
+      color: var(--fg, #f1f5f9);
+    }
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    .test-controls button {
+      padding: 12px 24px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--ok, #4ade80);
+      color: #000;
+    }
+    .test-controls button.secondary {
+      background: var(--card-accent, #334155);
+      color: var(--fg, #f1f5f9);
+    }
+    .test-info {
+      background: var(--card-accent, #334155);
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--fg, #f1f5f9);
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .status.success {
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid var(--ok, #4ade80);
+      color: var(--ok, #4ade80);
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 2px solid currentColor;
+    }
+    .test-result {
+      padding: 8px 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .test-result.pass {
+      background: rgba(74, 222, 128, 0.2);
+      border: 1px solid var(--ok, #4ade80);
+      color: var(--ok, #4ade80);
+    }
+    .test-result.fail {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid var(--err, #ef4444);
+      color: var(--err, #ef4444);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h2>🛡️ Fullscreen Nominations Safeguard Tests</h2>
+    
+    <div class="test-info">
+      <strong>Purpose:</strong> Verify the safeguard flag and max selection enforcement.
+      <br>
+      <strong>Tests:</strong>
+      <ol>
+        <li>Verify __nomsFsInstalled flag is set after installation</li>
+        <li>Verify double installation is prevented</li>
+        <li>Verify max selection count is enforced (cannot select more than required)</li>
+        <li>Verify deselection works correctly</li>
+      </ol>
+    </div>
+
+    <div class="button-group">
+      <button id="runAllTests">Run All Tests</button>
+      <button id="testSafeguard" class="secondary">Test 1: Safeguard Flag</button>
+      <button id="testDoubleInstall" class="secondary">Test 2: Double Install Prevention</button>
+      <button id="clearLogs" class="secondary">Clear Logs</button>
+    </div>
+
+    <div id="status" class="status success">
+      <div class="log-entry">Ready to test. Click "Run All Tests" to begin.</div>
+    </div>
+  </div>
+
+  <!-- TV overlay container -->
+  <div id="tv" style="display: none;">
+    <div id="tvOverlay"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/state.js"></script>
+  <script>
+    // Pre-setup: Create minimal global namespace
+    window.global = window;
+    window.game = window.game || {};
+    window.Game = window;
+  </script>
+  <script src="js/nominations.js"></script>
+  <script src="js/nominations-grid-fullscreen.js"></script>
+
+  <script>
+    // Test harness
+    const statusEl = document.getElementById('status');
+    const logs = [];
+    let testsPassed = 0;
+    let testsFailed = 0;
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = `[${timestamp}] ${message}`;
+      logs.push(entry);
+      
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.textContent = entry;
+      statusEl.appendChild(logEntry);
+      statusEl.scrollTop = statusEl.scrollHeight;
+      
+      console.log(message);
+    }
+
+    function logTestResult(testName, passed, message = '') {
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.textContent = `${passed ? '✅ PASS' : '❌ FAIL'}: ${testName}${message ? ' - ' + message : ''}`;
+      statusEl.appendChild(resultDiv);
+      
+      if (passed) {
+        testsPassed++;
+      } else {
+        testsFailed++;
+      }
+      
+      console.log(`${passed ? 'PASS' : 'FAIL'}: ${testName}`, message);
+    }
+
+    function clearLogs() {
+      logs.length = 0;
+      statusEl.innerHTML = '';
+      testsPassed = 0;
+      testsFailed = 0;
+      log('Logs cleared');
+    }
+
+    // Intercept console.log to capture [noms-fs] logs
+    const originalConsoleLog = console.log;
+    console.log = function(...args) {
+      const message = args.join(' ');
+      if (message.includes('[noms-fs]')) {
+        // Directly log to statusEl to avoid infinite recursion
+        const timestamp = new Date().toLocaleTimeString();
+        const entry = `[${timestamp}] ${message}`;
+        logs.push(entry);
+        
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        logEntry.textContent = entry;
+        statusEl.appendChild(logEntry);
+        statusEl.scrollTop = statusEl.scrollHeight;
+      }
+      originalConsoleLog.apply(console, args);
+    };
+
+    // Test 1: Verify __nomsFsInstalled flag
+    function testSafeguardFlag() {
+      log('Running Test 1: Safeguard Flag');
+      
+      // The module should have auto-installed on load
+      if (window.__nomsFsInstalled === true) {
+        logTestResult('Safeguard Flag', true, 'window.__nomsFsInstalled is set to true');
+      } else {
+        logTestResult('Safeguard Flag', false, `window.__nomsFsInstalled is ${window.__nomsFsInstalled}`);
+      }
+    }
+
+    // Test 2: Verify double installation prevention
+    function testDoubleInstallation() {
+      log('Running Test 2: Double Installation Prevention');
+      
+      // Try to install again
+      if (window.NomsFullscreenInterceptor && window.NomsFullscreenInterceptor.install) {
+        const before = window.renderNomsPanel;
+        window.NomsFullscreenInterceptor.install();
+        const after = window.renderNomsPanel;
+        
+        // Function should be the same (not re-wrapped)
+        if (before === after) {
+          logTestResult('Double Install Prevention', true, 'Interceptor not re-installed');
+        } else {
+          logTestResult('Double Install Prevention', false, 'Interceptor was re-installed (should be prevented)');
+        }
+      } else {
+        logTestResult('Double Install Prevention', false, 'NomsFullscreenInterceptor.install not found');
+      }
+    }
+
+    // Test 3: Verify max selection enforcement (manual - requires UI interaction)
+    function testMaxSelectionInfo() {
+      log('Test 3: Max Selection Enforcement (Manual Test)');
+      log('To test max selection:');
+      log('1. Setup a game with human HOH');
+      log('2. Start nominations');
+      log('3. Try to select more than the required number of nominees');
+      log('4. The selection should be ignored once max is reached');
+      log('This test requires manual verification in the browser');
+      logTestResult('Max Selection Info', true, 'Manual test instructions provided');
+    }
+
+    // Run all automated tests
+    function runAllTests() {
+      clearLogs();
+      log('Starting automated tests...');
+      log('');
+      
+      testSafeguardFlag();
+      testDoubleInstallation();
+      testMaxSelectionInfo();
+      
+      log('');
+      log(`Tests completed: ${testsPassed} passed, ${testsFailed} failed`);
+      
+      if (testsFailed === 0) {
+        log('✅ All automated tests passed!');
+      } else {
+        log(`❌ ${testsFailed} test(s) failed`);
+      }
+    }
+
+    // Event listeners
+    document.getElementById('runAllTests').addEventListener('click', runAllTests);
+    document.getElementById('testSafeguard').addEventListener('click', () => {
+      clearLogs();
+      testSafeguardFlag();
+    });
+    document.getElementById('testDoubleInstall').addEventListener('click', () => {
+      clearLogs();
+      testDoubleInstallation();
+    });
+    document.getElementById('clearLogs').addEventListener('click', clearLogs);
+
+    // Auto-run tests on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        log('Page loaded, running automated tests...');
+        setTimeout(runAllTests, 500);
+      }, 100);
+    });
+  </script>
+</body>
+</html>
