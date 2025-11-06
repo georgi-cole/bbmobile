@@ -850,6 +850,23 @@
       const ids=(g.nominees||[]).slice();
       g.__suppressNomBadges = true; global.updateHud?.();
 
+      // Check if ceremony was already handled by fullscreen selector
+      if(g.__nomsFromFullscreenSelector){
+        console.log('[noms] Ceremony already handled by fullscreen selector, skipping');
+        g.__nomsFromFullscreenSelector = false; // Reset flag
+        g.__suppressNomBadges = false; global.updateHud?.();
+        
+        try{
+          const names = ids.map(global.safeName).join(', ');
+          global.addLog?.(`Nominations locked: ${names}.`, 'warn');
+        }catch(e){ 
+          // Logging is optional, ignore failures
+        }
+        
+        setTimeout(()=>global.startVetoComp?.(),600);
+        return;
+      }
+
       // NEW: Check if this was a human HOH pick-mode nomination
       const wasHumanPickMode = hoh && hoh.human;
       
