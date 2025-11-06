@@ -26,6 +26,59 @@
     return picks;
   }
 
+  // ========== Overlay Host Management ==========
+  
+  /**
+   * Ensure #tvOverlay exists in the DOM.
+   * Prefer global.ensureTVOverlayScaffold() if available; otherwise inject minimal #tvOverlay.
+   * @returns {HTMLElement|null} The tvOverlay element or its content container
+   */
+  function ensureOverlayHost(){
+    console.log('[noms-pick] Ensuring TV overlay host exists');
+    
+    // Prefer global scaffold function if available (from veto.js)
+    if(global && typeof global.ensureTVOverlayScaffold === 'function'){
+      console.log('[noms-pick] Using global.ensureTVOverlayScaffold()');
+      const content = global.ensureTVOverlayScaffold();
+      if(content){
+        console.log('[noms-pick] ✓ Scaffold created successfully');
+        return content.parentElement || content; // Return parent #tvOverlay if possible
+      }
+    }
+    
+    // Fallback: create minimal #tvOverlay if missing
+    let tvOverlay = document.getElementById('tvOverlay');
+    if(!tvOverlay){
+      console.log('[noms-pick] #tvOverlay missing, creating minimal fallback');
+      tvOverlay = document.createElement('div');
+      tvOverlay.id = 'tvOverlay';
+      tvOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+        pointer-events: auto;
+      `;
+      
+      const tv = document.getElementById('tv');
+      if(tv){
+        tv.appendChild(tvOverlay);
+      } else {
+        document.body.appendChild(tvOverlay);
+      }
+      console.log('[noms-pick] ✓ Minimal #tvOverlay created');
+    } else {
+      console.log('[noms-pick] ✓ #tvOverlay already exists');
+    }
+    
+    return tvOverlay;
+  }
+  
   // ========== NEW: Pick Mode for Human HOH Nomination UX ==========
   
   /**
@@ -149,13 +202,20 @@
    * Enter pick mode: dim UI, enable roster selection, show confirm bar
    */
   function enterPickMode(){
-    if(pickModeState.active) return; // Already active
+    if(pickModeState.active) {
+      console.log('[noms-pick] Pick mode already active, skipping');
+      return; // Already active
+    }
+    
+    console.log('[noms-pick] Entering pick mode');
     
     injectPickModeStyles();
     
     pickModeState.active = true;
     pickModeState.selectedIds = [];
     pickModeState.required = requiredSlots();
+    
+    console.log('[noms-pick] Required selections:', pickModeState.required);
     
     // Add body class for dimming
     document.body.classList.add('bb-noms-pick-mode');
@@ -165,6 +225,7 @@
       if(e.key === 'Escape' || e.key === 'Backspace'){
         e.preventDefault();
         e.stopPropagation();
+        console.log('[noms-pick] Escape/Backspace blocked - must complete selection');
         // Optionally show a message that they must complete selection
         return false;
       }
@@ -173,6 +234,8 @@
     
     // Attach click handlers to roster tiles
     const tiles = document.querySelectorAll('.top-roster-tile');
+    console.log('[noms-pick] Found', tiles.length, 'roster tiles');
+    
     tiles.forEach(tile => {
       const playerId = parseInt(tile.dataset.playerId);
       if(!playerId || isNaN(playerId)) return;
@@ -190,6 +253,8 @@
     // Create and show confirm bar
     createConfirmBar();
     updateConfirmBar();
+    
+    console.log('[noms-pick] ✓ Pick mode active');
   }
   
   /**
@@ -235,6 +300,7 @@
     // Check eligibility
     if(!player || player.evicted || playerId === g.hohId){
       // Not eligible - ignore click
+      console.log('[noms-pick] Player', playerId, 'not eligible (evicted or HOH)');
       return;
     }
     
@@ -245,10 +311,12 @@
       // Deselect
       pickModeState.selectedIds.splice(idx, 1);
       if(tile) tile.classList.remove('bb-selected');
+      console.log('[noms-pick] Deselected player', playerId, '- now', pickModeState.selectedIds.length, '/', pickModeState.required);
     } else {
       // Select
       pickModeState.selectedIds.push(playerId);
       if(tile) tile.classList.add('bb-selected');
+      console.log('[noms-pick] Selected player', playerId, '- now', pickModeState.selectedIds.length, '/', pickModeState.required);
     }
     
     updateConfirmBar();
@@ -317,16 +385,104 @@
   }
   
   /**
+   * Show in-TV "Nomination Ceremony" card with NOMINATE button.
+   * @param {object} hoh - The Head of Household player object
+   * @param {number} need - Number of nominations required
+   * @returns {boolean} True if card was successfully mounted, false otherwise
+   */
+  function showNominateCard(hoh, need){
+    console.log('[noms-pick] Attempting to show nominate card');
+    
+    try {
+      // Ensure overlay host exists
+      const host = ensureOverlayHost();
+      if(!host){
+        console.warn('[noms-pick] Failed to create overlay host');
+        return false;
+      }
+      
+      // Clear existing content
+      host.innerHTML = '';
+      
+      // Create card
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        max-width: 92%;
+        max-height: 78%;
+        margin: 0 auto;
+        padding: 20px 24px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      `;
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Nomination Ceremony';
+      title.style.marginBottom = '4px';
+      title.style.fontSize = '1.1rem';
+      card.appendChild(title);
+      
+      const bodyText = document.createElement('div');
+      bodyText.className = 'big';
+      bodyText.style.fontSize = '0.85rem';
+      bodyText.style.lineHeight = '1.5';
+      bodyText.style.marginBottom = '8px';
+      
+      const countText = need > 2 
+        ? `You must nominate ${need} houseguests for eviction.`
+        : 'You must nominate two houseguests for eviction.';
+      bodyText.textContent = `${hoh.name}, as Head of Household, it is time to make your nominations. ${countText}`;
+      card.appendChild(bodyText);
+      
+      const nominateBtn = document.createElement('button');
+      nominateBtn.className = 'btn primary';
+      nominateBtn.textContent = 'NOMINATE';
+      nominateBtn.style.cssText = `
+        padding: 12px 32px;
+        font-size: 1rem;
+        font-weight: 700;
+        margin-top: 8px;
+      `;
+      
+      nominateBtn.addEventListener('click', () => {
+        console.log('[noms-pick] NOMINATE button clicked, entering pick mode');
+        // Clear TV and enter pick mode
+        host.innerHTML = '';
+        document.getElementById('tv')?.classList.remove('tvTall');
+        enterPickMode();
+      });
+      
+      card.appendChild(nominateBtn);
+      host.appendChild(card);
+      document.getElementById('tv')?.classList.add('tvTall');
+      
+      console.log('[noms-pick] ✓ Nominate card successfully mounted');
+      return true;
+      
+    } catch(err) {
+      console.error('[noms-pick] Error mounting nominate card:', err);
+      return false;
+    }
+  }
+  
+  /**
    * Commit nominations from pick mode
    */
   function commitNominations(){
     const g = global.game;
+    
+    console.log('[noms-pick] Committing nominations:', pickModeState.selectedIds);
     
     // Set pending noms and trigger finalize
     g._pendingNoms = pickModeState.selectedIds.slice();
     
     // Exit pick mode
     exitPickMode();
+    
+    console.log('[noms-pick] Pick mode exited, triggering finalize');
     
     // Finalize nominations
     finalizeNoms();
@@ -374,67 +530,24 @@
 
     // ========== NEW: Human HOH In-TV Pick Mode Flow ==========
     if(hoh && hoh.human){
-      // Show in-TV "Nomination Ceremony" intro card with NOMINATE button
-      const host = document.getElementById('tvOverlay');
-      if(!host) return;
+      console.log('[noms-pick] Human HOH detected, attempting in-TV card');
       
-      host.innerHTML = '';
+      // Try to show in-TV card
+      const cardMounted = showNominateCard(hoh, need);
       
-      const card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
-      card.style.cssText = `
-        max-width: 92%;
-        max-height: 78%;
-        margin: 0 auto;
-        padding: 20px 24px;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-      `;
-      
-      const title = document.createElement('h3');
-      title.textContent = 'Nomination Ceremony';
-      title.style.marginBottom = '4px';
-      title.style.fontSize = '1.1rem';
-      card.appendChild(title);
-      
-      const bodyText = document.createElement('div');
-      bodyText.className = 'big';
-      bodyText.style.fontSize = '0.85rem';
-      bodyText.style.lineHeight = '1.5';
-      bodyText.style.marginBottom = '8px';
-      
-      const countText = need > 2 
-        ? `You must nominate ${need} houseguests for eviction.`
-        : 'You must nominate two houseguests for eviction.';
-      bodyText.textContent = `${hoh.name}, as Head of Household, it is time to make your nominations. ${countText}`;
-      card.appendChild(bodyText);
-      
-      const nominateBtn = document.createElement('button');
-      nominateBtn.className = 'btn primary';
-      nominateBtn.textContent = 'NOMINATE';
-      nominateBtn.style.cssText = `
-        padding: 12px 32px;
-        font-size: 1rem;
-        font-weight: 700;
-        margin-top: 8px;
-      `;
-      
-      nominateBtn.addEventListener('click', () => {
-        // Clear TV and enter pick mode
-        host.innerHTML = '';
-        document.getElementById('tv')?.classList.remove('tvTall');
-        enterPickMode();
-      });
-      
-      card.appendChild(nominateBtn);
-      host.appendChild(card);
-      document.getElementById('tv')?.classList.add('tvTall');
-      
-      return; // Do NOT render legacy panel
-    } else {
+      if(cardMounted){
+        // Card successfully mounted - suppress legacy panel
+        console.log('[noms-pick] ✓ In-TV card active, legacy panel suppressed');
+        return;
+      } else {
+        // Card mount failed - fall through to legacy panel as safety
+        console.warn('[noms-pick] ⚠ Card mount failed, falling back to legacy panel');
+        // Continue to legacy panel rendering below (do NOT return)
+      }
+    }
+    
+    // ========== AI HOH or Fallback Legacy Panel ==========
+    if(!hoh || !hoh.human){
       // AI HOH - use existing AI logic
       if(!g.__nomsCommitInProgress && !g.nomsLocked){
         g._pendingNoms=aiPickNominees(need);
@@ -459,6 +572,39 @@
         info.className = 'tiny muted';
         info.textContent = 'HOH is considering nominations…';
         card.appendChild(info);
+        
+        host.appendChild(card);
+        document.getElementById('tv')?.classList.add('tvTall');
+      }
+    } else {
+      // Human HOH fallback: render legacy panel
+      // This code path is only reached if showNominateCard failed
+      console.log('[noms-pick] Rendering legacy panel for human HOH (fallback mode)');
+      
+      // Legacy panel code would go here if it existed
+      // For now, show a simple fallback message
+      const host = document.getElementById('tvOverlay');
+      if(host){
+        host.innerHTML = '';
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard';
+        card.style.cssText = 'max-width: 92%; padding: 16px; margin: 0 auto; text-align: center;';
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Nomination Ceremony';
+        title.style.marginBottom = '8px';
+        card.appendChild(title);
+        
+        const info = document.createElement('div');
+        info.className = 'big';
+        info.textContent = `${hoh.name}, as HOH, you must nominate ${need} houseguest${need > 1 ? 's' : ''} for eviction.`;
+        card.appendChild(info);
+        
+        const instruction = document.createElement('div');
+        instruction.className = 'tiny muted';
+        instruction.style.marginTop = '8px';
+        instruction.textContent = 'Please use the roster to select nominees.';
+        card.appendChild(instruction);
         
         host.appendChild(card);
         document.getElementById('tv')?.classList.add('tvTall');
@@ -709,11 +855,13 @@
       
       if(wasHumanPickMode){
         // ========== NEW HUMAN HOH CEREMONY FLOW ==========
+        console.log('[noms-pick] Starting human HOH ceremony for nominees:', ids);
         
         // Step 1: Show single summary card with all nominees
         await new Promise((resolve) => {
           const host = document.getElementById('tvOverlay');
           if(!host) {
+            console.warn('[noms-pick] No tvOverlay for summary card');
             resolve();
             return;
           }
@@ -751,6 +899,8 @@
           host.appendChild(card);
           document.getElementById('tv')?.classList.add('tvTall');
           
+          console.log('[noms-pick] ✓ Summary card shown');
+          
           setTimeout(() => {
             // Don't clear yet - reactions will clear it
             resolve();
@@ -766,7 +916,9 @@
         
         // Step 2: Show nominee reactions
         if(ids.length > 0){
+          console.log('[noms-pick] Showing nominee reactions');
           await showNomineeReactionsSimultaneously(ids);
+          console.log('[noms-pick] ✓ Nominee reactions complete');
         }
         
         // Step 3: Show ceremony conclusion
@@ -799,13 +951,17 @@
             host.appendChild(card);
             document.getElementById('tv')?.classList.add('tvTall');
             
+            console.log('[noms-pick] ✓ Adjournment card shown');
+            
             setTimeout(() => {
               host.innerHTML = '';
               document.getElementById('tv')?.classList.remove('tvTall');
+              console.log('[noms-pick] ✓ Ceremony complete');
               resolve();
             }, 2000);
           } else {
             // Fallback
+            console.warn('[noms-pick] No tvOverlay for adjournment, using fallback');
             global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
             setTimeout(resolve, 2000);
           }
