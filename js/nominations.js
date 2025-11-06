@@ -1114,5 +1114,9 @@
 
   global.startNominations=startNominations;
   global.lockNominationsAndProceed=lockNominationsAndProceed;
+  global.finalizeNoms=finalizeNoms;
+  global.renderNomsPanel=renderNomsPanel;
+  global.applyNominationSideEffects=applyNominationSideEffects;
+  global.showNomineeReactionsSimultaneously=showNomineeReactionsSimultaneously;
 
 })(window);
