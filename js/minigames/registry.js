@@ -231,36 +231,6 @@
     },
     
     // Phase 1: Scaffolds (now implemented!)
-    oteviator: {
-      key: 'oteviator',
-      name: 'Oteviator',
-      description: 'Elevator timing challenge - press at the perfect moment',
-      type: 'reaction',
-      scoring: 'accuracy',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'oteviator.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
-    
-    comixSpot: {
-      key: 'comixSpot',
-      name: 'Comix Spot',
-      description: 'Spot differences in comic panels quickly',
-      type: 'puzzle',
-      scoring: 'hybrid',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'comix-spot.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
-    
     holdWall: {
       key: 'holdWall',
       name: 'Hold Wall',
@@ -270,21 +240,6 @@
       mobileFriendly: true,
       implemented: true,
       module: 'hold-wall.js',
-      minScore: 0,
-      maxScore: 100,
-      retired: false,
-      seasons: ['spring', 'summer', 'autumn', 'winter']
-    },
-    
-    slipperyShuttle: {
-      key: 'slipperyShuttle',
-      name: 'Slippery Shuttle',
-      description: 'Navigate slippery platforms without falling',
-      type: 'puzzle',
-      scoring: 'time',
-      mobileFriendly: true,
-      implemented: true,
-      module: 'slippery-shuttle.js',
       minScore: 0,
       maxScore: 100,
       retired: false,
@@ -606,9 +561,188 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-
     
-
+    // New Mobile-Friendly Games (Phase 2 Expansion)
+    hangman: {
+      key: 'hangman',
+      name: 'Hangman',
+      description: 'Classic hangman with on-screen keyboard',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'hangman.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    tiltLabyrinth: {
+      key: 'tiltLabyrinth',
+      name: 'Tilt Labyrinth',
+      description: 'Tilt phone to move ball through maze',
+      type: 'puzzle',
+      scoring: 'time',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'tilt-labyrinth.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    threeDigitsQuiz: {
+      key: 'threeDigitsQuiz',
+      name: 'Three Digits Quiz',
+      description: 'Answer three sequential digit questions with graded hints',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: true,
+      module: 'three-digits-quiz.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    // Scaffolds (Future Implementation)
+    tetris: {
+      key: 'tetris',
+      name: 'Tetris',
+      description: 'Classic falling blocks puzzle',
+      type: 'puzzle',
+      scoring: 'endurance',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'tetris.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    travelingDots: {
+      key: 'travelingDots',
+      name: 'Traveling Dots',
+      description: 'Draw optimal path between points',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'traveling-dots.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    minesweeps: {
+      key: 'minesweeps',
+      name: 'Minesweeps',
+      description: 'Classic minesweeper puzzle',
+      type: 'puzzle',
+      scoring: 'accuracy',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'minesweeper.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    railSwitchSprint: {
+      key: 'railSwitchSprint',
+      name: 'Rail Switch Sprint',
+      description: 'Switch train routes to correct stations',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'rail-switch-sprint.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    shadowConeSneak: {
+      key: 'shadowConeSneak',
+      name: 'Shadow Cone Sneak',
+      description: 'Avoid guard vision cones on patrol routes',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'shadow-cone-sneak.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    bombDefuseConstraints: {
+      key: 'bombDefuseConstraints',
+      name: 'Bomb Defuse Constraints',
+      description: 'Toggle switches to satisfy boolean constraints',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'bomb-defuse-constraints.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    circuitLoop: {
+      key: 'circuitLoop',
+      name: 'Circuit Loop',
+      description: 'Rotate tiles to create closed power loops',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'circuit-loop.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    territoryEncircle: {
+      key: 'territoryEncircle',
+      name: 'Territory Encircle',
+      description: 'Draw non-crossing loops to capture dots',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'territory-encircle.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
+    
+    magnetMaze: {
+      key: 'magnetMaze',
+      name: 'Magnet Maze',
+      description: 'Toggle magnets to push/pull ball through maze',
+      type: 'puzzle',
+      scoring: 'hybrid',
+      mobileFriendly: true,
+      implemented: false,
+      module: 'magnet-maze.js',
+      minScore: 0,
+      maxScore: 100,
+      retired: false,
+      seasons: ['spring', 'summer', 'autumn', 'winter']
+    },
   };
 
   /**

@@ -105,13 +105,8 @@
     'simon': 'simonSays',  // Legacy alias
     
     // Phase 1: Scaffolds (future games)
-    'oteviator': 'oteviator',
-    'comixSpot': 'comixSpot',
-    'comix-spot': 'comixSpot',
     'holdWall': 'holdWall',
     'hold-wall': 'holdWall',
-    'slipperyShuttle': 'slipperyShuttle',
-    'slippery-shuttle': 'slipperyShuttle',
     'memoryZipline': 'memoryZipline',
     'memory-zipline': 'memoryZipline',
     
@@ -170,7 +165,42 @@
     'gridlock': 'gridLock',
     'keyMaster': 'keyMaster',
     'key-master': 'keyMaster',
-    'keymaster': 'keyMaster'
+    'keymaster': 'keyMaster',
+    
+    // Phase 2 Expansion: New Mobile-Friendly Games
+    'hangman': 'hangman',
+    'tiltLabyrinth': 'tiltLabyrinth',
+    'tilt-labyrinth': 'tiltLabyrinth',
+    'tiltlabyrinth': 'tiltLabyrinth',
+    'threeDigitsQuiz': 'threeDigitsQuiz',
+    'three-digits-quiz': 'threeDigitsQuiz',
+    'threedigitsquiz': 'threeDigitsQuiz',
+    
+    // Phase 2 Scaffolds (Future Implementation)
+    'tetris': 'tetris',
+    'travelingDots': 'travelingDots',
+    'traveling-dots': 'travelingDots',
+    'travelingdots': 'travelingDots',
+    'minesweeps': 'minesweeps',
+    'minesweeper': 'minesweeps',
+    'railSwitchSprint': 'railSwitchSprint',
+    'rail-switch-sprint': 'railSwitchSprint',
+    'railswitchsprint': 'railSwitchSprint',
+    'shadowConeSneak': 'shadowConeSneak',
+    'shadow-cone-sneak': 'shadowConeSneak',
+    'shadowconesneak': 'shadowConeSneak',
+    'bombDefuseConstraints': 'bombDefuseConstraints',
+    'bomb-defuse-constraints': 'bombDefuseConstraints',
+    'bombdefuseconstraints': 'bombDefuseConstraints',
+    'circuitLoop': 'circuitLoop',
+    'circuit-loop': 'circuitLoop',
+    'circuitloop': 'circuitLoop',
+    'territoryEncircle': 'territoryEncircle',
+    'territory-encircle': 'territoryEncircle',
+    'territoryencircle': 'territoryEncircle',
+    'magnetMaze': 'magnetMaze',
+    'magnet-maze': 'magnetMaze',
+    'magnetmaze': 'magnetMaze'
   };
 
   /**
