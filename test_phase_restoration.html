@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase Restoration Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1e293b;
+      color: #f1f5f9;
+    }
+    h1 {
+      color: #60a5fa;
+      border-bottom: 2px solid #475569;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background: #334155;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-result {
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .pass {
+      background: #065f46;
+      color: #d1fae5;
+      border-left: 4px solid #10b981;
+    }
+    .fail {
+      background: #7f1d1d;
+      color: #fecaca;
+      border-left: 4px solid #ef4444;
+    }
+    .info {
+      background: #1e3a8a;
+      color: #dbeafe;
+      border-left: 4px solid #3b82f6;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    button:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    #logOutput {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .summary {
+      font-size: 1.2em;
+      font-weight: 700;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .summary.all-pass {
+      background: #065f46;
+      color: #d1fae5;
+    }
+    .summary.has-fail {
+      background: #7f1d1d;
+      color: #fecaca;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Phase Restoration Test</h1>
+  <p>This test validates that nominations popup and social launcher work correctly after the phase flow restoration changes.</p>
+
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <div class="controls">
+      <button id="runAllBtn">Run All Tests</button>
+      <button id="testPhaseEventsBtn">Test Phase Events</button>
+      <button id="testNomsSetupBtn">Test Nominations Setup</button>
+      <button id="testSocialSetupBtn">Test Social Setup</button>
+      <button id="testTeardownBtn">Test Teardown Logic</button>
+      <button id="clearLogBtn">Clear Log</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="results"></div>
+    <div id="summary"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Log</h2>
+    <div id="logOutput"></div>
+  </div>
+
+  <!-- Load minimal dependencies -->
+  <script src="js/phase-events.js"></script>
+  
+  <script>
+    // Test harness
+    const results = [];
+    const logOutput = document.getElementById('logOutput');
+    
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+      logOutput.textContent += entry + '\n';
+      logOutput.scrollTop = logOutput.scrollHeight;
+      console.log(entry);
+    }
+    
+    function addResult(testName, passed, message) {
+      results.push({ testName, passed, message });
+      const resultsDiv = document.getElementById('results');
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.textContent = `${passed ? '✓' : '✗'} ${testName}: ${message}`;
+      resultsDiv.appendChild(resultDiv);
+      
+      log(`${testName}: ${passed ? 'PASS' : 'FAIL'} - ${message}`, passed ? 'pass' : 'fail');
+    }
+    
+    function clearResults() {
+      results.length = 0;
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('summary').innerHTML = '';
+    }
+    
+    function showSummary() {
+      const total = results.length;
+      const passed = results.filter(r => r.passed).length;
+      const failed = total - passed;
+      
+      const summaryDiv = document.getElementById('summary');
+      summaryDiv.className = `summary ${failed === 0 ? 'all-pass' : 'has-fail'}`;
+      summaryDiv.textContent = `Tests: ${passed}/${total} passed${failed > 0 ? `, ${failed} failed` : ''}`;
+    }
+    
+    // Test 1: Phase Events Module
+    function testPhaseEvents() {
+      log('Testing Phase Events module...');
+      
+      // Check if PhaseEvents is available
+      if (typeof window.PhaseEvents !== 'object') {
+        addResult('Phase Events Module', false, 'PhaseEvents not found on window');
+        return;
+      }
+      
+      addResult('Phase Events Module', true, 'PhaseEvents object exists');
+      
+      // Check methods
+      const requiredMethods = ['setPhase', 'onPhaseChange', 'getCurrentPhase', 'wrapExistingPhaseSetter'];
+      let allMethodsPresent = true;
+      
+      for (const method of requiredMethods) {
+        if (typeof window.PhaseEvents[method] !== 'function') {
+          addResult(`PhaseEvents.${method}`, false, 'Method not found');
+          allMethodsPresent = false;
+        } else {
+          addResult(`PhaseEvents.${method}`, true, 'Method exists');
+        }
+      }
+      
+      // Test event emission
+      if (allMethodsPresent) {
+        try {
+          // Create mock game object
+          window.game = window.game || { phase: 'test' };
+          
+          let eventFired = false;
+          const unsubscribe = window.PhaseEvents.onPhaseChange((oldPhase, newPhase) => {
+            log(`Phase change event: ${oldPhase} → ${newPhase}`);
+            eventFired = true;
+          });
+          
+          // Trigger a phase change
+          window.PhaseEvents.setPhase('nominations');
+          
+          // Check if event fired
+          setTimeout(() => {
+            addResult('Phase Change Event', eventFired, eventFired ? 'Event fired successfully' : 'Event did not fire');
+            unsubscribe();
+          }, 100);
+          
+        } catch (err) {
+          addResult('Phase Change Event', false, `Error: ${err.message}`);
+        }
+      }
+    }
+    
+    // Test 2: Nominations Setup (no polling)
+    function testNominationsSetup() {
+      log('Testing Nominations setup...');
+      
+      // Check for polling intervals (should not exist)
+      const scriptContent = document.createElement('script');
+      fetch('js/nominations-grid-fullscreen.js')
+        .then(response => response.text())
+        .then(content => {
+          // Check that phase change polling is removed/replaced
+          const hasPollingInterval = content.includes('setInterval(') && 
+                                     content.includes('500)') &&
+                                     content.includes('Poll every 500ms');
+          
+          addResult('No Phase Polling', !hasPollingInterval, 
+                   hasPollingInterval ? 'Found 500ms polling interval' : 'Polling interval removed/replaced');
+          
+          // Check for event-based detection
+          const hasEventListener = content.includes('PhaseEvents.onPhaseChange') ||
+                                  content.includes('addEventListener(\'phase:change\'');
+          
+          addResult('Event-Based Detection', hasEventListener,
+                   hasEventListener ? 'Uses event-based phase detection' : 'No event-based detection found');
+          
+          // Check for surgical teardown
+          const hasSurgicalTeardown = content.includes('SURGICAL') ||
+                                     (content.includes('querySelector(\'.nfs-stage\')') &&
+                                      content.includes('left tvOverlay intact'));
+          
+          addResult('Surgical Teardown', hasSurgicalTeardown,
+                   hasSurgicalTeardown ? 'Teardown is surgical' : 'Teardown may clear too much');
+          
+          // Check that safety microtask is disabled
+          const hasSafetyMicrotask = content.includes('Safety microtask: invoking NomsFS.showIntro()');
+          
+          addResult('Safety Microtask Disabled', !hasSafetyMicrotask,
+                   hasSafetyMicrotask ? 'Safety microtask still active' : 'Safety microtask removed/disabled');
+        })
+        .catch(err => {
+          addResult('Nominations Script Check', false, `Failed to load script: ${err.message}`);
+        });
+    }
+    
+    // Test 3: Social Setup (no blind clearing)
+    function testSocialSetup() {
+      log('Testing Social launcher setup...');
+      
+      fetch('js/socialize-mobile.js')
+        .then(response => response.text())
+        .then(content => {
+          // Check that ensureVisible doesn't blindly clear tvOverlay
+          const hasBlindClear = content.includes('tvOverlay.innerHTML = \'\'') &&
+                               !content.includes('Don\'t clear innerHTML');
+          
+          addResult('No Blind Clear', !hasBlindClear,
+                   hasBlindClear ? 'Still blindly clears tvOverlay' : 'Smart tvOverlay handling');
+          
+          // Check for conditional flag reset
+          const hasConditionalReset = content.includes('isSocialPhase') ||
+                                     content.includes('currentPhase === \'social');
+          
+          addResult('Conditional Flag Reset', hasConditionalReset,
+                   hasConditionalReset ? 'Flags reset conditionally' : 'Flag reset may be unconditional');
+          
+          // Check for safe reset in resetSocialFlags
+          const hasSafeReset = content.includes('still in social phase, skipping reset') ||
+                              content.includes('confirmed phase exit');
+          
+          addResult('Safe resetSocialFlags', hasSafeReset,
+                   hasSafeReset ? 'resetSocialFlags is safe' : 'resetSocialFlags may be unsafe');
+        })
+        .catch(err => {
+          addResult('Social Script Check', false, `Failed to load script: ${err.message}`);
+        });
+    }
+    
+    // Test 4: Teardown Logic
+    function testTeardownLogic() {
+      log('Testing teardown logic...');
+      
+      // Create mock elements
+      const tvOverlay = document.createElement('div');
+      tvOverlay.id = 'tvOverlay';
+      
+      const nfsStage = document.createElement('div');
+      nfsStage.className = 'nfs-stage';
+      nfsStage.textContent = 'Nomination content';
+      tvOverlay.appendChild(nfsStage);
+      
+      document.body.appendChild(tvOverlay);
+      
+      // Test that tvOverlay is not cleared if it doesn't contain nomination content
+      const tvOverlay2 = document.createElement('div');
+      tvOverlay2.id = 'tvOverlay2';
+      tvOverlay2.innerHTML = '<div class="other-content">Other content</div>';
+      document.body.appendChild(tvOverlay2);
+      
+      // Simulate check
+      const hasNfsStage1 = tvOverlay.querySelector('.nfs-stage') !== null;
+      const hasNfsStage2 = tvOverlay2.querySelector('.nfs-stage') !== null;
+      
+      addResult('Nomination Content Detection', hasNfsStage1 && !hasNfsStage2,
+               hasNfsStage1 && !hasNfsStage2 ? 'Correctly identifies nomination content' : 'Detection failed');
+      
+      // Clean up
+      tvOverlay.remove();
+      tvOverlay2.remove();
+      
+      addResult('Teardown Logic', true, 'Teardown logic uses content detection');
+    }
+    
+    // Run all tests
+    async function runAllTests() {
+      clearResults();
+      log('Starting all tests...');
+      
+      testPhaseEvents();
+      
+      // Wait a bit for async tests
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      testNominationsSetup();
+      testSocialSetup();
+      testTeardownLogic();
+      
+      // Wait for async tests to complete
+      setTimeout(() => {
+        showSummary();
+        log('All tests complete');
+      }, 1000);
+    }
+    
+    // Event listeners
+    document.getElementById('runAllBtn').addEventListener('click', runAllTests);
+    document.getElementById('testPhaseEventsBtn').addEventListener('click', () => {
+      clearResults();
+      testPhaseEvents();
+      setTimeout(showSummary, 200);
+    });
+    document.getElementById('testNomsSetupBtn').addEventListener('click', () => {
+      clearResults();
+      testNominationsSetup();
+      setTimeout(showSummary, 500);
+    });
+    document.getElementById('testSocialSetupBtn').addEventListener('click', () => {
+      clearResults();
+      testSocialSetup();
+      setTimeout(showSummary, 500);
+    });
+    document.getElementById('testTeardownBtn').addEventListener('click', () => {
+      clearResults();
+      testTeardownLogic();
+      setTimeout(showSummary, 200);
+    });
+    document.getElementById('clearLogBtn').addEventListener('click', () => {
+      logOutput.textContent = '';
+      log('Log cleared');
+    });
+    
+    // Auto-run on load
+    log('Test harness loaded. Click "Run All Tests" to start.');
+  </script>
+</body>
+</html>

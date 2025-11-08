@@ -1666,23 +1666,39 @@
     
     const g = global.game || {};
     
-    // 1. Clear any blocking TV overlay
+    // 1. Handle TV overlay more carefully - don't blindly clear it
     const tvOverlay = document.getElementById('tvOverlay');
     if (tvOverlay) {
-      tvOverlay.style.pointerEvents = 'none';
-      tvOverlay.style.display = 'none';
-      tvOverlay.innerHTML = '';
-      console.log('[socialize-mobile] ensure-visible: cleared blocking TV overlay');
+      // Only hide blocking overlays specific to social phase, not all content
+      // Check if tvOverlay is blocking (has certain classes or inline styles)
+      const isBlocking = tvOverlay.style.zIndex > 1000 || 
+                        tvOverlay.classList.contains('blocking') ||
+                        tvOverlay.style.pointerEvents === 'all';
+      
+      if (isBlocking) {
+        tvOverlay.style.pointerEvents = 'none';
+        tvOverlay.style.display = 'none';
+        console.log('[socialize-mobile] ensure-visible: made blocking overlay non-blocking');
+        // Don't clear innerHTML - other modules may need their content
+      } else {
+        console.log('[socialize-mobile] ensure-visible: tvOverlay not blocking, left intact');
+      }
     }
     
-    // 2. Clear "already active/sole owner" flags
-    if (g.__socialLauncherActive) {
-      console.log('[socialize-mobile] ensure-visible: clearing __socialLauncherActive flag');
-      g.__socialLauncherActive = false;
-    }
-    if (g.__socialLauncherMounted) {
-      console.log('[socialize-mobile] ensure-visible: clearing __socialLauncherMounted flag');
-      g.__socialLauncherMounted = false;
+    // 2. Clear "already active/sole owner" flags only at social phase start
+    // Don't clear during phase - this was causing re-mount issues
+    const currentPhase = g.phase;
+    const isSocialPhaseStart = currentPhase === 'social_intermission' || currentPhase === 'social';
+    
+    if (isSocialPhaseStart) {
+      if (g.__socialLauncherActive) {
+        console.log('[socialize-mobile] ensure-visible: clearing __socialLauncherActive flag');
+        g.__socialLauncherActive = false;
+      }
+      if (g.__socialLauncherMounted) {
+        console.log('[socialize-mobile] ensure-visible: clearing __socialLauncherMounted flag');
+        g.__socialLauncherMounted = false;
+      }
     }
     
     // 3. Reinitialize/reattach observers if needed
@@ -1719,11 +1735,22 @@
   /**
    * Reset flags on exiting social phase
    * Allows launcher to mount again in the next social phase
+   * Only resets if we're actually leaving social phase (not called mid-phase)
    */
   function resetSocialFlags() {
-    console.log('[socialize-mobile] reset-social-flags: exiting social_intermission');
+    console.log('[socialize-mobile] reset-social-flags: checking if social phase exit');
     
     const g = global.game || {};
+    const currentPhase = g.phase;
+    
+    // Safety: only reset if we're NOT in a social phase
+    // This prevents premature clearing during phase transitions
+    const isSocialPhase = currentPhase === 'social_intermission' || currentPhase === 'social';
+    
+    if (isSocialPhase) {
+      console.log('[socialize-mobile] reset-social-flags: still in social phase, skipping reset');
+      return;
+    }
     
     // Reset "already active/sole owner" flags
     if (g.__socialLauncherActive) {
@@ -1735,7 +1762,7 @@
       g.__socialLauncherMounted = false;
     }
     
-    console.log('[socialize-mobile] reset-social-flags: ✓ flags reset');
+    console.log('[socialize-mobile] reset-social-flags: ✓ flags reset (confirmed phase exit)');
   }
 
   // Public API
