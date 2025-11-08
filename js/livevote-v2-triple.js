@@ -95,7 +95,6 @@
       inset: 'clamp(8px,1.8vw,16px)',
       display: 'grid',
       gridTemplateRows: '1fr auto',
-      pointerEvents: 'none',
       zIndex: '150'
     });
 
