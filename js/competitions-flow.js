@@ -276,6 +276,11 @@
     // Register as active instructions card for cleanup on phase change
     activeInstructionsCard = card;
 
+    // Attach Rules button next to Play button
+    if(typeof g.attachRulesButton === 'function'){
+      g.attachRulesButton(playButton, gameKey);
+    }
+
     return card;
   }
 

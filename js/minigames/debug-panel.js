@@ -463,6 +463,46 @@
 
     container.appendChild(launchBtn);
 
+    // Rules button
+    const rulesBtn = document.createElement('button');
+    rulesBtn.textContent = '📋 View Rules';
+    rulesBtn.style.cssText = `
+      width: 100%;
+      padding: 8px;
+      margin-top: 8px;
+      background: rgba(91, 214, 138, 0.2);
+      border: 1px solid rgba(91, 214, 138, 0.5);
+      color: #5bd68a;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 11px;
+      transition: all 0.2s;
+    `;
+    rulesBtn.disabled = true;
+
+    select.addEventListener('change', () => {
+      rulesBtn.disabled = !select.value;
+    });
+
+    rulesBtn.addEventListener('click', () => {
+      if(select.value && typeof g.showMinigameRules === 'function'){
+        g.showMinigameRules(select.value);
+      }
+    });
+
+    rulesBtn.addEventListener('mouseenter', () => {
+      if(!rulesBtn.disabled){
+        rulesBtn.style.background = 'rgba(91, 214, 138, 0.3)';
+      }
+    });
+
+    rulesBtn.addEventListener('mouseleave', () => {
+      rulesBtn.style.background = 'rgba(91, 214, 138, 0.2)';
+    });
+
+    container.appendChild(rulesBtn);
+
     // Mini preview area (optional)
     const preview = document.createElement('div');
     preview.style.cssText = `
