@@ -141,12 +141,19 @@
    * @returns {string} CSS value for vertical offset (e.g., '20px' or '8%')
    */
   function computeTvCenterBiasPx(host) {
-    // Check for override
+    // Check for force exact center override
+    if (global.__tvForceExactCenter === true) {
+      console.log(LOG_PREFIX, 'Force exact center enabled, bias = 0');
+      return '0px';
+    }
+    
+    // Check for manual bias override
     if (typeof global.__tvCenterBiasY !== 'undefined') {
       const override = global.__tvCenterBiasY;
       
       // If it's a string ending in 'px', return as-is
       if (typeof override === 'string' && override.endsWith('px')) {
+        console.log(LOG_PREFIX, 'Using manual bias override:', override);
         return override;
       }
       
@@ -154,7 +161,9 @@
       if (typeof override === 'number') {
         const tvHeight = host ? host.offsetHeight : window.innerHeight;
         const biasPixels = Math.round(tvHeight * override);
-        return `${biasPixels}px`;
+        const result = `${biasPixels}px`;
+        console.log(LOG_PREFIX, `Using ratio bias override: ${override} = ${result}`);
+        return result;
       }
     }
     
@@ -163,13 +172,26 @@
     const vh = window.innerHeight;
     const isPortrait = vh > vw;
     
-    // On narrow portrait (mobile), use ~8% bias; otherwise ~4%
-    const biasRatio = isPortrait && vw < 600 ? 0.08 : 0.04;
+    // Estimate safe area top (e.g., notch on iOS)
+    const safeAreaTop = Math.min(20, vh * 0.02);
+    
+    // On narrow portrait (mobile), use ~7.5-8% bias; otherwise ~4-4.5%
+    let biasRatio;
+    if (isPortrait && vw < 600) {
+      biasRatio = 0.075; // 7.5% for narrow portrait
+    } else if (isPortrait) {
+      biasRatio = 0.08; // 8% for wider portrait
+    } else {
+      biasRatio = 0.045; // 4.5% for landscape
+    }
     
     const tvHeight = host ? host.offsetHeight : vh;
-    const biasPixels = Math.round(tvHeight * biasRatio);
+    const biasPixels = Math.max(0, Math.round(tvHeight * biasRatio - safeAreaTop));
     
-    return `${biasPixels}px`;
+    const result = `${biasPixels}px`;
+    console.log(LOG_PREFIX, `Computed adaptive bias: ${biasRatio * 100}% - safe:${safeAreaTop}px = ${result}`);
+    
+    return result;
   }
 
   // ========== CSS Injection ==========
@@ -231,22 +253,22 @@
         overflow-y: auto;
       }
       
-      /* Header with count and optional legend */
+      /* Header with count and optional legend - sticky at top */
       .noms-fs-header {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        position: sticky;
+        top: 0;
+        left: 0;
+        right: 0;
         z-index: 10001;
         background: var(--card, #1e293b);
-        border: 2px solid var(--sep, #475569);
-        border-radius: 12px;
-        padding: 12px 24px;
+        border-bottom: 2px solid var(--sep, #475569);
+        padding: 16px 24px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 8px;
+        margin-bottom: 16px;
       }
       
       .noms-fs-count {
@@ -301,13 +323,14 @@
         gap: 16px;
         max-width: 900px;
         width: 100%;
-        margin: 80px auto 100px;
+        margin: 0 auto;
+        padding: 16px 20px 120px 20px;
       }
       
       @media (max-width: 768px) {
         .noms-fs-grid {
           gap: 12px;
-          margin: 80px auto 120px;
+          padding: 12px 16px 140px 16px;
         }
       }
       
@@ -1340,6 +1363,25 @@
     showIntro: showIntroCard,
     
     /**
+     * Recompute and apply TV center bias
+     * Useful after layout changes (e.g., window resize, orientation change)
+     * @returns {string} The computed bias value
+     */
+    recenter: function() {
+      console.log(LOG_PREFIX, 'Recentering - recomputing bias');
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (!tvOverlay) {
+        console.warn(LOG_PREFIX, 'Cannot recenter - #tvOverlay not found');
+        return '0px';
+      }
+      
+      const bias = computeTvCenterBiasPx(tvOverlay);
+      tvOverlay.style.setProperty('--tv-center-bias', bias);
+      console.log(LOG_PREFIX, '✓ Recentered with bias:', bias);
+      return bias;
+    },
+    
+    /**
      * Get diagnostic information
      * @returns {object} Current state and configuration
      */
@@ -1364,7 +1406,9 @@
           hohHuman: hoh ? (hoh.human || false) : false
         },
         eligible: getEligiblePlayerIds().length,
-        requiredSlots: getRequiredSlots()
+        requiredSlots: getRequiredSlots(),
+        centerBias: global.__tvCenterBiasY,
+        forceExactCenter: global.__tvForceExactCenter
       };
     }
   };
