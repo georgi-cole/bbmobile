@@ -7,7 +7,24 @@
    * @param {function} callback - Function to call after modal dismisses
    */
   function showWeekIntroModal(weekNumber, callback) {
-    // Create modal content (no overlay needed - unified mount provides centering)
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 10, 18, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999999;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    `;
+
+    // Create modal content
     const modal = document.createElement('div');
     modal.style.cssText = `
       background: linear-gradient(135deg, #1a2f44 0%, #243a50 100%);
@@ -18,6 +35,9 @@
       box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.9), 0 8px 24px -8px rgba(0, 0, 0, 0.7);
       max-width: 500px;
       width: 90%;
+      transform: scale(0.85);
+      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
     `;
 
     // Create icons container
@@ -68,30 +88,30 @@
     modal.appendChild(title);
     modal.appendChild(subtitle);
     modal.appendChild(hint);
+    overlay.appendChild(modal);
 
-    // Mount using unified popup system
-    const wrapper = global.mountCenteredPopup(modal, {
-      replace: true,
-      className: 'week-intro-modal',
-      dialog: true
+    // Add to document
+    document.body.appendChild(overlay);
+
+    // Trigger fade-in animation
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
+      modal.style.transform = 'scale(1)';
     });
-
-    if (!wrapper) {
-      console.error('[week-intro] Failed to mount popup');
-      if (typeof callback === 'function') callback();
-      return;
-    }
 
     let dismissed = false;
     const dismiss = () => {
       if (dismissed) return;
       dismissed = true;
 
-      // Fade out with animation
-      wrapper.style.animation = 'popupFadeOut 0.3s ease';
+      // Fade out
+      overlay.style.opacity = '0';
+      modal.style.transform = 'scale(0.95)';
 
       setTimeout(() => {
-        global.unmountPopups();
+        if (overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
         if (typeof callback === 'function') {
           callback();
         }
@@ -101,8 +121,8 @@
     // Auto-dismiss after 5 seconds
     const autoDismissTimer = setTimeout(dismiss, 5000);
 
-    // Dismiss on click (on wrapper)
-    wrapper.addEventListener('click', () => {
+    // Dismiss on click
+    overlay.addEventListener('click', () => {
       clearTimeout(autoDismissTimer);
       dismiss();
     });

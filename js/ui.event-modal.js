@@ -99,8 +99,25 @@
       setTimeout(() => {
         dismissible = true;
       }, minDisplayTime);
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'event-modal-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(4, 10, 18, 0.9);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      `;
 
-      // Create modal content (no overlay needed - unified mount provides centering)
+      // Create modal content
       const modal = document.createElement('div');
       modal.className = `event-modal event-modal-${tone}`;
       
@@ -123,6 +140,9 @@
         box-shadow: 0 24px 72px -24px rgba(0, 0, 0, 0.95), 0 12px 32px -12px rgba(0, 0, 0, 0.8);
         max-width: 560px;
         width: 90%;
+        transform: scale(0.85);
+        transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        pointer-events: none;
         position: relative;
       `;
 
@@ -209,21 +229,15 @@
         modal.appendChild(subtitleEl);
       }
 
-      // Mount using unified popup system
-      const wrapper = global.mountCenteredPopup(modal, {
-        replace: true,
-        className: 'event-modal-wrapper',
-        dialog: true
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      currentModal = overlay;
+
+      // Trigger fade-in animation
+      requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        modal.style.transform = 'scale(1)';
       });
-
-      if (!wrapper) {
-        console.error('[event-modal] Failed to mount popup');
-        if (typeof resolve === 'function') resolve();
-        if (typeof resolveDisplay === 'function') resolveDisplay();
-        return;
-      }
-
-      currentModal = wrapper;
 
       // Enable dismissal after minDisplayTime
       setTimeout(() => {
@@ -240,11 +254,14 @@
         
         dismissed = true;
 
-        // Fade out with animation
-        wrapper.style.animation = 'popupFadeOut 0.3s ease';
+        // Fade out
+        overlay.style.opacity = '0';
+        modal.style.transform = 'scale(0.95)';
 
         setTimeout(() => {
-          global.unmountPopups();
+          if (overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+          }
           currentModal = null;
 
           // Call callback if provided
@@ -262,8 +279,8 @@
         }, 300); // Match fade-out duration
       };
 
-      // Click to dismiss (on wrapper, not body)
-      wrapper.addEventListener('click', dismiss);
+      // Click to dismiss
+      overlay.addEventListener('click', dismiss);
 
       // ESC to dismiss
       const keyHandler = (e) => {
@@ -284,8 +301,8 @@
    */
   function clearModalQueue() {
     modalQueue.length = 0;
-    if (currentModal) {
-      global.unmountPopups();
+    if (currentModal && currentModal.parentNode) {
+      currentModal.parentNode.removeChild(currentModal);
       currentModal = null;
     }
     isProcessing = false;
