@@ -129,41 +129,14 @@
       if(host){
         host.innerHTML = '';
         
-        // Compute vertical bias for TV-centered positioning (matches fullscreen logic)
-        // Check for force exact center override
-        let bias = '0px';
-        if (global.__tvForceExactCenter === true) {
-          console.log('[noms] Force exact center enabled, bias = 0');
-          bias = '0px';
-        } else if (typeof global.__tvCenterBiasY !== 'undefined') {
-          // Check for manual bias override
-          const override = global.__tvCenterBiasY;
-          if (typeof override === 'string' && override.endsWith('px')) {
-            bias = override;
-          } else if (typeof override === 'number') {
-            const tvHeight = host.offsetHeight || window.innerHeight;
-            bias = `${Math.round(tvHeight * override)}px`;
-          }
-        } else {
-          // Calculate default bias
-          const vw = window.innerWidth;
-          const vh = window.innerHeight;
-          const isPortrait = vh > vw;
-          const safeAreaTop = Math.min(20, vh * 0.02);
-          
-          let biasRatio;
-          if (isPortrait && vw < 600) {
-            biasRatio = 0.075; // 7.5% for narrow portrait
-          } else if (isPortrait) {
-            biasRatio = 0.08; // 8% for wider portrait
-          } else {
-            biasRatio = 0.045; // 4.5% for landscape
-          }
-          
-          const tvHeight = host.offsetHeight || vh;
-          const biasPixels = Math.max(0, Math.round(tvHeight * biasRatio - safeAreaTop));
-          bias = `${biasPixels}px`;
-        }
+        // Compute vertical bias for TV-centered positioning
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const isPortrait = vh > vw;
+        const biasRatio = isPortrait && vw < 600 ? 0.08 : 0.04;
+        const tvHeight = host.offsetHeight || vh;
+        const biasPixels = Math.round(tvHeight * biasRatio);
+        const bias = `${biasPixels}px`;
         host.style.setProperty('--tv-center-bias', bias);
         
         // Create stage wrapper for TV-centered layout with vertical bias
