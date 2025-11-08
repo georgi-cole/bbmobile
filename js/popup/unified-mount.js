@@ -85,6 +85,11 @@
       wrapper.setAttribute('aria-modal', 'true');
     }
 
+    // Store previously focused element for restoration on unmount
+    if (dialog && document.activeElement && document.activeElement !== document.body) {
+      window.__popupPreviousFocus = document.activeElement;
+    }
+
     // Add content to wrapper
     if (typeof content === 'string') {
       wrapper.innerHTML = content;
@@ -97,6 +102,50 @@
 
     // Mount to host
     host.appendChild(wrapper);
+
+    // Focus trap for dialog modals
+    if (dialog) {
+      const trapFocus = (e) => {
+        if (e.key !== 'Tab') return;
+        
+        const focusableSelector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        const focusable = wrapper.querySelectorAll(focusableSelector);
+        
+        if (focusable.length === 0) return;
+        
+        const firstFocusable = focusable[0];
+        const lastFocusable = focusable[focusable.length - 1];
+        
+        if (e.shiftKey) {
+          // Shift+Tab: if on first element, go to last
+          if (document.activeElement === firstFocusable) {
+            e.preventDefault();
+            lastFocusable.focus();
+          }
+        } else {
+          // Tab: if on last element, go to first
+          if (document.activeElement === lastFocusable) {
+            e.preventDefault();
+            firstFocusable.focus();
+          }
+        }
+      };
+      
+      wrapper.addEventListener('keydown', trapFocus);
+      wrapper.__focusTrap = trapFocus;
+      
+      // Focus first focusable element
+      if (focusFirst !== false) {
+        requestAnimationFrame(() => {
+          const focusable = wrapper.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusable.length > 0) {
+            focusable[0].focus();
+          }
+        });
+      }
+    }
 
     // Lock TV viewport scroll if requested
     if (lockScroll) {
@@ -140,6 +189,16 @@
       host.innerHTML = '';
       
       console.info('[unified-mount] Unmounted', popups.length, 'popup(s)');
+    }
+
+    // Restore focus to previously focused element
+    if (window.__popupPreviousFocus && document.body.contains(window.__popupPreviousFocus)) {
+      try {
+        window.__popupPreviousFocus.focus();
+      } catch (e) {
+        // Focus restoration failed, ignore
+      }
+      window.__popupPreviousFocus = null;
     }
 
     // Unlock TV viewport scroll if requested
