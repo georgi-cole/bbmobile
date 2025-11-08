@@ -1037,3 +1037,36 @@
   background: rgba(255, 255, 255, 0.05);
   transform: none;
 }
+
+/* ============================================
+   iOS SAFARI BLUR GHOSTING FIX
+   Prevents backdrop-filter blur "curtain" from
+   sticking during scroll in nested containers
+   ============================================ */
+
+/* iOS Safari blur ghosting guard for Social card surfaces */
+.socialize-hud,
+.socialize-card,
+.social-live-card,
+[data-sm-social-card] {
+  position: relative;          /* establish containing block */
+  isolation: isolate;          /* clip composited descendants */
+  contain: paint;              /* limit paint to this element */
+  will-change: transform;      /* promote to its own layer */
+  -webkit-transform: translateZ(0); /* force GPU compositing on iOS */
+  -webkit-backface-visibility: hidden;
+  z-index: 2;                  /* ensure above adjacent backgrounds */
+}
+
+/* iOS-only safety fallback: disable blur inside the nested scroll panel on small screens */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 768px) {
+    #panel .socialize-hud,
+    #panel .socialize-card,
+    #panel .social-live-card,
+    #panel [data-sm-social-card] {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+    }
+  }
+}
