@@ -74,6 +74,19 @@
     }
     
     activeMinigameOverlay = null;
+    
+    // Neutralize empty #tvOverlay if it has no active content (defensive guard)
+    (function ensureOverlayNotBlocking(){
+      try {
+        const ov = document.getElementById('tvOverlay');
+        if (!ov) return;
+        const content = ov.querySelector('.tvOverlayContent');
+        const hasActiveContent = !!(content && content.childElementCount > 0);
+        if (!hasActiveContent) {
+          ov.style.pointerEvents = 'none';
+        }
+      } catch(e){ console.warn('[CompetitionFlow] tvOverlay neutralization failed', e); }
+    })();
   }
 
   /**

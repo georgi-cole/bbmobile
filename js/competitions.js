@@ -357,6 +357,19 @@
       // Use new competition flow: instructions → fullscreen game → completion
       host.innerHTML = '<div class="tiny muted">Loading competition...</div>';
       
+      // Neutralize empty #tvOverlay if it has no active content (defensive guard)
+      (function ensureOverlayNotBlocking(){
+        try {
+          const ov = document.getElementById('tvOverlay');
+          if (!ov) return;
+          const content = ov.querySelector('.tvOverlayContent');
+          const hasActiveContent = !!(content && content.childElementCount > 0);
+          if (!hasActiveContent) {
+            ov.style.pointerEvents = 'none';
+          }
+        } catch(e){ console.warn('[Competition] tvOverlay neutralization failed', e); }
+      })();
+      
       // Get TV viewport as the target for instructions (inside TV, not below it)
       const tvViewport = document.querySelector('.tvViewport');
       const instructionsContainer = tvViewport || host;

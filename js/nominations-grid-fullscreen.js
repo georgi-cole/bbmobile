@@ -892,6 +892,18 @@
     selectorState.required = 0;
     selectorState.overlay = null;
     
+    // Neutralize #tvOverlay if it's empty after closing (defensive guard)
+    if (tvOverlay) {
+      try {
+        const content = tvOverlay.querySelector('.tvOverlayContent');
+        const hasActiveContent = !!(content && content.childElementCount > 0);
+        if (!hasActiveContent) {
+          tvOverlay.style.pointerEvents = 'none';
+          console.log(LOG_PREFIX, 'Neutralized empty #tvOverlay pointer-events');
+        }
+      } catch(e){ console.warn(LOG_PREFIX, 'tvOverlay neutralization failed', e); }
+    }
+    
     console.log(LOG_PREFIX, '✓ Selector closed');
   }
 
