@@ -596,36 +596,66 @@
       
       let longPressTimer = null;
       let longPressTriggered = false;
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let hasMoved = false;
       
       // Touch handlers for long-press
       if (isTouchDevice) {
         newCard.addEventListener('touchstart', (e) => {
           longPressTriggered = false;
+          hasMoved = false;
+          
+          // Store initial touch position
+          if (e.touches && e.touches.length > 0) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+          }
+          
           longPressTimer = setTimeout(() => {
-            longPressTriggered = true;
-            
-            // Trigger vibrate if supported
-            if (navigator.vibrate) {
-              navigator.vibrate(50);
+            // Only trigger if finger hasn't moved (not scrolling)
+            if (!hasMoved) {
+              longPressTriggered = true;
+              
+              // Trigger vibrate if supported
+              if (navigator.vibrate) {
+                navigator.vibrate(50);
+              }
+              
+              // Toggle Group mode
+              toggleGroupMode();
             }
-            
-            // Toggle Group mode
-            toggleGroupMode();
           }, 350);
+        }, { passive: true });
+        
+        // Detect movement during touch (indicates scrolling)
+        newCard.addEventListener('touchmove', (e) => {
+          if (e.touches && e.touches.length > 0) {
+            const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+            const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+            
+            // If finger moved more than 10px in any direction, it's a scroll gesture
+            if (deltaX > 10 || deltaY > 10) {
+              hasMoved = true;
+              clearTimeout(longPressTimer);
+            }
+          }
         }, { passive: true });
         
         newCard.addEventListener('touchend', (e) => {
           clearTimeout(longPressTimer);
           
-          if (!longPressTriggered) {
+          // Only handle selection if it was a tap (not scroll) and not long-press
+          if (!longPressTriggered && !hasMoved) {
             // Normal tap - handle selection
             handleCardSelection(newCard, playerId, e);
           }
-        });
+        }, { passive: true });
         
         newCard.addEventListener('touchcancel', () => {
           clearTimeout(longPressTimer);
-        });
+          hasMoved = true;
+        }, { passive: true });
       }
       
       // Click handler for desktop and tap fallback

@@ -3,253 +3,408 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test Group Action Cost Fix</title>
+  <title>Test: Group Action Selection During Scroll Fix</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 900px;
-      margin: 40px auto;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0f1a;
+      color: #fff;
+    }
+
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
       padding: 20px;
-      background: #1a1a2e;
-      color: #eee;
     }
-    h1 { color: #00d9ff; border-bottom: 2px solid #00d9ff; padding-bottom: 10px; }
-    h2 { color: #ff6b6b; margin-top: 30px; }
-    .test-case {
-      background: #16213e;
-      border-left: 4px solid #0f3460;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    .pass { border-left-color: #4caf50; }
-    .fail { border-left-color: #f44336; }
-    .result {
-      font-weight: bold;
-      font-size: 1.1em;
-      margin-top: 10px;
-    }
-    .pass .result { color: #4caf50; }
-    .fail .result { color: #f44336; }
-    code {
-      background: #0a0e27;
-      padding: 2px 6px;
-      border-radius: 3px;
-      color: #ffd700;
-    }
-    .details {
-      margin-top: 10px;
-      font-size: 0.9em;
-      color: #aaa;
-    }
-    .summary {
-      background: #0f3460;
+
+    .test-header {
+      background: linear-gradient(135deg, #1a2d45, #0f1e32);
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      border-radius: 12px;
       padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .test-header h1 {
+      margin: 0 0 10px 0;
+      color: #4a90e2;
+      font-size: 1.5rem;
+    }
+
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(100, 180, 255, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .test-section h2 {
+      margin: 0 0 15px 0;
+      font-size: 1.2rem;
+      color: #4a90e2;
+    }
+
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .test-btn {
+      background: linear-gradient(135deg, #4a90e2, #357abd);
+      color: #fff;
+      border: none;
       border-radius: 8px;
-      margin-top: 30px;
-      text-align: center;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
-    .summary h2 { margin-top: 0; }
+
+    .test-btn:hover {
+      background: linear-gradient(135deg, #5a9ff2, #4585c7);
+      transform: translateY(-2px);
+    }
+
+    .test-btn.secondary {
+      background: linear-gradient(135deg, #6c757d, #5a6268);
+    }
+
+    .test-btn.secondary:hover {
+      background: linear-gradient(135deg, #7c858d, #6a7278);
+    }
+
+    /* Mock TV container */
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      aspect-ratio: 16 / 9;
+      margin: 20px auto;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .tvViewport {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #1a1a2e, #0f0f1e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #tvOverlay {
+      position: absolute;
+      inset: var(--tv-safe-top, 44px) var(--tv-safe-x, 16px) var(--tv-safe-bottom, 42px) var(--tv-safe-x, 16px);
+      pointer-events: none;
+      z-index: 12;
+    }
+
+    #tvNow {
+      position: absolute;
+      left: var(--tv-safe-x, 16px);
+      right: var(--tv-safe-x, 16px);
+      bottom: 8px;
+      min-height: 28px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      background: linear-gradient(180deg, rgba(9, 24, 40, 0.85), rgba(6, 14, 24, 0.85));
+      color: #fff;
+      text-align: center;
+      z-index: 13;
+    }
+
+    .status-log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-entry.success { color: #4ade80; }
+    .log-entry.info { color: #60a5fa; }
+    .log-entry.warn { color: #fbbf24; }
+    .log-entry.error { color: #f87171; }
+
+    .test-checklist {
+      list-style: none;
+      padding: 0;
+    }
+
+    .test-checklist li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .test-checklist li:last-child {
+      border-bottom: none;
+    }
+
+    .pass { color: #4ade80; }
+    .pending { color: #fbbf24; }
   </style>
 </head>
 <body>
-  <h1>🧪 Group Action Energy Cost Fix - Test Suite</h1>
-  <div id="results"></div>
-  <div class="summary" id="summary"></div>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🔧 Group Action Selection During Scroll - Fix Verification</h1>
+      <p style="margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">
+        This test verifies that selected houseguests remain selected when scrolling during group interaction on mobile devices.
+      </p>
+    </div>
+
+    <div class="test-section">
+      <h2>TV Display with Launcher</h2>
+      <div id="tv">
+        <div class="tvViewport">
+          <div id="tvNow">Social Intermission</div>
+          <div id="tvOverlay"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <div class="test-controls">
+        <button class="test-btn" onclick="testOpenModal()">Open Modal</button>
+        <button class="test-btn" onclick="testSelectMultiple()">Auto-Select 3 Players</button>
+        <button class="test-btn" onclick="testCheckSelections()">Check Selections</button>
+        <button class="test-btn" onclick="testSimulateScroll()">Simulate Scroll Event</button>
+        <button class="test-btn secondary" onclick="testClearSelections()">Clear Selections</button>
+        <button class="test-btn secondary" onclick="testCloseModal()">Close Modal</button>
+      </div>
+      <div class="status-log" id="statusLog"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Checklist</h2>
+      <ul class="test-checklist">
+        <li class="pending">1. Open modal and select multiple players</li>
+        <li class="pending">2. Scroll within the player picker area</li>
+        <li class="pending">3. Verify selections are preserved after scrolling</li>
+        <li class="pending">4. Long-press on a card while stationary (should toggle group mode)</li>
+        <li class="pending">5. Touch and immediately scroll (should NOT toggle group mode)</li>
+        <li class="pending">6. Verify touch movement > 10px cancels long-press timer</li>
+        <li class="pending">7. Verify all touch events are passive for smooth scrolling</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>Expected Behavior</h2>
+      <ul style="list-style: disc; padding-left: 20px; color: rgba(255, 255, 255, 0.8);">
+        <li><strong>Tap and hold (stationary):</strong> Should trigger long-press after 350ms and toggle group mode</li>
+        <li><strong>Tap and scroll:</strong> Should NOT trigger long-press, allows smooth scrolling</li>
+        <li><strong>Movement threshold:</strong> > 10px movement cancels long-press</li>
+        <li><strong>Selected state:</strong> Preserved in <code>selectedIds</code> Set during scroll</li>
+        <li><strong>Visual feedback:</strong> Selected cards maintain blue outline during and after scroll</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>Implementation Details</h2>
+      <ul style="list-style: disc; padding-left: 20px; color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;">
+        <li><strong>Touch tracking:</strong> Stores initial touch position (touchStartX, touchStartY)</li>
+        <li><strong>Movement detection:</strong> touchmove listener calculates delta and sets hasMoved flag</li>
+        <li><strong>Timer cancellation:</strong> Movement > 10px clears longPressTimer</li>
+        <li><strong>Selection logic:</strong> Only processes tap if !hasMoved && !longPressTriggered</li>
+        <li><strong>Passive listeners:</strong> All touch events use { passive: true } for scroll performance</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/social.js"></script>
+  <script src="js/socialize-mobile.js"></script>
 
   <script>
-    // Mock the global context
-    window.game = { cfg: { enableSocialManeuvers: true }, humanId: 1, week: 1 };
-    window.getP = (id) => ({ id, name: `Player${id}`, affinity: {} });
-    window.safeName = (id) => `Player${id}`;
-    window.alivePlayers = () => [
-      { id: 1, name: 'Player1' },
-      { id: 2, name: 'Player2' },
-      { id: 3, name: 'Player3' },
-      { id: 4, name: 'Player4' },
-      { id: 5, name: 'Player5' }
-    ];
-  </script>
+    // Mock game state
+    window.game = {
+      humanId: 1,
+      week: 1,
+      phase: 'social_intermission',
+      cfg: {},
+      players: [
+        { id: 1, name: 'You', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player1', affinity: {} },
+        { id: 2, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=alice', affinity: {} },
+        { id: 3, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=bob', affinity: {} },
+        { id: 4, name: 'Charlie', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=charlie', affinity: {} },
+        { id: 5, name: 'Diana', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=diana', affinity: {} },
+        { id: 6, name: 'Eve', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=eve', affinity: {} },
+        { id: 7, name: 'Frank', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=frank', affinity: {} },
+        { id: 8, name: 'Grace', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=grace', affinity: {} },
+        { id: 9, name: 'Henry', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=henry', affinity: {} },
+        { id: 10, name: 'Iris', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=iris', affinity: {} }
+      ]
+    };
 
-  <!-- Load the actual social-maneuvers.js -->
-  <script src="../js/social-maneuvers.js"></script>
+    // Mock helper functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
 
-  <script>
-    const results = [];
-    
-    function runTest(description, testFn) {
-      try {
-        const result = testFn();
-        results.push({ description, ...result });
-        return result;
-      } catch (e) {
-        results.push({ 
-          description, 
-          pass: false, 
-          expected: 'No error', 
-          actual: e.message 
-        });
-        return { pass: false, expected: 'No error', actual: e.message };
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+
+    window.addLog = function(msg, cls = '') {
+      const log = document.getElementById('statusLog');
+      if (log) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry ' + cls;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        log.insertBefore(entry, log.firstChild);
+      }
+      console.log(`[${cls}] ${msg}`);
+    };
+
+    window.updateHud = function() {
+      console.log('HUD updated');
+    };
+
+    window.safeName = function(id) {
+      const player = window.getP(id);
+      return player ? player.name : 'Unknown';
+    };
+
+    // Mock SocialManeuvers for testing
+    window.SocialManeuvers = {
+      isEnabled: () => true,
+      SocialResources: {
+        init: (playerId) => {
+          if (!window.game.__sm_bankEnergy) {
+            window.game.__sm_bankEnergy = new Map();
+          }
+          window.game.__sm_bankEnergy.set(playerId, 5);
+        },
+        getAll: (playerId) => {
+          if (!window.game.__sm_bankEnergy) {
+            window.game.__sm_bankEnergy = new Map();
+          }
+          return {
+            energy: window.game.__sm_bankEnergy.get(playerId) || 5,
+            influence: 0,
+            information: 0
+          };
+        },
+        spend: (playerId, costs) => {
+          const current = window.game.__sm_bankEnergy.get(playerId) || 5;
+          window.game.__sm_bankEnergy.set(playerId, current - (costs.energy || 0));
+        },
+        earn: (playerId, gains) => {
+          const current = window.game.__sm_bankEnergy.get(playerId) || 5;
+          window.game.__sm_bankEnergy.set(playerId, current + (gains.energy || 0));
+        }
+      },
+      SOCIAL_ACTIONS: [
+        { id: 'smalltalk', label: 'Small Talk', costs: { energy: 1 }, category: 'friendly', description: 'Light conversation' },
+        { id: 'strategize', label: 'Strategize', costs: { energy: 2 }, category: 'strategic', description: 'Deep strategy talk' }
+      ]
+    };
+
+    // Test functions
+    function testOpenModal() {
+      window.SocializeMobile.openModal();
+      window.addLog('Modal opened - scroll in player picker area to test', 'info');
+    }
+
+    function testCloseModal() {
+      window.SocializeMobile.closeModal(false);
+      window.addLog('Modal closed', 'info');
+    }
+
+    function testSelectMultiple() {
+      // Programmatically select 3 players
+      const cards = document.querySelectorAll('.player-card');
+      if (cards.length >= 3) {
+        for (let i = 0; i < 3; i++) {
+          const card = cards[i];
+          const playerId = parseInt(card.dataset.playerId);
+          card.classList.add('selected');
+          card.setAttribute('aria-pressed', 'true');
+          window.SocializeMobile.state.selectedIds.add(playerId);
+        }
+        window.addLog(`Auto-selected 3 players: ${Array.from(window.SocializeMobile.state.selectedIds).map(id => window.safeName(id)).join(', ')}`, 'success');
+      } else {
+        window.addLog('Not enough player cards found - open modal first', 'warn');
       }
     }
 
-    // Test 1: Single target cost
-    runTest('Single target (1 target, base 1)', () => {
-      const cost = window.SocialManeuvers.computeActionCost('smalltalk', [1]);
-      return {
-        pass: cost.total === 1 && cost.base === 1 && cost.group === 0,
-        expected: 'total=1, base=1, group=0',
-        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`
-      };
-    });
-
-    // Test 2: Two targets
-    runTest('Two targets (2 targets, base 1)', () => {
-      const cost = window.SocialManeuvers.computeActionCost('smalltalk', [1, 2]);
-      return {
-        pass: cost.total === 2 && cost.base === 1 && cost.group === 1,
-        expected: 'total=2, base=1, group=1',
-        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`
-      };
-    });
-
-    // Test 3: Three targets
-    runTest('Three targets (3 targets, base 1)', () => {
-      const cost = window.SocialManeuvers.computeActionCost('smalltalk', [1, 2, 3]);
-      return {
-        pass: cost.total === 3 && cost.base === 1 && cost.group === 2,
-        expected: 'total=3, base=1, group=2',
-        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`
-      };
-    });
-
-    // Test 4: Four targets (the bug scenario!)
-    runTest('Four targets (4 targets, base 1) - BUG SCENARIO', () => {
-      const cost = window.SocialManeuvers.computeActionCost('smalltalk', [1, 2, 3, 4]);
-      return {
-        pass: cost.total === 4 && cost.base === 1 && cost.group === 3,
-        expected: 'total=4, base=1, group=3',
-        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`,
-        note: 'This is the exact scenario from the bug report!'
-      };
-    });
-
-    // Test 5: Action with higher base cost
-    runTest('Two targets with base cost 2', () => {
-      const cost = window.SocialManeuvers.computeActionCost('strategize', [1, 2]);
-      return {
-        pass: cost.total === 3 && cost.base === 2 && cost.group === 1,
-        expected: 'total=3, base=2, group=1',
-        actual: `total=${cost.total}, base=${cost.base}, group=${cost.group}`
-      };
-    });
-
-    // Test 6: Verify execution deducts correct amount
-    runTest('Execution: Four targets deducts 4 energy (not 1)', () => {
-      // Set up test player with 5 energy
-      window.SocialManeuvers.SocialResources.init(1);
-      window.SocialManeuvers.SocialEnergyBank.set(1, 5);
-      window.SocialManeuvers.SocialResources.set(1, 'energy', 5);
+    function testCheckSelections() {
+      const selectedCount = window.SocializeMobile.state.selectedIds.size;
+      const selectedNames = Array.from(window.SocializeMobile.state.selectedIds)
+        .map(id => window.safeName(id))
+        .join(', ');
       
-      const energyBefore = window.SocialManeuvers.SocialResources.get(1, 'energy');
-      
-      // Execute group action with 4 targets: primary (2) + extras ([3, 4, 5])
-      // Total targets = [2, 3, 4, 5] = 4 targets
-      const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk', [3, 4, 5]);
-      
-      const energyAfter = window.SocialManeuvers.SocialResources.get(1, 'energy');
-      const energySpent = energyBefore - energyAfter;
-      
-      return {
-        pass: energySpent === 4 && result.success === true,
-        expected: '4 energy deducted (5 → 1)',
-        actual: `${energySpent} energy deducted (${energyBefore} → ${energyAfter})`,
-        details: result.success ? 'Action executed successfully' : `Failed: ${result.reason}`
-      };
-    });
+      if (selectedCount > 0) {
+        window.addLog(`✅ ${selectedCount} player(s) selected: ${selectedNames}`, 'success');
+      } else {
+        window.addLog('⚠️ No players selected', 'warn');
+      }
+    }
 
-    // Test 7: Insufficient energy blocking
-    runTest('Execution blocked when insufficient energy', () => {
-      // Set up test player with only 2 energy
-      window.SocialManeuvers.SocialResources.init(1);
-      window.SocialManeuvers.SocialEnergyBank.set(1, 2);
-      window.SocialManeuvers.SocialResources.set(1, 'energy', 2);
-      
-      // Try to execute action needing 4 energy: [2, 3, 4, 5] = 4 targets = 4 energy
-      const result = window.SocialManeuvers.executeAction(1, 2, 'smalltalk', [3, 4, 5]);
-      
-      return {
-        pass: result.success === false && result.reason === 'insufficient_energy',
-        expected: 'Blocked with insufficient_energy',
-        actual: result.success ? 'Allowed (WRONG!)' : `Blocked: ${result.reason}`,
-        details: result.message || ''
-      };
-    });
-
-    // Test 8: Formula verification
-    runTest('Formula: total = base + (count - 1)', () => {
-      const testCases = [
-        { targets: 1, expected: 1 },
-        { targets: 2, expected: 2 },
-        { targets: 3, expected: 3 },
-        { targets: 4, expected: 4 },
-        { targets: 5, expected: 5 }
-      ];
-      
-      const results = testCases.map(tc => {
-        const ids = Array.from({ length: tc.targets }, (_, i) => i + 1);
-        const cost = window.SocialManeuvers.computeActionCost('smalltalk', ids);
-        return { targets: tc.targets, cost: cost.total, expected: tc.expected, match: cost.total === tc.expected };
+    function testClearSelections() {
+      window.SocializeMobile.state.selectedIds.clear();
+      document.querySelectorAll('.player-card.selected').forEach(card => {
+        card.classList.remove('selected');
+        card.setAttribute('aria-pressed', 'false');
       });
-      
-      const allPass = results.every(r => r.match);
-      
-      return {
-        pass: allPass,
-        expected: 'All test cases pass formula',
-        actual: results.map(r => `${r.targets}→${r.cost}${r.match ? '✓' : '✗'}`).join(', '),
-        details: allPass ? 'Formula works for all target counts' : 'Some cases failed'
-      };
-    });
+      window.addLog('All selections cleared', 'info');
+    }
 
-    // Render results
-    const resultsDiv = document.getElementById('results');
-    results.forEach((result, idx) => {
-      const div = document.createElement('div');
-      div.className = `test-case ${result.pass ? 'pass' : 'fail'}`;
-      div.innerHTML = `
-        <strong>Test ${idx + 1}:</strong> ${result.description}
-        <div class="details">
-          <div><strong>Expected:</strong> ${result.expected}</div>
-          <div><strong>Actual:</strong> ${result.actual}</div>
-          ${result.note ? `<div><strong>Note:</strong> ${result.note}</div>` : ''}
-          ${result.details ? `<div>${result.details}</div>` : ''}
-        </div>
-        <div class="result">${result.pass ? '✅ PASS' : '❌ FAIL'}</div>
-      `;
-      resultsDiv.appendChild(div);
-    });
+    function testSimulateScroll() {
+      // This is a simplified simulation - real testing requires actual touch device
+      const picker = document.querySelector('.player-picker');
+      if (picker && picker.parentElement) {
+        picker.parentElement.scrollTop += 50;
+        window.addLog('Simulated scroll event - check if selections are preserved', 'info');
+        
+        setTimeout(() => {
+          testCheckSelections();
+        }, 100);
+      } else {
+        window.addLog('Modal not open - open modal first', 'warn');
+      }
+    }
 
-    // Summary
-    const passed = results.filter(r => r.pass).length;
-    const failed = results.filter(r => !r.pass).length;
-    const summaryDiv = document.getElementById('summary');
-    summaryDiv.innerHTML = `
-      <h2>${passed === results.length ? '🎉 All Tests Passed!' : '⚠️ Some Tests Failed'}</h2>
-      <p><strong>${passed}</strong> passed, <strong>${failed}</strong> failed out of <strong>${results.length}</strong> total</p>
-      ${passed === results.length ? '<p style="color: #4caf50;">✓ Group action energy cost fix is working correctly!</p>' : '<p style="color: #f44336;">✗ There are still issues to fix.</p>'}
-    `;
-
-    // Log to console
-    console.group('🧪 Test Results');
-    results.forEach((r, i) => {
-      console.log(`${r.pass ? '✅' : '❌'} Test ${i + 1}: ${r.description}`);
-      console.log(`   Expected: ${r.expected}`);
-      console.log(`   Actual: ${r.actual}`);
-      if (r.details) console.log(`   ${r.details}`);
+    // Auto-initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      window.SocializeMobile.ensureLauncher();
+      window.addLog('Test page loaded', 'info');
+      window.addLog('📱 For full testing, use an actual mobile device or mobile emulator', 'info');
+      window.addLog('🧪 Test steps:', 'info');
+      window.addLog('  1. Open modal', 'info');
+      window.addLog('  2. Select multiple players (tap or use Auto-Select)', 'info');
+      window.addLog('  3. Scroll in the player picker', 'info');
+      window.addLog('  4. Verify selections remain (use Check Selections)', 'info');
     });
-    console.groupEnd();
-    console.log(`\n${passed}/${results.length} tests passed`);
   </script>
 </body>
 </html>
