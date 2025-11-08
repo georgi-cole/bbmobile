@@ -595,13 +595,13 @@
     
     threeDigitsQuiz: {
       key: 'threeDigitsQuiz',
-      name: 'Three Digits Quiz',
-      description: 'Answer three sequential digit questions with graded hints',
-      type: 'puzzle',
+      name: 'Number Trivia',
+      description: 'Answer numeric trivia questions with higher/lower hints',
+      type: 'trivia',
       scoring: 'hybrid',
       mobileFriendly: true,
       implemented: true,
-      module: 'three-digits-quiz.js',
+      module: 'number-trivia-quiz.js',
       minScore: 0,
       maxScore: 100,
       retired: false,

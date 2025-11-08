@@ -29,7 +29,7 @@
     // Game constants
     const CANVAS_WIDTH = 400;
     const CANVAS_HEIGHT = 400;
-    const GAME_DURATION = 60; // seconds
+    // Note: Game now relies on global competition timer instead of internal GAME_DURATION
     
     // Track colors
     const COLORS = ['#83bfff', '#ff6b9d', '#5bd68a', '#f7b955'];
@@ -42,8 +42,8 @@
     let crashes = 0;
     let combo = 0;
     let gameOver = false;
-    let startTime = Date.now();
-    let timeLeft = GAME_DURATION;
+    const startTime = Date.now();
+    let elapsedTime = 0;
     let trainSpawnTimer = 0;
     
     // Create simple track layout with switches
@@ -110,7 +110,7 @@
     crashDiv.style.cssText = 'color:#ff6b9d;font-weight:600;';
     
     const timerDiv = document.createElement('div');
-    timerDiv.textContent = `Time: ${GAME_DURATION}s`;
+    timerDiv.textContent = 'Time: 0s';
     timerDiv.style.cssText = 'color:#83bfff;font-weight:600;';
     
     const comboDiv = document.createElement('div');
@@ -148,6 +148,27 @@
       btn.addEventListener('click', () => toggleSwitch(idx));
       controlsDiv.appendChild(btn);
     });
+    
+    // Add "End Run" button for manual completion
+    const endRunBtn = document.createElement('button');
+    endRunBtn.textContent = 'End Run';
+    endRunBtn.style.cssText = `
+      min-height:44px;
+      padding:10px 20px;
+      font-size:1rem;
+      font-weight:bold;
+      background:#ff6b9d;
+      color:#1a1a1a;
+      border:2px solid #e55a8a;
+      border-radius:10px;
+      cursor:pointer;
+    `;
+    endRunBtn.addEventListener('click', () => {
+      if(!gameOver) {
+        endGame();
+      }
+    });
+    controlsDiv.appendChild(endRunBtn);
     
     wrapper.appendChild(title);
     wrapper.appendChild(instructions);
@@ -318,7 +339,6 @@
       });
     }
     
-    let lastTime = Date.now();
     let lastFrame = Date.now();
     
     function gameLoop() {
@@ -328,18 +348,16 @@
       const delta = now - lastFrame;
       lastFrame = now;
       
-      // Update timer
-      timeLeft = GAME_DURATION - Math.floor((now - startTime) / 1000);
-      timerDiv.textContent = `Time: ${Math.max(0, timeLeft)}s`;
+      // Update elapsed timer (informational only)
+      elapsedTime = Math.floor((now - startTime) / 1000);
+      timerDiv.textContent = `Time: ${elapsedTime}s`;
       
-      if(timeLeft <= 0) {
-        endGame();
-        return;
-      }
+      // Note: Game continues until global competition timer expires or player ends run
+      // No internal time limit
       
-      // Spawn trains
+      // Spawn trains (gradually increase spawn rate over time)
       trainSpawnTimer += delta;
-      const spawnInterval = Math.max(1500, 3000 - Math.floor((GAME_DURATION - timeLeft) / 10) * 200);
+      const spawnInterval = Math.max(1500, 3000 - Math.floor(elapsedTime / 10) * 200);
       if(trainSpawnTimer >= spawnInterval) {
         spawnTrain();
         trainSpawnTimer = 0;
@@ -372,7 +390,7 @@
       `;
       
       const resultText = document.createElement('div');
-      resultText.textContent = '⏱️ Time Up!';
+      resultText.textContent = '🎯 Run Complete!';
       resultText.style.cssText = 'font-size:1.8rem;color:#5bd68a;margin-bottom:15px;font-weight:bold;';
       
       const statsText = document.createElement('div');
