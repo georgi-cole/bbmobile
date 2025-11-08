@@ -129,7 +129,17 @@
       if(host){
         host.innerHTML = '';
         
-        // Create stage wrapper for TV-centered layout
+        // Compute vertical bias for TV-centered positioning
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const isPortrait = vh > vw;
+        const biasRatio = isPortrait && vw < 600 ? 0.08 : 0.04;
+        const tvHeight = host.offsetHeight || vh;
+        const biasPixels = Math.round(tvHeight * biasRatio);
+        const bias = `${biasPixels}px`;
+        host.style.setProperty('--tv-center-bias', bias);
+        
+        // Create stage wrapper for TV-centered layout with vertical bias
         const stage = document.createElement('div');
         stage.className = 'nfs-stage';
         stage.style.cssText = `
@@ -140,6 +150,7 @@
           justify-content: center;
           pointer-events: none;
           z-index: 10;
+          transform: translateY(calc(-1 * var(--tv-center-bias, 0px)));
         `;
         
         const center = document.createElement('div');
