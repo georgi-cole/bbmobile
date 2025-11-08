@@ -1656,99 +1656,16 @@
     
     return isPhaseCorrect && isNotEvicted;
   }
-  
-  /**
-   * Ensure launcher is visible and ready for social phase
-   * Called on entering social_intermission to guarantee launcher appears
-   */
-  function ensureVisible() {
-    console.log('[socialize-mobile] ensure-visible: entering social_intermission');
-    
-    const g = global.game || {};
-    
-    // 1. Clear any blocking TV overlay
-    const tvOverlay = document.getElementById('tvOverlay');
-    if (tvOverlay) {
-      tvOverlay.style.pointerEvents = 'none';
-      tvOverlay.style.display = 'none';
-      tvOverlay.innerHTML = '';
-      console.log('[socialize-mobile] ensure-visible: cleared blocking TV overlay');
-    }
-    
-    // 2. Clear "already active/sole owner" flags
-    if (g.__socialLauncherActive) {
-      console.log('[socialize-mobile] ensure-visible: clearing __socialLauncherActive flag');
-      g.__socialLauncherActive = false;
-    }
-    if (g.__socialLauncherMounted) {
-      console.log('[socialize-mobile] ensure-visible: clearing __socialLauncherMounted flag');
-      g.__socialLauncherMounted = false;
-    }
-    
-    // 3. Reinitialize/reattach observers if needed
-    try {
-      if (mountObserver) {
-        console.log('[socialize-mobile] ensure-visible: mount observer already active');
-      } else {
-        console.log('[socialize-mobile] ensure-visible: starting mount observer');
-        startMountObserver();
-      }
-    } catch(e) {
-      console.error('[socialize-mobile] ensure-visible: failed to start observer:', e);
-    }
-    
-    // 4. Call ensureSocializeLauncher() unconditionally with idempotent guard
-    try {
-      const launcher = ensureSocializeLauncher();
-      if (launcher) {
-        console.log('[socialize-mobile] ensure-visible: launcher mounted successfully');
-        
-        // 5. Show and update HUD
-        showLauncher();
-        updateHUDDisplay();
-        
-        console.log('[socialize-mobile] ensure-visible: ✓ launcher visible (phase social_intermission)');
-      } else {
-        console.warn('[socialize-mobile] ensure-visible: failed to mount launcher');
-      }
-    } catch(e) {
-      console.error('[socialize-mobile] ensure-visible: error mounting launcher:', e);
-    }
-  }
-  
-  /**
-   * Reset flags on exiting social phase
-   * Allows launcher to mount again in the next social phase
-   */
-  function resetSocialFlags() {
-    console.log('[socialize-mobile] reset-social-flags: exiting social_intermission');
-    
-    const g = global.game || {};
-    
-    // Reset "already active/sole owner" flags
-    if (g.__socialLauncherActive) {
-      console.log('[socialize-mobile] reset-social-flags: clearing __socialLauncherActive');
-      g.__socialLauncherActive = false;
-    }
-    if (g.__socialLauncherMounted) {
-      console.log('[socialize-mobile] reset-social-flags: clearing __socialLauncherMounted');
-      g.__socialLauncherMounted = false;
-    }
-    
-    console.log('[socialize-mobile] reset-social-flags: ✓ flags reset');
-  }
 
   // Public API
   global.SocializeMobile = {
     ensureLauncher: ensureSocializeLauncher,
     ensureSocializeLauncher: ensureSocializeLauncher, // Alias for clarity
-    ensureVisible: ensureVisible, // NEW: ensure launcher is visible on phase entry
     mountTVLauncher: ensureSocializeLauncher, // Back-compat alias
     openModal: openSocializeModal,
     closeModal: closeSocializeModal,
     updateHUD: updateHUDDisplay,
     resetWeeklyResources: resetWeeklyResources,
-    resetSocialFlags: resetSocialFlags, // NEW: reset flags on phase exit
     getResources: getResourceState,
     updateResources: updateResourceState,
     seedPhaseResources: seedPhaseResources,
