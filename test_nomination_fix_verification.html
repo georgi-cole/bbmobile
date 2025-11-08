@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nomination Fix Verification Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #1a1a1a;
+      color: #f0f0f0;
+    }
+    h1 { color: #4ade80; }
+    h2 { color: #60a5fa; margin-top: 30px; }
+    .test-section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #3a3a3a;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 5px 0;
+    }
+    .pass { background: #065f46; color: #d1fae5; }
+    .fail { background: #7f1d1d; color: #fee2e2; }
+    .pending { background: #713f12; color: #fef3c7; }
+    button {
+      background: #4ade80;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #22c55e; }
+    .log {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 4px;
+    }
+    .log-info { color: #60a5fa; }
+    .log-warn { color: #fbbf24; }
+    .log-error { color: #f87171; }
+    pre {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Nomination Fix Verification Test</h1>
+  <p>This test verifies the fixes for human HOH nomination flow.</p>
+
+  <div class="test-section">
+    <h2>Test 1: Global API Exposure</h2>
+    <p>Verify window.NomsFS API is available</p>
+    <div id="test1-status" class="status pending">Pending</div>
+    <button onclick="runTest1()">Run Test</button>
+    <div id="test1-log" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Interceptor Installation</h2>
+    <p>Verify interceptor installs with retry logic</p>
+    <div id="test2-status" class="status pending">Pending</div>
+    <button onclick="runTest2()">Run Test</button>
+    <div id="test2-log" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Diagnostic Logging</h2>
+    <p>Verify diagnostic info is logged during render</p>
+    <div id="test3-status" class="status pending">Pending</div>
+    <button onclick="runTest3()">Run Test</button>
+    <div id="test3-log" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Premature Nomination Guard</h2>
+    <p>Verify finalizeNoms blocks when human HOH hasn't selected</p>
+    <div id="test4-status" class="status pending">Pending</div>
+    <button onclick="runTest4()">Run Test</button>
+    <div id="test4-log" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Phase Entry Flag Reset</h2>
+    <p>Verify stale flags are cleared on phase entry</p>
+    <div id="test5-status" class="status pending">Pending</div>
+    <button onclick="runTest5()">Run Test</button>
+    <div id="test5-log" class="log"></div>
+  </div>
+
+  <script>
+    // Capture console logs
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    const consoleLogs = [];
+
+    function captureConsole() {
+      consoleLogs.length = 0;
+      console.log = function(...args) {
+        consoleLogs.push({ type: 'log', args });
+        originalLog.apply(console, args);
+      };
+      console.warn = function(...args) {
+        consoleLogs.push({ type: 'warn', args });
+        originalWarn.apply(console, args);
+      };
+      console.error = function(...args) {
+        consoleLogs.push({ type: 'error', args });
+        originalError.apply(console, args);
+      };
+    }
+
+    function restoreConsole() {
+      console.log = originalLog;
+      console.warn = originalWarn;
+      console.error = originalError;
+    }
+
+    function displayLogs(elementId, filter = null) {
+      const element = document.getElementById(elementId);
+      const logs = filter ? consoleLogs.filter(filter) : consoleLogs;
+      element.innerHTML = logs.map(log => {
+        const className = `log-${log.type}`;
+        const message = log.args.map(arg => 
+          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ');
+        return `<div class="log-entry ${className}">[${log.type}] ${message}</div>`;
+      }).join('');
+    }
+
+    function setStatus(testId, passed, message) {
+      const status = document.getElementById(`test${testId}-status`);
+      status.className = `status ${passed ? 'pass' : 'fail'}`;
+      status.textContent = passed ? `✓ Pass: ${message}` : `✗ Fail: ${message}`;
+    }
+
+    async function runTest1() {
+      captureConsole();
+      
+      try {
+        // Check if NomsFS exists
+        if (!window.NomsFS) {
+          setStatus(1, false, 'window.NomsFS not found');
+          displayLogs('test1-log');
+          restoreConsole();
+          return;
+        }
+
+        // Check API methods
+        const hasOpen = typeof window.NomsFS.open === 'function';
+        const hasShowIntro = typeof window.NomsFS.showIntro === 'function';
+        const hasDebug = typeof window.NomsFS.debug === 'function';
+
+        if (!hasOpen || !hasShowIntro || !hasDebug) {
+          setStatus(1, false, 'Missing API methods');
+          displayLogs('test1-log');
+          restoreConsole();
+          return;
+        }
+
+        // Test debug() method
+        const debugInfo = window.NomsFS.debug();
+        console.log('[test1] Debug info:', debugInfo);
+
+        if (!debugInfo || typeof debugInfo !== 'object') {
+          setStatus(1, false, 'debug() did not return valid object');
+          displayLogs('test1-log');
+          restoreConsole();
+          return;
+        }
+
+        setStatus(1, true, 'NomsFS API is properly exposed');
+        displayLogs('test1-log');
+      } catch (err) {
+        console.error('[test1] Error:', err);
+        setStatus(1, false, err.message);
+        displayLogs('test1-log');
+      }
+      
+      restoreConsole();
+    }
+
+    async function runTest2() {
+      captureConsole();
+      
+      try {
+        // Check if interceptor installed flag exists
+        if (!window.__nomsFsInstalled) {
+          setStatus(2, false, 'Interceptor not installed (__nomsFsInstalled flag missing)');
+          displayLogs('test2-log', log => log.args[0]?.includes?.('[noms-fs]'));
+          restoreConsole();
+          return;
+        }
+
+        // Check if renderNomsPanel was intercepted
+        if (!window.renderNomsPanel || typeof window.renderNomsPanel !== 'function') {
+          setStatus(2, false, 'renderNomsPanel not found');
+          displayLogs('test2-log', log => log.args[0]?.includes?.('[noms-fs]'));
+          restoreConsole();
+          return;
+        }
+
+        setStatus(2, true, 'Interceptor installed successfully');
+        displayLogs('test2-log', log => log.args[0]?.includes?.('[noms-fs]'));
+      } catch (err) {
+        console.error('[test2] Error:', err);
+        setStatus(2, false, err.message);
+        displayLogs('test2-log', log => log.args[0]?.includes?.('[noms-fs]'));
+      }
+      
+      restoreConsole();
+    }
+
+    async function runTest3() {
+      captureConsole();
+      
+      try {
+        // Create mock game state
+        window.game = window.game || {};
+        window.game.phase = 'nominations';
+        window.game.hohId = 1;
+        window.game.nomsLocked = false;
+        window.game.__nomsCommitInProgress = false;
+        window.game.__nomsCommitted = false;
+        window.game.nominees = [];
+        
+        // Mock getP
+        window.getP = (id) => ({ id, name: `Player ${id}`, human: id === 1 });
+
+        // Mock tv.say
+        window.tv = window.tv || {};
+        window.tv.say = () => {};
+
+        // Call renderNomsPanel to trigger diagnostic logging
+        if (window.renderNomsPanel) {
+          window.renderNomsPanel();
+        }
+
+        // Check if diagnostic log was created
+        const hasInterceptLog = consoleLogs.some(log => 
+          log.args[0]?.includes?.('[noms-fs]') && 
+          log.args[0]?.includes?.('intercept check')
+        );
+
+        if (!hasInterceptLog) {
+          setStatus(3, false, 'Diagnostic logging not found');
+          displayLogs('test3-log', log => log.args[0]?.includes?.('[noms-fs]') || log.args[0]?.includes?.('[noms-pick]'));
+          restoreConsole();
+          return;
+        }
+
+        setStatus(3, true, 'Diagnostic logging is working');
+        displayLogs('test3-log', log => log.args[0]?.includes?.('[noms-fs]') || log.args[0]?.includes?.('[noms-pick]'));
+      } catch (err) {
+        console.error('[test3] Error:', err);
+        setStatus(3, false, err.message);
+        displayLogs('test3-log', log => log.args[0]?.includes?.('[noms-fs]') || log.args[0]?.includes?.('[noms-pick]'));
+      }
+      
+      restoreConsole();
+    }
+
+    async function runTest4() {
+      captureConsole();
+      
+      try {
+        // Create mock game state for human HOH without pending noms
+        window.game = window.game || {};
+        window.game.hohId = 1;
+        window.game.nomsLocked = false;
+        window.game.__nomsCommitted = false;
+        window.game._pendingNoms = null; // No pending noms yet
+        window.game.nominees = [];
+        
+        window.getP = (id) => ({ id, name: `Player ${id}`, human: id === 1 });
+
+        // Try to call finalizeNoms
+        if (window.finalizeNoms) {
+          await window.finalizeNoms();
+        }
+
+        // Check if blocking message was logged
+        const hasBlockingLog = consoleLogs.some(log => 
+          log.type === 'warn' &&
+          log.args[0]?.includes?.('[nom]') &&
+          log.args[0]?.includes?.('Blocking premature finalizeNoms')
+        );
+
+        if (!hasBlockingLog) {
+          setStatus(4, false, 'Premature nomination guard not working');
+          displayLogs('test4-log', log => log.args[0]?.includes?.('[nom]'));
+          restoreConsole();
+          return;
+        }
+
+        // Verify nominees were not set
+        if (Array.isArray(window.game.nominees) && window.game.nominees.length > 0) {
+          setStatus(4, false, 'Nominees were set despite guard');
+          displayLogs('test4-log', log => log.args[0]?.includes?.('[nom]'));
+          restoreConsole();
+          return;
+        }
+
+        setStatus(4, true, 'Premature nomination guard is working');
+        displayLogs('test4-log', log => log.args[0]?.includes?.('[nom]'));
+      } catch (err) {
+        console.error('[test4] Error:', err);
+        setStatus(4, false, err.message);
+        displayLogs('test4-log', log => log.args[0]?.includes?.('[nom]'));
+      }
+      
+      restoreConsole();
+    }
+
+    async function runTest5() {
+      captureConsole();
+      
+      try {
+        // Create mock game state with stale flags
+        window.game = window.game || {};
+        window.game.phase = 'intermission';
+        window.game.hohId = 1;
+        window.game.nomsLocked = false;
+        window.game.__nomsCommitInProgress = true; // Stale flag
+        window.game.__nomsCommitted = true; // Stale flag
+        window.game.nominees = [];
+        
+        window.getP = (id) => ({ id, name: `Player ${id}`, human: id === 1 });
+
+        // Simulate phase change to nominations
+        if (window.setPhase) {
+          window.setPhase('nominations', 0);
+        }
+
+        // Check if reset log was created
+        const hasResetLog = consoleLogs.some(log => 
+          log.args[0]?.includes?.('[phase]') &&
+          log.args[0]?.includes?.('Resetting stale nomination flags')
+        );
+
+        // Verify flags were reset
+        const flagsReset = 
+          window.game.__nomsCommitInProgress === false &&
+          window.game.__nomsCommitted === false;
+
+        if (!hasResetLog && !flagsReset) {
+          setStatus(5, false, 'Flag reset not triggered (may need actual phase transition)');
+          displayLogs('test5-log', log => log.args[0]?.includes?.('[phase]'));
+          restoreConsole();
+          return;
+        }
+
+        setStatus(5, true, flagsReset ? 'Flags reset successfully' : 'Reset logic present (needs phase transition)');
+        displayLogs('test5-log', log => log.args[0]?.includes?.('[phase]'));
+      } catch (err) {
+        console.error('[test5] Error:', err);
+        setStatus(5, false, err.message);
+        displayLogs('test5-log', log => log.args[0]?.includes?.('[phase]'));
+      }
+      
+      restoreConsole();
+    }
+  </script>
+
+  <!-- Load actual game modules -->
+  <script defer src="js/nominations.js"></script>
+  <script defer src="js/nominations-grid-fullscreen.js"></script>
+  <script defer src="js/ui.hud-and-router.js"></script>
+
+  <script>
+    // Auto-run tests after modules load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.log('=== Auto-running verification tests ===');
+        runTest1();
+        setTimeout(() => runTest2(), 500);
+        setTimeout(() => runTest3(), 1000);
+        setTimeout(() => runTest4(), 1500);
+        setTimeout(() => runTest5(), 2000);
+      }, 2000); // Give modules time to initialize
+    });
+  </script>
+</body>
+</html>
