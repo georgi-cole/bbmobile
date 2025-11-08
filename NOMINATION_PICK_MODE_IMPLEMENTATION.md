@@ -1,8 +1,18 @@
-# Human-HOH Nomination Pick Mode Implementation
+# ⚠️ DEPRECATED: Human-HOH Nomination Pick Mode Implementation
 
-## Overview
+## ⚠️ Deprecation Notice
 
-This implementation replaces the legacy below-TV dropdown selectors for human Head of Household nominations with an interactive tap-to-select UX on the top roster. The new flow provides a more engaging, mobile-friendly experience while maintaining all existing game logic and AI HOH behaviors.
+**This document describes the legacy "pick mode" nomination flow that has been REMOVED.**
+
+The roster tile selection mode with confirm bar is no longer used. The codebase now exclusively uses the full-screen grid selector for human HOH nominations.
+
+**Current implementation:** See `js/nominations-grid-fullscreen.js` and `test_nomination_fullscreen_flow.html`
+
+---
+
+## Overview (Historical)
+
+This implementation replaced the legacy below-TV dropdown selectors for human Head of Household nominations with an interactive tap-to-select UX on the top roster. This approach has since been superseded by the full-screen grid selector for better UX and accessibility.
 
 ## Visual Flow
 
