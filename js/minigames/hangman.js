@@ -51,6 +51,38 @@
     wrongDiv.style.cssText = 'font-size:1.1rem;font-weight:bold;color:#ff6b9d;';
     wrongDiv.setAttribute('aria-live', 'polite');
     
+    // Gallows/figure display (SVG)
+    const gallowsDiv = document.createElement('div');
+    gallowsDiv.style.cssText = 'width:200px;height:250px;margin:10px auto;';
+    gallowsDiv.innerHTML = `
+      <svg width="200" height="250" viewBox="0 0 200 250" style="background:#0a0a0a;border-radius:8px;">
+        <!-- Base -->
+        <line x1="20" y1="230" x2="120" y2="230" stroke="#5bd68a" stroke-width="4"/>
+        <!-- Pole -->
+        <line x1="50" y1="230" x2="50" y2="20" stroke="#5bd68a" stroke-width="4"/>
+        <!-- Top beam -->
+        <line x1="50" y1="20" x2="130" y2="20" stroke="#5bd68a" stroke-width="4"/>
+        <!-- Rope -->
+        <line x1="130" y1="20" x2="130" y2="50" stroke="#5bd68a" stroke-width="2"/>
+        
+        <!-- Figure parts (initially hidden) -->
+        <!-- Head -->
+        <circle id="hangman-head" cx="130" cy="70" r="20" stroke="#ff6b9d" stroke-width="3" fill="none" opacity="0"/>
+        <!-- Torso -->
+        <line id="hangman-torso" x1="130" y1="90" x2="130" y2="150" stroke="#ff6b9d" stroke-width="3" opacity="0"/>
+        <!-- Left arm -->
+        <line id="hangman-left-arm" x1="130" y1="110" x2="100" y2="130" stroke="#ff6b9d" stroke-width="3" opacity="0"/>
+        <!-- Right arm -->
+        <line id="hangman-right-arm" x1="130" y1="110" x2="160" y2="130" stroke="#ff6b9d" stroke-width="3" opacity="0"/>
+        <!-- Left leg -->
+        <line id="hangman-left-leg" x1="130" y1="150" x2="105" y2="190" stroke="#ff6b9d" stroke-width="3" opacity="0"/>
+        <!-- Right leg -->
+        <line id="hangman-right-leg" x1="130" y1="150" x2="155" y2="190" stroke="#ff6b9d" stroke-width="3" opacity="0"/>
+      </svg>
+    `;
+    gallowsDiv.setAttribute('aria-label', 'Hangman figure');
+    gallowsDiv.setAttribute('role', 'img');
+    
     // Word display
     const wordDisplay = document.createElement('div');
     wordDisplay.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:60px;align-items:center;';
@@ -76,6 +108,7 @@
     wrapper.appendChild(title);
     wrapper.appendChild(instructions);
     wrapper.appendChild(wrongDiv);
+    wrapper.appendChild(gallowsDiv);
     wrapper.appendChild(wordDisplay);
     wrapper.appendChild(keyboardDiv);
     wrapper.appendChild(giveUpBtn);
@@ -132,6 +165,27 @@
         wordDisplay.appendChild(letterBox);
       }
     }
+    
+    function updateGallows(){
+      // Show body parts progressively based on wrong count
+      // 1: head, 2: torso, 3: left arm, 4: right arm, 5: left leg, 6: right leg
+      const parts = [
+        'hangman-head',
+        'hangman-torso', 
+        'hangman-left-arm',
+        'hangman-right-arm',
+        'hangman-left-leg',
+        'hangman-right-leg'
+      ];
+      
+      // Show parts up to wrongCount
+      for(let i = 0; i < parts.length; i++){
+        const part = document.getElementById(parts[i]);
+        if(part){
+          part.setAttribute('opacity', i < wrongCount ? '1' : '0');
+        }
+      }
+    }
 
     function guessLetter(letter){
       if(gameOver || guessed.has(letter)) return;
@@ -156,6 +210,7 @@
       }
       
       wrongDiv.textContent = `Wrong: ${wrongCount}/${MAX_WRONG}`;
+      updateGallows();
       updateWordDisplay();
       
       // Check win/lose
