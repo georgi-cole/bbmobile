@@ -73,49 +73,65 @@
 
   /**
    * Ensure TV overlay exists and is ready
+   * Mounts #tvOverlay as a child of #tv for TV-relative centering
    */
   function ensureTVOverlay() {
     console.log(LOG_PREFIX, 'Ensuring TV overlay exists');
     
-    // Try to use global scaffold function if available
-    if (global.ensureTVOverlayScaffold && typeof global.ensureTVOverlayScaffold === 'function') {
-      console.log(LOG_PREFIX, 'Using global.ensureTVOverlayScaffold()');
-      const content = global.ensureTVOverlayScaffold();
-      if (content) {
-        console.log(LOG_PREFIX, '✓ Scaffold created successfully');
-        return content.parentElement || content;
-      }
+    const tv = document.getElementById('tv');
+    if (!tv) {
+      console.warn(LOG_PREFIX, '#tv element not found');
+      return null;
     }
     
-    // Fallback: ensure #tvOverlay exists
+    // Ensure #tv has position: relative for absolute positioning of overlay
+    if (getComputedStyle(tv).position === 'static') {
+      tv.style.position = 'relative';
+      console.log(LOG_PREFIX, 'Set #tv position to relative');
+    }
+    
+    // Check if #tvOverlay exists
     let tvOverlay = document.getElementById('tvOverlay');
+    
+    // If it exists but is not a child of #tv, move it
+    if (tvOverlay && tvOverlay.parentElement !== tv) {
+      console.log(LOG_PREFIX, 'Moving #tvOverlay to be child of #tv');
+      tv.appendChild(tvOverlay);
+    }
+    
+    // Create if missing
     if (!tvOverlay) {
-      console.log(LOG_PREFIX, 'Creating minimal #tvOverlay');
+      console.log(LOG_PREFIX, 'Creating #tvOverlay as child of #tv');
       tvOverlay = document.createElement('div');
       tvOverlay.id = 'tvOverlay';
-      tvOverlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 999;
-        pointer-events: auto;
-      `;
-      
-      const tv = document.getElementById('tv');
-      if (tv) {
-        tv.appendChild(tvOverlay);
-      } else {
-        document.body.appendChild(tvOverlay);
-      }
-      console.log(LOG_PREFIX, '✓ Minimal #tvOverlay created');
+      // Use absolute positioning relative to #tv, inheriting CSS from styles.css
+      tv.appendChild(tvOverlay);
+      console.log(LOG_PREFIX, '✓ #tvOverlay created as child of #tv');
     }
     
     return tvOverlay;
+  }
+
+  // ========== Dynamic Sizing Helper ==========
+
+  /**
+   * Calculate grid sizing based on eligible player count
+   * Returns CSS variable values for responsive grid density
+   * @param {number} count - Number of eligible players
+   * @returns {object} {minCol: string, avatar: string}
+   */
+  function sizingFor(count) {
+    if (count <= 6) {
+      return { minCol: '160px', avatar: '84px' };
+    } else if (count <= 9) {
+      return { minCol: '140px', avatar: '72px' };
+    } else if (count <= 12) {
+      return { minCol: '120px', avatar: '64px' };
+    } else if (count <= 18) {
+      return { minCol: '110px', avatar: '60px' };
+    } else {
+      return { minCol: '100px', avatar: '56px' };
+    }
   }
 
   // ========== CSS Injection ==========
@@ -134,6 +150,30 @@
     const style = document.createElement('style');
     style.id = 'bb-noms-fullscreen-styles';
     style.textContent = `
+      /* TV-centered card containers */
+      .nfs-stage {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 10;
+      }
+      
+      .nfs-center {
+        pointer-events: auto;
+        max-width: 90%;
+        max-height: 80%;
+      }
+      
+      /* Disable flex centering when fullscreen overlay is active */
+      #tvOverlay.nfs-fullscreen-active {
+        display: block !important;
+        align-items: unset !important;
+        justify-content: unset !important;
+      }
+      
       /* Full-screen overlay for nomination selector */
       .noms-fs-overlay {
         position: fixed;
@@ -151,7 +191,7 @@
         overflow-y: auto;
       }
       
-      /* Header with count */
+      /* Header with count and optional legend */
       .noms-fs-header {
         position: fixed;
         top: 20px;
@@ -163,6 +203,10 @@
         border-radius: 12px;
         padding: 12px 24px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
       }
       
       .noms-fs-count {
@@ -172,10 +216,39 @@
         text-align: center;
       }
       
-      /* Grid of houseguest tiles */
+      /* Optional legend for ally/enemy indicators */
+      .noms-fs-legend {
+        display: flex;
+        gap: 12px;
+        font-size: 0.75rem;
+        color: var(--fg-dim, #94a3b8);
+      }
+      
+      .noms-fs-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      .noms-fs-legend-chip {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+      }
+      
+      .noms-fs-legend-item.ally {
+        color: rgba(74, 222, 128, 0.7);
+      }
+      
+      .noms-fs-legend-item.enemy {
+        color: rgba(248, 113, 113, 0.7);
+      }
+      
+      /* Grid of houseguest tiles with dynamic sizing via CSS variables */
       .noms-fs-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(var(--nfs-mincol, 140px), 1fr));
         gap: 16px;
         max-width: 900px;
         width: 100%;
@@ -184,7 +257,6 @@
       
       @media (max-width: 768px) {
         .noms-fs-grid {
-          grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
           gap: 12px;
           margin: 80px auto 120px;
         }
@@ -222,19 +294,24 @@
         background: rgba(74, 222, 128, 0.1);
       }
       
+      /* Ally/Enemy visual indicators */
+      .noms-fs-tile.nfs-ally .noms-fs-tile-avatar {
+        border: 3px solid rgba(74, 222, 128, 0.5);
+        box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+      }
+      
+      .noms-fs-tile.nfs-enemy .noms-fs-tile-avatar {
+        border: 3px solid rgba(248, 113, 113, 0.5);
+        box-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
+      }
+      
       .noms-fs-tile-avatar {
-        width: 80px;
-        height: 80px;
+        width: var(--nfs-avatar, 80px);
+        height: var(--nfs-avatar, 80px);
         border-radius: 50%;
         object-fit: cover;
         border: 2px solid var(--sep, #475569);
-      }
-      
-      @media (max-width: 768px) {
-        .noms-fs-tile-avatar {
-          width: 64px;
-          height: 64px;
-        }
+        transition: border 0.2s ease;
       }
       
       .noms-fs-tile-name {
@@ -327,24 +404,16 @@
   // ========== Intro Card ==========
 
   /**
-   * Show intro "Nomination Ceremony" card in TV overlay
-   * @returns {Promise<boolean>} Resolves true if user clicked NOMINATE, false on failure
+   * Show a centered card in the TV overlay using .nfs-stage/.nfs-center wrappers
+   * @param {string} title - Card title
+   * @param {string} bodyText - Card body text
+   * @param {string} buttonText - Button text
+   * @param {Function} onButtonClick - Button click handler
+   * @returns {Promise<boolean>} Resolves based on button click
    */
-  function showIntroCard() {
+  function showCenteredCard(title, bodyText, buttonText, onButtonClick) {
     return new Promise((resolve) => {
-      console.log(LOG_PREFIX, 'Showing intro card');
-      
       try {
-        const g = global.game;
-        const hoh = global.getP ? global.getP(g.hohId) : null;
-        const required = getRequiredSlots();
-        
-        if (!hoh) {
-          console.warn(LOG_PREFIX, 'HOH not found for intro card');
-          resolve(false);
-          return;
-        }
-        
         const tvOverlay = ensureTVOverlay();
         if (!tvOverlay) {
           console.warn(LOG_PREFIX, 'Failed to get TV overlay');
@@ -355,13 +424,17 @@
         // Clear existing content
         tvOverlay.innerHTML = '';
         
-        // Create centered card
+        // Create stage wrapper for TV-centered layout
+        const stage = document.createElement('div');
+        stage.className = 'nfs-stage';
+        
+        const center = document.createElement('div');
+        center.className = 'nfs-center';
+        
+        // Create card
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard';
         card.style.cssText = `
-          max-width: 90%;
-          max-height: 80%;
-          margin: auto;
           padding: 24px;
           text-align: center;
           display: flex;
@@ -372,30 +445,23 @@
         `;
         
         // Title
-        const title = document.createElement('h3');
-        title.textContent = 'Nomination Ceremony';
-        title.style.cssText = 'margin: 0 0 8px 0; font-size: 1.3rem;';
-        card.appendChild(title);
+        const titleEl = document.createElement('h3');
+        titleEl.textContent = title;
+        titleEl.style.cssText = 'margin: 0 0 8px 0; font-size: 1.3rem;';
+        card.appendChild(titleEl);
         
         // Body text
         const body = document.createElement('div');
         body.className = 'big';
         body.style.cssText = 'font-size: 1rem; line-height: 1.6; margin-bottom: 8px;';
-        
-        const countText = required === 2 
-          ? 'two houseguests' 
-          : required === 3 
-            ? 'three houseguests' 
-            : 'four houseguests';
-        
-        body.textContent = `${hoh.name}, as Head of Household, you must nominate ${countText} for eviction.`;
+        body.textContent = bodyText;
         card.appendChild(body);
         
-        // NOMINATE button
-        const nominateBtn = document.createElement('button');
-        nominateBtn.className = 'btn primary';
-        nominateBtn.textContent = 'NOMINATE';
-        nominateBtn.style.cssText = `
+        // Button
+        const btn = document.createElement('button');
+        btn.className = 'btn primary';
+        btn.textContent = buttonText;
+        btn.style.cssText = `
           padding: 14px 40px;
           font-size: 1.1rem;
           font-weight: 700;
@@ -407,31 +473,110 @@
           color: #000;
         `;
         
-        nominateBtn.addEventListener('click', () => {
-          console.log(LOG_PREFIX, 'NOMINATE button clicked');
-          // Clear card and proceed
-          tvOverlay.innerHTML = '';
-          document.getElementById('tv')?.classList.remove('tvTall');
-          resolve(true);
+        btn.addEventListener('click', () => {
+          onButtonClick(resolve);
         });
         
-        card.appendChild(nominateBtn);
-        tvOverlay.appendChild(card);
+        card.appendChild(btn);
+        center.appendChild(card);
+        stage.appendChild(center);
+        tvOverlay.appendChild(stage);
         
         // Show TV tall
         const tv = document.getElementById('tv');
         if (tv) tv.classList.add('tvTall');
         
-        console.log(LOG_PREFIX, '✓ Intro card mounted successfully');
-        
       } catch (err) {
-        console.error(LOG_PREFIX, 'Error mounting intro card:', err);
+        console.error(LOG_PREFIX, 'Error showing centered card:', err);
         resolve(false);
       }
     });
   }
 
+  /**
+   * Show intro "Nomination Ceremony" card in TV overlay
+   * @returns {Promise<boolean>} Resolves true if user clicked NOMINATE, false on failure
+   */
+  function showIntroCard() {
+    console.log(LOG_PREFIX, 'Showing intro card');
+    
+    const g = global.game;
+    const hoh = global.getP ? global.getP(g.hohId) : null;
+    const required = getRequiredSlots();
+    
+    if (!hoh) {
+      console.warn(LOG_PREFIX, 'HOH not found for intro card');
+      return Promise.resolve(false);
+    }
+    
+    const countText = required === 2 
+      ? 'two houseguests' 
+      : required === 3 
+        ? 'three houseguests' 
+        : 'four houseguests';
+    
+    const bodyText = `${hoh.name}, as Head of Household, you must nominate ${countText} for eviction.`;
+    
+    return showCenteredCard('Nomination Ceremony', bodyText, 'NOMINATE', (resolve) => {
+      console.log(LOG_PREFIX, 'NOMINATE button clicked');
+      // Clear card and proceed
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) tvOverlay.innerHTML = '';
+      document.getElementById('tv')?.classList.remove('tvTall');
+      resolve(true);
+    });
+  }
+
   // ========== Full-Screen Selector ==========
+
+  /**
+   * Classify player relationship to HOH (ally, enemy, or neutral)
+   * @param {number} hohId - HOH player ID
+   * @param {number} playerId - Candidate player ID
+   * @returns {string} 'ally', 'enemy', or 'neutral'
+   */
+  function classifyRelation(hohId, playerId) {
+    try {
+      const hoh = global.getP ? global.getP(hohId) : null;
+      if (!hoh) return 'neutral';
+      
+      // Check for alliance membership
+      if (global.inSameAlliance && typeof global.inSameAlliance === 'function') {
+        if (global.inSameAlliance(hohId, playerId)) {
+          console.log(LOG_PREFIX, `Player ${playerId} is ally (same alliance)`);
+          return 'ally';
+        }
+      }
+      
+      // Check affinity
+      if (hoh.affinity && typeof hoh.affinity[playerId] === 'number') {
+        const affinity = hoh.affinity[playerId];
+        
+        if (affinity > 0.15) {
+          console.log(LOG_PREFIX, `Player ${playerId} is ally (affinity ${affinity.toFixed(2)})`);
+          return 'ally';
+        }
+        
+        if (affinity < -0.15) {
+          console.log(LOG_PREFIX, `Player ${playerId} is enemy (affinity ${affinity.toFixed(2)})`);
+          return 'enemy';
+        }
+      }
+      
+      // Check for areEnemies function (if it exists)
+      if (global.areEnemies && typeof global.areEnemies === 'function') {
+        if (global.areEnemies(hohId, playerId)) {
+          console.log(LOG_PREFIX, `Player ${playerId} is enemy (areEnemies)`);
+          return 'enemy';
+        }
+      }
+      
+    } catch (err) {
+      console.warn(LOG_PREFIX, 'Error classifying relation:', err);
+    }
+    
+    return 'neutral';
+  }
 
   /**
    * Show full-screen grid selector for nominations
@@ -444,6 +589,8 @@
       try {
         injectFullscreenSelectorStyles();
         
+        const g = global.game;
+        const hohId = g ? g.hohId : null;
         const eligible = getEligiblePlayerIds();
         const required = getRequiredSlots();
         
@@ -455,15 +602,30 @@
           return;
         }
         
+        // Calculate dynamic sizing based on eligible count
+        const sizing = sizingFor(eligible.length);
+        console.log(LOG_PREFIX, `Dynamic sizing for ${eligible.length} players:`, sizing);
+        
         // Reset state
         selectorState.active = true;
         selectorState.selectedIds = [];
         selectorState.required = required;
         
+        // Mark #tvOverlay as fullscreen-active to disable flex centering
+        const tvOverlay = document.getElementById('tvOverlay');
+        if (tvOverlay) {
+          tvOverlay.classList.add('nfs-fullscreen-active');
+          console.log(LOG_PREFIX, 'Added .nfs-fullscreen-active to #tvOverlay');
+        }
+        
         // Create overlay
         const overlay = document.createElement('div');
         overlay.className = 'noms-fs-overlay';
         selectorState.overlay = overlay;
+        
+        // Set CSS variables for dynamic sizing
+        overlay.style.setProperty('--nfs-mincol', sizing.minCol);
+        overlay.style.setProperty('--nfs-avatar', sizing.avatar);
         
         // Create header with count
         const header = document.createElement('div');
@@ -476,6 +638,21 @@
         countDisplay.textContent = `0 / ${required} selected`;
         header.appendChild(countDisplay);
         
+        // Optional legend for ally/enemy indicators
+        const legend = document.createElement('div');
+        legend.className = 'noms-fs-legend';
+        
+        const allyItem = document.createElement('div');
+        allyItem.className = 'noms-fs-legend-item ally';
+        allyItem.innerHTML = '<div class="noms-fs-legend-chip"></div><span>Ally</span>';
+        legend.appendChild(allyItem);
+        
+        const enemyItem = document.createElement('div');
+        enemyItem.className = 'noms-fs-legend-item enemy';
+        enemyItem.innerHTML = '<div class="noms-fs-legend-chip"></div><span>Enemy</span>';
+        legend.appendChild(enemyItem);
+        
+        header.appendChild(legend);
         overlay.appendChild(header);
         
         // Create grid
@@ -490,13 +667,32 @@
           const player = global.getP ? global.getP(playerId) : null;
           if (!player) return;
           
+          // Classify relationship
+          const relation = classifyRelation(hohId, playerId);
+          
           const tile = document.createElement('div');
           tile.className = 'noms-fs-tile';
+          
+          // Add relation class
+          if (relation === 'ally') {
+            tile.classList.add('nfs-ally');
+          } else if (relation === 'enemy') {
+            tile.classList.add('nfs-enemy');
+          }
+          
           tile.setAttribute('data-player-id', playerId);
           tile.setAttribute('tabindex', '0');
           tile.setAttribute('role', 'button');
           tile.setAttribute('aria-pressed', 'false');
-          tile.setAttribute('aria-label', `Nominate ${player.name}`);
+          
+          // Build aria-label with relation
+          let ariaLabel = `Nominee candidate: ${player.name}`;
+          if (relation === 'ally') {
+            ariaLabel += ' (ally)';
+          } else if (relation === 'enemy') {
+            ariaLabel += ' (enemy)';
+          }
+          tile.setAttribute('aria-label', ariaLabel);
           
           // Avatar
           const avatar = document.createElement('img');
@@ -667,6 +863,13 @@
   function closeFullscreenSelector() {
     console.log(LOG_PREFIX, 'Closing fullscreen selector');
     
+    // Remove fullscreen-active class from #tvOverlay
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay && tvOverlay.classList.contains('nfs-fullscreen-active')) {
+      tvOverlay.classList.remove('nfs-fullscreen-active');
+      console.log(LOG_PREFIX, 'Removed .nfs-fullscreen-active from #tvOverlay');
+    }
+    
     // Remove overlay
     if (selectorState.overlay && selectorState.overlay.parentElement) {
       selectorState.overlay.remove();
@@ -711,12 +914,16 @@
         
         tvOverlay.innerHTML = '';
         
+        // Create stage wrapper for TV-centered layout
+        const stage = document.createElement('div');
+        stage.className = 'nfs-stage';
+        
+        const center = document.createElement('div');
+        center.className = 'nfs-center';
+        
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard';
         card.style.cssText = `
-          max-width: 90%;
-          max-height: 80%;
-          margin: auto;
           padding: 24px;
           text-align: center;
           animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
@@ -740,7 +947,9 @@
         nomineesList.textContent = names;
         card.appendChild(nomineesList);
         
-        tvOverlay.appendChild(card);
+        center.appendChild(card);
+        stage.appendChild(center);
+        tvOverlay.appendChild(stage);
         
         const tv = document.getElementById('tv');
         if (tv) tv.classList.add('tvTall');
@@ -775,12 +984,16 @@
         
         tvOverlay.innerHTML = '';
         
+        // Create stage wrapper for TV-centered layout
+        const stage = document.createElement('div');
+        stage.className = 'nfs-stage';
+        
+        const center = document.createElement('div');
+        center.className = 'nfs-center';
+        
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard';
         card.style.cssText = `
-          max-width: 90%;
-          max-height: 80%;
-          margin: auto;
           padding: 24px;
           text-align: center;
           animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
@@ -797,7 +1010,9 @@
         message.style.cssText = 'font-size: 1rem;';
         card.appendChild(message);
         
-        tvOverlay.appendChild(card);
+        center.appendChild(card);
+        stage.appendChild(center);
+        tvOverlay.appendChild(stage);
         
         const tv = document.getElementById('tv');
         if (tv) tv.classList.add('tvTall');

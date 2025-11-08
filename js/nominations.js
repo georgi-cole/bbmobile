@@ -128,12 +128,31 @@
       const host = ensureOverlayHost();
       if(host){
         host.innerHTML = '';
+        
+        // Create stage wrapper for TV-centered layout
+        const stage = document.createElement('div');
+        stage.className = 'nfs-stage';
+        stage.style.cssText = `
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 10;
+        `;
+        
+        const center = document.createElement('div');
+        center.className = 'nfs-center';
+        center.style.cssText = `
+          pointer-events: auto;
+          max-width: 90%;
+          max-height: 80%;
+        `;
+        
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard';
         card.style.cssText = `
-          max-width: 92%;
-          max-height: 78%;
-          margin: 0 auto;
           padding: 20px 24px;
           text-align: center;
           display: flex;
@@ -200,7 +219,9 @@
         });
         
         card.appendChild(nominateBtn);
-        host.appendChild(card);
+        center.appendChild(card);
+        stage.appendChild(center);
+        host.appendChild(stage);
         document.getElementById('tv')?.classList.add('tvTall');
         
         console.log('[noms] ✓ Fallback intro card mounted');

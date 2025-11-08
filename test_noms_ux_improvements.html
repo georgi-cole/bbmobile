@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nomination UX Improvements Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .test-controls {
+      background: var(--card, #1e293b);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid var(--sep, #475569);
+    }
+    .test-controls h2 {
+      margin-top: 0;
+      color: var(--fg, #f1f5f9);
+    }
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    .test-controls button {
+      padding: 12px 24px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--ok, #4ade80);
+      color: #000;
+    }
+    .test-controls button.secondary {
+      background: var(--card-accent, #334155);
+      color: var(--fg, #f1f5f9);
+    }
+    .test-info {
+      background: var(--card-accent, #334155);
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--fg, #f1f5f9);
+    }
+    #tv {
+      margin: 20px 0;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--fg, #f1f5f9);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h2>🎬 Nomination UX Improvements Test</h2>
+    
+    <div class="test-info">
+      <strong>Purpose:</strong> Test TV-centered layout, dynamic grid sizing, and ally/enemy annotations.
+      <br><br>
+      <strong>Test Scenarios:</strong>
+      <ol>
+        <li><strong>Small Cast (6 players):</strong> Grid should use larger tiles (160px, 84px avatars)</li>
+        <li><strong>Medium Cast (10 players):</strong> Grid should use medium tiles (120px, 64px avatars)</li>
+        <li><strong>Large Cast (18 players):</strong> Grid should use smaller tiles (110px, 60px avatars)</li>
+        <li><strong>Ally/Enemy Indicators:</strong> Tiles should show green ring for allies, red ring for enemies</li>
+        <li><strong>TV Centering:</strong> Intro/summary/adjourn cards should center perfectly in TV area</li>
+      </ol>
+    </div>
+
+    <div class="button-group">
+      <button id="testSmallCast">Test Small Cast (6 eligible)</button>
+      <button id="testMediumCast" class="secondary">Test Medium Cast (10 eligible)</button>
+      <button id="testLargeCast" class="secondary">Test Large Cast (18 eligible)</button>
+      <button id="testIntroCard" class="secondary">Test Intro Card</button>
+      <button id="debugInfo" class="secondary">Show Debug Info</button>
+    </div>
+
+    <div class="status" id="status">
+      Ready to test. Click a button to begin.
+    </div>
+  </div>
+
+  <!-- TV Container -->
+  <div class="card" id="actionCard">
+    <h1>Nomination Ceremony Test</h1>
+    <div class="tv tv-screen" id="tv">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+        <div class="tvTimer" id="tvTimer">00:00</div>
+      </div>
+      <div class="tvViewport">
+        <div id="tvNow" class="tvNow">Ready for testing</div>
+        <div id="tvOverlay" class="tvOverlay"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load game scripts -->
+  <script src="js/state.js"></script>
+  <script src="js/nominations-grid-fullscreen.js"></script>
+  <script src="js/nominations.js"></script>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    
+    function log(msg) {
+      const timestamp = new Date().toLocaleTimeString();
+      statusEl.textContent += `\n[${timestamp}] ${msg}`;
+      statusEl.scrollTop = statusEl.scrollHeight;
+      console.log(msg);
+    }
+
+    // Initialize minimal game state
+    function initGame(playerCount) {
+      log(`Initializing game with ${playerCount} players`);
+      
+      window.game = {
+        phase: 'nominations',
+        hohId: 1,
+        nomsLocked: false,
+        nominees: [],
+        players: [],
+        alliances: [
+          { members: [1, 2, 3], cohesion: 80 }
+        ]
+      };
+
+      // Create players
+      for (let i = 1; i <= playerCount + 1; i++) {
+        const player = {
+          id: i,
+          name: `Player ${i}`,
+          human: i === 1, // First player is human HOH
+          evicted: false,
+          jury: false,
+          avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=player${i}`,
+          affinity: {}
+        };
+
+        // Set up relationships for HOH (player 1)
+        if (i === 1) {
+          // Allies: Players 2, 3
+          player.affinity[2] = 0.6;
+          player.affinity[3] = 0.5;
+          
+          // Enemies: Last 2 players
+          if (playerCount >= 8) {
+            player.affinity[playerCount] = -0.7;
+            player.affinity[playerCount + 1] = -0.5;
+          }
+          
+          // Neutral: Everyone else
+          for (let j = 4; j < playerCount; j++) {
+            player.affinity[j] = (Math.random() - 0.5) * 0.2;
+          }
+        }
+
+        window.game.players.push(player);
+      }
+
+      log(`✓ Game initialized with HOH = Player 1 (human)`);
+      log(`  Allies: Players 2, 3 (alliance + affinity > 0.15)`);
+      if (playerCount >= 8) {
+        log(`  Enemies: Players ${playerCount}, ${playerCount + 1} (affinity < -0.15)`);
+      }
+      log(`  Eligible for nomination: ${playerCount} players`);
+    }
+
+    // Helper functions
+    window.getP = (id) => window.game.players.find(p => p.id === id) || null;
+    
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted && !p.jury);
+    
+    window.inSameAlliance = (a, b) => {
+      return window.game.alliances.some(al => 
+        al.members.includes(a) && al.members.includes(b)
+      );
+    };
+    
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+
+    // Test buttons
+    document.getElementById('testSmallCast').addEventListener('click', async () => {
+      log('\n=== Testing Small Cast (6 eligible) ===');
+      initGame(6);
+      
+      if (window.NomsFS && window.NomsFS.showIntro) {
+        const result = await window.NomsFS.showIntro();
+        if (result) {
+          log('✓ Intro card shown successfully');
+          log('Opening fullscreen selector with 6 tiles (160px min, 84px avatars)...');
+          
+          const selections = await window.NomsFS.open();
+          log(`Selections: ${selections ? selections.join(', ') : 'cancelled'}`);
+        }
+      } else {
+        log('✗ NomsFS not available');
+      }
+    });
+
+    document.getElementById('testMediumCast').addEventListener('click', async () => {
+      log('\n=== Testing Medium Cast (10 eligible) ===');
+      initGame(10);
+      
+      if (window.NomsFS && window.NomsFS.showIntro) {
+        const result = await window.NomsFS.showIntro();
+        if (result) {
+          log('✓ Intro card shown successfully');
+          log('Opening fullscreen selector with 10 tiles (120px min, 64px avatars)...');
+          
+          const selections = await window.NomsFS.open();
+          log(`Selections: ${selections ? selections.join(', ') : 'cancelled'}`);
+        }
+      } else {
+        log('✗ NomsFS not available');
+      }
+    });
+
+    document.getElementById('testLargeCast').addEventListener('click', async () => {
+      log('\n=== Testing Large Cast (18 eligible) ===');
+      initGame(18);
+      
+      if (window.NomsFS && window.NomsFS.showIntro) {
+        const result = await window.NomsFS.showIntro();
+        if (result) {
+          log('✓ Intro card shown successfully');
+          log('Opening fullscreen selector with 18 tiles (110px min, 60px avatars)...');
+          
+          const selections = await window.NomsFS.open();
+          log(`Selections: ${selections ? selections.join(', ') : 'cancelled'}`);
+        }
+      } else {
+        log('✗ NomsFS not available');
+      }
+    });
+
+    document.getElementById('testIntroCard').addEventListener('click', async () => {
+      log('\n=== Testing Intro Card Centering ===');
+      initGame(8);
+      
+      if (window.NomsFS && window.NomsFS.showIntro) {
+        log('Showing intro card - verify it is centered in TV area');
+        await window.NomsFS.showIntro();
+        log('✓ Intro card test complete');
+      } else {
+        log('✗ NomsFS not available');
+      }
+    });
+
+    document.getElementById('debugInfo').addEventListener('click', () => {
+      log('\n=== Debug Information ===');
+      
+      if (window.NomsFS && window.NomsFS.debug) {
+        const debug = window.NomsFS.debug();
+        log(JSON.stringify(debug, null, 2));
+      } else {
+        log('✗ NomsFS.debug() not available');
+      }
+      
+      const tv = document.getElementById('tv');
+      const tvOverlay = document.getElementById('tvOverlay');
+      
+      log(`#tv position: ${tv ? getComputedStyle(tv).position : 'not found'}`);
+      log(`#tvOverlay parent: ${tvOverlay ? (tvOverlay.parentElement ? tvOverlay.parentElement.id : 'no parent') : 'not found'}`);
+      log(`#tvOverlay classes: ${tvOverlay ? tvOverlay.className : 'not found'}`);
+    });
+
+    // Auto-log when module loads
+    setTimeout(() => {
+      log('✓ Nomination UX improvements module loaded');
+      log('✓ Test page ready');
+    }, 500);
+  </script>
+</body>
+</html>
