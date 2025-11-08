@@ -149,40 +149,7 @@
     // The fullscreen module (nominations-grid-fullscreen.js) intercepts this function
     // and handles the flow. This code only runs if the interceptor is not installed.
     if(hoh && hoh.human){
-      console.log('[noms] Human HOH detected - checking for NomsFS availability');
-      
-      // If NomsFS exists, call showIntro() instead of showing non-interactive fallback
-      if(global.NomsFS && typeof global.NomsFS.showIntro === 'function'){
-        console.log('[noms] NomsFS available - delegating to NomsFS.showIntro()');
-        
-        global.NomsFS.showIntro().then(success => {
-          if(success){
-            console.log('[noms] NomsFS.showIntro() succeeded, opening selector');
-            // Intro succeeded, now open selector
-            if(global.NomsFS && typeof global.NomsFS.open === 'function'){
-              global.NomsFS.open().then(selections => {
-                if(selections && Array.isArray(selections) && selections.length > 0){
-                  console.log('[noms] Selections from NomsFS:', selections);
-                  g._pendingNoms = selections.slice();
-                  finalizeNoms();
-                } else {
-                  console.warn('[noms] NomsFS returned no selections');
-                }
-              }).catch(err => {
-                console.error('[noms] NomsFS.open() error:', err);
-              });
-            }
-          } else {
-            console.warn('[noms] NomsFS.showIntro() failed, showing fallback card');
-            // Fall through to show fallback card below
-          }
-        }).catch(err => {
-          console.error('[noms] NomsFS.showIntro() error:', err);
-        });
-        return; // Exit early - NomsFS is handling the flow
-      }
-      
-      console.log('[noms] NomsFS not available - showing fallback intro card');
+      console.log('[noms] Human HOH detected - showing fallback intro card');
       
       const host = ensureOverlayHost();
       if(host){

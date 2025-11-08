@@ -10,12 +10,6 @@
 
   // Store original renderNomsPanel for fallback
   let originalRenderNomsPanel = null;
-  
-  // Sentinel marker to identify our wrapped function
-  const WRAPPED_SENTINEL = '__nfsWrapped';
-  
-  // Polling state for resilient interceptor
-  let verificationTimer = null;
 
   // State for the full-screen selector
   const selectorState = {
@@ -1174,14 +1168,14 @@
     
     // Check if nominations are already locked/committed
     if (g.nomsLocked || g.__nomsCommitInProgress || g.__nomsCommitted) {
-      console.log(LOG_PREFIX, 'Interceptor declined: nominations already locked/committed -', diagnostics);
+      console.log(LOG_PREFIX, 'Nominations already locked/committed, calling original');
       if (originalRenderNomsPanel) originalRenderNomsPanel();
       return;
     }
     
     // Check if human is HOH
     if (!hoh || !hoh.human) {
-      console.log(LOG_PREFIX, 'Interceptor declined: not human HOH -', diagnostics);
+      console.log(LOG_PREFIX, 'Not human HOH, calling original');
       if (originalRenderNomsPanel) originalRenderNomsPanel();
       return;
     }
@@ -1305,121 +1299,11 @@
     
     // Replace with intercepted version
     global.renderNomsPanel = interceptedRenderNomsPanel;
-    
-    // Mark wrapped function with sentinel
-    global.renderNomsPanel[WRAPPED_SENTINEL] = true;
-    
     console.log(LOG_PREFIX, '✓ Interceptor installed successfully');
     
     return true;
   }
 
-  /**
-   * Check if our wrapper is still active and re-wrap if needed
-   * @returns {boolean} True if wrapper is active or was successfully re-installed
-   */
-  function verifyWrapper() {
-    // Check if renderNomsPanel exists
-    if (!global.renderNomsPanel || typeof global.renderNomsPanel !== 'function') {
-      console.warn(LOG_PREFIX, 'renderNomsPanel missing during verification');
-      return false;
-    }
-    
-    // Check if our wrapper is still active
-    if (global.renderNomsPanel[WRAPPED_SENTINEL]) {
-      return true; // Wrapper is active
-    }
-    
-    // Wrapper was overwritten - re-install
-    console.warn(LOG_PREFIX, 're-wrapped renderNomsPanel (was overwritten)');
-    
-    // Store the current function as the new original
-    originalRenderNomsPanel = global.renderNomsPanel;
-    
-    // Replace with our interceptor
-    global.renderNomsPanel = interceptedRenderNomsPanel;
-    global.renderNomsPanel[WRAPPED_SENTINEL] = true;
-    
-    return true;
-  }
-  
-  /**
-   * Start verification polling during nominations phase
-   * Uses exponential backoff to reduce overhead
-   */
-  function startVerificationPolling() {
-    // Clear any existing timer
-    if (verificationTimer) {
-      clearInterval(verificationTimer);
-      verificationTimer = null;
-    }
-    
-    let attempt = 0;
-    const maxAttempts = 10; // Poll for ~10 seconds total
-    
-    const poll = () => {
-      attempt++;
-      
-      // Verify wrapper is active
-      const isActive = verifyWrapper();
-      
-      if (!isActive) {
-        console.warn(LOG_PREFIX, 'Verification failed - wrapper could not be re-installed');
-      }
-      
-      // Stop polling after max attempts or if phase changed
-      const g = global.game;
-      if (attempt >= maxAttempts || !g || g.phase !== 'nominations') {
-        if (verificationTimer) {
-          clearInterval(verificationTimer);
-          verificationTimer = null;
-        }
-        console.log(LOG_PREFIX, 'Verification polling stopped');
-      }
-    };
-    
-    // Poll with exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms, then 2000ms
-    let delay = 100;
-    verificationTimer = setInterval(() => {
-      poll();
-      // Increase delay up to 2 seconds
-      delay = Math.min(2000, delay * 2);
-      if (verificationTimer) {
-        clearInterval(verificationTimer);
-        verificationTimer = setInterval(poll, delay);
-      }
-    }, delay);
-    
-    console.log(LOG_PREFIX, 'Started verification polling');
-  }
-  
-  /**
-   * Phase entry hook - called when entering nominations phase
-   */
-  function onEnterNominationsPhase() {
-    console.log(LOG_PREFIX, 'Entering nominations phase');
-    
-    const g = global.game;
-    if (!g) return;
-    
-    // Verify wrapper is active
-    verifyWrapper();
-    
-    // Start polling to catch any late overwrites
-    startVerificationPolling();
-    
-    // Safety microtask: re-invoke renderNomsPanel after a short delay
-    // This ensures our interceptor has a chance to mount if initialization was delayed
-    setTimeout(() => {
-      if (g.phase === 'nominations' && !g.nomsLocked && !g.__nomsCommitInProgress) {
-        console.log(LOG_PREFIX, 'Safety microtask: re-invoking renderNomsPanel');
-        if (global.renderNomsPanel && typeof global.renderNomsPanel === 'function') {
-          global.renderNomsPanel();
-        }
-      }
-    }, 50);
-  }
-  
   /**
    * Retry interceptor installation with exponential backoff
    * @param {number} attempt - Current attempt number (1-based)
@@ -1448,43 +1332,15 @@
     }, delay);
   }
 
-  /**
-   * Hook into startNominations to trigger phase entry verification
-   */
-  function hookStartNominations() {
-    if (!global.startNominations || typeof global.startNominations !== 'function') {
-      console.warn(LOG_PREFIX, 'startNominations not found for hooking');
-      return;
-    }
-    
-    const originalStartNominations = global.startNominations;
-    
-    global.startNominations = function() {
-      // Call phase entry hook before original
-      onEnterNominationsPhase();
-      
-      // Call original
-      return originalStartNominations.apply(this, arguments);
-    };
-    
-    console.log(LOG_PREFIX, '✓ Hooked into startNominations');
-  }
-  
   // Auto-install when this module loads
   // Wait for DOM ready to ensure other modules are loaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        retryInstallInterceptor();
-        hookStartNominations();
-      }, 100);
+      setTimeout(() => retryInstallInterceptor(), 100);
     });
   } else {
     // DOM already loaded
-    setTimeout(() => {
-      retryInstallInterceptor();
-      hookStartNominations();
-    }, 100);
+    setTimeout(() => retryInstallInterceptor(), 100);
   }
 
   // ========== Global API Surface ==========
@@ -1526,13 +1382,6 @@
     },
     
     /**
-     * Verify wrapper is active and re-wrap if needed
-     * Useful for manual debugging or external module integration
-     * @returns {boolean} True if wrapper is active or was successfully re-installed
-     */
-    verifyWrapper: verifyWrapper,
-    
-    /**
      * Get diagnostic information
      * @returns {object} Current state and configuration
      */
@@ -1542,11 +1391,8 @@
       
       const hoh = global.getP ? global.getP(g.hohId) : null;
       
-      const isWrapped = global.renderNomsPanel && global.renderNomsPanel[WRAPPED_SENTINEL];
-      
       return {
         installed: global.__nomsFsInstalled || false,
-        wrapped: isWrapped || false,
         selectorActive: selectorState.active,
         selectedCount: selectorState.selectedIds.length,
         requiredCount: selectorState.required,
