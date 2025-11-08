@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nomination Selector Layout Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .test-controls {
+      background: var(--card, #1e293b);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid var(--sep, #475569);
+    }
+    .test-controls h2 {
+      margin-top: 0;
+      color: var(--fg, #f1f5f9);
+    }
+    .control-row {
+      display: flex;
+      gap: 16px;
+      margin: 16px 0;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 200px;
+    }
+    .control-group label {
+      font-weight: 600;
+      color: var(--fg, #f1f5f9);
+      font-size: 0.9rem;
+    }
+    .control-group select,
+    .control-group input[type="number"] {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--sep, #475569);
+      background: var(--card-accent, #334155);
+      color: var(--fg, #f1f5f9);
+      font-size: 0.9rem;
+    }
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    .test-controls button {
+      padding: 12px 24px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--ok, #4ade80);
+      color: #000;
+      transition: transform 0.2s ease;
+    }
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    .test-controls button.secondary {
+      background: var(--card-accent, #334155);
+      color: var(--fg, #f1f5f9);
+    }
+    .test-controls button.danger {
+      background: var(--err, #ef4444);
+      color: #fff;
+    }
+    .test-info {
+      background: var(--card-accent, #334155);
+      padding: 16px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--fg, #f1f5f9);
+      line-height: 1.6;
+    }
+    .test-info strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent, #60a5fa);
+      font-size: 1rem;
+    }
+    .test-info ul {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+    .test-info li {
+      margin: 4px 0;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid var(--ok, #4ade80);
+      color: var(--ok, #4ade80);
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 2px solid currentColor;
+    }
+    .viewport-simulator {
+      border: 2px solid var(--accent, #60a5fa);
+      border-radius: 8px;
+      margin: 20px auto;
+      overflow: hidden;
+      position: relative;
+      background: #000;
+    }
+    .viewport-label {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      background: rgba(96, 165, 250, 0.9);
+      color: #000;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      z-index: 10002;
+    }
+    #tv {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      position: relative;
+      border: none;
+    }
+    /* Simulated stage eye for visual reference */
+    #tv::before {
+      content: '👁';
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      opacity: 0.2;
+      pointer-events: none;
+      z-index: 1;
+    }
+    #tv::after {
+      content: 'TV Stage Eye Reference';
+      position: absolute;
+      top: 42%;
+      left: 50%;
+      transform: translate(-50%, 50%);
+      font-size: 0.7rem;
+      opacity: 0.3;
+      color: var(--fg-muted, #94a3b8);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .checkbox-group label {
+      cursor: pointer;
+      color: var(--fg, #f1f5f9);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h2>🎬 Nomination Selector Layout Test</h2>
+    
+    <div class="test-info">
+      <strong>Purpose:</strong>
+      Test TV-centered ceremony cards and sticky header in fullscreen nomination selector.
+      <ul>
+        <li><strong>TV Centering:</strong> Intro, summary, and adjourn cards should align with TV stage eye (not exact center)</li>
+        <li><strong>Sticky Header:</strong> Header should stay at top; first row of avatars should not be obscured</li>
+        <li><strong>Dynamic Grid:</strong> Grid should adjust density based on eligible player count</li>
+        <li><strong>Theme Inheritance:</strong> All elements should use theme CSS variables</li>
+        <li><strong>Ally/Enemy Rings:</strong> Green/red outlines should be subtle and visible</li>
+      </ul>
+    </div>
+
+    <div class="control-row">
+      <div class="control-group">
+        <label for="eligibleCount">Eligible Players:</label>
+        <select id="eligibleCount">
+          <option value="6">6 (Small Pool)</option>
+          <option value="8" selected>8 (Medium Pool)</option>
+          <option value="12">12 (Large Pool)</option>
+          <option value="18">18 (Very Large Pool)</option>
+          <option value="24">24 (Extreme Pool)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="nomSlots">Nomination Slots:</label>
+        <select id="nomSlots">
+          <option value="2" selected>2 (Standard)</option>
+          <option value="3">3 (Double Week)</option>
+          <option value="4">4 (Triple Week)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="viewportMode">Viewport Mode:</label>
+        <select id="viewportMode">
+          <option value="full">Full Width (Desktop)</option>
+          <option value="portrait-narrow">Portrait Narrow (360x640)</option>
+          <option value="portrait-wide">Portrait Wide (768x1024)</option>
+          <option value="landscape">Landscape (1024x768)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="control-row">
+      <div class="checkbox-group">
+        <input type="checkbox" id="forceExactCenter">
+        <label for="forceExactCenter">Force Exact Center (no bias)</label>
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="showLegend" checked>
+        <label for="showLegend">Show Ally/Enemy Legend</label>
+      </div>
+    </div>
+
+    <div class="control-row">
+      <div class="control-group">
+        <label for="manualBias">Manual Bias Override (px or ratio):</label>
+        <input type="text" id="manualBias" placeholder="e.g., 28px or 0.08">
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button id="showIntroCard">Show Intro Card</button>
+      <button id="openFullscreenSelector">Open Fullscreen Selector</button>
+      <button id="showSummaryCard" class="secondary">Show Summary Card</button>
+      <button id="showAdjournCard" class="secondary">Show Adjourn Card</button>
+    </div>
+
+    <div class="button-group">
+      <button id="recenterCards" class="secondary">Recenter Cards (NomsFS.recenter)</button>
+      <button id="checkDebugInfo" class="secondary">Check Debug Info</button>
+      <button id="clearLogs" class="secondary">Clear Logs</button>
+      <button id="resetOverrides" class="danger">Reset Overrides</button>
+    </div>
+
+    <div id="status" class="status">
+      <div class="log-entry">Ready to test. Configure options and click a test button.</div>
+    </div>
+  </div>
+
+  <!-- Viewport simulator -->
+  <div id="viewportSimulator" class="viewport-simulator" style="width: 100%;">
+    <div class="viewport-label">Full Width</div>
+    <div id="tv">
+      <div id="tvOverlay"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/state.js"></script>
+  <script>
+    // Pre-setup: Create minimal global namespace
+    window.global = window;
+    window.game = window.game || {};
+    window.Game = window;
+  </script>
+  <script src="js/nominations.js"></script>
+  <script src="js/nominations-grid-fullscreen.js"></script>
+
+  <script>
+    // Test harness
+    const statusEl = document.getElementById('status');
+    const logs = [];
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = `[${timestamp}] ${message}`;
+      logs.push(entry);
+      
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.textContent = entry;
+      statusEl.appendChild(logEntry);
+      statusEl.scrollTop = statusEl.scrollHeight;
+      
+      console.log(message);
+    }
+
+    function clearLogs() {
+      logs.length = 0;
+      statusEl.innerHTML = '';
+      log('Logs cleared');
+    }
+
+    // Intercept console.log to capture logs
+    const originalConsoleLog = console.log;
+    console.log = function(...args) {
+      const message = args.join(' ');
+      if (message.includes('[noms-fs]') || message.includes('[noms]')) {
+        log(message);
+      }
+      originalConsoleLog.apply(console, args);
+    };
+
+    // Create mock game
+    function createMockGame(eligibleCount, nomSlots) {
+      const players = [];
+      const getDicebearUrl = function(seed) {
+        return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+      };
+      
+      // Create HOH + eligible players
+      players.push({
+        id: 1,
+        name: 'HOH Player',
+        human: true,
+        evicted: false,
+        jury: false,
+        avatar: getDicebearUrl('hoh'),
+        affinity: {}
+      });
+
+      for (let i = 2; i <= eligibleCount + 1; i++) {
+        const isAlly = i <= 3; // First 2 eligible are allies
+        const isEnemy = i >= eligibleCount - 1 && i <= eligibleCount + 1; // Last 2 are enemies
+        
+        players.push({
+          id: i,
+          name: `Player ${i}`,
+          human: false,
+          evicted: false,
+          jury: false,
+          avatar: getDicebearUrl(`player${i}`)
+        });
+
+        // Set affinity for ally/enemy classification
+        if (isAlly) {
+          players[0].affinity[i] = 0.3; // Ally
+        } else if (isEnemy) {
+          players[0].affinity[i] = -0.3; // Enemy
+        } else {
+          players[0].affinity[i] = 0; // Neutral
+        }
+      }
+
+      window.game = {
+        players: players,
+        hohId: 1,
+        phase: 'nominations',
+        nomsLocked: false,
+        nominees: [],
+        __nomsCommitInProgress: false,
+        __nomsCommitted: false,
+        _pendingNoms: null,
+        __twistNomSlots: nomSlots
+      };
+
+      // Mock helper functions
+      window.getP = function(id) {
+        return window.game.players.find(p => p.id === id);
+      };
+
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted && !p.jury);
+      };
+
+      window.safeName = function(id) {
+        const p = window.getP(id);
+        return p ? p.name : String(id);
+      };
+
+      window.updateHud = function() {
+        log('updateHud() called');
+      };
+
+      window.syncPlayerBadgeStates = function() {
+        log('syncPlayerBadgeStates() called');
+      };
+
+      window.inSameAlliance = function(id1, id2) {
+        // Simple mock: players 2 and 3 are in same alliance as HOH
+        return (id1 === 1 && (id2 === 2 || id2 === 3)) || 
+               (id2 === 1 && (id1 === 2 || id1 === 3)) ||
+               (id1 === 2 && id2 === 3) ||
+               (id1 === 3 && id2 === 2);
+      };
+
+      log(`✓ Game created: ${eligibleCount} eligible players, ${nomSlots} nomination slots`);
+    }
+
+    // Apply viewport mode
+    function applyViewportMode(mode) {
+      const simulator = document.getElementById('viewportSimulator');
+      const label = simulator.querySelector('.viewport-label');
+      
+      switch(mode) {
+        case 'portrait-narrow':
+          simulator.style.width = '360px';
+          simulator.style.height = '640px';
+          label.textContent = 'Portrait Narrow (360×640)';
+          break;
+        case 'portrait-wide':
+          simulator.style.width = '768px';
+          simulator.style.height = '1024px';
+          label.textContent = 'Portrait Wide (768×1024)';
+          break;
+        case 'landscape':
+          simulator.style.width = '1024px';
+          simulator.style.height = '768px';
+          label.textContent = 'Landscape (1024×768)';
+          break;
+        default:
+          simulator.style.width = '100%';
+          simulator.style.height = 'auto';
+          label.textContent = 'Full Width (Desktop)';
+      }
+      
+      log(`✓ Viewport mode: ${mode}`);
+    }
+
+    // Apply overrides
+    function applyOverrides() {
+      const forceExactCenter = document.getElementById('forceExactCenter').checked;
+      const manualBias = document.getElementById('manualBias').value.trim();
+
+      if (forceExactCenter) {
+        window.__tvForceExactCenter = true;
+        log('✓ Force exact center enabled');
+      } else {
+        delete window.__tvForceExactCenter;
+      }
+
+      if (manualBias) {
+        if (manualBias.endsWith('px')) {
+          window.__tvCenterBiasY = manualBias;
+        } else {
+          const ratio = parseFloat(manualBias);
+          if (!isNaN(ratio)) {
+            window.__tvCenterBiasY = ratio;
+          }
+        }
+        log(`✓ Manual bias override: ${manualBias}`);
+      } else {
+        delete window.__tvCenterBiasY;
+      }
+    }
+
+    // Event handlers
+    document.getElementById('showIntroCard').addEventListener('click', () => {
+      const eligibleCount = parseInt(document.getElementById('eligibleCount').value);
+      const nomSlots = parseInt(document.getElementById('nomSlots').value);
+      
+      clearLogs();
+      applyOverrides();
+      createMockGame(eligibleCount, nomSlots);
+      
+      log('Opening intro card...');
+      
+      if (window.NomsFS && window.NomsFS.showIntro) {
+        window.NomsFS.showIntro().then(success => {
+          if (success) {
+            log('✓ Intro card completed successfully');
+          } else {
+            log('⚠ Intro card failed or cancelled');
+          }
+        });
+      } else {
+        log('❌ NomsFS.showIntro not available');
+      }
+    });
+
+    document.getElementById('openFullscreenSelector').addEventListener('click', () => {
+      const eligibleCount = parseInt(document.getElementById('eligibleCount').value);
+      const nomSlots = parseInt(document.getElementById('nomSlots').value);
+      
+      clearLogs();
+      applyOverrides();
+      createMockGame(eligibleCount, nomSlots);
+      
+      log('Opening fullscreen selector...');
+      log(`Config: ${eligibleCount} eligible, ${nomSlots} slots required`);
+      
+      if (window.NomsFS && window.NomsFS.open) {
+        window.NomsFS.open().then(selections => {
+          if (selections && selections.length > 0) {
+            const names = selections.map(id => window.safeName(id)).join(', ');
+            log(`✓ Selections: ${names}`);
+          } else {
+            log('⚠ No selections made');
+          }
+        }).catch(err => {
+          log(`❌ Error: ${err.message}`);
+        });
+      } else {
+        log('❌ NomsFS.open not available');
+      }
+    });
+
+    document.getElementById('showSummaryCard').addEventListener('click', () => {
+      const eligibleCount = parseInt(document.getElementById('eligibleCount').value);
+      const nomSlots = parseInt(document.getElementById('nomSlots').value);
+      
+      applyOverrides();
+      createMockGame(eligibleCount, nomSlots);
+      
+      // Mock some nominees
+      const nominees = [2, 3];
+      window.game.nominees = nominees;
+      
+      log('Showing summary card with mock nominees...');
+      
+      // Call internal function if available
+      if (window.NomsFullscreenInterceptor) {
+        const script = document.createElement('script');
+        script.textContent = `
+          (async () => {
+            const host = document.getElementById('tvOverlay');
+            if (!host) return;
+            
+            host.innerHTML = '';
+            
+            const bias = window.NomsFS ? window.NomsFS.recenter() : '0px';
+            
+            const stage = document.createElement('div');
+            stage.className = 'nfs-stage';
+            
+            const center = document.createElement('div');
+            center.className = 'nfs-center';
+            
+            const card = document.createElement('div');
+            card.className = 'revealCard diaryRoomCard';
+            card.style.cssText = 'padding: 24px; text-align: center; animation: cardFloatIn 0.65s ease forwards;';
+            
+            const title = document.createElement('h3');
+            title.textContent = 'Nominations';
+            title.style.marginBottom = '16px';
+            card.appendChild(title);
+            
+            const names = [2, 3].map(id => window.safeName(id)).join(' • ');
+            const body = document.createElement('div');
+            body.className = 'big';
+            body.textContent = names;
+            body.style.fontSize = '1.1rem';
+            card.appendChild(body);
+            
+            center.appendChild(card);
+            stage.appendChild(center);
+            host.appendChild(stage);
+            
+            document.getElementById('tv').classList.add('tvTall');
+          })();
+        `;
+        document.body.appendChild(script);
+        document.body.removeChild(script);
+        
+        log('✓ Summary card shown');
+      }
+    });
+
+    document.getElementById('showAdjournCard').addEventListener('click', () => {
+      applyOverrides();
+      
+      log('Showing adjourn card...');
+      
+      const script = document.createElement('script');
+      script.textContent = `
+        (async () => {
+          const host = document.getElementById('tvOverlay');
+          if (!host) return;
+          
+          host.innerHTML = '';
+          
+          const bias = window.NomsFS ? window.NomsFS.recenter() : '0px';
+          
+          const stage = document.createElement('div');
+          stage.className = 'nfs-stage';
+          
+          const center = document.createElement('div');
+          center.className = 'nfs-center';
+          
+          const card = document.createElement('div');
+          card.className = 'revealCard diaryRoomCard';
+          card.style.cssText = 'padding: 24px; text-align: center; animation: cardFloatIn 0.65s ease forwards;';
+          
+          const title = document.createElement('h3');
+          title.textContent = 'Nomination Ceremony';
+          title.style.marginBottom = '12px';
+          card.appendChild(title);
+          
+          const msg = document.createElement('div');
+          msg.className = 'big';
+          msg.textContent = 'This ceremony is adjourned.';
+          card.appendChild(msg);
+          
+          center.appendChild(card);
+          stage.appendChild(center);
+          host.appendChild(stage);
+          
+          document.getElementById('tv').classList.add('tvTall');
+        })();
+      `;
+      document.body.appendChild(script);
+      document.body.removeChild(script);
+      
+      log('✓ Adjourn card shown');
+    });
+
+    document.getElementById('recenterCards').addEventListener('click', () => {
+      if (window.NomsFS && window.NomsFS.recenter) {
+        const bias = window.NomsFS.recenter();
+        log(`✓ Recentered. New bias: ${bias}`);
+      } else {
+        log('❌ NomsFS.recenter not available');
+      }
+    });
+
+    document.getElementById('checkDebugInfo').addEventListener('click', () => {
+      if (window.NomsFS && window.NomsFS.debug) {
+        const info = window.NomsFS.debug();
+        log('=== Debug Info ===');
+        log(`Installed: ${info.installed}`);
+        log(`Selector Active: ${info.selectorActive}`);
+        log(`Eligible: ${info.eligible}`);
+        log(`Required Slots: ${info.requiredSlots}`);
+        log(`Center Bias: ${info.centerBias || 'auto'}`);
+        log(`Force Exact Center: ${info.forceExactCenter || false}`);
+        log(JSON.stringify(info.game, null, 2));
+      } else {
+        log('❌ NomsFS.debug not available');
+      }
+    });
+
+    document.getElementById('clearLogs').addEventListener('click', clearLogs);
+
+    document.getElementById('resetOverrides').addEventListener('click', () => {
+      delete window.__tvForceExactCenter;
+      delete window.__tvCenterBiasY;
+      document.getElementById('forceExactCenter').checked = false;
+      document.getElementById('manualBias').value = '';
+      log('✓ Overrides reset');
+    });
+
+    // Viewport mode change
+    document.getElementById('viewportMode').addEventListener('change', (e) => {
+      applyViewportMode(e.target.value);
+      
+      // Recenter if cards are visible
+      if (window.NomsFS && window.NomsFS.recenter) {
+        setTimeout(() => {
+          window.NomsFS.recenter();
+          log('✓ Auto-recentered after viewport change');
+        }, 100);
+      }
+    });
+
+    // Initialize
+    log('Test harness loaded. Configure options and click a test button.');
+    log('Tip: Try different viewport modes and eligible counts to test layout.');
+  </script>
+</body>
+</html>
