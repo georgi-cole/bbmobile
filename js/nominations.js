@@ -577,37 +577,93 @@
         document.getElementById('tv')?.classList.add('tvTall');
       }
     } else {
-      // Human HOH fallback: render legacy panel
+      // Human HOH fallback: render fully functional panel with NOMINATE button
       // This code path is only reached if showNominateCard failed
-      console.log('[noms-pick] Rendering legacy panel for human HOH (fallback mode)');
+      console.log('[noms-pick] Rendering fallback panel for human HOH (functional fallback mode)');
       
-      // Legacy panel code would go here if it existed
-      // For now, show a simple fallback message
-      const host = document.getElementById('tvOverlay');
+      const host = ensureOverlayHost();
       if(host){
         host.innerHTML = '';
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard';
-        card.style.cssText = 'max-width: 92%; padding: 16px; margin: 0 auto; text-align: center;';
+        card.style.cssText = `
+          max-width: 92%;
+          max-height: 78%;
+          margin: 0 auto;
+          padding: 20px 24px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+        `;
         
         const title = document.createElement('h3');
         title.textContent = 'Nomination Ceremony';
-        title.style.marginBottom = '8px';
+        title.style.marginBottom = '4px';
+        title.style.fontSize = '1.1rem';
         card.appendChild(title);
         
         const info = document.createElement('div');
         info.className = 'big';
-        info.textContent = `${hoh.name}, as HOH, you must nominate ${need} houseguest${need > 1 ? 's' : ''} for eviction.`;
+        info.style.fontSize = '0.85rem';
+        info.style.lineHeight = '1.5';
+        info.style.marginBottom = '8px';
+        const countText = need > 2 
+          ? `You must nominate ${need} houseguests for eviction.`
+          : 'You must nominate two houseguests for eviction.';
+        info.textContent = `${hoh.name}, as Head of Household, it is time to make your nominations. ${countText}`;
         card.appendChild(info);
         
-        const instruction = document.createElement('div');
-        instruction.className = 'tiny muted';
-        instruction.style.marginTop = '8px';
-        instruction.textContent = 'Please use the roster to select nominees.';
-        card.appendChild(instruction);
+        // NOMINATE button - try to use NomsFS.open() if available
+        const nominateBtn = document.createElement('button');
+        nominateBtn.className = 'btn primary';
+        nominateBtn.textContent = 'NOMINATE';
+        nominateBtn.style.cssText = `
+          padding: 12px 32px;
+          font-size: 1rem;
+          font-weight: 700;
+          margin-top: 8px;
+        `;
         
+        nominateBtn.addEventListener('click', () => {
+          console.log('[noms-pick] Fallback NOMINATE button clicked');
+          
+          // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
+          if(global.NomsFS && typeof global.NomsFS.open === 'function'){
+            console.log('[noms-pick] Using NomsFS.open() from fallback');
+            host.innerHTML = '';
+            document.getElementById('tv')?.classList.remove('tvTall');
+            
+            global.NomsFS.open().then(selections => {
+              if(selections && Array.isArray(selections) && selections.length > 0){
+                console.log('[noms-pick] Selections from NomsFS.open():', selections);
+                g._pendingNoms = selections.slice();
+                finalizeNoms();
+              } else {
+                console.warn('[noms-pick] NomsFS.open() returned no selections, re-showing fallback');
+                renderNomsPanel(); // Re-show fallback card
+              }
+            }).catch(err => {
+              console.error('[noms-pick] NomsFS.open() error:', err);
+              renderNomsPanel(); // Re-show fallback card
+            });
+          } else {
+            // NomsFS not available - fall back to pick mode
+            console.log('[noms-pick] NomsFS not available, using pick mode');
+            host.innerHTML = '';
+            document.getElementById('tv')?.classList.remove('tvTall');
+            enterPickMode();
+          }
+        });
+        
+        card.appendChild(nominateBtn);
         host.appendChild(card);
         document.getElementById('tv')?.classList.add('tvTall');
+        
+        console.log('[noms-pick] ✓ Functional fallback panel mounted');
+      } else {
+        console.error('[noms-pick] Failed to create overlay host for fallback panel');
       }
     }
   }
@@ -832,6 +888,14 @@
   async function finalizeNoms(){
     const g=global.game;
     if(g.nomsLocked || g.__nomsCommitted) return; // already locked
+    
+    // Guard: Don't finalize if human HOH hasn't made selections yet
+    const hoh = global.getP(g.hohId);
+    if(hoh && hoh.human && !g._pendingNoms){
+      console.warn('[nom] Blocking premature finalizeNoms - human HOH has not selected nominees yet');
+      return;
+    }
+    
     if(!g.__nomsCommitInProgress) g.__nomsCommitInProgress = true;
 
     g.nominees=ensureValidDistinct(); 

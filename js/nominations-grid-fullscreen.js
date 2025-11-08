@@ -835,6 +835,23 @@
       return;
     }
     
+    // Detailed diagnostic logging
+    const diagnostics = {
+      nomsLocked: g.nomsLocked || false,
+      __nomsCommitInProgress: g.__nomsCommitInProgress || false,
+      __nomsCommitted: g.__nomsCommitted || false,
+      nomineesLength: Array.isArray(g.nominees) ? g.nominees.length : 0,
+      hohId: g.hohId,
+      hohHuman: false
+    };
+    
+    const hoh = global.getP ? global.getP(g.hohId) : null;
+    if (hoh) {
+      diagnostics.hohHuman = hoh.human || false;
+    }
+    
+    console.log(LOG_PREFIX, 'intercept check', diagnostics);
+    
     // Check if nominations are already locked/committed
     if (g.nomsLocked || g.__nomsCommitInProgress || g.__nomsCommitted) {
       console.log(LOG_PREFIX, 'Nominations already locked/committed, calling original');
@@ -843,7 +860,6 @@
     }
     
     // Check if human is HOH
-    const hoh = global.getP ? global.getP(g.hohId) : null;
     if (!hoh || !hoh.human) {
       console.log(LOG_PREFIX, 'Not human HOH, calling original');
       if (originalRenderNomsPanel) originalRenderNomsPanel();
@@ -949,44 +965,120 @@
     // Safeguard: only install once
     if (global.__nomsFsInstalled) {
       console.log(LOG_PREFIX, 'Interceptor already installed, skipping');
-      return;
+      return true;
     }
-    
-    // Set flag immediately to prevent double installation attempts
-    // Note: Flag is set BEFORE checking for renderNomsPanel to prevent retry loops.
-    // This module auto-installs with a delay, which should be sufficient for
-    // nominations.js to load. If renderNomsPanel is still missing, it indicates
-    // a module loading order issue that should be fixed at the root cause.
-    global.__nomsFsInstalled = true;
     
     console.log(LOG_PREFIX, 'Installing interceptor');
     
-    // Store original renderNomsPanel
-    if (global.renderNomsPanel && typeof global.renderNomsPanel === 'function') {
-      originalRenderNomsPanel = global.renderNomsPanel;
-      console.log(LOG_PREFIX, 'Original renderNomsPanel stored');
-      
-      // Replace with intercepted version
-      global.renderNomsPanel = interceptedRenderNomsPanel;
-      console.log(LOG_PREFIX, '✓ Interceptor installed');
-    } else {
-      console.warn(LOG_PREFIX, 'No renderNomsPanel found to intercept');
-      console.warn(LOG_PREFIX, 'This may indicate a module loading order issue');
+    // Check if renderNomsPanel exists
+    if (!global.renderNomsPanel || typeof global.renderNomsPanel !== 'function') {
+      console.warn(LOG_PREFIX, 'renderNomsPanel not found');
+      return false;
     }
+    
+    // Set flag to prevent double installation
+    global.__nomsFsInstalled = true;
+    
+    // Store original renderNomsPanel
+    originalRenderNomsPanel = global.renderNomsPanel;
+    console.log(LOG_PREFIX, 'Original renderNomsPanel stored');
+    
+    // Replace with intercepted version
+    global.renderNomsPanel = interceptedRenderNomsPanel;
+    console.log(LOG_PREFIX, '✓ Interceptor installed successfully');
+    
+    return true;
+  }
+
+  /**
+   * Retry interceptor installation with exponential backoff
+   * @param {number} attempt - Current attempt number (1-based)
+   * @param {number} maxAttempts - Maximum number of attempts
+   */
+  function retryInstallInterceptor(attempt = 1, maxAttempts = 5) {
+    const success = installInterceptor();
+    
+    if (success) {
+      console.log(LOG_PREFIX, `✓ Installation succeeded on attempt ${attempt}`);
+      return;
+    }
+    
+    if (attempt >= maxAttempts) {
+      console.warn(LOG_PREFIX, `✗ Installation failed after ${maxAttempts} attempts`);
+      console.warn(LOG_PREFIX, 'Reason: renderNomsPanel not available - check module load order');
+      return;
+    }
+    
+    // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
+    const delay = 100 * Math.pow(2, attempt - 1);
+    console.log(LOG_PREFIX, `Retry ${attempt}/${maxAttempts} in ${delay}ms (reason: renderNomsPanel not ready)`);
+    
+    setTimeout(() => {
+      retryInstallInterceptor(attempt + 1, maxAttempts);
+    }, delay);
   }
 
   // Auto-install when this module loads
   // Wait for DOM ready to ensure other modules are loaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(installInterceptor, 100);
+      setTimeout(() => retryInstallInterceptor(), 100);
     });
   } else {
     // DOM already loaded
-    setTimeout(installInterceptor, 100);
+    setTimeout(() => retryInstallInterceptor(), 100);
   }
 
-  // Expose for debugging
+  // ========== Global API Surface ==========
+  
+  /**
+   * Public API for nomination fullscreen system
+   * Exposed as window.NomsFS
+   */
+  global.NomsFS = {
+    /**
+     * Open the fullscreen selector directly
+     * @returns {Promise<Array<number>|null>} Selected player IDs or null
+     */
+    open: showFullscreenSelector,
+    
+    /**
+     * Show the intro card
+     * @returns {Promise<boolean>} True if successful, false otherwise
+     */
+    showIntro: showIntroCard,
+    
+    /**
+     * Get diagnostic information
+     * @returns {object} Current state and configuration
+     */
+    debug: function() {
+      const g = global.game;
+      if (!g) return { error: 'No game object' };
+      
+      const hoh = global.getP ? global.getP(g.hohId) : null;
+      
+      return {
+        installed: global.__nomsFsInstalled || false,
+        selectorActive: selectorState.active,
+        selectedCount: selectorState.selectedIds.length,
+        requiredCount: selectorState.required,
+        game: {
+          phase: g.phase,
+          nomsLocked: g.nomsLocked || false,
+          __nomsCommitInProgress: g.__nomsCommitInProgress || false,
+          __nomsCommitted: g.__nomsCommitted || false,
+          nominees: Array.isArray(g.nominees) ? g.nominees.length : 0,
+          hohId: g.hohId,
+          hohHuman: hoh ? (hoh.human || false) : false
+        },
+        eligible: getEligiblePlayerIds().length,
+        requiredSlots: getRequiredSlots()
+      };
+    }
+  };
+  
+  // Legacy export for backward compatibility
   global.NomsFullscreenInterceptor = {
     install: installInterceptor,
     showIntroCard,
