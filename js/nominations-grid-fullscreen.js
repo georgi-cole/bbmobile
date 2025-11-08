@@ -8,6 +8,11 @@
 
   const LOG_PREFIX = '[noms-fs]';
 
+  // Feature flag for quick rollback
+  if (typeof global.__enableNomsFS === 'undefined') {
+    global.__enableNomsFS = true;
+  }
+
   // Store original renderNomsPanel for fallback
   let originalRenderNomsPanel = null;
   
@@ -1278,10 +1283,54 @@
   // ========== Initialization ==========
 
   /**
+   * Teardown any nomination-related overlays
+   * Called on phase exit to prevent overlays from blocking later phases
+   */
+  function teardownNominationOverlays() {
+    console.log(LOG_PREFIX, 'Teardown: cleaning up nomination overlays');
+    
+    // Remove #nomsFsOverlay if present
+    const nomsFsOverlay = document.getElementById('nomsFsOverlay');
+    if (nomsFsOverlay) {
+      nomsFsOverlay.remove();
+      console.log(LOG_PREFIX, 'Teardown: removed #nomsFsOverlay');
+    }
+    
+    // Neutralize #tvOverlay
+    const tvOverlay = document.getElementById('tvOverlay');
+    if (tvOverlay) {
+      tvOverlay.style.pointerEvents = 'none';
+      tvOverlay.style.display = 'none';
+      tvOverlay.innerHTML = '';
+      tvOverlay.classList.remove('nfs-fullscreen-active');
+      console.log(LOG_PREFIX, 'Teardown: neutralized #tvOverlay');
+    }
+    
+    // Close fullscreen selector if active
+    if (selectorState.active) {
+      closeFullscreenSelector();
+    }
+    
+    // Clear verification timer
+    if (verificationTimer) {
+      clearInterval(verificationTimer);
+      verificationTimer = null;
+    }
+    
+    console.log(LOG_PREFIX, '✓ Teardown complete');
+  }
+
+  /**
    * Install the interceptor
    * Wraps global.renderNomsPanel with our custom flow
    */
   function installInterceptor() {
+    // Check feature flag
+    if (global.__enableNomsFS === false) {
+      console.log(LOG_PREFIX, 'Feature flag disabled, skipping installation');
+      return false;
+    }
+    
     // Safeguard: only install once
     if (global.__nomsFsInstalled) {
       console.log(LOG_PREFIX, 'Interceptor already installed, skipping');
@@ -1402,6 +1451,18 @@
     const g = global.game;
     if (!g) return;
     
+    // Clear stale commit flags if nominations are unlocked and not in progress
+    if (!g.nomsLocked && !g.__nomsCommitInProgress && (!Array.isArray(g.nominees) || g.nominees.length === 0)) {
+      if (g.__nomsCommitInProgress === true) {
+        console.log(LOG_PREFIX, 'Clearing stale __nomsCommitInProgress flag');
+        g.__nomsCommitInProgress = false;
+      }
+      if (g.__nomsCommitted === true) {
+        console.log(LOG_PREFIX, 'Clearing stale __nomsCommitted flag');
+        g.__nomsCommitted = false;
+      }
+    }
+    
     // Verify wrapper is active
     verifyWrapper();
     
@@ -1412,12 +1473,33 @@
     // This ensures our interceptor has a chance to mount if initialization was delayed
     setTimeout(() => {
       if (g.phase === 'nominations' && !g.nomsLocked && !g.__nomsCommitInProgress) {
-        console.log(LOG_PREFIX, 'Safety microtask: re-invoking renderNomsPanel');
-        if (global.renderNomsPanel && typeof global.renderNomsPanel === 'function') {
-          global.renderNomsPanel();
+        const hoh = global.getP ? global.getP(g.hohId) : null;
+        if (hoh && hoh.human) {
+          console.log(LOG_PREFIX, 'Safety microtask: invoking NomsFS.showIntro()');
+          if (global.NomsFS && typeof global.NomsFS.showIntro === 'function') {
+            global.NomsFS.showIntro().then(success => {
+              if (success) {
+                console.log(LOG_PREFIX, 'Safety microtask: intro shown, opening selector');
+                if (global.NomsFS && typeof global.NomsFS.open === 'function') {
+                  global.NomsFS.open();
+                }
+              }
+            });
+          } else if (global.renderNomsPanel && typeof global.renderNomsPanel === 'function') {
+            console.log(LOG_PREFIX, 'Safety microtask: re-invoking renderNomsPanel');
+            global.renderNomsPanel();
+          }
         }
       }
     }, 50);
+  }
+  
+  /**
+   * Phase exit hook - called when leaving nominations phase
+   */
+  function onExitNominationsPhase() {
+    console.log(LOG_PREFIX, 'Leaving nominations phase');
+    teardownNominationOverlays();
   }
   
   /**
@@ -1470,6 +1552,30 @@
     console.log(LOG_PREFIX, '✓ Hooked into startNominations');
   }
   
+  /**
+   * Install phase change listener to detect leaving nominations
+   */
+  function installPhaseChangeListener() {
+    let lastPhase = null;
+    
+    // Use setInterval to poll for phase changes
+    setInterval(() => {
+      const g = global.game;
+      if (!g) return;
+      
+      const currentPhase = g.phase;
+      
+      // Detect transition out of nominations phase
+      if (lastPhase === 'nominations' && currentPhase !== 'nominations') {
+        onExitNominationsPhase();
+      }
+      
+      lastPhase = currentPhase;
+    }, 500); // Poll every 500ms
+    
+    console.log(LOG_PREFIX, '✓ Phase change listener installed');
+  }
+  
   // Auto-install when this module loads
   // Wait for DOM ready to ensure other modules are loaded
   if (document.readyState === 'loading') {
@@ -1477,6 +1583,7 @@
       setTimeout(() => {
         retryInstallInterceptor();
         hookStartNominations();
+        installPhaseChangeListener();
       }, 100);
     });
   } else {
@@ -1484,6 +1591,7 @@
     setTimeout(() => {
       retryInstallInterceptor();
       hookStartNominations();
+      installPhaseChangeListener();
     }, 100);
   }
 
@@ -1505,6 +1613,11 @@
      * @returns {Promise<boolean>} True if successful, false otherwise
      */
     showIntro: showIntroCard,
+    
+    /**
+     * Teardown overlays and cleanup
+     */
+    teardown: teardownNominationOverlays,
     
     /**
      * Recompute and apply TV center bias
@@ -1547,6 +1660,7 @@
       return {
         installed: global.__nomsFsInstalled || false,
         wrapped: isWrapped || false,
+        featureFlagEnabled: global.__enableNomsFS !== false,
         selectorActive: selectorState.active,
         selectedCount: selectorState.selectedIds.length,
         requiredCount: selectorState.required,
