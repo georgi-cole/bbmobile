@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test 7 New Minigames</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #0f1923;
+      color: #e3ecf5;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #6fd3ff;
+      text-align: center;
+    }
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .game-card {
+      background: #1d2734;
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid #2c3a4d;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .game-card:hover {
+      border-color: #6fd3ff;
+      transform: translateY(-2px);
+    }
+    .game-card.loaded {
+      border-color: #74e48b;
+    }
+    .game-card.not-loaded {
+      border-color: #ff6b6b;
+    }
+    .game-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #6fd3ff;
+    }
+    .game-status {
+      font-size: 0.85rem;
+      color: #95a9c0;
+    }
+    .game-status.success {
+      color: #74e48b;
+    }
+    .game-status.error {
+      color: #ff6b6b;
+    }
+    #game-container {
+      background: #1d2734;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      min-height: 400px;
+    }
+    #results {
+      background: #2c3a4d;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .btn {
+      background: #2c3a4d;
+      color: #e3ecf5;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .btn.primary {
+      background: #6fd3ff;
+      color: #0f1923;
+    }
+    .summary {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .summary-item {
+      background: #1d2734;
+      padding: 15px;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 150px;
+    }
+    .summary-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #6fd3ff;
+    }
+    .summary-label {
+      color: #95a9c0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎮 Test 7 New Minigames</h1>
+    
+    <div class="summary">
+      <div class="summary-item">
+        <div class="summary-value" id="loaded-count">0</div>
+        <div class="summary-label">Modules Loaded</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-value" id="total-count">7</div>
+        <div class="summary-label">Total Games</div>
+      </div>
+    </div>
+
+    <h2>Click a game to test:</h2>
+    <div class="game-grid" id="game-grid"></div>
+
+    <div id="game-container"></div>
+
+    <div id="results"></div>
+  </div>
+
+  <!-- Load game dependencies -->
+  <script src="js/bbSeededRng.js"></script>
+  
+  <!-- Load minigame infrastructure -->
+  <script src="js/minigames/core/loader.js"></script>
+  <script src="js/minigames/mobile-utils.js"></script>
+  <script src="js/minigames/accessibility.js"></script>
+  
+  <!-- Load the 7 new minigames -->
+  <script src="js/minigames/hangman.js"></script>
+  <script src="js/minigames/tilt-labyrinth.js"></script>
+  <script src="js/minigames/three-digits-quiz.js"></script>
+  <script src="js/minigames/tetris.js"></script>
+  <script src="js/minigames/traveling-dots.js"></script>
+  <script src="js/minigames/minesweeper.js"></script>
+  <script src="js/minigames/rail-switch-sprint.js"></script>
+  
+  <!-- Load registry -->
+  <script src="js/minigames/registry.js"></script>
+
+  <script>
+    const games = [
+      { key: 'hangman', name: 'Hangman', description: 'Classic word guessing' },
+      { key: 'tiltLabyrinth', name: 'Tilt Labyrinth', description: 'Hard mode 19×19 maze' },
+      { key: 'threeDigitsQuiz', name: 'Three Digits Quiz', description: 'Digit guessing with hints' },
+      { key: 'tetris', name: 'Tetris', description: 'Classic falling blocks' },
+      { key: 'travelingDots', name: 'Traveling Dots', description: 'TSP approximation' },
+      { key: 'minesweeps', name: 'Minesweeps', description: 'Classic minesweeper' },
+      { key: 'railSwitchSprint', name: 'Rail Switch Sprint', description: 'Route trains to stations' }
+    ];
+
+    let currentGame = null;
+
+    function checkModuleLoaded(key) {
+      // Check both MinigameModules and MiniGames namespaces
+      if (window.MinigameModules && window.MinigameModules[key]) {
+        return true;
+      }
+      if (window.MiniGames && window.MiniGames[key]) {
+        return true;
+      }
+      return false;
+    }
+
+    function updateLoadedCount() {
+      const loaded = games.filter(g => checkModuleLoaded(g.key)).length;
+      document.getElementById('loaded-count').textContent = loaded;
+    }
+
+    function renderGameCards() {
+      const grid = document.getElementById('game-grid');
+      grid.innerHTML = '';
+
+      games.forEach(game => {
+        const card = document.createElement('div');
+        const isLoaded = checkModuleLoaded(game.key);
+        
+        card.className = `game-card ${isLoaded ? 'loaded' : 'not-loaded'}`;
+        card.innerHTML = `
+          <div class="game-title">${game.name}</div>
+          <div class="game-status ${isLoaded ? 'success' : 'error'}">
+            ${isLoaded ? '✓ Loaded' : '✗ Not Loaded'}
+          </div>
+          <div style="font-size: 0.8rem; margin-top: 5px; color: #95a9c0;">
+            ${game.description}
+          </div>
+        `;
+
+        if (isLoaded) {
+          card.addEventListener('click', () => playGame(game.key, game.name));
+        }
+
+        grid.appendChild(card);
+      });
+
+      updateLoadedCount();
+    }
+
+    function playGame(key, name) {
+      const container = document.getElementById('game-container');
+      const results = document.getElementById('results');
+      
+      container.innerHTML = `<h3>Playing: ${name}</h3><p style="color: #95a9c0;">Loading game...</p>`;
+      results.innerHTML = '';
+
+      currentGame = key;
+
+      try {
+        // Get the module
+        let module = null;
+        if (window.MinigameModules && window.MinigameModules[key]) {
+          module = window.MinigameModules[key];
+        } else if (window.MiniGames && window.MiniGames[key]) {
+          module = window.MiniGames[key];
+        }
+
+        if (!module || typeof module.render !== 'function') {
+          throw new Error(`Module ${key} does not have a render function`);
+        }
+
+        // Clear container
+        container.innerHTML = '';
+
+        // Render the game
+        const options = {
+          debugMode: true,
+          seed: Date.now()
+        };
+
+        module.render(container, (score) => {
+          results.innerHTML = `
+            <h3>Game Complete!</h3>
+            <p><strong>${name}</strong></p>
+            <p>Final Score: <span style="color: #6fd3ff; font-size: 1.5rem; font-weight: bold;">${score}</span></p>
+            <button class="btn primary" onclick="playGame('${key}', '${name}')">Play Again</button>
+            <button class="btn" onclick="clearGame()">Close</button>
+          `;
+        }, options);
+
+      } catch (error) {
+        container.innerHTML = `
+          <h3 style="color: #ff6b6b;">Error Loading Game</h3>
+          <p>Game: ${name}</p>
+          <p style="color: #ff6b6b;">Error: ${error.message}</p>
+          <pre style="background: #0f1923; padding: 10px; border-radius: 4px; overflow-x: auto;">${error.stack}</pre>
+          <button class="btn" onclick="clearGame()">Close</button>
+        `;
+        console.error('Game error:', error);
+      }
+    }
+
+    function clearGame() {
+      document.getElementById('game-container').innerHTML = '';
+      document.getElementById('results').innerHTML = '';
+      currentGame = null;
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      // Wait a moment for all scripts to load
+      setTimeout(() => {
+        console.log('Checking modules...');
+        console.log('MinigameModules:', window.MinigameModules);
+        console.log('MiniGames:', window.MiniGames);
+        renderGameCards();
+      }, 100);
+    });
+  </script>
+</body>
+</html>

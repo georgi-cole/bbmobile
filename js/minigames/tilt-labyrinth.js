@@ -142,9 +142,9 @@
     let hasKey = false;
     
     // Ball physics
-    const MAZE_COLS = 16;
-    const MAZE_ROWS = 16;
-    const CELL_SIZE = 30;
+    const MAZE_COLS = 19;
+    const MAZE_ROWS = 19;
+    const CELL_SIZE = 25;
     const MAZE_SIZE = MAZE_COLS * CELL_SIZE;
     
     let ballX = CELL_SIZE / 2;
@@ -160,12 +160,12 @@
     const walls = cellsToWalls(mazeCells, CELL_SIZE);
     
     // Key and lock positions
-    const KEY_X = CELL_SIZE * rng.range(8, 11) + CELL_SIZE / 2;
-    const KEY_Y = CELL_SIZE * rng.range(4, 7) + CELL_SIZE / 2;
+    const KEY_X = CELL_SIZE * rng.range(9, 13) + CELL_SIZE / 2;
+    const KEY_Y = CELL_SIZE * rng.range(5, 9) + CELL_SIZE / 2;
     const KEY_RADIUS = 8;
     
-    const LOCK_X = CELL_SIZE * rng.range(12, 14) + CELL_SIZE / 2;
-    const LOCK_Y = CELL_SIZE * rng.range(10, 13);
+    const LOCK_X = CELL_SIZE * rng.range(14, 17) + CELL_SIZE / 2;
+    const LOCK_Y = CELL_SIZE * rng.range(12, 16);
     let lockOpen = false;
     
     // Goal position (bottom-right area)
@@ -175,7 +175,7 @@
     
     // Moving hazards (patrols)
     const hazards = [];
-    for(let i = 0; i < 3; i++){
+    for(let i = 0; i < 4; i++){
       hazards.push({
         x: CELL_SIZE * rng.range(3, MAZE_COLS - 4) + CELL_SIZE / 2,
         y: CELL_SIZE * rng.range(3, MAZE_ROWS - 4) + CELL_SIZE / 2,
