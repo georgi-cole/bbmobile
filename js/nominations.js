@@ -233,25 +233,6 @@
    * @param {number} playerId - Player ID of nominee
    * @returns {Promise} Resolves when popup is closed
    */
-  function showNomineeReaction(playerId){
-    return new Promise((resolve) => {
-      const player = global.getP(playerId);
-      if(!player){
-        resolve();
-        return;
-      }
-
-      // Pick a random reaction quote
-      const quote = NOMINEE_REACTIONS[Math.floor((global.rng?.()||Math.random())*NOMINEE_REACTIONS.length)];
-
-      // Use faux TV showCard
-      if(global.showCard){
-        global.showCard(player.name, [`"${quote}"`], 'noms', 2800, true);
-      }
-      setTimeout(resolve, 2800);
-    });
-  }
-
   /**
    * Show nominee reaction popups one at a time (1-by-1) in the TV overlay
    * @param {Array<number>} nomineeIds - Array of nominee player IDs
