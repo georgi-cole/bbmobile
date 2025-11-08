@@ -48,38 +48,7 @@
       global.closeAllVoteUI();
     }
 
-    // Center TV in viewport before locking scroll
-    const tvElement = document.querySelector('#tv');
-    if (global.centerTVInViewport) {
-      await global.centerTVInViewport(tvElement);
-    }
-
-    // Lock body scroll when choice card is shown (using ref-counted helper)
-    if (global.lockBodyScroll) {
-      global.lockBodyScroll();
-    } else {
-      // Fallback if helper not loaded yet
-      lockBodyScroll();
-    }
-
-    // Create modal root container
-    const root = document.createElement('div');
-    root.className = 'lv-root';
-    
-    // Store reference and mark as open
-    _modalRoot = root;
-    _isOpen = true;
-
-    // Create backdrop
-    const backdrop = document.createElement('div');
-    backdrop.className = 'lv-backdrop';
-    backdrop.onclick = () => {
-      // Optional: close on backdrop click
-      // For now, we'll leave this empty to require explicit Vote button interaction
-    };
-    root.appendChild(backdrop);
-
-    // Create card element
+    // Create card element (no root/backdrop needed - unified mount provides centering)
     const card = document.createElement('div');
     card.className = 'lv-choice-card';
     card.setAttribute('role', 'dialog');
@@ -138,11 +107,22 @@
     };
     card.appendChild(voteBtn);
 
-    // Add card to root
-    root.appendChild(card);
+    // Mount using unified popup system
+    const wrapper = global.mountCenteredPopup(card, {
+      replace: true,
+      className: 'lv-choice-card-wrapper',
+      lockScroll: true,
+      dialog: true
+    });
 
-    // Mount to document.body (not #tv)
-    document.body.appendChild(root);
+    if (!wrapper) {
+      console.error('[ChoiceCard] Failed to mount popup');
+      return null;
+    }
+
+    // Store reference and mark as open
+    _modalRoot = wrapper;
+    _isOpen = true;
 
     return card;
   }
@@ -155,83 +135,14 @@
       return;
     }
     
-    // Remove the entire modal root (includes backdrop and card)
-    if (_modalRoot) {
-      _modalRoot.remove();
-      console.debug('[ChoiceCard] Modal root removed');
-    }
-    
-    // Fallback: remove any stray elements if modal root reference was lost
-    const root = document.querySelector('.lv-root');
-    if (root) {
-      root.remove();
-      console.debug('[ChoiceCard] Stray modal root removed');
-    }
-
-    // Fallback: remove legacy card if present (only if new modal system wasn't used)
-    // This handles backwards compatibility with older code that may have created cards directly
-    const card = document.querySelector('.lv-choice-card');
-    if (card && !_modalRoot) {
-      card.remove();
-      console.debug('[ChoiceCard] Legacy card removed');
-    }
+    // Unmount using unified popup system
+    global.unmountPopups({ unlockScroll: true });
     
     // Reset singleton state
     _modalRoot = null;
     _isOpen = false;
     
-    // Use global helper to unlock body scroll
-    if (global.unlockBodyScroll) {
-      global.unlockBodyScroll();
-    } else {
-      // Fallback if helper not loaded yet
-      unlockBodyScroll();
-    }
-  }
-
-  // Lock body scroll (prevent background scrolling on mobile)
-  // iOS-safe: uses overflow:hidden instead of position:fixed
-  function lockBodyScroll() {
-    const body = document.body;
-    const html = document.documentElement;
-    if (!body || !html) return;
-    
-    // Store current scroll position
-    const scrollY = window.scrollY;
-    body.dataset.scrollY = String(scrollY);
-    body.dataset.scrollLocked = 'true';
-    
-    // Use overflow-based lock (iOS-safe)
-    body.style.overflow = 'hidden';
-    html.style.overscrollBehavior = 'contain';
-  }
-
-  // Unlock body scroll
-  function unlockBodyScroll() {
-    const body = document.body;
-    const html = document.documentElement;
-    if (!body || !html) return;
-    
-    // Restore scroll position if saved
-    const scrollY = parseInt(body.dataset.scrollY || '0', 10);
-    
-    // Clear new overflow-based lock
-    body.style.overflow = '';
-    html.style.overscrollBehavior = '';
-    
-    // Clear old position-based lock (backwards compatibility)
-    body.style.position = '';
-    body.style.top = '';
-    body.style.width = '';
-    
-    // Clear dataset flags
-    delete body.dataset.scrollLocked;
-    delete body.dataset.scrollY;
-    
-    // Restore scroll position
-    if (scrollY > 0) {
-      window.scrollTo(0, scrollY);
-    }
+    console.debug('[ChoiceCard] Choice card hidden');
   }
 
   // Export public API
