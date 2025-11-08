@@ -134,6 +134,44 @@
     }
   }
 
+  /**
+   * Compute vertical bias for TV-centered cards
+   * Calculates bias dynamically based on viewport to align cards with stage eye
+   * @param {HTMLElement} host - TV overlay element
+   * @returns {string} CSS value for vertical offset (e.g., '20px' or '8%')
+   */
+  function computeTvCenterBiasPx(host) {
+    // Check for override
+    if (typeof global.__tvCenterBiasY !== 'undefined') {
+      const override = global.__tvCenterBiasY;
+      
+      // If it's a string ending in 'px', return as-is
+      if (typeof override === 'string' && override.endsWith('px')) {
+        return override;
+      }
+      
+      // If it's a number, treat as ratio of TV height
+      if (typeof override === 'number') {
+        const tvHeight = host ? host.offsetHeight : window.innerHeight;
+        const biasPixels = Math.round(tvHeight * override);
+        return `${biasPixels}px`;
+      }
+    }
+    
+    // Calculate default bias based on viewport aspect ratio
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const isPortrait = vh > vw;
+    
+    // On narrow portrait (mobile), use ~8% bias; otherwise ~4%
+    const biasRatio = isPortrait && vw < 600 ? 0.08 : 0.04;
+    
+    const tvHeight = host ? host.offsetHeight : vh;
+    const biasPixels = Math.round(tvHeight * biasRatio);
+    
+    return `${biasPixels}px`;
+  }
+
   // ========== CSS Injection ==========
 
   /**
@@ -150,7 +188,7 @@
     const style = document.createElement('style');
     style.id = 'bb-noms-fullscreen-styles';
     style.textContent = `
-      /* TV-centered card containers */
+      /* TV-centered card containers with vertical bias */
       .nfs-stage {
         position: absolute;
         inset: 0;
@@ -159,6 +197,8 @@
         justify-content: center;
         pointer-events: none;
         z-index: 10;
+        /* Apply vertical bias to shift cards up toward stage eye */
+        transform: translateY(calc(-1 * var(--tv-center-bias, 0px)));
       }
       
       .nfs-center {
@@ -214,6 +254,15 @@
         font-weight: 700;
         color: var(--fg, #f1f5f9);
         text-align: center;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .noms-fs-guidance {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--fg-muted, #94a3b8);
       }
       
       /* Optional legend for ally/enemy indicators */
@@ -424,6 +473,11 @@
         // Clear existing content
         tvOverlay.innerHTML = '';
         
+        // Compute and set vertical bias for TV-centered positioning
+        const bias = computeTvCenterBiasPx(tvOverlay);
+        tvOverlay.style.setProperty('--tv-center-bias', bias);
+        console.log(LOG_PREFIX, 'Set --tv-center-bias:', bias);
+        
         // Create stage wrapper for TV-centered layout
         const stage = document.createElement('div');
         stage.className = 'nfs-stage';
@@ -627,7 +681,7 @@
         overlay.style.setProperty('--nfs-mincol', sizing.minCol);
         overlay.style.setProperty('--nfs-avatar', sizing.avatar);
         
-        // Create header with count
+        // Create header with count and guidance
         const header = document.createElement('div');
         header.className = 'noms-fs-header';
         
@@ -635,7 +689,19 @@
         countDisplay.className = 'noms-fs-count';
         countDisplay.setAttribute('aria-live', 'polite');
         countDisplay.setAttribute('aria-atomic', 'true');
-        countDisplay.textContent = `0 / ${required} selected`;
+        
+        // Add count text
+        const countText = document.createElement('span');
+        countText.textContent = `0 / ${required} selected`;
+        countDisplay.appendChild(countText);
+        
+        // Add guidance text
+        const guidance = document.createElement('span');
+        guidance.className = 'noms-fs-guidance';
+        const guidanceText = required === 2 ? 'Choose 2' : required === 3 ? 'Choose 3' : 'Choose 4';
+        guidance.textContent = `(${guidanceText})`;
+        countDisplay.appendChild(guidance);
+        
         header.appendChild(countDisplay);
         
         // Optional legend for ally/enemy indicators
@@ -739,7 +805,7 @@
             }
             
             // Update count display
-            countDisplay.textContent = `${selectorState.selectedIds.length} / ${required} selected`;
+            countText.textContent = `${selectorState.selectedIds.length} / ${required} selected`;
             
             // Update confirm button state
             const confirmBtn = overlay.querySelector('.noms-fs-confirm');
@@ -767,7 +833,7 @@
         // Create confirm button
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'noms-fs-confirm';
-        confirmBtn.textContent = 'CONFIRM NOMINATIONS';
+        confirmBtn.textContent = 'Confirm';
         confirmBtn.disabled = true;
         
         const handleConfirm = () => {
@@ -914,6 +980,11 @@
         
         tvOverlay.innerHTML = '';
         
+        // Compute and set vertical bias for TV-centered positioning
+        const bias = computeTvCenterBiasPx(tvOverlay);
+        tvOverlay.style.setProperty('--tv-center-bias', bias);
+        console.log(LOG_PREFIX, 'Set --tv-center-bias for summary:', bias);
+        
         // Create stage wrapper for TV-centered layout
         const stage = document.createElement('div');
         stage.className = 'nfs-stage';
@@ -983,6 +1054,11 @@
         }
         
         tvOverlay.innerHTML = '';
+        
+        // Compute and set vertical bias for TV-centered positioning
+        const bias = computeTvCenterBiasPx(tvOverlay);
+        tvOverlay.style.setProperty('--tv-center-bias', bias);
+        console.log(LOG_PREFIX, 'Set --tv-center-bias for adjourn:', bias);
         
         // Create stage wrapper for TV-centered layout
         const stage = document.createElement('div');
