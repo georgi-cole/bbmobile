@@ -55,23 +55,13 @@
   
   /**
    * Ensure #tvOverlay exists in the DOM.
-   * Prefer global.OverlayManager if available; otherwise fall back to scaffold or minimal creation.
+   * Prefer global.ensureTVOverlayScaffold() if available; otherwise inject minimal #tvOverlay.
    * @returns {HTMLElement|null} The tvOverlay element or its content container
    */
   function ensureOverlayHost(){
     console.log('[noms] Ensuring TV overlay host exists');
     
-    // Prefer OverlayManager if available
-    if(global && global.OverlayManager && typeof global.OverlayManager.ensureVisible === 'function'){
-      console.log('[noms] Using OverlayManager.ensureVisible()');
-      const overlay = global.OverlayManager.ensureVisible();
-      if(overlay){
-        console.log('[noms] ✓ Overlay ensured via OverlayManager');
-        return overlay;
-      }
-    }
-    
-    // Fallback: use global scaffold function if available (from veto.js)
+    // Prefer global scaffold function if available (from veto.js)
     if(global && typeof global.ensureTVOverlayScaffold === 'function'){
       console.log('[noms] Using global.ensureTVOverlayScaffold()');
       const content = global.ensureTVOverlayScaffold();
@@ -81,7 +71,7 @@
       }
     }
     
-    // Final fallback: create minimal #tvOverlay if missing
+    // Fallback: create minimal #tvOverlay if missing
     let tvOverlay = document.getElementById('tvOverlay');
     if(!tvOverlay){
       console.log('[noms] #tvOverlay missing, creating minimal fallback');

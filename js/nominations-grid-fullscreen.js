@@ -89,16 +89,6 @@
   function ensureTVOverlay() {
     console.log(LOG_PREFIX, 'Ensuring TV overlay exists');
     
-    // Use overlay manager if available
-    if (global.OverlayManager) {
-      const overlay = global.OverlayManager.ensureVisible();
-      if (overlay) {
-        console.log(LOG_PREFIX, '✓ Overlay ensured via OverlayManager');
-        return overlay;
-      }
-    }
-    
-    // Fallback to legacy implementation
     const tv = document.getElementById('tv');
     if (!tv) {
       console.warn(LOG_PREFIX, '#tv element not found');
@@ -1314,28 +1304,20 @@
       console.log(LOG_PREFIX, 'Teardown: removed #nomsFsOverlay');
     }
     
-    // Use overlay manager to clear owned content safely
+    // Only clean up tvOverlay if it contains nomination-specific content
+    // Check for .nfs-stage or .nfs-fullscreen-active marker
     const tvOverlay = document.getElementById('tvOverlay');
     if (tvOverlay) {
       // Remove nomination-specific classes
       tvOverlay.classList.remove('nfs-fullscreen-active');
       
-      // Only clear contents if we own the overlay and it contains .nfs-stage (our content)
+      // Only clear contents if it contains .nfs-stage (our content)
       const nfsStage = tvOverlay.querySelector('.nfs-stage');
-      if (nfsStage && global.OverlayManager) {
-        global.OverlayManager.clearOwned('noms');
-        console.log(LOG_PREFIX, 'Teardown: cleared tvOverlay via OverlayManager');
-      } else if (nfsStage) {
-        // Fallback if OverlayManager not available
+      if (nfsStage) {
         tvOverlay.innerHTML = '';
-        console.log(LOG_PREFIX, 'Teardown: cleared tvOverlay (legacy fallback)');
+        console.log(LOG_PREFIX, 'Teardown: cleared tvOverlay (contained nomination content)');
       } else {
         console.log(LOG_PREFIX, 'Teardown: left tvOverlay intact (no nomination content detected)');
-      }
-      
-      // Release overlay ownership
-      if (global.OverlayManager) {
-        global.OverlayManager.release('noms');
       }
     }
     
@@ -1459,13 +1441,6 @@
         console.log(LOG_PREFIX, 'Clearing stale __nomsCommitted flag');
         g.__nomsCommitted = false;
       }
-    }
-    
-    // Acquire overlay ownership and ensure it's visible
-    if (global.OverlayManager) {
-      global.OverlayManager.acquire('noms');
-      global.OverlayManager.ensureVisible();
-      console.log(LOG_PREFIX, '✓ Acquired overlay ownership and ensured visibility');
     }
     
     // Verify wrapper is active
@@ -1637,14 +1612,6 @@
       
       const isWrapped = global.renderNomsPanel && global.renderNomsPanel[WRAPPED_SENTINEL];
       
-      const tvOverlay = document.getElementById('tvOverlay');
-      
-      // Get overlay manager info if available
-      let overlayInfo = null;
-      if (global.OverlayManager && typeof global.OverlayManager.debug === 'function') {
-        overlayInfo = global.OverlayManager.debug();
-      }
-      
       return {
         installed: global.__nomsFsInstalled || false,
         wrapped: isWrapped || false,
@@ -1664,13 +1631,7 @@
         eligible: getEligiblePlayerIds().length,
         requiredSlots: getRequiredSlots(),
         centerBias: global.__tvCenterBiasY,
-        forceExactCenter: global.__tvForceExactCenter,
-        overlayManager: overlayInfo,
-        tvOverlay: tvOverlay ? {
-          exists: true,
-          visible: tvOverlay.style.display !== 'none',
-          hasContent: tvOverlay.innerHTML.length > 0
-        } : { exists: false }
+        forceExactCenter: global.__tvForceExactCenter
       };
     }
   };
