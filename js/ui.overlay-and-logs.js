@@ -360,36 +360,83 @@
 
     function renderCard({title,lines,tone,dur,uniform},hold){
       const cfg=ensureCfg(); if(!cfg.fxCards) return;
-      const host=uiEnsureTvOverlay(); if(!host) return;
-      host.style.visibility='';
-      const card=document.createElement('div');
-      // Apply bigAnnounce for announcement tone, otherwise use diaryRoomCard for standard events
-      if(tone==='big'||tone==='announce'){
+      
+      // Check if this is a bigAnnounce (full-screen) card
+      const isBigAnnounce = (tone==='big'||tone==='announce');
+      
+      if(isBigAnnounce){
+        // Keep bigAnnounce cards in tvOverlay as full-screen overlays
+        const host=uiEnsureTvOverlay(); if(!host) return;
+        host.style.visibility='';
+        const card=document.createElement('div');
         card.className='revealCard bigAnnounce';
+        const h=document.createElement('h3'); h.textContent=title; card.appendChild(h);
+        (lines||[]).forEach((txt,i)=>{
+          const d=document.createElement('div'); if(!uniform && i===0) d.className='big';
+          d.textContent=txt; card.appendChild(d);
+        });
+
+        // Faces when appropriate
+        const spec = deduceAvatarSpec(title, lines);
+        if(spec.ids && spec.ids.length){
+          attachFaceRow(card, spec.ids, {arrow:spec.arrow});
+        }
+
+        host.innerHTML=''; host.appendChild(card);
+        document.getElementById('tv')?.classList.add('tvTall');
+
+        const delayOut=Math.max(0,(hold/1000)-0.65);
+        card.style.animation='twistIntro .8s cubic-bezier(.23,.9,.25,1), holdOut .6s ease-in '+delayOut+'s forwards';
       } else {
-        card.className='revealCard diaryRoomCard';
+        // Use unified popup system for standard cards (centered in TV viewport)
+        const mountCenteredPopup = window.UnifiedMount?.mountCenteredPopup;
+        if(!mountCenteredPopup){
+          console.error('[renderCard] UnifiedMount not available, falling back to tvOverlay');
+          // Fallback to old behavior
+          const host=uiEnsureTvOverlay(); if(!host) return;
+          host.style.visibility='';
+          const card=document.createElement('div');
+          card.className='revealCard diaryRoomCard';
+          const h=document.createElement('h3'); h.textContent=title; card.appendChild(h);
+          (lines||[]).forEach((txt,i)=>{
+            const d=document.createElement('div'); if(!uniform && i===0) d.className='big';
+            d.textContent=txt; card.appendChild(d);
+          });
+          const spec = deduceAvatarSpec(title, lines);
+          if(spec.ids && spec.ids.length){
+            attachFaceRow(card, spec.ids, {arrow:spec.arrow});
+          }
+          host.innerHTML=''; host.appendChild(card);
+          document.getElementById('tv')?.classList.add('tvTall');
+          const delayOut=Math.max(0,(hold/1000)-0.65);
+          card.style.animation='cardFloatIn .65s cubic-bezier(.25,.9,.25,1) forwards, holdOut .6s ease-in '+delayOut+'s forwards';
+          return;
+        }
+        
+        // Build card content
+        const content=document.createElement('div');
+        content.className='revealCard diaryRoomCard';
+        const h=document.createElement('h3'); h.textContent=title; content.appendChild(h);
+        (lines||[]).forEach((txt,i)=>{
+          const d=document.createElement('div'); if(!uniform && i===0) d.className='big';
+          d.textContent=txt; content.appendChild(d);
+        });
+
+        // Faces when appropriate
+        const spec = deduceAvatarSpec(title, lines);
+        if(spec.ids && spec.ids.length){
+          attachFaceRow(content, spec.ids, {arrow:spec.arrow});
+        }
+
+        // Mount centered in TV viewport
+        mountCenteredPopup(content, {
+          replace: true,
+          className: 'reveal-card-popup'
+        });
+
+        const delayOut=Math.max(0,(hold/1000)-0.65);
+        content.style.animation='cardFloatIn .65s cubic-bezier(.25,.9,.25,1) forwards, holdOut .6s ease-in '+delayOut+'s forwards';
       }
-      const h=document.createElement('h3'); h.textContent=title; card.appendChild(h);
-      (lines||[]).forEach((txt,i)=>{
-        const d=document.createElement('div'); if(!uniform && i===0) d.className='big';
-        d.textContent=txt; card.appendChild(d);
-      });
-
-      // Faces when appropriate
-      const spec = deduceAvatarSpec(title, lines);
-      if(spec.ids && spec.ids.length){
-        attachFaceRow(card, spec.ids, {arrow:spec.arrow});
-      }
-
-      host.innerHTML=''; host.appendChild(card);
-
-      // TV grow while visible
-      document.getElementById('tv')?.classList.add('tvTall');
-
-      const delayOut=Math.max(0,(hold/1000)-0.65);
-      card.style.animation=(tone==='big'||tone==='announce')
-        ? 'twistIntro .8s cubic-bezier(.23,.9,.25,1), holdOut .6s ease-in '+delayOut+'s forwards'
-        : 'cardFloatIn .65s cubic-bezier(.25,.9,.25,1) forwards, holdOut .6s ease-in '+delayOut+'s forwards';
     }
 
     function next(){
@@ -407,8 +454,19 @@
         const gap=inTurbo()?p.turboGap:p.gap;
         setTimeout(()=>{
           try{
-            const host=uiEnsureTvOverlay();
-            if(host && host.firstChild && host.firstChild.classList.contains('revealCard')) host.removeChild(host.firstChild);
+            // Clean up based on card type
+            const isBigAnnounce = (job.tone==='big'||job.tone==='announce');
+            if(isBigAnnounce){
+              // Clean up tvOverlay for bigAnnounce cards
+              const host=uiEnsureTvOverlay();
+              if(host && host.firstChild && host.firstChild.classList.contains('revealCard')) host.removeChild(host.firstChild);
+            } else {
+              // Clean up unified popup for standard cards
+              const unmountPopups = window.UnifiedMount?.unmountPopups;
+              if(unmountPopups){
+                unmountPopups();
+              }
+            }
             if(!q.length) document.getElementById('tv')?.classList.remove('tvTall');
             // Release signature from pending set after card is removed
             if(job.__sig) pendingSigs.delete(job.__sig);
