@@ -1503,9 +1503,38 @@ header.innerHTML = `
   // Phase token cancellation system
   if(!g.currentPhaseToken) g.currentPhaseToken = 0;
   
+  /**
+   * Clean up stale overlay when transitioning to a new phase
+   * Removes or neutralizes lingering fallback overlays that could block UI
+   */
+  function cleanupStaleOverlayOnPhaseChange(nextPhase){
+    const tvOverlay = document.getElementById('tvOverlay');
+    if(!tvOverlay) return;
+    
+    const competitionPhases = ['hoh', 'veto_comp', 'veto', 'veto_ceremony', 'final3_comp1', 'final3_comp2'];
+    
+    if(competitionPhases.includes(nextPhase)){
+      // Remove fallback-created overlays entirely
+      if(tvOverlay.getAttribute('data-fallback') === 'true'){
+        console.log('[phase-router] Removing fallback-created #tvOverlay on phase change to', nextPhase);
+        tvOverlay.remove();
+        return;
+      }
+      
+      // Neutralize existing overlay
+      tvOverlay.classList.remove('tv-active');
+      tvOverlay.style.pointerEvents = 'none';
+      tvOverlay.style.display = 'none';
+      console.log('[phase-router] ✓ Deactivated stale #tvOverlay on phase change to', nextPhase);
+    }
+  }
+  
   function setPhase(phase, seconds, onTimeout){
     const game=g.game; if(!game) return;
     sanitizeJuryConsistency(true);
+    
+    // Clean up stale overlays before phase initialization
+    cleanupStaleOverlayOnPhaseChange(phase);
     
     // Increment phase token to cancel all previous phase operations
     const oldToken = g.currentPhaseToken;
