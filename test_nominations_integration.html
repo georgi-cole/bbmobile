@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nominations Integration Test</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0f172a;
+      color: #f1f5f9;
+    }
+    h1 { color: #4ade80; }
+    .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+    .pass { background: #166534; }
+    .fail { background: #991b1b; }
+    .info { background: #1e40af; }
+    pre { background: #1e293b; padding: 10px; border-radius: 4px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Nominations Integration Test</h1>
+  <div id="results"></div>
+  
+  <script>
+    const results = document.getElementById('results');
+    
+    function log(msg, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = msg;
+      results.appendChild(div);
+    }
+    
+    function test(name, fn) {
+      try {
+        fn();
+        log(`✓ ${name}`, 'pass');
+      } catch (err) {
+        log(`✗ ${name}: ${err.message}`, 'fail');
+      }
+    }
+    
+    // Setup minimal game state
+    window.game = {
+      phase: 'nominations',
+      hohId: 1,
+      nominees: [],
+      nomsLocked: false,
+      players: [
+        { id: 1, name: 'Alice', human: true, evicted: false },
+        { id: 2, name: 'Bob', evicted: false },
+        { id: 3, name: 'Carol', evicted: false }
+      ]
+    };
+    
+    window.alivePlayers = () => game.players.filter(p => !p.evicted);
+    window.getP = (id) => game.players.find(p => p.id === id);
+    window.safeName = (id) => getP(id)?.name || `Player ${id}`;
+    window.updateHud = () => {};
+    window.tv = { say: () => {} };
+    
+    // Load nominations modules
+    const script1 = document.createElement('script');
+    script1.src = '../js/nominations.js';
+    script1.onload = () => {
+      log('nominations.js loaded', 'info');
+      
+      const script2 = document.createElement('script');
+      script2.src = '../js/nominations-grid-fullscreen.js';
+      script2.onload = () => {
+        log('nominations-grid-fullscreen.js loaded', 'info');
+        
+        // Run tests after both modules load
+        setTimeout(() => {
+          log('\n=== Running Tests ===', 'info');
+          
+          test('renderNomsPanel exists', () => {
+            if (typeof window.renderNomsPanel !== 'function') {
+              throw new Error('renderNomsPanel not found');
+            }
+          });
+          
+          test('NomsFS API exists', () => {
+            if (!window.NomsFS) {
+              throw new Error('NomsFS not found');
+            }
+          });
+          
+          test('NomsFS.open exists', () => {
+            if (typeof window.NomsFS.open !== 'function') {
+              throw new Error('NomsFS.open not found');
+            }
+          });
+          
+          test('NomsFS.showIntro exists', () => {
+            if (typeof window.NomsFS.showIntro !== 'function') {
+              throw new Error('NomsFS.showIntro not found');
+            }
+          });
+          
+          test('NomsFS.debug exists', () => {
+            if (typeof window.NomsFS.debug !== 'function') {
+              throw new Error('NomsFS.debug not found');
+            }
+          });
+          
+          test('Interceptor installed', () => {
+            if (!window.__nomsFsInstalled) {
+              throw new Error('Interceptor not installed');
+            }
+          });
+          
+          test('No pick mode CSS', () => {
+            const pickStyles = document.getElementById('bb-noms-pick-styles');
+            if (pickStyles) {
+              throw new Error('Legacy pick mode styles still present');
+            }
+          });
+          
+          test('No confirm bar in DOM', () => {
+            const confirmBar = document.getElementById('bb-noms-confirm-bar');
+            if (confirmBar) {
+              throw new Error('Legacy confirm bar still present');
+            }
+          });
+          
+          test('No pick mode body class', () => {
+            if (document.body.classList.contains('bb-noms-pick-mode')) {
+              throw new Error('Legacy pick mode body class present');
+            }
+          });
+          
+          test('Debug info available', () => {
+            const debug = window.NomsFS.debug();
+            if (!debug || typeof debug !== 'object') {
+              throw new Error('Debug info not available');
+            }
+            log('Debug info: ' + JSON.stringify(debug, null, 2), 'info');
+          });
+          
+          log('\n=== Tests Complete ===', 'info');
+          
+        }, 500);
+      };
+      document.body.appendChild(script2);
+    };
+    document.body.appendChild(script1);
+  </script>
+</body>
+</html>
