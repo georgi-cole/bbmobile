@@ -127,12 +127,27 @@
       // Check if already dismissed during avatar loading
       if(dismissed) return;
       
-      // Create card (no overlay needed - unified mount provides centering)
+      // Create modal overlay
+      const modal = document.createElement('div');
+      modal.className = 'results-modal-overlay';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-labelledby', 'resultsModalTitle');
+      modal.setAttribute('aria-modal', 'true');
+      modal.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0,0,0,0.9);
+        backdrop-filter: blur(4px);
+        display: grid;
+        place-items: center;
+        animation: resultsModalFadeIn 0.3s ease;
+        cursor: default;
+      `;
+      
+      // Create card
       const card = document.createElement('div');
       card.className = 'results-card';
-      card.setAttribute('role', 'dialog');
-      card.setAttribute('aria-labelledby', 'resultsModalTitle');
-      card.setAttribute('aria-modal', 'true');
       card.style.cssText = `
         background: linear-gradient(135deg, #1a2937 0%, #0f1a28 100%);
         border: 1px solid rgba(120,180,240,0.35);
@@ -141,6 +156,7 @@
         box-shadow: 0 20px 60px -20px rgba(0,0,0,0.95);
         max-width: min(500px, 92vw);
         width: 100%;
+        animation: resultsCardSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         position: relative;
       `;
       
@@ -362,17 +378,8 @@
         card.appendChild(runnersUpSection);
       }
       
-      // Mount using unified popup system
-      const wrapper = global.mountCenteredPopup(card, {
-        replace: true,
-        className: 'results-popup-wrapper',
-        dialog: true
-      });
-
-      if (!wrapper) {
-        console.error('[results-popup] Failed to mount popup');
-        return;
-      }
+      modal.appendChild(card);
+      document.body.appendChild(modal);
       
       // Enable dismissal after 500ms
       setTimeout(() => {
@@ -386,11 +393,11 @@
         const elapsed = Date.now() - startTime;
         if(elapsed < minDisplayTime) return; // Force minimum display time
         dismissed = true;
-        wrapper.removeEventListener('click', dismissHandler);
-        wrapper.removeEventListener('keydown', keyHandler);
-        wrapper.style.animation = 'popupFadeOut 0.25s ease';
+        modal.removeEventListener('click', dismissHandler);
+        modal.removeEventListener('keydown', keyHandler);
+        modal.style.animation = 'resultsModalFadeOut 0.25s ease';
         setTimeout(() => {
-          global.unmountPopups();
+          if(modal.parentNode) modal.remove();
         }, 250);
       };
       
@@ -399,18 +406,18 @@
         if(e.key === 'Escape') dismissHandler(e);
       };
       
-      wrapper.addEventListener('click', dismissHandler);
-      wrapper.addEventListener('keydown', keyHandler);
+      modal.addEventListener('click', dismissHandler);
+      modal.addEventListener('keydown', keyHandler);
       
       // Auto-remove after duration
       await sleep(duration);
       if(!dismissed){
         dismissed = true;
-        wrapper.removeEventListener('click', dismissHandler);
-        wrapper.removeEventListener('keydown', keyHandler);
-        wrapper.style.animation = 'popupFadeOut 0.25s ease';
+        modal.removeEventListener('click', dismissHandler);
+        modal.removeEventListener('keydown', keyHandler);
+        modal.style.animation = 'resultsModalFadeOut 0.25s ease';
         await sleep(250);
-        global.unmountPopups();
+        modal.remove();
       }
     } catch(e) {
       console.warn('[resultsPopup] error', e);
