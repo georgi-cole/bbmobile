@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nomination TV Centering Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .test-controls {
+      background: var(--card, #1e293b);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid var(--sep, #475569);
+    }
+    .test-controls h2 {
+      margin-top: 0;
+      color: var(--fg, #f1f5f9);
+    }
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    .test-controls button {
+      padding: 12px 24px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--ok, #4ade80);
+      color: #000;
+    }
+    .test-controls button.secondary {
+      background: var(--card-accent, #334155);
+      color: var(--fg, #f1f5f9);
+    }
+    .test-info {
+      background: var(--card-accent, #334155);
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--fg, #f1f5f9);
+      line-height: 1.6;
+    }
+    .test-info strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent, #60a5fa);
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid var(--ok, #4ade80);
+      color: var(--ok, #4ade80);
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 2px solid currentColor;
+    }
+    #tv {
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 16/9;
+      margin: 20px auto;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 8px;
+      position: relative;
+      border: 3px solid var(--sep, #475569);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    /* Simulated stage eye for visual reference */
+    #tv::before {
+      content: '👁';
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      opacity: 0.2;
+      pointer-events: none;
+      z-index: 1;
+    }
+    #tv::after {
+      content: 'TV Stage Eye Reference';
+      position: absolute;
+      top: calc(40% + 40px);
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.75rem;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 1;
+      color: var(--fg-muted, #94a3b8);
+    }
+    .bias-info {
+      background: rgba(96, 165, 250, 0.1);
+      border: 1px solid var(--accent, #60a5fa);
+      color: var(--accent, #60a5fa);
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h2>📐 TV-Centered Nomination Cards Test</h2>
+    
+    <div class="test-info">
+      <strong>Purpose:</strong>
+      Test the vertical bias centering of nomination ceremony cards over the TV background.
+      Cards should appear centered relative to the "stage eye" (indicated by the eye emoji).
+      
+      <br><br>
+      <strong>Expected Behavior:</strong>
+      <ul style="margin: 8px 0 0 20px; padding: 0;">
+        <li>Intro/summary/adjourn cards should center over the stage eye with vertical bias</li>
+        <li>Portrait mobile: ~8% upward bias from center</li>
+        <li>Landscape/desktop: ~4% upward bias from center</li>
+        <li>Bias should recalculate on orientation change</li>
+        <li>Override via window.__tvCenterBiasY should work</li>
+      </ul>
+    </div>
+
+    <div class="button-group">
+      <button id="testIntroCard">Show Intro Card</button>
+      <button id="testSummaryCard">Show Summary Card</button>
+      <button id="testAdjournCard">Show Adjourn Card</button>
+      <button id="testFullFlow">Test Full Flow</button>
+    </div>
+
+    <div class="button-group">
+      <button id="setBias8" class="secondary">Set Bias: 8% (Portrait)</button>
+      <button id="setBias4" class="secondary">Set Bias: 4% (Default)</button>
+      <button id="setBias0" class="secondary">Set Bias: 0% (No Bias)</button>
+      <button id="setBias50px" class="secondary">Set Bias: 50px (Fixed)</button>
+      <button id="clearBias" class="secondary">Clear Bias Override</button>
+    </div>
+
+    <div class="button-group">
+      <button id="checkBias" class="secondary">Check Current Bias</button>
+      <button id="clearLogs" class="secondary">Clear Logs</button>
+    </div>
+
+    <div id="biasInfo" class="bias-info">
+      Bias: Not yet calculated
+    </div>
+
+    <div id="status" class="status">
+      <div class="log-entry">Ready to test. Click any button to begin.</div>
+    </div>
+  </div>
+
+  <!-- TV container with overlay -->
+  <div id="tv">
+    <div id="tvOverlay"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/bbGameBus.js"></script>
+  <script src="js/state.js"></script>
+  <script>
+    // Pre-setup: Create minimal global namespace
+    window.global = window;
+    window.game = window.game || {};
+    window.Game = window;
+  </script>
+  <script src="js/nominations.js"></script>
+  <script src="js/nominations-grid-fullscreen.js"></script>
+
+  <script>
+    // Test harness
+    const statusEl = document.getElementById('status');
+    const biasInfoEl = document.getElementById('biasInfo');
+    const logs = [];
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = `[${timestamp}] ${message}`;
+      logs.push(entry);
+      
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.textContent = entry;
+      statusEl.appendChild(logEntry);
+      statusEl.scrollTop = statusEl.scrollHeight;
+      
+      console.log(message);
+    }
+
+    function clearLogs() {
+      logs.length = 0;
+      statusEl.innerHTML = '';
+      log('Logs cleared');
+    }
+
+    function updateBiasInfo() {
+      const tvOverlay = document.getElementById('tvOverlay');
+      const bias = tvOverlay ? getComputedStyle(tvOverlay).getPropertyValue('--tv-center-bias') : 'N/A';
+      const overrideInfo = window.__tvCenterBiasY ? ` (Override: ${window.__tvCenterBiasY})` : '';
+      biasInfoEl.textContent = `Current Bias: ${bias || 'Not set'}${overrideInfo}`;
+    }
+
+    // Intercept console.log to capture module logs
+    const originalConsoleLog = console.log;
+    console.log = function(...args) {
+      const message = args.join(' ');
+      if (message.includes('[noms-fs]') || message.includes('[noms]') || message.includes('bias')) {
+        log(message);
+      }
+      originalConsoleLog.apply(console, args);
+    };
+
+    // Mock minimal game setup
+    function createMockGame() {
+      const players = [];
+      const getDicebearUrl = function(seed) {
+        return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+      };
+      
+      for (let i = 1; i <= 10; i++) {
+        players.push({
+          id: i,
+          name: `Player ${i}`,
+          human: i === 1,
+          evicted: false,
+          jury: false,
+          avatar: getDicebearUrl(`player${i}`),
+          affinity: {}
+        });
+      }
+
+      window.game = {
+        players: players,
+        hohId: 1,
+        phase: 'nominations',
+        nomsLocked: false,
+        nominees: [2, 3],
+        __nomsCommitInProgress: false,
+        __nomsCommitted: false,
+        _pendingNoms: null
+      };
+
+      window.getP = function(id) {
+        return window.game.players.find(p => p.id === id);
+      };
+
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted && !p.jury);
+      };
+
+      window.safeName = function(id) {
+        const p = window.getP(id);
+        return p ? p.name : String(id);
+      };
+
+      document.getElementById('tv').style.display = 'block';
+      log('✓ Mock game created');
+    }
+
+    // Initialize game
+    createMockGame();
+
+    // Test event handlers
+    document.getElementById('testIntroCard').addEventListener('click', async () => {
+      log('Testing intro card...');
+      if (window.NomsFS && window.NomsFS.showIntro) {
+        const result = await window.NomsFS.showIntro();
+        log(`Intro card result: ${result}`);
+        updateBiasInfo();
+      } else {
+        log('❌ NomsFS.showIntro not available', 'error');
+      }
+    });
+
+    document.getElementById('testSummaryCard').addEventListener('click', () => {
+      log('Testing summary card...');
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) {
+        tvOverlay.innerHTML = '';
+        
+        // Compute and set vertical bias
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const isPortrait = vh > vw;
+        const biasRatio = isPortrait && vw < 600 ? 0.08 : 0.04;
+        const tvHeight = tvOverlay.offsetHeight || vh;
+        const biasPixels = Math.round(tvHeight * biasRatio);
+        const bias = `${biasPixels}px`;
+        tvOverlay.style.setProperty('--tv-center-bias', bias);
+        log(`Set bias: ${bias}`);
+        
+        // Create stage wrapper
+        const stage = document.createElement('div');
+        stage.className = 'nfs-stage';
+        stage.style.cssText = `
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 10;
+          transform: translateY(calc(-1 * var(--tv-center-bias, 0px)));
+        `;
+        
+        const center = document.createElement('div');
+        center.className = 'nfs-center';
+        center.style.cssText = 'pointer-events: auto; max-width: 90%; max-height: 80%;';
+        
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard';
+        card.style.cssText = `
+          padding: 24px;
+          text-align: center;
+          animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+        `;
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Nominations';
+        title.style.marginBottom = '16px';
+        card.appendChild(title);
+        
+        const names = document.createElement('div');
+        names.className = 'big';
+        names.style.cssText = 'font-size: 1.1rem; font-weight: 600;';
+        names.textContent = 'Player 2 • Player 3';
+        card.appendChild(names);
+        
+        center.appendChild(card);
+        stage.appendChild(center);
+        tvOverlay.appendChild(stage);
+        
+        document.getElementById('tv').classList.add('tvTall');
+        log('✓ Summary card shown');
+        updateBiasInfo();
+      }
+    });
+
+    document.getElementById('testAdjournCard').addEventListener('click', () => {
+      log('Testing adjourn card...');
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) {
+        tvOverlay.innerHTML = '';
+        
+        // Compute and set vertical bias
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const isPortrait = vh > vw;
+        const biasRatio = isPortrait && vw < 600 ? 0.08 : 0.04;
+        const tvHeight = tvOverlay.offsetHeight || vh;
+        const biasPixels = Math.round(tvHeight * biasRatio);
+        const bias = `${biasPixels}px`;
+        tvOverlay.style.setProperty('--tv-center-bias', bias);
+        log(`Set bias: ${bias}`);
+        
+        // Create stage wrapper
+        const stage = document.createElement('div');
+        stage.className = 'nfs-stage';
+        stage.style.cssText = `
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 10;
+          transform: translateY(calc(-1 * var(--tv-center-bias, 0px)));
+        `;
+        
+        const center = document.createElement('div');
+        center.className = 'nfs-center';
+        center.style.cssText = 'pointer-events: auto; max-width: 90%; max-height: 80%;';
+        
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard';
+        card.style.cssText = `
+          padding: 24px;
+          text-align: center;
+          animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+        `;
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Nomination Ceremony';
+        title.style.marginBottom = '12px';
+        card.appendChild(title);
+        
+        const message = document.createElement('div');
+        message.className = 'big';
+        message.textContent = 'This ceremony is adjourned.';
+        card.appendChild(message);
+        
+        center.appendChild(card);
+        stage.appendChild(center);
+        tvOverlay.appendChild(stage);
+        
+        document.getElementById('tv').classList.add('tvTall');
+        log('✓ Adjourn card shown');
+        updateBiasInfo();
+      }
+    });
+
+    document.getElementById('testFullFlow').addEventListener('click', async () => {
+      log('Testing full nomination flow...');
+      if (window.renderNomsPanel) {
+        window.renderNomsPanel();
+        setTimeout(() => updateBiasInfo(), 500);
+      } else {
+        log('❌ renderNomsPanel not available', 'error');
+      }
+    });
+
+    // Bias override controls
+    document.getElementById('setBias8').addEventListener('click', () => {
+      window.__tvCenterBiasY = 0.08;
+      log('Set bias override to 8% (0.08 ratio)');
+      updateBiasInfo();
+    });
+
+    document.getElementById('setBias4').addEventListener('click', () => {
+      window.__tvCenterBiasY = 0.04;
+      log('Set bias override to 4% (0.04 ratio)');
+      updateBiasInfo();
+    });
+
+    document.getElementById('setBias0').addEventListener('click', () => {
+      window.__tvCenterBiasY = 0;
+      log('Set bias override to 0% (no bias)');
+      updateBiasInfo();
+    });
+
+    document.getElementById('setBias50px').addEventListener('click', () => {
+      window.__tvCenterBiasY = '50px';
+      log('Set bias override to 50px (fixed)');
+      updateBiasInfo();
+    });
+
+    document.getElementById('clearBias').addEventListener('click', () => {
+      delete window.__tvCenterBiasY;
+      log('Cleared bias override');
+      updateBiasInfo();
+    });
+
+    document.getElementById('checkBias').addEventListener('click', () => {
+      updateBiasInfo();
+      const tvOverlay = document.getElementById('tvOverlay');
+      const computedBias = tvOverlay ? getComputedStyle(tvOverlay).getPropertyValue('--tv-center-bias') : 'N/A';
+      log(`Current computed bias: ${computedBias}`);
+      log(`Window size: ${window.innerWidth}x${window.innerHeight}`);
+      log(`Is portrait: ${window.innerHeight > window.innerWidth}`);
+    });
+
+    document.getElementById('clearLogs').addEventListener('click', clearLogs);
+
+    // Update bias info on window resize
+    window.addEventListener('resize', () => {
+      log('Window resized - bias will recalculate on next card show');
+      updateBiasInfo();
+    });
+
+    // Initialize
+    log('Test harness loaded. Try showing cards to see TV centering.');
+    updateBiasInfo();
+  </script>
+</body>
+</html>
