@@ -33,25 +33,7 @@
     return new Promise((resolve) => {
       let resolved = false;
 
-      // Create overlay
-      const overlay = document.createElement('div');
-      overlay.className = 'confirm-modal-overlay';
-      overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(4, 10, 18, 0.92);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999999;
-        opacity: 0;
-        transition: opacity 0.25s ease;
-        padding: 20px;
-      `;
-
-      // Create modal content
+      // Create modal content (no overlay needed)
       const modal = document.createElement('div');
       modal.className = `confirm-modal confirm-modal-${tone}`;
       
@@ -72,9 +54,6 @@
         box-shadow: 0 20px 60px -16px rgba(0, 0, 0, 0.95), 0 8px 24px -8px rgba(0, 0, 0, 0.8);
         max-width: 480px;
         width: 100%;
-        transform: scale(0.9);
-        opacity: 0;
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         position: relative;
       `;
 
@@ -171,17 +150,23 @@
       buttonContainer.appendChild(confirmButton);
       modal.appendChild(buttonContainer);
 
-      overlay.appendChild(modal);
-      document.body.appendChild(overlay);
-      activeConfirm = overlay;
+      // Mount using unified popup system
+      const wrapper = global.mountCenteredPopup(modal, {
+        replace: true,
+        className: 'confirm-modal-wrapper',
+        dialog: true
+      });
 
-      // Trigger fade-in animation
+      if (!wrapper) {
+        console.error('[confirm-modal] Failed to mount popup');
+        resolve(false);
+        return;
+      }
+
+      activeConfirm = wrapper;
+
+      // Focus the confirm button for accessibility
       requestAnimationFrame(() => {
-        overlay.style.opacity = '1';
-        modal.style.transform = 'scale(1)';
-        modal.style.opacity = '1';
-        
-        // Focus the confirm button for accessibility
         confirmButton.focus();
       });
 
@@ -190,15 +175,12 @@
         if (resolved) return;
         resolved = true;
 
-        // Fade out
-        overlay.style.opacity = '0';
-        modal.style.transform = 'scale(0.95)';
+        // Fade out with animation
+        wrapper.style.animation = 'popupFadeOut 0.25s ease';
 
         setTimeout(() => {
-          if (overlay.parentNode) {
-            overlay.parentNode.removeChild(overlay);
-          }
-          if (activeConfirm === overlay) {
+          global.unmountPopups();
+          if (activeConfirm === wrapper) {
             activeConfirm = null;
           }
           resolve(value);
@@ -228,12 +210,7 @@
         originalResolve(value);
       };
 
-      // Click overlay to cancel (optional)
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-          handleResolve(false);
-        }
-      });
+      // Note: No backdrop click to cancel - requires explicit button interaction
     });
   }
 
