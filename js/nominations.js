@@ -29,6 +29,31 @@
   // ========== Overlay Host Management ==========
   
   /**
+   * Activate #tvOverlay for interactive use during ceremony/selection
+   */
+  function activateTvOverlay(){
+    const tvOverlay = document.getElementById('tvOverlay');
+    if(tvOverlay){
+      tvOverlay.classList.add('tv-active');
+      tvOverlay.style.pointerEvents = 'auto';
+      console.log('[noms] ✓ TV overlay activated');
+    }
+  }
+  
+  /**
+   * Deactivate #tvOverlay after ceremony/selection completes
+   */
+  function deactivateTvOverlay(){
+    const tvOverlay = document.getElementById('tvOverlay');
+    if(tvOverlay){
+      tvOverlay.classList.remove('tv-active');
+      tvOverlay.style.pointerEvents = 'none';
+      tvOverlay.style.display = 'none';
+      console.log('[noms] ✓ TV overlay deactivated');
+    }
+  }
+  
+  /**
    * Ensure #tvOverlay exists in the DOM.
    * Prefer global.ensureTVOverlayScaffold() if available; otherwise inject minimal #tvOverlay.
    * @returns {HTMLElement|null} The tvOverlay element or its content container
@@ -52,17 +77,18 @@
       console.log('[noms] #tvOverlay missing, creating minimal fallback');
       tvOverlay = document.createElement('div');
       tvOverlay.id = 'tvOverlay';
+      tvOverlay.setAttribute('data-fallback', 'true'); // Tag fallback-created overlays
       tvOverlay.style.cssText = `
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        display: flex;
+        display: none;
         align-items: center;
         justify-content: center;
         z-index: 999;
-        pointer-events: auto;
+        pointer-events: none;
       `;
       
       const tv = document.getElementById('tv');
@@ -71,7 +97,7 @@
       } else {
         document.body.appendChild(tvOverlay);
       }
-      console.log('[noms] ✓ Minimal #tvOverlay created');
+      console.log('[noms] ✓ Minimal #tvOverlay created with data-fallback');
     } else {
       console.log('[noms] ✓ #tvOverlay already exists');
     }
@@ -127,6 +153,7 @@
       
       const host = ensureOverlayHost();
       if(host){
+        activateTvOverlay(); // Activate overlay for interactive use
         host.innerHTML = '';
         
         // Compute vertical bias for TV-centered positioning (matches fullscreen logic)
@@ -235,6 +262,7 @@
             console.log('[noms] Using NomsFS.open() from fallback');
             host.innerHTML = '';
             document.getElementById('tv')?.classList.remove('tvTall');
+            deactivateTvOverlay(); // Deactivate while fullscreen selector is open
             
             global.NomsFS.open().then(selections => {
               if(selections && Array.isArray(selections) && selections.length > 0){
@@ -281,6 +309,7 @@
       // Show simple in-TV message for AI
       const host = document.getElementById('tvOverlay');
       if(host){
+        activateTvOverlay(); // Activate overlay for AI ceremony
         host.innerHTML = '';
         const card = document.createElement('div');
         card.className = 'revealCard diaryRoomCard';
@@ -639,12 +668,16 @@
           setTimeout(() => {
             host.innerHTML = '';
             document.getElementById('tv')?.classList.remove('tvTall');
+            deactivateTvOverlay(); // Deactivate overlay after ceremony completes
             resolve();
           }, 2000);
         } else {
           // Fallback
           global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
-          setTimeout(resolve, 2000);
+          setTimeout(() => {
+            deactivateTvOverlay(); // Deactivate overlay after ceremony completes
+            resolve();
+          }, 2000);
         }
       });
 
@@ -673,5 +706,7 @@
   global.renderNomsPanel=renderNomsPanel;
   global.applyNominationSideEffects=applyNominationSideEffects;
   global.showNomineeReactionsSimultaneously=showNomineeReactionsSimultaneously;
+  global.activateTvOverlay=activateTvOverlay;
+  global.deactivateTvOverlay=deactivateTvOverlay;
 
 })(window);

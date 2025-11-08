@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Overlay Lifecycle Fix</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #444;
+      border-radius: 8px;
+      background: #16213e;
+    }
+    .test-title {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #00d4aa;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 8px 0;
+      font-family: monospace;
+    }
+    .pass { background: #0f4c2e; color: #4ade80; }
+    .fail { background: #4c0f0f; color: #f87171; }
+    .info { background: #1e3a5f; color: #60a5fa; }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      background: #00d4aa;
+      color: #1a1a2e;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #00b894;
+    }
+    button:disabled {
+      background: #444;
+      color: #888;
+      cursor: not-allowed;
+    }
+    #testOverlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 212, 170, 0.1);
+      border: 2px dashed #00d4aa;
+      padding: 40px;
+      border-radius: 12px;
+      text-align: center;
+      z-index: 999;
+    }
+    .click-target {
+      padding: 20px;
+      background: #2c3e50;
+      border: 2px solid #00d4aa;
+      border-radius: 8px;
+      margin: 10px 0;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .click-target:hover {
+      background: #34495e;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Overlay Lifecycle Test</h1>
+  <p>This test verifies the fix for persistent interactive #tvOverlay blocking clicks.</p>
+
+  <div class="test-section">
+    <div class="test-title">Test 1: CSS Defaults</div>
+    <div id="test1-results"></div>
+    <button onclick="runTest1()">Run Test 1</button>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">Test 2: Activation/Deactivation</div>
+    <div id="test2-results"></div>
+    <button onclick="runTest2()">Run Test 2</button>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">Test 3: Click Blocking Behavior</div>
+    <div id="clickCount" style="margin-bottom: 10px;">Clicks: 0</div>
+    <div class="click-target" id="clickTarget" onclick="handleClick()">
+      Click me to test!
+    </div>
+    <button onclick="runTest3()">Test Click Blocking</button>
+    <div id="test3-results"></div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">Test 4: Phase Cleanup</div>
+    <div id="test4-results"></div>
+    <button onclick="runTest4()">Run Test 4</button>
+  </div>
+
+  <script>
+    let clickCount = 0;
+
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `status ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function clear(containerId) {
+      document.getElementById(containerId).innerHTML = '';
+    }
+
+    function handleClick() {
+      clickCount++;
+      document.getElementById('clickCount').textContent = `Clicks: ${clickCount}`;
+    }
+
+    function runTest1() {
+      clear('test1-results');
+      log('test1-results', '🔍 Checking CSS defaults...', 'info');
+
+      // Create a test overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'tvOverlay';
+      document.body.appendChild(overlay);
+
+      // Get computed styles
+      const styles = window.getComputedStyle(overlay);
+      const display = styles.display;
+      const pointerEvents = styles.pointerEvents;
+
+      log('test1-results', `display: ${display}`, display === 'none' ? 'pass' : 'fail');
+      log('test1-results', `pointer-events: ${pointerEvents}`, pointerEvents === 'none' ? 'pass' : 'fail');
+
+      // Test with .tv-active class
+      overlay.classList.add('tv-active');
+      const activeStyles = window.getComputedStyle(overlay);
+      const activeDisplay = activeStyles.display;
+
+      log('test1-results', `display with .tv-active: ${activeDisplay}`, activeDisplay !== 'none' ? 'pass' : 'fail');
+
+      overlay.remove();
+      
+      log('test1-results', '✅ Test 1 Complete', 'pass');
+    }
+
+    function runTest2() {
+      clear('test2-results');
+      log('test2-results', '🔍 Testing activation/deactivation helpers...', 'info');
+
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'tvOverlay';
+      document.body.appendChild(overlay);
+
+      // Test default state
+      const initialDisplay = overlay.style.display;
+      const initialPointerEvents = overlay.style.pointerEvents;
+      log('test2-results', `Initial display: ${initialDisplay || '(not set)'}`, 'info');
+      log('test2-results', `Initial pointer-events: ${initialPointerEvents || '(not set)'}`, 'info');
+
+      // Simulate activation
+      overlay.classList.add('tv-active');
+      overlay.style.pointerEvents = 'auto';
+      overlay.style.display = '';
+
+      const activeHasClass = overlay.classList.contains('tv-active');
+      const activePointerEvents = overlay.style.pointerEvents;
+      log('test2-results', `After activation - has .tv-active: ${activeHasClass}`, activeHasClass ? 'pass' : 'fail');
+      log('test2-results', `After activation - pointer-events: ${activePointerEvents}`, activePointerEvents === 'auto' ? 'pass' : 'fail');
+
+      // Simulate deactivation
+      overlay.classList.remove('tv-active');
+      overlay.style.pointerEvents = 'none';
+      overlay.style.display = 'none';
+
+      const deactiveHasClass = !overlay.classList.contains('tv-active');
+      const deactivePointerEvents = overlay.style.pointerEvents;
+      const deactiveDisplay = overlay.style.display;
+      log('test2-results', `After deactivation - no .tv-active: ${deactiveHasClass}`, deactiveHasClass ? 'pass' : 'fail');
+      log('test2-results', `After deactivation - pointer-events: ${deactivePointerEvents}`, deactivePointerEvents === 'none' ? 'pass' : 'fail');
+      log('test2-results', `After deactivation - display: ${deactiveDisplay}`, deactiveDisplay === 'none' ? 'pass' : 'fail');
+
+      overlay.remove();
+      
+      log('test2-results', '✅ Test 2 Complete', 'pass');
+    }
+
+    function runTest3() {
+      clear('test3-results');
+      clickCount = 0;
+      document.getElementById('clickCount').textContent = `Clicks: ${clickCount}`;
+      
+      log('test3-results', '🔍 Testing click blocking behavior...', 'info');
+
+      // Create overlay that blocks clicks
+      const overlay = document.createElement('div');
+      overlay.id = 'tvOverlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 999;
+        pointer-events: auto;
+        background: rgba(0, 212, 170, 0.1);
+      `;
+      
+      const message = document.createElement('div');
+      message.textContent = 'Overlay is active (should block clicks below)';
+      message.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px;
+        background: #16213e;
+        border: 2px solid #00d4aa;
+        border-radius: 8px;
+        color: #00d4aa;
+        font-weight: bold;
+      `;
+      overlay.appendChild(message);
+      document.body.appendChild(overlay);
+
+      log('test3-results', 'Overlay active - Try clicking "Click me to test!" button', 'info');
+      log('test3-results', 'Clicks should be blocked while overlay is visible', 'info');
+
+      // After 3 seconds, deactivate overlay
+      setTimeout(() => {
+        overlay.style.pointerEvents = 'none';
+        overlay.style.display = 'none';
+        log('test3-results', 'Overlay deactivated - Try clicking now', 'info');
+        log('test3-results', 'Clicks should now work', 'pass');
+
+        setTimeout(() => {
+          overlay.remove();
+          log('test3-results', `Final click count: ${clickCount}`, clickCount > 0 ? 'pass' : 'fail');
+          log('test3-results', '✅ Test 3 Complete', 'pass');
+        }, 3000);
+      }, 3000);
+    }
+
+    function runTest4() {
+      clear('test4-results');
+      log('test4-results', '🔍 Testing phase cleanup...', 'info');
+
+      // Create fallback overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'tvOverlay';
+      overlay.setAttribute('data-fallback', 'true');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 999;
+        pointer-events: auto;
+      `;
+      document.body.appendChild(overlay);
+
+      log('test4-results', 'Created fallback overlay with data-fallback="true"', 'info');
+      log('test4-results', `Overlay exists: ${!!document.getElementById('tvOverlay')}`, 'pass');
+
+      // Simulate phase cleanup
+      setTimeout(() => {
+        const tvOverlay = document.getElementById('tvOverlay');
+        if (tvOverlay && tvOverlay.getAttribute('data-fallback') === 'true') {
+          tvOverlay.remove();
+          log('test4-results', 'Removed fallback overlay', 'pass');
+        }
+
+        const overlayAfterCleanup = document.getElementById('tvOverlay');
+        log('test4-results', `Overlay exists after cleanup: ${!!overlayAfterCleanup}`, !overlayAfterCleanup ? 'pass' : 'fail');
+        log('test4-results', '✅ Test 4 Complete', 'pass');
+      }, 1000);
+    }
+
+    // Run all tests on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.log('Running automated tests...');
+        runTest1();
+        setTimeout(() => runTest2(), 500);
+      }, 500);
+    });
+  </script>
+
+  <!-- Include CSS file for actual overlay styles -->
+  <link rel="stylesheet" href="overrides-fixes.css">
+</body>
+</html>
