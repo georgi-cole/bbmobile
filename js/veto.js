@@ -239,6 +239,15 @@
     if(g.lastCompScores.has(id)) return false;
 
     var finalScore = base * mult;
+    
+    // Debug override: Always win feature - ensure human player gets maximum score
+    var cfg = g?.cfg || {};
+    if (cfg.debugAlwaysWin === true && id === g.humanId) {
+      // Give human player maximum possible score to guarantee competition victory
+      finalScore = 150;
+      console.info('[Veto] debugAlwaysWin enabled: Human player score set to', finalScore);
+    }
+    
     g.lastCompScores.set(id, finalScore);
 
     try{

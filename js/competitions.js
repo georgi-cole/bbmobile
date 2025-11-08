@@ -218,7 +218,15 @@
     }
 
     // Apply compBeast multiplier and clamp to reasonable range
-    const final = Math.max(0, Math.min(150, normalizedBase * mult));
+    let final = Math.max(0, Math.min(150, normalizedBase * mult));
+    
+    // Debug override: Always win feature - ensure human player gets maximum score
+    const cfg = g?.cfg || {};
+    if (cfg.debugAlwaysWin === true && id === g.humanId) {
+      // Give human player maximum possible score (150) to guarantee competition victory
+      final = 150;
+      console.info('[Competition] debugAlwaysWin enabled: Human player score set to', final);
+    }
 
     g.lastCompScores.set(id, final);
     
