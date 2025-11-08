@@ -26,467 +26,7 @@
     return picks;
   }
 
-  // ========== Overlay Host Management ==========
-  
-  /**
-   * Ensure #tvOverlay exists in the DOM.
-   * Prefer global.ensureTVOverlayScaffold() if available; otherwise inject minimal #tvOverlay.
-   * @returns {HTMLElement|null} The tvOverlay element or its content container
-   */
-  function ensureOverlayHost(){
-    console.log('[noms-pick] Ensuring TV overlay host exists');
-    
-    // Prefer global scaffold function if available (from veto.js)
-    if(global && typeof global.ensureTVOverlayScaffold === 'function'){
-      console.log('[noms-pick] Using global.ensureTVOverlayScaffold()');
-      const content = global.ensureTVOverlayScaffold();
-      if(content){
-        console.log('[noms-pick] ✓ Scaffold created successfully');
-        return content.parentElement || content; // Return parent #tvOverlay if possible
-      }
-    }
-    
-    // Fallback: create minimal #tvOverlay if missing
-    let tvOverlay = document.getElementById('tvOverlay');
-    if(!tvOverlay){
-      console.log('[noms-pick] #tvOverlay missing, creating minimal fallback');
-      tvOverlay = document.createElement('div');
-      tvOverlay.id = 'tvOverlay';
-      tvOverlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 999;
-        pointer-events: auto;
-      `;
-      
-      const tv = document.getElementById('tv');
-      if(tv){
-        tv.appendChild(tvOverlay);
-      } else {
-        document.body.appendChild(tvOverlay);
-      }
-      console.log('[noms-pick] ✓ Minimal #tvOverlay created');
-    } else {
-      console.log('[noms-pick] ✓ #tvOverlay already exists');
-    }
-    
-    return tvOverlay;
-  }
-  
-  // ========== NEW: Pick Mode for Human HOH Nomination UX ==========
-  
-  /**
-   * Inject CSS for nomination pick mode (dimming, selection rings, confirm bar)
-   */
-  function injectPickModeStyles(){
-    if(document.getElementById('bb-noms-pick-styles')) return; // Already injected
-    
-    const style = document.createElement('style');
-    style.id = 'bb-noms-pick-styles';
-    style.textContent = `
-      /* Dim entire page except roster during pick mode */
-      body.bb-noms-pick-mode::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        z-index: 999;
-        pointer-events: none;
-      }
-      
-      /* Keep roster interactive and above dim */
-      body.bb-noms-pick-mode #rosterBar,
-      body.bb-noms-pick-mode .top-roster,
-      body.bb-noms-pick-mode #topRoster {
-        position: relative;
-        z-index: 1000;
-        pointer-events: auto;
-      }
-      
-      /* Selection ring on tiles */
-      .top-roster-tile.bb-selected {
-        outline: 3px solid var(--ok, #4ade80);
-        outline-offset: 2px;
-        box-shadow: 0 0 12px var(--ok, #4ade80);
-      }
-      
-      /* Hover state during pick mode */
-      body.bb-noms-pick-mode .top-roster-tile:not(.evicted):hover {
-        cursor: pointer;
-        transform: scale(1.05);
-        transition: transform 0.15s ease;
-      }
-      
-      /* Floating confirm bar */
-      #bb-noms-confirm-bar {
-        position: fixed;
-        top: calc(var(--roster-bottom, 120px) + 10px);
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1001;
-        background: var(--card, #1e293b);
-        border: 1px solid var(--sep, #475569);
-        border-radius: 8px;
-        padding: 12px 20px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(8px);
-      }
-      
-      #bb-noms-count-text {
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: var(--fg, #f1f5f9);
-      }
-      
-      #bb-noms-confirm-btn {
-        padding: 8px 24px;
-        background: var(--ok, #4ade80);
-        color: #000;
-        border: none;
-        border-radius: 6px;
-        font-weight: 700;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: opacity 0.2s, transform 0.1s;
-      }
-      
-      #bb-noms-confirm-btn:hover:not(:disabled) {
-        transform: scale(1.05);
-      }
-      
-      #bb-noms-confirm-btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
-      
-      /* Reduced motion support */
-      @media (prefers-reduced-motion: reduce) {
-        body.bb-noms-pick-mode .top-roster-tile:hover {
-          transform: none;
-        }
-        #bb-noms-confirm-btn:hover:not(:disabled) {
-          transform: none;
-        }
-        .top-roster-tile.bb-selected {
-          transition: none;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-  
-  /**
-   * State for pick mode
-   */
-  const pickModeState = {
-    active: false,
-    selectedIds: [],
-    required: 0,
-    escapeHandler: null,
-    clickHandlers: new Map()
-  };
-  
-  /**
-   * Enter pick mode: dim UI, enable roster selection, show confirm bar
-   */
-  function enterPickMode(){
-    if(pickModeState.active) {
-      console.log('[noms-pick] Pick mode already active, skipping');
-      return; // Already active
-    }
-    
-    console.log('[noms-pick] Entering pick mode');
-    
-    injectPickModeStyles();
-    
-    pickModeState.active = true;
-    pickModeState.selectedIds = [];
-    pickModeState.required = requiredSlots();
-    
-    console.log('[noms-pick] Required selections:', pickModeState.required);
-    
-    // Add body class for dimming
-    document.body.classList.add('bb-noms-pick-mode');
-    
-    // Intercept Escape/Backspace to prevent exit
-    pickModeState.escapeHandler = (e) => {
-      if(e.key === 'Escape' || e.key === 'Backspace'){
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('[noms-pick] Escape/Backspace blocked - must complete selection');
-        // Optionally show a message that they must complete selection
-        return false;
-      }
-    };
-    document.addEventListener('keydown', pickModeState.escapeHandler, true);
-    
-    // Attach click handlers to roster tiles
-    const tiles = document.querySelectorAll('.top-roster-tile');
-    console.log('[noms-pick] Found', tiles.length, 'roster tiles');
-    
-    tiles.forEach(tile => {
-      const playerId = parseInt(tile.dataset.playerId);
-      if(!playerId || isNaN(playerId)) return;
-      
-      const handler = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleSelection(playerId);
-      };
-      
-      tile.addEventListener('click', handler);
-      pickModeState.clickHandlers.set(playerId, { tile, handler });
-    });
-    
-    // Create and show confirm bar
-    createConfirmBar();
-    updateConfirmBar();
-    
-    console.log('[noms-pick] ✓ Pick mode active');
-  }
-  
-  /**
-   * Exit pick mode: remove dim, selection rings, confirm bar
-   */
-  function exitPickMode(){
-    if(!pickModeState.active) return;
-    
-    pickModeState.active = false;
-    
-    // Remove body class
-    document.body.classList.remove('bb-noms-pick-mode');
-    
-    // Remove escape handler
-    if(pickModeState.escapeHandler){
-      document.removeEventListener('keydown', pickModeState.escapeHandler, true);
-      pickModeState.escapeHandler = null;
-    }
-    
-    // Remove click handlers
-    pickModeState.clickHandlers.forEach(({ tile, handler }) => {
-      tile.removeEventListener('click', handler);
-      tile.classList.remove('bb-selected');
-    });
-    pickModeState.clickHandlers.clear();
-    
-    // Remove confirm bar
-    const bar = document.getElementById('bb-noms-confirm-bar');
-    if(bar) bar.remove();
-    
-    // Clear state
-    pickModeState.selectedIds = [];
-    pickModeState.required = 0;
-  }
-  
-  /**
-   * Toggle selection of a roster tile
-   */
-  function toggleSelection(playerId){
-    const g = global.game;
-    const player = global.getP(playerId);
-    
-    // Check eligibility
-    if(!player || player.evicted || playerId === g.hohId){
-      // Not eligible - ignore click
-      console.log('[noms-pick] Player', playerId, 'not eligible (evicted or HOH)');
-      return;
-    }
-    
-    const idx = pickModeState.selectedIds.indexOf(playerId);
-    const tile = document.querySelector(`.top-roster-tile[data-player-id="${playerId}"]`);
-    
-    if(idx >= 0){
-      // Deselect
-      pickModeState.selectedIds.splice(idx, 1);
-      if(tile) tile.classList.remove('bb-selected');
-      console.log('[noms-pick] Deselected player', playerId, '- now', pickModeState.selectedIds.length, '/', pickModeState.required);
-    } else {
-      // Select
-      pickModeState.selectedIds.push(playerId);
-      if(tile) tile.classList.add('bb-selected');
-      console.log('[noms-pick] Selected player', playerId, '- now', pickModeState.selectedIds.length, '/', pickModeState.required);
-    }
-    
-    updateConfirmBar();
-  }
-  
-  /**
-   * Create floating confirm bar
-   */
-  function createConfirmBar(){
-    if(document.getElementById('bb-noms-confirm-bar')) return; // Already exists
-    
-    const bar = document.createElement('div');
-    bar.id = 'bb-noms-confirm-bar';
-    
-    const countText = document.createElement('span');
-    countText.id = 'bb-noms-count-text';
-    countText.setAttribute('aria-live', 'polite');
-    countText.setAttribute('aria-atomic', 'true');
-    
-    const confirmBtn = document.createElement('button');
-    confirmBtn.id = 'bb-noms-confirm-btn';
-    confirmBtn.textContent = 'CONFIRM';
-    confirmBtn.disabled = true;
-    
-    confirmBtn.addEventListener('click', () => {
-      if(pickModeState.selectedIds.length === pickModeState.required){
-        commitNominations();
-      }
-    });
-    
-    // Keyboard support
-    confirmBtn.addEventListener('keydown', (e) => {
-      if(e.key === 'Enter' || e.key === ' '){
-        e.preventDefault();
-        confirmBtn.click();
-      }
-    });
-    
-    bar.appendChild(countText);
-    bar.appendChild(confirmBtn);
-    document.body.appendChild(bar);
-    
-    // Calculate roster bottom position for bar placement
-    const rosterBar = document.getElementById('rosterBar');
-    if(rosterBar){
-      const rect = rosterBar.getBoundingClientRect();
-      document.documentElement.style.setProperty('--roster-bottom', `${rect.bottom}px`);
-    }
-  }
-  
-  /**
-   * Update confirm bar count and button state
-   */
-  function updateConfirmBar(){
-    const countText = document.getElementById('bb-noms-count-text');
-    const confirmBtn = document.getElementById('bb-noms-confirm-btn');
-    
-    if(!countText || !confirmBtn) return;
-    
-    const selected = pickModeState.selectedIds.length;
-    const required = pickModeState.required;
-    
-    countText.textContent = `${selected} / ${required} selected`;
-    
-    confirmBtn.disabled = (selected !== required);
-  }
-  
-  /**
-   * Show in-TV "Nomination Ceremony" card with NOMINATE button.
-   * @param {object} hoh - The Head of Household player object
-   * @param {number} need - Number of nominations required
-   * @returns {boolean} True if card was successfully mounted, false otherwise
-   */
-  function showNominateCard(hoh, need){
-    console.log('[noms-pick] Attempting to show nominate card');
-    
-    try {
-      // Ensure overlay host exists
-      const host = ensureOverlayHost();
-      if(!host){
-        console.warn('[noms-pick] Failed to create overlay host');
-        return false;
-      }
-      
-      // Clear existing content
-      host.innerHTML = '';
-      
-      // Create card
-      const card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
-      card.style.cssText = `
-        max-width: 92%;
-        max-height: 78%;
-        margin: 0 auto;
-        padding: 20px 24px;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-      `;
-      
-      const title = document.createElement('h3');
-      title.textContent = 'Nomination Ceremony';
-      title.style.marginBottom = '4px';
-      title.style.fontSize = '1.1rem';
-      card.appendChild(title);
-      
-      const bodyText = document.createElement('div');
-      bodyText.className = 'big';
-      bodyText.style.fontSize = '0.85rem';
-      bodyText.style.lineHeight = '1.5';
-      bodyText.style.marginBottom = '8px';
-      
-      const countText = need > 2 
-        ? `You must nominate ${need} houseguests for eviction.`
-        : 'You must nominate two houseguests for eviction.';
-      bodyText.textContent = `${hoh.name}, as Head of Household, it is time to make your nominations. ${countText}`;
-      card.appendChild(bodyText);
-      
-      const nominateBtn = document.createElement('button');
-      nominateBtn.className = 'btn primary';
-      nominateBtn.textContent = 'NOMINATE';
-      nominateBtn.style.cssText = `
-        padding: 12px 32px;
-        font-size: 1rem;
-        font-weight: 700;
-        margin-top: 8px;
-      `;
-      
-      nominateBtn.addEventListener('click', () => {
-        console.log('[noms-pick] NOMINATE button clicked, entering pick mode');
-        // Clear TV and enter pick mode
-        host.innerHTML = '';
-        document.getElementById('tv')?.classList.remove('tvTall');
-        enterPickMode();
-      });
-      
-      card.appendChild(nominateBtn);
-      host.appendChild(card);
-      document.getElementById('tv')?.classList.add('tvTall');
-      
-      console.log('[noms-pick] ✓ Nominate card successfully mounted');
-      return true;
-      
-    } catch(err) {
-      console.error('[noms-pick] Error mounting nominate card:', err);
-      return false;
-    }
-  }
-  
-  /**
-   * Commit nominations from pick mode
-   */
-  function commitNominations(){
-    const g = global.game;
-    
-    console.log('[noms-pick] Committing nominations:', pickModeState.selectedIds);
-    
-    // Set pending noms and trigger finalize
-    g._pendingNoms = pickModeState.selectedIds.slice();
-    
-    // Exit pick mode
-    exitPickMode();
-    
-    console.log('[noms-pick] Pick mode exited, triggering finalize');
-    
-    // Finalize nominations
-    finalizeNoms();
-  }
+
 
   function renderNomsPanel(){
     const g=global.game; global.tv.say('Nominations');
@@ -528,25 +68,7 @@
       return;
     }
 
-    // ========== NEW: Human HOH In-TV Pick Mode Flow ==========
-    if(hoh && hoh.human){
-      console.log('[noms-pick] Human HOH detected, attempting in-TV card');
-      
-      // Try to show in-TV card
-      const cardMounted = showNominateCard(hoh, need);
-      
-      if(cardMounted){
-        // Card successfully mounted - suppress legacy panel
-        console.log('[noms-pick] ✓ In-TV card active, legacy panel suppressed');
-        return;
-      } else {
-        // Card mount failed - fall through to legacy panel as safety
-        console.warn('[noms-pick] ⚠ Card mount failed, falling back to legacy panel');
-        // Continue to legacy panel rendering below (do NOT return)
-      }
-    }
-    
-    // ========== AI HOH or Fallback Legacy Panel ==========
+    // ========== AI HOH Path ==========
     if(!hoh || !hoh.human){
       // AI HOH - use existing AI logic
       if(!g.__nomsCommitInProgress && !g.nomsLocked){
@@ -577,12 +99,10 @@
         document.getElementById('tv')?.classList.add('tvTall');
       }
     } else {
-      // Human HOH fallback: render legacy panel
-      // This code path is only reached if showNominateCard failed
-      console.log('[noms-pick] Rendering legacy panel for human HOH (fallback mode)');
+      // ========== Human HOH Fallback Panel ==========
+      // This is only reached if the fullscreen ceremony module is not loaded/active
+      console.log('[noms] Rendering fallback panel for human HOH (safety net)');
       
-      // Legacy panel code would go here if it existed
-      // For now, show a simple fallback message
       const host = document.getElementById('tvOverlay');
       if(host){
         host.innerHTML = '';
@@ -603,7 +123,7 @@
         const instruction = document.createElement('div');
         instruction.className = 'tiny muted';
         instruction.style.marginTop = '8px';
-        instruction.textContent = 'Please use the roster to select nominees.';
+        instruction.textContent = 'The fullscreen nomination module failed to load. Please refresh the page.';
         card.appendChild(instruction);
         
         host.appendChild(card);
@@ -850,35 +370,18 @@
       const ids=(g.nominees||[]).slice();
       g.__suppressNomBadges = true; global.updateHud?.();
 
-      // Check if ceremony was already handled by fullscreen selector
-      if(g.__nomsFromFullscreenSelector){
-        console.log('[noms] Ceremony already handled by fullscreen selector, skipping');
-        g.__nomsFromFullscreenSelector = false; // Reset flag
-        g.__suppressNomBadges = false; global.updateHud?.();
-        
-        try{
-          const names = ids.map(global.safeName).join(', ');
-          global.addLog?.(`Nominations locked: ${names}.`, 'warn');
-        }catch(e){ 
-          // Logging is optional, ignore failures
-        }
-        
-        setTimeout(()=>global.startVetoComp?.(),600);
-        return;
-      }
-
-      // NEW: Check if this was a human HOH pick-mode nomination
-      const wasHumanPickMode = hoh && hoh.human;
+      // Check if this was a human HOH nomination
+      const wasHumanHOH = hoh && hoh.human;
       
-      if(wasHumanPickMode){
-        // ========== NEW HUMAN HOH CEREMONY FLOW ==========
-        console.log('[noms-pick] Starting human HOH ceremony for nominees:', ids);
+      if(wasHumanHOH){
+        // ========== HUMAN HOH CEREMONY FLOW ==========
+        console.log('[noms] Starting human HOH ceremony for nominees:', ids);
         
         // Step 1: Show single summary card with all nominees
         await new Promise((resolve) => {
           const host = document.getElementById('tvOverlay');
           if(!host) {
-            console.warn('[noms-pick] No tvOverlay for summary card');
+            console.warn('[noms] No tvOverlay for summary card');
             resolve();
             return;
           }
@@ -916,7 +419,7 @@
           host.appendChild(card);
           document.getElementById('tv')?.classList.add('tvTall');
           
-          console.log('[noms-pick] ✓ Summary card shown');
+          console.log('[noms] ✓ Summary card shown');
           
           setTimeout(() => {
             // Don't clear yet - reactions will clear it
@@ -933,9 +436,9 @@
         
         // Step 2: Show nominee reactions
         if(ids.length > 0){
-          console.log('[noms-pick] Showing nominee reactions');
+          console.log('[noms] Showing nominee reactions');
           await showNomineeReactionsSimultaneously(ids);
-          console.log('[noms-pick] ✓ Nominee reactions complete');
+          console.log('[noms] ✓ Nominee reactions complete');
         }
         
         // Step 3: Show ceremony conclusion
@@ -968,17 +471,17 @@
             host.appendChild(card);
             document.getElementById('tv')?.classList.add('tvTall');
             
-            console.log('[noms-pick] ✓ Adjournment card shown');
+            console.log('[noms] ✓ Adjournment card shown');
             
             setTimeout(() => {
               host.innerHTML = '';
               document.getElementById('tv')?.classList.remove('tvTall');
-              console.log('[noms-pick] ✓ Ceremony complete');
+              console.log('[noms] ✓ Ceremony complete');
               resolve();
             }, 2000);
           } else {
             // Fallback
-            console.warn('[noms-pick] No tvOverlay for adjournment, using fallback');
+            console.warn('[noms] No tvOverlay for adjournment, using fallback');
             global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
             setTimeout(resolve, 2000);
           }
