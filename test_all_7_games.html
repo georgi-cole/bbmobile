@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test All 7 Minigames</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a2a3a 0%, #0f1a25 100%);
+      color: #e3ecf5;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #5bd68a;
+      font-size: 2.2rem;
+    }
+    
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .game-card {
+      background: #0f1a25;
+      border: 2px solid #5bd68a;
+      border-radius: 12px;
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .game-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 20px rgba(91, 214, 138, 0.3);
+      border-color: #83bfff;
+    }
+    
+    .game-card h3 {
+      color: #ff6b9d;
+      margin-bottom: 8px;
+      font-size: 1.1rem;
+    }
+    
+    .game-card p {
+      color: #95a9c0;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    
+    .game-card .status {
+      margin-top: 10px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+    
+    .status.loaded {
+      background: #5bd68a;
+      color: #1a1a1a;
+    }
+    
+    .status.error {
+      background: #ff6b9d;
+      color: #1a1a1a;
+    }
+    
+    #game-container {
+      background: #0f1a25;
+      border: 3px solid #5bd68a;
+      border-radius: 15px;
+      padding: 20px;
+      min-height: 500px;
+      margin-bottom: 20px;
+    }
+    
+    #result-container {
+      background: #1a2a3a;
+      border: 2px solid #83bfff;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    
+    button.clear {
+      min-height: 50px;
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: #666;
+      color: #fff;
+      border: 2px solid #555;
+      border-radius: 12px;
+      cursor: pointer;
+      display: block;
+      margin: 0 auto;
+    }
+    
+    .summary {
+      background: #1a2a3a;
+      border: 2px solid #5bd68a;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    
+    .summary h2 {
+      color: #5bd68a;
+      margin-bottom: 15px;
+    }
+    
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .summary-item {
+      background: #0f1a25;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .summary-item .label {
+      color: #95a9c0;
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+    }
+    
+    .summary-item .value {
+      color: #5bd68a;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Test All 7 Minigames</h1>
+    
+    <div class="games-grid" id="games-grid"></div>
+    
+    <div id="game-container"></div>
+    <div id="result-container"></div>
+    <button class="clear" onclick="clearGame()">Clear Game</button>
+    
+    <div class="summary">
+      <h2>Test Summary</h2>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="label">Games Tested</div>
+          <div class="value" id="tested-count">0/7</div>
+        </div>
+        <div class="summary-item">
+          <div class="label">Average Score</div>
+          <div class="value" id="avg-score">-</div>
+        </div>
+        <div class="summary-item">
+          <div class="label">Highest Score</div>
+          <div class="value" id="high-score">-</div>
+        </div>
+        <div class="summary-item">
+          <div class="label">Status</div>
+          <div class="value" id="status" style="font-size:1.2rem;">Ready</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load minigame modules -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/loader.js"></script>
+  <script src="js/minigames/hangman.js"></script>
+  <script src="js/minigames/three-digits-quiz.js"></script>
+  <script src="js/minigames/tilt-labyrinth.js"></script>
+  <script src="js/minigames/tetris.js"></script>
+  <script src="js/minigames/traveling-dots.js"></script>
+  <script src="js/minigames/minesweeper.js"></script>
+  <script src="js/minigames/rail-switch-sprint.js"></script>
+  
+  <script>
+    const games = [
+      { 
+        key: 'hangman', 
+        name: 'Hangman',
+        description: 'Classic word guessing with Big Brother words. On-screen keyboard, mobile-friendly.',
+        emoji: '🔤'
+      },
+      { 
+        key: 'threeDigitsQuiz', 
+        name: 'Three Digits Quiz',
+        description: 'Guess 3 sequential digits (0-9) with intelligent hints. Fast-paced number puzzle.',
+        emoji: '🔢'
+      },
+      { 
+        key: 'tiltLabyrinth', 
+        name: 'Tilt Labyrinth (HARD)',
+        description: 'Navigate 16×16 procedural maze with moving hazards and key/lock mechanics. BitLife-style difficulty!',
+        emoji: '🌀'
+      },
+      { 
+        key: 'tetris', 
+        name: 'Tetris',
+        description: 'Classic falling blocks with rotation, line clears, and level progression. Mobile controls!',
+        emoji: '🟦'
+      },
+      { 
+        key: 'travelingDots', 
+        name: 'Traveling Dots',
+        description: 'TSP approximation - draw optimal path through all points. Efficiency scoring!',
+        emoji: '🎯'
+      },
+      { 
+        key: 'minesweeps', 
+        name: 'Minesweeps',
+        description: 'Classic minesweeper with flood fill. Long-press to flag, mobile-optimized!',
+        emoji: '💣'
+      },
+      { 
+        key: 'railSwitchSprint', 
+        name: 'Rail Switch Sprint',
+        description: 'Route color-coded trains to matching stations. Toggle switches, avoid collisions!',
+        emoji: '🚂'
+      }
+    ];
+    
+    const scores = {};
+    let currentGame = null;
+    
+    function createGameCard(game) {
+      const card = document.createElement('div');
+      card.className = 'game-card';
+      card.innerHTML = `
+        <h3>${game.emoji} ${game.name}</h3>
+        <p>${game.description}</p>
+        <div class="status" id="status-${game.key}">Checking...</div>
+      `;
+      
+      // Check module status
+      setTimeout(() => {
+        const statusEl = document.getElementById(`status-${game.key}`);
+        const isLoaded = window.MinigameModules && window.MinigameModules[game.key];
+        
+        if(isLoaded) {
+          statusEl.textContent = '✓ Ready';
+          statusEl.className = 'status loaded';
+        } else {
+          statusEl.textContent = '✗ Failed';
+          statusEl.className = 'status error';
+        }
+      }, 100);
+      
+      card.addEventListener('click', () => testGame(game));
+      
+      return card;
+    }
+    
+    function testGame(game) {
+      const container = document.getElementById('game-container');
+      const resultContainer = document.getElementById('result-container');
+      
+      container.innerHTML = '';
+      resultContainer.innerHTML = '';
+      currentGame = game.key;
+      
+      document.getElementById('status').textContent = `Testing ${game.name}...`;
+      
+      try {
+        if(!window.MinigameRegistry) {
+          throw new Error('MinigameRegistry not loaded');
+        }
+        
+        window.MinigameRegistry.render(game.key, container, (score) => {
+          scores[game.key] = score;
+          
+          resultContainer.innerHTML = `
+            <h3 style="color:#5bd68a;margin-bottom:10px;">✓ ${game.name} Completed!</h3>
+            <p style="color:#83bfff;font-size:1.2rem;">Score: <strong>${Math.round(score)}</strong>/100</p>
+          `;
+          
+          updateSummary();
+          document.getElementById('status').textContent = 'Ready';
+        }, { debugMode: false });
+        
+      } catch(error) {
+        console.error(`Error testing ${game.name}:`, error);
+        resultContainer.innerHTML = `
+          <h3 style="color:#ff6b9d;margin-bottom:10px;">✗ Error Testing ${game.name}</h3>
+          <p style="color:#95a9c0;">${error.message}</p>
+        `;
+        document.getElementById('status').textContent = 'Error';
+      }
+    }
+    
+    function clearGame() {
+      document.getElementById('game-container').innerHTML = '';
+      document.getElementById('result-container').innerHTML = '';
+      currentGame = null;
+      document.getElementById('status').textContent = 'Ready';
+    }
+    
+    function updateSummary() {
+      const tested = Object.keys(scores).length;
+      document.getElementById('tested-count').textContent = `${tested}/7`;
+      
+      if(tested > 0) {
+        const scoreValues = Object.values(scores);
+        const avg = Math.round(scoreValues.reduce((a, b) => a + b, 0) / tested);
+        const high = Math.round(Math.max(...scoreValues));
+        
+        document.getElementById('avg-score').textContent = avg;
+        document.getElementById('high-score').textContent = high;
+        
+        if(tested === 7) {
+          document.getElementById('status').textContent = '🎉 All Complete!';
+          document.getElementById('status').style.color = '#5bd68a';
+        }
+      }
+    }
+    
+    // Populate games grid
+    const grid = document.getElementById('games-grid');
+    games.forEach(game => {
+      grid.appendChild(createGameCard(game));
+    });
+    
+    // Log module status on load
+    window.addEventListener('load', () => {
+      console.log('=== Minigame Module Status ===');
+      games.forEach(game => {
+        const loaded = window.MinigameModules && window.MinigameModules[game.key];
+        console.log(`${game.key}: ${loaded ? '✓' : '✗'}`);
+      });
+    });
+  </script>
+</body>
+</html>
