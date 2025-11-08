@@ -1285,25 +1285,40 @@
   /**
    * Teardown any nomination-related overlays
    * Called on phase exit to prevent overlays from blocking later phases
+   * SURGICAL: Only removes nomination-specific elements, leaves tvOverlay intact for other modules
    */
   function teardownNominationOverlays() {
     console.log(LOG_PREFIX, 'Teardown: cleaning up nomination overlays');
     
-    // Remove #nomsFsOverlay if present
+    // Remove .noms-fs-overlay elements (fullscreen selector)
+    const nomsOverlays = document.querySelectorAll('.noms-fs-overlay');
+    nomsOverlays.forEach(overlay => {
+      overlay.remove();
+      console.log(LOG_PREFIX, 'Teardown: removed .noms-fs-overlay');
+    });
+    
+    // Remove #nomsFsOverlay if present (legacy)
     const nomsFsOverlay = document.getElementById('nomsFsOverlay');
     if (nomsFsOverlay) {
       nomsFsOverlay.remove();
       console.log(LOG_PREFIX, 'Teardown: removed #nomsFsOverlay');
     }
     
-    // Neutralize #tvOverlay
+    // Only clean up tvOverlay if it contains nomination-specific content
+    // Check for .nfs-stage or .nfs-fullscreen-active marker
     const tvOverlay = document.getElementById('tvOverlay');
     if (tvOverlay) {
-      tvOverlay.style.pointerEvents = 'none';
-      tvOverlay.style.display = 'none';
-      tvOverlay.innerHTML = '';
+      // Remove nomination-specific classes
       tvOverlay.classList.remove('nfs-fullscreen-active');
-      console.log(LOG_PREFIX, 'Teardown: neutralized #tvOverlay');
+      
+      // Only clear contents if it contains .nfs-stage (our content)
+      const nfsStage = tvOverlay.querySelector('.nfs-stage');
+      if (nfsStage) {
+        tvOverlay.innerHTML = '';
+        console.log(LOG_PREFIX, 'Teardown: cleared tvOverlay (contained nomination content)');
+      } else {
+        console.log(LOG_PREFIX, 'Teardown: left tvOverlay intact (no nomination content detected)');
+      }
     }
     
     // Close fullscreen selector if active
@@ -1393,53 +1408,18 @@
   }
   
   /**
-   * Start verification polling during nominations phase
-   * Uses exponential backoff to reduce overhead
+   * Start verification polling during nominations phase (DISABLED)
+   * This function is kept for compatibility but no longer performs polling.
+   * Verification now happens once at phase entry via verifyWrapper().
+   * Aggressive polling was causing race conditions with other modules.
    */
   function startVerificationPolling() {
-    // Clear any existing timer
+    console.log(LOG_PREFIX, 'Verification polling disabled - using single check at phase entry');
+    // Clear any existing timer (cleanup from previous implementation)
     if (verificationTimer) {
       clearInterval(verificationTimer);
       verificationTimer = null;
     }
-    
-    let attempt = 0;
-    const maxAttempts = 10; // Poll for ~10 seconds total
-    
-    const poll = () => {
-      attempt++;
-      
-      // Verify wrapper is active
-      const isActive = verifyWrapper();
-      
-      if (!isActive) {
-        console.warn(LOG_PREFIX, 'Verification failed - wrapper could not be re-installed');
-      }
-      
-      // Stop polling after max attempts or if phase changed
-      const g = global.game;
-      if (attempt >= maxAttempts || !g || g.phase !== 'nominations') {
-        if (verificationTimer) {
-          clearInterval(verificationTimer);
-          verificationTimer = null;
-        }
-        console.log(LOG_PREFIX, 'Verification polling stopped');
-      }
-    };
-    
-    // Poll with exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms, then 2000ms
-    let delay = 100;
-    verificationTimer = setInterval(() => {
-      poll();
-      // Increase delay up to 2 seconds
-      delay = Math.min(2000, delay * 2);
-      if (verificationTimer) {
-        clearInterval(verificationTimer);
-        verificationTimer = setInterval(poll, delay);
-      }
-    }, delay);
-    
-    console.log(LOG_PREFIX, 'Started verification polling');
   }
   
   /**
@@ -1466,32 +1446,10 @@
     // Verify wrapper is active
     verifyWrapper();
     
-    // Start polling to catch any late overwrites
-    startVerificationPolling();
-    
-    // Safety microtask: re-invoke renderNomsPanel after a short delay
-    // This ensures our interceptor has a chance to mount if initialization was delayed
-    setTimeout(() => {
-      if (g.phase === 'nominations' && !g.nomsLocked && !g.__nomsCommitInProgress) {
-        const hoh = global.getP ? global.getP(g.hohId) : null;
-        if (hoh && hoh.human) {
-          console.log(LOG_PREFIX, 'Safety microtask: invoking NomsFS.showIntro()');
-          if (global.NomsFS && typeof global.NomsFS.showIntro === 'function') {
-            global.NomsFS.showIntro().then(success => {
-              if (success) {
-                console.log(LOG_PREFIX, 'Safety microtask: intro shown, opening selector');
-                if (global.NomsFS && typeof global.NomsFS.open === 'function') {
-                  global.NomsFS.open();
-                }
-              }
-            });
-          } else if (global.renderNomsPanel && typeof global.renderNomsPanel === 'function') {
-            console.log(LOG_PREFIX, 'Safety microtask: re-invoking renderNomsPanel');
-            global.renderNomsPanel();
-          }
-        }
-      }
-    }, 50);
+    // Note: Removed aggressive verification polling and safety microtask auto-trigger
+    // These were causing race conditions with other modules. The interceptor is now
+    // installed once and will be called naturally when renderNomsPanel is invoked.
+    console.log(LOG_PREFIX, 'Phase entry complete - interceptor ready');
   }
   
   /**
@@ -1554,26 +1512,23 @@
   
   /**
    * Install phase change listener to detect leaving nominations
+   * Uses event-based detection instead of polling for better performance
    */
   function installPhaseChangeListener() {
-    let lastPhase = null;
-    
-    // Use setInterval to poll for phase changes
-    setInterval(() => {
-      const g = global.game;
-      if (!g) return;
-      
-      const currentPhase = g.phase;
-      
-      // Detect transition out of nominations phase
-      if (lastPhase === 'nominations' && currentPhase !== 'nominations') {
-        onExitNominationsPhase();
-      }
-      
-      lastPhase = currentPhase;
-    }, 500); // Poll every 500ms
-    
-    console.log(LOG_PREFIX, '✓ Phase change listener installed');
+    // Use event-based phase detection if available
+    if (global.PhaseEvents && typeof global.PhaseEvents.onPhaseChange === 'function') {
+      global.PhaseEvents.onPhaseChange((oldPhase, newPhase) => {
+        // Detect transition out of nominations phase
+        if (oldPhase === 'nominations' && newPhase !== 'nominations') {
+          onExitNominationsPhase();
+        }
+      });
+      console.log(LOG_PREFIX, '✓ Phase change listener installed (event-based)');
+    } else {
+      // Fallback to polling if PhaseEvents not available
+      console.warn(LOG_PREFIX, 'PhaseEvents not available, phase exit detection disabled');
+      console.warn(LOG_PREFIX, 'Load phase-events.js before this module for proper teardown');
+    }
   }
   
   // Auto-install when this module loads
