@@ -497,41 +497,22 @@
         if(deck) deck.remove();
       }catch(e){}
       
-      // Call ensureVisible to guarantee launcher mounts
-      if(global.SocializeMobile?.ensureVisible){
+      // Mount launcher with robust fallback
+      if(global.SocializeMobile?.ensureSocializeLauncher){
         try{
-          global.SocializeMobile.ensureVisible();
-          console.info('[social.js] ✓ Called ensureVisible');
+          global.SocializeMobile.ensureSocializeLauncher();
+          console.info('[social.js] ✓ Launcher mounted with robust fallback');
         }catch(e){
-          console.error('[social.js] ensureVisible failed:', e);
-          // Fallback to legacy mounting
-          if(global.SocializeMobile?.ensureSocializeLauncher){
-            try{
-              global.SocializeMobile.ensureSocializeLauncher();
-              console.info('[social.js] ✓ Launcher mounted with fallback');
-            }catch(e2){
-              console.error('[social.js] Fallback launcher mount failed:', e2);
-            }
-          }
+          console.error('[social.js] Failed to mount launcher:', e);
         }
-      } else {
-        // Fallback if ensureVisible not available
-        if(global.SocializeMobile?.ensureSocializeLauncher){
-          try{
-            global.SocializeMobile.ensureSocializeLauncher();
-            console.info('[social.js] ✓ Launcher mounted with robust fallback');
-          }catch(e){
-            console.error('[social.js] Failed to mount launcher:', e);
-          }
-        }
-        
-        // Update HUD
-        if(global.SocializeMobile?.updateHUD){
-          try{
-            global.SocializeMobile.updateHUD();
-          }catch(e){
-            console.error('[social.js] Failed to update HUD:', e);
-          }
+      }
+      
+      // Update HUD
+      if(global.SocializeMobile?.updateHUD){
+        try{
+          global.SocializeMobile.updateHUD();
+        }catch(e){
+          console.error('[social.js] Failed to update HUD:', e);
         }
       }
     }
@@ -557,16 +538,6 @@
             }
           }else{
             console.warn('[social.js] SocialManeuvers.onSocialPhaseEnd not found');
-          }
-          
-          // Reset social flags to allow remounting in next social phase
-          if(global.SocializeMobile?.resetSocialFlags){
-            try{
-              global.SocializeMobile.resetSocialFlags();
-              console.info('[social.js] ✓ Called resetSocialFlags');
-            }catch(e){
-              console.error('[social.js] resetSocialFlags failed:', e);
-            }
           }
           
           // Close/hide launcher
@@ -671,39 +642,23 @@
           }
         }
         
-        // Call ensureVisible to guarantee launcher mounts
-        if(global.SocializeMobile?.ensureVisible){
+        // Mount launcher
+        if(global.SocializeMobile?.ensureSocializeLauncher){
           try{
-            global.SocializeMobile.ensureVisible();
-            console.info('[social.js wrapper] ✓ Called ensureVisible');
-          }catch(e){
-            console.error('[social.js wrapper] ensureVisible failed:', e);
-            // Fallback to legacy mounting
-            if(global.SocializeMobile?.ensureSocializeLauncher){
-              try{
-                global.SocializeMobile.ensureSocializeLauncher();
-              }catch(e2){}
-            }
-          }
-        } else {
-          // Fallback if ensureVisible not available
-          if(global.SocializeMobile?.ensureSocializeLauncher){
-            try{
-              global.SocializeMobile.ensureSocializeLauncher();
-            }catch(e){}
-          }
-          
-          // Update HUD
-          if(global.SocializeMobile?.show){
-            try{
-              global.SocializeMobile.show();
-            }catch(e){}
-          }
-          if(global.SocializeMobile?.updateHUD){
-            try{
-              global.SocializeMobile.updateHUD();
-            }catch(e){}
-          }
+            global.SocializeMobile.ensureSocializeLauncher();
+          }catch(e){}
+        }
+        
+        // Update HUD
+        if(global.SocializeMobile?.show){
+          try{
+            global.SocializeMobile.show();
+          }catch(e){}
+        }
+        if(global.SocializeMobile?.updateHUD){
+          try{
+            global.SocializeMobile.updateHUD();
+          }catch(e){}
         }
       }
     }
@@ -721,16 +676,6 @@
             console.info('[social.js wrapper] ✓ Called onSocialPhaseEnd');
           }catch(e){
             console.error('[social.js wrapper] onSocialPhaseEnd failed:', e);
-          }
-        }
-        
-        // Reset social flags to allow remounting in next social phase
-        if(global.SocializeMobile?.resetSocialFlags){
-          try{
-            global.SocializeMobile.resetSocialFlags();
-            console.info('[social.js wrapper] ✓ Called resetSocialFlags');
-          }catch(e){
-            console.error('[social.js wrapper] resetSocialFlags failed:', e);
           }
         }
         
