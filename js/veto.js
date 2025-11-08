@@ -914,7 +914,14 @@
   global.installLegacyVetoPanelBlocker = installLegacyVetoPanelBlocker;
   
   function ensureTVOverlayScaffold(){
-    var tvOverlay = document.getElementById('tvOverlay');
+    // Use overlay manager if available to ensure visibility
+    var tvOverlay = null;
+    if(global.OverlayManager){
+      tvOverlay = global.OverlayManager.ensureVisible();
+    } else {
+      tvOverlay = document.getElementById('tvOverlay');
+    }
+    
     if(!tvOverlay) return null;
     
     // Check if scaffold already exists
@@ -952,6 +959,12 @@
   function releaseTVOverlay(){
     var tvOverlay = document.getElementById('tvOverlay');
     if(!tvOverlay) return;
+    
+    // Release overlay ownership via OverlayManager
+    if(global.OverlayManager){
+      global.OverlayManager.release('veto');
+      console.log('[veto] ✓ Released overlay ownership via OverlayManager');
+    }
     
     // Remove fallback-created overlays
     if(tvOverlay.getAttribute('data-fallback') === 'true'){
@@ -2049,6 +2062,13 @@
     g.__replacementApplied = false;
     g.__useTVCeremonyUI = false;
     if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
+
+    // Acquire overlay ownership and ensure it's visible
+    if(global.OverlayManager){
+      global.OverlayManager.acquire('veto');
+      global.OverlayManager.ensureVisible();
+      console.info('[veto] ✓ Acquired overlay ownership and ensured visibility');
+    }
 
     // Set legacy UI disable flags BEFORE any async UI
     g.__disableLegacyVetoUI = true;
@@ -3257,5 +3277,30 @@
     }, 200);
   }
   global.applyReplacementAndContinueMulti = applyReplacementAndContinueMulti;
+
+  /**
+   * Debug function to expose veto ceremony state
+   * Accessible via window.vetoDebug()
+   */
+  global.vetoDebug = function(){
+    var g = global.game;
+    if(!g) return { error: 'No game object' };
+    
+    var overlayInfo = null;
+    if(global.OverlayManager && typeof global.OverlayManager.debug === 'function'){
+      overlayInfo = global.OverlayManager.debug();
+    }
+    
+    return {
+      phase: g.phase,
+      __disableLegacyVetoUI: g.__disableLegacyVetoUI || false,
+      __useTVCeremonyUI: g.__useTVCeremonyUI || false,
+      vetoHolder: g.vetoHolder,
+      vetoSavedId: g.vetoSavedId,
+      __vetoCeremonyResolved: g.__vetoCeremonyResolved || false,
+      __vetoDecisionInProgress: g.__vetoDecisionInProgress || false,
+      overlayManager: overlayInfo
+    };
+  };
 
 })(window);
