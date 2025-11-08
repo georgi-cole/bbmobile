@@ -242,9 +242,16 @@
     updateWordDisplay();
   }
 
-  // Register module
-  g.MiniGames = g.MiniGames || {};
-  g.MiniGames.hangman = { render };
+  // Register module (both MinigameModules and legacy MiniGames)
+  if(typeof g.MinigameModules !== 'undefined' && typeof g.MinigameModules.register === 'function'){
+    g.MinigameModules.register('hangman', { render });
+  } else {
+    // Fallback to direct registration
+    g.MinigameModules = g.MinigameModules || {};
+    g.MinigameModules.hangman = { render };
+    g.MiniGames = g.MiniGames || {};
+    g.MiniGames.hangman = { render };
+  }
 
   console.info('[Hangman] Module loaded');
 

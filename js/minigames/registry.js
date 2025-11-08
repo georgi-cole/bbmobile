@@ -608,7 +608,7 @@
       seasons: ['spring', 'summer', 'autumn', 'winter']
     },
     
-    // Scaffolds (Future Implementation)
+    // Fully Implemented Games (Phase 2 Expansion)
     tetris: {
       key: 'tetris',
       name: 'Tetris',
@@ -616,7 +616,7 @@
       type: 'puzzle',
       scoring: 'endurance',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'tetris.js',
       minScore: 0,
       maxScore: 100,
@@ -631,7 +631,7 @@
       type: 'puzzle',
       scoring: 'hybrid',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'traveling-dots.js',
       minScore: 0,
       maxScore: 100,
@@ -646,7 +646,7 @@
       type: 'puzzle',
       scoring: 'accuracy',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'minesweeper.js',
       minScore: 0,
       maxScore: 100,
@@ -661,7 +661,7 @@
       type: 'puzzle',
       scoring: 'hybrid',
       mobileFriendly: true,
-      implemented: false,
+      implemented: true,
       module: 'rail-switch-sprint.js',
       minScore: 0,
       maxScore: 100,

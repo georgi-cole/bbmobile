@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Minigame Fixes</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a2a3a 0%, #0f1a25 100%);
+      color: #e3ecf5;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #5bd68a;
+      font-size: 2rem;
+    }
+    
+    .test-section {
+      background: #0f1a25;
+      border: 2px solid #5bd68a;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #ff6b9d;
+      margin-bottom: 15px;
+      font-size: 1.3rem;
+    }
+    
+    button {
+      min-height: 50px;
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, #5bd68a 0%, #4db878 100%);
+      color: #1a1a1a;
+      border: 2px solid #4db878;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin: 5px;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 214, 138, 0.4);
+    }
+    
+    .game-container {
+      margin-top: 20px;
+      min-height: 400px;
+      background: #1a2a3a;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #2a3a4a;
+      border-radius: 8px;
+      border-left: 4px solid #5bd68a;
+    }
+    
+    .error {
+      background: #3a2a2a;
+      border-left: 4px solid #ff6b9d;
+    }
+    
+    .console-log {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #95a9c0;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Minigame Fixes Test Page</h1>
+    
+    <div class="test-section">
+      <h2>Test Existing Games</h2>
+      <button onclick="testGame('hangman')">Test Hangman</button>
+      <button onclick="testGame('threeDigitsQuiz')">Test Three Digits Quiz</button>
+      <button onclick="testGame('tiltLabyrinth')">Test Tilt Labyrinth</button>
+      <button onclick="clearContainer()">Clear</button>
+      <div id="game-container" class="game-container"></div>
+      <div id="result-container"></div>
+      <div id="console-log" class="console-log"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Module Status</h2>
+      <div id="module-status"></div>
+    </div>
+  </div>
+  
+  <!-- Load registry first -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/loader.js"></script>
+  
+  <!-- Load minigame modules -->
+  <script src="js/minigames/hangman.js"></script>
+  <script src="js/minigames/three-digits-quiz.js"></script>
+  <script src="js/minigames/tilt-labyrinth.js"></script>
+  
+  <script>
+    // Intercept console logs
+    const consoleLog = document.getElementById('console-log');
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    
+    function logToPage(type, ...args) {
+      const msg = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      
+      const entry = document.createElement('div');
+      entry.style.color = type === 'error' ? '#ff6b9d' : type === 'warn' ? '#f7b955' : '#95a9c0';
+      entry.textContent = `[${type}] ${msg}`;
+      consoleLog.appendChild(entry);
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      logToPage('log', ...args);
+    };
+    
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      logToPage('error', ...args);
+    };
+    
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      logToPage('warn', ...args);
+    };
+    
+    // Check module status
+    function updateModuleStatus() {
+      const status = document.getElementById('module-status');
+      const modules = ['hangman', 'threeDigitsQuiz', 'tiltLabyrinth'];
+      
+      let html = '<table style="width:100%; border-collapse: collapse;">';
+      html += '<tr style="border-bottom: 1px solid #5bd68a;"><th style="text-align:left; padding:8px;">Module</th><th style="text-align:left; padding:8px;">MiniGames</th><th style="text-align:left; padding:8px;">MinigameModules</th><th style="text-align:left; padding:8px;">Registry</th></tr>';
+      
+      modules.forEach(key => {
+        const inMiniGames = window.MiniGames && window.MiniGames[key] && typeof window.MiniGames[key].render === 'function';
+        const inModules = window.MinigameModules && window.MinigameModules[key] && typeof window.MinigameModules[key].render === 'function';
+        const inRegistry = window.MinigameRegistry && window.MinigameRegistry.getGame(key);
+        
+        html += '<tr style="border-bottom: 1px solid #2a3a4a;">';
+        html += `<td style="padding:8px; color:#83bfff;">${key}</td>`;
+        html += `<td style="padding:8px; color:${inMiniGames ? '#5bd68a' : '#ff6b9d'};">${inMiniGames ? '✓' : '✗'}</td>`;
+        html += `<td style="padding:8px; color:${inModules ? '#5bd68a' : '#ff6b9d'};">${inModules ? '✓' : '✗'}</td>`;
+        html += `<td style="padding:8px; color:${inRegistry ? '#5bd68a' : '#ff6b9d'};">${inRegistry ? '✓' : '✗'}</td>`;
+        html += '</tr>';
+      });
+      
+      html += '</table>';
+      status.innerHTML = html;
+    }
+    
+    function clearContainer() {
+      document.getElementById('game-container').innerHTML = '';
+      document.getElementById('result-container').innerHTML = '';
+    }
+    
+    function testGame(key) {
+      clearContainer();
+      const container = document.getElementById('game-container');
+      const resultContainer = document.getElementById('result-container');
+      
+      console.log(`Testing ${key}...`);
+      
+      try {
+        // Try MinigameRegistry.render first
+        if (window.MinigameRegistry && typeof window.MinigameRegistry.render === 'function') {
+          console.log(`Using MinigameRegistry.render for ${key}`);
+          window.MinigameRegistry.render(key, container, (score) => {
+            const result = document.createElement('div');
+            result.className = 'result';
+            result.innerHTML = `<strong>✓ Game Complete!</strong><br>Score: ${score}`;
+            resultContainer.appendChild(result);
+            console.log(`${key} completed with score: ${score}`);
+          }, { debugMode: true });
+        } else if (window.MiniGames && window.MiniGames[key]) {
+          console.log(`Using window.MiniGames[${key}].render`);
+          window.MiniGames[key].render(container, (score) => {
+            const result = document.createElement('div');
+            result.className = 'result';
+            result.innerHTML = `<strong>✓ Game Complete!</strong><br>Score: ${score}`;
+            resultContainer.appendChild(result);
+            console.log(`${key} completed with score: ${score}`);
+          }, { debugMode: true });
+        } else {
+          throw new Error(`Module ${key} not found`);
+        }
+      } catch (error) {
+        console.error(`Error testing ${key}:`, error);
+        const result = document.createElement('div');
+        result.className = 'result error';
+        result.innerHTML = `<strong>✗ Error!</strong><br>${error.message}`;
+        resultContainer.appendChild(result);
+      }
+    }
+    
+    // Update status on load
+    window.addEventListener('load', () => {
+      updateModuleStatus();
+      console.log('Page loaded. Modules available:', 
+        window.MiniGames ? Object.keys(window.MiniGames) : 'None');
+    });
+  </script>
+</body>
+</html>
