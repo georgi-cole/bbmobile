@@ -1556,7 +1556,18 @@ header.innerHTML = `
       if(!g.__twistsInitDone){ g.twists?.init?.(); g.__twistsInitDone = true; }
       g.twists?.onPhaseChange?.(phase);
       if(phase === 'intermission'){ g.twists?.decideForWeek?.(); }
-      if(phase === 'nominations'){ g.twists?.prepareNominations?.(); }
+      if(phase === 'nominations'){ 
+        g.twists?.prepareNominations?.(); 
+        
+        // Reset stale nomination commit flags for fresh human HOH nominations
+        // Only clear if nominations are unlocked and HOH is human
+        const hoh = g.getP ? g.getP(game.hohId) : null;
+        if(hoh && hoh.human && !game.nomsLocked && (!Array.isArray(game.nominees) || game.nominees.length === 0)){
+          console.log('[phase] Resetting stale nomination flags for fresh human HOH phase');
+          game.__nomsCommitInProgress = false;
+          game.__nomsCommitted = false;
+        }
+      }
       if(phase === 'livevote'){ g.twists?.beforeLiveVote?.(); }
     }catch(e){ console.warn('[twists] hook error', e); }
 
