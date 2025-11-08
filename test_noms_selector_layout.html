@@ -294,6 +294,9 @@
     // Test harness
     const statusEl = document.getElementById('status');
     const logs = [];
+    
+    // Store original console.log before we override it
+    const originalConsoleLog = console.log;
 
     function log(message, type = 'info') {
       const timestamp = new Date().toLocaleTimeString();
@@ -306,7 +309,8 @@
       statusEl.appendChild(logEntry);
       statusEl.scrollTop = statusEl.scrollHeight;
       
-      console.log(message);
+      // Use originalConsoleLog to avoid infinite recursion
+      originalConsoleLog(message);
     }
 
     function clearLogs() {
@@ -316,7 +320,6 @@
     }
 
     // Intercept console.log to capture logs
-    const originalConsoleLog = console.log;
     console.log = function(...args) {
       const message = args.join(' ');
       if (message.includes('[noms-fs]') || message.includes('[noms]')) {
