@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rail Switch Sprint Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e3ecf5;
+      min-height: 100vh;
+    }
+    #test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #0f1419;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    h1 {
+      text-align: center;
+      color: #5bd68a;
+      margin-bottom: 20px;
+    }
+    .info {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #83bfff;
+    }
+    #game-host {
+      min-height: 500px;
+    }
+  </style>
+</head>
+<body>
+  <div id="test-container">
+    <h1>🎮 Rail Switch Sprint Test</h1>
+    <div class="info">
+      <strong>Testing:</strong> Updated Rail Switch Sprint
+      <br><strong>Changes:</strong>
+      <ul style="margin:5px 0;padding-left:20px;">
+        <li>Removed internal 60s timer cutoff</li>
+        <li>Game relies on global competition timer</li>
+        <li>Added "End Run" button for manual completion</li>
+        <li>Elapsed timer is informational only</li>
+      </ul>
+      <strong>Instructions:</strong> Toggle switches to route trains to matching colored stations. Use "End Run" to finish when ready.
+    </div>
+    <div id="game-host"></div>
+  </div>
+
+  <script type="module">
+    // Initialize minimal game globals
+    window.game = window.game || {};
+    window.MinigameModules = window.MinigameModules || {};
+    window.MiniGames = window.MiniGames || {};
+
+    // Load the rail switch sprint module
+    const module = await import('./js/minigames/rail-switch-sprint.js');
+    
+    console.log('Rail Switch Sprint module loaded');
+    console.log('MinigameModules:', window.MinigameModules);
+    
+    // Render the game
+    const host = document.getElementById('game-host');
+    
+    function onComplete(score) {
+      console.log('Game completed with score:', score);
+      
+      setTimeout(() => {
+        const again = confirm('Play again?');
+        if(again) {
+          host.innerHTML = '';
+          if(window.MinigameModules.railSwitchSprint) {
+            window.MinigameModules.railSwitchSprint.render(host, onComplete, { debugMode: true, seed: Date.now() });
+          }
+        }
+      }, 100);
+    }
+    
+    if(window.MinigameModules.railSwitchSprint) {
+      window.MinigameModules.railSwitchSprint.render(host, onComplete, { debugMode: true, seed: Date.now() });
+    } else {
+      host.innerHTML = '<p style="color:#ff6b9d;">Error: Rail Switch Sprint module not loaded</p>';
+    }
+  </script>
+</body>
+</html>

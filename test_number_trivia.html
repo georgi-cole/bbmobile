@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Number Trivia Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e3ecf5;
+      min-height: 100vh;
+    }
+    #test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #0f1419;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    h1 {
+      text-align: center;
+      color: #5bd68a;
+      margin-bottom: 20px;
+    }
+    .info {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #83bfff;
+    }
+    #game-host {
+      min-height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <div id="test-container">
+    <h1>🎮 Number Trivia Test</h1>
+    <div class="info">
+      <strong>Testing:</strong> New Number Trivia game (replaces Three Digits Quiz)
+      <br><strong>Features:</strong> 100 numeric trivia questions, higher/lower graded hints, skip option
+      <br><strong>Timer:</strong> Relies on global competition timer (no internal countdown)
+      <br><strong>Registry Key:</strong> threeDigitsQuiz (maintained for compatibility)
+    </div>
+    <div id="game-host"></div>
+  </div>
+
+  <script type="module">
+    // Initialize minimal game globals
+    window.game = window.game || {};
+    window.MinigameModules = window.MinigameModules || {};
+    window.MiniGames = window.MiniGames || {};
+
+    // Load the number trivia module
+    const module = await import('./js/minigames/number-trivia-quiz.js');
+    
+    console.log('Number Trivia module loaded');
+    console.log('MinigameModules:', window.MinigameModules);
+    
+    // Render the game
+    const host = document.getElementById('game-host');
+    
+    function onComplete(score) {
+      console.log('Game completed with score:', score);
+      
+      setTimeout(() => {
+        const again = confirm('Play again?');
+        if(again) {
+          host.innerHTML = '';
+          if(window.MinigameModules.threeDigitsQuiz) {
+            window.MinigameModules.threeDigitsQuiz.render(host, onComplete, { debugMode: true });
+          }
+        }
+      }, 100);
+    }
+    
+    if(window.MinigameModules.threeDigitsQuiz) {
+      window.MinigameModules.threeDigitsQuiz.render(host, onComplete, { debugMode: true });
+    } else {
+      host.innerHTML = '<p style="color:#ff6b9d;">Error: Number Trivia module not loaded</p>';
+    }
+  </script>
+</body>
+</html>

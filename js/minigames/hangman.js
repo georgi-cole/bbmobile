@@ -26,10 +26,10 @@
     const { debugMode = false } = options;
     
     // Game state
-    let word = WORDS[Math.floor(Math.random() * WORDS.length)];
-    let guessed = new Set();
+    const word = WORDS[Math.floor(Math.random() * WORDS.length)];
+    const guessed = new Set();
     let wrongCount = 0;
-    let startTime = Date.now();
+    const startTime = Date.now();
     let gameOver = false;
 
     const wrapper = document.createElement('div');
