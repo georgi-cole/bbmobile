@@ -1,6 +1,16 @@
-# Nomination Pick Mode Regression Fix
+# ⚠️ DEPRECATED: Nomination Pick Mode Regression Fix
 
-## Issue Summary
+## ⚠️ Deprecation Notice
+
+**This document describes fixes for the legacy "pick mode" nomination flow that has been REMOVED.**
+
+The roster tile selection mode with confirm bar is no longer used. This document is kept for historical reference only.
+
+**Current implementation:** See `js/nominations-grid-fullscreen.js`
+
+---
+
+## Issue Summary (Historical)
 
 **Problem:** After implementing the in-TV roster-pick flow for human HOH nominations, some sessions showed no nomination UI at the start of the nominations phase. The phase would run and the timer would count down, but the "Nomination Ceremony → NOMINATE" card never appeared and the legacy panel was also suppressed, leaving the user unable to nominate.
 
