@@ -13,19 +13,13 @@
 #tv{ position: relative; overflow: visible; }
 
 /* Reveal cards overlay (showCard) - Respect TV safe insets */
-/* Baseline: inert by default to prevent blocking clicks */
 #tvOverlay{
   position: absolute;
   inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
-  display: none; /* hidden by default */
-  place-items: center;
+  display: grid; place-items: center;
   padding: 12px;
-  pointer-events: none; /* non-interactive by default */
+  pointer-events: none; /* allow underlying clicks unless a card is present */
   z-index: 10;
-}
-/* Active state: visible and ready for content */
-#tvOverlay.tv-active{
-  display: grid;
 }
 #tvOverlay .revealCard{ pointer-events: auto; }
 

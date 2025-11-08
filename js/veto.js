@@ -933,38 +933,12 @@
       tvOverlay.appendChild(content);
     }
     
-    // Ensure overlay is non-interactive by default
-    tvOverlay.style.pointerEvents = 'none';
-    tvOverlay.style.display = 'none';
-    
     return content;
   }
   
   function clearTVOverlayContent(){
     var content = document.querySelector('.tvOverlayContent');
     if(content) content.innerHTML = '';
-  }
-  
-  /**
-   * Release/cleanup TV overlay after ceremony completes
-   * Removes fallback-created overlays and deactivates existing ones
-   */
-  function releaseTVOverlay(){
-    var tvOverlay = document.getElementById('tvOverlay');
-    if(!tvOverlay) return;
-    
-    // Remove fallback-created overlays
-    if(tvOverlay.getAttribute('data-fallback') === 'true'){
-      console.log('[veto] Removing fallback-created #tvOverlay');
-      tvOverlay.remove();
-      return;
-    }
-    
-    // Deactivate existing overlay
-    tvOverlay.classList.remove('tv-active');
-    tvOverlay.style.pointerEvents = 'none';
-    tvOverlay.style.display = 'none';
-    console.log('[veto] ✓ TV overlay released');
   }
 
   // Helper: Show nominee reactions (after veto not used)
@@ -2027,7 +2001,6 @@
   global.animateNominationTransfer = animateNominationTransfer;
   
   global.ensureTVOverlayScaffold = ensureTVOverlayScaffold;
-  global.releaseTVOverlay = releaseTVOverlay;
   global.clearTVOverlayContent = clearTVOverlayContent;
   global.showTVCard = showTVCard;
   global.showTVCardWithAvatars = showTVCardWithAvatars;
@@ -2878,10 +2851,6 @@
       g.__vetoCeremonyResolved = true;
       g.__vetoDecisionInProgress = false;
       g.__useTVCeremonyUI = false;
-      
-      // Release TV overlay after ceremony completes
-      releaseTVOverlay();
-      
       setTimeout(function(){
         if(typeof global.startSocial==='function'){
           global.startSocial('veto', function(){
@@ -3094,10 +3063,6 @@
     g.__vetoCeremonyResolved = true;
     g.__vetoDecisionInProgress = false;
     g.__useTVCeremonyUI = false;
-    
-    // Release TV overlay after ceremony completes
-    releaseTVOverlay();
-    
     setTimeout(function(){
       if(typeof global.startSocial==='function'){
         global.startSocial('veto', function(){
