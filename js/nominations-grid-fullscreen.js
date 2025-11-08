@@ -1,4 +1,4 @@
-// MODULE: nominations-fullscreen-ceremony.js
+// MODULE: nominations-grid-fullscreen.js
 // Full-screen nomination ceremony UX for human HOH
 // Intercepts renderNomsPanel to show intro card → full-screen selector → summary ceremony
 // Falls back to legacy UI if mounting fails at any step
@@ -881,10 +881,15 @@
       if (global.finalizeNoms && typeof global.finalizeNoms === 'function') {
         console.log(LOG_PREFIX, 'Calling finalizeNoms()');
         
-        // finalizeNoms already has ceremony logic for human HOH, it will handle everything
+        // Set flag to prevent ceremony duplication
+        g.__nomsFromFullscreenSelector = true;
+        
         global.finalizeNoms();
       } else if (global.lockNominationsAndProceed && typeof global.lockNominationsAndProceed === 'function') {
         console.log(LOG_PREFIX, 'Calling lockNominationsAndProceed()');
+        
+        g.__nomsFromFullscreenSelector = true;
+        
         global.lockNominationsAndProceed();
       } else {
         // Manual commit (fallback)
@@ -947,6 +952,13 @@
       return;
     }
     
+    // Set flag immediately to prevent double installation attempts
+    // Note: Flag is set BEFORE checking for renderNomsPanel to prevent retry loops.
+    // This module auto-installs with a delay, which should be sufficient for
+    // nominations.js to load. If renderNomsPanel is still missing, it indicates
+    // a module loading order issue that should be fixed at the root cause.
+    global.__nomsFsInstalled = true;
+    
     console.log(LOG_PREFIX, 'Installing interceptor');
     
     // Store original renderNomsPanel
@@ -956,39 +968,10 @@
       
       // Replace with intercepted version
       global.renderNomsPanel = interceptedRenderNomsPanel;
-      
-      // Set flag to prevent double installation
-      global.__nomsFsInstalled = true;
-      
       console.log(LOG_PREFIX, '✓ Interceptor installed');
     } else {
-      console.warn(LOG_PREFIX, 'renderNomsPanel not found, will retry with backoff');
-      
-      // Retry with exponential backoff
-      let retryCount = 0;
-      const maxRetries = 5;
-      
-      const retryInstall = () => {
-        if (retryCount >= maxRetries) {
-          console.warn(LOG_PREFIX, 'Max retries reached, giving up without blocking legacy');
-          global.__nomsFsInstalled = true; // Prevent further retries
-          return;
-        }
-        
-        if (global.renderNomsPanel && typeof global.renderNomsPanel === 'function') {
-          originalRenderNomsPanel = global.renderNomsPanel;
-          global.renderNomsPanel = interceptedRenderNomsPanel;
-          global.__nomsFsInstalled = true;
-          console.log(LOG_PREFIX, `✓ Interceptor installed on retry ${retryCount + 1}`);
-        } else {
-          retryCount++;
-          const delay = Math.pow(2, retryCount) * 100; // 200, 400, 800, 1600, 3200ms
-          console.log(LOG_PREFIX, `Retry ${retryCount}/${maxRetries} in ${delay}ms`);
-          setTimeout(retryInstall, delay);
-        }
-      };
-      
-      retryInstall();
+      console.warn(LOG_PREFIX, 'No renderNomsPanel found to intercept');
+      console.warn(LOG_PREFIX, 'This may indicate a module loading order issue');
     }
   }
 
@@ -1004,7 +987,7 @@
   }
 
   // Expose for debugging
-  global.NomsFullscreenCeremony = {
+  global.NomsFullscreenInterceptor = {
     install: installInterceptor,
     showIntroCard,
     showFullscreenSelector,
