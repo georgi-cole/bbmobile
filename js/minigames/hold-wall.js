@@ -64,7 +64,7 @@
     
     // Status feed panel (scrolling message feed)
     const feedPanel = document.createElement('div');
-    feedPanel.style.cssText = 'width:100%;max-width:400px;height:120px;background:#1a2332;border:1px solid #2c3a4d;border-radius:6px;padding:8px;overflow-y:auto;font-size:0.85rem;color:#95a9c0;display:flex;flex-direction:column-reverse;';
+    feedPanel.style.cssText = 'width:100%;max-width:400px;height:120px;background:#1a2332;border:1px solid #2c3a4d;border-radius:6px;padding:8px;overflow-y:auto;font-size:0.85rem;color:#95a9c0;';
     
     const feedContent = document.createElement('div');
     feedContent.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
@@ -103,8 +103,8 @@
       const msg = document.createElement('div');
       msg.textContent = text;
       msg.style.cssText = `color:${color};padding:2px 0;line-height:1.3;`;
-      feedContent.insertBefore(msg, feedContent.firstChild);
-      feedPanel.scrollTop = 0; // Auto-scroll to show latest
+      feedContent.appendChild(msg);
+      feedPanel.scrollTop = feedPanel.scrollHeight; // Auto-scroll to show latest
     }
     
     /**
