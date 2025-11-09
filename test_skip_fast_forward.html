@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skip Fast-Forward System Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e3ecf5;
+    }
+    
+    h1 { color: #5bd68a; }
+    h2 { color: #83bfff; border-bottom: 2px solid #83bfff; padding-bottom: 10px; }
+    
+    .test-section {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    button.primary {
+      background: linear-gradient(135deg, #5bd68a 0%, #4db878 100%);
+      color: #1a1a1a;
+    }
+    
+    button.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 214, 138, 0.4);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff6b9d 0%, #ee5a8a 100%);
+      color: #1a1a1a;
+    }
+    
+    button.info {
+      background: linear-gradient(135deg, #83bfff 0%, #6aa8f5 100%);
+      color: #1a1a1a;
+    }
+    
+    .status {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    
+    .status.active {
+      border-left: 4px solid #5bd68a;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #333;
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .test-card {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #1a2937 0%, #0f1a28 100%);
+      border: 2px solid #5bd68a;
+      border-radius: 12px;
+      padding: 30px;
+      min-width: 300px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      z-index: 9999;
+      animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+      }
+    }
+    
+    .success { color: #5bd68a; }
+    .error { color: #ff6b9d; }
+    .info { color: #83bfff; }
+    .warning { color: #f7b955; }
+  </style>
+</head>
+<body>
+  <h1>🚀 Skip Fast-Forward System Test</h1>
+  
+  <div class="test-section">
+    <h2>📊 System Status</h2>
+    <div id="systemStatus" class="status"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>🧪 Test Controls</h2>
+    
+    <div class="button-group">
+      <button class="primary" onclick="testSkipController()">Test SkipController</button>
+      <button class="primary" onclick="testSkipUtils()">Test SkipUtils</button>
+      <button class="primary" onclick="testDrainLoop()">Test Drain Loop</button>
+    </div>
+    
+    <div class="button-group">
+      <button class="info" onclick="simulateCard()">Simulate Card</button>
+      <button class="info" onclick="simulateMultipleCards()">Simulate Multiple Cards</button>
+      <button class="danger" onclick="triggerSkip()">⏩ Trigger Skip</button>
+    </div>
+    
+    <div class="button-group">
+      <button class="info" onclick="showDrainers()">Show Drainers</button>
+      <button class="info" onclick="showTimeouts()">Show Active Timeouts</button>
+      <button class="danger" onclick="clearLogs()">Clear Logs</button>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>📝 Test Logs</h2>
+    <div id="testLogs" class="status"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/runtime/skip-controller.js"></script>
+  <script src="js/runtime/skip-utils.js"></script>
+
+  <script>
+    const logs = [];
+    
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, message, type });
+      updateLogs();
+    }
+    
+    function updateLogs() {
+      const container = document.getElementById('testLogs');
+      container.innerHTML = logs.map(entry => 
+        `<div class="log-entry"><span class="${entry.type}">[${entry.timestamp}]</span> ${entry.message}</div>`
+      ).reverse().join('');
+    }
+    
+    function clearLogs() {
+      logs.length = 0;
+      updateLogs();
+      log('Logs cleared', 'info');
+    }
+    
+    function updateSystemStatus() {
+      const status = document.getElementById('systemStatus');
+      const isActive = window.SkipController?.isActive() || false;
+      const drainers = window.SkipController?.getRegisteredDrainers() || [];
+      const timeoutCount = window.SkipUtils?.getActiveTimeoutCount() || 0;
+      
+      status.innerHTML = `
+        <div><strong class="${isActive ? 'success' : 'info'}">Skip Active:</strong> ${isActive}</div>
+        <div><strong class="info">Registered Drainers:</strong> ${drainers.length}</div>
+        <div><strong class="info">Active Timeouts:</strong> ${timeoutCount}</div>
+        <div style="margin-top: 10px;"><strong>Drainers:</strong> ${drainers.join(', ') || 'None'}</div>
+      `;
+      
+      if (isActive) {
+        status.classList.add('active');
+      } else {
+        status.classList.remove('active');
+      }
+    }
+    
+    function testSkipController() {
+      log('Testing SkipController...', 'info');
+      
+      if (!window.SkipController) {
+        log('❌ SkipController not found!', 'error');
+        return;
+      }
+      
+      // Test enable
+      window.SkipController.enable();
+      log(`✅ Skip enabled: ${window.SkipController.isActive()}`, 'success');
+      
+      // Test complete
+      window.SkipController.complete();
+      log(`✅ Skip completed: ${!window.SkipController.isActive()}`, 'success');
+      
+      updateSystemStatus();
+    }
+    
+    function testSkipUtils() {
+      log('Testing SkipUtils...', 'info');
+      
+      if (!window.SkipUtils) {
+        log('❌ SkipUtils not found!', 'error');
+        return;
+      }
+      
+      // Test timeout without skip
+      log('Registering timeout (3s)...', 'info');
+      const timeoutId = window.SkipUtils.registerTimeout(() => {
+        log('⏰ Timeout fired normally', 'success');
+        updateSystemStatus();
+      }, 3000);
+      
+      log(`✅ Timeout registered: ${timeoutId}`, 'success');
+      updateSystemStatus();
+      
+      // Test sleep
+      log('Testing sleep (will resolve in 2s)...', 'info');
+      window.SkipUtils.sleep(2000).then(() => {
+        log('✅ Sleep completed', 'success');
+      });
+    }
+    
+    async function testDrainLoop() {
+      log('Testing drain loop...', 'info');
+      
+      if (!window.SkipController) {
+        log('❌ SkipController not found!', 'error');
+        return;
+      }
+      
+      // Create some test work
+      const testCards = [];
+      for (let i = 0; i < 3; i++) {
+        const card = document.createElement('div');
+        card.className = 'test-card';
+        card.textContent = `Test Card ${i + 1}`;
+        document.body.appendChild(card);
+        testCards.push(card);
+      }
+      
+      log(`Created ${testCards.length} test cards`, 'info');
+      
+      // Register test drainer
+      let drainerCallCount = 0;
+      window.SkipController.registerDrainer('test', () => {
+        drainerCallCount++;
+        const cards = document.querySelectorAll('.test-card');
+        if (cards.length > 0) {
+          cards.forEach(c => c.remove());
+          log(`🧹 Test drainer removed ${cards.length} cards (call ${drainerCallCount})`, 'warning');
+          return true;
+        }
+        return false;
+      });
+      
+      // Enable skip and run drain loop
+      window.SkipController.enable();
+      log('Skip enabled, running drain loop...', 'info');
+      
+      await window.SkipController.drainLoop();
+      
+      log(`✅ Drain loop complete (drainer called ${drainerCallCount} time(s))`, 'success');
+      
+      const remainingCards = document.querySelectorAll('.test-card');
+      if (remainingCards.length === 0) {
+        log('✅ All test cards removed', 'success');
+      } else {
+        log(`❌ ${remainingCards.length} cards still present!`, 'error');
+      }
+      
+      window.SkipController.complete();
+      window.SkipController.unregisterDrainer('test');
+      updateSystemStatus();
+    }
+    
+    function simulateCard() {
+      const card = document.createElement('div');
+      card.className = 'test-card';
+      card.innerHTML = `
+        <h3>Simulated Card</h3>
+        <p>This card will be removed by skip</p>
+        <button onclick="this.parentElement.remove()">Close</button>
+      `;
+      document.body.appendChild(card);
+      log('📇 Created simulated card', 'info');
+      
+      // Auto-remove after 5s
+      setTimeout(() => {
+        if (document.body.contains(card)) {
+          card.remove();
+          log('📇 Card auto-removed', 'info');
+        }
+      }, 5000);
+    }
+    
+    function simulateMultipleCards() {
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => simulateCard(), i * 500);
+      }
+      log('📇 Simulating 3 cards with 500ms delay...', 'info');
+    }
+    
+    async function triggerSkip() {
+      log('⏩ SKIP TRIGGERED', 'warning');
+      
+      if (!window.SkipController) {
+        log('❌ SkipController not available', 'error');
+        return;
+      }
+      
+      // Enable skip
+      window.SkipController.enable();
+      log('Skip mode enabled', 'info');
+      updateSystemStatus();
+      
+      // Run drain loop
+      log('Running drain loop...', 'info');
+      await window.SkipController.drainLoop();
+      log('✅ Drain loop complete', 'success');
+      
+      // Complete skip
+      window.SkipController.complete();
+      log('Skip mode completed', 'info');
+      updateSystemStatus();
+      
+      // Check for residual cards
+      const cards = document.querySelectorAll('.test-card');
+      if (cards.length > 0) {
+        log(`⚠️ Warning: ${cards.length} test card(s) still present`, 'warning');
+      } else {
+        log('✅ No residual cards', 'success');
+      }
+    }
+    
+    function showDrainers() {
+      const drainers = window.SkipController?.getRegisteredDrainers() || [];
+      log(`Registered drainers: ${drainers.join(', ') || 'None'}`, 'info');
+      updateSystemStatus();
+    }
+    
+    function showTimeouts() {
+      const count = window.SkipUtils?.getActiveTimeoutCount() || 0;
+      log(`Active timeouts: ${count}`, 'info');
+      updateSystemStatus();
+    }
+    
+    // Initial status update
+    updateSystemStatus();
+    setInterval(updateSystemStatus, 1000);
+    
+    log('Skip Fast-Forward Test loaded', 'success');
+    log('Use the buttons above to test the system', 'info');
+  </script>
+</body>
+</html>
