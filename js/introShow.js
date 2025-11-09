@@ -109,6 +109,8 @@
   let currentSequence = null;
   let skipCallback = null;
   let isActive = false;
+  const activeTimelines = [];
+  const activeTimeouts = [];
 
   // Check if GSAP is loaded
   function isGsapAvailable() {
@@ -377,7 +379,7 @@
     if (isGsapAvailable()) {
       // Animate lighting sweep
       if (sweep) {
-        gsap.fromTo(sweep,
+        const sweepTween = gsap.fromTo(sweep,
           { left: '-100%', opacity: 0.6 },
           { 
             left: '100%', 
@@ -388,12 +390,13 @@
             repeatDelay: 1
           }
         );
+        activeTimelines.push(sweepTween);
       }
 
       // Animate projector beam - subtle opacity pulse and rotation
       const projectorBeam = overlay.querySelector('.intro-projector-beam');
       if (projectorBeam) {
-        gsap.to(projectorBeam, {
+        const beamTween = gsap.to(projectorBeam, {
           opacity: 0.08,
           rotation: 0.5,
           duration: 2,
@@ -401,6 +404,7 @@
           yoyo: true,
           repeat: -1
         });
+        activeTimelines.push(beamTween);
       }
     } else {
       // Fallback: add CSS pulse class
@@ -424,18 +428,19 @@
     if (layers.length > 0) {
       layers.forEach((layer, idx) => {
         const speed = 20 + (idx * 10);
-        gsap.to(layer, {
+        const layerTween = gsap.to(layer, {
           x: `-${speed}%`,
           duration: 20 + (idx * 5),
           ease: 'none',
           repeat: -1
         });
+        activeTimelines.push(layerTween);
       });
     }
 
     // Animate auditorium with slow drift
     if (auditorium) {
-      gsap.to(auditorium, {
+      const auditoriumTween = gsap.to(auditorium, {
         x: '2%',
         y: '1%',
         scale: 1.02,
@@ -444,6 +449,7 @@
         yoyo: true,
         repeat: -1
       });
+      activeTimelines.push(auditoriumTween);
     }
   }
 
@@ -476,6 +482,7 @@
 
     // Entrance animation with perspective projection
     const timeline = gsap.timeline();
+    activeTimelines.push(timeline);
     
     timeline.to(card, {
       opacity: 1,
@@ -492,19 +499,20 @@
     const overlay = document.getElementById('introShowOverlay');
     const projectorBeam = overlay?.querySelector('.intro-projector-beam');
     if (projectorBeam) {
-      gsap.to(projectorBeam, {
+      const beamTween = gsap.to(projectorBeam, {
         opacity: 0.15,
         duration: 0.3,
         ease: 'power2.out',
         yoyo: true,
         repeat: 1
       });
+      activeTimelines.push(beamTween);
     }
 
     // Spotlight pulse
     const spotlight = card.querySelector('.intro-card-spotlight');
     if (spotlight) {
-      gsap.fromTo(spotlight,
+      const spotlightTween = gsap.fromTo(spotlight,
         { opacity: 0, scale: 0.5 },
         { 
           opacity: 0.3, 
@@ -515,12 +523,13 @@
           repeat: Math.floor(CONFIG.cardDuration / 1200)
         }
       );
+      activeTimelines.push(spotlightTween);
     }
 
     // Avatar glow pulse
     const glow = card.querySelector('.intro-card-avatar-glow');
     if (glow) {
-      gsap.to(glow, {
+      const glowTween = gsap.to(glow, {
         opacity: 0.8,
         scale: 1.2,
         duration: 1.2,
@@ -528,6 +537,7 @@
         yoyo: true,
         repeat: -1
       });
+      activeTimelines.push(glowTween);
     }
 
     // Camera zoom (subtle) with slight perspective shift
@@ -651,8 +661,7 @@
       // Schedule next card
       const nextDelay = isLast ? CONFIG.cardDuration : CONFIG.cardDuration + CONFIG.transitionDuration;
       const tid = setTimeout(showNextCard, nextDelay);
-      const timeouts = currentSequence ? currentSequence.timeouts : [];
-      timeouts.push(tid);
+      activeTimeouts.push(tid);
     }
 
     // Start the sequence
@@ -661,9 +670,19 @@
     // Store cleanup handles
     currentSequence = {
       overlay,
-      timeouts,
       cleanup: () => {
-        timeouts.forEach(t => clearTimeout(t));
+        activeTimeouts.forEach(t => clearTimeout(t));
+        activeTimeouts.length = 0;
+        activeTimelines.forEach(tl => {
+          try {
+            if (tl && typeof tl.kill === 'function') {
+              tl.kill();
+            }
+          } catch (e) {
+            // Ignore kill errors
+          }
+        });
+        activeTimelines.length = 0;
         overlay.style.display = 'none';
         isActive = false;
         skipCallback = null;
@@ -704,13 +723,65 @@
     return isActive;
   }
 
+  // Drainer for SkipController integration
+  function introDrainer() {
+    if (!isActive) {
+      return false;
+    }
+
+    // Kill all GSAP timelines
+    let didWork = false;
+    activeTimelines.forEach(tl => {
+      try {
+        if (tl && typeof tl.progress === 'function' && typeof tl.kill === 'function') {
+          tl.progress(1);
+          tl.kill();
+          didWork = true;
+        }
+      } catch (e) {
+        console.warn('[introShow] Error killing timeline:', e);
+      }
+    });
+    activeTimelines.length = 0;
+
+    // Clear all timeouts
+    activeTimeouts.forEach(tid => clearTimeout(tid));
+    if (activeTimeouts.length > 0) {
+      didWork = true;
+    }
+    activeTimeouts.length = 0;
+
+    // Remove overlay
+    const overlay = document.getElementById('introShowOverlay');
+    if (overlay) {
+      overlay.remove();
+      didWork = true;
+    }
+
+    // Reset state
+    if (currentSequence) {
+      currentSequence = null;
+      didWork = true;
+    }
+    isActive = false;
+    skipCallback = null;
+
+    return didWork;
+  }
+
   // Export API
   g.IntroShow = {
     play: playIntroSequence,
     stop: stopIntroSequence,
     isActive: isIntroActive,
-    hasGsap: isGsapAvailable
+    hasGsap: isGsapAvailable,
+    drainer: introDrainer
   };
+
+  // Register drainer with SkipController
+  if (g.SkipController) {
+    g.SkipController.registerDrainer('introShow', introDrainer);
+  }
 
   console.info('[introShow] Module loaded. GSAP available:', isGsapAvailable());
 

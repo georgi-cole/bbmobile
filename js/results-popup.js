@@ -63,6 +63,15 @@
     
     if(!topThree || topThree.length === 0) return;
     
+    // If skip is active, suppress rendering but allow scoring side effects
+    if(global.SkipController?.isActive()){
+      const winner = topThree[0];
+      const winnerId = (typeof winner === 'object') ? winner.id : null;
+      const winnerName = (typeof winner === 'object') ? winner.name : winner;
+      console.info(`[results] Suppressed under skip - winner=${winnerId || winnerName}`);
+      return; // Do not render popup
+    }
+    
     const startTime = Date.now();
     let dismissible = false;
     let dismissed = false;
@@ -424,7 +433,26 @@
     }
   }
   
+  // Drainer for SkipController integration
+  function resultsPopupDrainer(){
+    let didWork = false;
+    
+    // Remove any results modal overlays
+    const modals = document.querySelectorAll('.results-modal-overlay');
+    if(modals.length > 0){
+      modals.forEach(modal => modal.remove());
+      didWork = true;
+    }
+    
+    return didWork;
+  }
+  
   // Export
   global.showResultsPopup = showResultsPopup;
+  
+  // Register drainer with SkipController
+  if(global.SkipController){
+    global.SkipController.registerDrainer('resultsPopup', resultsPopupDrainer);
+  }
   
 })(window);

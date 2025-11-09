@@ -1124,11 +1124,22 @@ header.innerHTML = `
   g.updateHud = updateHud;
 
   // ------------ Fast Forward / Skip ------------
-  function fastForwardPhase(){
+  async function fastForwardPhase(){
     const game=g.game; if(!game) return;
     
     // Log fast-forward activation
     console.info(`[ff] activate phase=${game.phase}`);
+    
+    // Check for idempotency - if already in skip mode, ignore
+    if(g.SkipController && g.SkipController.isActive()){
+      console.warn('[ff] Skip already active, ignoring duplicate fastForwardPhase call');
+      return;
+    }
+    
+    // Enable skip mode
+    if(g.SkipController){
+      g.SkipController.enable();
+    }
     
     // Stop audio and clear overlays
     cancelAllPhaseAudio();
@@ -1147,7 +1158,21 @@ header.innerHTML = `
     // Special: return_twist immediate finalize
     if(game.phase === 'return_twist'){
       try{ g.finishAmericaReturnVote?.(); }catch{}
+      // Complete skip mode before returning
+      if(g.SkipController){
+        g.SkipController.complete();
+      }
       return;
+    }
+
+    // Execute drain loop to clear all pending animations/cards/timeouts
+    if(g.SkipController){
+      await g.SkipController.drainLoop();
+    }
+
+    // Complete skip mode
+    if(g.SkipController){
+      g.SkipController.complete();
     }
 
     if(game.phase==='livevote' && typeof g.beginDiaryRoomSequence==='function'){
@@ -1452,6 +1477,42 @@ header.innerHTML = `
         console.warn('[phase] fadeOutMusic error:', e);
       }
     }
+  }
+  
+  // Drainer for legacy cards, decision deck, tvOverlay
+  function legacyCardsDrainer(){
+    let didWork = false;
+    
+    // Remove any reveal cards
+    const revealCards = document.querySelectorAll('.revealCard');
+    if(revealCards.length > 0){
+      revealCards.forEach(card => card.remove());
+      didWork = true;
+    }
+    
+    // Remove decision deck
+    const decisionDeck = document.getElementById('decisionDeck');
+    if(decisionDeck){
+      decisionDeck.remove();
+      didWork = true;
+    }
+    
+    // Clear tvOverlay content
+    const tvOverlay = document.getElementById('tvOverlay');
+    if(tvOverlay && tvOverlay.children.length > 0){
+      tvOverlay.innerHTML = '';
+      tvOverlay.style.visibility = 'hidden';
+      didWork = true;
+    }
+    
+    // Clear any intro deck
+    const introDeck = document.getElementById('introDeck');
+    if(introDeck){
+      introDeck.remove();
+      didWork = true;
+    }
+    
+    return didWork;
   }
   
   // Check terminal state after evictions and jump to appropriate phase
@@ -1985,6 +2046,14 @@ header.innerHTML = `
     ensureAlivePlayersPatched();
     sanitizeJuryConsistency(true);
     updateHud();
+    
+    // Register skip drainers
+    if(g.SkipController){
+      g.SkipController.registerDrainer('legacyCards', legacyCardsDrainer);
+    }
+    if(g.SkipUtils){
+      g.SkipController?.registerDrainer('timeouts', g.SkipUtils.timeoutDrainer);
+    }
     
     // Listen for relations-updated events to refresh bio panel if open
     window.addEventListener('relations-updated', (e) => {

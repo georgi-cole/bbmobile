@@ -352,6 +352,20 @@
     const next = g.__decisionQueue.shift();
     if(!next){ clearDecisionDeck(); maskRevealOverlay(false); return; }
 
+    // If skip is active, auto-apply first action and continue
+    if(global.SkipController?.isActive()){
+      const firstAction = next.actions?.[0];
+      if(firstAction && firstAction.onChoose){
+        try{ firstAction.onChoose(); }catch(e){ console.error('[social] Error in skip auto-apply:', e); }
+      }
+      g.__decisionActive = false;
+      // Continue draining queue immediately
+      if(g.__decisionQueue.length > 0){
+        showNextDecision();
+      }
+      return;
+    }
+
     // Ensure reveal cards have completely finished before showing any decision
     try{ await global.cardQueueWaitIdle?.(); }catch{}
 
@@ -719,5 +733,49 @@
     
     console.info('[social.js] ✓ Defensive setPhase wrapper installed');
   })();
+
+  // Drainer for SkipController integration
+  function socialDecisionsDrainer(){
+    const g = global.game;
+    if(!g) return false;
+    
+    let didWork = false;
+    
+    // Auto-apply first action for all queued decisions
+    while(g.__decisionQueue && g.__decisionQueue.length > 0){
+      const decision = g.__decisionQueue.shift();
+      const firstAction = decision.actions?.[0];
+      if(firstAction && firstAction.onChoose){
+        try{
+          firstAction.onChoose();
+          didWork = true;
+        }catch(e){
+          console.error('[social] Error in drainer auto-apply:', e);
+        }
+      }
+    }
+    
+    // Clear active decision card
+    if(g.__decisionActive){
+      const deck = document.getElementById('decisionDeck');
+      if(deck){
+        deck.innerHTML = '';
+        didWork = true;
+      }
+      g.__decisionActive = false;
+      didWork = true;
+    }
+    
+    // Clear decision deck and overlay
+    clearDecisionDeck();
+    maskRevealOverlay(false);
+    
+    return didWork;
+  }
+
+  // Register drainer with SkipController
+  if(global.SkipController){
+    global.SkipController.registerDrainer('socialDecisions', socialDecisionsDrainer);
+  }
 
 })(window);
