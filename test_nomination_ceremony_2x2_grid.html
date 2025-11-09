@@ -119,6 +119,7 @@
   </div>
 
   <script src="js/ui.overlay-and-logs.js"></script>
+  <script src="js/ui/tv-cards.js"></script>
   <script>
     // Mock game data
     window.game = {
@@ -162,9 +163,18 @@
     ];
 
     // Test HOH speech
-    function testHohSpeech() {
+    async function testHohSpeech() {
       const hoh = window.getP(1);
-      if (window.buildCardWithAvatars) {
+      // Use TVCards.showTVCardWithAvatars if available
+      if (window.TVCards && window.TVCards.showTVCardWithAvatars) {
+        await window.TVCards.showTVCardWithAvatars({
+          title: 'Nomination Ceremony',
+          lines: [hoh.name + ' addresses the house.'],
+          tone: 'noms',
+          duration: 2400,
+          actorIds: hoh.id
+        });
+      } else if (window.buildCardWithAvatars) {
         const card = window.buildCardWithAvatars({
           title: 'Nomination Ceremony',
           lines: [hoh.name + ' addresses the house.'],
@@ -240,27 +250,35 @@
     }
 
     // Test ceremony end
-    function testCeremonyEnd() {
-      const host = document.getElementById('tvOverlay');
-      host.innerHTML = '';
-      
-      const card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard';
-      card.style.cssText = 'width: 90%; max-width: 450px; margin: 0 auto; padding: 20px 24px; text-align: center; animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;';
-      
-      const title = document.createElement('h3');
-      title.textContent = 'Nomination Ceremony';
-      title.style.marginBottom = '12px';
-      card.appendChild(title);
-      
-      const message = document.createElement('div');
-      message.className = 'big';
-      message.textContent = 'This ceremony is adjourned.';
-      message.style.fontSize = '0.9rem';
-      card.appendChild(message);
-      
-      host.appendChild(card);
-      document.getElementById('tv').classList.add('tvTall');
+    async function testCeremonyEnd() {
+      // Use shared TVCards.showTVCard function
+      if (window.TVCards && window.TVCards.showTVCard) {
+        await window.TVCards.showTVCard({
+          title: 'Nomination Ceremony',
+          lines: ['This ceremony is adjourned.'],
+          tone: 'noms',
+          duration: 2400
+        });
+      } else {
+        // Fallback to manual card creation
+        const host = document.getElementById('tvOverlay');
+        host.innerHTML = '';
+        
+        const card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard tvCardBody';
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Nomination Ceremony';
+        card.appendChild(title);
+        
+        const message = document.createElement('p');
+        message.className = 'big';
+        message.textContent = 'This ceremony is adjourned.';
+        card.appendChild(message);
+        
+        host.appendChild(card);
+        document.getElementById('tv').classList.add('tvTall');
+      }
       console.log('✅ Ceremony end message displayed');
     }
 
