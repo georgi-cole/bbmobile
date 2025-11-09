@@ -102,6 +102,55 @@
       `;
 
       // Add full-screen effects to overlay (behind modal)
+      
+      // Veto/POV effects - floating shields and strategic elements
+      if (theme === 'neutral' && type === 'veto') {
+        const vetoEffectsContainer = document.createElement('div');
+        vetoEffectsContainer.className = 'phase-intro-veto-bg';
+        vetoEffectsContainer.style.cssText = `
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
+        `;
+        
+        // Floating shield icons
+        const shields = ['🛡️'];
+        for (let i = 0; i < 8; i++) {
+          const shield = document.createElement('div');
+          shield.textContent = shields[0];
+          shield.style.cssText = `
+            position: absolute;
+            font-size: ${40 + Math.random() * 60}px;
+            opacity: ${0.08 + Math.random() * 0.12};
+            left: ${Math.random() * 100}%;
+            top: ${Math.random() * 100}%;
+            animation: float-drift ${15 + Math.random() * 15}s ease-in-out infinite;
+            animation-delay: ${Math.random() * 5}s;
+          `;
+          vetoEffectsContainer.appendChild(shield);
+        }
+        
+        // Glowing particles for strategic/power theme
+        for (let i = 0; i < 20; i++) {
+          const particle = document.createElement('div');
+          particle.style.cssText = `
+            position: absolute;
+            width: ${3 + Math.random() * 5}px;
+            height: ${3 + Math.random() * 5}px;
+            background: radial-gradient(circle, rgba(100, 149, 237, 0.6) 0%, transparent 70%);
+            border-radius: 50%;
+            left: ${Math.random() * 100}%;
+            top: ${Math.random() * 100}%;
+            animation: pulse-glow ${3 + Math.random() * 4}s ease-in-out infinite;
+            animation-delay: ${Math.random() * 3}s;
+          `;
+          vetoEffectsContainer.appendChild(particle);
+        }
+        
+        overlay.appendChild(vetoEffectsContainer);
+      }
+      
       // Flying emojis for social phase
       if (shouldAnimate && theme === 'social') {
         const emojiContainer = document.createElement('div');
@@ -146,6 +195,7 @@
           opacity: 0.7;
           box-shadow: 0 0 20px rgba(100, 149, 237, 0.6);
           pointer-events: none;
+          animation: led-pulse 3s ease-in-out infinite;
         `;
         overlay.appendChild(leftLED);
         
@@ -160,8 +210,25 @@
           opacity: 0.7;
           box-shadow: 0 0 20px rgba(100, 149, 237, 0.6);
           pointer-events: none;
+          animation: led-pulse 3s ease-in-out infinite;
+          animation-delay: 0.3s;
         `;
         overlay.appendChild(rightLED);
+        
+        // Add subtle spotlight effect
+        const spotlight = document.createElement('div');
+        spotlight.style.cssText = `
+          position: absolute;
+          top: -20%;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 60%;
+          height: 80%;
+          background: radial-gradient(ellipse at center top, rgba(100, 149, 237, 0.15) 0%, transparent 60%);
+          pointer-events: none;
+          animation: spotlight-fade 4s ease-in-out infinite;
+        `;
+        overlay.appendChild(spotlight);
         
         // Add large microphone watermark to overlay
         const micWatermark = document.createElement('div');
@@ -176,6 +243,22 @@
           user-select: none;
         `;
         overlay.appendChild(micWatermark);
+        
+        // Add camera recording indicator (subtle)
+        const recordingDot = document.createElement('div');
+        recordingDot.style.cssText = `
+          position: absolute;
+          top: 3%;
+          right: 3%;
+          width: 12px;
+          height: 12px;
+          background: #ff4444;
+          border-radius: 50%;
+          box-shadow: 0 0 10px rgba(255, 68, 68, 0.6);
+          pointer-events: none;
+          animation: recording-blink 2s ease-in-out infinite;
+        `;
+        overlay.appendChild(recordingDot);
       }
 
       // Create modal container
@@ -264,19 +347,95 @@
       modal.appendChild(content);
       overlay.appendChild(modal);
 
-      // Add CSS animation for flying emojis (if needed)
+      // Add CSS animations based on theme
+      const animationsNeeded = [];
+      
+      if (theme === 'neutral' && type === 'veto') {
+        animationsNeeded.push('veto');
+      }
       if (shouldAnimate && theme === 'social') {
+        animationsNeeded.push('social');
+      }
+      if (theme === 'diaryroom') {
+        animationsNeeded.push('diaryroom');
+      }
+      
+      if (animationsNeeded.length > 0) {
         const style = document.createElement('style');
-        style.textContent = `
-          @keyframes float-emoji {
-            0% {
-              transform: translateY(100vh) rotate(0deg);
+        let animations = '';
+        
+        if (animationsNeeded.includes('veto')) {
+          animations += `
+            @keyframes float-drift {
+              0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+              }
+              25% {
+                transform: translate(20px, -30px) rotate(5deg);
+              }
+              50% {
+                transform: translate(-15px, -60px) rotate(-3deg);
+              }
+              75% {
+                transform: translate(25px, -40px) rotate(4deg);
+              }
             }
-            100% {
-              transform: translateY(-100px) rotate(360deg);
+            @keyframes pulse-glow {
+              0%, 100% {
+                opacity: 0.3;
+                transform: scale(1);
+              }
+              50% {
+                opacity: 0.8;
+                transform: scale(1.5);
+              }
             }
-          }
-        `;
+          `;
+        }
+        
+        if (animationsNeeded.includes('social')) {
+          animations += `
+            @keyframes float-emoji {
+              0% {
+                transform: translateY(100vh) rotate(0deg);
+              }
+              100% {
+                transform: translateY(-100px) rotate(360deg);
+              }
+            }
+          `;
+        }
+        
+        if (animationsNeeded.includes('diaryroom')) {
+          animations += `
+            @keyframes led-pulse {
+              0%, 100% {
+                opacity: 0.6;
+              }
+              50% {
+                opacity: 0.9;
+              }
+            }
+            @keyframes spotlight-fade {
+              0%, 100% {
+                opacity: 0.8;
+              }
+              50% {
+                opacity: 1;
+              }
+            }
+            @keyframes recording-blink {
+              0%, 100% {
+                opacity: 1;
+              }
+              50% {
+                opacity: 0.3;
+              }
+            }
+          `;
+        }
+        
+        style.textContent = animations;
         document.head.appendChild(style);
       }
 
