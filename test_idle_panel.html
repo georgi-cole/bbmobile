@@ -112,23 +112,16 @@
       }
     }
 
-    // Setup game state if needed
-    if (!window.game) {
-      window.game = {
-        cfg: { IdlePhases: false },
-        week: 2,
-        phase: 'hoh',
-        humanId: 1,
-        lastHOHId: 1,
-        players: [
-          { id: 1, name: 'Human Player', evicted: false },
-          { id: 2, name: 'AI Player 1', evicted: false },
-          { id: 3, name: 'AI Player 2', evicted: false },
-          { id: 4, name: 'AI Player 3', evicted: false },
-          { id: 5, name: 'AI Player 4', evicted: false },
-          { id: 6, name: 'AI Player 5', evicted: false }
-        ]
-      };
+    // Setup game state - state.js creates window.game, so we just need to initialize players
+    if (window.game && (!window.game.players || window.game.players.length === 0)) {
+      window.game.players = [
+        { id: 1, name: 'Human Player', evicted: false },
+        { id: 2, name: 'AI Player 1', evicted: false },
+        { id: 3, name: 'AI Player 2', evicted: false },
+        { id: 4, name: 'AI Player 3', evicted: false },
+        { id: 5, name: 'AI Player 4', evicted: false },
+        { id: 6, name: 'AI Player 5', evicted: false }
+      ];
     }
 
     // Mock alivePlayers if not available
