@@ -3357,6 +3357,11 @@
       actorIds: g.vetoHolder
     });
     
+    // Clear all cards before phase transition
+    if(global.CardManager){
+      await global.CardManager.clear(true);
+    }
+    
     // Proceed to next phase
     g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
     g.__vetoCeremonyResolved = true;
