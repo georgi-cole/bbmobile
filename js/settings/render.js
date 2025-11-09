@@ -329,7 +329,7 @@
         const unlimited = cfg && cfg.debugUnlimitedTimer === true;
         const configDuration = (cfg && cfg.minigameDuration) || 180;
         
-        var options = {
+        const options = {
           debugMode: true
         };
         

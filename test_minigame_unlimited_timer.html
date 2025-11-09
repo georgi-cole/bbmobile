@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Unlimited Minigame Timer (∞)</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #83bfff;
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .test-section h2 {
+      color: #fbbf24;
+      font-size: 1.2rem;
+      margin-top: 0;
+    }
+    button {
+      background: #83bfff;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      opacity: 0.8;
+    }
+    button.success {
+      background: #22c55e;
+    }
+    button.danger {
+      background: #ef4444;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 8px 0;
+      font-size: 0.9rem;
+    }
+    .status.pass {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      color: #86efac;
+    }
+    .status.fail {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+    .status.info {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      color: #93c5fd;
+    }
+    .status.warn {
+      background: rgba(251, 191, 36, 0.2);
+      border: 1px solid rgba(251, 191, 36, 0.5);
+      color: #fbbf24;
+    }
+    .code {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Unlimited Minigame Timer Test (∞)</h1>
+  <p>This test validates that debug mode can launch minigames with an unlimited timer showing the infinity symbol (∞).</p>
+
+  <div class="status info">
+    <strong>Requirements:</strong>
+    <ul style="margin: 8px 0 0 20px;">
+      <li>Timer displays "Time: ∞" instead of countdown</li>
+      <li>No auto-timeout after 60+ seconds</li>
+      <li>Timer has aria-label="Unlimited debug session"</li>
+      <li>Normal debug mode (non-unlimited) still works</li>
+    </ul>
+  </div>
+
+  <!-- Test 1: Unlimited Timer -->
+  <div class="test-section">
+    <h2>Test 1: Unlimited Debug Timer</h2>
+    <p>Launch a minigame with <span class="code">unlimited: true</span> option. Timer should show "Time: ∞" and never expire.</p>
+    <button onclick="runTest1()">Launch Unlimited Timer Minigame</button>
+    <div id="test1-status"></div>
+  </div>
+
+  <!-- Test 2: Normal Timer (Fallback) -->
+  <div class="test-section">
+    <h2>Test 2: Normal Debug Timer (Control)</h2>
+    <p>Launch a minigame with normal timer (30 seconds). Timer should countdown normally.</p>
+    <button onclick="runTest2()">Launch Normal Timer Minigame</button>
+    <div id="test2-status"></div>
+  </div>
+
+  <!-- Test 3: Timer Display Validation -->
+  <div class="test-section">
+    <h2>Test 3: Manual Validation Checklist</h2>
+    <p>After launching the unlimited timer test, manually verify the following:</p>
+    <div id="test3-checklist">
+      <label style="display: block; margin: 8px 0;">
+        <input type="checkbox" id="check1"> Timer displays "Time: ∞" (infinity symbol)
+      </label>
+      <label style="display: block; margin: 8px 0;">
+        <input type="checkbox" id="check2"> Progress bar is visible (100% full)
+      </label>
+      <label style="display: block; margin: 8px 0;">
+        <input type="checkbox" id="check3"> Timer does NOT countdown after 70+ seconds
+      </label>
+      <label style="display: block; margin: 8px 0;">
+        <input type="checkbox" id="check4"> No "Time's Up" message appears
+      </label>
+      <label style="display: block; margin: 8px 0;">
+        <input type="checkbox" id="check5"> Close button (✕) still works to exit
+      </label>
+      <label style="display: block; margin: 8px 0;">
+        <input type="checkbox" id="check6"> Timer has accessible label (inspect with dev tools)
+      </label>
+    </div>
+    <button class="success" onclick="validateChecklist()" style="margin-top: 12px;">Validate Checklist</button>
+    <div id="test3-status"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/minigames/registry.js"></script>
+  <script src="js/minigames/selector.js"></script>
+  <script src="js/minigames/loader.js"></script>
+  <script src="js/competitions-flow.js"></script>
+  
+  <script>
+    // Initialize minimal game state
+    window.game = window.game || {
+      cfg: {
+        minigameDuration: 180,
+        debugUnlimitedTimer: false
+      },
+      timerPaused: false
+    };
+
+    // Mock pausePhaseTimer and resumePhaseTimer
+    window.pausePhaseTimer = function() {
+      console.log('[Mock] Phase timer paused');
+      window.game.timerPaused = true;
+    };
+    
+    window.resumePhaseTimer = function() {
+      console.log('[Mock] Phase timer resumed');
+      window.game.timerPaused = false;
+    };
+
+    // Test 1: Launch unlimited timer minigame
+    function runTest1() {
+      const statusDiv = document.getElementById('test1-status');
+      statusDiv.innerHTML = '<div class="status info">⏳ Launching minigame with unlimited timer...</div>';
+      
+      console.log('[Test 1] Launching minigame with unlimited timer');
+      
+      if (!window.CompetitionFlow || typeof window.CompetitionFlow.launchFullscreenMinigame !== 'function') {
+        statusDiv.innerHTML = '<div class="status fail">❌ CompetitionFlow not available</div>';
+        return;
+      }
+      
+      // Launch with unlimited options
+      try {
+        window.CompetitionFlow.launchFullscreenMinigame('quickTap', function(score) {
+          console.log('[Test 1] Minigame completed with score:', score);
+          statusDiv.innerHTML = `<div class="status pass">✅ Minigame completed with score: ${score.toFixed(1)}</div>`;
+        }, {
+          debugMode: true,
+          unlimited: true,
+          timeLimit: null,
+          disablePhaseTimerSync: true
+        });
+        
+        statusDiv.innerHTML = '<div class="status info">⏱️ Minigame launched! Check that timer shows "Time: ∞" and does not countdown.</div>';
+      } catch (error) {
+        console.error('[Test 1] Error:', error);
+        statusDiv.innerHTML = `<div class="status fail">❌ Error: ${error.message}</div>`;
+      }
+    }
+
+    // Test 2: Launch normal timer minigame (control)
+    function runTest2() {
+      const statusDiv = document.getElementById('test2-status');
+      statusDiv.innerHTML = '<div class="status info">⏳ Launching minigame with normal timer (30s)...</div>';
+      
+      console.log('[Test 2] Launching minigame with normal timer');
+      
+      if (!window.CompetitionFlow || typeof window.CompetitionFlow.launchFullscreenMinigame !== 'function') {
+        statusDiv.innerHTML = '<div class="status fail">❌ CompetitionFlow not available</div>';
+        return;
+      }
+      
+      // Launch with normal options
+      try {
+        window.CompetitionFlow.launchFullscreenMinigame('quickTap', function(score) {
+          console.log('[Test 2] Minigame completed with score:', score);
+          statusDiv.innerHTML = `<div class="status pass">✅ Minigame completed with score: ${score.toFixed(1)}</div>`;
+        }, {
+          debugMode: true,
+          timeLimit: 30
+        });
+        
+        statusDiv.innerHTML = '<div class="status info">⏱️ Minigame launched! Timer should countdown from 0:30 to 0:00.</div>';
+      } catch (error) {
+        console.error('[Test 2] Error:', error);
+        statusDiv.innerHTML = `<div class="status fail">❌ Error: ${error.message}</div>`;
+      }
+    }
+
+    // Validate manual checklist
+    function validateChecklist() {
+      const checks = [
+        document.getElementById('check1'),
+        document.getElementById('check2'),
+        document.getElementById('check3'),
+        document.getElementById('check4'),
+        document.getElementById('check5'),
+        document.getElementById('check6')
+      ];
+      
+      const allChecked = checks.every(check => check.checked);
+      const statusDiv = document.getElementById('test3-status');
+      
+      if (allChecked) {
+        statusDiv.innerHTML = '<div class="status pass">✅ All validations passed! Unlimited timer is working correctly.</div>';
+      } else {
+        const unchecked = checks.filter(check => !check.checked).length;
+        statusDiv.innerHTML = `<div class="status warn">⚠️ ${unchecked} item(s) not yet validated. Please complete all checks.</div>`;
+      }
+    }
+
+    // Auto-run info
+    console.log('🧪 Unlimited Timer Test Page Loaded');
+    console.log('Run Test 1 to launch minigame with unlimited timer (∞)');
+    console.log('Run Test 2 to launch minigame with normal timer (30s control)');
+  </script>
+</body>
+</html>
