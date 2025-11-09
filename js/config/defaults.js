@@ -50,6 +50,9 @@
     skipTurboHoldMs: 450,
     skipTurboGapMs: 100,
     
+    // Vote display settings (unified voting UI)
+    voteModalMs: 2600,  // Duration for unified vote modal display (default 2600ms)
+    
     // Audio
     musicOn: true,
     sfxOn: true,
