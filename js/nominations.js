@@ -84,38 +84,43 @@
       if(global.TVCards && typeof global.TVCards.showNominateIntro === 'function'){
         console.log('[noms] Using TVCards.showNominateIntro()');
         
-        global.TVCards.showNominateIntro({
-          hohName: hoh.name,
-          need: need,
-          onNominate: () => {
-            console.log('[noms] NOMINATE button clicked via TVCards');
-            
-            // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
-            if(global.NomsFS && typeof global.NomsFS.open === 'function'){
-              console.log('[noms] Using NomsFS.open()');
+        try {
+          global.TVCards.showNominateIntro({
+            hohName: hoh.name,
+            need: need,
+            onNominate: () => {
+              console.log('[noms] NOMINATE button clicked via TVCards');
               
-              global.NomsFS.open().then(selections => {
-                if(selections && Array.isArray(selections) && selections.length > 0){
-                  console.log('[noms] Selections from NomsFS.open():', selections);
-                  g._pendingNoms = selections.slice();
-                  finalizeNoms();
-                } else {
-                  console.warn('[noms] NomsFS.open() returned no selections, re-showing intro');
+              // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
+              if(global.NomsFS && typeof global.NomsFS.open === 'function'){
+                console.log('[noms] Using NomsFS.open()');
+                
+                global.NomsFS.open().then(selections => {
+                  if(selections && Array.isArray(selections) && selections.length > 0){
+                    console.log('[noms] Selections from NomsFS.open():', selections);
+                    g._pendingNoms = selections.slice();
+                    finalizeNoms();
+                  } else {
+                    console.warn('[noms] NomsFS.open() returned no selections, re-showing intro');
+                    renderNomsPanel(); // Re-show intro card
+                  }
+                }).catch(err => {
+                  console.error('[noms] NomsFS.open() error:', err);
                   renderNomsPanel(); // Re-show intro card
-                }
-              }).catch(err => {
-                console.error('[noms] NomsFS.open() error:', err);
-                renderNomsPanel(); // Re-show intro card
-              });
-            } else {
-              // NomsFS not available - log error and show message
-              console.error('[noms] NomsFS not available - fullscreen module not loaded');
-              alert('Nomination selector not available. Please refresh the page.');
+                });
+              } else {
+                // NomsFS not available - log error and show message
+                console.error('[noms] NomsFS not available - fullscreen module not loaded');
+                alert('Nomination selector not available. Please refresh the page.');
+              }
             }
-          }
-        });
-        
-        return;
+          });
+          
+          return;
+        } catch(err) {
+          console.error('[noms] TVCards.showNominateIntro() failed:', err);
+          // Fall through to manual fallback below
+        }
       }
       
       // Fallback: Manual card using proper TV overlay structure

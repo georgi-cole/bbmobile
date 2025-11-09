@@ -887,8 +887,11 @@ button:focus-visible,.btn:focus-visible{
 
 #tvOverlay{
   position:absolute; z-index:12;
-  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  inset: var(--tv-safe-top, 12px) var(--tv-safe-x, 12px) var(--tv-safe-bottom, 12px) var(--tv-safe-x, 12px);
   pointer-events:auto; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
+  /* Guard against zero-size collapse */
+  min-width: 1px;
+  min-height: 1px;
 }
 
 /* ===================================================================
@@ -3558,6 +3561,10 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   border:2px solid #213349; border-radius:18px; overflow:hidden;
   display:flex; flex-direction:column; justify-content:flex-start; padding:0; font-size:.72rem;
   box-shadow:0 16px 36px -22px rgba(0,0,0,.75);
+  /* Safe area defaults for overlay positioning - fallback if not set at root */
+  --tv-safe-top: 12px;
+  --tv-safe-bottom: 12px;
+  --tv-safe-x: 12px;
 }
 /* Custom TV background support (when user sets custom image) */
 .tv.hasTvBg{
@@ -3574,6 +3581,10 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
 .tv.tvTall{
   /* Fixed height to prevent flashing - same as base to maintain consistency */
   height: 520px;
+  /* Ensure safe area vars are defined for overlay positioning */
+  --tv-safe-top: 12px;
+  --tv-safe-bottom: 12px;
+  --tv-safe-x: 12px;
 }
 
 .tvHead{
@@ -3586,7 +3597,11 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
 
 #tvOverlay{
   position:absolute; z-index:12;
-  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  /* Use var() with fallbacks to prevent collapse if CSS vars undefined */
+  inset: var(--tv-safe-top, 12px) var(--tv-safe-x, 12px) var(--tv-safe-bottom, 12px) var(--tv-safe-x, 12px);
+  /* Guard against zero-size collapse */
+  min-width: 1px;
+  min-height: 1px;
   pointer-events:auto;  /* allow interactive cards */
   display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
 }
@@ -3730,6 +3745,10 @@ img{ max-width:100%; display:block; }
 .tv.tvTall{
   /* Fixed height to prevent flashing - same as base to maintain consistency */
   height: 520px;
+  /* Ensure safe area vars are defined for overlay positioning */
+  --tv-safe-top: 12px;
+  --tv-safe-bottom: 12px;
+  --tv-safe-x: 12px;
 }
 .tvViewport{
   position:relative;
@@ -3751,6 +3770,9 @@ img{ max-width:100%; display:block; }
   position:absolute; z-index:12;
   inset:0;
   pointer-events:auto; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
+  /* Guard against zero-size collapse */
+  min-width: 1px;
+  min-height: 1px;
 }
 #confetti{
   position:absolute; z-index:11;
@@ -3898,6 +3920,10 @@ img{ max-width:100%; display:block; }
 .tv.tvTall{
   /* Fixed height to prevent flashing - same as base to maintain consistency */
   height: 520px;
+  /* Ensure safe area vars are defined for overlay positioning */
+  --tv-safe-top: 12px;
+  --tv-safe-bottom: 12px;
+  --tv-safe-x: 12px;
 }
 
 .tvHead{
@@ -3911,9 +3937,12 @@ img{ max-width:100%; display:block; }
 /* Overlay and ticker respect safe area */
 #tvOverlay{
   position:absolute; z-index:12;
-  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  inset: var(--tv-safe-top, 12px) var(--tv-safe-x, 12px) var(--tv-safe-bottom, 12px) var(--tv-safe-x, 12px);
   display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
   pointer-events:auto;
+  /* Guard against zero-size collapse */
+  min-width: 1px;
+  min-height: 1px;
 }
 #confetti{
   position:absolute; z-index:11;
@@ -4069,6 +4098,10 @@ img{ max-width:100%; display:block; }
 .tv.tvTall{
   /* Fixed height to prevent flashing - same as base to maintain consistency */
   height: 520px;
+  /* Ensure safe area vars are defined for overlay positioning */
+  --tv-safe-top: 12px;
+  --tv-safe-bottom: 12px;
+  --tv-safe-x: 12px;
 }
 
 /* Background image layer constrained to the screen safe area */
@@ -4099,9 +4132,12 @@ img{ max-width:100%; display:block; }
 
 #tvOverlay{
   position:absolute; z-index:12;
-  inset: var(--tv-safe-top) var(--tv-safe-x) var(--tv-safe-bottom) var(--tv-safe-x);
+  inset: var(--tv-safe-top, 12px) var(--tv-safe-x, 12px) var(--tv-safe-bottom, 12px) var(--tv-safe-x, 12px);
   display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
   pointer-events:auto;
+  /* Guard against zero-size collapse */
+  min-width: 1px;
+  min-height: 1px;
 }
 #confetti{
   position:absolute; z-index:11;
