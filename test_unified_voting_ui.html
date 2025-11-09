@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Unified Voting UI</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+    }
+    .test-section h2 {
+      color: var(--accent);
+      margin-top: 0;
+    }
+    .test-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .test-controls button {
+      padding: 10px 16px;
+      background: var(--primary-2);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-s);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .test-controls button:hover {
+      background: var(--primary-3);
+    }
+    .status {
+      padding: 12px;
+      margin: 12px 0;
+      background: var(--card-2);
+      border-radius: var(--radius-s);
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .success { color: var(--good); }
+    .error { color: var(--bad); }
+    .info { color: var(--accent); }
+    
+    /* Test TV container */
+    #tv {
+      width: 100%;
+      max-width: 900px;
+      height: 500px;
+      margin: 20px auto;
+      background: linear-gradient(135deg, #1a2636, #0f1922);
+      border-radius: 16px;
+      border: 2px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <h1>Unified Voting UI Test Suite</h1>
+  <p class="muted">Tests for VoteDisplayManager and unified eviction voting display</p>
+
+  <!-- Test Section 1: Basic Vote Display -->
+  <div class="test-section">
+    <h2>Test 1: Basic Vote Display</h2>
+    <p>Shows a single vote using the unified avatar modal system.</p>
+    <div class="test-controls">
+      <button onclick="test1_showBasicVote()">Show Basic Vote</button>
+      <button onclick="test1_clearVote()">Clear Vote</button>
+    </div>
+    <div id="test1-status" class="status"></div>
+  </div>
+
+  <!-- Test Section 2: Sequential Votes -->
+  <div class="test-section">
+    <h2>Test 2: Sequential Vote Display</h2>
+    <p>Simulates a diary room sequence with multiple voters.</p>
+    <div class="test-controls">
+      <button onclick="test2_runSequence()">Run Sequence (3 votes)</button>
+      <button onclick="test2_stop()">Stop Sequence</button>
+    </div>
+    <div id="test2-status" class="status"></div>
+  </div>
+
+  <!-- Test Section 3: Fallback Mode -->
+  <div class="test-section">
+    <h2>Test 3: Fallback Mode (No TV Element)</h2>
+    <p>Tests fallback to legacy card system when TV element is unavailable.</p>
+    <div class="test-controls">
+      <button onclick="test3_testFallback()">Test Fallback (Hide TV)</button>
+      <button onclick="test3_restore()">Restore TV</button>
+    </div>
+    <div id="test3-status" class="status"></div>
+  </div>
+
+  <!-- Test Section 4: Artifact Cleanup -->
+  <div class="test-section">
+    <h2>Test 4: Legacy Artifact Cleanup</h2>
+    <p>Verifies that legacy 'Diary Room' cards are removed before showing unified modal.</p>
+    <div class="test-controls">
+      <button onclick="test4_createLegacyCards()">Create Legacy Cards</button>
+      <button onclick="test4_showUnifiedVote()">Show Unified Vote (Should Clear Legacy)</button>
+      <button onclick="test4_checkArtifacts()">Check for Artifacts</button>
+    </div>
+    <div id="test4-status" class="status"></div>
+  </div>
+
+  <!-- Test Section 5: Active State Check -->
+  <div class="test-section">
+    <h2>Test 5: VoteDisplayManager State</h2>
+    <p>Tests state management and body class toggling.</p>
+    <div class="test-controls">
+      <button onclick="test5_checkState()">Check State</button>
+      <button onclick="test5_showVoteLong()">Show Vote (5s)</button>
+    </div>
+    <div id="test5-status" class="status"></div>
+  </div>
+
+  <!-- TV Container -->
+  <div id="tv">
+    <div id="tvOverlay"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/eviction.js"></script>
+  <script>
+    // Mock game state and utilities
+    window.game = {
+      humanId: 1,
+      nominees: [2, 3],
+      cfg: {
+        voteModalMs: 2600
+      },
+      players: [
+        { id: 1, name: 'Player 1', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player1', evicted: false, human: true },
+        { id: 2, name: 'Player 2', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player2', evicted: false },
+        { id: 3, name: 'Player 3', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player3', evicted: false },
+        { id: 4, name: 'Player 4', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player4', evicted: false },
+        { id: 5, name: 'Player 5', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=player5', evicted: false }
+      ]
+    };
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Unknown';
+    };
+
+    window.resolveAvatar = function(player) {
+      return player.avatar;
+    };
+
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+
+    // Mock showCard for fallback testing
+    window.showCard = function(title, messages, tone, duration, important) {
+      console.log(`[Fallback showCard] ${title}: ${messages.join(', ')}`);
+      const status = document.getElementById('test3-status');
+      if (status) {
+        status.innerHTML = `<span class="info">✓ Fallback triggered: ${title} - ${messages.join(', ')}</span>`;
+      }
+    };
+
+    // Access VoteDisplayManager from eviction.js closure (will be undefined if module doesn't export it)
+    // For testing, we'll call the public showDiaryRoomWithAvatars function which uses VoteDisplayManager internally
+    
+    // Test 1: Basic Vote Display
+    function test1_showBasicVote() {
+      const status = document.getElementById('test1-status');
+      try {
+        // Use the public showDiaryRoomWithAvatars function
+        if (typeof window.showDiaryRoomWithAvatars === 'function') {
+          window.showDiaryRoomWithAvatars(1, 2, 'Player 1: I vote to evict Player 2.', 3000);
+          status.innerHTML = '<span class="success">✓ Vote displayed successfully</span>';
+        } else {
+          status.innerHTML = '<span class="error">✗ showDiaryRoomWithAvatars function not found</span>';
+        }
+      } catch (e) {
+        status.innerHTML = `<span class="error">✗ Error: ${e.message}</span>`;
+      }
+    }
+
+    function test1_clearVote() {
+      const status = document.getElementById('test1-status');
+      try {
+        const tvOverlay = document.getElementById('tvOverlay');
+        if (tvOverlay) {
+          tvOverlay.innerHTML = '';
+          document.body.classList.remove('vote-modal-active');
+          status.innerHTML = '<span class="success">✓ Vote cleared manually</span>';
+        }
+      } catch (e) {
+        status.innerHTML = `<span class="error">✗ Error: ${e.message}</span>`;
+      }
+    }
+
+    // Test 2: Sequential Votes
+    let test2_interval = null;
+    async function test2_runSequence() {
+      const status = document.getElementById('test2-status');
+      status.innerHTML = '<span class="info">Running sequence...</span>';
+      
+      const votes = [
+        { voterId: 4, targetId: 2, message: 'Player 4: I vote to evict Player 2.' },
+        { voterId: 5, targetId: 3, message: 'Player 5: I vote to evict Player 3.' },
+        { voterId: 1, targetId: 2, message: 'Player 1: I vote to evict Player 2.' }
+      ];
+
+      let index = 0;
+      const showNextVote = () => {
+        if (index >= votes.length) {
+          status.innerHTML = '<span class="success">✓ Sequence complete</span>';
+          return;
+        }
+
+        const vote = votes[index];
+        if (typeof window.showDiaryRoomWithAvatars === 'function') {
+          window.showDiaryRoomWithAvatars(vote.voterId, vote.targetId, vote.message, 2600);
+          status.innerHTML = `<span class="info">Showing vote ${index + 1} of ${votes.length}</span>`;
+          index++;
+          test2_interval = setTimeout(showNextVote, 2800); // Vote duration + gap
+        }
+      };
+
+      showNextVote();
+    }
+
+    function test2_stop() {
+      if (test2_interval) {
+        clearTimeout(test2_interval);
+        test2_interval = null;
+      }
+      const status = document.getElementById('test2-status');
+      status.innerHTML = '<span class="info">Sequence stopped</span>';
+      test1_clearVote();
+    }
+
+    // Test 3: Fallback Mode
+    let test3_hiddenTV = false;
+    function test3_testFallback() {
+      const status = document.getElementById('test3-status');
+      const tv = document.getElementById('tv');
+      
+      if (tv) {
+        tv.style.display = 'none';
+        test3_hiddenTV = true;
+        
+        // Try to show vote - should fallback to showCard
+        if (typeof window.showDiaryRoomWithAvatars === 'function') {
+          window.showDiaryRoomWithAvatars(1, 2, 'Player 1: I vote to evict Player 2.', 3000);
+          status.innerHTML = '<span class="info">TV hidden - check for fallback message above</span>';
+        }
+      }
+    }
+
+    function test3_restore() {
+      const status = document.getElementById('test3-status');
+      const tv = document.getElementById('tv');
+      
+      if (tv) {
+        tv.style.display = '';
+        test3_hiddenTV = false;
+        status.innerHTML = '<span class="success">✓ TV restored</span>';
+      }
+    }
+
+    // Test 4: Artifact Cleanup
+    function test4_createLegacyCards() {
+      const status = document.getElementById('test4-status');
+      
+      // Create fake legacy cards
+      const card1 = document.createElement('div');
+      card1.className = 'revealCard';
+      card1.textContent = 'Diary Room: Old vote card 1';
+      document.body.appendChild(card1);
+      
+      const card2 = document.createElement('div');
+      card2.className = 'revealCard';
+      card2.textContent = 'Diary Room: Old vote card 2';
+      document.body.appendChild(card2);
+      
+      status.innerHTML = '<span class="info">Created 2 legacy "Diary Room" cards in DOM</span>';
+    }
+
+    function test4_showUnifiedVote() {
+      const status = document.getElementById('test4-status');
+      
+      if (typeof window.showDiaryRoomWithAvatars === 'function') {
+        window.showDiaryRoomWithAvatars(1, 2, 'Player 1: I vote to evict Player 2.', 3000);
+        status.innerHTML = '<span class="info">Unified vote shown - legacy cards should be cleared</span>';
+        
+        // Check after a short delay
+        setTimeout(() => {
+          test4_checkArtifacts();
+        }, 500);
+      }
+    }
+
+    function test4_checkArtifacts() {
+      const status = document.getElementById('test4-status');
+      const cards = Array.from(document.querySelectorAll('.revealCard'));
+      const legacyCards = cards.filter(card => {
+        const text = card.textContent || '';
+        return text.includes('Diary Room') && !card.classList.contains('diaryRoomCard');
+      });
+      
+      if (legacyCards.length === 0) {
+        status.innerHTML = '<span class="success">✓ No legacy artifacts found - cleanup successful</span>';
+      } else {
+        status.innerHTML = `<span class="error">✗ Found ${legacyCards.length} legacy artifact(s)</span>`;
+      }
+    }
+
+    // Test 5: State Check
+    function test5_checkState() {
+      const status = document.getElementById('test5-status');
+      
+      // Check body class
+      const hasClass = document.body.classList.contains('vote-modal-active');
+      
+      // Check tvOverlay content
+      const tvOverlay = document.getElementById('tvOverlay');
+      const hasContent = tvOverlay && tvOverlay.children.length > 0;
+      
+      status.innerHTML = `
+        <div>Body class 'vote-modal-active': ${hasClass ? '<span class="success">YES</span>' : '<span class="muted">NO</span>'}</div>
+        <div>TV Overlay has content: ${hasContent ? '<span class="success">YES</span>' : '<span class="muted">NO</span>'}</div>
+      `;
+    }
+
+    function test5_showVoteLong() {
+      const status = document.getElementById('test5-status');
+      
+      if (typeof window.showDiaryRoomWithAvatars === 'function') {
+        window.showDiaryRoomWithAvatars(1, 2, 'Player 1: I vote to evict Player 2.', 5000);
+        status.innerHTML = '<span class="info">Vote displayed for 5 seconds - check state</span>';
+        
+        // Check state after 1 second
+        setTimeout(() => {
+          test5_checkState();
+        }, 1000);
+      }
+    }
+
+    // Initial state check
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('Test page loaded');
+      console.log('showDiaryRoomWithAvatars available:', typeof window.showDiaryRoomWithAvatars);
+    });
+  </script>
+</body>
+</html>

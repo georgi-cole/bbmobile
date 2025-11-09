@@ -7591,3 +7591,28 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 
 /* Decision buttons: consistent sizing */
 #tvOverlay .revealCard .veto-decision-row button{ min-height: 44px; font-weight: 700; letter-spacing: .3px; }
+
+/* ============================================================================
+   UNIFIED VOTING UI (VoteDisplayManager)
+   Hide legacy panels when unified vote modal is active
+   ============================================================================ */
+
+/* When vote modal is active, hide conflicting legacy UI elements */
+body.vote-modal-active #legacyVotePanel,
+body.vote-modal-active .lv-rollout-overlay,
+body.vote-modal-active .lv-overlay {
+  display: none !important;
+}
+
+/* Ensure vote modal appears above all other UI */
+body.vote-modal-active #tvOverlay {
+  z-index: 1000;
+}
+
+/* Ensure vote modal cards are centered and properly sized */
+body.vote-modal-active #tvOverlay .diaryRoomCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}

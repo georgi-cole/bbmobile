@@ -15,6 +15,262 @@
 
   function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
+  // ======= VOTE DISPLAY MANAGER =======
+  // Central manager for unified voting UI - prevents duplicate/overlapping cards
+  const VoteDisplayManager = {
+    active: false,
+    currentTimeout: null,
+    suppressLegacy: false,
+    currentCard: null,
+
+    /**
+     * Show a vote using the avatar modal (unified UI)
+     * @param {number} voterId - ID of the voter
+     * @param {number} targetId - ID of the target/nominee
+     * @param {string} message - Vote message text
+     * @param {number} duration - Display duration in ms (default from config or 2600)
+     */
+    showVote(voterId, targetId, message, duration) {
+      const g = global.game;
+      
+      // Use config duration if not specified
+      if (!duration) {
+        duration = g?.cfg?.voteModalMs || 2600;
+      }
+
+      // Clear any existing vote display first
+      this.clear();
+
+      // Purge legacy artifacts before showing new modal
+      this.clearLegacyArtifacts();
+
+      // Get player objects
+      const voter = global.getP?.(voterId);
+      const target = global.getP?.(targetId);
+      
+      // Fallback: if players not resolved or TV element missing, use legacy card
+      if (!voter || !target) {
+        console.warn('[VoteDisplayManager] Player objects not resolved, using fallback');
+        if (!this.suppressLegacy && global.showCard) {
+          global.showCard('Diary Room', [message], 'live', duration, true);
+        }
+        return;
+      }
+
+      // Check for TV overlay
+      const tv = document.getElementById('tv');
+      if (!tv) {
+        console.warn('[VoteDisplayManager] TV element not found, using fallback');
+        if (!this.suppressLegacy && global.showCard) {
+          global.showCard('Diary Room', [message], 'live', duration, true);
+        }
+        return;
+      }
+
+      // Get or create tvOverlay
+      let tvOverlay = document.getElementById('tvOverlay');
+      if (!tvOverlay) {
+        tvOverlay = document.createElement('div');
+        tvOverlay.id = 'tvOverlay';
+        tv.appendChild(tvOverlay);
+      }
+
+      // Mark as active
+      this.active = true;
+      document.body.classList.add('vote-modal-active');
+
+      // Ensure TV grows to accommodate card
+      tv.classList.add('tvTall');
+
+      // Get avatars with fallback
+      const voterAvatar = global.resolveAvatar?.(voter) || voter.avatar || getDicebearUrl(voter.name);
+      const targetAvatar = global.resolveAvatar?.(target) || target.avatar || getDicebearUrl(target.name);
+
+      // Create custom card with avatars
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard';
+      card.style.cssText = `
+        background: linear-gradient(135deg, #1c2b3e, #0e1a28);
+        border: 2px solid rgba(120,180,240,0.5);
+        border-radius: 20px;
+        padding: 24px 28px;
+        box-shadow: 0 24px 64px -24px rgba(0,0,0,0.95), 0 8px 24px -8px rgba(0,0,0,0.7);
+        max-width: min(480px, 92%);
+        width: 100%;
+        text-align: center;
+        pointer-events: auto;
+        margin: auto;
+      `;
+
+      const title = document.createElement('div');
+      title.textContent = 'Diary Room';
+      title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
+      card.appendChild(title);
+
+      const avatarRow = document.createElement('div');
+      avatarRow.style.cssText = 'display: flex; justify-content: center; align-items: center; margin-bottom: 18px; gap: 16px;';
+
+      // Voter avatar container
+      const voterContainer = document.createElement('div');
+      voterContainer.style.cssText = `
+        width: clamp(64px, 16vw, 88px); 
+        height: clamp(64px, 16vw, 88px); 
+        border-radius: 50%; 
+        border: 3px solid #7cffad; 
+        overflow: hidden;
+        box-shadow: 0 6px 16px rgba(124,255,173,0.4), 0 0 0 1px rgba(124,255,173,0.2);
+        flex-shrink: 0;
+      `;
+      
+      const voterImg = document.createElement('img');
+      voterImg.src = voterAvatar;
+      voterImg.alt = voter.name;
+      voterImg.onerror = function() {
+        console.warn(`[VoteDisplayManager] Failed to load avatar for ${voter.name}`);
+        this.onerror = null;
+        this.src = getDicebearUrl(voter.name);
+      };
+      voterImg.style.cssText = `
+        width: 100%; 
+        height: 100%; 
+        object-fit: cover;
+        display: block;
+      `;
+      voterContainer.appendChild(voterImg);
+
+      const arrow = document.createElement('div');
+      arrow.textContent = '→';
+      arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
+
+      // Target avatar container
+      const targetContainer = document.createElement('div');
+      targetContainer.style.cssText = `
+        width: clamp(64px, 16vw, 88px); 
+        height: clamp(64px, 16vw, 88px); 
+        border-radius: 50%; 
+        border: 3px solid #ff6b6b; 
+        overflow: hidden;
+        box-shadow: 0 6px 16px rgba(255,107,107,0.4), 0 0 0 1px rgba(255,107,107,0.2);
+        flex-shrink: 0;
+      `;
+      
+      const targetImg = document.createElement('img');
+      targetImg.src = targetAvatar;
+      targetImg.alt = target.name;
+      targetImg.onerror = function() {
+        console.warn(`[VoteDisplayManager] Failed to load avatar for ${target.name}`);
+        this.onerror = null;
+        this.src = getDicebearUrl(target.name);
+      };
+      targetImg.style.cssText = `
+        width: 100%; 
+        height: 100%; 
+        object-fit: cover;
+        display: block;
+      `;
+      targetContainer.appendChild(targetImg);
+
+      avatarRow.appendChild(voterContainer);
+      avatarRow.appendChild(arrow);
+      avatarRow.appendChild(targetContainer);
+      card.appendChild(avatarRow);
+
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = message;
+      messageDiv.style.cssText = 'font-size: clamp(0.9rem, 2.2vw, 1.05rem); color: #e8f4ff; line-height: 1.5; font-weight: 500;';
+      card.appendChild(messageDiv);
+
+      // Clear any existing content and append new card
+      tvOverlay.innerHTML = '';
+      tvOverlay.appendChild(card);
+      tvOverlay.style.visibility = '';
+      
+      // Store reference to current card
+      this.currentCard = card;
+
+      // Auto-remove after duration
+      this.currentTimeout = setTimeout(() => {
+        this.clear();
+      }, duration);
+    },
+
+    /**
+     * Clear the current vote modal display
+     */
+    clear() {
+      // Clear timeout if exists
+      if (this.currentTimeout) {
+        clearTimeout(this.currentTimeout);
+        this.currentTimeout = null;
+      }
+
+      // Remove card
+      if (this.currentCard) {
+        try {
+          this.currentCard.remove();
+        } catch (e) {
+          console.warn('[VoteDisplayManager] Error removing card:', e);
+        }
+        this.currentCard = null;
+      }
+
+      // Clean up tvOverlay
+      const tvOverlay = document.getElementById('tvOverlay');
+      if (tvOverlay) {
+        tvOverlay.innerHTML = '';
+      }
+
+      // Remove body class
+      document.body.classList.remove('vote-modal-active');
+
+      // Remove tvTall class if overlay is empty
+      const tv = document.getElementById('tv');
+      if (tv && tvOverlay && tvOverlay.children.length === 0) {
+        tv.classList.remove('tvTall');
+      }
+
+      this.active = false;
+    },
+
+    /**
+     * Check if vote modal is currently active
+     */
+    isActive() {
+      return this.active;
+    },
+
+    /**
+     * Clear legacy diary room artifacts that might conflict
+     */
+    clearLegacyArtifacts() {
+      // Remove any .revealCard elements with 'Diary Room' text
+      const cards = document.querySelectorAll('.revealCard');
+      cards.forEach(card => {
+        const text = card.textContent || '';
+        if (text.includes('Diary Room') && !card.classList.contains('diaryRoomCard')) {
+          try {
+            card.remove();
+          } catch (e) {
+            console.warn('[VoteDisplayManager] Error removing legacy card:', e);
+          }
+        }
+      });
+
+      // Hide LiveVoteOverlay if showing
+      if (global.LiveVoteOverlay?.isOpen?.()) {
+        try {
+          global.LiveVoteOverlay.hide();
+        } catch (e) {
+          console.warn('[VoteDisplayManager] Error hiding LiveVoteOverlay:', e);
+        }
+      }
+
+      // Hide LiveVoteRollout if showing (but don't interfere if it's intentionally shown)
+      // We'll be more selective here - only hide if we're about to show a vote modal
+      // The rollout might be intentionally shown during the voting sequence
+    }
+  };
+
   // Eviction result phrase variants
   const EVICTION_PHRASES = [
     'you have been evicted.',
@@ -524,146 +780,9 @@
   }
 
   // Helper to show diary room card with avatars (Issue #5)
+  // Now acts as a wrapper around VoteDisplayManager for backward compatibility
   function showDiaryRoomWithAvatars(voterId, targetId, message, duration=3000){
-    const voter = global.getP?.(voterId);
-    const target = global.getP?.(targetId);
-    if(!voter || !target) {
-      global.showCard?.('Diary Room', [message], 'live', duration, true);
-      return;
-    }
-
-    // Get avatars with fallback
-    const voterAvatar = global.resolveAvatar?.(voter) || voter.avatar || 
-      getDicebearUrl(voter.name);
-    const targetAvatar = global.resolveAvatar?.(target) || target.avatar || 
-      getDicebearUrl(target.name);
-
-    // Get or create TV overlay container
-    let tvOverlay = document.getElementById('tvOverlay');
-    if(!tvOverlay){
-      const tv = document.getElementById('tv');
-      if(!tv) {
-        console.warn('[DiaryRoom] TV element not found, falling back to showCard');
-        global.showCard?.('Diary Room', [message], 'live', duration, true);
-        return;
-      }
-      tvOverlay = document.createElement('div');
-      tvOverlay.id = 'tvOverlay';
-      tv.appendChild(tvOverlay);
-    }
-
-    // Ensure TV grows to accommodate card
-    const tv = document.getElementById('tv');
-    if(tv) tv.classList.add('tvTall');
-
-    // Create custom card with avatars - positioned within tvOverlay
-    const card = document.createElement('div');
-    card.className = 'revealCard diaryRoomCard';
-    card.style.cssText = `
-      background: linear-gradient(135deg, #1c2b3e, #0e1a28);
-      border: 2px solid rgba(120,180,240,0.5);
-      border-radius: 20px;
-      padding: 24px 28px;
-      box-shadow: 0 24px 64px -24px rgba(0,0,0,0.95), 0 8px 24px -8px rgba(0,0,0,0.7);
-      max-width: min(480px, 92%);
-      width: 100%;
-      text-align: center;
-      pointer-events: auto;
-      margin: auto;
-    `;
-
-    const title = document.createElement('div');
-    title.textContent = 'Diary Room';
-    title.style.cssText = 'font-size: 1.2rem; font-weight: 700; color: #ffd96b; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(255,217,107,0.3);';
-    card.appendChild(title);
-
-    const avatarRow = document.createElement('div');
-    avatarRow.style.cssText = 'display: flex; justify-content: center; align-items: center; margin-bottom: 18px; gap: 16px;';
-
-    // Voter avatar with container div for proper aspect ratio handling
-    const voterContainer = document.createElement('div');
-    voterContainer.style.cssText = `
-      width: clamp(64px, 16vw, 88px); 
-      height: clamp(64px, 16vw, 88px); 
-      border-radius: 50%; 
-      border: 3px solid #7cffad; 
-      overflow: hidden;
-      box-shadow: 0 6px 16px rgba(124,255,173,0.4), 0 0 0 1px rgba(124,255,173,0.2);
-      flex-shrink: 0;
-    `;
-    
-    const voterImg = document.createElement('img');
-    voterImg.src = voterAvatar;
-    voterImg.alt = voter.name;
-    voterImg.onerror = function(){
-      console.warn(`[avatar] failed to load url=${this.src} player=${voter.name}`);
-      this.onerror=null;
-      this.src=getDicebearUrl(voter.name);
-    };
-    voterImg.style.cssText = `
-      width: 100%; 
-      height: 100%; 
-      object-fit: cover;
-      display: block;
-    `;
-    voterContainer.appendChild(voterImg);
-
-    const arrow = document.createElement('div');
-    arrow.textContent = '→';
-    arrow.style.cssText = 'font-size: clamp(1.8rem, 4.5vw, 2.4rem); color: #ff6b6b; font-weight: 700; flex-shrink: 0; text-shadow: 0 2px 8px rgba(255,107,107,0.5);';
-
-    // Target avatar with container div for proper aspect ratio handling
-    const targetContainer = document.createElement('div');
-    targetContainer.style.cssText = `
-      width: clamp(64px, 16vw, 88px); 
-      height: clamp(64px, 16vw, 88px); 
-      border-radius: 50%; 
-      border: 3px solid #ff6b6b; 
-      overflow: hidden;
-      box-shadow: 0 6px 16px rgba(255,107,107,0.4), 0 0 0 1px rgba(255,107,107,0.2);
-      flex-shrink: 0;
-    `;
-    
-    const targetImg = document.createElement('img');
-    targetImg.src = targetAvatar;
-    targetImg.alt = target.name;
-    targetImg.onerror = function(){
-      console.warn(`[avatar] failed to load url=${this.src} player=${target.name}`);
-      this.onerror=null;
-      this.src=getDicebearUrl(target.name);
-    };
-    targetImg.style.cssText = `
-      width: 100%; 
-      height: 100%; 
-      object-fit: cover;
-      display: block;
-    `;
-    targetContainer.appendChild(targetImg);
-
-    avatarRow.appendChild(voterContainer);
-    avatarRow.appendChild(arrow);
-    avatarRow.appendChild(targetContainer);
-    card.appendChild(avatarRow);
-
-    const messageDiv = document.createElement('div');
-    messageDiv.textContent = message;
-    messageDiv.style.cssText = 'font-size: clamp(0.9rem, 2.2vw, 1.05rem); color: #e8f4ff; line-height: 1.5; font-weight: 500;';
-    card.appendChild(messageDiv);
-
-    // Clear any existing content and append new card
-    tvOverlay.innerHTML = '';
-    tvOverlay.appendChild(card);
-    tvOverlay.style.visibility = '';
-
-    // Auto-remove after duration
-    setTimeout(() => {
-      try{ 
-        card.remove(); 
-        if(tv && tvOverlay && tvOverlay.children.length === 0){
-          tv.classList.remove('tvTall');
-        }
-      }catch{}
-    }, duration);
+    VoteDisplayManager.showVote(voterId, targetId, message, duration);
   }
 
   /* ----- Diary Room Sequence (Animated / Per Voter) ----- */
@@ -675,6 +794,10 @@
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
     const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    
+    // Disable lv2 per-vote UI when using unified system (useLv2PerVote = false)
+    const useLv2PerVote = false; // Set to false to unify by eliminating lv2 separate per-vote UI
+    
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
 
@@ -689,7 +812,18 @@
       // Pause on human turn until they actually vote (no auto vote)
       if(entry.voter===g.humanId && entry.evict==null){
         markVoter(entry.voter,'your turn…');
-        if(!useLv2){ global.showCard?.('Diary Room',["It's your turn. Please cast your vote now."],'live',2000,true); } else{ global.lv2?.setTurn?.(true); }
+        
+        // Show inline hint inside the modal instead of legacy card
+        if(!useLv2PerVote && !useLv2){
+          // For unified system without lv2, show hint inside modal
+          const hintMessage = "It's your turn. Cast your vote.";
+          VoteDisplayManager.showVote(entry.voter, noms[0], hintMessage, 2000);
+          await sleep(2000);
+          VoteDisplayManager.clear();
+        } else if(useLv2){
+          global.lv2?.setTurn?.(true);
+        }
+        
         try{ await waitForHumanVote(); }catch{}
         entry.evict = g.__human_vote;
         if(useLv2){ global.lv2?.setTurn?.(false); }
@@ -699,14 +833,23 @@
       const nameV=global.safeName(entry.voter), namePick=global.safeName(pick);
       markVoter(entry.voter,'voting…');
       
-      // Issue #5: Show diary room with avatars
-      if(!useLv2){ showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
-      await sleep(3000);
-      } else { await sleep(1500); }
+      // Use VoteDisplayManager for all per-vote displays (unified system)
+      const voteMessage = `${nameV}: I vote to evict ${namePick}.`;
+      const voteDuration = g.cfg?.voteModalMs || 2600;
+      
+      if(!useLv2PerVote){
+        // Unified system: Use VoteDisplayManager
+        VoteDisplayManager.showVote(entry.voter, pick, voteMessage, voteDuration);
+        await sleep(voteDuration);
+      } else if(useLv2){
+        // Legacy lv2 path (kept for compatibility)
+        await sleep(1500);
+      }
+      
       try{ await global.cardQueueWaitIdle?.(); }catch{}
 
-      // Hook: Push vote to lv2 if enabled and 2-nom mode
-      if(twoMode && global.lv2?.pushVote){
+      // Hook: Push vote to lv2 if enabled and 2-nom mode (for tally updates)
+      if(twoMode && global.lv2?.pushVote && useLv2PerVote){
         const [leftId, rightId] = noms;
         const votePick = pick === leftId ? 'left' : 'right';
         global.lv2.pushVote({
@@ -883,6 +1026,11 @@
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
     const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+
+    // Clear any active vote modal before showing results
+    VoteDisplayManager.clear();
+    // Purge any duplicate 'Diary Room' cards
+    VoteDisplayManager.clearLegacyArtifacts();
 
     if(twoMode){
       let ca=preAorCounts, cb=preB;
@@ -1089,6 +1237,11 @@
   async function multiEvictFinalize(evictedIds,counts,K){
     const g=global.game;
     const modeLabel=(K===3)?'Triple Eviction':'Double Eviction';
+    
+    // Clear any active vote modal before showing results
+    VoteDisplayManager.clear();
+    // Purge any duplicate 'Diary Room' cards
+    VoteDisplayManager.clearLegacyArtifacts();
     
     // Calculate finalRank for multi-evictions (Issue #3)
     // Rank by votes (more votes = earlier out = lower placement), then alphabetically, then randomly
