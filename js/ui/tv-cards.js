@@ -16,11 +16,18 @@
   /**
    * Ensure TV overlay scaffold exists with proper structure.
    * Creates .tvDim (backdrop) and .tvOverlayContent (content container) if missing.
+   * Also ensures #tv has tvTall class for proper sizing.
    * @returns {HTMLElement|null} The tvOverlayContent element, or null if #tvOverlay not found
    */
   function ensureTVOverlay(){
     var tvOverlay = document.getElementById('tvOverlay');
     if(!tvOverlay) return null;
+    
+    // Ensure #tv has tvTall class for proper overlay space
+    var tv = document.getElementById('tv');
+    if(tv && !tv.classList.contains('tvTall')){
+      tv.classList.add('tvTall');
+    }
     
     // Check if scaffold already exists
     var dim = tvOverlay.querySelector('.tvDim');
