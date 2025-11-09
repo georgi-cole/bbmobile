@@ -30,37 +30,6 @@
     return EVICTION_PHRASES[Math.floor(Math.random()*EVICTION_PHRASES.length)];
   }
 
-  // Guard flag to prevent legacy Diary Room cards while avatar modal is active
-  let __drAvatarModalActive = false;
-
-  /**
-   * Remove any on-screen legacy 'Diary Room' revealCards and purge queued items from card queue.
-   * Best-effort DOM removal to prevent duplicate Diary Room UIs.
-   */
-  function clearLegacyDiaryRoomCards(){
-    try{
-      // Remove any .diaryRoomCard elements from TV overlay
-      const tvOverlay = document.getElementById('tvOverlay');
-      if(tvOverlay){
-        const diaryCards = tvOverlay.querySelectorAll('.revealCard.diaryRoomCard');
-        diaryCards.forEach(card => {
-          // Only remove if it's a Diary Room title (not other cards that use diaryRoomCard class)
-          const titleEl = card.querySelector('h3');
-          if(titleEl && titleEl.textContent.trim().toLowerCase().includes('diary room')){
-            card.remove();
-          }
-        });
-      }
-      
-      // Note: CardQueue purging would require access to the internal queue,
-      // which is not exposed. The queue deduplication system should prevent
-      // duplicates naturally, and any in-flight cards will be replaced by the
-      // avatar modal's explicit tvOverlay.innerHTML = ''.
-    }catch(e){
-      console.warn('[clearLegacyDiaryRoomCards] Error:', e);
-    }
-  }
-
   function startLiveVote(){
     const g=global.game;
     g.eviction={
@@ -559,10 +528,7 @@
     const voter = global.getP?.(voterId);
     const target = global.getP?.(targetId);
     if(!voter || !target) {
-      // Only show legacy card if avatar modal is not active
-      if(!__drAvatarModalActive){
-        global.showCard?.('Diary Room', [message], 'live', duration, true);
-      }
+      global.showCard?.('Diary Room', [message], 'live', duration, true);
       return;
     }
 
@@ -578,22 +544,13 @@
       const tv = document.getElementById('tv');
       if(!tv) {
         console.warn('[DiaryRoom] TV element not found, falling back to showCard');
-        // Only show legacy card if avatar modal is not active
-        if(!__drAvatarModalActive){
-          global.showCard?.('Diary Room', [message], 'live', duration, true);
-        }
+        global.showCard?.('Diary Room', [message], 'live', duration, true);
         return;
       }
       tvOverlay = document.createElement('div');
       tvOverlay.id = 'tvOverlay';
       tv.appendChild(tvOverlay);
     }
-
-    // Set flag to prevent legacy cards while avatar modal is active
-    __drAvatarModalActive = true;
-    
-    // Clear any legacy Diary Room cards that may be showing
-    clearLegacyDiaryRoomCards();
 
     // Ensure TV grows to accommodate card
     const tv = document.getElementById('tv');
@@ -705,12 +662,7 @@
         if(tv && tvOverlay && tvOverlay.children.length === 0){
           tv.classList.remove('tvTall');
         }
-        // Clear flag when avatar modal is removed
-        __drAvatarModalActive = false;
-      }catch{
-        // Ensure flag is cleared even on error
-        __drAvatarModalActive = false;
-      }
+      }catch{}
     }, duration);
   }
 
@@ -737,9 +689,7 @@
       // Pause on human turn until they actually vote (no auto vote)
       if(entry.voter===g.humanId && entry.evict==null){
         markVoter(entry.voter,'your turn…');
-        // Pre-turn hint removed for non-lv2 path to avoid overlapping with avatar modal
-        // The voting UI already provides sufficient indication that it's the user's turn
-        if(useLv2){ global.lv2?.setTurn?.(true); }
+        if(!useLv2){ global.showCard?.('Diary Room',["It's your turn. Please cast your vote now."],'live',2000,true); } else{ global.lv2?.setTurn?.(true); }
         try{ await waitForHumanVote(); }catch{}
         entry.evict = g.__human_vote;
         if(useLv2){ global.lv2?.setTurn?.(false); }
