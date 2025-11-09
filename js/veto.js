@@ -922,11 +922,20 @@
   }
   global.installLegacyVetoPanelBlocker = installLegacyVetoPanelBlocker;
   
+  // ======= TV CARD FUNCTIONS (Delegated to js/ui/tv-cards.js) =======
+  // These functions are now implemented in js/ui/tv-cards.js for reuse across all ceremonies.
+  // Veto.js maintains these wrappers for backward compatibility.
+  
   function ensureTVOverlayScaffold(){
+    // Delegate to TVCards module if available, otherwise fallback
+    if(global.TVCards && global.TVCards.ensureTVOverlay){
+      return global.TVCards.ensureTVOverlay();
+    }
+    
+    // Fallback implementation (if module not yet loaded)
     var tvOverlay = document.getElementById('tvOverlay');
     if(!tvOverlay) return null;
     
-    // Check if scaffold already exists
     var dim = tvOverlay.querySelector('.tvDim');
     var content = tvOverlay.querySelector('.tvOverlayContent');
     
@@ -946,6 +955,12 @@
   }
   
   function clearTVOverlayContent(){
+    // Delegate to TVCards module if available, otherwise fallback
+    if(global.TVCards && global.TVCards.clearTVOverlay){
+      return global.TVCards.clearTVOverlay();
+    }
+    
+    // Fallback implementation
     var content = document.querySelector('.tvOverlayContent');
     if(content) content.innerHTML = '';
   }
@@ -990,6 +1005,12 @@
   }
   
   function showTVCard({title, lines, tone, duration}){
+    // Delegate to TVCards module if available
+    if(global.TVCards && global.TVCards.showTVCard){
+      return global.TVCards.showTVCard({title, lines, tone, duration});
+    }
+    
+    // Fallback implementation
     return new Promise(function(resolve){
       var content = ensureTVOverlayScaffold();
       if(!content){ resolve(); return; }
@@ -1040,6 +1061,12 @@
    * @returns {Promise} Resolves when card is dismissed
    */
   function showTVCardWithAvatars({title, lines, tone, duration, actorIds, subjectIds}){
+    // Delegate to TVCards module if available
+    if(global.TVCards && global.TVCards.showTVCardWithAvatars){
+      return global.TVCards.showTVCardWithAvatars({title, lines, tone, duration, actorIds, subjectIds});
+    }
+    
+    // Fallback implementation
     return new Promise(function(resolve){
       var content = ensureTVOverlayScaffold();
       if(!content){ resolve(); return; }
@@ -1190,6 +1217,12 @@
   }
   
   function showTVDecision({title, message, buttons}){
+    // Delegate to TVCards module if available
+    if(global.TVCards && global.TVCards.showTVDecision){
+      return global.TVCards.showTVDecision({title, message, buttons});
+    }
+    
+    // Fallback implementation
     return new Promise(function(resolve){
       var content = ensureTVOverlayScaffold();
       if(!content){ resolve(null); return; }
@@ -1260,6 +1293,12 @@
   }
   
   function showTVNomineeSavePanel({title, nominees, povId}){
+    // Delegate to TVCards module if available
+    if(global.TVCards && global.TVCards.showTVNomineeSavePanel){
+      return global.TVCards.showTVNomineeSavePanel({title, nominees, povId});
+    }
+    
+    // Fallback implementation
     return new Promise(function(resolve){
       var content = ensureTVOverlayScaffold();
       if(!content){ resolve(null); return; }

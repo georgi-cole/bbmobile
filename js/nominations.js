@@ -95,26 +95,34 @@
     // If already locked/committed, show in-TV message
     if(g.nomsLocked || g.__nomsCommitInProgress || g.__nomsCommitted){
       const names = (g.nominees||[]).map(global.safeName).join(', ') || '—';
-      // Show a simple in-TV card
-      const host = document.getElementById('tvOverlay');
-      if(host){
-        host.innerHTML = '';
-        const card = document.createElement('div');
-        card.className = 'revealCard diaryRoomCard';
-        card.style.cssText = 'max-width: 92%; padding: 16px; margin: 0 auto; text-align: center;';
-        
-        const title = document.createElement('h3');
-        title.textContent = 'Nominations';
-        title.style.marginBottom = '8px';
-        card.appendChild(title);
-        
-        const info = document.createElement('div');
-        info.className = 'big';
-        info.textContent = `Locked. Nominees: ${names}.`;
-        card.appendChild(info);
-        
-        host.appendChild(card);
-        document.getElementById('tv')?.classList.add('tvTall');
+      // Use TVCards.showInlineCard if available, otherwise fallback
+      if(global.TVCards && global.TVCards.showInlineCard){
+        global.TVCards.showInlineCard({
+          title: 'Nominations',
+          content: `Locked. Nominees: ${names}.`,
+          tone: 'noms',
+          duration: 0 // Manual dismiss
+        });
+      } else {
+        // Fallback: Show a simple in-TV card
+        const host = document.getElementById('tvOverlay');
+        if(host){
+          host.innerHTML = '';
+          const card = document.createElement('div');
+          card.className = 'revealCard diaryRoomCard tvCardBody';
+          
+          const title = document.createElement('h3');
+          title.textContent = 'Nominations';
+          card.appendChild(title);
+          
+          const info = document.createElement('p');
+          info.className = 'big';
+          info.textContent = `Locked. Nominees: ${names}.`;
+          card.appendChild(info);
+          
+          host.appendChild(card);
+          document.getElementById('tv')?.classList.add('tvTall');
+        }
       }
       return;
     }
@@ -241,25 +249,33 @@
       }
       
       // Show simple in-TV message for AI
-      const host = document.getElementById('tvOverlay');
-      if(host){
-        host.innerHTML = '';
-        const card = document.createElement('div');
-        card.className = 'revealCard diaryRoomCard';
-        card.style.cssText = 'max-width: 92%; padding: 16px; margin: 0 auto; text-align: center;';
-        
-        const title = document.createElement('h3');
-        title.textContent = 'Nominations';
-        title.style.marginBottom = '8px';
-        card.appendChild(title);
-        
-        const info = document.createElement('div');
-        info.className = 'tiny muted';
-        info.textContent = 'HOH is considering nominations…';
-        card.appendChild(info);
-        
-        host.appendChild(card);
-        document.getElementById('tv')?.classList.add('tvTall');
+      if(global.TVCards && global.TVCards.showInlineCard){
+        global.TVCards.showInlineCard({
+          title: 'Nominations',
+          content: 'HOH is considering nominations…',
+          tone: 'noms',
+          duration: 0
+        });
+      } else {
+        // Fallback
+        const host = document.getElementById('tvOverlay');
+        if(host){
+          host.innerHTML = '';
+          const card = document.createElement('div');
+          card.className = 'revealCard diaryRoomCard tvCardBody';
+          
+          const title = document.createElement('h3');
+          title.textContent = 'Nominations';
+          card.appendChild(title);
+          
+          const info = document.createElement('p');
+          info.className = 'tiny muted';
+          info.textContent = 'HOH is considering nominations…';
+          card.appendChild(info);
+          
+          host.appendChild(card);
+          document.getElementById('tv')?.classList.add('tvTall');
+        }
       }
     }
   }
@@ -567,48 +583,48 @@
         }
       }
       
-      // Step 4: Show ceremony conclusion message (faux TV styled like nominee cards)
-      await new Promise((resolve) => {
-        const host = document.getElementById('tvOverlay');
-        if(host){
-          host.innerHTML = '';
-          
-          const card = document.createElement('div');
-          card.className = 'revealCard diaryRoomCard';
-          card.style.cssText = `
-            width: 90%;
-            max-width: 450px;
-            margin: 0 auto;
-            padding: 20px 24px;
-            text-align: center;
-            animation: cardFloatIn 0.65s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
-          `;
-          
-          const title = document.createElement('h3');
-          title.textContent = 'Nomination Ceremony';
-          title.style.marginBottom = '12px';
-          card.appendChild(title);
-          
-          const message = document.createElement('div');
-          message.className = 'big';
-          message.textContent = 'This ceremony is adjourned.';
-          message.style.fontSize = '0.9rem';
-          card.appendChild(message);
-          
-          host.appendChild(card);
-          document.getElementById('tv')?.classList.add('tvTall');
-          
-          setTimeout(() => {
+      // Step 4: Show ceremony conclusion message (use TVCards if available)
+      if(global.TVCards && global.TVCards.showTVCard){
+        await global.TVCards.showTVCard({
+          title: 'Nomination Ceremony',
+          lines: ['This ceremony is adjourned.'],
+          tone: 'noms',
+          duration: 2000
+        });
+      } else {
+        // Fallback: manual card creation
+        await new Promise((resolve) => {
+          const host = document.getElementById('tvOverlay');
+          if(host){
             host.innerHTML = '';
-            document.getElementById('tv')?.classList.remove('tvTall');
-            resolve();
-          }, 2000);
-        } else {
-          // Fallback
-          global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
-          setTimeout(resolve, 2000);
-        }
-      });
+            
+            const card = document.createElement('div');
+            card.className = 'revealCard diaryRoomCard tvCardBody';
+            
+            const title = document.createElement('h3');
+            title.textContent = 'Nomination Ceremony';
+            card.appendChild(title);
+            
+            const message = document.createElement('p');
+            message.className = 'big';
+            message.textContent = 'This ceremony is adjourned.';
+            card.appendChild(message);
+            
+            host.appendChild(card);
+            document.getElementById('tv')?.classList.add('tvTall');
+            
+            setTimeout(() => {
+              host.innerHTML = '';
+              document.getElementById('tv')?.classList.remove('tvTall');
+              resolve();
+            }, 2000);
+          } else {
+            // Fallback
+            global.showCard?.('Nomination Ceremony', ['This ceremony is adjourned.'], 'noms', 2000, true);
+            setTimeout(resolve, 2000);
+          }
+        });
+      }
 
       // TV screen cards disappear, nominee tags update, game advances
       g.__suppressNomBadges = false; global.updateHud?.();
