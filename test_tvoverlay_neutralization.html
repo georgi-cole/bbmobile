@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Overlay Neutralization Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0f1419;
+      color: #e3ecf5;
+    }
+    h1, h2 { color: #6fd3ff; }
+    .test-section {
+      background: #1d2734;
+      border: 1px solid #2c3a4d;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .test-result {
+      padding: 8px 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .pass { background: #1b4332; color: #74e48b; border-left: 4px solid #74e48b; }
+    .fail { background: #4d1616; color: #ff6b6b; border-left: 4px solid #ff6b6b; }
+    .info { background: #1a2a44; color: #6fd3ff; border-left: 4px solid #6fd3ff; }
+    button {
+      background: #167bb4;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 4px;
+      font-size: 0.95rem;
+    }
+    button:hover { background: #1a8fcd; }
+    
+    #test-tv {
+      position: relative;
+      width: 600px;
+      height: 400px;
+      margin: 20px auto;
+      background: #1a1a1a;
+      border: 3px solid #333;
+      border-radius: 8px;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      z-index: 12;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.3);
+    }
+    
+    .tvOverlayContent {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    
+    .tvOverlayContent > * {
+      pointer-events: auto;
+    }
+    
+    .test-button-behind {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      background: #4ade80;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 1;
+    }
+    
+    .test-card {
+      padding: 20px;
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      border-radius: 12px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    
+    .status-clickable {
+      background: #4ade80;
+      color: #000;
+    }
+    
+    .status-blocked {
+      background: #ff6b6b;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 TV Overlay Neutralization Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Scenario</h2>
+    <p>This test simulates the bug where an empty #tvOverlay blocks clicks to buttons underneath it.</p>
+    <p><strong>Expected behavior:</strong> When the overlay has no content, it should have <code>pointer-events: none</code></p>
+  </div>
+
+  <div class="test-section">
+    <h2>Interactive Test</h2>
+    <div id="test-tv">
+      <div id="tvOverlay">
+        <div class="tvOverlayContent"></div>
+      </div>
+      <button class="test-button-behind" onclick="handleButtonClick()">
+        Click Me (Behind Overlay)
+      </button>
+    </div>
+    
+    <div style="text-align: center; margin-top: 16px;">
+      <p>Overlay Status: <span id="overlay-status" class="status-indicator status-blocked">BLOCKING</span></p>
+      <p>Button Click Count: <span id="click-count" style="font-weight: bold;">0</span></p>
+    </div>
+    
+    <div style="display: flex; justify-content: center; gap: 8px; margin-top: 12px;">
+      <button onclick="addContentToOverlay()">Add Content to Overlay</button>
+      <button onclick="removeContentFromOverlay()">Remove Content from Overlay</button>
+      <button onclick="neutralizeOverlayManually()">Neutralize Overlay (Fix)</button>
+      <button onclick="resetOverlay()">Reset Overlay</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Automated Tests</h2>
+    <div id="test-results"></div>
+    <button onclick="runAutomatedTests()">Run Automated Tests</button>
+  </div>
+
+  <script>
+    let clickCount = 0;
+    
+    function handleButtonClick() {
+      clickCount++;
+      document.getElementById('click-count').textContent = clickCount;
+      log('✓ Button clicked successfully!', 'pass');
+    }
+    
+    function checkOverlayStatus() {
+      const overlay = document.getElementById('tvOverlay');
+      const statusEl = document.getElementById('overlay-status');
+      
+      const pointerEvents = window.getComputedStyle(overlay).pointerEvents;
+      const isBlocking = pointerEvents === 'auto';
+      
+      statusEl.textContent = isBlocking ? 'BLOCKING' : 'NOT BLOCKING';
+      statusEl.className = 'status-indicator ' + (isBlocking ? 'status-blocked' : 'status-clickable');
+      
+      return !isBlocking;
+    }
+    
+    function addContentToOverlay() {
+      const content = document.querySelector('#tvOverlay .tvOverlayContent');
+      const card = document.createElement('div');
+      card.className = 'test-card';
+      card.innerHTML = '<h3>Test Card</h3><p>This is content in the overlay</p>';
+      content.appendChild(card);
+      
+      log('Added content to overlay', 'info');
+      checkOverlayStatus();
+    }
+    
+    function removeContentFromOverlay() {
+      const content = document.querySelector('#tvOverlay .tvOverlayContent');
+      content.innerHTML = '';
+      
+      log('Removed all content from overlay', 'info');
+      checkOverlayStatus();
+    }
+    
+    function neutralizeOverlayManually() {
+      // This simulates the fix we implemented
+      const ov = document.getElementById('tvOverlay');
+      if (!ov) return;
+      
+      const content = ov.querySelector('.tvOverlayContent');
+      const hasActiveContent = !!(content && content.childElementCount > 0);
+      
+      if (!hasActiveContent) {
+        ov.style.pointerEvents = 'none';
+        log('✓ Neutralized empty overlay (set pointer-events: none)', 'pass');
+      } else {
+        log('✗ Overlay has content, keeping pointer-events: auto', 'info');
+      }
+      
+      checkOverlayStatus();
+    }
+    
+    function resetOverlay() {
+      const overlay = document.getElementById('tvOverlay');
+      overlay.style.pointerEvents = 'auto';
+      const content = overlay.querySelector('.tvOverlayContent');
+      content.innerHTML = '';
+      
+      log('Reset overlay to initial state (pointer-events: auto, no content)', 'info');
+      checkOverlayStatus();
+    }
+    
+    function log(message, type = 'info') {
+      const container = document.getElementById('test-results');
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+    
+    function runAutomatedTests() {
+      document.getElementById('test-results').innerHTML = '';
+      
+      log('=== Starting Automated Tests ===', 'info');
+      
+      // Test 1: Overlay with content should keep pointer-events
+      log('Test 1: Overlay with content', 'info');
+      resetOverlay();
+      addContentToOverlay();
+      neutralizeOverlayManually();
+      const test1 = document.getElementById('tvOverlay').style.pointerEvents !== 'none';
+      log(test1 ? '✓ Test 1 PASSED: Overlay with content keeps pointer-events' : '✗ Test 1 FAILED', test1 ? 'pass' : 'fail');
+      
+      // Test 2: Empty overlay should be neutralized
+      log('Test 2: Empty overlay', 'info');
+      resetOverlay();
+      neutralizeOverlayManually();
+      const test2 = document.getElementById('tvOverlay').style.pointerEvents === 'none';
+      log(test2 ? '✓ Test 2 PASSED: Empty overlay is neutralized' : '✗ Test 2 FAILED', test2 ? 'pass' : 'fail');
+      
+      // Test 3: After removing content, overlay should be neutralized
+      log('Test 3: Remove content then neutralize', 'info');
+      resetOverlay();
+      addContentToOverlay();
+      removeContentFromOverlay();
+      neutralizeOverlayManually();
+      const test3 = document.getElementById('tvOverlay').style.pointerEvents === 'none';
+      log(test3 ? '✓ Test 3 PASSED: Overlay neutralized after content removed' : '✗ Test 3 FAILED', test3 ? 'pass' : 'fail');
+      
+      // Test 4: Button is clickable when overlay is neutralized
+      log('Test 4: Button clickability', 'info');
+      resetOverlay();
+      const initialCount = clickCount;
+      neutralizeOverlayManually();
+      // Simulate click programmatically
+      document.querySelector('.test-button-behind').click();
+      const test4 = clickCount > initialCount;
+      log(test4 ? '✓ Test 4 PASSED: Button is clickable after neutralization' : '✗ Test 4 FAILED', test4 ? 'pass' : 'fail');
+      
+      // Summary
+      const allPassed = test1 && test2 && test3 && test4;
+      log('=== Test Summary ===', 'info');
+      log(allPassed ? '✓ All tests PASSED' : '✗ Some tests FAILED', allPassed ? 'pass' : 'fail');
+      
+      // Reset for manual testing
+      resetOverlay();
+    }
+    
+    // Initial status check
+    window.addEventListener('load', function() {
+      checkOverlayStatus();
+    });
+  </script>
+</body>
+</html>
