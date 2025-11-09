@@ -153,7 +153,144 @@
         border-radius: 50%;
       }
 
+      /* Nokia Image Shell Theme Styles */
+      .snake-phone-shell {
+        --phone-width: 300px;
+        --phone-height: 600px;
+        --lcd-top: 60px;
+        --lcd-left: 40px;
+        --lcd-width: 220px;
+        --lcd-height: 180px;
+        --keypad-top: 305px;
+        --keypad-btn-size: 40px;
+        
+        position: relative;
+        width: var(--phone-width);
+        height: var(--phone-height);
+        background-image: url('assets/skins/nokia3310-shell.svg');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        margin: 20px auto;
+      }
+
+      .snake-phone-shell .snake-nokia-canvas-container {
+        position: absolute;
+        top: var(--lcd-top);
+        left: var(--lcd-left);
+        width: var(--lcd-width);
+        height: var(--lcd-height);
+        background: transparent;
+        padding: 0;
+        border-radius: 4px;
+        box-shadow: none;
+      }
+
+      .snake-phone-shell .snake-nokia-canvas {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+
+      .snake-phone-shell .snake-nokia-status {
+        top: 5px;
+        left: 5px;
+        font-size: 9px;
+      }
+
+      .snake-phone-shell .snake-nokia-scanlines {
+        border-radius: 4px;
+      }
+
+      .snake-keypad-overlay {
+        position: absolute;
+        top: var(--keypad-top);
+        left: 50%;
+        transform: translateX(-50%);
+        width: 180px;
+        height: 130px;
+      }
+
+      .snake-keypad-btn {
+        position: absolute;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        width: var(--keypad-btn-size);
+        height: var(--keypad-btn-size);
+        padding: 0;
+        transition: background 0.1s ease;
+      }
+
+      .snake-keypad-btn:active {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+      }
+
+      .snake-keypad-btn-up {
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        height: 45px;
+      }
+
+      .snake-keypad-btn-down {
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        height: 45px;
+      }
+
+      .snake-keypad-btn-left {
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 50px;
+      }
+
+      .snake-keypad-btn-right {
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 50px;
+      }
+
+      /* Responsive scaling */
+      @media (max-width: 768px) {
+        .snake-phone-shell {
+          --phone-width: 270px;
+          --phone-height: 540px;
+          --lcd-top: 54px;
+          --lcd-left: 36px;
+          --lcd-width: 198px;
+          --lcd-height: 162px;
+          --keypad-top: 275px;
+          --keypad-btn-size: 36px;
+        }
+        
+        .snake-keypad-overlay {
+          width: 162px;
+          height: 117px;
+        }
+      }
+
       @media (max-width: 480px) {
+        .snake-phone-shell {
+          --phone-width: 240px;
+          --phone-height: 480px;
+          --lcd-top: 48px;
+          --lcd-left: 32px;
+          --lcd-width: 176px;
+          --lcd-height: 144px;
+          --keypad-top: 244px;
+          --keypad-btn-size: 32px;
+        }
+        
+        .snake-keypad-overlay {
+          width: 144px;
+          height: 104px;
+        }
+
         .snake-nokia-dpad {
           grid-template-columns: repeat(3, 60px);
           grid-template-rows: repeat(3, 60px);
@@ -183,24 +320,37 @@
     const { 
       debugMode = false, 
       competitionMode = false,
-      variant = 'normal' // 'normal' or 'portal'
+      variant = 'normal', // 'normal' or 'portal'
+      theme = 'nokia' // 'nokia', 'nokia-shell', or 'nokia-image-shell'
     } = options;
     
     const portalMode = variant === 'portal';
+    const useImageShell = theme === 'nokia-image-shell';
     
     // Inject styles
     injectStyles();
     
     const wrapper = document.createElement('div');
-    wrapper.className = 'snake-nokia-wrapper';
+    wrapper.className = useImageShell ? 'snake-phone-shell' : 'snake-nokia-wrapper';
     
-    const title = document.createElement('h3');
-    title.textContent = portalMode ? 'Snake (Portal Mode)' : 'Snake';
-    title.className = 'snake-nokia-title';
+    // For image shell theme, don't show title/instructions separately
+    if (!useImageShell) {
+      const title = document.createElement('h3');
+      title.textContent = portalMode ? 'Snake (Portal Mode)' : 'Snake';
+      title.className = 'snake-nokia-title';
+      wrapper.appendChild(title);
+      
+      const instructions = document.createElement('p');
+      instructions.textContent = portalMode ? 'Eat food, grow, edges wrap around!' : 'Eat food, avoid walls and yourself!';
+      instructions.className = 'snake-nokia-instructions';
+      wrapper.appendChild(instructions);
+    }
     
-    const instructions = document.createElement('p');
-    instructions.textContent = portalMode ? 'Eat food, grow, edges wrap around!' : 'Eat food, avoid walls and yourself!';
-    instructions.className = 'snake-nokia-instructions';
+    // Store instructions element for later updates (game over message)
+    let instructions = null;
+    if (!useImageShell) {
+      instructions = wrapper.querySelector('.snake-nokia-instructions');
+    }
     
     // Canvas container with bezel
     const canvasContainer = document.createElement('div');
@@ -260,10 +410,47 @@
       return btn;
     }
     
-    wrapper.appendChild(title);
-    wrapper.appendChild(instructions);
+    // Append canvas container
     wrapper.appendChild(canvasContainer);
-    wrapper.appendChild(controlsDiv);
+    
+    // For image shell theme, create transparent keypad overlay instead of D-pad
+    if (useImageShell) {
+      const keypadOverlay = document.createElement('div');
+      keypadOverlay.className = 'snake-keypad-overlay';
+      
+      const keypadBtnUp = document.createElement('button');
+      keypadBtnUp.className = 'snake-keypad-btn snake-keypad-btn-up';
+      keypadBtnUp.setAttribute('aria-label', 'up');
+      
+      const keypadBtnDown = document.createElement('button');
+      keypadBtnDown.className = 'snake-keypad-btn snake-keypad-btn-down';
+      keypadBtnDown.setAttribute('aria-label', 'down');
+      
+      const keypadBtnLeft = document.createElement('button');
+      keypadBtnLeft.className = 'snake-keypad-btn snake-keypad-btn-left';
+      keypadBtnLeft.setAttribute('aria-label', 'left');
+      
+      const keypadBtnRight = document.createElement('button');
+      keypadBtnRight.className = 'snake-keypad-btn snake-keypad-btn-right';
+      keypadBtnRight.setAttribute('aria-label', 'right');
+      
+      keypadOverlay.appendChild(keypadBtnUp);
+      keypadOverlay.appendChild(keypadBtnDown);
+      keypadOverlay.appendChild(keypadBtnLeft);
+      keypadOverlay.appendChild(keypadBtnRight);
+      
+      wrapper.appendChild(keypadOverlay);
+      
+      // Store keypad buttons for later event handling
+      btnUp._keypadBtn = keypadBtnUp;
+      btnDown._keypadBtn = keypadBtnDown;
+      btnLeft._keypadBtn = keypadBtnLeft;
+      btnRight._keypadBtn = keypadBtnRight;
+    } else {
+      // Use traditional D-pad for non-image-shell themes
+      wrapper.appendChild(controlsDiv);
+    }
+    
     container.appendChild(wrapper);
     
     // Game state
@@ -355,8 +542,11 @@
       gameOver = true;
       clearInterval(gameLoop);
       
-      instructions.textContent = 'Game Over!';
-      instructions.style.color = '#ff6b6b';
+      // Update instructions if they exist (not in image shell theme)
+      if (instructions) {
+        instructions.textContent = 'Game Over!';
+        instructions.style.color = '#ff6b6b';
+      }
       
       // Score based on food eaten
       let rawScore;
@@ -422,14 +612,18 @@
       }
     });
     
-    // D-pad button handlers with haptic feedback
+    // D-pad/keypad button handlers with haptic feedback
     function addDPadHandler(btn, dir) {
       const handler = (e) => {
         if(!gameOver) {
           e.preventDefault();
           setDirection(dir);
-          btn.classList.add('snake-nokia-dpad-pressed');
-          setTimeout(() => btn.classList.remove('snake-nokia-dpad-pressed'), 100);
+          
+          // Add visual feedback if not using image shell
+          if (!useImageShell) {
+            btn.classList.add('snake-nokia-dpad-pressed');
+            setTimeout(() => btn.classList.remove('snake-nokia-dpad-pressed'), 100);
+          }
           
           // Haptic feedback
           if(navigator.vibrate) {
@@ -442,10 +636,20 @@
       btn.addEventListener('click', handler);
     }
     
-    addDPadHandler(btnUp, {x:0, y:-1});
-    addDPadHandler(btnDown, {x:0, y:1});
-    addDPadHandler(btnLeft, {x:-1, y:0});
-    addDPadHandler(btnRight, {x:1, y:0});
+    // Add handlers for either D-pad or keypad buttons depending on theme
+    if (useImageShell) {
+      // Use keypad overlay buttons
+      addDPadHandler(btnUp._keypadBtn, {x:0, y:-1});
+      addDPadHandler(btnDown._keypadBtn, {x:0, y:1});
+      addDPadHandler(btnLeft._keypadBtn, {x:-1, y:0});
+      addDPadHandler(btnRight._keypadBtn, {x:1, y:0});
+    } else {
+      // Use traditional D-pad buttons
+      addDPadHandler(btnUp, {x:0, y:-1});
+      addDPadHandler(btnDown, {x:0, y:1});
+      addDPadHandler(btnLeft, {x:-1, y:0});
+      addDPadHandler(btnRight, {x:1, y:0});
+    }
     
     // Swipe controls on canvas
     let touchStartX = 0;
