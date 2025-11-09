@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake - Nokia 3310 Image Shell Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e3ecf5;
+    }
+    h1 { 
+      color: #4a90e2; 
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .description {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+    }
+    .description h2 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    .description ul {
+      line-height: 1.8;
+    }
+    .description code {
+      background: #0f1419;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #83bfff;
+    }
+    .test-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: #1a1f2e;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #2c3a4d;
+      text-align: center;
+      flex: 1;
+      min-width: 320px;
+      max-width: 400px;
+    }
+    .test-section h3 {
+      color: #83bfff;
+      margin-top: 0;
+    }
+    button {
+      background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .game-container {
+      display: flex;
+      justify-content: center;
+      min-height: 650px;
+      margin-top: 20px;
+    }
+    .controls {
+      margin: 15px 0;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background: #0f1419;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #95a9c0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐍 Snake - Nokia 3310 Image Shell Test</h1>
+  
+  <div class="description">
+    <h2>✨ Nokia 3310 Image Shell Theme</h2>
+    <ul>
+      <li><strong>Theme:</strong> <code>theme: 'nokia-image-shell'</code></li>
+      <li><strong>Phone Shell:</strong> SVG image of Nokia 3310 at <code>assets/skins/nokia3310-shell.svg</code></li>
+      <li><strong>LCD Positioning:</strong> Game canvas positioned absolutely within phone's LCD area</li>
+      <li><strong>Transparent Keypad:</strong> Four invisible buttons overlaid on phone's arrow keys</li>
+      <li><strong>Responsive Scaling:</strong> CSS variables adjust positioning for different screen sizes</li>
+      <li><strong>Controls:</strong> Keyboard (arrows/WASD), swipe on canvas, and keypad overlay all work</li>
+      <li><strong>Preserved Features:</strong> All game logic, scoring, and competition mode unchanged</li>
+    </ul>
+  </div>
+
+  <div class="test-container">
+    <div class="test-section">
+      <h3>Image Shell Theme</h3>
+      <p>Snake game rendered inside Nokia 3310 phone</p>
+      <div class="controls">
+        <button onclick="startImageShellNormal()">▶ Normal Mode</button>
+        <button onclick="startImageShellPortal()">▶ Portal Mode</button>
+        <button onclick="stopGame('gameContainer1')" id="stopBtn1" disabled>⏹ Stop</button>
+      </div>
+      <div id="gameContainer1" class="game-container"></div>
+      <div id="status1" class="status">Ready to play</div>
+    </div>
+
+    <div class="test-section">
+      <h3>Traditional Nokia Theme (comparison)</h3>
+      <p>Original Nokia UI with D-pad</p>
+      <div class="controls">
+        <button onclick="startTraditionalNormal()">▶ Normal Mode</button>
+        <button onclick="startTraditionalPortal()">▶ Portal Mode</button>
+        <button onclick="stopGame('gameContainer2')" id="stopBtn2" disabled>⏹ Stop</button>
+      </div>
+      <div id="gameContainer2" class="game-container"></div>
+      <div id="status2" class="status">Ready to play</div>
+    </div>
+  </div>
+
+  <div class="description" style="margin-top: 40px;">
+    <h2>🎮 Test Checklist</h2>
+    <ul>
+      <li>✅ Image shell displays correctly with phone visible</li>
+      <li>✅ Canvas is positioned inside LCD area of phone</li>
+      <li>✅ Status line (LEN/F count) visible in LCD</li>
+      <li>✅ Transparent keypad buttons respond to clicks/taps</li>
+      <li>✅ Keyboard arrow keys work</li>
+      <li>✅ Swipe gestures work on canvas</li>
+      <li>✅ Game logic unchanged (normal vs portal mode)</li>
+      <li>✅ Responsive layout adapts to screen size</li>
+      <li>✅ Traditional theme still works (backward compatibility)</li>
+    </ul>
+  </div>
+
+  <script src="js/minigames/snake.js"></script>
+  <script>
+    let currentGame = { container1: null, container2: null };
+
+    function startImageShellNormal() {
+      const container = document.getElementById('gameContainer1');
+      const status = document.getElementById('status1');
+      container.innerHTML = '';
+      status.textContent = 'Playing: Normal Mode with Image Shell';
+      document.getElementById('stopBtn1').disabled = false;
+      
+      window.MiniGames.snake.render(container, (score) => {
+        console.log('Image shell normal game ended. Score:', score);
+        status.textContent = `Game Over! Score: ${score}`;
+        document.getElementById('stopBtn1').disabled = true;
+      }, { 
+        variant: 'normal', 
+        theme: 'nokia-image-shell',
+        debugMode: true 
+      });
+    }
+
+    function startImageShellPortal() {
+      const container = document.getElementById('gameContainer1');
+      const status = document.getElementById('status1');
+      container.innerHTML = '';
+      status.textContent = 'Playing: Portal Mode with Image Shell';
+      document.getElementById('stopBtn1').disabled = false;
+      
+      window.MiniGames.snake.render(container, (score) => {
+        console.log('Image shell portal game ended. Score:', score);
+        status.textContent = `Game Over! Score: ${score}`;
+        document.getElementById('stopBtn1').disabled = true;
+      }, { 
+        variant: 'portal', 
+        theme: 'nokia-image-shell',
+        debugMode: true 
+      });
+    }
+
+    function startTraditionalNormal() {
+      const container = document.getElementById('gameContainer2');
+      const status = document.getElementById('status2');
+      container.innerHTML = '';
+      status.textContent = 'Playing: Normal Mode with Traditional UI';
+      document.getElementById('stopBtn2').disabled = false;
+      
+      window.MiniGames.snake.render(container, (score) => {
+        console.log('Traditional normal game ended. Score:', score);
+        status.textContent = `Game Over! Score: ${score}`;
+        document.getElementById('stopBtn2').disabled = true;
+      }, { 
+        variant: 'normal', 
+        theme: 'nokia',
+        debugMode: true 
+      });
+    }
+
+    function startTraditionalPortal() {
+      const container = document.getElementById('gameContainer2');
+      const status = document.getElementById('status2');
+      container.innerHTML = '';
+      status.textContent = 'Playing: Portal Mode with Traditional UI';
+      document.getElementById('stopBtn2').disabled = false;
+      
+      window.MiniGames.snake.render(container, (score) => {
+        console.log('Traditional portal game ended. Score:', score);
+        status.textContent = `Game Over! Score: ${score}`;
+        document.getElementById('stopBtn2').disabled = true;
+      }, { 
+        variant: 'portal', 
+        theme: 'nokia',
+        debugMode: true 
+      });
+    }
+
+    function stopGame(containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '<p style="color: #95a9c0; padding: 20px;">Game stopped</p>';
+      const btnId = containerId === 'gameContainer1' ? 'stopBtn1' : 'stopBtn2';
+      const statusId = containerId === 'gameContainer1' ? 'status1' : 'status2';
+      document.getElementById(btnId).disabled = true;
+      document.getElementById(statusId).textContent = 'Game stopped';
+    }
+    
+    // Auto-start image shell version for visual testing
+    window.addEventListener('load', () => {
+      setTimeout(startImageShellNormal, 500);
+    });
+  </script>
+</body>
+</html>
