@@ -351,7 +351,7 @@
       input.focus();
     }
 
-    function endGame(){
+    function endGame(reason = 'complete'){
       if(gameOver) return;
       gameOver = true;
       
@@ -376,6 +376,15 @@
       }
       
       score = Math.max(0, Math.min(100, Math.round(score)));
+      
+      // If ended by skip, invoke callback immediately without showing result UI
+      if(reason === 'skip'){
+        console.info('[NumberTriviaQuiz] Game ended by skip - score:', score);
+        if(typeof onComplete === 'function'){
+          onComplete(score);
+        }
+        return;
+      }
       
       // Show result
       const resultDiv = document.createElement('div');
@@ -424,6 +433,16 @@
         }
       }, 3500);
     }
+    
+    // Skip finish logic - called by drainer
+    function trySkipFinish(){
+      if(gameOver) return false;
+      endGame('skip');
+      return true;
+    }
+    
+    // Store reference for drainer access
+    g.__numberTriviaQuizActive = { trySkipFinish };
 
     // Event listeners
     submitBtn.addEventListener('click', submitAnswer);
@@ -436,6 +455,18 @@
     });
   }
 
+  // Drainer for SkipController integration
+  function numberTriviaQuizDrainer(){
+    if(g.__numberTriviaQuizActive && g.__numberTriviaQuizActive.trySkipFinish){
+      const didWork = g.__numberTriviaQuizActive.trySkipFinish();
+      if(didWork){
+        delete g.__numberTriviaQuizActive;
+      }
+      return didWork;
+    }
+    return false;
+  }
+
   // Register module (both MinigameModules and legacy MiniGames)
   if(typeof g.MinigameModules !== 'undefined' && typeof g.MinigameModules.register === 'function'){
     g.MinigameModules.register('threeDigitsQuiz', { render });
@@ -445,6 +476,11 @@
     g.MinigameModules.threeDigitsQuiz = { render };
     g.MiniGames = g.MiniGames || {};
     g.MiniGames.threeDigitsQuiz = { render };
+  }
+  
+  // Register drainer with SkipController
+  if(g.SkipController){
+    g.SkipController.registerDrainer('numberTriviaQuiz', numberTriviaQuizDrainer);
   }
 
   console.info('[NumberTriviaQuiz] Module loaded (registered as threeDigitsQuiz)');
