@@ -120,42 +120,60 @@
    */
   function init(){
     loadSavedTheme();
-    wireThemeSelector(0);
+    wireThemeSelector();
     console.log('[theme-switcher] Initialized');
   }
 
   /**
    * Wire up theme selector in settings modal
    */
-  function wireThemeSelector(retryCount = 0){
-    // Wait for DOM to be ready and settings modal to exist
-    const themeSelector = document.getElementById('themeSelector');
-    if(!themeSelector){
-      // Retry after a short delay if element not found yet, up to max retries
-      if (retryCount < 50) {
-        setTimeout(function() { wireThemeSelector(retryCount + 1); }, 100);
-      } else {
-        console.warn('[theme-switcher] themeSelector element not found after maximum retries.');
+  function wireThemeSelector(){
+    function attach(el){
+      // Set current theme
+      el.value = getCurrentTheme();
+
+      // Listen for changes
+      if(!el.__themeWired){
+        el.__themeWired = true;
+        el.addEventListener('change', function(){
+          const theme = el.value;
+          applyTheme(theme);
+          if(typeof window.showNotification === 'function'){
+            window.showNotification('Theme changed to ' + getThemeName(theme), 'ok');
+          }
+        });
       }
+    }
+
+    // If already in DOM, attach immediately
+    const existing = document.getElementById('themeSelector');
+    if(existing){
+      attach(existing);
       return;
     }
 
-    // Set current theme
-    themeSelector.value = getCurrentTheme();
-
-    // Listen for changes
-    if(!themeSelector.__themeWired){
-      themeSelector.__themeWired = true;
-      themeSelector.addEventListener('change', function(){
-        const theme = themeSelector.value;
-        applyTheme(theme);
-        
-        // Show notification if available
-        if(typeof window.showNotification === 'function'){
-          window.showNotification('Theme changed to ' + getThemeName(theme), 'ok');
+    // Observe for late insertion of the settings modal / theme selector
+    if('MutationObserver' in window){
+      const obs = new MutationObserver(function(){
+        const el = document.getElementById('themeSelector');
+        if(el){
+          try{ attach(el); } finally { obs.disconnect(); }
         }
       });
+      try{
+        obs.observe(document.body, { childList: true, subtree: true });
+      }catch(e){
+        // In rare cases document.body may not be ready; fallback silently
+        document.addEventListener('DOMContentLoaded', function(){
+          try{
+            obs.observe(document.body, { childList: true, subtree: true });
+          }catch(err){
+            // Silently fail if observation still can't be set up
+          }
+        }, { once: true });
+      }
     }
+    // No warning if not found; it's valid for pages without settings modal
   }
 
   // Expose API
