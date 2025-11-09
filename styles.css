@@ -889,7 +889,13 @@ button:focus-visible,.btn:focus-visible{
   pointer-events:auto; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;
 }
 
-/* TV Overlay Scaffolding for contained UI */
+/* ===================================================================
+   TV OVERLAY SCAFFOLDING & IN-TV CEREMONY CARDS
+   Shared by: veto ceremony, nomination ceremony, eviction results
+   Module: js/ui/tv-cards.js
+   ================================================================ */
+
+/* Backdrop blur layer */
 .tvDim{
   position:absolute;
   inset:0;
@@ -920,7 +926,11 @@ button:focus-visible,.btn:focus-visible{
   -webkit-overflow-scrolling:touch;
 }
 
-/* TV Card Body - Typography parity with other ceremonies */
+/* TV Card Body - Typography standardization
+   - h3: 0.95rem (title)
+   - p: 0.86rem (body text)
+   - p.big: 0.92rem, weight 500 (emphasized text)
+   All ceremony cards use these values for visual consistency */
 .tvCardBody{
   font-size:0.86rem;
   line-height:1.45;
