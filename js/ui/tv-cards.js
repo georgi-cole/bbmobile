@@ -541,44 +541,93 @@
       var container = ensureTVOverlay();
       if(!container){ resolve(); return; }
       
-      clearTVOverlay();
-      
-      var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard tvCardBody';
-      if(tone) card.setAttribute('data-tone', tone);
-      
-      var h3 = document.createElement('h3');
-      h3.textContent = title;
-      card.appendChild(h3);
-      
-      // Handle content as string or array
-      var contentArray = Array.isArray(content) ? content : [content];
-      for(var i=0; i<contentArray.length; i++){
-        var p = document.createElement('p');
-        if(i === 0) p.className = 'big';
-        p.textContent = contentArray[i];
-        card.appendChild(p);
-      }
-      
-      container.appendChild(card);
-      
-      var tv = document.getElementById('tv');
-      if(tv) tv.classList.add('tvTall');
-      
-      // Downscale font if card is too tall
-      var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
-      if(fitTVCardText) fitTVCardText(card);
-      
-      // Auto-dismiss if duration provided
-      if(duration && duration > 0){
-        setTimeout(function(){
+      // Use CardManager if available
+      if(global.CardManager){
+        global.CardManager.show(function(){
           clearTVOverlay();
-          if(tv) tv.classList.remove('tvTall');
-          resolve();
-        }, duration);
+          
+          var card = document.createElement('div');
+          card.className = 'revealCard diaryRoomCard tvCardBody';
+          if(tone) card.setAttribute('data-tone', tone);
+          
+          var h3 = document.createElement('h3');
+          h3.textContent = title;
+          card.appendChild(h3);
+          
+          // Handle content as string or array
+          var contentArray = Array.isArray(content) ? content : [content];
+          for(var i=0; i<contentArray.length; i++){
+            var p = document.createElement('p');
+            if(i === 0) p.className = 'big';
+            p.textContent = contentArray[i];
+            card.appendChild(p);
+          }
+          
+          container.appendChild(card);
+          
+          var tv = document.getElementById('tv');
+          if(tv) tv.classList.add('tvTall');
+          
+          // Downscale font if card is too tall
+          var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+          if(fitTVCardText) fitTVCardText(card);
+          
+          // Auto-dismiss if duration provided
+          var timeout = null;
+          if(duration && duration > 0){
+            timeout = setTimeout(function(){
+              clearTVOverlay();
+              if(tv) tv.classList.remove('tvTall');
+              resolve();
+            }, duration);
+          } else {
+            // Manual dismiss only
+            resolve();
+          }
+          
+          return { card: card, timeout: timeout };
+        });
       } else {
-        // Manual dismiss only
-        resolve();
+        // Fallback: original implementation without CardManager
+        clearTVOverlay();
+        
+        var card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard tvCardBody';
+        if(tone) card.setAttribute('data-tone', tone);
+        
+        var h3 = document.createElement('h3');
+        h3.textContent = title;
+        card.appendChild(h3);
+        
+        // Handle content as string or array
+        var contentArray = Array.isArray(content) ? content : [content];
+        for(var i=0; i<contentArray.length; i++){
+          var p = document.createElement('p');
+          if(i === 0) p.className = 'big';
+          p.textContent = contentArray[i];
+          card.appendChild(p);
+        }
+        
+        container.appendChild(card);
+        
+        var tv = document.getElementById('tv');
+        if(tv) tv.classList.add('tvTall');
+        
+        // Downscale font if card is too tall
+        var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+        if(fitTVCardText) fitTVCardText(card);
+        
+        // Auto-dismiss if duration provided
+        if(duration && duration > 0){
+          setTimeout(function(){
+            clearTVOverlay();
+            if(tv) tv.classList.remove('tvTall');
+            resolve();
+          }, duration);
+        } else {
+          // Manual dismiss only
+          resolve();
+        }
       }
     });
   }
