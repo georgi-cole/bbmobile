@@ -90,6 +90,7 @@
     let participants = [];
     let dropTimers = [];
     let dealWindowTimer = null;
+    let dealCountdownInterval = null;
     let postDealInterval = null;
     let rivalName = null;
     let aiDropped = false;
@@ -142,14 +143,19 @@
     function scheduleAIDrops(){
       if(participants.length === 0) return;
       
+      // Filter out player to get only AI participants
+      const aiOnly = participants.filter(p => p !== 'You');
+      
+      if(aiOnly.length === 0) return;
+      
       // Keep one AI for final two (last in array)
-      const droppersCount = participants.length - 1;
+      const droppersCount = aiOnly.length - 1;
       const dropTimes = [];
       
       // Schedule drops between 5s (5000ms) and 180s (180000ms)
       for(let i = 0; i < droppersCount; i++){
         const dropTime = 5000 + rng() * 175000; // 5s to 180s
-        dropTimes.push({ name: participants[i], time: dropTime });
+        dropTimes.push({ name: aiOnly[i], time: dropTime });
       }
       
       // Sort by time for proper narrative flow
@@ -168,8 +174,9 @@
           addFeedMessage(`${drop.name} dropped. ${remaining} remaining.`, '#ff9966');
           
           // Check if we're down to final two (player + one AI)
-          if(remaining === 1){
-            rivalName = participants[0];
+          if(remaining === 2){
+            // Get the remaining AI (not 'You')
+            rivalName = participants.find(p => p !== 'You');
             startDealWindow();
           }
         }, drop.time);
@@ -187,8 +194,20 @@
       
       addFeedMessage(`${rivalName}: "Release now and I won't nominate you!"`, '#ffcc00');
       
+      // Add countdown display
+      let timeLeft = 10;
+      addFeedMessage(`Deal expires in ${timeLeft} seconds...`, '#ffcc00');
+      
+      dealCountdownInterval = setInterval(() => {
+        timeLeft--;
+        if(timeLeft > 0){
+          addFeedMessage(`Deal expires in ${timeLeft} seconds...`, '#ffcc00');
+        }
+      }, 1000);
+      
       // 10-second deal window
       dealWindowTimer = setTimeout(() => {
+        if(dealCountdownInterval) clearInterval(dealCountdownInterval);
         addFeedMessage('Deal window expired. Competition continues...', '#95a9c0');
         startPostDealChecks();
       }, 10000);
@@ -232,6 +251,7 @@
       dropTimers.forEach(t => clearTimeout(t));
       dropTimers = [];
       if(dealWindowTimer) clearTimeout(dealWindowTimer);
+      if(dealCountdownInterval) clearInterval(dealCountdownInterval);
       if(postDealInterval) clearInterval(postDealInterval);
     }
     
