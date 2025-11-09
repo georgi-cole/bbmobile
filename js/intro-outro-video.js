@@ -151,6 +151,15 @@
 
   // Show intro once when the page/app opens
   async function maybePlayIntroOnLoad(){
+    // Check if skipIntros is enabled
+    const cfg = (g.game && g.game.cfg) || g.cfg || {};
+    if (cfg.skipIntros) {
+      console.info('[intro-outro] skipIntros enabled, skipping intro video');
+      markIntroPlayed();
+      dispatchIntroFinished();
+      return;
+    }
+    
     if (isIntroPlayed()) return;
     const url = await pickVideoUrl(INTRO_URL, INTRO_URL_MOBILE);
     fetch(url, { method: 'HEAD', cache: 'no-store' }).then(r=>{
@@ -183,6 +192,17 @@
     }
     g.startOpeningSequence = async function wrappedOpening() {
       console.info('[intro-outro] startOpeningSequence intercepted');
+      
+      // Check if skipIntros is enabled
+      const cfg = (g.game && g.game.cfg) || g.cfg || {};
+      if (cfg.skipIntros) {
+        console.info('[intro-outro] skipIntros enabled, skipping intro video in startOpeningSequence');
+        markIntroPlayed();
+        dispatchIntroFinished();
+        markGameStarted();
+        return origStart.call(g);
+      }
+      
       if (isIntroPlayed()){
         // Intro already played - mark game started and proceed with opening sequence
         markGameStarted();

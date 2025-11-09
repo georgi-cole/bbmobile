@@ -180,6 +180,7 @@
     useRealityIntro: true,  // Enable reality-TV intro by default
     minigameDuration: 180,  // Default minigame challenge timer (seconds) - 3 minutes
     autoShowRulesOnStart: true,  // Show rules modal automatically after intro
+    skipIntros: false,  // When true, skip intro video and animated intro sequence
     debugAlwaysWin: false,  // Debug: Always win minigames/competitions (testing only)
   };
 
