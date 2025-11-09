@@ -183,22 +183,9 @@
   // Export to global namespace
   global.CardManager = CardManager;
   
-  // Install phase transition listeners
-  if(typeof global.game !== 'undefined'){
-    // Listen for phase changes to auto-clear cards
-    const originalSetPhase = global.setPhase;
-    if(typeof originalSetPhase === 'function'){
-      global.setPhase = function(phase, duration, callback){
-        console.log('[CardManager] Phase change detected:', phase);
-        
-        // Clear cards on phase boundaries
-        CardManager.clear(true).then(() => {
-          // Call original setPhase
-          return originalSetPhase.call(this, phase, duration, callback);
-        });
-      };
-    }
-  }
+  // Note: Phase transition listeners are NOT auto-installed here to avoid
+  // wrapping setPhase multiple times. Instead, veto.js and social.js explicitly
+  // call CardManager.clear() at ceremony/phase boundaries.
   
   // Debug: Log card manager state every 5 seconds in dev mode
   if(global.location && global.location.hostname === 'localhost'){
