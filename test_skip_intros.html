@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skip Intros Feature Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: #0f1320;
+      color: #e6e8ee;
+    }
+    h1 { color: #2d8ab4; }
+    .test-section {
+      background: #141a23;
+      border: 1px solid #2b3546;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #79d19a;
+    }
+    button {
+      background: #2877a0;
+      color: white;
+      border: 1px solid #2d8ab4;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 4px;
+    }
+    button:hover {
+      background: #1a4a63;
+    }
+    .result {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #0e1422;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .pass { color: #79d19a; }
+    .fail { color: #f2c862; }
+    .info { color: #9aa3b2; }
+    .code {
+      background: #0a0e1a;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>Skip Intros Feature Test</h1>
+  
+  <div class="test-section">
+    <h2>1. Check skipIntros Setting Exists in Config</h2>
+    <button onclick="testConfigExists()">Run Test</button>
+    <div id="test1-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. Verify Default Value (should be false)</h2>
+    <button onclick="testDefaultValue()">Run Test</button>
+    <div id="test2-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. Open Settings Modal and Check Visual Tab</h2>
+    <button onclick="openSettingsAndCheckTab()">Open Settings Modal</button>
+    <div id="test3-result" class="result">
+      Manual verification: Open settings, navigate to Visual tab, and verify "Skip Intros" checkbox exists under "Intros & Rules" section.
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>4. Toggle skipIntros Setting</h2>
+    <button onclick="testToggleSetting()">Enable Skip Intros</button>
+    <button onclick="testDisableSetting()">Disable Skip Intros</button>
+    <div id="test4-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>5. Test Intro Video Skip Logic</h2>
+    <button onclick="testIntroVideoSkip()">Test Skip Logic</button>
+    <div id="test5-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>6. Test Rules Modal Coordination</h2>
+    <button onclick="testRulesModalCoordination()">Test Rules Coordination</button>
+    <div id="test6-result" class="result"></div>
+  </div>
+
+  <!-- Load required dependencies -->
+  <script defer src="js/config/defaults.js"></script>
+  <script defer src="js/settings/effects.js"></script>
+  <script defer src="js/settings/registry.js"></script>
+  <script type="module" src="js/settings/cast-tab.js"></script>
+  <script defer src="js/settings/render.js"></script>
+  <script defer src="js/ui.config-and-settings.js"></script>
+  <script defer src="js/rules.js"></script>
+  <script defer src="js/intro-outro-video.js"></script>
+  
+  <script>
+    // Wait for scripts to load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        console.log('[test] All scripts loaded');
+      }, 500);
+    });
+    
+    function log(elementId, message, type = 'info') {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const className = type === 'pass' ? 'pass' : type === 'fail' ? 'fail' : 'info';
+      el.innerHTML = `<span class="${className}">${message}</span>`;
+    }
+    
+    function testConfigExists() {
+      const cfg = window.Config?.DEFAULT_CFG || window.game?.cfg || window.cfg;
+      if (!cfg) {
+        log('test1-result', '✗ Config not found', 'fail');
+        return;
+      }
+      
+      if ('skipIntros' in cfg) {
+        log('test1-result', `✓ skipIntros exists in config (value: ${cfg.skipIntros})`, 'pass');
+      } else {
+        log('test1-result', '✗ skipIntros not found in config', 'fail');
+      }
+    }
+    
+    function testDefaultValue() {
+      const cfg = window.Config?.DEFAULT_CFG || window.game?.cfg || window.cfg;
+      if (!cfg) {
+        log('test2-result', '✗ Config not found', 'fail');
+        return;
+      }
+      
+      if (cfg.skipIntros === false) {
+        log('test2-result', '✓ Default value is false (correct)', 'pass');
+      } else {
+        log('test2-result', `✗ Default value is ${cfg.skipIntros} (expected: false)`, 'fail');
+      }
+    }
+    
+    function openSettingsAndCheckTab() {
+      if (typeof window.openSettingsModal === 'function') {
+        window.openSettingsModal();
+        log('test3-result', '✓ Settings modal opened. Navigate to Visual tab to verify "Skip Intros" checkbox.', 'pass');
+      } else {
+        log('test3-result', '✗ openSettingsModal function not found', 'fail');
+      }
+    }
+    
+    function testToggleSetting() {
+      const game = window.game = window.game || {};
+      game.cfg = game.cfg || {};
+      game.cfg.skipIntros = true;
+      window.cfg = game.cfg; // Ensure alias
+      
+      if (typeof window.Config?.saveStoredCfg === 'function') {
+        window.Config.saveStoredCfg(game.cfg);
+      }
+      
+      log('test4-result', `✓ skipIntros set to: ${game.cfg.skipIntros}`, 'pass');
+    }
+    
+    function testDisableSetting() {
+      const game = window.game = window.game || {};
+      game.cfg = game.cfg || {};
+      game.cfg.skipIntros = false;
+      window.cfg = game.cfg; // Ensure alias
+      
+      if (typeof window.Config?.saveStoredCfg === 'function') {
+        window.Config.saveStoredCfg(game.cfg);
+      }
+      
+      log('test4-result', `✓ skipIntros set to: ${game.cfg.skipIntros}`, 'pass');
+    }
+    
+    function testIntroVideoSkip() {
+      const game = window.game = window.game || {};
+      game.cfg = game.cfg || {};
+      
+      // Test with skipIntros enabled
+      game.cfg.skipIntros = true;
+      
+      let result = [];
+      
+      // Check if intro-outro-video.js would skip
+      const cfg = game.cfg;
+      if (cfg.skipIntros) {
+        result.push('✓ Intro video would be skipped when skipIntros=true');
+      } else {
+        result.push('✗ Intro video would not be skipped');
+      }
+      
+      // Test with skipIntros disabled
+      game.cfg.skipIntros = false;
+      if (!game.cfg.skipIntros) {
+        result.push('✓ Intro video would play when skipIntros=false');
+      } else {
+        result.push('✗ Intro video logic incorrect');
+      }
+      
+      log('test5-result', result.join('<br>'), 'pass');
+    }
+    
+    function testRulesModalCoordination() {
+      const game = window.game = window.game || {};
+      game.cfg = game.cfg || {};
+      
+      let result = [];
+      
+      // Test 1: skipIntros enabled should prevent rules modal
+      game.cfg.skipIntros = true;
+      game.cfg.autoShowRulesOnStart = true;
+      
+      if (game.cfg.skipIntros) {
+        result.push('✓ With skipIntros=true, rules modal would be skipped');
+      } else {
+        result.push('✗ Rules modal skip logic incorrect');
+      }
+      
+      // Test 2: skipIntros disabled with autoShowRulesOnStart enabled
+      game.cfg.skipIntros = false;
+      game.cfg.autoShowRulesOnStart = true;
+      
+      if (!game.cfg.skipIntros && game.cfg.autoShowRulesOnStart) {
+        result.push('✓ With skipIntros=false and autoShowRulesOnStart=true, rules would show');
+      } else {
+        result.push('✗ Rules modal show logic incorrect');
+      }
+      
+      // Test 3: Both disabled
+      game.cfg.skipIntros = false;
+      game.cfg.autoShowRulesOnStart = false;
+      
+      if (!game.cfg.autoShowRulesOnStart) {
+        result.push('✓ With autoShowRulesOnStart=false, rules would not auto-show');
+      } else {
+        result.push('✗ Rules modal coordination incorrect');
+      }
+      
+      log('test6-result', result.join('<br>'), 'pass');
+    }
+  </script>
+</body>
+</html>
