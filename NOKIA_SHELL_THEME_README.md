@@ -42,7 +42,7 @@ window.MiniGames.snake.render(container, (score) => {
 ## Features
 
 ### Phone Shell Image
-- High-quality SVG image of Nokia 3310 at `assets/skins/nokia3310-shell.svg`
+- Nokia 3310 phone shell image (PNG) at `assets/skins/nokia3310-shell.png`
 - Includes LCD screen area, D-pad, numeric keypad, and "NOKIA" branding
 - Scales responsively while maintaining proportions
 
@@ -81,7 +81,7 @@ window.MiniGames.snake.render(container, (score) => {
 ```
 assets/
   skins/
-    nokia3310-shell.svg          # Phone shell image (4KB SVG)
+    nokia3310-shell.png          # Phone shell image (PNG, 1.4MB)
 js/
   minigames/
     snake.js                      # Updated with theme support
@@ -128,10 +128,10 @@ All existing tests pass with no regressions.
 
 ## Technical Notes
 
-### Why SVG?
-- Scales perfectly at any resolution
-- Small file size (4KB)
-- Easy to modify colors/styling if needed
+### Image Format
+- Uses PNG format for authentic Nokia 3310 appearance
+- High-resolution image (1.4MB) ensures quality on all displays
+- Realistic phone texture and details preserved
 - No external dependencies
 
 ### CSS Variables Benefits
@@ -144,7 +144,7 @@ All existing tests pass with no regressions.
 - No impact on game logic performance
 - CSS-only positioning and scaling
 - Transparent overlays use minimal resources
-- SVG background renders efficiently
+- PNG background renders efficiently
 
 ## Future Enhancements
 

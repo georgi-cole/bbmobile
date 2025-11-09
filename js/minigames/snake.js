@@ -167,7 +167,7 @@
         position: relative;
         width: var(--phone-width);
         height: var(--phone-height);
-        background-image: url('assets/skins/nokia3310-shell.svg');
+        background-image: url('assets/skins/nokia3310-shell.png');
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
