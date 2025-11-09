@@ -696,7 +696,9 @@ button:focus-visible,.btn:focus-visible{
 
 /* 07. TV / SHOW PANEL (safe areas) ----------------------------------------- */
 .tv{
-  position:relative; height:260px;
+  position:relative;
+  /* Fixed height to prevent flashing when popups appear/disappear */
+  height: 520px;
   /* Default background with gradient (no network request) */
   background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
@@ -3456,7 +3458,9 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   #sideCard{ grid-column:1; grid-row:auto; width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
   #actionCard{ grid-column:1; grid-row:auto; width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
   .wrap > .card{ width:100%; max-width:none; margin-left:0; margin-right:0; justify-self:stretch; }
-  .tv{ height:260px; }
+  /* Fixed height for mobile to prevent flashing when popups appear/disappear */
+  .tv{ height:360px; }
+  .tv.tvTall{ height:360px; }
 }
 @media (max-width:540px){
   .modal{ padding:18px 16px 24px; border-radius:16px; }
@@ -3546,7 +3550,8 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
 /* 07. TV / SHOW PANEL (safe areas and responsive height) */
 .tv{
   position:relative;
-  height: clamp(280px, 42vh, 520px);
+  /* Fixed height to prevent flashing when popups appear/disappear */
+  height: 520px;
   /* Default background with gradient (no network request) */
   background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
@@ -3567,7 +3572,8 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   background-color:#0e1730;
 }
 .tv.tvTall{
-  height: clamp(340px, 52vh, 600px);
+  /* Fixed height to prevent flashing - same as base to maintain consistency */
+  height: 520px;
 }
 
 .tvHead{
@@ -3700,7 +3706,8 @@ img{ max-width:100%; display:block; }
 /* 07. TV / SHOW PANEL — TV Frame with Bezel and Viewport */
 .tv{
   position:relative;
-  height: clamp(280px, 42vh, 520px);
+  /* Fixed height to prevent flashing when popups appear/disappear */
+  height: 520px;
   /* Default background with gradient (no network request) */
   background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
@@ -3720,7 +3727,10 @@ img{ max-width:100%; display:block; }
   background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
-.tv.tvTall{ height: clamp(400px, 62vh, 720px); }
+.tv.tvTall{
+  /* Fixed height to prevent flashing - same as base to maintain consistency */
+  height: 520px;
+}
 .tvViewport{
   position:relative;
   flex:1;
@@ -3864,7 +3874,8 @@ img{ max-width:100%; display:block; }
 /* TV dimensions scale with content */
 .tv{
   position:relative;
-  height: clamp(300px, 44vh, 560px);
+  /* Fixed height to prevent flashing when popups appear/disappear */
+  height: 520px;
   /* Default background with gradient (no network request) */
   background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
@@ -3884,7 +3895,10 @@ img{ max-width:100%; display:block; }
   background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
-.tv.tvTall{ height: clamp(360px, 56vh, 640px); }
+.tv.tvTall{
+  /* Fixed height to prevent flashing - same as base to maintain consistency */
+  height: 520px;
+}
 
 .tvHead{
   display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
@@ -4031,7 +4045,8 @@ img{ max-width:100%; display:block; }
 /* TV container with adaptive height */
 .tv{
   position:relative;
-  height: clamp(300px, 44vh, 560px);
+  /* Fixed height to prevent flashing when popups appear/disappear */
+  height: 520px;
   /* Default background with gradient (no network request) */
   background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
   background-color:#0e1730; /* Fallback */
@@ -4051,7 +4066,10 @@ img{ max-width:100%; display:block; }
   background: var(--tv-bg) center/cover;
   background-color:#0e1730;
 }
-.tv.tvTall{ height: clamp(360px, 56vh, 640px); }
+.tv.tvTall{
+  /* Fixed height to prevent flashing - same as base to maintain consistency */
+  height: 520px;
+}
 
 /* Background image layer constrained to the screen safe area */
 .tv::before{
