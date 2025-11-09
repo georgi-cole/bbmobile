@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: TV Cards Module</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a0f16;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+    }
+    .test-controls {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(20, 30, 45, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(110, 160, 220, 0.25);
+      max-width: 280px;
+    }
+    .test-controls h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      color: #4CAF50;
+    }
+    .test-controls button {
+      display: block;
+      margin: 8px 0;
+      padding: 10px 15px;
+      background: #2a4766;
+      color: #e0e0e0;
+      border: 1px solid #356089;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 14px;
+    }
+    .test-controls button:hover {
+      background: #356089;
+    }
+    .test-info {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(28, 43, 62, 0.5);
+      border-radius: 12px;
+      border-left: 4px solid #4CAF50;
+      max-width: 900px;
+    }
+    .test-info h2 {
+      margin-top: 0;
+      color: #4CAF50;
+    }
+    #tv {
+      margin: 20px auto;
+      max-width: 900px;
+      position: relative;
+      background: linear-gradient(135deg, #0e1a28, #1a2b3f);
+      border: 3px solid #356089;
+      border-radius: 24px;
+      padding: 40px 30px;
+      min-height: 500px;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+    }
+    #tv.tvTall {
+      min-height: 600px;
+    }
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 8px;
+      background: rgba(76, 175, 80, 0.2);
+      border-radius: 4px;
+      font-size: 12px;
+      color: #7fd996;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h3>🧪 TV Cards Module Tests</h3>
+    <button id="testBasicCard">Basic Card</button>
+    <button id="testCardWithAvatars">Card with Avatars</button>
+    <button id="testInlineCard">Inline Card</button>
+    <button id="testDecision">Decision Card</button>
+    <button id="testCeremonyEnd">Ceremony End</button>
+    <button id="clearOverlay">Clear Overlay</button>
+    <div class="status" id="status">Ready</div>
+  </div>
+
+  <div class="test-info">
+    <h2>🎯 TV Cards Module Verification</h2>
+    <p><strong>Testing:</strong> New js/ui/tv-cards.js module</p>
+    <ul>
+      <li>✅ Basic text cards (showTVCard)</li>
+      <li>✅ Cards with avatars (showTVCardWithAvatars)</li>
+      <li>✅ Inline ceremony messages (showInlineCard)</li>
+      <li>✅ Decision cards with buttons (showTVDecision)</li>
+      <li>✅ Consistent positioning and typography</li>
+    </ul>
+  </div>
+
+  <div id="tv">
+    <div id="tvOverlay"></div>
+  </div>
+
+  <script src="js/ui.overlay-and-logs.js"></script>
+  <script src="js/ui/tv-cards.js"></script>
+  <script>
+    // Mock game data
+    window.game = {
+      cfg: { fxCards: true },
+      players: [
+        { id: 1, name: 'Alice', avatar: null },
+        { id: 2, name: 'Bob', avatar: null },
+        { id: 3, name: 'Charlie', avatar: null }
+      ]
+    };
+
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.resolveAvatar = function(playerOrId) {
+      const player = typeof playerOrId === 'object' ? playerOrId : window.getP(playerOrId);
+      return 'https://api.dicebear.com/6.x/bottts/svg?seed=' + encodeURIComponent((player && player.name) || 'player');
+    };
+
+    const status = document.getElementById('status');
+
+    function updateStatus(msg) {
+      status.textContent = msg;
+      console.log('✅', msg);
+    }
+
+    // Test basic card
+    document.getElementById('testBasicCard').addEventListener('click', async function() {
+      updateStatus('Testing basic card...');
+      await window.TVCards.showTVCard({
+        title: 'Test Card',
+        lines: ['This is a basic TV card.', 'It uses standardized styling.'],
+        tone: 'noms',
+        duration: 2400
+      });
+      updateStatus('Basic card test complete');
+    });
+
+    // Test card with avatars
+    document.getElementById('testCardWithAvatars').addEventListener('click', async function() {
+      updateStatus('Testing card with avatars...');
+      await window.TVCards.showTVCardWithAvatars({
+        title: 'Nomination Ceremony',
+        lines: ['Alice nominates Bob and Charlie for eviction.'],
+        tone: 'noms',
+        duration: 3000,
+        actorIds: 1,
+        subjectIds: [2, 3]
+      });
+      updateStatus('Avatar card test complete');
+    });
+
+    // Test inline card
+    document.getElementById('testInlineCard').addEventListener('click', async function() {
+      updateStatus('Testing inline card...');
+      await window.TVCards.showInlineCard({
+        title: 'System Message',
+        content: ['Nominations are locked.', 'Nominees: Bob, Charlie'],
+        tone: 'info',
+        duration: 2500
+      });
+      updateStatus('Inline card test complete');
+    });
+
+    // Test decision card
+    document.getElementById('testDecision').addEventListener('click', async function() {
+      updateStatus('Testing decision card...');
+      const result = await window.TVCards.showTVDecision({
+        title: 'Use Power of Veto?',
+        message: 'Will you use the Power of Veto?',
+        buttons: [
+          { label: 'Use Veto', value: 'use', primary: true },
+          { label: 'Do Not Use', value: 'no_use' }
+        ]
+      });
+      updateStatus('Decision: ' + result);
+    });
+
+    // Test ceremony end
+    document.getElementById('testCeremonyEnd').addEventListener('click', async function() {
+      updateStatus('Testing ceremony end...');
+      await window.TVCards.showTVCard({
+        title: 'Nomination Ceremony',
+        lines: ['This ceremony is adjourned.'],
+        tone: 'noms',
+        duration: 2000
+      });
+      updateStatus('Ceremony end test complete');
+    });
+
+    // Clear overlay
+    document.getElementById('clearOverlay').addEventListener('click', function() {
+      window.TVCards.clearTVOverlay();
+      document.getElementById('tv').classList.remove('tvTall');
+      updateStatus('Overlay cleared');
+    });
+
+    // Initial status
+    updateStatus('Module loaded - TVCards available: ' + (window.TVCards ? 'YES ✓' : 'NO ✗'));
+  </script>
+</body>
+</html>
