@@ -3370,6 +3370,185 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color:#3575c2; cursor:po
   display:flex; justify-content:space-between; align-items:center; background:#1b2f42; padding:4px 8px 5px; border-radius:6px; letter-spacing:.3px; font-weight:600; color:#d5e4f2;
 }
 
+/* Final 4 Eviction Unified Card -------------------------------------------- */
+.final4-eviction-card{
+  background:var(--final4-card-bg, #182a3b);
+  border:1px solid var(--final4-card-border, #26405b);
+  border-radius:var(--final4-card-radius, 14px);
+  padding:var(--final4-card-padding, 14px);
+  box-shadow:0 6px 16px -10px rgba(0,0,0,0.6);
+  font-size:.7rem;
+  line-height:1.4;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.final4-eviction-header h3{
+  margin:0;
+  font-size:.95rem;
+  font-weight:600;
+  color:var(--final4-title-color, #ffdc8b);
+  letter-spacing:.3px;
+}
+
+/* Inline TV viewport section */
+.final4-inline-tv{
+  background:var(--final4-tv-bg, #0a0f14);
+  border:1px solid var(--final4-tv-border, #1a2533);
+  border-radius:10px;
+  overflow:hidden;
+  position:relative;
+  min-height:var(--final4-tv-height, 120px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.final4-tv-viewport{
+  width:100%;
+  height:100%;
+  min-height:120px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+
+.final4-tv-now{
+  font-size:1.2rem;
+  font-weight:700;
+  color:var(--final4-tv-text-color, #88a8c8);
+  text-transform:uppercase;
+  letter-spacing:1.5px;
+  text-shadow:0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* Info section */
+.final4-info-section{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:.7rem;
+  line-height:1.4;
+}
+
+.final4-power-info{
+  color:var(--final4-info-color, #d5e4f2);
+  padding:8px 10px;
+  background:var(--final4-info-bg, rgba(38,64,91,0.3));
+  border-radius:8px;
+  border:1px solid var(--final4-info-border, rgba(38,64,91,0.5));
+}
+
+.final4-power-info strong{
+  color:var(--final4-info-strong-color, #ffdc8b);
+  font-weight:600;
+}
+
+.final4-nom-info{
+  padding:6px 10px;
+  color:var(--final4-nom-color, #a8c0d8);
+}
+
+/* Status messages */
+.final4-status-done{
+  padding:10px 12px;
+  background:var(--final4-status-done-bg, rgba(56,142,60,0.2));
+  border:1px solid var(--final4-status-done-border, rgba(76,175,80,0.4));
+  border-radius:8px;
+  color:var(--final4-status-done-color, #88e6a0);
+  font-weight:600;
+  text-align:center;
+  font-size:.75rem;
+}
+
+.final4-explanation{
+  padding:10px 12px;
+  background:var(--final4-explanation-bg, rgba(255,152,0,0.12));
+  border:1px solid var(--final4-explanation-border, rgba(255,152,0,0.3));
+  border-radius:8px;
+  color:var(--final4-explanation-color, #ffdc8b);
+  font-size:.7rem;
+  line-height:1.5;
+}
+
+.final4-explanation strong{
+  font-weight:600;
+}
+
+/* Action buttons section */
+.final4-actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.final4-button-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+}
+
+.final4-evict-btn{
+  flex:1 1 auto;
+  min-width:120px;
+  max-width:200px;
+  padding:10px 16px;
+  font-size:.75rem;
+  font-weight:600;
+  letter-spacing:.3px;
+}
+
+.final4-hint{
+  text-align:center;
+  color:var(--final4-hint-color, #8899aa);
+  font-style:italic;
+  padding:0 8px;
+}
+
+.final4-ai-status{
+  padding:12px;
+  text-align:center;
+  color:var(--final4-ai-status-color, #a8c0d8);
+  font-style:italic;
+  background:var(--final4-ai-status-bg, rgba(38,64,91,0.2));
+  border-radius:8px;
+  font-size:.72rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px){
+  .final4-eviction-card{
+    padding:12px;
+    gap:10px;
+  }
+  
+  .final4-inline-tv{
+    min-height:100px;
+  }
+  
+  .final4-tv-viewport{
+    min-height:100px;
+  }
+  
+  .final4-tv-now{
+    font-size:1rem;
+  }
+  
+  .final4-button-row{
+    flex-direction:column;
+  }
+  
+  .final4-evict-btn{
+    max-width:100%;
+    width:100%;
+  }
+}
+
 /* 17. CONFETTI -------------------------------------------------------------- */
 #confetti{ pointer-events:none; mix-blend-mode:screen; }
 

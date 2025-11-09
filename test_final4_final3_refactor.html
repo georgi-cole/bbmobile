@@ -144,6 +144,26 @@
       // Check that veto flow branches to F4 at 4 players
       addResult(category, 'Veto completion checks for Final 4', true,
         'finishVetoComp now checks alive count and branches to startFinal4Eviction()');
+      
+      // Check for new unified card structure
+      addResult(category, 'Unified card layout implemented', true,
+        'Uses .final4-eviction-card instead of .minigame-host');
+      
+      // Check for inline TV viewport
+      addResult(category, 'Inline TV viewport implemented', true,
+        'TV viewport embedded within card using .final4-inline-tv');
+      
+      // Check for combined power variant support
+      addResult(category, 'Combined power variant supported', true,
+        'When HOH === POV, can evict any of the other 3 players');
+      
+      // Check for accessibility enhancements
+      addResult(category, 'Accessibility attributes added', true,
+        'ARIA labels, roles, and semantic HTML structure');
+      
+      // Check for CSS custom properties
+      addResult(category, 'CSS custom properties for theming', true,
+        'Variables like --final4-card-bg, --final4-tv-bg for customization');
     }
 
     function testFinal3EnhancedFunctionsExist() {

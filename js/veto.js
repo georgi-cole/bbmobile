@@ -676,70 +676,159 @@
     var g = global.game;
     var panel = document.querySelector('#panel'); if(!panel) return;
     panel.innerHTML = '';
-    var box = document.createElement('div'); box.className = 'minigame-host';
-    box.innerHTML = '<h3>Final 4 Eviction</h3>';
+    
+    // Create unified card container matching minigame prompt style
+    var card = document.createElement('div');
+    card.className = 'final4-eviction-card';
+    card.setAttribute('role', 'region');
+    card.setAttribute('aria-label', 'Final 4 Eviction Decision');
+    
+    // Header section
+    var header = document.createElement('div');
+    header.className = 'final4-eviction-header';
+    var title = document.createElement('h3');
+    title.textContent = 'Final 4 Eviction';
+    title.id = 'final4-title';
+    header.appendChild(title);
+    card.appendChild(header);
+    
     var holder = getP(g.vetoHolder);
     var hoh = getP(g.hohId);
     var noms = (g.nominees || []).map(getP);
     
-    var info = document.createElement('div'); info.className = 'tiny';
-    info.textContent = 'POV Holder: ' + (holder ? holder.name : '?') + 
-                      '. HOH: ' + (hoh ? hoh.name : '?') + 
-                      '. Nominees: ' + noms.map(function(n){ return n ? n.name : '?'; }).join(', ') + '.';
-    box.appendChild(info);
+    // Check for combined power variant (HOH === POV holder)
+    var isCombinedPower = (g.hohId === g.vetoHolder) && (g.cfg.final4CombinedPower !== false);
     
-    if(g.__f4EvictionResolved){
-      var done = document.createElement('div'); done.className = 'tiny ok'; 
-      done.textContent = 'Eviction choice locked.';
-      box.appendChild(done); panel.appendChild(box); return;
+    // Inline TV viewport section
+    var tvSection = document.createElement('div');
+    tvSection.className = 'final4-inline-tv';
+    tvSection.setAttribute('role', 'presentation');
+    tvSection.setAttribute('aria-hidden', 'true');
+    
+    var tvViewport = document.createElement('div');
+    tvViewport.className = 'final4-tv-viewport';
+    tvViewport.setAttribute('data-faux-tv', 'final4');
+    
+    var tvNow = document.createElement('div');
+    tvNow.className = 'final4-tv-now';
+    tvNow.textContent = 'Final 4';
+    tvViewport.appendChild(tvNow);
+    
+    tvSection.appendChild(tvViewport);
+    card.appendChild(tvSection);
+    
+    // Info section
+    var infoSection = document.createElement('div');
+    infoSection.className = 'final4-info-section';
+    
+    var powerHolder = document.createElement('div');
+    powerHolder.className = 'final4-power-info';
+    if(isCombinedPower){
+      powerHolder.innerHTML = '<strong>Combined Power:</strong> ' + (holder ? holder.name : '?') + ' holds both HOH and POV';
+    } else {
+      powerHolder.innerHTML = '<strong>POV Holder:</strong> ' + (holder ? holder.name : '?') + 
+                             ' &nbsp;|&nbsp; <strong>HOH:</strong> ' + (hoh ? hoh.name : '?');
+    }
+    infoSection.appendChild(powerHolder);
+    
+    if(!isCombinedPower){
+      var nomInfo = document.createElement('div');
+      nomInfo.className = 'final4-nom-info tiny muted';
+      nomInfo.textContent = 'Nominees: ' + noms.map(function(n){ return n ? n.name : '?'; }).join(', ');
+      infoSection.appendChild(nomInfo);
     }
     
-    var note = document.createElement('div'); note.className = 'tiny warn';
-    note.style.marginTop = '8px';
-    note.textContent = 'At Final 4, the Power of Veto holder has sole power to evict.';
-    box.appendChild(note);
+    card.appendChild(infoSection);
     
+    // Status or action section
+    if(g.__f4EvictionResolved){
+      var doneStatus = document.createElement('div');
+      doneStatus.className = 'final4-status-done';
+      doneStatus.setAttribute('role', 'status');
+      doneStatus.setAttribute('aria-live', 'polite');
+      doneStatus.textContent = '✓ Eviction choice locked';
+      card.appendChild(doneStatus);
+      panel.appendChild(card);
+      return;
+    }
+    
+    // Explanation note
+    var explanation = document.createElement('div');
+    explanation.className = 'final4-explanation';
+    if(isCombinedPower){
+      explanation.innerHTML = '⚡ <strong>Combined Power:</strong> You may evict any of the other 3 remaining houseguests.';
+    } else {
+      explanation.innerHTML = '⚠️ <strong>Sole Vote:</strong> The POV holder has sole power to evict at Final 4.';
+    }
+    card.appendChild(explanation);
+    
+    // Action section (buttons or AI status)
     if(holder && holder.human){
-      var row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '12px';
+      var actionSection = document.createElement('div');
+      actionSection.className = 'final4-actions';
+      actionSection.setAttribute('role', 'group');
+      actionSection.setAttribute('aria-labelledby', 'final4-title');
+      
+      // Determine who can be evicted
+      var evictableIds = [];
+      if(isCombinedPower){
+        // Combined power: can evict any of the other 3
+        var alive = alivePlayers().map(function(p){ return p.id; });
+        evictableIds = alive.filter(function(id){ return id !== g.vetoHolder; });
+      } else {
+        // Standard: only the 2 nominees
+        evictableIds = g.nominees || [];
+      }
+      
       function disableAll(){
-        var bs = row.querySelectorAll('button');
+        var bs = actionSection.querySelectorAll('button');
         for(var i = 0; i < bs.length; i++){ bs[i].disabled = true; }
       }
       
-      for(var i = 0; i < g.nominees.length; i++){
+      var buttonRow = document.createElement('div');
+      buttonRow.className = 'final4-button-row';
+      
+      for(var i = 0; i < evictableIds.length; i++){
         (function wrapEvict(id){
           var p = getP(id);
-          var b = document.createElement('button'); 
-          b.className = 'btn danger'; 
-          b.textContent = 'Evict ' + (p ? p.name : '?');
-          b.disabled = !!g.__f4EvictionInProgress;
-          b.onclick = async function(){ 
-            if(g.__f4EvictionInProgress) return; 
+          var btn = document.createElement('button');
+          btn.className = 'btn danger final4-evict-btn';
+          btn.textContent = 'Evict ' + (p ? p.name : '?');
+          btn.disabled = !!g.__f4EvictionInProgress;
+          btn.setAttribute('aria-label', 'Evict ' + (p ? p.name : 'player'));
+          btn.onclick = async function(){
+            if(g.__f4EvictionInProgress) return;
             if(await window.showConfirm('Are you sure you want to evict ' + (p ? p.name : '?') + '?', {
               title: 'Confirm Eviction',
               confirmText: 'Evict',
               tone: 'danger'
             })){
-              disableAll(); 
-              finalizeFinal4Eviction(id); 
+              disableAll();
+              finalizeFinal4Eviction(id);
             }
           };
-          row.appendChild(b);
-        })(g.nominees[i]);
+          buttonRow.appendChild(btn);
+        })(evictableIds[i]);
       }
       
-      box.appendChild(row);
-      var hint = document.createElement('div'); hint.className = 'tiny muted';
-      hint.style.marginTop = '8px';
+      actionSection.appendChild(buttonRow);
+      
+      var hint = document.createElement('div');
+      hint.className = 'final4-hint tiny muted';
       hint.textContent = 'Choose wisely — your decision determines who moves forward to the Final 3.';
-      box.appendChild(hint);
+      actionSection.appendChild(hint);
+      
+      card.appendChild(actionSection);
     } else {
-      var aiNote = document.createElement('div'); aiNote.className = 'tiny muted'; 
-      aiNote.textContent = 'POV holder is deciding…';
-      box.appendChild(aiNote);
+      var aiStatus = document.createElement('div');
+      aiStatus.className = 'final4-ai-status';
+      aiStatus.setAttribute('role', 'status');
+      aiStatus.setAttribute('aria-live', 'polite');
+      aiStatus.textContent = 'POV holder is deciding…';
+      card.appendChild(aiStatus);
     }
     
-    panel.appendChild(box);
+    panel.appendChild(card);
   }
   global.renderFinal4EvictionPanel = renderFinal4EvictionPanel;
   
@@ -801,11 +890,25 @@
   function aiFinal4EvictionChoice(){
     var g = global.game;
     var holder = getP(g.vetoHolder);
-    var noms = (g.nominees || []).slice();
+    
+    // Check for combined power variant (HOH === POV holder)
+    var isCombinedPower = (g.hohId === g.vetoHolder) && (g.cfg.final4CombinedPower !== false);
+    
+    // Determine evictable pool
+    var evictableIds = [];
+    if(isCombinedPower){
+      // Combined power: can evict any of the other 3
+      var alive = alivePlayers().map(function(p){ return p.id; });
+      evictableIds = alive.filter(function(id){ return id !== g.vetoHolder; });
+    } else {
+      // Standard: only the 2 nominees
+      evictableIds = (g.nominees || []).slice();
+    }
+    
     var bestId = null, bestScore = -Infinity;
     
-    for(var i = 0; i < noms.length; i++){
-      var id = noms[i];
+    for(var i = 0; i < evictableIds.length; i++){
+      var id = evictableIds[i];
       var cand = getP(id);
       var aff = (holder && holder.affinity && typeof holder.affinity[id] === 'number') ? holder.affinity[id] : 0;
       var threat = cand.threat || 0.5;
