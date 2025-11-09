@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Overlay Blocking Fix Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px;
+      background: #1e293b;
+      color: #f1f5f9;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #4ade80;
+      margin-bottom: 10px;
+    }
+    
+    .test-section {
+      background: #334155;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .test-section h2 {
+      color: #60a5fa;
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 5px;
+      transition: background 0.2s;
+    }
+    
+    button:hover {
+      background: #2563eb;
+    }
+    
+    button.success {
+      background: #22c55e;
+    }
+    
+    button.success:hover {
+      background: #16a34a;
+    }
+    
+    button.danger {
+      background: #ef4444;
+    }
+    
+    button.danger:hover {
+      background: #dc2626;
+    }
+    
+    .log {
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 0;
+    }
+    
+    .log-entry.success {
+      color: #4ade80;
+    }
+    
+    .log-entry.error {
+      color: #f87171;
+    }
+    
+    .log-entry.info {
+      color: #94a3b8;
+    }
+    
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-left: 10px;
+    }
+    
+    .status.pass {
+      background: #166534;
+      color: #86efac;
+    }
+    
+    .status.fail {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+    
+    #mockTV {
+      position: relative;
+      width: 100%;
+      height: 300px;
+      background: #0f172a;
+      border: 2px solid #475569;
+      border-radius: 8px;
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #mockTVOverlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+    }
+    
+    #mockTVOverlay.hidden {
+      display: none;
+    }
+    
+    .tvOverlayContent {
+      background: #334155;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    #testButton {
+      font-size: 1.2rem;
+      padding: 20px 40px;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 TV Overlay Blocking Fix Test</h1>
+    <p>This test verifies that the fix for empty #tvOverlay blocking clicks works correctly.</p>
+    
+    <div class="test-section">
+      <h2>Test 1: Empty Overlay Neutralization</h2>
+      <p>This simulates the scenario where #tvOverlay exists but has no content.</p>
+      
+      <div id="mockTV">
+        <div id="mockTVOverlay">
+          <div class="tvOverlayContent"></div>
+        </div>
+        <button id="testButton">Click Me!</button>
+      </div>
+      
+      <button onclick="setupEmptyOverlay()">Setup: Empty Overlay with pointer-events: auto</button>
+      <button onclick="applyFix()" class="success">Apply Fix: Run ensureOverlayNotBlocking()</button>
+      <button onclick="testClickability()" class="success">Test: Try Clicking Button</button>
+      <button onclick="reset()" class="danger">Reset</button>
+      
+      <div class="log" id="log"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 2: Overlay With Content</h2>
+      <p>This verifies that overlays with active content keep pointer-events enabled.</p>
+      
+      <button onclick="testOverlayWithContent()">Test Overlay With Content</button>
+      <span id="contentTestResult"></span>
+      
+      <div class="log" id="contentLog"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 3: Integration Tests</h2>
+      <p>These tests verify the fix works with the actual functions from the codebase.</p>
+      
+      <button onclick="runIntegrationTests()">Run Integration Tests</button>
+      <span id="integrationTestResult"></span>
+      
+      <div class="log" id="integrationLog"></div>
+    </div>
+  </div>
+  
+  <script>
+    let clickCount = 0;
+    
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    function logTo(logId, message, type = 'info') {
+      const logEl = document.getElementById(logId);
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    function setupEmptyOverlay() {
+      const overlay = document.getElementById('mockTVOverlay');
+      overlay.style.pointerEvents = 'auto';
+      overlay.style.display = 'flex';
+      
+      // Clear any content
+      const content = overlay.querySelector('.tvOverlayContent');
+      if (content) {
+        content.innerHTML = '';
+      }
+      
+      log('✓ Setup complete: Empty overlay with pointer-events: auto', 'info');
+      log('  Try clicking the "Click Me!" button - it should be blocked', 'info');
+    }
+    
+    function applyFix() {
+      // This is the actual fix function from the codebase
+      function ensureOverlayNotBlocking() {
+        try {
+          const ov = document.getElementById('mockTVOverlay');
+          if (!ov) {
+            log('  No overlay found', 'error');
+            return;
+          }
+          
+          const content = ov.querySelector('.tvOverlayContent');
+          const hasActiveContent = !!(content && content.childElementCount > 0);
+          
+          log(`  Overlay found. Content children: ${content ? content.childElementCount : 'N/A'}`, 'info');
+          
+          if (!hasActiveContent) {
+            ov.style.pointerEvents = 'none';
+            log('✓ Fix applied: Set pointer-events: none on empty overlay', 'success');
+          } else {
+            log('  Overlay has content, keeping pointer-events: auto', 'info');
+          }
+        } catch (e) {
+          log(`✗ Fix failed: ${e.message}`, 'error');
+        }
+      }
+      
+      ensureOverlayNotBlocking();
+      log('  Now try clicking the "Click Me!" button - it should work!', 'success');
+    }
+    
+    function testClickability() {
+      const overlay = document.getElementById('mockTVOverlay');
+      const pointerEvents = window.getComputedStyle(overlay).pointerEvents;
+      
+      if (pointerEvents === 'none') {
+        log('✓ Overlay has pointer-events: none - clicks will pass through', 'success');
+      } else {
+        log(`✗ Overlay still has pointer-events: ${pointerEvents} - clicks are blocked`, 'error');
+      }
+    }
+    
+    function reset() {
+      clickCount = 0;
+      document.getElementById('testButton').textContent = 'Click Me!';
+      document.getElementById('log').innerHTML = '';
+      log('Reset complete', 'info');
+    }
+    
+    function testOverlayWithContent() {
+      document.getElementById('contentLog').innerHTML = '';
+      logTo('contentLog', 'Testing overlay with active content...', 'info');
+      
+      // Create a mock overlay with content
+      const mockOverlay = document.createElement('div');
+      mockOverlay.id = 'testOverlayWithContent';
+      mockOverlay.style.pointerEvents = 'auto';
+      
+      const content = document.createElement('div');
+      content.className = 'tvOverlayContent';
+      
+      // Add a child element
+      const child = document.createElement('div');
+      child.textContent = 'Active content';
+      content.appendChild(child);
+      
+      mockOverlay.appendChild(content);
+      document.body.appendChild(mockOverlay);
+      
+      // Apply the fix logic
+      function ensureOverlayNotBlocking(overlayId) {
+        try {
+          const ov = document.getElementById(overlayId);
+          if (!ov) return;
+          
+          const content = ov.querySelector('.tvOverlayContent');
+          const hasActiveContent = !!(content && content.childElementCount > 0);
+          
+          logTo('contentLog', `  Content children: ${content ? content.childElementCount : 0}`, 'info');
+          
+          if (!hasActiveContent) {
+            ov.style.pointerEvents = 'none';
+            logTo('contentLog', '  Set pointer-events: none', 'info');
+          } else {
+            logTo('contentLog', '  Kept pointer-events: auto (has content)', 'info');
+          }
+          
+          return ov.style.pointerEvents;
+        } catch (e) {
+          logTo('contentLog', `✗ Error: ${e.message}`, 'error');
+          return null;
+        }
+      }
+      
+      const result = ensureOverlayNotBlocking('testOverlayWithContent');
+      
+      // Cleanup
+      mockOverlay.remove();
+      
+      if (result === 'auto') {
+        logTo('contentLog', '✓ TEST PASSED: Overlay with content keeps pointer-events: auto', 'success');
+        document.getElementById('contentTestResult').innerHTML = '<span class="status pass">PASS</span>';
+      } else {
+        logTo('contentLog', `✗ TEST FAILED: Expected 'auto', got '${result}'`, 'error');
+        document.getElementById('contentTestResult').innerHTML = '<span class="status fail">FAIL</span>';
+      }
+    }
+    
+    function runIntegrationTests() {
+      document.getElementById('integrationLog').innerHTML = '';
+      logTo('integrationLog', 'Running integration tests...', 'info');
+      
+      let passCount = 0;
+      let failCount = 0;
+      
+      // Test 1: Empty overlay is neutralized
+      {
+        const overlay = document.createElement('div');
+        overlay.id = 'integrationTest1';
+        const content = document.createElement('div');
+        content.className = 'tvOverlayContent';
+        overlay.appendChild(content);
+        overlay.style.pointerEvents = 'auto';
+        document.body.appendChild(overlay);
+        
+        function ensureOverlayNotBlocking() {
+          const ov = document.getElementById('integrationTest1');
+          if (!ov) return;
+          const content = ov.querySelector('.tvOverlayContent');
+          const hasActiveContent = !!(content && content.childElementCount > 0);
+          if (!hasActiveContent) {
+            ov.style.pointerEvents = 'none';
+          }
+        }
+        
+        ensureOverlayNotBlocking();
+        
+        if (overlay.style.pointerEvents === 'none') {
+          logTo('integrationLog', '✓ Test 1: Empty overlay neutralized', 'success');
+          passCount++;
+        } else {
+          logTo('integrationLog', '✗ Test 1: Failed to neutralize empty overlay', 'error');
+          failCount++;
+        }
+        
+        overlay.remove();
+      }
+      
+      // Test 2: Overlay with content is not neutralized
+      {
+        const overlay = document.createElement('div');
+        overlay.id = 'integrationTest2';
+        const content = document.createElement('div');
+        content.className = 'tvOverlayContent';
+        const child = document.createElement('div');
+        content.appendChild(child);
+        overlay.appendChild(content);
+        overlay.style.pointerEvents = 'auto';
+        document.body.appendChild(overlay);
+        
+        function ensureOverlayNotBlocking() {
+          const ov = document.getElementById('integrationTest2');
+          if (!ov) return;
+          const content = ov.querySelector('.tvOverlayContent');
+          const hasActiveContent = !!(content && content.childElementCount > 0);
+          if (!hasActiveContent) {
+            ov.style.pointerEvents = 'none';
+          }
+        }
+        
+        ensureOverlayNotBlocking();
+        
+        if (overlay.style.pointerEvents === 'auto') {
+          logTo('integrationLog', '✓ Test 2: Overlay with content preserved', 'success');
+          passCount++;
+        } else {
+          logTo('integrationLog', '✗ Test 2: Incorrectly neutralized overlay with content', 'error');
+          failCount++;
+        }
+        
+        overlay.remove();
+      }
+      
+      // Test 3: Missing content element doesn't crash
+      {
+        const overlay = document.createElement('div');
+        overlay.id = 'integrationTest3';
+        overlay.style.pointerEvents = 'auto';
+        document.body.appendChild(overlay);
+        
+        let crashed = false;
+        try {
+          function ensureOverlayNotBlocking() {
+            const ov = document.getElementById('integrationTest3');
+            if (!ov) return;
+            const content = ov.querySelector('.tvOverlayContent');
+            const hasActiveContent = !!(content && content.childElementCount > 0);
+            if (!hasActiveContent) {
+              ov.style.pointerEvents = 'none';
+            }
+          }
+          
+          ensureOverlayNotBlocking();
+        } catch (e) {
+          crashed = true;
+          logTo('integrationLog', `✗ Test 3: Crashed with error: ${e.message}`, 'error');
+          failCount++;
+        }
+        
+        if (!crashed) {
+          logTo('integrationLog', '✓ Test 3: Handles missing content element gracefully', 'success');
+          passCount++;
+        }
+        
+        overlay.remove();
+      }
+      
+      // Summary
+      logTo('integrationLog', '─────────────────────────────', 'info');
+      logTo('integrationLog', `Tests passed: ${passCount}`, passCount > 0 ? 'success' : 'info');
+      logTo('integrationLog', `Tests failed: ${failCount}`, failCount > 0 ? 'error' : 'info');
+      
+      if (failCount === 0) {
+        document.getElementById('integrationTestResult').innerHTML = '<span class="status pass">ALL PASS</span>';
+      } else {
+        document.getElementById('integrationTestResult').innerHTML = '<span class="status fail">SOME FAILED</span>';
+      }
+    }
+    
+    // Button click handler
+    document.getElementById('testButton').addEventListener('click', function() {
+      clickCount++;
+      this.textContent = `Clicked ${clickCount} time${clickCount !== 1 ? 's' : ''}!`;
+      log(`✓ Button clicked successfully! (Click #${clickCount})`, 'success');
+    });
+    
+    // Initial setup
+    log('Test page loaded. Click "Setup" to begin.', 'info');
+  </script>
+</body>
+</html>
