@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold Wall Winner-Takes-All Scoring Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 30px;
+    }
+    
+    .test-section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .game-container {
+      background: rgba(26, 35, 50, 0.6);
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 400px;
+    }
+    
+    .info {
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 3px solid #83bfff;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    .warning {
+      background: rgba(255, 153, 102, 0.1);
+      border-left: 3px solid #ff9966;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .success {
+      background: rgba(102, 255, 102, 0.1);
+      border-left: 3px solid #66ff66;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .error {
+      background: rgba(255, 107, 107, 0.1);
+      border-left: 3px solid #ff6b6b;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .test-result {
+      padding: 8px 12px;
+      margin: 5px 0;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .test-pass {
+      background: rgba(102, 255, 102, 0.1);
+      color: #66ff66;
+    }
+    
+    .test-fail {
+      background: rgba(255, 107, 107, 0.1);
+      color: #ff6b6b;
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🏆 Hold Wall Winner-Takes-All Scoring Test</h1>
+    
+    <div class="test-section">
+      <h2>Scoring Test Scenarios</h2>
+      <div class="info">
+        <strong>Test Objective:</strong><br>
+        Verify that Hold Wall now uses winner-takes-all scoring:<br>
+        • Score = 100 when AI drops and player is last remaining<br>
+        • Score = 0 for all other cases (moved, released early, deal accepted)
+      </div>
+      
+      <div class="controls">
+        <button class="btn" onclick="runAllTests()">▶ Run All Tests</button>
+        <button class="btn" onclick="testWinScenario()">Test Win (Score 100)</button>
+        <button class="btn" onclick="testLoseByMove()">Test Lose by Move</button>
+        <button class="btn" onclick="testLoseByRelease()">Test Lose by Release</button>
+        <button class="btn" onclick="resetResults()">🔄 Reset</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="testResults">
+        <p style="text-align: center; color: #95a9c0;">Click "Run All Tests" to begin</p>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Manual Test</h2>
+      <div class="warning">
+        <strong>Instructions for Manual Testing:</strong><br>
+        1. Click "Start Manual Test" below<br>
+        2. Press and hold the WALL element<br>
+        3. Wait for AI drops to occur<br>
+        4. When the last AI drops, you should win with score = 100<br>
+        5. Alternatively, release early or move to test score = 0
+      </div>
+      <div class="controls">
+        <button class="btn" onclick="startManualTest()">▶ Start Manual Test</button>
+      </div>
+      <div id="gameContainer" class="game-container">
+        <p style="text-align: center; color: #95a9c0;">Click "Start Manual Test" above</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the minigame module -->
+  <script src="js/minigames/hold-wall.js"></script>
+  
+  <script>
+    // Mock game state for testing
+    window.game = {
+      players: [
+        { name: 'You', human: true, evicted: false },
+        { name: 'Finn', human: false, evicted: false },
+        { name: 'Mimi', human: false, evicted: false },
+        { name: 'Rae', human: false, evicted: false }
+      ],
+      cfg: {}
+    };
+    
+    let testResults = [];
+    
+    function logTestResult(testName, passed, expected, actual, message = '') {
+      const result = {
+        name: testName,
+        passed: passed,
+        expected: expected,
+        actual: actual,
+        message: message
+      };
+      testResults.push(result);
+      displayResults();
+    }
+    
+    function displayResults() {
+      const container = document.getElementById('testResults');
+      container.innerHTML = '';
+      
+      let passCount = 0;
+      let failCount = 0;
+      
+      testResults.forEach(result => {
+        const div = document.createElement('div');
+        div.className = 'test-result ' + (result.passed ? 'test-pass' : 'test-fail');
+        
+        const icon = result.passed ? '✓' : '✗';
+        const status = result.passed ? 'PASS' : 'FAIL';
+        
+        div.innerHTML = `
+          ${icon} ${status}: ${result.name}<br>
+          Expected: ${result.expected}, Got: ${result.actual}
+          ${result.message ? '<br>' + result.message : ''}
+        `;
+        
+        container.appendChild(div);
+        
+        if(result.passed) passCount++;
+        else failCount++;
+      });
+      
+      if(testResults.length > 0) {
+        const summary = document.createElement('div');
+        summary.className = passCount === testResults.length ? 'success' : 'warning';
+        summary.innerHTML = `
+          <strong>Summary:</strong> ${passCount} passed, ${failCount} failed out of ${testResults.length} tests
+        `;
+        container.appendChild(summary);
+      }
+    }
+    
+    function resetResults() {
+      testResults = [];
+      document.getElementById('testResults').innerHTML = '<p style="text-align: center; color: #95a9c0;">Click "Run All Tests" to begin</p>';
+    }
+    
+    // Test 1: Win scenario - AI drops, player wins
+    function testWinScenario() {
+      console.log('[Test] Running win scenario test...');
+      
+      const container = document.createElement('div');
+      let capturedScore = null;
+      
+      const onComplete = (score) => {
+        capturedScore = score;
+        console.log('[Test] Win scenario - captured score:', score);
+        
+        const passed = capturedScore === 100;
+        logTestResult(
+          'Win Scenario (AI drops, player last)',
+          passed,
+          100,
+          capturedScore,
+          'Player should score 100 when AI drops and player is last remaining'
+        );
+      };
+      
+      // Start the game
+      if(window.MiniGames && window.MiniGames.holdWall){
+        window.MiniGames.holdWall.render(container, onComplete, { seed: 42 });
+        
+        // Simulate immediate press and hold
+        const wallDiv = container.querySelector('[style*="WALL"]');
+        if(wallDiv) {
+          const mouseDownEvent = new MouseEvent('mousedown', { clientX: 100, clientY: 100 });
+          wallDiv.dispatchEvent(mouseDownEvent);
+          
+          // Simulate AI win scenario by directly triggering endHold with aiWon=true
+          // This requires accessing the internal game state which is not exposed
+          // For now, we'll log that this is a limitation
+          console.log('[Test] Note: Cannot directly simulate AI drop in automated test');
+          logTestResult(
+            'Win Scenario Test Setup',
+            true,
+            'Manual verification needed',
+            'Automated setup complete',
+            'Manually hold wall until AI drops to verify score = 100'
+          );
+        }
+      } else {
+        logTestResult('Win Scenario', false, 'MiniGames.holdWall exists', 'Module not found');
+      }
+    }
+    
+    // Test 2: Lose by moving
+    function testLoseByMove() {
+      console.log('[Test] Running lose by move test...');
+      
+      const container = document.createElement('div');
+      let capturedScore = null;
+      
+      const onComplete = (score) => {
+        capturedScore = score;
+        console.log('[Test] Lose by move - captured score:', score);
+        
+        const passed = capturedScore === 0;
+        logTestResult(
+          'Lose by Move',
+          passed,
+          0,
+          capturedScore,
+          'Player should score 0 when moving too much'
+        );
+      };
+      
+      if(window.MiniGames && window.MiniGames.holdWall){
+        window.MiniGames.holdWall.render(container, onComplete, { seed: 42 });
+        
+        const wallDiv = container.querySelector('[style*="WALL"]');
+        if(wallDiv) {
+          // Start holding
+          const mouseDownEvent = new MouseEvent('mousedown', { clientX: 100, clientY: 100 });
+          wallDiv.dispatchEvent(mouseDownEvent);
+          
+          // Simulate large movement (over threshold)
+          setTimeout(() => {
+            const mouseMoveEvent = new MouseEvent('mousemove', { clientX: 200, clientY: 200 });
+            wallDiv.dispatchEvent(mouseMoveEvent);
+          }, 100);
+        }
+      } else {
+        logTestResult('Lose by Move', false, 'MiniGames.holdWall exists', 'Module not found');
+      }
+    }
+    
+    // Test 3: Lose by releasing early
+    function testLoseByRelease() {
+      console.log('[Test] Running lose by release test...');
+      
+      const container = document.createElement('div');
+      let capturedScore = null;
+      
+      const onComplete = (score) => {
+        capturedScore = score;
+        console.log('[Test] Lose by release - captured score:', score);
+        
+        const passed = capturedScore === 0;
+        logTestResult(
+          'Lose by Release',
+          passed,
+          0,
+          capturedScore,
+          'Player should score 0 when releasing before being last remaining'
+        );
+      };
+      
+      if(window.MiniGames && window.MiniGames.holdWall){
+        window.MiniGames.holdWall.render(container, onComplete, { seed: 42 });
+        
+        const wallDiv = container.querySelector('[style*="WALL"]');
+        if(wallDiv) {
+          // Start holding
+          const mouseDownEvent = new MouseEvent('mousedown', { clientX: 100, clientY: 100 });
+          wallDiv.dispatchEvent(mouseDownEvent);
+          
+          // Release after a short time
+          setTimeout(() => {
+            const mouseUpEvent = new MouseEvent('mouseup', { clientX: 100, clientY: 100 });
+            wallDiv.dispatchEvent(mouseUpEvent);
+          }, 500);
+        }
+      } else {
+        logTestResult('Lose by Release', false, 'MiniGames.holdWall exists', 'Module not found');
+      }
+    }
+    
+    function runAllTests() {
+      resetResults();
+      
+      // Test module loading
+      const moduleLoaded = !!(window.MiniGames && window.MiniGames.holdWall);
+      logTestResult(
+        'Module Load Check',
+        moduleLoaded,
+        'MiniGames.holdWall exists',
+        moduleLoaded ? 'Module found' : 'Module not found'
+      );
+      
+      if(moduleLoaded) {
+        // Run automated tests with delays
+        setTimeout(() => testLoseByRelease(), 100);
+        setTimeout(() => testLoseByMove(), 2000);
+        
+        // Add instruction for win scenario
+        setTimeout(() => {
+          const info = document.createElement('div');
+          info.className = 'info';
+          info.innerHTML = `
+            <strong>Win Scenario Test:</strong><br>
+            To test score = 100 when AI drops, use the Manual Test section below.
+            Hold the wall until AI drops occur and the last AI falls.
+          `;
+          document.getElementById('testResults').appendChild(info);
+        }, 4000);
+      }
+    }
+    
+    function startManualTest() {
+      const container = document.getElementById('gameContainer');
+      
+      const onComplete = (score) => {
+        const result = document.createElement('div');
+        result.className = score === 100 ? 'success' : (score === 0 ? 'warning' : 'error');
+        result.innerHTML = `
+          <strong>Game Complete!</strong><br>
+          Final Score: ${score}<br>
+          ${score === 100 ? '✓ Correct: Winner-takes-all scoring!' : 
+            score === 0 ? '✓ Correct: Score 0 for not winning' : 
+            '✗ Unexpected score value'}
+        `;
+        container.appendChild(result);
+      };
+      
+      if(window.MiniGames && window.MiniGames.holdWall){
+        container.innerHTML = '';
+        window.MiniGames.holdWall.render(container, onComplete, { seed: 42 });
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: MiniGames.holdWall not found!</p>';
+      }
+    }
+    
+    // Log that the test page is ready
+    console.log('[Test] Hold Wall Winner-Takes-All Scoring test page loaded');
+  </script>
+</body>
+</html>

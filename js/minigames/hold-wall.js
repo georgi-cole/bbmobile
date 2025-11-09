@@ -35,8 +35,6 @@
     container.innerHTML = '';
     
     const { 
-      debugMode = false, 
-      competitionMode = false,
       seed
     } = options;
     
@@ -66,7 +64,7 @@
     
     // Status feed panel (scrolling message feed)
     const feedPanel = document.createElement('div');
-    feedPanel.style.cssText = 'width:100%;max-width:400px;height:120px;background:#1a2332;border:1px solid #2c3a4d;border-radius:6px;padding:8px;overflow-y:auto;font-size:0.85rem;color:#95a9c0;display:flex;flex-direction:column-reverse;';
+    feedPanel.style.cssText = 'width:100%;max-width:400px;height:120px;background:#1a2332;border:1px solid #2c3a4d;border-radius:6px;padding:8px;overflow-y:auto;font-size:0.85rem;color:#95a9c0;';
     
     const feedContent = document.createElement('div');
     feedContent.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
@@ -92,6 +90,7 @@
     let participants = [];
     let dropTimers = [];
     let dealWindowTimer = null;
+    let dealCountdownInterval = null;
     let postDealInterval = null;
     let rivalName = null;
     let aiDropped = false;
@@ -105,8 +104,8 @@
       const msg = document.createElement('div');
       msg.textContent = text;
       msg.style.cssText = `color:${color};padding:2px 0;line-height:1.3;`;
-      feedContent.insertBefore(msg, feedContent.firstChild);
-      feedPanel.scrollTop = 0; // Auto-scroll to show latest
+      feedContent.appendChild(msg);
+      feedPanel.scrollTop = feedPanel.scrollHeight; // Auto-scroll to show latest
     }
     
     /**
@@ -144,14 +143,19 @@
     function scheduleAIDrops(){
       if(participants.length === 0) return;
       
+      // Filter out player to get only AI participants
+      const aiOnly = participants.filter(p => p !== 'You');
+      
+      if(aiOnly.length === 0) return;
+      
       // Keep one AI for final two (last in array)
-      const droppersCount = participants.length - 1;
+      const droppersCount = aiOnly.length - 1;
       const dropTimes = [];
       
       // Schedule drops between 5s (5000ms) and 180s (180000ms)
       for(let i = 0; i < droppersCount; i++){
         const dropTime = 5000 + rng() * 175000; // 5s to 180s
-        dropTimes.push({ name: participants[i], time: dropTime });
+        dropTimes.push({ name: aiOnly[i], time: dropTime });
       }
       
       // Sort by time for proper narrative flow
@@ -170,8 +174,9 @@
           addFeedMessage(`${drop.name} dropped. ${remaining} remaining.`, '#ff9966');
           
           // Check if we're down to final two (player + one AI)
-          if(remaining === 1){
-            rivalName = participants[0];
+          if(remaining === 2){
+            // Get the remaining AI (not 'You')
+            rivalName = participants.find(p => p !== 'You');
             startDealWindow();
           }
         }, drop.time);
@@ -189,8 +194,20 @@
       
       addFeedMessage(`${rivalName}: "Release now and I won't nominate you!"`, '#ffcc00');
       
+      // Add countdown display
+      let timeLeft = 10;
+      addFeedMessage(`Deal expires in ${timeLeft} seconds...`, '#ffcc00');
+      
+      dealCountdownInterval = setInterval(() => {
+        timeLeft--;
+        if(timeLeft > 0){
+          addFeedMessage(`Deal expires in ${timeLeft} seconds...`, '#ffcc00');
+        }
+      }, 1000);
+      
       // 10-second deal window
       dealWindowTimer = setTimeout(() => {
+        if(dealCountdownInterval) clearInterval(dealCountdownInterval);
         addFeedMessage('Deal window expired. Competition continues...', '#95a9c0');
         startPostDealChecks();
       }, 10000);
@@ -234,6 +251,7 @@
       dropTimers.forEach(t => clearTimeout(t));
       dropTimers = [];
       if(dealWindowTimer) clearTimeout(dealWindowTimer);
+      if(dealCountdownInterval) clearInterval(dealCountdownInterval);
       if(postDealInterval) clearInterval(postDealInterval);
     }
     
@@ -307,17 +325,22 @@
       // Check if player released during deal window
       const duringDealWindow = rivalName && dealWindowTimer && !aiDropped;
       
+      // Winner-takes-all scoring: 100 if last remaining, 0 otherwise
+      let finalScore = 0;
+      
       if(aiWon){
-        // AI dropped, player wins automatically
+        // AI dropped, player wins automatically - score 100
+        finalScore = 100;
         statusDiv.textContent = 'You win! Others dropped.';
         statusDiv.style.color = '#66ff66';
         addFeedMessage('Challenge complete! You outlasted everyone!', '#66ff66');
       } else if(moved){
+        // Player moved - score 0
         statusDiv.textContent = 'You moved! Final time: ' + holdDuration.toFixed(1) + 's';
         statusDiv.style.color = '#ff6b6b';
         addFeedMessage('You moved too much and lost grip!', '#ff6b6b');
       } else if(duringDealWindow){
-        // Player released during the 10-second deal window
+        // Player released during the 10-second deal window - score 0
         const respected = rng() < 0.8; // 80% chance AI respects promise
         
         if(respected){
@@ -338,33 +361,9 @@
           });
         }
       } else {
+        // Player released before being last - score 0
         statusDiv.textContent = 'Released! Time: ' + holdDuration.toFixed(1) + 's';
         addFeedMessage('You released from the wall.', '#95a9c0');
-      }
-      
-      // Calculate score (0-15s range, perfect = 15s+)
-      let rawScore;
-      if(holdDuration >= 15){
-        rawScore = 100;
-      } else if(holdDuration >= 10){
-        rawScore = 70 + (holdDuration - 10) * 6;
-      } else if(holdDuration >= 5){
-        rawScore = 40 + (holdDuration - 5) * 6;
-      } else {
-        rawScore = holdDuration * 8;
-      }
-      
-      rawScore = Math.min(100, Math.round(rawScore));
-      
-      const playerSucceeded = rawScore >= 60;
-      
-      // Apply win probability logic
-      let finalScore = rawScore;
-      if(g.GameUtils && !debugMode && competitionMode){
-        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-        if(!shouldWin && playerSucceeded){
-          finalScore = Math.round(30 + Math.random() * 25);
-        }
       }
       
       setTimeout(() => onComplete(finalScore), 1500);
