@@ -26,59 +26,6 @@
     return picks;
   }
 
-  // ========== Overlay Host Management ==========
-  
-  /**
-   * Ensure #tvOverlay exists in the DOM.
-   * Prefer global.ensureTVOverlayScaffold() if available; otherwise inject minimal #tvOverlay.
-   * @returns {HTMLElement|null} The tvOverlay element or its content container
-   */
-  function ensureOverlayHost(){
-    console.log('[noms] Ensuring TV overlay host exists');
-    
-    // Prefer global scaffold function if available (from veto.js)
-    if(global && typeof global.ensureTVOverlayScaffold === 'function'){
-      console.log('[noms] Using global.ensureTVOverlayScaffold()');
-      const content = global.ensureTVOverlayScaffold();
-      if(content){
-        console.log('[noms] ✓ Scaffold created successfully');
-        return content.parentElement || content; // Return parent #tvOverlay if possible
-      }
-    }
-    
-    // Fallback: create minimal #tvOverlay if missing
-    let tvOverlay = document.getElementById('tvOverlay');
-    if(!tvOverlay){
-      console.log('[noms] #tvOverlay missing, creating minimal fallback');
-      tvOverlay = document.createElement('div');
-      tvOverlay.id = 'tvOverlay';
-      tvOverlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 999;
-        pointer-events: auto;
-      `;
-      
-      const tv = document.getElementById('tv');
-      if(tv){
-        tv.appendChild(tvOverlay);
-      } else {
-        document.body.appendChild(tvOverlay);
-      }
-      console.log('[noms] ✓ Minimal #tvOverlay created');
-    } else {
-      console.log('[noms] ✓ #tvOverlay already exists');
-    }
-    
-    return tvOverlay;
-  }
-
   function renderNomsPanel(){
     const g=global.game; global.tv.say('Nominations');
 
@@ -127,115 +74,126 @@
       return;
     }
 
-    // ========== Human HOH: Minimal fallback intro card ==========
+    // ========== Human HOH: Nomination intro card ==========
     // The fullscreen module (nominations-grid-fullscreen.js) intercepts this function
     // and handles the flow. This code only runs if the interceptor is not installed.
     if(hoh && hoh.human){
-      console.log('[noms] Human HOH detected - showing fallback intro card');
+      console.log('[noms] Human HOH detected - showing intro card');
       
-      const host = ensureOverlayHost();
-      if(host){
-        host.innerHTML = '';
+      // Prefer TVCards.showNominateIntro for proper TV overlay positioning
+      if(global.TVCards && typeof global.TVCards.showNominateIntro === 'function'){
+        console.log('[noms] Using TVCards.showNominateIntro()');
         
-        // Create stage wrapper for TV-centered layout
-        const stage = document.createElement('div');
-        stage.className = 'nfs-stage';
-        stage.style.cssText = `
-          position: absolute;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          pointer-events: none;
-          z-index: 10;
-        `;
-        
-        const center = document.createElement('div');
-        center.className = 'nfs-center';
-        center.style.cssText = `
-          pointer-events: auto;
-          max-width: 90%;
-          max-height: 80%;
-        `;
-        
-        const card = document.createElement('div');
-        card.className = 'revealCard diaryRoomCard';
-        card.style.cssText = `
-          padding: 20px 24px;
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 12px;
-        `;
-        
-        const title = document.createElement('h3');
-        title.textContent = 'Nomination Ceremony';
-        title.style.marginBottom = '4px';
-        title.style.fontSize = '1.1rem';
-        card.appendChild(title);
-        
-        const info = document.createElement('div');
-        info.className = 'big';
-        info.style.fontSize = '0.85rem';
-        info.style.lineHeight = '1.5';
-        info.style.marginBottom = '8px';
-        const countText = need > 2 
-          ? `You must nominate ${need} houseguests for eviction.`
-          : 'You must nominate two houseguests for eviction.';
-        info.textContent = `${hoh.name}, as Head of Household, it is time to make your nominations. ${countText}`;
-        card.appendChild(info);
-        
-        // NOMINATE button - calls NomsFS.open() if available
-        const nominateBtn = document.createElement('button');
-        nominateBtn.className = 'btn primary';
-        nominateBtn.textContent = 'NOMINATE';
-        nominateBtn.style.cssText = `
-          padding: 12px 32px;
-          font-size: 1rem;
-          font-weight: 700;
-          margin-top: 8px;
-        `;
-        
-        nominateBtn.addEventListener('click', () => {
-          console.log('[noms] Fallback NOMINATE button clicked');
-          
-          // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
-          if(global.NomsFS && typeof global.NomsFS.open === 'function'){
-            console.log('[noms] Using NomsFS.open() from fallback');
-            host.innerHTML = '';
-            document.getElementById('tv')?.classList.remove('tvTall');
+        global.TVCards.showNominateIntro({
+          hohName: hoh.name,
+          need: need,
+          onNominate: () => {
+            console.log('[noms] NOMINATE button clicked via TVCards');
             
-            global.NomsFS.open().then(selections => {
-              if(selections && Array.isArray(selections) && selections.length > 0){
-                console.log('[noms] Selections from NomsFS.open():', selections);
-                g._pendingNoms = selections.slice();
-                finalizeNoms();
-              } else {
-                console.warn('[noms] NomsFS.open() returned no selections, re-showing fallback');
-                renderNomsPanel(); // Re-show fallback card
-              }
-            }).catch(err => {
-              console.error('[noms] NomsFS.open() error:', err);
-              renderNomsPanel(); // Re-show fallback card
-            });
-          } else {
-            // NomsFS not available - log error and show message
-            console.error('[noms] NomsFS not available - fullscreen module not loaded');
-            alert('Nomination selector not available. Please refresh the page.');
+            // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
+            if(global.NomsFS && typeof global.NomsFS.open === 'function'){
+              console.log('[noms] Using NomsFS.open()');
+              
+              global.NomsFS.open().then(selections => {
+                if(selections && Array.isArray(selections) && selections.length > 0){
+                  console.log('[noms] Selections from NomsFS.open():', selections);
+                  g._pendingNoms = selections.slice();
+                  finalizeNoms();
+                } else {
+                  console.warn('[noms] NomsFS.open() returned no selections, re-showing intro');
+                  renderNomsPanel(); // Re-show intro card
+                }
+              }).catch(err => {
+                console.error('[noms] NomsFS.open() error:', err);
+                renderNomsPanel(); // Re-show intro card
+              });
+            } else {
+              // NomsFS not available - log error and show message
+              console.error('[noms] NomsFS not available - fullscreen module not loaded');
+              alert('Nomination selector not available. Please refresh the page.');
+            }
           }
         });
         
-        card.appendChild(nominateBtn);
-        center.appendChild(card);
-        stage.appendChild(center);
-        host.appendChild(stage);
-        document.getElementById('tv')?.classList.add('tvTall');
-        
-        console.log('[noms] ✓ Fallback intro card mounted');
-      } else {
-        console.error('[noms] Failed to create overlay host for fallback panel');
+        return;
       }
+      
+      // Fallback: Manual card using proper TV overlay structure
+      console.log('[noms] TVCards not available, using fallback intro card');
+      
+      const content = global.ensureTVOverlayScaffold ? global.ensureTVOverlayScaffold() : null;
+      if(!content){
+        console.error('[noms] Failed to ensure TV overlay scaffold for fallback panel');
+        return;
+      }
+      
+      content.innerHTML = '';
+      
+      const card = document.createElement('div');
+      card.className = 'revealCard diaryRoomCard tvCardBody';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Nomination Ceremony';
+      card.appendChild(title);
+      
+      const info = document.createElement('p');
+      const countText = need > 2 
+        ? `You must nominate ${need} houseguests for eviction.`
+        : 'You must nominate two houseguests for eviction.';
+      info.textContent = `${hoh.name}, as Head of Household, it is time to make your nominations. ${countText}`;
+      card.appendChild(info);
+      
+      const btnRow = document.createElement('div');
+      btnRow.className = 'veto-decision-row';
+      
+      const nominateBtn = document.createElement('button');
+      nominateBtn.className = 'btn primary';
+      nominateBtn.textContent = 'NOMINATE';
+      nominateBtn.setAttribute('aria-label', 'Open nomination selector');
+      
+      nominateBtn.addEventListener('click', () => {
+        console.log('[noms] Fallback NOMINATE button clicked');
+        nominateBtn.disabled = true;
+        
+        // Try to use NomsFS.open() if available (from nominations-grid-fullscreen.js)
+        if(global.NomsFS && typeof global.NomsFS.open === 'function'){
+          console.log('[noms] Using NomsFS.open() from fallback');
+          content.innerHTML = '';
+          document.getElementById('tv')?.classList.remove('tvTall');
+          
+          global.NomsFS.open().then(selections => {
+            if(selections && Array.isArray(selections) && selections.length > 0){
+              console.log('[noms] Selections from NomsFS.open():', selections);
+              g._pendingNoms = selections.slice();
+              finalizeNoms();
+            } else {
+              console.warn('[noms] NomsFS.open() returned no selections, re-showing fallback');
+              renderNomsPanel(); // Re-show fallback card
+            }
+          }).catch(err => {
+            console.error('[noms] NomsFS.open() error:', err);
+            renderNomsPanel(); // Re-show fallback card
+          });
+        } else {
+          // NomsFS not available - log error and show message
+          console.error('[noms] NomsFS not available - fullscreen module not loaded');
+          alert('Nomination selector not available. Please refresh the page.');
+        }
+      });
+      
+      btnRow.appendChild(nominateBtn);
+      card.appendChild(btnRow);
+      content.appendChild(card);
+      
+      document.getElementById('tv')?.classList.add('tvTall');
+      
+      // Apply text fitting if available
+      if(global.fitTVCardText || (global.UI && global.UI.fitTVCardText)){
+        const fitFn = global.UI?.fitTVCardText || global.fitTVCardText;
+        fitFn(card);
+      }
+      
+      console.log('[noms] ✓ Fallback intro card mounted');
       return;
     }
     
@@ -563,13 +521,28 @@
       }
 
       // Step 2: Nominee reveals (faux TV)
+      // Prefer TVCards helpers for proper TV overlay positioning
       for(let i=0; i<ids.length; i++){
         const label = ids.length>2 ? `Nominee #${i+1}` : (i===0 ? 'First Nominee' : 'Second Nominee');
-        global.showCard?.(label, [global.safeName(ids[i])], 'noms', 2200, true);
-        try{ 
-          await global.cardQueueWaitIdle?.(); 
-        }catch(e){ 
-          // Card queue is optional, continue if not available
+        const nomineeName = global.safeName(ids[i]);
+        
+        // Use TVCards.showTVCardWithAvatars if available
+        if(global.TVCards && typeof global.TVCards.showTVCardWithAvatars === 'function'){
+          await global.TVCards.showTVCardWithAvatars({
+            title: label,
+            lines: [nomineeName],
+            tone: 'noms',
+            duration: 2200,
+            subjectIds: [ids[i]] // Show nominee avatar
+          });
+        } else {
+          // Fallback to global.showCard
+          global.showCard?.(label, [nomineeName], 'noms', 2200, true);
+          try{ 
+            await global.cardQueueWaitIdle?.(); 
+          }catch(e){ 
+            // Card queue is optional, continue if not available
+          }
         }
       }
 

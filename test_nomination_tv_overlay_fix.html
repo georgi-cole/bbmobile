@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Nomination Ceremony TV Overlay Fix</title>
+  <link rel="stylesheet" href="styles.css?v=test">
+  <link rel="stylesheet" href="overrides-fixes.css?v=test">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a0f16;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+    }
+    .test-controls {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(20, 30, 45, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(110, 160, 220, 0.25);
+      max-width: 250px;
+    }
+    .test-controls button {
+      display: block;
+      margin: 8px 0;
+      padding: 10px 15px;
+      background: #2a4766;
+      color: #e0e0e0;
+      border: 1px solid #356089;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 14px;
+    }
+    .test-controls button:hover {
+      background: #356089;
+    }
+    .test-info {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(28, 43, 62, 0.5);
+      border-radius: 12px;
+      border-left: 4px solid #4CAF50;
+    }
+    .test-info h2 {
+      margin-top: 0;
+      color: #4CAF50;
+    }
+    .test-info ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .test-info li {
+      margin: 8px 0;
+      line-height: 1.6;
+    }
+    #tv {
+      margin: 20px auto;
+      max-width: 800px;
+      position: relative;
+      background: linear-gradient(135deg, #0e1a28, #1a2b3f);
+      border: 3px solid #356089;
+      border-radius: 24px;
+      padding: 40px 30px;
+      min-height: 500px;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8);
+    }
+    /* Visual guide to show TV boundaries */
+    #tv::before {
+      content: 'Faux TV Screen Boundary';
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 12px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h3 style="margin: 0 0 10px 0; color: #83bfff;">Test Controls</h3>
+    <button id="test2Nominees">Test 2 Nominees</button>
+    <button id="test3Nominees">Test 3 Nominees (Double)</button>
+    <button id="test4Nominees">Test 4 Nominees (Triple)</button>
+    <button id="testIntroOnly">Test Intro Card Only</button>
+    <button id="testRevealOnly">Test Nominee Reveal</button>
+    <button id="clearOverlay">Clear Overlay</button>
+  </div>
+
+  <div class="test-info">
+    <h2>🧪 Nomination Ceremony TV Overlay Fix Test</h2>
+    <p><strong>Purpose:</strong> Verify that ALL nomination ceremony cards render inside the faux TV screen boundary.</p>
+    <p><strong>Expected Behavior:</strong></p>
+    <ul>
+      <li>✅ Intro card with NOMINATE button is centered within TV screen (not page)</li>
+      <li>✅ Nominee reveal cards appear inside TV overlay with avatars</li>
+      <li>✅ Cards use standard TV overlay styling (.revealCard.diaryRoomCard.tvCardBody)</li>
+      <li>✅ Multi-nominee (3-4) cards match single-nominee (2) visual style</li>
+      <li>✅ All cards constrained by max-width: min(92%, 520px) and max-height: 78%</li>
+      <li>✅ Typography consistent: h3: 0.95rem, p: 0.86rem, p.big: 0.92rem</li>
+    </ul>
+    <p><strong>Visual Check:</strong> Cards should stay within the blue TV border, centered vertically and horizontally.</p>
+  </div>
+
+  <!-- TV container with overlay scaffold -->
+  <div id="tv">
+    <div id="tvNow" style="text-align: center; opacity: 0.7; padding: 20px;">
+      Click a test button to simulate nomination ceremony cards
+    </div>
+    <div id="tvOverlay"></div>
+  </div>
+
+  <!-- Load modules in order -->
+  <script src="js/integrity.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/helpers.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/ui/tv-cards.js"></script>
+  <script src="js/nominations.js"></script>
+
+  <script>
+    // Initialize minimal game state for testing
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice', human: true },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob', human: false },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie', human: false },
+        { id: 4, name: 'Diana', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diana', human: false },
+        { id: 5, name: 'Eve', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eve', human: false }
+      ],
+      hohId: 1,
+      phase: 'nominations',
+      nominees: [],
+      nomsLocked: false,
+      __twistNomSlots: 2
+    };
+
+    // Helper functions
+    window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => {
+      const p = window.getP(id);
+      return p ? p.name : `Player ${id}`;
+    };
+    window.tv = { say: (text) => console.log('[TV]', text) };
+    window.updateHud = () => {};
+
+    // Ensure TV overlay has proper structure
+    function setupTVOverlay() {
+      const tv = document.getElementById('tv');
+      let tvOverlay = document.getElementById('tvOverlay');
+      
+      if (!tvOverlay) {
+        tvOverlay = document.createElement('div');
+        tvOverlay.id = 'tvOverlay';
+        tv.appendChild(tvOverlay);
+      }
+      
+      // Ensure TV has proper positioning
+      tv.style.position = 'relative';
+      
+      // Set up overlay scaffold if TVCards is available
+      if (window.TVCards && window.TVCards.ensureTVOverlay) {
+        window.TVCards.ensureTVOverlay();
+      }
+      
+      return tvOverlay;
+    }
+
+    // Test: Show intro card with NOMINATE button
+    function testIntroCard(need) {
+      setupTVOverlay();
+      const g = window.game;
+      const hoh = window.getP(g.hohId);
+      
+      console.log(`[TEST] Showing intro card for ${need} nominees`);
+      
+      if (window.TVCards && window.TVCards.showNominateIntro) {
+        console.log('[TEST] Using TVCards.showNominateIntro()');
+        window.TVCards.showNominateIntro({
+          hohName: hoh.name,
+          need: need,
+          onNominate: () => {
+            console.log('[TEST] NOMINATE button clicked');
+            alert('NOMINATE button clicked! (In real game, this opens NomsFS.open())');
+          }
+        });
+      } else {
+        console.error('[TEST] TVCards.showNominateIntro not available');
+        alert('TVCards.showNominateIntro not available. Check console.');
+      }
+    }
+
+    // Test: Show nominee reveal cards
+    async function testNomineeReveal(nominees) {
+      setupTVOverlay();
+      console.log(`[TEST] Showing nominee reveal for ${nominees.length} nominees`);
+      
+      for (let i = 0; i < nominees.length; i++) {
+        const label = nominees.length > 2 ? `Nominee #${i+1}` : (i === 0 ? 'First Nominee' : 'Second Nominee');
+        const nomineeName = window.safeName(nominees[i]);
+        
+        if (window.TVCards && window.TVCards.showTVCardWithAvatars) {
+          console.log(`[TEST] Showing nominee ${i+1}/${nominees.length} with TVCards`);
+          await window.TVCards.showTVCardWithAvatars({
+            title: label,
+            lines: [nomineeName],
+            tone: 'noms',
+            duration: 2000,
+            subjectIds: [nominees[i]]
+          });
+        } else {
+          console.error('[TEST] TVCards.showTVCardWithAvatars not available');
+          alert('TVCards not available');
+          break;
+        }
+      }
+      
+      console.log('[TEST] Nominee reveal complete');
+    }
+
+    // Test: Full ceremony flow
+    async function testFullCeremony(need) {
+      setupTVOverlay();
+      const g = window.game;
+      const nominees = [];
+      
+      // Pick nominees (skip HOH)
+      for (let i = 0; i < g.players.length && nominees.length < need; i++) {
+        if (g.players[i].id !== g.hohId) {
+          nominees.push(g.players[i].id);
+        }
+      }
+      
+      console.log(`[TEST] Full ceremony: ${need} nominees:`, nominees);
+      
+      // Step 1: Show intro
+      testIntroCard(need);
+      
+      // Wait for user to click NOMINATE (simulate selection)
+      setTimeout(async () => {
+        // Clear intro
+        if (window.TVCards && window.TVCards.clearTVOverlay) {
+          window.TVCards.clearTVOverlay();
+        }
+        
+        // Step 2: Show nominee reveals
+        await testNomineeReveal(nominees);
+      }, 3000);
+    }
+
+    // Button handlers
+    document.getElementById('test2Nominees').addEventListener('click', () => {
+      window.game.__twistNomSlots = 2;
+      testFullCeremony(2);
+    });
+
+    document.getElementById('test3Nominees').addEventListener('click', () => {
+      window.game.__twistNomSlots = 3;
+      testFullCeremony(3);
+    });
+
+    document.getElementById('test4Nominees').addEventListener('click', () => {
+      window.game.__twistNomSlots = 4;
+      testFullCeremony(4);
+    });
+
+    document.getElementById('testIntroOnly').addEventListener('click', () => {
+      testIntroCard(2);
+    });
+
+    document.getElementById('testRevealOnly').addEventListener('click', () => {
+      const nominees = [2, 3]; // Bob and Charlie
+      testNomineeReveal(nominees);
+    });
+
+    document.getElementById('clearOverlay').addEventListener('click', () => {
+      setupTVOverlay();
+      if (window.TVCards && window.TVCards.clearTVOverlay) {
+        window.TVCards.clearTVOverlay();
+        document.getElementById('tv').classList.remove('tvTall');
+      } else {
+        document.getElementById('tvOverlay').innerHTML = '';
+      }
+      document.getElementById('tvNow').textContent = 'Click a test button to simulate nomination ceremony cards';
+      console.log('[TEST] Overlay cleared');
+    });
+
+    // Initial setup
+    console.log('[TEST] Nomination TV overlay test page loaded');
+    console.log('[TEST] TVCards available:', !!window.TVCards);
+    console.log('[TEST] TVCards.showNominateIntro available:', !!(window.TVCards && window.TVCards.showNominateIntro));
+    console.log('[TEST] TVCards.showTVCardWithAvatars available:', !!(window.TVCards && window.TVCards.showTVCardWithAvatars));
+  </script>
+</body>
+</html>

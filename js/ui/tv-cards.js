@@ -483,6 +483,39 @@
     });
   }
 
+  /**
+   * Show nomination ceremony intro card with NOMINATE button.
+   * @param {Object} options - Card configuration
+   * @param {string} options.hohName - Name of the Head of Household
+   * @param {number} options.need - Number of nominees required (2, 3, or 4)
+   * @param {Function} options.onNominate - Callback when NOMINATE button is clicked
+   * @returns {Promise} Resolves when button is clicked
+   */
+  function showNominateIntro({hohName, need, onNominate}){
+    var countText = need > 2 
+      ? 'You must nominate ' + need + ' houseguests for eviction.'
+      : 'You must nominate two houseguests for eviction.';
+    var message = hohName + ', as Head of Household, it is time to make your nominations. ' + countText;
+    
+    return showTVDecision({
+      title: 'Nomination Ceremony',
+      message: message,
+      buttons: [
+        {
+          label: 'NOMINATE',
+          value: 'nominate',
+          primary: true,
+          ariaLabel: 'Open nomination selector'
+        }
+      ]
+    }).then(function(result){
+      if(result === 'nominate' && onNominate){
+        onNominate();
+      }
+      return result;
+    });
+  }
+
   // ======= EXPORTS =======
 
   // Export to global namespace
@@ -493,7 +526,8 @@
     showTVCardWithAvatars: showTVCardWithAvatars,
     showTVDecision: showTVDecision,
     showTVNomineeSavePanel: showTVNomineeSavePanel,
-    showInlineCard: showInlineCard
+    showInlineCard: showInlineCard,
+    showNominateIntro: showNominateIntro
   };
 
   // Export as module
