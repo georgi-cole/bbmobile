@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Debug Always Win Feature</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0a0e1a;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #4a9eff;
+      border-bottom: 2px solid #2a4a6a;
+      padding-bottom: 10px;
+    }
+    .section {
+      background: #121827;
+      border: 1px solid #2a3550;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-case {
+      background: #1a2030;
+      border-left: 3px solid #4a9eff;
+      padding: 15px;
+      margin: 10px 0;
+    }
+    .result {
+      font-weight: bold;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .pass {
+      background: rgba(74, 222, 128, 0.2);
+      color: #4ade80;
+      border: 1px solid #4ade80;
+    }
+    .fail {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid #ef4444;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    button:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+    .info {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid #3b82f6;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+    .code {
+      background: #0a0e1a;
+      border: 1px solid #2a3550;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    .scores {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .score-card {
+      background: #1a2030;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #2a3550;
+    }
+    .score-card.winner {
+      border-color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Test: Debug Always Win Feature</h1>
+  
+  <div class="info">
+    <strong>Test Objective:</strong> Verify that when <code>debugAlwaysWin</code> is enabled in settings, 
+    the human player always wins HOH and Veto competitions, regardless of their actual performance.
+  </div>
+
+  <div class="section">
+    <h2>Setup</h2>
+    <div class="test-case">
+      <h3>1. Initialize Test Environment</h3>
+      <button id="btnInit">Initialize Game</button>
+      <div id="initResult"></div>
+    </div>
+    
+    <div class="test-case">
+      <h3>2. Enable Debug Always Win</h3>
+      <button id="btnEnableDebug">Enable debugAlwaysWin</button>
+      <button id="btnDisableDebug">Disable debugAlwaysWin</button>
+      <div id="debugResult"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Test Cases</h2>
+    
+    <div class="test-case">
+      <h3>Test 1: HOH Competition with debugAlwaysWin Enabled</h3>
+      <p>Submit a low score for human player and verify they still win.</p>
+      <button id="btnTest1">Run Test 1</button>
+      <div id="test1Result"></div>
+    </div>
+
+    <div class="test-case">
+      <h3>Test 2: HOH Competition with debugAlwaysWin Disabled</h3>
+      <p>Submit a low score for human player and verify they lose (normal behavior).</p>
+      <button id="btnTest2">Run Test 2</button>
+      <div id="test2Result"></div>
+    </div>
+
+    <div class="test-case">
+      <h3>Test 3: Veto Competition with debugAlwaysWin Enabled</h3>
+      <p>Submit a low score for human player and verify they still win.</p>
+      <button id="btnTest3">Run Test 3</button>
+      <div id="test3Result"></div>
+    </div>
+
+    <div class="test-case">
+      <h3>Test 4: Veto Competition with debugAlwaysWin Disabled</h3>
+      <p>Submit a low score for human player and verify they lose (normal behavior).</p>
+      <button id="btnTest4">Run Test 4</button>
+      <div id="test4Result"></div>
+    </div>
+  </div>
+
+  <script>
+    // Mock game environment
+    window.game = window.game || {};
+    window.rng = Math.random;
+    
+    // Test utilities
+    function log(element, message, isPass) {
+      const div = document.createElement('div');
+      div.className = `result ${isPass ? 'pass' : 'fail'}`;
+      div.textContent = message;
+      element.appendChild(div);
+    }
+    
+    function showScores(element, scores, winnerId) {
+      const container = document.createElement('div');
+      container.className = 'scores';
+      
+      const sortedScores = Array.from(scores.entries()).sort((a, b) => b[1] - a[1]);
+      
+      sortedScores.forEach(([id, score]) => {
+        const card = document.createElement('div');
+        card.className = 'score-card' + (id === winnerId ? ' winner' : '');
+        card.innerHTML = `
+          <div>${id === window.game.humanId ? '👤 Human' : '🤖 AI ' + id}</div>
+          <div style="font-size: 24px; font-weight: bold;">${score.toFixed(1)}</div>
+          ${id === winnerId ? '<div style="color: #4ade80;">👑 WINNER</div>' : ''}
+        `;
+        container.appendChild(card);
+      });
+      
+      element.appendChild(container);
+    }
+
+    // Initialize test environment
+    document.getElementById('btnInit').addEventListener('click', () => {
+      const result = document.getElementById('initResult');
+      result.innerHTML = '';
+      
+      // Create mock game state
+      window.game = {
+        humanId: 1,
+        week: 2,
+        phase: 'lobby',
+        cfg: {
+          debugAlwaysWin: false,
+          tHOH: 40,
+          useNewMinigames: true
+        },
+        players: [
+          { id: 1, name: 'Human Player', human: true, evicted: false, compBeast: 0.5 },
+          { id: 2, name: 'AI Player 1', human: false, evicted: false, compBeast: 0.6 },
+          { id: 3, name: 'AI Player 2', human: false, evicted: false, compBeast: 0.7 },
+          { id: 4, name: 'AI Player 3', human: false, evicted: false, compBeast: 0.8 }
+        ],
+        lastCompScores: new Map()
+      };
+      
+      // Mock helper functions
+      window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.safeName = (id) => {
+        const p = window.getP(id);
+        return p ? p.name : `Player ${id}`;
+      };
+      
+      log(result, '✓ Game environment initialized', true);
+      log(result, `✓ Human player ID: ${window.game.humanId}`, true);
+      log(result, `✓ ${window.game.players.length} players created`, true);
+    });
+
+    // Enable/disable debug mode
+    document.getElementById('btnEnableDebug').addEventListener('click', () => {
+      const result = document.getElementById('debugResult');
+      result.innerHTML = '';
+      
+      if (!window.game) {
+        log(result, '✗ Please initialize game first', false);
+        return;
+      }
+      
+      window.game.cfg.debugAlwaysWin = true;
+      log(result, '✓ debugAlwaysWin ENABLED', true);
+      
+      const code = document.createElement('div');
+      code.className = 'code';
+      code.textContent = `window.game.cfg.debugAlwaysWin = ${window.game.cfg.debugAlwaysWin}`;
+      result.appendChild(code);
+    });
+
+    document.getElementById('btnDisableDebug').addEventListener('click', () => {
+      const result = document.getElementById('debugResult');
+      result.innerHTML = '';
+      
+      if (!window.game) {
+        log(result, '✗ Please initialize game first', false);
+        return;
+      }
+      
+      window.game.cfg.debugAlwaysWin = false;
+      log(result, '✓ debugAlwaysWin DISABLED', true);
+      
+      const code = document.createElement('div');
+      code.className = 'code';
+      code.textContent = `window.game.cfg.debugAlwaysWin = ${window.game.cfg.debugAlwaysWin}`;
+      result.appendChild(code);
+    });
+
+    // Test 1: HOH with debugAlwaysWin enabled
+    document.getElementById('btnTest1').addEventListener('click', () => {
+      const result = document.getElementById('test1Result');
+      result.innerHTML = '';
+      
+      if (!window.game) {
+        log(result, '✗ Please initialize game first', false);
+        return;
+      }
+      
+      // Enable debug mode
+      window.game.cfg.debugAlwaysWin = true;
+      window.game.lastCompScores = new Map();
+      window.game.phase = 'hoh';
+      
+      // Simulate competition: human gets low score, AI gets high scores
+      const humanScore = 30; // Low score
+      const humanMult = 1.0;
+      
+      // Submit human score (should be overridden to 150)
+      submitScore(window.game.humanId, humanScore, humanMult, 'HOH/test');
+      
+      // Submit AI scores (high scores)
+      submitScore(2, 90, 1.2, 'HOH/AI');
+      submitScore(3, 95, 1.3, 'HOH/AI');
+      submitScore(4, 85, 1.4, 'HOH/AI');
+      
+      // Determine winner
+      const sortedScores = Array.from(window.game.lastCompScores.entries())
+        .sort((a, b) => b[1] - a[1]);
+      const winnerId = sortedScores[0][0];
+      const humanFinalScore = window.game.lastCompScores.get(window.game.humanId);
+      
+      log(result, `Human submitted score: ${humanScore}`, true);
+      log(result, `Human final score (after override): ${humanFinalScore}`, true);
+      
+      showScores(result, window.game.lastCompScores, winnerId);
+      
+      if (winnerId === window.game.humanId && humanFinalScore === 150) {
+        log(result, '✓ TEST PASSED: Human player wins with maximum score (150)', true);
+      } else {
+        log(result, `✗ TEST FAILED: Human did not win. Winner: ${window.safeName(winnerId)}`, false);
+      }
+    });
+
+    // Test 2: HOH with debugAlwaysWin disabled
+    document.getElementById('btnTest2').addEventListener('click', () => {
+      const result = document.getElementById('test2Result');
+      result.innerHTML = '';
+      
+      if (!window.game) {
+        log(result, '✗ Please initialize game first', false);
+        return;
+      }
+      
+      // Disable debug mode
+      window.game.cfg.debugAlwaysWin = false;
+      window.game.lastCompScores = new Map();
+      window.game.phase = 'hoh';
+      
+      // Simulate competition: human gets low score, AI gets high scores
+      const humanScore = 30; // Low score
+      const humanMult = 1.0;
+      
+      // Submit human score (should NOT be overridden)
+      submitScore(window.game.humanId, humanScore, humanMult, 'HOH/test');
+      
+      // Submit AI scores (high scores)
+      submitScore(2, 90, 1.2, 'HOH/AI');
+      submitScore(3, 95, 1.3, 'HOH/AI');
+      submitScore(4, 85, 1.4, 'HOH/AI');
+      
+      // Determine winner
+      const sortedScores = Array.from(window.game.lastCompScores.entries())
+        .sort((a, b) => b[1] - a[1]);
+      const winnerId = sortedScores[0][0];
+      const humanFinalScore = window.game.lastCompScores.get(window.game.humanId);
+      
+      log(result, `Human submitted score: ${humanScore}`, true);
+      log(result, `Human final score: ${humanFinalScore}`, true);
+      
+      showScores(result, window.game.lastCompScores, winnerId);
+      
+      if (winnerId !== window.game.humanId && humanFinalScore === 30) {
+        log(result, '✓ TEST PASSED: Human player loses with low score (normal behavior)', true);
+      } else {
+        log(result, `✗ TEST FAILED: Expected human to lose. Winner: ${window.safeName(winnerId)}`, false);
+      }
+    });
+
+    // Test 3: Veto with debugAlwaysWin enabled
+    document.getElementById('btnTest3').addEventListener('click', () => {
+      const result = document.getElementById('test3Result');
+      result.innerHTML = '';
+      
+      if (!window.game) {
+        log(result, '✗ Please initialize game first', false);
+        return;
+      }
+      
+      // Enable debug mode
+      window.game.cfg.debugAlwaysWin = true;
+      window.game.lastCompScores = new Map();
+      window.game.phase = 'veto';
+      
+      // Simulate veto competition
+      const humanScore = 25;
+      const humanMult = 1.0;
+      
+      // Submit using veto's submitGuarded function
+      submitGuarded(window.game.humanId, humanScore, humanMult, 'Veto/test');
+      submitGuarded(2, 90, 1.2, 'Veto/AI');
+      submitGuarded(3, 95, 1.3, 'Veto/AI');
+      
+      const sortedScores = Array.from(window.game.lastCompScores.entries())
+        .sort((a, b) => b[1] - a[1]);
+      const winnerId = sortedScores[0][0];
+      const humanFinalScore = window.game.lastCompScores.get(window.game.humanId);
+      
+      log(result, `Human submitted score: ${humanScore}`, true);
+      log(result, `Human final score (after override): ${humanFinalScore}`, true);
+      
+      showScores(result, window.game.lastCompScores, winnerId);
+      
+      if (winnerId === window.game.humanId && humanFinalScore === 150) {
+        log(result, '✓ TEST PASSED: Human player wins veto with maximum score (150)', true);
+      } else {
+        log(result, `✗ TEST FAILED: Human did not win veto. Winner: ${window.safeName(winnerId)}`, false);
+      }
+    });
+
+    // Test 4: Veto with debugAlwaysWin disabled
+    document.getElementById('btnTest4').addEventListener('click', () => {
+      const result = document.getElementById('test4Result');
+      result.innerHTML = '';
+      
+      if (!window.game) {
+        log(result, '✗ Please initialize game first', false);
+        return;
+      }
+      
+      // Disable debug mode
+      window.game.cfg.debugAlwaysWin = false;
+      window.game.lastCompScores = new Map();
+      window.game.phase = 'veto';
+      
+      // Simulate veto competition
+      const humanScore = 25;
+      const humanMult = 1.0;
+      
+      // Submit using veto's submitGuarded function
+      submitGuarded(window.game.humanId, humanScore, humanMult, 'Veto/test');
+      submitGuarded(2, 90, 1.2, 'Veto/AI');
+      submitGuarded(3, 95, 1.3, 'Veto/AI');
+      
+      const sortedScores = Array.from(window.game.lastCompScores.entries())
+        .sort((a, b) => b[1] - a[1]);
+      const winnerId = sortedScores[0][0];
+      const humanFinalScore = window.game.lastCompScores.get(window.game.humanId);
+      
+      log(result, `Human submitted score: ${humanScore}`, true);
+      log(result, `Human final score: ${humanFinalScore}`, true);
+      
+      showScores(result, window.game.lastCompScores, winnerId);
+      
+      if (winnerId !== window.game.humanId && humanFinalScore === 25) {
+        log(result, '✓ TEST PASSED: Human player loses veto with low score (normal behavior)', true);
+      } else {
+        log(result, `✗ TEST FAILED: Expected human to lose veto. Winner: ${window.safeName(winnerId)}`, false);
+      }
+    });
+
+    // Include the actual submitScore and submitGuarded functions
+    function submitScore(id, base, mult, label) {
+      const g = window.game;
+      g.lastCompScores = g.lastCompScores || new Map();
+      if (g.lastCompScores.has(id)) return false;
+
+      let normalizedBase = base;
+      if (g?.cfg?.useNewMinigames) {
+        normalizedBase = Math.max(0, Math.min(100, base));
+      } else {
+        if (base > 100) {
+          normalizedBase = Math.min(100, (base / 120) * 100);
+        }
+      }
+
+      let final = Math.max(0, Math.min(150, normalizedBase * mult));
+      
+      // Debug override: Always win feature
+      const cfg = g?.cfg || {};
+      if (cfg.debugAlwaysWin === true && id === g.humanId) {
+        final = 150;
+        console.info('[Competition] debugAlwaysWin enabled: Human player score set to', final);
+      }
+
+      g.lastCompScores.set(id, final);
+      return true;
+    }
+
+    function submitGuarded(id, base, mult, label) {
+      const g = window.game;
+      g.lastCompScores = g.lastCompScores || new Map();
+      id = +id;
+      base = +base;
+      mult = (mult == null ? 1 : +mult) || 1;
+      if (g.lastCompScores.has(id)) return false;
+
+      let finalScore = base * mult;
+      
+      // Debug override: Always win feature
+      const cfg = g?.cfg || {};
+      if (cfg.debugAlwaysWin === true && id === g.humanId) {
+        finalScore = 150;
+        console.info('[Veto] debugAlwaysWin enabled: Human player score set to', finalScore);
+      }
+      
+      g.lastCompScores.set(id, finalScore);
+      return true;
+    }
+  </script>
+</body>
+</html>
