@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Overlap Fix Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-panel {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    
+    .test-log {
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    
+    .test-log div {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    .test-log .info {
+      color: #4CAF50;
+    }
+    
+    .test-log .warn {
+      color: #FF9800;
+      background: rgba(255,152,0,0.1);
+    }
+    
+    .test-log .error {
+      color: #F44336;
+      background: rgba(244,67,54,0.1);
+    }
+    
+    .card-count {
+      font-size: 24px;
+      font-weight: bold;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+    }
+    
+    .card-count.pass {
+      background: rgba(76, 175, 80, 0.2);
+      color: #4CAF50;
+    }
+    
+    .card-count.fail {
+      background: rgba(244, 67, 54, 0.2);
+      color: #F44336;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎴 Card Overlap Fix Test</h1>
+  <p>This test verifies that only one card can exist at a time and that phase transitions properly clear cards.</p>
+  
+  <div class="test-panel">
+    <h2>Test Controls</h2>
+    <div class="test-controls">
+      <button id="btnShowVetoCard" class="btn primary">Show Veto Card</button>
+      <button id="btnShowSocialCard" class="btn primary">Show Social Card</button>
+      <button id="btnSimulateTransition" class="btn">Simulate Veto → Social Transition</button>
+      <button id="btnClearAll" class="btn">Clear All Cards</button>
+      <button id="btnCheckCards" class="btn">Count Cards in DOM</button>
+    </div>
+    
+    <div id="cardCount" class="card-count">
+      Cards in DOM: <span id="cardCountValue">0</span>
+    </div>
+  </div>
+  
+  <div class="test-panel">
+    <h2>Test Log</h2>
+    <div id="testLog" class="test-log"></div>
+  </div>
+  
+  <div id="tv" class="tv">
+    <div class="tvViewport">
+      <div id="tvOverlay"></div>
+      <div class="tvScreen">
+        <div id="tvText">Test Environment</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load dependencies -->
+  <script src="js/ui/CardManager.js"></script>
+  <script src="js/ui/tv-cards.js"></script>
+  
+  <script>
+    // Test logging
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+    
+    // Count cards in DOM
+    function countCards() {
+      const cards = document.querySelectorAll('.revealCard, .diaryRoomCard, .decisionCard');
+      const count = cards.length;
+      const countEl = document.getElementById('cardCountValue');
+      const containerEl = document.getElementById('cardCount');
+      
+      countEl.textContent = count;
+      
+      if (count === 0) {
+        containerEl.className = 'card-count';
+      } else if (count === 1) {
+        containerEl.className = 'card-count pass';
+        log(`✓ Exactly 1 card in DOM (correct)`, 'info');
+      } else {
+        containerEl.className = 'card-count fail';
+        log(`✗ FAIL: ${count} cards in DOM (should be 0 or 1)`, 'error');
+        cards.forEach((card, i) => {
+          log(`  Card ${i+1}: ${card.className}`, 'warn');
+        });
+      }
+      
+      return count;
+    }
+    
+    // Setup mock global functions
+    window.getP = function(id) {
+      return {
+        id: id,
+        name: `Player ${id}`,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=player${id}`
+      };
+    };
+    
+    // Test: Show veto card
+    document.getElementById('btnShowVetoCard').addEventListener('click', async function() {
+      log('Showing veto ceremony card...', 'info');
+      
+      await window.TVCards.showTVCardWithAvatars({
+        title: 'Veto Ceremony',
+        lines: ['This veto ceremony is adjourned.'],
+        tone: 'veto',
+        duration: 3000,
+        actorIds: 1
+      });
+      
+      log('Veto card shown (will auto-dismiss in 3s)', 'info');
+      
+      // Check cards after short delay
+      setTimeout(() => {
+        countCards();
+      }, 100);
+    });
+    
+    // Test: Show social card
+    document.getElementById('btnShowSocialCard').addEventListener('click', async function() {
+      log('Showing social intermission card...', 'info');
+      
+      await window.TVCards.showTVCard({
+        title: 'Social Intermission',
+        lines: ['Time to socialize with houseguests.'],
+        tone: 'social',
+        duration: 2400
+      });
+      
+      log('Social card shown (will auto-dismiss in 2.4s)', 'info');
+      
+      // Check cards after short delay
+      setTimeout(() => {
+        countCards();
+      }, 100);
+    });
+    
+    // Test: Simulate veto → social transition
+    document.getElementById('btnSimulateTransition').addEventListener('click', async function() {
+      log('=== Starting Veto → Social Transition Test ===', 'info');
+      
+      // Step 1: Show veto adjourn card
+      log('Step 1: Show veto adjourn card (2.8s duration)', 'info');
+      const vetoPromise = window.TVCards.showTVCardWithAvatars({
+        title: 'Veto Ceremony',
+        lines: ['This veto ceremony is adjourned.'],
+        tone: 'veto',
+        duration: 2800,
+        actorIds: 1
+      });
+      
+      // Check cards immediately
+      setTimeout(() => {
+        const count = countCards();
+        if (count !== 1) {
+          log('FAIL: Expected 1 veto card', 'error');
+        }
+      }, 100);
+      
+      // Step 2: Clear cards (simulating ceremony end)
+      setTimeout(async () => {
+        log('Step 2: Clearing cards before phase transition', 'info');
+        await window.CardManager.clear(true);
+        
+        const count = countCards();
+        if (count === 0) {
+          log('✓ All cards cleared successfully', 'info');
+        } else {
+          log(`✗ FAIL: ${count} cards remaining after clear()`, 'error');
+        }
+        
+        // Step 3: Show social card
+        setTimeout(async () => {
+          log('Step 3: Show social intermission card', 'info');
+          await window.TVCards.showTVCard({
+            title: 'Social Intermission',
+            lines: ['Time to socialize with houseguests.'],
+            tone: 'social',
+            duration: 2400
+          });
+          
+          setTimeout(() => {
+            const count = countCards();
+            if (count === 1) {
+              log('✓ TEST PASSED: Only social card visible', 'info');
+            } else {
+              log(`✗ TEST FAILED: ${count} cards visible`, 'error');
+            }
+          }, 100);
+        }, 200);
+      }, 1000); // Clear after 1 second (before veto card would normally dismiss)
+    });
+    
+    // Clear all cards
+    document.getElementById('btnClearAll').addEventListener('click', async function() {
+      log('Clearing all cards...', 'info');
+      await window.CardManager.clear(true);
+      
+      setTimeout(() => {
+        const count = countCards();
+        if (count === 0) {
+          log('✓ All cards cleared', 'info');
+        } else {
+          log(`✗ ${count} cards still in DOM`, 'error');
+        }
+      }, 100);
+    });
+    
+    // Check cards count
+    document.getElementById('btnCheckCards').addEventListener('click', function() {
+      log('Checking cards in DOM...', 'info');
+      countCards();
+      
+      // Also check CardManager state
+      if (window.CardManager) {
+        const info = window.CardManager.getDebugInfo();
+        log(`CardManager state: ${JSON.stringify(info)}`, 'info');
+      }
+    });
+    
+    // Auto-check cards every 2 seconds
+    setInterval(() => {
+      countCards();
+    }, 2000);
+    
+    // Initial log
+    log('Card Overlap Fix Test initialized', 'info');
+    log('CardManager loaded: ' + !!window.CardManager, 'info');
+    log('TVCards loaded: ' + !!window.TVCards, 'info');
+    countCards();
+  </script>
+</body>
+</html>
