@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idle Panel Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .test-section h3 {
+      margin-top: 0;
+    }
+    #testPanel {
+      min-height: 200px;
+      border: 2px dashed #999;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .btn {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      background: #f0f0f0;
+      border-radius: 3px;
+    }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      overflow-x: auto;
+      max-height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Idle Panel Feature Test</h1>
+  
+  <div class="test-section">
+    <h3>Feature Flag Control</h3>
+    <button id="enableFlag" class="btn">Enable IdlePhases</button>
+    <button id="disableFlag" class="btn">Disable IdlePhases</button>
+    <div id="flagStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Game State Setup</h3>
+    <button id="setupHohIneligible" class="btn">Setup HOH (Ineligible)</button>
+    <button id="setupHohEligible" class="btn">Setup HOH (Eligible)</button>
+    <button id="setupVetoIneligible" class="btn">Setup Veto (Ineligible)</button>
+    <button id="setupVetoEligible" class="btn">Setup Veto (Eligible)</button>
+    <div id="stateStatus" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Render Panel</h3>
+    <button id="renderPanel" class="btn">Render Panel</button>
+    <button id="clearPanel" class="btn">Clear Panel</button>
+    <div id="testPanel"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Telemetry Log</h3>
+    <button id="clearTelemetry" class="btn">Clear Telemetry</button>
+    <button id="refreshTelemetry" class="btn">Refresh</button>
+    <pre id="telemetryLog"></pre>
+  </div>
+
+  <!-- Load required scripts -->
+  <script>window.global = window;</script>
+  <script src="js/state.js"></script>
+  <script src="js/telemetry.js"></script>
+  <script src="js/ui.idle-panel.js"></script>
+
+  <script>
+    // Test utilities
+    function updateFlagStatus() {
+      const status = document.getElementById('flagStatus');
+      const enabled = window.game?.cfg?.IdlePhases || false;
+      status.textContent = `IdlePhases: ${enabled ? 'ENABLED' : 'DISABLED'}`;
+      status.className = 'status ' + (enabled ? 'success' : '');
+    }
+
+    function updateStateStatus(msg) {
+      const status = document.getElementById('stateStatus');
+      status.textContent = msg;
+      status.className = 'status success';
+    }
+
+    function updateTelemetry() {
+      const log = document.getElementById('telemetryLog');
+      const events = window.game?.__telemetry || [];
+      if (events.length === 0) {
+        log.textContent = 'No telemetry events yet.';
+      } else {
+        log.textContent = JSON.stringify(events, null, 2);
+      }
+    }
+
+    // Setup game state if needed
+    if (!window.game) {
+      window.game = {
+        cfg: { IdlePhases: false },
+        week: 2,
+        phase: 'hoh',
+        humanId: 1,
+        lastHOHId: 1,
+        players: [
+          { id: 1, name: 'Human Player', evicted: false },
+          { id: 2, name: 'AI Player 1', evicted: false },
+          { id: 3, name: 'AI Player 2', evicted: false },
+          { id: 4, name: 'AI Player 3', evicted: false },
+          { id: 5, name: 'AI Player 4', evicted: false },
+          { id: 6, name: 'AI Player 5', evicted: false }
+        ]
+      };
+    }
+
+    // Mock alivePlayers if not available
+    if (!window.alivePlayers) {
+      window.alivePlayers = function() {
+        return window.game.players.filter(p => !p.evicted);
+      };
+    }
+
+    // Mock getP if not available
+    if (!window.getP) {
+      window.getP = function(id) {
+        return window.game.players.find(p => p.id === id);
+      };
+    }
+
+    // Mock startSocial for testing
+    if (!window.startSocial) {
+      window.startSocial = function(source) {
+        alert('startSocial called with source: ' + source);
+        window.trackEvent('test:startSocial', { source: source });
+      };
+    }
+
+    // Event handlers
+    document.getElementById('enableFlag').addEventListener('click', function() {
+      window.game.cfg.IdlePhases = true;
+      window.game.__idlePanelRenderedFor = null; // Reset render marker
+      updateFlagStatus();
+    });
+
+    document.getElementById('disableFlag').addEventListener('click', function() {
+      window.game.cfg.IdlePhases = false;
+      window.game.__idlePanelRenderedFor = null; // Reset render marker
+      updateFlagStatus();
+    });
+
+    document.getElementById('setupHohIneligible').addEventListener('click', function() {
+      window.game.phase = 'hoh';
+      window.game.week = 2;
+      window.game.lastHOHId = 1; // Human was last HOH
+      window.game.humanId = 1;
+      window.game.__idlePanelRenderedFor = null; // Reset render marker
+      delete window.game.__vetoPlayers;
+      updateStateStatus('HOH phase, week 2, human was last HOH (INELIGIBLE)');
+    });
+
+    document.getElementById('setupHohEligible').addEventListener('click', function() {
+      window.game.phase = 'hoh';
+      window.game.week = 2;
+      window.game.lastHOHId = 2; // Someone else was last HOH
+      window.game.humanId = 1;
+      window.game.__idlePanelRenderedFor = null; // Reset render marker
+      delete window.game.__vetoPlayers;
+      updateStateStatus('HOH phase, week 2, human was NOT last HOH (ELIGIBLE)');
+    });
+
+    document.getElementById('setupVetoIneligible').addEventListener('click', function() {
+      window.game.phase = 'veto_comp';
+      window.game.week = 3;
+      window.game.humanId = 1;
+      window.game.__vetoPlayers = [2, 3, 4, 5, 6]; // Human (ID 1) not in list
+      window.game.__idlePanelRenderedFor = null; // Reset render marker
+      updateStateStatus('Veto phase, human NOT in __vetoPlayers (INELIGIBLE)');
+    });
+
+    document.getElementById('setupVetoEligible').addEventListener('click', function() {
+      window.game.phase = 'veto_comp';
+      window.game.week = 3;
+      window.game.humanId = 1;
+      window.game.__vetoPlayers = [1, 2, 3, 4, 5, 6]; // Human (ID 1) in list
+      window.game.__idlePanelRenderedFor = null; // Reset render marker
+      updateStateStatus('Veto phase, human IS in __vetoPlayers (ELIGIBLE)');
+    });
+
+    document.getElementById('renderPanel').addEventListener('click', function() {
+      const panel = document.getElementById('testPanel');
+      const result = window.renderIdlePanel(panel);
+      if (!result) {
+        panel.innerHTML = '<div class="error">Panel NOT rendered. Check: Feature flag enabled? Human ineligible?</div>';
+      }
+      updateTelemetry();
+    });
+
+    document.getElementById('clearPanel').addEventListener('click', function() {
+      document.getElementById('testPanel').innerHTML = '';
+    });
+
+    document.getElementById('clearTelemetry').addEventListener('click', function() {
+      if (window.game) {
+        window.game.__telemetry = [];
+      }
+      updateTelemetry();
+    });
+
+    document.getElementById('refreshTelemetry').addEventListener('click', function() {
+      updateTelemetry();
+    });
+
+    // Initial state
+    updateFlagStatus();
+    updateStateStatus('Not configured');
+    updateTelemetry();
+  </script>
+</body>
+</html>

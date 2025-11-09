@@ -1807,7 +1807,14 @@ header.innerHTML = `
     if(game.phase==='livevote'){ g.renderLiveVotePanel?.(); return; }
 
     const compPhases=['hoh','veto_comp','veto','final3_comp1','final3_comp2'];
-    if(compPhases.includes(game.phase)){ g.renderCompPanel?.(panel); return; }
+    if(compPhases.includes(game.phase)){
+      // Check if idle panel should be shown (feature flag gated)
+      if(typeof g.renderIdlePanel === 'function' && g.renderIdlePanel(panel)){
+        return; // Idle panel was rendered, skip competition panel
+      }
+      g.renderCompPanel?.(panel);
+      return;
+    }
 
     if(game.phase?.startsWith?.('social')){ g.renderSocialPhase?.(panel); return; }
 
