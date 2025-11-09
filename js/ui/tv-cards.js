@@ -15,17 +15,36 @@
 
   /**
    * Ensure TV overlay scaffold exists with proper structure.
-   * Creates .tvDim (backdrop) and .tvOverlayContent (content container) if missing.
+   * Creates #tvOverlay if missing, along with .tvDim (backdrop) and .tvOverlayContent (content container).
    * Also ensures #tv has tvTall class for proper sizing.
-   * @returns {HTMLElement|null} The tvOverlayContent element, or null if #tvOverlay not found
+   * @returns {HTMLElement|null} The tvOverlayContent element, or null if #tv not found
    */
   function ensureTVOverlay(){
+    var tv = document.getElementById('tv');
+    if(!tv){
+      console.error('[TVCards] Cannot ensure TV overlay - #tv element not found');
+      return null;
+    }
+    
+    // Find or create #tvOverlay
     var tvOverlay = document.getElementById('tvOverlay');
-    if(!tvOverlay) return null;
+    if(!tvOverlay){
+      console.log('[TVCards] Creating missing #tvOverlay element');
+      tvOverlay = document.createElement('div');
+      tvOverlay.id = 'tvOverlay';
+      
+      // Find tvViewport to append overlay inside it
+      var viewport = tv.querySelector('.tvViewport');
+      if(viewport){
+        viewport.appendChild(tvOverlay);
+      } else {
+        // Fallback: append directly to #tv
+        tv.appendChild(tvOverlay);
+      }
+    }
     
     // Ensure #tv has tvTall class for proper overlay space
-    var tv = document.getElementById('tv');
-    if(tv && !tv.classList.contains('tvTall')){
+    if(!tv.classList.contains('tvTall')){
       tv.classList.add('tvTall');
     }
     
@@ -34,12 +53,14 @@
     var content = tvOverlay.querySelector('.tvOverlayContent');
     
     if(!dim){
+      console.log('[TVCards] Creating .tvDim backdrop');
       dim = document.createElement('div');
       dim.className = 'tvDim';
       tvOverlay.appendChild(dim);
     }
     
     if(!content){
+      console.log('[TVCards] Creating .tvOverlayContent container');
       content = document.createElement('div');
       content.className = 'tvOverlayContent';
       tvOverlay.appendChild(content);
@@ -247,8 +268,7 @@
       
       // Count total avatars and add .has-wide-avatars if > 2
       if(hasAvatars){
-        var actors = Array.isArray(actorIds) ? actorIds : (actorIds != null ? [actorIds] : []);
-        var subjects = Array.isArray(subjectIds) ? subjectIds : (subjectIds != null ? [subjectIds] : []);
+        // Note: actors and subjects already defined above
         var totalAvatars = actors.length + subjects.length;
         if(totalAvatars > 2){
           card.classList.add('has-wide-avatars');
@@ -499,6 +519,15 @@
    * @returns {Promise} Resolves when button is clicked
    */
   function showNominateIntro({hohName, need, onNominate}){
+    console.log('[TVCards] showNominateIntro - HOH:', hohName, 'need:', need);
+    
+    // Always ensure scaffold exists before showing card
+    var content = ensureTVOverlay();
+    if(!content){
+      console.error('[TVCards] showNominateIntro failed - could not ensure overlay scaffold');
+      return Promise.reject(new Error('TV overlay scaffold could not be created'));
+    }
+    
     var countText = need > 2 
       ? 'You must nominate ' + need + ' houseguests for eviction.'
       : 'You must nominate two houseguests for eviction.';
