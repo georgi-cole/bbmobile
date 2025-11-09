@@ -296,20 +296,9 @@
     // Decide and announce POV twist if active
     var twist = decideVetoTwistForWeek();
     
-    // If multi-eviction week, show info card about twist suspension
-    if(isMultiEvictionWeek() && typeof global.showEventModal === 'function'){
-      setTimeout(function(){
-        if(typeof global.showEventModal === 'function'){
-          global.showEventModal({
-            title: 'Standard POV',
-            emojis: '🛡️',
-            subtitle: 'Special POV twist suspended for multi-eviction week. Standard Power of Veto is in play.',
-            tone: 'info',
-            duration: 5000
-          });
-        }
-      }, 500);
-    } else if(twist && typeof global.showEventModal === 'function'){
+    // Show twist announcement if Golden or Diamond POV is active
+    // (Standard POV intro modal is now handled by ui.phase-intro-modals.js)
+    if(twist && typeof global.showEventModal === 'function'){
       var twistConfig = null;
       
       if(twist === 'diamond'){
