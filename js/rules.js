@@ -361,6 +361,13 @@
       return;
     }
     
+    // Check if skipIntros is enabled - if so, don't show rules modal
+    if (cfg.skipIntros) {
+      console.info('[rules] skipIntros is enabled — skipping rules modal');
+      markRulesShown(); // Mark as shown so it doesn't appear later
+      return;
+    }
+    
     // Check if rules have already been shown (persistent across sessions)
     if (isRulesShown()) {
       console.info('[rules] rules already shown previously — skipping');
@@ -386,6 +393,13 @@
     const cfg = (global.game && global.game.cfg) || {};
     if (!cfg.autoShowRulesOnStart) {
       console.info('[rules] autoShowRulesOnStart is false — skipping fallback');
+      return;
+    }
+    
+    // Check if skipIntros is enabled - if so, don't show rules modal
+    if (cfg.skipIntros) {
+      console.info('[rules] skipIntros is enabled — skipping fallback');
+      markRulesShown(); // Mark as shown so it doesn't appear later
       return;
     }
     

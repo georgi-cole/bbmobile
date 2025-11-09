@@ -15,6 +15,7 @@
     colorblindMode: false,
     strictAvatars: false, // When true, use local silhouette instead of external fallback
     autoShowRulesOnStart: true, // When true, shows rules modal automatically after intro
+    skipIntros: false, // When true, skip intro video and animated intro sequence
     useRibbon: true,
     modernLiveVoteUI: true, // When true, use modern cinematic Live Vote UI (lv2)
     

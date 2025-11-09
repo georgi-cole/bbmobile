@@ -169,10 +169,17 @@
           ]
         },
         {
+          title: 'Intros & Rules',
+          fields: [
+            checkbox('skipIntros', 'Skip Intros'),
+            html('<div class="tiny muted">Skip intro video and animated intro sequence when starting the app</div>'),
+            checkbox('autoShowRulesOnStart', 'Show rules modal after intro')
+          ]
+        },
+        {
           title: 'Avatars',
           fields: [
-            checkbox('strictAvatars', 'Strict local avatars (no external fallback)'),
-            checkbox('autoShowRulesOnStart', 'Show rules modal after intro')
+            checkbox('strictAvatars', 'Strict local avatars (no external fallback)')
           ]
         }
       ]

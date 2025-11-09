@@ -1254,6 +1254,18 @@ header.innerHTML = `
     try{ g.setMusic?.('theme_opening', true); }catch{}
     g.setPhase('opening', game.cfg?.tOpening || 90, g.finishOpening);
     
+    // Check if skipIntros is enabled - if so, skip all intro sequences
+    if (game.cfg?.skipIntros) {
+      console.info('[opening] skipIntros enabled, skipping intro sequences');
+      // Skip directly to finish
+      setTimeout(() => {
+        if (game.phase === 'opening') {
+          g.finishOpening();
+        }
+      }, 500);
+      return;
+    }
+    
     // Check if reality-TV style intro is enabled and available
     const useRealityIntro = game.cfg?.useRealityIntro !== false && 
                             typeof g.IntroShow !== 'undefined' && 
