@@ -21,8 +21,15 @@
    * @param {string} gameKey - The game to watch
    * @param {Function} onTimeout - Callback when timeout occurs
    * @param {number} timeoutMs - Timeout in milliseconds (default 60s)
+   * @param {Object} options - Optional parameters (e.g., unlimited mode)
    */
-  function start(gameKey, onTimeout, timeoutMs = DEFAULT_TIMEOUT_MS){
+  function start(gameKey, onTimeout, timeoutMs = DEFAULT_TIMEOUT_MS, options = {}){
+    // Skip watchdog in unlimited debug mode
+    if(options.unlimited === true || options.timeLimit === null){
+      console.info(`[Watchdog] Skipping watchdog for "${gameKey}" (unlimited mode)`);
+      return;
+    }
+    
     // Clear any existing watchdog
     stop();
 

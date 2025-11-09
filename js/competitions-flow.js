@@ -439,6 +439,9 @@
     // Get configured duration from settings
     const configDuration = (game && game.cfg && game.cfg.minigameDuration) || 180;
     
+    // Check for unlimited mode
+    const isUnlimited = options.unlimited === true || options.timeLimit === null;
+    
     // Pause phase timer when starting minigame
     let phaseTimerWasPaused = false;
     if(game && !game.timerPaused && g.pausePhaseTimer){
@@ -451,23 +454,29 @@
     let timeLimit = options.timeLimit ?? configDuration;
     let usePhaseTimer = false;
     
-    // Check if we should sync with phase timer instead
-    // (Only if phase timer exists and is longer than config duration)
-    if(game && game.phaseEndsAt && !game.timerPaused){
-      const remainingMs = game.phaseEndsAt - Date.now();
-      if(remainingMs > 0){
-        const phaseTimeRemaining = Math.ceil(remainingMs / 1000);
-        // Use phase time if it's available and wasn't paused by us
-        if(!phaseTimerWasPaused){
-          timeLimit = phaseTimeRemaining;
-          usePhaseTimer = true;
-          console.info('[CompetitionFlow] Syncing minigame timer with phase timer:', timeLimit, 'seconds');
+    if(isUnlimited){
+      console.info('[CompetitionFlow] Using unlimited debug timer (∞)');
+      timeLimit = null;
+      usePhaseTimer = false;
+    } else {
+      // Check if we should sync with phase timer instead
+      // (Only if phase timer exists and is longer than config duration and not disabled)
+      if(game && game.phaseEndsAt && !game.timerPaused && !options.disablePhaseTimerSync){
+        const remainingMs = game.phaseEndsAt - Date.now();
+        if(remainingMs > 0){
+          const phaseTimeRemaining = Math.ceil(remainingMs / 1000);
+          // Use phase time if it's available and wasn't paused by us
+          if(!phaseTimerWasPaused){
+            timeLimit = phaseTimeRemaining;
+            usePhaseTimer = true;
+            console.info('[CompetitionFlow] Syncing minigame timer with phase timer:', timeLimit, 'seconds');
+          }
         }
       }
-    }
-    
-    if(!usePhaseTimer){
-      console.info('[CompetitionFlow] Using configured minigame duration:', timeLimit, 'seconds');
+      
+      if(!usePhaseTimer){
+        console.info('[CompetitionFlow] Using configured minigame duration:', timeLimit, 'seconds');
+      }
     }
     
     // Get theme colors
@@ -517,6 +526,12 @@
       font-size: 0.95rem;
       font-family: monospace;
     `;
+    
+    // Set accessibility label for unlimited mode
+    if(isUnlimited){
+      timerText.setAttribute('aria-label', 'Unlimited debug session');
+      timerText.textContent = 'Time: ∞';
+    }
 
     const progressBar = document.createElement('div');
     progressBar.style.cssText = `
@@ -596,6 +611,11 @@
 
     // Start timer countdown - sync with phase timer if enabled
     function updateTimer(){
+      // Skip timer updates in unlimited mode
+      if(isUnlimited){
+        return;
+      }
+      
       // If using phase timer, recalculate remaining time from game.phaseEndsAt
       let remaining;
       if(usePhaseTimer && game && game.phaseEndsAt){
@@ -692,8 +712,11 @@
       }
     }
 
-    updateTimer();
-    timerInterval = setInterval(updateTimer, 1000);
+    // Only start timer interval if not unlimited
+    if(!isUnlimited){
+      updateTimer();
+      timerInterval = setInterval(updateTimer, 1000);
+    }
 
     // Close function
     function close(skipAnimation){
