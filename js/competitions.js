@@ -343,6 +343,28 @@
   }
 
   // Helper: run a human minigame with both replay-lock and anti-cheat
+  /**
+   * Helper: Neutralize empty #tvOverlay to prevent click blocking
+   * When #tvOverlay exists but has no active content, set pointer-events: none
+   * This prevents leftover overlays from blocking competition instructions/buttons
+   */
+  function ensureOverlayNotBlocking() {
+    try {
+      const ov = document.getElementById('tvOverlay');
+      if (!ov) return;
+      
+      const content = ov.querySelector('.tvOverlayContent');
+      const hasActiveContent = !!(content && content.childElementCount > 0);
+      
+      if (!hasActiveContent) {
+        ov.style.pointerEvents = 'none';
+        console.log('[Competition] Neutralized empty #tvOverlay (pointer-events: none)');
+      }
+    } catch (e) {
+      console.warn('[Competition] tvOverlay neutralization failed', e);
+    }
+  }
+
   function runHumanMinigameWithGuards({ mg, host, player, label, multiplier, onAfterSubmit }) {
     const g = global.game;
 
@@ -356,6 +378,9 @@
     if (global.CompetitionFlow && typeof global.CompetitionFlow.runCompetitionFlow === 'function') {
       // Use new competition flow: instructions → fullscreen game → completion
       host.innerHTML = '<div class="tiny muted">Loading competition...</div>';
+      
+      // Neutralize any empty #tvOverlay before rendering instructions
+      ensureOverlayNotBlocking();
       
       // Get TV viewport as the target for instructions (inside TV, not below it)
       const tvViewport = document.querySelector('.tvViewport');

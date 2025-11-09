@@ -11,6 +11,28 @@
   let activeMinigameCleanup = null;
 
   /**
+   * Helper: Neutralize empty #tvOverlay to prevent click blocking
+   * When #tvOverlay exists but has no active content, set pointer-events: none
+   * This prevents leftover overlays from blocking competition instructions/buttons
+   */
+  function ensureOverlayNotBlocking() {
+    try {
+      const ov = document.getElementById('tvOverlay');
+      if (!ov) return;
+      
+      const content = ov.querySelector('.tvOverlayContent');
+      const hasActiveContent = !!(content && content.childElementCount > 0);
+      
+      if (!hasActiveContent) {
+        ov.style.pointerEvents = 'none';
+        console.log('[CompetitionFlow] Neutralized empty #tvOverlay (pointer-events: none)');
+      }
+    } catch (e) {
+      console.warn('[CompetitionFlow] tvOverlay neutralization failed', e);
+    }
+  }
+
+  /**
    * Clean up any active minigames and instructions on phase change
    * Called by forceClearPhaseUI in ui.hud-and-router.js
    */
@@ -74,6 +96,9 @@
     }
     
     activeMinigameOverlay = null;
+    
+    // Neutralize any empty #tvOverlay after cleanup
+    ensureOverlayNotBlocking();
   }
 
   /**
