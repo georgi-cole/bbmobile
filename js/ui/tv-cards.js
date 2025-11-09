@@ -93,38 +93,209 @@
       var content = ensureTVOverlay();
       if(!content){ resolve(); return; }
       
-      clearTVOverlay();
+      // Use CardManager if available for centralized lifecycle management
+      if(global.CardManager){
+        global.CardManager.show(function(){
+          clearTVOverlay();
+          
+          var card = document.createElement('div');
+          card.className = 'revealCard diaryRoomCard tvCardBody';
+          if(tone) card.setAttribute('data-tone', tone);
+          
+          var h3 = document.createElement('h3');
+          h3.textContent = title;
+          card.appendChild(h3);
+          
+          for(var i=0; i<lines.length; i++){
+            var p = document.createElement('p');
+            if(i === 0) p.className = 'big';
+            p.textContent = lines[i];
+            card.appendChild(p);
+          }
+          
+          content.appendChild(card);
+          
+          var tv = document.getElementById('tv');
+          if(tv) tv.classList.add('tvTall');
+          
+          // Downscale font if card is too tall
+          var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+          if(fitTVCardText) fitTVCardText(card);
+          
+          // Set up auto-dismissal
+          var timeout = setTimeout(function(){
+            clearTVOverlay();
+            if(tv) tv.classList.remove('tvTall');
+            resolve();
+          }, duration || 2400);
+          
+          return { card: card, timeout: timeout };
+        });
+      } else {
+        // Fallback: original implementation without CardManager
+        clearTVOverlay();
+        
+        var card = document.createElement('div');
+        card.className = 'revealCard diaryRoomCard tvCardBody';
+        if(tone) card.setAttribute('data-tone', tone);
+        
+        var h3 = document.createElement('h3');
+        h3.textContent = title;
+        card.appendChild(h3);
+        
+        for(var i=0; i<lines.length; i++){
+          var p = document.createElement('p');
+          if(i === 0) p.className = 'big';
+          p.textContent = lines[i];
+          card.appendChild(p);
+        }
+        
+        content.appendChild(card);
+        
+        var tv = document.getElementById('tv');
+        if(tv) tv.classList.add('tvTall');
+        
+        // Downscale font if card is too tall
+        var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+        if(fitTVCardText) fitTVCardText(card);
+        
+        setTimeout(function(){
+          clearTVOverlay();
+          if(tv) tv.classList.remove('tvTall');
+          resolve();
+        }, duration || 2400);
+      }
+    });
+  }
+
+  /**
+   * Helper: Build avatar card DOM structure.
+   * @private
+   */
+  function buildAvatarCard({title, lines, tone, actorIds, subjectIds}){
+    var card = document.createElement('div');
+    card.className = 'revealCard diaryRoomCard tvCardBody';
+    if(tone) card.setAttribute('data-tone', tone);
+    
+    // Build avatar row if actors/subjects provided
+    var hasAvatars = (actorIds && actorIds !== null) || (subjectIds && subjectIds !== null);
+    if(hasAvatars){
+      var avatarRow = document.createElement('div');
+      avatarRow.className = 'tv-card-avatars';
+      avatarRow.style.display = 'flex';
+      avatarRow.style.gap = '12px';
+      avatarRow.style.justifyContent = 'center';
+      avatarRow.style.marginBottom = '16px';
+      avatarRow.style.flexWrap = 'wrap';
       
-      var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard tvCardBody';
-      if(tone) card.setAttribute('data-tone', tone);
-      
-      var h3 = document.createElement('h3');
-      h3.textContent = title;
-      card.appendChild(h3);
-      
-      for(var i=0; i<lines.length; i++){
-        var p = document.createElement('p');
-        if(i === 0) p.className = 'big';
-        p.textContent = lines[i];
-        card.appendChild(p);
+      // Add actor avatars
+      var actors = Array.isArray(actorIds) ? actorIds : (actorIds != null ? [actorIds] : []);
+      for(var i=0; i<actors.length; i++){
+        var actorId = actors[i];
+        var actor = getP(actorId);
+        if(actor){
+          var avatarWrap = document.createElement('div');
+          avatarWrap.style.display = 'flex';
+          avatarWrap.style.flexDirection = 'column';
+          avatarWrap.style.alignItems = 'center';
+          avatarWrap.style.gap = '6px';
+          
+          var img = document.createElement('img');
+          var resolveAvatar = (global.Game || global).resolveAvatar;
+          img.src = resolveAvatar ? resolveAvatar(actor) : (actor.avatar || actor.img || actor.photo);
+          if(!img.src){
+            img.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(actor.name);
+          }
+          img.alt = actor.name;
+          img.style.width = '64px';
+          img.style.height = '64px';
+          img.style.borderRadius = '12px';
+          img.style.border = '2px solid rgba(255,255,255,0.3)';
+          img.style.objectFit = 'cover';
+          avatarWrap.appendChild(img);
+          
+          var nameLabel = document.createElement('div');
+          nameLabel.className = 'tiny';
+          nameLabel.textContent = actor.name;
+          nameLabel.style.textAlign = 'center';
+          nameLabel.style.fontSize = '12px';
+          nameLabel.style.opacity = '0.9';
+          avatarWrap.appendChild(nameLabel);
+          
+          avatarRow.appendChild(avatarWrap);
+        }
       }
       
-      content.appendChild(card);
+      // Add arrow separator if both actors and subjects exist
+      if(actors.length > 0 && subjectIds){
+        var arrow = document.createElement('div');
+        arrow.textContent = '→';
+        arrow.style.fontSize = '32px';
+        arrow.style.alignSelf = 'center';
+        arrow.style.opacity = '0.7';
+        arrow.style.padding = '0 8px';
+        avatarRow.appendChild(arrow);
+      }
       
-      var tv = document.getElementById('tv');
-      if(tv) tv.classList.add('tvTall');
+      // Add subject avatars
+      var subjects = Array.isArray(subjectIds) ? subjectIds : (subjectIds != null ? [subjectIds] : []);
+      for(var j=0; j<subjects.length; j++){
+        var subjectId = subjects[j];
+        var subject = getP(subjectId);
+        if(subject){
+          var subjectWrap = document.createElement('div');
+          subjectWrap.style.display = 'flex';
+          subjectWrap.style.flexDirection = 'column';
+          subjectWrap.style.alignItems = 'center';
+          subjectWrap.style.gap = '6px';
+          
+          var subjectImg = document.createElement('img');
+          var resolveAvatar2 = (global.Game || global).resolveAvatar;
+          subjectImg.src = resolveAvatar2 ? resolveAvatar2(subject) : (subject.avatar || subject.img || subject.photo);
+          if(!subjectImg.src){
+            subjectImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(subject.name);
+          }
+          subjectImg.alt = subject.name;
+          subjectImg.style.width = '64px';
+          subjectImg.style.height = '64px';
+          subjectImg.style.borderRadius = '12px';
+          subjectImg.style.border = '2px solid rgba(255,255,255,0.3)';
+          subjectImg.style.objectFit = 'cover';
+          subjectWrap.appendChild(subjectImg);
+          
+          var subjectLabel = document.createElement('div');
+          subjectLabel.className = 'tiny';
+          subjectLabel.textContent = subject.name;
+          subjectLabel.style.textAlign = 'center';
+          subjectLabel.style.fontSize = '12px';
+          subjectLabel.style.opacity = '0.9';
+          subjectWrap.appendChild(subjectLabel);
+          
+          avatarRow.appendChild(subjectWrap);
+        }
+      }
       
-      // Downscale font if card is too tall
-      var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
-      if(fitTVCardText) fitTVCardText(card);
+      card.appendChild(avatarRow);
       
-      setTimeout(function(){
-        clearTVOverlay();
-        if(tv) tv.classList.remove('tvTall');
-        resolve();
-      }, duration || 2400);
-    });
+      // Count total avatars and add .has-wide-avatars if > 2
+      var totalAvatars = actors.length + subjects.length;
+      if(totalAvatars > 2){
+        card.classList.add('has-wide-avatars');
+      }
+    }
+    
+    var h3 = document.createElement('h3');
+    h3.textContent = title;
+    card.appendChild(h3);
+    
+    for(var k=0; k<lines.length; k++){
+      var p = document.createElement('p');
+      if(k === 0) p.className = 'big';
+      p.textContent = lines[k];
+      card.appendChild(p);
+    }
+    
+    return card;
   }
 
   /**
@@ -143,147 +314,49 @@
       var content = ensureTVOverlay();
       if(!content){ resolve(); return; }
       
-      clearTVOverlay();
-      
-      var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard tvCardBody';
-      if(tone) card.setAttribute('data-tone', tone);
-      
-      // Build avatar row if actors/subjects provided
-      var hasAvatars = (actorIds && actorIds !== null) || (subjectIds && subjectIds !== null);
-      if(hasAvatars){
-        var avatarRow = document.createElement('div');
-        avatarRow.className = 'tv-card-avatars';
-        avatarRow.style.display = 'flex';
-        avatarRow.style.gap = '12px';
-        avatarRow.style.justifyContent = 'center';
-        avatarRow.style.marginBottom = '16px';
-        avatarRow.style.flexWrap = 'wrap';
-        
-        // Add actor avatars
-        var actors = Array.isArray(actorIds) ? actorIds : (actorIds != null ? [actorIds] : []);
-        for(var i=0; i<actors.length; i++){
-          var actorId = actors[i];
-          var actor = getP(actorId);
-          if(actor){
-            var avatarWrap = document.createElement('div');
-            avatarWrap.style.display = 'flex';
-            avatarWrap.style.flexDirection = 'column';
-            avatarWrap.style.alignItems = 'center';
-            avatarWrap.style.gap = '6px';
-            
-            var img = document.createElement('img');
-            var resolveAvatar = (global.Game || global).resolveAvatar;
-            img.src = resolveAvatar ? resolveAvatar(actor) : (actor.avatar || actor.img || actor.photo);
-            if(!img.src){
-              img.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(actor.name);
-            }
-            img.alt = actor.name;
-            img.style.width = '64px';
-            img.style.height = '64px';
-            img.style.borderRadius = '12px';
-            img.style.border = '2px solid rgba(255,255,255,0.3)';
-            img.style.objectFit = 'cover';
-            avatarWrap.appendChild(img);
-            
-            var nameLabel = document.createElement('div');
-            nameLabel.className = 'tiny';
-            nameLabel.textContent = actor.name;
-            nameLabel.style.textAlign = 'center';
-            nameLabel.style.fontSize = '12px';
-            nameLabel.style.opacity = '0.9';
-            avatarWrap.appendChild(nameLabel);
-            
-            avatarRow.appendChild(avatarWrap);
-          }
-        }
-        
-        // Add arrow separator if both actors and subjects exist
-        if(actors.length > 0 && subjectIds){
-          var arrow = document.createElement('div');
-          arrow.textContent = '→';
-          arrow.style.fontSize = '32px';
-          arrow.style.alignSelf = 'center';
-          arrow.style.opacity = '0.7';
-          arrow.style.padding = '0 8px';
-          avatarRow.appendChild(arrow);
-        }
-        
-        // Add subject avatars
-        var subjects = Array.isArray(subjectIds) ? subjectIds : (subjectIds != null ? [subjectIds] : []);
-        for(var j=0; j<subjects.length; j++){
-          var subjectId = subjects[j];
-          var subject = getP(subjectId);
-          if(subject){
-            var subjectWrap = document.createElement('div');
-            subjectWrap.style.display = 'flex';
-            subjectWrap.style.flexDirection = 'column';
-            subjectWrap.style.alignItems = 'center';
-            subjectWrap.style.gap = '6px';
-            
-            var subjectImg = document.createElement('img');
-            var resolveAvatar2 = (global.Game || global).resolveAvatar;
-            subjectImg.src = resolveAvatar2 ? resolveAvatar2(subject) : (subject.avatar || subject.img || subject.photo);
-            if(!subjectImg.src){
-              subjectImg.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(subject.name);
-            }
-            subjectImg.alt = subject.name;
-            subjectImg.style.width = '64px';
-            subjectImg.style.height = '64px';
-            subjectImg.style.borderRadius = '12px';
-            subjectImg.style.border = '2px solid rgba(255,255,255,0.3)';
-            subjectImg.style.objectFit = 'cover';
-            subjectWrap.appendChild(subjectImg);
-            
-            var subjectLabel = document.createElement('div');
-            subjectLabel.className = 'tiny';
-            subjectLabel.textContent = subject.name;
-            subjectLabel.style.textAlign = 'center';
-            subjectLabel.style.fontSize = '12px';
-            subjectLabel.style.opacity = '0.9';
-            subjectWrap.appendChild(subjectLabel);
-            
-            avatarRow.appendChild(subjectWrap);
-          }
-        }
-        
-        card.appendChild(avatarRow);
-      }
-      
-      var h3 = document.createElement('h3');
-      h3.textContent = title;
-      card.appendChild(h3);
-      
-      for(var k=0; k<lines.length; k++){
-        var p = document.createElement('p');
-        if(k === 0) p.className = 'big';
-        p.textContent = lines[k];
-        card.appendChild(p);
-      }
-      
-      content.appendChild(card);
-      
-      var tv = document.getElementById('tv');
-      if(tv) tv.classList.add('tvTall');
-      
-      // Count total avatars and add .has-wide-avatars if > 2
-      if(hasAvatars){
-        // Note: actors and subjects already defined above
-        var totalAvatars = actors.length + subjects.length;
-        if(totalAvatars > 2){
-          card.classList.add('has-wide-avatars');
-        }
-      }
-      
-      // Downscale font if card is too tall
-      var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
-      if(fitTVCardText) fitTVCardText(card);
-      
-      setTimeout(function(){
+      // Use CardManager if available for centralized lifecycle management
+      if(global.CardManager){
+        global.CardManager.show(function(){
+          clearTVOverlay();
+          
+          var card = buildAvatarCard({title, lines, tone, actorIds, subjectIds});
+          content.appendChild(card);
+          
+          var tv = document.getElementById('tv');
+          if(tv) tv.classList.add('tvTall');
+          
+          // Downscale font if card is too tall
+          var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+          if(fitTVCardText) fitTVCardText(card);
+          
+          var timeout = setTimeout(function(){
+            clearTVOverlay();
+            if(tv) tv.classList.remove('tvTall');
+            resolve();
+          }, duration || 2400);
+          
+          return { card: card, timeout: timeout };
+        });
+      } else {
+        // Fallback: original implementation without CardManager
         clearTVOverlay();
-        if(tv) tv.classList.remove('tvTall');
-        resolve();
-      }, duration || 2400);
+        
+        var card = buildAvatarCard({title, lines, tone, actorIds, subjectIds});
+        content.appendChild(card);
+        
+        var tv = document.getElementById('tv');
+        if(tv) tv.classList.add('tvTall');
+        
+        // Downscale font if card is too tall
+        var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
+        if(fitTVCardText) fitTVCardText(card);
+        
+        setTimeout(function(){
+          clearTVOverlay();
+          if(tv) tv.classList.remove('tvTall');
+          resolve();
+        }, duration || 2400);
+      }
     });
   }
 

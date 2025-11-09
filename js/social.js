@@ -492,6 +492,12 @@
     g.__socialShown = 0;        // reset per intermission (max 3 prompts)
     g.__socialLogBudget = 6;    // reset ambient budget
 
+    // Clear any lingering ceremony cards before starting social phase
+    if(global.CardManager){
+      console.info('[social.js] Clearing ceremony cards before social phase');
+      await global.CardManager.clear(true);
+    }
+
     // Call onSocialPhaseStart when Social Maneuvers is enabled
     if(global.SocialManeuvers?.isEnabled?.()){
       console.info('[social.js] ▶ Entering social_intermission - calling onSocialPhaseStart');
