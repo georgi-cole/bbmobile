@@ -78,7 +78,39 @@
     // The fullscreen module (nominations-grid-fullscreen.js) intercepts this function
     // and handles the flow. This code only runs if the interceptor is not installed.
     if(hoh && hoh.human){
-      console.log('[noms] Human HOH detected - showing intro card');
+      console.log('[noms] Human HOH detected - showing intro card (need:', need, ')');
+      
+      // Pre-flight: Ensure #tvOverlay exists before attempting to use any helpers
+      // This is critical for multi-eviction weeks where the intro may fail to appear
+      let tvOverlay = document.getElementById('tvOverlay');
+      if(!tvOverlay){
+        console.warn('[noms] #tvOverlay missing - creating scaffold synchronously');
+        const tv = document.getElementById('tv');
+        if(tv){
+          const viewport = tv.querySelector('.tvViewport');
+          tvOverlay = document.createElement('div');
+          tvOverlay.id = 'tvOverlay';
+          
+          if(viewport){
+            viewport.appendChild(tvOverlay);
+          } else {
+            tv.appendChild(tvOverlay);
+          }
+          
+          // Create scaffold elements
+          const dim = document.createElement('div');
+          dim.className = 'tvDim';
+          tvOverlay.appendChild(dim);
+          
+          const content = document.createElement('div');
+          content.className = 'tvOverlayContent';
+          tvOverlay.appendChild(content);
+          
+          console.log('[noms] ✓ Created #tvOverlay scaffold');
+        } else {
+          console.error('[noms] Cannot create #tvOverlay - #tv element not found');
+        }
+      }
       
       // Prefer TVCards.showNominateIntro for proper TV overlay positioning
       if(global.TVCards && typeof global.TVCards.showNominateIntro === 'function'){
@@ -126,10 +158,23 @@
       // Fallback: Manual card using proper TV overlay structure
       console.log('[noms] TVCards not available, using fallback intro card');
       
-      const content = global.ensureTVOverlayScaffold ? global.ensureTVOverlayScaffold() : null;
+      let content = global.ensureTVOverlayScaffold ? global.ensureTVOverlayScaffold() : null;
       if(!content){
         console.error('[noms] Failed to ensure TV overlay scaffold for fallback panel');
-        return;
+        // Hard fallback: Find or create .tvOverlayContent directly
+        tvOverlay = document.getElementById('tvOverlay');
+        if(tvOverlay){
+          content = tvOverlay.querySelector('.tvOverlayContent');
+          if(!content){
+            console.log('[noms] Creating .tvOverlayContent in hard fallback');
+            content = document.createElement('div');
+            content.className = 'tvOverlayContent';
+            tvOverlay.appendChild(content);
+          }
+        } else {
+          console.error('[noms] #tvOverlay still missing after pre-flight check');
+          return;
+        }
       }
       
       content.innerHTML = '';
