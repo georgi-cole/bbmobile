@@ -16,19 +16,6 @@
   };
 
   /**
-   * Detect if device is mobile (iOS, Android, etc.)
-   * @returns {boolean} True if running on mobile device
-   */
-  function isMobileDevice(){
-    return (
-      'ontouchstart' in global ||
-      (global.navigator && global.navigator.maxTouchPoints > 0) ||
-      (global.navigator && global.navigator.msMaxTouchPoints > 0) ||
-      (global.navigator && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(global.navigator.userAgent))
-    );
-  }
-
-  /**
    * CompLocks - Manages weekly submission locks for competition minigames
    * Stores locks in localStorage keyed by week, phase, gameKey, and playerId
    */
@@ -132,7 +119,7 @@
     },
 
     /**
-     * Clear stale week 1 locks (called automatically on mobile devices)
+     * Clear stale week 1 locks (called automatically on all devices at startup)
      * Prevents users from being blocked on first launch due to leftover locks
      */
     clearStaleWeek1Locks(){
@@ -151,7 +138,7 @@
         // Remove them
         if(keysToRemove.length > 0){
           keysToRemove.forEach(key => storage.removeItem(key));
-          console.info(`[CompLocks] Auto-cleared ${keysToRemove.length} stale week 1 locks on mobile device`);
+          console.info(`[CompLocks] Auto-cleared ${keysToRemove.length} stale week 1 locks`);
         }
       } catch(e) {
         console.warn('[CompLocks] Error clearing stale week 1 locks:', e);
@@ -162,14 +149,12 @@
   // Export to global scope
   global.CompLocks = CompLocks;
 
-  // Auto-clear stale week 1 locks on mobile devices
-  // This prevents users from being blocked on first launch
-  if(isMobileDevice()){
-    try {
-      CompLocks.clearStaleWeek1Locks();
-    } catch(e) {
-      console.warn('[CompLocks] Failed to auto-clear stale locks:', e);
-    }
+  // Auto-clear stale week 1 locks on all devices at startup
+  // This prevents users from being blocked on first launch or refresh
+  try {
+    CompLocks.clearStaleWeek1Locks();
+  } catch(e) {
+    console.warn('[CompLocks] Failed to auto-clear stale locks:', e);
   }
 
   console.info('[CompLocks] Module loaded');

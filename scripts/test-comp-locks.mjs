@@ -188,7 +188,7 @@ test('Backwards compatibility: fails gracefully', () => {
   global.localStorage.getItem = originalGetItem;
 });
 
-console.log('\nMobile Stale Lock Tests:');
+console.log('\nStale Week 1 Lock Tests:');
 
 test('clearStaleWeek1Locks method exists', () => {
   if (typeof global.CompLocks.clearStaleWeek1Locks !== 'function') {

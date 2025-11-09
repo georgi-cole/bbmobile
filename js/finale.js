@@ -142,6 +142,16 @@
   function startNewSeasonFlow() {
     console.info('[new-season] starting new season flow');
     
+    // Clear all competition locks to ensure Week 1 is available in the new season
+    try {
+      if (g.CompLocks && typeof g.CompLocks.clearAllLocks === 'function') {
+        g.CompLocks.clearAllLocks();
+        console.info('[new-season] cleared all competition locks');
+      }
+    } catch(e) {
+      console.warn('[new-season] failed to clear competition locks:', e);
+    }
+    
     // Hide the finale modal
     const dim = document.querySelector('.cinDim');
     if (dim) {
