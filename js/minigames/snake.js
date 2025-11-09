@@ -156,12 +156,12 @@
       /* Nokia Image Shell Theme Styles */
       .snake-phone-shell {
         --phone-width: 300px;
-        --phone-height: 600px;
-        --lcd-top: 60px;
-        --lcd-left: 40px;
-        --lcd-width: 220px;
-        --lcd-height: 180px;
-        --keypad-top: 305px;
+        --phone-height: 665px;
+        --lcd-top: 155px;
+        --lcd-left: 53px;
+        --lcd-width: 194px;
+        --lcd-height: 125px;
+        --keypad-top: 365px;
         --keypad-btn-size: 40px;
         
         position: relative;
@@ -259,12 +259,12 @@
       @media (max-width: 768px) {
         .snake-phone-shell {
           --phone-width: 270px;
-          --phone-height: 540px;
-          --lcd-top: 54px;
-          --lcd-left: 36px;
-          --lcd-width: 198px;
-          --lcd-height: 162px;
-          --keypad-top: 275px;
+          --phone-height: 598px;
+          --lcd-top: 140px;
+          --lcd-left: 48px;
+          --lcd-width: 175px;
+          --lcd-height: 113px;
+          --keypad-top: 328px;
           --keypad-btn-size: 36px;
         }
         
@@ -277,12 +277,12 @@
       @media (max-width: 480px) {
         .snake-phone-shell {
           --phone-width: 240px;
-          --phone-height: 480px;
-          --lcd-top: 48px;
-          --lcd-left: 32px;
-          --lcd-width: 176px;
-          --lcd-height: 144px;
-          --keypad-top: 244px;
+          --phone-height: 532px;
+          --lcd-top: 124px;
+          --lcd-left: 42px;
+          --lcd-width: 155px;
+          --lcd-height: 100px;
+          --keypad-top: 292px;
           --keypad-btn-size: 32px;
         }
         
