@@ -114,3 +114,4 @@ All changes are backwards compatible:
 ## References
 - Issue: Multi-eviction nomination intro card intermittently missing
 - Related test files: `test_nomination_intro_multi_eviction.html`, `test_nomination_tv_overlay_fix.html`
+- PR: Fix for multi-eviction weeks where intro card fails to render
