@@ -81,7 +81,7 @@
       let overlayBg = 'rgba(4, 10, 18, 0.85)';
       
       if (theme === 'diaryroom') {
-        // Diary Room: blurred texture background
+        // Diary Room: darker background for full-screen effect
         overlayBg = 'rgba(20, 25, 35, 0.95)';
       }
       
@@ -98,7 +98,85 @@
         cursor: pointer;
         opacity: 0;
         transition: opacity 0.3s ease;
+        overflow: hidden;
       `;
+
+      // Add full-screen effects to overlay (behind modal)
+      // Flying emojis for social phase
+      if (shouldAnimate && theme === 'social') {
+        const emojiContainer = document.createElement('div');
+        emojiContainer.className = 'phase-intro-emoji-bg';
+        emojiContainer.style.cssText = `
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
+        `;
+        
+        // Flying emojis
+        const emojis = ['😎', '🤝', '🎉', '🔥', '💬', '⭐', '🧠', '🤔', '💥', '✨'];
+        for (let i = 0; i < 25; i++) {
+          const emoji = document.createElement('div');
+          emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+          emoji.style.cssText = `
+            position: absolute;
+            font-size: ${30 + Math.random() * 50}px;
+            opacity: ${0.2 + Math.random() * 0.3};
+            left: ${Math.random() * 100}%;
+            animation: float-emoji ${10 + Math.random() * 10}s linear infinite;
+            animation-delay: ${Math.random() * 5}s;
+          `;
+          emojiContainer.appendChild(emoji);
+        }
+        
+        overlay.appendChild(emojiContainer);
+      }
+
+      // Diary Room effects for eviction phase
+      if (theme === 'diaryroom') {
+        // Add LED light strips to overlay (full height)
+        const leftLED = document.createElement('div');
+        leftLED.style.cssText = `
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: linear-gradient(180deg, transparent 0%, #6495ed 15%, #6495ed 85%, transparent 100%);
+          opacity: 0.7;
+          box-shadow: 0 0 20px rgba(100, 149, 237, 0.6);
+          pointer-events: none;
+        `;
+        overlay.appendChild(leftLED);
+        
+        const rightLED = document.createElement('div');
+        rightLED.style.cssText = `
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: linear-gradient(180deg, transparent 0%, #6495ed 15%, #6495ed 85%, transparent 100%);
+          opacity: 0.7;
+          box-shadow: 0 0 20px rgba(100, 149, 237, 0.6);
+          pointer-events: none;
+        `;
+        overlay.appendChild(rightLED);
+        
+        // Add large microphone watermark to overlay
+        const micWatermark = document.createElement('div');
+        micWatermark.innerHTML = '🎤';
+        micWatermark.style.cssText = `
+          position: absolute;
+          bottom: 5%;
+          right: 5%;
+          font-size: 15rem;
+          opacity: 0.05;
+          pointer-events: none;
+          user-select: none;
+        `;
+        overlay.appendChild(micWatermark);
+      }
 
       // Create modal container
       const modal = document.createElement('div');
@@ -122,78 +200,6 @@
       if (theme === 'diaryroom') {
         modal.style.background = 'linear-gradient(135deg, #2a1f2f 0%, #3a2f3f 100%)';
         modal.style.border = '2px solid #5a4f6f';
-        
-        // Add LED light strips (left and right)
-        const leftLED = document.createElement('div');
-        leftLED.style.cssText = `
-          position: absolute;
-          left: 0;
-          top: 10%;
-          bottom: 10%;
-          width: 3px;
-          background: linear-gradient(180deg, transparent 0%, #6495ed 20%, #6495ed 80%, transparent 100%);
-          opacity: 0.6;
-          box-shadow: 0 0 12px rgba(100, 149, 237, 0.5);
-        `;
-        modal.appendChild(leftLED);
-        
-        const rightLED = document.createElement('div');
-        rightLED.style.cssText = `
-          position: absolute;
-          right: 0;
-          top: 10%;
-          bottom: 10%;
-          width: 3px;
-          background: linear-gradient(180deg, transparent 0%, #6495ed 20%, #6495ed 80%, transparent 100%);
-          opacity: 0.6;
-          box-shadow: 0 0 12px rgba(100, 149, 237, 0.5);
-        `;
-        modal.appendChild(rightLED);
-        
-        // Add microphone watermark
-        const micWatermark = document.createElement('div');
-        micWatermark.innerHTML = '🎤';
-        micWatermark.style.cssText = `
-          position: absolute;
-          bottom: 20px;
-          right: 20px;
-          font-size: 4rem;
-          opacity: 0.06;
-          pointer-events: none;
-          user-select: none;
-        `;
-        modal.appendChild(micWatermark);
-      }
-
-      // Create emoji background for social phase
-      if (shouldAnimate && theme === 'social') {
-        const emojiContainer = document.createElement('div');
-        emojiContainer.className = 'phase-intro-emoji-bg';
-        emojiContainer.style.cssText = `
-          position: absolute;
-          inset: 0;
-          overflow: hidden;
-          pointer-events: none;
-          border-radius: 20px;
-        `;
-        
-        // Flying emojis
-        const emojis = ['😎', '🤝', '🎉', '🔥', '💬', '⭐', '🧠', '🤔', '💥', '✨'];
-        for (let i = 0; i < 15; i++) {
-          const emoji = document.createElement('div');
-          emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-          emoji.style.cssText = `
-            position: absolute;
-            font-size: ${20 + Math.random() * 30}px;
-            opacity: ${0.15 + Math.random() * 0.25};
-            left: ${Math.random() * 100}%;
-            animation: float-emoji ${8 + Math.random() * 8}s linear infinite;
-            animation-delay: ${Math.random() * 5}s;
-          `;
-          emojiContainer.appendChild(emoji);
-        }
-        
-        modal.insertBefore(emojiContainer, modal.firstChild);
       }
 
       // Create dismiss hint
