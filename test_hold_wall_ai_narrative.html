@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hold Wall AI Narrative Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a131f 0%, #1a2332 100%);
+      color: #e3ecf5;
+      padding: 20px;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #83bfff;
+      margin-bottom: 30px;
+    }
+    
+    .test-section {
+      background: rgba(44, 58, 77, 0.4);
+      border: 1px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #83bfff;
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    
+    .btn {
+      background: #83bfff;
+      color: #1a2332;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #a3cfff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(131, 191, 255, 0.4);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .game-container {
+      background: rgba(26, 35, 50, 0.6);
+      border: 2px solid #2c3a4d;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 400px;
+    }
+    
+    .info {
+      background: rgba(131, 191, 255, 0.1);
+      border-left: 3px solid #83bfff;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    .warning {
+      background: rgba(255, 153, 102, 0.1);
+      border-left: 3px solid #ff9966;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .success {
+      background: rgba(102, 255, 102, 0.1);
+      border-left: 3px solid #66ff66;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .event-log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #2c3a4d;
+      border-radius: 6px;
+      padding: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+    
+    .event-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(44, 58, 77, 0.3);
+    }
+    
+    .event-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .timestamp {
+      color: #95a9c0;
+      margin-right: 8px;
+    }
+    
+    .event-name {
+      color: #83bfff;
+      font-weight: bold;
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧱 Hold Wall AI Narrative Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <div class="info">
+        <strong>Test Goals:</strong><br>
+        • Verify AI drops occur randomly over ~3 minutes<br>
+        • Check final-two deal window (10 seconds)<br>
+        • Test post-deal periodic checks (20s intervals, 40% drop chance)<br>
+        • Verify deal outcome event emission<br>
+        • Confirm all timers are cleaned up properly
+      </div>
+      
+      <div class="controls">
+        <button class="btn" onclick="startBasicTest()">▶ Start Basic Test</button>
+        <button class="btn" onclick="startSeededTest()">▶ Start Seeded Test (seed=42)</button>
+        <button class="btn" onclick="startQuickTest()">▶ Quick Test (fast drops)</button>
+        <button class="btn" onclick="resetGame()">🔄 Reset</button>
+      </div>
+      
+      <div class="warning">
+        <strong>Instructions:</strong><br>
+        1. Click a test button to start<br>
+        2. Press and hold the WALL element<br>
+        3. Watch the status feed for AI drops<br>
+        4. When down to 2, a deal will be offered for 10 seconds<br>
+        5. Release during deal window to test 80% promise respect<br>
+        6. Wait after 10s to test 20s interval periodic checks
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Game Display</h2>
+      <div id="gameContainer" class="game-container">
+        <p style="text-align: center; color: #95a9c0;">Click a test button above to start</p>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Event Log (bbGameBus)</h2>
+      <div class="info">
+        Events emitted on <code>bbGameBus</code> will appear below:
+      </div>
+      <div id="eventLog" class="event-log">
+        <div style="color: #95a9c0; text-align: center;">No events yet...</div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Checklist</h2>
+      <div id="checklist" style="line-height: 2;">
+        <div>✓ Load minigame module</div>
+        <div>⏳ Start game and see initial participant count</div>
+        <div>⏳ Observe AI drops in feed over time</div>
+        <div>⏳ Reach final two and see deal offer</div>
+        <div>⏳ Test deal acceptance (release within 10s)</div>
+        <div>⏳ OR wait out deal window and test periodic checks</div>
+        <div>⏳ Verify no console errors</div>
+        <div>⏳ Verify all timers cleaned up on end</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the minigame module -->
+  <script src="js/minigames/hold-wall.js"></script>
+  
+  <script>
+    // Mock game state for testing
+    window.game = {
+      players: [
+        { name: 'You', human: true, evicted: false },
+        { name: 'Finn', human: false, evicted: false },
+        { name: 'Mimi', human: false, evicted: false },
+        { name: 'Rae', human: false, evicted: false },
+        { name: 'Nova', human: false, evicted: false },
+        { name: 'Kai', human: false, evicted: false },
+        { name: 'Zed', human: false, evicted: false },
+        { name: 'Ivy', human: false, evicted: false },
+        { name: 'Ash', human: false, evicted: false }
+      ],
+      cfg: {}
+    };
+    
+    // Mock GameUtils for win probability
+    window.GameUtils = {
+      determineGameResult: function(succeeded, debug) {
+        return succeeded && Math.random() < 0.2; // 20% win chance
+      }
+    };
+    
+    // Setup event bus to capture events
+    window.bbGameBus = {
+      emit: function(eventName, data) {
+        logEvent(eventName, data);
+      }
+    };
+    
+    function logEvent(eventName, data) {
+      const log = document.getElementById('eventLog');
+      const timestamp = new Date().toLocaleTimeString();
+      
+      const entry = document.createElement('div');
+      entry.className = 'event-entry';
+      entry.innerHTML = `
+        <span class="timestamp">[${timestamp}]</span>
+        <span class="event-name">${eventName}</span>
+        <span style="color: #95a9c0;">: ${JSON.stringify(data)}</span>
+      `;
+      
+      // Clear "no events" message
+      if(log.firstChild && log.firstChild.textContent.includes('No events yet')){
+        log.innerHTML = '';
+      }
+      
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+    
+    function startBasicTest() {
+      const container = document.getElementById('gameContainer');
+      
+      if(window.MiniGames && window.MiniGames.holdWall){
+        console.log('[Test] Starting basic test...');
+        window.MiniGames.holdWall.render(container, handleComplete, {
+          competitionMode: true,
+          debugMode: false
+        });
+        updateChecklist(1);
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: MiniGames.holdWall not found!</p>';
+      }
+    }
+    
+    function startSeededTest() {
+      const container = document.getElementById('gameContainer');
+      
+      if(window.MiniGames && window.MiniGames.holdWall){
+        console.log('[Test] Starting seeded test with seed=42...');
+        window.MiniGames.holdWall.render(container, handleComplete, {
+          competitionMode: true,
+          debugMode: false,
+          seed: 42
+        });
+        updateChecklist(1);
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: MiniGames.holdWall not found!</p>';
+      }
+    }
+    
+    function startQuickTest() {
+      // For quick testing, we'll need to modify the game to have faster drops
+      // This is just a demo of how you'd start it - actual implementation would need
+      // a test mode that accelerates the timeline
+      const container = document.getElementById('gameContainer');
+      
+      if(window.MiniGames && window.MiniGames.holdWall){
+        console.log('[Test] Starting quick test (normal speed for now)...');
+        window.MiniGames.holdWall.render(container, handleComplete, {
+          competitionMode: true,
+          debugMode: false,
+          seed: 123
+        });
+        updateChecklist(1);
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: MiniGames.holdWall not found!</p>';
+      }
+    }
+    
+    function handleComplete(score) {
+      console.log('[Test] Game completed with score:', score);
+      
+      const container = document.getElementById('gameContainer');
+      const msg = document.createElement('div');
+      msg.className = 'success';
+      msg.innerHTML = `<strong>Game Complete!</strong><br>Final Score: ${score}`;
+      container.appendChild(msg);
+      
+      updateChecklist(7);
+    }
+    
+    function resetGame() {
+      document.getElementById('gameContainer').innerHTML = '<p style="text-align: center; color: #95a9c0;">Click a test button above to start</p>';
+      document.getElementById('eventLog').innerHTML = '<div style="color: #95a9c0; text-align: center;">No events yet...</div>';
+      console.log('[Test] Game reset');
+    }
+    
+    function updateChecklist(step) {
+      const checklist = document.getElementById('checklist');
+      const items = checklist.children;
+      
+      // Update specific checklist items based on progress
+      // This is a simple demo - in a real test you'd track more detailed state
+      if(step >= 1 && items[1]) {
+        items[1].innerHTML = '✓ Start game and see initial participant count';
+        items[1].style.color = '#66ff66';
+      }
+    }
+    
+    // Log that the test page is ready
+    console.log('[Test] Hold Wall AI Narrative test page loaded');
+    console.log('[Test] Mock game state:', window.game);
+    console.log('[Test] Mock GameUtils:', window.GameUtils);
+    console.log('[Test] Mock bbGameBus:', window.bbGameBus);
+  </script>
+</body>
+</html>
