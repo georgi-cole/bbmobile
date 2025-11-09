@@ -35,8 +35,6 @@
     container.innerHTML = '';
     
     const { 
-      debugMode = false, 
-      competitionMode = false,
       seed
     } = options;
     
@@ -307,17 +305,22 @@
       // Check if player released during deal window
       const duringDealWindow = rivalName && dealWindowTimer && !aiDropped;
       
+      // Winner-takes-all scoring: 100 if last remaining, 0 otherwise
+      let finalScore = 0;
+      
       if(aiWon){
-        // AI dropped, player wins automatically
+        // AI dropped, player wins automatically - score 100
+        finalScore = 100;
         statusDiv.textContent = 'You win! Others dropped.';
         statusDiv.style.color = '#66ff66';
         addFeedMessage('Challenge complete! You outlasted everyone!', '#66ff66');
       } else if(moved){
+        // Player moved - score 0
         statusDiv.textContent = 'You moved! Final time: ' + holdDuration.toFixed(1) + 's';
         statusDiv.style.color = '#ff6b6b';
         addFeedMessage('You moved too much and lost grip!', '#ff6b6b');
       } else if(duringDealWindow){
-        // Player released during the 10-second deal window
+        // Player released during the 10-second deal window - score 0
         const respected = rng() < 0.8; // 80% chance AI respects promise
         
         if(respected){
@@ -338,33 +341,9 @@
           });
         }
       } else {
+        // Player released before being last - score 0
         statusDiv.textContent = 'Released! Time: ' + holdDuration.toFixed(1) + 's';
         addFeedMessage('You released from the wall.', '#95a9c0');
-      }
-      
-      // Calculate score (0-15s range, perfect = 15s+)
-      let rawScore;
-      if(holdDuration >= 15){
-        rawScore = 100;
-      } else if(holdDuration >= 10){
-        rawScore = 70 + (holdDuration - 10) * 6;
-      } else if(holdDuration >= 5){
-        rawScore = 40 + (holdDuration - 5) * 6;
-      } else {
-        rawScore = holdDuration * 8;
-      }
-      
-      rawScore = Math.min(100, Math.round(rawScore));
-      
-      const playerSucceeded = rawScore >= 60;
-      
-      // Apply win probability logic
-      let finalScore = rawScore;
-      if(g.GameUtils && !debugMode && competitionMode){
-        const shouldWin = g.GameUtils.determineGameResult(playerSucceeded, false);
-        if(!shouldWin && playerSucceeded){
-          finalScore = Math.round(30 + Math.random() * 25);
-        }
       }
       
       setTimeout(() => onComplete(finalScore), 1500);

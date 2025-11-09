@@ -1067,31 +1067,45 @@
       sections: [
         {
           h: 'Goal',
-          p: ['Hold onto the wall as long as possible in this endurance challenge.']
+          p: ['Be the last player holding the wall. This is a pure endurance challenge with no time limit.']
         },
         {
           h: 'How to Play',
           list: [
             'Press and hold the screen to grip the wall',
-            'Maintain your hold as long as you can',
-            'Fatigue increases over time',
-            'Last as long as possible before letting go'
+            'Stay still - moving too much causes you to lose your grip',
+            'AI opponents will randomly drop over time',
+            'The challenge ends only when one player remains'
+          ]
+        },
+        {
+          h: 'AI Drop Pattern',
+          list: [
+            'AI drops occur randomly over the first ~3 minutes',
+            'When down to final two, a 10-second deal window opens',
+            'After deal expires, 40% chance AI drops every 20 seconds',
+            'Outlast everyone to win'
           ]
         },
         {
           h: 'Controls',
-          p: ['Press and hold anywhere on the screen to maintain your grip.']
+          p: ['Press and hold anywhere on the screen to maintain your grip. Keep your finger still!']
         },
         {
           h: 'Scoring',
-          p: ['Score is based entirely on hold duration. Longer hold = higher score.']
+          list: [
+            'Winner (last remaining): 100 points',
+            'Released or moved before being last: 0 points',
+            'No partial credit - winner takes all'
+          ]
         },
         {
           h: 'Tips',
           list: [
             'Find a comfortable holding position',
-            'Stay focused and patient',
-            'Prepare for increasing difficulty over time'
+            'Stay focused and patient - no time limit',
+            'Consider the deal window strategy at final two',
+            'Keep your finger steady to avoid movement penalties'
           ]
         }
       ]
