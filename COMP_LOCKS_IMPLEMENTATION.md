@@ -116,11 +116,11 @@ Each phase is tracked independently:
 - Final 3 Part 1, 2, and 3 (separate phases)
 - Different games within same phase are tracked separately
 
-### 5. Mobile-Friendly Auto-Clear (NEW)
-- Automatically detects mobile devices (iOS, Android) on module load
-- Clears stale week 1 locks to prevent first-launch blocking
+### 5. Universal Week 1 Auto-Clear
+- Automatically clears stale week 1 locks on module load for ALL devices
+- Prevents first-launch or refresh blocking on both desktop and mobile
 - Preserves locks for week 2+ to maintain integrity
-- Only affects mobile devices, desktop behavior unchanged
+- Ensures Week 1 is always available after page refresh or new season start
 
 ### 6. Lock Safety Guarantees
 - Locks are ONLY set after successful score submission
@@ -175,13 +175,13 @@ CompLocks.clearAllLocks();
 CompLocks.clearStaleWeek1Locks();
 ```
 
-### Mobile First Launch
-On mobile devices (iOS, Android):
-1. Module loads and detects mobile device
-2. Automatically clears any stale week 1 locks
-3. Player can play HOH even if locks existed from previous session
+### Startup Auto-Clear (All Devices)
+On page load or refresh (all devices):
+1. Module loads automatically
+2. Clears any stale week 1 locks unconditionally
+3. Player can always play Week 1 HOH/POV after refresh
 4. Week 2+ locks are preserved for integrity
-5. Desktop behavior is unchanged (no auto-clear)
+5. Works identically on desktop, mobile, and all platforms
 
 ## Security Considerations
 
@@ -229,28 +229,28 @@ The following features were explicitly excluded per requirements:
 - [x] Manual tests work correctly
 - [x] No syntax errors
 - [x] Backwards compatible with existing code
-- [x] Mobile devices auto-clear stale week 1 locks
-- [x] Desktop devices do not auto-clear
+- [x] All devices auto-clear stale week 1 locks on startup
+- [x] Desktop and mobile behavior is consistent
 - [x] Locks only set after successful score submission
 - [x] Incomplete/abandoned games never trigger locks
 
-## Recent Improvements (PR #XX)
+## Recent Improvements
 
-### Mobile Stale Lock Auto-Clear
-**Problem:** Mobile users could be blocked from playing HOH on first launch if stale week 1 locks existed in localStorage from a previous session.
+### Universal Week 1 Auto-Clear (Current)
+**Problem:** Desktop users (especially Windows Chrome) could be blocked from playing Week 1 HOH/POV if stale locks existed in localStorage from a previous session. Previously only mobile devices auto-cleared these locks.
 
 **Solution:** 
-- Added `isMobileDevice()` function to detect iOS, Android, and touch devices
-- Added `clearStaleWeek1Locks()` method to clear only week 1 locks
-- Module automatically calls `clearStaleWeek1Locks()` on load when on mobile
-- Desktop behavior unchanged (no auto-clear)
+- Removed mobile device detection logic (`isMobileDevice()` function)
+- Changed auto-clear to run unconditionally on ALL devices at module load
+- Added `CompLocks.clearAllLocks()` to finale.js "New Season" flow
 - Week 2+ locks preserved on all devices
+- Works identically across desktop, mobile, and all platforms
 
 **Testing:**
-- Added 3 new automated tests for mobile stale lock clearing
-- Verified on iOS (iPhone user agent)
-- Verified on Android (Pixel user agent)
-- Verified desktop behavior unchanged
+- All 19 automated tests pass
+- Week 1 locks cleared on module load for all devices
+- New Season button clears all locks before restart
+- No regressions in existing functionality
 
 ### Lock Safety Improvements
 **Problem:** Need to ensure locks are never set on incomplete or abandoned games.
