@@ -324,13 +324,29 @@
       if(global.CompetitionFlow && typeof global.CompetitionFlow.launchFullscreenMinigame === 'function'){
         console.info('[settings/render] Launching minigame in debug mode:', gameKey);
         
+        // Check if unlimited timer is enabled
+        const cfg = global.game && global.game.cfg;
+        const unlimited = cfg && cfg.debugUnlimitedTimer === true;
+        const configDuration = (cfg && cfg.minigameDuration) || 180;
+        
+        const options = {
+          debugMode: true
+        };
+        
+        if(unlimited){
+          console.info('[settings/render] Using unlimited debug timer (∞)');
+          options.unlimited = true;
+          options.timeLimit = null;
+          options.disablePhaseTimerSync = true;
+        } else {
+          console.info('[settings/render] Using configured timer:', configDuration, 'seconds');
+          options.timeLimit = configDuration;
+        }
+        
         global.CompetitionFlow.launchFullscreenMinigame(gameKey, function(score){
           console.info('[settings/render] Debug minigame completed with score:', score);
           notify('Debug minigame completed: ' + score.toFixed(1), 'ok');
-        }, {
-          timeLimit: 60,
-          debugMode: true
-        });
+        }, options);
       } else {
         notify('CompetitionFlow not available', 'warn');
         console.warn('[settings/render] CompetitionFlow.launchFullscreenMinigame not available');
