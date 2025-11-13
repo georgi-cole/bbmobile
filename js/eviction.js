@@ -1291,19 +1291,9 @@
   function postEvictionRouting(){
     const g=global.game;
     
-    // Clean up all vote UI using global helper
+    // COMMIT 3: Clean up all vote UI using global helper (includes lv2 cleanup)
     if (global.closeAllVoteUI) {
       global.closeAllVoteUI();
-    }
-    
-    // Clean up lv2 UI if it was active
-    if (global.lv2?.cleanup) {
-      global.lv2.cleanup();
-    }
-    
-    // Clean up triple UI if it was active
-    if (global.lv2?.cleanupTriple) {
-      global.lv2.cleanupTriple();
     }
     
     const remain=global.alivePlayers();
