@@ -208,8 +208,8 @@
     0 6px 20px rgba(255, 107, 107, 0.5),
     0 0 0 1px rgba(255, 107, 107, 0.2);
   
-  /* Minimum tap target */
-  min-height: 44px;
+  /* Minimum tap target - WCAG AAA compliance (48x48px) */
+  min-height: 48px;
   min-width: 160px;
 }
 
