@@ -256,6 +256,26 @@
       console.warn('[livevote-helpers] Error hiding rollout:', e);
     }
 
+    // COMMIT 3: Exit external overlay mode before cleanup (if active)
+    try {
+      if (global.lv2?.exitExternalOverlayMode) {
+        global.lv2.exitExternalOverlayMode();
+        console.debug('[livevote-helpers] External overlay mode exited');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error exiting external overlay mode:', e);
+    }
+
+    // Clear TV overlay content
+    try {
+      if (typeof global.clearTVOverlayContent === 'function') {
+        global.clearTVOverlayContent();
+        console.debug('[livevote-helpers] TV overlay content cleared');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error clearing TV overlay content:', e);
+    }
+
     // COMMIT 3: Clean up lv2 UI if active
     try {
       if (global.lv2?.cleanup) {
