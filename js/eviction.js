@@ -96,11 +96,19 @@
       return;
     }
 
-    // COMMIT 1: Direct voting flow - skip pre-vote modal (LiveVoteChoiceCard removed)
+    // COMMIT 1 & 2: Direct voting flow + observer/voter enforcement
     const you = global.getP?.(g.humanId);
     const voters = eligibleVoters();
     const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
     const hasVoted = g.__human_vote != null;
+    
+    // COMMIT 2: If human is NOT a voter (observer), skip all vote UI
+    // Observers (nominated or HOH without tie-break) only see the diary room sequence
+    if (!humanIsVoter) {
+      console.info('[eviction] Human is observer (nominated or HOH), skipping all vote UI');
+      panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny muted">You are observing this vote.</div></div>';
+      return;
+    }
     
     // If human is eligible voter and hasn't voted yet, show voting overlay directly
     if (humanIsVoter && !hasVoted && global.LiveVoteOverlay) {
@@ -185,8 +193,9 @@
       .map(id => ({ id, name: global.safeName?.(id) || 'Unknown' }))
       .filter(n => n.id != null);
 
-    // Check if we should use triple 3-up UI (3 nominees, enabled in settings)
-    const useTriple = nominees.length === 3 
+    // COMMIT 2: Check if we should use triple 3-up UI (only for voters with 3 nominees)
+    const useTriple = humanIsVoter
+      && nominees.length === 3 
       && g.cfg?.modernLiveVoteUI !== false 
       && typeof global.lv2?.initTriple === 'function';
 
@@ -212,8 +221,9 @@
       return;
     }
 
-    // Check if we should use modern lv2 UI (2 nominees only, enabled in settings)
-    const useLv2 = g.eviction.nominees.length === 2 
+    // COMMIT 2: Check if we should use modern lv2 UI (only for voters with 2 nominees)
+    const useLv2 = humanIsVoter
+      && g.eviction.nominees.length === 2 
       && g.cfg?.modernLiveVoteUI !== false 
       && global.lv2?.enabled !== false;
 
@@ -444,6 +454,13 @@
     const g = global.game;
     if(!g || !g.eviction) return;
     
+    // COMMIT 2: Only run countdown for eligible voters
+    const humanIsVoter = voters.some(v => v.id === g.humanId);
+    if (!humanIsVoter) {
+      console.debug('[eviction] Skipping countdown: human is observer');
+      return;
+    }
+    
     // Clear any existing countdown first (idempotent)
     if(global.clearVoteCountdown){
       global.clearVoteCountdown();
@@ -489,8 +506,8 @@
       // Lock the auto-vote
       lockHumanVote(autoPick);
       
-      // Show rollout overlay to display remaining votes
-      if(global.LiveVoteRollout){
+      // COMMIT 2: Show rollout only for voters (not observers)
+      if(global.LiveVoteRollout && humanIsVoter){
         const expectedVotes = voters.length;
         global.LiveVoteRollout.show({
           expectedVotes: expectedVotes,
