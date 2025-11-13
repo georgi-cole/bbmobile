@@ -96,13 +96,56 @@
       return;
     }
 
-    // Check if human is an eligible voter and hasn't voted yet
+    // Determine human eligibility via eligibleVoters()
     const you = global.getP?.(g.humanId);
     const voters = eligibleVoters();
     const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
     const hasVoted = g.__human_vote != null;
     
+    // Observer mode: If human is NOT an eligible voter (nominated or HOH without tie-break),
+    // they are an observer and should only see stage/diary room sequence - no vote UI
+    if (!humanIsVoter) {
+      console.debug('[eviction] Human is observer (nominated or HOH), no vote UI shown');
+      
+      // Show observer info in panel
+      const box = document.createElement('div');
+      box.className = 'minigame-host';
+      box.innerHTML = '<h3>Live Vote</h3>';
+      
+      const info = document.createElement('div');
+      info.className = 'tiny';
+      const remain = global.alivePlayers().length;
+      info.textContent = `Nominees: ${global.fmtList(g.eviction.nominees)}. HOH: ${global.safeName(g.hohId)}${remain===4?' (does not vote at Final 4)':' (votes in tie only)'}.`;
+      box.appendChild(info);
+      
+      const observerNote = document.createElement('div');
+      observerNote.className = 'tiny warn';
+      observerNote.style.marginTop = '8px';
+      
+      if (g.eviction.nominees.includes(g.humanId)) {
+        observerNote.textContent = 'You are nominated and cannot vote. Watch the ceremony unfold.';
+      } else if (g.hohId === g.humanId) {
+        observerNote.textContent = 'As HOH, you only vote to break a tie.';
+      } else {
+        observerNote.textContent = 'You are observing this vote.';
+      }
+      box.appendChild(observerNote);
+      
+      const votersList = document.createElement('div');
+      votersList.className = 'tiny muted';
+      votersList.style.marginTop = '6px';
+      votersList.textContent = `Voters: ${voters.length ? voters.map(p=>p.name).join(', ') : 'none'}`;
+      box.appendChild(votersList);
+      
+      panel.appendChild(box);
+      
+      // For observers: NO vote overlay, NO rollout overlay
+      // They only see the stage/diary room sequence which is handled by beginDiaryRoomSequence()
+      return;
+    }
+    
     // Direct-to-vote flow: skip ChoiceCard, go straight to VoteOverlay
+    // Only shown for eligible voters who haven't voted yet
     const useDirectVote = humanIsVoter && !hasVoted && global.LiveVoteOverlay;
 
     if (useDirectVote) {
@@ -156,6 +199,8 @@
             lockHumanVote(selectedId);
             
             // Show rollout overlay to display remaining votes
+            // Note: This only executes for eligible voters, not observers
+            // Observers never reach this code path due to the early return above
             if (global.LiveVoteRollout) {
               const expectedVotes = voters.length;
               global.LiveVoteRollout.show({
