@@ -96,21 +96,27 @@
       return;
     }
 
-    // Check if we should use two-step mobile voting flow
+    // COMMIT 1 & 2: Direct voting flow + observer/voter enforcement
     const you = global.getP?.(g.humanId);
     const voters = eligibleVoters();
     const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
     const hasVoted = g.__human_vote != null;
-    const useTwoStep = humanIsVoter && !hasVoted && global.LiveVoteChoiceCard && global.LiveVoteOverlay;
-
-    if (useTwoStep) {
-      // Use two-step mobile voting flow
-      // Check if either modal is already open (prevents duplicate modals)
-      const choiceCardOpen = global.LiveVoteChoiceCard?.isOpen?.() || false;
+    
+    // COMMIT 2: If human is NOT a voter (observer), skip all vote UI
+    // Observers (nominated or HOH without tie-break) only see the diary room sequence
+    if (!humanIsVoter) {
+      console.info('[eviction] Human is observer (nominated or HOH), skipping all vote UI');
+      panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny muted">You are observing this vote.</div></div>';
+      return;
+    }
+    
+    // If human is eligible voter and hasn't voted yet, show voting overlay directly
+    if (humanIsVoter && !hasVoted && global.LiveVoteOverlay) {
+      // Check if overlay is already open (prevents duplicate modals)
       const overlayOpen = global.LiveVoteOverlay?.isOpen?.() || false;
       
-      if (choiceCardOpen || overlayOpen) {
-        console.debug('[eviction] Skipping Choice Card show: modal already open');
+      if (overlayOpen) {
+        console.debug('[eviction] Skipping overlay show: already open');
         return;
       }
       
@@ -123,69 +129,62 @@
         console.warn('[LiveVote] clearTVOverlayContent failed', e); 
       }
       
-      // Show Choice Card first
-      if (global.LiveVoteChoiceCard) {
-        const choiceCard = global.LiveVoteChoiceCard.show({
-          nominees: g.eviction.nominees,
-          onVoteClick: (nominees) => {
-            // Hide Choice Card (idempotent)
-            global.LiveVoteChoiceCard.hide();
+      // COMMIT 4: Hide panel while overlay is open (use CSS class)
+      if (panel) {
+        panel.classList.add('voteOverlayOpen');
+      }
+      
+      // Show Voting Overlay directly (no pre-vote modal)
+      global.LiveVoteOverlay.show({
+        nominees: g.eviction.nominees,
+        isTieBreak: false,
+        onSubmit: (selectedId) => {
+          // Clear countdown timer using shared helper
+          if (global.clearVoteCountdown) {
+            global.clearVoteCountdown();
+          }
+          
+          // Close all vote UI immediately
+          if (global.closeAllVoteUI) {
+            global.closeAllVoteUI();
+          }
+          
+          // COMMIT 4: Restore panel visibility (remove CSS class)
+          if (panel) {
+            panel.classList.remove('voteOverlayOpen');
+          }
+          
+          // Lock the vote
+          lockHumanVote(selectedId);
+          
+          // Show rollout overlay to display remaining votes
+          if (global.LiveVoteRollout) {
+            const expectedVotes = voters.length;
+            global.LiveVoteRollout.show({
+              expectedVotes: expectedVotes,
+              nominees: g.eviction.nominees
+            });
             
-            // Show Voting Overlay only if not already open
-            if (global.LiveVoteOverlay && !global.LiveVoteOverlay.isOpen?.()) {
-              global.LiveVoteOverlay.show({
-                nominees: nominees,
-                isTieBreak: false,
-                onSubmit: (selectedId) => {
-                  // Clear countdown timer using shared helper
-                  if (global.clearVoteCountdown) {
-                    global.clearVoteCountdown();
-                  }
-                  
-                  // Close all vote UI immediately
-                  if (global.closeAllVoteUI) {
-                    global.closeAllVoteUI();
-                  }
-                  
-                  // Lock the vote
-                  lockHumanVote(selectedId);
-                  
-                  // Show rollout overlay to display remaining votes
-                  if (global.LiveVoteRollout) {
-                    const expectedVotes = voters.length;
-                    global.LiveVoteRollout.show({
-                      expectedVotes: expectedVotes,
-                      nominees: g.eviction.nominees
-                    });
-                    
-                    // Mark user vote as first vote in rollout
-                    const userPlayer = global.getP?.(g.humanId);
-                    const targetPlayer = global.getP?.(selectedId);
-                    if (userPlayer && targetPlayer) {
-                      global.LiveVoteRollout.addVote({
-                        voterId: g.humanId,
-                        voterName: userPlayer.name,
-                        targetId: selectedId,
-                        targetName: targetPlayer.name
-                      });
-                    }
-                  }
-                }
+            // Mark user vote as first vote in rollout
+            const userPlayer = global.getP?.(g.humanId);
+            const targetPlayer = global.getP?.(selectedId);
+            if (userPlayer && targetPlayer) {
+              global.LiveVoteRollout.addVote({
+                voterId: g.humanId,
+                voterName: userPlayer.name,
+                targetId: selectedId,
+                targetName: targetPlayer.name
               });
-              
-              // Start countdown immediately (not via .then()) to align with HUD timer
-              // Use same duration as phase timer (tVote) for synchronization
-              const liveVoteSeconds = g.cfg?.tVote || 30;
-              startVoteCountdown(liveVoteSeconds, nominees, voters);
             }
           }
-        });
-        
-        // Only hide panel after choice card is successfully shown
-        if (choiceCard && panel) {
-          panel.style.display = 'none';
         }
-      }
+      });
+      
+      // Start countdown immediately to align with HUD timer
+      // Use same duration as phase timer (tVote) for synchronization
+      const liveVoteSeconds = g.cfg?.tVote || 30;
+      startVoteCountdown(liveVoteSeconds, g.eviction.nominees, voters);
+      
       return;
     }
 
@@ -194,8 +193,9 @@
       .map(id => ({ id, name: global.safeName?.(id) || 'Unknown' }))
       .filter(n => n.id != null);
 
-    // Check if we should use triple 3-up UI (3 nominees, enabled in settings)
-    const useTriple = nominees.length === 3 
+    // COMMIT 2: Check if we should use triple 3-up UI (only for voters with 3 nominees)
+    const useTriple = humanIsVoter
+      && nominees.length === 3 
       && g.cfg?.modernLiveVoteUI !== false 
       && typeof global.lv2?.initTriple === 'function';
 
@@ -221,8 +221,9 @@
       return;
     }
 
-    // Check if we should use modern lv2 UI (2 nominees only, enabled in settings)
-    const useLv2 = g.eviction.nominees.length === 2 
+    // COMMIT 2: Check if we should use modern lv2 UI (only for voters with 2 nominees)
+    const useLv2 = humanIsVoter
+      && g.eviction.nominees.length === 2 
       && g.cfg?.modernLiveVoteUI !== false 
       && global.lv2?.enabled !== false;
 
@@ -453,6 +454,13 @@
     const g = global.game;
     if(!g || !g.eviction) return;
     
+    // COMMIT 2: Only run countdown for eligible voters
+    const humanIsVoter = voters.some(v => v.id === g.humanId);
+    if (!humanIsVoter) {
+      console.debug('[eviction] Skipping countdown: human is observer');
+      return;
+    }
+    
     // Clear any existing countdown first (idempotent)
     if(global.clearVoteCountdown){
       global.clearVoteCountdown();
@@ -498,8 +506,8 @@
       // Lock the auto-vote
       lockHumanVote(autoPick);
       
-      // Show rollout overlay to display remaining votes
-      if(global.LiveVoteRollout){
+      // COMMIT 2: Show rollout only for voters (not observers)
+      if(global.LiveVoteRollout && humanIsVoter){
         const expectedVotes = voters.length;
         global.LiveVoteRollout.show({
           expectedVotes: expectedVotes,
@@ -1283,19 +1291,9 @@
   function postEvictionRouting(){
     const g=global.game;
     
-    // Clean up all vote UI using global helper
+    // COMMIT 3: Clean up all vote UI using global helper (includes lv2 cleanup)
     if (global.closeAllVoteUI) {
       global.closeAllVoteUI();
-    }
-    
-    // Clean up lv2 UI if it was active
-    if (global.lv2?.cleanup) {
-      global.lv2.cleanup();
-    }
-    
-    // Clean up triple UI if it was active
-    if (global.lv2?.cleanupTriple) {
-      global.lv2.cleanupTriple();
     }
     
     const remain=global.alivePlayers();

@@ -160,3 +160,8 @@
 
 /* Maintain containment cap */
 #tvOverlay .revealCard.diaryRoomCard{ max-height: 78% !important; }
+
+/* COMMIT 4: Panel visibility class-based toggle for vote overlays */
+#panel.voteOverlayOpen {
+  display: none !important;
+}

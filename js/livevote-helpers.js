@@ -256,6 +256,41 @@
       console.warn('[livevote-helpers] Error hiding rollout:', e);
     }
 
+    // COMMIT 3: Clean up lv2 UI if active
+    try {
+      if (global.lv2?.cleanup) {
+        global.lv2.cleanup();
+        console.debug('[livevote-helpers] lv2 UI cleaned up');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error cleaning up lv2:', e);
+    }
+
+    try {
+      if (global.lv2?.cleanupTriple) {
+        global.lv2.cleanupTriple();
+        console.debug('[livevote-helpers] lv2 triple UI cleaned up');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error cleaning up lv2 triple:', e);
+    }
+
+    // COMMIT 3 & 4: Restore panel visibility if hidden
+    try {
+      const panel = document.querySelector('#panel');
+      if (panel) {
+        // Remove class-based hide
+        panel.classList.remove('voteOverlayOpen');
+        // Also clear any inline style (backwards compatibility)
+        if (panel.style.display === 'none') {
+          panel.style.display = '';
+        }
+        console.debug('[livevote-helpers] Panel visibility restored');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error restoring panel visibility:', e);
+    }
+
     // Always force-unlock body scroll as final step
     // This ensures scroll is restored even if UI elements are already gone
     // and handles mismatched lock/unlock calls
