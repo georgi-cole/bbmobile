@@ -256,6 +256,38 @@
       console.warn('[livevote-helpers] Error hiding rollout:', e);
     }
 
+    // Clean up lv2 UI if it was active
+    try {
+      if (global.lv2?.cleanup) {
+        global.lv2.cleanup();
+        console.debug('[livevote-helpers] lv2 UI cleaned up');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error cleaning up lv2:', e);
+    }
+
+    // Clean up lv2 triple UI if it was active
+    try {
+      if (global.lv2?.cleanupTriple) {
+        global.lv2.cleanupTriple();
+        console.debug('[livevote-helpers] lv2 triple UI cleaned up');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error cleaning up lv2 triple:', e);
+    }
+
+    // Restore panel visibility if it was hidden
+    try {
+      const panel = document.querySelector('#panel');
+      if (panel) {
+        panel.style.display = '';
+        panel.classList.remove('voteOverlayOpen');
+        console.debug('[livevote-helpers] Panel visibility restored');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error restoring panel:', e);
+    }
+
     // Always force-unlock body scroll as final step
     // This ensures scroll is restored even if UI elements are already gone
     // and handles mismatched lock/unlock calls
