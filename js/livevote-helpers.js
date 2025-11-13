@@ -256,6 +256,26 @@
       console.warn('[livevote-helpers] Error hiding rollout:', e);
     }
 
+    // Clear TV overlay content to remove any inline cards/bubbles
+    try {
+      if (typeof global.clearTVOverlayContent === 'function') {
+        global.clearTVOverlayContent();
+        console.debug('[livevote-helpers] TV overlay content cleared');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error clearing TV overlay content:', e);
+    }
+
+    // Exit external overlay mode to restore any hidden lv2 elements
+    try {
+      if (global.lv2?.exitExternalOverlayMode) {
+        global.lv2.exitExternalOverlayMode();
+        console.debug('[livevote-helpers] lv2 external overlay mode exited');
+      }
+    } catch (e) {
+      console.warn('[livevote-helpers] Error exiting lv2 external overlay mode:', e);
+    }
+
     // COMMIT 3: Clean up lv2 UI if active
     try {
       if (global.lv2?.cleanup) {

@@ -144,9 +144,18 @@
             global.clearVoteCountdown();
           }
           
-          // Close all vote UI immediately
+          // Close all vote UI immediately to ensure we're not stacking residual overlays
           if (global.closeAllVoteUI) {
             global.closeAllVoteUI();
+          }
+          
+          // Clear any inline TV cards/bubbles before showing rollout
+          try {
+            if (typeof global.clearTVOverlayContent === 'function') {
+              global.clearTVOverlayContent();
+            }
+          } catch (e) {
+            console.warn('[eviction] clearTVOverlayContent failed', e);
           }
           
           // COMMIT 4: Restore panel visibility (remove CSS class)
@@ -156,6 +165,15 @@
           
           // Lock the vote
           lockHumanVote(selectedId);
+          
+          // Enter external overlay mode to hide lv2 inline UI (keep only stage visible)
+          try {
+            if (global.lv2?.enterExternalOverlayMode) {
+              global.lv2.enterExternalOverlayMode();
+            }
+          } catch (e) {
+            console.warn('[eviction] enterExternalOverlayMode failed', e);
+          }
           
           // Show rollout overlay to display remaining votes
           if (global.LiveVoteRollout) {
@@ -1290,6 +1308,15 @@
 
   function postEvictionRouting(){
     const g=global.game;
+    
+    // Exit external overlay mode to restore any hidden lv2 HUD before cleanup
+    try {
+      if (global.lv2?.exitExternalOverlayMode) {
+        global.lv2.exitExternalOverlayMode();
+      }
+    } catch (e) {
+      console.warn('[eviction] exitExternalOverlayMode failed', e);
+    }
     
     // COMMIT 3: Clean up all vote UI using global helper (includes lv2 cleanup)
     if (global.closeAllVoteUI) {

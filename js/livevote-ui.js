@@ -30,7 +30,9 @@
     isFinal4: false,
     isResponsive: false,
     carouselIndex: 0, // Current nominee shown in carousel (0=left, 1=right)
-    useCarousel: false // Whether to use carousel layout
+    useCarousel: false, // Whether to use carousel layout
+    _externalOverlayActive: false, // Track if external overlay mode is active
+    _hiddenChildren: [] // Array of { el, display } for hidden children
   };
 
   // Default pacing
@@ -1434,6 +1436,87 @@
     card.remove();
   }
 
+  /**
+   * Enter external overlay mode
+   * Hides all lv2 children except the stage node (keeps background visible)
+   * Stores original display values to restore later
+   */
+  function enterExternalOverlayMode() {
+    try {
+      // Guard: no-op if not initialized
+      if (!state.container) {
+        console.debug('[lv2] enterExternalOverlayMode: not initialized, skipping');
+        return;
+      }
+
+      // Guard: no-op if already active
+      if (state._externalOverlayActive) {
+        console.debug('[lv2] enterExternalOverlayMode: already active, skipping');
+        return;
+      }
+
+      console.debug('[lv2] enterExternalOverlayMode: hiding children except stage');
+      
+      // Reset hidden children array
+      state._hiddenChildren = [];
+
+      // Find all direct children of the container
+      const children = Array.from(state.container.children);
+
+      children.forEach(child => {
+        // Keep the stage visible (it's the background)
+        if (child === state.stage || child.classList.contains('lv2-stage')) {
+          return;
+        }
+
+        // Store original display value
+        const originalDisplay = child.style.display || '';
+        state._hiddenChildren.push({ el: child, display: originalDisplay });
+
+        // Hide the child
+        child.style.display = 'none';
+      });
+
+      state._externalOverlayActive = true;
+      console.debug(`[lv2] enterExternalOverlayMode: hid ${state._hiddenChildren.length} children`);
+    } catch (err) {
+      console.error('[lv2] enterExternalOverlayMode error:', err);
+    }
+  }
+
+  /**
+   * Exit external overlay mode
+   * Restores all previously hidden children to their original display values
+   */
+  function exitExternalOverlayMode() {
+    try {
+      // Guard: no-op if not active
+      if (!state._externalOverlayActive) {
+        console.debug('[lv2] exitExternalOverlayMode: not active, skipping');
+        return;
+      }
+
+      console.debug('[lv2] exitExternalOverlayMode: restoring hidden children');
+
+      // Restore all hidden children
+      state._hiddenChildren.forEach(({ el, display }) => {
+        try {
+          el.style.display = display;
+        } catch (e) {
+          console.warn('[lv2] exitExternalOverlayMode: failed to restore child', e);
+        }
+      });
+
+      // Clear state
+      state._hiddenChildren = [];
+      state._externalOverlayActive = false;
+      
+      console.debug('[lv2] exitExternalOverlayMode: complete');
+    } catch (err) {
+      console.error('[lv2] exitExternalOverlayMode error:', err);
+    }
+  }
+
   // Public API exposed on window.lv2
   const lv2 = {
     init: init,
@@ -1450,6 +1533,8 @@
     showEvicteeFinal: showEvicteeFinal,
     supportsInlineCard: supportsInlineCard,
     showInlineCard: showInlineCard,
+    enterExternalOverlayMode: enterExternalOverlayMode,
+    exitExternalOverlayMode: exitExternalOverlayMode,
     get enabled() {
       // Read from config if available
       return global.game?.cfg?.modernLiveVoteUI !== false;
