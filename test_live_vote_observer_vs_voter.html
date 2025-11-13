@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Live Vote Observer vs Voter Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="overrides-fixes.css">
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <link rel="stylesheet" href="css/livevote-rollout.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-header {
+      max-width: 1200px;
+      margin: 0 auto 30px;
+      padding: 24px;
+      background: rgba(20,35,55,0.9);
+      border-radius: 12px;
+      border: 2px solid rgba(0,224,204,0.3);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 12px 0;
+      color: #00e0cc;
+      font-size: 1.8rem;
+      text-shadow: 0 2px 8px rgba(0,224,204,0.4);
+    }
+    
+    .test-header p {
+      margin: 8px 0;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+    
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto 30px;
+    }
+    
+    .control-section {
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+      padding: 20px;
+    }
+    
+    .control-section h2 {
+      margin: 0 0 16px 0;
+      font-size: 1.2rem;
+      color: #83bfff;
+      border-bottom: 2px solid rgba(131,191,255,0.3);
+      padding-bottom: 8px;
+    }
+    
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(0,224,204,0.05);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .radio-group label:hover {
+      background: rgba(0,224,204,0.1);
+    }
+    
+    .radio-group input[type="radio"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 16px 0;
+    }
+    
+    .button-group button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s;
+      flex: 1;
+      min-width: 140px;
+    }
+    
+    .button-group button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .button-group button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .status-card {
+      background: rgba(0,224,204,0.1);
+      border: 1px solid rgba(0,224,204,0.3);
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: 12px;
+    }
+    
+    .status-card h3 {
+      margin: 0 0 8px 0;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #00e0cc;
+      opacity: 0.8;
+    }
+    
+    .status-card .value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 4px 0;
+    }
+    
+    .status-card .sub {
+      font-size: 0.85rem;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+    
+    .info-box {
+      background: rgba(131,191,255,0.1);
+      border-left: 4px solid #83bfff;
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin: 12px 0;
+      font-size: 0.9rem;
+    }
+    
+    .info-box strong {
+      color: #83bfff;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <h1>🎬 Live Vote Observer vs Voter Test Harness</h1>
+    <p>Test the Live Eviction Vote flow for different player roles and device sizes. 
+       Verify that observers (nominated or HOH) never see voting UI, and that eligible voters 
+       get the direct-to-vote experience without pre-vote modals.</p>
+  </div>
+  
+  <div class="controls-grid">
+    <!-- Scenario Selection -->
+    <div class="control-section">
+      <h2>👤 Player Role Scenario</h2>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="scenario" value="nominated" checked>
+          <span><strong>Nominated (Observer)</strong><br>
+          <small>Human is nominated, should only see stage/diary</small></span>
+        </label>
+        <label>
+          <input type="radio" name="scenario" value="hoh">
+          <span><strong>HOH (Observer)</strong><br>
+          <small>Human is HOH, votes only in tie-break</small></span>
+        </label>
+        <label>
+          <input type="radio" name="scenario" value="voter">
+          <span><strong>Eligible Voter</strong><br>
+          <small>Human can vote, sees vote overlay</small></span>
+        </label>
+        <label>
+          <input type="radio" name="scenario" value="hoh-tiebreak">
+          <span><strong>HOH Tie-Break</strong><br>
+          <small>HOH votes to break a tie (edge case)</small></span>
+        </label>
+      </div>
+      
+      <div class="status-card">
+        <h3>Current Scenario</h3>
+        <div class="value" id="scenarioStatus">Nominated (Observer)</div>
+        <div class="sub" id="scenarioDesc">Human is nominated and cannot vote</div>
+      </div>
+    </div>
+    
+    <!-- Device Presets -->
+    <div class="control-section">
+      <h2>📱 Device Viewport</h2>
+      <div class="button-group">
+        <button onclick="setViewport(375, 667)">Mobile<br><small>375×667</small></button>
+        <button onclick="setViewport(820, 1180)">Tablet<br><small>820×1180</small></button>
+        <button onclick="setViewport(1366, 768)">Laptop<br><small>1366×768</small></button>
+      </div>
+      
+      <div class="status-card">
+        <h3>Current Viewport</h3>
+        <div class="value" id="viewportStatus">Desktop</div>
+        <div class="sub" id="viewportSize">Natural size</div>
+      </div>
+      
+      <div class="info-box">
+        <strong>Note:</strong> Viewport simulation works best in responsive mode (F12 → Device Toolbar).
+        On actual devices, the native viewport is used automatically.
+      </div>
+    </div>
+    
+    <!-- Test Actions -->
+    <div class="control-section">
+      <h2>🎮 Test Actions</h2>
+      <div class="button-group">
+        <button onclick="startLiveVote()" style="background: linear-gradient(135deg, #ff6b6b, #d63031); color: white;">
+          Start Live Vote
+        </button>
+        <button onclick="simulateVote()" id="btnSimVote" disabled>
+          Simulate Vote
+        </button>
+      </div>
+      <div class="button-group">
+        <button onclick="clearAll()">
+          Clear All UI
+        </button>
+        <button onclick="resetTest()">
+          Reset Test
+        </button>
+      </div>
+      
+      <div class="status-card">
+        <h3>Test State</h3>
+        <div class="value" id="testState">Ready</div>
+        <div class="sub" id="testDetails">Click "Start Live Vote" to begin</div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="panel" style="max-width: 900px; margin: 0 auto;"></div>
+  
+  <!-- Load dependencies -->
+  <script src="js/livevote-helpers.js"></script>
+  <script src="js/livevote-voteoverlay.js"></script>
+  <script src="js/livevote-rollout.js"></script>
+  <script src="js/livevote-ui.js"></script>
+  
+  <script>
+    // Mock game state
+    window.game = {
+      cfg: {
+        modernLiveVoteUI: true,
+        tVote: 30,
+        cardHoldMs: 500,
+        cardGapMs: 250
+      },
+      humanId: 1,
+      hohId: null,
+      nominees: [],
+      eviction: null,
+      players: [
+        { id: 1, name: 'Alice', alive: true, avatar: null, affinity: {}, threat: 0.5 },
+        { id: 2, name: 'Bob', alive: true, avatar: null, affinity: {}, threat: 0.6 },
+        { id: 3, name: 'Charlie', alive: true, avatar: null, affinity: {}, threat: 0.4 },
+        { id: 4, name: 'Diana', alive: true, avatar: null, affinity: {}, threat: 0.7 },
+        { id: 5, name: 'Eve', alive: true, avatar: null, affinity: {}, threat: 0.3 }
+      ],
+      __human_vote: null
+    };
+    
+    // Mock global helpers
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.safeName = function(id) {
+      const p = window.getP(id);
+      return p?.name || 'Unknown';
+    };
+    
+    window.fmtList = function(ids) {
+      return ids.map(id => window.safeName(id)).join(', ');
+    };
+    
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => p.alive);
+    };
+    
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    window.resolveAvatar = function(player) {
+      return player?.avatar || window.getDicebearUrl(player?.name);
+    };
+    
+    window.addLog = function(msg, type) {
+      console.log(`[${type}] ${msg}`);
+    };
+    
+    // Update scenario status display
+    function updateScenarioDisplay() {
+      const scenario = document.querySelector('input[name="scenario"]:checked').value;
+      const statusEl = document.getElementById('scenarioStatus');
+      const descEl = document.getElementById('scenarioDesc');
+      
+      const scenarios = {
+        'nominated': {
+          title: 'Nominated (Observer)',
+          desc: 'Human is nominated and cannot vote'
+        },
+        'hoh': {
+          title: 'HOH (Observer)',
+          desc: 'Human is HOH, votes only in tie-break'
+        },
+        'voter': {
+          title: 'Eligible Voter',
+          desc: 'Human can vote, sees vote overlay'
+        },
+        'hoh-tiebreak': {
+          title: 'HOH Tie-Break',
+          desc: 'HOH votes to break a tie (edge case)'
+        }
+      };
+      
+      statusEl.textContent = scenarios[scenario].title;
+      descEl.textContent = scenarios[scenario].desc;
+    }
+    
+    // Listen for scenario changes
+    document.querySelectorAll('input[name="scenario"]').forEach(radio => {
+      radio.addEventListener('change', updateScenarioDisplay);
+    });
+    
+    // Set viewport size (for testing responsive behavior)
+    function setViewport(width, height) {
+      // This only works in browser dev tools responsive mode
+      // Display info about the requested size
+      document.getElementById('viewportStatus').textContent = 
+        width <= 500 ? 'Mobile' : width <= 900 ? 'Tablet' : 'Laptop';
+      document.getElementById('viewportSize').textContent = `${width}×${height}px`;
+      
+      console.log(`Viewport set to ${width}×${height}. Use browser dev tools for actual resizing.`);
+    }
+    
+    // Start live vote based on selected scenario
+    function startLiveVote() {
+      const scenario = document.querySelector('input[name="scenario"]:checked').value;
+      
+      // Reset state
+      window.game.eviction = null;
+      window.game.__human_vote = null;
+      
+      // Configure based on scenario
+      switch(scenario) {
+        case 'nominated':
+          // Human is nominated
+          window.game.humanId = 2; // Bob is nominated
+          window.game.hohId = 1; // Alice is HOH
+          window.game.nominees = [2, 3]; // Bob and Charlie nominated
+          break;
+        case 'hoh':
+          // Human is HOH
+          window.game.humanId = 1; // Alice is HOH
+          window.game.hohId = 1;
+          window.game.nominees = [2, 3]; // Bob and Charlie nominated
+          break;
+        case 'voter':
+          // Human is eligible voter
+          window.game.humanId = 4; // Diana is voter
+          window.game.hohId = 1; // Alice is HOH
+          window.game.nominees = [2, 3]; // Bob and Charlie nominated
+          break;
+        case 'hoh-tiebreak':
+          // HOH tie-break scenario (rare)
+          window.game.humanId = 1; // Alice is HOH
+          window.game.hohId = 1;
+          window.game.nominees = [2, 3];
+          // Note: Tie-break logic would need special handling in actual game
+          break;
+      }
+      
+      // Initialize eviction state
+      window.game.eviction = {
+        nominees: window.game.nominees,
+        votes: [],
+        evicted: null,
+        voters: [],
+        planned: [],
+        sequenceStarted: false,
+        sequenceDone: false,
+        revealed: false,
+        revealing: false
+      };
+      
+      // Render the panel
+      renderLiveVotePanel();
+      
+      // Update test state
+      document.getElementById('testState').textContent = 'Live Vote Active';
+      document.getElementById('testDetails').textContent = 
+        scenario === 'voter' ? 'Vote overlay should be visible' : 'Observer mode - no vote UI';
+      
+      // Enable simulate vote button only for voters
+      document.getElementById('btnSimVote').disabled = (scenario !== 'voter');
+    }
+    
+    // Simulate casting a vote (for voter scenarios)
+    function simulateVote() {
+      if (window.game.__human_vote != null) {
+        alert('Already voted!');
+        return;
+      }
+      
+      // Pick first nominee as vote target
+      const targetId = window.game.nominees[0];
+      window.game.__human_vote = targetId;
+      
+      console.log(`Simulated vote for ${window.safeName(targetId)}`);
+      
+      // Re-render panel to show "voted" state
+      renderLiveVotePanel();
+      
+      document.getElementById('testState').textContent = 'Vote Cast';
+      document.getElementById('testDetails').textContent = `Voted to evict ${window.safeName(targetId)}`;
+    }
+    
+    // Clear all UI
+    function clearAll() {
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+      }
+      
+      const panel = document.getElementById('panel');
+      panel.innerHTML = '';
+      
+      document.getElementById('testState').textContent = 'Cleared';
+      document.getElementById('testDetails').textContent = 'All UI elements removed';
+      document.getElementById('btnSimVote').disabled = true;
+    }
+    
+    // Reset test
+    function resetTest() {
+      clearAll();
+      window.game.eviction = null;
+      window.game.__human_vote = null;
+      
+      document.getElementById('testState').textContent = 'Ready';
+      document.getElementById('testDetails').textContent = 'Click "Start Live Vote" to begin';
+    }
+    
+    // Simplified renderLiveVotePanel for testing (mimics eviction.js logic)
+    function renderLiveVotePanel() {
+      const g = window.game;
+      const panel = document.getElementById('panel');
+      
+      if (!panel) return;
+      
+      // Clear existing UI
+      if (window.closeAllVoteUI) {
+        window.closeAllVoteUI();
+      }
+      
+      panel.innerHTML = '';
+      
+      if (!g.eviction) {
+        panel.innerHTML = '<div class="tiny muted">Eviction flow not initialized.</div>';
+        return;
+      }
+      
+      // Check eligibility
+      const you = window.getP(g.humanId);
+      const voters = eligibleVoters();
+      const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
+      const hasVoted = g.__human_vote != null;
+      
+      // Observer mode: If human is NOT an eligible voter
+      if (!humanIsVoter) {
+        console.debug('[test] Human is observer, no vote UI shown');
+        
+        const box = document.createElement('div');
+        box.className = 'minigame-host';
+        box.innerHTML = '<h3>Live Vote</h3>';
+        
+        const info = document.createElement('div');
+        info.className = 'tiny';
+        info.textContent = `Nominees: ${window.fmtList(g.eviction.nominees)}. HOH: ${window.safeName(g.hohId)}.`;
+        box.appendChild(info);
+        
+        const observerNote = document.createElement('div');
+        observerNote.className = 'tiny warn';
+        observerNote.style.marginTop = '8px';
+        
+        if (g.eviction.nominees.includes(g.humanId)) {
+          observerNote.textContent = '✋ You are nominated and cannot vote. Watch the ceremony unfold.';
+        } else if (g.hohId === g.humanId) {
+          observerNote.textContent = '👑 As HOH, you only vote to break a tie.';
+        } else {
+          observerNote.textContent = '👁️ You are observing this vote.';
+        }
+        box.appendChild(observerNote);
+        
+        const votersList = document.createElement('div');
+        votersList.className = 'tiny muted';
+        votersList.style.marginTop = '6px';
+        votersList.textContent = `Voters: ${voters.length ? voters.map(p=>p.name).join(', ') : 'none'}`;
+        box.appendChild(votersList);
+        
+        panel.appendChild(box);
+        return;
+      }
+      
+      // Voter mode: Show direct-to-vote UI
+      if (humanIsVoter && !hasVoted && window.LiveVoteOverlay) {
+        console.debug('[test] Showing vote overlay for eligible voter');
+        
+        // Hide panel while overlay is visible
+        panel.style.display = 'none';
+        panel.classList.add('voteOverlayOpen');
+        
+        // Show vote overlay
+        window.LiveVoteOverlay.show({
+          nominees: g.eviction.nominees,
+          isTieBreak: false,
+          onSubmit: (selectedId) => {
+            console.log(`Vote submitted: ${window.safeName(selectedId)}`);
+            
+            if (window.closeAllVoteUI) {
+              window.closeAllVoteUI();
+            }
+            
+            // Restore panel
+            panel.style.display = '';
+            panel.classList.remove('voteOverlayOpen');
+            
+            // Lock vote
+            g.__human_vote = selectedId;
+            
+            // Show rollout (only for voters)
+            if (window.LiveVoteRollout) {
+              window.LiveVoteRollout.show({
+                expectedVotes: voters.length,
+                nominees: g.eviction.nominees
+              });
+              
+              const userPlayer = window.getP(g.humanId);
+              const targetPlayer = window.getP(selectedId);
+              if (userPlayer && targetPlayer) {
+                window.LiveVoteRollout.addVote({
+                  voterId: g.humanId,
+                  voterName: userPlayer.name,
+                  targetId: selectedId,
+                  targetName: targetPlayer.name
+                });
+              }
+            }
+            
+            // Re-render to show voted state
+            renderLiveVotePanel();
+          },
+          onCancel: () => {
+            // Restore panel if canceled
+            panel.style.display = '';
+            panel.classList.remove('voteOverlayOpen');
+          }
+        });
+        
+        return;
+      }
+      
+      // Already voted - show confirmation
+      if (hasVoted) {
+        const box = document.createElement('div');
+        box.className = 'minigame-host';
+        box.innerHTML = '<h3>Live Vote</h3>';
+        
+        const ok = document.createElement('div');
+        ok.className = 'tiny ok';
+        ok.textContent = `✅ Your vote is recorded: Evict ${window.safeName(g.__human_vote)}.`;
+        box.appendChild(ok);
+        
+        panel.appendChild(box);
+      }
+    }
+    
+    // Simplified eligibleVoters (mimics eviction.js)
+    function eligibleVoters() {
+      const g = window.game;
+      const remain = window.alivePlayers().length;
+      
+      if (remain === 4) {
+        // Final 4: veto holder votes
+        // For simplicity, just return non-nominees
+        return window.alivePlayers().filter(p => 
+          p.id !== g.hohId && !g.eviction.nominees.includes(p.id)
+        ).slice(0, 1);
+      }
+      
+      // Normal: all alive players except HOH and nominees
+      return window.alivePlayers().filter(p => 
+        p.id !== g.hohId && !g.eviction.nominees.includes(p.id)
+      );
+    }
+    
+    // Initialize display
+    updateScenarioDisplay();
+  </script>
+</body>
+</html>
