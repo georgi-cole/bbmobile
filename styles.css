@@ -1756,10 +1756,12 @@ button:focus-visible,.btn:focus-visible{
   transform:translate(-50%,-50%) scale(1);
 }
 
-/* Phase 2: Grayscale */
+/* Phase 2: Grayscale - enhanced visual effect */
 .eviction-visual-avatar.grayscale img{
-  filter:grayscale(100%) brightness(0.85);
+  filter:grayscale(100%) brightness(0.85) contrast(1.1);
   transition:filter 0.4s ease-out;
+  /* Subtle border color change to enhance the effect */
+  border-color:rgba(200,200,200,0.7);
 }
 
 /* Phase 3: Fade out */
@@ -1767,6 +1769,45 @@ button:focus-visible,.btn:focus-visible{
   opacity:0;
   transform:translate(-50%,-50%) scale(1.1);
   transition:all 0.6s ease-in;
+}
+
+/* Mobile optimizations for eviction avatar - ensure proper centering and sizing */
+@media (max-width: 640px) {
+  .eviction-visual-avatar{
+    /* Use vw instead of vmin on mobile portrait for better sizing */
+    width:clamp(140px, 45vw, 280px);
+    height:clamp(140px, 45vw, 280px);
+    /* Ensure transform maintains perfect centering */
+    top:50%;
+    left:50%;
+  }
+  
+  .eviction-visual-avatar img{
+    /* Slightly thinner border on mobile for better proportions */
+    border-width:4px;
+  }
+}
+
+/* Very small mobile screens (iPhone SE, older devices) */
+@media (max-width: 400px) {
+  .eviction-visual-avatar{
+    /* Smaller avatar on very small screens */
+    width:clamp(120px, 42vw, 220px);
+    height:clamp(120px, 42vw, 220px);
+  }
+  
+  .eviction-visual-avatar img{
+    border-width:3px;
+  }
+}
+
+/* Mobile landscape orientation - use height-based sizing */
+@media (max-width: 896px) and (orientation: landscape) {
+  .eviction-visual-avatar{
+    /* Use vh instead for landscape orientation */
+    width:clamp(120px, 40vh, 240px);
+    height:clamp(120px, 40vh, 240px);
+  }
 }
 
 @keyframes badgeFadeIn{
