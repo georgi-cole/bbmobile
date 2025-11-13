@@ -149,6 +149,24 @@
             global.closeAllVoteUI();
           }
           
+          // Clear any TV overlay content
+          try {
+            if (typeof global.clearTVOverlayContent === 'function') {
+              global.clearTVOverlayContent();
+            }
+          } catch (e) {
+            console.warn('[eviction] clearTVOverlayContent failed', e);
+          }
+          
+          // Enter external overlay mode (hide lv2 children except stage)
+          try {
+            if (global.lv2?.enterExternalOverlayMode) {
+              global.lv2.enterExternalOverlayMode();
+            }
+          } catch (e) {
+            console.warn('[eviction] enterExternalOverlayMode failed', e);
+          }
+          
           // COMMIT 4: Restore panel visibility (remove CSS class)
           if (panel) {
             panel.classList.remove('voteOverlayOpen');
