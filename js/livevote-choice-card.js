@@ -48,11 +48,12 @@
       global.closeAllVoteUI();
     }
 
-    // Center TV in viewport before locking scroll
-    const tvElement = document.querySelector('#tv');
-    if (global.centerTVInViewport) {
-      await global.centerTVInViewport(tvElement);
-    }
+    // MOBILE FIX: Skip centerTVInViewport for fixed-position modal
+    // The modal uses position:fixed (.lv-root) and covers the entire viewport, so it
+    // doesn't need the underlying page to be scrolled to a specific position.
+    // Centering the TV before showing a fixed modal can cause the underlying page
+    // to be in a suboptimal scroll position, which can block interaction on mobile.
+    // Instead, we just lock body scroll directly to prevent background scrolling.
 
     // Lock body scroll when choice card is shown (using ref-counted helper)
     if (global.lockBodyScroll) {
