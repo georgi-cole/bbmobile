@@ -129,9 +129,9 @@
         console.warn('[LiveVote] clearTVOverlayContent failed', e); 
       }
       
-      // Hide panel while overlay is open
+      // COMMIT 4: Hide panel while overlay is open (use CSS class)
       if (panel) {
-        panel.style.display = 'none';
+        panel.classList.add('voteOverlayOpen');
       }
       
       // Show Voting Overlay directly (no pre-vote modal)
@@ -149,9 +149,9 @@
             global.closeAllVoteUI();
           }
           
-          // Restore panel visibility
+          // COMMIT 4: Restore panel visibility (remove CSS class)
           if (panel) {
-            panel.style.display = '';
+            panel.classList.remove('voteOverlayOpen');
           }
           
           // Lock the vote

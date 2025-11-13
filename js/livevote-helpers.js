@@ -275,11 +275,16 @@
       console.warn('[livevote-helpers] Error cleaning up lv2 triple:', e);
     }
 
-    // COMMIT 3: Restore panel visibility if hidden
+    // COMMIT 3 & 4: Restore panel visibility if hidden
     try {
       const panel = document.querySelector('#panel');
-      if (panel && panel.style.display === 'none') {
-        panel.style.display = '';
+      if (panel) {
+        // Remove class-based hide
+        panel.classList.remove('voteOverlayOpen');
+        // Also clear any inline style (backwards compatibility)
+        if (panel.style.display === 'none') {
+          panel.style.display = '';
+        }
         console.debug('[livevote-helpers] Panel visibility restored');
       }
     } catch (e) {
