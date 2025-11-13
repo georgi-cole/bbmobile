@@ -96,21 +96,19 @@
       return;
     }
 
-    // Check if we should use two-step mobile voting flow
+    // COMMIT 1: Direct voting flow - skip pre-vote modal (LiveVoteChoiceCard removed)
     const you = global.getP?.(g.humanId);
     const voters = eligibleVoters();
     const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
     const hasVoted = g.__human_vote != null;
-    const useTwoStep = humanIsVoter && !hasVoted && global.LiveVoteChoiceCard && global.LiveVoteOverlay;
-
-    if (useTwoStep) {
-      // Use two-step mobile voting flow
-      // Check if either modal is already open (prevents duplicate modals)
-      const choiceCardOpen = global.LiveVoteChoiceCard?.isOpen?.() || false;
+    
+    // If human is eligible voter and hasn't voted yet, show voting overlay directly
+    if (humanIsVoter && !hasVoted && global.LiveVoteOverlay) {
+      // Check if overlay is already open (prevents duplicate modals)
       const overlayOpen = global.LiveVoteOverlay?.isOpen?.() || false;
       
-      if (choiceCardOpen || overlayOpen) {
-        console.debug('[eviction] Skipping Choice Card show: modal already open');
+      if (overlayOpen) {
+        console.debug('[eviction] Skipping overlay show: already open');
         return;
       }
       
@@ -123,69 +121,62 @@
         console.warn('[LiveVote] clearTVOverlayContent failed', e); 
       }
       
-      // Show Choice Card first
-      if (global.LiveVoteChoiceCard) {
-        const choiceCard = global.LiveVoteChoiceCard.show({
-          nominees: g.eviction.nominees,
-          onVoteClick: (nominees) => {
-            // Hide Choice Card (idempotent)
-            global.LiveVoteChoiceCard.hide();
+      // Hide panel while overlay is open
+      if (panel) {
+        panel.style.display = 'none';
+      }
+      
+      // Show Voting Overlay directly (no pre-vote modal)
+      global.LiveVoteOverlay.show({
+        nominees: g.eviction.nominees,
+        isTieBreak: false,
+        onSubmit: (selectedId) => {
+          // Clear countdown timer using shared helper
+          if (global.clearVoteCountdown) {
+            global.clearVoteCountdown();
+          }
+          
+          // Close all vote UI immediately
+          if (global.closeAllVoteUI) {
+            global.closeAllVoteUI();
+          }
+          
+          // Restore panel visibility
+          if (panel) {
+            panel.style.display = '';
+          }
+          
+          // Lock the vote
+          lockHumanVote(selectedId);
+          
+          // Show rollout overlay to display remaining votes
+          if (global.LiveVoteRollout) {
+            const expectedVotes = voters.length;
+            global.LiveVoteRollout.show({
+              expectedVotes: expectedVotes,
+              nominees: g.eviction.nominees
+            });
             
-            // Show Voting Overlay only if not already open
-            if (global.LiveVoteOverlay && !global.LiveVoteOverlay.isOpen?.()) {
-              global.LiveVoteOverlay.show({
-                nominees: nominees,
-                isTieBreak: false,
-                onSubmit: (selectedId) => {
-                  // Clear countdown timer using shared helper
-                  if (global.clearVoteCountdown) {
-                    global.clearVoteCountdown();
-                  }
-                  
-                  // Close all vote UI immediately
-                  if (global.closeAllVoteUI) {
-                    global.closeAllVoteUI();
-                  }
-                  
-                  // Lock the vote
-                  lockHumanVote(selectedId);
-                  
-                  // Show rollout overlay to display remaining votes
-                  if (global.LiveVoteRollout) {
-                    const expectedVotes = voters.length;
-                    global.LiveVoteRollout.show({
-                      expectedVotes: expectedVotes,
-                      nominees: g.eviction.nominees
-                    });
-                    
-                    // Mark user vote as first vote in rollout
-                    const userPlayer = global.getP?.(g.humanId);
-                    const targetPlayer = global.getP?.(selectedId);
-                    if (userPlayer && targetPlayer) {
-                      global.LiveVoteRollout.addVote({
-                        voterId: g.humanId,
-                        voterName: userPlayer.name,
-                        targetId: selectedId,
-                        targetName: targetPlayer.name
-                      });
-                    }
-                  }
-                }
+            // Mark user vote as first vote in rollout
+            const userPlayer = global.getP?.(g.humanId);
+            const targetPlayer = global.getP?.(selectedId);
+            if (userPlayer && targetPlayer) {
+              global.LiveVoteRollout.addVote({
+                voterId: g.humanId,
+                voterName: userPlayer.name,
+                targetId: selectedId,
+                targetName: targetPlayer.name
               });
-              
-              // Start countdown immediately (not via .then()) to align with HUD timer
-              // Use same duration as phase timer (tVote) for synchronization
-              const liveVoteSeconds = g.cfg?.tVote || 30;
-              startVoteCountdown(liveVoteSeconds, nominees, voters);
             }
           }
-        });
-        
-        // Only hide panel after choice card is successfully shown
-        if (choiceCard && panel) {
-          panel.style.display = 'none';
         }
-      }
+      });
+      
+      // Start countdown immediately to align with HUD timer
+      // Use same duration as phase timer (tVote) for synchronization
+      const liveVoteSeconds = g.cfg?.tVote || 30;
+      startVoteCountdown(liveVoteSeconds, g.eviction.nominees, voters);
+      
       return;
     }
 
