@@ -73,19 +73,14 @@
       return null;
     }
 
-    // Center TV in viewport before locking scroll
-    // If scroll is already locked, temporarily unlock it
-    const wasLocked = document.body.dataset.scrollLocked === 'true';
-    if (wasLocked && global.unlockBodyScroll) {
-      global.unlockBodyScroll();
-    }
+    // MOBILE FIX: Skip centerTVInViewport for fixed-position overlay
+    // The overlay uses position:fixed and covers the entire viewport, so it doesn't
+    // need the underlying page to be scrolled to a specific position.
+    // Centering the TV before showing a fixed overlay can cause the underlying page
+    // to be in a suboptimal scroll position, which can block avatar selection on mobile.
+    // Instead, we just lock body scroll directly to prevent background scrolling.
     
-    // Wait for TV to be centered
-    if (global.centerTVInViewport) {
-      await global.centerTVInViewport(targetContainer);
-    }
-    
-    // Now lock body scroll when modal opens
+    // Lock body scroll when modal opens to prevent background scrolling
     lockBodyScroll();
 
     // Initialize state
