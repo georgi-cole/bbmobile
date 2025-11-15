@@ -74,47 +74,6 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-/* Skip Pill - matches .sm-pill.sm-group-toggle styling */
-.sm-pill.sm-skip-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 2px solid rgba(231, 76, 60, 0.3);
-  background: rgba(231, 76, 60, 0.1);
-  color: rgba(255, 255, 255, 0.85);
-  text-transform: none;
-  letter-spacing: normal;
-  z-index: 100;
-  pointer-events: auto;
-}
-
-.sm-pill.sm-skip-pill:hover {
-  background: rgba(231, 76, 60, 0.25);
-  border-color: rgba(231, 76, 60, 0.5);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
-}
-
-.sm-pill.sm-skip-pill:active {
-  transform: translateY(0);
-  background: rgba(231, 76, 60, 0.3);
-}
-
-.sm-pill.sm-skip-pill:focus-visible {
-  outline: 2px solid rgba(231, 76, 60, 0.6);
-  outline-offset: 2px;
 }
 
 .socialize-hud-resources {
