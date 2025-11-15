@@ -2133,14 +2133,6 @@
       return;
     }
     
-    // Validate pausedTimerState.remaining before restoring
-    if(typeof pausedTimerState.remaining !== 'number' || pausedTimerState.remaining < 0) {
-      console.warn('[social-maneuvers] Invalid pausedTimerState.remaining:', pausedTimerState.remaining, '- not resuming');
-      timerPaused = false;
-      pausedTimerState = null;
-      return;
-    }
-    
     const now = Date.now();
     g.endAt = now + pausedTimerState.remaining;
     if (typeof pausedTimerState.phaseEndsAt === 'number') {
@@ -2150,34 +2142,6 @@
     timerPaused = false;
     console.info('[social-maneuvers] ▶️ Timer resumed (fallback):', pausedTimerState.remaining, 'ms remaining');
     pausedTimerState = null;
-  }
-  
-  /**
-   * Safe countdown rendering utility - clamps time to >= 0 and formats as mm:ss
-   * Prevents timer display of extreme values like 52600:00
-   * @param {number} ms - Milliseconds remaining
-   * @returns {string} Formatted time string (mm:ss)
-   */
-  function renderCountdown(ms) {
-    // Clamp to 0 if negative
-    if(typeof ms !== 'number' || isNaN(ms) || ms <= 0) {
-      return '00:00';
-    }
-    
-    // Clamp to max 24 hours (86400000ms) to prevent extreme values
-    const MAX_DISPLAY_MS = 24 * 60 * 60 * 1000;
-    const clampedMs = Math.min(ms, MAX_DISPLAY_MS);
-    
-    const seconds = Math.ceil(clampedMs / 1000);
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    
-    // Safety check: if mins > 9999, return 00:00
-    if(mins > 9999) {
-      return '00:00';
-    }
-    
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
   
   // Wrap setPhase once to detect entering and leaving social_intermission
@@ -2920,7 +2884,7 @@
   // ============================================================================
   
   /**
-   * Stop the Social phase timer to prevent countdown during auto-skip or manual Skip
+   * Stop the Social phase timer to prevent countdown during auto-skip
    */
   function stopSocialPhaseTimer() {
     const g = global.game;
@@ -2928,59 +2892,12 @@
     
     console.info('[sm-phase-skip] Stopping Social phase timer...');
     
-    // Try GameTimer.pause() first if available
-    if (global.GameTimer && typeof global.GameTimer.pause === 'function') {
-      try {
-        global.GameTimer.pause();
-        console.info('[sm-phase-skip] ✓ Timer stopped via GameTimer.pause()');
-        return;
-      } catch(e) {
-        console.warn('[sm-phase-skip] GameTimer.pause() failed, using fallback:', e);
-      }
-    }
-    
-    // Fallback: Set endAt to far future to effectively stop countdown
+    // Set endAt to far future to effectively stop countdown
     const farFuture = Date.now() + (365 * 24 * 60 * 60 * 1000); // 1 year
     g.endAt = farFuture;
     g.phaseEndsAt = farFuture;
     
     console.info('[sm-phase-skip] ✓ Timer stopped (endAt set to far future)');
-  }
-  
-  /**
-   * End the Social phase immediately with reason (e.g., 'skip', 'energy-depleted')
-   * Unified phase completion path used by Skip button and auto-skip
-   * @param {string} reason - Reason for ending phase ('skip', 'energy-depleted', 'timer-expired')
-   */
-  function endSocialPhaseNow(reason = 'skip') {
-    const g = global.game;
-    if(!g) return;
-    
-    // Idempotency guard: prevent double execution
-    if(g.__smPhaseEndInProgress) {
-      console.warn(`[sm-phase-end] Phase end already in progress - ignoring duplicate call (reason: ${reason})`);
-      return;
-    }
-    g.__smPhaseEndInProgress = true;
-    
-    console.info(`[sm-phase-end] Ending Social phase now (reason: ${reason})`);
-    
-    // Stop the phase timer immediately
-    stopSocialPhaseTimer();
-    
-    // Call onSocialPhaseEnd() exactly once
-    try {
-      onSocialPhaseEnd();
-    } catch(e) {
-      console.error('[sm-phase-end] onSocialPhaseEnd failed:', e);
-    }
-    
-    // Clean up and advance to next phase after summary is shown
-    // The Continue button in summary will trigger phase transition
-    // Reset the guard flag after phase transition
-    setTimeout(() => {
-      if(g) g.__smPhaseEndInProgress = false;
-    }, 1000);
   }
   
   function showEmptyEnergyOverlayAndSkip(playerId) {
@@ -3510,32 +3427,14 @@
     console.groupEnd();
   }
 
-  // Singleton guard for summary panel
-  let summaryPanelOpen = false;
-  
   function showSummaryPanel(summary){
     if(!summary) return;
-    
-    // Singleton guard: only one summary panel can be open at a time
-    if(summaryPanelOpen) {
-      console.warn('[social-maneuvers] Summary panel already open - ignoring duplicate call');
-      return;
-    }
-    summaryPanelOpen = true;
-
-    // Remove any existing summary panels before creating new one
-    const existingPanels = document.querySelectorAll('.social-summary-card, .modal--social-summary, [data-social-summary]');
-    existingPanels.forEach(panel => {
-      console.info('[social-maneuvers] Removing stray summary panel');
-      panel.remove();
-    });
 
     // Create summary card UI
     const deck = document.getElementById('decisionDeck') || createSummaryDeck();
     
     const card = document.createElement('div');
     card.className = 'revealCard social-summary-card';
-    card.setAttribute('data-social-summary', ''); // Mark for cleanup
     card.style.cssText = 'max-width: 680px; pointer-events: auto;';
 
     const header = document.createElement('h3');
@@ -3630,9 +3529,6 @@
     continueBtn.textContent = 'Continue';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
-      // Reset singleton guard when closing
-      summaryPanelOpen = false;
-      
       card.style.animation = 'popOut 0.4s ease forwards';
       setTimeout(() => {
         card.remove();
@@ -3650,7 +3546,9 @@
             console.info('[social-maneuvers] ⏩ Human has 0 energy - stopping timer and advancing phase');
             
             // Stop phase timer
-            stopSocialPhaseTimer();
+            if(typeof stopSocialPhaseTimer === 'function'){
+              stopSocialPhaseTimer();
+            }
             
             // Advance to next phase immediately
             if(typeof global.startNominations === 'function'){
@@ -3809,8 +3707,6 @@
     recordActionInMemory, getPlayerMemory,
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
     pausePhaseTimer, resumePhaseTimer, // Timer control exports
-    stopSocialPhaseTimer, endSocialPhaseNow, // Skip button support
-    renderCountdown, // Safe countdown rendering utility
     recordCompetitionParticipation, // Skip watcher integration
     trackPreVetoNominees, // Pre-veto tracking for save detection
     installPropertyWatchers, // Manual watcher installation if needed

@@ -1,7 +1,7 @@
 # Social Maneuvers Alignment - Validation Guide
 
 ## Overview
-This document provides validation steps for the Social Maneuvers alignment implementation and bug fixes.
+This document provides validation steps for the Social Maneuvers alignment implementation (PR #XXX).
 
 ## Changes Summary
 
@@ -13,7 +13,7 @@ This document provides validation steps for the Social Maneuvers alignment imple
 
 ### 2. Timer Pause/Resume (js/social-maneuvers.js)
 - Implemented `pausePhaseTimer()` - freezes phase timer by storing remaining time
-- Implemented `resumePhaseTimer()` - restores timer with original remaining time, with validation
+- Implemented `resumePhaseTimer()` - restores timer with original remaining time
 - Wrapped `global.setPhase` to detect phase transitions
 - When leaving social_intermission: closes modal, hides launcher, resumes timer
 - Exported timer functions on `global.SocialManeuvers`
@@ -29,28 +29,6 @@ This document provides validation steps for the Social Maneuvers alignment imple
 - Mount observer already checks `isInSocialPhase()` before mounting launcher
 - setPhase wrapper closes modal and hides launcher when leaving social_intermission
 - Clean state transitions guaranteed
-
-### 5. Skip Button & Phase Completion (NEW)
-- Added `endSocialPhaseNow(reason)` function for unified phase completion
-- Added Skip button pill to Social phase HUD (red accent, matches group toggle pills)
-- Wired Skip button to call `SocialManeuvers.endSocialPhaseNow('skip')`
-- Enhanced `stopSocialPhaseTimer()` to try GameTimer.pause() first
-- Added idempotency guards to prevent double execution
-- Exported `endSocialPhaseNow` and `stopSocialPhaseTimer` on `global.SocialManeuvers`
-
-### 6. Duplicate Summary Prevention (NEW)
-- Added module-level `summaryPanelOpen` singleton flag
-- Guard `showSummaryPanel()` to prevent duplicate calls
-- Remove stray summary instances before opening new one
-- Mark panels with `[data-social-summary]` attribute for cleanup
-- Reset flag when Continue button is clicked
-
-### 7. Timer Correctness & Clamping (NEW)
-- Added `renderCountdown(ms)` utility with safe clamping (max 24 hours)
-- Enhanced `tv-skip.js` updateTimerDisplay() to clamp extreme values
-- Added validation to `resumePhaseTimer()` for pausedTimerState.remaining
-- Prevents timer display of values like 52600:00 after Continue
-- Exported `renderCountdown` on `global.SocialManeuvers`
 
 ## Validation Steps
 
@@ -159,65 +137,6 @@ This document provides validation steps for the Social Maneuvers alignment imple
 - ✓ NO legacy fallback messages
 - ✓ Action recorded in session data for summary
 
-#### Test 7: Skip Button Ends Phase Immediately (NEW)
-**Steps:**
-1. During social_intermission, locate the Skip button in the Social phase HUD
-2. Click the Skip button
-3. Observe phase transition and summary
-
-**Expected:**
-- ✓ Skip button is visible as a red pill next to "Social Phase" title
-- ✓ Skip button has focus ring when tabbed to (keyboard accessible)
-- ✓ Click triggers immediate phase end
-- ✓ Console log: `[socialize-mobile] Skip button clicked`
-- ✓ Console log: `[sm-phase-end] Ending Social phase now (reason: skip)`
-- ✓ Exactly one summary dialog appears (no duplicates)
-- ✓ Summary shows "Social Phase Complete"
-- ✓ Click Continue advances to nominations
-- ✓ Timer does not jump to extreme value
-
-#### Test 8: No Duplicate Summaries After Energy Depletion (NEW)
-**Steps:**
-1. During social_intermission, open Socialize modal
-2. Perform actions until all energy is spent (energy = 0)
-3. Modal closes automatically
-4. Observe the summary dialog
-
-**Expected:**
-- ✓ Only ONE summary dialog appears (no stacked duplicates)
-- ✓ Console log: `[social-maneuvers] Summary panel already open - ignoring duplicate call` (if duplicate attempt)
-- ✓ Summary shows energy spent, actions performed
-- ✓ No `.modal--social-summary` or legacy summary elements
-- ✓ Click Continue advances phase correctly
-
-#### Test 9: Timer Does Not Jump After Continue (NEW)
-**Steps:**
-1. Complete social phase and see summary
-2. Note the timer display in TV header
-3. Click Continue button in summary
-4. Observe timer display
-
-**Expected:**
-- ✓ Timer does not show extreme values like 52600:00
-- ✓ Timer shows either correct countdown or 00:00
-- ✓ Timer does not become stuck
-- ✓ Console shows no errors about invalid endAt
-- ✓ Next phase timer starts correctly
-
-#### Test 10: Skip Pill Matches Other Pills Visually (NEW)
-**Steps:**
-1. During social_intermission, compare Skip button to Group toggle pill (in modal)
-2. Inspect with DevTools if needed
-
-**Expected:**
-- ✓ Skip pill height matches (~24-28px with padding 4px 12px)
-- ✓ Skip pill border-radius matches (16px)
-- ✓ Skip pill font-weight matches (600)
-- ✓ Skip pill has red accent color (rgba(231, 76, 60, ...))
-- ✓ Hover state shows transform: translateY(-1px)
-- ✓ Focus ring visible on keyboard focus (2px solid)
-- ✓ Pill is not larger/thicker than other pills
-
 ## Console Log Checklist
 
 When validating, look for these key log messages:
@@ -237,19 +156,6 @@ When validating, look for these key log messages:
 - `[socialize-mobile] ⏸️ Phase timer paused (modal opened)`
 - `[social-maneuvers] ⏸️ Timer paused: X ms remaining`
 - `[socialize-mobile] ▶️ Phase timer resumed (modal closed)`
-- `[sm-phase-skip] Stopping Social phase timer...` (when Skip clicked)
-- `[sm-phase-skip] ✓ Timer stopped via GameTimer.pause()` or `✓ Timer stopped (endAt set to far future)`
-
-### Skip Button Workflow (NEW)
-- `[socialize-mobile] Skip button clicked`
-- `[sm-phase-end] Ending Social phase now (reason: skip)`
-- `[sm-phase-skip] Stopping Social phase timer...`
-- `[social-maneuvers] ◼️ onSocialPhaseEnd() - leaving social_intermission phase`
-- `[social-maneuvers] ✓ Social phase complete - generating summary`
-
-### Summary Panel (NEW)
-- `[social-maneuvers] Summary panel already open - ignoring duplicate call` (if duplicate attempt detected)
-- `[social-maneuvers] Removing stray summary panel` (if cleanup occurs)
 - `[social-maneuvers] ▶️ Timer resumed: X ms remaining`
 
 ### Weekly Reset
