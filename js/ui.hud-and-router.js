@@ -1165,6 +1165,21 @@ header.innerHTML = `
       return;
     }
 
+    // Special: Social phase - use unified completion path
+    if((game.phase === 'social' || game.phase === 'social_intermission') && g.SocialManeuvers?.endSocialPhaseNow){
+      try{
+        console.info('[ff] Social phase detected - calling endSocialPhaseNow(skip)');
+        g.SocialManeuvers.endSocialPhaseNow('skip');
+      }catch(e){
+        console.error('[ff] endSocialPhaseNow failed:', e);
+      }
+      // Complete skip mode
+      if(g.SkipController){
+        g.SkipController.complete();
+      }
+      return;
+    }
+
     // Execute drain loop to clear all pending animations/cards/timeouts
     if(g.SkipController){
       await g.SkipController.drainLoop();
