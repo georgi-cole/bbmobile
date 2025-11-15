@@ -54,10 +54,10 @@
       console.warn('[TVSkip] .tvTitle not found');
     }
 
-    // Find and hide the original timer
-    const originalTimer = document.getElementById('tvTimer');
+    // Find and remove the original timer completely
+    const originalTimer = tvHead.querySelector('.tvTimer');
     if(originalTimer){
-      originalTimer.style.display = 'none';
+      originalTimer.remove();
     }
 
     // Check prefers-reduced-motion
