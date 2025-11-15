@@ -728,7 +728,8 @@ button:focus-visible,.btn:focus-visible{
   background:linear-gradient(180deg, rgba(13,24,38,.45), rgba(7,14,24,.2));
 }
 .tvTitle{ font-weight:600; letter-spacing:.6px; font-size:.75rem; color:#c7d7eb; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tvTimer{ font-size:.95rem; font-weight:600; color:#e2edf8; white-space:nowrap; }
+/* Timer moved to dashboard pill - hide inline TV timer */
+.tvTimer{ display:none !important; }
 
 /* Inline TV Skip Button */
 .tv-skip-button{
@@ -1203,6 +1204,63 @@ button:focus-visible,.btn:focus-visible{
   letter-spacing:0.5px;
   white-space:nowrap;
   flex-shrink:0;
+}
+.timer-players-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 10px;
+  border-radius:12px;
+  background:var(--card);
+  border:1px solid var(--line);
+  color:var(--ink);
+  font-size:0.7rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+
+/* Timer Pill (compact timer with progress bar) */
+.timer-pill{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 12px;
+  border-radius:12px;
+  background:var(--card);
+  border:1px solid var(--line);
+  color:var(--ink);
+  font-size:0.7rem;
+  font-weight:700;
+  letter-spacing:0.5px;
+  white-space:nowrap;
+  flex-shrink:0;
+  overflow:hidden;
+  min-width:60px;
+}
+.timer-pill__fill{
+  position:absolute;
+  top:0;
+  right:0;
+  bottom:0;
+  background:linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+  width:100%;
+  transform-origin:right center;
+  transition:transform 0.3s ease;
+  z-index:0;
+}
+@media (prefers-reduced-motion: reduce){
+  .timer-pill__fill{
+    transition:none;
+  }
+}
+.timer-pill__text{
+  position:relative;
+  z-index:1;
+  text-shadow:0 1px 2px rgba(0,0,0,0.3);
 }
 
 /* Row 2: Phase + Next */
