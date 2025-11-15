@@ -1,0 +1,180 @@
+/* toolbar.css
+ * Horizontally scrollable toolbar for mobile devices
+ * Implements single-line scrolling with fade indicators and accessibility
+ */
+
+/* Base scrollable toolbar styles */
+.toolbar--scroll {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Hide scrollbar visually */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  
+  /* Ensure touch targets remain accessible */
+  position: relative;
+  
+  /* Smooth scroll behavior for keyboard navigation */
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar for WebKit browsers */
+.toolbar--scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Ensure toolbar buttons don't shrink or wrap */
+.toolbar--scroll .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Adjust audio/mute button icon size for better alignment */
+.toolbar--scroll #btnMuteToggle {
+  padding: 6px 10px 7px;
+}
+
+/* Reduce icon size in the mute toggle button (if it contains SVG or emoji) */
+.toolbar--scroll #btnMuteToggle svg,
+.toolbar--scroll #btnMuteToggle img {
+  width: 18px;
+  height: 18px;
+}
+
+/* Maintain minimum touch target height for accessibility */
+.toolbar--scroll .btn {
+  min-height: 40px;
+}
+
+/* On very narrow screens, allow slightly smaller targets but not below 36px */
+@media (max-width: 360px) {
+  .toolbar--scroll .btn {
+    min-height: 36px;
+  }
+}
+
+/* Fade overlay indicators for scrollability */
+.toolbar-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 0.3s ease;
+}
+
+/* Left fade gradient */
+.toolbar-fade--left {
+  left: 0;
+  background: linear-gradient(to right, rgba(18, 29, 42, 0.9), rgba(18, 29, 42, 0));
+}
+
+/* Right fade gradient */
+.toolbar-fade--right {
+  right: 0;
+  background: linear-gradient(to left, rgba(18, 29, 42, 0.9), rgba(18, 29, 42, 0));
+}
+
+/* Hide fades when at scroll edges */
+.toolbar--scroll.no-left .toolbar-fade--left {
+  opacity: 0;
+}
+
+.toolbar--scroll.no-right .toolbar-fade--right {
+  opacity: 0;
+}
+
+/* Focus visible styling for keyboard navigation within scrollable toolbar */
+.toolbar--scroll .btn:focus-visible {
+  /* Ensure focused button is visible when tabbing */
+  scroll-margin-inline: 40px;
+}
+
+/* Theme-aware fade overlays */
+body[data-theme="modernhouse"] .toolbar-fade--left,
+body[data-theme="apartment"] .toolbar-fade--left {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
+}
+
+body[data-theme="modernhouse"] .toolbar-fade--right,
+body[data-theme="apartment"] .toolbar-fade--right {
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
+}
+
+body[data-theme="tvstudio"] .toolbar-fade--left,
+body:not([data-theme]) .toolbar-fade--left {
+  background: linear-gradient(to right, rgba(10, 10, 18, 0.9), rgba(10, 10, 18, 0));
+}
+
+body[data-theme="tvstudio"] .toolbar-fade--right,
+body:not([data-theme]) .toolbar-fade--right {
+  background: linear-gradient(to left, rgba(10, 10, 18, 0.9), rgba(10, 10, 18, 0));
+}
+
+body[data-theme="matrix"] .toolbar-fade--left {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0));
+}
+
+body[data-theme="matrix"] .toolbar-fade--right {
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0));
+}
+
+body[data-theme="rainbow"] .toolbar-fade--left {
+  background: linear-gradient(to right, rgba(26, 26, 30, 0.9), rgba(26, 26, 30, 0));
+}
+
+body[data-theme="rainbow"] .toolbar-fade--right {
+  background: linear-gradient(to left, rgba(26, 26, 30, 0.9), rgba(26, 26, 30, 0));
+}
+
+body[data-theme="sunsetbeach"] .toolbar-fade--left {
+  background: linear-gradient(to right, rgba(40, 30, 50, 0.9), rgba(40, 30, 50, 0));
+}
+
+body[data-theme="sunsetbeach"] .toolbar-fade--right {
+  background: linear-gradient(to left, rgba(40, 30, 50, 0.9), rgba(40, 30, 50, 0));
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 640px) {
+  /* Enable scroll on mobile devices */
+  .toolbar--scroll {
+    gap: 6px;
+  }
+  
+  /* Slightly narrower fades on very small screens */
+  .toolbar-fade {
+    width: 20px;
+  }
+  
+  /* Adjust button padding for tighter layout */
+  .toolbar--scroll .btn.iconOnly {
+    padding: 7px 10px 8px;
+  }
+}
+
+/* Ensure smooth scrolling during keyboard navigation */
+@media (prefers-reduced-motion: no-preference) {
+  .toolbar--scroll {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .toolbar--scroll {
+    scroll-behavior: auto;
+  }
+  
+  .toolbar-fade {
+    transition: none;
+  }
+}

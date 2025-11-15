@@ -1587,6 +1587,16 @@ header.innerHTML = `
 
     // Force-clear all previous phase UI elements
     forceClearPhaseUI(phase);
+    
+    // Clean up all ephemeral UI (ceremony cards, messages, toasts)
+    if(typeof g.UICleanup?.cleanupAll === 'function'){
+      try {
+        g.UICleanup.cleanupAll();
+        console.info('[phase] UICleanup.cleanupAll() executed');
+      } catch(e) {
+        console.error('[phase] UICleanup.cleanupAll() error:', e);
+      }
+    }
 
     // Cancel any pending cards from previous phase
     if(typeof g.CardQueue?.cancelAll === 'function'){

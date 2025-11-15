@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toolbar Scroll Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/toolbar.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: var(--card);
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+    }
+    .viewport-info {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 1000;
+    }
+    .test-toolbar {
+      margin: 10px 0;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-info">
+    Viewport: <span id="viewportWidth">-</span> x <span id="viewportHeight">-</span>
+  </div>
+
+  <div class="test-section">
+    <h2>Toolbar Scroll Test</h2>
+    <p>This page tests the horizontally scrollable toolbar implementation:</p>
+    <ul>
+      <li>Resize window to mobile width (320px, 375px, 414px)</li>
+      <li>Verify toolbar scrolls horizontally without wrapping</li>
+      <li>Check fade gradients appear at edges when scrollable</li>
+      <li>Test keyboard navigation (Tab to focus buttons, Left/Right arrows to scroll)</li>
+      <li>Confirm all buttons remain accessible</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 1: Default Topbar (with toolbar--scroll class)</h3>
+    <div class="topbar toolbar--scroll test-toolbar">
+      <div class="toolbar-fade toolbar-fade--left" aria-hidden="true"></div>
+      <button class="btn iconOnly">⚙️</button>
+      <button class="btn iconOnly">▶</button>
+      <button class="btn">➡ Advance</button>
+      <button class="btn">🎵 Music</button>
+      <button class="btn" id="btnMuteToggle">🔊</button>
+      <button class="btn iconOnly">📊</button>
+      <button class="btn iconOnly danger">🚪</button>
+      <button class="btn">Extra Button 1</button>
+      <button class="btn">Extra Button 2</button>
+      <button class="btn">Extra Button 3</button>
+      <div class="toolbar-fade toolbar-fade--right" aria-hidden="true"></div>
+    </div>
+    <p><em>This toolbar has many buttons to test scrolling on narrow viewports.</em></p>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 2: Minimal Toolbar (just a few buttons)</h3>
+    <div class="topbar toolbar--scroll test-toolbar">
+      <div class="toolbar-fade toolbar-fade--left" aria-hidden="true"></div>
+      <button class="btn iconOnly">⚙️</button>
+      <button class="btn iconOnly">▶</button>
+      <button class="btn" id="btnMuteToggle2">🔊</button>
+      <div class="toolbar-fade toolbar-fade--right" aria-hidden="true"></div>
+    </div>
+    <p><em>This toolbar has few buttons - fades should hide when not scrollable.</em></p>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 3: Without toolbar--scroll class (legacy wrap behavior)</h3>
+    <div class="topbar test-toolbar">
+      <button class="btn iconOnly">⚙️</button>
+      <button class="btn iconOnly">▶</button>
+      <button class="btn">➡ Advance</button>
+      <button class="btn">🎵 Music</button>
+      <button class="btn">🔊</button>
+      <button class="btn iconOnly">📊</button>
+      <button class="btn iconOnly danger">🚪</button>
+      <button class="btn">Extra Button 1</button>
+      <button class="btn">Extra Button 2</button>
+    </div>
+    <p><em>This toolbar uses legacy wrap behavior for comparison.</em></p>
+  </div>
+
+  <div class="test-section">
+    <h3>Accessibility Tests</h3>
+    <ul>
+      <li>Press Tab key to navigate through buttons - focused button should scroll into view</li>
+      <li>When focused on toolbar, press Left/Right arrow keys to scroll</li>
+      <li>All buttons should remain keyboard accessible</li>
+      <li>Fade overlays should not block clicks (pointer-events: none)</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h3>Visual Tests</h3>
+    <ol>
+      <li>Resize to 320px width - toolbar should scroll, no wrapping</li>
+      <li>Resize to 375px width (iPhone) - toolbar should scroll</li>
+      <li>Resize to 414px width (iPhone Pro Max) - may scroll depending on buttons</li>
+      <li>Resize to 768px+ width - should not scroll (all buttons visible)</li>
+    </ol>
+  </div>
+
+  <script type="module">
+    import { initScrollableToolbar } from './js/ui/toolbarScroll.js';
+    
+    // Initialize all scrollable toolbars on the page
+    document.querySelectorAll('.toolbar--scroll').forEach(toolbar => {
+      initScrollableToolbar(`.${toolbar.classList[0]}.${toolbar.classList[1]}`);
+    });
+    
+    // Update viewport info
+    function updateViewportInfo() {
+      document.getElementById('viewportWidth').textContent = window.innerWidth + 'px';
+      document.getElementById('viewportHeight').textContent = window.innerHeight + 'px';
+    }
+    updateViewportInfo();
+    window.addEventListener('resize', updateViewportInfo);
+    
+    console.log('Toolbar scroll test page loaded');
+    console.log('Open DevTools and use responsive design mode to test different viewport widths');
+  </script>
+</body>
+</html>

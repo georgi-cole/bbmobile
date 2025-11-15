@@ -1126,6 +1126,11 @@
       card.className = 'revealCard diaryRoomCard tvCardBody';
       if(tone) card.setAttribute('data-tone', tone);
       
+      // Mark as ephemeral for automatic cleanup on phase transitions
+      card.setAttribute('data-ephemeral', 'true');
+      card.setAttribute('data-ui-card', 'true');
+      card.classList.add('ceremony-card');
+      
       var h3 = document.createElement('h3');
       h3.textContent = title;
       card.appendChild(h3);
@@ -1181,6 +1186,11 @@
       var card = document.createElement('div');
       card.className = 'revealCard diaryRoomCard tvCardBody';
       if(tone) card.setAttribute('data-tone', tone);
+      
+      // Mark as ephemeral for automatic cleanup on phase transitions
+      card.setAttribute('data-ephemeral', 'true');
+      card.setAttribute('data-ui-card', 'true');
+      card.classList.add('ceremony-card');
       
       // Build avatar row if actors/subjects provided
       var hasAvatars = (actorIds && actorIds !== null) || (subjectIds && subjectIds !== null);
@@ -1336,6 +1346,11 @@
       
       var card = document.createElement('div');
       card.className = 'revealCard diaryRoomCard tvCardBody';
+      
+      // Mark as ephemeral for automatic cleanup on phase transitions
+      card.setAttribute('data-ephemeral', 'true');
+      card.setAttribute('data-ui-card', 'true');
+      card.classList.add('ceremony-card');
       
       var h3 = document.createElement('h3');
       h3.textContent = title;

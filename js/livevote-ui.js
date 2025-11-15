@@ -244,6 +244,22 @@
       const ctaDock = document.createElement('div');
       ctaDock.className = 'lv2-cta-dock';
       
+      // Fallback inline styles ensure the dock stays visible even if CSS is cached/old
+      Object.assign(ctaDock.style, {
+        position: 'fixed',
+        left: '0',
+        right: '0',
+        bottom: '0',
+        zIndex: '1000',
+        padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
+        background: 'linear-gradient(to top, rgba(12,14,22,.92), rgba(12,14,22,.72) 60%, rgba(12,14,22,0))',
+        borderTop: '1px solid rgba(255,255,255,.06)',
+        backdropFilter: 'saturate(1.1) blur(8px)',
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '12px'
+      });
+      
       const mainButton = document.createElement('button');
       mainButton.className = 'lv2-cta-main';
       mainButton.textContent = `Evict ${state.leftName}`;
@@ -252,6 +268,12 @@
       
       ctaDock.appendChild(mainButton);
       container.appendChild(ctaDock);
+      
+      // Spacer so content never sits under the fixed dock
+      const spacer = document.createElement('div');
+      spacer.className = 'lv2-cta-spacer';
+      spacer.style.height = 'calc(88px + env(safe-area-inset-bottom))';
+      container.appendChild(spacer);
     }
 
     // V2.2.1: Voter feed area - centered below the two photos

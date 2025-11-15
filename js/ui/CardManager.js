@@ -1,6 +1,7 @@
 // MODULE: CardManager.js
 // Centralized card lifecycle manager to prevent overlapping/lingering cards.
 // Guarantees only one card is visible at any time.
+// Integrates with uiCleanup.js for ephemeral UI tracking
 
 (function(global){
   'use strict';
@@ -44,6 +45,11 @@
         this.currentCard = result.card;
         this.currentTimeline = result.timeline || null;
         this.dismissalTimeout = result.timeout || null;
+        
+        // Mark card as ephemeral if UICleanup is available
+        if(global.UICleanup && typeof global.UICleanup.markEphemeral === 'function'){
+          global.UICleanup.markEphemeral(this.currentCard);
+        }
         
         console.log('[CardManager] ✓ Card shown:', this.currentCard.className);
       } catch(e){

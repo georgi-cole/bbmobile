@@ -26,7 +26,7 @@
 <link rel="stylesheet" href="css/livevote-rollout.css">
 <link rel="stylesheet" href="css/livevote-overrides.css">
 <link rel="stylesheet" href="css/compact-hud.css">
-<link rel="stylesheet" href="css/tv-overlay-status.css">
+<link rel="stylesheet" href="css/toolbar.css">
 
 <!-- DEBUG: Mobile Scroll Fix (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete css/mobile-scroll-fix.css -->
@@ -65,7 +65,8 @@
 </head>
 <body>
 <!-- Top Controls -->
-<div class="topbar">
+<div class="topbar toolbar--scroll">
+  <div class="toolbar-fade toolbar-fade--left" aria-hidden="true"></div>
   <button class="btn iconOnly" id="btnOpenSettings" aria-label="Settings" title="Settings">⚙️</button>
   <button class="btn iconOnly" id="btnStartQuick" aria-label="Start game" title="Start game">▶</button>
 
@@ -81,69 +82,10 @@
   <button class="btn iconOnly danger" id="btnSelfEvict" title="Self-Evict (Exit Game)" aria-label="Self-evict from game" style="display:none;">
     🚪
   </button>
+  <div class="toolbar-fade toolbar-fade--right" aria-hidden="true"></div>
 </div>
 
 <div class="wrap">
-  <!-- Dashboard (left) — Cast completely removed -->
-  <div class="card" id="dashboardCard">
-    <!-- REDESIGNED DASHBOARD: HOH, POV, Nominees removed (shown in roster) -->
-    
-    <!-- Row: Players Remaining (unified alive/evicted with gradient) -->
-    <div class="dashboard-row">
-      <div class="dashboard-info-item dashboard-info-full">
-        <span class="dashboard-label">Players</span>
-        <div id="playersStatus" class="players-status-bar" title="Alive vs Evicted">
-          <div id="playersStatusFill" class="players-status-fill"></div>
-          <span id="playersStatusText" class="players-status-text">12 / 12</span>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Special badges (double, triple, etc.) -->
-    <div class="dashboard-special-badges">
-      <span id="doubleBadge" class="badge bad" style="display:none;">DOUBLE</span>
-      <span id="tripleBadge" class="badge bad" style="display:none;">TRIPLE</span>
-      <span id="manualBadge" class="badge acc" style="display:none;">MANUAL</span>
-      <span id="juryHouseBadge" class="badge" style="display:none;">JURY</span>
-      <span id="openingBadge" class="badge" style="display:none;">OPENING</span>
-    </div>
-    
-    <div class="sep"></div>
-    
-    <!-- Timer Section -->
-    <div class="dashboard-timer-section" role="region" aria-label="Phase timer and status">
-      <!-- Row 1: Season + Week -->
-      <div class="dashboard-timer-row-1" aria-label="Season and week">
-        <span id="timerSeasonBadge" class="timer-season-badge" aria-label="Current season">Season 1</span>
-        <span id="timerWeekBadge" class="timer-week-badge" aria-label="Current week">Week 1</span>
-      </div>
-      
-      <!-- Row 2: Current Phase (full name) -->
-      <div class="dashboard-timer-row-2" aria-label="Current phase">
-        <span id="timerPhaseName" class="timer-phase-name">Intro</span>
-      </div>
-      
-      <!-- Timer (centered and bigger) -->
-      <div class="dashboard-timer-content">
-        <span id="countdown" class="dashboard-timer-display" aria-live="polite" aria-atomic="true">00:00</span>
-      </div>
-      
-      <!-- Skip progress bar (full-width, glass effect, depletes right-to-left) -->
-      <div 
-        id="timerSkipProgressBar" 
-        class="timer-skip-progress-bar" 
-        role="button" 
-        tabindex="0"
-        aria-label="Skip to next phase"
-        title="Skip to next phase"
-      >
-        <div id="timerSkipProgressFill" class="timer-skip-progress-fill"></div>
-        <span class="timer-skip-label">⏩ Skip</span>
-      </div>
-    </div>
-    <!-- Cast header, table, and note intentionally removed -->
-  </div>
-
   <!-- Show / Center -->
   <div class="card" id="actionCard">
     <h1>Houseguests</h1>
@@ -391,6 +333,9 @@
 <script defer src="js/competitions-flow.js"></script><!-- Competition flow with popup -->
 <script defer src="js/comp-locks.js"></script>
 <script defer src="js/competitions.js"></script>
+<!-- UI Cleanup (ephemeral UI tracking and cleanup) - MUST load before CardManager.js -->
+<script type="module" src="js/ui/uiCleanup.js"></script>
+<script type="module" src="js/ui/cardManager.js"></script>
 <!-- Card Manager (centralized card lifecycle) - MUST load before tv-cards.js -->
 <script defer src="js/ui/CardManager.js"></script>
 <!-- TV Cards (shared ceremony card UI) - MUST load before nominations.js -->
@@ -423,6 +368,51 @@
 <script src="js/persistence.js"></script>
 <script src="js/player-bio.js"></script>
 <script src="js/bootstrap.js"></script>
+<!-- Initialize UI Cleanup after bootstrap -->
+<script type="module">
+  import { UICleanup } from './js/ui/uiCleanup.js';
+  
+  // Wait for game to be initialized
+  function initUICleanup() {
+    if (!window.game) {
+      setTimeout(initUICleanup, 100);
+      return;
+    }
+    
+    // Create a minimal event bus if none exists
+    if (!window.game.bus) {
+      window.game.bus = {
+        listeners: {},
+        on(event, handler) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(handler);
+        },
+        emit(event, ...args) {
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(h => {
+              try { h(...args); } catch(e) { console.error(`[EventBus] Error in ${event} handler:`, e); }
+            });
+          }
+          return true;
+        }
+      };
+    }
+    
+    // Initialize UICleanup with the event bus
+    UICleanup.init(window.game.bus);
+    console.info('[UICleanup] Initialized with event bus');
+    
+    // Expose globally for testing and manual cleanup
+    window.UICleanup = UICleanup;
+  }
+  
+  // Start initialization when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUICleanup);
+  } else {
+    initUICleanup();
+  }
+</script>
 <script src="js/integrity.js"></script>
 <script src="js/finale.js"></script>
   
@@ -487,9 +477,6 @@
       phaseName.textContent = phaseText;
     }
     
-    // Update players status bar
-    updatePlayersStatus();
-    
     // Also update the main dashboard title header
     updateDashboardHeader();
     
@@ -519,33 +506,6 @@
       'social_intermission': 'Social Time'
     };
     return fullNames[phase] || phase;
-  }
-  
-  // Update players status bar with gradient
-  function updatePlayersStatus(){
-    const game = window.game || {};
-    const playersStatusFill = document.getElementById('playersStatusFill');
-    const playersStatusText = document.getElementById('playersStatusText');
-    
-    if(playersStatusFill && playersStatusText){
-      let aliveCount = 0;
-      let totalCount = 0;
-      
-      try{
-        const players = game.players || [];
-        totalCount = players.length;
-        aliveCount = (window.alivePlayers?.() || []).length;
-      }catch{}
-      
-      const evictedCount = totalCount - aliveCount;
-      const alivePercentage = totalCount > 0 ? (aliveCount / totalCount) * 100 : 100;
-      
-      // Update fill width (represents alive players)
-      playersStatusFill.style.width = `${alivePercentage}%`;
-      
-      // Update text
-      playersStatusText.textContent = `${aliveCount} / ${totalCount}`;
-    }
   }
   
   // Update main dashboard title header with week and phase info
@@ -740,7 +700,6 @@
   }
   
   function init(){ 
-    updateTimerHeader(); 
     initSkipProgressBar();
     
     // Initialize compact HUD
@@ -760,6 +719,9 @@
   window.updateTimerHeader = updateTimerHeader;
 })();
 </script>
+
+<!-- Toolbar Scroll Module (horizontal scrolling for mobile) -->
+<script type="module" src="js/ui/toolbarScroll.js"></script>
 
 <!-- DEBUG: Mobile Scroll Debug JS (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete js/debug/mobile-scroll-debug.js -->
