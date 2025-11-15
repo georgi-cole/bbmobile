@@ -87,17 +87,6 @@
   <div class="card" id="dashboardCard">
     <!-- REDESIGNED DASHBOARD: HOH, POV, Nominees removed (shown in roster) -->
     
-    <!-- Row: Players Remaining (unified alive/evicted with gradient) -->
-    <div class="dashboard-row">
-      <div class="dashboard-info-item dashboard-info-full">
-        <span class="dashboard-label">Players</span>
-        <div id="playersStatus" class="players-status-bar" title="Alive vs Evicted">
-          <div id="playersStatusFill" class="players-status-fill"></div>
-          <span id="playersStatusText" class="players-status-text">12 / 12</span>
-        </div>
-      </div>
-    </div>
-    
     <!-- Special badges (double, triple, etc.) -->
     <div class="dashboard-special-badges">
       <span id="doubleBadge" class="badge bad" style="display:none;">DOUBLE</span>
@@ -451,9 +440,6 @@
       phaseName.textContent = phaseText;
     }
     
-    // Update players status bar
-    updatePlayersStatus();
-    
     // Also update the main dashboard title header
     updateDashboardHeader();
     
@@ -483,33 +469,6 @@
       'social_intermission': 'Social Time'
     };
     return fullNames[phase] || phase;
-  }
-  
-  // Update players status bar with gradient
-  function updatePlayersStatus(){
-    const game = window.game || {};
-    const playersStatusFill = document.getElementById('playersStatusFill');
-    const playersStatusText = document.getElementById('playersStatusText');
-    
-    if(playersStatusFill && playersStatusText){
-      let aliveCount = 0;
-      let totalCount = 0;
-      
-      try{
-        const players = game.players || [];
-        totalCount = players.length;
-        aliveCount = (window.alivePlayers?.() || []).length;
-      }catch{}
-      
-      const evictedCount = totalCount - aliveCount;
-      const alivePercentage = totalCount > 0 ? (aliveCount / totalCount) * 100 : 100;
-      
-      // Update fill width (represents alive players)
-      playersStatusFill.style.width = `${alivePercentage}%`;
-      
-      // Update text
-      playersStatusText.textContent = `${aliveCount} / ${totalCount}`;
-    }
   }
   
   // Update main dashboard title header with week and phase info
