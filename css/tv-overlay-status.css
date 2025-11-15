@@ -1,0 +1,95 @@
+/* ============================================================================
+   TV OVERLAY STATUS CHIP
+   
+   Purpose: Compact status indicator in TV header, positioned next to Skip button
+   Replaces below-TV message strip for transient status updates
+   
+   Features:
+   - Inline with Skip button in .tvHead container
+   - Responsive text sizing
+   - Glass/blur effects matching existing design
+   - Accessibility support
+   ============================================================================ */
+
+:root {
+  --tv-status-bg: rgba(255, 255, 255, 0.1);
+  --tv-status-text: rgba(255, 255, 255, 0.9);
+  --tv-status-border: rgba(255, 255, 255, 0.15);
+  --tv-status-blur: blur(8px);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --tv-status-bg: rgba(0, 0, 0, 0.08);
+    --tv-status-text: rgba(0, 0, 0, 0.8);
+    --tv-status-border: rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* Status chip container */
+.tv-status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  margin-left: 8px;
+  border-radius: 8px;
+  background: var(--tv-status-bg);
+  backdrop-filter: var(--tv-status-blur);
+  -webkit-backdrop-filter: var(--tv-status-blur);
+  border: 1px solid var(--tv-status-border);
+  color: var(--tv-status-text);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 400px;
+  transition: opacity 0.3s ease;
+}
+
+/* Content span */
+.tv-status-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Responsive behavior */
+@media (max-width: 768px) {
+  .tv-status-chip {
+    font-size: 0.65rem;
+    padding: 5px 10px;
+    margin-left: 6px;
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tv-status-chip {
+    font-size: 0.6rem;
+    padding: 4px 8px;
+    margin-left: 4px;
+    max-width: 200px;
+  }
+}
+
+/* Accessibility */
+.tv-status-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .tv-status-chip {
+    transition: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .tv-status-chip {
+    border: 2px solid currentColor;
+  }
+}
