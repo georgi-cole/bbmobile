@@ -111,15 +111,10 @@
     
     <!-- Timer Section -->
     <div class="dashboard-timer-section" role="region" aria-label="Phase timer and status">
-      <!-- Row 1: Season + Week + Players + Timer -->
+      <!-- Row 1: Season + Week -->
       <div class="dashboard-timer-row-1" aria-label="Season and week">
         <span id="timerSeasonBadge" class="timer-season-badge" aria-label="Current season">Season 1</span>
         <span id="timerWeekBadge" class="timer-week-badge" aria-label="Current week">Week 1</span>
-        <span id="timerPlayersBadge" class="timer-players-badge" aria-label="Active players">12 / 12</span>
-        <div id="timerPill" class="timer-pill" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-label="Phase timer">
-          <div id="timerPillFill" class="timer-pill__fill"></div>
-          <span id="timerPillText" class="timer-pill__text">00:00</span>
-        </div>
       </div>
       
       <!-- Row 2: Current Phase (full name) -->
@@ -158,6 +153,7 @@
     <div class="tv tv-screen" id="tv">
       <div class="tvHead">
         <div class="tvTitle">House Network Live</div>
+        <div class="tvTimer" id="tvTimer">00:00</div>
       </div>
       <div class="tvViewport" data-sm-faux-tv>
         <div id="tvNow" class="tvNow">Welcome to the season.</div>
