@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="css/livevote-voteoverlay.css">
 <link rel="stylesheet" href="css/livevote-rollout.css">
 <link rel="stylesheet" href="css/livevote-overrides.css">
+<link rel="stylesheet" href="css/compact-hud.css">
 
 <!-- DEBUG: Mobile Scroll Fix (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete css/mobile-scroll-fix.css -->
@@ -145,6 +146,8 @@
   <!-- Show / Center -->
   <div class="card" id="actionCard">
     <h1>Houseguests</h1>
+    <!-- Compact HUD (Phase, Season/Week, Players) -->
+    <div class="compact-hud" id="compactHud"></div>
     <!-- Roster Bar (above TV) -->
     <div id="rosterBar"></div>
     <div class="tv tv-screen" id="tv">
@@ -242,6 +245,7 @@
 <script defer src="js/tv.js"></script>
 <script defer src="js/tv-fit.js"></script>
 <script defer src="js/tv-skip.js"></script>
+<script defer src="src/ui/compactHud.js"></script>
 <script defer src="js/players-total.js?v=5"></script>
 <script defer src="js/ui.overlay-and-logs.js"></script>
 <script defer src="js/cards-queue.js"></script>
@@ -486,6 +490,11 @@
     
     // Also update the main dashboard title header
     updateDashboardHeader();
+    
+    // Update compact HUD if available
+    if(window.CompactHud && typeof window.CompactHud.update === 'function'){
+      window.CompactHud.update();
+    }
   }
   
   // Helper function to get full phase name for tooltip
@@ -730,7 +739,14 @@
   
   function init(){ 
     updateTimerHeader(); 
-    initSkipProgressBar(); 
+    initSkipProgressBar();
+    
+    // Initialize compact HUD
+    const hudContainer = document.getElementById('compactHud');
+    if(hudContainer && window.CompactHud){
+      window.CompactHud.init(hudContainer);
+    }
+    
     placementsHover(); 
     ensureRulesButton();
     ensureProfileButton();

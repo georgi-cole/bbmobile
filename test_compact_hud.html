@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Compact HUD Test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/compact-hud.css">
+<style>
+body {
+  padding: 20px;
+  background: #0e1730;
+  color: #fff;
+}
+.test-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.test-controls {
+  background: rgba(255,255,255,0.1);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+.test-controls button {
+  margin: 5px;
+  padding: 8px 16px;
+  background: #4a90e2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.test-controls button:hover {
+  background: #5aa0f2;
+}
+.card {
+  background: rgba(13, 27, 42, 0.9);
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 20px;
+}
+.card h1 {
+  padding: 20px 20px 10px;
+  margin: 0;
+}
+.log-container {
+  background: rgba(0,0,0,0.3);
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 12px;
+}
+.log-entry {
+  margin: 2px 0;
+  padding: 2px 4px;
+}
+</style>
+</head>
+<body>
+<div class="test-container">
+  <h1>Compact HUD Test</h1>
+  
+  <div class="test-controls">
+    <h3>Test Phase Changes</h3>
+    <button onclick="setPhase('opening')">Opening</button>
+    <button onclick="setPhase('intermission')">Intermission</button>
+    <button onclick="setPhase('hoh')">HOH</button>
+    <button onclick="setPhase('nominations')">Nominations</button>
+    <button onclick="setPhase('veto_comp')">Veto Comp</button>
+    <button onclick="setPhase('veto_ceremony')">Veto Ceremony</button>
+    <button onclick="setPhase('livevote')">Eviction</button>
+    <button onclick="setPhase('jury')">Jury</button>
+    <button onclick="setPhase('social')">Social Time</button>
+    <button onclick="setPhase('final3_comp1')">Final 3 - Part 1</button>
+  </div>
+  
+  <div class="test-controls">
+    <h3>Test Week/Season Changes</h3>
+    <button onclick="incrementWeek()">Next Week</button>
+    <button onclick="setWeek(1)">Reset to Week 1</button>
+    <button onclick="incrementSeason()">Next Season</button>
+  </div>
+  
+  <div class="test-controls">
+    <h3>Test Player Count Changes</h3>
+    <button onclick="setPlayers(12, 12)">12/12 (Start)</button>
+    <button onclick="setPlayers(8, 12)">8/12 (Mid-game)</button>
+    <button onclick="setPlayers(4, 12)">4/12 (Late game)</button>
+    <button onclick="setPlayers(2, 12)">2/12 (Final 2)</button>
+    <button onclick="evictPlayer()">Evict One Player</button>
+  </div>
+  
+  <div class="test-controls">
+    <h3>Expected Behavior</h3>
+    <ul style="text-align: left; font-size: 0.9rem;">
+      <li>✅ Phase chip shows full phase name (compressed to 3 letters at &lt;480px)</li>
+      <li>✅ Season/Week chip shows SxWx format (e.g., S1W1, S2W5)</li>
+      <li>✅ Week shows "Final" when alive players ≤ 2</li>
+      <li>✅ Players chip shows alive/total count (e.g., 8/12)</li>
+      <li>✅ HUD is sticky within card when scrolling</li>
+      <li>✅ aria-live announcements on Phase and Players changes</li>
+      <li>✅ Tooltips show full text on hover</li>
+    </ul>
+  </div>
+  
+  <div class="card">
+    <h1>Houseguests</h1>
+    <!-- Compact HUD -->
+    <div class="compact-hud" id="compactHud"></div>
+    <!-- Dummy content to test sticky behavior -->
+    <div style="padding: 20px;">
+      <p>This is the Houseguests section with the compact HUD above.</p>
+      <p>Scroll down to see the HUD stick to the top of this card.</p>
+      <div style="height: 400px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 20px; margin-top: 20px;">
+        <p>Dummy roster content area</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="log-container" id="logContainer">
+    <strong>Event Log:</strong>
+  </div>
+</div>
+
+<script>
+// Setup global game state
+window.game = {
+  phase: 'lobby',
+  week: 1,
+  season: 1,
+  players: Array.from({ length: 12 }, (_, i) => ({
+    id: i + 1,
+    name: `Player ${i + 1}`,
+    evicted: false
+  })),
+  cfg: {
+    numPlayers: 12
+  }
+};
+
+// Helper to get alive players
+window.alivePlayers = function() {
+  return window.game.players.filter(p => !p.evicted);
+};
+
+// Helper to get full phase name
+window.getFullPhaseName = function(phase) {
+  const fullNames = {
+    'lobby': 'Lobby',
+    'opening': 'Season Premiere',
+    'intermission': 'Strategizing',
+    'hoh': 'HOH Competition',
+    'nominations': 'Nominations',
+    'veto_comp': 'Veto Competition',
+    'veto': 'Veto Competition',
+    'veto_ceremony': 'Veto Ceremony',
+    'livevote': 'Eviction',
+    'jury': 'Jury Deliberation',
+    'return_twist': 'Return Challenge',
+    'final3_comp1': 'Final 3 – Part 1',
+    'final3_comp2': 'Final 3 – Part 2',
+    'final3_decision': 'Final 3 – Decision',
+    'social': 'Social Time',
+    'social_intermission': 'Social Time'
+  };
+  return fullNames[phase] || phase;
+};
+
+// Log helper
+function addLog(message, type = 'info') {
+  const logContainer = document.getElementById('logContainer');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.style.color = type === 'warn' ? '#ffa500' : type === 'error' ? '#ff4444' : '#4af';
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  logContainer.appendChild(entry);
+  logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+// Test functions
+function setPhase(phase) {
+  window.game.phase = phase;
+  addLog(`Phase changed to: ${phase} (${window.getFullPhaseName(phase)})`);
+  if (window.CompactHud) {
+    window.CompactHud.update();
+  }
+}
+
+function incrementWeek() {
+  window.game.week++;
+  addLog(`Week incremented to: ${window.game.week}`);
+  if (window.CompactHud) {
+    window.CompactHud.update();
+  }
+}
+
+function setWeek(week) {
+  window.game.week = week;
+  addLog(`Week set to: ${week}`);
+  if (window.CompactHud) {
+    window.CompactHud.update();
+  }
+}
+
+function incrementSeason() {
+  window.game.season++;
+  window.game.week = 1;
+  addLog(`Season incremented to: ${window.game.season}, Week reset to 1`);
+  if (window.CompactHud) {
+    window.CompactHud.update();
+  }
+}
+
+function setPlayers(alive, total) {
+  // Reset all players
+  window.game.players = Array.from({ length: total }, (_, i) => ({
+    id: i + 1,
+    name: `Player ${i + 1}`,
+    evicted: i >= alive
+  }));
+  window.game.cfg.numPlayers = total;
+  addLog(`Players set to: ${alive}/${total}`);
+  if (window.CompactHud) {
+    window.CompactHud.update();
+  }
+}
+
+function evictPlayer() {
+  const alive = window.alivePlayers();
+  if (alive.length > 0) {
+    alive[alive.length - 1].evicted = true;
+    const aliveCount = window.alivePlayers().length;
+    const total = window.game.players.length;
+    addLog(`Evicted player. Now: ${aliveCount}/${total}`);
+    if (window.CompactHud) {
+      window.CompactHud.update();
+    }
+  } else {
+    addLog('No players left to evict', 'warn');
+  }
+}
+
+// Initial log
+addLog('Test page loaded');
+</script>
+
+<!-- Load CompactHud module -->
+<script src="src/ui/compactHud.js"></script>
+
+<script>
+// Initialize HUD after module loads
+setTimeout(() => {
+  const hudContainer = document.getElementById('compactHud');
+  if (hudContainer && window.CompactHud) {
+    window.CompactHud.init(hudContainer);
+    addLog('CompactHud initialized');
+  } else {
+    addLog('Failed to initialize CompactHud', 'error');
+  }
+}, 100);
+</script>
+
+</body>
+</html>
