@@ -107,40 +107,6 @@
       <span id="openingBadge" class="badge" style="display:none;">OPENING</span>
     </div>
     
-    <div class="sep"></div>
-    
-    <!-- Timer Section -->
-    <div class="dashboard-timer-section" role="region" aria-label="Phase timer and status">
-      <!-- Row 1: Season + Week -->
-      <div class="dashboard-timer-row-1" aria-label="Season and week">
-        <span id="timerSeasonBadge" class="timer-season-badge" aria-label="Current season">Season 1</span>
-        <span id="timerWeekBadge" class="timer-week-badge" aria-label="Current week">Week 1</span>
-      </div>
-      
-      <!-- Row 2: Current Phase (full name) -->
-      <div class="dashboard-timer-row-2" aria-label="Current phase">
-        <span id="timerPhaseName" class="timer-phase-name">Intro</span>
-      </div>
-      
-      <!-- Timer (centered and bigger) -->
-      <div class="dashboard-timer-content">
-        <span id="countdown" class="dashboard-timer-display" aria-live="polite" aria-atomic="true">00:00</span>
-      </div>
-      
-      <!-- Skip progress bar (full-width, glass effect, depletes right-to-left) -->
-      <div 
-        id="timerSkipProgressBar" 
-        class="timer-skip-progress-bar" 
-        role="button" 
-        tabindex="0"
-        aria-label="Skip to next phase"
-        title="Skip to next phase"
-      >
-        <div id="timerSkipProgressFill" class="timer-skip-progress-fill"></div>
-        <span class="timer-skip-label">⏩ Skip</span>
-      </div>
-    </div>
-    <!-- Cast header, table, and note intentionally removed -->
   </div>
 
   <!-- Show / Center -->
@@ -738,7 +704,6 @@
   }
   
   function init(){ 
-    updateTimerHeader(); 
     initSkipProgressBar();
     
     // Initialize compact HUD

@@ -59,7 +59,7 @@
   padding: 6px 12px;
   border-radius: 14px;
   background: var(--hud-chip-bg);
-  color: var(--hud-chip-text);
+  color: var(--card);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -76,17 +76,29 @@
 
 /* Phase chip - highest priority, always visible */
 .compact-hud-chip.phase {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  --chip-base: var(--accent);
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--chip-base) 90%, var(--card)) 0%, 
+    color-mix(in srgb, var(--chip-base) 75%, var(--bg)) 100%);
+  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
 }
 
 /* Season/Week chip */
 .compact-hud-chip.season-week {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  --chip-base: var(--accent-2);
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--chip-base) 85%, var(--card)) 0%, 
+    color-mix(in srgb, var(--chip-base) 70%, var(--bg)) 100%);
+  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
 }
 
 /* Players chip */
 .compact-hud-chip.players {
-  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+  --chip-base: var(--good);
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--chip-base) 80%, var(--card)) 0%, 
+    color-mix(in srgb, var(--chip-base) 65%, var(--bg)) 100%);
+  border: 1px solid color-mix(in srgb, var(--line) 60%, var(--chip-base));
 }
 
 /* Icon support (optional) */
