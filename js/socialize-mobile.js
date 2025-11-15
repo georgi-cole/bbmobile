@@ -152,7 +152,10 @@
     launcher.style.zIndex = '2147483000';
     launcher.innerHTML = `
       <div class="socialize-hud socialize-card social-live-card" data-sm-social-card>
-        <div class="socialize-hud-title">Social Phase</div>
+        <div class="socialize-hud-title">
+          Social Phase
+          <button class="sm-pill sm-skip-pill" id="socialSkipBtn" aria-label="Skip Social Phase" title="End Social Phase immediately">Skip</button>
+        </div>
         <div class="socialize-hud-resources">
           <div class="resource-badge" data-tip="Energy: Used for all social actions">
             <span class="resource-icon">⚡</span>
@@ -177,6 +180,16 @@
     // Attach event listeners
     $('#socializeOpenBtn')?.addEventListener('click', openSocializeModal);
     $('#resourceHelpBtn')?.addEventListener('click', showResourceHelp);
+    
+    // Attach Skip button handler
+    const skipBtn = $('#socialSkipBtn');
+    if(skipBtn) {
+      // Remove any existing listeners by cloning the node
+      const newSkipBtn = skipBtn.cloneNode(true);
+      skipBtn.parentNode.replaceChild(newSkipBtn, skipBtn);
+      
+      newSkipBtn.addEventListener('click', handleSkipClick);
+    }
     
     // Subscribe to resource-changed events for live updates
     global.addEventListener('social-resources-changed', (event) => {
@@ -249,6 +262,27 @@
     }
     
     console.info('[socialize-mobile] Social card disabled for evicted player');
+  }
+
+  function handleSkipClick() {
+    console.info('[socialize-mobile] Skip button clicked');
+    
+    // Close modal if open
+    closeSocializeModal(false);
+    
+    // Call endSocialPhaseNow from SocialManeuvers
+    if(global.SocialManeuvers?.endSocialPhaseNow) {
+      try {
+        global.SocialManeuvers.endSocialPhaseNow('skip');
+        console.info('[socialize-mobile] ✓ Skip triggered phase end');
+      } catch(e) {
+        console.error('[socialize-mobile] Failed to end phase via Skip:', e);
+        global.addLog?.('Failed to skip Social phase. Please try again.', 'error');
+      }
+    } else {
+      console.error('[socialize-mobile] SocialManeuvers.endSocialPhaseNow not available');
+      global.addLog?.('Skip functionality not available.', 'error');
+    }
   }
 
   function showResourceHelp() {
