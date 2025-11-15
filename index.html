@@ -329,6 +329,9 @@
 <script defer src="js/competitions-flow.js"></script><!-- Competition flow with popup -->
 <script defer src="js/comp-locks.js"></script>
 <script defer src="js/competitions.js"></script>
+<!-- UI Cleanup (ephemeral UI tracking and cleanup) - MUST load before CardManager.js -->
+<script type="module" src="js/ui/uiCleanup.js"></script>
+<script type="module" src="js/ui/cardManager.js"></script>
 <!-- Card Manager (centralized card lifecycle) - MUST load before tv-cards.js -->
 <script defer src="js/ui/CardManager.js"></script>
 <!-- TV Cards (shared ceremony card UI) - MUST load before nominations.js -->
@@ -361,6 +364,51 @@
 <script src="js/persistence.js"></script>
 <script src="js/player-bio.js"></script>
 <script src="js/bootstrap.js"></script>
+<!-- Initialize UI Cleanup after bootstrap -->
+<script type="module">
+  import { UICleanup } from './js/ui/uiCleanup.js';
+  
+  // Wait for game to be initialized
+  function initUICleanup() {
+    if (!window.game) {
+      setTimeout(initUICleanup, 100);
+      return;
+    }
+    
+    // Create a minimal event bus if none exists
+    if (!window.game.bus) {
+      window.game.bus = {
+        listeners: {},
+        on(event, handler) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(handler);
+        },
+        emit(event, ...args) {
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(h => {
+              try { h(...args); } catch(e) { console.error(`[EventBus] Error in ${event} handler:`, e); }
+            });
+          }
+          return true;
+        }
+      };
+    }
+    
+    // Initialize UICleanup with the event bus
+    UICleanup.init(window.game.bus);
+    console.info('[UICleanup] Initialized with event bus');
+    
+    // Expose globally for testing and manual cleanup
+    window.UICleanup = UICleanup;
+  }
+  
+  // Start initialization when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUICleanup);
+  } else {
+    initUICleanup();
+  }
+</script>
 <script src="js/integrity.js"></script>
 <script src="js/finale.js"></script>
   
