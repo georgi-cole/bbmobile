@@ -422,7 +422,7 @@
     });
   }
 
-  function closeSocializeModal(showToast = false) {
+  function closeSocializeModal() {
     const modal = $('#socializeModal');
     if (!modal) return;
 
@@ -449,10 +449,7 @@
     modal.classList.remove('open');
     setTimeout(() => {
       modal.remove();
-      
-      if (showToast) {
-        showSocialUpdateToast();
-      }
+      // REMOVED: Legacy toast UI - engine summary is sole owner
     }, 300);
   }
 
@@ -1423,7 +1420,7 @@
     const updatedRes = getResourceState();
     if (updatedRes.energy <= 0) {
       setTimeout(() => {
-        closeSocializeModal(true);
+        closeSocializeModal();
       }, 800);
     }
   }
@@ -1485,114 +1482,8 @@
     }
   }
 
-  function showSocialUpdateToast() {
-    const toast = document.createElement('div');
-    toast.className = 'social-update-toast';
-    toast.innerHTML = `
-      <div class="toast-content">
-        <div class="toast-title">Social Update</div>
-        <div class="toast-message">Social phase complete. All energy spent.</div>
-        <div class="toast-actions">
-          <button class="toast-btn details-btn">Details</button>
-          <button class="toast-btn ok-btn">OK</button>
-        </div>
-      </div>
-    `;
-
-    // Position in TV overlay safe area
-    const tvOverlay = $('#tvOverlay');
-    if (tvOverlay) {
-      tvOverlay.appendChild(toast);
-    } else {
-      document.body.appendChild(toast);
-    }
-
-    // Animate in
-    requestAnimationFrame(() => {
-      toast.classList.add('show');
-    });
-
-    // Event listeners
-    toast.querySelector('.details-btn')?.addEventListener('click', () => {
-      showDetailsDialog();
-      dismissToast(toast);
-    });
-
-    toast.querySelector('.ok-btn')?.addEventListener('click', () => {
-      dismissToast(toast);
-    });
-
-    // Auto-dismiss after 10 seconds
-    setTimeout(() => {
-      if (toast.parentNode) {
-        dismissToast(toast);
-      }
-    }, 10000);
-  }
-
-  function dismissToast(toast) {
-    toast.classList.remove('show');
-    setTimeout(() => {
-      toast.remove();
-    }, 300);
-  }
-
-  function showDetailsDialog() {
-    const res = getResourceState();
-    const g = global.game || {};
-    
-    const dialog = document.createElement('div');
-    dialog.className = 'details-dialog';
-    dialog.innerHTML = `
-      <div class="dialog-backdrop"></div>
-      <div class="dialog-content">
-        <button class="dialog-close-btn" aria-label="Close">×</button>
-        <h3>Social Phase Summary</h3>
-        <div class="dialog-body">
-          <p>You've completed your social interactions for this phase.</p>
-          <div class="resource-summary">
-            <div class="summary-item">
-              <span class="summary-icon">⚡</span>
-              <span class="summary-label">Energy Remaining:</span>
-              <span class="summary-value">${res.energy}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-icon">🤝</span>
-              <span class="summary-label">Influence Gained:</span>
-              <span class="summary-value">${res.influence}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-icon">💡</span>
-              <span class="summary-label">Information Gained:</span>
-              <span class="summary-value">${res.information}</span>
-            </div>
-          </div>
-          <p class="dialog-hint">Check the feed for detailed interaction results.</p>
-        </div>
-        <div class="dialog-footer">
-          <button class="dialog-ok-btn">Close</button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(dialog);
-
-    // Animate in
-    requestAnimationFrame(() => {
-      dialog.classList.add('show');
-    });
-
-    const closeDialog = () => {
-      dialog.classList.remove('show');
-      setTimeout(() => {
-        dialog.remove();
-      }, 300);
-    };
-
-    dialog.querySelector('.dialog-close-btn')?.addEventListener('click', closeDialog);
-    dialog.querySelector('.dialog-ok-btn')?.addEventListener('click', closeDialog);
-    dialog.querySelector('.dialog-backdrop')?.addEventListener('click', closeDialog);
-  }
+  // REMOVED: showSocialUpdateToast(), dismissToast(), showDetailsDialog()
+  // Legacy toast/mini-card UI completely removed - engine summary is sole owner
 
   // Seed phase resources if engine is present
   function seedPhaseResources() {
