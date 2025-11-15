@@ -2699,32 +2699,40 @@ button:focus-visible,.btn:focus-visible{
 
 /* CTA Dock - always visible at bottom, anchored to safe area */
 .lv2-cta-dock {
-  grid-area: cta-dock;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 900;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: clamp(12px, 2dvh, 20px) clamp(16px, 4dvw, 24px);
-  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.2) 100%);
-  margin-top: auto;
-  min-height: 72px;
-  position: relative;
-  z-index: 10; /* Ensure CTA is above other elements */
+  gap: 12px;
+  background: linear-gradient(
+    to top,
+    rgba(12, 14, 22, 0.92),
+    rgba(12, 14, 22, 0.72) 60%,
+    rgba(12, 14, 22, 0.0)
+  );
+  border-top: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: saturate(1.1) blur(8px);
+  -webkit-backdrop-filter: saturate(1.1) blur(8px); /* Safari support */
 }
 
 /* Main CTA button inside dock */
 .lv2-cta-main {
   background: linear-gradient(135deg, #e63946, #c1121f);
   border: none;
-  border-radius: var(--radius-md, 12px);
-  padding: clamp(14px, 3dvh, 20px) clamp(32px, 8dvw, 56px);
+  border-radius: 999px;
+  padding: 14px 24px;
   color: white;
-  font-size: clamp(1.1rem, 2.5dvh, 1.5rem);
+  font-size: clamp(16px, 4.2vw, 18px);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
-  min-width: clamp(200px, 70dvw, 360px);
-  min-height: 56px;
+  min-height: 48px;
+  width: min(560px, 92vw);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   user-select: none;
@@ -2765,6 +2773,11 @@ button:focus-visible,.btn:focus-visible{
   50% {
     box-shadow: 0 8px 28px rgba(230, 57, 70, 0.7), 0 0 40px rgba(230, 57, 70, 0.4);
   }
+}
+
+/* CTA Spacer - reserves space at bottom so content doesn't sit under fixed dock */
+.lv2-cta-spacer {
+  height: calc(88px + env(safe-area-inset-bottom));
 }
 
 /* Carousel grid: single column with overflow hidden */
@@ -7852,3 +7865,13 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 
 /* Decision buttons: consistent sizing */
 #tvOverlay .revealCard .veto-decision-row button{ min-height: 44px; font-weight: 700; letter-spacing: .3px; }
+
+/* Mobile spacing optimization - reduce gaps on small screens */
+@media (max-width: 480px) {
+  .lv2,
+  .lv-overlay__content,
+  .lv2-voter-feed {
+    row-gap: clamp(8px, 2.5vh, 16px);
+    margin-bottom: 0; /* spacer handles bottom offset */
+  }
+}
