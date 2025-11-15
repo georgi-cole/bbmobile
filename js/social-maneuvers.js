@@ -22,6 +22,12 @@
   }
 
   // ============================================================================
+  // MODULE-LEVEL GUARDS (Singleton Protection)
+  // ============================================================================
+  let socialPhaseEnded = false;
+  let socialSummaryOpen = false;
+
+  // ============================================================================
   // SOCIAL RESOURCES SYSTEM (Energy, Influence, Information)
   // ============================================================================
   // Note: Information is scaled to 0..100 to support high-impact action costs.
@@ -2977,9 +2983,68 @@
     }, 3000);
   }
   
+  // ============================================================================
+  // UNIFIED PHASE COMPLETION (Single Path for All Exit Scenarios)
+  // ============================================================================
+  /**
+   * Unified function to end the Social phase cleanly.
+   * Handles timer cleanup, idempotency, and calls onSocialPhaseEnd exactly once.
+   * 
+   * @param {string} reason - Why phase is ending: 'skip', 'continue', 'timeout', 'energy'
+   */
+  function endSocialPhaseNow(reason = 'manual'){
+    const g = global.game;
+    if(!g) return;
+
+    // Idempotency guard: prevent double execution
+    if(socialPhaseEnded){
+      console.warn(`[social-maneuvers] endSocialPhaseNow(${reason}) called but phase already ended - ignoring`);
+      return;
+    }
+    socialPhaseEnded = true;
+
+    console.info(`[social-maneuvers] 🛑 Ending Social phase now (reason: ${reason})`);
+
+    // 1. Stop/clear timers safely
+    // Clear fast-advance timeout
+    if(g.__socialFastAdvanceTimeout){
+      clearTimeout(g.__socialFastAdvanceTimeout);
+      g.__socialFastAdvanceTimeout = null;
+      console.info('[social-maneuvers] ✓ Cleared fast-advance timeout');
+    }
+
+    // Stop phase timer by setting endAt to now
+    const now = Date.now();
+    g.endAt = now;
+    g.phaseEndsAt = now;
+    console.info('[social-maneuvers] ✓ Timer stopped (endAt set to now)');
+
+    // 2. Call onSocialPhaseEnd exactly once
+    try{
+      onSocialPhaseEnd();
+      console.info('[social-maneuvers] ✓ onSocialPhaseEnd called successfully');
+    }catch(e){
+      console.error('[social-maneuvers] onSocialPhaseEnd failed:', e);
+    }
+
+    // 3. If reason is 'continue', advance to next phase
+    if(reason === 'continue'){
+      // Give time for summary to be dismissed, then advance
+      console.info('[social-maneuvers] ⏩ Advancing to next phase after Continue');
+      
+      // Phase advance will be handled by the timer callback or explicit call
+      // Don't double-advance here - let the normal flow handle it
+    }
+  }
+
   function onSocialPhaseStart(){
     if(!isEnabled()){ console.info('[social-maneuvers] Phase start called but feature is DISABLED'); return; }
     console.info('[social-maneuvers] ▶️ onSocialPhaseStart() - entering social_intermission phase');
+    
+    // Reset singleton guards for new phase
+    socialPhaseEnded = false;
+    socialSummaryOpen = false;
+    
     const alivePlayers = getAlivePlayers();
     const humanId = global.game?.humanId;
     
@@ -3130,6 +3195,15 @@
   
   function onSocialPhaseEnd(){
     if(!isEnabled()) { console.info('[social-maneuvers] Phase end called but feature is DISABLED'); return; }
+    
+    // Guard: prevent double-calling (can be called directly or via endSocialPhaseNow)
+    const g = global.game;
+    if(g?.__socialPhaseEndCalled){
+      console.warn('[social-maneuvers] onSocialPhaseEnd already called - ignoring duplicate');
+      return;
+    }
+    if(g) g.__socialPhaseEndCalled = true;
+    
     console.info('[social-maneuvers] ◼️ onSocialPhaseEnd() - leaving social_intermission phase');
     console.info('[social-maneuvers] ✓ Social phase complete - generating summary');
     
@@ -3430,8 +3504,22 @@
   function showSummaryPanel(summary){
     if(!summary) return;
 
+    // Singleton guard: only show summary once per phase end
+    if(socialSummaryOpen){
+      console.warn('[social-maneuvers] Summary already open - ignoring duplicate call');
+      return;
+    }
+    socialSummaryOpen = true;
+
     // Create summary card UI
     const deck = document.getElementById('decisionDeck') || createSummaryDeck();
+    
+    // Remove any existing summary cards (defensive cleanup)
+    const existingCards = deck.querySelectorAll('.social-summary-card');
+    existingCards.forEach(card => {
+      console.info('[social-maneuvers] Removing existing summary card (duplicate prevention)');
+      card.remove();
+    });
     
     const card = document.createElement('div');
     card.className = 'revealCard social-summary-card';
@@ -3529,6 +3617,9 @@
     continueBtn.textContent = 'Continue';
     continueBtn.style.cssText = 'background: var(--accent, #3498db);';
     continueBtn.onclick = () => {
+      // Reset summary guard so it can be shown again next phase
+      socialSummaryOpen = false;
+      
       card.style.animation = 'popOut 0.4s ease forwards';
       setTimeout(() => {
         card.remove();
@@ -3536,34 +3627,9 @@
           deck.remove();
         }
         
-        // Check if human player has 0 energy and auto-advance if so
-        const g = global.game;
-        if(g){
-          const humanId = g.humanId;
-          const humanEnergy = SocialResources.get(humanId, 'energy');
-          
-          if(humanEnergy === 0){
-            console.info('[social-maneuvers] ⏩ Human has 0 energy - stopping timer and advancing phase');
-            
-            // Stop phase timer
-            if(typeof stopSocialPhaseTimer === 'function'){
-              stopSocialPhaseTimer();
-            }
-            
-            // Advance to next phase immediately
-            if(typeof global.startNominations === 'function'){
-              global.startNominations();
-              console.info('[social-maneuvers] ✓ Advanced to nominations');
-            } else if(typeof global.setPhase === 'function'){
-              global.setPhase('nominations', g.cfg?.tNoms || 25, () => {
-                if(typeof global.startVeto === 'function') global.startVeto();
-                else if(typeof global.startVetoComp === 'function') global.startVetoComp();
-              });
-              global.renderPanel?.();
-              console.info('[social-maneuvers] ✓ Advanced to nominations via setPhase');
-            }
-          }
-        }
+        // Let the phase timer callback handle phase advance naturally
+        // Don't try to advance manually here - it will happen via timer or explicit call
+        console.info('[social-maneuvers] ✓ Summary dismissed - phase will advance via timer callback');
       }, 400);
     };
     buttonBar.appendChild(continueBtn);
@@ -3706,6 +3772,7 @@
     computeActionCost, // Unified cost calculator (single source of truth)
     recordActionInMemory, getPlayerMemory,
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
+    endSocialPhaseNow, // Unified phase completion function
     pausePhaseTimer, resumePhaseTimer, // Timer control exports
     recordCompetitionParticipation, // Skip watcher integration
     trackPreVetoNominees, // Pre-veto tracking for save detection
