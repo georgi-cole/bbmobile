@@ -24,12 +24,6 @@
       return;
     }
 
-    // Find the skip button to insert after it
-    const skipButton = document.getElementById('tvSkipButton');
-    if(!skipButton){
-      console.warn('[TvStatus] Skip button not found, will append to tvHead');
-    }
-
     // Create status chip container
     statusChip = document.createElement('div');
     statusChip.id = 'tvStatusChip';
@@ -44,14 +38,8 @@
     statusContent.className = 'tv-status-content';
     statusChip.appendChild(statusContent);
 
-    // Insert after skip button (or at end if skip button not found)
-    if(skipButton && skipButton.nextSibling){
-      tvHead.insertBefore(statusChip, skipButton.nextSibling);
-    } else if(skipButton){
-      tvHead.appendChild(statusChip);
-    } else {
-      tvHead.appendChild(statusChip);
-    }
+    // Append to the end of tvHead (where timer used to be)
+    tvHead.appendChild(statusChip);
 
     console.info('[TvStatus] Initialized');
   }

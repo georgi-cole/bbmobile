@@ -26,12 +26,12 @@
   }
 }
 
-/* Status chip container */
+/* Status chip container - now positioned on the right (where timer was) */
 .tv-status-chip {
   display: inline-flex;
   align-items: center;
   padding: 6px 12px;
-  margin-left: 8px;
+  margin-left: auto;
   border-radius: 8px;
   background: var(--tv-status-bg);
   backdrop-filter: var(--tv-status-blur);

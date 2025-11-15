@@ -164,99 +164,141 @@
 }
 
 /* ============================================================================
-   TV SKIP PROGRESS ENHANCEMENT
+   TV SKIP+TIMER UNIFIED PILL
    
-   Purpose: Add a linear progress bar behind the Skip button that depletes
-            from right-to-left as the phase timer runs down.
+   Purpose: Unified pill containing Skip button and Timer with progress bar
    
    Features:
-   - Always visible (disabled state when not skippable)
-   - R->L depletion animation tied to phase timer
+   - Skip button and timer in one pill-shaped component
+   - Progress bar depletes as time runs out (gradient empties incrementally)
+   - Inherits color gradient from theme
+   - Fully transparent at 0:00
    - Respects prefers-reduced-motion
-   - Maintains existing Skip button styles
    ============================================================================ */
 
-/* Skip button container - enhanced with progress background */
-.tv-skip-button {
+/* Unified pill container */
+.tv-skip-timer-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Progress bar background - fills entire pill, depletes over time */
+.tv-skip-timer-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  transform-origin: left center;
+  transition: transform 0.3s linear;
+  z-index: 0;
+}
+
+/* Skip button inside pill */
+.tv-skip-timer-button {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 8px 16px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  border: none;
+  background: transparent;
   color: var(--card);
   font-size: 0.85rem;
   font-weight: 700;
-  border: none;
   cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-  overflow: hidden;
   z-index: 1;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
 }
 
-.tv-skip-button:hover:not(:disabled) {
-  transform: scale(1.05);
+.tv-skip-timer-button:hover:not(:disabled) {
+  opacity: 0.9;
 }
 
-.tv-skip-button:active:not(:disabled) {
-  transform: scale(0.98);
+.tv-skip-timer-button:active:not(:disabled) {
+  opacity: 0.8;
 }
 
-.tv-skip-button:disabled {
+.tv-skip-timer-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Progress fill background (depletes R->L) */
-.tv-skip-progress {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: linear-gradient(90deg, 
-    rgba(255, 255, 255, 0.15) 0%, 
-    rgba(255, 255, 255, 0.05) 100%);
-  transform-origin: right center;
-  transition: transform 0.3s linear;
-  z-index: -1;
-  pointer-events: none;
-}
-
-/* Animation for running-out effect */
-@keyframes progressDeplete {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
-}
-
-.tv-skip-progress.animating {
-  animation: progressDeplete linear forwards;
-}
-
-/* Skip button label stays above progress */
-.tv-skip-button > span {
+/* Timer display inside pill */
+.tv-skip-timer-display {
   position: relative;
-  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  color: var(--card);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  z-index: 1;
+  white-space: nowrap;
+  min-width: 60px;
+}
+
+/* Separator line between skip and timer */
+.tv-skip-timer-button::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.3);
+  z-index: 1;
 }
 
 /* Reduced motion: disable progress animation */
 @media (prefers-reduced-motion: reduce) {
-  .tv-skip-progress {
+  .tv-skip-timer-progress {
     transition: none;
-    animation: none !important;
   }
-  .tv-skip-button {
+  .tv-skip-timer-button {
     transition: none;
   }
 }
 
 /* Focus styles */
-.tv-skip-button:focus-visible {
+.tv-skip-timer-button:focus-visible {
   outline: 2px solid var(--card);
-  outline-offset: 2px;
+  outline-offset: -2px;
+  border-radius: 20px 0 0 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tv-skip-timer-button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .tv-skip-timer-display {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    min-width: 55px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tv-skip-timer-button {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .tv-skip-timer-display {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    min-width: 50px;
+  }
 }
