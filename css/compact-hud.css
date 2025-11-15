@@ -1,0 +1,262 @@
+/* ============================================================================
+   COMPACT HUD MODULE
+   
+   Purpose: Provides a compact status HUD in the Houseguests header showing
+            Phase, Season/Week, and Player count in branded chips.
+   
+   References:
+   - Phase/Season/Week badges: index.html#L112-L130
+   - Update logic: index.html#L450-L480
+   - Global state: js/state.js#L16-L34
+   
+   Features:
+   - Sticky header for long player lists
+   - Mobile-responsive with compression at narrow widths
+   - Glass/blur effects matching existing dashboard
+   - aria-live announcements for screen readers
+   - Tooltip support via title attributes
+   ============================================================================ */
+
+:root {
+  --hud-bg: rgba(13, 27, 42, 0.85);
+  --hud-border: rgba(255, 255, 255, 0.08);
+  --hud-chip-bg: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  --hud-chip-text: var(--card);
+  --hud-blur: blur(12px);
+  --hud-gap: 8px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --hud-bg: rgba(255, 255, 255, 0.92);
+    --hud-border: rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* HUD Container - sticky within Houseguests card */
+.compact-hud {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--hud-gap);
+  padding: 10px 12px;
+  background: var(--hud-bg);
+  backdrop-filter: var(--hud-blur);
+  -webkit-backdrop-filter: var(--hud-blur);
+  border-bottom: 1px solid var(--hud-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-wrap: wrap;
+}
+
+/* Individual HUD Chips */
+.compact-hud-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: var(--hud-chip-bg);
+  color: var(--hud-chip-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.compact-hud-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Phase chip - highest priority, always visible */
+.compact-hud-chip.phase {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+}
+
+/* Season/Week chip */
+.compact-hud-chip.season-week {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+}
+
+/* Players chip */
+.compact-hud-chip.players {
+  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+}
+
+/* Icon support (optional) */
+.compact-hud-chip-icon {
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.compact-hud-chip-label {
+  line-height: 1;
+}
+
+/* Responsive behavior */
+/* Desktop: full labels + icons */
+@media (min-width: 768px) {
+  .compact-hud-chip {
+    font-size: 0.8rem;
+    padding: 7px 14px;
+  }
+}
+
+/* Tablet: show labels, icons optional */
+@media (min-width: 480px) and (max-width: 767px) {
+  .compact-hud-chip {
+    font-size: 0.72rem;
+    padding: 6px 11px;
+  }
+}
+
+/* Mobile: compress phase to 3-letter code, keep SxWx and X/X readable */
+@media (max-width: 479px) {
+  .compact-hud {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  
+  .compact-hud-chip {
+    font-size: 0.7rem;
+    padding: 5px 9px;
+    gap: 3px;
+  }
+  
+  /* Phase compression is handled by JS ResizeObserver */
+  .compact-hud-chip.phase.compressed .compact-hud-chip-label {
+    /* Label will be replaced with 3-letter code by JS */
+  }
+}
+
+/* Accessibility */
+.compact-hud-chip[aria-live] {
+  /* Screen reader announcements */
+}
+
+/* Focus styles for keyboard navigation */
+.compact-hud-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .compact-hud-chip {
+    transition: none;
+  }
+  .compact-hud-chip:hover {
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .compact-hud-chip {
+    border: 2px solid currentColor;
+  }
+}
+
+/* ============================================================================
+   TV SKIP PROGRESS ENHANCEMENT
+   
+   Purpose: Add a linear progress bar behind the Skip button that depletes
+            from right-to-left as the phase timer runs down.
+   
+   Features:
+   - Always visible (disabled state when not skippable)
+   - R->L depletion animation tied to phase timer
+   - Respects prefers-reduced-motion
+   - Maintains existing Skip button styles
+   ============================================================================ */
+
+/* Skip button container - enhanced with progress background */
+.tv-skip-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: var(--card);
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.tv-skip-button:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.tv-skip-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.tv-skip-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Progress fill background (depletes R->L) */
+.tv-skip-progress {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.15) 0%, 
+    rgba(255, 255, 255, 0.05) 100%);
+  transform-origin: right center;
+  transition: transform 0.3s linear;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Animation for running-out effect */
+@keyframes progressDeplete {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.tv-skip-progress.animating {
+  animation: progressDeplete linear forwards;
+}
+
+/* Skip button label stays above progress */
+.tv-skip-button > span {
+  position: relative;
+  z-index: 2;
+}
+
+/* Reduced motion: disable progress animation */
+@media (prefers-reduced-motion: reduce) {
+  .tv-skip-progress {
+    transition: none;
+    animation: none !important;
+  }
+  .tv-skip-button {
+    transition: none;
+  }
+}
+
+/* Focus styles */
+.tv-skip-button:focus-visible {
+  outline: 2px solid var(--card);
+  outline-offset: 2px;
+}

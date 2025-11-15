@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>TV Skip Control Test</title>
+<title>TV Skip Control Test - Always Visible with Progress</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/compact-hud.css">
 <style>
 body {
   padding: 20px;
@@ -51,17 +52,32 @@ body {
 </head>
 <body>
 <div class="test-container">
-  <h1>TV Skip Control Test</h1>
+  <h1>TV Skip Control Test - Always Visible with Progress</h1>
   
   <div class="test-controls">
     <h3>Test Controls</h3>
-    <button onclick="setTestPhase('opening')">Set Phase: Opening</button>
-    <button onclick="setTestPhase('intermission')">Set Phase: Intermission</button>
-    <button onclick="setTestPhase('hoh')">Set Phase: HOH</button>
-    <button onclick="setTestPhase('nominations')">Set Phase: Nominations</button>
+    <button onclick="setTestPhase('opening')">Set Phase: Opening (5s)</button>
+    <button onclick="setTestPhase('intermission')">Set Phase: Intermission (3s)</button>
+    <button onclick="setTestPhase('hoh')">Set Phase: HOH (35s)</button>
+    <button onclick="setTestPhase('nominations')">Set Phase: Nominations (25s)</button>
+    <button onclick="setTestPhase('social')">Set Phase: Social (30s)</button>
     <button onclick="setTestPhase('lobby')">Set Phase: Lobby (Not Skippable)</button>
     <button onclick="setTestPhase(null)">Set Phase: null (Not Skippable)</button>
+    <button onclick="testStartTimer()">Start Phase Timer</button>
     <button onclick="testUpdateHud()">Call updateHud()</button>
+  </div>
+  
+  <div class="test-controls">
+    <h3>Expected Behavior</h3>
+    <ul style="text-align: left; font-size: 0.9rem;">
+      <li>✅ Skip button is ALWAYS visible (even in Social phase)</li>
+      <li>✅ Skip button is ENABLED when phase is skippable</li>
+      <li>✅ Skip button is DISABLED when phase is not skippable (lobby, null)</li>
+      <li>✅ Progress bar depletes R→L as phase timer counts down</li>
+      <li>✅ Progress animation respects prefers-reduced-motion</li>
+      <li>✅ Clicking skip when enabled triggers skip handler</li>
+      <li>✅ Clicking skip when disabled does nothing</li>
+    </ul>
   </div>
 
   <div class="card">
@@ -88,7 +104,17 @@ window.game = window.game || {
   phase: 'lobby',
   week: 1,
   season: 1,
-  players: []
+  players: [],
+  endAt: 0,
+  cfg: {
+    tHOH: 35,
+    tNoms: 25,
+    tVeto: 30,
+    tVetoDec: 20,
+    tComms: 30,
+    tVote: 25,
+    tJury: 42
+  }
 };
 
 // Log helper
@@ -135,23 +161,51 @@ window.updateHud = function() {
 function setTestPhase(phase) {
   addLog(`Setting phase to: ${phase}`);
   window.game.phase = phase;
-  if (window.TVSkip && window.TVSkip.updateVisibility) {
-    window.TVSkip.updateVisibility();
+  
+  // Don't auto-start timer, let user click "Start Phase Timer" button
+  
+  if (window.TVSkip && window.TVSkip.updateState) {
+    window.TVSkip.updateState();
   }
   
-  // Check button visibility
+  // Check button state
   setTimeout(() => {
     const skipBtn = document.getElementById('tvSkipButton');
     const tvTitle = document.querySelector('.tvTitle');
     if (skipBtn) {
       const isVisible = skipBtn.style.display !== 'none';
-      addLog(`Skip button visible: ${isVisible}`, isVisible ? 'info' : 'warn');
+      const isEnabled = !skipBtn.disabled;
+      addLog(`Skip button visible: ${isVisible}, enabled: ${isEnabled}`, isVisible && isEnabled ? 'info' : 'warn');
     }
     if (tvTitle) {
       const isVisible = tvTitle.style.display !== 'none';
-      addLog(`TV Title visible: ${isVisible}`, isVisible ? 'info' : 'warn');
+      addLog(`TV Title visible: ${isVisible}`, !isVisible ? 'info' : 'warn');
     }
   }, 100);
+}
+
+function testStartTimer() {
+  const game = window.game;
+  const phase = game.phase;
+  
+  // Get phase duration
+  const durations = {
+    'opening': 5000,
+    'intermission': 3000,
+    'hoh': 35000,
+    'nominations': 25000,
+    'veto_comp': 30000,
+    'veto': 30000,
+    'veto_ceremony': 20000,
+    'livevote': 25000,
+    'jury': 42000,
+    'social': 30000
+  };
+  
+  const duration = durations[phase] || 30000;
+  game.endAt = Date.now() + duration;
+  
+  addLog(`Started timer for phase '${phase}': ${duration / 1000}s`);
 }
 
 function testUpdateHud() {
@@ -175,8 +229,16 @@ setTimeout(() => {
   const skipBtn = document.getElementById('tvSkipButton');
   if (skipBtn) {
     addLog('Skip button found in DOM');
+    addLog(`Initial state: visible=${skipBtn.style.display !== 'none'}, disabled=${skipBtn.disabled}`);
   } else {
     addLog('Skip button NOT found in DOM', 'error');
+  }
+  
+  const progressBar = document.querySelector('.tv-skip-progress');
+  if (progressBar) {
+    addLog('Progress bar found in DOM');
+  } else {
+    addLog('Progress bar NOT found in DOM', 'error');
   }
 }, 500);
 </script>
