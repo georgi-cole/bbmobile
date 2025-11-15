@@ -363,7 +363,12 @@
     // 2) Check if CompetitionFlow is available for new flow
     if (global.CompetitionFlow && typeof global.CompetitionFlow.runCompetitionFlow === 'function') {
       // Use new competition flow: instructions → fullscreen game → completion
-      host.innerHTML = '<div class="tiny muted">Loading competition...</div>';
+      // Show status in TV header instead of below-TV panel
+      if (global.TvStatus && typeof global.TvStatus.set === 'function') {
+        global.TvStatus.set('Loading competition...');
+      } else {
+        host.innerHTML = '<div class="tiny muted">Loading competition...</div>';
+      }
       
       // Neutralize empty #tvOverlay if it has no active content (defensive guard)
       (function ensureOverlayNotBlocking(){

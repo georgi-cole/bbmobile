@@ -32,13 +32,15 @@
     'social'
   ];
 
+  let skipTimerPill = null;
   let skipButton = null;
+  let timerDisplay = null;
   let tvTitle = null;
   let progressBar = null;
   let progressInterval = null;
   let prefersReducedMotion = false;
 
-  // Initialize the inline skip button
+  // Initialize the unified skip+timer pill
   function init(){
     const tvHead = document.querySelector('.tvHead');
     if(!tvHead){
@@ -52,6 +54,12 @@
       console.warn('[TVSkip] .tvTitle not found');
     }
 
+    // Find and remove the original timer completely
+    const originalTimer = tvHead.querySelector('.tvTimer');
+    if(originalTimer){
+      originalTimer.remove();
+    }
+
     // Check prefers-reduced-motion
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     prefersReducedMotion = mediaQuery.matches;
@@ -59,35 +67,42 @@
       prefersReducedMotion = e.matches;
     });
 
-    // Create skip button with progress bar
+    // Create unified pill container
+    skipTimerPill = document.createElement('div');
+    skipTimerPill.className = 'tv-skip-timer-pill';
+    
+    // Create progress bar background (fills entire pill)
+    progressBar = document.createElement('div');
+    progressBar.className = 'tv-skip-timer-progress';
+    skipTimerPill.appendChild(progressBar);
+    
+    // Create skip button
     skipButton = document.createElement('button');
     skipButton.id = 'tvSkipButton';
-    skipButton.className = 'tv-skip-button';
+    skipButton.className = 'tv-skip-timer-button';
     skipButton.setAttribute('role', 'button');
     skipButton.setAttribute('aria-label', 'Skip to next phase');
     skipButton.setAttribute('title', 'Skip to next phase');
     
-    // Create progress bar element
-    progressBar = document.createElement('div');
-    progressBar.className = 'tv-skip-progress';
+    const skipLabel = document.createElement('span');
+    skipLabel.textContent = '⏩ Skip';
+    skipButton.appendChild(skipLabel);
     
-    // Create label span
-    const label = document.createElement('span');
-    label.textContent = '⏩ Skip';
+    // Create timer display
+    timerDisplay = document.createElement('div');
+    timerDisplay.className = 'tv-skip-timer-display';
+    timerDisplay.textContent = '00:00';
     
-    // Assemble button
-    skipButton.appendChild(progressBar);
-    skipButton.appendChild(label);
+    // Assemble pill: skip button + timer
+    skipTimerPill.appendChild(skipButton);
+    skipTimerPill.appendChild(timerDisplay);
     
     // Insert after tvTitle
     if(tvTitle && tvTitle.nextSibling){
-      tvHead.insertBefore(skipButton, tvTitle.nextSibling);
+      tvHead.insertBefore(skipTimerPill, tvTitle.nextSibling);
     } else {
-      tvHead.appendChild(skipButton);
+      tvHead.appendChild(skipTimerPill);
     }
-
-    // Always visible, but may be disabled
-    skipButton.style.display = 'inline-flex';
     
     // Hide tvTitle when skip button is present
     if(tvTitle) tvTitle.style.display = 'none';
@@ -98,10 +113,41 @@
     // Initial state update
     updateState();
     
-    // Start progress animation
+    // Start progress animation and timer update
     startProgressAnimation();
+    startTimerUpdate();
 
-    console.info('[TVSkip] Initialized (always visible)');
+    console.info('[TVSkip] Initialized (unified skip+timer pill)');
+  }
+
+  // Update timer display
+  function updateTimerDisplay(){
+    if(!timerDisplay) return;
+
+    const game = g.game || {};
+    const now = Date.now();
+    const endAt = game.endAt || (game.phaseEndsAt || 0);
+
+    if(!endAt || endAt <= now){
+      timerDisplay.textContent = '00:00';
+      return;
+    }
+
+    const remaining = Math.max(0, Math.ceil((endAt - now) / 1000));
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  // Start timer update interval
+  function startTimerUpdate(){
+    // Update immediately
+    updateTimerDisplay();
+    
+    // Update every second
+    setInterval(() => {
+      updateTimerDisplay();
+    }, 1000);
   }
 
   // Wire up click and keyboard handlers

@@ -330,13 +330,20 @@
     }
 
     var panel = document.querySelector('#panel');
-    if(panel){
-      panel.innerHTML = '';
-      var host = document.createElement('div');
-      host.className = 'minigame-host';
-      var names = g.__vetoPlayers.map(safeName).join(', ');
-      host.innerHTML = '<div class="tiny">Players: '+names+'</div>';
-      panel.appendChild(host);
+    var names = g.__vetoPlayers.map(safeName).join(', ');
+    
+    // Show player list in TV header status chip
+    if(global.TvStatus && typeof global.TvStatus.setPlayersAndNote === 'function'){
+      global.TvStatus.setPlayersAndNote(g.__vetoPlayers.map(safeName), '');
+    } else {
+      // Fallback: show in panel if TvStatus not available
+      if(panel){
+        panel.innerHTML = '';
+        var host = document.createElement('div');
+        host.className = 'minigame-host';
+        host.innerHTML = '<div class="tiny">Players: '+names+'</div>';
+        panel.appendChild(host);
+      }
     }
 
     var you = (g.humanId!=null) ? getP(g.humanId) : null;
@@ -345,7 +352,7 @@
 
     if(humanIn){
       var mg = (typeof global.pickMinigameType==='function') ? global.pickMinigameType() : 'clicker';
-      var hostNode = document.querySelector('#panel .minigame-host');
+      var hostNode = panel || document.querySelector('#panel');
       
       if(hostNode){
         // Use new competition flow with guards if available
@@ -378,12 +385,18 @@
         }
       }
     } else {
-      var host2 = document.querySelector('#panel .minigame-host');
-      if(host2){
-        var note = document.createElement('div');
-        note.className = 'tiny muted';
-        note.textContent = 'You were not drawn to play in this Veto. Waiting for results…';
-        host2.appendChild(note);
+      // Human not drawn to play - show note in TV status chip
+      if(global.TvStatus && typeof global.TvStatus.setPlayersAndNote === 'function'){
+        global.TvStatus.setPlayersAndNote(g.__vetoPlayers.map(safeName), 'You were not drawn');
+      } else {
+        // Fallback: show in panel if TvStatus not available
+        var host2 = document.querySelector('#panel .minigame-host');
+        if(host2){
+          var note = document.createElement('div');
+          note.className = 'tiny muted';
+          note.textContent = 'You were not drawn to play in this Veto. Waiting for results…';
+          host2.appendChild(note);
+        }
       }
     }
 
