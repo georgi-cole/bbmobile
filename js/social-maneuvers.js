@@ -2133,6 +2133,14 @@
       return;
     }
     
+    // Validate pausedTimerState.remaining before restoring
+    if(typeof pausedTimerState.remaining !== 'number' || pausedTimerState.remaining < 0) {
+      console.warn('[social-maneuvers] Invalid pausedTimerState.remaining:', pausedTimerState.remaining, '- not resuming');
+      timerPaused = false;
+      pausedTimerState = null;
+      return;
+    }
+    
     const now = Date.now();
     g.endAt = now + pausedTimerState.remaining;
     if (typeof pausedTimerState.phaseEndsAt === 'number') {
@@ -2142,6 +2150,34 @@
     timerPaused = false;
     console.info('[social-maneuvers] ▶️ Timer resumed (fallback):', pausedTimerState.remaining, 'ms remaining');
     pausedTimerState = null;
+  }
+  
+  /**
+   * Safe countdown rendering utility - clamps time to >= 0 and formats as mm:ss
+   * Prevents timer display of extreme values like 52600:00
+   * @param {number} ms - Milliseconds remaining
+   * @returns {string} Formatted time string (mm:ss)
+   */
+  function renderCountdown(ms) {
+    // Clamp to 0 if negative
+    if(typeof ms !== 'number' || isNaN(ms) || ms <= 0) {
+      return '00:00';
+    }
+    
+    // Clamp to max 24 hours (86400000ms) to prevent extreme values
+    const MAX_DISPLAY_MS = 24 * 60 * 60 * 1000;
+    const clampedMs = Math.min(ms, MAX_DISPLAY_MS);
+    
+    const seconds = Math.ceil(clampedMs / 1000);
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    
+    // Safety check: if mins > 9999, return 00:00
+    if(mins > 9999) {
+      return '00:00';
+    }
+    
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
   
   // Wrap setPhase once to detect entering and leaving social_intermission
@@ -3774,6 +3810,7 @@
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
     pausePhaseTimer, resumePhaseTimer, // Timer control exports
     stopSocialPhaseTimer, endSocialPhaseNow, // Skip button support
+    renderCountdown, // Safe countdown rendering utility
     recordCompetitionParticipation, // Skip watcher integration
     trackPreVetoNominees, // Pre-veto tracking for save detection
     installPropertyWatchers, // Manual watcher installation if needed
