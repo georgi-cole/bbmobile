@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="css/livevote-rollout.css">
 <link rel="stylesheet" href="css/livevote-overrides.css">
 <link rel="stylesheet" href="css/compact-hud.css">
+<link rel="stylesheet" href="css/toolbar.css">
 
 <!-- DEBUG: Mobile Scroll Fix (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete css/mobile-scroll-fix.css -->
@@ -64,7 +65,8 @@
 </head>
 <body>
 <!-- Top Controls -->
-<div class="topbar">
+<div class="topbar toolbar--scroll">
+  <div class="toolbar-fade toolbar-fade--left" aria-hidden="true"></div>
   <button class="btn iconOnly" id="btnOpenSettings" aria-label="Settings" title="Settings">⚙️</button>
   <button class="btn iconOnly" id="btnStartQuick" aria-label="Start game" title="Start game">▶</button>
 
@@ -80,6 +82,7 @@
   <button class="btn iconOnly danger" id="btnSelfEvict" title="Self-Evict (Exit Game)" aria-label="Self-evict from game" style="display:none;">
     🚪
   </button>
+  <div class="toolbar-fade toolbar-fade--right" aria-hidden="true"></div>
 </div>
 
 <div class="wrap">
@@ -715,6 +718,9 @@
   window.updateTimerHeader = updateTimerHeader;
 })();
 </script>
+
+<!-- Toolbar Scroll Module (horizontal scrolling for mobile) -->
+<script type="module" src="js/ui/toolbarScroll.js"></script>
 
 <!-- DEBUG: Mobile Scroll Debug JS (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete js/debug/mobile-scroll-debug.js -->

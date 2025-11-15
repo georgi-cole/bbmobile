@@ -5299,6 +5299,9 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 .topbar{ flex-wrap:wrap; }
 .topbar .btn{ white-space:nowrap; }
 
+/* Scrollable toolbar: prevent wrapping for horizontal scroll behavior */
+.topbar.toolbar--scroll{ flex-wrap:nowrap; }
+
 /* Credits cinema mode (centered slides; per-letter animations rely on these) */
 .creditsCinema{
   position:fixed; inset:0; z-index:99990;
