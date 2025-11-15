@@ -120,7 +120,7 @@
     console.info('[TVSkip] Initialized (unified skip+timer pill)');
   }
 
-  // Update timer display
+  // Update timer display with safe clamping
   function updateTimerDisplay(){
     if(!timerDisplay) return;
 
@@ -128,15 +128,25 @@
     const now = Date.now();
     const endAt = game.endAt || (game.phaseEndsAt || 0);
 
-    if(!endAt || endAt <= now){
+    // Guard: if endAt is invalid or too far in the future (>24 hours), show 00:00
+    const maxReasonableTime = now + (24 * 60 * 60 * 1000); // 24 hours from now
+    if(!endAt || endAt <= now || endAt > maxReasonableTime){
       timerDisplay.textContent = '00:00';
       return;
     }
 
-    const remaining = Math.max(0, Math.ceil((endAt - now) / 1000));
+    // Clamp remaining time to prevent extreme values
+    const remainingMs = endAt - now;
+    const remaining = Math.max(0, Math.min(86400, Math.ceil(remainingMs / 1000))); // Max 24 hours
     const mins = Math.floor(remaining / 60);
     const secs = remaining % 60;
-    timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    
+    // Format as mm:ss, with safety check for extreme values
+    if(mins > 9999) {
+      timerDisplay.textContent = '00:00'; // Reset if somehow mins exceeds reasonable range
+    } else {
+      timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
   }
 
   // Start timer update interval
