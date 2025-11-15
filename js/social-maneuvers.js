@@ -3219,7 +3219,6 @@
     }
 
     // Clear any pending fast-advance timeout on phase end
-    const g = global.game;
     if(g?.__socialFastAdvanceTimeout){
       clearTimeout(g.__socialFastAdvanceTimeout);
       g.__socialFastAdvanceTimeout = null;
