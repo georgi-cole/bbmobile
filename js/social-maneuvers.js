@@ -2890,7 +2890,8 @@
   // ============================================================================
   
   /**
-   * Stop the Social phase timer to prevent countdown during auto-skip
+   * Stop the Social phase timer to prevent countdown during auto-skip.
+   * Sets endAt to now to prevent "far future" timer values.
    */
   function stopSocialPhaseTimer() {
     const g = global.game;
@@ -2898,12 +2899,12 @@
     
     console.info('[sm-phase-skip] Stopping Social phase timer...');
     
-    // Set endAt to far future to effectively stop countdown
-    const farFuture = Date.now() + (365 * 24 * 60 * 60 * 1000); // 1 year
-    g.endAt = farFuture;
-    g.phaseEndsAt = farFuture;
+    // Set endAt to now to stop countdown and prevent far-future values
+    const now = Date.now();
+    g.endAt = now;
+    g.phaseEndsAt = now;
     
-    console.info('[sm-phase-skip] ✓ Timer stopped (endAt set to far future)');
+    console.info('[sm-phase-skip] ✓ Timer stopped (endAt set to now)');
   }
   
   function showEmptyEnergyOverlayAndSkip(playerId) {
