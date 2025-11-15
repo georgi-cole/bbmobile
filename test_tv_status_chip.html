@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Status Chip Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/compact-hud.css">
+  <link rel="stylesheet" href="css/tv-overlay-status.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .test-controls {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    .test-controls h2 {
+      margin-top: 0;
+    }
+    .test-controls button {
+      margin: 5px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      background: #4a90e2;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .test-controls button:hover {
+      background: #357abd;
+    }
+    .tv {
+      margin: 20px 0;
+    }
+    .tvHead {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+      border-radius: 12px 12px 0 0;
+      position: relative;
+    }
+    .tvTitle {
+      flex: 1;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .tvTimer {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+      font-family: 'Courier New', monospace;
+    }
+    .tvViewport {
+      background: #182a3b;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0 0 12px 12px;
+    }
+    .tvNow {
+      color: white;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>TV Status Chip Test</h1>
+  
+  <div class="test-controls">
+    <h2>Test Controls</h2>
+    <button onclick="testSimpleMessage()">Set Simple Message</button>
+    <button onclick="testLoadingMessage()">Set "Loading competition..."</button>
+    <button onclick="testPlayersOnly()">Set Players (3 players)</button>
+    <button onclick="testPlayersWithNote()">Set Players + Note</button>
+    <button onclick="testNotDrawn()">Set "You were not drawn"</button>
+    <button onclick="clearStatus()">Clear Status</button>
+  </div>
+
+  <div class="card">
+    <div class="tv">
+      <div class="tvHead">
+        <div class="tvTitle">House Network Live</div>
+        <div class="tvTimer">00:00</div>
+      </div>
+      <div class="tvViewport">
+        <div class="tvNow">Welcome to the season.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="test-controls">
+    <h2>API Usage</h2>
+    <pre><code>// Simple message
+window.TvStatus.set('Loading competition...');
+
+// Player list with note
+window.TvStatus.setPlayersAndNote(['Alice', 'Bob', 'Charlie'], 'You were not drawn');
+
+// Clear
+window.TvStatus.clear();</code></pre>
+  </div>
+
+  <script src="js/tv-skip.js"></script>
+  <script src="js/tv-overlay-status.js"></script>
+  
+  <script>
+    function testSimpleMessage() {
+      window.TvStatus.set('Simple status message');
+    }
+    
+    function testLoadingMessage() {
+      window.TvStatus.set('Loading competition...');
+    }
+    
+    function testPlayersOnly() {
+      window.TvStatus.setPlayersAndNote(['Alice', 'Bob', 'Charlie'], '');
+    }
+    
+    function testPlayersWithNote() {
+      window.TvStatus.setPlayersAndNote(['Alice', 'Bob', 'Charlie', 'David'], 'Competition in progress');
+    }
+    
+    function testNotDrawn() {
+      window.TvStatus.setPlayersAndNote(['Alice', 'Bob', 'Charlie'], 'You were not drawn');
+    }
+    
+    function clearStatus() {
+      window.TvStatus.clear();
+    }
+
+    // Log when module is ready
+    window.addEventListener('load', function() {
+      console.log('TvStatus module:', window.TvStatus);
+      console.log('Available methods:', Object.keys(window.TvStatus));
+    });
+  </script>
+</body>
+</html>
