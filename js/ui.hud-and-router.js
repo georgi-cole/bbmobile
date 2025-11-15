@@ -1120,9 +1120,6 @@ header.innerHTML = `
     if(typeof window.updateTimerHeader === 'function'){
       window.updateTimerHeader();
     }
-    
-    // Update players badge
-    updatePlayersBadge();
   }
   g.updateHud = updateHud;
 
@@ -1573,50 +1570,6 @@ header.innerHTML = `
   
   g.checkTerminalState = checkTerminalState;
   
-  // ------------ Timer Pill & Players Badge Helpers ------------
-  
-  // Update Players badge with active/total count
-  function updatePlayersBadge(){
-    const badge = document.getElementById('timerPlayersBadge');
-    if(!badge) return;
-    
-    try{
-      const game = g.game || {};
-      const players = game.players || [];
-      const totalCount = players.length;
-      const aliveCount = (g.alivePlayers?.() || []).length;
-      
-      badge.textContent = `${aliveCount} / ${totalCount}`;
-      badge.setAttribute('aria-label', `${aliveCount} of ${totalCount} players active`);
-    }catch(e){
-      console.warn('[updatePlayersBadge] error:', e);
-    }
-  }
-  
-  // Update timer pill progress (0-100%)
-  g.updateTimerPillProgress = function(percentRemaining){
-    const pill = document.getElementById('timerPill');
-    const fill = document.getElementById('timerPillFill');
-    
-    if(!pill || !fill) return;
-    
-    try{
-      // Clamp to 0-100
-      const percent = Math.max(0, Math.min(100, percentRemaining));
-      
-      // Set fill scale (right-to-left depletion)
-      fill.style.transform = `scaleX(${percent / 100})`;
-      
-      // Update aria-valuenow (rounded to integer)
-      pill.setAttribute('aria-valuenow', Math.round(percent).toString());
-    }catch(e){
-      console.warn('[updateTimerPillProgress] error:', e);
-    }
-  };
-  
-  // Expose updatePlayersBadge globally
-  g.updatePlayersBadge = updatePlayersBadge;
-  
   // ------------ Phase Router ------------
   let tickHandle=null;
   
@@ -1723,8 +1676,7 @@ header.innerHTML = `
     
     function setClock(str){
       const cd=document.getElementById('countdown'); if(cd) cd.textContent=str;
-      const timerPillText=document.getElementById('timerPillText'); if(timerPillText) timerPillText.textContent=str;
-      // No longer update #tvTimer - it's hidden
+      const tt=document.getElementById('tvTimer'); if(tt) tt.textContent=str;
     }
 
     if(!seconds){
@@ -1737,10 +1689,6 @@ header.innerHTML = `
       // Reset skip progress bar
       if(typeof window.updateSkipProgress === 'function'){
         window.updateSkipProgress(0, 1);
-      }
-      // Reset timer pill to 0%
-      if(typeof g.updateTimerPillProgress === 'function'){
-        g.updateTimerPillProgress(0);
       }
       try{
         if(typeof onTimeout==='function'){ onTimeout(); }
@@ -1765,10 +1713,6 @@ header.innerHTML = `
       // Reset skip progress bar
       if(typeof window.updateSkipProgress === 'function'){
         window.updateSkipProgress(0, 1);
-      }
-      // Reset timer pill to 0%
-      if(typeof g.updateTimerPillProgress === 'function'){
-        g.updateTimerPillProgress(0);
       }
       
       // Wait for human vote, then start timer
@@ -1811,10 +1755,6 @@ header.innerHTML = `
         if(typeof window.updateSkipProgress === 'function'){
           window.updateSkipProgress(total, total);
         }
-        // Reset timer pill to 0%
-        if(typeof g.updateTimerPillProgress === 'function'){
-          g.updateTimerPillProgress(0);
-        }
         try{
           if(typeof onTimeout==='function'){ onTimeout(); }
           else { defaultAdvance(phase); }
@@ -1832,11 +1772,6 @@ header.innerHTML = `
       // Update skip progress bar (depletes right-to-left)
       if(typeof window.updateSkipProgress === 'function'){
         window.updateSkipProgress(total - rem, total);
-      }
-      
-      // Update timer pill progress (depletes right-to-left)
-      if(typeof g.updateTimerPillProgress === 'function'){
-        g.updateTimerPillProgress(percentRemaining);
       }
       
       // HOURGLASS ANIMATION: Top empties, bottom fills
@@ -1864,9 +1799,6 @@ header.innerHTML = `
       }
     }
     tickHandle=setInterval(tick,200); tick();
-    
-    // Update players badge when timer starts
-    updatePlayersBadge();
   }
   
   // Pause the phase timer
