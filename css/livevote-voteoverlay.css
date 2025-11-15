@@ -11,19 +11,17 @@
   z-index: 2147483640;
   display: flex;
   flex-direction: column;
-  height: 100vh; /* Fallback for older browsers */
-  min-height: 100dvh; /* Dynamic viewport height */
-  max-height: 100dvh; /* Ensure overlay doesn't exceed viewport */
-  min-height: 100svh; /* Small viewport height (stable, preferred) */
-  max-height: 100svh; /* Ensure overlay doesn't exceed viewport */
-  overflow: hidden; /* Prevent direct scrolling on overlay */
+  height: 100dvh; /* Dynamic viewport height (iOS compatible) */
+  overflow: auto; /* Allow scrolling for long content */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   overscroll-behavior: contain;
   
   /* Safe area support */
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
-  /* Note: bottom padding handled by dock to keep sticky button at true bottom */
+  /* Reserve space at bottom so content doesn't sit under fixed dock */
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
 .lv-overlay__header {
@@ -186,24 +184,36 @@
   right: 8px;
 }
 
-/* Action dock at bottom - sticky to stay visible during scroll */
+/* Action dock at bottom - fixed to viewport bottom for guaranteed visibility */
 .lv-overlay__dock {
-  padding: 20px 16px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom));
-  text-align: center;
-  flex-shrink: 0;
-  position: sticky; /* Stays at bottom of visible area during scroll */
+  position: fixed;
+  left: 0;
+  right: 0;
   bottom: 0;
-  background: linear-gradient(to bottom, transparent, rgba(10, 15, 22, 0.98) 20%);
-  z-index: 10; /* Ensure dock stays above carousel content */
+  z-index: 1000;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  
+  /* Subtle background to separate from content, readable over video/TV */
+  background: linear-gradient(
+    to top,
+    rgba(12, 14, 22, 0.92),
+    rgba(12, 14, 22, 0.72) 60%,
+    rgba(12, 14, 22, 0.0)
+  );
+  border-top: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: saturate(1.1) blur(8px);
+  -webkit-backdrop-filter: saturate(1.1) blur(8px); /* Safari support */
 }
 
 .lv-overlay__evict-btn {
   background: linear-gradient(135deg, #ff6b6b, #d63031);
   border: none;
-  border-radius: 28px;
-  padding: 16px 48px;
-  font-size: clamp(1.1rem, 3.5vw, 1.3rem);
+  border-radius: 999px;
+  padding: 14px 24px;
+  font-size: clamp(16px, 4.2vw, 18px);
   font-weight: 700;
   color: #ffffff;
   cursor: pointer;
@@ -212,9 +222,9 @@
     0 6px 20px rgba(255, 107, 107, 0.5),
     0 0 0 1px rgba(255, 107, 107, 0.2);
   
-  /* COMMIT 4: Minimum tap target (48px meets accessibility guidelines) */
+  /* Comfortably tappable across device sizes */
   min-height: 48px;
-  min-width: 160px;
+  width: min(560px, 92vw);
 }
 
 .lv-overlay__evict-btn:hover:not(:disabled) {
@@ -309,15 +319,9 @@
     right: 4px;
   }
   
-  .lv-overlay__dock {
-    padding: 16px 12px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-  }
-  
-  .lv-overlay__evict-btn {
-    padding: 14px 40px;
-    width: 100%;
-    max-width: 280px;
+  /* Reinforce bottom padding on small screens */
+  .lv-overlay {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
   }
 }
 
@@ -326,6 +330,11 @@
 @media (max-width: 820px), (pointer: coarse) {
   .lv-overlay__arrow {
     display: none !important;
+  }
+  
+  /* Reinforce bottom padding for coarse pointers */
+  .lv-overlay {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
   }
 }
 
@@ -348,10 +357,6 @@
   .lv-overlay__nominee.center .lv-overlay__avatar-container {
     width: clamp(120px, 30vw, 160px);
     height: clamp(120px, 30vw, 160px);
-  }
-  
-  .lv-overlay__dock {
-    padding: 12px 16px;
   }
 }
 
