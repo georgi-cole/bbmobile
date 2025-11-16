@@ -1528,10 +1528,33 @@
   }
 
   function hideLauncher() {
+    // Hide launcher by setting display:none (preserves DOM node)
     const launcher = $('#socializeLauncher');
     if (launcher) {
       launcher.style.display = 'none';
-      console.info('[socialize-mobile] Launcher hidden');
+      console.info('[socialize-mobile] Launcher hidden (display:none)');
+    }
+    
+    // ENHANCEMENT (PR #XXX): Also remove any active modal/panel to prevent overlap
+    const modal = $('#socializeModal');
+    if (modal) {
+      modal.remove();
+      console.info('[socialize-mobile] ✓ Removed active modal');
+    }
+    
+    const panel = $('#socializePanel');
+    if (panel) {
+      panel.remove();
+      console.info('[socialize-mobile] ✓ Removed active panel');
+    }
+    
+    // Remove any socialize containers/overlays
+    const containers = $$('.socialize-container, [data-socialize-root], [data-social-module], .socialize-overlay, .socialize-modal-backdrop');
+    containers.forEach(el => {
+      el.remove();
+    });
+    if (containers.length > 0) {
+      console.info(`[socialize-mobile] ✓ Removed ${containers.length} container(s)`);
     }
   }
 
