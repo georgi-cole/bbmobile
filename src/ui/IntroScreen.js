@@ -725,6 +725,7 @@
         show,
         showWithPreload,
         hide,
+        reset,
         preloadBackground
       };
     }
@@ -754,6 +755,7 @@
       show,
       showWithPreload,
       hide,
+      reset,
       preloadBackground
     };
   }
