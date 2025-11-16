@@ -11,7 +11,7 @@ body:not(.main-screen-built) .topbar {
 
 /* Ensure intro screen is visible even if main screen is hidden */
 .intro-screen {
-  display: none; /* Will be set to flex when shown */
+  /* Will be set to flex when shown via .intro-screen--visible */
 }
 
 .intro-screen--visible {
