@@ -11,8 +11,10 @@
   z-index: 2147483640;
   display: flex;
   flex-direction: column;
-  height: 100dvh; /* Dynamic viewport height (iOS compatible) */
-  overflow: auto; /* Allow scrolling for long content */
+  min-height: 100dvh; /* Use min-height instead of fixed height to allow natural sizing */
+  max-height: 100dvh; /* Constrain maximum height to viewport */
+  overflow-y: auto; /* Allow vertical scrolling for long content */
+  overflow-x: hidden; /* Prevent horizontal scroll */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   overscroll-behavior: contain;
   
