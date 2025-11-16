@@ -6,7 +6,7 @@
 // 4. Time-of-day base (sunrise, day, sunset, night)
 //
 // Emits: theme:bg-change event with { key, url, anchor, reason }
-// Public API: init({ bus }), getCurrent(), updateTheme()
+// Public API: init({ bus }), getCurrent(), updateTheme(), setAdaptive(), manualOverride()
 
 (function(g) {
   'use strict';
@@ -51,11 +51,37 @@
   let userCoords = null;
   let adaptiveEnabled = true;
   let isUpdating = false; // Lock flag to prevent concurrent updates
+  let geolocationAttempts = 0;
 
   const UPDATE_INTERVAL = 60 * 1000;       // Update theme every 1 minute
   const WEATHER_CACHE_DURATION = 15 * 60 * 1000; // Cache weather for 15 minutes
+  const MAX_GEOLOCATION_ATTEMPTS = 2;
 
   // ===== UTILITY FUNCTIONS =====
+
+  // Telemetry helper - logs to Telemetry system if available, otherwise console
+  function logTelemetry(event, data = {}) {
+    try {
+      if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+        window.Telemetry.log(event, data);
+      } else {
+        console.info(`[BackgroundTheme:Telemetry] ${event}`, data);
+      }
+    } catch (err) {
+      console.warn('[BackgroundTheme] Telemetry logging failed:', err);
+    }
+  }
+
+  // Ensure alias is maintained in both namespaces
+  function ensureAlias() {
+    if (!g.game) {
+      g.game = {};
+    }
+    if (!g.game.BackgroundTheme) {
+      g.game.BackgroundTheme = g.BackgroundTheme;
+      console.info('[BackgroundTheme] Alias established: window.game.BackgroundTheme -> window.BackgroundTheme');
+    }
+  }
 
   // Check if date falls within holiday period (Dec 20 – Jan 1)
   function isHolidayPeriod(date = new Date()) {
@@ -126,8 +152,12 @@
   async function requestGeolocation() {
     if (!navigator.geolocation) {
       console.info('[BackgroundTheme] Geolocation not available');
+      logTelemetry('bg_geolocation_attempt', { attempt: 0, success: false, reason: 'not_available' });
       return null;
     }
+
+    geolocationAttempts++;
+    const attemptNum = geolocationAttempts;
 
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
@@ -137,10 +167,12 @@
             lon: position.coords.longitude
           };
           console.info('[BackgroundTheme] Geolocation obtained:', coords);
+          logTelemetry('bg_geolocation_attempt', { attempt: attemptNum, success: true });
           resolve(coords);
         },
         (error) => {
           console.info('[BackgroundTheme] Geolocation denied or failed:', error.message);
+          logTelemetry('bg_geolocation_attempt', { attempt: attemptNum, success: false, reason: error.message });
           resolve(null);
         },
         { timeout: 10000, maximumAge: 300000 } // 5-minute cache
@@ -200,9 +232,16 @@
       weatherFetchTime = now;
       
       console.info('[BackgroundTheme] Weather fetched:', weatherData, 'Solar:', solarData);
+      logTelemetry('bg_weather_fetch', { 
+        success: true, 
+        rain: weatherData.rain, 
+        snow: weatherData.snow,
+        hasSolarData: !!solarData
+      });
       return weatherData;
     } catch (error) {
       console.warn('[BackgroundTheme] Weather fetch failed:', error.message);
+      logTelemetry('bg_weather_fetch', { success: false, error: error.message });
       return null;
     }
   }
@@ -293,9 +332,16 @@
     isUpdating = true;
 
     try {
-      // Try to get geolocation and weather if we don't have it
-      if (!userCoords) {
+      // Try to get geolocation with retry logic
+      if (!userCoords && geolocationAttempts < MAX_GEOLOCATION_ATTEMPTS) {
         userCoords = await requestGeolocation();
+        
+        // Retry once more if first attempt failed
+        if (!userCoords && geolocationAttempts < MAX_GEOLOCATION_ATTEMPTS) {
+          console.info('[BackgroundTheme] Retrying geolocation...');
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+          userCoords = await requestGeolocation();
+        }
       }
       
       if (userCoords && (!weatherData || (now - weatherFetchTime) >= WEATHER_CACHE_DURATION)) {
@@ -323,6 +369,13 @@
       lastUpdate = now;
 
       console.info('[BackgroundTheme] Theme updated:', themeData);
+      
+      // Log telemetry
+      logTelemetry('bg_update', {
+        theme: theme,
+        reason: reason,
+        adaptiveEnabled: adaptiveEnabled
+      });
 
       // Emit event
       if (bus) {
@@ -351,14 +404,48 @@
     
     console.info('[BackgroundTheme] Adaptive backgrounds:', adaptiveEnabled ? 'enabled' : 'disabled');
     
+    // Log telemetry
+    logTelemetry('bg_adaptive_toggle', { enabled: adaptiveEnabled });
+    
     if (!adaptiveEnabled && currentTheme) {
       // Keep current background frozen
       console.info('[BackgroundTheme] Background frozen at:', currentTheme.key);
     }
   }
 
+  function manualOverride(key) {
+    if (!BACKGROUNDS[key]) {
+      console.error('[BackgroundTheme] Invalid theme key:', key);
+      console.info('[BackgroundTheme] Valid keys:', Object.keys(BACKGROUNDS).join(', '));
+      return null;
+    }
+
+    // Build theme data
+    const themeData = {
+      key: key,
+      url: ASSETS_BASE + BACKGROUNDS[key],
+      anchor: ANCHORS[key] || ANCHORS.day,
+      reason: 'manual override'
+    };
+
+    currentTheme = themeData;
+    lastUpdate = Date.now();
+
+    console.info('[BackgroundTheme] Manual override applied:', themeData);
+    
+    // Log telemetry
+    logTelemetry('bg_manual_override', { key: key });
+
+    // Emit event
+    if (bus) {
+      bus.emit('theme:bg-change', themeData);
+    }
+
+    return themeData;
+  }
+
   function init(options = {}) {
-    bus = options.bus || g.bbGameBus;
+    bus = options.bus || g.bbGameBus || (g.game && g.game.bus);
     
     if (!bus) {
       console.error('[BackgroundTheme] No event bus provided. Theme changes will not emit events.');
@@ -375,6 +462,9 @@
     }
 
     console.info('[BackgroundTheme] Initialized (adaptive:', adaptiveEnabled, ')');
+    
+    // Log telemetry
+    logTelemetry('bg_init', { adaptiveEnabled: adaptiveEnabled });
 
     // Initial theme update
     updateTheme(true);
@@ -397,18 +487,31 @@
     return {
       getCurrent,
       updateTheme,
-      setAdaptive
+      setAdaptive,
+      manualOverride
     };
   }
 
-  // Export API
+  // Export API to both window.BackgroundTheme and window.game.BackgroundTheme
+  const API = {
+    init,
+    getCurrent,
+    updateTheme,
+    setAdaptive,
+    manualOverride
+  };
+
   if (!g.BackgroundTheme) {
-    g.BackgroundTheme = {
-      init,
-      getCurrent,
-      updateTheme,
-      setAdaptive
-    };
+    g.BackgroundTheme = API;
+    console.info('[BackgroundTheme] Exported to window.BackgroundTheme');
   }
+
+  // Ensure alias to window.game.BackgroundTheme
+  ensureAlias();
+
+  // Re-establish alias after a short delay to handle GameGuard merges
+  setTimeout(() => {
+    ensureAlias();
+  }, 100);
 
 })(window);

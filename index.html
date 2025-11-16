@@ -452,6 +452,49 @@
 
 <!-- Intro Hub Screen System -->
 <script defer src="src/utils/backgroundTheme.js"></script>
+
+<!-- BackgroundTheme Alias Bridge: Ensure window.game.BackgroundTheme exists -->
+<script>
+(function bridgeBackgroundTheme() {
+  'use strict';
+  
+  // Wait for BackgroundTheme to be available, then establish alias
+  const MAX_RETRIES = 20;
+  const RETRY_DELAY = 50; // ms
+  let attempts = 0;
+  
+  function tryBridge() {
+    attempts++;
+    
+    if (window.BackgroundTheme) {
+      // Ensure window.game exists
+      if (!window.game) {
+        window.game = {};
+      }
+      
+      // Create alias if not already present
+      if (!window.game.BackgroundTheme) {
+        window.game.BackgroundTheme = window.BackgroundTheme;
+        console.info('[BackgroundThemeBridge] Aliased window.BackgroundTheme to window.game.BackgroundTheme');
+      }
+      
+      // Success - stop retrying
+      return true;
+    } else if (attempts < MAX_RETRIES) {
+      // Keep trying
+      setTimeout(tryBridge, RETRY_DELAY);
+      return false;
+    } else {
+      console.warn('[BackgroundThemeBridge] Failed to establish alias after', attempts, 'attempts');
+      return false;
+    }
+  }
+  
+  // Start trying immediately
+  tryBridge();
+})();
+</script>
+
 <script defer src="src/ui/IntroScreen.js"></script>
 <script defer src="src/ui/hubModalBridge.js"></script>
 <!-- DeferredGuards loaded earlier (before roster-placeholders) -->
