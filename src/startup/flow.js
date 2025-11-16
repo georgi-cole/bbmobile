@@ -164,15 +164,19 @@
   async function showIntroHub() {
     console.info('[StartupFlow] Showing intro hub...');
 
-    // Preload background first
-    await preloadIntroBackground();
-
-    // Show intro screen
-    if (g.IntroScreen && typeof g.IntroScreen.show === 'function') {
+    // Use IntroScreen's built-in preload and show
+    // This ensures background is loaded before buttons are displayed
+    if (g.IntroScreen && typeof g.IntroScreen.showWithPreload === 'function') {
+      await g.IntroScreen.showWithPreload();
+      console.info('[StartupFlow] Intro hub displayed with preloaded background');
+    } else if (g.IntroScreen && typeof g.IntroScreen.show === 'function') {
+      // Fallback to old method if showWithPreload not available
+      console.warn('[StartupFlow] showWithPreload not available, using legacy show()');
+      await preloadIntroBackground();
       g.IntroScreen.show();
       console.info('[StartupFlow] Intro hub displayed');
     } else {
-      console.error('[StartupFlow] IntroScreen.show not available');
+      console.error('[StartupFlow] IntroScreen not available');
     }
   }
 
@@ -479,7 +483,7 @@
   function init() {
     // Prevent duplicate initialization
     if (handlersWired) {
-      console.info('[StartupFlow] Already initialized, skipping');
+      console.warn('[StartupFlow] Already initialized, skipping duplicate init() call');
       return;
     }
     
@@ -497,6 +501,8 @@
       console.info('[StartupFlow] Intro video finished event received, showing intro hub');
       await showIntroHub();
     }, { once: true });
+    
+    console.info('[StartupFlow] Initialization complete, event handlers wired');
     
     // Don't start sequence here - it will be triggered after DOM ready
     // and after intro-outro-video.js decides whether to show video

@@ -15,8 +15,11 @@
   let isVisible = false;
   let currentBgLayer = 'current';
   let bus = null;
+  let playButtonClicked = false; // Idempotence guard for Play button
 
   const FADE_DURATION = 600; // ms
+  const PRELOAD_TIMEOUT = 1500; // ms - timeout for background preload
+  const LOADING_BUFFER_THRESHOLD = 300; // ms - show loading spinner if preload exceeds this
 
   // ===== DOM BUILDING =====
 
@@ -84,12 +87,15 @@
       }
 
       btn.addEventListener('click', () => {
+        console.info(`[IntroHub] action=${action} icon="${label}"`);
+        
         if (action === 'toggle-music') {
           handleMusicToggle(btn);
         } else if (action === 'toggle-sound') {
           handleSoundToggle(btn);
-        } else if (bus) {
-          bus.emit(action, {});
+        } else {
+          // Handle other quick icon actions (Help, Settings)
+          handleButtonAction(action, label);
         }
       });
 
@@ -125,9 +131,19 @@
       btn.style.setProperty('--stagger-index', index);
 
       btn.addEventListener('click', () => {
-        if (bus) {
-          bus.emit(action, {});
+        console.info(`[IntroHub] action=${action} button="${label}"`);
+        
+        // Handle Play button specially with idempotence guard
+        if (action === 'intro:play') {
+          if (playButtonClicked) {
+            console.warn('[IntroHub] Play button already clicked, ignoring duplicate click');
+            return;
+          }
+          playButtonClicked = true;
         }
+        
+        // Try direct global function calls first, fall back to bus events
+        handleButtonAction(action, label);
       });
 
       column.appendChild(btn);
@@ -165,9 +181,8 @@
       chip.appendChild(labelEl);
 
       chip.addEventListener('click', () => {
-        if (bus) {
-          bus.emit(action, {});
-        }
+        console.info(`[IntroHub] action=${action} chip="${label}"`);
+        handleButtonAction(action, label);
       });
 
       container.appendChild(chip);
@@ -200,16 +215,35 @@
       console.warn('[IntroScreen] Unknown audio type:', type);
       return;
     }
+    
+    // Try to find audio subsystem
     if (g.game && g.game.audio && typeof g.game.audio[methodName] === 'function') {
       enabled = g.game.audio[methodName]();
+      btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+      btn.textContent = enabled ? icons.on : icons.off;
     } else if (g.audio && typeof g.audio[methodName] === 'function') {
       enabled = g.audio[methodName]();
+      btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+      btn.textContent = enabled ? icons.on : icons.off;
     } else {
-      console.warn(`[IntroScreen] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle not available`);
-      return;
+      // Audio subsystem not yet initialized, retry after delay
+      console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle not yet available, will retry...`);
+      setTimeout(() => {
+        if (g.game && g.game.audio && typeof g.game.audio[methodName] === 'function') {
+          enabled = g.game.audio[methodName]();
+          btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+          btn.textContent = enabled ? icons.on : icons.off;
+          console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded on retry`);
+        } else if (g.audio && typeof g.audio[methodName] === 'function') {
+          enabled = g.audio[methodName]();
+          btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+          btn.textContent = enabled ? icons.on : icons.off;
+          console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded on retry`);
+        } else {
+          console.warn(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle still not available after retry`);
+        }
+      }, 1000);
     }
-    btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-    btn.textContent = enabled ? icons.on : icons.off;
   }
 
   function handleMusicToggle(btn) {
@@ -218,6 +252,83 @@
 
   function handleSoundToggle(btn) {
     handleAudioToggle('sound', btn);
+  }
+
+  /**
+   * Handle button actions by trying direct global function calls first,
+   * then falling back to bus events, and finally CustomEvents.
+   * This ensures buttons work reliably even if handlers aren't wired yet.
+   */
+  function handleButtonAction(action, label) {
+    let handled = false;
+    
+    // Map actions to global function names
+    const actionMap = {
+      'intro:play': { fn: 'enterGame', obj: 'StartupFlow', method: 'enterGame' },
+      'intro:open:rules': { fn: 'showRulesModal' },
+      'intro:open:profile': { fn: 'showProfileModal', fallback: { obj: 'ProfileModal', method: 'open' } },
+      'intro:open:settings': { fn: 'showSettingsModal', click: 'btnOpenSettings' },
+      'intro:open:leaderboard': { fn: 'showLeaderboard', fallback: { obj: 'ProgressionUI', method: 'showLeaderboard' }, click: 'xpLeaderboardBadge' },
+      'intro:open:credits': { fn: 'showCreditsModal', fallback2: 'showCredits' },
+      'intro:open:help': { fn: 'showHelpModal', fallback2: 'showHelp', fallback3: 'showRulesModal' }
+    };
+    
+    const mapping = actionMap[action];
+    
+    if (mapping) {
+      // Try primary function
+      if (mapping.fn && typeof g[mapping.fn] === 'function') {
+        console.info(`[IntroHub] Calling global.${mapping.fn}()`);
+        g[mapping.fn]();
+        handled = true;
+      } else if (mapping.obj && mapping.method && g[mapping.obj] && typeof g[mapping.obj][mapping.method] === 'function') {
+        // Try object.method pattern
+        console.info(`[IntroHub] Calling global.${mapping.obj}.${mapping.method}()`);
+        g[mapping.obj][mapping.method]();
+        handled = true;
+      } else if (mapping.fallback && g[mapping.fallback.obj] && typeof g[mapping.fallback.obj][mapping.fallback.method] === 'function') {
+        // Try fallback object.method
+        console.info(`[IntroHub] Calling fallback global.${mapping.fallback.obj}.${mapping.fallback.method}()`);
+        g[mapping.fallback.obj][mapping.fallback.method]();
+        handled = true;
+      } else if (mapping.fallback2 && typeof g[mapping.fallback2] === 'function') {
+        // Try second fallback function
+        console.info(`[IntroHub] Calling fallback global.${mapping.fallback2}()`);
+        g[mapping.fallback2]();
+        handled = true;
+      } else if (mapping.fallback3 && typeof g[mapping.fallback3] === 'function') {
+        // Try third fallback function
+        console.info(`[IntroHub] Calling fallback global.${mapping.fallback3}()`);
+        g[mapping.fallback3]();
+        handled = true;
+      } else if (mapping.click) {
+        // Try clicking an element (for Settings, Leaderboard)
+        const el = document.getElementById(mapping.click);
+        if (el) {
+          console.info(`[IntroHub] Clicking element #${mapping.click}`);
+          el.click();
+          handled = true;
+        }
+      }
+    }
+    
+    // If not handled by direct calls, try bus event
+    if (!handled && bus) {
+      console.info(`[IntroHub] Emitting bus event: ${action}`);
+      bus.emit(action, {});
+      handled = true;
+    }
+    
+    // If still not handled, dispatch CustomEvent as final fallback
+    if (!handled) {
+      console.warn(`[IntroHub] No handler found for ${action}, dispatching CustomEvent`);
+      const eventName = action.replace(/:/g, '-'); // Convert intro:play to intro-play
+      const event = new CustomEvent(`bb:ui:${eventName}`, { 
+        detail: { action, label },
+        bubbles: true 
+      });
+      window.dispatchEvent(event);
+    }
   }
 
   function updateAnchors(anchor) {
@@ -339,10 +450,171 @@
     }
   }
 
+  // ===== BACKGROUND PRELOADING =====
+
+  /**
+   * Preload the background image before showing the intro screen.
+   * This prevents the flicker where buttons appear before the background.
+   * @returns {Promise} Resolves when preload completes or times out
+   */
+  function preloadBackground() {
+    return new Promise((resolve) => {
+      // Get background URL from BackgroundTheme
+      let url = 'assets/skins/daily-background.png'; // Default fallback
+      if (g.BackgroundTheme && typeof g.BackgroundTheme.getCurrent === 'function') {
+        const theme = g.BackgroundTheme.getCurrent();
+        if (theme && theme.url) {
+          url = theme.url;
+        }
+      }
+
+      console.info('[IntroScreen] Preloading background:', url);
+
+      const img = new Image();
+      let loadTimeout = null;
+      let hasCompleted = false;
+      const startTime = Date.now();
+
+      const complete = () => {
+        if (hasCompleted) return;
+        hasCompleted = true;
+        
+        if (loadTimeout) {
+          clearTimeout(loadTimeout);
+        }
+        
+        const elapsed = Date.now() - startTime;
+        console.info(`[IntroScreen] Background preload completed in ${elapsed}ms`);
+        resolve(url);
+      };
+
+      img.onload = () => {
+        // Use decode() for smoother rendering if available
+        if (img.decode) {
+          img.decode()
+            .then(complete)
+            .catch(() => {
+              console.warn('[IntroScreen] Image decode failed, proceeding anyway');
+              complete();
+            });
+        } else {
+          complete();
+        }
+      };
+
+      img.onerror = () => {
+        console.warn('[IntroScreen] Background preload failed:', url);
+        complete(); // Still proceed even if preload fails
+      };
+
+      // Timeout after PRELOAD_TIMEOUT to prevent blocking
+      loadTimeout = setTimeout(() => {
+        if (!hasCompleted) {
+          console.warn(`[IntroScreen] Background preload timeout after ${PRELOAD_TIMEOUT}ms`);
+          img.onload = null;
+          img.onerror = null;
+          complete();
+        }
+      }, PRELOAD_TIMEOUT);
+
+      // Check if image is already cached
+      if (img.complete) {
+        complete();
+      } else {
+        img.src = url;
+      }
+    });
+  }
+
+  /**
+   * Show intro screen with preloaded background.
+   * This ensures background and buttons appear together (no flicker).
+   * @param {boolean} skipPreload - If true, skip preloading (for testing)
+   */
+  async function showWithPreload(skipPreload = false) {
+    // Idempotence guard
+    if (isVisible) {
+      console.info('[IntroScreen] Already visible, ignoring duplicate showWithPreload() call');
+      return;
+    }
+
+    // Optional: Show loading buffer if preload takes too long
+    let loadingBuffer = null;
+    const bufferTimer = setTimeout(() => {
+      if (!isVisible) {
+        console.info('[IntroScreen] Showing loading buffer...');
+        loadingBuffer = showLoadingBuffer();
+      }
+    }, LOADING_BUFFER_THRESHOLD);
+
+    // Preload background
+    if (!skipPreload) {
+      await preloadBackground();
+    }
+
+    // Clear loading buffer timer
+    clearTimeout(bufferTimer);
+    
+    // Remove loading buffer if shown
+    if (loadingBuffer) {
+      hideLoadingBuffer(loadingBuffer);
+    }
+
+    // Now show the intro screen
+    show();
+  }
+
+  /**
+   * Show a lightweight loading buffer (spinner or "Loading..." text)
+   * @returns {HTMLElement} The buffer element
+   */
+  function showLoadingBuffer() {
+    const buffer = document.createElement('div');
+    buffer.id = 'intro-loading-buffer';
+    buffer.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #0a0e14;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9997;
+      color: #fff;
+      font-size: 18px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    `;
+    buffer.innerHTML = '<div style="text-align: center;">Loading...<br><div style="margin-top: 16px; font-size: 32px;">⏳</div></div>';
+    document.body.appendChild(buffer);
+    return buffer;
+  }
+
+  /**
+   * Hide and remove the loading buffer
+   * @param {HTMLElement} buffer - The buffer element to remove
+   */
+  function hideLoadingBuffer(buffer) {
+    if (buffer && buffer.parentNode) {
+      buffer.style.opacity = '0';
+      buffer.style.transition = 'opacity 200ms ease-out';
+      setTimeout(() => {
+        if (buffer.parentNode) {
+          buffer.parentNode.removeChild(buffer);
+        }
+      }, 200);
+    }
+  }
+
   // ===== PUBLIC API =====
 
   function show() {
-    if (isVisible) return;
+    // Idempotence guard - if already visible, do nothing
+    if (isVisible) {
+      console.info('[IntroScreen] Already visible, ignoring duplicate show() call');
+      return;
+    }
 
     // Build DOM if not exists
     if (!container) {
@@ -410,7 +682,9 @@
 
     return {
       show,
-      hide
+      showWithPreload,
+      hide,
+      preloadBackground
     };
   }
 
@@ -434,7 +708,9 @@
     g.IntroScreen = {
       init,
       show,
-      hide
+      showWithPreload,
+      hide,
+      preloadBackground
     };
   }
 

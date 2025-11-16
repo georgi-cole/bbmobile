@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>IntroScreen Enhanced Test - BBMobile</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="css/intro.css">
+<style>
+  body {
+    margin: 0;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: #fff;
+  }
+  .controls {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 10000;
+    background: rgba(0,0,0,0.8);
+    padding: 15px;
+    border-radius: 8px;
+    max-width: 350px;
+  }
+  .controls h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+  }
+  .controls button {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+    padding: 8px;
+    background: #0088ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .controls button:hover {
+    background: #0099ff;
+  }
+  .controls .info {
+    margin: 10px 0;
+    padding: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  #eventLog {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 10000;
+    background: rgba(0,0,0,0.9);
+    padding: 10px;
+    border-radius: 8px;
+    max-width: 500px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 11px;
+    font-family: monospace;
+  }
+  #eventLog .event {
+    margin: 2px 0;
+    padding: 4px;
+    border-left: 2px solid #00d4ff;
+    padding-left: 8px;
+  }
+  #eventLog .event.action {
+    border-left-color: #00ff88;
+  }
+  #eventLog .event.warn {
+    border-left-color: #ffaa00;
+  }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <h3>IntroScreen Enhanced Test</h3>
+  <button id="btnShowWithPreload">Show with Preload (NEW)</button>
+  <button id="btnShow">Show (Legacy)</button>
+  <button id="btnHide">Hide</button>
+  <button id="btnShowDuplicate">Test Duplicate Show</button>
+  <button id="btnChangeTheme">Change Background</button>
+  <div class="info">
+    <strong>Status:</strong> <span id="status">Ready</span><br>
+    <strong>Preload Time:</strong> <span id="preloadTime">-</span>
+  </div>
+</div>
+
+<div id="eventLog">
+  <strong>Event Log (watch console for [IntroHub] messages):</strong>
+</div>
+
+<!-- Load dependencies -->
+<script src="js/bbGameBus.js"></script>
+<script src="src/utils/backgroundTheme.js"></script>
+<script src="src/ui/IntroScreen.js"></script>
+
+<script>
+(function() {
+  'use strict';
+  
+  // Initialize game bus
+  if (!window.game) window.game = {};
+  window.game.bus = window.bbGameBus;
+  
+  // Mock audio controls for testing
+  window.game.audio = {
+    toggleMusic: function() {
+      logEvent('Music toggled', 'action');
+      return true;
+    },
+    toggleSound: function() {
+      logEvent('Sound toggled', 'action');
+      return true;
+    }
+  };
+  
+  // Mock global functions for button testing
+  window.showRulesModal = function() {
+    logEvent('showRulesModal() called', 'action');
+    alert('Rules Modal would open here');
+  };
+  
+  window.showProfileModal = function() {
+    logEvent('showProfileModal() called', 'action');
+    alert('Profile Modal would open here');
+  };
+  
+  window.showCreditsModal = function() {
+    logEvent('showCreditsModal() called', 'action');
+    alert('Credits Modal would open here');
+  };
+  
+  window.showHelpModal = function() {
+    logEvent('showHelpModal() called', 'action');
+    alert('Help Modal would open here');
+  };
+  
+  // Mock StartupFlow for Play button
+  window.StartupFlow = {
+    enterGame: function() {
+      logEvent('StartupFlow.enterGame() called - Game would start', 'action');
+      alert('Game would start here');
+    }
+  };
+  
+  // Initialize BackgroundTheme
+  const bgTheme = window.BackgroundTheme.init({ bus: window.bbGameBus });
+  
+  // Initialize IntroScreen
+  const introScreen = window.IntroScreen.init({ bus: window.bbGameBus });
+  
+  // Listen to all intro events
+  const events = [
+    'intro:play',
+    'intro:open:rules',
+    'intro:open:profile',
+    'intro:open:leaderboard',
+    'intro:open:settings',
+    'intro:open:credits',
+    'intro:open:help',
+    'intro:chip:daily',
+    'intro:chip:news',
+    'theme:bg-change'
+  ];
+  
+  events.forEach(event => {
+    window.bbGameBus.on(event, (data) => {
+      logEvent(`Bus event: ${event}`, 'action', data);
+    });
+  });
+  
+  // Button handlers
+  document.getElementById('btnShowWithPreload').addEventListener('click', async () => {
+    document.getElementById('status').textContent = 'Preloading...';
+    const start = Date.now();
+    
+    try {
+      await introScreen.showWithPreload();
+      const elapsed = Date.now() - start;
+      document.getElementById('preloadTime').textContent = elapsed + 'ms';
+      document.getElementById('status').textContent = 'Shown (with preload)';
+      logEvent('showWithPreload() completed in ' + elapsed + 'ms');
+    } catch(e) {
+      logEvent('Error: ' + e.message, 'warn');
+      document.getElementById('status').textContent = 'Error';
+    }
+  });
+  
+  document.getElementById('btnShow').addEventListener('click', () => {
+    introScreen.show();
+    document.getElementById('status').textContent = 'Shown (legacy)';
+    logEvent('show() called (legacy method)');
+  });
+  
+  document.getElementById('btnHide').addEventListener('click', () => {
+    introScreen.hide();
+    document.getElementById('status').textContent = 'Hidden';
+    logEvent('hide() called');
+  });
+  
+  document.getElementById('btnShowDuplicate').addEventListener('click', async () => {
+    logEvent('Testing duplicate show() calls...', 'warn');
+    await introScreen.showWithPreload();
+    await introScreen.showWithPreload(); // Should be ignored
+    await introScreen.showWithPreload(); // Should be ignored
+    logEvent('Duplicate test complete - check console for warnings');
+  });
+  
+  document.getElementById('btnChangeTheme').addEventListener('click', () => {
+    bgTheme.updateTheme(true);
+    logEvent('Theme changed');
+  });
+  
+  // Log events
+  function logEvent(message, type = 'event', data) {
+    const log = document.getElementById('eventLog');
+    const entry = document.createElement('div');
+    entry.className = 'event ' + type;
+    entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+    if (data && typeof data === 'object') {
+      entry.textContent += ` ${JSON.stringify(data, null, 2)}`;
+    }
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+  }
+  
+  // Capture console logs to display
+  const originalLog = console.info;
+  console.info = function(...args) {
+    originalLog.apply(console, args);
+    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+    if (msg.includes('[IntroHub]') || msg.includes('[IntroScreen]')) {
+      logEvent(msg);
+    }
+  };
+  
+  const originalWarn = console.warn;
+  console.warn = function(...args) {
+    originalWarn.apply(console, args);
+    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+    if (msg.includes('[IntroHub]') || msg.includes('[IntroScreen]')) {
+      logEvent(msg, 'warn');
+    }
+  };
+  
+  logEvent('Test page initialized - Ready to test!');
+  logEvent('Click "Show with Preload" to test the enhanced version');
+  
+})();
+</script>
+
+</body>
+</html>
