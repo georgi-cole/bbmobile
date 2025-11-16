@@ -660,7 +660,11 @@
   };
   
   // Expose restartToHub globally for easy access
+  // Both on window and window.game for consistency
   g.restartToHub = restartToHub;
+  if (g.game) {
+    g.game.restartToHub = restartToHub;
+  }
 
   console.info('[StartupFlow] Module loaded');
 
