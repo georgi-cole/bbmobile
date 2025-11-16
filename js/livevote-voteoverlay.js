@@ -480,17 +480,27 @@
 
     if (!submissionSuccess) return;
 
-    // 4. Mark as submitted
+    // 4. Mark as submitted and add fade-out class
     evictBtn.classList.remove('submitting');
-    evictBtn.classList.add('submitted');
+    evictBtn.classList.add('submitted', 'fade-out');
 
-    // 5. Immediately hide the overlay after successful submission
-    // The onSubmit callback has already been called and the rollout overlay is being shown
-    // We need to remove this overlay immediately to prevent button persistence
-    // Brief delay to show "Vote submitted" feedback (reduced from 200ms to minimize persistence)
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // 5. Wait for fade-out animation (300-600ms delay + 200-300ms animation)
+    const fadeDelay = 400; // ms to wait before starting fade
+    const fadeAnimation = 300; // ms for fade animation
     
-    // 6. Close the overlay immediately - no fade needed since rollout takes over
+    await new Promise(resolve => setTimeout(resolve, fadeDelay));
+    
+    // Add fade-out to button and status
+    evictBtn.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+    evictBtn.style.opacity = '0';
+    evictBtn.style.transform = 'scale(0.9)';
+    
+    status.style.transition = 'opacity 0.3s ease-out';
+    status.style.opacity = '0';
+
+    await new Promise(resolve => setTimeout(resolve, fadeAnimation));
+
+    // 6. Close the overlay after fade completes
     hide();
   }
 
