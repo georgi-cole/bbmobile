@@ -189,27 +189,29 @@
 
     overlay.appendChild(carousel);
 
-    // Status message area (for accessibility announcements)
+    // Confirmation container - placed directly below carousel for proximity to selected avatar
+    const confirmContainer = document.createElement('div');
+    confirmContainer.className = 'lv-overlay__confirm-container';
+    confirmContainer.style.display = 'none'; // Hidden until selection is made
+    
+    // Status message area (for accessibility announcements and confirmation text)
     const status = document.createElement('div');
     status.className = 'lv-overlay__status';
     status.setAttribute('role', 'status');
     status.setAttribute('aria-live', 'polite');
     status.textContent = 'Select a nominee to evict';
-    overlay.appendChild(status);
+    confirmContainer.appendChild(status);
 
-    // Action dock with Evict button
-    const dock = document.createElement('div');
-    dock.className = 'lv-overlay__dock';
-
+    // Evict button - compact and positioned close to avatar
     const evictBtn = document.createElement('button');
     evictBtn.className = 'lv-overlay__evict-btn';
     evictBtn.textContent = 'Evict';
     evictBtn.disabled = true; // Disabled until selection is made
     evictBtn.setAttribute('aria-label', 'Vote to evict selected nominee');
     evictBtn.onclick = handleEvictClick;
-    dock.appendChild(evictBtn);
+    confirmContainer.appendChild(evictBtn);
 
-    overlay.appendChild(dock);
+    overlay.appendChild(confirmContainer);
 
     // Close button - only render if explicitly allowed via options.allowClose
     if (allowClose) {
@@ -380,16 +382,28 @@
     if (!state.overlay) return;
 
     const evictBtn = state.overlay.querySelector('.lv-overlay__evict-btn');
-    if (!evictBtn) return;
+    const confirmContainer = state.overlay.querySelector('.lv-overlay__confirm-container');
+    if (!evictBtn || !confirmContainer) return;
 
     if (state.selectedNominee !== null) {
+      // Show confirmation container when a nominee is selected
+      confirmContainer.style.display = 'flex';
+      
+      // Enable button with just "Evict" label (no player name)
       evictBtn.disabled = false;
+      evictBtn.textContent = 'Evict';
+      
       const player = global.getP?.(state.selectedNominee);
       if (player) {
-        evictBtn.textContent = `Evict ${player.name}`;
         evictBtn.setAttribute('aria-label', `Vote to evict ${player.name}`);
       }
+      
+      // Reset any submission state if user changes selection
+      evictBtn.classList.remove('submitting', 'submitted');
+      evictBtn.style.pointerEvents = '';
     } else {
+      // Hide confirmation container when no selection
+      confirmContainer.style.display = 'none';
       evictBtn.disabled = true;
       evictBtn.textContent = 'Evict';
       evictBtn.setAttribute('aria-label', 'Vote to evict selected nominee');
@@ -397,20 +411,97 @@
   }
 
   // Handle Evict button click
-  function handleEvictClick() {
+  async function handleEvictClick() {
     if (state.selectedNominee === null) return;
+    if (!state.overlay) return;
+
+    const evictBtn = state.overlay.querySelector('.lv-overlay__evict-btn');
+    const status = state.overlay.querySelector('.lv-overlay__status');
+    if (!evictBtn || !status) return;
+    
+    // Prevent double submission
+    if (evictBtn.classList.contains('submitting') || evictBtn.classList.contains('submitted')) {
+      return;
+    }
 
     const selectedId = state.selectedNominee;
     const callback = state.onSubmit;
 
-    // Close the overlay IMMEDIATELY before submitting
-    // This ensures UI disappears before any re-rendering happens
-    hide();
+    // 1. Immediately disable the button to prevent double-tap
+    evictBtn.disabled = true;
+    evictBtn.classList.add('submitting');
+    evictBtn.style.pointerEvents = 'none'; // Extra protection against tap events
+    evictBtn.setAttribute('aria-disabled', 'true');
 
-    // Submit the vote after UI is closed
-    if (callback) {
-      callback(selectedId);
+    // 2. Update status text to confirmation
+    status.textContent = 'Vote submitted.';
+    status.classList.add('submitted');
+
+    // 3. Submit the vote
+    let submissionSuccess = true;
+    try {
+      if (callback) {
+        const result = callback(selectedId);
+        // If callback returns a promise, wait for it
+        if (result && typeof result.then === 'function') {
+          await result;
+        }
+      }
+    } catch (error) {
+      console.error('[VoteOverlay] Vote submission failed:', error);
+      submissionSuccess = false;
+      
+      // Show error message
+      status.textContent = 'Submission failed. Please try again.';
+      status.classList.remove('submitted');
+      status.classList.add('error');
+      
+      // Re-enable button after error
+      evictBtn.disabled = false;
+      evictBtn.classList.remove('submitting');
+      evictBtn.classList.add('error');
+      evictBtn.style.pointerEvents = '';
+      evictBtn.setAttribute('aria-disabled', 'false');
+      
+      // Clear error state after a delay
+      setTimeout(() => {
+        if (state.overlay && state.selectedNominee !== null) {
+          status.classList.remove('error');
+          evictBtn.classList.remove('error');
+          const player = global.getP?.(state.selectedNominee);
+          if (player) {
+            status.textContent = `${player.name} selected. Press Evict to confirm.`;
+          }
+        }
+      }, 3000);
+      
+      return; // Don't proceed to fade out and hide
     }
+
+    if (!submissionSuccess) return;
+
+    // 4. Mark as submitted and add fade-out class
+    evictBtn.classList.remove('submitting');
+    evictBtn.classList.add('submitted', 'fade-out');
+
+    // 5. Wait for fade-out animation (300-600ms delay + 200-300ms animation)
+    const fadeDelay = 400; // ms to wait before starting fade
+    const fadeAnimation = 300; // ms for fade animation
+    
+    await new Promise(resolve => setTimeout(resolve, fadeDelay));
+    
+    // Add fade-out to button and status
+    evictBtn.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+    evictBtn.style.opacity = '0';
+    evictBtn.style.transform = 'scale(0.9)';
+    
+    status.style.transition = 'opacity 0.3s ease-out';
+    status.style.opacity = '0';
+
+    await new Promise(resolve => setTimeout(resolve, fadeAnimation));
+
+    // 6. Close the overlay after fade completes
+    hide();
   }
 
   // Handle keyboard navigation
