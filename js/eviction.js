@@ -701,12 +701,17 @@
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
     const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    const tripleMode = noms.length === 3;
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
     
     // Hide CTA bar when voting phase begins (issue #574)
     if (useLv2 && global.lv2?.hideCtaBar) {
       global.lv2.hideCtaBar();
+    }
+    // Hide triple CTAs if using triple UI
+    if (tripleMode && global.lv2?.hideCtasTriple) {
+      global.lv2.hideCtasTriple();
     }
 
     function markVoter(vId,text){
