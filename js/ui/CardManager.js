@@ -178,7 +178,7 @@
         if(deck){
           deck.remove();
         }
-      } catch(e){
+      } catch(_){
         // Deck may not exist, that's OK
       }
     },
@@ -235,7 +235,7 @@
       for(let i = 0; i < this.__pendingTimeouts.length; i++){
         try {
           clearTimeout(this.__pendingTimeouts[i]);
-        } catch(e){
+        } catch(_){
           // Ignore errors from already-cleared timeouts
         }
       }
@@ -285,6 +285,31 @@
   // Note: Phase transition listeners are NOT auto-installed here to avoid
   // wrapping setPhase multiple times. Instead, veto.js and social.js explicitly
   // call CardManager.clear() at ceremony/phase boundaries.
+  
+  // Register drainer with SkipController for skip/fast-forward integration
+  function cardManagerDrainer(){
+    let didWork = false;
+    
+    // Cancel all pending timeouts
+    if(CardManager.__pendingTimeouts && CardManager.__pendingTimeouts.length > 0){
+      CardManager.cancelAllTimeouts();
+      didWork = true;
+    }
+    
+    // Clear current card if one exists
+    if(CardManager.currentCard){
+      CardManager.clear(true); // Immediate clear, no animation
+      didWork = true;
+    }
+    
+    return didWork;
+  }
+  
+  // Register drainer when SkipController is available
+  if(global.SkipController && typeof global.SkipController.registerDrainer === 'function'){
+    global.SkipController.registerDrainer('cardManager', cardManagerDrainer);
+    console.info('[CardManager] ✓ Drainer registered with SkipController');
+  }
   
   // Debug: Log card manager state every 5 seconds in dev mode
   if(global.location && global.location.hostname === 'localhost'){
