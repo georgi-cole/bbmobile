@@ -688,6 +688,16 @@
       console.info('[social.js wrapper] ◼ Detected leaving social_intermission via setPhase');
       
       if(global.SocialManeuvers?.isEnabled?.()){
+        // HIDE SOCIAL MODULE BEFORE SHOWING SUMMARY (PR #XXX fix)
+        if(global.SocialManeuvers?.ensureSocialModuleHidden){
+          try{
+            global.SocialManeuvers.ensureSocialModuleHidden();
+            console.info('[social.js wrapper] ✓ Called ensureSocialModuleHidden');
+          }catch(e){
+            console.error('[social.js wrapper] ensureSocialModuleHidden failed:', e);
+          }
+        }
+        
         // Call onSocialPhaseEnd if not already called
         if(global.SocialManeuvers?.onSocialPhaseEnd && !global.game?.__socialPhaseEndCalled){
           try{
