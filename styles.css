@@ -5399,7 +5399,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
 
 /* ========== Rules modal ========== */
 .rulesDim{
-  position:fixed; inset:0; z-index:420;
+  position:fixed; inset:0; z-index:10050;
   display:none; align-items:center; justify-content:center;
   background: radial-gradient(120% 120% at 50% 10%, rgba(2,6,10,.78), rgba(0,0,0,.92));
   backdrop-filter: blur(2px);

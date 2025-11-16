@@ -114,6 +114,7 @@
     panel.innerHTML = `
       <div class="profile-modal-header">
         <h2 class="profile-modal-title">Create Your Profile</h2>
+        <button class="profile-modal-close" id="profileCloseBtn" title="Close" aria-label="Close">✕</button>
       </div>
       <div class="profile-modal-body">
         <div class="profile-avatar-upload" id="avatarUploadContainer"></div>
@@ -223,6 +224,20 @@
     cancelBtn.onclick = () => {
       showProfileList(preselectId);
     };
+    
+    // Wire close button (X)
+    const closeBtn = panel.querySelector('#profileCloseBtn');
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        // Check if profiles exist - if not, just hide modal
+        const profiles = global.ProfileStorage.getAllProfiles();
+        if (profiles.length > 0) {
+          showProfileList(preselectId);
+        } else {
+          hideModal();
+        }
+      };
+    }
   }
 
   // Show profile list
@@ -270,6 +285,7 @@
     panel.innerHTML = `
       <div class="profile-modal-header">
         <h2 class="profile-modal-title">Select Profile</h2>
+        <button class="profile-modal-close" id="profileCloseBtn" title="Close" aria-label="Close">✕</button>
       </div>
       <div class="profile-modal-body">
         ${profiles.length > 0 ? `
@@ -345,6 +361,14 @@
         onGuestCallback();
       }
     };
+    
+    // Wire close button
+    const closeBtn = panel.querySelector('#profileCloseBtn');
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        hideModal();
+      };
+    }
   }
 
   // Create modal element

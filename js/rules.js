@@ -13,14 +13,14 @@
   function isRulesShown(){
     try{ 
       return sessionStorage.getItem(RULES_SHOWN_KEY) === '1' || global.__bbRulesShown === true; 
-    }catch{ 
+    }catch(err) { 
       return !!global.__bbRulesShown; 
     }
   }
   
   function markRulesShown(){
     global.__bbRulesShown = true;
-    try{ sessionStorage.setItem(RULES_SHOWN_KEY, '1'); }catch{}
+    try{ sessionStorage.setItem(RULES_SHOWN_KEY, '1'); }catch(err){ /* ignore */ }
   }
 
   function ensureModal() {
@@ -66,7 +66,7 @@
         e.preventDefault();
         e.stopPropagation();
         // Focus the OK button to guide the user
-        try { ok.focus(); } catch {}
+        try { ok.focus(); } catch(err) { /* ignore */ }
       }
     });
 
@@ -96,7 +96,7 @@
         } else {
           // Keep focus in panel
           e.preventDefault();
-          try { ok.focus(); } catch {}
+          try { ok.focus(); } catch(err) { /* ignore */ }
         }
       }
     });
@@ -293,6 +293,12 @@
   }
 
   function showRulesModal() {
+    // Prevent showing rules if Play button has been pressed (game is starting)
+    if (global.__bbPlayInitiated) {
+      console.info('[rules] Play already initiated — skipping rules modal');
+      return;
+    }
+    
     const dim = ensureModal();
     const panel = dim.querySelector('.rulesPanel');
     const body = dim.querySelector('.rulesBody');
@@ -313,8 +319,8 @@
     document.body.style.overflow = 'hidden';
 
     // Focus handling
-    try { lastFocusEl = document.activeElement; } catch { lastFocusEl = null; }
-    setTimeout(() => { try { ok.focus(); } catch {} }, 100);
+    try { lastFocusEl = document.activeElement; } catch(err) { lastFocusEl = null; }
+    setTimeout(() => { try { ok.focus(); } catch(err) { /* ignore */ } }, 100);
 
     ok.onclick = () => {
       hideRulesModal();
@@ -339,7 +345,7 @@
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
       // Restore focus
-      try { lastFocusEl && lastFocusEl.focus && lastFocusEl.focus(); } catch {}
+      try { lastFocusEl && lastFocusEl.focus && lastFocusEl.focus(); } catch(err) { /* ignore */ }
       
       // Dispatch event that rules were acknowledged
       try {
@@ -354,6 +360,13 @@
 
   // Listen for intro finished event
   function setupIntroListener() {
+    // Check suppression flag first (set by suppress-auto-rules.js)
+    if (global.__bbSuppressAutoRules) {
+      console.info('[rules] __bbSuppressAutoRules is true — skipping intro listener');
+      markRulesShown(); // Mark as shown to prevent fallback
+      return;
+    }
+    
     // Only set up listener if autoShowRulesOnStart is enabled
     const cfg = (global.game && global.game.cfg) || {};
     if (!cfg.autoShowRulesOnStart) {
@@ -374,7 +387,7 @@
       return;
     }
     
-    window.addEventListener('bb:intro:finished', function(e) {
+    window.addEventListener('bb:intro:finished', function() {
       console.info('[rules] bb:intro:finished received');
       introFinishedReceived = true;
       
@@ -389,6 +402,13 @@
 
   // Fallback: wrap startOpeningSequence and show rules if no event arrives
   function setupFallback() {
+    // Check suppression flag first (set by suppress-auto-rules.js)
+    if (global.__bbSuppressAutoRules) {
+      console.info('[rules] __bbSuppressAutoRules is true — skipping fallback');
+      markRulesShown(); // Mark as shown to prevent any auto-show
+      return;
+    }
+    
     // Only set up fallback if autoShowRulesOnStart is enabled
     const cfg = (global.game && global.game.cfg) || {};
     if (!cfg.autoShowRulesOnStart) {

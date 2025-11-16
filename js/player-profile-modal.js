@@ -6,8 +6,6 @@
 (function (global) {
   'use strict';
 
-  let profileSelected = false;
-
   // Show toast notification
   function showToast(message, duration = 3000) {
     const toast = document.createElement('div');
@@ -41,16 +39,38 @@
   // Handle profile selection
   function handleProfileSelect(profile) {
     global.ProfileService.setCurrentProfile(profile);
-    profileSelected = true;
-    startGame();
+    
+    // Only start game if Play button was pressed
+    // Otherwise, just close the modal and return to hub
+    if (global.__bbPlayInitiated) {
+      console.info('[player-profile-modal] Play was initiated, starting game with selected profile');
+      startGame();
+    } else {
+      console.info('[player-profile-modal] Play not initiated yet, closing modal and returning to hub');
+      // Close the modal
+      if (global.ProfileModal && typeof global.ProfileModal.hide === 'function') {
+        global.ProfileModal.hide();
+      }
+    }
   }
 
   // Handle guest mode
   function handleGuestMode() {
     global.ProfileService.setGuestMode();
-    profileSelected = true;
     showToast('⚠️ Playing as Guest - Progress will not be saved');
-    startGame();
+    
+    // Only start game if Play button was pressed
+    // Otherwise, just close the modal and return to hub
+    if (global.__bbPlayInitiated) {
+      console.info('[player-profile-modal] Play was initiated, starting game in guest mode');
+      startGame();
+    } else {
+      console.info('[player-profile-modal] Play not initiated yet, closing modal and returning to hub');
+      // Close the modal
+      if (global.ProfileModal && typeof global.ProfileModal.hide === 'function') {
+        global.ProfileModal.hide();
+      }
+    }
   }
 
   // Start the game
@@ -163,8 +183,6 @@
   // Expose showProfileModal for the topbar "Switch Profile" button
   global.showProfileModal = function() {
     console.info('[player-profile-modal] showProfileModal called');
-    // Reset flag to allow re-showing the modal
-    profileSelected = false;
     showProfileSelectionModal();
   };
 
