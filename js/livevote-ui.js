@@ -351,11 +351,7 @@
     state.container = container;
     state.stage = stage;
     
-    // Clear any existing lv2 UI
-    const existingLv2 = tv.querySelector('.lv2-overlay');
-    if (existingLv2) existingLv2.remove();
-    
-    // Append to TV
+    // Append to TV (existing lv2 already removed at start of renderPanel)
     tv.appendChild(overlay);
 
     // Setup ResizeObserver for responsive scaling
