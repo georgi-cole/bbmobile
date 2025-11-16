@@ -117,6 +117,13 @@
     });
   }
 
+  /**
+   * Build the cast of players and initialize main game UI.
+   * IMPORTANT: This function is now deferred until after the Play button is pressed.
+   * It is called by StartupFlow.buildMainScreen() after gating checks pass.
+   * It should NOT be called during initial bootstrap to prevent main screen from showing
+   * before the user has seen the intro video and pressed Play.
+   */
   function buildCast(){
     ensureGame();
     const g=global.game;
@@ -200,6 +207,9 @@
     global.updateHud?.();
     global.renderPanel?.();
   }
+  
+  // Expose buildCast globally so StartupFlow can call it
+  global.buildCast = buildCast;
 
   function rebuildGame(preservePlayers=true){
     ensureGame();
@@ -749,30 +759,21 @@
       // as they would read from UI defaults and overwrite the loaded config.
       // They should only be called when user actually changes settings.
 
-      buildCast();
+      // IMPORTANT: Do NOT call buildCast() here during initial boot.
+      // The main screen build is now deferred until after Play is pressed.
+      // StartupFlow will call buildCast() after the user completes the intro sequence.
+      // This prevents the main game elements from flashing before the intro hub.
 
       wireButtons();
       wireSettingsTabs();
       
-      // Initialize BackgroundTheme service
-      if(typeof global.BackgroundTheme !== 'undefined' && typeof global.BackgroundTheme.init === 'function'){
-        global.BackgroundTheme.init({ bus: global.bbGameBus });
-        console.info('[Bootstrap] BackgroundTheme initialized');
-        
-        // Sync with config setting
-        const adaptiveSetting = global.game.cfg.adaptiveBackground;
-        if(adaptiveSetting !== undefined){
-          global.BackgroundTheme.setAdaptive(adaptiveSetting);
-        }
+      // Initialize StartupFlow controller
+      if(typeof global.StartupFlow !== 'undefined' && typeof global.StartupFlow.init === 'function'){
+        global.StartupFlow.init();
+        console.info('[Bootstrap] StartupFlow initialized');
       }
       
-      // Initialize IntroScreen
-      if(typeof global.IntroScreen !== 'undefined' && typeof global.IntroScreen.init === 'function'){
-        global.IntroScreen.init({ bus: global.bbGameBus });
-        console.info('[Bootstrap] IntroScreen initialized');
-      }
-      
-      // Wire up IntroScreen to show after intro video
+      // Wire up IntroScreen to show after intro video (for legacy compatibility)
       wireIntroScreenFlow();
       
       (function keepAlive(){

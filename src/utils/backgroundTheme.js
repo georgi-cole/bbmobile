@@ -20,7 +20,9 @@
     sunset: 'sunset-background.png',
     night: 'night-background.png',
     rain: 'rainy-background.png',
-    snow: 'nisght-snow-background.png', // TODO: Rename file to night-snow-background.png in follow-up PR
+    // TODO: Rename asset file from nisght-snow-background.png to night-snow-background.png
+    // For now, keep using the misspelled filename to avoid breaking the app
+    snow: 'nisght-snow-background.png',
     xmasDay: 'xmas-day-background.png',
     xmasy: 'xmasy-background.png',
     xmasyNight: 'xmasy-night-background.png'
