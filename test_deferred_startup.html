@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deferred Startup Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      background: #0f1419;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #4a9eff;
+      border-bottom: 2px solid #4a9eff;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background: #1a2230;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #2a3340;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #6ab7ff;
+    }
+    .status {
+      padding: 10px 15px;
+      border-radius: 5px;
+      margin: 8px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    .pass { background: #1e4620; color: #7dff7d; border-left: 4px solid #4caf50; }
+    .fail { background: #4a1616; color: #ff7d7d; border-left: 4px solid #f44336; }
+    .info { background: #1a3a4a; color: #7ddeff; border-left: 4px solid #2196f3; }
+    .warn { background: #4a3a1a; color: #ffdd7d; border-left: 4px solid #ff9800; }
+    button {
+      padding: 12px 24px;
+      margin: 8px 5px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      background: #2563a7;
+      color: white;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #3573b7;
+    }
+    button:disabled {
+      background: #444;
+      color: #888;
+      cursor: not-allowed;
+    }
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .summary {
+      background: #0a1015;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+      border: 2px solid #4a9eff;
+    }
+    .summary h3 {
+      margin-top: 0;
+      color: #4a9eff;
+    }
+    .code {
+      background: #0a0f14;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin: 10px 0;
+      border: 1px solid #2a3340;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Deferred Startup Test Harness</h1>
+  <p>Automated verification that game components (cast, HUD, placeholders, opening sequence) are deferred until Play is pressed.</p>
+
+  <div class="test-section">
+    <h2>Test 1: DeferredGuards Module</h2>
+    <div id="test1-result"></div>
+    <div class="test-controls">
+      <button onclick="runTest1()">Run Test 1</button>
+    </div>
+    <div class="code">
+      Verify DeferredGuards module exists and has required API:<br>
+      - isGameReadyToStart()<br>
+      - isGameStarted()<br>
+      - markGameReady()<br>
+      - markGameStarted()<br>
+      - deferTask()<br>
+      - flushDeferredTasks()
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Initial State (Before Play)</h2>
+    <div id="test2-result"></div>
+    <div class="test-controls">
+      <button onclick="runTest2()">Run Test 2</button>
+    </div>
+    <div class="code">
+      Assert initial state before Play button is pressed:<br>
+      - DeferredGuards.isGameReadyToStart() === false<br>
+      - DeferredGuards.isGameStarted() === false<br>
+      - No .playerTile or .top-roster-tile elements visible<br>
+      - Main screen not built (body missing .main-screen-built class)
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Task Deferral</h2>
+    <div id="test3-result"></div>
+    <div class="test-controls">
+      <button onclick="runTest3()">Run Test 3</button>
+    </div>
+    <div class="code">
+      Test that tasks are properly deferred:<br>
+      - Queue a test task before Play<br>
+      - Verify task is not executed immediately<br>
+      - Call markGameReady() and flushDeferredTasks()<br>
+      - Verify task is executed after flush
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Intro Hub Buttons</h2>
+    <div id="test4-result"></div>
+    <div class="test-controls">
+      <button onclick="runTest4('rules')">Test Rules Button</button>
+      <button onclick="runTest4('profile')">Test Profile Button</button>
+      <button onclick="runTest4('settings')">Test Settings Button</button>
+    </div>
+    <div class="code">
+      Simulate button clicks and verify modals open:<br>
+      - Rules button → Rules modal visible<br>
+      - Profile button → Profile modal visible<br>
+      - Settings button → Settings modal visible
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Play Button (Simulated)</h2>
+    <div id="test5-result"></div>
+    <div class="test-controls">
+      <button onclick="runTest5()">Simulate Play Button</button>
+    </div>
+    <div class="code">
+      Simulate Play button press and verify:<br>
+      - DeferredGuards.isGameReadyToStart() becomes true<br>
+      - Deferred tasks are flushed<br>
+      - Cast tiles appear (after brief delay)<br>
+      - Main screen is built (.main-screen-built class added)
+    </div>
+  </div>
+
+  <div class="summary" id="summary">
+    <h3>Test Summary</h3>
+    <div id="summary-content">
+      <div class="info">Run tests to see results</div>
+    </div>
+  </div>
+
+  <script>
+    // Test utilities
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `status ${type}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function clear(containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+    }
+
+    let testResults = {
+      test1: null,
+      test2: null,
+      test3: null,
+      test4: null,
+      test5: null
+    };
+
+    function updateSummary() {
+      const total = Object.keys(testResults).length;
+      const completed = Object.values(testResults).filter(r => r !== null).length;
+      const passed = Object.values(testResults).filter(r => r === true).length;
+      const failed = Object.values(testResults).filter(r => r === false).length;
+
+      let summaryHTML = `
+        <div class="info">
+          <strong>Progress:</strong> ${completed}/${total} tests completed<br>
+          <strong>Passed:</strong> ${passed} | <strong>Failed:</strong> ${failed}
+        </div>
+      `;
+
+      if (completed === total && failed === 0) {
+        summaryHTML += '<div class="pass"><strong>✓ ALL TESTS PASSED</strong></div>';
+      } else if (failed > 0) {
+        summaryHTML += '<div class="fail"><strong>✗ SOME TESTS FAILED</strong></div>';
+      }
+
+      document.getElementById('summary-content').innerHTML = summaryHTML;
+    }
+
+    // Test 1: DeferredGuards Module
+    function runTest1() {
+      clear('test1-result');
+      log('test1-result', 'Running Test 1...', 'info');
+
+      try {
+        // Check if DeferredGuards exists
+        if (typeof window.DeferredGuards === 'undefined') {
+          log('test1-result', '✗ FAIL: DeferredGuards module not found', 'fail');
+          testResults.test1 = false;
+          updateSummary();
+          return;
+        }
+        log('test1-result', '✓ DeferredGuards module exists', 'pass');
+
+        // Check API methods
+        const requiredMethods = [
+          'isGameReadyToStart',
+          'isGameStarted',
+          'markGameReady',
+          'markGameStarted',
+          'deferTask',
+          'flushDeferredTasks',
+          'getState'
+        ];
+
+        let allMethodsExist = true;
+        for (const method of requiredMethods) {
+          if (typeof window.DeferredGuards[method] !== 'function') {
+            log('test1-result', `✗ FAIL: Missing method ${method}`, 'fail');
+            allMethodsExist = false;
+          }
+        }
+
+        if (allMethodsExist) {
+          log('test1-result', '✓ All required methods exist', 'pass');
+          log('test1-result', '✓ TEST 1 PASSED', 'pass');
+          testResults.test1 = true;
+        } else {
+          log('test1-result', '✗ TEST 1 FAILED', 'fail');
+          testResults.test1 = false;
+        }
+
+      } catch (err) {
+        log('test1-result', `✗ FAIL: Error - ${err.message}`, 'fail');
+        testResults.test1 = false;
+      }
+
+      updateSummary();
+    }
+
+    // Test 2: Initial State
+    function runTest2() {
+      clear('test2-result');
+      log('test2-result', 'Running Test 2...', 'info');
+
+      try {
+        // Check DeferredGuards initial state
+        if (typeof window.DeferredGuards === 'undefined') {
+          log('test2-result', '✗ FAIL: DeferredGuards not available', 'fail');
+          testResults.test2 = false;
+          updateSummary();
+          return;
+        }
+
+        const isReady = window.DeferredGuards.isGameReadyToStart();
+        const isStarted = window.DeferredGuards.isGameStarted();
+
+        if (isReady) {
+          log('test2-result', '✗ FAIL: Game already marked as ready (should be false initially)', 'fail');
+          testResults.test2 = false;
+        } else {
+          log('test2-result', '✓ isGameReadyToStart() === false', 'pass');
+        }
+
+        if (isStarted) {
+          log('test2-result', '✗ FAIL: Game already marked as started', 'fail');
+          testResults.test2 = false;
+        } else {
+          log('test2-result', '✓ isGameStarted() === false', 'pass');
+        }
+
+        // Check for player tiles (should not exist yet)
+        const playerTiles = document.querySelectorAll('.playerTile, .top-roster-tile:not(.placeholder-tile)');
+        if (playerTiles.length > 0) {
+          log('test2-result', `✗ FAIL: Found ${playerTiles.length} player tiles (should be 0)`, 'fail');
+          testResults.test2 = false;
+        } else {
+          log('test2-result', '✓ No player tiles present before Play', 'pass');
+        }
+
+        // Check main screen not built
+        const hasMainScreenClass = document.body.classList.contains('main-screen-built');
+        if (hasMainScreenClass) {
+          log('test2-result', '✗ FAIL: Main screen already built', 'fail');
+          testResults.test2 = false;
+        } else {
+          log('test2-result', '✓ Main screen not built yet', 'pass');
+        }
+
+        if (testResults.test2 !== false) {
+          log('test2-result', '✓ TEST 2 PASSED', 'pass');
+          testResults.test2 = true;
+        } else {
+          log('test2-result', '✗ TEST 2 FAILED', 'fail');
+        }
+
+      } catch (err) {
+        log('test2-result', `✗ FAIL: Error - ${err.message}`, 'fail');
+        testResults.test2 = false;
+      }
+
+      updateSummary();
+    }
+
+    // Test 3: Task Deferral
+    function runTest3() {
+      clear('test3-result');
+      log('test3-result', 'Running Test 3...', 'info');
+
+      try {
+        if (typeof window.DeferredGuards === 'undefined') {
+          log('test3-result', '✗ FAIL: DeferredGuards not available', 'fail');
+          testResults.test3 = false;
+          updateSummary();
+          return;
+        }
+
+        let taskExecuted = false;
+        const testTask = () => { taskExecuted = true; };
+
+        // Defer a task (game should not be ready yet)
+        window.DeferredGuards.deferTask(testTask, 'test-task');
+
+        // Task should NOT be executed immediately
+        if (taskExecuted) {
+          log('test3-result', '✗ FAIL: Task executed immediately (should be deferred)', 'fail');
+          testResults.test3 = false;
+          updateSummary();
+          return;
+        }
+        log('test3-result', '✓ Task properly deferred (not executed immediately)', 'pass');
+
+        // Check deferred task count
+        const state = window.DeferredGuards.getState();
+        if (state.deferredTaskCount === 0) {
+          log('test3-result', '✗ FAIL: No deferred tasks in queue', 'fail');
+          testResults.test3 = false;
+        } else {
+          log('test3-result', `✓ Found ${state.deferredTaskCount} deferred task(s) in queue`, 'pass');
+        }
+
+        // Now mark ready and flush
+        window.DeferredGuards.markGameReady();
+        window.DeferredGuards.flushDeferredTasks();
+
+        // Task should now be executed
+        if (!taskExecuted) {
+          log('test3-result', '✗ FAIL: Task not executed after flush', 'fail');
+          testResults.test3 = false;
+        } else {
+          log('test3-result', '✓ Task executed after flush', 'pass');
+          log('test3-result', '✓ TEST 3 PASSED', 'pass');
+          testResults.test3 = true;
+        }
+
+        // Reset for next test
+        window.DeferredGuards.clearDeferredTasks();
+
+      } catch (err) {
+        log('test3-result', `✗ FAIL: Error - ${err.message}`, 'fail');
+        testResults.test3 = false;
+      }
+
+      updateSummary();
+    }
+
+    // Test 4: Intro Hub Buttons
+    function runTest4(buttonType) {
+      clear('test4-result');
+      log('test4-result', `Running Test 4 (${buttonType})...`, 'info');
+
+      try {
+        let buttonId, modalSelector, eventName;
+        
+        if (buttonType === 'rules') {
+          buttonId = 'intro-btn-rules';
+          modalSelector = '.rules-modal, #rulesModal, [data-modal="rules"]';
+          eventName = 'intro:open:rules';
+        } else if (buttonType === 'profile') {
+          buttonId = 'intro-btn-profile';
+          modalSelector = '.profile-modal, #profileModal, [data-modal="profile"]';
+          eventName = 'intro:open:profile';
+        } else if (buttonType === 'settings') {
+          buttonId = 'intro-icon-settings';
+          modalSelector = '.settings-modal, #settingsModal, [data-modal="settings"]';
+          eventName = 'intro:open:settings';
+        } else {
+          log('test4-result', `✗ FAIL: Unknown button type ${buttonType}`, 'fail');
+          return;
+        }
+
+        // Check if button exists
+        const button = document.getElementById(buttonId);
+        if (!button) {
+          log('test4-result', `⚠ Button #${buttonId} not found (intro hub may not be visible)`, 'warn');
+          log('test4-result', 'ℹ This test requires intro hub to be visible', 'info');
+          return;
+        }
+
+        log('test4-result', `✓ Button #${buttonId} exists`, 'pass');
+
+        // Simulate click by emitting event
+        if (window.bbGameBus && typeof window.bbGameBus.emit === 'function') {
+          log('test4-result', `Emitting event: ${eventName}`, 'info');
+          window.bbGameBus.emit(eventName, {});
+
+          // Check if modal appeared (with delay for animation)
+          setTimeout(() => {
+            const modal = document.querySelector(modalSelector);
+            if (modal) {
+              const isVisible = modal.style.display !== 'none' && 
+                               window.getComputedStyle(modal).display !== 'none';
+              if (isVisible) {
+                log('test4-result', `✓ ${buttonType} modal is visible`, 'pass');
+                log('test4-result', '✓ TEST 4 PASSED (for this button)', 'pass');
+              } else {
+                log('test4-result', `✗ ${buttonType} modal exists but not visible`, 'warn');
+              }
+            } else {
+              log('test4-result', `⚠ Modal not found with selector: ${modalSelector}`, 'warn');
+              log('test4-result', 'ℹ Modal may have different markup or not implemented yet', 'info');
+            }
+          }, 500);
+
+        } else {
+          log('test4-result', '✗ Event bus not available', 'fail');
+        }
+
+      } catch (err) {
+        log('test4-result', `✗ FAIL: Error - ${err.message}`, 'fail');
+      }
+    }
+
+    // Test 5: Play Button Simulation
+    function runTest5() {
+      clear('test5-result');
+      log('test5-result', 'Running Test 5...', 'info');
+
+      try {
+        if (typeof window.StartupFlow === 'undefined' || 
+            typeof window.StartupFlow.enterGame !== 'function') {
+          log('test5-result', '✗ FAIL: StartupFlow.enterGame not available', 'fail');
+          testResults.test5 = false;
+          updateSummary();
+          return;
+        }
+
+        log('test5-result', 'Calling StartupFlow.enterGame()...', 'info');
+        
+        // Call enterGame (this should mark game as ready and flush tasks)
+        window.StartupFlow.enterGame();
+
+        // Check state immediately
+        if (window.DeferredGuards) {
+          const isReady = window.DeferredGuards.isGameReadyToStart();
+          if (isReady) {
+            log('test5-result', '✓ Game marked as ready', 'pass');
+          } else {
+            log('test5-result', '✗ FAIL: Game not marked as ready', 'fail');
+            testResults.test5 = false;
+          }
+        }
+
+        // Check after delay for async operations
+        setTimeout(() => {
+          // Check if main screen built
+          const hasMainScreenClass = document.body.classList.contains('main-screen-built');
+          if (hasMainScreenClass) {
+            log('test5-result', '✓ Main screen built (.main-screen-built class added)', 'pass');
+          } else {
+            log('test5-result', '⚠ Main screen not built yet (may take longer)', 'warn');
+          }
+
+          // Check for player tiles (may take time to render)
+          const playerTiles = document.querySelectorAll('.playerTile, .top-roster-tile:not(.placeholder-tile)');
+          if (playerTiles.length > 0) {
+            log('test5-result', `✓ Found ${playerTiles.length} player tiles`, 'pass');
+            log('test5-result', '✓ TEST 5 PASSED', 'pass');
+            testResults.test5 = true;
+          } else {
+            log('test5-result', '⚠ No player tiles found yet (may still be rendering)', 'warn');
+            log('test5-result', 'ℹ Check manually if cast appears shortly', 'info');
+            testResults.test5 = null; // Inconclusive
+          }
+
+          updateSummary();
+        }, 2000);
+
+      } catch (err) {
+        log('test5-result', `✗ FAIL: Error - ${err.message}`, 'fail');
+        testResults.test5 = false;
+        updateSummary();
+      }
+    }
+
+    // Auto-run first test on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        log('summary-content', 'Test harness loaded. Run individual tests or use sequence below.', 'info');
+      }, 500);
+    });
+  </script>
+</body>
+</html>

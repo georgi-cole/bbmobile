@@ -201,10 +201,13 @@
 <!-- Randomize AI cast (subset + order) at game start -->
 <script defer src="js/cast-randomizer.js"></script>
 
+<!-- Deferred Guards must load early, before any module that checks it -->
+<script defer src="src/startup/deferredGuards.js"></script>
+
 <!-- Hide roster until the opening or fast-cast completes -->
 <script defer src="js/roster-visibility.js"></script>
 
-<!-- Show "BIG BROTHER" placeholder tiles before game starts -->
+<!-- Show "BIG BROTHER" placeholder tiles before game starts (DEFERRED) -->
 <script defer src="js/roster-placeholders.js"></script>
 
 <script defer src="js/ui.hud-and-router.js?v=bio-panel-2"></script>
@@ -422,6 +425,7 @@
 <!-- Intro Hub Screen System -->
 <script defer src="src/utils/backgroundTheme.js"></script>
 <script defer src="src/ui/IntroScreen.js"></script>
+<!-- DeferredGuards loaded earlier (before roster-placeholders) -->
 <script defer src="src/startup/flow.js"></script>
 
 <script defer src="js/logs-helper.js?v=fixes-5"></script>

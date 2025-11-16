@@ -44,6 +44,7 @@ export async function initialize() {
 export async function recordEvent(ruleId, amount, meta) {
     // Check if in guest mode - if so, return no-op event without persisting
     if (isGuestMode()) {
+        console.info(`[guest-xp] XP event suppressed in guest mode: ${ruleId} (+${amount} XP)`);
         const noopEvent = {
             id: generateId(),
             timestamp: Date.now(),

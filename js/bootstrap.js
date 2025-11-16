@@ -128,10 +128,26 @@
    * before the user has seen the intro video and pressed Play.
    */
   function buildCast(){
+    // DEFERRED STARTUP GUARD: Check if game is ready to start
+    // If not ready, defer cast building until after Play button is pressed
+    if (global.DeferredGuards && !global.DeferredGuards.isGameReadyToStart()) {
+      console.info('[buildCast] Game not ready, deferring cast build');
+      global.DeferredGuards.deferTask(() => {
+        console.info('[buildCast] Executing deferred cast build');
+        buildCastInternal();
+      }, 'buildCast');
+      return;
+    }
+
+    // Game is ready or guard not available, build normally
+    buildCastInternal();
+  }
+
+  function buildCastInternal(){
     ensureGame();
     const g=global.game;
     if(typeof global.pushPlayer!=='function' || typeof global.initAffinities!=='function'){
-      setTimeout(buildCast, 30);
+      setTimeout(buildCastInternal, 30);
       return;
     }
     g.players.length = 0;

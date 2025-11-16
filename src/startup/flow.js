@@ -255,6 +255,21 @@
   async function enterGame() {
     console.info('[StartupFlow] enterGame() called');
 
+    // Prevent duplicate calls (idempotence check)
+    if (g.DeferredGuards && g.DeferredGuards.isGameStarted()) {
+      console.warn('[StartupFlow] Game already started, ignoring duplicate enterGame() call');
+      return;
+    }
+
+    // Mark game as ready to start (unblocks deferred tasks)
+    if (g.DeferredGuards) {
+      g.DeferredGuards.markGameReady();
+    } else {
+      console.warn('[StartupFlow] DeferredGuards not available, proceeding without guards');
+      // Set legacy flag for backward compatibility
+      g.__bbGameReadyToStart = true;
+    }
+
     // Set autoShowRulesOnStart to false to prevent auto-popups
     if (g.game && g.game.cfg) {
       g.game.cfg.autoShowRulesOnStart = false;
@@ -279,6 +294,13 @@
       if (g.ProfileService) {
         g.ProfileService.setGuestMode();
       }
+      // Log guest mode marker for verification
+      console.info('[guest-xp] Guest mode active - XP events will be suppressed');
+    }
+
+    // Flush deferred tasks (HUD, roster placeholders, etc.)
+    if (g.DeferredGuards) {
+      g.DeferredGuards.flushDeferredTasks();
     }
 
     // Build/rebuild game if needed
@@ -291,6 +313,13 @@
 
     // Build main screen and start game
     buildMainScreen();
+
+    // Mark game as started (prevents duplicate starts)
+    if (g.DeferredGuards) {
+      g.DeferredGuards.markGameStarted();
+    } else {
+      g.__bbGameStarted = true;
+    }
 
     // Start opening sequence
     if (typeof g.startOpeningSequence === 'function') {
@@ -319,8 +348,9 @@
   /**
    * Check if user profile is complete.
    * @returns {boolean} True if profile is complete
+   * NOTE: Currently unused, kept for potential future gating checks
    */
-  function checkProfileComplete() {
+  function checkProfileComplete() { // eslint-disable-line no-unused-vars
     try {
       // Check if profile service is available
       if (g.ProfileService && typeof g.ProfileService.hasCompleteProfile === 'function') {

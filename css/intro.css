@@ -48,6 +48,8 @@ body:not(.main-screen-built) .topbar {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  background-color: #0a0e14; /* Fallback dark background */
+  background-image: url('../assets/skins/daily-background.png'); /* Default background */
   transition: opacity 600ms ease-in-out;
 }
 
@@ -59,6 +61,7 @@ body:not(.main-screen-built) .topbar {
 .intro-screen__bg--next {
   z-index: 2;
   opacity: 0;
+  background-image: none; /* Only current layer has default bg */
 }
 
 /* ===== Content Container ===== */

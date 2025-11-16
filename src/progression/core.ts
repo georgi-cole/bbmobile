@@ -54,6 +54,7 @@ export async function recordEvent(
 ): Promise<XPEvent> {
   // Check if in guest mode - if so, return no-op event without persisting
   if (isGuestMode()) {
+    console.info(`[guest-xp] XP event suppressed in guest mode: ${ruleId} (+${amount} XP)`);
     const noopEvent: XPEvent = {
       id: generateId(),
       timestamp: Date.now(),
