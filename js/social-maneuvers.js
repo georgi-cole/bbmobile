@@ -2923,6 +2923,13 @@
     // Stop the phase timer immediately
     stopSocialPhaseTimer();
     
+    // HIDE SOCIAL LAUNCHER to prevent stacking/overlap on mobile
+    const socialLauncher = document.getElementById('socializeLauncher');
+    if(socialLauncher){
+      socialLauncher.style.display = 'none';
+      console.info('[sm-phase-skip] ✓ Social launcher hidden during auto-skip');
+    }
+    
     // Find faux TV container with fallbacks
     const tvContainer = document.querySelector('[data-sm-faux-tv]')
                      || document.querySelector('#fauxTv')
@@ -3510,6 +3517,13 @@
       return;
     }
     socialSummaryOpen = true;
+
+    // HIDE SOCIAL LAUNCHER to prevent stacking/overlap on mobile
+    const socialLauncher = document.getElementById('socializeLauncher');
+    if(socialLauncher){
+      socialLauncher.style.display = 'none';
+      console.info('[social-maneuvers] ✓ Social launcher hidden to prevent overlay stacking');
+    }
 
     // Create summary card UI
     const deck = document.getElementById('decisionDeck') || createSummaryDeck();
