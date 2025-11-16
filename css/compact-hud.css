@@ -197,6 +197,11 @@
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  /* Fallback background for when progress depletes */
+  background: rgba(60, 80, 100, 0.3);
+  /* Prevent shrinking below content size */
+  flex-shrink: 0;
+  min-width: fit-content;
 }
 
 /* Progress bar background - fills entire pill, depletes over time */
@@ -228,6 +233,11 @@
   z-index: 1;
   white-space: nowrap;
   transition: opacity 0.2s ease;
+  /* Enhanced text visibility with multiple shadows for glow effect */
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.8),
+    0 0 4px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(0, 0, 0, 0.4);
 }
 
 .tv-skip-timer-button:hover:not(:disabled) {
@@ -257,6 +267,11 @@
   z-index: 1;
   white-space: nowrap;
   min-width: 60px;
+  /* Enhanced text visibility with multiple shadows for glow effect */
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.8),
+    0 0 4px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(0, 0, 0, 0.4);
 }
 
 /* Separator line between skip and timer */
