@@ -121,14 +121,13 @@
   }
 
   // Listen for rules acknowledgment to trigger profile modal
+  // NOTE: This auto-show behavior is disabled per startup flow refactor.
+  // Profile modal should only open via explicit user action (button clicks).
   function setupRulesListener() {
-    console.info('[player-profile-modal] setting up rules listener on window');
-    window.addEventListener('bb:rules:acknowledged', function () {
-      console.info('[player-profile-modal] bb:rules:acknowledged event received on window');
-      // Reset profileSelected flag to ensure modal shows
-      profileSelected = false;
-      showProfileSelectionModal();
-    });
+    console.info('[player-profile-modal] rules listener disabled - profile modal only opens via buttons');
+    // Listener removed - profile modal should only show when user explicitly clicks Profile button
+    // Old behavior: auto-show after rules acknowledged
+    // New behavior: manual trigger only (via showProfileModal())
   }
 
   // Remove any static "Create Your Profile" text in the UI

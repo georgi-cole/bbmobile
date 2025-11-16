@@ -11,6 +11,17 @@ function generateId() {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 /**
+ * Check if currently in guest mode (no XP persistence)
+ */
+export function isGuestMode() {
+    try {
+        return localStorage.getItem('bb.guestMode') === 'true';
+    }
+    catch {
+        return false;
+    }
+}
+/**
  * Initialize the progression system
  */
 export async function initialize() {
@@ -31,6 +42,22 @@ export async function initialize() {
  * Record an XP event
  */
 export async function recordEvent(ruleId, amount, meta) {
+    // Check if in guest mode - if so, return no-op event without persisting
+    if (isGuestMode()) {
+        const noopEvent = {
+            id: generateId(),
+            timestamp: Date.now(),
+            ruleId,
+            amount,
+            week: meta?.week,
+            season: meta?.season,
+            meta: {
+                ...meta,
+                guestMode: true
+            }
+        };
+        return noopEvent;
+    }
     const event = {
         id: generateId(),
         timestamp: Date.now(),

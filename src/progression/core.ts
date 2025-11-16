@@ -15,6 +15,17 @@ function generateId(): string {
 }
 
 /**
+ * Check if currently in guest mode (no XP persistence)
+ */
+export function isGuestMode(): boolean {
+  try {
+    return localStorage.getItem('bb.guestMode') === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Initialize the progression system
  */
 export async function initialize(): Promise<void> {
@@ -41,6 +52,23 @@ export async function recordEvent(
   amount: number,
   meta?: { week?: number; season?: number; [key: string]: unknown }
 ): Promise<XPEvent> {
+  // Check if in guest mode - if so, return no-op event without persisting
+  if (isGuestMode()) {
+    const noopEvent: XPEvent = {
+      id: generateId(),
+      timestamp: Date.now(),
+      ruleId,
+      amount,
+      week: meta?.week,
+      season: meta?.season,
+      meta: {
+        ...meta,
+        guestMode: true
+      }
+    };
+    return noopEvent;
+  }
+
   const event: XPEvent = {
     id: generateId(),
     timestamp: Date.now(),
