@@ -10,6 +10,9 @@
     get(k, def=null){ try{ return localStorage.getItem(k) ?? def; }catch{ return def; } },
     set(k, v){ try{ localStorage.setItem(k,v); }catch{} }
   };
+  
+  // Expose StorageSafe globally for use by other modules (e.g., StartupFlow)
+  global.StorageSafe = StorageSafe;
 
   // ---------- Ensure game ----------
   function ensureGame(){
@@ -117,6 +120,13 @@
     });
   }
 
+  /**
+   * Build the cast of players and initialize main game UI.
+   * IMPORTANT: This function is now deferred until after the Play button is pressed.
+   * It is called by StartupFlow.buildMainScreen() after gating checks pass.
+   * It should NOT be called during initial bootstrap to prevent main screen from showing
+   * before the user has seen the intro video and pressed Play.
+   */
   function buildCast(){
     ensureGame();
     const g=global.game;
@@ -200,6 +210,9 @@
     global.updateHud?.();
     global.renderPanel?.();
   }
+  
+  // Expose buildCast globally so StartupFlow can call it
+  global.buildCast = buildCast;
 
   function rebuildGame(preservePlayers=true){
     ensureGame();
@@ -559,68 +572,25 @@
     }
   }
 
-  // ---------- Intro Screen Flow ----------
+  // ---------- Intro Screen Flow (Legacy) ----------
+  // NOTE: This function is kept for backwards compatibility and non-critical button wiring.
+  // The main Play button logic is now handled by StartupFlow to ensure proper
+  // main screen deferred initialization. Other buttons (Rules, Profile, etc.) are
+  // still wired here for redundancy with StartupFlow.
   function wireIntroScreenFlow(){
-    // Show IntroScreen after the Kolequant intro video finishes
-    window.addEventListener('bb:intro:finished', function(){
-      console.info('[Bootstrap] Intro video finished, showing IntroScreen');
-      if(typeof global.IntroScreen !== 'undefined' && typeof global.IntroScreen.show === 'function'){
-        global.IntroScreen.show();
-      }
-    }, { once: true });
-
-    // Wire up IntroScreen event handlers
+    // NOTE: Do NOT show IntroScreen here - StartupFlow now handles this
+    // This event listener is kept for legacy compatibility but should not fire
+    // since StartupFlow intercepts the video end event first.
+    
+    // Wire up IntroScreen event handlers (secondary/fallback)
     if(!global.bbGameBus) return;
 
     const bus = global.bbGameBus;
 
-    // Play button - route through Rules/Profile if needed
-    bus.on('intro:play', function(){
-      console.info('[Bootstrap] Play button clicked');
-      
-      // Check if rules accepted
-      const rulesAccepted = StorageSafe.get('bb_rules_accepted', null) === 'true';
-      if(!rulesAccepted){
-        console.info('[Bootstrap] Rules not accepted, opening Rules modal');
-        // Open Rules modal
-        if(typeof global.openRulesModal === 'function'){
-          global.openRulesModal();
-        } else if(typeof global.showRules === 'function'){
-          global.showRules();
-        }
-        // After rules are accepted, they'll return to intro screen
-        return;
-      }
+    // NOTE: Play button handler removed - now handled by StartupFlow
+    // StartupFlow ensures buildMainScreen() is called before starting the game
 
-      // Check if profile is complete
-      const profileComplete = checkProfileComplete();
-      if(!profileComplete){
-        console.info('[Bootstrap] Profile incomplete, opening Profile modal');
-        // Open Profile modal
-        if(typeof global.ProfileModal !== 'undefined' && typeof global.ProfileModal.open === 'function'){
-          global.ProfileModal.open();
-        } else if(typeof global.openProfileModal === 'function'){
-          global.openProfileModal();
-        }
-        // After profile is complete, they'll return to intro screen
-        return;
-      }
-
-      // All checks passed, hide intro and start game
-      console.info('[Bootstrap] Starting game from IntroScreen');
-      if(typeof global.IntroScreen.hide === 'function'){
-        global.IntroScreen.hide();
-      }
-      
-      // Navigate to main game
-      if(typeof global.startOpeningSequence === 'function'){
-        global.startOpeningSequence();
-      } else if(typeof global.startGame === 'function'){
-        global.startGame();
-      }
-    });
-
-    // Rules button
+    // Rules button (fallback - also handled by StartupFlow)
     bus.on('intro:open:rules', function(){
       console.info('[Bootstrap] Rules button clicked');
       if(typeof global.openRulesModal === 'function'){
@@ -630,7 +600,7 @@
       }
     });
 
-    // Profile button
+    // Profile button (fallback - also handled by StartupFlow)
     bus.on('intro:open:profile', function(){
       console.info('[Bootstrap] Profile button clicked');
       if(typeof global.ProfileModal !== 'undefined' && typeof global.ProfileModal.open === 'function'){
@@ -640,7 +610,7 @@
       }
     });
 
-    // Leaderboard button
+    // Leaderboard button (fallback - also handled by StartupFlow)
     bus.on('intro:open:leaderboard', function(){
       console.info('[Bootstrap] Leaderboard button clicked');
       // Show XP/progression panel if available
@@ -653,7 +623,7 @@
       }
     });
 
-    // Settings button
+    // Settings button (fallback - also handled by StartupFlow)
     bus.on('intro:open:settings', function(){
       console.info('[Bootstrap] Settings button clicked');
       if(typeof global.openSettings === 'function'){
@@ -664,7 +634,7 @@
       }
     });
 
-    // Credits button
+    // Credits button (fallback - also handled by StartupFlow)
     bus.on('intro:open:credits', function(){
       console.info('[Bootstrap] Credits button clicked');
       if(typeof global.showCredits === 'function'){
@@ -674,7 +644,7 @@
       }
     });
 
-    // Help button
+    // Help button (fallback - also handled by StartupFlow)
     bus.on('intro:open:help', function(){
       console.info('[Bootstrap] Help button clicked');
       if(typeof global.showHelp === 'function'){
@@ -684,30 +654,7 @@
       }
     });
 
-    // Chip buttons (placeholders for future features)
-    bus.on('intro:chip:daily', function(){
-      console.info('[Bootstrap] Daily chip clicked (placeholder)');
-    });
-
-    bus.on('intro:chip:news', function(){
-      console.info('[Bootstrap] News chip clicked (placeholder)');
-    });
-  }
-
-  function checkProfileComplete(){
-    try {
-      // Check if profile service is available
-      if(typeof global.ProfileService !== 'undefined' && typeof global.ProfileService.hasCompleteProfile === 'function'){
-        return global.ProfileService.hasCompleteProfile();
-      }
-      // Fallback: check localStorage using StorageSafe
-      const profile = StorageSafe.get('bb_user_profile', null);
-      if(!profile) return false;
-      const data = JSON.parse(profile);
-      return !!(data && data.name && data.name.trim());
-    } catch {
-      return false;
-    }
+    // NOTE: Chip buttons (Daily, News) are now handled by StartupFlow
   }
 
   // ---------- Boot ----------
@@ -749,30 +696,21 @@
       // as they would read from UI defaults and overwrite the loaded config.
       // They should only be called when user actually changes settings.
 
-      buildCast();
+      // IMPORTANT: Do NOT call buildCast() here during initial boot.
+      // The main screen build is now deferred until after Play is pressed.
+      // StartupFlow will call buildCast() after the user completes the intro sequence.
+      // This prevents the main game elements from flashing before the intro hub.
 
       wireButtons();
       wireSettingsTabs();
       
-      // Initialize BackgroundTheme service
-      if(typeof global.BackgroundTheme !== 'undefined' && typeof global.BackgroundTheme.init === 'function'){
-        global.BackgroundTheme.init({ bus: global.bbGameBus });
-        console.info('[Bootstrap] BackgroundTheme initialized');
-        
-        // Sync with config setting
-        const adaptiveSetting = global.game.cfg.adaptiveBackground;
-        if(adaptiveSetting !== undefined){
-          global.BackgroundTheme.setAdaptive(adaptiveSetting);
-        }
+      // Initialize StartupFlow controller
+      if(typeof global.StartupFlow !== 'undefined' && typeof global.StartupFlow.init === 'function'){
+        global.StartupFlow.init();
+        console.info('[Bootstrap] StartupFlow initialized');
       }
       
-      // Initialize IntroScreen
-      if(typeof global.IntroScreen !== 'undefined' && typeof global.IntroScreen.init === 'function'){
-        global.IntroScreen.init({ bus: global.bbGameBus });
-        console.info('[Bootstrap] IntroScreen initialized');
-      }
-      
-      // Wire up IntroScreen to show after intro video
+      // Wire up IntroScreen to show after intro video (for legacy compatibility)
       wireIntroScreenFlow();
       
       (function keepAlive(){

@@ -157,13 +157,25 @@
       console.info('[intro-outro] skipIntros enabled, skipping intro video');
       markIntroPlayed();
       dispatchIntroFinished();
+      // Trigger startup sequence immediately (will skip to intro hub)
+      if (g.StartupFlow && typeof g.StartupFlow.startupSequence === 'function') {
+        setTimeout(() => g.StartupFlow.startupSequence(), 100);
+      }
       return;
     }
     
     if (isIntroPlayed()) return;
     const url = await pickVideoUrl(INTRO_URL, INTRO_URL_MOBILE);
     fetch(url, { method: 'HEAD', cache: 'no-store' }).then(r=>{
-      if (!r.ok) return;
+      if (!r.ok) {
+        // If video doesn't exist, trigger startup sequence anyway
+        markIntroPlayed();
+        dispatchIntroFinished();
+        if (g.StartupFlow && typeof g.StartupFlow.startupSequence === 'function') {
+          setTimeout(() => g.StartupFlow.startupSequence(), 100);
+        }
+        return;
+      }
       playVideo(url, {
         onEnd: function(){
           markIntroPlayed();
@@ -173,9 +185,21 @@
           markIntroPlayed();
           dispatchIntroFinished();
         },
-        onFail: ()=>{}
+        onFail: ()=>{
+          // Trigger startup sequence even on video failure
+          if (g.StartupFlow && typeof g.StartupFlow.startupSequence === 'function') {
+            setTimeout(() => g.StartupFlow.startupSequence(), 100);
+          }
+        }
       });
-    }).catch(()=>{});
+    }).catch(()=>{
+      // Trigger startup sequence on fetch failure
+      markIntroPlayed();
+      dispatchIntroFinished();
+      if (g.StartupFlow && typeof g.StartupFlow.startupSequence === 'function') {
+        setTimeout(() => g.StartupFlow.startupSequence(), 100);
+      }
+    });
   }
   if (document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', maybePlayIntroOnLoad, { once:true });

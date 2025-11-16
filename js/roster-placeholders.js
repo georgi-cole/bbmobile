@@ -3,6 +3,11 @@
  * - Shows normal-looking roster tiles with generic avatar silhouettes
  * - Uses same markup structure as real roster tiles for seamless transition
  * These placeholders are removed when the actual roster becomes visible.
+ * 
+ * NOTE: With the new startup flow (StartupFlow), placeholder avatars won't appear
+ * until after Play is pressed, as the main screen (including roster) is deferred
+ * until after the intro hub sequence completes.
+ * TODO: Consider whether placeholder logic is still needed given deferred main screen build.
  */
 (function(g) {
   'use strict';
