@@ -245,7 +245,11 @@
       '.leaderboardDim',
       '.helpDim',
       '.settingsDim',
-      '.confirmDim'
+      '.confirmDim',
+      '#settingsBackdrop',        // Settings modal
+      '.modal-backdrop',          // Generic modal (settings, config)
+      '.xp-modal-backdrop',       // XP/Progression modal
+      '.socialize-modal-backdrop' // Social maneuvers modal
     ];
     
     // Close each modal that's currently visible

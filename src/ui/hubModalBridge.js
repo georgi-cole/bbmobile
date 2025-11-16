@@ -19,7 +19,11 @@
     '.creditsDim',
     '.leaderboardDim',
     '.helpDim',
-    '.settingsDim'
+    '.settingsDim',
+    '#settingsBackdrop',     // Settings modal (uses .modal-backdrop)
+    '.modal-backdrop',       // Generic modal backdrop (settings, config, etc.)
+    '.xp-modal-backdrop',    // XP/Progression modal
+    '.socialize-modal-backdrop' // Social maneuvers modal
   ];
 
   const MODAL_Z_INDEX = 10050;
@@ -152,6 +156,10 @@
       .leaderboardDim { z-index: ${MODAL_Z_INDEX} !important; }
       .helpDim { z-index: ${MODAL_Z_INDEX} !important; }
       .settingsDim { z-index: ${MODAL_Z_INDEX} !important; }
+      #settingsBackdrop { z-index: ${MODAL_Z_INDEX} !important; }
+      .modal-backdrop { z-index: ${MODAL_Z_INDEX} !important; }
+      .xp-modal-backdrop { z-index: ${MODAL_Z_INDEX} !important; }
+      .socialize-modal-backdrop { z-index: ${MODAL_Z_INDEX} !important; }
       
       /* Intro screen hub - below modals */
       #introScreen,
