@@ -1065,6 +1065,30 @@
     if(content) content.innerHTML = '';
   }
 
+  /**
+   * Helper: Tracked delay with auto-cleanup
+   * Creates a delay that registers/unregisters with CardManager for proper cleanup
+   * @param {number} ms - Milliseconds to delay
+   * @returns {Promise} Resolves after delay or immediately if phase changed
+   */
+  async function delay(ms){
+    return new Promise(function(resolve){
+      if(global.CardManager && typeof global.CardManager.registerTimeout === 'function'){
+        var timeoutId = setTimeout(function(){
+          // Auto-unregister when timeout completes naturally
+          if(global.CardManager && typeof global.CardManager.__unregisterTimeout === 'function'){
+            global.CardManager.__unregisterTimeout(timeoutId);
+          }
+          resolve();
+        }, ms);
+        global.CardManager.registerTimeout(timeoutId);
+      } else {
+        // Fallback: standard setTimeout
+        setTimeout(resolve, ms);
+      }
+    });
+  }
+  
   // Helper: Show nominee reactions (after veto not used)
   async function showNomineeReactionsSimultaneously(nomineeIds){
     if(!nomineeIds || nomineeIds.length === 0) return;
@@ -1106,21 +1130,8 @@
           console.warn('[veto] Failed to show nominee reaction for', nomId, e);
         }
         
-        // Small delay between reactions - use tracked timeout if CardManager available
-        if(global.CardManager && typeof global.CardManager.registerTimeout === 'function'){
-          await new Promise(function(resolve){
-            // PHASE GUARD: Check again before scheduling delay
-            if(g && g.phase !== 'veto_ceremony'){
-              resolve();
-              return;
-            }
-            var timeoutId = setTimeout(resolve, 600);
-            global.CardManager.registerTimeout(timeoutId);
-          });
-        } else {
-          // Fallback: standard delay
-          await new Promise(function(r){ setTimeout(r, 600); });
-        }
+        // Small delay between reactions - use tracked delay with auto-cleanup
+        await delay(600);
       }
     }
   }

@@ -213,6 +213,20 @@
     },
     
     /**
+     * Unregister a completed timeout from tracking.
+     * Call this when a timeout naturally completes to clean up the registry.
+     * @param {number} timeoutId - setTimeout return value to remove
+     */
+    __unregisterTimeout(timeoutId){
+      if(timeoutId){
+        const index = this.__pendingTimeouts.indexOf(timeoutId);
+        if(index !== -1){
+          this.__pendingTimeouts.splice(index, 1);
+        }
+      }
+    },
+    
+    /**
      * Cancel all registered timeouts.
      */
     cancelAllTimeouts(){
