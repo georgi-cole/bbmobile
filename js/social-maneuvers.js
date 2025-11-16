@@ -3256,6 +3256,14 @@
     // Log to DevTools console
     logToConsole(summary);
     
+    // Hide launcher and close modal before showing summary
+    if(global.SocializeMobile?.closeModal){
+      global.SocializeMobile.closeModal();
+    }
+    if(global.SocializeMobile?.hide){
+      global.SocializeMobile.hide();
+    }
+    
     // Show UI summary panel
     showSummaryPanel(summary);
   }
