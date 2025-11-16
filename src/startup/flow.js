@@ -199,6 +199,10 @@
     console.info('[StartupFlow] Building main game screen...');
     mainScreenBuilt = true;
 
+    // CRITICAL: Close all open modals before transitioning to main screen
+    // This prevents modals from appearing over the game screen
+    closeAllModals();
+
     // Hide intro screen
     if (g.IntroScreen && typeof g.IntroScreen.hide === 'function') {
       g.IntroScreen.hide();
@@ -215,11 +219,105 @@
       console.error('[StartupFlow] buildCast function not available');
     }
 
+    // CRITICAL: Remove roster placeholders before showing actual roster
+    // This prevents double avatars (Guest placeholders + actual players)
+    removeRosterPlaceholders();
+
     // Update UI
     if (g.updateHud) g.updateHud();
     if (g.renderPanel) g.renderPanel();
 
     console.info('[StartupFlow] Main screen built');
+  }
+  
+  /**
+   * Close all open modals to prevent them from appearing over the main game screen.
+   * This is called when transitioning from intro hub to main game.
+   */
+  function closeAllModals() {
+    console.info('[StartupFlow] Closing all open modals before game start');
+    
+    // List of known modal selectors
+    const modalSelectors = [
+      '.rulesDim',
+      '.profile-modal-dim',
+      '.creditsDim',
+      '.leaderboardDim',
+      '.helpDim',
+      '.settingsDim',
+      '.confirmDim'
+    ];
+    
+    // Close each modal that's currently visible
+    modalSelectors.forEach(selector => {
+      const modal = document.querySelector(selector);
+      if (modal) {
+        const isVisible = modal.style.display === 'flex' || 
+                         modal.classList.contains('open') ||
+                         window.getComputedStyle(modal).display !== 'none';
+        
+        if (isVisible) {
+          console.info(`[StartupFlow] Closing modal: ${selector}`);
+          
+          // Hide the modal
+          modal.style.display = 'none';
+          modal.classList.remove('open');
+          
+          // Find and hide panel if it exists
+          const panel = modal.querySelector('[class*="Panel"]');
+          if (panel) {
+            panel.classList.remove('in');
+          }
+        }
+      }
+    });
+    
+    // Restore body scroll (modals may have locked it)
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    
+    // Close profile modal using its API if available
+    if (g.ProfileModal && typeof g.ProfileModal.hide === 'function') {
+      console.info('[StartupFlow] Closing ProfileModal via API');
+      g.ProfileModal.hide();
+    }
+    
+    // Close rules modal using its API if available
+    if (typeof g.hideRulesModal === 'function') {
+      console.info('[StartupFlow] Closing Rules modal via API');
+      g.hideRulesModal();
+    }
+  }
+  
+  /**
+   * Remove roster placeholders to prevent double avatars (Guest + actual players).
+   * This is called when transitioning from intro hub to main game.
+   */
+  function removeRosterPlaceholders() {
+    console.info('[StartupFlow] Removing roster placeholders before showing actual roster');
+    
+    // Remove placeholder overlay by ID
+    const placeholderOverlay = document.getElementById('bbRosterPlaceholderOverlay');
+    if (placeholderOverlay) {
+      console.info('[StartupFlow] Removing placeholder overlay');
+      placeholderOverlay.remove();
+    }
+    
+    // Remove placeholder visibility attribute
+    document.body.removeAttribute('data-roster-placeholders-visible');
+    
+    // Remove individual placeholder tiles if they exist
+    const placeholderTiles = document.querySelectorAll('.placeholder-tile');
+    if (placeholderTiles.length > 0) {
+      console.info(`[StartupFlow] Removing ${placeholderTiles.length} placeholder tiles`);
+      placeholderTiles.forEach(tile => tile.remove());
+    }
+    
+    // Use RosterPlaceholders API if available
+    if (g.RosterPlaceholders && typeof g.RosterPlaceholders.hide === 'function') {
+      console.info('[StartupFlow] Hiding placeholders via RosterPlaceholders API');
+      g.RosterPlaceholders.hide();
+    }
   }
 
   // ===== STARTUP ORCHESTRATION =====
