@@ -72,14 +72,14 @@
       }
     }
 
-    // Initialize IntroScreen unconditionally (init is idempotent)
-    // CRITICAL: Always call init() regardless of whether show() exists
-    // This ensures the module is properly initialized before use
+    // CRITICAL: Initialize IntroScreen unconditionally (no conditional skip)
+    // Always call init() to ensure module is properly initialized before use
+    // init() is idempotent and builds DOM, so multiple calls are safe
     if (g.IntroScreen && typeof g.IntroScreen.init === 'function') {
       g.IntroScreen.init({ bus });
       console.info('[StartupFlow] IntroScreen initialized');
     } else {
-      console.warn('[StartupFlow] IntroScreen not available or missing init method');
+      console.error('[StartupFlow] IntroScreen not available or missing init method - critical failure');
     }
 
     console.info('[StartupFlow] Core services initialized');
@@ -159,11 +159,12 @@
   /**
    * Show the intro hub screen with preloaded background.
    * Background and buttons appear simultaneously (no delayed fade).
+   * CRITICAL: Always use showWithPreload() for smooth appearance
    */
   async function showIntroHub() {
     console.info('[StartupFlow] Showing intro hub...');
 
-    // Use IntroScreen's built-in preload and show
+    // CRITICAL: Always use IntroScreen's showWithPreload for best UX
     // This ensures background is loaded before buttons are displayed
     if (g.IntroScreen && typeof g.IntroScreen.showWithPreload === 'function') {
       await g.IntroScreen.showWithPreload();
@@ -175,7 +176,7 @@
       g.IntroScreen.show();
       console.info('[StartupFlow] Intro hub displayed');
     } else {
-      console.error('[StartupFlow] IntroScreen not available');
+      console.error('[StartupFlow] IntroScreen not available - critical failure');
     }
   }
 
@@ -609,6 +610,43 @@
     // and after intro-outro-video.js decides whether to show video
   }
 
+  // ===== RESTART TO HUB =====
+
+  /**
+   * Restart to intro hub - helper for in-game restart functionality.
+   * Hides main screen, resets intro state, and shows hub again.
+   * This allows players to return to the hub from within the game.
+   */
+  async function restartToHub() {
+    console.info('[StartupFlow] Restarting to intro hub...');
+    
+    // Hide main screen
+    const mainScreen = document.querySelector('.wrap');
+    if (mainScreen) {
+      mainScreen.style.display = 'none';
+    }
+    
+    // Remove main-screen-built class to hide game UI
+    document.body.classList.remove('main-screen-built');
+    
+    // Reset IntroScreen state
+    if (g.IntroScreen && typeof g.IntroScreen.reset === 'function') {
+      g.IntroScreen.reset();
+      console.info('[StartupFlow] IntroScreen state reset');
+    }
+    
+    // Re-initialize IntroScreen to ensure fresh state
+    if (g.IntroScreen && typeof g.IntroScreen.init === 'function') {
+      g.IntroScreen.init({ bus });
+      console.info('[StartupFlow] IntroScreen re-initialized');
+    }
+    
+    // Show intro hub again
+    await showIntroHub();
+    
+    console.info('[StartupFlow] Restart to hub complete');
+  }
+
   // ===== PUBLIC API =====
 
   g.StartupFlow = {
@@ -617,8 +655,16 @@
     buildMainScreen,
     preloadIntroBackground,
     showIntroHub,
-    enterGame
+    enterGame,
+    restartToHub
   };
+  
+  // Expose restartToHub globally for easy access
+  // Both on window and window.game for consistency
+  g.restartToHub = restartToHub;
+  if (g.game) {
+    g.game.restartToHub = restartToHub;
+  }
 
   console.info('[StartupFlow] Module loaded');
 
