@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Social Overlay & Skip Button Fix</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="socialize-mobile.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .test-section {
+      background: rgba(44, 44, 44, 0.8);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(110, 160, 220, 0.3);
+    }
+    .test-header {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #3498db;
+    }
+    .test-description {
+      margin-bottom: 15px;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.6;
+    }
+    .btn {
+      background: linear-gradient(135deg, rgba(28, 43, 62, 0.6), rgba(12, 22, 36, 0.5));
+      border: 1px solid rgba(110, 160, 220, 0.3);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 5px;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, rgba(38, 53, 72, 0.7), rgba(22, 32, 46, 0.6));
+      transform: translateY(-2px);
+    }
+    .status {
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-weight: 500;
+    }
+    .status.pass {
+      background: rgba(39, 174, 96, 0.2);
+      border: 1px solid rgba(39, 174, 96, 0.5);
+      color: #2ecc71;
+    }
+    .status.fail {
+      background: rgba(231, 76, 60, 0.2);
+      border: 1px solid rgba(231, 76, 60, 0.5);
+      color: #e74c3c;
+    }
+    .status.info {
+      background: rgba(52, 152, 219, 0.2);
+      border: 1px solid rgba(52, 152, 219, 0.5);
+      color: #3498db;
+    }
+    .tv-mock {
+      position: relative;
+      width: 100%;
+      height: 500px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid rgba(110, 160, 220, 0.3);
+    }
+    .skip-button-mock {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      background: rgba(52, 152, 219, 0.8);
+      border: 1px solid rgba(52, 152, 219, 1);
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.2s ease;
+    }
+    .skip-button-mock:hover {
+      background: rgba(52, 152, 219, 1);
+      transform: translateX(-50%) scale(1.05);
+    }
+    .skip-button-mock.clicked {
+      background: rgba(39, 174, 96, 0.8);
+      border-color: rgba(39, 174, 96, 1);
+    }
+    .roster-mock {
+      position: absolute;
+      top: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 5;
+    }
+    .avatar-mock {
+      width: 80px;
+      height: 80px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(100, 100, 100, 0.5), rgba(60, 60, 60, 0.5));
+      border: 2px solid rgba(110, 160, 220, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1 style="text-align: center; margin-bottom: 30px;">🧪 Social Overlay & Skip Button Fix Tests</h1>
+    
+    <!-- Test 1: Launcher Pointer Events -->
+    <div class="test-section">
+      <div class="test-header">Test 1: Launcher Pointer Events</div>
+      <div class="test-description">
+        Verify that the socialize launcher uses <code>pointer-events: none</code> on the container,
+        allowing clicks to pass through to elements below.
+      </div>
+      <button class="btn" onclick="test1()">Run Test 1</button>
+      <div id="test1-result"></div>
+    </div>
+
+    <!-- Test 2: Button and HUD Clickability -->
+    <div class="test-section">
+      <div class="test-header">Test 2: Button and HUD Clickability</div>
+      <div class="test-description">
+        Verify that buttons and HUD elements within the launcher have <code>pointer-events: auto</code>,
+        making them interactive.
+      </div>
+      <button class="btn" onclick="test2()">Run Test 2</button>
+      <div id="test2-result"></div>
+    </div>
+
+    <!-- Test 3: Skip Button Interaction -->
+    <div class="test-section">
+      <div class="test-header">Test 3: Skip Button Interaction (Visual)</div>
+      <div class="test-description">
+        Visual test: The socialize launcher should be rendered with a skip button below it.
+        Click the skip button to verify it's clickable despite the launcher overlay.
+      </div>
+      <button class="btn" onclick="test3()">Setup Visual Test</button>
+      <div id="test3-result"></div>
+      <div id="test3-visual" style="margin-top: 20px;"></div>
+    </div>
+
+    <!-- Test 4: Launcher Hidden on Phase End -->
+    <div class="test-section">
+      <div class="test-header">Test 4: Launcher Hidden on Phase End</div>
+      <div class="test-description">
+        Verify that the launcher is hidden when <code>onSocialPhaseEnd()</code> is called.
+      </div>
+      <button class="btn" onclick="test4()">Run Test 4</button>
+      <div id="test4-result"></div>
+    </div>
+  </div>
+
+  <script>
+    // Test 1: Check CSS pointer-events on launcher
+    function test1() {
+      const result = document.getElementById('test1-result');
+      
+      // Check if socialize-mobile.css is loaded
+      const styles = Array.from(document.styleSheets);
+      const socializeCSS = styles.find(sheet => 
+        sheet.href && sheet.href.includes('socialize-mobile.css')
+      );
+      
+      if (!socializeCSS) {
+        result.innerHTML = '<div class="status fail">❌ FAIL: socialize-mobile.css not loaded</div>';
+        return;
+      }
+      
+      // Create a test element to check computed styles
+      const testLauncher = document.createElement('div');
+      testLauncher.className = 'socialize-launcher';
+      testLauncher.style.position = 'fixed';
+      testLauncher.style.top = '-1000px';
+      document.body.appendChild(testLauncher);
+      
+      const computedStyle = window.getComputedStyle(testLauncher);
+      const pointerEvents = computedStyle.pointerEvents;
+      
+      document.body.removeChild(testLauncher);
+      
+      if (pointerEvents === 'none') {
+        result.innerHTML = '<div class="status pass">✅ PASS: Launcher has pointer-events: none</div>';
+      } else {
+        result.innerHTML = `<div class="status fail">❌ FAIL: Launcher has pointer-events: ${pointerEvents} (expected: none)</div>`;
+      }
+    }
+
+    // Test 2: Check CSS pointer-events on buttons and HUD
+    function test2() {
+      const result = document.getElementById('test2-result');
+      let allPass = true;
+      let messages = [];
+      
+      // Test button
+      const testButton = document.createElement('button');
+      testButton.className = 'socialize-open-btn';
+      testButton.style.position = 'fixed';
+      testButton.style.top = '-1000px';
+      document.body.appendChild(testButton);
+      
+      const buttonStyle = window.getComputedStyle(testButton);
+      if (buttonStyle.pointerEvents !== 'auto') {
+        allPass = false;
+        messages.push(`Button has pointer-events: ${buttonStyle.pointerEvents} (expected: auto)`);
+      } else {
+        messages.push('Button has pointer-events: auto ✓');
+      }
+      
+      document.body.removeChild(testButton);
+      
+      // Test HUD
+      const testHUD = document.createElement('div');
+      testHUD.className = 'socialize-hud';
+      testHUD.style.position = 'fixed';
+      testHUD.style.top = '-1000px';
+      document.body.appendChild(testHUD);
+      
+      const hudStyle = window.getComputedStyle(testHUD);
+      if (hudStyle.pointerEvents !== 'auto') {
+        allPass = false;
+        messages.push(`HUD has pointer-events: ${hudStyle.pointerEvents} (expected: auto)`);
+      } else {
+        messages.push('HUD has pointer-events: auto ✓');
+      }
+      
+      document.body.removeChild(testHUD);
+      
+      if (allPass) {
+        result.innerHTML = `<div class="status pass">✅ PASS: All elements have correct pointer-events<br>${messages.join('<br>')}</div>`;
+      } else {
+        result.innerHTML = `<div class="status fail">❌ FAIL: Some elements have incorrect pointer-events<br>${messages.join('<br>')}</div>`;
+      }
+    }
+
+    // Test 3: Visual test with mock UI
+    function test3() {
+      const result = document.getElementById('test3-result');
+      const visual = document.getElementById('test3-visual');
+      
+      visual.innerHTML = `
+        <div class="tv-mock">
+          <!-- Socialize launcher (z-index: 1000) -->
+          <div class="socialize-launcher" style="position: absolute; top: 20px; right: 20px;">
+            <div class="socialize-hud">
+              <div class="socialize-hud-title">Social Phase</div>
+              <div class="socialize-hud-resources">
+                <div class="resource-badge">⚡ 5</div>
+                <div class="resource-badge">🤝 3</div>
+                <div class="resource-badge">💡 2</div>
+              </div>
+            </div>
+            <button class="socialize-open-btn" onclick="alert('Socialize button clicked!')">Socialize</button>
+          </div>
+          
+          <!-- Skip button (z-index: 10) -->
+          <button class="skip-button-mock" onclick="handleSkipClick(this)">⏩ Skip</button>
+          
+          <!-- Mock roster -->
+          <div class="roster-mock">
+            <div class="avatar-mock">👤</div>
+            <div class="avatar-mock">👤</div>
+            <div class="avatar-mock">👤</div>
+          </div>
+        </div>
+      `;
+      
+      result.innerHTML = '<div class="status info">ℹ️ Visual test setup complete. Try clicking the Skip button below the launcher.</div>';
+    }
+
+    function handleSkipClick(button) {
+      button.classList.add('clicked');
+      button.textContent = '✓ Skip Clicked!';
+      const result = document.getElementById('test3-result');
+      result.innerHTML = '<div class="status pass">✅ PASS: Skip button is clickable through the launcher!</div>';
+    }
+
+    // Test 4: Check that launcher is hidden on phase end
+    function test4() {
+      const result = document.getElementById('test4-result');
+      
+      // Mock the global game object and SocializeMobile
+      window.game = window.game || {};
+      window.game.__socialManeuversSession = {
+        startTime: Date.now(),
+        week: 1,
+        actionsThisPhase: [],
+        energySpent: new Map(),
+        informationSpent: new Map(),
+        relationshipDeltas: new Map()
+      };
+      
+      let hideCalled = false;
+      let closeModalCalled = false;
+      
+      window.SocializeMobile = {
+        hide: function() {
+          hideCalled = true;
+          console.log('SocializeMobile.hide() called');
+        },
+        closeModal: function() {
+          closeModalCalled = true;
+          console.log('SocializeMobile.closeModal() called');
+        }
+      };
+      
+      // Check if the code in social-maneuvers.js includes the hide call
+      fetch('js/social-maneuvers.js')
+        .then(response => response.text())
+        .then(code => {
+          const hasHideCall = code.includes('SocializeMobile?.hide');
+          const hasCloseModalCall = code.includes('SocializeMobile?.closeModal');
+          const inOnPhaseEnd = code.includes('function onSocialPhaseEnd()') && 
+                               code.indexOf('SocializeMobile?.hide', code.indexOf('function onSocialPhaseEnd()')) > 0;
+          
+          let messages = [];
+          let allPass = true;
+          
+          if (hasHideCall) {
+            messages.push('✓ Code contains SocializeMobile.hide() call');
+          } else {
+            messages.push('✗ Code missing SocializeMobile.hide() call');
+            allPass = false;
+          }
+          
+          if (hasCloseModalCall) {
+            messages.push('✓ Code contains SocializeMobile.closeModal() call');
+          } else {
+            messages.push('✗ Code missing SocializeMobile.closeModal() call');
+            allPass = false;
+          }
+          
+          if (inOnPhaseEnd) {
+            messages.push('✓ Hide call is in onSocialPhaseEnd() function');
+          } else {
+            messages.push('✗ Hide call not found in onSocialPhaseEnd()');
+            allPass = false;
+          }
+          
+          if (allPass) {
+            result.innerHTML = `<div class="status pass">✅ PASS: Launcher will be hidden on phase end<br>${messages.join('<br>')}</div>`;
+          } else {
+            result.innerHTML = `<div class="status fail">❌ FAIL: Launcher hide logic incomplete<br>${messages.join('<br>')}</div>`;
+          }
+        })
+        .catch(error => {
+          result.innerHTML = `<div class="status fail">❌ FAIL: Could not load social-maneuvers.js: ${error.message}</div>`;
+        });
+    }
+
+    // Auto-run tests on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('Running automated tests...');
+      test1();
+      test2();
+      test4();
+    });
+  </script>
+</body>
+</html>
