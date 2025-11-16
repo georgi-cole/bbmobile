@@ -554,20 +554,19 @@
    * @param {boolean} skipPreload - If true, skip preloading (for testing)
    */
   async function showWithPreload(skipPreload = false) {
-    // Global idempotence guard - prevents duplicate shows from different code paths
-    if (g.__bbHubShown) {
-      console.info('[IntroScreen] Already visible (global flag), ignoring duplicate showWithPreload() call');
-      return;
-    }
-    
-    // Idempotence guard
+    // Idempotence guard - check local state first
     if (isVisible) {
       console.info('[IntroScreen] Already visible, ignoring duplicate showWithPreload() call');
       return;
     }
 
-    // NOTE: Do NOT set __bbHubShown flag here - it should only be set AFTER the hub is successfully shown
-    // This allows retries if DOM mounting fails
+    // Global idempotence guard - prevents duplicate shows from different code paths
+    if (g.__bbHubShown) {
+      console.info('[IntroScreen] Already visible (global flag), ignoring duplicate showWithPreload() call');
+      return;
+    }
+
+    console.info('[IntroScreen] Preloading background...');
 
     // Optional: Show loading buffer if preload takes too long
     let loadingBuffer = null;
@@ -688,16 +687,20 @@
     container.classList.add('intro-screen--visible');
     isVisible = true;
 
-    // CRITICAL: Only set global flag AFTER hub is successfully shown and DOM is mounted
-    // This ensures retries work if DOM mounting fails on first attempt
+    // CRITICAL: Set global flag AFTER hub is successfully shown and DOM is mounted
+    // This is moved to AFTER classList.add to ensure the hub is fully visible
     g.__bbHubShown = true;
 
     console.info('[IntroScreen] Shown');
   }
 
   function hide() {
-    if (!isVisible || !container) return;
+    if (!isVisible || !container) {
+      console.info('[IntroScreen] Already hidden or not initialized, ignoring hide() call');
+      return;
+    }
 
+    console.info('[IntroScreen] Hiding...');
     container.classList.remove('intro-screen--visible');
     
     // Wait for fade-out animation before hiding
@@ -706,6 +709,10 @@
         container.style.display = 'none';
       }
       isVisible = false;
+      
+      // CRITICAL: Reset global flag so hub can be shown again on restart
+      g.__bbHubShown = false;
+      
       console.info('[IntroScreen] Hidden');
     }, 400); // Match CSS transition duration
   }
@@ -766,6 +773,35 @@
     announcer.textContent = `Background updated: ${reason}`;
   }
 
+  /**
+   * Reset the intro screen state for hard restarts.
+   * Removes container, resets flags, and prepares for fresh initialization.
+   * This is helpful for in-game restart paths that need to fully reset the hub.
+   */
+  function reset() {
+    console.info('[IntroScreen] Resetting state...');
+    
+    // Hide first if visible
+    if (isVisible && container) {
+      container.classList.remove('intro-screen--visible');
+      container.style.display = 'none';
+    }
+    
+    // Remove container from DOM
+    if (container && container.parentNode) {
+      container.parentNode.removeChild(container);
+    }
+    
+    // Reset state
+    container = null;
+    isVisible = false;
+    currentBgLayer = 'current';
+    playButtonClicked = false;
+    g.__bbHubShown = false;
+    
+    console.info('[IntroScreen] Reset complete');
+  }
+
   // Export API
   if (!g.IntroScreen) {
     g.IntroScreen = {
@@ -773,8 +809,14 @@
       show,
       showWithPreload,
       hide,
+      reset,
       preloadBackground
     };
+  }
+
+  // Backward compatibility alias
+  if (!g.introScreen) {
+    g.introScreen = g.IntroScreen;
   }
 
 })(window);
