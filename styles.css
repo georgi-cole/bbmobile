@@ -1732,15 +1732,15 @@ button:focus-visible,.btn:focus-visible{
   top:50%;
   left:50%;
   transform:translate(-50%,-50%) scale(0.6);
-  transform-origin:center center; /* Explicit center origin */
+  transform-origin:center center; /* Explicit center origin for all transform states */
   width:clamp(160px, 38vmin, 320px);
   height:clamp(160px, 38vmin, 320px);
   z-index:100;
   opacity:0;
   transition:all 0.6s cubic-bezier(0.34,1.56,0.64,1);
   pointer-events:none;
-  /* Ensure it's centered even if container has unusual dimensions */
-  margin:0; /* Remove any default margins */
+  /* Ensure perfect centering regardless of container dimensions */
+  margin:0; /* Remove any default margins that could offset position */
 }
 
 .eviction-visual-avatar img{
@@ -1752,11 +1752,11 @@ button:focus-visible,.btn:focus-visible{
   box-shadow:0 12px 48px rgba(0,0,0,0.8), 0 0 60px rgba(255,255,255,0.2);
 }
 
-/* Phase 1: Zoom in */
+/* Phase 1: Zoom in - maintain center transform origin throughout */
 .eviction-visual-avatar.zoom-in{
   opacity:1;
   transform:translate(-50%,-50%) scale(1);
-  /* Ensure transform origin stays centered during zoom */
+  /* Ensure transform origin stays centered during zoom animation */
   transform-origin:center center;
 }
 
@@ -3146,7 +3146,7 @@ button:focus-visible,.btn:focus-visible{
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 50; /* Increased from 20 to ensure it's above other TV elements */
+  z-index: 60; /* Increased from 50 to ensure it's above all TV overlay elements */
   background: linear-gradient(135deg, rgba(20,35,55,0.98) 0%, rgba(14,23,48,0.98) 100%);
   border: 2px solid rgba(131,191,255,0.4);
   border-radius: 16px;
@@ -3157,8 +3157,8 @@ button:focus-visible,.btn:focus-visible{
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.5s ease-in-out;
-  /* Ensure it stays within viewport for mobile */
-  max-height: min(calc(100dvh - 80px), 80vh);
+  /* Ensure it stays within viewport for mobile using dynamic viewport units */
+  max-height: min(calc(100dvh - 100px), 75vh); /* More conservative to ensure visibility */
   overflow-y: auto;
   overflow-x: hidden;
   /* Ensure proper containment within TV viewport */

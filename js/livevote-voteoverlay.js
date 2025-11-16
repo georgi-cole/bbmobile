@@ -487,8 +487,8 @@
     // 5. Immediately hide the overlay after successful submission
     // The onSubmit callback has already been called and the rollout overlay is being shown
     // We need to remove this overlay immediately to prevent button persistence
-    // Brief delay to show "Vote submitted" feedback, then hide
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Brief delay to show "Vote submitted" feedback (reduced from 200ms to minimize persistence)
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // 6. Close the overlay immediately - no fade needed since rollout takes over
     hide();

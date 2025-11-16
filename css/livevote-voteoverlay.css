@@ -35,7 +35,7 @@
 }
 
 .lv-overlay__carousel {
-  flex: 0 1 auto; /* Don't grow beyond content, allow shrinking */
+  flex: 0 0 auto; /* Fixed size - don't grow or shrink to prevent excessive spacing */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,7 +47,7 @@
   scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
   padding: 20px 16px;
   min-height: 0; /* Critical: Allow flex child to shrink below content size */
-  max-height: 60vh; /* Prevent carousel from taking too much vertical space */
+  max-height: 55vh; /* Reduced from 60vh to give more room for button below */
   
   /* Hide scrollbars visually while keeping functionality */
   scrollbar-width: none; /* Firefox */
@@ -189,8 +189,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px; /* Reduced from 12px */
-  padding: 8px 16px 16px; /* Added bottom padding for breathing room */
+  gap: 6px; /* Reduced further to tighten spacing */
+  padding: 4px 16px 20px; /* Tighter top padding, more bottom for safe area */
   margin-top: 0; /* Removed top margin - keep it tight to carousel */
   flex-shrink: 0;
   animation: fadeIn 0.3s ease-out;
