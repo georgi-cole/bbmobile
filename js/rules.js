@@ -293,6 +293,12 @@
   }
 
   function showRulesModal() {
+    // Prevent showing rules if Play button has been pressed (game is starting)
+    if (global.__bbPlayInitiated) {
+      console.info('[rules] Play already initiated — skipping rules modal');
+      return;
+    }
+    
     const dim = ensureModal();
     const panel = dim.querySelector('.rulesPanel');
     const body = dim.querySelector('.rulesBody');
@@ -354,6 +360,13 @@
 
   // Listen for intro finished event
   function setupIntroListener() {
+    // Check suppression flag first (set by suppress-auto-rules.js)
+    if (global.__bbSuppressAutoRules) {
+      console.info('[rules] __bbSuppressAutoRules is true — skipping intro listener');
+      markRulesShown(); // Mark as shown to prevent fallback
+      return;
+    }
+    
     // Only set up listener if autoShowRulesOnStart is enabled
     const cfg = (global.game && global.game.cfg) || {};
     if (!cfg.autoShowRulesOnStart) {
@@ -389,6 +402,13 @@
 
   // Fallback: wrap startOpeningSequence and show rules if no event arrives
   function setupFallback() {
+    // Check suppression flag first (set by suppress-auto-rules.js)
+    if (global.__bbSuppressAutoRules) {
+      console.info('[rules] __bbSuppressAutoRules is true — skipping fallback');
+      markRulesShown(); // Mark as shown to prevent any auto-show
+      return;
+    }
+    
     // Only set up fallback if autoShowRulesOnStart is enabled
     const cfg = (global.game && global.game.cfg) || {};
     if (!cfg.autoShowRulesOnStart) {

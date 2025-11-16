@@ -140,6 +140,11 @@
             return;
           }
           playButtonClicked = true;
+          
+          // Set global flag to indicate Play was pressed
+          // This prevents Rules modal from showing after Play
+          g.__bbPlayInitiated = true;
+          console.info('[IntroHub] Set __bbPlayInitiated=true');
         }
         
         // Try direct global function calls first, fall back to bus events
@@ -549,11 +554,20 @@
    * @param {boolean} skipPreload - If true, skip preloading (for testing)
    */
   async function showWithPreload(skipPreload = false) {
+    // Global idempotence guard - prevents duplicate shows from different code paths
+    if (g.__bbHubShown) {
+      console.info('[IntroScreen] Already visible (global flag), ignoring duplicate showWithPreload() call');
+      return;
+    }
+    
     // Idempotence guard
     if (isVisible) {
       console.info('[IntroScreen] Already visible, ignoring duplicate showWithPreload() call');
       return;
     }
+
+    // Set global flag to prevent duplicate shows
+    g.__bbHubShown = true;
 
     // Optional: Show loading buffer if preload takes too long
     let loadingBuffer = null;
@@ -627,11 +641,20 @@
   // ===== PUBLIC API =====
 
   function show() {
+    // Global idempotence guard - prevents duplicate shows from different code paths
+    if (g.__bbHubShown) {
+      console.info('[IntroScreen] Already visible (global flag), ignoring duplicate show() call');
+      return;
+    }
+    
     // Idempotence guard - if already visible, do nothing
     if (isVisible) {
       console.info('[IntroScreen] Already visible, ignoring duplicate show() call');
       return;
     }
+
+    // Set global flag to prevent duplicate shows
+    g.__bbHubShown = true;
 
     // Build DOM if not exists
     if (!container) {
