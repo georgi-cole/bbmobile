@@ -6,8 +6,6 @@
 (function (global) {
   'use strict';
 
-  let profileSelected = false;
-
   // Show toast notification
   function showToast(message, duration = 3000) {
     const toast = document.createElement('div');
@@ -41,7 +39,6 @@
   // Handle profile selection
   function handleProfileSelect(profile) {
     global.ProfileService.setCurrentProfile(profile);
-    profileSelected = true;
     
     // Only start game if Play button was pressed
     // Otherwise, just close the modal and return to hub
@@ -60,7 +57,6 @@
   // Handle guest mode
   function handleGuestMode() {
     global.ProfileService.setGuestMode();
-    profileSelected = true;
     showToast('⚠️ Playing as Guest - Progress will not be saved');
     
     // Only start game if Play button was pressed
@@ -187,8 +183,6 @@
   // Expose showProfileModal for the topbar "Switch Profile" button
   global.showProfileModal = function() {
     console.info('[player-profile-modal] showProfileModal called');
-    // Reset flag to allow re-showing the modal
-    profileSelected = false;
     showProfileSelectionModal();
   };
 
