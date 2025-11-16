@@ -36,3 +36,6 @@ test_player_count_deferred.html
 test_color_match_slider_default.html
 test_tv_overlay_fix.html
 screenshots/tv-overlay-fix/
+
+# Test files for development
+test_intro_screen_fix.html

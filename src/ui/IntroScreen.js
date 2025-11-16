@@ -566,8 +566,8 @@
       return;
     }
 
-    // Set global flag to prevent duplicate shows
-    g.__bbHubShown = true;
+    // NOTE: Do NOT set __bbHubShown flag here - it should only be set AFTER the hub is successfully shown
+    // This allows retries if DOM mounting fails
 
     // Optional: Show loading buffer if preload takes too long
     let loadingBuffer = null;
@@ -592,6 +592,7 @@
     }
 
     // Now show the intro screen
+    // The show() function will set __bbHubShown = true after successful mount
     show();
   }
 
@@ -641,20 +642,11 @@
   // ===== PUBLIC API =====
 
   function show() {
-    // Global idempotence guard - prevents duplicate shows from different code paths
-    if (g.__bbHubShown) {
-      console.info('[IntroScreen] Already visible (global flag), ignoring duplicate show() call');
-      return;
-    }
-    
     // Idempotence guard - if already visible, do nothing
     if (isVisible) {
       console.info('[IntroScreen] Already visible, ignoring duplicate show() call');
       return;
     }
-
-    // Set global flag to prevent duplicate shows
-    g.__bbHubShown = true;
 
     // Build DOM if not exists
     if (!container) {
@@ -696,6 +688,10 @@
     container.classList.add('intro-screen--visible');
     isVisible = true;
 
+    // CRITICAL: Only set global flag AFTER hub is successfully shown and DOM is mounted
+    // This ensures retries work if DOM mounting fails on first attempt
+    g.__bbHubShown = true;
+
     console.info('[IntroScreen] Shown');
   }
 
@@ -715,6 +711,17 @@
   }
 
   function init(options = {}) {
+    // Idempotence guard - prevent double initialization
+    if (bus) {
+      console.info('[IntroScreen] Already initialized, skipping duplicate init() call');
+      return {
+        show,
+        showWithPreload,
+        hide,
+        preloadBackground
+      };
+    }
+
     bus = options.bus || g.bbGameBus;
 
     if (!bus) {
