@@ -16,7 +16,7 @@ body:not(.main-screen-built) .topbar {
   left: 0;
   width: 100vw;
   height: 100vh; /* Fallback for older browsers */
-  z-index: 9998; /* Below video overlay (9999) */
+  z-index: 9990; /* Below modals (10050), below video overlay (9999) */
   display: none;
   opacity: 0;
   transition: opacity 400ms ease-in-out;

@@ -16,7 +16,7 @@
 .profile-modal-dim {
   position: fixed;
   inset: 0;
-  z-index: 430;
+  z-index: 10050; /* Above intro hub (9990) */
   display: none;
   align-items: center;
   justify-content: center;
