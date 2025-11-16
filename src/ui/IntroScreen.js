@@ -202,8 +202,11 @@
     }
   }
 
-  // Helper for both music and sound toggles
+  // Helper for both music and sound toggles with retry logic
   function handleAudioToggle(type, btn) {
+    const MAX_RETRIES = 10;
+    const RETRY_DELAY = 150; // ms
+    
     let enabled, methodName, icons;
     if (type === 'music') {
       methodName = 'toggleMusic';
@@ -216,34 +219,48 @@
       return;
     }
     
-    // Try to find audio subsystem
-    if (g.game && g.game.audio && typeof g.game.audio[methodName] === 'function') {
-      enabled = g.game.audio[methodName]();
-      btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-      btn.textContent = enabled ? icons.on : icons.off;
-    } else if (g.audio && typeof g.audio[methodName] === 'function') {
-      enabled = g.audio[methodName]();
-      btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-      btn.textContent = enabled ? icons.on : icons.off;
-    } else {
-      // Audio subsystem not yet initialized, retry after delay
-      console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle not yet available, will retry...`);
-      setTimeout(() => {
-        if (g.game && g.game.audio && typeof g.game.audio[methodName] === 'function') {
-          enabled = g.game.audio[methodName]();
-          btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-          btn.textContent = enabled ? icons.on : icons.off;
-          console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded on retry`);
-        } else if (g.audio && typeof g.audio[methodName] === 'function') {
-          enabled = g.audio[methodName]();
-          btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-          btn.textContent = enabled ? icons.on : icons.off;
-          console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded on retry`);
-        } else {
-          console.warn(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle still not available after retry`);
+    // Try to find audio subsystem with retry logic
+    let retryCount = 0;
+    
+    const tryToggle = () => {
+      if (g.game && g.game.audio && typeof g.game.audio[methodName] === 'function') {
+        enabled = g.game.audio[methodName]();
+        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        btn.textContent = enabled ? icons.on : icons.off;
+        if (retryCount > 0) {
+          console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded after ${retryCount} retries`);
         }
-      }, 1000);
+        return true;
+      } else if (g.audio && typeof g.audio[methodName] === 'function') {
+        enabled = g.audio[methodName]();
+        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        btn.textContent = enabled ? icons.on : icons.off;
+        if (retryCount > 0) {
+          console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded after ${retryCount} retries`);
+        }
+        return true;
+      }
+      return false;
+    };
+    
+    // Initial attempt
+    if (tryToggle()) {
+      return;
     }
+    
+    // Retry logic
+    console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle not yet available, will retry up to ${MAX_RETRIES} times...`);
+    
+    const retryInterval = setInterval(() => {
+      retryCount++;
+      
+      if (tryToggle()) {
+        clearInterval(retryInterval);
+      } else if (retryCount >= MAX_RETRIES) {
+        clearInterval(retryInterval);
+        console.warn(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle not available after ${MAX_RETRIES} retries (${MAX_RETRIES * RETRY_DELAY}ms)`);
+      }
+    }, RETRY_DELAY);
   }
 
   function handleMusicToggle(btn) {
@@ -619,15 +636,31 @@
     // Build DOM if not exists
     if (!container) {
       container = buildDOM();
+      
+      // Get initial background from BackgroundTheme BEFORE appending to DOM
+      // This ensures background is set before first paint
+      if (g.BackgroundTheme && typeof g.BackgroundTheme.getCurrent === 'function') {
+        const theme = g.BackgroundTheme.getCurrent();
+        if (theme) {
+          // Find background layer and set URL before DOM insertion
+          const bgCurrent = container.querySelector('.intro-screen__bg--current');
+          if (bgCurrent) {
+            bgCurrent.style.backgroundImage = `url(${theme.url})`;
+          }
+          updateAnchors(theme.anchor);
+        }
+      }
+      
+      // Now append to body with background already set
       document.body.appendChild(container);
-    }
-
-    // Get initial background from BackgroundTheme
-    if (g.BackgroundTheme && typeof g.BackgroundTheme.getCurrent === 'function') {
-      const theme = g.BackgroundTheme.getCurrent();
-      if (theme) {
-        setBackground(theme.url, true);
-        updateAnchors(theme.anchor);
+    } else {
+      // Container already exists, just update background if needed
+      if (g.BackgroundTheme && typeof g.BackgroundTheme.getCurrent === 'function') {
+        const theme = g.BackgroundTheme.getCurrent();
+        if (theme) {
+          setBackground(theme.url, true);
+          updateAnchors(theme.anchor);
+        }
       }
     }
 
