@@ -17,6 +17,7 @@
 
   let mainScreenBuilt = false;
   let bus = null;
+  let handlersWired = false; // Track if event handlers have been registered
 
   // ===== CORE SERVICE INITIALIZATION =====
   
@@ -54,22 +55,32 @@
 
     bus = g.bbGameBus;
 
-    // Initialize BackgroundTheme service
+    // Initialize BackgroundTheme service (only if not already initialized)
+    // Check for existence of getCurrent method as indicator of initialization
     if (g.BackgroundTheme && typeof g.BackgroundTheme.init === 'function') {
-      g.BackgroundTheme.init({ bus });
-      console.info('[StartupFlow] BackgroundTheme initialized');
+      if (!g.BackgroundTheme.getCurrent) {
+        g.BackgroundTheme.init({ bus });
+        console.info('[StartupFlow] BackgroundTheme initialized');
+      } else {
+        console.info('[StartupFlow] BackgroundTheme already initialized, skipping');
+      }
       
-      // Sync with config setting
+      // Sync with config setting (safe to do even if already initialized)
       const adaptiveSetting = g.game.cfg.adaptiveBackground;
       if (adaptiveSetting !== undefined) {
         g.BackgroundTheme.setAdaptive(adaptiveSetting);
       }
     }
 
-    // Initialize IntroScreen
+    // Initialize IntroScreen (only if not already initialized)
+    // Check for existence of show method as indicator of initialization
     if (g.IntroScreen && typeof g.IntroScreen.init === 'function') {
-      g.IntroScreen.init({ bus });
-      console.info('[StartupFlow] IntroScreen initialized');
+      if (!g.IntroScreen.show) {
+        g.IntroScreen.init({ bus });
+        console.info('[StartupFlow] IntroScreen initialized');
+      } else {
+        console.info('[StartupFlow] IntroScreen already initialized, skipping');
+      }
     }
 
     console.info('[StartupFlow] Core services initialized');
@@ -228,19 +239,9 @@
       await showIntroHub();
     } else {
       // Video will play via intro-outro-video.js
-      // Preload background while video plays
-      console.info('[StartupFlow] Waiting for intro video to finish...');
-      
-      // Listen for video end event to show intro hub
-      const videoEndHandler = async () => {
-        console.info('[StartupFlow] Intro video finished, showing intro hub');
-        await showIntroHub();
-      };
-
-      // Hook into bb:intro:finished event
-      g.addEventListener('bb:intro:finished', videoEndHandler, { once: true });
-
-      // Also start preloading in parallel with video
+      // Just preload background in parallel - don't show intro hub yet
+      // The bb:intro:finished event will trigger showIntroHub()
+      console.info('[StartupFlow] Video will play, preloading background...');
       preloadIntroBackground();
     }
   }
@@ -251,7 +252,7 @@
    * Wire up Play button handler to build main screen after gating.
    */
   function wirePlayButton() {
-    if (!bus) return;
+    if (!bus || handlersWired) return; // Prevent duplicate registration
 
     bus.on('intro:play', async function() {
       console.info('[StartupFlow] Play button clicked');
@@ -314,11 +315,14 @@
       if (g.ProfileService && typeof g.ProfileService.hasCompleteProfile === 'function') {
         return g.ProfileService.hasCompleteProfile();
       }
-      // Fallback: check localStorage
-      const profile = localStorage.getItem('bb_user_profile');
-      if (!profile) return false;
-      const data = JSON.parse(profile);
-      return !!(data && data.name && data.name.trim());
+      // Fallback: check localStorage using StorageSafe (consistent with bootstrap.js)
+      if (g.StorageSafe && typeof g.StorageSafe.get === 'function') {
+        const profile = g.StorageSafe.get('bb_user_profile', null);
+        if (!profile) return false;
+        const data = JSON.parse(profile);
+        return !!(data && data.name && data.name.trim());
+      }
+      return false;
     } catch {
       return false;
     }
@@ -330,7 +334,7 @@
    * Wire up Daily and News chip button handlers (graceful no-ops for now).
    */
   function wireChipButtons() {
-    if (!bus) return;
+    if (!bus || handlersWired) return; // Prevent duplicate registration
 
     // Daily chip button - placeholder for future implementation
     bus.on('intro:chip:daily', function() {
@@ -350,10 +354,26 @@
    * Should be called from bootstrap after config is loaded.
    */
   function init() {
+    // Prevent duplicate initialization
+    if (handlersWired) {
+      console.info('[StartupFlow] Already initialized, skipping');
+      return;
+    }
+    
     console.info('[StartupFlow] Initializing...');
     
     wirePlayButton();
     wireChipButtons();
+    
+    // Mark handlers as wired after successful registration
+    handlersWired = true;
+    
+    // Set up listener for video end event (fires when video finishes or is skipped)
+    // This listener is registered once and will show the intro hub after video ends
+    g.addEventListener('bb:intro:finished', async function() {
+      console.info('[StartupFlow] Intro video finished event received, showing intro hub');
+      await showIntroHub();
+    }, { once: true });
     
     // Don't start sequence here - it will be triggered after DOM ready
     // and after intro-outro-video.js decides whether to show video

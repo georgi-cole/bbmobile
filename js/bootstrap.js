@@ -10,6 +10,9 @@
     get(k, def=null){ try{ return localStorage.getItem(k) ?? def; }catch{ return def; } },
     set(k, v){ try{ localStorage.setItem(k,v); }catch{} }
   };
+  
+  // Expose StorageSafe globally for use by other modules (e.g., StartupFlow)
+  global.StorageSafe = StorageSafe;
 
   // ---------- Ensure game ----------
   function ensureGame(){

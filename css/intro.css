@@ -9,15 +9,6 @@ body:not(.main-screen-built) .topbar {
   display: none !important;
 }
 
-/* Ensure intro screen is visible even if main screen is hidden */
-.intro-screen {
-  /* Will be set to flex when shown via .intro-screen--visible */
-}
-
-.intro-screen--visible {
-  display: flex !important;
-}
-
 /* ===== Root Container ===== */
 .intro-screen {
   position: fixed;
@@ -30,6 +21,10 @@ body:not(.main-screen-built) .topbar {
   opacity: 0;
   transition: opacity 400ms ease-in-out;
   overflow: hidden;
+}
+
+.intro-screen--visible {
+  display: flex !important;
 }
 
 /* Use dvh for modern browsers that support it */
