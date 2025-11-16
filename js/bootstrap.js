@@ -700,8 +700,8 @@
       if(typeof global.ProfileService !== 'undefined' && typeof global.ProfileService.hasCompleteProfile === 'function'){
         return global.ProfileService.hasCompleteProfile();
       }
-      // Fallback: check localStorage
-      const profile = localStorage.getItem('bb_user_profile');
+      // Fallback: check localStorage using StorageSafe
+      const profile = StorageSafe.get('bb_user_profile', null);
       if(!profile) return false;
       const data = JSON.parse(profile);
       return !!(data && data.name && data.name.trim());

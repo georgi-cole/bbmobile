@@ -8,13 +8,19 @@
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  height: 100vh; /* Fallback for older browsers */
   z-index: 9998; /* Below video overlay (9999) */
   display: none;
   opacity: 0;
   transition: opacity 400ms ease-in-out;
   overflow: hidden;
+}
+
+/* Use dvh for modern browsers that support it */
+@supports (height: 100dvh) {
+  .intro-screen {
+    height: 100dvh;
+  }
 }
 
 .intro-screen--visible {
@@ -368,9 +374,11 @@
   .intro-screen__icon-btn,
   .intro-screen__chip {
     border-width: 2px;
+    background: rgba(255, 255, 255, 0.25);
   }
   
   .intro-screen__btn--primary {
     border-color: #00d4ff;
+    background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
   }
 }

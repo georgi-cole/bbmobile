@@ -253,16 +253,23 @@
 
     // Preload image before fading
     const img = new Image();
-    img.onload = () => {
+    let loadTimeout = null;
+    let hasCompleted = false;
+    
+    const completeTransition = () => {
+      if (hasCompleted) return;
+      hasCompleted = true;
+      
+      if (loadTimeout) {
+        clearTimeout(loadTimeout);
+      }
+      
       targetLayer.style.backgroundImage = `url(${url})`;
       
       // Optional: decode image for smoother rendering
-      if (img.decode) {
+      if (img.decode && img.complete) {
         img.decode().then(() => {
-          // Fade in target layer
           targetLayer.style.opacity = '1';
-          
-          // After fade completes, clear source layer
           setTimeout(() => {
             sourceLayer.style.backgroundImage = '';
             sourceLayer.style.opacity = '0';
@@ -278,7 +285,7 @@
           }, FADE_DURATION);
         });
       } else {
-        // Browser doesn't support decode, proceed with fade
+        // Browser doesn't support decode or image not complete, proceed with fade
         targetLayer.style.opacity = '1';
         setTimeout(() => {
           sourceLayer.style.backgroundImage = '';
@@ -288,7 +295,18 @@
       }
     };
     
+    img.onload = () => {
+      completeTransition();
+    };
+    
     img.onerror = () => {
+      if (hasCompleted) return;
+      hasCompleted = true;
+      
+      if (loadTimeout) {
+        clearTimeout(loadTimeout);
+      }
+      
       console.error('[IntroScreen] Failed to load background:', url);
       // Try fallback to daily background
       const fallbackUrl = 'assets/skins/daily-background.png';
@@ -303,7 +321,22 @@
       }
     };
     
-    img.src = url;
+    // Set timeout for slow/failed loads (5 seconds)
+    loadTimeout = setTimeout(() => {
+      if (!hasCompleted) {
+        console.warn('[IntroScreen] Image load timeout:', url);
+        img.onerror = null;
+        img.onload = null;
+        completeTransition();
+      }
+    }, 5000);
+    
+    // Check if image is already cached
+    if (img.complete) {
+      completeTransition();
+    } else {
+      img.src = url;
+    }
   }
 
   // ===== PUBLIC API =====

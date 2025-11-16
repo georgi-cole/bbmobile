@@ -48,6 +48,7 @@
   let solarData = null;
   let userCoords = null;
   let adaptiveEnabled = true;
+  let isUpdating = false; // Lock flag to prevent concurrent updates
 
   const UPDATE_INTERVAL = 60 * 1000;       // Update theme every 1 minute
   const WEATHER_CACHE_DURATION = 15 * 60 * 1000; // Cache weather for 15 minutes
@@ -276,48 +277,60 @@
       return; // Adaptive backgrounds disabled
     }
 
+    // Prevent concurrent updates
+    if (isUpdating) {
+      console.info('[BackgroundTheme] Update already in progress, skipping');
+      return;
+    }
+
     const now = Date.now();
     if (!force && currentTheme && (now - lastUpdate) < UPDATE_INTERVAL) {
       return; // Too soon to update
     }
 
-    // Try to get geolocation and weather if we don't have it
-    if (!userCoords) {
-      userCoords = await requestGeolocation();
-    }
-    
-    if (userCoords && (!weatherData || (now - weatherFetchTime) >= WEATHER_CACHE_DURATION)) {
-      await fetchWeather(userCoords);
-    }
+    isUpdating = true;
 
-    // Determine theme
-    const { theme, reason } = determineTheme();
+    try {
+      // Try to get geolocation and weather if we don't have it
+      if (!userCoords) {
+        userCoords = await requestGeolocation();
+      }
+      
+      if (userCoords && (!weatherData || (now - weatherFetchTime) >= WEATHER_CACHE_DURATION)) {
+        await fetchWeather(userCoords);
+      }
 
-    // Check if theme changed
-    if (currentTheme && currentTheme.key === theme) {
+      // Determine theme
+      const { theme, reason } = determineTheme();
+
+      // Check if theme changed
+      if (currentTheme && currentTheme.key === theme) {
+        lastUpdate = now;
+        return; // No change
+      }
+
+      // Build theme data
+      const themeData = {
+        key: theme,
+        url: ASSETS_BASE + BACKGROUNDS[theme],
+        anchor: ANCHORS[theme] || ANCHORS.day,
+        reason: reason
+      };
+
+      currentTheme = themeData;
       lastUpdate = now;
-      return; // No change
+
+      console.info('[BackgroundTheme] Theme updated:', themeData);
+
+      // Emit event
+      if (bus) {
+        bus.emit('theme:bg-change', themeData);
+      }
+
+      return themeData;
+    } finally {
+      isUpdating = false;
     }
-
-    // Build theme data
-    const themeData = {
-      key: theme,
-      url: ASSETS_BASE + BACKGROUNDS[theme],
-      anchor: ANCHORS[theme] || ANCHORS.day,
-      reason: reason
-    };
-
-    currentTheme = themeData;
-    lastUpdate = now;
-
-    console.info('[BackgroundTheme] Theme updated:', themeData);
-
-    // Emit event
-    if (bus) {
-      bus.emit('theme:bg-change', themeData);
-    }
-
-    return themeData;
   }
 
   function getCurrent() {
@@ -326,6 +339,14 @@
 
   function setAdaptive(enabled) {
     adaptiveEnabled = !!enabled;
+    
+    // Persist setting to localStorage
+    try {
+      localStorage.setItem('bb.adaptiveBackground', enabled ? 'true' : 'false');
+    } catch (e) {
+      console.warn('[BackgroundTheme] Failed to save adaptive setting:', e);
+    }
+    
     console.info('[BackgroundTheme] Adaptive backgrounds:', adaptiveEnabled ? 'enabled' : 'disabled');
     
     if (!adaptiveEnabled && currentTheme) {
@@ -356,8 +377,12 @@
     // Initial theme update
     updateTheme(true);
 
-    // Set up periodic updates
-    setInterval(() => updateTheme(), UPDATE_INTERVAL);
+    // Set up periodic updates - only update when document is visible
+    setInterval(() => {
+      if (!document.hidden) {
+        updateTheme();
+      }
+    }, UPDATE_INTERVAL);
 
     // Update on visibility change (tab becomes visible)
     document.addEventListener('visibilitychange', () => {
