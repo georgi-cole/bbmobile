@@ -73,14 +73,10 @@
     }
 
     // Initialize IntroScreen (only if not already initialized)
-    // Check for existence of show method as indicator of initialization
+    // The init() function has its own idempotence guard using the bus variable
     if (g.IntroScreen && typeof g.IntroScreen.init === 'function') {
-      if (!g.IntroScreen.show) {
-        g.IntroScreen.init({ bus });
-        console.info('[StartupFlow] IntroScreen initialized');
-      } else {
-        console.info('[StartupFlow] IntroScreen already initialized, skipping');
-      }
+      g.IntroScreen.init({ bus });
+      console.info('[StartupFlow] IntroScreen init called');
     }
 
     console.info('[StartupFlow] Core services initialized');

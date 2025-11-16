@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IntroScreen Fix Verification</title>
+  <link rel="stylesheet" href="css/intro.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #0a0e14;
+      color: #fff;
+    }
+    
+    .test-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 99999;
+      border-top: 2px solid #00d4ff;
+    }
+    
+    .test-panel h2 {
+      margin: 0 0 15px 0;
+      color: #00d4ff;
+      font-size: 18px;
+    }
+    
+    .test-result {
+      margin: 8px 0;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .test-result.pass {
+      background: rgba(0, 255, 100, 0.1);
+      border-left: 3px solid #0f6;
+    }
+    
+    .test-result.fail {
+      background: rgba(255, 50, 50, 0.1);
+      border-left: 3px solid #f33;
+    }
+    
+    .test-result.info {
+      background: rgba(0, 212, 255, 0.1);
+      border-left: 3px solid #00d4ff;
+    }
+    
+    .test-controls {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    
+    .test-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #00d4ff;
+      color: #000;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover {
+      background: #00e4ff;
+      transform: translateY(-2px);
+    }
+    
+    .test-btn:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-panel">
+    <h2>🔬 IntroScreen Fix Verification</h2>
+    <div id="test-results"></div>
+    <div class="test-controls">
+      <button class="test-btn" onclick="runTests()">Run Tests</button>
+      <button class="test-btn" onclick="location.reload()">Reload Page</button>
+    </div>
+  </div>
+
+  <script>
+    // Initialize minimal game object
+    window.game = { cfg: {} };
+    
+    // Create event bus
+    window.bbGameBus = {
+      listeners: {},
+      on(event, handler) {
+        if (!this.listeners[event]) this.listeners[event] = [];
+        this.listeners[event].push(handler);
+      },
+      emit(event, ...args) {
+        if (this.listeners[event]) {
+          this.listeners[event].forEach(h => {
+            try { h(...args); } catch(e) { console.error(`[EventBus] Error in ${event} handler:`, e); }
+          });
+        }
+      }
+    };
+    
+    // Create minimal BackgroundTheme service
+    window.BackgroundTheme = {
+      getCurrent() {
+        return {
+          url: 'assets/skins/daily-background.png',
+          anchor: { left: '50vw', top: '50vh' }
+        };
+      }
+    };
+  </script>
+
+  <!-- Load IntroScreen module -->
+  <script src="src/ui/IntroScreen.js"></script>
+
+  <script>
+    const results = document.getElementById('test-results');
+    
+    function log(msg, status = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${status}`;
+      div.textContent = msg;
+      results.appendChild(div);
+      console.log(`[${status.toUpperCase()}]`, msg);
+    }
+    
+    function pass(msg) { log('✓ ' + msg, 'pass'); }
+    function fail(msg) { log('✗ ' + msg, 'fail'); }
+    function info(msg) { log('ℹ ' + msg, 'info'); }
+    
+    async function runTests() {
+      results.innerHTML = '';
+      info('Starting IntroScreen verification tests...');
+      
+      // Test 1: Module export
+      info('Test 1: Checking module export...');
+      if (typeof window.IntroScreen === 'object') {
+        pass('window.IntroScreen exists');
+      } else {
+        fail('window.IntroScreen does not exist');
+        return;
+      }
+      
+      // Test 2: API methods exist
+      info('Test 2: Checking API methods...');
+      const methods = ['init', 'show', 'showWithPreload', 'hide', 'preloadBackground'];
+      let allMethodsExist = true;
+      methods.forEach(method => {
+        if (typeof window.IntroScreen[method] === 'function') {
+          pass(`IntroScreen.${method}() exists`);
+        } else {
+          fail(`IntroScreen.${method}() missing`);
+          allMethodsExist = false;
+        }
+      });
+      
+      if (!allMethodsExist) return;
+      
+      // Test 3: Initialize
+      info('Test 3: Calling IntroScreen.init()...');
+      try {
+        window.IntroScreen.init({ bus: window.bbGameBus });
+        pass('IntroScreen.init() completed');
+      } catch (e) {
+        fail('IntroScreen.init() threw error: ' + e.message);
+        return;
+      }
+      
+      // Test 4: Check flags before show
+      info('Test 4: Checking flags before show...');
+      if (!window.__bbHubShown) {
+        pass('__bbHubShown is not set (correct - flag should only be set after show)');
+      } else {
+        fail('__bbHubShown is already set (incorrect - shows premature flag setting)');
+      }
+      
+      // Test 5: Show the hub
+      info('Test 5: Calling IntroScreen.showWithPreload()...');
+      try {
+        await window.IntroScreen.showWithPreload(true); // Skip preload for testing
+        pass('IntroScreen.showWithPreload() completed');
+      } catch (e) {
+        fail('IntroScreen.showWithPreload() threw error: ' + e.message);
+        return;
+      }
+      
+      // Test 6: Check DOM presence
+      info('Test 6: Checking DOM presence...');
+      const introEl = document.getElementById('introScreen');
+      if (introEl) {
+        pass('Hub DOM exists (#introScreen)');
+        
+        if (introEl.classList.contains('intro-screen--visible')) {
+          pass('Hub has visible class');
+        } else {
+          fail('Hub missing visible class');
+        }
+      } else {
+        fail('Hub DOM not found (#introScreen)');
+      }
+      
+      // Test 7: Check flags after show
+      info('Test 7: Checking flags after show...');
+      if (window.__bbHubShown === true) {
+        pass('__bbHubShown is set to true (correct - flag set after successful show)');
+      } else {
+        fail('__bbHubShown is not set (incorrect - flag should be set after show)');
+      }
+      
+      // Test 8: Verify buttons exist
+      info('Test 8: Checking button presence...');
+      const playBtn = document.getElementById('intro-btn-play');
+      if (playBtn) {
+        pass('Play button exists');
+        info(`Play button label: "${playBtn.textContent}"`);
+      } else {
+        fail('Play button not found');
+      }
+      
+      // Test 9: Check background
+      info('Test 9: Checking background...');
+      const bgLayer = document.querySelector('.intro-screen__bg--current');
+      if (bgLayer) {
+        pass('Background layer exists');
+        const bgImage = window.getComputedStyle(bgLayer).backgroundImage;
+        if (bgImage && bgImage !== 'none') {
+          pass('Background image is set');
+        } else {
+          fail('Background image not set');
+        }
+      } else {
+        fail('Background layer not found');
+      }
+      
+      // Test 10: Idempotence test
+      info('Test 10: Testing idempotence (calling show again)...');
+      try {
+        await window.IntroScreen.showWithPreload(true);
+        pass('Second call to showWithPreload() completed (should be ignored)');
+      } catch (e) {
+        fail('Second call threw error: ' + e.message);
+      }
+      
+      info('✅ All tests completed! Check console for [IntroScreen] logs.');
+    }
+    
+    // Run tests automatically after a short delay
+    setTimeout(() => {
+      runTests();
+    }, 500);
+  </script>
+</body>
+</html>
