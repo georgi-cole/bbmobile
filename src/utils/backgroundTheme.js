@@ -347,7 +347,9 @@
       if (saved !== null) {
         adaptiveEnabled = saved === 'true';
       }
-    } catch {}
+    } catch (e) {
+      // Ignore localStorage errors
+    }
 
     console.info('[BackgroundTheme] Initialized (adaptive:', adaptiveEnabled, ')');
 

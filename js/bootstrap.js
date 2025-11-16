@@ -29,7 +29,7 @@
       numPlayers:12,tHOH:35,tNoms:25,tVeto:30,tVetoDec:20,tComms:30,tVote:25,tJury:42,
       fxCards:true,fxSound:true,fxAnim:true,fxStyle:'fade',miniMode:'random',
       manualMode:false,doubleChance:10,tripleChance:3,enableJuryHouse:true,autoMusic:true,
-      returnChance:50,selfEvictChance:0,enablePublicFav:false
+      returnChance:50,selfEvictChance:0,enablePublicFav:false,adaptiveBackground:true
     };
   }
 
@@ -758,6 +758,12 @@
       if(typeof global.BackgroundTheme !== 'undefined' && typeof global.BackgroundTheme.init === 'function'){
         global.BackgroundTheme.init({ bus: global.bbGameBus });
         console.info('[Bootstrap] BackgroundTheme initialized');
+        
+        // Sync with config setting
+        const adaptiveSetting = global.game.cfg.adaptiveBackground;
+        if(adaptiveSetting !== undefined){
+          global.BackgroundTheme.setAdaptive(adaptiveSetting);
+        }
       }
       
       // Initialize IntroScreen

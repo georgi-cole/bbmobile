@@ -51,7 +51,8 @@
           title: 'Interface',
           fields: [
             checkbox('fxCards', 'Card reveal popups (FX cards)'),
-            checkbox('showTopRoster', 'Show top roster above TV')
+            checkbox('showTopRoster', 'Show top roster above TV'),
+            checkbox('adaptiveBackground', 'Adaptive backgrounds (intro screen)')
           ]
         },
         {
