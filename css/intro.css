@@ -2,6 +2,22 @@
  * Full-screen intro hub with dynamic backgrounds and glass-morphism UI
  */
 
+/* ===== Main Game Screen Hiding (before Play) ===== */
+/* Hide main game elements until StartupFlow.buildMainScreen() is called */
+body:not(.main-screen-built) .wrap,
+body:not(.main-screen-built) .topbar {
+  display: none !important;
+}
+
+/* Ensure intro screen is visible even if main screen is hidden */
+.intro-screen {
+  display: none; /* Will be set to flex when shown */
+}
+
+.intro-screen--visible {
+  display: flex !important;
+}
+
 /* ===== Root Container ===== */
 .intro-screen {
   position: fixed;

@@ -189,6 +189,9 @@
       g.IntroScreen.hide();
     }
 
+    // Mark that main screen is being built (shows main game elements via CSS)
+    document.body.classList.add('main-screen-built');
+
     // Build cast and initialize main game UI
     // This was previously done in bootstrap() during initial boot
     if (typeof g.buildCast === 'function') {
@@ -321,6 +324,25 @@
   // ===== INITIALIZATION =====
 
   /**
+   * Wire up Daily and News chip button handlers (graceful no-ops for now).
+   */
+  function wireChipButtons() {
+    if (!bus) return;
+
+    // Daily chip button - placeholder for future implementation
+    bus.on('intro:chip:daily', function() {
+      console.info('[StartupFlow] Daily chip clicked (not yet implemented)');
+      // TODO: Implement daily challenge feature
+    });
+
+    // News chip button - placeholder for future implementation
+    bus.on('intro:chip:news', function() {
+      console.info('[StartupFlow] News chip clicked (not yet implemented)');
+      // TODO: Implement news/announcements feature
+    });
+  }
+
+  /**
    * Initialize startup flow controller.
    * Should be called from bootstrap after config is loaded.
    */
@@ -328,6 +350,7 @@
     console.info('[StartupFlow] Initializing...');
     
     wirePlayButton();
+    wireChipButtons();
     
     // Don't start sequence here - it will be triggered after DOM ready
     // and after intro-outro-video.js decides whether to show video

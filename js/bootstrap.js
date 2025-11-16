@@ -651,14 +651,7 @@
       }
     });
 
-    // Chip buttons (placeholders for future features)
-    bus.on('intro:chip:daily', function(){
-      console.info('[Bootstrap] Daily chip clicked (placeholder)');
-    });
-
-    bus.on('intro:chip:news', function(){
-      console.info('[Bootstrap] News chip clicked (placeholder)');
-    });
+    // NOTE: Chip buttons (Daily, News) are now handled by StartupFlow
   }
 
   // ---------- Boot ----------
