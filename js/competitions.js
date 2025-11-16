@@ -357,10 +357,8 @@
     // 1) Block replays for this week/phase/game
     if (global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, player.id)) {
       // Use inline status instead of below-TV message
-      if (global.TVInlineStatus?.set) {
-        global.TVInlineStatus.set('You have already submitted for this competition.', 'muted');
-      } else {
-        host.innerHTML = '<div class="tiny muted">You have already submitted for this competition.</div>';
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('You have already submitted for this competition.');
       }
       return;
     }
@@ -369,10 +367,8 @@
     if (global.CompetitionFlow && typeof global.CompetitionFlow.runCompetitionFlow === 'function') {
       // Use new competition flow: instructions → fullscreen game → completion
       // Show status in TV header inline status bar
-      if (global.TVInlineStatus?.set) {
-        global.TVInlineStatus.set('Loading competition…', 'muted');
-      } else {
-        host.innerHTML = '<div class="tiny muted">Loading competition...</div>';
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Loading competition…');
       }
       
       // Neutralize empty #tvOverlay if it has no active content (defensive guard)
@@ -419,10 +415,8 @@
         // Submit score
         if (submitScore(player.id, base, multiplier, label)) {
           // Use inline status instead of below-TV message
-          if (global.TVInlineStatus?.set) {
-            global.TVInlineStatus.set('Submission received. Waiting for others…', 'success');
-          } else {
-            host.innerHTML = '<div class="tiny muted">Submission received. Waiting for others…</div>';
+          if (window.TvStatus?.set) {
+            window.TvStatus.set('Submission received. Waiting for others…');
           }
           if (typeof onAfterSubmit === 'function') onAfterSubmit();
           maybeFinishComp();
@@ -458,10 +452,8 @@
 
         if (submitScore(player.id, base, multiplier, label)) {
           // Use inline status instead of below-TV message
-          if (global.TVInlineStatus?.set) {
-            global.TVInlineStatus.set('Submission received. Waiting for others…', 'success');
-          } else {
-            host.innerHTML = '<div class="tiny muted">Submission received. Waiting for others…</div>';
+          if (window.TvStatus?.set) {
+            window.TvStatus.set('Submission received. Waiting for others…');
           }
           if (typeof onAfterSubmit === 'function') onAfterSubmit();
           maybeFinishComp();
@@ -834,8 +826,8 @@
     if (g.phase === 'final3_comp2') return renderF3P2(panel);
     if (g.phase === 'final3_comp3') return renderF3P3(panel);
     // Use inline status instead of below-TV message
-    if (global.TVInlineStatus?.set) {
-      global.TVInlineStatus.set('Competition running…', 'muted');
+    if (window.TvStatus?.set) {
+      window.TvStatus.set('Competition running…');
     }
     panel.innerHTML = '';
   }
@@ -849,21 +841,16 @@
     // Check if minigame system is ready
     if (!isMinigameSystemReady()) {
       // Use inline status instead of below-TV message
-      if (global.TVInlineStatus?.set) {
-        global.TVInlineStatus.set('Loading minigame system…', 'muted');
-      } else {
-        host.innerHTML = '<div class="tiny muted">Loading minigame system...</div>';
-        panel.appendChild(host);
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Loading minigame system…');
       }
       setTimeout(() => {
         if (isMinigameSystemReady()) {
           renderHOH(panel);
         } else {
           console.error('[Competition] Minigame system failed to load');
-          if (global.TVInlineStatus?.set) {
-            global.TVInlineStatus.set('Error loading minigames. Please refresh the page.', 'error');
-          } else {
-            host.innerHTML = '<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+          if (window.TvStatus?.set) {
+            window.TvStatus.set('Error loading minigames. Please refresh the page.');
           }
         }
       }, 500);
@@ -886,21 +873,20 @@
 
       } else {
         // Use inline status instead of below-TV message
-        if (global.TVInlineStatus?.set) {
-          global.TVInlineStatus.set('Not eligible this week or already submitted.', 'muted');
-        } else {
-          host.innerHTML = '<div class="tiny muted">Not eligible this week or already submitted.</div>';
+        if (window.TvStatus?.set) {
+          window.TvStatus.set('Not eligible this week or already submitted.');
         }
       }
     } else {
       // Use inline status instead of below-TV message
-      if (global.TVInlineStatus?.set) {
-        global.TVInlineStatus.set('You are evicted and cannot compete.', 'muted');
-      } else {
-        host.innerHTML = '<div class="tiny muted">You are evicted and cannot compete.</div>';
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('You are evicted and cannot compete.');
       }
     }
-    panel.appendChild(host);
+    // Only append host if it has content (minigame rendering)
+    if(host.childElementCount > 0){
+      panel.appendChild(host);
+    }
   }
 
   function startHOH() {
@@ -1154,21 +1140,16 @@
 
     if (!isMinigameSystemReady()) {
       // Use inline status instead of below-TV message
-      if (global.TVInlineStatus?.set) {
-        global.TVInlineStatus.set('Loading minigame system…', 'muted');
-      } else {
-        host.innerHTML = '<div class="tiny muted">Loading minigame system...</div>';
-        panel.appendChild(host);
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Loading minigame system…');
       }
       setTimeout(() => {
         if (isMinigameSystemReady()) {
           renderF3P1(panel);
         } else {
           console.error('[Competition] Minigame system failed to load');
-          if (global.TVInlineStatus?.set) {
-            global.TVInlineStatus.set('Error loading minigames. Please refresh the page.', 'error');
-          } else {
-            host.innerHTML = '<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+          if (window.TvStatus?.set) {
+            window.TvStatus.set('Error loading minigames. Please refresh the page.');
           }
         }
       }, 500);
@@ -1188,13 +1169,14 @@
 
     } else {
       // Use inline status instead of below-TV message
-      if (global.TVInlineStatus?.set) {
-        global.TVInlineStatus.set('Waiting for competition to conclude…', 'muted');
-      } else {
-        host.innerHTML = '<div class="tiny muted">Waiting for competition to conclude…</div>';
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Waiting for competition to conclude…');
       }
     }
-    panel.appendChild(host);
+    // Only append host if it has content (minigame rendering)
+    if(host.childElementCount > 0){
+      panel.appendChild(host);
+    }
   }
 
   function startF3P1() {
@@ -1281,8 +1263,8 @@
   function renderF3P2(panel) {
     panel.innerHTML = '';
     // Use inline status instead of below-TV message
-    if (global.TVInlineStatus?.set) {
-      global.TVInlineStatus.set('Final 3 — Part 2 (head-to-head) is running…', 'muted');
+    if (window.TvStatus?.set) {
+      window.TvStatus.set('Final 3 — Part 2 (head-to-head) is running…');
     }
   }
 
@@ -1323,8 +1305,8 @@
         if (host) {
           if (!isMinigameSystemReady()) {
             // Use inline status instead of below-TV message
-            if (global.TVInlineStatus?.set) {
-              global.TVInlineStatus.set('Loading minigame system…', 'muted');
+            if (window.TvStatus?.set) {
+              window.TvStatus.set('Loading minigame system…');
             }
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
             setTimeout(() => {
@@ -1339,8 +1321,8 @@
                 });
               } else {
                 console.error('[Competition] Minigame system failed to load');
-                if (global.TVInlineStatus?.set) {
-                  global.TVInlineStatus.set('Error loading minigames. Please refresh the page.', 'error');
+                if (window.TvStatus?.set) {
+                  window.TvStatus.set('Error loading minigames. Please refresh the page.');
                 }
               }
             }, 500);
@@ -1348,8 +1330,8 @@
             const mg = pickMinigameType();
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
             // Use inline status instead of below-TV message
-            if (global.TVInlineStatus?.set) {
-              global.TVInlineStatus.set('You are in Final 3 — Part 2.', 'muted');
+            if (window.TvStatus?.set) {
+              window.TvStatus.set('You are in Final 3 — Part 2.');
             }
             host.appendChild(wrap);
 
@@ -1392,8 +1374,8 @@
   function renderF3P3(panel) {
     panel.innerHTML = '';
     // Use inline status instead of below-TV message
-    if (global.TVInlineStatus?.set) {
-      global.TVInlineStatus.set('Final 3 — Part 3 (final showdown) is running…', 'muted');
+    if (window.TvStatus?.set) {
+      window.TvStatus.set('Final 3 — Part 3 (final showdown) is running…');
     }
   }
 
@@ -1434,8 +1416,8 @@
         if (host) {
           if (!isMinigameSystemReady()) {
             // Use inline status instead of below-TV message
-            if (global.TVInlineStatus?.set) {
-              global.TVInlineStatus.set('Loading minigame system…', 'muted');
+            if (window.TvStatus?.set) {
+              window.TvStatus.set('Loading minigame system…');
             }
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
             setTimeout(() => {
@@ -1450,8 +1432,8 @@
                 });
               } else {
                 console.error('[Competition] Minigame system failed to load');
-                if (global.TVInlineStatus?.set) {
-                  global.TVInlineStatus.set('Error loading minigames. Please refresh the page.', 'error');
+                if (window.TvStatus?.set) {
+                  window.TvStatus.set('Error loading minigames. Please refresh the page.');
                 }
               }
             }, 500);
@@ -1459,8 +1441,8 @@
             const mg = pickMinigameType();
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
             // Use inline status instead of below-TV message
-            if (global.TVInlineStatus?.set) {
-              global.TVInlineStatus.set('You are in Final 3 — Part 3.', 'muted');
+            if (window.TvStatus?.set) {
+              window.TvStatus.set('You are in Final 3 — Part 3.');
             }
             host.appendChild(wrap);
 

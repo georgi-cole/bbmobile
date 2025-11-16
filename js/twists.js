@@ -499,14 +499,8 @@
     const panel=document.getElementById('panel');
     if(!panel) return;
     // Use inline status instead of below-TV message
-    if (global.TVInlineStatus?.set) {
-      global.TVInlineStatus.set("America's Vote complete.", 'success');
-    } else {
-      const note=document.createElement('div');
-      note.className='tiny muted';
-      note.style.marginTop='6px';
-      note.textContent="America's Vote complete.";
-      panel.appendChild(note);
+    if (window.TvStatus?.set) {
+      window.TvStatus.set("America's Vote complete.");
     }
   }
 

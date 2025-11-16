@@ -264,6 +264,10 @@
           var ctrls = host.querySelectorAll('button, input, select, textarea');
             for(var k=0;k<ctrls.length;k++){ ctrls[k].disabled = true; }
         }
+        // Show inline status on human submission
+        if(window.TvStatus?.set){
+          window.TvStatus.set('Submission received. Waiting for others…');
+        }
         if(typeof window.CustomEvent === 'function'){
           window.dispatchEvent(new CustomEvent('bb:comp:submitted', { detail: { kind: 'veto' } }));
         }
@@ -330,16 +334,15 @@
     }
 
     var panel = document.querySelector('#panel');
-    var names = g.__vetoPlayers.map(safeName).join(', ');
     
-    // Show player list in panel (multi-line content, not just a simple status)
-    if(panel){
-      panel.innerHTML = '';
-      var host = document.createElement('div');
-      host.className = 'minigame-host';
-      host.innerHTML = '<div class="tiny">Players: '+names+'</div>';
-      panel.appendChild(host);
+    // Show player list using inline status chip API
+    var list = Array.isArray(g.__vetoPlayers) ? g.__vetoPlayers.map(safeName) : [];
+    if(window.TvStatus?.setPlayersAndNote){
+      window.TvStatus.setPlayersAndNote(list, 'Competition in progress');
     }
+    
+    // Clear panel to leave room only for minigame host if needed
+    if(panel) panel.innerHTML = '';
 
     var you = (g.humanId!=null) ? getP(g.humanId) : null;
     var humanIn = !!(you && !you.evicted && g.__vetoPlayers.indexOf(you.id)!==-1);
@@ -381,17 +384,8 @@
       }
     } else {
       // Human not drawn to play - show note using inline status
-      if(global.TVInlineStatus?.set){
-        global.TVInlineStatus.set('You were not drawn to play in this Veto.', 'muted');
-      } else {
-        // Fallback: show in panel if TVInlineStatus not available
-        var host2 = document.querySelector('#panel .minigame-host');
-        if(host2){
-          var note = document.createElement('div');
-          note.className = 'tiny muted';
-          note.textContent = 'You were not drawn to play in this Veto. Waiting for results…';
-          host2.appendChild(note);
-        }
+      if(window.TvStatus?.set){
+        window.TvStatus.set('You were not drawn to play in this Veto.');
       }
     }
 

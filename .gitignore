@@ -39,3 +39,4 @@ screenshots/tv-overlay-fix/
 
 # Test files for development
 test_intro_screen_fix.html
+test_status_migration.html
