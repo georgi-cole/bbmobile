@@ -73,15 +73,13 @@
       return null;
     }
 
-    // MOBILE FIX: Skip centerTVInViewport for fixed-position overlay
-    // The overlay uses position:fixed and covers the entire viewport, so it doesn't
-    // need the underlying page to be scrolled to a specific position.
-    // Centering the TV before showing a fixed overlay can cause the underlying page
-    // to be in a suboptimal scroll position, which can block avatar selection on mobile.
-    // Instead, we just lock body scroll directly to prevent background scrolling.
+    // MOBILE FIX: Do not lock body scroll - the overlay itself is scrollable
+    // The overlay uses position:fixed with overflow-y:auto to allow internal scrolling.
+    // This allows the ceremony page to remain accessible and scrollable behind the overlay
+    // while the overlay content can also scroll if needed.
+    // We skip body scroll locking to fix mobile scrolling issues (issue #574).
     
-    // Lock body scroll when modal opens to prevent background scrolling
-    lockBodyScroll();
+    // Note: Body scroll lock has been intentionally removed to allow page scrolling
 
     // Initialize state
     state.nominees = nominees;
@@ -562,13 +560,8 @@
     state.overlay.remove();
     state.overlay = null;
     
-    // Use global helper to unlock body scroll
-    if (global.unlockBodyScroll) {
-      global.unlockBodyScroll();
-    } else {
-      // Fallback if helper not loaded yet
-      unlockBodyScroll();
-    }
+    // Note: Body scroll lock was not applied, so no need to unlock
+    // The overlay is self-contained and scrollable without affecting body scroll
     
     // Reset state
     state.nominees = [];
@@ -580,50 +573,9 @@
     state.onCancel = null;
   }
 
-  // Lock body scroll (prevent background scrolling on mobile)
-  // iOS-safe: uses overflow:hidden instead of position:fixed
-  function lockBodyScroll() {
-    const body = document.body;
-    const html = document.documentElement;
-    if (!body) return;
-    
-    // Store current scroll position
-    const scrollY = window.scrollY;
-    body.dataset.scrollY = String(scrollY);
-    body.dataset.scrollLocked = 'true';
-    
-    // Use overflow-based lock (iOS-safe)
-    body.style.overflow = 'hidden';
-    html.style.overscrollBehavior = 'contain';
-  }
-
-  // Unlock body scroll
-  function unlockBodyScroll() {
-    const body = document.body;
-    const html = document.documentElement;
-    if (!body || !html) return;
-    
-    // Restore scroll position if saved
-    const scrollY = parseInt(body.dataset.scrollY || '0', 10);
-    
-    // Clear new overflow-based lock
-    body.style.overflow = '';
-    html.style.overscrollBehavior = '';
-    
-    // Clear old position-based lock (backwards compatibility)
-    body.style.position = '';
-    body.style.top = '';
-    body.style.width = '';
-    
-    // Clear dataset flags
-    delete body.dataset.scrollLocked;
-    delete body.dataset.scrollY;
-    
-    // Restore scroll position
-    if (scrollY > 0) {
-      window.scrollTo(0, scrollY);
-    }
-  }
+  // Note: Body scroll lock functions removed in fix for issue #574
+  // The overlay is now self-contained and scrollable without locking body scroll
+  // This allows the ceremony page to remain accessible and scrollable on mobile devices
 
   // Export public API
   global.LiveVoteOverlay = {

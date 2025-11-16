@@ -247,7 +247,14 @@
     });
   }
 
+  // Hide all CTA buttons when voting phase begins (issue #574)
+  function hideCtasTriple() {
+    if (!ctaRow) return;
+    ctaRow.style.display = 'none';
+  }
+
   // Export public API
   lv2.initTriple = initTriple;
   lv2.cleanupTriple = cleanup;
+  lv2.hideCtasTriple = hideCtasTriple;
 })();
