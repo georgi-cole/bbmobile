@@ -29,7 +29,8 @@
     'final3_comp1',
     'final3_comp2',
     'final3_decision',
-    'social'
+    'social',
+    'social_intermission'
   ];
 
   let skipTimerPill = null;
