@@ -48,6 +48,27 @@
 <!-- Global shim for resilience against stray global references -->
 <script>window.global = window;</script>
 
+<!-- CRITICAL: Protective guard to prevent destructive window.game reassignment -->
+<script>
+(function guardGame(){
+  const original = window.game || (window.game = {});
+  Object.defineProperty(window, 'game', {
+    configurable: true,
+    get(){ return original; },
+    set(v){
+      if (v && typeof v === 'object'){
+        console.warn('[GameGuard] Merging new properties into window.game instead of replacing');
+        Object.assign(original, v);
+      } else {
+        console.warn('[GameGuard] Ignored non-object game replacement');
+      }
+    }
+  });
+  original.cfg = original.cfg || {};
+  console.info('[GameGuard] window.game protected from destructive reassignment');
+})();
+</script>
+
 <!-- Feature Flag: Social Maneuvers (default: enabled, runtime toggleable) -->
 <script>
   (function() {
@@ -432,6 +453,62 @@
 <script defer src="src/ui/hubModalBridge.js"></script>
 <!-- DeferredGuards loaded earlier (before roster-placeholders) -->
 <script defer src="src/startup/flow.js"></script>
+
+<!-- Recovery Watchdog: Ensures IntroScreen appears even if initialization fails -->
+<script>
+(function recoveryWatchdog() {
+  'use strict';
+  const WATCHDOG_TIMEOUT = 2500; // ms - wait before checking
+  
+  // Run watchdog after all scripts have had a chance to load
+  setTimeout(() => {
+    // Check if IntroScreen API exists
+    const hasAPI = window.game && window.game.IntroScreen && typeof window.game.IntroScreen.showWithPreload === 'function';
+    
+    // Check if hub DOM element exists
+    const hasElement = !!document.getElementById('introScreen');
+    
+    // Check if hub should be shown (no game started yet)
+    const shouldShow = !window.__bbGameStarted && !window.game?.players?.length;
+    
+    if (!hasAPI) {
+      console.error('[RecoveryWatchdog] CRITICAL: window.game.IntroScreen API missing after timeout');
+      console.error('[RecoveryWatchdog] Attempting recovery by re-fetching IntroScreen.js...');
+      
+      // Attempt recovery by re-loading the script
+      const script = document.createElement('script');
+      script.src = 'src/ui/IntroScreen.js?recovery=' + Date.now();
+      script.onload = () => {
+        console.info('[RecoveryWatchdog] IntroScreen.js re-loaded, attempting to show hub');
+        if (window.game && window.game.IntroScreen && typeof window.game.IntroScreen.init === 'function') {
+          window.game.IntroScreen.init({ bus: window.bbGameBus });
+        }
+        if (window.game && window.game.IntroScreen && typeof window.game.IntroScreen.showWithPreload === 'function' && shouldShow) {
+          window.game.IntroScreen.showWithPreload();
+        }
+      };
+      script.onerror = () => {
+        console.error('[RecoveryWatchdog] FATAL: Failed to re-load IntroScreen.js');
+      };
+      document.body.appendChild(script);
+      return;
+    }
+    
+    if (!hasElement && shouldShow) {
+      console.warn('[RecoveryWatchdog] Hub element missing but API exists - attempting to show hub');
+      if (typeof window.game.IntroScreen.showWithPreload === 'function') {
+        window.game.IntroScreen.showWithPreload();
+      }
+      return;
+    }
+    
+    // Everything looks good
+    if (hasAPI && hasElement) {
+      console.info('[RecoveryWatchdog] IntroScreen healthy - API and element present');
+    }
+  }, WATCHDOG_TIMEOUT);
+})();
+</script>
 
 <script defer src="js/logs-helper.js?v=fixes-5"></script>
 <script defer src="js/logs.js"></script>

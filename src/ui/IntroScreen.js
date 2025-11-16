@@ -8,8 +8,14 @@
 // - Dynamic positioning based on BackgroundTheme anchor suggestions
 // - Event-driven architecture using window.game.bus
 
-(function(g) {
+// SENTINEL LOG: Script executing
+console.info('[IntroScreen] Script executing – pre-init');
+
+(function() {
   'use strict';
+  
+  // CRITICAL: Bind window.game immediately to prevent lost reference
+  const g = window.game = window.game || {};
 
   let container = null;
   let isVisible = false;
@@ -647,28 +653,32 @@
       return;
     }
 
-    // Build DOM if not exists
+    // CRITICAL: Ensure DOM is built (should be done in init, but guard here too)
     if (!container) {
       container = buildDOM();
-      
-      // Get initial background from BackgroundTheme BEFORE appending to DOM
-      // This ensures background is set before first paint
-      if (g.BackgroundTheme && typeof g.BackgroundTheme.getCurrent === 'function') {
-        const theme = g.BackgroundTheme.getCurrent();
-        if (theme) {
-          // Find background layer and set URL before DOM insertion
-          const bgCurrent = container.querySelector('.intro-screen__bg--current');
-          if (bgCurrent) {
-            bgCurrent.style.backgroundImage = `url(${theme.url})`;
-          }
-          updateAnchors(theme.anchor);
+      console.info('[IntroScreen] DOM built during show() - late build');
+    }
+
+    // Get initial background from BackgroundTheme BEFORE appending to DOM
+    // This ensures background is set before first paint
+    if (g.BackgroundTheme && typeof g.BackgroundTheme.getCurrent === 'function') {
+      const theme = g.BackgroundTheme.getCurrent();
+      if (theme) {
+        // Find background layer and set URL before DOM insertion
+        const bgCurrent = container.querySelector('.intro-screen__bg--current');
+        if (bgCurrent) {
+          bgCurrent.style.backgroundImage = `url(${theme.url})`;
         }
+        updateAnchors(theme.anchor);
       }
-      
-      // Now append to body with background already set
+    }
+    
+    // Append to body if not already in DOM
+    if (!container.parentNode) {
       document.body.appendChild(container);
+      console.info('[IntroScreen] DOM appended to body');
     } else {
-      // Container already exists, just update background if needed
+      // Container already in DOM, just update background if needed
       if (g.BackgroundTheme && typeof g.BackgroundTheme.getCurrent === 'function') {
         const theme = g.BackgroundTheme.getCurrent();
         if (theme) {
@@ -687,8 +697,8 @@
     container.classList.add('intro-screen--visible');
     isVisible = true;
 
-    // CRITICAL: Set global flag AFTER hub is successfully shown and DOM is mounted
-    // This is moved to AFTER classList.add to ensure the hub is fully visible
+    // CRITICAL: Set global flag ONLY AFTER hub is fully visible in DOM
+    // This ensures __bbHubShown accurately reflects hub visibility
     g.__bbHubShown = true;
 
     console.info('[IntroScreen] Shown');
@@ -703,15 +713,16 @@
     console.info('[IntroScreen] Hiding...');
     container.classList.remove('intro-screen--visible');
     
+    // CRITICAL: Reset flag immediately when hiding starts
+    // This allows hub to be shown again during restart
+    g.__bbHubShown = false;
+    
     // Wait for fade-out animation before hiding
     setTimeout(() => {
       if (container) {
         container.style.display = 'none';
       }
       isVisible = false;
-      
-      // CRITICAL: Reset global flag so hub can be shown again on restart
-      g.__bbHubShown = false;
       
       console.info('[IntroScreen] Hidden');
     }, 400); // Match CSS transition duration
@@ -734,7 +745,20 @@
 
     if (!bus) {
       console.error('[IntroScreen] No event bus provided');
-      return;
+      return {
+        show,
+        showWithPreload,
+        hide,
+        reset,
+        preloadBackground
+      };
+    }
+
+    // CRITICAL: Build DOM during init to ensure it's ready
+    // This makes init idempotent and ensures DOM exists before showing
+    if (!container) {
+      container = buildDOM();
+      console.info('[IntroScreen] DOM built during init');
     }
 
     // Listen for background theme changes
@@ -789,6 +813,9 @@
       container.style.display = 'none';
     }
     
+    // CRITICAL: Reset flag immediately during reset
+    g.__bbHubShown = false;
+    
     // Remove container from DOM
     if (container && container.parentNode) {
       container.parentNode.removeChild(container);
@@ -799,26 +826,25 @@
     isVisible = false;
     currentBgLayer = 'current';
     playButtonClicked = false;
-    g.__bbHubShown = false;
     
     console.info('[IntroScreen] Reset complete');
   }
 
-  // Export API
-  if (!g.IntroScreen) {
-    g.IntroScreen = {
-      init,
-      show,
-      showWithPreload,
-      hide,
-      reset,
-      preloadBackground
-    };
-  }
+  // CRITICAL: Export API immediately and reliably
+  // Assign to window.game.IntroScreen (not just g.IntroScreen)
+  // This ensures the API is available even if window.game is reassigned
+  window.game.IntroScreen = {
+    init,
+    show,
+    showWithPreload,
+    hide,
+    reset,
+    preloadBackground
+  };
 
   // Backward compatibility alias
-  if (!g.introScreen) {
-    g.introScreen = g.IntroScreen;
-  }
+  window.game.introScreen = window.game.IntroScreen;
+  
+  console.info('[IntroScreen] API exported to window.game.IntroScreen');
 
-})(window);
+})();
