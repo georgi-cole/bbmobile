@@ -108,8 +108,8 @@
   flex-direction: column;
   gap: 16px;
   position: absolute;
-  left: var(--anchor-left, 58vw);
-  top: var(--anchor-top, 40vh);
+  left: var(--anchor-left, 50vw);
+  top: var(--anchor-top, 50vh);
   transform: translate(-50%, -50%);
   z-index: 15;
   animation: intro-lift-in 800ms ease-out backwards;
@@ -284,8 +284,7 @@
 /* Portrait Mobile */
 @media (max-width: 768px) and (orientation: portrait) {
   .intro-screen__button-column {
-    left: 50vw;
-    top: 50vh;
+    /* Keep centered positioning from CSS vars */
     min-width: 240px;
   }
   
@@ -319,8 +318,7 @@
 /* Landscape Mobile / Small Tablet */
 @media (max-width: 1024px) and (orientation: landscape) {
   .intro-screen__button-column {
-    left: var(--anchor-left, 60vw);
-    top: var(--anchor-top, 50vh);
+    /* Keep centered positioning from CSS vars */
   }
   
   .intro-screen__btn {
@@ -333,16 +331,16 @@
 
 /* Extreme Aspect Ratios */
 @media (max-aspect-ratio: 9/16) {
-  /* Very tall/narrow screens */
+  /* Very tall/narrow screens - keep centered */
   .intro-screen__button-column {
-    left: 50vw;
+    /* Positioning handled by CSS vars, keep centered */
   }
 }
 
 @media (min-aspect-ratio: 21/9) {
-  /* Ultra-wide screens */
+  /* Ultra-wide screens - keep centered */
   .intro-screen__button-column {
-    left: calc(var(--anchor-left, 58vw) + 5vw);
+    /* Positioning handled by CSS vars, keep centered */
   }
 }
 

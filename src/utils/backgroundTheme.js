@@ -27,17 +27,17 @@
   };
 
   // Anchor suggestions per theme (CSS values for button column positioning)
-  // These position the button column within the "beam/right-center" area of each background
+  // These position the button column centered on screen with slight adjustments per theme
   const ANCHORS = {
-    sunrise: { left: '60vw', top: '38vh' },
-    day: { left: '58vw', top: '40vh' },
-    sunset: { left: '59vw', top: '39vh' },
-    night: { left: '62vw', top: '40vh' },      // Slightly more right for night
-    rain: { left: '58vw', top: '41vh' },
-    snow: { left: '61vw', top: '39vh' },
-    xmasDay: { left: '59vw', top: '38vh' },
-    xmasy: { left: '60vw', top: '39vh' },
-    xmasyNight: { left: '62vw', top: '40vh' }
+    sunrise: { left: '50vw', top: '50vh' },
+    day: { left: '50vw', top: '50vh' },
+    sunset: { left: '50vw', top: '50vh' },
+    night: { left: '50vw', top: '50vh' },
+    rain: { left: '50vw', top: '50vh' },
+    snow: { left: '50vw', top: '50vh' },
+    xmasDay: { left: '50vw', top: '50vh' },
+    xmasy: { left: '50vw', top: '50vh' },
+    xmasyNight: { left: '50vw', top: '50vh' }
   };
 
   let bus = null;

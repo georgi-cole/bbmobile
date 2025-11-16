@@ -113,7 +113,6 @@
       { id: 'intro-btn-rules', label: 'Rules', action: 'intro:open:rules' },
       { id: 'intro-btn-profile', label: 'Profile', action: 'intro:open:profile' },
       { id: 'intro-btn-leaderboard', label: 'Leaderboard', action: 'intro:open:leaderboard' },
-      { id: 'intro-btn-settings', label: 'Settings', action: 'intro:open:settings' },
       { id: 'intro-btn-credits', label: 'Credits', action: 'intro:open:credits' }
     ];
 
