@@ -125,10 +125,11 @@
   <!-- Minimal game scaffold -->
   <div id="tv" style="display:none;"></div>
   
-  <script type="module">
-    // Import required modules
-    import './js/ui/CardManager.js';
-    import './js/ui/tv-cards.js';
+  <!-- Load required modules -->
+  <script src="js/ui/CardManager.js"></script>
+  <script src="js/ui/tv-cards.js"></script>
+  
+  <script>
     
     const testLog = document.getElementById('testLog');
     const cardCount = document.getElementById('cardCount');
@@ -306,8 +307,12 @@
       log('Test cleared', 'info');
     });
     
-    // Initial setup
-    log('Test ready. Click "Run Skip Mid-Ceremony Test" to start.', 'info');
+    // Wait for modules to load
+    window.addEventListener('load', function() {
+      log('Test ready. Click "Run Skip Mid-Ceremony Test" to start.', 'info');
+      log('CardManager loaded: ' + !!window.CardManager, 'info');
+      log('TVCards loaded: ' + !!window.TVCards, 'info');
+    });
   </script>
 </body>
 </html>
