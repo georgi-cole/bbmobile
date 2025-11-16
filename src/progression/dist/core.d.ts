@@ -3,6 +3,10 @@
  */
 import type { XPEvent, XPRule, XPRuleSet, PlayerState, Snapshot } from './types.js';
 /**
+ * Check if currently in guest mode (no XP persistence)
+ */
+export declare function isGuestMode(): boolean;
+/**
  * Initialize the progression system
  */
 export declare function initialize(): Promise<void>;

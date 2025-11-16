@@ -246,62 +246,73 @@
     }
   }
 
+  // ===== ENTER GAME ORCHESTRATION =====
+
+  /**
+   * Enter game - main orchestration function called when Play button is pressed.
+   * Handles profile loading/guest mode and starts the game.
+   */
+  async function enterGame() {
+    console.info('[StartupFlow] enterGame() called');
+
+    // Set autoShowRulesOnStart to false to prevent auto-popups
+    if (g.game && g.game.cfg) {
+      g.game.cfg.autoShowRulesOnStart = false;
+    }
+
+    // Look up last-used profile
+    let profile = null;
+    if (g.ProfileStorage && g.ProfileService) {
+      const lastProfileId = g.ProfileStorage.getLastProfileId();
+      if (lastProfileId) {
+        profile = g.ProfileStorage.getProfileById(lastProfileId);
+        console.info('[StartupFlow] found last profile:', profile?.displayName);
+      }
+    }
+
+    // Apply profile or set guest mode
+    if (profile && g.ProfileService) {
+      console.info('[StartupFlow] applying profile:', profile.displayName);
+      g.ProfileService.setCurrentProfile(profile);
+    } else {
+      console.info('[StartupFlow] no profile found, enabling guest mode');
+      if (g.ProfileService) {
+        g.ProfileService.setGuestMode();
+      }
+    }
+
+    // Build/rebuild game if needed
+    if (!g.game || !g.game.players || g.game.players.length === 0) {
+      console.info('[StartupFlow] building game cast');
+      if (typeof g.buildCast === 'function') {
+        g.buildCast();
+      }
+    }
+
+    // Build main screen and start game
+    buildMainScreen();
+
+    // Start opening sequence
+    if (typeof g.startOpeningSequence === 'function') {
+      g.startOpeningSequence();
+    } else if (typeof g.startGame === 'function') {
+      g.startGame();
+    } else {
+      console.error('[StartupFlow] No game start function available');
+    }
+  }
+
   // ===== EVENT WIRING =====
 
   /**
-   * Wire up Play button handler to build main screen after gating.
+   * Wire up Play button handler to call enterGame().
    */
   function wirePlayButton() {
     if (!bus || handlersWired) return; // Prevent duplicate registration
 
     bus.on('intro:play', async function() {
       console.info('[StartupFlow] Play button clicked');
-
-      // Check if rules accepted
-      let rulesAccepted = false;
-      // Use StorageSafe utility for localStorage access (consistent with bootstrap.js)
-      if (g.StorageSafe && typeof g.StorageSafe.get === 'function') {
-        rulesAccepted = g.StorageSafe.get('bb_rules_accepted', null) === 'true';
-      } else {
-        rulesAccepted = false;
-      }
-
-      if (!rulesAccepted) {
-        console.info('[StartupFlow] Rules not accepted, opening Rules modal');
-        // Open Rules modal - user will return to intro hub after accepting
-        if (typeof g.openRulesModal === 'function') {
-          g.openRulesModal();
-        } else if (typeof g.showRules === 'function') {
-          g.showRules();
-        }
-        return;
-      }
-
-      // Check if profile is complete
-      const profileComplete = checkProfileComplete();
-      if (!profileComplete) {
-        console.info('[StartupFlow] Profile incomplete, opening Profile modal');
-        // Open Profile modal - user will return to intro hub after completing
-        if (g.ProfileModal && typeof g.ProfileModal.open === 'function') {
-          g.ProfileModal.open();
-        } else if (typeof g.openProfileModal === 'function') {
-          g.openProfileModal();
-        }
-        return;
-      }
-
-      // All checks passed - build main screen and start game
-      console.info('[StartupFlow] Gating checks passed, building main screen');
-      buildMainScreen();
-
-      // Start opening sequence
-      if (typeof g.startOpeningSequence === 'function') {
-        g.startOpeningSequence();
-      } else if (typeof g.startGame === 'function') {
-        g.startGame();
-      } else {
-        console.error('[StartupFlow] No game start function available');
-      }
+      await enterGame();
     });
   }
 
@@ -331,10 +342,92 @@
   // ===== INITIALIZATION =====
 
   /**
-   * Wire up Daily and News chip button handlers (graceful no-ops for now).
+   * Wire up Intro Hub button handlers.
    */
-  function wireChipButtons() {
+  function wireIntroHubButtons() {
     if (!bus || handlersWired) return; // Prevent duplicate registration
+
+    // Rules button - opens Rules modal
+    bus.on('intro:open:rules', function() {
+      console.info('[StartupFlow] Rules button clicked');
+      if (typeof g.showRulesModal === 'function') {
+        g.showRulesModal();
+      } else if (typeof g.openRulesModal === 'function') {
+        g.openRulesModal();
+      } else {
+        console.warn('[StartupFlow] Rules modal function not available');
+      }
+    });
+
+    // Profile button - opens Profile modal
+    bus.on('intro:open:profile', function() {
+      console.info('[StartupFlow] Profile button clicked');
+      if (typeof g.showProfileModal === 'function') {
+        g.showProfileModal();
+      } else if (g.ProfileModal && typeof g.ProfileModal.open === 'function') {
+        g.ProfileModal.open();
+      } else {
+        console.warn('[StartupFlow] Profile modal function not available');
+      }
+    });
+
+    // Settings button - opens Settings modal (same as topbar Settings)
+    bus.on('intro:open:settings', function() {
+      console.info('[StartupFlow] Settings button clicked');
+      // Trigger the same settings modal as the topbar button
+      const settingsBtn = document.getElementById('btnOpenSettings');
+      if (settingsBtn) {
+        settingsBtn.click();
+      } else if (typeof g.openSettings === 'function') {
+        g.openSettings();
+      } else {
+        console.warn('[StartupFlow] Settings modal function not available');
+      }
+    });
+
+    // Leaderboard button - shows leaderboard/XP panel
+    bus.on('intro:open:leaderboard', function() {
+      console.info('[StartupFlow] Leaderboard button clicked');
+      // Trigger the same leaderboard as the topbar badge button
+      const leaderboardBtn = document.getElementById('xpLeaderboardBadge');
+      if (leaderboardBtn) {
+        leaderboardBtn.click();
+      } else if (typeof g.showLeaderboard === 'function') {
+        g.showLeaderboard();
+      } else if (g.bus) {
+        g.bus.emit('progression:show-panel', {});
+      } else {
+        console.warn('[StartupFlow] Leaderboard function not available');
+      }
+    });
+
+    // Credits button - shows credits/end credits
+    bus.on('intro:open:credits', function() {
+      console.info('[StartupFlow] Credits button clicked');
+      if (typeof g.showCreditsModal === 'function') {
+        g.showCreditsModal();
+      } else if (typeof g.showCredits === 'function') {
+        g.showCredits();
+      } else {
+        console.warn('[StartupFlow] Credits function not available');
+      }
+    });
+
+    // Help button - shows help/instructions
+    bus.on('intro:open:help', function() {
+      console.info('[StartupFlow] Help button clicked');
+      if (typeof g.showHelpModal === 'function') {
+        g.showHelpModal();
+      } else if (typeof g.showHelp === 'function') {
+        g.showHelp();
+      } else {
+        // Fallback: show Rules modal as it contains game instructions
+        console.info('[StartupFlow] Help modal not available, showing Rules modal instead');
+        if (typeof g.showRulesModal === 'function') {
+          g.showRulesModal();
+        }
+      }
+    });
 
     // Daily chip button - placeholder for future implementation
     bus.on('intro:chip:daily', function() {
@@ -363,7 +456,7 @@
     console.info('[StartupFlow] Initializing...');
     
     wirePlayButton();
-    wireChipButtons();
+    wireIntroHubButtons();
     
     // Mark handlers as wired after successful registration
     handlersWired = true;
@@ -386,7 +479,8 @@
     startupSequence,
     buildMainScreen,
     preloadIntroBackground,
-    showIntroHub
+    showIntroHub,
+    enterGame
   };
 
   console.info('[StartupFlow] Module loaded');

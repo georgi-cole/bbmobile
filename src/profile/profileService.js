@@ -73,6 +73,9 @@
     currentProfile = profile;
     isGuest = false;
     
+    // Clear guest mode when a real profile is selected
+    clearGuestMode();
+    
     if (profile) {
       // Check if previous game was completed with this profile and increment season
       checkAndIncrementSeasonForProfile(profile);
@@ -92,6 +95,14 @@
     currentProfile = null;
     isGuest = true;
     
+    // Set localStorage flag to suppress XP writes
+    try {
+      localStorage.setItem('bb.guestMode', 'true');
+      console.info('[profileService] guest mode enabled - XP writes suppressed');
+    } catch (e) {
+      console.warn('[profileService] failed to set guest mode flag:', e);
+    }
+    
     // Apply default guest profile to game
     applyProfileToGame({
       displayName: 'Guest',
@@ -99,6 +110,16 @@
       xp: 0,
       season: 1
     });
+  }
+
+  // Clear guest mode (called when user selects a real profile later)
+  function clearGuestMode() {
+    try {
+      localStorage.removeItem('bb.guestMode');
+      console.info('[profileService] guest mode cleared - XP writes enabled');
+    } catch (e) {
+      console.warn('[profileService] failed to clear guest mode flag:', e);
+    }
   }
 
   // Apply profile to game state
@@ -269,6 +290,7 @@
     isGuestMode,
     setCurrentProfile,
     setGuestMode,
+    clearGuestMode,
     updateCurrentProfile,
     initializeProfile,
     getDisplayName,
