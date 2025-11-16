@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vote Overlay Improvements Test</title>
+  <link rel="stylesheet" href="css/livevote-voteoverlay.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-controls {
+      max-width: 600px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+      display: block;
+      width: 100%;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .test-info ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .test-info li {
+      margin: 4px 0;
+    }
+
+    #tv {
+      position: relative;
+      max-width: 900px;
+      margin: 20px auto;
+      height: 600px;
+      background: linear-gradient(to bottom, rgba(14,23,48,0.7), rgba(14,23,48,0.8));
+      background-color: #0e1730;
+      border: 2px solid rgba(0,0,0,0.35);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>📱 Vote Overlay Improvements Test</h1>
+    
+    <button onclick="testNormalVote()">Test Normal Vote (2 Nominees)</button>
+    <button onclick="testMultipleNominees()">Test Multiple Nominees (4)</button>
+    <button onclick="testWithErrors()">Test Error Handling</button>
+    
+    <div class="test-info">
+      <strong>✨ New Features:</strong>
+      <ul>
+        <li>✅ Button label is just "Evict" (no player name)</li>
+        <li>✅ Button size reduced (~42-44px height)</li>
+        <li>✅ Confirmation positioned 8px below avatar</li>
+        <li>✅ Button disables immediately on tap</li>
+        <li>✅ Fade-out animation after submission</li>
+        <li>✅ Error handling with re-enable</li>
+        <li>✅ Accessibility improvements (aria-live)</li>
+      </ul>
+      <p><strong>Instructions:</strong> Click a test button, select a nominee by tapping their avatar, then tap "Evict" to see the improvements.</p>
+    </div>
+  </div>
+  
+  <div id="tv"></div>
+  
+  <script>
+    // Mock global helpers
+    window.game = {
+      cfg: {}
+    };
+    
+    window.getP = function(id) {
+      return mockPlayers[id];
+    };
+    
+    window.safeName = function(id) {
+      return mockPlayers[id]?.name || 'Unknown';
+    };
+    
+    window.resolveAvatar = function(player) {
+      return player.avatar || getDicebearUrl(player.name);
+    };
+    
+    function getDicebearUrl(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    }
+    
+    // Mock players
+    const mockPlayers = {
+      1: { id: 1, name: 'Ash', avatar: null },
+      2: { id: 2, name: 'Blake', avatar: null },
+      3: { id: 3, name: 'Charlie', avatar: null },
+      4: { id: 4, name: 'Dana', avatar: null }
+    };
+    
+    let testErrorMode = false;
+    
+    function testNormalVote() {
+      if (window.LiveVoteOverlay?.isOpen()) {
+        window.LiveVoteOverlay.hide();
+      }
+      
+      testErrorMode = false;
+      
+      window.LiveVoteOverlay.show({
+        nominees: [1, 2],
+        onSubmit: (selectedId) => {
+          console.log('Vote submitted for player:', selectedId);
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              console.log('Vote processed successfully');
+              resolve();
+            }, 500);
+          });
+        },
+        allowClose: true,
+        onCancel: () => {
+          console.log('Vote cancelled');
+        }
+      });
+    }
+    
+    function testMultipleNominees() {
+      if (window.LiveVoteOverlay?.isOpen()) {
+        window.LiveVoteOverlay.hide();
+      }
+      
+      testErrorMode = false;
+      
+      window.LiveVoteOverlay.show({
+        nominees: [1, 2, 3, 4],
+        onSubmit: (selectedId) => {
+          console.log('Vote submitted for player:', selectedId);
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              console.log('Vote processed successfully');
+              resolve();
+            }, 500);
+          });
+        },
+        allowClose: true,
+        onCancel: () => {
+          console.log('Vote cancelled');
+        }
+      });
+    }
+    
+    function testWithErrors() {
+      if (window.LiveVoteOverlay?.isOpen()) {
+        window.LiveVoteOverlay.hide();
+      }
+      
+      testErrorMode = true;
+      
+      window.LiveVoteOverlay.show({
+        nominees: [1, 2],
+        onSubmit: (selectedId) => {
+          console.log('Vote submitted for player:', selectedId);
+          return new Promise((resolve, reject) => {
+            setTimeout(() => {
+              console.error('Simulating submission error');
+              reject(new Error('Network error: Failed to submit vote'));
+            }, 500);
+          });
+        },
+        allowClose: true,
+        onCancel: () => {
+          console.log('Vote cancelled');
+        }
+      });
+    }
+  </script>
+  
+  <script src="js/livevote-voteoverlay.js"></script>
+</body>
+</html>
