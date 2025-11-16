@@ -87,6 +87,9 @@
    * @param {string} [options.tone] - Optional tone/style attribute
    * @param {number} [options.duration=2400] - Display duration in ms
    * @returns {Promise} Resolves when card is dismissed
+   * 
+   * NOTE: CardManager wrapper automatically handles timeout registration and phase guards.
+   * Factory returns {card, timeout} - CardManager.show() auto-registers the timeout.
    */
   function showTVCard({title, lines, tone, duration}){
     return new Promise(function(resolve){

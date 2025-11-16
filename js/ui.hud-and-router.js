@@ -1595,6 +1595,16 @@ header.innerHTML = `
     const game=g.game; if(!game) return;
     sanitizeJuryConsistency(true);
     
+    // Notify CardManager of phase change FIRST (before any other cleanup)
+    if(g.CardManager && typeof g.CardManager.onPhaseChange === 'function'){
+      try {
+        g.CardManager.onPhaseChange(phase);
+        console.info('[phase] CardManager.onPhaseChange() called for phase:', phase);
+      } catch(e){
+        console.error('[phase] CardManager.onPhaseChange() error:', e);
+      }
+    }
+    
     // Increment phase token to cancel all previous phase operations
     const oldToken = g.currentPhaseToken;
     g.currentPhaseToken = (g.currentPhaseToken || 0) + 1;
