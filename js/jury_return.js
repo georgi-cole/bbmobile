@@ -35,20 +35,14 @@
         });
       } else {
         // Use inline status instead of below-TV message
-        if (global.TVInlineStatus?.set) {
-          global.TVInlineStatus.set('Minigame engine not available.', 'warn');
-        } else {
-          const note=document.createElement('div'); note.className='tiny muted';
-          note.textContent='Minigame engine not available.'; box.appendChild(note);
+        if (window.TvStatus?.set) {
+          window.TvStatus.set('Minigame engine not available.');
         }
       }
     } else {
       // Use inline status instead of below-TV message
-      if (global.TVInlineStatus?.set) {
-        global.TVInlineStatus.set('You are not a juror. Observing…', 'muted');
-      } else {
-        const note=document.createElement('div'); note.className='tiny muted';
-        note.textContent='You are not a juror. Observing…'; box.appendChild(note);
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('You are not a juror. Observing…');
       }
     }
   }
