@@ -399,6 +399,13 @@
       applyPlayerCount(cfg.numPlayers);
     }
     
+    // Sync adaptive background setting to BackgroundTheme
+    if(changedKeys.indexOf('adaptiveBackground') !== -1){
+      if(typeof global.BackgroundTheme !== 'undefined' && typeof global.BackgroundTheme.setAdaptive === 'function'){
+        global.BackgroundTheme.setAdaptive(!!cfg.adaptiveBackground);
+      }
+    }
+    
     // Always trigger global HUD update
     try{
       global.updateHud?.();
