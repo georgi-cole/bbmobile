@@ -2063,6 +2063,22 @@ header.innerHTML = `
 
   // ------------ Init ------------
   function init(){
+    // DEFERRED STARTUP GUARD: Check if game is ready to start
+    // If not ready, defer HUD initialization until after Play button is pressed
+    if (g.DeferredGuards && !g.DeferredGuards.isGameReadyToStart()) {
+      console.info('[ui.hud-and-router] Game not ready, deferring HUD initialization');
+      g.DeferredGuards.deferTask(() => {
+        console.info('[ui.hud-and-router] Executing deferred HUD initialization');
+        initHUDInternal();
+      }, 'HUD.init');
+      return;
+    }
+
+    // Game is ready or guard not available, initialize normally
+    initHUDInternal();
+  }
+
+  function initHUDInternal(){
     UI.initSettingsUI?.();
     wireCompSubmitDelegationOnce();
     UI.ensureLogTabs?.();

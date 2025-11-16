@@ -278,8 +278,29 @@
 
   /**
    * Initialize the placeholder system.
+   * NOTE: With deferred startup, this should NOT auto-execute until after Play.
+   * See DeferredGuards module for gate control.
    */
   function init() {
+    // DEFERRED STARTUP GUARD: Check if game is ready to start
+    // If not ready, defer initialization until after Play button is pressed
+    if (g.DeferredGuards && !g.DeferredGuards.isGameReadyToStart()) {
+      console.info('[RosterPlaceholders] Game not ready, deferring initialization');
+      g.DeferredGuards.deferTask(() => {
+        console.info('[RosterPlaceholders] Executing deferred initialization');
+        initInternal();
+      }, 'RosterPlaceholders.init');
+      return;
+    }
+
+    // Game is ready or guard not available, initialize normally
+    initInternal();
+  }
+
+  /**
+   * Internal initialization logic (extracted for deferred execution).
+   */
+  function initInternal() {
     injectPlaceholderCSS();
 
     // Try to render placeholders immediately
@@ -321,6 +342,7 @@
   }
 
   // Initialize when DOM is ready
+  // NOTE: This will now defer if DeferredGuards says game is not ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {
