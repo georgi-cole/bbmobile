@@ -34,12 +34,22 @@
           submitJuryScore(you.id, base, (0.8 + (you?.skill||0.5)*0.6), 'JuryReturn/'+mg);
         });
       } else {
-        const note=document.createElement('div'); note.className='tiny muted';
-        note.textContent='Minigame engine not available.'; box.appendChild(note);
+        // Use inline status instead of below-TV message
+        if (global.TVInlineStatus?.set) {
+          global.TVInlineStatus.set('Minigame engine not available.', 'warn');
+        } else {
+          const note=document.createElement('div'); note.className='tiny muted';
+          note.textContent='Minigame engine not available.'; box.appendChild(note);
+        }
       }
     } else {
-      const note=document.createElement('div'); note.className='tiny muted';
-      note.textContent='You are not a juror. Observing…'; box.appendChild(note);
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('You are not a juror. Observing…', 'muted');
+      } else {
+        const note=document.createElement('div'); note.className='tiny muted';
+        note.textContent='You are not a juror. Observing…'; box.appendChild(note);
+      }
     }
   }
   global.renderJuryReturnPanel=renderJuryReturnPanel;

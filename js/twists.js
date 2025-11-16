@@ -498,11 +498,16 @@
   function cleanupReturnPanel(){
     const panel=document.getElementById('panel');
     if(!panel) return;
-    const note=document.createElement('div');
-    note.className='tiny muted';
-    note.style.marginTop='6px';
-    note.textContent="America's Vote complete.";
-    panel.appendChild(note);
+    // Use inline status instead of below-TV message
+    if (global.TVInlineStatus?.set) {
+      global.TVInlineStatus.set("America's Vote complete.", 'success');
+    } else {
+      const note=document.createElement('div');
+      note.className='tiny muted';
+      note.style.marginTop='6px';
+      note.textContent="America's Vote complete.";
+      panel.appendChild(note);
+    }
   }
 
   function resumeWeekAfterReturn(){
@@ -521,7 +526,12 @@
     const g=global.game; const st=g.__returnTwist;
     const panel=document.getElementById('panel'); if(!panel) return;
     if(g.phase!=='return_twist'){
-      panel.innerHTML='<div class="tiny muted">Return twist not active.</div>';
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('Return twist not active.', 'muted');
+      } else {
+        panel.innerHTML='<div class="tiny muted">Return twist not active.</div>';
+      }
       return;
     }
     panel.innerHTML='';

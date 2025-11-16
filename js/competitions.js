@@ -356,16 +356,21 @@
 
     // 1) Block replays for this week/phase/game
     if (global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, player.id)) {
-      host.innerHTML = '<div class="tiny muted">You have already submitted for this competition.</div>';
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('You have already submitted for this competition.', 'muted');
+      } else {
+        host.innerHTML = '<div class="tiny muted">You have already submitted for this competition.</div>';
+      }
       return;
     }
 
     // 2) Check if CompetitionFlow is available for new flow
     if (global.CompetitionFlow && typeof global.CompetitionFlow.runCompetitionFlow === 'function') {
       // Use new competition flow: instructions → fullscreen game → completion
-      // Show status in TV header instead of below-TV panel
-      if (global.TvStatus && typeof global.TvStatus.set === 'function') {
-        global.TvStatus.set('Loading competition...');
+      // Show status in TV header inline status bar
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('Loading competition…', 'muted');
       } else {
         host.innerHTML = '<div class="tiny muted">Loading competition...</div>';
       }
@@ -413,7 +418,12 @@
 
         // Submit score
         if (submitScore(player.id, base, multiplier, label)) {
-          host.innerHTML = '<div class="tiny muted">Submission received. Waiting for others…</div>';
+          // Use inline status instead of below-TV message
+          if (global.TVInlineStatus?.set) {
+            global.TVInlineStatus.set('Submission received. Waiting for others…', 'success');
+          } else {
+            host.innerHTML = '<div class="tiny muted">Submission received. Waiting for others…</div>';
+          }
           if (typeof onAfterSubmit === 'function') onAfterSubmit();
           maybeFinishComp();
         }
@@ -447,7 +457,12 @@
         }
 
         if (submitScore(player.id, base, multiplier, label)) {
-          host.innerHTML = '<div class="tiny muted">Submission received. Waiting for others…</div>';
+          // Use inline status instead of below-TV message
+          if (global.TVInlineStatus?.set) {
+            global.TVInlineStatus.set('Submission received. Waiting for others…', 'success');
+          } else {
+            host.innerHTML = '<div class="tiny muted">Submission received. Waiting for others…</div>';
+          }
           if (typeof onAfterSubmit === 'function') onAfterSubmit();
           maybeFinishComp();
         }
@@ -818,7 +833,11 @@
     if (g.phase === 'final3_comp1') return renderF3P1(panel);
     if (g.phase === 'final3_comp2') return renderF3P2(panel);
     if (g.phase === 'final3_comp3') return renderF3P3(panel);
-    panel.innerHTML = '<div class="tiny muted">Competition running…</div>';
+    // Use inline status instead of below-TV message
+    if (global.TVInlineStatus?.set) {
+      global.TVInlineStatus.set('Competition running…', 'muted');
+    }
+    panel.innerHTML = '';
   }
   global.renderCompPanel = renderCompPanel;
 
@@ -829,14 +848,23 @@
 
     // Check if minigame system is ready
     if (!isMinigameSystemReady()) {
-      host.innerHTML = '<div class="tiny muted">Loading minigame system...</div>';
-      panel.appendChild(host);
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('Loading minigame system…', 'muted');
+      } else {
+        host.innerHTML = '<div class="tiny muted">Loading minigame system...</div>';
+        panel.appendChild(host);
+      }
       setTimeout(() => {
         if (isMinigameSystemReady()) {
           renderHOH(panel);
         } else {
           console.error('[Competition] Minigame system failed to load');
-          host.innerHTML = '<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+          if (global.TVInlineStatus?.set) {
+            global.TVInlineStatus.set('Error loading minigames. Please refresh the page.', 'error');
+          } else {
+            host.innerHTML = '<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+          }
         }
       }, 500);
       return;
@@ -857,10 +885,20 @@
         });
 
       } else {
-        host.innerHTML = '<div class="tiny muted">Not eligible this week or already submitted.</div>';
+        // Use inline status instead of below-TV message
+        if (global.TVInlineStatus?.set) {
+          global.TVInlineStatus.set('Not eligible this week or already submitted.', 'muted');
+        } else {
+          host.innerHTML = '<div class="tiny muted">Not eligible this week or already submitted.</div>';
+        }
       }
     } else {
-      host.innerHTML = '<div class="tiny muted">You are evicted and cannot compete.</div>';
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('You are evicted and cannot compete.', 'muted');
+      } else {
+        host.innerHTML = '<div class="tiny muted">You are evicted and cannot compete.</div>';
+      }
     }
     panel.appendChild(host);
   }
@@ -1115,14 +1153,23 @@
     const you = global.getP?.(g.humanId);
 
     if (!isMinigameSystemReady()) {
-      host.innerHTML = '<div class="tiny muted">Loading minigame system...</div>';
-      panel.appendChild(host);
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('Loading minigame system…', 'muted');
+      } else {
+        host.innerHTML = '<div class="tiny muted">Loading minigame system...</div>';
+        panel.appendChild(host);
+      }
       setTimeout(() => {
         if (isMinigameSystemReady()) {
           renderF3P1(panel);
         } else {
           console.error('[Competition] Minigame system failed to load');
-          host.innerHTML = '<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+          if (global.TVInlineStatus?.set) {
+            global.TVInlineStatus.set('Error loading minigames. Please refresh the page.', 'error');
+          } else {
+            host.innerHTML = '<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+          }
         }
       }, 500);
       return;
@@ -1139,7 +1186,14 @@
         multiplier: (0.8 + (you?.skill || 0.5) * 0.6)
       });
 
-    } else host.innerHTML = '<div class="tiny muted">Waiting for competition to conclude…</div>';
+    } else {
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('Waiting for competition to conclude…', 'muted');
+      } else {
+        host.innerHTML = '<div class="tiny muted">Waiting for competition to conclude…</div>';
+      }
+    }
     panel.appendChild(host);
   }
 
@@ -1225,8 +1279,11 @@
   }
 
   function renderF3P2(panel) {
-    panel.innerHTML = ''; const host = document.createElement('div'); host.className = 'minigame-host';
-    host.innerHTML = '<div class="tiny muted">Final 3 — Part 2 (head-to-head) is running…</div>'; panel.appendChild(host);
+    panel.innerHTML = '';
+    // Use inline status instead of below-TV message
+    if (global.TVInlineStatus?.set) {
+      global.TVInlineStatus.set('Final 3 — Part 2 (head-to-head) is running…', 'muted');
+    }
   }
 
   function startF3P2(duo) {
@@ -1265,8 +1322,11 @@
         const host = document.querySelector('#panel .minigame-host') || document.querySelector('#panel');
         if (host) {
           if (!isMinigameSystemReady()) {
+            // Use inline status instead of below-TV message
+            if (global.TVInlineStatus?.set) {
+              global.TVInlineStatus.set('Loading minigame system…', 'muted');
+            }
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
-            wrap.innerHTML = '<div class="tiny muted">Loading minigame system...</div>'; host.appendChild(wrap);
             setTimeout(() => {
               if (isMinigameSystemReady()) {
                 const mg = pickMinigameType();
@@ -1279,13 +1339,19 @@
                 });
               } else {
                 console.error('[Competition] Minigame system failed to load');
-                wrap.innerHTML = '<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+                if (global.TVInlineStatus?.set) {
+                  global.TVInlineStatus.set('Error loading minigames. Please refresh the page.', 'error');
+                }
               }
             }, 500);
           } else {
             const mg = pickMinigameType();
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
-            wrap.innerHTML = '<div class="tiny muted">You are in Final 3 — Part 2.</div>'; host.appendChild(wrap);
+            // Use inline status instead of below-TV message
+            if (global.TVInlineStatus?.set) {
+              global.TVInlineStatus.set('You are in Final 3 — Part 2.', 'muted');
+            }
+            host.appendChild(wrap);
 
             runHumanMinigameWithGuards({
               mg,
@@ -1324,8 +1390,11 @@
   }
 
   function renderF3P3(panel) {
-    panel.innerHTML = ''; const host = document.createElement('div'); host.className = 'minigame-host';
-    host.innerHTML = '<div class="tiny muted">Final 3 — Part 3 (final showdown) is running…</div>'; panel.appendChild(host);
+    panel.innerHTML = '';
+    // Use inline status instead of below-TV message
+    if (global.TVInlineStatus?.set) {
+      global.TVInlineStatus.set('Final 3 — Part 3 (final showdown) is running…', 'muted');
+    }
   }
 
   function startF3P3() {
@@ -1364,8 +1433,11 @@
         const host = document.querySelector('#panel .minigame-host') || document.querySelector('#panel');
         if (host) {
           if (!isMinigameSystemReady()) {
+            // Use inline status instead of below-TV message
+            if (global.TVInlineStatus?.set) {
+              global.TVInlineStatus.set('Loading minigame system…', 'muted');
+            }
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
-            wrap.innerHTML = '<div class="tiny muted">Loading minigame system...</div>'; host.appendChild(wrap);
             setTimeout(() => {
               if (isMinigameSystemReady()) {
                 const mg = pickMinigameType();
@@ -1378,13 +1450,19 @@
                 });
               } else {
                 console.error('[Competition] Minigame system failed to load');
-                wrap.innerHTML = '<div class="tiny muted">Error loading minigames. Please refresh the page.</div>';
+                if (global.TVInlineStatus?.set) {
+                  global.TVInlineStatus.set('Error loading minigames. Please refresh the page.', 'error');
+                }
               }
             }, 500);
           } else {
             const mg = pickMinigameType();
             const wrap = document.createElement('div'); wrap.className = 'minigame-host'; wrap.style.marginTop = '8px';
-            wrap.innerHTML = '<div class="tiny muted">You are in Final 3 — Part 3.</div>'; host.appendChild(wrap);
+            // Use inline status instead of below-TV message
+            if (global.TVInlineStatus?.set) {
+              global.TVInlineStatus.set('You are in Final 3 — Part 3.', 'muted');
+            }
+            host.appendChild(wrap);
 
             runHumanMinigameWithGuards({
               mg,

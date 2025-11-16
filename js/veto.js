@@ -332,18 +332,13 @@
     var panel = document.querySelector('#panel');
     var names = g.__vetoPlayers.map(safeName).join(', ');
     
-    // Show player list in TV header status chip
-    if(global.TvStatus && typeof global.TvStatus.setPlayersAndNote === 'function'){
-      global.TvStatus.setPlayersAndNote(g.__vetoPlayers.map(safeName), '');
-    } else {
-      // Fallback: show in panel if TvStatus not available
-      if(panel){
-        panel.innerHTML = '';
-        var host = document.createElement('div');
-        host.className = 'minigame-host';
-        host.innerHTML = '<div class="tiny">Players: '+names+'</div>';
-        panel.appendChild(host);
-      }
+    // Show player list in panel (multi-line content, not just a simple status)
+    if(panel){
+      panel.innerHTML = '';
+      var host = document.createElement('div');
+      host.className = 'minigame-host';
+      host.innerHTML = '<div class="tiny">Players: '+names+'</div>';
+      panel.appendChild(host);
     }
 
     var you = (g.humanId!=null) ? getP(g.humanId) : null;
@@ -385,11 +380,11 @@
         }
       }
     } else {
-      // Human not drawn to play - show note in TV status chip
-      if(global.TvStatus && typeof global.TvStatus.setPlayersAndNote === 'function'){
-        global.TvStatus.setPlayersAndNote(g.__vetoPlayers.map(safeName), 'You were not drawn');
+      // Human not drawn to play - show note using inline status
+      if(global.TVInlineStatus?.set){
+        global.TVInlineStatus.set('You were not drawn to play in this Veto.', 'muted');
       } else {
-        // Fallback: show in panel if TvStatus not available
+        // Fallback: show in panel if TVInlineStatus not available
         var host2 = document.querySelector('#panel .minigame-host');
         if(host2){
           var note = document.createElement('div');
