@@ -985,6 +985,32 @@
     });
   }
 
+  // Hide CTA bar (when voting phase begins)
+  function hideCtaBar() {
+    if (!state.ctaBar) return;
+    
+    // Handle carousel mode with CTA dock
+    if (state.useCarousel) {
+      const { ctaDock, carouselCTA } = state.ctaBar;
+      
+      if (ctaDock) {
+        ctaDock.style.display = 'none';
+        return;
+      }
+      
+      // Legacy carousel CTA
+      if (carouselCTA) {
+        carouselCTA.style.display = 'none';
+        return;
+      }
+    }
+    
+    // Handle normal mode - hide pill containers
+    const { leftCtaSide, rightCtaSide } = state.ctaBar;
+    if (leftCtaSide) leftCtaSide.style.display = 'none';
+    if (rightCtaSide) rightCtaSide.style.display = 'none';
+  }
+
   // V2.1: Set turn state - shows subtle tag and highlights CTA bar
   function setTurn(isActive) {
     state.humanTurn = isActive;
@@ -1537,6 +1563,7 @@
     cleanup: cleanup,
     createCtaBar: createCtaBar,
     updateCtaBar: updateCtaBar,
+    hideCtaBar: hideCtaBar,
     setTurn: setTurn,
     showTurnIndicator: showTurnIndicator,
     hideTurnIndicator: hideTurnIndicator,

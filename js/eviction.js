@@ -703,6 +703,11 @@
     const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
+    
+    // Hide CTA bar when voting phase begins (issue #574)
+    if (useLv2 && global.lv2?.hideCtaBar) {
+      global.lv2.hideCtaBar();
+    }
 
     function markVoter(vId,text){
       const li=document.querySelector(`#liveVoteList li[data-voter-id="${vId}"]`);
