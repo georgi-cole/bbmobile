@@ -567,7 +567,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
 
     // Global idempotence guard - prevents duplicate shows from different code paths
-    if (g.__bbHubShown) {
+    if (window.__bbHubShown) {
       console.info('[IntroScreen] Already visible (global flag), ignoring duplicate showWithPreload() call');
       return;
     }
@@ -699,7 +699,7 @@ console.info('[IntroScreen] Script executing – pre-init');
 
     // CRITICAL: Set global flag ONLY AFTER hub is fully visible in DOM
     // This ensures __bbHubShown accurately reflects hub visibility
-    g.__bbHubShown = true;
+    window.__bbHubShown = true;
 
     console.info('[IntroScreen] Shown');
   }
@@ -715,7 +715,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     
     // CRITICAL: Reset flag immediately when hiding starts
     // This allows hub to be shown again during restart
-    g.__bbHubShown = false;
+    window.__bbHubShown = false;
     
     // Wait for fade-out animation before hiding
     setTimeout(() => {
@@ -814,7 +814,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
     
     // CRITICAL: Reset flag immediately during reset
-    g.__bbHubShown = false;
+    window.__bbHubShown = false;
     
     // Remove container from DOM
     if (container && container.parentNode) {
