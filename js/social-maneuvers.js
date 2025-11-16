@@ -3205,6 +3205,105 @@
         humanId
       });
     }
+    
+    // BIND SKIP PILL (PR #XXX fix): Make Skip pill reliably clickable
+    bindSkipPill();
+  }
+  
+  /**
+   * Bind click handler to Skip pill to make it reliably clickable during social phase.
+   * Locates pill via multiple selectors and ensures pointer-events and z-index are set.
+   * Called from onSocialPhaseStart() and can be called repeatedly (idempotent).
+   */
+  function bindSkipPill() {
+    console.info('[social-maneuvers] 🎯 Binding Skip pill click handler...');
+    
+    // Try multiple selectors to find the Skip pill
+    const selectors = [
+      '#tvSkipButton',
+      '[data-action="social-skip"]',
+      '.pill--skip',
+      '.skip-pill',
+      '.tv-skip-timer-button'
+    ];
+    
+    let pill = null;
+    for (const selector of selectors) {
+      pill = document.querySelector(selector);
+      if (pill) {
+        console.info(`[social-maneuvers] ✓ Found Skip pill via selector: ${selector}`);
+        break;
+      }
+    }
+    
+    if (!pill) {
+      console.warn('[social-maneuvers] ⚠️ Skip pill not found - will retry on next phase start');
+      return;
+    }
+    
+    // Force CSS: pointer-events:auto and z-index:20 (above summary deck z-index:12)
+    pill.style.pointerEvents = 'auto';
+    pill.style.zIndex = '20';
+    pill.style.position = 'relative';
+    
+    // Override parent pointer-events if needed
+    const parent = pill.parentElement;
+    if (parent && window.getComputedStyle(parent).pointerEvents === 'none') {
+      parent.style.pointerEvents = 'auto';
+      console.info('[social-maneuvers] ✓ Overrode parent pointer-events:none');
+    }
+    
+    // Remove existing listeners by cloning node (clean slate)
+    const newPill = pill.cloneNode(true);
+    pill.parentNode.replaceChild(newPill, pill);
+    pill = newPill;
+    
+    // Attach single click handler that calls endSocialPhaseNow('skip')
+    const handleSkipClick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.info('[social-maneuvers] 🎯 Skip pill clicked - ending social phase');
+      endSocialPhaseNow('skip');
+    };
+    
+    pill.addEventListener('click', handleSkipClick);
+    
+    // Also add keyboard handler for accessibility
+    pill.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        console.info('[social-maneuvers] 🎯 Skip pill activated via keyboard - ending social phase');
+        endSocialPhaseNow('skip');
+      }
+    });
+    
+    console.info('[social-maneuvers] ✓ Skip pill click handler bound successfully');
+    
+    // Optional: MutationObserver to re-bind if pill is re-rendered dynamically
+    if (!global.__skipPillObserver) {
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === 'childList') {
+            // Check if pill was removed and re-added
+            const pillExists = document.querySelector(selectors.join(','));
+            if (pillExists && pillExists !== pill) {
+              console.info('[social-maneuvers] Skip pill re-rendered - re-binding');
+              bindSkipPill();
+              break;
+            }
+          }
+        }
+      });
+      
+      // Observe the TV header for changes
+      const tvHead = document.querySelector('.tvHead');
+      if (tvHead) {
+        observer.observe(tvHead, { childList: true, subtree: true });
+        global.__skipPillObserver = observer;
+        console.info('[social-maneuvers] ✓ Skip pill mutation observer installed');
+      }
+    }
   }
   
   function onSocialPhaseEnd(){
@@ -3853,6 +3952,7 @@
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
     endSocialPhaseNow, // Unified phase completion function
     ensureSocialModuleHidden, // UI teardown helper (PR #XXX)
+    bindSkipPill, // Skip pill click handler binding (PR #XXX)
     pausePhaseTimer, resumePhaseTimer, // Timer control exports
     recordCompetitionParticipation, // Skip watcher integration
     trackPreVetoNominees, // Pre-veto tracking for save detection
