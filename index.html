@@ -48,6 +48,9 @@
 <!-- Global shim for resilience against stray global references -->
 <script>window.global = window;</script>
 
+<!-- Telemetry System (load early for startup tracking) -->
+<script src="src/telemetry/telemetry-core.js"></script>
+
 <!-- CRITICAL: Protective guard to prevent destructive window.game reassignment -->
 <script>
 (function guardGame(){
@@ -460,10 +463,18 @@
   'use strict';
   const WATCHDOG_TIMEOUT = 2500; // ms - wait before checking
   
+  // Helper to log telemetry
+  function logTelemetry(event, data) {
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log(event, data);
+    }
+  }
+  
   // Run watchdog after all scripts have had a chance to load
   setTimeout(() => {
-    // Check if IntroScreen API exists
-    const hasAPI = window.game && window.game.IntroScreen && typeof window.game.IntroScreen.showWithPreload === 'function';
+    // Check if IntroScreen API exists (try both namespaces)
+    const hasAPI = (window.IntroScreen && typeof window.IntroScreen.showWithPreload === 'function') ||
+                   (window.game && window.game.IntroScreen && typeof window.game.IntroScreen.showWithPreload === 'function');
     
     // Check if hub DOM element exists
     const hasElement = !!document.getElementById('introScreen');
@@ -471,24 +482,44 @@
     // Check if hub should be shown (no game started yet)
     const shouldShow = !window.__bbGameStarted && !window.game?.players?.length;
     
+    // Log watchdog check
+    logTelemetry('recovery_watchdog_check', { 
+      hasAPI, 
+      hasElement, 
+      shouldShow,
+      hasWindowIntroScreen: !!(window.IntroScreen),
+      hasGameIntroScreen: !!(window.game && window.game.IntroScreen)
+    });
+    
     if (!hasAPI) {
-      console.error('[RecoveryWatchdog] CRITICAL: window.game.IntroScreen API missing after timeout');
+      console.error('[RecoveryWatchdog] CRITICAL: IntroScreen API missing after timeout');
       console.error('[RecoveryWatchdog] Attempting recovery by re-fetching IntroScreen.js...');
+      
+      // Log recovery attempt
+      logTelemetry('recovery_watchdog_api_missing', {});
       
       // Attempt recovery by re-loading the script
       const script = document.createElement('script');
       script.src = 'src/ui/IntroScreen.js?recovery=' + Date.now();
       script.onload = () => {
         console.info('[RecoveryWatchdog] IntroScreen.js re-loaded, attempting to show hub');
-        if (window.game && window.game.IntroScreen && typeof window.game.IntroScreen.init === 'function') {
-          window.game.IntroScreen.init({ bus: window.bbGameBus });
+        
+        logTelemetry('recovery_watchdog_script_reloaded', {});
+        
+        // Get API from either namespace
+        const introAPI = window.IntroScreen || (window.game && window.game.IntroScreen);
+        
+        if (introAPI && typeof introAPI.init === 'function') {
+          introAPI.init({ bus: window.bbGameBus });
         }
-        if (window.game && window.game.IntroScreen && typeof window.game.IntroScreen.showWithPreload === 'function' && shouldShow) {
-          window.game.IntroScreen.showWithPreload();
+        if (introAPI && typeof introAPI.showWithPreload === 'function' && shouldShow) {
+          introAPI.showWithPreload();
+          logTelemetry('recovery_watchdog_show_attempted', {});
         }
       };
       script.onerror = () => {
         console.error('[RecoveryWatchdog] FATAL: Failed to re-load IntroScreen.js');
+        logTelemetry('recovery_watchdog_reload_failed', {});
       };
       document.body.appendChild(script);
       return;
@@ -496,8 +527,15 @@
     
     if (!hasElement && shouldShow) {
       console.warn('[RecoveryWatchdog] Hub element missing but API exists - attempting to show hub');
-      if (typeof window.game.IntroScreen.showWithPreload === 'function') {
-        window.game.IntroScreen.showWithPreload();
+      
+      logTelemetry('recovery_watchdog_element_missing', { hasAPI, shouldShow });
+      
+      // Get API from either namespace
+      const introAPI = window.IntroScreen || (window.game && window.game.IntroScreen);
+      
+      if (introAPI && typeof introAPI.showWithPreload === 'function') {
+        introAPI.showWithPreload();
+        logTelemetry('recovery_watchdog_show_attempted', {});
       }
       return;
     }
@@ -505,6 +543,10 @@
     // Everything looks good
     if (hasAPI && hasElement) {
       console.info('[RecoveryWatchdog] IntroScreen healthy - API and element present');
+      logTelemetry('recovery_watchdog_healthy', { hasAPI, hasElement });
+    } else if (hasAPI && !shouldShow) {
+      console.info('[RecoveryWatchdog] IntroScreen API present, game already started');
+      logTelemetry('recovery_watchdog_game_started', { hasAPI, shouldShow });
     }
   }, WATCHDOG_TIMEOUT);
 })();

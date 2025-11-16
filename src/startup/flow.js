@@ -19,6 +19,32 @@
   let bus = null;
   let handlersWired = false; // Track if event handlers have been registered
 
+  // ===== INTRO API RESOLUTION =====
+
+  /**
+   * Get IntroScreen API from either namespace
+   * Tries window.IntroScreen first, then window.game.IntroScreen
+   * @returns {Object|null} IntroScreen API or null if not found
+   */
+  function getIntroAPI() {
+    // Try window.IntroScreen first (new alias)
+    if (g.IntroScreen && typeof g.IntroScreen.init === 'function') {
+      return g.IntroScreen;
+    }
+    
+    // Try window.game.IntroScreen (primary export)
+    if (g.game && g.game.IntroScreen && typeof g.game.IntroScreen.init === 'function') {
+      return g.game.IntroScreen;
+    }
+    
+    // Try window.game.introScreen (backward compatibility)
+    if (g.game && g.game.introScreen && typeof g.game.introScreen.init === 'function') {
+      return g.game.introScreen;
+    }
+    
+    return null;
+  }
+
   // ===== CORE SERVICE INITIALIZATION =====
   
   /**
@@ -27,6 +53,11 @@
    */
   function initCoreServices() {
     console.info('[StartupFlow] Initializing core services...');
+
+    // Emit telemetry for init start
+    if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+      g.Telemetry.log('startup_init_start', {});
+    }
 
     // Ensure game object exists
     if (!g.game) {
@@ -72,17 +103,28 @@
       }
     }
 
-    // CRITICAL: Initialize IntroScreen unconditionally (no conditional skip)
+    // CRITICAL: Resolve and initialize IntroScreen unconditionally
     // Always call init() to ensure module is properly initialized before use
     // init() is idempotent and builds DOM, so multiple calls are safe
-    if (g.IntroScreen && typeof g.IntroScreen.init === 'function') {
-      g.IntroScreen.init({ bus });
-      console.info('[StartupFlow] IntroScreen initialized');
+    const introAPI = getIntroAPI();
+    if (introAPI) {
+      introAPI.init({ bus });
+      console.info('[StartupFlow] IntroScreen initialized via', introAPI === g.IntroScreen ? 'window.IntroScreen' : 'window.game.IntroScreen');
     } else {
-      console.error('[StartupFlow] IntroScreen not available or missing init method - critical failure');
+      console.error('[StartupFlow] IntroScreen not available - critical failure');
+      
+      // Emit telemetry for missing IntroScreen
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_intro_api_missing', {});
+      }
     }
 
     console.info('[StartupFlow] Core services initialized');
+
+    // Emit telemetry for init done
+    if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+      g.Telemetry.log('startup_init_done', { hasIntroAPI: !!introAPI });
+    }
   }
 
   // ===== BACKGROUND PRELOADING =====
@@ -164,19 +206,60 @@
   async function showIntroHub() {
     console.info('[StartupFlow] Showing intro hub...');
 
-    // CRITICAL: Always use IntroScreen's showWithPreload for best UX
-    // This ensures background is loaded before buttons are displayed
-    if (g.IntroScreen && typeof g.IntroScreen.showWithPreload === 'function') {
-      await g.IntroScreen.showWithPreload();
-      console.info('[StartupFlow] Intro hub displayed with preloaded background');
-    } else if (g.IntroScreen && typeof g.IntroScreen.show === 'function') {
-      // Fallback to old method if showWithPreload not available
-      console.warn('[StartupFlow] showWithPreload not available, using legacy show()');
-      await preloadIntroBackground();
-      g.IntroScreen.show();
-      console.info('[StartupFlow] Intro hub displayed');
-    } else {
+    // Emit telemetry for show hub start
+    if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+      g.Telemetry.log('startup_show_hub_start', {});
+    }
+
+    // Get IntroScreen API from either namespace
+    const introAPI = getIntroAPI();
+    
+    if (!introAPI) {
       console.error('[StartupFlow] IntroScreen not available - critical failure');
+      
+      // Emit telemetry for show hub error
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_show_hub_error', { reason: 'api_not_found' });
+      }
+      
+      return;
+    }
+
+    try {
+      // CRITICAL: Always use IntroScreen's showWithPreload for best UX
+      // This ensures background is loaded before buttons are displayed
+      if (typeof introAPI.showWithPreload === 'function') {
+        await introAPI.showWithPreload();
+        console.info('[StartupFlow] Intro hub displayed with preloaded background');
+      } else if (typeof introAPI.show === 'function') {
+        // Fallback to old method if showWithPreload not available
+        console.warn('[StartupFlow] showWithPreload not available, using legacy show()');
+        await preloadIntroBackground();
+        introAPI.show();
+        console.info('[StartupFlow] Intro hub displayed');
+      } else {
+        console.error('[StartupFlow] IntroScreen has no show method - critical failure');
+        
+        // Emit telemetry for show hub error
+        if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+          g.Telemetry.log('startup_show_hub_error', { reason: 'no_show_method' });
+        }
+        
+        return;
+      }
+
+      // Emit telemetry for show hub success
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_show_hub_done', {});
+      }
+
+    } catch (err) {
+      console.error('[StartupFlow] Error showing intro hub:', err);
+      
+      // Emit telemetry for show hub error
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_show_hub_error', { reason: 'exception', error: err.message });
+      }
     }
   }
 
@@ -342,6 +425,12 @@
     if (skipIntros) {
       // Skip video, go straight to intro hub
       console.info('[StartupFlow] skipIntros enabled, showing intro hub directly');
+      
+      // Emit telemetry for skip intros
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_skip_intros', {});
+      }
+      
       await showIntroHub();
     } else {
       // Video will play via intro-outro-video.js
@@ -591,6 +680,10 @@
     
     console.info('[StartupFlow] Initializing...');
     
+    // CRITICAL: Initialize core services (including IntroScreen)
+    // This must happen during init() since bootstrap calls init() but not startupSequence()
+    initCoreServices();
+    
     wirePlayButton();
     wireIntroHubButtons();
     
@@ -601,6 +694,12 @@
     // This listener is registered once and will show the intro hub after video ends
     g.addEventListener('bb:intro:finished', async function() {
       console.info('[StartupFlow] Intro video finished event received, showing intro hub');
+      
+      // Emit telemetry for video finished
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_video_finished', {});
+      }
+      
       await showIntroHub();
     }, { once: true });
     
@@ -620,6 +719,11 @@
   async function restartToHub() {
     console.info('[StartupFlow] Restarting to intro hub...');
     
+    // Emit telemetry for restart
+    if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+      g.Telemetry.log('startup_restart_to_hub', {});
+    }
+    
     // Hide main screen
     const mainScreen = document.querySelector('.wrap');
     if (mainScreen) {
@@ -629,16 +733,29 @@
     // Remove main-screen-built class to hide game UI
     document.body.classList.remove('main-screen-built');
     
-    // Reset IntroScreen state
-    if (g.IntroScreen && typeof g.IntroScreen.reset === 'function') {
-      g.IntroScreen.reset();
-      console.info('[StartupFlow] IntroScreen state reset');
-    }
+    // Reset main screen built flag
+    mainScreenBuilt = false;
     
-    // Re-initialize IntroScreen to ensure fresh state
-    if (g.IntroScreen && typeof g.IntroScreen.init === 'function') {
-      g.IntroScreen.init({ bus });
-      console.info('[StartupFlow] IntroScreen re-initialized');
+    // Get IntroScreen API from either namespace
+    const introAPI = getIntroAPI();
+    
+    if (introAPI) {
+      // Reset IntroScreen state
+      if (typeof introAPI.reset === 'function') {
+        introAPI.reset();
+        console.info('[StartupFlow] IntroScreen state reset');
+      }
+      
+      // CRITICAL: Ensure __bbHubShown is false before re-showing
+      window.__bbHubShown = false;
+      
+      // Re-initialize IntroScreen to ensure fresh state
+      if (typeof introAPI.init === 'function') {
+        introAPI.init({ bus });
+        console.info('[StartupFlow] IntroScreen re-initialized');
+      }
+    } else {
+      console.error('[StartupFlow] IntroScreen not available for restart');
     }
     
     // Show intro hub again

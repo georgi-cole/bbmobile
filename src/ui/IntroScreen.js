@@ -288,9 +288,22 @@ console.info('[IntroScreen] Script executing – pre-init');
    * This ensures buttons work reliably even if handlers aren't wired yet.
    */
   function handleButtonAction(action, label) {
+    // Emit telemetry for button action
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log('hub_button_click', { action, label });
+    }
+
     let handled = false;
     
-    // Map actions to global function names
+    // Try bus event FIRST (preferred method when bus is available)
+    if (bus) {
+      console.info(`[IntroHub] Emitting bus event: ${action}`);
+      bus.emit(action, {});
+      handled = true;
+      return; // Early return - bus events are the primary mechanism
+    }
+    
+    // Fallback: Map actions to global function names (for backward compatibility)
     const actionMap = {
       'intro:play': { fn: 'enterGame', obj: 'StartupFlow', method: 'enterGame' },
       'intro:open:rules': { fn: 'showRulesModal' },
@@ -334,22 +347,27 @@ console.info('[IntroScreen] Script executing – pre-init');
         const el = document.getElementById(mapping.click);
         if (el) {
           console.info(`[IntroHub] Clicking element #${mapping.click}`);
+          
+          // Emit telemetry for DOM click fallback
+          if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+            window.Telemetry.log('hub_button_dom_click', { action, elementId: mapping.click });
+          }
+          
           el.click();
           handled = true;
         }
       }
     }
     
-    // If not handled by direct calls, try bus event
-    if (!handled && bus) {
-      console.info(`[IntroHub] Emitting bus event: ${action}`);
-      bus.emit(action, {});
-      handled = true;
-    }
-    
     // If still not handled, dispatch CustomEvent as final fallback
     if (!handled) {
       console.warn(`[IntroHub] No handler found for ${action}, dispatching CustomEvent`);
+      
+      // Emit telemetry for fallback to CustomEvent
+      if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+        window.Telemetry.log('hub_button_custom_event_fallback', { action, label });
+      }
+      
       const eventName = action.replace(/:/g, '-'); // Convert intro:play to intro-play
       const event = new CustomEvent(`bb:ui:${eventName}`, { 
         detail: { action, label },
@@ -560,16 +578,27 @@ console.info('[IntroScreen] Script executing – pre-init');
    * @param {boolean} skipPreload - If true, skip preloading (for testing)
    */
   async function showWithPreload(skipPreload = false) {
+    // Emit telemetry for showWithPreload start
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log('intro_show_with_preload_start', { skipPreload });
+    }
+
     // Idempotence guard - check local state first
     if (isVisible) {
       console.info('[IntroScreen] Already visible, ignoring duplicate showWithPreload() call');
+      
+      // Emit telemetry for duplicate attempt
+      if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+        window.Telemetry.log('intro_show_with_preload_duplicate', { isVisible: true });
+      }
+      
       return;
     }
 
-    // Global idempotence guard - prevents duplicate shows from different code paths
+    // Global idempotence guard - check flag but don't trust it blindly
     if (window.__bbHubShown) {
-      console.info('[IntroScreen] Already visible (global flag), ignoring duplicate showWithPreload() call');
-      return;
+      console.warn('[IntroScreen] Global flag __bbHubShown is true but isVisible is false - resetting flag and proceeding');
+      window.__bbHubShown = false;
     }
 
     console.info('[IntroScreen] Preloading background...');
@@ -599,6 +628,11 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Now show the intro screen
     // The show() function will set __bbHubShown = true after successful mount
     show();
+    
+    // Emit telemetry for showWithPreload complete
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log('intro_show_with_preload_done', { isVisible });
+    }
   }
 
   /**
@@ -647,10 +681,27 @@ console.info('[IntroScreen] Script executing – pre-init');
   // ===== PUBLIC API =====
 
   function show() {
+    // Emit telemetry for show start
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log('intro_show_start', {});
+    }
+
     // Idempotence guard - if already visible, do nothing
     if (isVisible) {
       console.info('[IntroScreen] Already visible, ignoring duplicate show() call');
+      
+      // Emit telemetry for duplicate show attempt
+      if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+        window.Telemetry.log('intro_show_duplicate', { isVisible: true });
+      }
+      
       return;
+    }
+
+    // Global idempotence guard - check flag but don't trust it blindly
+    if (window.__bbHubShown) {
+      console.warn('[IntroScreen] Global flag __bbHubShown is true but isVisible is false - resetting flag');
+      window.__bbHubShown = false;
     }
 
     // CRITICAL: Ensure DOM is built (should be done in init, but guard here too)
@@ -702,6 +753,11 @@ console.info('[IntroScreen] Script executing – pre-init');
     window.__bbHubShown = true;
 
     console.info('[IntroScreen] Shown');
+
+    // Emit telemetry for show complete
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log('intro_show_done', { flagSet: window.__bbHubShown });
+    }
   }
 
   function hide() {
@@ -711,6 +767,12 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
 
     console.info('[IntroScreen] Hiding...');
+    
+    // Emit telemetry for hide
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log('intro_hide', { wasVisible: isVisible });
+    }
+    
     container.classList.remove('intro-screen--visible');
     
     // CRITICAL: Reset flag immediately when hiding starts
@@ -729,9 +791,20 @@ console.info('[IntroScreen] Script executing – pre-init');
   }
 
   function init(options = {}) {
+    // Emit telemetry for init start
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log('intro_init_start', {});
+    }
+
     // Idempotence guard - prevent double initialization
     if (bus) {
       console.info('[IntroScreen] Already initialized, skipping duplicate init() call');
+      
+      // Emit telemetry for duplicate init attempt
+      if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+        window.Telemetry.log('intro_init_duplicate', {});
+      }
+      
       return {
         show,
         showWithPreload,
@@ -741,10 +814,17 @@ console.info('[IntroScreen] Script executing – pre-init');
       };
     }
 
-    bus = options.bus || g.bbGameBus;
+    // Auto-bind bus if not provided (fallback to window.game.bus or window.game.bbGameBus)
+    bus = options.bus || g.bus || g.bbGameBus;
 
     if (!bus) {
-      console.error('[IntroScreen] No event bus provided');
+      console.error('[IntroScreen] No event bus provided or available');
+      
+      // Emit telemetry for missing bus
+      if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+        window.Telemetry.log('intro_init_no_bus', {});
+      }
+      
       return {
         show,
         showWithPreload,
@@ -774,6 +854,11 @@ console.info('[IntroScreen] Script executing – pre-init');
     });
 
     console.info('[IntroScreen] Initialized');
+
+    // Emit telemetry for init complete
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log('intro_init_done', { hasBus: !!bus });
+    }
 
     return {
       show,
@@ -807,6 +892,11 @@ console.info('[IntroScreen] Script executing – pre-init');
   function reset() {
     console.info('[IntroScreen] Resetting state...');
     
+    // Emit telemetry for reset
+    if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+      window.Telemetry.log('intro_reset', { wasVisible: isVisible, hadContainer: !!container });
+    }
+    
     // Hide first if visible
     if (isVisible && container) {
       container.classList.remove('intro-screen--visible');
@@ -821,19 +911,19 @@ console.info('[IntroScreen] Script executing – pre-init');
       container.parentNode.removeChild(container);
     }
     
-    // Reset state
+    // Reset state (but keep bus reference for re-initialization)
     container = null;
     isVisible = false;
     currentBgLayer = 'current';
     playButtonClicked = false;
+    bus = null; // Reset bus so init() can be called again
     
     console.info('[IntroScreen] Reset complete');
   }
 
-  // CRITICAL: Export API immediately and reliably
-  // Assign to window.game.IntroScreen (not just g.IntroScreen)
-  // This ensures the API is available even if window.game is reassigned
-  window.game.IntroScreen = {
+  // CRITICAL: Export API immediately and reliably to BOTH namespaces
+  // This ensures StartupFlow can find it in either location
+  const API = {
     init,
     show,
     showWithPreload,
@@ -842,9 +932,15 @@ console.info('[IntroScreen] Script executing – pre-init');
     preloadBackground
   };
 
+  // Export to window.game.IntroScreen (primary)
+  window.game.IntroScreen = API;
+
+  // Export to window.IntroScreen (alias for StartupFlow compatibility)
+  window.IntroScreen = API;
+
   // Backward compatibility alias
-  window.game.introScreen = window.game.IntroScreen;
+  window.game.introScreen = API;
   
-  console.info('[IntroScreen] API exported to window.game.IntroScreen');
+  console.info('[IntroScreen] API exported to window.game.IntroScreen and window.IntroScreen');
 
 })();
