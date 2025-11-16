@@ -682,7 +682,9 @@
 
     return {
       show,
-      hide
+      showWithPreload,
+      hide,
+      preloadBackground
     };
   }
 
