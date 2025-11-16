@@ -92,7 +92,12 @@
     
     panel.innerHTML='';
     if(!g.eviction){
-      panel.innerHTML='<div class="tiny muted">Eviction flow not initialized.</div>';
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('Eviction flow not initialized.', 'warn');
+      } else {
+        panel.innerHTML='<div class="tiny muted">Eviction flow not initialized.</div>';
+      }
       return;
     }
 
@@ -106,7 +111,12 @@
     // Observers (nominated or HOH without tie-break) only see the diary room sequence
     if (!humanIsVoter) {
       console.info('[eviction] Human is observer (nominated or HOH), skipping all vote UI');
-      panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny muted">You are observing this vote.</div></div>';
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('You are observing this vote.', 'muted');
+      } else {
+        panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny muted">You are observing this vote.</div></div>';
+      }
       return;
     }
     

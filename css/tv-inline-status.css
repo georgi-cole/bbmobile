@@ -1,0 +1,156 @@
+/* ============================================================================
+   TV INLINE STATUS BAR
+   
+   Purpose: Unified inline status indicator in TV header beside Skip/Timer
+   Replaces legacy below-TV message strips with compact inline status
+   
+   Features:
+   - Inline positioning next to Skip/Timer pill
+   - Tone variants (muted, warn, error, success)
+   - Responsive text sizing and truncation
+   - Glass/blur effects matching existing design
+   - Accessibility support
+   ============================================================================ */
+
+:root {
+  --tv-status-bg-muted: rgba(100, 100, 100, 0.2);
+  --tv-status-text-muted: rgba(255, 255, 255, 0.75);
+  --tv-status-bg-warn: rgba(255, 193, 7, 0.25);
+  --tv-status-text-warn: rgba(255, 235, 59, 1);
+  --tv-status-bg-error: rgba(244, 67, 54, 0.25);
+  --tv-status-text-error: rgba(255, 138, 128, 1);
+  --tv-status-bg-success: rgba(76, 175, 80, 0.25);
+  --tv-status-text-success: rgba(129, 199, 132, 1);
+  --tv-status-blur: blur(8px);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --tv-status-bg-muted: rgba(0, 0, 0, 0.08);
+    --tv-status-text-muted: rgba(0, 0, 0, 0.7);
+    --tv-status-bg-warn: rgba(255, 152, 0, 0.2);
+    --tv-status-text-warn: rgba(230, 81, 0, 1);
+    --tv-status-bg-error: rgba(211, 47, 47, 0.2);
+    --tv-status-text-error: rgba(183, 28, 28, 1);
+    --tv-status-bg-success: rgba(56, 142, 60, 0.2);
+    --tv-status-text-success: rgba(27, 94, 32, 1);
+  }
+}
+
+/* Base inline status bar */
+.tv-inline-status {
+  display: none; /* Hidden by default until message is set */
+  position: relative;
+  align-items: center;
+  padding: 6px 14px;
+  margin-left: 8px;
+  border-radius: 16px;
+  background: var(--tv-status-bg-muted);
+  backdrop-filter: var(--tv-status-blur);
+  -webkit-backdrop-filter: var(--tv-status-blur);
+  color: var(--tv-status-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 350px;
+  transition: opacity 0.3s ease, background 0.2s ease;
+  /* Strong text shadow for readability over animated background */
+  text-shadow: 
+    0 0 2px rgba(0, 0, 0, 0.8),
+    0 0 4px rgba(0, 0, 0, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+  /* Prevent shrinking */
+  flex-shrink: 0;
+}
+
+/* Tone variants */
+.tv-inline-status[data-tone="warn"] {
+  background: var(--tv-status-bg-warn);
+  color: var(--tv-status-text-warn);
+}
+
+.tv-inline-status[data-tone="error"] {
+  background: var(--tv-status-bg-error);
+  color: var(--tv-status-text-error);
+}
+
+.tv-inline-status[data-tone="success"] {
+  background: var(--tv-status-bg-success);
+  color: var(--tv-status-text-success);
+}
+
+/* Responsive adjustments for tablets */
+@media (max-width: 768px) {
+  .tv-inline-status {
+    font-size: 0.7rem;
+    padding: 5px 12px;
+    margin-left: 6px;
+    max-width: 250px;
+  }
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 480px) {
+  .tv-inline-status {
+    font-size: 0.65rem;
+    padding: 4px 10px;
+    margin-left: 4px;
+    max-width: 180px;
+  }
+}
+
+/* Very narrow screens - extra compact */
+@media (max-width: 360px) {
+  .tv-inline-status {
+    font-size: 0.6rem;
+    padding: 3px 8px;
+    margin-left: 3px;
+    max-width: 140px;
+  }
+}
+
+/* Focus styles for accessibility */
+.tv-inline-status:focus-visible {
+  outline: 2px solid var(--accent, #4a90e2);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .tv-inline-status {
+    transition: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .tv-inline-status {
+    border: 2px solid currentColor;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  
+  .tv-inline-status[data-tone="warn"] {
+    background: rgba(255, 193, 7, 0.4);
+  }
+  
+  .tv-inline-status[data-tone="error"] {
+    background: rgba(244, 67, 54, 0.4);
+  }
+  
+  .tv-inline-status[data-tone="success"] {
+    background: rgba(76, 175, 80, 0.4);
+  }
+}
+
+/* Screen reader only utility class (if not already defined elsewhere) */
+.sr-only {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

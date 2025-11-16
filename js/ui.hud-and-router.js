@@ -1638,6 +1638,16 @@ header.innerHTML = `
     ensureCfg();
     g.phaseMusic?.(phase);
 
+    // Dispatch phase change event for modules like TVInlineStatus
+    try {
+      const phaseChangeEvent = new CustomEvent('bb:phase:changed', {
+        detail: { phase: phase, previousPhase: oldToken }
+      });
+      window.dispatchEvent(phaseChangeEvent);
+    } catch(e) {
+      console.warn('[phase] Failed to dispatch bb:phase:changed event:', e);
+    }
+
     // Toggle copy disabling for competitions
     try{
       const body=document.body;
@@ -1894,8 +1904,25 @@ header.innerHTML = `
     const game=g.game || {};
     panel.innerHTML='';
 
-    if(game.phase==='lobby'){ panel.innerHTML='<div class="tiny muted">Open Settings and Restart Season to begin.</div>'; updateHud(); return; }
-    if(game.phase==='opening'){ panel.innerHTML='<div class="tiny muted">Season Premiere…</div>'; return; }
+    if(game.phase==='lobby'){
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('Open Settings and Restart Season to begin.', 'muted');
+      } else {
+        panel.innerHTML='<div class="tiny muted">Open Settings and Restart Season to begin.</div>';
+      }
+      updateHud();
+      return;
+    }
+    if(game.phase==='opening'){
+      // Use inline status instead of below-TV message
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('Season Premiere…', 'muted');
+      } else {
+        panel.innerHTML='<div class="tiny muted">Season Premiere…</div>';
+      }
+      return;
+    }
     if(game.phase==='return_twist'){ g.renderReturnTwistPanel?.(); return; }
     if(game.phase==='nominations'){ g.renderNominationsPanel?.(); return; }
     if(game.phase==='veto_ceremony'){ g.renderVetoCeremonyPanel?.(); return; }
@@ -1916,7 +1943,12 @@ header.innerHTML = `
 
     if(game.phase?.startsWith?.('social')){ g.renderSocialPhase?.(panel); return; }
 
-    panel.innerHTML=`<div class="tiny muted">Game running… (${game.phase})</div>`;
+    // Use inline status instead of below-TV message
+    if (global.TVInlineStatus?.set) {
+      global.TVInlineStatus.set(`Game running… (${game.phase})`, 'muted');
+    } else {
+      panel.innerHTML=`<div class="tiny muted">Game running… (${game.phase})</div>`;
+    }
   }
   g.renderPanel = renderPanel;
 
