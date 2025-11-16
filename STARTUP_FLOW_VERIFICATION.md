@@ -1,21 +1,28 @@
 # Startup Flow Refactor - Verification Guide
 
 ## Overview
-This document describes how to manually verify the startup flow changes that remove auto-gating and add guest mode support.
+This document describes how to manually verify the startup flow changes that implement deferred initialization and guest mode support.
 
 ## Changes Summary
 
-### 1. Guest Mode
+### 1. Deferred Initialization (NEW)
+- **What**: Game components (cast, HUD, roster placeholders, opening sequence) are NOT built until Play is pressed
+- **How**: DeferredGuards module gates all initialization behind Play button
+- **When**: Components are deferred during initial load, then flushed when enterGame() is called
+- **Verification**: Use `test_deferred_startup.html` for automated tests
+
+### 2. Guest Mode
 - **What**: User can play without a profile, no XP is recorded
 - **How**: localStorage flag `bb.guestMode` is checked in progression core
 - **When**: Automatically enabled when Play is pressed with no existing profile
+- **Marker**: Console logs `[guest-xp]` when XP events are suppressed
 
-### 2. No Auto-Popups
+### 3. No Auto-Popups
 - **What**: Rules and Profile modals no longer auto-show after intro
 - **How**: Disabled auto-show listeners and set `autoShowRulesOnStart=false`
 - **When**: All modals only open via explicit button clicks
 
-### 3. Intro Hub Buttons
+### 4. Intro Hub Buttons
 - **What**: All buttons properly wired to their handlers
 - **Which**: Play, Rules, Profile, Settings, Leaderboard, Credits, Help
 
@@ -116,7 +123,30 @@ This document describes how to manually verify the startup flow changes that rem
 4. ✅ Close modal
 5. ✅ Returns to Intro Hub
 
-### Test 4: Guest to Profile Transition
+### Test 4: Deferred Initialization (NEW)
+
+#### Setup
+1. Clear localStorage and sessionStorage
+2. Reload page
+3. Open browser console
+
+#### Before Play Button
+1. ✅ Check console logs - should see `[RosterPlaceholders] Game not ready, deferring initialization`
+2. ✅ Check console logs - should see `[ui.hud-and-router] Game not ready, deferring HUD initialization`
+3. ✅ Check console logs - should see `[buildCast] Game not ready, deferring cast build`
+4. ✅ Open DevTools Elements tab - verify NO `.playerTile` or `.top-roster-tile` elements exist (except placeholders)
+5. ✅ Check `window.DeferredGuards.getState()` in console - should show `gameReadyToStart: false`
+
+#### After Play Button
+6. ✅ Click Play button
+7. ✅ Check console logs - should see `[DeferredGuards] Game is now ready to start`
+8. ✅ Check console logs - should see `[DeferredGuards] Flushing X deferred tasks...`
+9. ✅ Check console logs - should see deferred tasks executing (buildCast, HUD.init, RosterPlaceholders.init)
+10. ✅ Check `window.DeferredGuards.getState()` in console - should show `gameReadyToStart: true`
+11. ✅ Verify cast tiles appear in roster
+12. ✅ Verify HUD panels are functional
+
+### Test 5: Guest to Profile Transition
 
 #### Setup
 1. Start as Guest (no profile)
@@ -131,7 +161,7 @@ This document describes how to manually verify the startup flow changes that rem
 5. ✅ Human player name updates to profile name
 6. ✅ Future XP events are now recorded normally
 
-### Test 5: Config Flag Behavior
+### Test 6: Config Flag Behavior
 
 #### Check autoShowRulesOnStart
 1. Open console
@@ -147,19 +177,53 @@ This document describes how to manually verify the startup flow changes that rem
 5. Check again
 6. ✅ Should be `null` (removed)
 
+## Automated Testing
+
+### Test Harness
+Use `test_deferred_startup.html` for automated verification:
+
+1. Open `test_deferred_startup.html` in browser
+2. Run Test 1: Verify DeferredGuards API exists
+3. Run Test 2: Verify initial state (before Play)
+4. Run Test 3: Verify task deferral mechanism
+5. Run Test 4: Test intro hub button functionality
+6. Run Test 5: Simulate Play button and verify game builds
+
+### Expected Results
+- All tests should pass (show green ✓)
+- Test summary should show "ALL TESTS PASSED"
+- Console should show proper deferred initialization sequence
+
 ## Console Verification
 
-### Check for Expected Messages
+### Check for Expected Messages (Deferred Initialization)
 ```javascript
-// During startup
+// During initial load (before Play)
+[DeferredGuards] Module loaded
 [StartupFlow] Initializing...
+[RosterPlaceholders] Game not ready, deferring initialization
+[ui.hud-and-router] Game not ready, deferring HUD initialization
+[buildCast] Game not ready, deferring cast build
+
+// After Play button pressed
 [StartupFlow] Play button clicked
 [StartupFlow] enterGame() called
+[DeferredGuards] Game is now ready to start
 [StartupFlow] no profile found, enabling guest mode
-[profileService] guest mode enabled - XP writes suppressed
+[guest-xp] Guest mode active - XP events will be suppressed
+[DeferredGuards] Flushing 3 deferred tasks...
+[DeferredGuards] Executing deferred task 1/3: RosterPlaceholders.init
+[RosterPlaceholders] Executing deferred initialization
+[DeferredGuards] Executing deferred task 2/3: HUD.init
+[ui.hud-and-router] Executing deferred HUD initialization
+[DeferredGuards] Executing deferred task 3/3: buildCast
+[buildCast] Executing deferred cast build
+[DeferredGuards] All deferred tasks flushed
+[DeferredGuards] Game has started
+[StartupFlow] Main screen built
 
 // When recording XP as guest
-// Event should have meta.guestMode: true
+[guest-xp] XP event suppressed in guest mode: hoh_win (+50 XP)
 ```
 
 ### Check for Warnings/Errors
@@ -205,15 +269,32 @@ Test in:
 ## Success Criteria
 
 All of the following must be true:
+
+### Deferred Initialization (NEW)
+- ✅ Before Play: No cast tiles, no HUD panels, no player roster visible
+- ✅ Before Play: Console shows deferred task messages
+- ✅ Before Play: `DeferredGuards.isGameReadyToStart() === false`
+- ✅ After Play: All deferred tasks flush and execute in order
+- ✅ After Play: Cast tiles and HUD appear correctly
+- ✅ After Play: `DeferredGuards.isGameReadyToStart() === true`
+- ✅ `test_deferred_startup.html` shows all tests passing
+
+### Guest Mode and Auto-Popups
 - ✅ No auto-popups of Rules or Profile modals
 - ✅ Play button works for both first-time and returning users
-- ✅ Guest mode correctly suppresses XP writes
+- ✅ Guest mode correctly suppresses XP writes (console shows `[guest-xp]` markers)
 - ✅ Profile mode correctly enables XP writes
 - ✅ All Intro Hub buttons work and open correct modals
+
+### Performance and Quality
 - ✅ Background preloads correctly (no flicker)
 - ✅ No console errors during normal flow
 - ✅ CodeQL security scan passes with 0 alerts
 - ✅ All existing tests pass (npm run test:all)
+
+### Screenshots
+- ✅ Four required screenshots generated in `screenshots/startup-flow/`
+- ✅ Screenshots clearly show: (1) Intro hub, (2) Rules modal, (3) Profile modal, (4) Game after Play
 
 ## Security Summary
 
@@ -250,19 +331,55 @@ If issues are found:
    - Profile modal auto-shows after rules
    - No guest mode option
 
-## Test File
+## Screenshot Generation
 
-Use `test_startup_flow.html` for automated verification of:
-- Guest mode flag behavior
-- ProfileService API
-- StartupFlow API
-- Config flag behavior
-- Button wiring (indirect verification)
+### Automated Screenshot Capture
+Use `scripts/startup_flow_screenshots.mjs` to automatically generate verification screenshots:
+
+```bash
+# Start local server first
+python -m http.server 8080
+# or
+npx http-server -p 8080
+
+# In another terminal, run screenshot script
+node scripts/startup_flow_screenshots.mjs
+```
+
+This will generate four screenshots in `screenshots/startup-flow/`:
+1. `1-intro-hub.png` - Intro Hub initial state with background and buttons
+2. `2-rules-modal.png` - Rules modal opened from hub
+3. `3-profile-modal.png` - Profile modal opened from hub
+4. `4-game-after-play.png` - Game after Play pressed with cast present
+
+### Manual Screenshot Capture
+If Puppeteer is not available:
+1. Open `index.html` in browser with DevTools (F12)
+2. Set viewport to 1280x800 using Device Toolbar
+3. Capture screenshots at each stage listed above
+4. Save to `screenshots/startup-flow/` directory
+
+## Test Files
+
+### Automated Test Harness
+- `test_deferred_startup.html` - Automated verification of deferred initialization
+  - Tests DeferredGuards API
+  - Tests initial state and task deferral
+  - Tests button functionality
+  - Provides structured PASS/FAIL results
+
+### Manual Test File
+- `test_startup_flow.html` - Manual verification of guest mode and button wiring
+  - Tests guest mode flag behavior
+  - Tests ProfileService API
+  - Tests StartupFlow API
+  - Tests config flag behavior
 
 ## Conclusion
 
 This refactor significantly improves the user experience by:
-1. Removing mandatory onboarding friction
-2. Allowing immediate gameplay as Guest
-3. Preserving all existing functionality for profile users
-4. Maintaining security and data integrity
+1. **Deferring initialization** - Nothing builds until user presses Play
+2. **Removing mandatory onboarding friction** - No forced modals
+3. **Allowing immediate gameplay as Guest** - No profile required
+4. **Preserving all existing functionality** for profile users
+5. **Maintaining security and data integrity** through proper guards

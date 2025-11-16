@@ -348,8 +348,9 @@
   /**
    * Check if user profile is complete.
    * @returns {boolean} True if profile is complete
+   * NOTE: Currently unused, kept for potential future gating checks
    */
-  function checkProfileComplete() {
+  function checkProfileComplete() { // eslint-disable-line no-unused-vars
     try {
       // Check if profile service is available
       if (g.ProfileService && typeof g.ProfileService.hasCompleteProfile === 'function') {
