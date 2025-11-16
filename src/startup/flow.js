@@ -680,6 +680,10 @@
     
     console.info('[StartupFlow] Initializing...');
     
+    // CRITICAL: Initialize core services (including IntroScreen)
+    // This must happen during init() since bootstrap calls init() but not startupSequence()
+    initCoreServices();
+    
     wirePlayButton();
     wireIntroHubButtons();
     
