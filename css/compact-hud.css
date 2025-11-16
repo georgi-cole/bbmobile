@@ -197,8 +197,6 @@
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  z-index: 20; /* PR #XXX: Above summary deck (z-index:12) */
-  pointer-events: auto !important; /* PR #XXX: Ensure clickable during social phase */
 }
 
 /* Progress bar background - fills entire pill, depletes over time */
@@ -227,8 +225,7 @@
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  z-index: 20; /* PR #XXX: Above summary deck (z-index:12) */
-  pointer-events: auto !important; /* PR #XXX: Force clickable during social phase */
+  z-index: 1;
   white-space: nowrap;
   transition: opacity 0.2s ease;
 }

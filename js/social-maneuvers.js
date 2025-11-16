@@ -3006,25 +3006,12 @@
 
     console.info(`[social-maneuvers] 🛑 Ending Social phase now (reason: ${reason})`);
 
-    // 0. HIDE SOCIAL MODULE BEFORE ANY OTHER LOGIC (PR #XXX fix)
-    ensureSocialModuleHidden();
-
     // 1. Stop/clear timers safely
     // Clear fast-advance timeout
     if(g.__socialFastAdvanceTimeout){
       clearTimeout(g.__socialFastAdvanceTimeout);
       g.__socialFastAdvanceTimeout = null;
       console.info('[social-maneuvers] ✓ Cleared fast-advance timeout');
-    }
-
-    // Resume timer if paused, then immediately stop it (PR #XXX timer safety)
-    if(timerPaused){
-      console.info('[social-maneuvers] Timer is paused - resuming before stopping');
-      try{
-        resumePhaseTimer();
-      }catch(e){
-        console.warn('[social-maneuvers] resumePhaseTimer failed:', e);
-      }
     }
 
     // Stop phase timer by setting endAt to now
@@ -3204,105 +3191,6 @@
         durationMs: defaultDurationMs,
         humanId
       });
-    }
-    
-    // BIND SKIP PILL (PR #XXX fix): Make Skip pill reliably clickable
-    bindSkipPill();
-  }
-  
-  /**
-   * Bind click handler to Skip pill to make it reliably clickable during social phase.
-   * Locates pill via multiple selectors and ensures pointer-events and z-index are set.
-   * Called from onSocialPhaseStart() and can be called repeatedly (idempotent).
-   */
-  function bindSkipPill() {
-    console.info('[social-maneuvers] 🎯 Binding Skip pill click handler...');
-    
-    // Try multiple selectors to find the Skip pill
-    const selectors = [
-      '#tvSkipButton',
-      '[data-action="social-skip"]',
-      '.pill--skip',
-      '.skip-pill',
-      '.tv-skip-timer-button'
-    ];
-    
-    let pill = null;
-    for (const selector of selectors) {
-      pill = document.querySelector(selector);
-      if (pill) {
-        console.info(`[social-maneuvers] ✓ Found Skip pill via selector: ${selector}`);
-        break;
-      }
-    }
-    
-    if (!pill) {
-      console.warn('[social-maneuvers] ⚠️ Skip pill not found - will retry on next phase start');
-      return;
-    }
-    
-    // Force CSS: pointer-events:auto and z-index:20 (above summary deck z-index:12)
-    pill.style.pointerEvents = 'auto';
-    pill.style.zIndex = '20';
-    pill.style.position = 'relative';
-    
-    // Override parent pointer-events if needed
-    const parent = pill.parentElement;
-    if (parent && window.getComputedStyle(parent).pointerEvents === 'none') {
-      parent.style.pointerEvents = 'auto';
-      console.info('[social-maneuvers] ✓ Overrode parent pointer-events:none');
-    }
-    
-    // Remove existing listeners by cloning node (clean slate)
-    const newPill = pill.cloneNode(true);
-    pill.parentNode.replaceChild(newPill, pill);
-    pill = newPill;
-    
-    // Attach single click handler that calls endSocialPhaseNow('skip')
-    const handleSkipClick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.info('[social-maneuvers] 🎯 Skip pill clicked - ending social phase');
-      endSocialPhaseNow('skip');
-    };
-    
-    pill.addEventListener('click', handleSkipClick);
-    
-    // Also add keyboard handler for accessibility
-    pill.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        e.stopPropagation();
-        console.info('[social-maneuvers] 🎯 Skip pill activated via keyboard - ending social phase');
-        endSocialPhaseNow('skip');
-      }
-    });
-    
-    console.info('[social-maneuvers] ✓ Skip pill click handler bound successfully');
-    
-    // Optional: MutationObserver to re-bind if pill is re-rendered dynamically
-    if (!global.__skipPillObserver) {
-      const observer = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-          if (mutation.type === 'childList') {
-            // Check if pill was removed and re-added
-            const pillExists = document.querySelector(selectors.join(','));
-            if (pillExists && pillExists !== pill) {
-              console.info('[social-maneuvers] Skip pill re-rendered - re-binding');
-              bindSkipPill();
-              break;
-            }
-          }
-        }
-      });
-      
-      // Observe the TV header for changes
-      const tvHead = document.querySelector('.tvHead');
-      if (tvHead) {
-        observer.observe(tvHead, { childList: true, subtree: true });
-        global.__skipPillObserver = observer;
-        console.info('[social-maneuvers] ✓ Skip pill mutation observer installed');
-      }
     }
   }
   
@@ -3616,9 +3504,6 @@
   function showSummaryPanel(summary){
     if(!summary) return;
 
-    // REDUNDANT CLEANUP: Ensure social module is hidden before showing summary (PR #XXX fix)
-    ensureSocialModuleHidden();
-
     // Singleton guard: only show summary once per phase end
     if(socialSummaryOpen){
       console.warn('[social-maneuvers] Summary already open - ignoring duplicate call');
@@ -3879,69 +3764,6 @@
   }
 
   // ============================================================================
-  // UI TEARDOWN HELPERS
-  // ============================================================================
-  
-  /**
-   * Ensure social module UI is fully hidden/removed before showing summary.
-   * Removes all social module UI elements including launcher, panel, containers, and backdrops.
-   * Called from endSocialPhaseNow() and showSummaryPanel() for redundant cleanup.
-   */
-  function ensureSocialModuleHidden() {
-    console.info('[social-maneuvers] 🧹 Ensuring social module UI is hidden/removed');
-    
-    // Selectors for all social module UI elements
-    const selectors = [
-      '#socializePanel',
-      '.socialize-container',
-      '[data-socialize-root]',
-      '[data-social-panel]',
-      '[data-social-module]',
-      '.socialize-modal-backdrop',
-      '.socialize-overlay',
-      '#socializeLauncher',
-      '.socialize-launcher',
-      '[data-sm-launcher]',
-      '.socialize-modal'
-    ];
-    
-    let removedCount = 0;
-    selectors.forEach(selector => {
-      const elements = document.querySelectorAll(selector);
-      elements.forEach(el => {
-        el.remove();
-        removedCount++;
-      });
-    });
-    
-    // Call SocializeMobile.hide() if available to ensure proper cleanup
-    if (typeof global.SocializeMobile?.hide === 'function') {
-      try {
-        global.SocializeMobile.hide();
-        console.info('[social-maneuvers] ✓ Called SocializeMobile.hide()');
-      } catch(e) {
-        console.warn('[social-maneuvers] SocializeMobile.hide() failed:', e);
-      }
-    }
-    
-    // Stop launcher observer if active
-    if (typeof global.SocialLauncherBootstrap?.stopLauncherObserver === 'function') {
-      try {
-        global.SocialLauncherBootstrap.stopLauncherObserver();
-        console.info('[social-maneuvers] ✓ Stopped launcher observer');
-      } catch(e) {
-        console.warn('[social-maneuvers] stopLauncherObserver failed:', e);
-      }
-    }
-    
-    if (removedCount > 0) {
-      console.info(`[social-maneuvers] ✓ Removed ${removedCount} social module UI element(s)`);
-    } else {
-      console.info('[social-maneuvers] ✓ No social module UI elements found to remove');
-    }
-  }
-
-  // ============================================================================
   // GLOBAL EXPORTS
   // ============================================================================
   global.SocialManeuvers = {
@@ -3951,8 +3773,6 @@
     recordActionInMemory, getPlayerMemory,
     renderSocialManeuversUI, onSocialPhaseStart, onSocialPhaseEnd,
     endSocialPhaseNow, // Unified phase completion function
-    ensureSocialModuleHidden, // UI teardown helper (PR #XXX)
-    bindSkipPill, // Skip pill click handler binding (PR #XXX)
     pausePhaseTimer, resumePhaseTimer, // Timer control exports
     recordCompetitionParticipation, // Skip watcher integration
     trackPreVetoNominees, // Pre-veto tracking for save detection
