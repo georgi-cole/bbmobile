@@ -187,32 +187,37 @@
     }
   }
 
-  function handleMusicToggle(btn) {
-    if (g.game && g.game.audio && typeof g.game.audio.toggleMusic === 'function') {
-      const enabled = g.game.audio.toggleMusic();
-      btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-      btn.textContent = enabled ? '🎵' : '🔇';
-    } else if (g.audio && typeof g.audio.toggleMusic === 'function') {
-      const enabled = g.audio.toggleMusic();
-      btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-      btn.textContent = enabled ? '🎵' : '🔇';
+  // Helper for both music and sound toggles
+  function handleAudioToggle(type, btn) {
+    let enabled, methodName, icons;
+    if (type === 'music') {
+      methodName = 'toggleMusic';
+      icons = { on: '🎵', off: '🔇' };
+    } else if (type === 'sound') {
+      methodName = 'toggleSound';
+      icons = { on: '🔊', off: '🔇' };
     } else {
-      console.warn('[IntroScreen] Music toggle not available');
+      console.warn('[IntroScreen] Unknown audio type:', type);
+      return;
     }
+    if (g.game && g.game.audio && typeof g.game.audio[methodName] === 'function') {
+      enabled = g.game.audio[methodName]();
+    } else if (g.audio && typeof g.audio[methodName] === 'function') {
+      enabled = g.audio[methodName]();
+    } else {
+      console.warn(`[IntroScreen] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle not available`);
+      return;
+    }
+    btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    btn.textContent = enabled ? icons.on : icons.off;
+  }
+
+  function handleMusicToggle(btn) {
+    handleAudioToggle('music', btn);
   }
 
   function handleSoundToggle(btn) {
-    if (g.game && g.game.audio && typeof g.game.audio.toggleSound === 'function') {
-      const enabled = g.game.audio.toggleSound();
-      btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-      btn.textContent = enabled ? '🔊' : '🔇';
-    } else if (g.audio && typeof g.audio.toggleSound === 'function') {
-      const enabled = g.audio.toggleSound();
-      btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-      btn.textContent = enabled ? '🔊' : '🔇';
-    } else {
-      console.warn('[IntroScreen] Sound toggle not available');
-    }
+    handleAudioToggle('sound', btn);
   }
 
   function updateAnchors(anchor) {
