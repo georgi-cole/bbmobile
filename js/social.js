@@ -725,6 +725,15 @@
       const entering = phase === 'social_intermission' || phase === 'social';
       const leaving = !entering && _inSocialPhase;
       
+      // Notify CardManager of phase change BEFORE any other logic
+      if(global.CardManager && typeof global.CardManager.onPhaseChange === 'function'){
+        try {
+          global.CardManager.onPhaseChange(phase);
+        } catch(e){
+          console.error('[social.js wrapper] CardManager.onPhaseChange failed:', e);
+        }
+      }
+      
       if(entering && !_inSocialPhase){
         handleSocialPhaseEntry();
       }

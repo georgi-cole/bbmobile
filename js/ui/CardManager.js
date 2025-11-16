@@ -13,6 +13,10 @@
     dismissalTimeout: null,       // Pending auto-dismissal timeout
     isShowing: false,             // Flag to prevent concurrent shows
     
+    // Phase token & timeout tracking (for stuck card prevention)
+    _phaseToken: 0,               // Incremented on each phase change
+    __pendingTimeouts: [],        // Registry of all scheduled timeouts
+    
     /**
      * Show a new card. Automatically hides current card before showing new one.
      * @param {Function} factory - Function that creates and returns {card, timeline?, timeout?}
@@ -31,6 +35,9 @@
       
       this.isShowing = true;
       
+      // Capture current phase token to validate later
+      const myToken = this._phaseToken;
+      
       try {
         // Create new card
         const result = factory();
@@ -41,10 +48,30 @@
           return;
         }
         
+        // PHASE GUARD: If phase changed during factory execution, abort
+        if(myToken !== this._phaseToken){
+          console.warn('[CardManager] Phase changed during card creation, aborting show');
+          // Remove card if it was created
+          if(result.card && result.card.parentNode){
+            result.card.parentNode.removeChild(result.card);
+          }
+          // Clear any timeout that was created
+          if(result.timeout){
+            clearTimeout(result.timeout);
+          }
+          this.isShowing = false;
+          return;
+        }
+        
         // Track new card
         this.currentCard = result.card;
         this.currentTimeline = result.timeline || null;
         this.dismissalTimeout = result.timeout || null;
+        
+        // Auto-register timeout if factory returned one
+        if(result.timeout){
+          this.registerTimeout(result.timeout);
+        }
         
         // Mark card as ephemeral if UICleanup is available
         if(global.UICleanup && typeof global.UICleanup.markEphemeral === 'function'){
@@ -130,6 +157,9 @@
       
       console.log('[CardManager] Clearing all cards' + (immediate ? ' (immediate)' : ''));
       
+      // Cancel all pending timeouts
+      this.cancelAllTimeouts();
+      
       await this.hideCurrent({ immediate: immediate });
       
       // Also clear TV overlay content as defensive measure
@@ -173,6 +203,53 @@
     },
     
     /**
+     * Register a timeout for tracking and automatic cancellation.
+     * @param {number} timeoutId - setTimeout return value
+     */
+    registerTimeout(timeoutId){
+      if(timeoutId){
+        this.__pendingTimeouts.push(timeoutId);
+      }
+    },
+    
+    /**
+     * Cancel all registered timeouts.
+     */
+    cancelAllTimeouts(){
+      console.log('[CardManager] Cancelling', this.__pendingTimeouts.length, 'pending timeouts');
+      
+      for(let i = 0; i < this.__pendingTimeouts.length; i++){
+        try {
+          clearTimeout(this.__pendingTimeouts[i]);
+        } catch(e){
+          // Ignore errors from already-cleared timeouts
+        }
+      }
+      
+      // Clear the registry
+      this.__pendingTimeouts = [];
+    },
+    
+    /**
+     * Called when phase changes. Increments phase token and cancels all pending timeouts.
+     * @param {string} newPhase - The new phase name
+     */
+    onPhaseChange(newPhase){
+      console.log('[CardManager] Phase change detected:', newPhase, '(token', this._phaseToken, '->', this._phaseToken + 1 + ')');
+      
+      // Increment phase token to invalidate any in-flight card operations
+      this._phaseToken++;
+      
+      // Cancel all pending timeouts to prevent late card shows
+      this.cancelAllTimeouts();
+      
+      // Clear current card immediately
+      this.clear(true).catch(e => {
+        console.error('[CardManager] Error clearing on phase change:', e);
+      });
+    },
+    
+    /**
      * Get debug info about current state.
      */
     getDebugInfo(){
@@ -181,7 +258,9 @@
         cardClass: this.currentCard ? this.currentCard.className : null,
         hasTimeline: !!this.currentTimeline,
         hasTimeout: !!this.dismissalTimeout,
-        isShowing: this.isShowing
+        isShowing: this.isShowing,
+        phaseToken: this._phaseToken,
+        pendingTimeouts: this.__pendingTimeouts.length
       };
     }
   };

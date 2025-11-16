@@ -1074,9 +1074,17 @@
   async function showNomineeReactionsSimultaneously(nomineeIds){
     if(!nomineeIds || nomineeIds.length === 0) return;
     
+    var g = global.game;
+    
     // Use buildCardWithAvatars if available, otherwise fallback
     if(typeof global.buildCardWithAvatars === 'function'){
       for(var i=0; i<nomineeIds.length; i++){
+        // PHASE GUARD: Abort if phase is no longer veto_ceremony
+        if(g && g.phase !== 'veto_ceremony'){
+          console.log('[veto] Aborting nominee reactions - phase changed to', g.phase);
+          return;
+        }
+        
         var nomId = nomineeIds[i];
         var nom = getP(nomId);
         if(!nom) continue;
@@ -1103,8 +1111,21 @@
           console.warn('[veto] Failed to show nominee reaction for', nomId, e);
         }
         
-        // Small delay between reactions
-        await new Promise(function(r){ setTimeout(r, 600); });
+        // Small delay between reactions - use tracked timeout if CardManager available
+        if(global.CardManager && typeof global.CardManager.registerTimeout === 'function'){
+          await new Promise(function(resolve){
+            // PHASE GUARD: Check again before scheduling delay
+            if(g && g.phase !== 'veto_ceremony'){
+              resolve();
+              return;
+            }
+            var timeoutId = setTimeout(resolve, 600);
+            global.CardManager.registerTimeout(timeoutId);
+          });
+        } else {
+          // Fallback: standard delay
+          await new Promise(function(r){ setTimeout(r, 600); });
+        }
       }
     }
   }

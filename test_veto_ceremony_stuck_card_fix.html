@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Ceremony Stuck Card Fix Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-panel {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    
+    .test-log {
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 16px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    
+    .test-log div {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    .test-log .pass {
+      color: #4CAF50;
+      background: rgba(76,175,80,0.1);
+    }
+    
+    .test-log .fail {
+      color: #F44336;
+      background: rgba(244,67,54,0.1);
+    }
+    
+    .test-log .info {
+      color: #2196F3;
+    }
+    
+    .test-log .warn {
+      color: #FF9800;
+    }
+    
+    .card-count {
+      font-size: 24px;
+      font-weight: bold;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+    }
+    
+    .card-count.pass {
+      background: rgba(76, 175, 80, 0.2);
+      color: #4CAF50;
+    }
+    
+    .card-count.fail {
+      background: rgba(244, 67, 54, 0.2);
+      color: #F44336;
+    }
+    
+    .status {
+      padding: 8px 16px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-weight: bold;
+    }
+    
+    .status.running {
+      background: rgba(33,150,243,0.2);
+      color: #2196F3;
+    }
+    
+    .status.pass {
+      background: rgba(76,175,80,0.2);
+      color: #4CAF50;
+    }
+    
+    .status.fail {
+      background: rgba(244,67,54,0.2);
+      color: #F44336;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎴 Veto Ceremony Stuck Card Fix Test</h1>
+  <p>This test verifies that ceremony reaction cards are properly cancelled and do not persist into the next phase when fast-forwarding.</p>
+  
+  <div class="test-panel">
+    <h2>Test Scenario: Skip Mid-Ceremony</h2>
+    <p>Simulates veto ceremony with nominee reactions, triggers fast-forward/skip before reactions complete, advances to next phase, and verifies no cards persist.</p>
+    
+    <div class="test-controls">
+      <button id="runTest" class="btn primary">Run Skip Mid-Ceremony Test</button>
+      <button id="clearTest" class="btn">Clear Test</button>
+    </div>
+    
+    <div id="testStatus" class="status" style="display:none;"></div>
+    
+    <div id="cardCount" class="card-count" style="display:none;"></div>
+    
+    <h3>Test Log</h3>
+    <div id="testLog" class="test-log"></div>
+  </div>
+  
+  <!-- Minimal game scaffold -->
+  <div id="tv" style="display:none;"></div>
+  
+  <script type="module">
+    // Import required modules
+    import './js/ui/CardManager.js';
+    import './js/ui/tv-cards.js';
+    
+    const testLog = document.getElementById('testLog');
+    const cardCount = document.getElementById('cardCount');
+    const testStatus = document.getElementById('testStatus');
+    
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      testLog.appendChild(entry);
+      testLog.scrollTop = testLog.scrollHeight;
+      console.log(`[TEST:${type}]`, message);
+    }
+    
+    function updateCardCount() {
+      const cards = document.querySelectorAll('.tvCardBody, .revealCard, .ceremony-card');
+      cardCount.textContent = `Cards in DOM: ${cards.length}`;
+      cardCount.style.display = 'block';
+      cardCount.className = 'card-count ' + (cards.length === 0 ? 'pass' : 'fail');
+      return cards.length;
+    }
+    
+    function setStatus(text, type) {
+      testStatus.textContent = text;
+      testStatus.className = 'status ' + type;
+      testStatus.style.display = 'block';
+    }
+    
+    // Initialize minimal game state
+    function initGame() {
+      window.game = {
+        phase: 'veto_ceremony',
+        week: 1,
+        cfg: {
+          tVetoDec: 25
+        },
+        players: [
+          { id: 1, name: 'Alice', nominated: true, evicted: false },
+          { id: 2, name: 'Bob', nominated: true, evicted: false },
+          { id: 3, name: 'Charlie', nominated: false, evicted: false },
+          { id: 4, name: 'Diana', nominated: false, evicted: false }
+        ],
+        nominees: [1, 2],
+        vetoHolder: 3,
+        hohId: 4
+      };
+      
+      window.getP = (id) => window.game.players.find(p => p.id === id);
+      window.safeName = (id) => {
+        const p = window.getP(id);
+        return p ? p.name : `Player ${id}`;
+      };
+      window.alivePlayers = () => window.game.players.filter(p => !p.evicted);
+      
+      log('Game state initialized', 'info');
+    }
+    
+    // Simulate veto ceremony with nominee reactions
+    async function simulateVetoCeremony() {
+      log('Starting veto ceremony...', 'info');
+      
+      // Show first nominee reaction card
+      log('Showing reaction for nominee 1 (Alice)...', 'info');
+      await window.TVCards.showTVCard({
+        title: 'Alice',
+        lines: ['I\'ll campaign hard this week.'],
+        tone: 'neutral',
+        duration: 2400
+      });
+      
+      updateCardCount();
+      
+      // Schedule second nominee reaction (this should be cancelled by phase change)
+      log('Scheduling reaction for nominee 2 (Bob) in 600ms...', 'info');
+      const delayPromise = new Promise(resolve => {
+        const timeoutId = setTimeout(() => {
+          log('Showing reaction for nominee 2 (Bob)...', 'warn');
+          window.TVCards.showTVCard({
+            title: 'Bob',
+            lines: ['I need to hustle and make connections.'],
+            tone: 'neutral',
+            duration: 2400
+          }).then(resolve);
+        }, 600);
+        
+        // Register timeout with CardManager if available
+        if(window.CardManager && typeof window.CardManager.registerTimeout === 'function'){
+          window.CardManager.registerTimeout(timeoutId);
+          log('Timeout registered with CardManager', 'info');
+        }
+      });
+      
+      return delayPromise;
+    }
+    
+    // Run the main test
+    document.getElementById('runTest').addEventListener('click', async () => {
+      log('=== TEST START ===', 'info');
+      setStatus('Test Running...', 'running');
+      
+      // Clear any existing state
+      if(window.CardManager){
+        await window.CardManager.clear(true);
+      }
+      
+      // Initialize game
+      initGame();
+      updateCardCount();
+      
+      try {
+        // Start veto ceremony with reactions
+        const ceremonyPromise = simulateVetoCeremony();
+        
+        // Wait 300ms (mid-ceremony, before second reaction)
+        await new Promise(resolve => setTimeout(resolve, 300));
+        log('⏩ Triggering fast-forward (skip) mid-ceremony...', 'warn');
+        
+        // Simulate phase change to social_intermission
+        log('Changing phase to social_intermission...', 'info');
+        if(window.CardManager && typeof window.CardManager.onPhaseChange === 'function'){
+          window.CardManager.onPhaseChange('social_intermission');
+          log('CardManager.onPhaseChange() called', 'info');
+        }
+        
+        window.game.phase = 'social_intermission';
+        log('Phase changed to: ' + window.game.phase, 'info');
+        
+        // Wait 1 second to allow any pending timeouts to potentially fire
+        log('Waiting 1 second for any stuck timeouts...', 'info');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check if any cards remain
+        const remainingCards = updateCardCount();
+        
+        log('=== TEST RESULTS ===', 'info');
+        if(remainingCards === 0){
+          log('✅ PASS: No cards persisted into next phase', 'pass');
+          setStatus('✅ TEST PASSED', 'pass');
+        } else {
+          log(`❌ FAIL: ${remainingCards} card(s) persisted into next phase`, 'fail');
+          setStatus('❌ TEST FAILED', 'fail');
+          
+          // Log details about persisting cards
+          const cards = document.querySelectorAll('.tvCardBody, .revealCard, .ceremony-card');
+          cards.forEach((card, idx) => {
+            log(`  Card ${idx + 1}: ${card.className}`, 'fail');
+          });
+        }
+        
+        // Check CardManager debug info
+        if(window.CardManager && typeof window.CardManager.getDebugInfo === 'function'){
+          const debugInfo = window.CardManager.getDebugInfo();
+          log('CardManager state: ' + JSON.stringify(debugInfo), 'info');
+        }
+        
+      } catch(error) {
+        log('❌ TEST ERROR: ' + error.message, 'fail');
+        setStatus('❌ TEST ERROR', 'fail');
+        console.error(error);
+      }
+    });
+    
+    document.getElementById('clearTest').addEventListener('click', () => {
+      testLog.innerHTML = '';
+      cardCount.style.display = 'none';
+      testStatus.style.display = 'none';
+      
+      if(window.CardManager){
+        window.CardManager.clear(true);
+      }
+      
+      const content = document.querySelector('.tvOverlayContent');
+      if(content) content.innerHTML = '';
+      
+      log('Test cleared', 'info');
+    });
+    
+    // Initial setup
+    log('Test ready. Click "Run Skip Mid-Ceremony Test" to start.', 'info');
+  </script>
+</body>
+</html>
