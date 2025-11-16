@@ -258,9 +258,12 @@
 
       // Check if rules accepted
       let rulesAccepted = false;
-      try {
-        rulesAccepted = localStorage.getItem('bb_rules_accepted') === 'true';
-      } catch {}
+      // Use StorageSafe utility for localStorage access (consistent with bootstrap.js)
+      if (g.StorageSafe && typeof g.StorageSafe.get === 'function') {
+        rulesAccepted = g.StorageSafe.get('bb_rules_accepted', null) === 'true';
+      } else {
+        rulesAccepted = false;
+      }
 
       if (!rulesAccepted) {
         console.info('[StartupFlow] Rules not accepted, opening Rules modal');
