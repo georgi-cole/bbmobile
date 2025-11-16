@@ -559,6 +559,157 @@
     }
   }
 
+  // ---------- Intro Screen Flow ----------
+  function wireIntroScreenFlow(){
+    // Show IntroScreen after the Kolequant intro video finishes
+    window.addEventListener('bb:intro:finished', function(){
+      console.info('[Bootstrap] Intro video finished, showing IntroScreen');
+      if(typeof global.IntroScreen !== 'undefined' && typeof global.IntroScreen.show === 'function'){
+        global.IntroScreen.show();
+      }
+    }, { once: true });
+
+    // Wire up IntroScreen event handlers
+    if(!global.bbGameBus) return;
+
+    const bus = global.bbGameBus;
+
+    // Play button - route through Rules/Profile if needed
+    bus.on('intro:play', function(){
+      console.info('[Bootstrap] Play button clicked');
+      
+      // Check if rules accepted
+      const rulesAccepted = StorageSafe.get('bb_rules_accepted', null) === 'true';
+      if(!rulesAccepted){
+        console.info('[Bootstrap] Rules not accepted, opening Rules modal');
+        // Open Rules modal
+        if(typeof global.openRulesModal === 'function'){
+          global.openRulesModal();
+        } else if(typeof global.showRules === 'function'){
+          global.showRules();
+        }
+        // After rules are accepted, they'll return to intro screen
+        return;
+      }
+
+      // Check if profile is complete
+      const profileComplete = checkProfileComplete();
+      if(!profileComplete){
+        console.info('[Bootstrap] Profile incomplete, opening Profile modal');
+        // Open Profile modal
+        if(typeof global.ProfileModal !== 'undefined' && typeof global.ProfileModal.open === 'function'){
+          global.ProfileModal.open();
+        } else if(typeof global.openProfileModal === 'function'){
+          global.openProfileModal();
+        }
+        // After profile is complete, they'll return to intro screen
+        return;
+      }
+
+      // All checks passed, hide intro and start game
+      console.info('[Bootstrap] Starting game from IntroScreen');
+      if(typeof global.IntroScreen.hide === 'function'){
+        global.IntroScreen.hide();
+      }
+      
+      // Navigate to main game
+      if(typeof global.startOpeningSequence === 'function'){
+        global.startOpeningSequence();
+      } else if(typeof global.startGame === 'function'){
+        global.startGame();
+      }
+    });
+
+    // Rules button
+    bus.on('intro:open:rules', function(){
+      console.info('[Bootstrap] Rules button clicked');
+      if(typeof global.openRulesModal === 'function'){
+        global.openRulesModal();
+      } else if(typeof global.showRules === 'function'){
+        global.showRules();
+      }
+    });
+
+    // Profile button
+    bus.on('intro:open:profile', function(){
+      console.info('[Bootstrap] Profile button clicked');
+      if(typeof global.ProfileModal !== 'undefined' && typeof global.ProfileModal.open === 'function'){
+        global.ProfileModal.open();
+      } else if(typeof global.openProfileModal === 'function'){
+        global.openProfileModal();
+      }
+    });
+
+    // Leaderboard button
+    bus.on('intro:open:leaderboard', function(){
+      console.info('[Bootstrap] Leaderboard button clicked');
+      // Show XP/progression panel if available
+      if(typeof global.showXPPanel === 'function'){
+        global.showXPPanel();
+      } else if(typeof global.ProgressionUI !== 'undefined' && typeof global.ProgressionUI.showLeaderboard === 'function'){
+        global.ProgressionUI.showLeaderboard();
+      } else {
+        console.warn('[Bootstrap] Leaderboard not available yet');
+      }
+    });
+
+    // Settings button
+    bus.on('intro:open:settings', function(){
+      console.info('[Bootstrap] Settings button clicked');
+      if(typeof global.openSettings === 'function'){
+        global.openSettings();
+      } else {
+        const settingsBtn = document.getElementById('btnOpenSettings');
+        if(settingsBtn) settingsBtn.click();
+      }
+    });
+
+    // Credits button
+    bus.on('intro:open:credits', function(){
+      console.info('[Bootstrap] Credits button clicked');
+      if(typeof global.showCredits === 'function'){
+        global.showCredits();
+      } else if(typeof global.endCredits !== 'undefined' && typeof global.endCredits.show === 'function'){
+        global.endCredits.show();
+      }
+    });
+
+    // Help button
+    bus.on('intro:open:help', function(){
+      console.info('[Bootstrap] Help button clicked');
+      if(typeof global.showHelp === 'function'){
+        global.showHelp();
+      } else if(typeof global.openRulesModal === 'function'){
+        global.openRulesModal();
+      }
+    });
+
+    // Chip buttons (placeholders for future features)
+    bus.on('intro:chip:daily', function(){
+      console.info('[Bootstrap] Daily chip clicked (placeholder)');
+    });
+
+    bus.on('intro:chip:news', function(){
+      console.info('[Bootstrap] News chip clicked (placeholder)');
+    });
+  }
+
+  function checkProfileComplete(){
+    try {
+      // Check if profile service is available
+      if(typeof global.ProfileService !== 'undefined' && typeof global.ProfileService.hasCompleteProfile === 'function'){
+        return global.ProfileService.hasCompleteProfile();
+      }
+      // Fallback: check localStorage
+      const profile = localStorage.getItem('bb_user_profile');
+      if(!profile) return false;
+      const data = JSON.parse(profile);
+      return !!(data && data.name && data.name.trim());
+    } catch {
+      return false;
+    }
+  }
+
   // ---------- Boot ----------
   function bootstrap(){
     try{
@@ -602,6 +753,22 @@
 
       wireButtons();
       wireSettingsTabs();
+      
+      // Initialize BackgroundTheme service
+      if(typeof global.BackgroundTheme !== 'undefined' && typeof global.BackgroundTheme.init === 'function'){
+        global.BackgroundTheme.init({ bus: global.bbGameBus });
+        console.info('[Bootstrap] BackgroundTheme initialized');
+      }
+      
+      // Initialize IntroScreen
+      if(typeof global.IntroScreen !== 'undefined' && typeof global.IntroScreen.init === 'function'){
+        global.IntroScreen.init({ bus: global.bbGameBus });
+        console.info('[Bootstrap] IntroScreen initialized');
+      }
+      
+      // Wire up IntroScreen to show after intro video
+      wireIntroScreenFlow();
+      
       (function keepAlive(){
         wireButtons();
         updateStartButtonUI();   // Keep label in sync with phase
