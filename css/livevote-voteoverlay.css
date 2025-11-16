@@ -35,18 +35,19 @@
 }
 
 .lv-overlay__carousel {
-  flex: 1 1 auto; /* Allow growing and shrinking */
+  flex: 0 0 auto; /* Fixed size - don't grow or shrink to prevent excessive spacing */
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow-y: auto; /* Enable vertical scrolling for content that exceeds height */
+  overflow-y: visible; /* Don't create internal scroll for carousel itself */
   overflow-x: auto; /* Enable horizontal scrolling for nominee track */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   scroll-behavior: smooth; /* Smooth scrolling behavior */
   scroll-snap-type: x mandatory; /* Enable horizontal snap scrolling */
   padding: 20px 16px;
   min-height: 0; /* Critical: Allow flex child to shrink below content size */
+  max-height: 55vh; /* Reduced from 60vh to give more room for button below */
   
   /* Hide scrollbars visually while keeping functionality */
   scrollbar-width: none; /* Firefox */
@@ -183,14 +184,14 @@
   right: 8px;
 }
 
-/* Confirmation container - positioned close to selected avatar (8-16px below carousel) */
+/* Confirmation container - positioned close to selected avatar below carousel */
 .lv-overlay__confirm-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  margin-top: 8px; /* 8px below carousel for proximity to selected avatar */
+  gap: 6px; /* Reduced further to tighten spacing */
+  padding: 4px 16px 20px; /* Tighter top padding, more bottom for safe area */
+  margin-top: 0; /* Removed top margin - keep it tight to carousel */
   flex-shrink: 0;
   animation: fadeIn 0.3s ease-out;
 }
