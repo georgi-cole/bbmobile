@@ -72,11 +72,14 @@
       }
     }
 
-    // Initialize IntroScreen (only if not already initialized)
-    // The init() function has its own idempotence guard using the bus variable
+    // Initialize IntroScreen unconditionally (init is idempotent)
+    // CRITICAL: Always call init() regardless of whether show() exists
+    // This ensures the module is properly initialized before use
     if (g.IntroScreen && typeof g.IntroScreen.init === 'function') {
       g.IntroScreen.init({ bus });
-      console.info('[StartupFlow] IntroScreen init called');
+      console.info('[StartupFlow] IntroScreen initialized');
+    } else {
+      console.warn('[StartupFlow] IntroScreen not available or missing init method');
     }
 
     console.info('[StartupFlow] Core services initialized');
