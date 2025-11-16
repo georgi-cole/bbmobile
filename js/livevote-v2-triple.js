@@ -55,6 +55,16 @@
 
   // Cleanup and restore panel visibility
   function cleanup() {
+    // Clean up any rollout overlay that may be showing
+    try {
+      if (global.LiveVoteRollout?.hide) {
+        global.LiveVoteRollout.hide();
+        console.debug('[lv2:triple] Cleaned up rollout overlay during cleanup');
+      }
+    } catch (e) {
+      console.warn('[lv2:triple] Error hiding rollout during cleanup:', e);
+    }
+    
     teardown();
     document.body.classList.remove('lv-active-livevote');
     document.body.classList.remove('lv-dock-livevote');
@@ -74,6 +84,17 @@
    */
   function initTriple(opts) {
     cleanup();
+    
+    // Clean up any existing rollout overlay before rendering triple UI
+    try {
+      if (global.LiveVoteRollout?.hide) {
+        global.LiveVoteRollout.hide();
+        console.debug('[lv2:triple] Cleaned up rollout overlay before init');
+      }
+    } catch (e) {
+      console.warn('[lv2:triple] Error hiding rollout:', e);
+    }
+    
     const overlay = getTvRoot();
     if (!overlay) {
       console.warn('[lv2:triple] No #tv overlay found.');

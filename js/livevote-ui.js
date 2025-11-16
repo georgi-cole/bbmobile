@@ -124,6 +124,23 @@
       return;
     }
 
+    // Clean up any existing rollout overlay before rendering lv2 UI
+    try {
+      if (global.LiveVoteRollout?.hide) {
+        global.LiveVoteRollout.hide();
+        console.debug('[lv2] Cleaned up rollout overlay before init');
+      }
+    } catch (e) {
+      console.warn('[lv2] Error hiding rollout:', e);
+    }
+
+    // Remove any existing lv2 overlays before creating new one
+    const existingLv2 = tv.querySelector('.lv2-overlay');
+    if (existingLv2) {
+      existingLv2.remove();
+      console.debug('[lv2] Removed existing lv2 overlay');
+    }
+
     // Hide #panel content during lv2 mode
     const panel = document.querySelector('#panel');
     if (panel) {
@@ -1235,6 +1252,16 @@
 
   // Clean up lv2 UI and restore panel visibility
   function cleanup() {
+    // Clean up any rollout overlay that may be showing
+    try {
+      if (global.LiveVoteRollout?.hide) {
+        global.LiveVoteRollout.hide();
+        console.debug('[lv2] Cleaned up rollout overlay during cleanup');
+      }
+    } catch (e) {
+      console.warn('[lv2] Error hiding rollout during cleanup:', e);
+    }
+    
     // Exit external overlay mode if active (restore any hidden children)
     if (state._externalOverlayActive) {
       exitExternalOverlayMode();
@@ -1278,6 +1305,7 @@
     state.isFinal4 = false;
     state.carouselIndex = 0;
     state.useCarousel = false;
+    state.selectedNominee = null;
   }
 
   // Helper: sleep
