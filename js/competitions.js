@@ -506,6 +506,7 @@
     }
   }
   global.runHumanMinigameWithGuards = runHumanMinigameWithGuards;
+  global.getTvInstructionsContainer = getTvInstructionsContainer;
 
   // Reusable tri-slot reveal sequence for competitions
   // Can be used for HOH, Veto, or other top-3 reveals
