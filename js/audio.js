@@ -171,7 +171,18 @@
       p.catch(err => {
         const errStr = String(err.name || err.message || '');
         if (/NotAllowedError/i.test(errStr)) {
-          console.info('[audio] Autoplay blocked; installing gesture unlock');
+          console.info('[audio] Autoplay blocked; dispatching bb:audio:autoplay-blocked event');
+          
+          // Dispatch global event for UI to show consent prompt
+          try {
+            window.dispatchEvent(new CustomEvent('bb:audio:autoplay-blocked', {
+              detail: { reason: 'NotAllowedError', originalError: err }
+            }));
+          } catch(e) {
+            console.warn('[audio] Failed to dispatch autoplay-blocked event:', e);
+          }
+          
+          // Fallback: install gesture unlock (in case UI doesn't handle the event)
           const unlock = () => {
             try {
               audioEl.play().catch(() => {});

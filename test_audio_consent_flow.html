@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Audio Consent Flow</title>
+  <link rel="stylesheet" href="css/intro.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0e14;
+      color: #fff;
+      padding: 20px;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #00d4ff;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-button {
+      background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+      transition: all 200ms ease;
+    }
+    .test-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+    }
+    .test-button:active {
+      transform: translateY(2px) scale(0.97);
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .info {
+      color: #aaa;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎵 Audio Consent Flow Test</h1>
+    
+    <div class="test-section">
+      <h2>Test 1: Autoplay Blocked Event</h2>
+      <p class="info">This test simulates the autoplay-blocked event dispatch.</p>
+      <button class="test-button" onclick="testAutoplayBlocked()">Trigger Autoplay Blocked Event</button>
+      <div id="test1-status" class="status">Status: Ready</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 2: Music Toggle Icons</h2>
+      <p class="info">This test creates music/sound toggle buttons to verify icon state management.</p>
+      <div style="display: flex; gap: 12px; margin: 10px 0;">
+        <button id="test-music-btn" class="intro-screen__icon-btn">🎵</button>
+        <button id="test-sound-btn" class="intro-screen__icon-btn">🔊</button>
+      </div>
+      <button class="test-button" onclick="testIconInitialization()">Initialize Icons from Config</button>
+      <button class="test-button" onclick="testMusicToggle()">Toggle Music</button>
+      <button class="test-button" onclick="testSoundToggle()">Toggle Sound</button>
+      <div id="test2-status" class="status">Status: Ready</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 3: Full Integration</h2>
+      <p class="info">This test verifies the full integration by loading IntroScreen and testing end-to-end.</p>
+      <button class="test-button" onclick="testFullIntegration()">Show Intro Screen</button>
+      <button class="test-button" onclick="testHideIntroScreen()">Hide Intro Screen</button>
+      <button class="test-button" onclick="testTriggerAutoplayFromHub()">Trigger Autoplay from Hub</button>
+      <div id="test3-status" class="status">Status: Ready</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 4: SFX Integration</h2>
+      <p class="info">Test that SFX respects consent and config.</p>
+      <button class="test-button" id="sfx-test-btn">Hover/Click Me</button>
+      <button class="test-button" onclick="testAttachSfx()">Attach SFX</button>
+      <button class="test-button" onclick="testConsentGranted()">Dispatch Consent Granted</button>
+      <div id="test4-status" class="status">Status: Ready</div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>window.MUSIC_BASE = 'audio/';</script>
+  <script src="js/audio.js"></script>
+  <script src="js/audio-bridge.js"></script>
+  <script src="js/ui/introHubSfx.js"></script>
+  <script src="src/ui/IntroScreen.js"></script>
+
+  <script>
+    // Initialize mock game object
+    window.game = window.game || {};
+    window.game.cfg = { sfxOn: true, musicOn: true };
+    window.game.bus = {
+      emit: (event, data) => console.log('[Bus]', event, data),
+      on: (event, handler) => console.log('[Bus] on', event)
+    };
+
+    function setStatus(id, msg) {
+      document.getElementById(id).textContent = 'Status: ' + msg;
+    }
+
+    // Test 1: Autoplay Blocked Event
+    function testAutoplayBlocked() {
+      console.log('[Test1] Dispatching bb:audio:autoplay-blocked event');
+      setStatus('test1-status', 'Dispatching event...');
+      
+      window.dispatchEvent(new CustomEvent('bb:audio:autoplay-blocked', {
+        detail: { reason: 'NotAllowedError', originalError: new Error('Simulated') }
+      }));
+      
+      setTimeout(() => {
+        const overlay = document.getElementById('intro-consent-overlay');
+        if (overlay) {
+          setStatus('test1-status', '✅ Consent overlay appeared!');
+        } else {
+          setStatus('test1-status', '❌ Consent overlay did not appear');
+        }
+      }, 500);
+    }
+
+    // Test 2: Icon Management
+    function testIconInitialization() {
+      console.log('[Test2] Testing icon initialization');
+      setStatus('test2-status', 'Initializing icons...');
+      
+      const musicBtn = document.getElementById('test-music-btn');
+      const soundBtn = document.getElementById('test-sound-btn');
+      
+      // Simulate setAudioIconState (from IntroScreen.js)
+      function setAudioIconState(btn, type, enabled) {
+        const icons = type === 'music' 
+          ? { on: '🎵', off: '🔇' }
+          : { on: '🔊', off: '🔇' };
+        
+        btn.textContent = enabled ? icons.on : icons.off;
+        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        btn.classList.toggle('is-off', !enabled);
+      }
+      
+      // Initialize from config
+      setAudioIconState(musicBtn, 'music', window.game.cfg.musicOn);
+      setAudioIconState(soundBtn, 'sound', window.game.cfg.sfxOn);
+      
+      setStatus('test2-status', `✅ Icons initialized (music=${window.game.cfg.musicOn}, sound=${window.game.cfg.sfxOn})`);
+    }
+
+    function testMusicToggle() {
+      console.log('[Test2] Testing music toggle');
+      const musicBtn = document.getElementById('test-music-btn');
+      
+      if (window.game.audio && typeof window.game.audio.toggleMusic === 'function') {
+        const enabled = window.game.audio.toggleMusic();
+        
+        // Update icon
+        const icons = { on: '🎵', off: '🔇' };
+        musicBtn.textContent = enabled ? icons.on : icons.off;
+        musicBtn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        musicBtn.classList.toggle('is-off', !enabled);
+        
+        setStatus('test2-status', `✅ Music toggled to ${enabled ? 'ON' : 'OFF'}`);
+      } else {
+        setStatus('test2-status', '❌ toggleMusic not available');
+      }
+    }
+
+    function testSoundToggle() {
+      console.log('[Test2] Testing sound toggle');
+      const soundBtn = document.getElementById('test-sound-btn');
+      
+      if (window.game.audio && typeof window.game.audio.toggleSound === 'function') {
+        const enabled = window.game.audio.toggleSound();
+        
+        // Update icon
+        const icons = { on: '🔊', off: '🔇' };
+        soundBtn.textContent = enabled ? icons.on : icons.off;
+        soundBtn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        soundBtn.classList.toggle('is-off', !enabled);
+        
+        setStatus('test2-status', `✅ Sound toggled to ${enabled ? 'ON' : 'OFF'}`);
+      } else {
+        setStatus('test2-status', '❌ toggleSound not available');
+      }
+    }
+
+    // Test 3: Full Integration
+    function testFullIntegration() {
+      console.log('[Test3] Testing full integration');
+      setStatus('test3-status', 'Initializing IntroScreen...');
+      
+      if (window.IntroScreen) {
+        const api = window.IntroScreen.init({ bus: window.game.bus });
+        api.show();
+        setStatus('test3-status', '✅ IntroScreen shown! Check the screen.');
+      } else {
+        setStatus('test3-status', '❌ IntroScreen not available');
+      }
+    }
+
+    function testHideIntroScreen() {
+      if (window.IntroScreen) {
+        window.IntroScreen.hide();
+        setStatus('test3-status', '✅ IntroScreen hidden');
+      }
+    }
+
+    function testTriggerAutoplayFromHub() {
+      console.log('[Test3] Triggering autoplay from hub');
+      setStatus('test3-status', 'Requesting music playback...');
+      
+      // Simulate the hub requesting music
+      if (window.game.audio && typeof window.game.audio.playMusicForPhase === 'function') {
+        window.game.audio.playMusicForPhase('intro_hub');
+        setStatus('test3-status', '✅ Music requested. Check for consent overlay if blocked.');
+      } else {
+        setStatus('test3-status', '❌ playMusicForPhase not available');
+      }
+    }
+
+    // Test 4: SFX Integration
+    function testAttachSfx() {
+      console.log('[Test4] Attaching SFX');
+      if (window.IntroHubSfx) {
+        const btn = document.getElementById('sfx-test-btn');
+        window.IntroHubSfx.attach(btn.parentElement);
+        setStatus('test4-status', '✅ SFX attached. Hover/click test button to hear.');
+      } else {
+        setStatus('test4-status', '❌ IntroHubSfx not available');
+      }
+    }
+
+    function testConsentGranted() {
+      console.log('[Test4] Dispatching consent granted event');
+      window.dispatchEvent(new CustomEvent('bb:sound-consent-granted'));
+      setStatus('test4-status', '✅ Consent granted event dispatched');
+    }
+
+    // Auto-run basic checks
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('=== Test page loaded ===');
+      console.log('Audio system:', typeof window.game.audio);
+      console.log('IntroScreen:', typeof window.IntroScreen);
+      console.log('IntroHubSfx:', typeof window.IntroHubSfx);
+      console.log('Ready for testing...');
+    });
+  </script>
+</body>
+</html>

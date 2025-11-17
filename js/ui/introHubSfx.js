@@ -105,6 +105,22 @@
     // Listen for custom event dispatched when sound is toggled
     document.addEventListener('introHubSfx', syncEnabled);
     
+    // Listen for consent granted event
+    window.addEventListener('bb:sound-consent-granted', () => {
+      console.info('[IntroHubSfx] Sound consent granted, syncing state');
+      syncEnabled();
+      
+      // Resume WebAudio context if it was suspended
+      const ac = getCtx();
+      if (ac && ac.state === 'suspended') {
+        ac.resume().then(() => {
+          console.info('[IntroHubSfx] WebAudio context resumed');
+        }).catch(_err => {
+          console.warn('[IntroHubSfx] Failed to resume WebAudio context');
+        });
+      }
+    });
+    
     // Cheap fallback: periodic sync every 4 seconds
     if(!g.__introHubSfxPoll){
       g.__introHubSfxPoll = setInterval(syncEnabled, 4000);
@@ -123,7 +139,7 @@
       el.currentTime = 0;
       const p = el.play();
       if (p && p.catch) {
-        p.catch(err => {
+        p.catch(() => {
           if (label === 'hover' && !warnedHover) {
             console.info('[IntroHubSfx] Hover SFX not available:', HOVER_SRC);
             warnedHover = true;

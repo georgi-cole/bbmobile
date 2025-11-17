@@ -213,18 +213,32 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
   }
 
+  /**
+   * Set audio icon state consistently
+   * @param {HTMLElement} btn - Button element
+   * @param {string} type - 'music' or 'sound'
+   * @param {boolean} enabled - Whether audio is enabled
+   */
+  function setAudioIconState(btn, type, enabled) {
+    const icons = type === 'music' 
+      ? { on: '🎵', off: '🔇' }
+      : { on: '🔊', off: '🔇' };
+    
+    btn.textContent = enabled ? icons.on : icons.off;
+    btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    btn.classList.toggle('is-off', !enabled);
+  }
+
   // Helper for both music and sound toggles with retry logic
   function handleAudioToggle(type, btn) {
     const MAX_RETRIES = 10;
     const RETRY_DELAY = 150; // ms
     
-    let enabled, methodName, icons;
+    let enabled, methodName;
     if (type === 'music') {
       methodName = 'toggleMusic';
-      icons = { on: '🎵', off: '🔇' };
     } else if (type === 'sound') {
       methodName = 'toggleSound';
-      icons = { on: '🔊', off: '🔇' };
     } else {
       console.warn('[IntroScreen] Unknown audio type:', type);
       return;
@@ -236,9 +250,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     const tryToggle = () => {
       if (g.game && g.game.audio && typeof g.game.audio[methodName] === 'function') {
         enabled = g.game.audio[methodName]();
-        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-        btn.textContent = enabled ? icons.on : icons.off;
-        btn.classList.toggle('is-off', !enabled);
+        setAudioIconState(btn, type, enabled);
         if (retryCount > 0) {
           console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded after ${retryCount} retries`);
         }
@@ -253,9 +265,7 @@ console.info('[IntroScreen] Script executing – pre-init');
         return true;
       } else if (g.audio && typeof g.audio[methodName] === 'function') {
         enabled = g.audio[methodName]();
-        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-        btn.textContent = enabled ? icons.on : icons.off;
-        btn.classList.toggle('is-off', !enabled);
+        setAudioIconState(btn, type, enabled);
         if (retryCount > 0) {
           console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded after ${retryCount} retries`);
         }
@@ -708,8 +718,201 @@ console.info('[IntroScreen] Script executing – pre-init');
   }
 
   /**
+   * Initialize audio icon states from config
+   */
+  function initAudioIcons() {
+    try {
+      const cfg = (g && ((g.game && g.game.cfg) || g.cfg)) || {};
+      const musicOn = cfg.musicOn !== false; // default true
+      const sfxOn = cfg.sfxOn !== false; // default true
+      
+      const musicBtn = document.getElementById('intro-icon-music');
+      const soundBtn = document.getElementById('intro-icon-sound');
+      
+      if (musicBtn) {
+        setAudioIconState(musicBtn, 'music', musicOn);
+        console.info('[IntroHub] Music icon initialized:', musicOn ? 'ON' : 'OFF');
+      }
+      
+      if (soundBtn) {
+        setAudioIconState(soundBtn, 'sound', sfxOn);
+        console.info('[IntroHub] Sound icon initialized:', sfxOn ? 'ON' : 'OFF');
+      }
+    } catch(e) {
+      console.warn('[IntroHub] Failed to initialize audio icons:', e);
+    }
+  }
+
+  /**
+   * Show consent overlay for autoplay unlock
+   */
+  function showConsentOverlay() {
+    // Don't show if already exists
+    if (document.getElementById('intro-consent-overlay')) {
+      return;
+    }
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'intro-consent-overlay';
+    overlay.className = 'intro-consent-overlay';
+    
+    const card = document.createElement('div');
+    card.className = 'intro-consent-card';
+    
+    const title = document.createElement('h2');
+    title.className = 'intro-consent-title';
+    title.textContent = 'Enable sound?';
+    
+    const message = document.createElement('p');
+    message.className = 'intro-consent-message';
+    message.textContent = 'Allow audio to play music and sound effects.';
+    
+    const buttonRow = document.createElement('div');
+    buttonRow.className = 'intro-consent-buttons';
+    
+    const allowBtn = document.createElement('button');
+    allowBtn.className = 'intro-consent-btn intro-consent-btn--allow';
+    allowBtn.textContent = 'Allow';
+    allowBtn.addEventListener('click', () => {
+      handleConsentAllow();
+      hideConsentOverlay();
+    });
+    
+    const muteBtn = document.createElement('button');
+    muteBtn.className = 'intro-consent-btn intro-consent-btn--mute';
+    muteBtn.textContent = 'Mute for now';
+    muteBtn.addEventListener('click', () => {
+      handleConsentMute();
+      hideConsentOverlay();
+    });
+    
+    buttonRow.appendChild(allowBtn);
+    buttonRow.appendChild(muteBtn);
+    
+    card.appendChild(title);
+    card.appendChild(message);
+    card.appendChild(buttonRow);
+    overlay.appendChild(card);
+    
+    document.body.appendChild(overlay);
+    
+    // Fade in
+    requestAnimationFrame(() => {
+      overlay.classList.add('intro-consent-overlay--visible');
+    });
+    
+    console.info('[IntroHub] Consent overlay shown');
+  }
+
+  /**
+   * Hide consent overlay
+   */
+  function hideConsentOverlay() {
+    const overlay = document.getElementById('intro-consent-overlay');
+    if (overlay) {
+      overlay.classList.remove('intro-consent-overlay--visible');
+      setTimeout(() => {
+        if (overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+      }, 300);
+      console.info('[IntroHub] Consent overlay hidden');
+    }
+  }
+
+  /**
+   * Handle consent Allow action
+   */
+  function handleConsentAllow() {
+    try {
+      const cfg = (g && ((g.game && g.game.cfg) || g.cfg)) || {};
+      cfg.musicOn = true;
+      cfg.sfxOn = true;
+      
+      // Update audio system
+      if (g.game && g.game.audio) {
+        if (typeof g.game.audio.setMusicEnabled === 'function') {
+          g.game.audio.setMusicEnabled(true);
+        }
+        if (typeof g.game.audio.setSfxEnabled === 'function') {
+          g.game.audio.setSfxEnabled(true);
+        }
+      } else if (g.audio) {
+        if (typeof g.audio.setMusicEnabled === 'function') {
+          g.audio.setMusicEnabled(true);
+        }
+        if (typeof g.audio.setSfxEnabled === 'function') {
+          g.audio.setSfxEnabled(true);
+        }
+      }
+      
+      // Update icon states
+      const musicBtn = document.getElementById('intro-icon-music');
+      const soundBtn = document.getElementById('intro-icon-sound');
+      if (musicBtn) setAudioIconState(musicBtn, 'music', true);
+      if (soundBtn) setAudioIconState(soundBtn, 'sound', true);
+      
+      // Start intro hub music immediately (gesture satisfied)
+      if (typeof g?.audio?.playMusicForPhase === 'function') {
+        g.audio.playMusicForPhase('intro_hub');
+      } else if (typeof g?.playIntroHubMusic === 'function') {
+        g.playIntroHubMusic();
+      }
+      
+      // Dispatch consent granted event
+      try {
+        window.dispatchEvent(new CustomEvent('bb:sound-consent-granted'));
+      } catch(e) {
+        // Ignore dispatch errors
+      }
+      
+      console.info('[IntroHub] Consent granted - audio enabled');
+    } catch(e) {
+      console.warn('[IntroHub] Failed to handle consent allow:', e);
+    }
+  }
+
+  /**
+   * Handle consent Mute action
+   */
+  function handleConsentMute() {
+    try {
+      const cfg = (g && ((g.game && g.game.cfg) || g.cfg)) || {};
+      cfg.musicOn = false;
+      cfg.sfxOn = false;
+      
+      // Update audio system
+      if (g.game && g.game.audio) {
+        if (typeof g.game.audio.setMusicEnabled === 'function') {
+          g.game.audio.setMusicEnabled(false);
+        }
+        if (typeof g.game.audio.setSfxEnabled === 'function') {
+          g.game.audio.setSfxEnabled(false);
+        }
+      } else if (g.audio) {
+        if (typeof g.audio.setMusicEnabled === 'function') {
+          g.audio.setMusicEnabled(false);
+        }
+        if (typeof g.audio.setSfxEnabled === 'function') {
+          g.audio.setSfxEnabled(false);
+        }
+      }
+      
+      // Update icon states
+      const musicBtn = document.getElementById('intro-icon-music');
+      const soundBtn = document.getElementById('intro-icon-sound');
+      if (musicBtn) setAudioIconState(musicBtn, 'music', false);
+      if (soundBtn) setAudioIconState(soundBtn, 'sound', false);
+      
+      console.info('[IntroHub] Consent muted - audio disabled');
+    } catch(e) {
+      console.warn('[IntroHub] Failed to handle consent mute:', e);
+    }
+  }
+
+  /**
    * Ensure lobby music plays whenever the hub is visible
-   * Includes gesture unlock fallback for autoplay restrictions
+   * Includes autoplay-blocked listener for consent prompt
    */
   function ensureLobbyMusic() {
     try {
@@ -726,6 +929,13 @@ console.info('[IntroScreen] Script executing – pre-init');
         return;
       }
 
+      // Listen for autoplay-blocked event
+      const autoplayBlockedHandler = () => {
+        console.info('[IntroHub] Autoplay blocked, showing consent overlay');
+        showConsentOverlay();
+      };
+      window.addEventListener('bb:audio:autoplay-blocked', autoplayBlockedHandler, { once: true });
+
       // Initial request
       try {
         if (typeof g?.audio?.playMusicForPhase === 'function') {
@@ -737,32 +947,6 @@ console.info('[IntroScreen] Script executing – pre-init');
       } catch(e) {
         console.warn('[IntroHub] Lobby music initial request failed', e);
       }
-
-      // Gesture unlock retry while hub is visible
-      const hub = document.getElementById('introScreen');
-      if (!hub) return;
-
-      const unlockOnce = () => {
-        try {
-          if (hub && hub.classList.contains('intro-screen--visible')) {
-            if (typeof g?.audio?.playMusicForPhase === 'function') {
-              g.audio.playMusicForPhase('intro_hub');
-            } else if (typeof g?.playIntroHubMusic === 'function') {
-              g.playIntroHubMusic();
-            }
-            console.info('[IntroHub] Lobby music re-requested on user gesture');
-          }
-        } catch(e){
-          // Ignore errors
-        }
-        document.removeEventListener('pointerdown', unlockOnce, true);
-        document.removeEventListener('keydown', unlockOnce, true);
-        document.removeEventListener('touchend', unlockOnce, true);
-      };
-
-      document.addEventListener('pointerdown', unlockOnce, true);
-      document.addEventListener('keydown', unlockOnce, true);
-      document.addEventListener('touchend', unlockOnce, true);
     } catch (e) {
       console.warn('[IntroHub] ensureLobbyMusic error', e);
     }
@@ -782,6 +966,9 @@ console.info('[IntroScreen] Script executing – pre-init');
     } catch(e) {
       console.warn('[IntroHub] Failed to attach UI SFX', e);
     }
+    
+    // Initialize audio icon states from config
+    initAudioIcons();
     
     // Ensure lobby music plays
     ensureLobbyMusic();
