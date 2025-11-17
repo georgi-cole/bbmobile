@@ -1400,6 +1400,13 @@ header.innerHTML = `
   // ------------ Phase UI Force Clear ------------
   function forceClearPhaseUI(newPhase){
     try{
+      // CRITICAL FIX: Close all vote UI on phase transition
+      // This prevents stuck voting overlays when advancing to next phase
+      if(typeof g.closeAllVoteUI === 'function'){
+        g.closeAllVoteUI();
+        console.info('[phase] Vote UI cleaned up on phase transition');
+      }
+      
       // Remove any lingering modal overlays, cards, or phase-specific UI
       document.querySelectorAll('[data-bb-card], .results-modal-overlay, .pfWinnerCard, .pfModalHost').forEach(el => {
         try{ el.remove(); }catch{}
