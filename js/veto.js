@@ -37,14 +37,8 @@
   ];
 
   // Nominee reaction phrases (when veto is not used)
-  const NOMINEE_REACTION_PHRASES = [
-    'I\'ll campaign hard this week.',
-    'I\'m not out yet.',
-    'I need to hustle and make connections.',
-    'Time to fight for votes.',
-    'I\'m going to work my social game.',
-    'I won\'t give up without a fight.'
-  ];
+  // REMOVED: Hard removal of nominee reaction plea cards per issue requirements
+  const NOMINEE_REACTION_PHRASES = [];
 
   // HOH replacement announcement phrases
   const HOH_REPLACEMENT_PHRASES = [
@@ -56,6 +50,8 @@
   ];
 
   function pickPhrase(arr){
+    // Safety guard: return empty string if array is empty or undefined
+    if(!arr || arr.length === 0) return '';
     return arr[Math.floor(rng()*arr.length)];
   }
 
@@ -1266,50 +1262,11 @@
   }
   
   // Helper: Show nominee reactions (after veto not used)
+  // REMOVED: Hard removal of nominee reaction plea cards per issue requirements
+  // This function is now a no-op to prevent any nominee reactions from displaying
   async function showNomineeReactionsSimultaneously(nomineeIds){
-    if(!nomineeIds || nomineeIds.length === 0) return;
-    
-    var g = global.game;
-    
-    // Use buildCardWithAvatars if available, otherwise fallback
-    if(typeof global.buildCardWithAvatars === 'function'){
-      for(var i=0; i<nomineeIds.length; i++){
-        // PHASE GUARD: Abort if phase is no longer veto_ceremony
-        if(g && g.phase !== 'veto_ceremony'){
-          console.log('[veto] Aborting nominee reactions - phase changed to', g.phase);
-          return;
-        }
-        
-        var nomId = nomineeIds[i];
-        var nom = getP(nomId);
-        if(!nom) continue;
-        
-        var reaction = pickPhrase(NOMINEE_REACTION_PHRASES);
-        
-        try{
-          var card = global.buildCardWithAvatars({
-            title: nom.name,
-            lines: [reaction],
-            tone: 'neutral',
-            duration: 2400,
-            actorId: nomId,
-            type: 'reaction'
-          });
-          
-          if(card){
-            // Let the card show itself via the card queue system
-            if(typeof global.cardQueueWaitIdle === 'function'){
-              await global.cardQueueWaitIdle();
-            }
-          }
-        }catch(e){
-          console.warn('[veto] Failed to show nominee reaction for', nomId, e);
-        }
-        
-        // Small delay between reactions - use tracked delay with auto-cleanup
-        await delay(600);
-      }
-    }
+    // No-op: nominee reactions removed
+    return;
   }
   
   function showTVCard({title, lines, tone, duration}){
@@ -3268,10 +3225,8 @@
         actorIds: g.vetoHolder
       });
 
-      // Show nominee reactions (they're still on the block)
-      if(g.nominees && g.nominees.length > 0){
-        await showNomineeReactionsSimultaneously(g.nominees);
-      }
+      // REMOVED: Nominee reaction plea cards no longer displayed per issue requirements
+      // Ceremony advances immediately to adjourn message
 
       // Show adjourn message with POV holder avatar
       await showTVCardWithAvatars({
