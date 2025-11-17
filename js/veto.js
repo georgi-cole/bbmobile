@@ -265,8 +265,8 @@
             for(var k=0;k<ctrls.length;k++){ ctrls[k].disabled = true; }
         }
         // Show inline status on human submission
-        if(window.TvStatus?.set){
-          window.TvStatus.set('Submission received. Waiting for others…');
+        if(window.TVInlineStatus?.set){
+          window.TVInlineStatus.set('Submission received. Waiting for others…');
         }
         if(typeof window.CustomEvent === 'function'){
           window.dispatchEvent(new CustomEvent('bb:comp:submitted', { detail: { kind: 'veto' } }));
@@ -359,8 +359,8 @@
       }
       
       // Show status message while waiting
-      if (window.TvStatus && window.TvStatus.set) {
-        window.TvStatus.set('Waiting for player profile…');
+      if (window.TVInlineStatus && window.TVInlineStatus.set) {
+        window.TVInlineStatus.set('Waiting for player profile…');
       }
       
       // Poll at 250ms intervals
@@ -434,10 +434,11 @@
 
     var panel = document.querySelector('#panel');
     
-    // Show player list using inline status chip API
+    // Show player list using inline status chip - format as single message
     var list = Array.isArray(g.__vetoPlayers) ? g.__vetoPlayers.map(safeName) : [];
-    if(window.TvStatus?.setPlayersAndNote){
-      window.TvStatus.setPlayersAndNote(list, 'Competition in progress');
+    if(window.TVInlineStatus?.set && list.length > 0){
+      var statusMsg = 'Veto Participants: ' + list.join(', ');
+      window.TVInlineStatus.set(statusMsg, 'muted');
     }
     
     // Clear panel to leave room only for minigame host if needed
@@ -469,8 +470,8 @@
       
       if (!you) {
         console.error('[veto.js] ✗ Human profile not available after waiting and fallback');
-        if (window.TvStatus && window.TvStatus.set) {
-          window.TvStatus.set('Error: Player profile not loaded. Please refresh the page.');
+        if (window.TVInlineStatus && window.TVInlineStatus.set) {
+          window.TVInlineStatus.set('Error: Player profile not loaded. Please refresh the page.', 'error');
         }
         // Continue with AI participants even if human profile failed
       } else {
@@ -519,10 +520,11 @@
             console.error('[veto.js] ✗ No host node available for minigame rendering');
           }
         } else {
-          // Human not drawn to play - show note using inline status
+          // Human not drawn to play - show note using inline status with participant list
           console.info('[veto.js] Human not eligible for this veto competition');
-          if(window.TvStatus?.set){
-            window.TvStatus.set('You were not drawn to play in this Veto.');
+          if(window.TVInlineStatus?.set){
+            var participantNames = list.join(', ');
+            window.TVInlineStatus.set('You are not playing Veto. Participants: ' + participantNames, 'muted');
           }
         }
       }
