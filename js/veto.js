@@ -293,6 +293,8 @@
     if(Array.isArray(g.__vetoPlayers)){
       g.__vetoPlayers = g.__vetoPlayers.map(function(x){ return +x; }); }
 
+    console.info('[veto] Starting POV competition for week', g.week, 'with players:', g.__vetoPlayers);
+
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Competition');
     if(typeof global.phaseMusic==='function') global.phaseMusic('veto_comp');
     if(typeof global.setPhase==='function') global.setPhase('veto_comp', g.cfg && g.cfg.tVeto || 40, finishVetoComp);
@@ -350,11 +352,20 @@
 
     if(humanIn){
       var mg = (typeof global.pickMinigameType==='function') ? global.pickMinigameType() : 'clicker';
+      console.info('[veto] Human player eligible, selected minigame:', mg);
+      
+      // Resolve host node with proper fallback chain
       var hostNode = panel || document.querySelector('#panel');
+      
+      // Use inline status to show loading state
+      if(window.TvStatus?.set){
+        window.TvStatus.set('Loading competition…');
+      }
       
       if(hostNode){
         // Use new competition flow with guards if available
         if(typeof global.runHumanMinigameWithGuards === 'function'){
+          console.info('[veto] Using runHumanMinigameWithGuards for human player');
           global.runHumanMinigameWithGuards({
             mg: mg,
             host: hostNode,
@@ -362,7 +373,7 @@
             label: 'Veto/' + mg,
             multiplier: (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6),
             onAfterSubmit: function(){
-              // Callback after submission
+              console.info('[veto] Human submission received');
             }
           });
         } else if(typeof global.renderMinigame==='function'){
@@ -389,25 +400,31 @@
       }
     }
 
-    var aiList = [];
-    for(var i=0;i<g.__vetoPlayers.length;i++){
-      var pid = g.__vetoPlayers[i];
-      if(you && pid===you.id) continue;
-      aiList.push(pid);
+    // Legacy fallback: generate AI scores immediately if OpponentSynth not available
+    // This ensures the competition always completes even without human submission
+    if (!global.OpponentSynth) {
+      console.info('[veto] OpponentSynth not available, using legacy AI scoring');
+      var aiList = [];
+      for(var i=0;i<g.__vetoPlayers.length;i++){
+        var pid = g.__vetoPlayers[i];
+        if(you && pid===you.id) continue;
+        aiList.push(pid);
+      }
+      for(i=0;i<aiList.length;i++){
+        (function wrap(id){
+          var p = getP(id);
+          if(!p || p.human) return;
+          setTimeout(function(){
+            if(!global.game || global.game.phase!=='veto_comp') return;
+            // Use compBeast for fairer AI scoring
+            var baseScore = 8 + rng()*20;
+            var aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.6);
+            submitGuarded(+id, baseScore, aiMultiplier, 'Veto/AI');
+          }, 300 + rng()*((g.cfg && g.cfg.tVeto || 40)*620));
+        })(aiList[i]);
+      }
     }
-    for(i=0;i<aiList.length;i++){
-      (function wrap(id){
-        var p = getP(id);
-        if(!p || p.human) return;
-        setTimeout(function(){
-          if(!global.game || global.game.phase!=='veto_comp') return;
-          // Use compBeast for fairer AI scoring
-          var baseScore = 8 + rng()*20;
-          var aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.6);
-          submitGuarded(+id, baseScore, aiMultiplier, 'Veto/AI');
-        }, 300 + rng()*((g.cfg && g.cfg.tVeto || 40)*620));
-      })(aiList[i]);
-    }
+    // New system: Wait for human submission, then generate synthetic opponents via OpponentSynth
   }
   global.startVetoComp = startVetoComp;
 
@@ -511,10 +528,13 @@
     var g = global.game;
     if(!g || g.phase!=='veto_comp') return;
 
+    console.info('[veto] finishVetoComp called, checking submissions...');
+
     // If we still need human input
     if(!humanSubmitted()){
       // Auto-submit 0 if phase timer truly ended (phaseEndsAt set by setPhase)
       if(humanIsParticipant() && g.phaseEndsAt && Date.now() > g.phaseEndsAt + 250){
+        console.warn('[veto] Phase ended without human submission, auto-submitting 0');
         submitGuarded(g.humanId, 0, 1, 'Veto/Auto');
       } else {
         setTimeout(finishVetoComp, 700);
@@ -597,7 +617,10 @@
     top3 = top3.filter(function(x){ return x && typeof x[0] !== 'undefined'; });
     if(!top3.length && eligible.length){ top3 = [[eligible[0], 0]]; }
 
+    console.info('[veto] Revealing POV winner:', global.game.vetoHolder, 'from', arr.length, 'scores');
+
     showVetoRevealSequence(top3).then(function(){
+      console.info('[veto] Reveal complete, proceeding to post-veto flow');
       // Check for Final 4 — skip veto ceremony and go direct to eviction
       handlePostVetoReveal();
     }).catch(function(e){
