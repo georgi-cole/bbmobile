@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: HOH/POV Readiness Retry</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { color: #83bfff; }
+    h2 { color: #95b8d8; margin-top: 1.5rem; }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+      font-size: 0.95rem;
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    .log {
+      background: #0a0f16;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .log-entry { margin: 4px 0; }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+    .warn { color: #fbbf24; }
+    .tvViewport {
+      background: linear-gradient(135deg, #0a0f16 0%, #0d1821 100%);
+      border: 2px solid #24364b;
+      border-radius: 12px;
+      padding: 40px 20px;
+      min-height: 350px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .scenario-card {
+      background: #0f1a28;
+      border: 1px solid #2a3f5a;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .scenario-card h3 {
+      margin: 0 0 8px 0;
+      color: #83bfff;
+      font-size: 1rem;
+    }
+    .scenario-card p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #95a9c0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: HOH/POV Readiness Retry Logic</h1>
+    <p>Simulates timing scenarios where human profile or TV container may not be ready immediately.</p>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <div class="scenario-grid">
+        <div class="scenario-card">
+          <h3>✓ Normal Case</h3>
+          <p>Human profile ready immediately. Should succeed in first attempt.</p>
+        </div>
+        <div class="scenario-card">
+          <h3>⏱️ Delayed Profile</h3>
+          <p>Human profile delayed by 500ms. Should retry and succeed.</p>
+        </div>
+        <div class="scenario-card">
+          <h3>⚠️ Missing Profile</h3>
+          <p>Human profile never appears. Should timeout gracefully after 2s.</p>
+        </div>
+        <div class="scenario-card">
+          <h3>📦 Detached Container</h3>
+          <p>TV container detached. Should find fallback container.</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <button onclick="testNormalCase()">1. Test Normal Case (✓)</button>
+        <button onclick="testDelayedProfile()">2. Test Delayed Profile (⏱️)</button>
+        <button onclick="testMissingProfile()">3. Test Missing Profile (⚠️)</button>
+        <button onclick="testDetachedContainer()">4. Test Detached Container (📦)</button>
+        <button onclick="runAllScenarios()">▶ Run All Scenarios</button>
+        <button onclick="clearLog()">Clear Log</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>TV Viewport (Simulated)</h2>
+      <div class="tvViewport" data-faux-tv id="tvViewport">
+        <div style="color: #95a9c0; font-style: italic;">Ready for instructions</div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    let logs = [];
+    
+    // Mock game object
+    window.game = {
+      week: 2,
+      phase: 'hoh',
+      humanId: null,
+      players: [],
+      lastCompScores: new Map(),
+      cfg: { tHOH: 60 }
+    };
+    
+    // Mock player
+    const mockPlayer = {
+      id: 0,
+      name: 'TestPlayer',
+      human: true,
+      evicted: false,
+      compBeast: 0.6
+    };
+    
+    // Mock global functions
+    window.getP = function(id) {
+      if (id === 0 && window.game.players.length > 0) {
+        return window.game.players[0];
+      }
+      return null;
+    };
+    
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+    
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+    
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-50).map(l => 
+        `<div class="log-entry ${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    function clearLog() {
+      logs = [];
+      updateLog();
+      log('Log cleared', 'info');
+    }
+    
+    // Simulate waitForHumanReady function (simplified version)
+    async function simulateWaitForHumanReady(maxWaitMs = 2000) {
+      const g = window.game;
+      const startTime = Date.now();
+      let attempts = 0;
+      
+      log('→ Starting waitForHumanReady...', 'info');
+      
+      while (Date.now() - startTime < maxWaitMs) {
+        attempts++;
+        
+        if (g.humanId != null) {
+          const player = window.getP(g.humanId);
+          if (player) {
+            const elapsed = Date.now() - startTime;
+            log(`✓ Human profile ready after ${attempts} attempt(s), ${elapsed}ms`, 'pass');
+            return player;
+          }
+        }
+        
+        log(`  Attempt ${attempts}: Waiting for profile... (humanId=${g.humanId})`, 'info');
+        
+        const delay = Math.min(250 * attempts, 1000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      log(`⚠ Human profile not ready after ${maxWaitMs}ms, ${attempts} attempts`, 'warn');
+      return null;
+    }
+    
+    // Test scenarios
+    async function testNormalCase() {
+      log('═══ Test 1: Normal Case ═══', 'info');
+      
+      // Setup: Profile ready immediately
+      window.game.humanId = 0;
+      window.game.players = [mockPlayer];
+      
+      log('Setup: humanId=0, profile exists', 'info');
+      
+      const player = await simulateWaitForHumanReady(2000);
+      
+      if (player && player.id === 0) {
+        log('✓ TEST PASSED: Profile found immediately', 'pass');
+      } else {
+        log('✗ TEST FAILED: Profile not found', 'fail');
+      }
+      
+      log('', 'info');
+    }
+    
+    async function testDelayedProfile() {
+      log('═══ Test 2: Delayed Profile (500ms) ═══', 'info');
+      
+      // Setup: Profile appears after 500ms
+      window.game.humanId = null;
+      window.game.players = [];
+      
+      log('Setup: humanId=null, profile will appear in 500ms', 'info');
+      
+      // Schedule profile to appear after 500ms
+      setTimeout(() => {
+        window.game.humanId = 0;
+        window.game.players = [mockPlayer];
+        log('  → Profile now available (delayed)', 'info');
+      }, 500);
+      
+      const player = await simulateWaitForHumanReady(2000);
+      
+      if (player && player.id === 0) {
+        log('✓ TEST PASSED: Profile found after delay', 'pass');
+      } else {
+        log('✗ TEST FAILED: Profile not found after delay', 'fail');
+      }
+      
+      log('', 'info');
+    }
+    
+    async function testMissingProfile() {
+      log('═══ Test 3: Missing Profile (timeout) ═══', 'info');
+      
+      // Setup: Profile never appears
+      window.game.humanId = null;
+      window.game.players = [];
+      
+      log('Setup: humanId=null, profile will never appear', 'info');
+      
+      const player = await simulateWaitForHumanReady(2000);
+      
+      if (!player) {
+        log('✓ TEST PASSED: Timeout handled gracefully', 'pass');
+      } else {
+        log('✗ TEST FAILED: Should have timed out', 'fail');
+      }
+      
+      log('', 'info');
+    }
+    
+    function testDetachedContainer() {
+      log('═══ Test 4: Detached Container ═══', 'info');
+      
+      if (!window.CompetitionFlow || !window.CompetitionFlow.ensureAttachedContainer) {
+        log('⚠ CompetitionFlow not loaded, skipping container test', 'warn');
+        return;
+      }
+      
+      // Create detached container
+      const detached = document.createElement('div');
+      detached.id = 'detached-test';
+      
+      log('Created detached container (not in DOM)', 'info');
+      log('  isConnected: ' + detached.isConnected, 'info');
+      
+      // Try to ensure it's attached
+      const validated = window.CompetitionFlow.ensureAttachedContainer(detached);
+      
+      log('Called ensureAttachedContainer(detached)', 'info');
+      log('  Returned: ' + validated.tagName + (validated.id ? '#' + validated.id : ''), 'info');
+      log('  isConnected: ' + validated.isConnected, 'info');
+      
+      if (validated.isConnected && validated !== detached) {
+        log('✓ TEST PASSED: Returned attached fallback container', 'pass');
+      } else if (!validated.isConnected) {
+        log('✗ TEST FAILED: Returned container not attached', 'fail');
+      } else {
+        log('✗ TEST FAILED: Returned same detached container', 'fail');
+      }
+      
+      log('', 'info');
+    }
+    
+    async function runAllScenarios() {
+      log('═══════════════════════════════════', 'info');
+      log('═══ Running All Test Scenarios ═══', 'info');
+      log('═══════════════════════════════════', 'info');
+      log('', 'info');
+      
+      await testNormalCase();
+      await new Promise(r => setTimeout(r, 500));
+      
+      await testDelayedProfile();
+      await new Promise(r => setTimeout(r, 500));
+      
+      await testMissingProfile();
+      await new Promise(r => setTimeout(r, 500));
+      
+      testDetachedContainer();
+      
+      log('═══════════════════════════════════', 'info');
+      log('═══ All Scenarios Complete ═══', 'info');
+      log('═══════════════════════════════════', 'info');
+    }
+    
+    // Initialize
+    log('Test page loaded', 'info');
+    log('Click a test button or "Run All Scenarios" to begin', 'info');
+    log('', 'info');
+  </script>
+</body>
+</html>

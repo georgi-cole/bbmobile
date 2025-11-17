@@ -255,7 +255,7 @@
         // Hide raw scores during veto competition - only log completion
         global.addLog(safeName(id)+' completed the Veto competition.', 'tiny');
       }
-    }catch(e){}
+    }catch(e){ /* Non-fatal error, continue */ }
 
     try{
       if((g.phase==='veto_comp' || g.phase==='veto') && id===g.humanId){
@@ -278,6 +278,44 @@
   }
   global.__submitGuarded = submitGuarded;
 
+  /**
+   * Wait for human profile to be ready during veto competition
+   * Retries with exponential backoff up to a timeout
+   * @param {number} maxWaitMs - Maximum time to wait (default: 2000ms)
+   * @returns {Promise<Object|null>} Resolves with player object or null on timeout
+   */
+  async function waitForHumanReadyVeto(maxWaitMs){
+    maxWaitMs = maxWaitMs || 2000;
+    var g = global.game;
+    var startTime = Date.now();
+    var attempts = 0;
+    
+    while (Date.now() - startTime < maxWaitMs) {
+      attempts++;
+      
+      // Check if humanId exists and profile is available
+      if (g.humanId != null) {
+        var player = getP(g.humanId);
+        if (player) {
+          console.info('[veto.js] ✓ Human profile ready after ' + attempts + ' attempt(s), ' + (Date.now() - startTime) + 'ms');
+          return player;
+        }
+      }
+      
+      // Show status message while waiting
+      if (window.TvStatus && window.TvStatus.set) {
+        window.TvStatus.set('Waiting for player profile…');
+      }
+      
+      // Exponential backoff: 250ms, 500ms, 750ms, 1000ms...
+      var delay = Math.min(250 * attempts, 1000);
+      await new Promise(function(resolve){ setTimeout(resolve, delay); });
+    }
+    
+    console.warn('[veto.js] ⚠ Human profile not ready after ' + maxWaitMs + 'ms, ' + attempts + ' attempts');
+    return null;
+  }
+
   function startVetoComp(){
     var g = global.game;
     g.lastCompScores = new Map();
@@ -295,7 +333,12 @@
 
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Competition');
     if(typeof global.phaseMusic==='function') global.phaseMusic('veto_comp');
-    if(typeof global.setPhase==='function') global.setPhase('veto_comp', g.cfg && g.cfg.tVeto || 40, finishVetoComp);
+    
+    // Ensure phase finish callback is set
+    if(typeof global.setPhase==='function'){
+      console.info('[veto.js] Setting veto_comp phase with finishVetoComp callback');
+      global.setPhase('veto_comp', g.cfg && g.cfg.tVeto || 40, finishVetoComp);
+    }
 
     // Decide and announce POV twist if active
     var twist = decideVetoTwistForWeek();
@@ -344,69 +387,107 @@
     // Clear panel to leave room only for minigame host if needed
     if(panel) panel.innerHTML = '';
 
-    var you = (g.humanId!=null) ? getP(g.humanId) : null;
-    var humanIn = !!(you && !you.evicted && g.__vetoPlayers.indexOf(you.id)!==-1);
-    // humanIn will be correct because g.__vetoPlayers and you.id are numeric now
+    console.info('[veto.js] ═══ startVetoComp called ═══');
+    console.info('[veto.js] Week: ' + g.week + ', Phase: ' + g.phase + ', Human ID: ' + g.humanId);
+    console.info('[veto.js] Veto participants: ' + (g.__vetoPlayers || []).join(', '));
 
-    if(humanIn){
-      var mg = (typeof global.pickMinigameType==='function') ? global.pickMinigameType() : 'clicker';
-      var hostNode = panel || document.querySelector('#panel');
+    // Wait for human profile with retry loop
+    (async function(){
+      var you = await waitForHumanReadyVeto(2000);
       
-      if(hostNode){
-        // Use new competition flow with guards if available
-        if(typeof global.runHumanMinigameWithGuards === 'function'){
-          global.runHumanMinigameWithGuards({
-            mg: mg,
-            host: hostNode,
-            player: you,
-            label: 'Veto/' + mg,
-            multiplier: (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6),
-            onAfterSubmit: function(){
-              // Callback after submission
+      if (!you) {
+        console.error('[veto.js] ✗ Human profile not available after waiting');
+        if (window.TvStatus && window.TvStatus.set) {
+          window.TvStatus.set('Error: Player profile not loaded. Please refresh the page.');
+        }
+        // Continue with AI participants even if human profile failed
+      } else {
+        var humanIn = !!(you && !you.evicted && g.__vetoPlayers.indexOf(you.id)!==-1);
+        console.info('[veto.js] Human player: ' + you.name + '(' + you.id + '), evicted=' + you.evicted + ', eligible=' + humanIn);
+        
+        if(humanIn){
+          var mg = (typeof global.pickMinigameType==='function') ? global.pickMinigameType() : 'clicker';
+          console.info('[veto.js] ✓ Selected minigame for human: ' + mg);
+          
+          var hostNode = panel || document.querySelector('#panel');
+          
+          if(hostNode){
+            // Use new competition flow with guards if available
+            if(typeof global.runHumanMinigameWithGuards === 'function'){
+              console.info('[veto.js] → Using runHumanMinigameWithGuards for veto competition');
+              global.runHumanMinigameWithGuards({
+                mg: mg,
+                host: hostNode,
+                player: you,
+                label: 'Veto/' + mg,
+                multiplier: (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6),
+                onAfterSubmit: function(){
+                  console.info('[veto.js] ✓ Human veto submission complete');
+                }
+              });
+            } else if(typeof global.renderMinigame==='function'){
+              // Fallback to legacy rendering
+              console.warn('[veto.js] Using legacy renderMinigame (runHumanMinigameWithGuards not available)');
+              var playWrap = document.createElement('div');
+              playWrap.className = 'col';
+              global.renderMinigame(mg, playWrap, function(base){
+                // Use compBeast for human too (no guaranteed wins)
+                var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
+                submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
+              });
+              hostNode.appendChild(playWrap);
             }
-          });
-        } else if(typeof global.renderMinigame==='function'){
-          // Fallback to legacy rendering
-          var playWrap = document.createElement('div');
-          playWrap.className = 'col';
-          global.renderMinigame(mg, playWrap, function(base){
-            // Use compBeast for human too (no guaranteed wins)
-            var humanMultiplier = (0.75 + (you && you.compBeast ? you.compBeast : 0.5) * 0.6);
-            submitGuarded(you.id, base, humanMultiplier, 'Veto/'+mg);
-          });
-          hostNode.appendChild(playWrap);
-        }
-        else {
-          // Last-resort fallback: if no modern or legacy renderer is available,
-          // auto-submit a zero so the flow cannot stall.
-          setTimeout(function(){ submitGuarded(you.id, 0, 1, 'Veto/AutoFallback'); }, 200);
+            else {
+              // Last-resort fallback: if no modern or legacy renderer is available,
+              // auto-submit a zero so the flow cannot stall.
+              console.error('[veto.js] ✗ No minigame renderer available, auto-submitting 0');
+              setTimeout(function(){ submitGuarded(you.id, 0, 1, 'Veto/AutoFallback'); }, 200);
+            }
+          } else {
+            console.error('[veto.js] ✗ No host node available for minigame rendering');
+          }
+        } else {
+          // Human not drawn to play - show note using inline status
+          console.info('[veto.js] Human not eligible for this veto competition');
+          if(window.TvStatus?.set){
+            window.TvStatus.set('You were not drawn to play in this Veto.');
+          }
         }
       }
-    } else {
-      // Human not drawn to play - show note using inline status
-      if(window.TvStatus?.set){
-        window.TvStatus.set('You were not drawn to play in this Veto.');
-      }
-    }
+    })().catch(function(err){
+      console.error('[veto.js] Error in human readiness async block:', err);
+    });
 
+    // Generate AI scores - fallback if OpponentSynth not available
+    // Get human ID early to exclude from AI list
+    var humanIdForExclusion = g.humanId;
     var aiList = [];
     for(var i=0;i<g.__vetoPlayers.length;i++){
       var pid = g.__vetoPlayers[i];
-      if(you && pid===you.id) continue;
+      if(humanIdForExclusion != null && pid === humanIdForExclusion) continue;
       aiList.push(pid);
     }
-    for(i=0;i<aiList.length;i++){
-      (function wrap(id){
-        var p = getP(id);
-        if(!p || p.human) return;
-        setTimeout(function(){
-          if(!global.game || global.game.phase!=='veto_comp') return;
-          // Use compBeast for fairer AI scoring
-          var baseScore = 8 + rng()*20;
-          var aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.6);
-          submitGuarded(+id, baseScore, aiMultiplier, 'Veto/AI');
-        }, 300 + rng()*((g.cfg && g.cfg.tVeto || 40)*620));
-      })(aiList[i]);
+    
+    console.info('[veto.js] AI participants: ' + aiList.length + ' (OpponentSynth: ' + (!!global.OpponentSynth) + ')');
+    
+    // Legacy fallback: generate AI scores immediately if OpponentSynth not available
+    if (!global.OpponentSynth) {
+      console.info('[veto.js] Using legacy AI scoring (OpponentSynth not available)');
+      for(i=0;i<aiList.length;i++){
+        (function wrap(id){
+          var p = getP(id);
+          if(!p || p.human) return;
+          setTimeout(function(){
+            if(!global.game || global.game.phase!=='veto_comp') return;
+            // Use compBeast for fairer AI scoring
+            var baseScore = 8 + rng()*20;
+            var aiMultiplier = (0.75 + (p.compBeast || 0.5) * 0.6);
+            submitGuarded(+id, baseScore, aiMultiplier, 'Veto/AI');
+          }, 300 + rng()*((g.cfg && g.cfg.tVeto || 40)*620));
+        })(aiList[i]);
+      }
+    } else {
+      console.info('[veto.js] OpponentSynth available - AI scores will be generated after human submission');
     }
   }
   global.startVetoComp = startVetoComp;
