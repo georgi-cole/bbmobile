@@ -122,6 +122,12 @@ body:not(.main-screen-built) .topbar {
   outline-offset: 2px;
 }
 
+/* Off state for toggle buttons */
+.intro-screen__icon-btn.is-off {
+  opacity: 0.45;
+  filter: grayscale(0.4);
+}
+
 /* ===== Button Column (Main Navigation) ===== */
 .intro-screen__button-column {
   display: flex;
