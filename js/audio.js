@@ -45,7 +45,9 @@
     eviction: 'eviction.mp3',
     twist: 'twist.mp3',
     final_jury_vote: 'final jury vote.mp3',
-    winner: 'victory.mp3'
+    winner: 'victory.mp3',
+    // NEW lobby track for Intro Hub
+    intro_hub: 'Intro Hub music.mp3'
   };
 
   function mapPhase(phase){
@@ -359,6 +361,15 @@
     });
   }
 
+  // Intro Hub music helpers (non-breaking additions)
+  function playIntroHubMusic(volume){
+    return playMusicForPhase('intro_hub', volume);
+  }
+  
+  function stopIntroHubMusic(){
+    return stopMusic();
+  }
+
   // Compat aliases and public API
   g.playMusicForPhase = playMusicForPhase;
   g.stopMusic = stopMusic;
@@ -371,6 +382,8 @@
   g.toggleMute = toggleMute;
   g.getMuted = getMuted;
   g.fadeOutMusic = fadeOut;
+  g.playIntroHubMusic = playIntroHubMusic;  // Intro Hub lobby music
+  g.stopIntroHubMusic = stopIntroHubMusic;  // Stop lobby music
 
   console.info('[audio] ready (phase-wrapped, filename+phase inputs, immediate-play with gesture fallback)');
 
