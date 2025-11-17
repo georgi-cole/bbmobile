@@ -17,7 +17,8 @@
     maxActionsPerTick: 2,             // 0-2 interactions per tick
     emptyEnergyBurstCount: 3,         // Total AI interactions during empty-energy skip
     emptyEnergyBurstDelay: 800,       // Delay between burst interactions (ms)
-    verbose: false                     // Verbose logging for debugging
+    verbose: false,                    // Verbose logging for debugging
+    maxTicksPerPhase: 1000            // Safety cap to prevent infinite loops
   };
 
   function getConfig() {
@@ -42,13 +43,18 @@
   // ============================================================================
   let schedulerTimer = null;
   let isRunning = false;
-  let phaseContext = null;
-  let actionCounts = new Map(); // Track actions per AI this phase
-  let recentPairings = new Set(); // Avoid duplicate pairings in short succession
+  let isActive = false;          // Guard flag to prevent re-entry
+  let phaseContext = null;       // eslint-disable-line no-unused-vars
+  const actionCounts = new Map(); // Track actions per AI this phase
+  const recentPairings = new Set(); // Avoid duplicate pairings in short succession
+  let tickCount = 0;            // Track total ticks per phase
+  let idlePassCount = 0;        // Track consecutive passes with no actions
 
   function initPhaseState() {
     actionCounts.clear();
     recentPairings.clear();
+    tickCount = 0;
+    idlePassCount = 0;
   }
 
   function getPairingKey(actorId, targetIds) {
@@ -288,9 +294,18 @@
   // SCHEDULER LOGIC
   // ============================================================================
   function scheduleNextTick() {
-    if (!isRunning) return;
+    // Guard: prevent re-entry and check if still active
+    if (!isRunning || !isActive) return;
 
     const config = getConfig();
+    
+    // Safety check: max ticks per phase
+    if (tickCount >= config.maxTicksPerPhase) {
+      console.warn(`[ai-scheduler] ⚠️ MAX_TICKS_PER_PHASE (${config.maxTicksPerPhase}) reached - terminating phase`);
+      endSocialPhase();
+      return;
+    }
+
     const delay = config.tickIntervalMin + 
                   Math.random() * (config.tickIntervalMax - config.tickIntervalMin);
 
@@ -301,13 +316,22 @@
   }
 
   function performTick() {
-    if (!isRunning) return;
+    if (!isRunning || !isActive) return;
 
+    tickCount++;
+    
     const config = getConfig();
     const aiPlayers = getEligibleAIPlayers();
     
     if (aiPlayers.length < 2) {
       // Need at least 2 AI players for interactions
+      console.debug('[ai-scheduler] Not enough AI players for interactions (need 2+)');
+      idlePassCount++;
+      // If multiple consecutive idle passes, end phase
+      if (idlePassCount >= 5) {
+        console.warn('[ai-scheduler] Too many idle passes (not enough AI players) - ending phase');
+        endSocialPhase();
+      }
       return;
     }
 
@@ -315,20 +339,37 @@
     const actionCount = Math.random() < 0.3 ? 0 : 
                        Math.random() < 0.6 ? 1 : 2;
 
+    let actionsExecuted = 0;
     for (let i = 0; i < actionCount; i++) {
-      performSingleInteraction();
+      const result = performSingleInteraction();
+      if (result) actionsExecuted++;
+    }
+    
+    // Track idle passes (no actions executed)
+    if (actionsExecuted === 0) {
+      idlePassCount++;
+      console.debug(`[ai-scheduler] Idle pass ${idlePassCount} (no actions executed)`);
+      
+      // Safety: if no actions executed in multiple consecutive passes, end phase
+      if (idlePassCount >= 10) {
+        console.warn('[ai-scheduler] ⚠️ Too many consecutive idle passes - no actors can execute actions - terminating phase');
+        endSocialPhase();
+      }
+    } else {
+      // Reset idle counter on successful execution
+      idlePassCount = 0;
     }
   }
 
   function performSingleInteraction() {
-    const config = getConfig();
+    const config = getConfig(); // eslint-disable-line no-unused-vars
     
     // Select actor (with soft cap check)
     let attempts = 0;
     let actor = null;
     while (attempts < 10) {
       const candidate = selectRandomAI();
-      if (!candidate) return;
+      if (!candidate) return false;
       
       // Soft cap: prefer AIs with fewer actions
       const count = getActionCount(candidate.id);
@@ -339,21 +380,21 @@
       attempts++;
     }
 
-    if (!actor) return;
+    if (!actor) return false;
 
     // Decide if multi-target (group action) - 20% chance
     const isMultiTarget = Math.random() < 0.2;
     
     // Select targets
     const targetIds = selectRandomTarget(actor.id, isMultiTarget);
-    if (!targetIds || targetIds.length === 0) return;
+    if (!targetIds || targetIds.length === 0) return false;
 
     // Skip if recently paired
-    if (wasRecentlyPaired(actor.id, targetIds)) return;
+    if (wasRecentlyPaired(actor.id, targetIds)) return false;
 
     // Select action
     const action = selectAction(actor.id, targetIds);
-    if (!action) return;
+    if (!action) return false;
 
     // Execute
     const result = executeAIAction(actor.id, targetIds, action);
@@ -369,12 +410,72 @@
       console.info(
         `[ai-scheduler] ${actorName} → ${action.label} → ${targetNames}: ${outcomeType}`
       );
+      return true; // Action executed successfully
     } else if (result && !result.success) {
       // Action failed (e.g., insufficient resources) - log at debug level
       const actorName = global.safeName?.(actor.id) || `Player ${actor.id}`;
       console.debug(
         `[ai-scheduler] ${actorName} → ${action.label}: failed (${result.reason || 'unknown'})`
       );
+      return false; // Action failed
+    }
+    
+    return false; // No result or execution failed
+  }
+
+  // ============================================================================
+  // PHASE TERMINATION
+  // ============================================================================
+  /**
+   * Cleanly end the social phase when no more actions can be executed
+   * Emits social:complete event for phase advancement
+   */
+  function endSocialPhase() {
+    if (!isRunning) return;
+    
+    console.info('[ai-scheduler] 🛑 Ending social phase - no more actions can be executed');
+    
+    // Set idle state
+    isActive = false;
+    isRunning = false;
+    
+    // Clear any pending timeouts
+    if (schedulerTimer) {
+      clearTimeout(schedulerTimer);
+      schedulerTimer = null;
+    }
+    
+    // Log summary
+    const totalActions = Array.from(actionCounts.values()).reduce((a, b) => a + b, 0);
+    console.info('[ai-scheduler] Phase summary:', {
+      totalTicks: tickCount,
+      totalInteractions: totalActions,
+      perPlayer: Object.fromEntries(actionCounts)
+    });
+    
+    // Emit completion event for phase advancement
+    try {
+      const event = new CustomEvent('social:ai-phase-complete', {
+        detail: {
+          reason: 'no_actions_available',
+          totalTicks: tickCount,
+          totalActions: totalActions
+        }
+      });
+      window.dispatchEvent(event);
+      console.info('[ai-scheduler] ✓ Emitted social:ai-phase-complete event');
+    } catch (e) {
+      console.error('[ai-scheduler] Failed to emit completion event:', e);
+    }
+    
+    // Call onSocialPhaseEnd if available to ensure phase transitions
+    if (typeof global.SocialManeuvers?.onSocialPhaseEnd === 'function') {
+      try {
+        // Don't call directly - let the phase timer handle it
+        console.info('[ai-scheduler] Phase timer will handle phase end callback');
+      } catch (e) {
+        console.error('[ai-scheduler] Error during phase end:', e);
+      }
     }
   }
 
@@ -397,6 +498,7 @@
     console.info('[ai-scheduler] ▶️ Starting AI social phase');
     
     isRunning = true;
+    isActive = true;
     phaseContext = context;
     initPhaseState();
     
@@ -409,6 +511,7 @@
     console.info('[ai-scheduler] ◼️ Stopping AI social phase');
     
     isRunning = false;
+    isActive = false;
     phaseContext = null;
     
     if (schedulerTimer) {
@@ -417,8 +520,10 @@
     }
 
     // Log summary
+    const totalActions = Array.from(actionCounts.values()).reduce((a, b) => a + b, 0);
     console.info('[ai-scheduler] Phase summary:', {
-      totalInteractions: Array.from(actionCounts.values()).reduce((a, b) => a + b, 0),
+      totalTicks: tickCount,
+      totalInteractions: totalActions,
       perPlayer: Object.fromEntries(actionCounts)
     });
   }
