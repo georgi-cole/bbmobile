@@ -279,13 +279,55 @@
   global.__submitGuarded = submitGuarded;
 
   /**
+   * Helper to derive humanId from players array when g.humanId is null
+   * Checks for human flag, guest name, or uses first alive player
+   * @returns {number|null} Derived humanId or null if no suitable player found
+   */
+  function ensureHumanIdFromPlayersVeto() {
+    var g = global.game;
+    var players = g.players || global.game?.players || (global.PlayerService && global.PlayerService.players) || [];
+    
+    if (!players || players.length === 0) {
+      console.warn('[veto.js] No players array available for fallback humanId');
+      return null;
+    }
+    
+    // Strategy 1: Find player with human=true flag
+    var humanPlayer = players.find(function(p){ return p.human === true; });
+    if (humanPlayer) {
+      console.info('[veto.js] 🔄 Fallback: Found human player by flag: ' + humanPlayer.name + '(' + humanPlayer.id + ')');
+      g.humanId = humanPlayer.id;
+      return humanPlayer.id;
+    }
+    
+    // Strategy 2: Find player with name='Guest' (case-insensitive)
+    humanPlayer = players.find(function(p){ return p.name && p.name.toLowerCase() === 'guest'; });
+    if (humanPlayer) {
+      console.info('[veto.js] 🔄 Fallback: Found guest player by name: ' + humanPlayer.name + '(' + humanPlayer.id + ')');
+      g.humanId = humanPlayer.id;
+      return humanPlayer.id;
+    }
+    
+    // Strategy 3: Last resort - use first alive player
+    var alivePlayer = players.find(function(p){ return !p.evicted; });
+    if (alivePlayer) {
+      console.warn('[veto.js] ⚠ Fallback: Using first alive player as human: ' + alivePlayer.name + '(' + alivePlayer.id + ')');
+      g.humanId = alivePlayer.id;
+      return alivePlayer.id;
+    }
+    
+    console.error('[veto.js] ✗ Fallback failed: No suitable player found in players array');
+    return null;
+  }
+
+  /**
    * Wait for human profile to be ready during veto competition
-   * Retries with exponential backoff up to a timeout
-   * @param {number} maxWaitMs - Maximum time to wait (default: 2000ms)
+   * Retries with exponential backoff up to a timeout, with fallback to derive humanId from players
+   * @param {number} maxWaitMs - Maximum time to wait (default: 5000ms, increased from 2000ms)
    * @returns {Promise<Object|null>} Resolves with player object or null on timeout
    */
   async function waitForHumanReadyVeto(maxWaitMs){
-    maxWaitMs = maxWaitMs || 2000;
+    maxWaitMs = maxWaitMs || 5000;
     var g = global.game;
     var startTime = Date.now();
     var attempts = 0;
@@ -302,13 +344,27 @@
         }
       }
       
+      // Check if players array exists - if so, we can derive humanId as fallback
+      var players = g.players || (global.PlayerService && global.PlayerService.players);
+      if (players && players.length > 0 && !g.humanId) {
+        console.info('[veto.js] Players array available but humanId null, attempting fallback (attempt ' + attempts + ')');
+        var derivedId = ensureHumanIdFromPlayersVeto();
+        if (derivedId !== null) {
+          var playerDerived = getP(derivedId);
+          if (playerDerived) {
+            console.info('[veto.js] ✓ Human profile ready via fallback after ' + attempts + ' attempt(s), ' + (Date.now() - startTime) + 'ms');
+            return playerDerived;
+          }
+        }
+      }
+      
       // Show status message while waiting
       if (window.TvStatus && window.TvStatus.set) {
         window.TvStatus.set('Waiting for player profile…');
       }
       
-      // Exponential backoff: 250ms, 500ms, 750ms, 1000ms...
-      var delay = Math.min(250 * attempts, 1000);
+      // Poll at 250ms intervals
+      var delay = 250;
       await new Promise(function(resolve){ setTimeout(resolve, delay); });
     }
     
@@ -391,12 +447,28 @@
     console.info('[veto.js] Week: ' + g.week + ', Phase: ' + g.phase + ', Human ID: ' + g.humanId);
     console.info('[veto.js] Veto participants: ' + (g.__vetoPlayers || []).join(', '));
 
-    // Wait for human profile with retry loop
+    // Wait for human profile with retry loop (increased to 5s timeout)
     (async function(){
-      var you = await waitForHumanReadyVeto(2000);
+      var you = await waitForHumanReadyVeto(5000);
+      
+      // Immediate fallback: if timeout but players exist, try one more quick derivation
+      if (!you) {
+        console.warn('[veto.js] ⚠ First wait timed out, attempting immediate fallback');
+        var players = g.players || (global.PlayerService && global.PlayerService.players);
+        if (players && players.length > 0) {
+          console.info('[veto.js] Players array exists, attempting to derive humanId');
+          var derivedId = ensureHumanIdFromPlayersVeto();
+          if (derivedId !== null) {
+            you = getP(derivedId);
+            if (you) {
+              console.info('[veto.js] ✓ Immediate fallback successful: ' + you.name + '(' + you.id + ')');
+            }
+          }
+        }
+      }
       
       if (!you) {
-        console.error('[veto.js] ✗ Human profile not available after waiting');
+        console.error('[veto.js] ✗ Human profile not available after waiting and fallback');
         if (window.TvStatus && window.TvStatus.set) {
           window.TvStatus.set('Error: Player profile not loaded. Please refresh the page.');
         }
