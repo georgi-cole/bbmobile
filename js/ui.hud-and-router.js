@@ -1312,10 +1312,10 @@ header.innerHTML = `
                             g.IntroShow.hasGsap();
     
     if (useRealityIntro) {
-      console.info('[opening] Using reality-TV style intro sequence');
+      console.info('[opening] Using reality-TV style intro sequence with preload');
       try {
         const players = [...(game.players || [])];
-        g.IntroShow.play(players, () => {
+        g.IntroShow.playWithPreload(players, () => {
           console.info('[opening] Reality-TV intro completed');
           if (game.phase === 'opening') {
             g.finishOpening();

@@ -193,6 +193,117 @@
     return 'https://api.dicebear.com/6.x/bottts/svg?seed=' + encodeURIComponent(name);
   }
 
+  // Truncate backstory to a compact teaser
+  function truncateBackstory(text, maxChars) {
+    if (!text || typeof text !== 'string') return 'Ready to compete.';
+    
+    maxChars = maxChars || 90;
+    text = text.trim();
+    
+    if (text.length <= maxChars) return text;
+    
+    // Try to find a sentence boundary (period, exclamation, question mark)
+    const truncated = text.substring(0, maxChars);
+    const lastSentenceEnd = Math.max(
+      truncated.lastIndexOf('.'),
+      truncated.lastIndexOf('!'),
+      truncated.lastIndexOf('?')
+    );
+    
+    if (lastSentenceEnd > maxChars * 0.6) {
+      // If we found a sentence boundary in the last 40% of text, use it
+      return text.substring(0, lastSentenceEnd + 1).trim();
+    }
+    
+    // Otherwise, truncate at word boundary and add ellipsis
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > maxChars * 0.7) {
+      return text.substring(0, lastSpace).trim() + '...';
+    }
+    
+    // Fallback: hard truncate with ellipsis
+    return text.substring(0, maxChars - 3).trim() + '...';
+  }
+
+  // Preload roster images and enrich with short backstories
+  function preloadRoster(players, options) {
+    return new Promise((resolve) => {
+      const opts = options || {};
+      const timeoutMs = opts.timeoutMs || 8000;
+      const maxBackstoryChars = opts.maxBackstoryChars || 90;
+      
+      console.info('[introShow] Preloading roster:', players.length, 'players');
+      
+      const enrichedPlayers = [];
+      const imagePromises = [];
+      let loadedCount = 0;
+      let failedCount = 0;
+      
+      // Set up timeout
+      const timeoutId = setTimeout(() => {
+        console.warn('[introShow] Preload timeout after', timeoutMs, 'ms. Loaded:', loadedCount, 'Failed:', failedCount);
+        resolve(enrichedPlayers);
+      }, timeoutMs);
+      
+      players.forEach((player) => {
+        // Enrich player with short backstory
+        const enriched = Object.assign({}, player);
+        
+        // Generate short backstory from available player data
+        const backstory = player.backstory || player.bio?.backstory || player.motto || '';
+        enriched.__shortStory = truncateBackstory(backstory, maxBackstoryChars);
+        
+        enrichedPlayers.push(enriched);
+        
+        // Preload avatar image
+        const avatarUrl = resolveAvatarForPlayer(player);
+        
+        const imagePromise = new Promise((resolveImage) => {
+          const img = new Image();
+          
+          img.onload = () => {
+            loadedCount++;
+            console.info('[introShow] Preloaded avatar for', player.name);
+            resolveImage(true);
+          };
+          
+          img.onerror = () => {
+            failedCount++;
+            console.warn('[introShow] Failed to preload avatar for', player.name, '- will use fallback');
+            resolveImage(false);
+          };
+          
+          img.src = avatarUrl;
+        });
+        
+        imagePromises.push(imagePromise);
+      });
+      
+      // Wait for all images (or timeout)
+      Promise.all(imagePromises).then(() => {
+        clearTimeout(timeoutId);
+        console.info('[introShow] Preload complete. Loaded:', loadedCount, 'Failed:', failedCount);
+        resolve(enrichedPlayers);
+      });
+    });
+  }
+
+  // Build loading overlay with skip button
+  function buildLoadingOverlay(root) {
+    const overlay = document.createElement('div');
+    overlay.className = 'intro-preload-loading';
+    overlay.innerHTML = `
+      <div class="intro-preload-box">
+        <div class="intro-preload-spinner"></div>
+        <div class="intro-preload-text">Loading cast...</div>
+        <button class="intro-preload-skip-btn">Skip Intro</button>
+      </div>
+    `;
+    
+    root.appendChild(overlay);
+    return overlay;
+  }
+
   // Build a contestant card
   function buildContestantCard(player) {
     const card = document.createElement('div');
@@ -207,6 +318,9 @@
     const safeOccupation = escapeHtml(player.occupation);
     const safeMotto = escapeHtml(player.motto);
     
+    // Use preloaded short story if available, otherwise use motto
+    const safeStory = escapeHtml(player.__shortStory || '');
+    
     card.innerHTML = `
       <div class="intro-card-bg"></div>
       <div class="intro-card-content">
@@ -220,7 +334,7 @@
             ${safeLocation ? `<span class="intro-card-location">${safeLocation}</span>` : ''}
           </div>
           ${safeOccupation ? `<div class="intro-card-occupation">${safeOccupation}</div>` : ''}
-          ${safeMotto ? `<div class="intro-card-motto">"${safeMotto}"</div>` : ''}
+          ${safeStory ? `<div class="intro-card-story">${safeStory}</div>` : ''}
         </div>
       </div>
       <div class="intro-card-spotlight"></div>
@@ -699,6 +813,15 @@
     isActive = false;
     skipCallback = null;
     
+    // Remove preload overlay if present
+    const overlay = document.getElementById('introShowOverlay');
+    if (overlay) {
+      const preloadOverlay = overlay.querySelector('.intro-preload-loading');
+      if (preloadOverlay) {
+        preloadOverlay.remove();
+      }
+    }
+    
     // Fade out music when intro completes or is skipped
     try {
       if (typeof g.fadeOutMusic === 'function') {
@@ -709,6 +832,65 @@
     } catch (e) {
       console.warn('[introShow] Failed to fade out music:', e);
     }
+  }
+
+  // Play intro with preload step
+  function playWithPreload(players, onComplete) {
+    if (!players || players.length === 0) {
+      console.warn('[introShow] No players provided');
+      if (onComplete) onComplete();
+      return;
+    }
+
+    if (isActive) {
+      console.warn('[introShow] Sequence already active');
+      return;
+    }
+
+    console.info('[introShow] Starting preload and intro sequence');
+
+    // Create overlay early
+    const overlay = createOverlay();
+    overlay.style.display = 'flex';
+
+    // Build loading overlay
+    const loadingOverlay = buildLoadingOverlay(overlay);
+    
+    // Wire skip button during preload
+    const skipBtn = loadingOverlay.querySelector('.intro-preload-skip-btn');
+    if (skipBtn) {
+      skipBtn.addEventListener('click', () => {
+        console.info('[introShow] Skipped during preload');
+        cleanup();
+        if (onComplete) onComplete();
+      });
+    }
+
+    // Get preload timeout from config
+    const cfg = (g.game && g.game.cfg) || {};
+    const timeoutMs = cfg.introPreloadTimeoutMs || 8000;
+    const maxBackstoryChars = cfg.introMaxBackstoryChars || 90;
+
+    // Start preloading
+    preloadRoster(players, { timeoutMs, maxBackstoryChars })
+      .then((enrichedPlayers) => {
+        // Remove loading overlay
+        if (loadingOverlay && loadingOverlay.parentNode) {
+          loadingOverlay.remove();
+        }
+        
+        // Start the actual intro sequence with enriched players
+        playIntroSequence(enrichedPlayers, onComplete);
+      })
+      .catch((err) => {
+        console.error('[introShow] Preload failed:', err);
+        // Remove loading overlay
+        if (loadingOverlay && loadingOverlay.parentNode) {
+          loadingOverlay.remove();
+        }
+        // Fallback: play with original players
+        playIntroSequence(players, onComplete);
+      });
   }
 
   // Stop/skip the current sequence
@@ -772,6 +954,7 @@
   // Export API
   g.IntroShow = {
     play: playIntroSequence,
+    playWithPreload: playWithPreload,
     stop: stopIntroSequence,
     isActive: isIntroActive,
     hasGsap: isGsapAvailable,

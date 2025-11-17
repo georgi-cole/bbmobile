@@ -177,7 +177,9 @@
     musicOn: true,
     sfxOn: true,
     useRibbon: true,
-    useRealityIntro: true,  // Enable reality-TV intro by default
+    useRealityIntro: false,  // Reality-TV intro disabled by default (user opt-in)
+    introPreloadTimeoutMs: 8000,  // Timeout for preloading intro assets (ms)
+    introMaxBackstoryChars: 90,  // Max characters for truncated backstories in intro
     minigameDuration: 180,  // Default minigame challenge timer (seconds) - 3 minutes
     autoShowRulesOnStart: true,  // Show rules modal automatically after intro
     skipIntros: false,  // When true, skip intro video and animated intro sequence
