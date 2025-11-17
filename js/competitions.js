@@ -350,6 +350,45 @@
     // Full results are shown in reveal card
   }
 
+  /**
+   * Get a reliable, attached container for TV instructions
+   * Returns the first DOM-attached element from a priority list of selectors
+   * Falls back to document.body if no TV container is found or attached
+   * 
+   * @returns {HTMLElement} An attached DOM element suitable for rendering instructions
+   */
+  function getTvInstructionsContainer() {
+    // Priority list of selectors to try, in order
+    const selectors = [
+      '[data-faux-tv]',
+      '[data-sm-faux-tv]',
+      '.tvViewport',
+      '#tv',
+      '.tv',
+      '.faux-tv',
+      '.tv-screen',
+      '#panel'
+    ];
+
+    // Try each selector and return first attached element
+    for (const selector of selectors) {
+      try {
+        const el = document.querySelector(selector);
+        if (el && el.isConnected) {
+          console.info('[Competition] Using container:', selector);
+          return el;
+        }
+      } catch (e) {
+        // Selector failed, continue to next
+        console.warn('[Competition] Selector failed:', selector, e);
+      }
+    }
+
+    // Ultimate fallback: document.body (always attached)
+    console.warn('[Competition] No TV container found, falling back to document.body');
+    return document.body;
+  }
+
   // Helper: run a human minigame with both replay-lock and anti-cheat
   function runHumanMinigameWithGuards({ mg, host, player, label, multiplier, onAfterSubmit }) {
     const g = global.game;
@@ -384,18 +423,23 @@
         } catch(e){ console.warn('[Competition] tvOverlay neutralization failed', e); }
       })();
       
-      // Get TV viewport as the target for instructions (inside TV, not below it)
-      const tvViewport = document.querySelector('.tvViewport');
-      const instructionsContainer = tvViewport || host;
+      // Get an attached container for instructions (inside TV, not a detached node)
+      const instructionsContainer = getTvInstructionsContainer();
       
       // Start AntiCheat session with minDistinctInputs: 0 to allow low-input games
+      // Use the same attached container as instructions to ensure proper tracking
       let antiCheatSessionId = null;
       if (global.AntiCheat) {
-        antiCheatSessionId = global.AntiCheat.startSession({
-          container: host,
-          gameKey: mg,
-          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
-        });
+        try {
+          antiCheatSessionId = global.AntiCheat.startSession({
+            container: instructionsContainer,
+            gameKey: mg,
+            thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
+          });
+        } catch (e) {
+          // Don't abort flow if AntiCheat fails to start
+          console.warn('[Competition] AntiCheat.startSession failed (non-fatal):', e);
+        }
       }
 
       // Run competition flow (pass TV viewport for instructions to appear inside TV)
@@ -462,6 +506,7 @@
     }
   }
   global.runHumanMinigameWithGuards = runHumanMinigameWithGuards;
+  global.getTvInstructionsContainer = getTvInstructionsContainer;
 
   // Reusable tri-slot reveal sequence for competitions
   // Can be used for HOH, Veto, or other top-3 reveals

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Instructions Container Fix</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: #83bfff; 
+    }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    button.danger {
+      background: #c73737;
+    }
+    button.danger:hover {
+      background: #dc4c4c;
+    }
+    
+    /* Simulate TV viewport */
+    .tv-viewport {
+      background: #0a0f16;
+      border: 2px solid #24364b;
+      border-radius: 12px;
+      padding: 40px 20px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .tvViewport {
+      width: 100%;
+      min-height: 350px;
+      position: relative;
+    }
+
+    .log {
+      background: #0a0f16;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+    .warn { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Instructions Container Fix</h1>
+    <p>Tests the fix for HOH/POV instructions card not appearing due to detached container.</p>
+    <ul>
+      <li>Verifies <code>getTvInstructionsContainer()</code> returns attached container</li>
+      <li>Verifies <code>ensureAttachedContainer()</code> handles detached containers</li>
+      <li>Tests instructions render in proper TV viewport</li>
+      <li>Confirms Play button launches fullscreen overlay</li>
+    </ul>
+
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <button onclick="testWithValidContainer()">1. Test with Valid Container (.tvViewport)</button>
+      <button onclick="testWithDetachedContainer()">2. Test with Detached Container (should fallback)</button>
+      <button onclick="testWithNullContainer()">3. Test with Null Container (should fallback)</button>
+      <button onclick="testFullFlow()">4. Test Full Competition Flow</button>
+      <button onclick="clearTV()" class="danger">Clear TV</button>
+    </div>
+
+    <div class="test-section">
+      <h2>TV Viewport (with data-sm-faux-tv attribute)</h2>
+      <div class="tv-viewport">
+        <div class="tvViewport" data-sm-faux-tv>
+          <div style="color: #95a9c0; font-style: italic; text-align: center;">
+            Click a test button to begin
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Mock game object
+    window.game = window.game || {};
+    window.game.cfg = window.game.cfg || {};
+    
+    // Mock MinigameInstructions
+    window.MinigameInstructions = {
+      getInstructions(gameKey) {
+        return {
+          title: `${gameKey} Competition`,
+          description: 'Test the minigame to verify the container fix works.',
+          steps: [
+            'Verify instructions appear in TV viewport',
+            'Check that container is attached to DOM',
+            'Click Play to launch fullscreen overlay'
+          ]
+        };
+      }
+    };
+
+    // Mock renderMinigame
+    window.renderMinigame = function(gameKey, container, onComplete, options) {
+      log(`✓ renderMinigame called for ${gameKey}`, 'pass');
+      log(`  Container tagName: ${container.tagName}`, 'info');
+      log(`  Container isConnected: ${container.isConnected}`, container.isConnected ? 'pass' : 'fail');
+      
+      container.innerHTML = `
+        <div style="text-align: center; color: #e3ecf5; padding: 40px;">
+          <h2>Mock Minigame: ${gameKey}</h2>
+          <p>Container is properly attached!</p>
+          <button onclick="completeMockGame()" style="padding: 12px 32px; margin-top: 20px;">
+            Complete Game
+          </button>
+        </div>
+      `;
+      
+      window._mockGameComplete = onComplete;
+    };
+
+    window.completeMockGame = function() {
+      log('Mock game completed', 'pass');
+      if(window._mockGameComplete) {
+        window._mockGameComplete(1000);
+      }
+    };
+  </script>
+  <script src="js/minigames/instructions.js"></script>
+  <script src="js/competitions-flow.js"></script>
+  <script src="js/competitions.js"></script>
+
+  <script>
+    let logs = [];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-30).reverse().map(l => 
+        `<div class="${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+    }
+
+    function clearTV() {
+      const tv = document.querySelector('.tvViewport');
+      if(tv) {
+        tv.innerHTML = '<div style="color: #95a9c0; font-style: italic; text-align: center;">TV cleared</div>';
+        log('TV viewport cleared', 'info');
+      }
+    }
+
+    function testWithValidContainer() {
+      log('=== Test 1: Valid Container ===', 'info');
+      const tv = document.querySelector('.tvViewport');
+      
+      if(!tv) {
+        log('ERROR: .tvViewport not found in DOM', 'fail');
+        return;
+      }
+      
+      log(`Container found: ${tv.tagName}`, 'pass');
+      log(`Container isConnected: ${tv.isConnected}`, tv.isConnected ? 'pass' : 'fail');
+      
+      if(window.getTvInstructionsContainer) {
+        const container = window.getTvInstructionsContainer();
+        log(`getTvInstructionsContainer() returned: ${container.tagName}`, 'pass');
+        log(`Returned container isConnected: ${container.isConnected}`, container.isConnected ? 'pass' : 'fail');
+      } else {
+        log('ERROR: getTvInstructionsContainer not available', 'fail');
+      }
+      
+      if(window.CompetitionFlow && window.CompetitionFlow.showInstructionsInTV) {
+        window.CompetitionFlow.showInstructionsInTV('quickTap', tv, () => {
+          log('✓ Play button clicked', 'pass');
+          clearTV();
+        });
+        log('✓ Instructions shown in TV', 'pass');
+        
+        // Verify instructions are in the DOM
+        setTimeout(() => {
+          const card = tv.querySelector('.competition-instructions-card');
+          if(card && card.isConnected) {
+            log('✓ Instructions card is attached to DOM', 'pass');
+          } else {
+            log('ERROR: Instructions card not found or not attached', 'fail');
+          }
+        }, 100);
+      } else {
+        log('ERROR: CompetitionFlow not available', 'fail');
+      }
+    }
+
+    function testWithDetachedContainer() {
+      log('=== Test 2: Detached Container ===', 'info');
+      
+      // Create a detached div (not in DOM)
+      const detachedDiv = document.createElement('div');
+      log(`Created detached container: ${detachedDiv.tagName}`, 'info');
+      log(`Detached container isConnected: ${detachedDiv.isConnected}`, detachedDiv.isConnected ? 'fail' : 'pass');
+      
+      if(window.CompetitionFlow && window.CompetitionFlow.showInstructionsInTV) {
+        // This should use ensureAttachedContainer and fallback to an attached container
+        window.CompetitionFlow.showInstructionsInTV('memoryMatch', detachedDiv, () => {
+          log('✓ Play button clicked (with fallback container)', 'pass');
+          clearTV();
+        });
+        
+        // Verify instructions ended up in the TV, not the detached div
+        setTimeout(() => {
+          const tv = document.querySelector('.tvViewport');
+          const card = tv ? tv.querySelector('.competition-instructions-card') : null;
+          
+          if(card && card.isConnected) {
+            log('✓ Instructions rendered in attached container (fallback worked)', 'pass');
+          } else {
+            log('ERROR: Instructions not found in attached container', 'fail');
+          }
+          
+          // Check detached div is still empty
+          if(detachedDiv.children.length === 0) {
+            log('✓ Detached container remained empty (not used)', 'pass');
+          } else {
+            log('ERROR: Instructions rendered in detached container', 'fail');
+          }
+        }, 100);
+      } else {
+        log('ERROR: CompetitionFlow not available', 'fail');
+      }
+    }
+
+    function testWithNullContainer() {
+      log('=== Test 3: Null Container ===', 'info');
+      
+      if(window.CompetitionFlow && window.CompetitionFlow.showInstructionsInTV) {
+        try {
+          // This should handle null gracefully and fallback
+          window.CompetitionFlow.showInstructionsInTV('timingBar', null, () => {
+            log('✓ Play button clicked (with fallback from null)', 'pass');
+            clearTV();
+          });
+          
+          // Verify instructions ended up in an attached container
+          setTimeout(() => {
+            const tv = document.querySelector('.tvViewport');
+            const card = tv ? tv.querySelector('.competition-instructions-card') : null;
+            
+            if(card && card.isConnected) {
+              log('✓ Instructions rendered in attached container (null handled)', 'pass');
+            } else {
+              log('ERROR: Instructions not found', 'fail');
+            }
+          }, 100);
+        } catch(e) {
+          log(`ERROR: Exception thrown with null container: ${e.message}`, 'fail');
+        }
+      } else {
+        log('ERROR: CompetitionFlow not available', 'fail');
+      }
+    }
+
+    function testFullFlow() {
+      log('=== Test 4: Full Competition Flow ===', 'info');
+      const tv = document.querySelector('.tvViewport');
+      
+      if(window.CompetitionFlow && window.CompetitionFlow.runCompetitionFlow) {
+        window.CompetitionFlow.runCompetitionFlow('quickTap', tv, (score) => {
+          log(`✓ Competition completed with score: ${score}`, 'pass');
+        }, { timeLimit: 30 });
+        
+        log('✓ Competition flow started', 'pass');
+        log('Instructions should appear. Click Play to launch fullscreen.', 'info');
+        
+        // Verify instructions appear
+        setTimeout(() => {
+          const card = document.querySelector('.competition-instructions-card');
+          if(card && card.isConnected) {
+            log('✓ Instructions card visible and attached', 'pass');
+          } else {
+            log('ERROR: Instructions card not found', 'fail');
+          }
+        }, 100);
+      } else {
+        log('ERROR: CompetitionFlow.runCompetitionFlow not available', 'fail');
+      }
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded', 'info');
+      log('Ready to test container fix', 'info');
+      
+      // Check if functions are available
+      if(window.getTvInstructionsContainer) {
+        log('✓ getTvInstructionsContainer() available', 'pass');
+      } else {
+        log('⚠ getTvInstructionsContainer() not found', 'warn');
+      }
+      
+      if(window.CompetitionFlow) {
+        log('✓ CompetitionFlow module loaded', 'pass');
+      } else {
+        log('⚠ CompetitionFlow module not loaded', 'warn');
+      }
+      
+      // Verify DOM structure
+      const tv = document.querySelector('.tvViewport');
+      if(tv) {
+        log(`✓ .tvViewport found (${tv.tagName})`, 'pass');
+        log(`  Has data-sm-faux-tv: ${tv.hasAttribute('data-sm-faux-tv')}`, 'info');
+      } else {
+        log('⚠ .tvViewport not found', 'warn');
+      }
+    });
+  </script>
+</body>
+</html>

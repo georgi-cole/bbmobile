@@ -156,6 +156,51 @@
   }
 
   /**
+   * Ensure container is attached to the DOM
+   * Returns the container if attached, otherwise returns a safe fallback
+   * 
+   * @param {HTMLElement} container - Container to validate
+   * @returns {HTMLElement} An attached container (original or fallback)
+   */
+  function ensureAttachedContainer(container){
+    // Check if container is valid and attached
+    if(container && container.isConnected){
+      return container;
+    }
+
+    // Container is detached or null, log warning and find fallback
+    console.warn('[CompetitionFlow] Container is detached or null, finding fallback');
+
+    // Try to find an attached container using priority list
+    const selectors = [
+      '[data-faux-tv]',
+      '[data-sm-faux-tv]',
+      '.tvViewport',
+      '#tv',
+      '.tv',
+      '.faux-tv',
+      '.tv-screen',
+      '#panel'
+    ];
+
+    for(const selector of selectors){
+      try {
+        const el = document.querySelector(selector);
+        if(el && el.isConnected){
+          console.info('[CompetitionFlow] Using fallback container:', selector);
+          return el;
+        }
+      } catch(e){
+        // Selector failed, continue to next
+      }
+    }
+
+    // Ultimate fallback: document.body
+    console.warn('[CompetitionFlow] No attached container found, using document.body');
+    return document.body;
+  }
+
+  /**
    * Show instructions inside TV viewport with Play button
    * When Play is pressed, launches the minigame in fullscreen overlay
    * 
@@ -165,6 +210,8 @@
    * @returns {HTMLElement} The instructions card element
    */
   function showInstructionsInTV(gameKey, container, onPlay){
+    // Ensure container is attached to the DOM (belt-and-suspenders safeguard)
+    container = ensureAttachedContainer(container);
     // Get instructions from MinigameInstructions module
     let instructions = { title: 'Competition', description: 'Play the minigame to compete!', steps: [] };
     if(g.MinigameInstructions && typeof g.MinigameInstructions.getInstructions === 'function'){
@@ -805,6 +852,9 @@
    * @returns {void}
    */
   function runCompetitionFlow(gameKey, container, onComplete, options = {}){
+    // Ensure container is attached to the DOM (belt-and-suspenders safeguard)
+    container = ensureAttachedContainer(container);
+    
     // Step 1: Show instructions in TV area
     const instructionsCard = showInstructionsInTV(
       gameKey,
