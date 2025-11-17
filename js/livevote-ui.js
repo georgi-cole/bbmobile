@@ -31,6 +31,7 @@
     isResponsive: false,
     carouselIndex: 0, // Current nominee shown in carousel (0=left, 1=right)
     useCarousel: false, // Whether to use carousel layout
+    selectedNominee: null, // Currently selected nominee ID (for confirm button)
     _externalOverlayActive: false, // External overlay (e.g., rollout) is showing
     _hiddenChildren: [] // Array of { el, display } for elements hidden during external overlay
   };
@@ -123,6 +124,23 @@
       return;
     }
 
+    // Clean up any existing rollout overlay before rendering lv2 UI
+    try {
+      if (global.LiveVoteRollout?.hide) {
+        global.LiveVoteRollout.hide();
+        console.debug('[lv2] Cleaned up rollout overlay before init');
+      }
+    } catch (e) {
+      console.warn('[lv2] Error hiding rollout:', e);
+    }
+
+    // Remove any existing lv2 overlays before creating new one
+    const existingLv2 = tv.querySelector('.lv2-overlay');
+    if (existingLv2) {
+      existingLv2.remove();
+      console.debug('[lv2] Removed existing lv2 overlay');
+    }
+
     // Hide #panel content during lv2 mode
     const panel = document.querySelector('#panel');
     if (panel) {
@@ -182,20 +200,28 @@
     const rightSide = createContestant('right', state.rightName, state.rightId);
     grid.appendChild(rightSide);
     
+    container.appendChild(grid);
+    
     // Mobile Carousel 2.0: Add arrows hugging the portrait (inside grid)
     if (state.useCarousel) {
       const prevArrow = document.createElement('button');
       prevArrow.className = 'lv2-arrow prev';
       prevArrow.setAttribute('aria-label', 'Show previous nominee');
       prevArrow.innerHTML = '◀';
-      prevArrow.onclick = () => navigateCarousel('prev');
+      prevArrow.onclick = () => {
+        navigateCarousel('prev');
+        updateSelectionFromCarousel();
+      };
       grid.appendChild(prevArrow);
       
       const nextArrow = document.createElement('button');
       nextArrow.className = 'lv2-arrow next';
       nextArrow.setAttribute('aria-label', 'Show next nominee');
       nextArrow.innerHTML = '▶';
-      nextArrow.onclick = () => navigateCarousel('next');
+      nextArrow.onclick = () => {
+        navigateCarousel('next');
+        updateSelectionFromCarousel();
+      };
       grid.appendChild(nextArrow);
     }
     
@@ -239,41 +265,65 @@
       container.appendChild(statusRow);
     }
     
-    // Mobile Carousel 2.0: CTA Dock (always visible at bottom)
+    // Mobile Carousel 2.0: CTA Dock (positioned INSIDE overlay, directly under carousel)
     if (state.useCarousel) {
       const ctaDock = document.createElement('div');
-      ctaDock.className = 'lv2-cta-dock';
+      ctaDock.className = 'lv2-cta-dock lv2-cta-dock-inline';
       
-      // Fallback inline styles ensure the dock stays visible even if CSS is cached/old
+      // Position inline within the overlay structure, not fixed
+      // This ensures it's contained within the faux TV overlay
       Object.assign(ctaDock.style, {
-        position: 'fixed',
-        left: '0',
-        right: '0',
-        bottom: '0',
-        zIndex: '1000',
-        padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
-        background: 'linear-gradient(to top, rgba(12,14,22,.92), rgba(12,14,22,.72) 60%, rgba(12,14,22,0))',
-        borderTop: '1px solid rgba(255,255,255,.06)',
-        backdropFilter: 'saturate(1.1) blur(8px)',
+        position: 'relative',
+        width: '100%',
+        padding: '16px',
         display: 'flex',
         justifyContent: 'center',
-        gap: '12px'
+        gap: '12px',
+        marginTop: '8px'
       });
       
       const mainButton = document.createElement('button');
       mainButton.className = 'lv2-cta-main';
-      mainButton.textContent = `Evict ${state.leftName}`;
-      mainButton.setAttribute('aria-label', `Vote to evict ${state.leftName}`);
-      mainButton.dataset.pick = state.leftId;
+      mainButton.disabled = true; // Initially disabled until selection
+      mainButton.textContent = 'Select a Nominee';
+      mainButton.setAttribute('aria-label', 'Select a nominee to evict');
+      mainButton.dataset.pick = '';
+      
+      ctaDock.appendChild(mainButton);
+      
+      // Insert dock immediately after the grid (carousel/header section)
+      const gridIndex = Array.from(container.children).findIndex(child => 
+        child.classList.contains('lv2-grid')
+      );
+      if (gridIndex !== -1) {
+        container.insertBefore(ctaDock, container.children[gridIndex + 1]);
+      } else {
+        container.appendChild(ctaDock);
+      }
+    } else {
+      // Desktop mode: Add confirm button under the grid
+      const ctaDock = document.createElement('div');
+      ctaDock.className = 'lv2-cta-dock lv2-cta-dock-inline lv2-cta-dock-desktop';
+      
+      Object.assign(ctaDock.style, {
+        position: 'relative',
+        width: '100%',
+        padding: '16px',
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '12px',
+        marginTop: '8px'
+      });
+      
+      const mainButton = document.createElement('button');
+      mainButton.className = 'lv2-cta-main';
+      mainButton.disabled = true; // Initially disabled until selection
+      mainButton.textContent = 'Select a Nominee';
+      mainButton.setAttribute('aria-label', 'Select a nominee to evict');
+      mainButton.dataset.pick = '';
       
       ctaDock.appendChild(mainButton);
       container.appendChild(ctaDock);
-      
-      // Spacer so content never sits under the fixed dock
-      const spacer = document.createElement('div');
-      spacer.className = 'lv2-cta-spacer';
-      spacer.style.height = 'calc(88px + env(safe-area-inset-bottom))';
-      container.appendChild(spacer);
     }
 
     // V2.2.1: Voter feed area - centered below the two photos
@@ -301,11 +351,7 @@
     state.container = container;
     state.stage = stage;
     
-    // Clear any existing lv2 UI
-    const existingLv2 = tv.querySelector('.lv2-overlay');
-    if (existingLv2) existingLv2.remove();
-    
-    // Append to TV
+    // Append to TV (existing lv2 already removed at start of renderPanel)
     tv.appendChild(overlay);
 
     // Setup ResizeObserver for responsive scaling
@@ -316,7 +362,11 @@
       // Set initial carousel index to 0 (left nominee)
       state.carouselIndex = 0;
       // Use setTimeout to ensure DOM is ready
-      setTimeout(() => updateCarouselView(), 50);
+      setTimeout(() => {
+        updateCarouselView();
+        // Auto-select the first nominee on initialization
+        updateSelectionFromCarousel();
+      }, 50);
     }
   }
 
@@ -325,6 +375,22 @@
     const contestant = document.createElement('div');
     contestant.className = `lv2-contestant ${side}`;
     contestant.dataset.side = side;
+    contestant.dataset.playerId = playerId;
+
+    // Make contestant clickable to select nominee (both carousel and desktop modes)
+    contestant.style.cursor = 'pointer';
+    contestant.onclick = () => selectNominee(playerId, name);
+    contestant.setAttribute('role', 'button');
+    contestant.setAttribute('tabindex', '0');
+    contestant.setAttribute('aria-label', `Select ${name} for eviction`);
+    
+    // Add keyboard support
+    contestant.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        selectNominee(playerId, name);
+      }
+    };
 
     // Avatar with gradient ring
     const avatarWrapper = document.createElement('div');
@@ -485,6 +551,45 @@
     
     btn.dataset.pick = currentId;
     btn.dataset.side = currentSide;
+  }
+  
+  // Select a nominee (enables confirm button and updates label)
+  function selectNominee(playerId, playerName) {
+    state.selectedNominee = playerId;
+    
+    // Update the confirm button
+    const ctaDock = state.container?.querySelector('.lv2-cta-dock');
+    if (ctaDock) {
+      const mainBtn = ctaDock.querySelector('.lv2-cta-main');
+      if (mainBtn) {
+        mainBtn.disabled = false;
+        mainBtn.textContent = `Evict ${playerName}`;
+        mainBtn.setAttribute('aria-label', `Confirm eviction of ${playerName}`);
+        mainBtn.dataset.pick = playerId;
+      }
+    }
+    
+    // Add visual selection indicator to the contestant
+    const contestants = state.container?.querySelectorAll('.lv2-contestant');
+    contestants?.forEach(c => {
+      if (c.dataset.playerId === String(playerId)) {
+        c.classList.add('selected');
+      } else {
+        c.classList.remove('selected');
+      }
+    });
+  }
+  
+  // Update selection based on current carousel position (auto-select when navigating)
+  function updateSelectionFromCarousel() {
+    if (!state.useCarousel) return;
+    
+    const currentSide = state.carouselIndex === 0 ? 'left' : 'right';
+    const currentName = state.carouselIndex === 0 ? state.leftName : state.rightName;
+    const currentId = state.carouselIndex === 0 ? state.leftId : state.rightId;
+    
+    // Auto-select the currently visible nominee
+    selectNominee(currentId, currentName);
   }
   
   // Mobile Carousel 2.0: Update the CTA dock button to target the currently shown nominee
@@ -1143,6 +1248,16 @@
 
   // Clean up lv2 UI and restore panel visibility
   function cleanup() {
+    // Clean up any rollout overlay that may be showing
+    try {
+      if (global.LiveVoteRollout?.hide) {
+        global.LiveVoteRollout.hide();
+        console.debug('[lv2] Cleaned up rollout overlay during cleanup');
+      }
+    } catch (e) {
+      console.warn('[lv2] Error hiding rollout during cleanup:', e);
+    }
+    
     // Exit external overlay mode if active (restore any hidden children)
     if (state._externalOverlayActive) {
       exitExternalOverlayMode();
@@ -1186,6 +1301,7 @@
     state.isFinal4 = false;
     state.carouselIndex = 0;
     state.useCarousel = false;
+    state.selectedNominee = null;
   }
 
   // Helper: sleep
