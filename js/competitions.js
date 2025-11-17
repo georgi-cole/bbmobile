@@ -386,20 +386,16 @@
       
       // Get TV viewport as the target for instructions (inside TV, not below it)
       const tvViewport = document.querySelector('.tvViewport');
-      const instructionsContainer = tvViewport || host || document.body;
+      const instructionsContainer = tvViewport || host;
       
       // Start AntiCheat session with minDistinctInputs: 0 to allow low-input games
       let antiCheatSessionId = null;
       if (global.AntiCheat) {
-        try {
-          antiCheatSessionId = global.AntiCheat.startSession({
-            container: instructionsContainer,
-            gameKey: mg,
-            thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
-          });
-        } catch (e) {
-          console.warn('[Competition] AntiCheat startSession failed, proceeding without anti-cheat:', e);
-        }
+        antiCheatSessionId = global.AntiCheat.startSession({
+          container: host,
+          gameKey: mg,
+          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
+        });
       }
 
       // Run competition flow (pass TV viewport for instructions to appear inside TV)
@@ -431,22 +427,14 @@
       // Fallback to legacy inline rendering
       console.warn('[Competition] CompetitionFlow not available, using legacy rendering');
       
-      // Get TV viewport with fallbacks
-      const tvViewport = document.querySelector('.tvViewport');
-      const safeContainer = tvViewport || host || document.body;
-      
       // Start AntiCheat session
       let antiCheatSessionId = null;
       if (global.AntiCheat) {
-        try {
-          antiCheatSessionId = global.AntiCheat.startSession({
-            container: safeContainer,
-            gameKey: mg,
-            thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
-          });
-        } catch (e) {
-          console.warn('[Competition] AntiCheat startSession failed, proceeding without anti-cheat:', e);
-        }
+        antiCheatSessionId = global.AntiCheat.startSession({
+          container: host,
+          gameKey: mg,
+          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
+        });
       }
 
       // Render game inline & validate
