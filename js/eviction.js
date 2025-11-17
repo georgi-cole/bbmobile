@@ -77,8 +77,26 @@
       }
     });
 
-    // Start DR quickly to avoid dead air
-    setTimeout(()=>{ if(!g.eviction.sequenceStarted) beginDiaryRoomSequence(); }, 700);
+    // Start DR sequence - wait for human to vote if they're a voter
+    // This prevents overlapping UIs where voting overlay and diary room cards show simultaneously
+    const humanIsVoter = voters.some(v => v.id === g.humanId);
+    if (humanIsVoter) {
+      // If human is voting, wait for their vote before starting DR sequence
+      // This ensures clean UI transition: vote UI -> rollout -> DR sequence
+      setTimeout(async ()=>{ 
+        if(!g.eviction.sequenceStarted) {
+          // Wait for human vote to be cast before starting sequence
+          if(g.__human_vote == null) {
+            console.debug('[eviction] Waiting for human vote before starting DR sequence');
+            try { await waitForHumanVote(); } catch(e) {}
+          }
+          beginDiaryRoomSequence();
+        }
+      }, 700);
+    } else {
+      // If human is just observing, start DR sequence immediately
+      setTimeout(()=>{ if(!g.eviction.sequenceStarted) beginDiaryRoomSequence(); }, 700);
+    }
   }
   global.startLiveVote=startLiveVote;
 
@@ -714,6 +732,13 @@
     const tripleMode = noms.length === 3;
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
+    
+    // CRITICAL FIX: Close all voting UI before starting diary room sequence
+    // This prevents overlapping UIs where vote overlay and diary room cards show simultaneously
+    if (global.closeAllVoteUI) {
+      console.info('[eviction] Closing all vote UI before diary room sequence');
+      global.closeAllVoteUI();
+    }
     
     // Hide CTA bar when voting phase begins (issue #574)
     if (useLv2 && global.lv2?.hideCtaBar) {
