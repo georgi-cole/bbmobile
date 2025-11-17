@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Bridge Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0e14;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #4fc3f7;
+      border-bottom: 2px solid #1e88e5;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #1a1f2e;
+      border-radius: 8px;
+      border: 1px solid #2a3544;
+    }
+    .test-section h2 {
+      color: #81c784;
+      margin-top: 0;
+    }
+    button {
+      background: #1e88e5;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1565c0;
+    }
+    button:disabled {
+      background: #424242;
+      cursor: not-allowed;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      background: #263238;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .success {
+      color: #81c784;
+    }
+    .error {
+      color: #ef5350;
+    }
+    .info {
+      color: #4fc3f7;
+    }
+    pre {
+      background: #0d1117;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔊 Audio Bridge Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Audio Bridge Initialization</h2>
+    <p>Verify that audio-bridge.js creates window.game.audio properly</p>
+    <button id="testBridgeInit">Run Test</button>
+    <div id="bridgeInitResult" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Toggle APIs Availability</h2>
+    <p>Check that toggleMusic and toggleSound are immediately available</p>
+    <button id="testToggleAPIs">Run Test</button>
+    <div id="toggleAPIsResult" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Interactive Toggle Test</h2>
+    <p>Test music and sound toggles interactively</p>
+    <div>
+      <button id="toggleMusicBtn">Toggle Music</button>
+      <button id="toggleSoundBtn">Toggle Sound</button>
+      <button id="checkStateBtn">Check State</button>
+    </div>
+    <div id="interactiveResult" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Lobby Music Test</h2>
+    <p>Test intro hub lobby music playback</p>
+    <div>
+      <button id="playLobbyMusic">Play Lobby Music</button>
+      <button id="stopLobbyMusic">Stop Lobby Music</button>
+    </div>
+    <div id="lobbyMusicResult" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Console Log Inspection</h2>
+    <p>Check for expected log messages</p>
+    <button id="inspectLogs">Inspect Console</button>
+    <div id="logsResult" class="status"></div>
+    <pre id="consoleOutput"></pre>
+  </div>
+
+  <!-- Load audio.js first -->
+  <script>window.MUSIC_BASE = 'audio/';</script>
+  <script src="js/audio.js"></script>
+  
+  <!-- Load audio-bridge.js -->
+  <script src="js/audio-bridge.js"></script>
+
+  <!-- Test script -->
+  <script>
+    // Capture console logs
+    const consoleLogs = [];
+    const originalLog = console.info;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    
+    console.info = function(...args) {
+      consoleLogs.push({ type: 'info', message: args.join(' ') });
+      originalLog.apply(console, args);
+    };
+    
+    console.error = function(...args) {
+      consoleLogs.push({ type: 'error', message: args.join(' ') });
+      originalError.apply(console, args);
+    };
+    
+    console.warn = function(...args) {
+      consoleLogs.push({ type: 'warn', message: args.join(' ') });
+      originalWarn.apply(console, args);
+    };
+
+    // Test 1: Bridge Initialization
+    document.getElementById('testBridgeInit').addEventListener('click', () => {
+      const result = document.getElementById('bridgeInitResult');
+      let html = '';
+      
+      const checks = [
+        { 
+          name: 'window.game exists', 
+          test: () => typeof window.game === 'object' && window.game !== null 
+        },
+        { 
+          name: 'window.game.audio exists', 
+          test: () => typeof window.game.audio === 'object' && window.game.audio !== null 
+        },
+        { 
+          name: 'window.audio exists (g.audio)', 
+          test: () => typeof window.audio === 'object' && window.audio !== null 
+        },
+        { 
+          name: 'Bridge log message present', 
+          test: () => consoleLogs.some(log => log.message.includes('[audio-bridge] Initialized'))
+        }
+      ];
+      
+      checks.forEach(check => {
+        const passed = check.test();
+        html += `<div class="${passed ? 'success' : 'error'}">
+          ${passed ? '✓' : '✗'} ${check.name}
+        </div>`;
+      });
+      
+      result.innerHTML = html;
+    });
+
+    // Test 2: Toggle APIs
+    document.getElementById('testToggleAPIs').addEventListener('click', () => {
+      const result = document.getElementById('toggleAPIsResult');
+      let html = '';
+      
+      const apis = [
+        'toggleMusic',
+        'toggleSound',
+        'getMusicEnabled',
+        'getSfxEnabled',
+        'setMusicEnabled',
+        'setSfxEnabled',
+        'playMusicForPhase',
+        'stopMusic',
+        'playIntroHubMusic',
+        'stopIntroHubMusic'
+      ];
+      
+      apis.forEach(api => {
+        const existsOnGameAudio = typeof window.game.audio[api] === 'function';
+        const existsOnGlobal = typeof window[api] === 'function';
+        html += `<div class="${existsOnGameAudio ? 'success' : 'error'}">
+          ${existsOnGameAudio ? '✓' : '✗'} window.game.audio.${api}() ${existsOnGameAudio ? 'available' : 'missing'}
+        </div>`;
+      });
+      
+      result.innerHTML = html;
+    });
+
+    // Test 3: Interactive Toggle
+    document.getElementById('toggleMusicBtn').addEventListener('click', () => {
+      if (typeof window.game.audio.toggleMusic === 'function') {
+        const newState = window.game.audio.toggleMusic();
+        document.getElementById('interactiveResult').innerHTML = 
+          `<div class="info">Music toggled: ${newState ? 'ON' : 'OFF'}</div>`;
+      }
+    });
+
+    document.getElementById('toggleSoundBtn').addEventListener('click', () => {
+      if (typeof window.game.audio.toggleSound === 'function') {
+        const newState = window.game.audio.toggleSound();
+        document.getElementById('interactiveResult').innerHTML = 
+          `<div class="info">Sound toggled: ${newState ? 'ON' : 'OFF'}</div>`;
+      }
+    });
+
+    document.getElementById('checkStateBtn').addEventListener('click', () => {
+      const musicOn = window.game.audio.getMusicEnabled();
+      const soundOn = window.game.audio.getSfxEnabled();
+      const muted = window.game.audio.getMuted();
+      
+      document.getElementById('interactiveResult').innerHTML = 
+        `<div class="info">
+          Music: ${musicOn ? 'ON' : 'OFF'}<br>
+          Sound: ${soundOn ? 'ON' : 'OFF'}<br>
+          Muted: ${muted ? 'YES' : 'NO'}
+        </div>`;
+    });
+
+    // Test 4: Lobby Music
+    document.getElementById('playLobbyMusic').addEventListener('click', () => {
+      const result = document.getElementById('lobbyMusicResult');
+      if (typeof window.game.audio.playIntroHubMusic === 'function') {
+        window.game.audio.playIntroHubMusic();
+        result.innerHTML = '<div class="success">✓ Lobby music play requested</div>';
+      } else {
+        result.innerHTML = '<div class="error">✗ playIntroHubMusic not available</div>';
+      }
+    });
+
+    document.getElementById('stopLobbyMusic').addEventListener('click', () => {
+      const result = document.getElementById('lobbyMusicResult');
+      if (typeof window.game.audio.stopIntroHubMusic === 'function') {
+        window.game.audio.stopIntroHubMusic();
+        result.innerHTML = '<div class="success">✓ Lobby music stop requested</div>';
+      } else {
+        result.innerHTML = '<div class="error">✗ stopIntroHubMusic not available</div>';
+      }
+    });
+
+    // Test 5: Console Logs
+    document.getElementById('inspectLogs').addEventListener('click', () => {
+      const result = document.getElementById('logsResult');
+      const output = document.getElementById('consoleOutput');
+      
+      const expectedLogs = [
+        '[audio] ready',
+        '[audio-bridge] Initialized'
+      ];
+      
+      let html = '';
+      expectedLogs.forEach(expected => {
+        const found = consoleLogs.some(log => log.message.includes(expected));
+        html += `<div class="${found ? 'success' : 'error'}">
+          ${found ? '✓' : '✗'} "${expected}" ${found ? 'found' : 'missing'}
+        </div>`;
+      });
+      
+      result.innerHTML = html;
+      
+      // Display recent logs
+      const recentLogs = consoleLogs.slice(-20);
+      output.textContent = recentLogs.map(log => 
+        `[${log.type.toUpperCase()}] ${log.message}`
+      ).join('\n');
+    });
+
+    // Auto-run first test on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.getElementById('testBridgeInit').click();
+      }, 100);
+    });
+  </script>
+</body>
+</html>

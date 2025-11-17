@@ -719,6 +719,27 @@ console.info('[IntroScreen] Script executing – pre-init');
     } catch(e) {
       console.warn('[IntroHub] Failed to attach UI SFX', e);
     }
+    
+    // Backup: Start lobby music if enabled and not muted
+    // This ensures music plays even if StartupFlow's call failed or was skipped
+    setTimeout(() => {
+      try {
+        const cfg = (g.game && g.game.cfg) || g.cfg || {};
+        const musicOn = cfg.musicOn !== false; // default true
+        const muted = (typeof g.getMuted === 'function') ? g.getMuted() : false;
+        
+        if (musicOn && !muted) {
+          console.info('[IntroHub] Backup: lobby music requested from IntroScreen');
+          if (typeof g.playIntroHubMusic === 'function') {
+            g.playIntroHubMusic();
+          }
+        } else {
+          console.info('[IntroHub] Backup: skipping lobby music (musicOn=' + musicOn + ', muted=' + muted + ')');
+        }
+      } catch(err) {
+        console.warn('[IntroHub] Failed to start backup lobby music', err);
+      }
+    }, 0);
   }
 
   // ===== PUBLIC API =====

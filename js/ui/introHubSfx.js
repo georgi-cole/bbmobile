@@ -13,6 +13,8 @@
   let clickEl = null;
   let enabled = true;
   let initialized = false;
+  let hoverErrorLogged = false;
+  let clickErrorLogged = false;
 
   /**
    * Initialize the SFX module
@@ -26,10 +28,26 @@
     hoverEl.preload = 'auto';
     hoverEl.volume = 0.75;
     
+    // Add error handler for hover audio (one-time logging)
+    hoverEl.addEventListener('error', () => {
+      if (!hoverErrorLogged) {
+        console.info(`[IntroHubSfx] Hover SFX not available: ${HOVER_SRC} (asset may be missing)`);
+        hoverErrorLogged = true;
+      }
+    });
+    
     // Create click audio element
     clickEl = new Audio(CLICK_SRC);
     clickEl.preload = 'auto';
     clickEl.volume = 0.9;
+    
+    // Add error handler for click audio (one-time logging)
+    clickEl.addEventListener('error', () => {
+      if (!clickErrorLogged) {
+        console.info(`[IntroHubSfx] Click SFX not available: ${CLICK_SRC} (asset may be missing)`);
+        clickErrorLogged = true;
+      }
+    });
     
     // Sync enabled state with global config
     syncEnabled();
@@ -68,14 +86,22 @@
   /**
    * Play an audio element if enabled
    * @param {HTMLAudioElement} el - Audio element to play
+   * @param {string} type - Type of sound ('hover' or 'click') for error logging
    */
-  function play(el){
+  function play(el, type){
     if(!enabled || !el) return;
     
     try{
       el.currentTime = 0;
-      el.play().catch(() => {
-        // Gracefully ignore play errors (autoplay blocked, etc.)
+      el.play().catch((err) => {
+        // Log once if playback fails due to missing asset or other issues
+        if (type === 'hover' && !hoverErrorLogged) {
+          console.info(`[IntroHubSfx] Hover SFX playback failed: ${err.message || err}`);
+          hoverErrorLogged = true;
+        } else if (type === 'click' && !clickErrorLogged) {
+          console.info(`[IntroHubSfx] Click SFX playback failed: ${err.message || err}`);
+          clickErrorLogged = true;
+        }
       });
     } catch(_) {
       // Gracefully ignore exceptions
@@ -86,14 +112,14 @@
    * Play hover sound
    */
   function playHover(){
-    play(hoverEl);
+    play(hoverEl, 'hover');
   }
 
   /**
    * Play click sound
    */
   function playClick(){
-    play(clickEl);
+    play(clickEl, 'click');
   }
 
   /**
