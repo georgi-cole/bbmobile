@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Ceremony Invocation Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #0e1a28;
+      color: #e2e8f0;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #71bfff;
+      margin-bottom: 20px;
+    }
+    
+    .test-section {
+      background: rgba(28, 43, 62, 0.6);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #94a3b8;
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+    }
+    
+    .info {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+      padding: 12px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+    
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .checklist li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    
+    .checklist li:before {
+      content: "□ ";
+      color: #64748b;
+      margin-right: 8px;
+    }
+    
+    .pass {
+      color: #4ade80;
+    }
+    
+    .fail {
+      color: #f87171;
+    }
+    
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: #2563eb;
+    }
+    
+    button.secondary {
+      background: #475569;
+    }
+    
+    button.secondary:hover {
+      background: #334155;
+    }
+    
+    #log {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    
+    #log div {
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    
+    #log .veto {
+      color: #a78bfa;
+    }
+    
+    #log .info {
+      color: #60a5fa;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    #log .warn {
+      color: #fbbf24;
+    }
+    
+    #log .error {
+      color: #f87171;
+    }
+    
+    #log .success {
+      color: #4ade80;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Veto Ceremony Invocation Test</h1>
+  
+  <div class="test-section">
+    <h2>Purpose</h2>
+    <div class="info">
+      This test verifies that the veto ceremony decision prompt appears when a human player wins the Power of Veto.
+      The fix removes the callback from setPhase to prevent premature finalization.
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>What to Look For</h2>
+    <ul class="checklist">
+      <li><span class="pass">✓</span> Console logs show: [veto] POV Winner determined</li>
+      <li><span class="pass">✓</span> Console logs show: [veto] handlePostVetoReveal with alive count</li>
+      <li><span class="pass">✓</span> Console logs show: [veto] Starting veto ceremony</li>
+      <li><span class="pass">✓</span> Console logs show: [veto] startVetoCeremony with holder/twist/nominees</li>
+      <li><span class="pass">✓</span> Console logs show: [veto] Rendering POV use decision</li>
+      <li><span class="pass">✓</span> Console logs show: [veto] Decision resolved (after user clicks)</li>
+      <li><span class="pass">✓</span> setPhase called WITHOUT finalizeCeremony callback</li>
+      <li><span class="pass">✓</span> Idempotent guard prevents duplicate starts</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>Console Log Capture</h2>
+    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 10px;">
+      All console.log, console.info, console.warn, and console.error messages will appear below:
+    </p>
+    <button onclick="clearLog()">Clear Log</button>
+    <button class="secondary" onclick="copyLog()">Copy Log</button>
+    <div id="log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Instructions</h2>
+    <ol style="line-height: 1.8; color: #cbd5e1;">
+      <li>Open the main game (<code>index.html</code>) in a new tab</li>
+      <li>Start a new game with a human player</li>
+      <li>Play through until the veto competition phase</li>
+      <li>Make sure the human player wins the veto competition</li>
+      <li>Watch the console (F12) for the logging sequence</li>
+      <li>Verify the decision prompt appears and waits for user input</li>
+      <li>Return to this tab to review the captured logs below</li>
+    </ol>
+  </div>
+  
+  <div class="test-section">
+    <h2>Expected Behavior</h2>
+    <div style="background: rgba(74, 222, 128, 0.1); border-left: 3px solid #4ade80; padding: 12px; margin-bottom: 10px;">
+      <strong>✓ CORRECT:</strong> After veto competition, you see:
+      <ul style="margin: 10px 0 0 20px;">
+        <li>Intro card: "POV Holder will decide..."</li>
+        <li>Decision prompt: "Use Power of Veto?" with YES/NO buttons</li>
+        <li>Prompt waits for your click</li>
+        <li>Console shows all logging steps</li>
+      </ul>
+    </div>
+    
+    <div style="background: rgba(248, 113, 113, 0.1); border-left: 3px solid #f87171; padding: 12px;">
+      <strong>✗ BUG (before fix):</strong> After veto competition:
+      <ul style="margin: 10px 0 0 20px;">
+        <li>Phase advances to veto_ceremony</li>
+        <li>Music stops but no UI appears</li>
+        <li>Ceremony auto-proceeds as if veto not used</li>
+        <li>Player cannot make a decision</li>
+      </ul>
+    </div>
+  </div>
+  
+  <script>
+    // Intercept console methods to display in the log div
+    const logDiv = document.getElementById('log');
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    function addLogEntry(type, args) {
+      const message = Array.from(args).map(arg => {
+        if (typeof arg === 'object') {
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch (e) {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      }).join(' ');
+      
+      const div = document.createElement('div');
+      div.className = type;
+      
+      // Highlight veto-related messages
+      if (message.includes('[veto]')) {
+        div.classList.add('veto');
+      }
+      
+      const timestamp = new Date().toLocaleTimeString();
+      div.textContent = `[${timestamp}] ${message}`;
+      
+      logDiv.appendChild(div);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addLogEntry('info', args);
+    };
+    
+    console.info = function(...args) {
+      originalInfo.apply(console, args);
+      addLogEntry('info', args);
+    };
+    
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addLogEntry('warn', args);
+    };
+    
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addLogEntry('error', args);
+    };
+    
+    function clearLog() {
+      logDiv.innerHTML = '';
+    }
+    
+    function copyLog() {
+      const text = Array.from(logDiv.children)
+        .map(div => div.textContent)
+        .join('\n');
+      
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Log copied to clipboard!');
+      }).catch(err => {
+        console.error('Failed to copy log:', err);
+      });
+    }
+    
+    // Initial message
+    console.info('✅ Veto Ceremony Invocation Test Ready');
+    console.info('Open the main game (index.html) and play until veto competition phase');
+    console.info('Console logs will appear here automatically');
+  </script>
+</body>
+</html>

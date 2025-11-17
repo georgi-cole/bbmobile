@@ -656,16 +656,27 @@
 
   function handlePostVetoReveal(){
     var aliveCount = alivePlayers().length;
+    
+    console.info('[veto] handlePostVetoReveal - aliveCount:', aliveCount);
+    
     if(aliveCount === 4){
+      console.info('[veto] Final 4 bypass - skipping ceremony, going to Final 4 eviction');
       setTimeout(function(){ startFinal4Eviction(); }, 500);
     } else {
+      console.info('[veto] Starting veto ceremony in 500ms');
       setTimeout(function(){ startVetoCeremony(); }, 500);
     }
   }
 
   function finishVetoComp(){
     var g = global.game;
-    if(!g || g.phase!=='veto_comp') return;
+    
+    console.info('[veto] finishVetoComp called - phase:', g ? g.phase : 'none');
+    
+    if(!g || g.phase!=='veto_comp'){
+      console.warn('[veto] finishVetoComp - invalid phase, aborting');
+      return;
+    }
     
     // Guard: prevent multiple calls
     if(g.__finishVetoCompCalled){
@@ -731,6 +742,12 @@
 
     global.game.vetoHolder = arr[0] && arr[0][0];
     var W = getP(global.game.vetoHolder);
+    
+    console.info('[veto] POV Winner determined:', global.game.vetoHolder, 
+                 'name:', W ? W.name : 'Unknown', 
+                 'human:', W ? W.human : false,
+                 'score:', arr[0] ? arr[0][1] : 0);
+    
     if(W){
       W.stats = W.stats || {};
       W.wins = W.wins || {};
@@ -2366,6 +2383,14 @@
 
   async function startVetoCeremony(){
     var g = global.game;
+    
+    // Idempotent guard: prevent duplicate calls
+    if(g.__vetoCeremonyStarted){
+      console.warn('[veto] startVetoCeremony already called - skipping duplicate');
+      return;
+    }
+    g.__vetoCeremonyStarted = true;
+    
     g.vetoSavedId = null;
     g.vetoRepPref = null;
     g._awaitingReplacement = false;
@@ -2390,10 +2415,16 @@
     if(global.tv && typeof global.tv.say==='function') global.tv.say('Veto Ceremony');
     if(typeof global.phaseMusic==='function') global.phaseMusic('nominations');
 
-    // Step 1: Ceremony Intro - use TV contained card
     var holder = getP(g.vetoHolder);
     var holderName = holder ? holder.name : 'POV Holder';
+    var playerCount = alivePlayers().length;
+    var twistMode = g.activeVetoTwist || 'standard';
     
+    // Debug logging
+    console.info('[veto] startVetoCeremony - holder:', holderName, 'id:', g.vetoHolder, 
+                 'twist:', twistMode, 'nominees:', g.nominees, 'playerCount:', playerCount);
+
+    // Step 1: Ceremony Intro - use TV contained card
     await showTVCard({
       title: 'Veto Ceremony',
       lines: [holderName + ' will decide whether to use the Power of Veto.'],
@@ -2406,22 +2437,30 @@
       if(global.addLog) global.addLog(holderName + ' stands to make the veto decision.', 'tiny'); 
     }catch(e){}
 
-    // Step 2: Set phase and show decision panel
+    // Step 2: Set phase WITHOUT callback - we'll handle flow manually
+    // This prevents premature invocation of finalizeCeremony when phase timer expires
     if(typeof global.setPhase==='function')
-      global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25, finalizeCeremony);
+      global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25);
     
     // For human POV holder, show unified "Use POV?" decision for all types
     if(holder && holder.human){
       // Set flag to prevent duplicate panel rendering
       g.__useTVCeremonyUI = true;
       
+      console.info('[veto] Rendering POV use decision for human (twist=' + twistMode + ')');
+      
       // Show unified decision prompt for Standard, Golden, or Diamond POV
       var decision = await renderPOVUseDecision(g.vetoHolder);
       
+      console.info('[veto] Decision resolved: used=' + (decision ? 'true' : 'false'));
+      
       if(decision){
         // User chose Yes - handle based on POV type
+        console.info('[veto] User chose to use POV');
+        
         if(g.activeVetoTwist === 'diamond'){
           // Diamond POV: Replace both nominees
+          console.info('[veto] Handling Diamond POV ceremony');
           await handleDiamondPOVCeremony(holder);
         } else {
           // Standard or Golden POV: Save one nominee
@@ -2430,6 +2469,8 @@
             console.warn('[veto] No nominees to save, treating as veto not used');
             await finalizeCeremony({ used: false });
           } else if(g.nominees.length > 1){
+            console.info('[veto] Multiple nominees - showing save selection');
+            
             // Use carousel picker for Golden/Standard POV save selection
             var savedId = await openCarouselPicker({
               ids: g.nominees,
@@ -2440,8 +2481,12 @@
             
             if(savedId == null){
               // User cancelled - return to decision prompt
+              console.info('[veto] User cancelled save selection');
+              g.__vetoCeremonyStarted = false; // Reset guard to allow retry
               return;
             }
+            
+            console.info('[veto] User selected to save player:', savedId);
             
             // Immediately remove NOM badge from saved player
             var savedP = getP(savedId);
@@ -2462,26 +2507,35 @@
               duration: 2800
             });
             
+            console.info('[veto] Finalizing ceremony with savedId:', savedId);
             await finalizeCeremony({ used: true, savedId: savedId });
           } else {
+            console.info('[veto] Single nominee - auto-selecting:', g.nominees[0]);
             await finalizeCeremony({ used: true, savedId: g.nominees[0] });
           }
         }
       } else {
         // User chose No
+        console.info('[veto] User chose NOT to use POV');
         await finalizeCeremony({ used: false });
       }
     } else {
       // AI auto-decision after brief delay
+      console.info('[veto] AI POV holder - scheduling auto-decision in 1200ms');
+      
       g.__vetoAutoTimer = setTimeout(function(){
         var gg = global.game;
         if(gg && gg.phase==='veto_ceremony' && !gg._awaitingReplacement && !gg.__vetoCeremonyResolved){
+          console.info('[veto] AI auto-decision executing');
+          
           // Check for Diamond POV
           if(gg.activeVetoTwist === 'diamond'){
-            try{ handleDiamondPOVCeremony(getP(gg.vetoHolder)); }catch(e){}
+            try{ handleDiamondPOVCeremony(getP(gg.vetoHolder)); }catch(e){ console.error('[veto] AI Diamond POV error:', e); }
           } else {
-            try{ finalizeCeremony(); }catch(e){}
+            try{ finalizeCeremony(); }catch(e){ console.error('[veto] AI finalize error:', e); }
           }
+        } else {
+          console.warn('[veto] AI auto-decision skipped - ceremony already resolved or awaiting replacement');
         }
       }, 1200);
     }
@@ -2985,21 +3039,48 @@
 
   async function finalizeCeremony(choice){
     var g = global.game;
+    
+    console.info('[veto] finalizeCeremony called with choice:', choice);
 
-    if(g._awaitingReplacement) return;
-    if(g.__vetoDecisionInProgress) return;
-    if(g.__vetoCeremonyResolved) return;
+    if(g._awaitingReplacement){
+      console.warn('[veto] finalizeCeremony blocked - awaiting replacement');
+      return;
+    }
+    if(g.__vetoDecisionInProgress){
+      console.warn('[veto] finalizeCeremony blocked - decision in progress');
+      return;
+    }
+    if(g.__vetoCeremonyResolved){
+      console.warn('[veto] finalizeCeremony blocked - ceremony already resolved');
+      return;
+    }
 
     g.__vetoDecisionInProgress = true;
     if(g.__vetoAutoTimer){ try{ clearTimeout(g.__vetoAutoTimer); }catch(e){} g.__vetoAutoTimer=null; }
 
     var decision = choice;
     if(!decision){
-      if(typeof g.vetoSavedId==='number'){ decision = { used: true, savedId: g.vetoSavedId }; }
-      else if(g.nominees.indexOf(g.vetoHolder)!==-1){ decision = { used: true, savedId: g.vetoHolder }; }
-      else if(!(getP(g.vetoHolder) && getP(g.vetoHolder).human)){ decision = aiVetoDecision(); }
-      else { decision = { used: false }; }
+      console.info('[veto] No explicit choice provided, determining decision automatically');
+      
+      if(typeof g.vetoSavedId==='number'){ 
+        decision = { used: true, savedId: g.vetoSavedId };
+        console.info('[veto] Using stored vetoSavedId:', g.vetoSavedId);
+      }
+      else if(g.nominees.indexOf(g.vetoHolder)!==-1){ 
+        decision = { used: true, savedId: g.vetoHolder };
+        console.info('[veto] POV holder is nominee - auto-use on self');
+      }
+      else if(!(getP(g.vetoHolder) && getP(g.vetoHolder).human)){ 
+        decision = aiVetoDecision();
+        console.info('[veto] AI decision:', decision);
+      }
+      else { 
+        decision = { used: false };
+        console.info('[veto] Default to not used');
+      }
     }
+    
+    console.info('[veto] Final decision: used=' + decision.used + ', savedId=' + (decision.savedId || 'none'));
 
     var aliveCount = alivePlayers().length;
 
@@ -3201,16 +3282,23 @@
         actorIds: g.vetoHolder
       });
 
+      console.info('[veto] Ceremony complete (veto not used) - transitioning to social/livevote');
+      
       g.vetoSavedId=null; g.vetoRepPref=null; g._awaitingReplacement=false;
       g.__vetoCeremonyResolved = true;
       g.__vetoDecisionInProgress = false;
       g.__useTVCeremonyUI = false;
       setTimeout(function(){
         if(typeof global.startSocial==='function'){
+          console.info('[veto] Calling startSocial after ceremony (not used)');
           global.startSocial('veto', function(){
-            if(typeof global.startLiveVote==='function') global.startLiveVote();
+            if(typeof global.startLiveVote==='function'){
+              console.info('[veto] Calling startLiveVote after social (not used)');
+              global.startLiveVote();
+            }
           });
         } else if(typeof global.startLiveVote==='function'){
+          console.info('[veto] Calling startLiveVote directly (not used)');
           global.startLiveVote();
         }
       }, 200);
