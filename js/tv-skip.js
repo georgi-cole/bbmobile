@@ -86,7 +86,8 @@
     skipButton.setAttribute('title', 'Skip to next phase');
     
     const skipLabel = document.createElement('span');
-    skipLabel.textContent = '⏩ Skip';
+    skipLabel.textContent = '⏩ FFWD';
+    skipLabel.setAttribute('title', 'Fast-Forward (preserves all steps, compresses time)');
     skipButton.appendChild(skipLabel);
     
     // Create timer display
