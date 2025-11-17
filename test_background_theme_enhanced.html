@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BackgroundTheme Enhanced - Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #4ecca3;
+      border-bottom: 2px solid #4ecca3;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #ffa07a;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: #16213e;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border-left: 4px solid #4ecca3;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background: #2d5a2d;
+      border-left: 4px solid #4ecca3;
+    }
+    .test-result.fail {
+      background: #5a2d2d;
+      border-left: 4px solid #ff6b6b;
+    }
+    .test-result.info {
+      background: #2d3a5a;
+      border-left: 4px solid #6bb6ff;
+    }
+    button {
+      background: #4ecca3;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #3daa82;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    code {
+      background: #0f1419;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #ffa07a;
+    }
+    pre {
+      background: #0f1419;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      color: #ffa07a;
+    }
+    .current-theme {
+      background: #16213e;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 2px solid #4ecca3;
+    }
+    .current-theme img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    #telemetryLog {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #0f1419;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .telemetry-entry {
+      padding: 5px;
+      margin: 5px 0;
+      border-left: 3px solid #4ecca3;
+      padding-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 BackgroundTheme Enhanced - Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Current Theme</h2>
+    <div id="currentTheme" class="current-theme">
+      <p>No theme loaded yet...</p>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Manual Override Controls</h2>
+    <div class="controls">
+      <button onclick="testManualOverride('sunrise')">☀️ Sunrise</button>
+      <button onclick="testManualOverride('day')">🌞 Day</button>
+      <button onclick="testManualOverride('sunset')">🌅 Sunset</button>
+      <button onclick="testManualOverride('night')">🌙 Night</button>
+      <button onclick="testManualOverride('rain')">🌧️ Rain</button>
+      <button onclick="testManualOverride('snow')">❄️ Snow</button>
+      <button onclick="testManualOverride('xmasDay')">🎄 Xmas Day</button>
+      <button onclick="testManualOverride('xmasy')">🎅 Xmasy</button>
+      <button onclick="testManualOverride('xmasyNight')">🌃 Xmas Night</button>
+    </div>
+    <div class="controls">
+      <button onclick="testAdaptiveToggle(true)" style="background: #4ecca3;">Enable Adaptive</button>
+      <button onclick="testAdaptiveToggle(false)" style="background: #ff6b6b;">Disable Adaptive</button>
+      <button onclick="testUpdateTheme()">🔄 Update Theme</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Telemetry Log</h2>
+    <div id="telemetryLog"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>API Documentation</h2>
+    <p>Available methods:</p>
+    <ul>
+      <li><code>window.BackgroundTheme.getCurrent()</code> - Get current theme</li>
+      <li><code>window.game.BackgroundTheme.getCurrent()</code> - Get current theme (alias)</li>
+      <li><code>window.BackgroundTheme.manualOverride('sunset')</code> - Set theme manually</li>
+      <li><code>window.BackgroundTheme.setAdaptive(true/false)</code> - Toggle adaptive backgrounds</li>
+      <li><code>window.BackgroundTheme.updateTheme(true)</code> - Force theme update</li>
+    </ul>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Mock event bus if not available
+    if (!window.bbGameBus) {
+      window.bbGameBus = {
+        emit: function(event, data) {
+          console.log('[MockBus] Event:', event, data);
+        }
+      };
+    }
+
+    // Intercept Telemetry.log to capture events
+    const telemetryEvents = [];
+    const originalTelemetry = window.Telemetry;
+    
+    window.Telemetry = {
+      log: function(event, data) {
+        telemetryEvents.push({ event, data, timestamp: Date.now() });
+        logTelemetryEvent(event, data);
+        if (originalTelemetry && originalTelemetry.log) {
+          originalTelemetry.log(event, data);
+        }
+      }
+    };
+
+    function logTelemetryEvent(event, data) {
+      const log = document.getElementById('telemetryLog');
+      const entry = document.createElement('div');
+      entry.className = 'telemetry-entry';
+      entry.innerHTML = `<strong>${event}</strong>: ${JSON.stringify(data)}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+  </script>
+
+  <script src="src/utils/backgroundTheme.js"></script>
+
+  <script>
+    const results = document.getElementById('testResults');
+    const currentThemeDiv = document.getElementById('currentTheme');
+
+    function logResult(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      results.appendChild(div);
+      console.log(`[Test] ${message}`);
+    }
+
+    function updateCurrentThemeDisplay() {
+      const theme = window.game.BackgroundTheme.getCurrent();
+      if (theme) {
+        currentThemeDiv.innerHTML = `
+          <p><strong>Key:</strong> <code>${theme.key}</code></p>
+          <p><strong>URL:</strong> <code>${theme.url}</code></p>
+          <p><strong>Reason:</strong> ${theme.reason}</p>
+          <p><strong>Anchor:</strong> ${JSON.stringify(theme.anchor)}</p>
+          <img src="${theme.url}" alt="${theme.key} background" onerror="this.style.display='none'">
+        `;
+      } else {
+        currentThemeDiv.innerHTML = '<p>No theme available</p>';
+      }
+    }
+
+    // Run tests
+    function runTests() {
+      logResult('=== Starting BackgroundTheme Enhanced Tests ===', 'info');
+
+      // Test 1: Check window.BackgroundTheme exists
+      if (window.BackgroundTheme) {
+        logResult('✓ Test 1: window.BackgroundTheme exists', 'pass');
+      } else {
+        logResult('✗ Test 1: window.BackgroundTheme NOT found', 'fail');
+        return;
+      }
+
+      // Test 2: Check window.game.BackgroundTheme exists (alias)
+      if (window.game && window.game.BackgroundTheme) {
+        logResult('✓ Test 2: window.game.BackgroundTheme exists (alias)', 'pass');
+      } else {
+        logResult('✗ Test 2: window.game.BackgroundTheme NOT found (alias broken)', 'fail');
+      }
+
+      // Test 3: Check they point to same object
+      if (window.BackgroundTheme === window.game.BackgroundTheme) {
+        logResult('✓ Test 3: Both namespaces point to same object', 'pass');
+      } else {
+        logResult('⚠ Test 3: Namespaces point to different objects (may be intentional)', 'info');
+      }
+
+      // Test 4: Check API methods exist
+      const methods = ['init', 'getCurrent', 'updateTheme', 'setAdaptive', 'manualOverride'];
+      let allMethodsExist = true;
+      methods.forEach(method => {
+        if (typeof window.BackgroundTheme[method] === 'function') {
+          logResult(`✓ Test 4.${method}: ${method}() exists`, 'pass');
+        } else {
+          logResult(`✗ Test 4.${method}: ${method}() NOT found`, 'fail');
+          allMethodsExist = false;
+        }
+      });
+
+      // Test 5: Initialize BackgroundTheme
+      try {
+        window.BackgroundTheme.init({ bus: window.bbGameBus });
+        logResult('✓ Test 5: BackgroundTheme.init() succeeded', 'pass');
+      } catch (e) {
+        logResult(`✗ Test 5: BackgroundTheme.init() failed: ${e.message}`, 'fail');
+        return;
+      }
+
+      // Test 6: Get current theme
+      setTimeout(() => {
+        const theme = window.game.BackgroundTheme.getCurrent();
+        if (theme) {
+          logResult(`✓ Test 6: getCurrent() returned theme: ${theme.key}`, 'pass');
+          updateCurrentThemeDisplay();
+        } else {
+          logResult('✗ Test 6: getCurrent() returned null', 'fail');
+        }
+
+        // Test 7: Check telemetry events
+        const bgInitEvent = telemetryEvents.find(e => e.event === 'bg_init');
+        const bgUpdateEvent = telemetryEvents.find(e => e.event === 'bg_update');
+        
+        if (bgInitEvent) {
+          logResult(`✓ Test 7: bg_init telemetry event logged`, 'pass');
+        } else {
+          logResult('✗ Test 7: bg_init telemetry event NOT found', 'fail');
+        }
+
+        if (bgUpdateEvent) {
+          logResult(`✓ Test 8: bg_update telemetry event logged`, 'pass');
+        } else {
+          logResult('⚠ Test 8: bg_update telemetry event NOT found yet (may take a moment)', 'info');
+        }
+
+        logResult('=== Tests Complete ===', 'info');
+      }, 500);
+    }
+
+    function testManualOverride(key) {
+      try {
+        const result = window.BackgroundTheme.manualOverride(key);
+        if (result) {
+          logResult(`✓ Manual override to '${key}' succeeded`, 'pass');
+          updateCurrentThemeDisplay();
+        } else {
+          logResult(`✗ Manual override to '${key}' failed`, 'fail');
+        }
+      } catch (e) {
+        logResult(`✗ Manual override to '${key}' error: ${e.message}`, 'fail');
+      }
+    }
+
+    function testAdaptiveToggle(enabled) {
+      try {
+        window.BackgroundTheme.setAdaptive(enabled);
+        logResult(`✓ Adaptive backgrounds ${enabled ? 'enabled' : 'disabled'}`, 'pass');
+      } catch (e) {
+        logResult(`✗ Adaptive toggle error: ${e.message}`, 'fail');
+      }
+    }
+
+    function testUpdateTheme() {
+      try {
+        window.BackgroundTheme.updateTheme(true);
+        logResult('✓ Force update theme requested', 'pass');
+        setTimeout(updateCurrentThemeDisplay, 500);
+      } catch (e) {
+        logResult(`✗ Update theme error: ${e.message}`, 'fail');
+      }
+    }
+
+    // Run tests after a short delay to ensure module is loaded
+    setTimeout(runTests, 100);
+  </script>
+</body>
+</html>
