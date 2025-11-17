@@ -381,6 +381,7 @@
     g.__vetoAutoTimer = null;
     g.__replacementCommitted = false;
     g.__replacementApplied = false;
+    g.__finishVetoCompCalled = false;
 
     g.__vetoPlayers = computeVetoParticipants();
     // Normalize to numeric again in case upstream changed shape
@@ -663,6 +664,12 @@
   function finishVetoComp(){
     var g = global.game;
     if(!g || g.phase!=='veto_comp') return;
+    
+    // Guard: prevent multiple calls
+    if(g.__finishVetoCompCalled){
+      console.warn('[veto] finishVetoComp already called - skipping duplicate');
+      return;
+    }
 
     // If we still need human input
     if(!humanSubmitted()){
@@ -674,6 +681,9 @@
         return;
       }
     }
+    
+    // Mark as called to prevent duplicates
+    g.__finishVetoCompCalled = true;
 
     var eligible = (Array.isArray(g.__vetoPlayers) && g.__vetoPlayers.length)
       ? g.__vetoPlayers.map(function(x){ return +x; })
