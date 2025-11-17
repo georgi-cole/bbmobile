@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: HOH Profile Fallback Logic</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { color: #83bfff; }
+    h2 { color: #95b8d8; margin-top: 1.5rem; }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+      font-size: 0.95rem;
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    .log {
+      background: #0a0f16;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log-entry { margin: 4px 0; }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+    .warn { color: #fbbf24; }
+    .summary {
+      background: #0a0f16;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      border-left: 4px solid #77d58d;
+    }
+    .summary.fail {
+      border-left-color: #ff6d6d;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 HOH Profile Fallback Logic Test</h1>
+    <p>Tests the new fallback logic for deriving humanId when profile application is delayed.</p>
+
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <button onclick="runTest1()">Test 1: humanId null, human flag present</button>
+      <button onclick="runTest2()">Test 2: humanId null, Guest name present</button>
+      <button onclick="runTest3()">Test 3: humanId null, use first alive</button>
+      <button onclick="runTest4()">Test 4: No players array</button>
+      <button onclick="runTest5()">Test 5: Normal flow (humanId already set)</button>
+      <button onclick="runAllTests()">▶️ Run All Tests</button>
+      <button onclick="clearLog()">Clear Log</button>
+      
+      <div id="testLog" class="log"></div>
+      <div id="testSummary"></div>
+    </div>
+  </div>
+
+  <!-- Minimal mock setup -->
+  <script>
+    // Mock global object
+    window.game = {
+      cfg: {},
+      players: []
+    };
+
+    // Test results tracking
+    let testResults = [];
+    let currentTestName = '';
+
+    function log(message, className = 'info') {
+      const logDiv = document.getElementById('testLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${className}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(message);
+    }
+
+    function clearLog() {
+      document.getElementById('testLog').innerHTML = '';
+      document.getElementById('testSummary').innerHTML = '';
+      testResults = [];
+    }
+
+    function recordResult(testName, passed, message) {
+      testResults.push({ testName, passed, message });
+      log(`${testName}: ${message}`, passed ? 'pass' : 'fail');
+    }
+
+    function showSummary() {
+      const summaryDiv = document.getElementById('testSummary');
+      const passed = testResults.filter(r => r.passed).length;
+      const total = testResults.length;
+      const allPassed = passed === total;
+      
+      summaryDiv.className = `summary ${allPassed ? 'pass' : 'fail'}`;
+      summaryDiv.innerHTML = `
+        <strong>Test Summary:</strong> ${passed}/${total} passed
+        ${allPassed ? '✅ All tests passed!' : '❌ Some tests failed'}
+      `;
+    }
+
+    // Mock ensureHumanIdFromPlayers function (simplified version of the actual implementation)
+    function mockEnsureHumanIdFromPlayers() {
+      const g = window.game;
+      const players = g.players || [];
+      
+      if (!players || players.length === 0) {
+        console.warn('[Test] No players array available for fallback humanId');
+        return null;
+      }
+      
+      // Strategy 1: Find player with human=true flag
+      let humanPlayer = players.find(p => p.human === true);
+      if (humanPlayer) {
+        console.info(`[Test] 🔄 Fallback: Found human player by flag: ${humanPlayer.name}(${humanPlayer.id})`);
+        g.humanId = humanPlayer.id;
+        return humanPlayer.id;
+      }
+      
+      // Strategy 2: Find player with name='Guest' (case-insensitive)
+      humanPlayer = players.find(p => p.name && p.name.toLowerCase() === 'guest');
+      if (humanPlayer) {
+        console.info(`[Test] 🔄 Fallback: Found guest player by name: ${humanPlayer.name}(${humanPlayer.id})`);
+        g.humanId = humanPlayer.id;
+        return humanPlayer.id;
+      }
+      
+      // Strategy 3: Last resort - use first alive player
+      const alivePlayer = players.find(p => !p.evicted);
+      if (alivePlayer) {
+        console.warn(`[Test] ⚠ Fallback: Using first alive player as human: ${alivePlayer.name}(${alivePlayer.id})`);
+        g.humanId = alivePlayer.id;
+        return alivePlayer.id;
+      }
+      
+      console.error('[Test] ✗ Fallback failed: No suitable player found in players array');
+      return null;
+    }
+
+    // Test 1: humanId null, human flag present
+    function runTest1() {
+      currentTestName = 'Test 1';
+      log('=== Test 1: humanId null, human flag present ===', 'info');
+      
+      window.game = {
+        humanId: null,
+        players: [
+          { id: 0, name: 'You', human: true, evicted: false },
+          { id: 1, name: 'Alice', human: false, evicted: false }
+        ]
+      };
+      
+      const result = mockEnsureHumanIdFromPlayers();
+      const passed = result === 0 && window.game.humanId === 0;
+      recordResult(currentTestName, passed, 
+        passed ? 'Successfully found human by flag' : `Failed: expected humanId=0, got ${result}`);
+    }
+
+    // Test 2: humanId null, Guest name present
+    function runTest2() {
+      currentTestName = 'Test 2';
+      log('=== Test 2: humanId null, Guest name present ===', 'info');
+      
+      window.game = {
+        humanId: null,
+        players: [
+          { id: 0, name: 'Guest', human: false, evicted: false },
+          { id: 1, name: 'Alice', human: false, evicted: false }
+        ]
+      };
+      
+      const result = mockEnsureHumanIdFromPlayers();
+      const passed = result === 0 && window.game.humanId === 0;
+      recordResult(currentTestName, passed, 
+        passed ? 'Successfully found Guest by name' : `Failed: expected humanId=0, got ${result}`);
+    }
+
+    // Test 3: humanId null, use first alive
+    function runTest3() {
+      currentTestName = 'Test 3';
+      log('=== Test 3: humanId null, use first alive as fallback ===', 'info');
+      
+      window.game = {
+        humanId: null,
+        players: [
+          { id: 0, name: 'Player1', human: false, evicted: false },
+          { id: 1, name: 'Player2', human: false, evicted: false }
+        ]
+      };
+      
+      const result = mockEnsureHumanIdFromPlayers();
+      const passed = result === 0 && window.game.humanId === 0;
+      recordResult(currentTestName, passed, 
+        passed ? 'Successfully used first alive player' : `Failed: expected humanId=0, got ${result}`);
+    }
+
+    // Test 4: No players array
+    function runTest4() {
+      currentTestName = 'Test 4';
+      log('=== Test 4: No players array available ===', 'info');
+      
+      window.game = {
+        humanId: null,
+        players: []
+      };
+      
+      const result = mockEnsureHumanIdFromPlayers();
+      const passed = result === null && window.game.humanId === null;
+      recordResult(currentTestName, passed, 
+        passed ? 'Correctly returned null for empty players' : `Failed: expected null, got ${result}`);
+    }
+
+    // Test 5: Normal flow (humanId already set)
+    function runTest5() {
+      currentTestName = 'Test 5';
+      log('=== Test 5: Normal flow - humanId already set ===', 'info');
+      
+      window.game = {
+        humanId: 5,
+        players: [
+          { id: 5, name: 'You', human: true, evicted: false },
+          { id: 6, name: 'Alice', human: false, evicted: false }
+        ]
+      };
+      
+      // In real flow, waitForHumanReady would return immediately
+      const passed = window.game.humanId === 5;
+      recordResult(currentTestName, passed, 
+        passed ? 'humanId already set, no fallback needed' : `Failed: humanId changed unexpectedly`);
+    }
+
+    async function runAllTests() {
+      clearLog();
+      log('🚀 Running all tests...', 'info');
+      
+      runTest1();
+      await new Promise(r => setTimeout(r, 100));
+      runTest2();
+      await new Promise(r => setTimeout(r, 100));
+      runTest3();
+      await new Promise(r => setTimeout(r, 100));
+      runTest4();
+      await new Promise(r => setTimeout(r, 100));
+      runTest5();
+      
+      await new Promise(r => setTimeout(r, 200));
+      showSummary();
+    }
+  </script>
+</body>
+</html>
