@@ -986,7 +986,9 @@
     showInstructionsInTV: showInstructionsInTV,
     launchFullscreenMinigame: launchFullscreenMinigame,
     runCompetitionFlow: runCompetitionFlow,
-    cleanupOnPhaseChange: cleanupOnPhaseChange
+    cleanupOnPhaseChange: cleanupOnPhaseChange,
+    ensureAttachedContainer: ensureAttachedContainer,
+    resolveAttachedTvContainer: ensureAttachedContainer // Alias for consistency
   };
 
 })(window);

@@ -69,12 +69,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>🧪 Test: Competition Flow Improvements</h1>
-    <p>Tests all three improvements:</p>
+    <h1>🧪 Test: Competition Flow Improvements - Container Validation</h1>
+    <p>Tests all improvements plus automated container validation:</p>
     <ol>
       <li>Instructions popup removed when Play is pressed</li>
       <li>Instructions styled with transparent, compact design (matching jury vote popup)</li>
       <li>Timer/progress tracker shown in fullscreen minigame overlay</li>
+      <li><strong>NEW:</strong> Automated container validation (attached DOM check)</li>
     </ol>
 
     <div class="test-section">
@@ -82,6 +83,9 @@
       <button onclick="testInstructions()">1. Show Instructions (Compact Style)</button>
       <button onclick="testPlayAndRemove()">2. Test Play Button (Should Remove Instructions)</button>
       <button onclick="testFullscreenWithTimer()">3. Test Fullscreen with Timer</button>
+      <button onclick="testContainerValidation()">4. Test Container Validation</button>
+      <button onclick="testDetachedContainer()">5. Test Detached Container Handling</button>
+      <button onclick="runAllTests()">▶ Run All Tests</button>
       <button onclick="clearTV()">Clear TV</button>
     </div>
 
@@ -207,9 +211,114 @@
       }
     }
 
+    function testContainerValidation() {
+      log('Testing container validation...', 'info');
+      
+      if(!window.CompetitionFlow || !window.CompetitionFlow.ensureAttachedContainer) {
+        log('CompetitionFlow.ensureAttachedContainer not available', 'fail');
+        return;
+      }
+      
+      // Test 1: Valid attached container
+      const tv = document.getElementById('tvViewport');
+      const validated1 = window.CompetitionFlow.ensureAttachedContainer(tv);
+      if(validated1 && validated1.isConnected) {
+        log('✓ Valid attached container validated correctly', 'pass');
+      } else {
+        log('✗ Valid container validation failed', 'fail');
+      }
+      
+      // Test 2: Null container (should return fallback)
+      const validated2 = window.CompetitionFlow.ensureAttachedContainer(null);
+      if(validated2 && validated2.isConnected) {
+        log('✓ Null container returns attached fallback: ' + validated2.tagName, 'pass');
+      } else {
+        log('✗ Null container fallback failed', 'fail');
+      }
+      
+      // Test 3: Detached container
+      const detached = document.createElement('div');
+      detached.className = 'test-detached';
+      const validated3 = window.CompetitionFlow.ensureAttachedContainer(detached);
+      if(validated3 && validated3.isConnected && validated3 !== detached) {
+        log('✓ Detached container returns attached fallback: ' + validated3.tagName, 'pass');
+      } else {
+        log('✗ Detached container handling failed', 'fail');
+      }
+      
+      log('Container validation tests complete', 'info');
+    }
+    
+    function testDetachedContainer() {
+      log('Testing detached container scenario...', 'info');
+      
+      // Create a detached container
+      const detachedContainer = document.createElement('div');
+      detachedContainer.id = 'detached-test-container';
+      detachedContainer.style.cssText = 'background: #1a2937; padding: 20px;';
+      
+      log('Created detached container (not in DOM)', 'info');
+      
+      if(!window.CompetitionFlow || !window.CompetitionFlow.showInstructionsInTV) {
+        log('CompetitionFlow not available', 'fail');
+        return;
+      }
+      
+      // Try to show instructions in detached container
+      // ensureAttachedContainer should handle this and find a fallback
+      try {
+        log('Attempting to render instructions in detached container...', 'info');
+        window.CompetitionFlow.showInstructionsInTV('quickTap', detachedContainer, () => {
+          log('Play button clicked in detached container test', 'info');
+        });
+        
+        // Check if instructions ended up in an attached container
+        setTimeout(() => {
+          const instructionsCard = document.querySelector('.competition-instructions-card');
+          if(instructionsCard && instructionsCard.isConnected) {
+            log('✓ Instructions rendered in attached container despite detached input', 'pass');
+            log('Instructions container: ' + instructionsCard.parentElement.tagName, 'info');
+          } else {
+            log('✗ Instructions not found in attached container', 'fail');
+          }
+        }, 500);
+      } catch(e) {
+        log('✗ Error during detached container test: ' + e.message, 'fail');
+      }
+    }
+    
+    function runAllTests() {
+      log('═══ Running All Automated Tests ═══', 'info');
+      
+      // Clear TV first
+      clearTV();
+      
+      // Run tests in sequence with delays
+      setTimeout(() => {
+        log('Test 1: Container Validation', 'info');
+        testContainerValidation();
+      }, 500);
+      
+      setTimeout(() => {
+        log('Test 2: Detached Container Handling', 'info');
+        testDetachedContainer();
+      }, 2000);
+      
+      setTimeout(() => {
+        log('Test 3: Instructions Display', 'info');
+        testInstructions();
+      }, 4000);
+      
+      setTimeout(() => {
+        log('═══ All Automated Tests Complete ═══', 'info');
+        log('Manual tests (Play button, fullscreen) require user interaction', 'info');
+      }, 6000);
+    }
+
     // Initialize
     log('Test page loaded', 'info');
-    log('All three improvements are ready to test', 'info');
+    log('All improvements are ready to test', 'info');
+    log('Click "Run All Tests" for automated validation', 'info');
   </script>
 </body>
 </html>

@@ -48,7 +48,7 @@
         const msg = [title || 'Update'].concat(Array.isArray(lines) ? lines : []).join(' — ');
         tvNow.textContent = msg;
       }
-    } catch (e) { }
+    } catch (e) { /* Non-fatal error, continue */ }
     return undefined;
   }
   async function waitCardsIdle() {
@@ -56,7 +56,7 @@
       if (typeof global.cardQueueWaitIdle === 'function') {
         await global.cardQueueWaitIdle();
       }
-    } catch (e) { }
+    } catch (e) { /* Non-fatal error, continue */ }
   }
 
   // Fisher-Yates shuffle for legacy pool (one-time per season)
@@ -950,6 +950,43 @@
   }
   global.renderCompPanel = renderCompPanel;
 
+  /**
+   * Wait for human profile to be ready (g.humanId and profile object available)
+   * Retries with exponential backoff up to a timeout
+   * @param {number} maxWaitMs - Maximum time to wait (default: 2000ms)
+   * @returns {Promise<Object|null>} Resolves with player object or null on timeout
+   */
+  async function waitForHumanReady(maxWaitMs = 2000) {
+    const g = global.game;
+    const startTime = Date.now();
+    let attempts = 0;
+    
+    while (Date.now() - startTime < maxWaitMs) {
+      attempts++;
+      
+      // Check if humanId exists and profile is available
+      if (g.humanId !== null && g.humanId !== undefined) {
+        const player = global.getP?.(g.humanId);
+        if (player) {
+          console.info(`[Competition] ✓ Human profile ready after ${attempts} attempt(s), ${Date.now() - startTime}ms`);
+          return player;
+        }
+      }
+      
+      // Show status message while waiting
+      if (window.TvStatus?.set) {
+        window.TvStatus.set('Waiting for player profile…');
+      }
+      
+      // Exponential backoff: 250ms, 500ms, 750ms, 1000ms...
+      const delay = Math.min(250 * attempts, 1000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
+    console.warn(`[Competition] ⚠ Human profile not ready after ${maxWaitMs}ms, ${attempts} attempts`);
+    return null;
+  }
+
   function renderHOH(panel) {
     const g = global.game; 
     panel.innerHTML = '';
@@ -958,8 +995,7 @@
     console.info(`[Competition] Week: ${g.week}, Phase: ${g.phase}, Human ID: ${g.humanId}`);
     
     const host = document.createElement('div'); host.className = 'miniggame-host minigame-host';
-    const you = global.getP?.(g.humanId);
-
+    
     // Check if minigame system is ready
     if (!isMinigameSystemReady()) {
       console.warn('[Competition] ⚠ Minigame system not ready, waiting...');
@@ -983,43 +1019,69 @@
 
     console.info('[Competition] ✓ Minigame system is ready');
 
-    if (you && !you.evicted) {
+    // Wait for human profile with retry loop
+    (async () => {
+      const you = await waitForHumanReady(2000);
+      
+      if (!you) {
+        console.error('[Competition] ✗ Human profile not available after waiting');
+        if (window.TvStatus?.set) {
+          window.TvStatus.set('Error: Player profile not loaded. Please refresh the page.');
+        }
+        return;
+      }
+
+      if (you.evicted) {
+        console.warn(`[Competition] ⚠ Human is evicted and cannot compete`);
+        if (window.TvStatus?.set) {
+          window.TvStatus.set('You are evicted and cannot compete.');
+        }
+        return;
+      }
+
       const alive = global.alivePlayers(); 
       const blocked = (alive.length !== 4 && g.week > 1) ? g.lastHOHId : null;
       
       console.info(`[Competition] Human player: ${you.name}(${you.id}), evicted=${you.evicted}`);
       console.info(`[Competition] Alive players: ${alive.length}, Blocked player: ${blocked || 'none'}`);
-      console.info(`[Competition] Already submitted: ${g.lastCompScores?.has(you.id) || false}`);
       
-      if (you.id !== blocked && !g.lastCompScores?.has(you.id)) {
-        console.info('[Competition] ✓ Human is eligible for HOH competition');
-        
-        const mg = pickMinigameType();
-        console.info(`[Competition] ✓ Selected minigame: ${mg}`);
-
-        runHumanMinigameWithGuards({
-          mg,
-          host,
-          player: you,
-          label: `HOH/${mg}`,
-          multiplier: (0.75 + (you?.compBeast || 0.5) * 0.6),
-          onAfterSubmit: () => { /* no-op */ }
-        });
-
-      } else {
-        console.warn(`[Competition] ⚠ Human not eligible: blocked=${you.id === blocked}, alreadySubmitted=${g.lastCompScores?.has(you.id)}`);
-        // Use inline status instead of below-TV message
+      // Check if blocked
+      if (you.id === blocked) {
+        console.warn(`[Competition] ⚠ Human is blocked (was last HOH): blocked=${blocked}`);
         if (window.TvStatus?.set) {
-          window.TvStatus.set('Not eligible this week or already submitted.');
+          window.TvStatus.set('Not eligible this week (you were last HOH).');
         }
+        return;
       }
-    } else {
-      console.warn(`[Competition] ⚠ Human cannot compete: exists=${!!you}, evicted=${you?.evicted || 'N/A'}`);
-      // Use inline status instead of below-TV message
-      if (window.TvStatus?.set) {
-        window.TvStatus.set('You are evicted and cannot compete.');
+      
+      // Check eligibility using lastCompScores first (quick check)
+      // CompLocks will be checked in runHumanMinigameWithGuards for replay prevention
+      const alreadySubmittedQuick = g.lastCompScores?.has(you.id) || false;
+      console.info(`[Competition] Quick eligibility check: alreadySubmitted=${alreadySubmittedQuick}`);
+      
+      if (alreadySubmittedQuick) {
+        console.warn(`[Competition] ⚠ Human already submitted for this competition (quick check)`);
+        if (window.TvStatus?.set) {
+          window.TvStatus.set('You have already submitted for this competition.');
+        }
+        return;
       }
-    }
+      
+      console.info('[Competition] ✓ Human is eligible for HOH competition');
+      
+      const mg = pickMinigameType();
+      console.info(`[Competition] ✓ Selected minigame: ${mg}`);
+
+      runHumanMinigameWithGuards({
+        mg,
+        host,
+        player: you,
+        label: `HOH/${mg}`,
+        multiplier: (0.75 + (you?.compBeast || 0.5) * 0.6),
+        onAfterSubmit: () => { /* no-op */ }
+      });
+    })();
+    
     // Only append host if it has content (minigame rendering)
     if(host.childElementCount > 0){
       panel.appendChild(host);
@@ -1330,7 +1392,7 @@
         try {
           global.cardQueueWaitIdle().then(function () { beginF3P1Competition(); });
           return;
-        } catch (e) { }
+        } catch (e) { /* Non-fatal error, continue */ }
       }
       setTimeout(function () { beginF3P1Competition(); }, 500);
     })();
@@ -1419,7 +1481,7 @@
         try {
           global.cardQueueWaitIdle().then(function () { beginF3P2Competition(duo); });
           return;
-        } catch (e) { }
+        } catch (e) { /* Non-fatal error, continue */ }
       }
       setTimeout(function () { beginF3P2Competition(duo); }, 500);
     })();
@@ -1530,7 +1592,7 @@
         try {
           global.cardQueueWaitIdle().then(function () { beginF3P3Competition(); });
           return;
-        } catch (e) { }
+        } catch (e) { /* Non-fatal error, continue */ }
       }
       setTimeout(function () { beginF3P3Competition(); }, 500);
     })();
@@ -1899,11 +1961,11 @@
 
     safeShowCard('🎬 Final Eviction Decision', [`${hoh.name} has chosen to evict`, ev.name, 'to the Jury'], 'evict', 5000, true);
 
-    try { await global.cardQueueWaitIdle?.(); } catch { }
+    try { await global.cardQueueWaitIdle?.(); } catch { /* Non-fatal error, continue */ }
 
     safeShowCard('🥉 Third Place', [ev.name, 'finishes in 3rd place', 'The Bronze Medalist'], 'warn', 4500, true);
 
-    try { await global.cardQueueWaitIdle?.(); } catch { }
+    try { await global.cardQueueWaitIdle?.(); } catch { /* Non-fatal error, continue */ }
 
     // Notify visual system to suppress red X during animation
     if(typeof global.notifyEvictedForVisual === 'function'){
@@ -1922,11 +1984,11 @@
     const justification = g.__lastEvictionJustification;
     if (justification) {
       safeShowCard(`💬 ${hoh.name}`, [`"${justification}"`], 'neutral', 4000, true);
-      try { await global.cardQueueWaitIdle?.(); } catch { }
+      try { await global.cardQueueWaitIdle?.(); } catch { /* Non-fatal error, continue */ }
 
       const reply = generateEvicteeReply(ev, hoh);
       safeShowCard(`💬 ${ev.name}`, [`"${reply}"`], 'neutral', 4000, true);
-      try { await global.cardQueueWaitIdle?.(); } catch { }
+      try { await global.cardQueueWaitIdle?.(); } catch { /* Non-fatal error, continue */ }
 
       delete g.__lastEvictionJustification;
     }
@@ -1954,7 +2016,7 @@
     g.hohId = null;
     console.info('[final3] badges cleared after eviction reveal');
 
-    try { global.updateHud?.(); } catch { }
+    try { global.updateHud?.(); } catch { /* Non-fatal error, continue */ }
     setTimeout(() => {
       if (typeof global.postEvictionRouting === 'function') {
         global.postEvictionRouting();
