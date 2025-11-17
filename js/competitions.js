@@ -375,7 +375,7 @@
       try {
         const el = document.querySelector(selector);
         if (el && el.isConnected) {
-          console.info('[Competition] Using container:', selector);
+          console.info('[Competition] ✓ Using attached container:', selector);
           return el;
         }
       } catch (e) {
@@ -385,16 +385,53 @@
     }
 
     // Ultimate fallback: document.body (always attached)
-    console.warn('[Competition] No TV container found, falling back to document.body');
+    console.warn('[Competition] ⚠ No TV container found, falling back to document.body');
     return document.body;
   }
 
+  /**
+   * Wait for TV viewport to be ready and attached to DOM
+   * Retries up to maxAttempts with specified delay between attempts
+   * 
+   * @param {number} maxAttempts - Maximum number of retry attempts (default: 20)
+   * @param {number} delayMs - Delay between attempts in milliseconds (default: 100ms)
+   * @returns {Promise<HTMLElement>} Resolves with attached container when ready
+   */
+  function waitForTvViewportReady(maxAttempts = 20, delayMs = 100) {
+    return new Promise((resolve) => {
+      let attempts = 0;
+      
+      function checkReady() {
+        attempts++;
+        const container = getTvInstructionsContainer();
+        
+        // Check if we got a real TV container (not document.body fallback)
+        const isRealTvContainer = container !== document.body;
+        
+        if (isRealTvContainer && container.isConnected) {
+          console.info(`[Competition] ✓ TV viewport ready after ${attempts} attempt(s)`);
+          resolve(container);
+        } else if (attempts >= maxAttempts) {
+          console.warn(`[Competition] ⚠ TV viewport not ready after ${attempts} attempts, using fallback`);
+          resolve(container); // Use fallback container
+        } else {
+          setTimeout(checkReady, delayMs);
+        }
+      }
+      
+      checkReady();
+    });
+  }
+
   // Helper: run a human minigame with both replay-lock and anti-cheat
-  function runHumanMinigameWithGuards({ mg, host, player, label, multiplier, onAfterSubmit }) {
+  async function runHumanMinigameWithGuards({ mg, host, player, label, multiplier, onAfterSubmit }) {
     const g = global.game;
+
+    console.info(`[Competition] → runHumanMinigameWithGuards called: week=${g.week}, phase=${g.phase}, mg=${mg}, player=${player.name}(${player.id})`);
 
     // 1) Block replays for this week/phase/game
     if (global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, player.id)) {
+      console.warn(`[Competition] ⚠ Replay-lock triggered: week=${g.week}, phase=${g.phase}, mg=${mg}, player=${player.name}(${player.id})`);
       // Use inline status instead of below-TV message
       if (window.TvStatus?.set) {
         window.TvStatus.set('You have already submitted for this competition.');
@@ -402,8 +439,12 @@
       return;
     }
 
+    console.info('[Competition] ✓ Replay-lock check passed');
+
     // 2) Check if CompetitionFlow is available for new flow
     if (global.CompetitionFlow && typeof global.CompetitionFlow.runCompetitionFlow === 'function') {
+      console.info('[Competition] ✓ Using CompetitionFlow (new flow)');
+      
       // Use new competition flow: instructions → fullscreen game → completion
       // Show status in TV header inline status bar
       if (window.TvStatus?.set) {
@@ -414,17 +455,27 @@
       (function ensureOverlayNotBlocking(){
         try {
           const ov = document.getElementById('tvOverlay');
-          if (!ov) return;
+          if (!ov) {
+            console.info('[Competition] No #tvOverlay found');
+            return;
+          }
           const content = ov.querySelector('.tvOverlayContent');
           const hasActiveContent = !!(content && content.childElementCount > 0);
           if (!hasActiveContent) {
             ov.style.pointerEvents = 'none';
+            console.info('[Competition] ✓ Neutralized empty #tvOverlay (pointer-events: none)');
+          } else {
+            console.info(`[Competition] #tvOverlay has active content (${content.childElementCount} children), not neutralizing`);
           }
-        } catch(e){ console.warn('[Competition] tvOverlay neutralization failed', e); }
+        } catch(e){ 
+          console.warn('[Competition] tvOverlay neutralization failed', e); 
+        }
       })();
       
-      // Get an attached container for instructions (inside TV, not a detached node)
-      const instructionsContainer = getTvInstructionsContainer();
+      // Wait for TV viewport to be ready and attached (with retry)
+      console.info('[Competition] Waiting for TV viewport readiness...');
+      const instructionsContainer = await waitForTvViewportReady(20, 100);
+      console.info('[Competition] ✓ TV viewport ready, container obtained:', instructionsContainer.tagName, instructionsContainer.className || instructionsContainer.id);
       
       // Start AntiCheat session with minDistinctInputs: 0 to allow low-input games
       // Use the same attached container as instructions to ensure proper tracking
@@ -436,6 +487,7 @@
             gameKey: mg,
             thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
           });
+          console.info('[Competition] ✓ AntiCheat session started:', antiCheatSessionId);
         } catch (e) {
           // Don't abort flow if AntiCheat fails to start
           console.warn('[Competition] AntiCheat.startSession failed (non-fatal):', e);
@@ -443,7 +495,10 @@
       }
 
       // Run competition flow (pass TV viewport for instructions to appear inside TV)
+      console.info('[Competition] → Calling CompetitionFlow.runCompetitionFlow with container and game:', mg);
       global.CompetitionFlow.runCompetitionFlow(mg, instructionsContainer, (base) => {
+        console.info(`[Competition] ← Competition completed with score: ${base}`);
+        
         // Validate with AntiCheat
         if (antiCheatSessionId && global.AntiCheat) {
           const v = global.AntiCheat.validate(antiCheatSessionId);
@@ -453,17 +508,22 @@
             global.AntiCheat.cleanup(antiCheatSessionId);
             return;
           }
+          console.info('[Competition] ✓ AntiCheat validation passed');
           global.AntiCheat.cleanup(antiCheatSessionId);
         }
 
         // Submit score
+        console.info(`[Competition] → Submitting score: player=${player.name}, base=${base}, multiplier=${multiplier}`);
         if (submitScore(player.id, base, multiplier, label)) {
+          console.info('[Competition] ✓ Score submitted successfully');
           // Use inline status instead of below-TV message
           if (window.TvStatus?.set) {
             window.TvStatus.set('Submission received. Waiting for others…');
           }
           if (typeof onAfterSubmit === 'function') onAfterSubmit();
           maybeFinishComp();
+        } else {
+          console.warn('[Competition] ⚠ Score submission failed (duplicate or invalid)');
         }
       });
       
@@ -474,15 +534,22 @@
       // Start AntiCheat session
       let antiCheatSessionId = null;
       if (global.AntiCheat) {
-        antiCheatSessionId = global.AntiCheat.startSession({
-          container: host,
-          gameKey: mg,
-          thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
-        });
+        try {
+          antiCheatSessionId = global.AntiCheat.startSession({
+            container: host,
+            gameKey: mg,
+            thresholds: { minPlayTime: 3000, maxDuration: 300000, minDistinctInputs: 0 }
+          });
+          console.info('[Competition] ✓ AntiCheat session started (legacy):', antiCheatSessionId);
+        } catch (e) {
+          console.warn('[Competition] AntiCheat.startSession failed (non-fatal):', e);
+        }
       }
 
       // Render game inline & validate
       global.renderMinigame?.(mg, host, (base) => {
+        console.info(`[Competition] ← Legacy competition completed with score: ${base}`);
+        
         if (antiCheatSessionId && global.AntiCheat) {
           const v = global.AntiCheat.validate(antiCheatSessionId);
           if (!v.valid) {
@@ -491,16 +558,21 @@
             global.AntiCheat.cleanup(antiCheatSessionId);
             return;
           }
+          console.info('[Competition] ✓ AntiCheat validation passed (legacy)');
           global.AntiCheat.cleanup(antiCheatSessionId);
         }
 
+        console.info(`[Competition] → Submitting score (legacy): player=${player.name}, base=${base}`);
         if (submitScore(player.id, base, multiplier, label)) {
+          console.info('[Competition] ✓ Score submitted successfully (legacy)');
           // Use inline status instead of below-TV message
           if (window.TvStatus?.set) {
             window.TvStatus.set('Submission received. Waiting for others…');
           }
           if (typeof onAfterSubmit === 'function') onAfterSubmit();
           maybeFinishComp();
+        } else {
+          console.warn('[Competition] ⚠ Score submission failed (duplicate or invalid, legacy)');
         }
       });
     }
@@ -879,21 +951,28 @@
   global.renderCompPanel = renderCompPanel;
 
   function renderHOH(panel) {
-    const g = global.game; panel.innerHTML = '';
+    const g = global.game; 
+    panel.innerHTML = '';
+    
+    console.info(`[Competition] ═══ renderHOH called ═══`);
+    console.info(`[Competition] Week: ${g.week}, Phase: ${g.phase}, Human ID: ${g.humanId}`);
+    
     const host = document.createElement('div'); host.className = 'miniggame-host minigame-host';
     const you = global.getP?.(g.humanId);
 
     // Check if minigame system is ready
     if (!isMinigameSystemReady()) {
+      console.warn('[Competition] ⚠ Minigame system not ready, waiting...');
       // Use inline status instead of below-TV message
       if (window.TvStatus?.set) {
         window.TvStatus.set('Loading minigame system…');
       }
       setTimeout(() => {
         if (isMinigameSystemReady()) {
+          console.info('[Competition] ✓ Minigame system ready after wait, retrying renderHOH');
           renderHOH(panel);
         } else {
-          console.error('[Competition] Minigame system failed to load');
+          console.error('[Competition] ✗ Minigame system failed to load after wait');
           if (window.TvStatus?.set) {
             window.TvStatus.set('Error loading minigames. Please refresh the page.');
           }
@@ -902,10 +981,21 @@
       return;
     }
 
+    console.info('[Competition] ✓ Minigame system is ready');
+
     if (you && !you.evicted) {
-      const alive = global.alivePlayers(); const blocked = (alive.length !== 4 && g.week > 1) ? g.lastHOHId : null;
+      const alive = global.alivePlayers(); 
+      const blocked = (alive.length !== 4 && g.week > 1) ? g.lastHOHId : null;
+      
+      console.info(`[Competition] Human player: ${you.name}(${you.id}), evicted=${you.evicted}`);
+      console.info(`[Competition] Alive players: ${alive.length}, Blocked player: ${blocked || 'none'}`);
+      console.info(`[Competition] Already submitted: ${g.lastCompScores?.has(you.id) || false}`);
+      
       if (you.id !== blocked && !g.lastCompScores?.has(you.id)) {
+        console.info('[Competition] ✓ Human is eligible for HOH competition');
+        
         const mg = pickMinigameType();
+        console.info(`[Competition] ✓ Selected minigame: ${mg}`);
 
         runHumanMinigameWithGuards({
           mg,
@@ -917,12 +1007,14 @@
         });
 
       } else {
+        console.warn(`[Competition] ⚠ Human not eligible: blocked=${you.id === blocked}, alreadySubmitted=${g.lastCompScores?.has(you.id)}`);
         // Use inline status instead of below-TV message
         if (window.TvStatus?.set) {
           window.TvStatus.set('Not eligible this week or already submitted.');
         }
       }
     } else {
+      console.warn(`[Competition] ⚠ Human cannot compete: exists=${!!you}, evicted=${you?.evicted || 'N/A'}`);
       // Use inline status instead of below-TV message
       if (window.TvStatus?.set) {
         window.TvStatus.set('You are evicted and cannot compete.');

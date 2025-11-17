@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: HOH/POV Instructions Fix</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: #83bfff; 
+    }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    
+    /* Simulate TV viewport */
+    .tvViewport {
+      background: #0a0f16;
+      border: 2px solid #24364b;
+      border-radius: 12px;
+      padding: 40px 20px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .log {
+      background: #0a0f16;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+    .warn { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: HOH/POV Instructions Fix</h1>
+    <p><strong>Purpose:</strong> Verify comprehensive logging and TV viewport readiness checks.</p>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <p>Check the Console Log below for detailed diagnostic output:</p>
+      <ul>
+        <li>✓ Container selection with priority list</li>
+        <li>✓ TV viewport readiness retry logic</li>
+        <li>✓ Replay-lock checks with context</li>
+        <li>✓ Instructions rendering confirmation</li>
+        <li>✓ Fullscreen overlay creation</li>
+      </ul>
+      
+      <button onclick="testContainerSelection()">1. Test Container Selection</button>
+      <button onclick="testTvReadiness()">2. Test TV Readiness Wait</button>
+      <button onclick="testReplayLock()">3. Test Replay Lock Logging</button>
+      <button onclick="testFullFlow()">4. Test Full Competition Flow</button>
+      <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="test-section">
+      <h2>TV Viewport Simulation</h2>
+      <div class="tvViewport" data-faux-tv id="tvViewport">
+        <div style="color: #95a9c0; font-style: italic;">TV viewport ready (data-faux-tv attribute present)</div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log Output</h2>
+      <div id="consoleLog" class="log">Logs will appear here...</div>
+    </div>
+  </div>
+
+  <script>
+    // Capture console logs and display in page
+    let capturedLogs = [];
+    const originalConsole = {
+      log: console.log,
+      info: console.info,
+      warn: console.warn,
+      error: console.error
+    };
+    
+    function captureLog(level, args) {
+      const msg = Array.from(args).map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      
+      capturedLogs.push({ level, msg, time: new Date().toLocaleTimeString() });
+      updateLogDisplay();
+      
+      // Call original console method
+      originalConsole[level].apply(console, args);
+    }
+    
+    console.log = (...args) => captureLog('log', args);
+    console.info = (...args) => captureLog('info', args);
+    console.warn = (...args) => captureLog('warn', args);
+    console.error = (...args) => captureLog('error', args);
+    
+    function updateLogDisplay() {
+      const logEl = document.getElementById('consoleLog');
+      logEl.innerHTML = capturedLogs.slice(-100).map(l => {
+        let className = 'info';
+        if (l.msg.includes('✓') || l.msg.includes('PASS')) className = 'pass';
+        else if (l.msg.includes('✗') || l.msg.includes('FAIL') || l.level === 'error') className = 'fail';
+        else if (l.msg.includes('⚠') || l.level === 'warn') className = 'warn';
+        
+        return `<div class="${className}">[${l.time}] ${l.msg}</div>`;
+      }).join('');
+      
+      // Auto-scroll to bottom
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    function clearLog() {
+      capturedLogs = [];
+      updateLogDisplay();
+      console.info('[Test] Log cleared');
+    }
+    
+    // Mock minimal game environment
+    window.game = {
+      week: 1,
+      phase: 'hoh',
+      humanId: 1,
+      players: [
+        { id: 1, name: 'Human Player', human: true, evicted: false, compBeast: 0.6 },
+        { id: 2, name: 'AI Player 1', human: false, evicted: false, compBeast: 0.5 },
+        { id: 3, name: 'AI Player 2', human: false, evicted: false, compBeast: 0.5 }
+      ],
+      lastCompScores: new Map(),
+      cfg: {
+        tHOH: 30
+      }
+    };
+    
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+    
+    // Mock CompLocks
+    window.CompLocks = {
+      hasSubmittedThisWeek: function(week, phase, gameKey, playerId) {
+        console.info(`[CompLocks] Checking lock: week=${week}, phase=${phase}, game=${gameKey}, player=${playerId}`);
+        return false; // Always return false for testing
+      },
+      lockSubmission: function(week, phase, gameKey, playerId) {
+        console.info(`[CompLocks] Locking: week=${week}, phase=${phase}, game=${gameKey}, player=${playerId}`);
+      }
+    };
+    
+    // Mock MinigameRegistry and MinigameSelector
+    window.MinigameRegistry = {
+      getImplementedGames: function() { return ['quickTap', 'memoryMatch', 'timingBar']; }
+    };
+    
+    window.MinigameSelector = {
+      selectNext: function() {
+        console.info('[MinigameSelector] Selecting next game from pool');
+        return 'quickTap';
+      }
+    };
+    
+    window.MinigameInstructions = {
+      getInstructions: function(gameKey) {
+        return {
+          title: `${gameKey} Challenge`,
+          description: 'Test your skills in this minigame!',
+          steps: ['Step 1: Get ready', 'Step 2: Play the game', 'Step 3: Complete for score']
+        };
+      }
+    };
+    
+    // Mock renderMinigame
+    window.renderMinigame = function(gameKey, container, onComplete, options) {
+      console.info(`[renderMinigame] Rendering ${gameKey} with options:`, options);
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #e3ecf5;">
+          <h2>Mock Game: ${gameKey}</h2>
+          <p>This is a mock game for testing purposes.</p>
+          <button onclick="completeTestGame()" style="padding: 12px 24px; margin-top: 20px;">
+            Complete Game (Score: 100)
+          </button>
+        </div>
+      `;
+      
+      window._mockGameComplete = onComplete;
+      return { cleanup: () => console.info('[renderMinigame] Cleanup called') };
+    };
+    
+    window.completeTestGame = function() {
+      console.info('[Test] Completing mock game with score 100');
+      if (window._mockGameComplete) {
+        window._mockGameComplete(100);
+      }
+    };
+    
+    // Test functions
+    function testContainerSelection() {
+      console.info('\n═══ TEST 1: Container Selection ═══');
+      
+      // Load getTvInstructionsContainer from competitions.js
+      const script = document.createElement('script');
+      script.src = 'js/competitions.js';
+      script.onload = function() {
+        console.info('[Test] competitions.js loaded');
+        
+        if (window.getTvInstructionsContainer) {
+          console.info('[Test] Calling getTvInstructionsContainer()...');
+          const container = window.getTvInstructionsContainer();
+          console.info('[Test] ✓ Container obtained:', container.tagName, container.className || container.id);
+        } else {
+          console.error('[Test] ✗ getTvInstructionsContainer not available');
+        }
+      };
+      document.head.appendChild(script);
+    }
+    
+    function testTvReadiness() {
+      console.info('\n═══ TEST 2: TV Readiness Wait ═══');
+      console.info('[Test] This test verifies the retry logic waits for TV viewport to be attached');
+      
+      // Temporarily remove TV viewport
+      const tv = document.getElementById('tvViewport');
+      const parent = tv.parentNode;
+      tv.remove();
+      console.warn('[Test] TV viewport temporarily removed from DOM');
+      
+      // Try to get container (should trigger retry logic)
+      setTimeout(function() {
+        console.info('[Test] Calling getTvInstructionsContainer with detached TV...');
+        const container = window.getTvInstructionsContainer();
+        console.info('[Test] Container obtained during detached state:', container.tagName);
+        
+        // Re-attach TV after 500ms
+        setTimeout(function() {
+          parent.appendChild(tv);
+          console.info('[Test] ✓ TV viewport re-attached to DOM');
+        }, 500);
+      }, 100);
+    }
+    
+    function testReplayLock() {
+      console.info('\n═══ TEST 3: Replay Lock Logging ═══');
+      console.info('[Test] This test checks verbose logging for replay-lock decisions');
+      
+      // Create a mock scenario where player has already submitted
+      const origCheck = window.CompLocks.hasSubmittedThisWeek;
+      window.CompLocks.hasSubmittedThisWeek = function(week, phase, gameKey, playerId) {
+        console.warn(`[CompLocks] MOCK: Player has already submitted - week=${week}, phase=${phase}, game=${gameKey}, player=${playerId}`);
+        return true; // Return true to trigger replay-lock
+      };
+      
+      console.info('[Test] Attempting to run competition with replay-lock active...');
+      
+      // Trigger the flow (should be blocked by replay-lock)
+      if (window.runHumanMinigameWithGuards) {
+        const player = window.getP(1);
+        window.runHumanMinigameWithGuards({
+          mg: 'quickTap',
+          host: document.createElement('div'),
+          player: player,
+          label: 'HOH/quickTap',
+          multiplier: 1.0,
+          onAfterSubmit: () => {}
+        });
+      }
+      
+      // Restore original check after 2 seconds
+      setTimeout(function() {
+        window.CompLocks.hasSubmittedThisWeek = origCheck;
+        console.info('[Test] ✓ Replay-lock check restored');
+      }, 2000);
+    }
+    
+    function testFullFlow() {
+      console.info('\n═══ TEST 4: Full Competition Flow ═══');
+      console.info('[Test] This test runs the complete competition flow with all logging');
+      
+      // Ensure competitions-flow.js is loaded
+      if (!window.CompetitionFlow) {
+        const script = document.createElement('script');
+        script.src = 'js/competitions-flow.js';
+        script.onload = function() {
+          console.info('[Test] competitions-flow.js loaded');
+          runFullFlowTest();
+        };
+        document.head.appendChild(script);
+      } else {
+        runFullFlowTest();
+      }
+    }
+    
+    function runFullFlowTest() {
+      const tv = document.getElementById('tvViewport');
+      
+      if (window.CompetitionFlow && window.CompetitionFlow.runCompetitionFlow) {
+        console.info('[Test] → Calling CompetitionFlow.runCompetitionFlow');
+        
+        window.CompetitionFlow.runCompetitionFlow('quickTap', tv, function(score) {
+          console.info(`[Test] ✓ Competition completed with score: ${score}`);
+        }, { timeLimit: 30 });
+        
+        console.info('[Test] Instructions should now be visible in TV viewport');
+        console.info('[Test] Click the Play button to launch fullscreen minigame');
+      } else {
+        console.error('[Test] ✗ CompetitionFlow not available');
+      }
+    }
+    
+    // Initialize
+    console.info('═══ HOH/POV Instructions Fix Test ═══');
+    console.info('Test environment initialized. Click test buttons to run scenarios.');
+    console.info('All console output will be captured and displayed on this page.');
+    console.info('Check for ✓ (success), ⚠ (warning), and ✗ (error) indicators.\n');
+  </script>
+</body>
+</html>

@@ -165,11 +165,12 @@
   function ensureAttachedContainer(container){
     // Check if container is valid and attached
     if(container && container.isConnected){
+      console.info('[CompetitionFlow] ✓ Container is attached:', container.tagName, container.className || container.id);
       return container;
     }
 
     // Container is detached or null, log warning and find fallback
-    console.warn('[CompetitionFlow] Container is detached or null, finding fallback');
+    console.warn('[CompetitionFlow] ⚠ Container is detached or null, finding fallback. Provided:', container);
 
     // Try to find an attached container using priority list
     const selectors = [
@@ -187,16 +188,17 @@
       try {
         const el = document.querySelector(selector);
         if(el && el.isConnected){
-          console.info('[CompetitionFlow] Using fallback container:', selector);
+          console.info('[CompetitionFlow] ✓ Using fallback attached container:', selector);
           return el;
         }
       } catch(e){
         // Selector failed, continue to next
+        console.warn('[CompetitionFlow] Selector failed:', selector, e);
       }
     }
 
     // Ultimate fallback: document.body
-    console.warn('[CompetitionFlow] No attached container found, using document.body');
+    console.warn('[CompetitionFlow] ⚠ No attached container found, using document.body');
     return document.body;
   }
 
@@ -210,8 +212,12 @@
    * @returns {HTMLElement} The instructions card element
    */
   function showInstructionsInTV(gameKey, container, onPlay){
+    console.info(`[CompetitionFlow] → showInstructionsInTV called: gameKey=${gameKey}`);
+    
     // Ensure container is attached to the DOM (belt-and-suspenders safeguard)
     container = ensureAttachedContainer(container);
+    console.info('[CompetitionFlow] ✓ Container validated and ready for instructions');
+    
     // Get instructions from MinigameInstructions module
     let instructions = { title: 'Competition', description: 'Play the minigame to compete!', steps: [] };
     if(g.MinigameInstructions && typeof g.MinigameInstructions.getInstructions === 'function'){
@@ -318,6 +324,7 @@
       playButton.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
     });
     playButton.addEventListener('click', () => {
+      console.info('[CompetitionFlow] ▶ Play button clicked, launching fullscreen minigame');
       if(typeof onPlay === 'function'){
         onPlay();
       }
@@ -332,6 +339,9 @@
     buttonsContainer.appendChild(playButton);
     card.appendChild(buttonsContainer);
     container.appendChild(card);
+    
+    console.info('[CompetitionFlow] ✓ Instructions card rendered and appended to container');
+    console.info(`[CompetitionFlow] Container details: tagName=${container.tagName}, className=${container.className}, id=${container.id}, isConnected=${container.isConnected}`);
 
     // Register as active instructions card for cleanup on phase change
     activeInstructionsCard = card;
@@ -481,6 +491,9 @@
    * @returns {Object} Overlay controls { close, overlay }
    */
   function launchFullscreenMinigame(gameKey, onComplete, options = {}){
+    console.info(`[CompetitionFlow] ═══ launchFullscreenMinigame ═══`);
+    console.info(`[CompetitionFlow] Game: ${gameKey}, Options:`, options);
+    
     const game = g.game;
     
     // Get configured duration from settings
@@ -649,6 +662,8 @@
     overlay.appendChild(closeBtn);
     overlay.appendChild(gameContainer);
     document.body.appendChild(overlay);
+    
+    console.info('[CompetitionFlow] ✓ Fullscreen overlay created and appended to document.body');
 
     // Track if game has completed
     let hasCompleted = false;
@@ -811,6 +826,7 @@
     });
 
     // Render the minigame
+    console.info('[CompetitionFlow] → Rendering minigame in fullscreen container');
     if(g.renderMinigame && typeof g.renderMinigame === 'function'){
       // Pass options with competitionMode flag
       const gameOptions = {
@@ -818,8 +834,14 @@
         competitionMode: true
       };
 
+      console.info('[CompetitionFlow] → Calling renderMinigame:', gameKey, 'with options:', gameOptions);
       g.renderMinigame(gameKey, gameContainer, (score) => {
-        if(hasCompleted) return; // Prevent double completion
+        console.info(`[CompetitionFlow] ← Minigame completed with score: ${score}`);
+        
+        if(hasCompleted) {
+          console.warn('[CompetitionFlow] ⚠ Duplicate completion detected, ignoring');
+          return; // Prevent double completion
+        }
         hasCompleted = true;
         
         // Show completion animation
@@ -827,14 +849,16 @@
         
         // Close overlay and call completion callback after animation
         setTimeout(() => {
+          console.info('[CompetitionFlow] → Closing fullscreen overlay and calling onComplete');
           close(false); // Use fade out animation
           if(typeof onComplete === 'function'){
             onComplete(score);
           }
         }, 2500); // Wait for animation to complete
       }, gameOptions);
+      console.info('[CompetitionFlow] ✓ renderMinigame called successfully');
     } else {
-      console.error('[CompetitionFlow] renderMinigame function not available');
+      console.error('[CompetitionFlow] ✗ renderMinigame function not available!');
       gameContainer.innerHTML = '<div style="color:#ff6b9d;text-align:center;padding:40px;">Error: Minigame system not loaded</div>';
     }
 
@@ -852,18 +876,26 @@
    * @returns {void}
    */
   function runCompetitionFlow(gameKey, container, onComplete, options = {}){
+    console.info(`[CompetitionFlow] ═══ runCompetitionFlow called ═══`);
+    console.info(`[CompetitionFlow] Game: ${gameKey}, Options:`, options);
+    
     // Ensure container is attached to the DOM (belt-and-suspenders safeguard)
     container = ensureAttachedContainer(container);
+    console.info('[CompetitionFlow] ✓ Container validated for competition flow');
     
     // Step 1: Show instructions in TV area
+    console.info('[CompetitionFlow] Step 1: Showing instructions in TV');
     const instructionsCard = showInstructionsInTV(
       gameKey,
       container,
       // On Play button click
       () => {
+        console.info('[CompetitionFlow] Step 2: Play button clicked, transitioning to fullscreen');
+        
         // Remove instructions card when Play is pressed
         if(instructionsCard && instructionsCard.parentNode){
           instructionsCard.remove();
+          console.info('[CompetitionFlow] ✓ Instructions card removed');
         }
         
         // Clear active instructions reference
@@ -872,6 +904,7 @@
         }
         
         // Step 2: Launch fullscreen minigame
+        console.info('[CompetitionFlow] → Launching fullscreen minigame');
         launchFullscreenMinigame(gameKey, onComplete, options);
       }
     );
