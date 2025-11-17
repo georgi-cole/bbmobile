@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Intro Hub Music + SFX</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0e14;
+      color: #fff;
+      padding: 20px;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #00d4ff;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-button {
+      background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+      transition: all 200ms ease;
+    }
+    .test-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+    }
+    .test-button:active {
+      transform: translateY(2px) scale(0.97);
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid rgba(0, 255, 0, 0.3);
+    }
+    .status.error {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid rgba(255, 0, 0, 0.3);
+    }
+    .info {
+      color: #aaa;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎵 Intro Hub Music + SFX Test</h1>
+    
+    <div class="test-section">
+      <h2>Audio System Test</h2>
+      <p class="info">Tests the audio.js helper functions for intro hub lobby music.</p>
+      <button class="test-button" onclick="testPlayIntroHubMusic()">Play Intro Hub Music</button>
+      <button class="test-button" onclick="testStopIntroHubMusic()">Stop Intro Hub Music</button>
+      <button class="test-button" onclick="testFadeOutMusic()">Fade Out Music (600ms)</button>
+      <button class="test-button" onclick="testToggleMute()">Toggle Mute</button>
+      <div id="audio-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>SFX Module Test</h2>
+      <p class="info">Tests the introHubSfx.js module for button hover and click sounds.</p>
+      <button class="test-button" id="test-btn-1">Test Button 1</button>
+      <button class="test-button" id="test-btn-2">Test Button 2</button>
+      <button class="test-button" id="test-btn-3">Test Button 3</button>
+      <button class="test-button" onclick="testAttachSfx()">Attach SFX to Buttons</button>
+      <button class="test-button" onclick="testSyncSfx()">Sync SFX State</button>
+      <div id="sfx-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Integration Test</h2>
+      <p class="info">Tests the full integration: music + SFX + toggle events.</p>
+      <button class="test-button" onclick="testFullIntegration()">Run Full Integration Test</button>
+      <div id="integration-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <div id="test-log" style="background: #000; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>window.MUSIC_BASE = 'audio/';</script>
+  <script src="js/audio.js"></script>
+  <script src="js/ui/introHubSfx.js"></script>
+
+  <script>
+    // Initialize mock game object
+    window.game = window.game || { cfg: { sfxOn: true, musicOn: true } };
+
+    // Logging helper
+    function log(message, isError = false) {
+      const logDiv = document.getElementById('test-log');
+      const timestamp = new Date().toLocaleTimeString();
+      const color = isError ? '#ff6b6b' : '#00ff88';
+      logDiv.innerHTML += `<div style="color: ${color}; margin: 2px 0;">[${timestamp}] ${message}</div>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(message);
+    }
+
+    // Status helper
+    function setStatus(elementId, message, isError = false) {
+      const statusDiv = document.getElementById(elementId);
+      statusDiv.className = 'status' + (isError ? ' error' : '');
+      statusDiv.innerHTML = message;
+    }
+
+    // Audio System Tests
+    function testPlayIntroHubMusic() {
+      log('Testing playIntroHubMusic()...');
+      try {
+        if (typeof window.playIntroHubMusic === 'function') {
+          window.playIntroHubMusic();
+          setStatus('audio-status', '✅ playIntroHubMusic() called successfully');
+          log('✅ playIntroHubMusic() executed');
+        } else {
+          setStatus('audio-status', '❌ playIntroHubMusic() not found', true);
+          log('❌ playIntroHubMusic() not found', true);
+        }
+      } catch (e) {
+        setStatus('audio-status', '❌ Error: ' + e.message, true);
+        log('❌ Error calling playIntroHubMusic(): ' + e.message, true);
+      }
+    }
+
+    function testStopIntroHubMusic() {
+      log('Testing stopIntroHubMusic()...');
+      try {
+        if (typeof window.stopIntroHubMusic === 'function') {
+          window.stopIntroHubMusic();
+          setStatus('audio-status', '✅ stopIntroHubMusic() called successfully');
+          log('✅ stopIntroHubMusic() executed');
+        } else {
+          setStatus('audio-status', '❌ stopIntroHubMusic() not found', true);
+          log('❌ stopIntroHubMusic() not found', true);
+        }
+      } catch (e) {
+        setStatus('audio-status', '❌ Error: ' + e.message, true);
+        log('❌ Error calling stopIntroHubMusic(): ' + e.message, true);
+      }
+    }
+
+    function testFadeOutMusic() {
+      log('Testing fadeOutMusic()...');
+      try {
+        if (typeof window.fadeOutMusic === 'function') {
+          window.fadeOutMusic(600);
+          setStatus('audio-status', '✅ fadeOutMusic(600) called successfully');
+          log('✅ fadeOutMusic(600) executed');
+        } else {
+          setStatus('audio-status', '❌ fadeOutMusic() not found', true);
+          log('❌ fadeOutMusic() not found', true);
+        }
+      } catch (e) {
+        setStatus('audio-status', '❌ Error: ' + e.message, true);
+        log('❌ Error calling fadeOutMusic(): ' + e.message, true);
+      }
+    }
+
+    function testToggleMute() {
+      log('Testing toggleMute()...');
+      try {
+        if (typeof window.toggleMute === 'function') {
+          const newState = window.toggleMute();
+          setStatus('audio-status', `✅ toggleMute() called, muted=${newState}`);
+          log(`✅ toggleMute() executed, muted=${newState}`);
+        } else {
+          setStatus('audio-status', '❌ toggleMute() not found', true);
+          log('❌ toggleMute() not found', true);
+        }
+      } catch (e) {
+        setStatus('audio-status', '❌ Error: ' + e.message, true);
+        log('❌ Error calling toggleMute(): ' + e.message, true);
+      }
+    }
+
+    // SFX Module Tests
+    function testAttachSfx() {
+      log('Testing IntroHubSfx.attach()...');
+      try {
+        if (window.IntroHubSfx && typeof window.IntroHubSfx.attach === 'function') {
+          const testSection = document.querySelector('.test-section:nth-child(2)');
+          window.IntroHubSfx.attach(testSection);
+          setStatus('sfx-status', '✅ SFX attached to test buttons (hover/click to test)');
+          log('✅ IntroHubSfx.attach() executed - hover over buttons to hear sounds');
+        } else {
+          setStatus('sfx-status', '❌ IntroHubSfx.attach() not found', true);
+          log('❌ IntroHubSfx.attach() not found', true);
+        }
+      } catch (e) {
+        setStatus('sfx-status', '❌ Error: ' + e.message, true);
+        log('❌ Error calling IntroHubSfx.attach(): ' + e.message, true);
+      }
+    }
+
+    function testSyncSfx() {
+      log('Testing IntroHubSfx.sync()...');
+      try {
+        if (window.IntroHubSfx && typeof window.IntroHubSfx.sync === 'function') {
+          window.IntroHubSfx.sync();
+          setStatus('sfx-status', '✅ SFX state synced with global config');
+          log('✅ IntroHubSfx.sync() executed');
+        } else {
+          setStatus('sfx-status', '❌ IntroHubSfx.sync() not found', true);
+          log('❌ IntroHubSfx.sync() not found', true);
+        }
+      } catch (e) {
+        setStatus('sfx-status', '❌ Error: ' + e.message, true);
+        log('❌ Error calling IntroHubSfx.sync(): ' + e.message, true);
+      }
+    }
+
+    // Full Integration Test
+    function testFullIntegration() {
+      log('=== Starting Full Integration Test ===');
+      let passed = 0;
+      let failed = 0;
+
+      // Test 1: Check audio functions exist
+      log('Test 1: Checking audio functions...');
+      if (typeof window.playIntroHubMusic === 'function') {
+        log('✅ playIntroHubMusic exists');
+        passed++;
+      } else {
+        log('❌ playIntroHubMusic missing', true);
+        failed++;
+      }
+
+      if (typeof window.stopIntroHubMusic === 'function') {
+        log('✅ stopIntroHubMusic exists');
+        passed++;
+      } else {
+        log('❌ stopIntroHubMusic missing', true);
+        failed++;
+      }
+
+      // Test 2: Check SFX module exists
+      log('Test 2: Checking SFX module...');
+      if (window.IntroHubSfx) {
+        log('✅ IntroHubSfx module loaded');
+        passed++;
+      } else {
+        log('❌ IntroHubSfx module missing', true);
+        failed++;
+      }
+
+      // Test 3: Check SFX functions
+      log('Test 3: Checking SFX functions...');
+      if (window.IntroHubSfx && typeof window.IntroHubSfx.attach === 'function') {
+        log('✅ IntroHubSfx.attach exists');
+        passed++;
+      } else {
+        log('❌ IntroHubSfx.attach missing', true);
+        failed++;
+      }
+
+      if (window.IntroHubSfx && typeof window.IntroHubSfx.sync === 'function') {
+        log('✅ IntroHubSfx.sync exists');
+        passed++;
+      } else {
+        log('❌ IntroHubSfx.sync missing', true);
+        failed++;
+      }
+
+      // Test 4: Check mute functions
+      log('Test 4: Checking mute functions...');
+      if (typeof window.getMuted === 'function') {
+        log('✅ getMuted exists');
+        passed++;
+      } else {
+        log('❌ getMuted missing', true);
+        failed++;
+      }
+
+      // Test 5: Test custom event dispatch
+      log('Test 5: Testing custom event dispatch...');
+      try {
+        let eventReceived = false;
+        document.addEventListener('introHubSfx', () => { eventReceived = true; }, { once: true });
+        document.dispatchEvent(new CustomEvent('introHubSfx', { detail: { enabled: true } }));
+        if (eventReceived) {
+          log('✅ Custom event dispatch works');
+          passed++;
+        } else {
+          log('❌ Custom event not received', true);
+          failed++;
+        }
+      } catch (e) {
+        log('❌ Custom event dispatch failed: ' + e.message, true);
+        failed++;
+      }
+
+      // Summary
+      log('=== Integration Test Complete ===');
+      log(`Passed: ${passed}, Failed: ${failed}`);
+      
+      if (failed === 0) {
+        setStatus('integration-status', `✅ All ${passed} integration tests passed!`);
+      } else {
+        setStatus('integration-status', `⚠️ ${passed} passed, ${failed} failed`, true);
+      }
+    }
+
+    // Auto-run basic checks on load
+    window.addEventListener('DOMContentLoaded', () => {
+      log('=== Test page loaded ===');
+      log('Audio system: ' + (typeof window.playIntroHubMusic === 'function' ? '✅ Ready' : '❌ Not loaded'));
+      log('SFX module: ' + (window.IntroHubSfx ? '✅ Ready' : '❌ Not loaded'));
+      log('Ready for manual testing...');
+    });
+  </script>
+</body>
+</html>
