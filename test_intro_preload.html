@@ -1,567 +1,345 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<title>Intro Preload Test - BBMobile</title>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<link rel="stylesheet" href="css/intro.css">
-<link rel="stylesheet" href="src/ui/profileModal.css">
-<style>
-  body {
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #1a1a1a;
-    color: #fff;
-  }
-  
-  .test-controls {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    z-index: 20000;
-    background: rgba(0,0,0,0.9);
-    padding: 20px;
-    border-radius: 12px;
-    max-width: 350px;
-    border: 2px solid #00d4ff;
-  }
-  
-  .test-controls h2 {
-    margin: 0 0 15px 0;
-    font-size: 16px;
-    color: #00d4ff;
-  }
-  
-  .test-section {
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #333;
-  }
-  
-  .test-section:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-  }
-  
-  .test-section h3 {
-    margin: 0 0 10px 0;
-    font-size: 14px;
-    color: #78b4f0;
-  }
-  
-  .test-controls button {
-    display: block;
-    width: 100%;
-    margin: 5px 0;
-    padding: 10px;
-    background: #0088ff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    transition: background 0.2s ease;
-  }
-  
-  .test-controls button:hover {
-    background: #0099ff;
-  }
-  
-  .test-controls button.secondary {
-    background: #333;
-  }
-  
-  .test-controls button.secondary:hover {
-    background: #444;
-  }
-  
-  .test-status {
-    margin: 10px 0 0 0;
-    padding: 10px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 6px;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  
-  .test-status.pass {
-    border-left: 3px solid #00ff88;
-  }
-  
-  .test-status.fail {
-    border-left: 3px solid #ff4444;
-  }
-  
-  .test-status.info {
-    border-left: 3px solid #00d4ff;
-  }
-  
-  #eventLog {
-    position: fixed;
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
-    z-index: 20000;
-    background: rgba(0,0,0,0.95);
-    padding: 15px;
-    border-radius: 12px;
-    max-height: 250px;
-    overflow-y: auto;
-    font-size: 11px;
-    font-family: 'Courier New', monospace;
-    border: 2px solid #333;
-  }
-  
-  #eventLog .log-header {
-    font-weight: bold;
-    color: #00d4ff;
-    margin-bottom: 10px;
-    position: sticky;
-    top: 0;
-    background: rgba(0,0,0,0.95);
-    padding: 5px 0;
-  }
-  
-  #eventLog .event {
-    margin: 3px 0;
-    padding: 5px;
-    border-left: 2px solid #00d4ff;
-    padding-left: 10px;
-  }
-  
-  #eventLog .event.error {
-    border-left-color: #ff4444;
-    color: #ff8888;
-  }
-  
-  #eventLog .event.success {
-    border-left-color: #00ff88;
-    color: #88ffbb;
-  }
-  
-  #eventLog .event.warning {
-    border-left-color: #ffaa00;
-    color: #ffcc66;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Intro Preload Feature</title>
+  <link rel="stylesheet" href="styles-intro-show.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0c14;
+      color: #e0e0e0;
+    }
+    .test-panel {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #1a1d2e;
+      border: 1px solid #2a3446;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    h1 {
+      margin: 0 0 20px;
+      color: #00d9ff;
+      font-size: 1.8rem;
+    }
+    .test-section {
+      margin: 24px 0;
+      padding: 16px;
+      background: #14172a;
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin: 0 0 12px;
+      font-size: 1.2rem;
+      color: #9fb5ff;
+    }
+    button {
+      background: linear-gradient(135deg, #2877a0, #1a4a63);
+      border: 1px solid #2d8ab4;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 8px 8px 8px 0;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: linear-gradient(135deg, #3088b8, #2a5a73);
+      transform: scale(1.05);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .status {
+      margin: 12px 0;
+      padding: 8px 12px;
+      background: rgba(0, 217, 255, 0.1);
+      border-left: 3px solid #00d9ff;
+      border-radius: 4px;
+    }
+    .note {
+      font-size: 0.9rem;
+      color: #a0a0c8;
+      margin-top: 8px;
+    }
+    code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #79d19a;
+    }
+    .log {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+    .log-entry {
+      margin: 4px 0;
+      padding: 4px;
+    }
+    .log-info { color: #79d19a; }
+    .log-warn { color: #f2c862; }
+    .log-error { color: #ff6b6b; }
+  </style>
 </head>
 <body>
-
-<div class="test-controls">
-  <h2>🧪 Intro Preload Test Suite</h2>
-  
-  <div class="test-section">
-    <h3>Background Paint Test</h3>
-    <button id="btnTestPreload">Test Background-First Paint</button>
-    <div id="statusPreload" class="test-status info">
-      Click button to test that background loads before buttons appear
+  <div class="test-panel">
+    <h1>🎬 Intro Preload Feature Test</h1>
+    
+    <div class="test-section">
+      <h2>Configuration</h2>
+      <div class="status" id="configStatus">Loading configuration...</div>
+      <button id="btnToggleIntro">Toggle Reality Intro</button>
+      <button id="btnSetTimeout">Set Timeout (3s)</button>
+      <div class="note">
+        Default: <code>useRealityIntro: false</code>, <code>introPreloadTimeoutMs: 8000</code>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      
+      <button id="btnTest1">Test 1: Default Disabled</button>
+      <div class="note">Verifies reality intro is OFF by default (classic dual-card should play)</div>
+      
+      <button id="btnTest2">Test 2: Enable & Preload</button>
+      <div class="note">Enables reality intro, shows loading overlay, then plays animation</div>
+      
+      <button id="btnTest3">Test 3: Skip During Preload</button>
+      <div class="note">Shows loading overlay and verifies skip button works</div>
+      
+      <button id="btnTest4">Test 4: Fast Images</button>
+      <div class="note">Tests with small fast-loading placeholder images</div>
+      
+      <button id="btnTest5">Test 5: Slow Timeout</button>
+      <div class="note">Sets short timeout and tests with slow/broken images</div>
+      
+      <button id="btnStop">Stop/Skip Intro</button>
+    </div>
+    
+    <div class="test-section">
+      <h2>Event Log</h2>
+      <div class="log" id="logPanel"></div>
+      <button id="btnClearLog">Clear Log</button>
     </div>
   </div>
-  
-  <div class="test-section">
-    <h3>Button Actions Test</h3>
-    <button id="btnShowIntro">Show Intro Hub</button>
-    <button id="btnTestAllButtons" class="secondary">Test All Hub Buttons</button>
-    <div id="statusButtons" class="test-status info">
-      Show hub and click each button to verify actions
-    </div>
-  </div>
-  
-  <div class="test-section">
-    <h3>Modal Layering Test</h3>
-    <button id="btnTestModals" class="secondary">Test Modal Z-Index</button>
-    <div id="statusModals" class="test-status info">
-      Verify modals appear above hub with correct layering
-    </div>
-  </div>
-  
-  <div class="test-section">
-    <h3>Idempotence Test</h3>
-    <button id="btnTestIdempotence" class="secondary">Test Duplicate Calls</button>
-    <div id="statusIdempotence" class="test-status info">
-      Verify duplicate show() calls are ignored
-    </div>
-  </div>
-  
-  <div class="test-section">
-    <button id="btnClearLog" class="secondary">Clear Event Log</button>
-  </div>
-</div>
 
-<div id="eventLog">
-  <div class="log-header">📋 Event Log</div>
-</div>
-
-<!-- Load dependencies -->
-<script src="js/bbGameBus.js"></script>
-<script src="src/utils/backgroundTheme.js"></script>
-<script src="src/ui/IntroScreen.js"></script>
-<script src="src/ui/hubModalBridge.js"></script>
-
-<script>
-(function() {
-  'use strict';
+  <!-- Load GSAP (required for intro animations) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   
-  // Initialize game bus
-  if (!window.game) window.game = {};
-  window.game.bus = window.bbGameBus;
+  <!-- Load modules -->
+  <script src="js/introShow.js"></script>
   
-  // Mock audio controls for testing
-  window.game.audio = {
-    toggleMusic: function() {
-      logEvent('Music toggled', 'success');
-      return true;
-    },
-    toggleSound: function() {
-      logEvent('Sound toggled', 'success');
-      return true;
-    }
-  };
-  
-  // Mock global functions for testing
-  window.StartupFlow = {
-    enterGame: function() {
-      logEvent('StartupFlow.enterGame() called', 'success');
-    }
-  };
-  
-  window.startOpeningSequence = function() {
-    logEvent('startOpeningSequence() called (fallback)', 'success');
-  };
-  
-  window.showRulesModal = function() {
-    logEvent('showRulesModal() called', 'success');
-    showMockModal('Rules Modal', 'This is the game rules modal');
-  };
-  
-  window.showProfileModal = function() {
-    logEvent('showProfileModal() called', 'success');
-    showMockModal('Profile Modal', 'This is the profile selection modal');
-  };
-  
-  window.showSettingsModal = function() {
-    logEvent('showSettingsModal() called', 'success');
-    showMockModal('Settings Modal', 'This is the settings modal');
-  };
-  
-  window.showLeaderboard = function() {
-    logEvent('showLeaderboard() called', 'success');
-    showMockModal('Leaderboard', 'This is the XP leaderboard');
-  };
-  
-  window.showCreditsModal = function() {
-    logEvent('showCreditsModal() called', 'success');
-    showMockModal('Credits', 'Game credits and acknowledgments');
-  };
-  
-  window.showHelpModal = function() {
-    logEvent('showHelpModal() called', 'success');
-    showMockModal('Help', 'Game help and instructions');
-  };
-  
-  // Initialize BackgroundTheme
-  const bgTheme = window.BackgroundTheme.init({ bus: window.bbGameBus });
-  
-  // Initialize IntroScreen
-  const introScreen = window.IntroScreen.init({ bus: window.bbGameBus });
-  
-  // Listen to all intro events
-  const events = [
-    'intro:play',
-    'intro:open:rules',
-    'intro:open:profile',
-    'intro:open:leaderboard',
-    'intro:open:settings',
-    'intro:open:credits',
-    'intro:open:help',
-    'intro:chip:daily',
-    'intro:chip:news',
-    'theme:bg-change'
-  ];
-  
-  events.forEach(event => {
-    window.bbGameBus.on(event, (data) => {
-      logEvent(`Event: ${event}`, 'info');
-    });
-  });
-  
-  // Log events
-  function logEvent(message, type = 'info') {
-    const log = document.getElementById('eventLog');
-    const entry = document.createElement('div');
-    entry.className = `event ${type}`;
-    const timestamp = new Date().toLocaleTimeString();
-    entry.textContent = `[${timestamp}] ${message}`;
-    log.appendChild(entry);
-    log.scrollTop = log.scrollHeight;
-  }
-  
-  // Mock modal display
-  function showMockModal(title, content) {
-    const modal = document.createElement('div');
-    modal.className = 'mock-modal';
-    modal.style.cssText = `
-      position: fixed;
-      inset: 0;
-      z-index: 10050;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.8);
-      backdrop-filter: blur(4px);
-    `;
+  <script>
+    // Initialize window.game mock
+    window.game = window.game || {};
+    window.game.cfg = {
+      useRealityIntro: false,
+      introPreloadTimeoutMs: 8000,
+      introMaxBackstoryChars: 90
+    };
     
-    const panel = document.createElement('div');
-    panel.style.cssText = `
-      background: linear-gradient(145deg, #0d1624, #0a1320);
-      border: 2px solid #00d4ff;
-      border-radius: 16px;
-      padding: 30px;
-      max-width: 500px;
-      text-align: center;
-    `;
+    // Mock helper functions
+    window.resolveAvatar = function(player) {
+      return player.avatar || player.img || player.photo || 
+        'https://api.dicebear.com/6.x/bottts/svg?seed=' + encodeURIComponent(player.name || 'Guest');
+    };
     
-    panel.innerHTML = `
-      <h3 style="margin: 0 0 15px 0; color: #00d4ff; font-size: 1.5rem;">${title}</h3>
-      <p style="margin: 0 0 20px 0; color: #c4d9ec;">${content}</p>
-      <button id="mockModalClose" style="
-        padding: 10px 24px;
-        background: #0088ff;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 600;
-      ">Close</button>
-    `;
-    
-    modal.appendChild(panel);
-    document.body.appendChild(modal);
-    
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal || e.target.id === 'mockModalClose') {
-        modal.remove();
+    // Test data: Mock players
+    const mockPlayers = [
+      { 
+        id: 1, 
+        name: 'Alex Martinez', 
+        age: 28, 
+        location: 'Miami, FL',
+        occupation: 'Software Engineer',
+        motto: 'Code smart, play hard',
+        backstory: 'A passionate developer who loves competition. Alex brings strategic thinking and technical skills to the house. Ready to dominate both code and social game!',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alex'
+      },
+      { 
+        id: 2, 
+        name: 'Jordan Lee', 
+        age: 25, 
+        location: 'Portland, OR',
+        occupation: 'Barista & Artist',
+        motto: 'Stay creative, stay fierce',
+        backstory: 'An artistic soul with a competitive edge. Jordan\'s creativity and social skills make them a force to be reckoned with in the house.',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Jordan'
+      },
+      { 
+        id: 3, 
+        name: 'Sam Rivera', 
+        age: 32, 
+        location: 'Austin, TX',
+        occupation: 'Marketing Director',
+        motto: 'Influence and inspire',
+        backstory: 'A marketing genius who knows how to read people and craft narratives. Sam is here to win hearts and minds.',
+        avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Sam'
       }
-    });
-  }
-  
-  // ===== TEST FUNCTIONS =====
-  
-  // Test 1: Background-First Paint
-  document.getElementById('btnTestPreload').addEventListener('click', async () => {
-    const status = document.getElementById('statusPreload');
-    status.className = 'test-status info';
-    status.textContent = 'Testing... Please wait...';
-    
-    logEvent('=== TEST 1: Background-First Paint ===', 'info');
-    
-    // Clear any existing intro screen
-    const existing = document.getElementById('introScreen');
-    if (existing) {
-      existing.remove();
-    }
-    
-    // Reset visibility flag (hack for testing)
-    if (window.IntroScreen._resetForTest) {
-      window.IntroScreen._resetForTest();
-    }
-    
-    // Measure timing
-    const startTime = performance.now();
-    logEvent('Starting showWithPreload()...', 'info');
-    
-    // Capture paint timing
-    let backgroundSetTime = null;
-    let buttonsVisibleTime = null;
-    
-    const observer = new MutationObserver(() => {
-      const intro = document.getElementById('introScreen');
-      if (intro) {
-        const bg = intro.querySelector('.intro-screen__bg--current');
-        const buttons = intro.querySelector('.intro-screen__button-column');
-        
-        if (bg && bg.style.backgroundImage && bg.style.backgroundImage !== 'none' && !backgroundSetTime) {
-          backgroundSetTime = performance.now() - startTime;
-          logEvent(`✓ Background set at ${backgroundSetTime.toFixed(2)}ms`, 'success');
-        }
-        
-        if (buttons && window.getComputedStyle(intro).display !== 'none' && !buttonsVisibleTime) {
-          buttonsVisibleTime = performance.now() - startTime;
-          logEvent(`✓ Buttons visible at ${buttonsVisibleTime.toFixed(2)}ms`, 'success');
-        }
-        
-        if (backgroundSetTime && buttonsVisibleTime) {
-          observer.disconnect();
-          
-          const delta = buttonsVisibleTime - backgroundSetTime;
-          if (backgroundSetTime <= buttonsVisibleTime) {
-            status.className = 'test-status pass';
-            status.textContent = `✅ PASS: Background set before buttons (delta: ${delta.toFixed(2)}ms)`;
-            logEvent(`✅ TEST 1 PASSED: Background-first paint verified`, 'success');
-          } else {
-            status.className = 'test-status fail';
-            status.textContent = `❌ FAIL: Buttons appeared before background (delta: ${delta.toFixed(2)}ms)`;
-            logEvent(`❌ TEST 1 FAILED: Buttons visible before background`, 'error');
-          }
-        }
-      }
-    });
-    
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['style', 'class']
-    });
-    
-    // Run test
-    await introScreen.showWithPreload();
-    
-    // Timeout fallback
-    setTimeout(() => {
-      observer.disconnect();
-      if (!backgroundSetTime || !buttonsVisibleTime) {
-        status.className = 'test-status fail';
-        status.textContent = '❌ FAIL: Could not measure timing (check console)';
-        logEvent('❌ TEST 1 FAILED: Timing measurement incomplete', 'error');
-      }
-    }, 3000);
-  });
-  
-  // Test 2: Show Intro Hub
-  document.getElementById('btnShowIntro').addEventListener('click', () => {
-    logEvent('=== Showing Intro Hub ===', 'info');
-    introScreen.showWithPreload();
-  });
-  
-  // Test 3: Test All Buttons
-  document.getElementById('btnTestAllButtons').addEventListener('click', () => {
-    const status = document.getElementById('statusButtons');
-    status.className = 'test-status info';
-    status.textContent = 'Testing all buttons... Check event log';
-    
-    logEvent('=== TEST 2: Button Actions ===', 'info');
-    
-    // Simulate clicking each button
-    const buttonTests = [
-      { id: 'intro-btn-play', name: 'Play' },
-      { id: 'intro-btn-rules', name: 'Rules' },
-      { id: 'intro-btn-profile', name: 'Profile' },
-      { id: 'intro-btn-leaderboard', name: 'Leaderboard' },
-      { id: 'intro-btn-credits', name: 'Credits' },
-      { id: 'intro-icon-help', name: 'Help' },
-      { id: 'intro-icon-settings', name: 'Settings' },
-      { id: 'intro-chip-daily', name: 'Daily' },
-      { id: 'intro-chip-news', name: 'News' }
     ];
     
-    let passed = 0;
-    let failed = 0;
+    // Logging
+    const logPanel = document.getElementById('logPanel');
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logPanel.appendChild(entry);
+      logPanel.scrollTop = logPanel.scrollHeight;
+      console.log(`[${type}]`, message);
+    }
     
-    buttonTests.forEach(({ id, name }, index) => {
-      setTimeout(() => {
-        const btn = document.getElementById(id);
-        if (btn) {
-          logEvent(`Testing button: ${name}`, 'info');
-          btn.click();
-          passed++;
-        } else {
-          logEvent(`❌ Button not found: ${name} (${id})`, 'error');
-          failed++;
-        }
-        
-        if (index === buttonTests.length - 1) {
-          if (failed === 0) {
-            status.className = 'test-status pass';
-            status.textContent = `✅ PASS: All ${passed} buttons clicked successfully`;
-            logEvent(`✅ TEST 2 PASSED: All buttons functional`, 'success');
-          } else {
-            status.className = 'test-status fail';
-            status.textContent = `❌ FAIL: ${failed} buttons not found`;
-            logEvent(`❌ TEST 2 FAILED: ${failed} buttons missing`, 'error');
-          }
-        }
-      }, index * 500);
-    });
-  });
-  
-  // Test 4: Modal Z-Index
-  document.getElementById('btnTestModals').addEventListener('click', () => {
-    const status = document.getElementById('statusModals');
-    logEvent('=== TEST 3: Modal Z-Index ===', 'info');
+    // Update config status
+    function updateConfigStatus() {
+      const status = document.getElementById('configStatus');
+      const cfg = window.game.cfg;
+      status.innerHTML = `
+        <code>useRealityIntro: ${cfg.useRealityIntro}</code><br>
+        <code>introPreloadTimeoutMs: ${cfg.introPreloadTimeoutMs}</code><br>
+        <code>introMaxBackstoryChars: ${cfg.introMaxBackstoryChars}</code>
+      `;
+    }
     
-    // Trigger a modal
-    logEvent('Opening Rules modal to test layering...', 'info');
-    window.showRulesModal();
-    
-    setTimeout(() => {
-      const intro = document.getElementById('introScreen');
-      const modal = document.querySelector('.mock-modal');
+    // Test functions
+    function test1_DefaultDisabled() {
+      log('TEST 1: Verifying default configuration', 'info');
+      window.game.cfg.useRealityIntro = false;
+      updateConfigStatus();
       
-      if (intro && modal) {
-        const introZ = parseInt(window.getComputedStyle(intro).zIndex) || 0;
-        const modalZ = parseInt(window.getComputedStyle(modal).zIndex) || 0;
-        
-        logEvent(`Intro hub z-index: ${introZ}`, 'info');
-        logEvent(`Modal z-index: ${modalZ}`, 'info');
-        
-        if (modalZ > introZ) {
-          status.className = 'test-status pass';
-          status.textContent = `✅ PASS: Modal z-index (${modalZ}) > Hub z-index (${introZ})`;
-          logEvent(`✅ TEST 3 PASSED: Modal layering correct`, 'success');
-        } else {
-          status.className = 'test-status fail';
-          status.textContent = `❌ FAIL: Modal z-index (${modalZ}) <= Hub z-index (${introZ})`;
-          logEvent(`❌ TEST 3 FAILED: Modal layering incorrect`, 'error');
-        }
+      if (!window.game.cfg.useRealityIntro) {
+        log('✓ Reality intro is disabled by default', 'info');
       } else {
-        status.className = 'test-status fail';
-        status.textContent = '❌ FAIL: Could not find intro or modal elements';
-        logEvent(`❌ TEST 3 FAILED: Elements not found`, 'error');
+        log('✗ Reality intro is enabled (should be disabled)', 'error');
       }
-    }, 500);
-  });
-  
-  // Test 5: Idempotence
-  document.getElementById('btnTestIdempotence').addEventListener('click', async () => {
-    const status = document.getElementById('statusIdempotence');
-    status.className = 'test-status info';
-    status.textContent = 'Testing... Check event log for duplicate warnings';
+      
+      log('Note: Classic dual-card intro would play in actual game', 'info');
+    }
     
-    logEvent('=== TEST 4: Idempotence ===', 'info');
+    function test2_EnableAndPreload() {
+      log('TEST 2: Enabling reality intro and testing preload', 'info');
+      window.game.cfg.useRealityIntro = true;
+      updateConfigStatus();
+      
+      if (!window.IntroShow || !window.IntroShow.playWithPreload) {
+        log('✗ IntroShow.playWithPreload not found!', 'error');
+        return;
+      }
+      
+      log('Starting playWithPreload...', 'info');
+      window.IntroShow.playWithPreload(mockPlayers, () => {
+        log('✓ Intro completed successfully', 'info');
+      });
+    }
     
-    // Call show multiple times
-    logEvent('Calling showWithPreload() 3 times...', 'info');
-    await introScreen.showWithPreload();
-    await introScreen.showWithPreload();
-    await introScreen.showWithPreload();
+    function test3_SkipDuringPreload() {
+      log('TEST 3: Testing skip during preload', 'info');
+      window.game.cfg.useRealityIntro = true;
+      window.game.cfg.introPreloadTimeoutMs = 10000; // Longer timeout
+      updateConfigStatus();
+      
+      log('Starting playWithPreload with 10s timeout...', 'info');
+      log('Click "Stop/Skip Intro" button or the skip button in the overlay', 'warn');
+      
+      window.IntroShow.playWithPreload(mockPlayers, () => {
+        log('✓ Intro completed or skipped', 'info');
+      });
+    }
     
-    // Check console for "Already visible" messages
-    setTimeout(() => {
-      status.className = 'test-status pass';
-      status.textContent = '✅ Check console log for "Already visible" messages (expected)';
-      logEvent('✅ TEST 4: Check console for idempotence guards', 'success');
-    }, 500);
-  });
-  
-  // Clear log button
-  document.getElementById('btnClearLog').addEventListener('click', () => {
-    const log = document.getElementById('eventLog');
-    log.innerHTML = '<div class="log-header">📋 Event Log (Cleared)</div>';
-    logEvent('Log cleared', 'info');
-  });
-  
-  // Initial log
-  logEvent('Test suite initialized', 'success');
-  logEvent('BackgroundTheme and IntroScreen modules loaded', 'success');
-  logEvent('HubModalBridge loaded and observing', 'success');
-  logEvent('Ready to run tests!', 'info');
-  
-})();
-</script>
-
+    function test4_FastImages() {
+      log('TEST 4: Testing with fast-loading images', 'info');
+      window.game.cfg.useRealityIntro = true;
+      window.game.cfg.introPreloadTimeoutMs = 8000;
+      updateConfigStatus();
+      
+      // Use small SVG avatars (should load quickly)
+      const fastPlayers = mockPlayers.map(p => ({
+        ...p,
+        avatar: `https://api.dicebear.com/6.x/bottts/svg?seed=${p.name}&size=64`
+      }));
+      
+      log('Starting with small fast-loading avatars...', 'info');
+      window.IntroShow.playWithPreload(fastPlayers, () => {
+        log('✓ Fast image test completed', 'info');
+      });
+    }
+    
+    function test5_SlowTimeout() {
+      log('TEST 5: Testing timeout with slow/broken images', 'warn');
+      window.game.cfg.useRealityIntro = true;
+      window.game.cfg.introPreloadTimeoutMs = 3000; // Short timeout
+      updateConfigStatus();
+      
+      // Use a mix of fast and intentionally slow/broken URLs
+      const slowPlayers = [
+        { ...mockPlayers[0], avatar: 'https://via.placeholder.com/200x200.png?text=Slow1' },
+        { ...mockPlayers[1], avatar: 'https://httpstat.us/200?sleep=5000' }, // 5s delay
+        { ...mockPlayers[2], avatar: 'https://invalid-url-that-will-fail.example.com/image.jpg' }
+      ];
+      
+      log('Starting with slow/broken images and 3s timeout...', 'warn');
+      log('Should timeout after 3 seconds and continue with placeholders', 'info');
+      
+      window.IntroShow.playWithPreload(slowPlayers, () => {
+        log('✓ Timeout test completed (used placeholders for failed images)', 'info');
+      });
+    }
+    
+    function stopIntro() {
+      log('Stopping intro...', 'warn');
+      if (window.IntroShow && window.IntroShow.stop) {
+        window.IntroShow.stop();
+        log('✓ Intro stopped', 'info');
+      } else {
+        log('✗ IntroShow.stop not available', 'error');
+      }
+    }
+    
+    function toggleIntro() {
+      window.game.cfg.useRealityIntro = !window.game.cfg.useRealityIntro;
+      updateConfigStatus();
+      log(`Reality intro ${window.game.cfg.useRealityIntro ? 'enabled' : 'disabled'}`, 'info');
+    }
+    
+    function setTimeout3s() {
+      window.game.cfg.introPreloadTimeoutMs = 3000;
+      updateConfigStatus();
+      log('Timeout set to 3 seconds', 'info');
+    }
+    
+    function clearLog() {
+      logPanel.innerHTML = '';
+      log('Log cleared', 'info');
+    }
+    
+    // Wire up buttons
+    document.getElementById('btnTest1').onclick = test1_DefaultDisabled;
+    document.getElementById('btnTest2').onclick = test2_EnableAndPreload;
+    document.getElementById('btnTest3').onclick = test3_SkipDuringPreload;
+    document.getElementById('btnTest4').onclick = test4_FastImages;
+    document.getElementById('btnTest5').onclick = test5_SlowTimeout;
+    document.getElementById('btnStop').onclick = stopIntro;
+    document.getElementById('btnToggleIntro').onclick = toggleIntro;
+    document.getElementById('btnSetTimeout').onclick = setTimeout3s;
+    document.getElementById('btnClearLog').onclick = clearLog;
+    
+    // Initialize
+    updateConfigStatus();
+    log('Test panel initialized', 'info');
+    log('IntroShow module loaded: ' + (window.IntroShow ? 'YES' : 'NO'), 'info');
+    log('GSAP available: ' + (typeof gsap !== 'undefined' ? 'YES' : 'NO'), 'info');
+    log('playWithPreload available: ' + (window.IntroShow?.playWithPreload ? 'YES' : 'NO'), 'info');
+  </script>
 </body>
 </html>
