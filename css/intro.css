@@ -402,3 +402,152 @@ body:not(.main-screen-built) .topbar {
     background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
   }
 }
+
+/* ===== Consent Overlay ===== */
+.intro-consent-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9995; /* Above intro screen (9990), below modals (10050) */
+  opacity: 0;
+  transition: opacity 300ms ease-in-out;
+}
+
+.intro-consent-overlay--visible {
+  opacity: 1;
+}
+
+.intro-consent-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  text-align: center;
+  animation: intro-consent-slide 400ms ease-out backwards;
+}
+
+@keyframes intro-consent-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.intro-consent-title {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.intro-consent-message {
+  margin: 0 0 24px 0;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+}
+
+.intro-consent-buttons {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.intro-consent-btn {
+  min-height: 52px;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 250ms ease;
+  border: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.intro-consent-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.intro-consent-btn:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+}
+
+.intro-consent-btn:focus-visible {
+  outline: 3px solid #00d4ff;
+  outline-offset: 3px;
+}
+
+.intro-consent-btn--allow {
+  background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+  color: #ffffff;
+}
+
+.intro-consent-btn--allow:hover {
+  background: linear-gradient(135deg, #00e4ff 0%, #0098ff 100%);
+  box-shadow: 0 6px 24px rgba(0, 212, 255, 0.5);
+}
+
+.intro-consent-btn--mute {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.intro-consent-btn--mute:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Responsive consent overlay */
+@media (max-width: 768px) {
+  .intro-consent-card {
+    padding: 24px;
+    max-width: 340px;
+  }
+  
+  .intro-consent-title {
+    font-size: 20px;
+  }
+  
+  .intro-consent-message {
+    font-size: 15px;
+  }
+  
+  .intro-consent-btn {
+    min-height: 48px;
+    font-size: 16px;
+  }
+}
+
+/* Reduced motion for consent overlay */
+@media (prefers-reduced-motion: reduce) {
+  .intro-consent-overlay,
+  .intro-consent-card {
+    animation: none !important;
+    transition: opacity 200ms ease !important;
+  }
+  
+  .intro-consent-btn:hover {
+    transform: none !important;
+  }
+}
