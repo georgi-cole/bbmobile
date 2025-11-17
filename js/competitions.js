@@ -951,12 +951,54 @@
   global.renderCompPanel = renderCompPanel;
 
   /**
+   * Helper to derive humanId from players array when g.humanId is null
+   * Checks for human flag, guest name, or uses first alive player
+   * @returns {number|null} Derived humanId or null if no suitable player found
+   */
+  function ensureHumanIdFromPlayers() {
+    const g = global.game;
+    const players = g.players || global.game?.players || global.PlayerService?.players || [];
+    
+    if (!players || players.length === 0) {
+      console.warn('[Competition] No players array available for fallback humanId');
+      return null;
+    }
+    
+    // Strategy 1: Find player with human=true flag
+    let humanPlayer = players.find(p => p.human === true);
+    if (humanPlayer) {
+      console.info(`[Competition] 🔄 Fallback: Found human player by flag: ${humanPlayer.name}(${humanPlayer.id})`);
+      g.humanId = humanPlayer.id;
+      return humanPlayer.id;
+    }
+    
+    // Strategy 2: Find player with name='Guest' (case-insensitive)
+    humanPlayer = players.find(p => p.name && p.name.toLowerCase() === 'guest');
+    if (humanPlayer) {
+      console.info(`[Competition] 🔄 Fallback: Found guest player by name: ${humanPlayer.name}(${humanPlayer.id})`);
+      g.humanId = humanPlayer.id;
+      return humanPlayer.id;
+    }
+    
+    // Strategy 3: Last resort - use first alive player
+    const alivePlayer = players.find(p => !p.evicted);
+    if (alivePlayer) {
+      console.warn(`[Competition] ⚠ Fallback: Using first alive player as human: ${alivePlayer.name}(${alivePlayer.id})`);
+      g.humanId = alivePlayer.id;
+      return alivePlayer.id;
+    }
+    
+    console.error('[Competition] ✗ Fallback failed: No suitable player found in players array');
+    return null;
+  }
+
+  /**
    * Wait for human profile to be ready (g.humanId and profile object available)
-   * Retries with exponential backoff up to a timeout
-   * @param {number} maxWaitMs - Maximum time to wait (default: 2000ms)
+   * Retries with exponential backoff up to a timeout, with fallback to derive humanId from players
+   * @param {number} maxWaitMs - Maximum time to wait (default: 5000ms, increased from 2000ms)
    * @returns {Promise<Object|null>} Resolves with player object or null on timeout
    */
-  async function waitForHumanReady(maxWaitMs = 2000) {
+  async function waitForHumanReady(maxWaitMs = 5000) {
     const g = global.game;
     const startTime = Date.now();
     let attempts = 0;
@@ -973,13 +1015,27 @@
         }
       }
       
+      // Check if players array exists - if so, we can derive humanId as fallback
+      const players = g.players || global.PlayerService?.players;
+      if (players && players.length > 0 && !g.humanId) {
+        console.info(`[Competition] Players array available but humanId null, attempting fallback (attempt ${attempts})`);
+        const derivedId = ensureHumanIdFromPlayers();
+        if (derivedId !== null) {
+          const player = global.getP?.(derivedId);
+          if (player) {
+            console.info(`[Competition] ✓ Human profile ready via fallback after ${attempts} attempt(s), ${Date.now() - startTime}ms`);
+            return player;
+          }
+        }
+      }
+      
       // Show status message while waiting
       if (window.TvStatus?.set) {
         window.TvStatus.set('Waiting for player profile…');
       }
       
-      // Exponential backoff: 250ms, 500ms, 750ms, 1000ms...
-      const delay = Math.min(250 * attempts, 1000);
+      // Poll at 250ms intervals
+      const delay = 250;
       await new Promise(resolve => setTimeout(resolve, delay));
     }
     
@@ -1019,12 +1075,28 @@
 
     console.info('[Competition] ✓ Minigame system is ready');
 
-    // Wait for human profile with retry loop
+    // Wait for human profile with retry loop (increased to 5s timeout)
     (async () => {
-      const you = await waitForHumanReady(2000);
+      let you = await waitForHumanReady(5000);
+      
+      // Immediate fallback: if timeout but players exist, try one more quick derivation
+      if (!you) {
+        console.warn('[Competition] ⚠ First wait timed out, attempting immediate fallback');
+        const players = g.players || global.PlayerService?.players;
+        if (players && players.length > 0) {
+          console.info('[Competition] Players array exists, attempting to derive humanId');
+          const derivedId = ensureHumanIdFromPlayers();
+          if (derivedId !== null) {
+            you = global.getP?.(derivedId);
+            if (you) {
+              console.info(`[Competition] ✓ Immediate fallback successful: ${you.name}(${you.id})`);
+            }
+          }
+        }
+      }
       
       if (!you) {
-        console.error('[Competition] ✗ Human profile not available after waiting');
+        console.error('[Competition] ✗ Human profile not available after waiting and fallback');
         if (window.TvStatus?.set) {
           window.TvStatus.set('Error: Player profile not loaded. Please refresh the page.');
         }
