@@ -213,9 +213,19 @@ console.info('[IntroScreen] Script executing – pre-init');
 
   /**
    * Detect if running in standalone mode (Home Screen app)
+   * Supports both iOS (navigator.standalone) and Android/Chrome (display-mode media query)
+   * Note: Currently not used in consent flow, but kept for future enhancements
    */
-  function isStandalone() {
-    return ('standalone' in navigator) && (navigator.standalone === true);
+  function isStandalone() { // eslint-disable-line no-unused-vars
+    // iOS check
+    if (('standalone' in navigator) && (navigator.standalone === true)) {
+      return true;
+    }
+    // Android/Chrome PWA check
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+      return true;
+    }
+    return false;
   }
 
   function checkForSave() {
@@ -962,9 +972,9 @@ console.info('[IntroScreen] Script executing – pre-init');
         // Ignore localStorage errors
       }
 
-      // If iOS standalone and no persisted consent decision, show consent overlay immediately
-      if (isIOS() && isStandalone() && !consentGranted && !consentDenied) {
-        console.info('[IntroHub] iOS standalone detected, showing consent overlay immediately');
+      // If iOS (Safari or standalone) and no persisted consent decision, show consent overlay immediately
+      if (isIOS() && !consentGranted && !consentDenied) {
+        console.info('[IntroHub] iOS detected (Safari/standalone), showing consent overlay immediately');
         showSoundConsentOverlay();
         return;
       }
