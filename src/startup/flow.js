@@ -253,6 +253,20 @@
         g.Telemetry.log('startup_show_hub_done', {});
       }
 
+      // Play intro hub lobby music if enabled
+      if (typeof g.playIntroHubMusic === 'function') {
+        const cfg = (g.game && g.game.cfg) || g.cfg || {};
+        const musicEnabled = cfg.musicOn !== false; // default true
+        const isMuted = (typeof g.getMuted === 'function') ? g.getMuted() : false;
+        
+        if (musicEnabled && !isMuted) {
+          console.info('[StartupFlow] Playing intro hub lobby music');
+          g.playIntroHubMusic();
+        } else {
+          console.info('[StartupFlow] Skipping lobby music (disabled or muted)');
+        }
+      }
+
     } catch (err) {
       console.error('[StartupFlow] Error showing intro hub:', err);
       
@@ -281,6 +295,19 @@
 
     console.info('[StartupFlow] Building main game screen...');
     mainScreenBuilt = true;
+
+    // Stop lobby music when transitioning to main game
+    try {
+      if (typeof g.fadeOutMusic === 'function') {
+        g.fadeOutMusic(600); // graceful fade
+        console.info('[StartupFlow] Fading out lobby music (600ms)');
+      } else if (typeof g.stopIntroHubMusic === 'function') {
+        g.stopIntroHubMusic();
+        console.info('[StartupFlow] Stopped lobby music');
+      }
+    } catch(e) {
+      console.warn('[StartupFlow] Unable to stop lobby music', e);
+    }
 
     // CRITICAL: Close all open modals before transitioning to main screen
     // This prevents modals from appearing over the game screen

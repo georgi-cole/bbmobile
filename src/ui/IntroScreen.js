@@ -280,6 +280,15 @@ console.info('[IntroScreen] Script executing – pre-init');
 
   function handleSoundToggle(btn) {
     handleAudioToggle('sound', btn);
+    
+    // Dispatch custom event to notify SFX module of sound toggle
+    try {
+      document.dispatchEvent(new CustomEvent('introHubSfx', { 
+        detail: { enabled: btn.getAttribute('aria-pressed') === 'true' } 
+      }));
+    } catch(e) {
+      // Ignore dispatch errors
+    }
   }
 
   /**
@@ -633,6 +642,8 @@ console.info('[IntroScreen] Script executing – pre-init');
     if (window.Telemetry && typeof window.Telemetry.log === 'function') {
       window.Telemetry.log('intro_show_with_preload_done', { isVisible });
     }
+    
+    // Note: afterIntroScreenVisible() is called inside show()
   }
 
   /**
@@ -675,6 +686,22 @@ console.info('[IntroScreen] Script executing – pre-init');
           buffer.parentNode.removeChild(buffer);
         }
       }, 200);
+    }
+  }
+
+  /**
+   * Attach UI SFX to intro screen buttons
+   * Called after intro screen becomes visible
+   */
+  function afterIntroScreenVisible(){
+    try {
+      const hubRoot = document.getElementById('introScreen');
+      if (hubRoot && window.IntroHubSfx) {
+        window.IntroHubSfx.attach(hubRoot);
+        console.info('[IntroHub] UI SFX attached');
+      }
+    } catch(e) {
+      console.warn('[IntroHub] Failed to attach UI SFX', e);
     }
   }
 
@@ -751,6 +778,9 @@ console.info('[IntroScreen] Script executing – pre-init');
     // CRITICAL: Set global flag ONLY AFTER hub is fully visible in DOM
     // This ensures __bbHubShown accurately reflects hub visibility
     window.__bbHubShown = true;
+
+    // Attach UI SFX after hub is visible
+    afterIntroScreenVisible();
 
     console.info('[IntroScreen] Shown');
 
