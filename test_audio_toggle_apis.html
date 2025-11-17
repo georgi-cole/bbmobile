@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Audio Toggle APIs</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0e14;
+      color: #fff;
+      padding: 20px;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #00d4ff;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #aaa;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-button {
+      background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+      transition: all 200ms ease;
+    }
+    .test-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+    }
+    .test-button:active {
+      transform: translateY(0) scale(0.97);
+    }
+    .test-button.secondary {
+      background: linear-gradient(135deg, #666 0%, #444 100%);
+    }
+    .status {
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 6px;
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    .status.error {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid rgba(255, 0, 0, 0.3);
+    }
+    .status.warning {
+      background: rgba(255, 165, 0, 0.1);
+      border: 1px solid rgba(255, 165, 0, 0.3);
+    }
+    .info {
+      color: #aaa;
+      font-size: 14px;
+      margin: 10px 0;
+      line-height: 1.5;
+    }
+    .api-check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      margin: 5px 0;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 4px;
+    }
+    .api-check .icon {
+      font-size: 20px;
+      min-width: 30px;
+    }
+    .api-check .name {
+      flex: 1;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .log-area {
+      background: #000;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 0;
+    }
+    .log-entry.success { color: #0f0; }
+    .log-entry.error { color: #f44; }
+    .log-entry.info { color: #0cf; }
+    .log-entry.warn { color: #fa0; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎵 Audio Toggle APIs Test</h1>
+    <p class="subtitle">Testing new audio toggle APIs for music and SFX control</p>
+    
+    <div class="test-section">
+      <h2>API Availability Check</h2>
+      <p class="info">Verifying all required APIs are exported correctly</p>
+      <div id="api-check"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Music Control APIs</h2>
+      <p class="info">Test music enable/disable and toggle functionality</p>
+      <div style="margin: 15px 0;">
+        <button class="test-button" onclick="testToggleMusic()">Toggle Music</button>
+        <button class="test-button" onclick="testSetMusicEnabled(true)">Enable Music</button>
+        <button class="test-button" onclick="testSetMusicEnabled(false)">Disable Music</button>
+        <button class="test-button secondary" onclick="testGetMusicEnabled()">Get Music State</button>
+      </div>
+      <div id="music-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>SFX Control APIs</h2>
+      <p class="info">Test SFX enable/disable and toggle functionality</p>
+      <div style="margin: 15px 0;">
+        <button class="test-button" onclick="testToggleSound()">Toggle Sound</button>
+        <button class="test-button" onclick="testSetSfxEnabled(true)">Enable SFX</button>
+        <button class="test-button" onclick="testSetSfxEnabled(false)">Disable SFX</button>
+        <button class="test-button secondary" onclick="testGetSfxEnabled()">Get SFX State</button>
+      </div>
+      <div id="sfx-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Lobby Music APIs</h2>
+      <p class="info">Test intro hub lobby music play/stop</p>
+      <div style="margin: 15px 0;">
+        <button class="test-button" onclick="testPlayIntroHubMusic()">Play Intro Hub Music</button>
+        <button class="test-button" onclick="testPlayIntroHubMusicVolume()">Play (50% Volume)</button>
+        <button class="test-button" onclick="testStopIntroHubMusic()">Stop Intro Hub Music</button>
+        <button class="test-button secondary" onclick="testFadeOutMusic()">Fade Out (600ms)</button>
+      </div>
+      <div id="lobby-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Integration Test</h2>
+      <p class="info">Test complete workflow: enable → play → toggle → disable</p>
+      <button class="test-button" onclick="runIntegrationTest()">Run Full Integration Test</button>
+      <div id="integration-status"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Log</h2>
+      <button class="test-button secondary" onclick="clearLog()" style="float: right;">Clear Log</button>
+      <div class="log-area" id="test-log"></div>
+    </div>
+  </div>
+
+  <!-- Load audio.js first -->
+  <script src="js/audio.js"></script>
+
+  <script>
+    // Log helper
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('test-log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(`[${type.toUpperCase()}]`, message);
+    }
+
+    function clearLog() {
+      document.getElementById('test-log').innerHTML = '';
+      log('Log cleared', 'info');
+    }
+
+    function showStatus(elementId, message, isError = false) {
+      const el = document.getElementById(elementId);
+      el.innerHTML = `<div class="status ${isError ? 'error' : ''}">${message}</div>`;
+    }
+
+    // Check API availability
+    function checkAPIAvailability() {
+      const apis = [
+        { name: 'window.audio', path: () => window.audio },
+        { name: 'window.audio.toggleMusic', path: () => window.audio?.toggleMusic },
+        { name: 'window.audio.setMusicEnabled', path: () => window.audio?.setMusicEnabled },
+        { name: 'window.audio.getMusicEnabled', path: () => window.audio?.getMusicEnabled },
+        { name: 'window.audio.toggleSound', path: () => window.audio?.toggleSound },
+        { name: 'window.audio.setSfxEnabled', path: () => window.audio?.setSfxEnabled },
+        { name: 'window.audio.getSfxEnabled', path: () => window.audio?.getSfxEnabled },
+        { name: 'window.playIntroHubMusic', path: () => window.playIntroHubMusic },
+        { name: 'window.stopIntroHubMusic', path: () => window.stopIntroHubMusic },
+        { name: 'window.fadeOutMusic', path: () => window.fadeOutMusic },
+      ];
+
+      const checkEl = document.getElementById('api-check');
+      checkEl.innerHTML = '';
+
+      let allAvailable = true;
+      apis.forEach(api => {
+        const available = typeof api.path() === 'function';
+        allAvailable = allAvailable && available;
+        
+        const div = document.createElement('div');
+        div.className = 'api-check';
+        div.innerHTML = `
+          <span class="icon">${available ? '✅' : '❌'}</span>
+          <span class="name">${api.name}</span>
+        `;
+        checkEl.appendChild(div);
+        
+        log(`API ${api.name}: ${available ? 'Available' : 'Missing'}`, available ? 'success' : 'error');
+      });
+
+      if (allAvailable) {
+        log('✅ All APIs available', 'success');
+      } else {
+        log('❌ Some APIs missing', 'error');
+      }
+    }
+
+    // Music API tests
+    function testToggleMusic() {
+      try {
+        const result = window.audio.toggleMusic();
+        showStatus('music-status', `Music toggled to: ${result ? 'ENABLED' : 'DISABLED'}`);
+        log(`toggleMusic() returned: ${result}`, 'success');
+      } catch (e) {
+        showStatus('music-status', `Error: ${e.message}`, true);
+        log(`toggleMusic() error: ${e.message}`, 'error');
+      }
+    }
+
+    function testSetMusicEnabled(enabled) {
+      try {
+        const result = window.audio.setMusicEnabled(enabled);
+        showStatus('music-status', `Music set to: ${result ? 'ENABLED' : 'DISABLED'}`);
+        log(`setMusicEnabled(${enabled}) returned: ${result}`, 'success');
+      } catch (e) {
+        showStatus('music-status', `Error: ${e.message}`, true);
+        log(`setMusicEnabled() error: ${e.message}`, 'error');
+      }
+    }
+
+    function testGetMusicEnabled() {
+      try {
+        const result = window.audio.getMusicEnabled();
+        showStatus('music-status', `Current music state: ${result ? 'ENABLED' : 'DISABLED'}`);
+        log(`getMusicEnabled() returned: ${result}`, 'info');
+      } catch (e) {
+        showStatus('music-status', `Error: ${e.message}`, true);
+        log(`getMusicEnabled() error: ${e.message}`, 'error');
+      }
+    }
+
+    // SFX API tests
+    function testToggleSound() {
+      try {
+        const result = window.audio.toggleSound();
+        showStatus('sfx-status', `SFX toggled to: ${result ? 'ENABLED' : 'DISABLED'}`);
+        log(`toggleSound() returned: ${result}`, 'success');
+      } catch (e) {
+        showStatus('sfx-status', `Error: ${e.message}`, true);
+        log(`toggleSound() error: ${e.message}`, 'error');
+      }
+    }
+
+    function testSetSfxEnabled(enabled) {
+      try {
+        const result = window.audio.setSfxEnabled(enabled);
+        showStatus('sfx-status', `SFX set to: ${result ? 'ENABLED' : 'DISABLED'}`);
+        log(`setSfxEnabled(${enabled}) returned: ${result}`, 'success');
+      } catch (e) {
+        showStatus('sfx-status', `Error: ${e.message}`, true);
+        log(`setSfxEnabled() error: ${e.message}`, 'error');
+      }
+    }
+
+    function testGetSfxEnabled() {
+      try {
+        const result = window.audio.getSfxEnabled();
+        showStatus('sfx-status', `Current SFX state: ${result ? 'ENABLED' : 'DISABLED'}`);
+        log(`getSfxEnabled() returned: ${result}`, 'info');
+      } catch (e) {
+        showStatus('sfx-status', `Error: ${e.message}`, true);
+        log(`getSfxEnabled() error: ${e.message}`, 'error');
+      }
+    }
+
+    // Lobby music tests
+    function testPlayIntroHubMusic() {
+      try {
+        window.playIntroHubMusic();
+        showStatus('lobby-status', 'Intro hub music started (check console for audio logs)');
+        log('playIntroHubMusic() called', 'success');
+      } catch (e) {
+        showStatus('lobby-status', `Error: ${e.message}`, true);
+        log(`playIntroHubMusic() error: ${e.message}`, 'error');
+      }
+    }
+
+    function testPlayIntroHubMusicVolume() {
+      try {
+        window.playIntroHubMusic(0.5);
+        showStatus('lobby-status', 'Intro hub music started at 50% volume');
+        log('playIntroHubMusic(0.5) called', 'success');
+      } catch (e) {
+        showStatus('lobby-status', `Error: ${e.message}`, true);
+        log(`playIntroHubMusic(0.5) error: ${e.message}`, 'error');
+      }
+    }
+
+    function testStopIntroHubMusic() {
+      try {
+        window.stopIntroHubMusic();
+        showStatus('lobby-status', 'Intro hub music stopped');
+        log('stopIntroHubMusic() called', 'success');
+      } catch (e) {
+        showStatus('lobby-status', `Error: ${e.message}`, true);
+        log(`stopIntroHubMusic() error: ${e.message}`, 'error');
+      }
+    }
+
+    function testFadeOutMusic() {
+      try {
+        window.fadeOutMusic(600);
+        showStatus('lobby-status', 'Music fading out over 600ms');
+        log('fadeOutMusic(600) called', 'success');
+      } catch (e) {
+        showStatus('lobby-status', `Error: ${e.message}`, true);
+        log(`fadeOutMusic() error: ${e.message}`, 'error');
+      }
+    }
+
+    // Integration test
+    async function runIntegrationTest() {
+      showStatus('integration-status', 'Running integration test...', false);
+      log('=== Starting Integration Test ===', 'info');
+      
+      try {
+        // Step 1: Enable music
+        log('Step 1: Enabling music', 'info');
+        const enabled1 = window.audio.setMusicEnabled(true);
+        if (!enabled1) throw new Error('Failed to enable music');
+        log('✓ Music enabled', 'success');
+        
+        await sleep(500);
+        
+        // Step 2: Play intro hub music
+        log('Step 2: Playing intro hub music', 'info');
+        window.playIntroHubMusic(0.7);
+        log('✓ Intro hub music started', 'success');
+        
+        await sleep(1000);
+        
+        // Step 3: Check music state
+        log('Step 3: Checking music state', 'info');
+        const state1 = window.audio.getMusicEnabled();
+        if (!state1) throw new Error('Music should be enabled');
+        log(`✓ Music state: ${state1}`, 'success');
+        
+        await sleep(500);
+        
+        // Step 4: Toggle music off
+        log('Step 4: Toggling music off', 'info');
+        const toggled1 = window.audio.toggleMusic();
+        if (toggled1) throw new Error('Music should be disabled after toggle');
+        log('✓ Music toggled off', 'success');
+        
+        await sleep(500);
+        
+        // Step 5: Verify music stopped
+        log('Step 5: Verifying music state', 'info');
+        const state2 = window.audio.getMusicEnabled();
+        if (state2) throw new Error('Music should be disabled');
+        log(`✓ Music state: ${state2}`, 'success');
+        
+        await sleep(500);
+        
+        // Step 6: Toggle music back on
+        log('Step 6: Toggling music back on', 'info');
+        const toggled2 = window.audio.toggleMusic();
+        if (!toggled2) throw new Error('Music should be enabled after toggle');
+        log('✓ Music toggled back on', 'success');
+        
+        await sleep(500);
+        
+        // Step 7: Fade out
+        log('Step 7: Fading out music', 'info');
+        window.fadeOutMusic(600);
+        log('✓ Music fading out', 'success');
+        
+        await sleep(700);
+        
+        log('=== Integration Test Complete ===', 'success');
+        showStatus('integration-status', '✅ Integration test passed! All APIs working correctly.');
+        
+      } catch (e) {
+        log(`Integration test failed: ${e.message}`, 'error');
+        showStatus('integration-status', `❌ Integration test failed: ${e.message}`, true);
+      }
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded', 'info');
+      checkAPIAvailability();
+    });
+  </script>
+</body>
+</html>
