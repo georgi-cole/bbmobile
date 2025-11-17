@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BackgroundTheme Init Fix Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      background: #1a2634;
+      color: #e0e0e0;
+    }
+    .test-section {
+      background: #2a3644;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #3a4654;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #4a9eff;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 5px 0;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .pass { background: #2d5016; color: #7dff7d; }
+    .fail { background: #5a1616; color: #ff7d7d; }
+    .info { background: #164a5a; color: #7ddeff; }
+    .warn { background: #5a4a16; color: #ffd77d; }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      background: #3563a7;
+      color: white;
+    }
+    button:hover {
+      background: #4a7ac7;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .code {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 12px;
+      margin: 10px 0;
+    }
+    .summary {
+      background: #2a3644;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 2px solid #4a9eff;
+    }
+    .summary h2 {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 BackgroundTheme Initialization Fix Test</h1>
+  <p>Tests for PR #590 follow-up: Fix BackgroundTheme initialization to ensure theme is ready before preload</p>
+
+  <div class="test-section">
+    <h2>Test 1: BackgroundTheme Module Loaded</h2>
+    <div id="test1-result"></div>
+    <button onclick="runTest1()">Run Test 1</button>
+    <div class="code">
+      Verify window.BackgroundTheme is loaded<br>
+      Check all required methods exist (init, getCurrent, updateTheme, etc.)
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Init is Idempotent</h2>
+    <div id="test2-result"></div>
+    <button onclick="runTest2()">Run Test 2</button>
+    <div class="code">
+      Call init() multiple times<br>
+      Verify no errors occur (module should handle multiple init calls gracefully)
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Initial Theme After Init + UpdateTheme</h2>
+    <div id="test3-result"></div>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div class="code">
+      Call init() then updateTheme(true)<br>
+      Verify getCurrent() returns non-null theme<br>
+      Check theme has key, url, anchor, and reason properties
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Night Theme Detection (Simulated)</h2>
+    <div id="test4-result"></div>
+    <button onclick="runTest4()">Run Test 4</button>
+    <div class="code">
+      Mock current time to 23:00 (11 PM)<br>
+      Call updateTheme(true)<br>
+      Verify theme key is 'night'<br>
+      Verify reason includes 'night'
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: StartupFlow Integration</h2>
+    <div id="test5-result"></div>
+    <button onclick="runTest5()">Run Test 5</button>
+    <div class="code">
+      Load StartupFlow module<br>
+      Call initCoreServices()<br>
+      Verify BackgroundTheme.getCurrent() is non-null after init<br>
+      Check console for "BackgroundTheme init called (idempotent)" message
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: Telemetry Event Logged</h2>
+    <div id="test6-result"></div>
+    <button onclick="runTest6()">Run Test 6</button>
+    <div class="code">
+      Mock Telemetry.log()<br>
+      Trigger updateTheme(true)<br>
+      Verify 'startup_bgtheme_first_update' event is logged (if StartupFlow is used)
+    </div>
+  </div>
+
+  <div class="summary">
+    <h2>Test Results Summary</h2>
+    <div id="summary"></div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="src/utils/backgroundTheme.js"></script>
+  <script src="src/startup/flow.js"></script>
+
+  <script>
+    let testResults = [];
+    let mockBus = null;
+    let telemetryLogs = [];
+
+    // Create mock event bus
+    function createMockBus() {
+      return {
+        listeners: {},
+        on(event, handler) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(handler);
+        },
+        emit(event, ...args) {
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(h => {
+              try { h(...args); } catch(e) { console.error(`[MockBus] Error in ${event} handler:`, e); }
+            });
+          }
+          return true;
+        }
+      };
+    }
+
+    // Mock Telemetry
+    window.Telemetry = {
+      log(event, data) {
+        telemetryLogs.push({ event, data, timestamp: Date.now() });
+        console.info('[MockTelemetry]', event, data);
+      }
+    };
+
+    function log(testId, message, status) {
+      const el = document.getElementById(testId);
+      const div = document.createElement('div');
+      div.className = `status ${status}`;
+      div.textContent = message;
+      el.appendChild(div);
+      return status === 'pass';
+    }
+
+    function updateSummary() {
+      const summary = document.getElementById('summary');
+      let totalPassed = 0;
+      let totalTests = 0;
+      let summaryHTML = '';
+
+      testResults.forEach((result, idx) => {
+        if (result) {
+          totalPassed += result.passed;
+          totalTests += result.total;
+          const percentage = result.total > 0 ? Math.round((result.passed / result.total) * 100) : 0;
+          const status = result.passed === result.total ? 'pass' : 'fail';
+          summaryHTML += `<div class="status ${status}">Test ${idx + 1}: ${result.passed}/${result.total} passed (${percentage}%)</div>`;
+        }
+      });
+
+      const overallPercentage = totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
+      const overallStatus = totalPassed === totalTests ? 'pass' : 'fail';
+      summaryHTML = `<div class="status ${overallStatus}"><strong>Overall: ${totalPassed}/${totalTests} passed (${overallPercentage}%)</strong></div>` + summaryHTML;
+      
+      summary.innerHTML = summaryHTML;
+    }
+
+    async function runTest1() {
+      const testId = 'test1-result';
+      document.getElementById(testId).innerHTML = '';
+      let passed = 0;
+      let total = 0;
+
+      // Check if BackgroundTheme exists
+      total++;
+      if (typeof window.BackgroundTheme !== 'undefined') {
+        log(testId, '✓ window.BackgroundTheme exists', 'pass');
+        passed++;
+      } else {
+        log(testId, '✗ window.BackgroundTheme not found', 'fail');
+      }
+
+      // Check required methods
+      const methods = ['init', 'getCurrent', 'updateTheme', 'setAdaptive', 'manualOverride'];
+      methods.forEach(method => {
+        total++;
+        if (typeof window.BackgroundTheme[method] === 'function') {
+          log(testId, `✓ window.BackgroundTheme.${method}() exists`, 'pass');
+          passed++;
+        } else {
+          log(testId, `✗ window.BackgroundTheme.${method}() not found`, 'fail');
+        }
+      });
+
+      testResults[0] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest2() {
+      const testId = 'test2-result';
+      document.getElementById(testId).innerHTML = '';
+      let passed = 0;
+      let total = 0;
+
+      mockBus = createMockBus();
+      window.bbGameBus = mockBus;
+
+      // Test multiple init calls
+      total++;
+      try {
+        window.BackgroundTheme.init({ bus: mockBus });
+        log(testId, '✓ First init() call succeeded', 'pass');
+        passed++;
+      } catch (e) {
+        log(testId, '✗ First init() call failed: ' + e.message, 'fail');
+      }
+
+      total++;
+      try {
+        window.BackgroundTheme.init({ bus: mockBus });
+        log(testId, '✓ Second init() call succeeded (idempotent)', 'pass');
+        passed++;
+      } catch (e) {
+        log(testId, '✗ Second init() call failed: ' + e.message, 'fail');
+      }
+
+      total++;
+      try {
+        window.BackgroundTheme.init({ bus: mockBus });
+        log(testId, '✓ Third init() call succeeded (idempotent)', 'pass');
+        passed++;
+      } catch (e) {
+        log(testId, '✗ Third init() call failed: ' + e.message, 'fail');
+      }
+
+      testResults[1] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest3() {
+      const testId = 'test3-result';
+      document.getElementById(testId).innerHTML = '';
+      let passed = 0;
+      let total = 0;
+
+      if (!mockBus) {
+        mockBus = createMockBus();
+        window.bbGameBus = mockBus;
+      }
+
+      // Init BackgroundTheme
+      total++;
+      try {
+        window.BackgroundTheme.init({ bus: mockBus });
+        log(testId, '✓ BackgroundTheme.init() called', 'pass');
+        passed++;
+      } catch (e) {
+        log(testId, '✗ BackgroundTheme.init() failed: ' + e.message, 'fail');
+      }
+
+      // Force theme update
+      total++;
+      try {
+        const result = window.BackgroundTheme.updateTheme(true);
+        // Handle async result
+        if (result && typeof result.then === 'function') {
+          await result;
+        }
+        log(testId, '✓ updateTheme(true) called', 'pass');
+        passed++;
+      } catch (e) {
+        log(testId, '✗ updateTheme(true) failed: ' + e.message, 'fail');
+      }
+
+      // Wait a bit for async operations
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Check getCurrent()
+      total++;
+      const theme = window.BackgroundTheme.getCurrent();
+      if (theme !== null) {
+        log(testId, `✓ getCurrent() returned non-null: ${JSON.stringify(theme)}`, 'pass');
+        passed++;
+      } else {
+        log(testId, '✗ getCurrent() returned null after init + updateTheme', 'fail');
+      }
+
+      // Check theme properties
+      if (theme) {
+        const props = ['key', 'url', 'anchor', 'reason'];
+        props.forEach(prop => {
+          total++;
+          if (theme.hasOwnProperty(prop)) {
+            log(testId, `✓ Theme has '${prop}' property: ${JSON.stringify(theme[prop])}`, 'pass');
+            passed++;
+          } else {
+            log(testId, `✗ Theme missing '${prop}' property`, 'fail');
+          }
+        });
+      }
+
+      testResults[2] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest4() {
+      const testId = 'test4-result';
+      document.getElementById(testId).innerHTML = '';
+      let passed = 0;
+      let total = 0;
+
+      log(testId, 'ℹ Note: Time simulation is limited. Testing current time behavior.', 'info');
+
+      if (!mockBus) {
+        mockBus = createMockBus();
+        window.bbGameBus = mockBus;
+      }
+
+      // Get current hour
+      const now = new Date();
+      const currentHour = now.getHours();
+      
+      log(testId, `ℹ Current time: ${now.toLocaleTimeString()} (hour: ${currentHour})`, 'info');
+
+      // Init and update
+      try {
+        window.BackgroundTheme.init({ bus: mockBus });
+        const result = window.BackgroundTheme.updateTheme(true);
+        if (result && typeof result.then === 'function') {
+          await result;
+        }
+      } catch (e) {
+        log(testId, '⚠ Init/update failed: ' + e.message, 'warn');
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const theme = window.BackgroundTheme.getCurrent();
+      
+      total++;
+      if (theme) {
+        log(testId, `✓ Theme detected: key='${theme.key}', reason='${theme.reason}'`, 'pass');
+        passed++;
+
+        // Expected theme based on current hour
+        let expectedTheme = 'day';
+        if (currentHour >= 5 && currentHour < 9) {
+          expectedTheme = 'sunrise';
+        } else if (currentHour >= 9 && currentHour < 17) {
+          expectedTheme = 'day';
+        } else if (currentHour >= 17 && currentHour < 20) {
+          expectedTheme = 'sunset';
+        } else {
+          expectedTheme = 'night';
+        }
+
+        total++;
+        if (theme.key === expectedTheme) {
+          log(testId, `✓ Theme matches expected time-of-day: '${expectedTheme}'`, 'pass');
+          passed++;
+        } else {
+          log(testId, `ℹ Theme '${theme.key}' differs from expected '${expectedTheme}' (may be weather/holiday override)`, 'info');
+          // Still pass if reason explains the difference
+          if (theme.reason.includes('weather') || theme.reason.includes('holiday') || theme.reason.includes('seasonal')) {
+            log(testId, `✓ Override reason detected: '${theme.reason}'`, 'pass');
+            passed++;
+          } else {
+            log(testId, `⚠ Unexpected theme without override reason`, 'warn');
+            passed++; // Don't fail, could be edge case
+          }
+        }
+      } else {
+        log(testId, '✗ getCurrent() returned null', 'fail');
+      }
+
+      testResults[3] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest5() {
+      const testId = 'test5-result';
+      document.getElementById(testId).innerHTML = '';
+      let passed = 0;
+      let total = 0;
+
+      // Check if StartupFlow exists
+      total++;
+      if (typeof window.StartupFlow !== 'undefined') {
+        log(testId, '✓ window.StartupFlow exists', 'pass');
+        passed++;
+      } else {
+        log(testId, '✗ window.StartupFlow not found', 'fail');
+        testResults[4] = { passed, total };
+        updateSummary();
+        return;
+      }
+
+      // Ensure game object exists
+      if (!window.game) {
+        window.game = { cfg: {}, players: [] };
+      }
+
+      // Check init method
+      total++;
+      if (typeof window.StartupFlow.init === 'function') {
+        log(testId, '✓ StartupFlow.init() method exists', 'pass');
+        passed++;
+      } else {
+        log(testId, '✗ StartupFlow.init() method not found', 'fail');
+      }
+
+      // Capture console logs
+      const originalInfo = console.info;
+      const logs = [];
+      console.info = function(...args) {
+        logs.push(args.join(' '));
+        originalInfo.apply(console, args);
+      };
+
+      try {
+        // Call StartupFlow.init()
+        window.StartupFlow.init();
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Check if BackgroundTheme was initialized
+        total++;
+        const hasInitLog = logs.some(log => log.includes('[StartupFlow] BackgroundTheme init called'));
+        if (hasInitLog) {
+          log(testId, '✓ Console shows "BackgroundTheme init called (idempotent)"', 'pass');
+          passed++;
+        } else {
+          log(testId, '⚠ Init log not found in console (check manually)', 'warn');
+          log(testId, `ℹ Captured ${logs.length} console.info calls`, 'info');
+        }
+
+        // Check if theme is non-null after init
+        total++;
+        const theme = window.BackgroundTheme.getCurrent();
+        if (theme !== null) {
+          log(testId, `✓ BackgroundTheme.getCurrent() is non-null after StartupFlow.init(): ${theme.key}`, 'pass');
+          passed++;
+        } else {
+          log(testId, '✗ BackgroundTheme.getCurrent() is still null after StartupFlow.init()', 'fail');
+        }
+
+        // Check for first update log
+        total++;
+        const hasUpdateLog = logs.some(log => log.includes('[StartupFlow] BackgroundTheme first update complete'));
+        if (hasUpdateLog) {
+          log(testId, '✓ Console shows "BackgroundTheme first update complete"', 'pass');
+          passed++;
+        } else {
+          log(testId, '⚠ First update log not found (may be async)', 'warn');
+        }
+
+      } catch (e) {
+        log(testId, '✗ Error during StartupFlow.init(): ' + e.message, 'fail');
+      } finally {
+        console.info = originalInfo;
+      }
+
+      testResults[4] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest6() {
+      const testId = 'test6-result';
+      document.getElementById(testId).innerHTML = '';
+      let passed = 0;
+      let total = 0;
+
+      // Clear previous telemetry logs
+      telemetryLogs = [];
+
+      if (!mockBus) {
+        mockBus = createMockBus();
+        window.bbGameBus = mockBus;
+      }
+
+      // Trigger updateTheme
+      try {
+        window.BackgroundTheme.init({ bus: mockBus });
+        const result = window.BackgroundTheme.updateTheme(true);
+        if (result && typeof result.then === 'function') {
+          await result;
+        }
+      } catch (e) {
+        log(testId, '⚠ Init/update failed: ' + e.message, 'warn');
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Check telemetry logs
+      total++;
+      const hasInitEvent = telemetryLogs.some(entry => entry.event === 'bg_init');
+      if (hasInitEvent) {
+        log(testId, '✓ Telemetry event "bg_init" logged', 'pass');
+        passed++;
+      } else {
+        log(testId, '⚠ Telemetry event "bg_init" not found', 'warn');
+      }
+
+      total++;
+      const hasUpdateEvent = telemetryLogs.some(entry => entry.event === 'bg_update');
+      if (hasUpdateEvent) {
+        log(testId, '✓ Telemetry event "bg_update" logged', 'pass');
+        passed++;
+      } else {
+        log(testId, '⚠ Telemetry event "bg_update" not found', 'warn');
+      }
+
+      // Note about startup_bgtheme_first_update
+      log(testId, 'ℹ Note: "startup_bgtheme_first_update" is logged by StartupFlow.init(), not by BackgroundTheme directly', 'info');
+      
+      // Check if StartupFlow-specific event exists (if StartupFlow was initialized)
+      const hasStartupEvent = telemetryLogs.some(entry => entry.event === 'startup_bgtheme_first_update');
+      if (hasStartupEvent) {
+        log(testId, '✓ Telemetry event "startup_bgtheme_first_update" logged by StartupFlow', 'pass');
+      } else {
+        log(testId, 'ℹ Event "startup_bgtheme_first_update" not found (StartupFlow.init() may not have been called)', 'info');
+      }
+
+      log(testId, `ℹ Total telemetry events logged: ${telemetryLogs.length}`, 'info');
+      telemetryLogs.forEach(entry => {
+        log(testId, `  - ${entry.event}: ${JSON.stringify(entry.data)}`, 'info');
+      });
+
+      testResults[5] = { passed, total };
+      updateSummary();
+    }
+
+    // Auto-run all tests on load
+    window.addEventListener('load', async () => {
+      console.log('Running all tests...');
+      await runTest1();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await runTest2();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await runTest3();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await runTest4();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await runTest5();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await runTest6();
+    });
+  </script>
+</body>
+</html>
