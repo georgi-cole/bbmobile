@@ -67,7 +67,7 @@
     const s = String(nameOrFilename).trim();
     // Raw filename support (mp3, mp4, ogg, etc.)
     if (/\.(mp3|mp4|ogg|wav|m4a)(\?.*)?$/i.test(s)) return s;
-    // Try phase mapping first
+    // Try phase mapping
     const p = mapPhase(s);
     if (p) {
       console.info('[audio] resolveToFile phase:', s, '->', p);
@@ -78,6 +78,11 @@
     if (ev) {
       console.info('[audio] resolveToFile event:', s, '->', ev);
       return ev;
+    }
+    // Fallback for intro_hub if not in mapping
+    if (s === 'intro_hub') {
+      console.info('[audio] resolveToFile fallback intro_hub -> Intro Hub music.mp3');
+      return 'Intro Hub music.mp3';
     }
     console.warn('[audio] resolveToFile: unknown', s);
     return null;
@@ -166,16 +171,7 @@
       p.catch(err => {
         const errStr = String(err.name || err.message || '');
         if (/NotAllowedError/i.test(errStr)) {
-          console.info('[audio] Autoplay blocked; notifying listeners');
-          // Dispatch event to notify UI about autoplay block
-          try {
-            document.dispatchEvent(new CustomEvent('bb:audio:autoplay-blocked', {
-              detail: { error: errStr }
-            }));
-          } catch(e) {
-            // Ignore dispatch errors
-          }
-          // Install gesture unlock as fallback
+          console.info('[audio] Autoplay blocked; installing gesture unlock');
           const unlock = () => {
             try {
               audioEl.play().catch(() => {});
@@ -240,7 +236,7 @@
 
     try {
       attemptPlay(audio);
-      console.info(`[audio] playing file: ${file}`);
+      console.info(`[audio] successfully started music, file=${file}`);
     } catch (e) {
       // Fallback if premiere.mp4 missing: try intro.mp3
       if (/premiere\.mp4$/i.test(file)) {
@@ -448,13 +444,19 @@
       } catch(e) {
         // Ignore stop errors
       }
-    } else {
-      // Resume last requested track or default to intro_hub
-      const trackToPlay = lastRequestedPhaseOrFile || 'intro_hub';
+    } else if (lastRequestedPhaseOrFile) {
+      // Resume last requested track
       try {
-        playMusicForPhase(trackToPlay);
+        playMusicForPhase(lastRequestedPhaseOrFile);
       } catch(e) {
         // Ignore resume errors
+      }
+    } else {
+      // Default to intro_hub if no last requested
+      try {
+        playMusicForPhase('intro_hub');
+      } catch(e) {
+        // Ignore fallback errors
       }
     }
     

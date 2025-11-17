@@ -48,15 +48,6 @@
     // Wire up event listener for sound toggle
     wireBridge();
     
-    // Listen for sound consent event to create WebAudio context
-    document.addEventListener('bb:sound-consent-granted', () => {
-      console.info('[IntroHubSfx] Sound consent granted, resuming WebAudio context');
-      const ac = getCtx();
-      if (ac && ac.state === 'suspended') {
-        ac.resume().catch(() => {});
-      }
-    }, { once: true });
-    
     initialized = true;
     console.info('[IntroHubSfx] Initialized (hover & click SFX ready)');
   }
@@ -132,7 +123,7 @@
       el.currentTime = 0;
       const p = el.play();
       if (p && p.catch) {
-        p.catch(() => {
+        p.catch(err => {
           if (label === 'hover' && !warnedHover) {
             console.info('[IntroHubSfx] Hover SFX not available:', HOVER_SRC);
             warnedHover = true;
