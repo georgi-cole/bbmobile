@@ -1036,6 +1036,32 @@ console.info('[IntroScreen] Script executing – pre-init');
   }
 
   /**
+   * Add subtle glassy effects to the Play CTA
+   * Helper: finds Play CTA via common selectors and adds styling classes
+   */
+  function decoratePlayCta() {
+    try {
+      const playBtn =
+        document.querySelector('[data-action="intro:start"]') ||
+        document.querySelector('#introPlayButton') ||
+        document.querySelector('#intro-btn-play') ||
+        document.querySelector('.intro-screen__cta--play') ||
+        document.querySelector('.intro-screen__btn--play') ||
+        document.querySelector('.intro-screen__btn--primary');
+
+      if (!playBtn) {
+        console.debug('[IntroHub] Play CTA not found for decoration');
+        return;
+      }
+
+      playBtn.classList.add('intro-cta--glassy', 'intro-cta--animated');
+      console.info('[IntroHub] Play CTA decorated with glassy effects');
+    } catch (e) {
+      console.debug('[IntroHub] decoratePlayCta skipped', e);
+    }
+  }
+
+  /**
    * Attach UI SFX to intro screen buttons
    * Called after intro screen becomes visible
    */
@@ -1055,6 +1081,13 @@ console.info('[IntroScreen] Script executing – pre-init');
     
     // Ensure lobby music plays (handles iOS standalone consent)
     ensureLobbyMusic();
+    
+    // Decorate Play CTA with glassy effects
+    try {
+      decoratePlayCta();
+    } catch (e) {
+      console.debug('[IntroHub] decoratePlayCta skipped', e);
+    }
   }
 
   // ===== PUBLIC API =====
