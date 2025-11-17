@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Verification - BackgroundTheme Init Fix</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      padding: 20px;
+      background: #0a0a0a;
+      color: #00ff00;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #00ffff;
+      border-bottom: 2px solid #00ffff;
+      padding-bottom: 10px;
+    }
+    .console-output {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 3px 0;
+      padding: 2px 5px;
+    }
+    .log-info { color: #00ff00; }
+    .log-warn { color: #ffaa00; }
+    .log-error { color: #ff0000; }
+    .status-box {
+      background: #1a2634;
+      border: 2px solid #4a9eff;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+    }
+    .status-box h2 {
+      margin-top: 0;
+      color: #4a9eff;
+    }
+    .theme-display {
+      background: #2a3644;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border-left: 4px solid #00ff00;
+    }
+    .pass { color: #00ff00; font-weight: bold; }
+    .fail { color: #ff0000; font-weight: bold; }
+    pre {
+      background: #0a0a0a;
+      padding: 10px;
+      border: 1px solid #333;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    button {
+      background: #3563a7;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #4a7ac7;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Manual Verification: BackgroundTheme Init Fix</h1>
+  <p>This page verifies that the BackgroundTheme initialization fix works correctly.</p>
+  <p><strong>Current Time:</strong> <span id="currentTime"></span></p>
+  <p><strong>Expected Theme:</strong> <span id="expectedTheme"></span></p>
+
+  <div class="status-box">
+    <h2>Initialization Status</h2>
+    <div id="initStatus">Waiting for modules to load...</div>
+  </div>
+
+  <div class="status-box">
+    <h2>Theme Information</h2>
+    <div id="themeInfo">No theme loaded yet</div>
+  </div>
+
+  <div class="status-box">
+    <h2>Console Output</h2>
+    <div class="console-output" id="consoleOutput"></div>
+  </div>
+
+  <button onclick="rerunInit()">Re-run StartupFlow.init()</button>
+  <button onclick="forceUpdate()">Force Theme Update</button>
+  <button onclick="clearConsole()">Clear Console</button>
+
+  <!-- Load required modules -->
+  <script src="src/utils/backgroundTheme.js"></script>
+  <script src="src/startup/flow.js"></script>
+
+  <script>
+    // Mock Telemetry
+    let telemetryEvents = [];
+    window.Telemetry = {
+      log(event, data) {
+        telemetryEvents.push({ event, data, timestamp: Date.now() });
+        logToConsole('[Telemetry] ' + event + ': ' + JSON.stringify(data), 'info');
+      }
+    };
+
+    // Capture console messages
+    let consoleMessages = [];
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    function logToConsole(message, level = 'info') {
+      consoleMessages.push({ message, level, timestamp: Date.now() });
+      const output = document.getElementById('consoleOutput');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${level}`;
+      const time = new Date().toLocaleTimeString();
+      entry.textContent = `[${time}] ${message}`;
+      output.appendChild(entry);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    console.info = function(...args) {
+      logToConsole(args.join(' '), 'info');
+      originalInfo.apply(console, args);
+    };
+
+    console.warn = function(...args) {
+      logToConsole(args.join(' '), 'warn');
+      originalWarn.apply(console, args);
+    };
+
+    console.error = function(...args) {
+      logToConsole(args.join(' '), 'error');
+      originalError.apply(console, args);
+    };
+
+    // Display current time and expected theme
+    function updateTimeDisplay() {
+      const now = new Date();
+      const hour = now.getHours();
+      document.getElementById('currentTime').textContent = now.toLocaleTimeString();
+
+      let expected = 'day';
+      if (hour >= 5 && hour < 9) expected = 'sunrise';
+      else if (hour >= 9 && hour < 17) expected = 'day';
+      else if (hour >= 17 && hour < 20) expected = 'sunset';
+      else expected = 'night';
+
+      document.getElementById('expectedTheme').textContent = expected + ' (unless weather/holiday override)';
+    }
+
+    updateTimeDisplay();
+    setInterval(updateTimeDisplay, 1000);
+
+    // Initialize mock game object
+    if (!window.game) {
+      window.game = { cfg: { adaptiveBackground: true }, players: [] };
+    }
+
+    // Ensure event bus exists
+    if (!window.bbGameBus) {
+      window.bbGameBus = {
+        listeners: {},
+        on(event, handler) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(handler);
+        },
+        emit(event, ...args) {
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(h => {
+              try { h(...args); } catch(e) { console.error('[EventBus] Error:', e); }
+            });
+          }
+          return true;
+        }
+      };
+    }
+
+    // Check initialization
+    async function checkInit() {
+      const statusEl = document.getElementById('initStatus');
+      const themeEl = document.getElementById('themeInfo');
+
+      // Check if modules loaded
+      if (!window.BackgroundTheme) {
+        statusEl.innerHTML = '<span class="fail">✗ BackgroundTheme module not loaded</span>';
+        return;
+      }
+
+      if (!window.StartupFlow) {
+        statusEl.innerHTML = '<span class="fail">✗ StartupFlow module not loaded</span>';
+        return;
+      }
+
+      logToConsole('✓ Modules loaded successfully', 'info');
+
+      // Check theme before init
+      const themeBefore = window.BackgroundTheme.getCurrent();
+      logToConsole('Theme before init: ' + (themeBefore ? JSON.stringify(themeBefore) : 'null'), 'info');
+
+      // Run StartupFlow.init()
+      logToConsole('Calling StartupFlow.init()...', 'info');
+      window.StartupFlow.init();
+
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Check theme after init
+      const themeAfter = window.BackgroundTheme.getCurrent();
+      logToConsole('Theme after init: ' + (themeAfter ? JSON.stringify(themeAfter) : 'null'), 'info');
+
+      // Update status display
+      if (themeAfter) {
+        statusEl.innerHTML = '<span class="pass">✓ Initialization successful</span>';
+        themeEl.innerHTML = `
+          <div class="theme-display">
+            <strong>Key:</strong> ${themeAfter.key}<br>
+            <strong>URL:</strong> ${themeAfter.url}<br>
+            <strong>Reason:</strong> ${themeAfter.reason}<br>
+            <strong>Anchor:</strong> ${JSON.stringify(themeAfter.anchor)}
+          </div>
+        `;
+
+        // Verify expected behavior
+        const now = new Date();
+        const hour = now.getHours();
+        let expectedKey = 'day';
+        if (hour >= 5 && hour < 9) expectedKey = 'sunrise';
+        else if (hour >= 9 && hour < 17) expectedKey = 'day';
+        else if (hour >= 17 && hour < 20) expectedKey = 'sunset';
+        else expectedKey = 'night';
+
+        if (themeAfter.key === expectedKey) {
+          themeEl.innerHTML += '<div class="theme-display" style="border-left-color: #00ff00;">✓ Theme matches expected time of day</div>';
+        } else if (themeAfter.reason.includes('weather') || themeAfter.reason.includes('holiday') || themeAfter.reason.includes('seasonal')) {
+          themeEl.innerHTML += '<div class="theme-display" style="border-left-color: #ffaa00;">ℹ Theme differs due to override: ' + themeAfter.reason + '</div>';
+        } else {
+          themeEl.innerHTML += '<div class="theme-display" style="border-left-color: #ff0000;">⚠ Theme differs from expected without clear override reason</div>';
+        }
+      } else {
+        statusEl.innerHTML = '<span class="fail">✗ Theme is still null after init</span>';
+        themeEl.innerHTML = '<div class="theme-display" style="border-left-color: #ff0000;">✗ getCurrent() returned null - FIX FAILED</div>';
+      }
+
+      // Check telemetry
+      const hasStartupEvent = telemetryEvents.some(e => e.event === 'startup_bgtheme_first_update');
+      if (hasStartupEvent) {
+        logToConsole('✓ Telemetry event "startup_bgtheme_first_update" logged', 'info');
+      }
+    }
+
+    function rerunInit() {
+      clearConsole();
+      logToConsole('=== Re-running initialization ===', 'info');
+      checkInit();
+    }
+
+    async function forceUpdate() {
+      logToConsole('=== Forcing theme update ===', 'info');
+      try {
+        const result = await window.BackgroundTheme.updateTheme(true);
+        logToConsole('Update result: ' + JSON.stringify(result), 'info');
+        
+        const theme = window.BackgroundTheme.getCurrent();
+        document.getElementById('themeInfo').innerHTML = `
+          <div class="theme-display">
+            <strong>Key:</strong> ${theme?.key || 'null'}<br>
+            <strong>URL:</strong> ${theme?.url || 'null'}<br>
+            <strong>Reason:</strong> ${theme?.reason || 'null'}
+          </div>
+        `;
+      } catch (e) {
+        logToConsole('Update failed: ' + e.message, 'error');
+      }
+    }
+
+    function clearConsole() {
+      consoleMessages = [];
+      telemetryEvents = [];
+      document.getElementById('consoleOutput').innerHTML = '';
+    }
+
+    // Auto-run on page load
+    window.addEventListener('load', () => {
+      setTimeout(checkInit, 100);
+    });
+  </script>
+</body>
+</html>

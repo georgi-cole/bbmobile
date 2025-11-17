@@ -86,20 +86,50 @@
 
     bus = g.bbGameBus;
 
-    // Initialize BackgroundTheme service (only if not already initialized)
-    // Check for existence of getCurrent method as indicator of initialization
+    // Initialize BackgroundTheme service unconditionally (idempotent)
     if (g.BackgroundTheme && typeof g.BackgroundTheme.init === 'function') {
-      if (!g.BackgroundTheme.getCurrent) {
+      try {
         g.BackgroundTheme.init({ bus });
-        console.info('[StartupFlow] BackgroundTheme initialized');
-      } else {
-        console.info('[StartupFlow] BackgroundTheme already initialized, skipping');
+        console.info('[StartupFlow] BackgroundTheme init called (idempotent)');
+      } catch (e) {
+        console.warn('[StartupFlow] BackgroundTheme init failed', e);
       }
-      
-      // Sync with config setting (safe to do even if already initialized)
-      const adaptiveSetting = g.game.cfg.adaptiveBackground;
+
+      // Sync adaptive setting (if present in config)
+      const adaptiveSetting = g.game?.cfg?.adaptiveBackground;
       if (adaptiveSetting !== undefined) {
-        g.BackgroundTheme.setAdaptive(adaptiveSetting);
+        try {
+          g.BackgroundTheme.setAdaptive(adaptiveSetting);
+        } catch (e) {
+          console.warn('[StartupFlow] setAdaptive failed', e);
+        }
+      }
+
+      // Force first theme update to ensure currentTheme is ready before any preload
+      try {
+        const firstTheme = g.BackgroundTheme.updateTheme(true);
+        // If updateTheme returns a promise (async), handle it
+        if (firstTheme && typeof firstTheme.then === 'function') {
+          firstTheme.then(t => {
+            if (t) {
+              console.info('[StartupFlow] BackgroundTheme first update complete:', t);
+              if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+                g.Telemetry.log('startup_bgtheme_first_update', { theme: t.key, reason: t.reason });
+              }
+            } else {
+              console.warn('[StartupFlow] BackgroundTheme first update returned null');
+            }
+          }).catch(err => console.warn('[StartupFlow] BackgroundTheme first update promise failed', err));
+        } else if (firstTheme) {
+          console.info('[StartupFlow] BackgroundTheme first update complete:', firstTheme);
+          if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+            g.Telemetry.log('startup_bgtheme_first_update', { theme: firstTheme.key, reason: firstTheme.reason });
+          }
+        } else {
+          console.warn('[StartupFlow] BackgroundTheme first update returned null');
+        }
+      } catch (e) {
+        console.warn('[StartupFlow] BackgroundTheme first update failed', e);
       }
     }
 
