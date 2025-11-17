@@ -238,6 +238,7 @@ console.info('[IntroScreen] Script executing – pre-init');
         enabled = g.game.audio[methodName]();
         btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
         btn.textContent = enabled ? icons.on : icons.off;
+        btn.classList.toggle('is-off', !enabled);
         if (retryCount > 0) {
           console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded after ${retryCount} retries`);
         }
@@ -254,6 +255,7 @@ console.info('[IntroScreen] Script executing – pre-init');
         enabled = g.audio[methodName]();
         btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
         btn.textContent = enabled ? icons.on : icons.off;
+        btn.classList.toggle('is-off', !enabled);
         if (retryCount > 0) {
           console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded after ${retryCount} retries`);
         }
@@ -706,6 +708,67 @@ console.info('[IntroScreen] Script executing – pre-init');
   }
 
   /**
+   * Ensure lobby music plays whenever the hub is visible
+   * Includes gesture unlock fallback for autoplay restrictions
+   */
+  function ensureLobbyMusic() {
+    try {
+      const cfg = (g && ((g.game && g.game.cfg) || g.cfg)) || {};
+      const musicOn = cfg.musicOn !== false;
+      const muted = (typeof g?.getMuted === 'function') ? g.getMuted() : false;
+
+      if (!musicOn || muted) {
+        console.info('[IntroHub] Lobby music suppressed (musicOn=%s, muted=%s)', musicOn, muted);
+        return;
+      }
+      if (typeof g?.playIntroHubMusic !== 'function' && typeof g?.audio?.playMusicForPhase !== 'function') {
+        console.warn('[IntroHub] Lobby music API not ready');
+        return;
+      }
+
+      // Initial request
+      try {
+        if (typeof g?.audio?.playMusicForPhase === 'function') {
+          g.audio.playMusicForPhase('intro_hub');
+        } else {
+          g.playIntroHubMusic();
+        }
+        console.info('[IntroHub] Lobby music requested');
+      } catch(e) {
+        console.warn('[IntroHub] Lobby music initial request failed', e);
+      }
+
+      // Gesture unlock retry while hub is visible
+      const hub = document.getElementById('introScreen');
+      if (!hub) return;
+
+      const unlockOnce = () => {
+        try {
+          if (hub && hub.classList.contains('intro-screen--visible')) {
+            if (typeof g?.audio?.playMusicForPhase === 'function') {
+              g.audio.playMusicForPhase('intro_hub');
+            } else if (typeof g?.playIntroHubMusic === 'function') {
+              g.playIntroHubMusic();
+            }
+            console.info('[IntroHub] Lobby music re-requested on user gesture');
+          }
+        } catch(e){
+          // Ignore errors
+        }
+        document.removeEventListener('pointerdown', unlockOnce, true);
+        document.removeEventListener('keydown', unlockOnce, true);
+        document.removeEventListener('touchend', unlockOnce, true);
+      };
+
+      document.addEventListener('pointerdown', unlockOnce, true);
+      document.addEventListener('keydown', unlockOnce, true);
+      document.addEventListener('touchend', unlockOnce, true);
+    } catch (e) {
+      console.warn('[IntroHub] ensureLobbyMusic error', e);
+    }
+  }
+
+  /**
    * Attach UI SFX to intro screen buttons
    * Called after intro screen becomes visible
    */
@@ -720,26 +783,8 @@ console.info('[IntroScreen] Script executing – pre-init');
       console.warn('[IntroHub] Failed to attach UI SFX', e);
     }
     
-    // Backup: Start lobby music if enabled and not muted
-    // This ensures music plays even if StartupFlow's call failed or was skipped
-    setTimeout(() => {
-      try {
-        const cfg = (g.game && g.game.cfg) || g.cfg || {};
-        const musicOn = cfg.musicOn !== false; // default true
-        const muted = (typeof g.getMuted === 'function') ? g.getMuted() : false;
-        
-        if (musicOn && !muted) {
-          console.info('[IntroHub] Backup: lobby music requested from IntroScreen');
-          if (typeof g.playIntroHubMusic === 'function') {
-            g.playIntroHubMusic();
-          }
-        } else {
-          console.info('[IntroHub] Backup: skipping lobby music (musicOn=' + musicOn + ', muted=' + muted + ')');
-        }
-      } catch(err) {
-        console.warn('[IntroHub] Failed to start backup lobby music', err);
-      }
-    }, 0);
+    // Ensure lobby music plays
+    ensureLobbyMusic();
   }
 
   // ===== PUBLIC API =====

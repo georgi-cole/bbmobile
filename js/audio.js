@@ -69,10 +69,22 @@
     if (/\.(mp3|mp4|ogg|wav|m4a)(\?.*)?$/i.test(s)) return s;
     // Try phase mapping
     const p = mapPhase(s);
-    if (p) return p;
+    if (p) {
+      console.info('[audio] resolveToFile phase:', s, '->', p);
+      return p;
+    }
     // Try event mapping
     const ev = EVENT_TO_TRACK[s.toLowerCase().replace(/\s+/g,'_')];
-    if (ev) return ev;
+    if (ev) {
+      console.info('[audio] resolveToFile event:', s, '->', ev);
+      return ev;
+    }
+    // Fallback for intro_hub if not in mapping
+    if (s === 'intro_hub') {
+      console.info('[audio] resolveToFile fallback intro_hub -> Intro Hub music.mp3');
+      return 'Intro Hub music.mp3';
+    }
+    console.warn('[audio] resolveToFile: unknown', s);
     return null;
   }
 
@@ -424,7 +436,7 @@
   function setMusicEnabled(en){
     musicEnabled = !!en;
     persistCfgFlag('musicOn', musicEnabled);
-    console.info('[audio] setMusicEnabled', musicEnabled);
+    console.info('[audio] setMusicEnabled ->', musicEnabled);
     
     if (!musicEnabled) {
       try {
@@ -434,7 +446,18 @@
       }
     } else if (lastRequestedPhaseOrFile) {
       // Resume last requested track
-      playMusicForPhase(lastRequestedPhaseOrFile);
+      try {
+        playMusicForPhase(lastRequestedPhaseOrFile);
+      } catch(e) {
+        // Ignore resume errors
+      }
+    } else {
+      // Default to intro_hub if no last requested
+      try {
+        playMusicForPhase('intro_hub');
+      } catch(e) {
+        // Ignore fallback errors
+      }
     }
     
     return musicEnabled;
@@ -452,7 +475,7 @@
   function setSfxEnabled(en){
     sfxEnabled = !!en;
     persistCfgFlag('sfxOn', sfxEnabled);
-    console.info('[audio] setSfxEnabled', sfxEnabled);
+    console.info('[audio] setSfxEnabled ->', sfxEnabled);
     
     // Dispatch CustomEvent for SFX module to sync
     try {

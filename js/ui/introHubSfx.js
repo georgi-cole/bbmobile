@@ -6,15 +6,16 @@
 (function(g){
   'use strict';
   
-  const HOVER_SRC = 'audio/ui_hover.mp3';
-  const CLICK_SRC = 'audio/ui_click.mp3';
+  const CLICK_SRC = 'audio/mouse-click-290204.mp3';
+  const HOVER_SRC = CLICK_SRC; // reuse at lower volume
   
   let hoverEl = null;
   let clickEl = null;
   let enabled = true;
   let initialized = false;
-  let hoverErrorLogged = false;
-  let clickErrorLogged = false;
+  let warnedHover = false;
+  let warnedClick = false;
+  let ctx = null;
 
   /**
    * Initialize the SFX module
@@ -26,28 +27,20 @@
     // Create hover audio element
     hoverEl = new Audio(HOVER_SRC);
     hoverEl.preload = 'auto';
-    hoverEl.volume = 0.75;
-    
-    // Add error handler for hover audio (one-time logging)
-    hoverEl.addEventListener('error', () => {
-      if (!hoverErrorLogged) {
-        console.info(`[IntroHubSfx] Hover SFX not available: ${HOVER_SRC} (asset may be missing)`);
-        hoverErrorLogged = true;
-      }
-    });
+    hoverEl.volume = 0.35;
     
     // Create click audio element
     clickEl = new Audio(CLICK_SRC);
     clickEl.preload = 'auto';
-    clickEl.volume = 0.9;
+    clickEl.volume = 0.85;
     
-    // Add error handler for click audio (one-time logging)
-    clickEl.addEventListener('error', () => {
-      if (!clickErrorLogged) {
-        console.info(`[IntroHubSfx] Click SFX not available: ${CLICK_SRC} (asset may be missing)`);
-        clickErrorLogged = true;
-      }
-    });
+    // Preload both
+    try {
+      hoverEl.load();
+      clickEl.load();
+    } catch(e) {
+      // Ignore load errors
+    }
     
     // Sync enabled state with global config
     syncEnabled();
@@ -60,6 +53,39 @@
   }
 
   /**
+   * Get or create WebAudio context for beep fallback
+   */
+  function getCtx(){
+    if (!ctx) {
+      try {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch(e) {
+        ctx = null;
+      }
+    }
+    return ctx;
+  }
+
+  /**
+   * Generate a beep using WebAudio (fallback when asset unavailable)
+   */
+  function beep(freq=880, duration=0.05, gain=0.05){
+    const ac = getCtx();
+    if (!ac || !enabled) return;
+    
+    const osc = ac.createOscillator();
+    const gnode = ac.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gnode.gain.value = gain;
+    osc.connect(gnode);
+    gnode.connect(ac.destination);
+    const now = ac.currentTime;
+    osc.start(now);
+    osc.stop(now + duration);
+  }
+
+  /**
    * Sync enabled state with global config
    * Checks sfxOn setting and mute state
    */
@@ -68,7 +94,7 @@
     const sfxOn = cfg.sfxOn !== false; // default true
     const muted = typeof g.getMuted === 'function' ? g.getMuted() : false;
     enabled = sfxOn && !muted;
-    console.info(`[IntroHubSfx] Synced enabled state: sfxOn=${sfxOn}, muted=${muted}, enabled=${enabled}`);
+    if (console.debug) console.debug('[IntroHubSfx] Synced enabled state:', { sfxOn, muted, enabled });
   }
 
   /**
@@ -80,31 +106,47 @@
     document.addEventListener('introHubSfx', syncEnabled);
     
     // Cheap fallback: periodic sync every 4 seconds
-    setInterval(syncEnabled, 4000);
+    if(!g.__introHubSfxPoll){
+      g.__introHubSfxPoll = setInterval(syncEnabled, 4000);
+    }
   }
 
   /**
-   * Play an audio element if enabled
+   * Try to play an audio element, with beep fallback if blocked
    * @param {HTMLAudioElement} el - Audio element to play
-   * @param {string} type - Type of sound ('hover' or 'click') for error logging
+   * @param {string} label - 'hover' or 'click' for logging
    */
-  function play(el, type){
-    if(!enabled || !el) return;
+  function tryPlay(el, label){
+    if(!enabled || !el) return true;
     
-    try{
+    try {
       el.currentTime = 0;
-      el.play().catch((err) => {
-        // Log once if playback fails due to missing asset or other issues
-        if (type === 'hover' && !hoverErrorLogged) {
-          console.info(`[IntroHubSfx] Hover SFX playback failed: ${err.message || err}`);
-          hoverErrorLogged = true;
-        } else if (type === 'click' && !clickErrorLogged) {
-          console.info(`[IntroHubSfx] Click SFX playback failed: ${err.message || err}`);
-          clickErrorLogged = true;
-        }
-      });
-    } catch(_) {
-      // Gracefully ignore exceptions
+      const p = el.play();
+      if (p && p.catch) {
+        p.catch(err => {
+          if (label === 'hover' && !warnedHover) {
+            console.info('[IntroHubSfx] Hover SFX not available:', HOVER_SRC);
+            warnedHover = true;
+          }
+          if (label === 'click' && !warnedClick) {
+            console.info('[IntroHubSfx] Click SFX not available:', CLICK_SRC);
+            warnedClick = true;
+          }
+          // Play beep fallback
+          if (enabled) {
+            if (label === 'hover') beep(1200, 0.03, 0.03);
+            else beep(600, 0.05, 0.06);
+          }
+        });
+      }
+      return true;
+    } catch(e) {
+      // Play beep fallback on exception
+      if (enabled) {
+        if (label === 'hover') beep(1200, 0.03, 0.03);
+        else beep(600, 0.05, 0.06);
+      }
+      return false;
     }
   }
 
@@ -112,14 +154,14 @@
    * Play hover sound
    */
   function playHover(){
-    play(hoverEl, 'hover');
+    tryPlay(hoverEl, 'hover');
   }
 
   /**
    * Play click sound
    */
   function playClick(){
-    play(clickEl, 'click');
+    tryPlay(clickEl, 'click');
   }
 
   /**
@@ -135,12 +177,13 @@
     const buttons = root.querySelectorAll('button');
     
     // Attach listeners to each button
+    let bound = 0;
     buttons.forEach(btn => {
       // Skip if already attached
-      if(btn.__hubSfx) return;
+      if(btn.__hubSfxBound) return;
       
       // Mark as attached
-      btn.__hubSfx = true;
+      btn.__hubSfxBound = true;
       
       // Attach hover listeners
       btn.addEventListener('mouseenter', playHover);
@@ -149,9 +192,11 @@
       // Attach click listeners
       btn.addEventListener('click', playClick, {capture: true});
       btn.addEventListener('touchend', playClick, {passive: true});
+      
+      bound++;
     });
     
-    console.info(`[IntroHubSfx] Attached to ${buttons.length} buttons`);
+    console.info(`[IntroHubSfx] Attached to ${bound} buttons`);
   }
 
   // Public API
