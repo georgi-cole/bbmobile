@@ -37,7 +37,8 @@
     finale: null,
     // Special intro music track
     theme_opening: 'intro.mp3',
-    premiere: 'premiere.mp4' // Main theatrical intro music (video file audio track)
+    premiere: 'premiere.mp4', // Main theatrical intro music (video file audio track)
+    intro_hub: 'Intro Hub music.mp3' // Lobby music for Intro Hub
   };
 
   // Event mapping
@@ -45,9 +46,7 @@
     eviction: 'eviction.mp3',
     twist: 'twist.mp3',
     final_jury_vote: 'final jury vote.mp3',
-    winner: 'victory.mp3',
-    // NEW lobby track for Intro Hub
-    intro_hub: 'Intro Hub music.mp3'
+    winner: 'victory.mp3'
   };
 
   function mapPhase(phase){
@@ -86,6 +85,22 @@
     if(stored === '1' || stored === 'true') isMuted = true;
   } catch(e) {
     // Ignore localStorage errors
+  }
+  
+  // Music and SFX enable states
+  let musicEnabled = true;
+  let sfxEnabled = true;
+  let lastRequestedPhaseOrFile = null;
+  
+  // Prime from config if present
+  try {
+    const cfg = (g.game && g.game.cfg) || g.cfg;
+    if (cfg) {
+      if (typeof cfg.musicOn === 'boolean') musicEnabled = cfg.musicOn;
+      if (typeof cfg.sfxOn === 'boolean') sfxEnabled = cfg.sfxOn;
+    }
+  } catch(e) {
+    // Ignore config loading errors
   }
   
   function ensureEl(){
@@ -136,6 +151,32 @@
   }
 
   function srcFor(file){ return BASE + file.split('/').map(encodeURIComponent).join('/'); }
+  
+  // Attempt play wrapper with autoplay unlock fallback
+  function attemptPlay(audioEl){
+    const p = audioEl.play();
+    if (p && p.catch) {
+      p.catch(err => {
+        const errStr = String(err.name || err.message || '');
+        if (/NotAllowedError/i.test(errStr)) {
+          console.info('[audio] Autoplay blocked; installing gesture unlock');
+          const unlock = () => {
+            try {
+              audioEl.play().catch(() => {});
+            } catch(e) {
+              // Ignore play errors
+            }
+            document.removeEventListener('click', unlock, true);
+            document.removeEventListener('touchend', unlock, true);
+            document.removeEventListener('keydown', unlock, true);
+          };
+          document.addEventListener('click', unlock, true);
+          document.addEventListener('touchend', unlock, true);
+          document.addEventListener('keydown', unlock, true);
+        }
+      });
+    }
+  }
 
   // Try to play immediately; if NotAllowedError, attach one-time unlock to retry
   async function playFile(file){
@@ -182,30 +223,15 @@
     }
 
     try {
-      await audio.play();
+      attemptPlay(audio);
       console.info(`[audio] successfully started music, file=${file}`);
     } catch (e) {
-      if (e && String(e.name).toLowerCase() === 'notallowederror') {
-        // Browser blocked autoplay: retry on next gesture
-        console.info('[audio] autoplay blocked, waiting for user gesture');
-        const retry = async () => {
-          document.removeEventListener('pointerdown', retry);
-          document.removeEventListener('keydown', retry);
-          try { 
-            await audio.play(); 
-            console.info(`[audio] successfully started after gesture, file=${file}`);
-          } catch (err) { console.warn('[audio] play retry failed:', err); }
-        };
-        document.addEventListener('pointerdown', retry, { once:true, passive:true });
-        document.addEventListener('keydown', retry, { once:true });
-        return;
-      }
       // Fallback if premiere.mp4 missing: try intro.mp3
       if (/premiere\.mp4$/i.test(file)) {
         try {
           currentSrc = srcFor('intro.mp3');
           audio.src = currentSrc;
-          await audio.play();
+          attemptPlay(audio);
           console.warn('[audio] premiere.mp4 failed; fell back to intro.mp3');
           return;
         } catch (fallbackErr) {
@@ -217,7 +243,7 @@
         try {
           currentSrc = srcFor('competition.mp3');
           audio.src = currentSrc;
-          await audio.play();
+          attemptPlay(audio);
           console.warn('[audio] veto.mp3 failed; fell back to competition.mp3');
           return;
         } catch (fallbackErr) {
@@ -228,9 +254,27 @@
     }
   }
 
-  function playMusicForPhase(nameOrFilename){
+  function playMusicForPhase(nameOrFilename, volume){
+    lastRequestedPhaseOrFile = nameOrFilename;
+    
+    if (!musicEnabled) {
+      console.info('[audio] music disabled, ignoring', nameOrFilename);
+      return;
+    }
+    
     const file = resolveToFile(nameOrFilename);
-    if (file === null) { stopMusic(); return; }
+    if (file === null) {
+      console.warn('[audio] Unknown phase/file', nameOrFilename);
+      stopMusic();
+      return;
+    }
+    
+    // Set volume if provided
+    if (typeof volume === 'number') {
+      const audio = ensureEl();
+      audio.volume = Math.max(0, Math.min(1, volume));
+    }
+    
     playFile(file);
   }
 
@@ -361,6 +405,75 @@
     });
   }
 
+  // Persist config flag to localStorage
+  function persistCfgFlag(key, value){
+    try {
+      const cfg = (g.game && g.game.cfg) || g.cfg || {};
+      cfg[key] = value;
+      if (g.Config && typeof g.Config.saveStoredCfg === 'function') {
+        g.Config.saveStoredCfg(cfg);
+      } else {
+        localStorage.setItem('bb_settings_cfg', JSON.stringify(cfg));
+      }
+    } catch(e) {
+      // Ignore persistence errors
+    }
+  }
+  
+  // Music enable/disable API
+  function setMusicEnabled(en){
+    musicEnabled = !!en;
+    persistCfgFlag('musicOn', musicEnabled);
+    console.info('[audio] setMusicEnabled', musicEnabled);
+    
+    if (!musicEnabled) {
+      try {
+        stopMusic();
+      } catch(e) {
+        // Ignore stop errors
+      }
+    } else if (lastRequestedPhaseOrFile) {
+      // Resume last requested track
+      playMusicForPhase(lastRequestedPhaseOrFile);
+    }
+    
+    return musicEnabled;
+  }
+  
+  function toggleMusic(){
+    return setMusicEnabled(!musicEnabled);
+  }
+  
+  function getMusicEnabled(){
+    return musicEnabled;
+  }
+  
+  // SFX enable/disable API
+  function setSfxEnabled(en){
+    sfxEnabled = !!en;
+    persistCfgFlag('sfxOn', sfxEnabled);
+    console.info('[audio] setSfxEnabled', sfxEnabled);
+    
+    // Dispatch CustomEvent for SFX module to sync
+    try {
+      document.dispatchEvent(new CustomEvent('introHubSfx', {
+        detail: { enabled: sfxEnabled }
+      }));
+    } catch(e) {
+      // Ignore dispatch errors
+    }
+    
+    return sfxEnabled;
+  }
+  
+  function toggleSound(){
+    return setSfxEnabled(!sfxEnabled);
+  }
+  
+  function getSfxEnabled(){
+    return sfxEnabled;
+  }
+  
   // Intro Hub music helpers (non-breaking additions)
   function playIntroHubMusic(volume){
     return playMusicForPhase('intro_hub', volume);
@@ -384,7 +497,25 @@
   g.fadeOutMusic = fadeOut;
   g.playIntroHubMusic = playIntroHubMusic;  // Intro Hub lobby music
   g.stopIntroHubMusic = stopIntroHubMusic;  // Stop lobby music
+  
+  // Export on g.audio namespace for IntroScreen access
+  g.audio = g.audio || {};
+  Object.assign(g.audio, {
+    playMusicForPhase,
+    stopMusic,
+    setMusicVolume,
+    fadeOutMusic: fadeOut,
+    toggleMute,
+    getMuted,
+    setMuted,
+    setMusicEnabled,
+    toggleMusic,
+    getMusicEnabled,
+    setSfxEnabled,
+    toggleSound,
+    getSfxEnabled
+  });
 
-  console.info('[audio] ready (phase-wrapped, filename+phase inputs, immediate-play with gesture fallback)');
+  console.info('[audio] ready (phase-wrapped, filename+phase inputs, immediate-play with gesture fallback, toggle APIs)');
 
 })(window);

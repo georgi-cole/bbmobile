@@ -38,7 +38,7 @@
     wireBridge();
     
     initialized = true;
-    console.info('[IntroHubSfx] Initialized');
+    console.info('[IntroHubSfx] Initialized (hover & click SFX ready)');
   }
 
   /**

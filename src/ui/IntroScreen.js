@@ -241,6 +241,14 @@ console.info('[IntroScreen] Script executing – pre-init');
         if (retryCount > 0) {
           console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded after ${retryCount} retries`);
         }
+        // Dispatch CustomEvent for sound toggle
+        if (type === 'sound') {
+          try {
+            document.dispatchEvent(new CustomEvent('introHubSfx', { detail: { enabled } }));
+          } catch(e) {
+            // Ignore dispatch errors
+          }
+        }
         return true;
       } else if (g.audio && typeof g.audio[methodName] === 'function') {
         enabled = g.audio[methodName]();
@@ -248,6 +256,14 @@ console.info('[IntroScreen] Script executing – pre-init');
         btn.textContent = enabled ? icons.on : icons.off;
         if (retryCount > 0) {
           console.info(`[IntroHub] ${type.charAt(0).toUpperCase() + type.slice(1)} toggle succeeded after ${retryCount} retries`);
+        }
+        // Dispatch CustomEvent for sound toggle
+        if (type === 'sound') {
+          try {
+            document.dispatchEvent(new CustomEvent('introHubSfx', { detail: { enabled } }));
+          } catch(e) {
+            // Ignore dispatch errors
+          }
         }
         return true;
       }
