@@ -1,42 +1,39 @@
 // MODULE: js/ui/introHubSfx.js
-// Lightweight SFX module for Intro Hub button interactions
-// Provides hover and click sounds for all Intro Hub buttons
+// WebAudio-first SFX module for Intro Hub button interactions
+// Provides low-latency click sounds using WebAudio API with HTMLAudio fallback
 // Respects global sfxOn setting and mute state
 
 (function(g){
   'use strict';
   
-  const CLICK_SRC = 'audio/mouse-click-290204.mp3';
-  const HOVER_SRC = CLICK_SRC; // reuse at lower volume
+  // Prefer WAV for faster decode, fallback to MP3
+  const CLICK_WAV = 'audio/mouse-click.wav';
+  const CLICK_MP3 = 'audio/mouse-click-290204.mp3';
   
-  let hoverEl = null;
-  let clickEl = null;
+  let ctx = null;
+  let clickBuffer = null;
+  let clickEl = null; // HTMLAudio fallback
   let enabled = true;
   let initialized = false;
-  let warnedHover = false;
   let warnedClick = false;
-  let ctx = null;
+  let useWebAudio = true;
 
   /**
    * Initialize the SFX module
-   * Creates audio elements and sets up listeners
+   * Creates WebAudio context and attempts to load/decode audio buffer
    */
   function init(){
     if(initialized) return;
     
-    // Create hover audio element
-    hoverEl = new Audio(HOVER_SRC);
-    hoverEl.preload = 'auto';
-    hoverEl.volume = 0.35;
+    // Create WebAudio context
+    ctx = getCtx();
     
-    // Create click audio element
-    clickEl = new Audio(CLICK_SRC);
+    // Create HTMLAudio fallback
+    clickEl = new Audio(CLICK_MP3);
     clickEl.preload = 'auto';
     clickEl.volume = 0.85;
     
-    // Preload both
     try {
-      hoverEl.load();
       clickEl.load();
     } catch(e) {
       // Ignore load errors
@@ -45,15 +42,18 @@
     // Sync enabled state with global config
     syncEnabled();
     
-    // Wire up event listener for sound toggle
+    // Wire up event listener for sound toggle and consent
     wireBridge();
     
+    // Try to load and decode buffer proactively if consent already granted
+    tryLoadBuffer();
+    
     initialized = true;
-    console.info('[IntroHubSfx] Initialized (hover & click SFX ready)');
+    console.info('[IntroHubSfx] Initialized (WebAudio-first, HTMLAudio fallback)');
   }
 
   /**
-   * Get or create WebAudio context for beep fallback
+   * Get or create WebAudio context
    */
   function getCtx(){
     if (!ctx) {
@@ -67,22 +67,55 @@
   }
 
   /**
-   * Generate a beep using WebAudio (fallback when asset unavailable)
+   * Try to load and decode audio buffer
+   * Prefers WAV for faster decode, falls back to MP3
    */
-  function beep(freq=880, duration=0.05, gain=0.05){
+  async function tryLoadBuffer(){
     const ac = getCtx();
-    if (!ac || !enabled) return;
+    if (!ac || clickBuffer) return; // Already loaded or no context
     
-    const osc = ac.createOscillator();
-    const gnode = ac.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = freq;
-    gnode.gain.value = gain;
-    osc.connect(gnode);
-    gnode.connect(ac.destination);
-    const now = ac.currentTime;
-    osc.start(now);
-    osc.stop(now + duration);
+    // Check if consent granted
+    let consentGranted = false;
+    try {
+      const consent = localStorage.getItem('bb_sound_consent');
+      consentGranted = consent === '1';
+    } catch(e) {
+      // Ignore localStorage errors
+    }
+    
+    if (!consentGranted) {
+      console.info('[IntroHubSfx] Consent not granted, deferring buffer load');
+      return;
+    }
+    
+    // Try WAV first
+    try {
+      const response = await fetch(CLICK_WAV);
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        clickBuffer = await ac.decodeAudioData(arrayBuffer);
+        console.info('[IntroHubSfx] WAV buffer loaded and decoded');
+        useWebAudio = true;
+        return;
+      }
+    } catch(e) {
+      console.info('[IntroHubSfx] WAV load failed, trying MP3 fallback:', e.message);
+    }
+    
+    // Fallback to MP3
+    try {
+      const response = await fetch(CLICK_MP3);
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        clickBuffer = await ac.decodeAudioData(arrayBuffer);
+        console.info('[IntroHubSfx] MP3 buffer loaded and decoded');
+        useWebAudio = true;
+        return;
+      }
+    } catch(e) {
+      console.warn('[IntroHubSfx] MP3 buffer decode failed, will use HTMLAudio fallback:', e.message);
+      useWebAudio = false;
+    }
   }
 
   /**
@@ -98,28 +131,35 @@
   }
 
   /**
-   * Wire up event bridge for sound toggle
-   * Listens for introHubSfx custom event
+   * Wire up event bridge for sound toggle and consent
+   * Listens for introHubSfx custom event and bb:sound-consent-granted
    */
   function wireBridge(){
     // Listen for custom event dispatched when sound is toggled
     document.addEventListener('introHubSfx', syncEnabled);
     
     // Listen for consent granted event
-    window.addEventListener('bb:sound-consent-granted', () => {
-      console.info('[IntroHubSfx] Sound consent granted, syncing state');
+    const consentHandler = async () => {
+      console.info('[IntroHubSfx] Sound consent granted, syncing state and loading buffer');
       syncEnabled();
       
       // Resume WebAudio context if it was suspended
       const ac = getCtx();
       if (ac && ac.state === 'suspended') {
-        ac.resume().then(() => {
+        try {
+          await ac.resume();
           console.info('[IntroHubSfx] WebAudio context resumed');
-        }).catch(_err => {
-          console.warn('[IntroHubSfx] Failed to resume WebAudio context');
-        });
+        } catch(err) {
+          console.warn('[IntroHubSfx] Failed to resume WebAudio context:', err);
+        }
       }
-    });
+      
+      // Load and decode buffer now that consent is granted
+      await tryLoadBuffer();
+    };
+    
+    window.addEventListener('bb:sound-consent-granted', consentHandler);
+    document.addEventListener('bb:sound-consent-granted', consentHandler);
     
     // Cheap fallback: periodic sync every 4 seconds
     if(!g.__introHubSfxPoll){
@@ -128,56 +168,52 @@
   }
 
   /**
-   * Try to play an audio element, with beep fallback if blocked
-   * @param {HTMLAudioElement} el - Audio element to play
-   * @param {string} label - 'hover' or 'click' for logging
-   */
-  function tryPlay(el, label){
-    if(!enabled || !el) return true;
-    
-    try {
-      el.currentTime = 0;
-      const p = el.play();
-      if (p && p.catch) {
-        p.catch(() => {
-          if (label === 'hover' && !warnedHover) {
-            console.info('[IntroHubSfx] Hover SFX not available:', HOVER_SRC);
-            warnedHover = true;
-          }
-          if (label === 'click' && !warnedClick) {
-            console.info('[IntroHubSfx] Click SFX not available:', CLICK_SRC);
-            warnedClick = true;
-          }
-          // Play beep fallback
-          if (enabled) {
-            if (label === 'hover') beep(1200, 0.03, 0.03);
-            else beep(600, 0.05, 0.06);
-          }
-        });
-      }
-      return true;
-    } catch(e) {
-      // Play beep fallback on exception
-      if (enabled) {
-        if (label === 'hover') beep(1200, 0.03, 0.03);
-        else beep(600, 0.05, 0.06);
-      }
-      return false;
-    }
-  }
-
-  /**
-   * Play hover sound
-   */
-  function playHover(){
-    tryPlay(hoverEl, 'hover');
-  }
-
-  /**
-   * Play click sound
+   * Play click sound using WebAudio (low latency) or HTMLAudio fallback
    */
   function playClick(){
-    tryPlay(clickEl, 'click');
+    if (!enabled) return;
+    
+    const ac = getCtx();
+    
+    // Try WebAudio first (low latency)
+    if (useWebAudio && ac && clickBuffer) {
+      try {
+        const source = ac.createBufferSource();
+        const gainNode = ac.createGain();
+        gainNode.gain.value = 0.85;
+        source.buffer = clickBuffer;
+        source.connect(gainNode);
+        gainNode.connect(ac.destination);
+        source.start(0);
+        return;
+      } catch(e) {
+        if (!warnedClick) {
+          console.warn('[IntroHubSfx] WebAudio playback failed, falling back to HTMLAudio:', e.message);
+          warnedClick = true;
+        }
+      }
+    }
+    
+    // Fallback to HTMLAudio
+    if (clickEl) {
+      try {
+        clickEl.currentTime = 0;
+        const p = clickEl.play();
+        if (p && p.catch) {
+          p.catch((err) => {
+            if (!warnedClick) {
+              console.info('[IntroHubSfx] HTMLAudio playback blocked or failed:', err.message);
+              warnedClick = true;
+            }
+          });
+        }
+      } catch(e) {
+        if (!warnedClick) {
+          console.warn('[IntroHubSfx] HTMLAudio playback exception:', e.message);
+          warnedClick = true;
+        }
+      }
+    }
   }
 
   /**
@@ -201,18 +237,13 @@
       // Mark as attached
       btn.__hubSfxBound = true;
       
-      // Attach hover listeners
-      btn.addEventListener('mouseenter', playHover);
-      btn.addEventListener('focus', playHover);
-      
-      // Attach click listeners
-      btn.addEventListener('click', playClick, {capture: true});
-      btn.addEventListener('touchend', playClick, {passive: true});
+      // Use pointerdown for immediate feedback (lower latency than click)
+      btn.addEventListener('pointerdown', playClick, {passive: true});
       
       bound++;
     });
     
-    console.info(`[IntroHubSfx] Attached to ${bound} buttons`);
+    console.info(`[IntroHubSfx] Attached to ${bound} buttons (using pointerdown for low latency)`);
   }
 
   // Public API

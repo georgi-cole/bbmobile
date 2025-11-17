@@ -204,12 +204,51 @@ console.info('[IntroScreen] Script executing – pre-init');
 
   // ===== HELPER FUNCTIONS =====
 
+  /**
+   * Detect if running on iOS
+   */
+  function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  }
+
+  /**
+   * Detect if running in standalone mode (Home Screen app)
+   */
+  function isStandalone() {
+    return ('standalone' in navigator) && (navigator.standalone === true);
+  }
+
   function checkForSave() {
     try {
       const save = localStorage.getItem('bbGameState');
       return !!save;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Sync quick icon states from config
+   */
+  function syncQuickIconsFromCfg() {
+    try {
+      const cfg = (g && ((g.game && g.game.cfg) || g.cfg)) || {};
+      const musicOn = cfg.musicOn !== false;
+      const sfxOn = cfg.sfxOn !== false;
+      
+      const musicBtn = document.getElementById('intro-icon-music');
+      const soundBtn = document.getElementById('intro-icon-sound');
+      
+      if (musicBtn) {
+        setAudioIconState(musicBtn, 'music', musicOn);
+      }
+      if (soundBtn) {
+        setAudioIconState(soundBtn, 'sound', sfxOn);
+      }
+      
+      console.info('[IntroHub] Quick icons synced from config (music=%s, sfx=%s)', musicOn, sfxOn);
+    } catch(e) {
+      console.warn('[IntroHub] Failed to sync quick icons from config:', e);
     }
   }
 
@@ -308,15 +347,6 @@ console.info('[IntroScreen] Script executing – pre-init');
 
   function handleSoundToggle(btn) {
     handleAudioToggle('sound', btn);
-    
-    // Dispatch custom event to notify SFX module of sound toggle
-    try {
-      document.dispatchEvent(new CustomEvent('introHubSfx', { 
-        detail: { enabled: btn.getAttribute('aria-pressed') === 'true' } 
-      }));
-    } catch(e) {
-      // Ignore dispatch errors
-    }
   }
 
   /**
@@ -717,41 +747,12 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
   }
 
-  /**
-   * Initialize audio icon states from config
-   */
-  function initAudioIcons() {
-    try {
-      const cfg = (g && ((g.game && g.game.cfg) || g.cfg)) || {};
-      const musicOn = cfg.musicOn !== false; // default true
-      const sfxOn = cfg.sfxOn !== false; // default true
-      
-      const musicBtn = document.getElementById('intro-icon-music');
-      const soundBtn = document.getElementById('intro-icon-sound');
-      
-      if (musicBtn) {
-        setAudioIconState(musicBtn, 'music', musicOn);
-        console.info('[IntroHub] Music icon initialized:', musicOn ? 'ON' : 'OFF');
-      }
-      
-      if (soundBtn) {
-        setAudioIconState(soundBtn, 'sound', sfxOn);
-        console.info('[IntroHub] Sound icon initialized:', sfxOn ? 'ON' : 'OFF');
-      }
-    } catch(e) {
-      console.warn('[IntroHub] Failed to initialize audio icons:', e);
-    }
-  }
+
 
   /**
-   * Show consent overlay for autoplay unlock
+   * Build consent overlay DOM structure
    */
-  function showConsentOverlay() {
-    // Don't show if already exists
-    if (document.getElementById('intro-consent-overlay')) {
-      return;
-    }
-    
+  function buildSoundConsentOverlay() {
     const overlay = document.createElement('div');
     overlay.id = 'intro-consent-overlay';
     overlay.className = 'intro-consent-overlay';
@@ -775,7 +776,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     allowBtn.textContent = 'Allow';
     allowBtn.addEventListener('click', () => {
       handleConsentAllow();
-      hideConsentOverlay();
+      hideSoundConsentOverlay();
     });
     
     const muteBtn = document.createElement('button');
@@ -783,7 +784,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     muteBtn.textContent = 'Mute for now';
     muteBtn.addEventListener('click', () => {
       handleConsentMute();
-      hideConsentOverlay();
+      hideSoundConsentOverlay();
     });
     
     buttonRow.appendChild(allowBtn);
@@ -794,6 +795,20 @@ console.info('[IntroScreen] Script executing – pre-init');
     card.appendChild(buttonRow);
     overlay.appendChild(card);
     
+    return overlay;
+  }
+
+  /**
+   * Show consent overlay for autoplay unlock
+   */
+  function showSoundConsentOverlay() {
+    // Don't show if already exists
+    if (document.getElementById('intro-consent-overlay')) {
+      console.info('[IntroHub] Consent overlay already shown');
+      return;
+    }
+    
+    const overlay = buildSoundConsentOverlay();
     document.body.appendChild(overlay);
     
     // Fade in
@@ -807,7 +822,7 @@ console.info('[IntroScreen] Script executing – pre-init');
   /**
    * Hide consent overlay
    */
-  function hideConsentOverlay() {
+  function hideSoundConsentOverlay() {
     const overlay = document.getElementById('intro-consent-overlay');
     if (overlay) {
       overlay.classList.remove('intro-consent-overlay--visible');
@@ -825,6 +840,13 @@ console.info('[IntroScreen] Script executing – pre-init');
    */
   function handleConsentAllow() {
     try {
+      // Persist consent to localStorage
+      try {
+        localStorage.setItem('bb_sound_consent', '1');
+      } catch(e) {
+        console.warn('[IntroHub] Failed to persist consent to localStorage:', e);
+      }
+      
       const cfg = (g && ((g.game && g.game.cfg) || g.cfg)) || {};
       cfg.musicOn = true;
       cfg.sfxOn = true;
@@ -862,11 +884,12 @@ console.info('[IntroScreen] Script executing – pre-init');
       // Dispatch consent granted event
       try {
         window.dispatchEvent(new CustomEvent('bb:sound-consent-granted'));
+        document.dispatchEvent(new CustomEvent('bb:sound-consent-granted'));
       } catch(e) {
         // Ignore dispatch errors
       }
       
-      console.info('[IntroHub] Consent granted - audio enabled');
+      console.info('[IntroHub] Consent granted - audio enabled, persisted to localStorage');
     } catch(e) {
       console.warn('[IntroHub] Failed to handle consent allow:', e);
     }
@@ -877,6 +900,13 @@ console.info('[IntroScreen] Script executing – pre-init');
    */
   function handleConsentMute() {
     try {
+      // Persist denial to localStorage
+      try {
+        localStorage.setItem('bb_sound_consent', '0');
+      } catch(e) {
+        console.warn('[IntroHub] Failed to persist consent denial to localStorage:', e);
+      }
+      
       const cfg = (g && ((g.game && g.game.cfg) || g.cfg)) || {};
       cfg.musicOn = false;
       cfg.sfxOn = false;
@@ -904,7 +934,7 @@ console.info('[IntroScreen] Script executing – pre-init');
       if (musicBtn) setAudioIconState(musicBtn, 'music', false);
       if (soundBtn) setAudioIconState(soundBtn, 'sound', false);
       
-      console.info('[IntroHub] Consent muted - audio disabled');
+      console.info('[IntroHub] Consent muted - audio disabled, persisted to localStorage');
     } catch(e) {
       console.warn('[IntroHub] Failed to handle consent mute:', e);
     }
@@ -913,12 +943,55 @@ console.info('[IntroScreen] Script executing – pre-init');
   /**
    * Ensure lobby music plays whenever the hub is visible
    * Includes autoplay-blocked listener for consent prompt
+   * For iOS standalone, shows consent overlay immediately
    */
   function ensureLobbyMusic() {
     try {
       const cfg = (g && ((g.game && g.game.cfg) || g.cfg)) || {};
       const musicOn = cfg.musicOn !== false;
       const muted = (typeof g?.getMuted === 'function') ? g.getMuted() : false;
+
+      // Check persisted consent
+      let consentGranted = false;
+      let consentDenied = false;
+      try {
+        const consent = localStorage.getItem('bb_sound_consent');
+        if (consent === '1') consentGranted = true;
+        if (consent === '0') consentDenied = true;
+      } catch(e) {
+        // Ignore localStorage errors
+      }
+
+      // If iOS standalone and no persisted consent decision, show consent overlay immediately
+      if (isIOS() && isStandalone() && !consentGranted && !consentDenied) {
+        console.info('[IntroHub] iOS standalone detected, showing consent overlay immediately');
+        showSoundConsentOverlay();
+        return;
+      }
+
+      // If consent was previously granted, enable audio and start music
+      if (consentGranted) {
+        console.info('[IntroHub] Persisted consent found, enabling audio');
+        cfg.musicOn = true;
+        cfg.sfxOn = true;
+        
+        // Dispatch consent granted event for SFX module
+        try {
+          window.dispatchEvent(new CustomEvent('bb:sound-consent-granted'));
+          document.dispatchEvent(new CustomEvent('bb:sound-consent-granted'));
+        } catch(e) {
+          // Ignore dispatch errors
+        }
+        
+        // Try to start music
+        if (typeof g?.audio?.playMusicForPhase === 'function') {
+          g.audio.playMusicForPhase('intro_hub');
+        } else if (typeof g?.playIntroHubMusic === 'function') {
+          g.playIntroHubMusic();
+        }
+        console.info('[IntroHub] Lobby music started from persisted consent');
+        return;
+      }
 
       if (!musicOn || muted) {
         console.info('[IntroHub] Lobby music suppressed (musicOn=%s, muted=%s)', musicOn, muted);
@@ -932,11 +1005,11 @@ console.info('[IntroScreen] Script executing – pre-init');
       // Listen for autoplay-blocked event
       const autoplayBlockedHandler = () => {
         console.info('[IntroHub] Autoplay blocked, showing consent overlay');
-        showConsentOverlay();
+        showSoundConsentOverlay();
       };
       window.addEventListener('bb:audio:autoplay-blocked', autoplayBlockedHandler, { once: true });
 
-      // Initial request
+      // Initial request (will trigger autoplay-blocked if needed)
       try {
         if (typeof g?.audio?.playMusicForPhase === 'function') {
           g.audio.playMusicForPhase('intro_hub');
@@ -967,10 +1040,10 @@ console.info('[IntroScreen] Script executing – pre-init');
       console.warn('[IntroHub] Failed to attach UI SFX', e);
     }
     
-    // Initialize audio icon states from config
-    initAudioIcons();
+    // Sync quick icons from config
+    syncQuickIconsFromCfg();
     
-    // Ensure lobby music plays
+    // Ensure lobby music plays (handles iOS standalone consent)
     ensureLobbyMusic();
   }
 
