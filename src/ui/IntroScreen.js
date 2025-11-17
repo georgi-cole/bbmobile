@@ -214,8 +214,9 @@ console.info('[IntroScreen] Script executing – pre-init');
   /**
    * Detect if running in standalone mode (Home Screen app)
    * Supports both iOS (navigator.standalone) and Android/Chrome (display-mode media query)
+   * Note: Currently not used in consent flow, but kept for future enhancements
    */
-  function isStandalone() {
+  function isStandalone() { // eslint-disable-line no-unused-vars
     // iOS check
     if (('standalone' in navigator) && (navigator.standalone === true)) {
       return true;
