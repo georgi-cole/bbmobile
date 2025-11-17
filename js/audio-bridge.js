@@ -15,63 +15,80 @@
   const bridge = {
     // Core playback methods
     playMusicForPhase(...args) {
-      return typeof g.playMusicForPhase === 'function' ? g.playMusicForPhase(...args) : null;
+      const fn = g.audio?.playMusicForPhase || g.playMusicForPhase;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     playMusic(...args) {
-      return typeof g.playMusic === 'function' ? g.playMusic(...args) : null;
+      const fn = g.audio?.playMusic || g.playMusic;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     phaseMusic(...args) {
-      return typeof g.phaseMusic === 'function' ? g.phaseMusic(...args) : null;
+      const fn = g.audio?.phaseMusic || g.phaseMusic;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     stopMusic(...args) {
-      return typeof g.stopMusic === 'function' ? g.stopMusic(...args) : null;
+      const fn = g.audio?.stopMusic || g.stopMusic;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     setMusicVolume(...args) {
-      return typeof g.setMusicVolume === 'function' ? g.setMusicVolume(...args) : null;
+      const fn = g.audio?.setMusicVolume || g.setMusicVolume;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     fadeOutMusic(...args) {
-      return typeof g.fadeOutMusic === 'function' ? g.fadeOutMusic(...args) : null;
+      const fn = g.audio?.fadeOutMusic || g.fadeOutMusic;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     
     // Mute/unmute methods
     setMuted(...args) {
-      return typeof g.setMuted === 'function' ? g.setMuted(...args) : null;
+      const fn = g.audio?.setMuted || g.setMuted;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     toggleMute(...args) {
-      return typeof g.toggleMute === 'function' ? g.toggleMute(...args) : null;
+      const fn = g.audio?.toggleMute || g.toggleMute;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     getMuted(...args) {
-      return typeof g.getMuted === 'function' ? g.getMuted(...args) : false;
+      const fn = g.audio?.getMuted || g.getMuted;
+      return typeof fn === 'function' ? fn(...args) : false;
     },
     
     // Music enable/disable methods
     setMusicEnabled(...args) {
-      return typeof g.setMusicEnabled === 'function' ? g.setMusicEnabled(...args) : null;
+      const fn = g.audio?.setMusicEnabled || g.setMusicEnabled;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     toggleMusic(...args) {
-      return typeof g.toggleMusic === 'function' ? g.toggleMusic(...args) : null;
+      const fn = g.audio?.toggleMusic || g.toggleMusic;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     getMusicEnabled(...args) {
-      return typeof g.getMusicEnabled === 'function' ? g.getMusicEnabled(...args) : true;
+      const fn = g.audio?.getMusicEnabled || g.getMusicEnabled;
+      return typeof fn === 'function' ? fn(...args) : true;
     },
     
     // SFX enable/disable methods
     setSfxEnabled(...args) {
-      return typeof g.setSfxEnabled === 'function' ? g.setSfxEnabled(...args) : null;
+      const fn = g.audio?.setSfxEnabled || g.setSfxEnabled;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     toggleSound(...args) {
-      return typeof g.toggleSound === 'function' ? g.toggleSound(...args) : null;
+      const fn = g.audio?.toggleSound || g.toggleSound;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     getSfxEnabled(...args) {
-      return typeof g.getSfxEnabled === 'function' ? g.getSfxEnabled(...args) : true;
+      const fn = g.audio?.getSfxEnabled || g.getSfxEnabled;
+      return typeof fn === 'function' ? fn(...args) : true;
     },
     
     // Intro hub music methods
     playIntroHubMusic(...args) {
-      return typeof g.playIntroHubMusic === 'function' ? g.playIntroHubMusic(...args) : null;
+      const fn = g.audio?.playIntroHubMusic || g.playIntroHubMusic;
+      return typeof fn === 'function' ? fn(...args) : null;
     },
     stopIntroHubMusic(...args) {
-      return typeof g.stopIntroHubMusic === 'function' ? g.stopIntroHubMusic(...args) : null;
+      const fn = g.audio?.stopIntroHubMusic || g.stopIntroHubMusic;
+      return typeof fn === 'function' ? fn(...args) : null;
     }
   };
 
