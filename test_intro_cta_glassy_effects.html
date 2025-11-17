@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Intro CTA Glassy Effects Test - BBMobile</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="css/intro.css">
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0e14;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .test-container {
+    padding: 40px;
+    max-width: 800px;
+    width: 100%;
+  }
+  .test-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+  }
+  .test-section h2 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    color: #00d4ff;
+  }
+  .test-section p {
+    margin: 10px 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.8);
+  }
+  .button-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+  }
+  .test-btn {
+    min-height: 52px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 250ms ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .test-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  }
+  /* Primary button base styling from intro.css */
+  .intro-screen__btn--primary {
+    background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+    border: 1px solid rgba(0, 212, 255, 0.5);
+    font-size: 20px;
+    font-weight: 700;
+    box-shadow: 0 6px 24px rgba(0, 212, 255, 0.4),
+                0 0 40px rgba(0, 212, 255, 0.2);
+  }
+  .intro-screen__btn--primary:hover {
+    background: linear-gradient(135deg, #00e4ff 0%, #0098ff 100%);
+    box-shadow: 0 8px 32px rgba(0, 212, 255, 0.5),
+                0 0 60px rgba(0, 212, 255, 0.3);
+    transform: translateY(-2px) scale(1.02);
+  }
+  .controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.8);
+    padding: 15px;
+    border-radius: 8px;
+    z-index: 10000;
+    min-width: 200px;
+  }
+  .controls h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+  }
+  .controls button {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+    padding: 8px;
+    background: #0088ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .controls button:hover {
+    background: #0099ff;
+  }
+  .info-box {
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .status {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+  }
+  .status.active {
+    background: #00ff00;
+  }
+  .status.inactive {
+    background: #ff0000;
+  }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <h3>Test Controls</h3>
+  <button id="btnToggleGlassy">Toggle Glassy</button>
+  <button id="btnToggleAnimated">Toggle Animated</button>
+  <button id="btnToggleBoth">Toggle Both</button>
+  <button id="btnResetAll">Reset All</button>
+  <div class="info-box">
+    <div><span class="status" id="statusGlassy"></span> Glassy Style</div>
+    <div><span class="status" id="statusAnimated"></span> Animations</div>
+    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2);">
+      <small>Check console for logs</small>
+    </div>
+  </div>
+</div>
+
+<div class="test-container">
+  <div class="test-section">
+    <h2>1. Standard Button (No Effects)</h2>
+    <p>This button shows the base styling without any glassy effects or animations.</p>
+    <div class="button-grid">
+      <button class="test-btn intro-screen__btn--primary" id="btnStandard">Play</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Glassy Style Only</h2>
+    <p>This button has the glassy gradient styling but no animations. Notice the multi-layer gradient, subtle border glow, and backdrop blur.</p>
+    <div class="button-grid">
+      <button class="test-btn intro-screen__btn--primary intro-cta--glassy" id="btnGlassy">Play (Glassy)</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Animated Only (No Glassy)</h2>
+    <p>This button has the pulse and shimmer animations but no glassy styling. Watch for the subtle scale pulse every 3s and the shimmer sweep across the surface.</p>
+    <div class="button-grid">
+      <button class="test-btn intro-screen__btn--primary intro-cta--animated" id="btnAnimated">Play (Animated)</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Complete Effect (Glassy + Animated)</h2>
+    <p><strong>This is the production version:</strong> Combines glassy gradient styling with subtle animations (pulse + shimmer) on a 3-second cycle. This should be applied to the Play CTA in the Intro Hub.</p>
+    <div class="button-grid">
+      <button class="test-btn intro-screen__btn--primary intro-cta--glassy intro-cta--animated" id="btnComplete">Play (Complete)</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Interactive Test</h2>
+    <p>Click this button to dynamically add/remove effects and test the JavaScript helper function behavior.</p>
+    <div class="button-grid">
+      <button class="test-btn intro-screen__btn--primary" id="btnInteractive">Play (Interactive)</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Testing Checklist</h2>
+    <p>
+      ✓ Visual: Glassy gradient with multi-layer backgrounds<br>
+      ✓ Visual: Subtle inset highlight and shadow depth<br>
+      ✓ Animation: Pulse scales to ~1.045 briefly every 3s<br>
+      ✓ Animation: Shimmer sweeps across button surface (6-12% of cycle)<br>
+      ✓ Performance: Animations use GPU-friendly transforms<br>
+      ✓ Performance: No continuous high CPU/GPU usage<br>
+      ✓ Accessibility: Effects disabled when prefers-reduced-motion is active<br>
+      ✓ Interaction: Button remains fully clickable during animations<br>
+      ✓ Interaction: Hover state works correctly<br>
+    </p>
+  </div>
+
+  <div class="test-section">
+    <h2>Motion Preferences</h2>
+    <p>
+      <strong>Current OS/Browser Setting:</strong> 
+      <code id="motionPref" style="color: #00d4ff;"></code>
+    </p>
+    <p style="font-size: 13px; opacity: 0.7;">
+      To test reduced motion: Enable "Reduce motion" in your OS accessibility settings or browser preferences, then reload this page.
+      Animations should be completely disabled when reduced motion is active.
+    </p>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // Check motion preference
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('motionPref').textContent = prefersReducedMotion 
+    ? 'Reduced Motion (animations disabled)'
+    : 'Normal Motion (animations enabled)';
+
+  // Get interactive button
+  const interactiveBtn = document.getElementById('btnInteractive');
+  
+  // Status indicators
+  const statusGlassy = document.getElementById('statusGlassy');
+  const statusAnimated = document.getElementById('statusAnimated');
+  
+  // Update status indicators
+  function updateStatus() {
+    const hasGlassy = interactiveBtn.classList.contains('intro-cta--glassy');
+    const hasAnimated = interactiveBtn.classList.contains('intro-cta--animated');
+    
+    statusGlassy.className = hasGlassy ? 'status active' : 'status inactive';
+    statusAnimated.className = hasAnimated ? 'status active' : 'status inactive';
+  }
+  
+  // Initial status
+  updateStatus();
+  
+  // Control buttons
+  document.getElementById('btnToggleGlassy').addEventListener('click', () => {
+    interactiveBtn.classList.toggle('intro-cta--glassy');
+    updateStatus();
+    console.log('[Test] Glassy toggled:', interactiveBtn.classList.contains('intro-cta--glassy'));
+  });
+  
+  document.getElementById('btnToggleAnimated').addEventListener('click', () => {
+    interactiveBtn.classList.toggle('intro-cta--animated');
+    updateStatus();
+    console.log('[Test] Animated toggled:', interactiveBtn.classList.contains('intro-cta--animated'));
+  });
+  
+  document.getElementById('btnToggleBoth').addEventListener('click', () => {
+    const hasEither = interactiveBtn.classList.contains('intro-cta--glassy') || 
+                      interactiveBtn.classList.contains('intro-cta--animated');
+    
+    if (hasEither) {
+      interactiveBtn.classList.remove('intro-cta--glassy', 'intro-cta--animated');
+    } else {
+      interactiveBtn.classList.add('intro-cta--glassy', 'intro-cta--animated');
+    }
+    updateStatus();
+    console.log('[Test] Both toggled');
+  });
+  
+  document.getElementById('btnResetAll').addEventListener('click', () => {
+    interactiveBtn.classList.remove('intro-cta--glassy', 'intro-cta--animated');
+    updateStatus();
+    console.log('[Test] Reset to base state');
+  });
+  
+  // Log clicks on all test buttons
+  document.querySelectorAll('.test-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      console.log('[Test] Button clicked:', e.target.id || 'unknown', {
+        hasGlassy: e.target.classList.contains('intro-cta--glassy'),
+        hasAnimated: e.target.classList.contains('intro-cta--animated')
+      });
+    });
+  });
+  
+  console.log('[Test] Intro CTA Glassy Effects Test loaded');
+  console.log('[Test] Prefers reduced motion:', prefersReducedMotion);
+})();
+</script>
+
+</body>
+</html>
