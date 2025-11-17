@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: TVInlineStatus Veto Competition Messages</title>
+  <link rel="stylesheet" href="css/tv-inline-status.css">
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: #83bfff; 
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #95a9c0;
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+    }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #83bfff;
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 12px 24px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    button:disabled {
+      background: #24364b;
+      color: #6b7a8d;
+      cursor: not-allowed;
+    }
+    .log { 
+      background: #0a0f16; 
+      padding: 15px; 
+      border-radius: 6px; 
+      margin-top: 15px; 
+      font-family: 'Courier New', monospace; 
+      font-size: 0.85rem; 
+      max-height: 400px; 
+      overflow-y: auto; 
+      line-height: 1.6;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+      padding: 2px 0;
+    }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+    .warn { color: #f2ce7b; }
+    .muted { color: #95a9c0; }
+    
+    /* Mock TV Header */
+    .tvHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #1a2738, #243447);
+      border: 1px solid #34495e;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      min-height: 50px;
+    }
+    .tv-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e3ecf5;
+    }
+    .tv-skip-timer-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: #e3ecf5;
+    }
+    
+    /* Status display area */
+    .status-display {
+      background: #0a0f16;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+    .status-label {
+      color: #95a9c0;
+      font-size: 0.8rem;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-value {
+      font-family: 'Courier New', monospace;
+      color: #83bfff;
+      font-size: 1rem;
+      word-break: break-word;
+    }
+    .status-empty {
+      color: #6b7a8d;
+      font-style: italic;
+    }
+    
+    .participants-list {
+      background: #162435;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .participant {
+      display: inline-block;
+      padding: 6px 12px;
+      margin: 4px;
+      background: #24364b;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .participant.human {
+      background: #3563a7;
+      color: #fff;
+      font-weight: 600;
+    }
+    .participant.not-selected {
+      opacity: 0.5;
+    }
+    
+    .result-box {
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border-left: 4px solid;
+    }
+    .result-box.pass {
+      background: rgba(119, 213, 141, 0.1);
+      border-color: #77d58d;
+    }
+    .result-box.fail {
+      background: rgba(255, 109, 109, 0.1);
+      border-color: #ff6d6d;
+    }
+    .result-box.pending {
+      background: rgba(131, 191, 255, 0.1);
+      border-color: #83bfff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: TVInlineStatus Veto Competition Messages</h1>
+    <p class="subtitle">
+      Tests that status messages are displayed correctly during veto_comp phase when human is/isn't selected to play.
+      <br>Issue: Status was cleared on phase change but never repopulated.
+    </p>
+
+    <!-- Mock TV Header with TVInlineStatus -->
+    <div class="test-section">
+      <h2>Mock TV Display</h2>
+      <div class="tvHead">
+        <div class="tv-title">Veto Competition</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="tv-skip-timer-pill">⏱️ 40s</div>
+          <!-- TVInlineStatus will be injected here by the module -->
+        </div>
+      </div>
+      
+      <div class="status-display">
+        <div class="status-label">Current Status Message:</div>
+        <div id="currentStatus" class="status-value status-empty">(No status set)</div>
+      </div>
+    </div>
+
+    <!-- Test Controls -->
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      
+      <div style="margin-bottom: 20px;">
+        <h3 style="color: #83bfff; font-size: 1rem; margin-bottom: 10px;">Scenario 1: Human IS Selected to Play</h3>
+        <p style="color: #95a9c0; font-size: 0.9rem; margin-bottom: 10px;">
+          Human player is in the veto participants list. Should show general participant list initially, then submission message.
+        </p>
+        <button onclick="runScenario1()">Run Scenario 1</button>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <h3 style="color: #83bfff; font-size: 1rem; margin-bottom: 10px;">Scenario 2: Human NOT Selected to Play</h3>
+        <p style="color: #95a9c0; font-size: 0.9rem; margin-bottom: 10px;">
+          Human player is NOT in the veto participants list. Should show "You are not playing Veto. Participants: ..."
+        </p>
+        <button onclick="runScenario2()">Run Scenario 2</button>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <h3 style="color: #83bfff; font-size: 1rem; margin-bottom: 10px;">Manual Controls</h3>
+        <button onclick="testPhaseChange()">Simulate Phase Change (should clear)</button>
+        <button onclick="testSetStatus()">Set Test Status</button>
+        <button onclick="testClearStatus()">Clear Status</button>
+      </div>
+    </div>
+
+    <!-- Participants Info -->
+    <div class="test-section">
+      <h2>Simulated Veto Participants</h2>
+      <div id="participantsInfo" class="participants-list">
+        <!-- Will be populated dynamically -->
+      </div>
+    </div>
+
+    <!-- Test Results -->
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <!-- Console Log -->
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <!-- Load Dependencies -->
+  <script src="js/runtime/tv-inline-status.js"></script>
+
+  <script>
+    // =====================================================
+    // Test Setup
+    // =====================================================
+    
+    const logs = [];
+    let testResults = [];
+    
+    // Mock game state
+    window.game = {
+      phase: 'intermission',
+      week: 2,
+      humanId: 1,
+      __vetoPlayers: [],
+      players: [
+        { id: 1, name: 'You (Human)', evicted: false, human: true },
+        { id: 2, name: 'Alice', evicted: false },
+        { id: 3, name: 'Bob', evicted: false },
+        { id: 4, name: 'Charlie', evicted: false },
+        { id: 5, name: 'Diana', evicted: false },
+        { id: 6, name: 'Eve', evicted: false },
+        { id: 7, name: 'Frank', evicted: false }
+      ]
+    };
+    
+    // Helper functions
+    window.safeName = function(id) {
+      const player = window.game.players.find(p => p.id === id);
+      return player ? player.name : `Player ${id}`;
+    };
+    
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, msg, type });
+      updateLog();
+      console.log(`[${timestamp}] ${msg}`);
+    }
+    
+    function updateLog() {
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = logs.slice(-30).reverse().map(l => 
+        `<div class="log-entry ${l.type}">[${l.timestamp}] ${l.msg}</div>`
+      ).join('');
+      logEl.scrollTop = 0;
+    }
+    
+    function updateStatusDisplay() {
+      const statusEl = document.getElementById('currentStatus');
+      const status = window.TVInlineStatus?.getStatus();
+      
+      if (status && status.message) {
+        statusEl.textContent = status.message;
+        statusEl.className = `status-value ${status.tone}`;
+      } else {
+        statusEl.textContent = '(No status set)';
+        statusEl.className = 'status-value status-empty';
+      }
+    }
+    
+    function updateParticipantsDisplay() {
+      const container = document.getElementById('participantsInfo');
+      const vetoPlayers = window.game.__vetoPlayers || [];
+      const humanId = window.game.humanId;
+      
+      if (vetoPlayers.length === 0) {
+        container.innerHTML = '<div style="color: #6b7a8d; font-style: italic;">No participants selected</div>';
+        return;
+      }
+      
+      container.innerHTML = vetoPlayers.map(id => {
+        const player = window.getP(id);
+        const isHuman = id === humanId;
+        return `<div class="participant ${isHuman ? 'human' : ''}">${player ? player.name : id}${isHuman ? ' 👤' : ''}</div>`;
+      }).join('');
+    }
+    
+    function addResult(scenario, passed, message) {
+      testResults.push({ scenario, passed, message });
+      displayResults();
+    }
+    
+    function displayResults() {
+      const resultsEl = document.getElementById('results');
+      
+      if (testResults.length === 0) {
+        resultsEl.innerHTML = '<div style="color: #6b7a8d; font-style: italic;">No tests run yet</div>';
+        return;
+      }
+      
+      resultsEl.innerHTML = testResults.map(r => {
+        const icon = r.passed ? '✅' : '❌';
+        const cssClass = r.passed ? 'pass' : 'fail';
+        return `
+          <div class="result-box ${cssClass}">
+            <strong>${icon} ${r.scenario}</strong>
+            <div style="margin-top: 8px; color: #e3ecf5;">${r.message}</div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // =====================================================
+    // Test Scenarios
+    // =====================================================
+    
+    function simulatePhaseChange(phaseName) {
+      log(`Simulating phase change to: ${phaseName}`, 'info');
+      
+      window.game.phase = phaseName;
+      
+      // Dispatch bb:phase:changed event
+      const event = new CustomEvent('bb:phase:changed', {
+        detail: { phase: phaseName }
+      });
+      window.dispatchEvent(event);
+      
+      log(`Phase change event dispatched`, 'info');
+      
+      // Update displays
+      setTimeout(() => {
+        updateStatusDisplay();
+      }, 100);
+    }
+    
+    async function runScenario1() {
+      log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+      log('Starting Scenario 1: Human IS Selected', 'info');
+      testResults = [];
+      
+      // Setup: Human is in veto players
+      window.game.__vetoPlayers = [1, 2, 3, 4, 5, 6]; // Human (ID 1) is included
+      updateParticipantsDisplay();
+      log('Veto participants: ' + window.game.__vetoPlayers.map(id => window.safeName(id)).join(', '), 'muted');
+      
+      // Simulate phase change to veto_comp
+      simulatePhaseChange('veto_comp');
+      await sleep(200);
+      
+      // Simulate veto.js setting initial participant list
+      const list = window.game.__vetoPlayers.map(id => window.safeName(id));
+      const statusMsg = 'Veto Participants: ' + list.join(', ');
+      
+      log('Setting status: ' + statusMsg, 'info');
+      window.TVInlineStatus?.set(statusMsg, 'muted');
+      
+      await sleep(200);
+      updateStatusDisplay();
+      
+      // Check if status is visible
+      const status = window.TVInlineStatus?.getStatus();
+      const passed1 = status && status.message === statusMsg;
+      
+      if (passed1) {
+        log('✓ Status message is visible after phase change', 'pass');
+        addResult('Scenario 1 - Initial Status', true, 'Status shows participant list correctly');
+      } else {
+        log('✗ Status message is NOT visible', 'fail');
+        addResult('Scenario 1 - Initial Status', false, `Expected: "${statusMsg}", Got: "${status?.message || '(empty)'}"`);
+      }
+      
+      // Simulate human submission
+      await sleep(500);
+      log('Simulating human submission...', 'info');
+      window.TVInlineStatus?.set('Submission received. Waiting for others…');
+      
+      await sleep(200);
+      updateStatusDisplay();
+      
+      const status2 = window.TVInlineStatus?.getStatus();
+      const passed2 = status2 && status2.message === 'Submission received. Waiting for others…';
+      
+      if (passed2) {
+        log('✓ Submission status is visible', 'pass');
+        addResult('Scenario 1 - Submission Status', true, 'Status updates to submission message');
+      } else {
+        log('✗ Submission status is NOT visible', 'fail');
+        addResult('Scenario 1 - Submission Status', false, 'Status did not update to submission message');
+      }
+      
+      log('Scenario 1 complete', 'info');
+    }
+    
+    async function runScenario2() {
+      log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+      log('Starting Scenario 2: Human NOT Selected', 'info');
+      testResults = [];
+      
+      // Setup: Human is NOT in veto players
+      window.game.__vetoPlayers = [2, 3, 4, 5, 6, 7]; // Human (ID 1) is NOT included
+      updateParticipantsDisplay();
+      log('Veto participants: ' + window.game.__vetoPlayers.map(id => window.safeName(id)).join(', '), 'muted');
+      
+      // Simulate phase change to veto_comp
+      simulatePhaseChange('veto_comp');
+      await sleep(200);
+      
+      // Simulate veto.js setting initial participant list
+      const list = window.game.__vetoPlayers.map(id => window.safeName(id));
+      let statusMsg = 'Veto Participants: ' + list.join(', ');
+      
+      log('Setting initial status: ' + statusMsg, 'info');
+      window.TVInlineStatus?.set(statusMsg, 'muted');
+      
+      await sleep(200);
+      updateStatusDisplay();
+      
+      // Simulate async check determining human is not eligible
+      await sleep(300);
+      const participantNames = list.join(', ');
+      statusMsg = 'You are not playing Veto. Participants: ' + participantNames;
+      
+      log('Human not eligible, updating status: ' + statusMsg, 'info');
+      window.TVInlineStatus?.set(statusMsg, 'muted');
+      
+      await sleep(200);
+      updateStatusDisplay();
+      
+      // Check if status is visible and correct
+      const status = window.TVInlineStatus?.getStatus();
+      const passed = status && status.message === statusMsg;
+      
+      if (passed) {
+        log('✓ Status message is visible with correct message', 'pass');
+        addResult('Scenario 2 - Non-Participant Status', true, 'Status correctly shows "You are not playing Veto" with participant list');
+      } else {
+        log('✗ Status message is incorrect or not visible', 'fail');
+        addResult('Scenario 2 - Non-Participant Status', false, `Expected: "${statusMsg}", Got: "${status?.message || '(empty)'}"`);
+      }
+      
+      // Verify status persists over time
+      await sleep(2000);
+      updateStatusDisplay();
+      
+      const status2 = window.TVInlineStatus?.getStatus();
+      const persisted = status2 && status2.message === statusMsg;
+      
+      if (persisted) {
+        log('✓ Status persisted for 2 seconds', 'pass');
+        addResult('Scenario 2 - Status Persistence', true, 'Status remained visible during competition timer');
+      } else {
+        log('✗ Status was cleared prematurely', 'fail');
+        addResult('Scenario 2 - Status Persistence', false, 'Status should persist during competition');
+      }
+      
+      log('Scenario 2 complete', 'info');
+    }
+    
+    function testPhaseChange() {
+      simulatePhaseChange('veto_comp');
+      log('Phase changed to veto_comp - status should be cleared', 'warn');
+    }
+    
+    function testSetStatus() {
+      const msg = 'Test status message at ' + new Date().toLocaleTimeString();
+      window.TVInlineStatus?.set(msg, 'muted');
+      log('Set test status: ' + msg, 'info');
+      setTimeout(updateStatusDisplay, 100);
+    }
+    
+    function testClearStatus() {
+      window.TVInlineStatus?.clear();
+      log('Cleared status', 'info');
+      setTimeout(updateStatusDisplay, 100);
+    }
+    
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    // =====================================================
+    // Initialize
+    // =====================================================
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded', 'info');
+      
+      // Force initialize TVInlineStatus
+      if (window.TVInlineStatus && typeof window.TVInlineStatus.init === 'function') {
+        window.TVInlineStatus.init();
+        log('TVInlineStatus initialized', 'info');
+      }
+      
+      updateStatusDisplay();
+      updateParticipantsDisplay();
+      displayResults();
+      
+      // Monitor status changes
+      setInterval(updateStatusDisplay, 500);
+    });
+  </script>
+</body>
+</html>
