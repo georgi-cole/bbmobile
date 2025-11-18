@@ -16,6 +16,7 @@
     // Phase token & timeout tracking (for stuck card prevention)
     _phaseToken: 0,               // Incremented on each phase change
     __pendingTimeouts: [],        // Registry of all scheduled timeouts
+    __pendingTimeoutData: [],     // Registry of timeout metadata (callback, originalDuration)
     
     /**
      * Show a new card. Automatically hides current card before showing new one.
@@ -205,10 +206,17 @@
     /**
      * Register a timeout for tracking and automatic cancellation.
      * @param {number} timeoutId - setTimeout return value
+     * @param {Function} callback - The callback function (for fast-forward replay)
+     * @param {number} originalDuration - Original duration in ms (for fast-forward compression)
      */
-    registerTimeout(timeoutId){
+    registerTimeout(timeoutId, callback, originalDuration){
       if(timeoutId){
         this.__pendingTimeouts.push(timeoutId);
+        this.__pendingTimeoutData.push({
+          id: timeoutId,
+          callback: callback,
+          originalDuration: originalDuration || 0
+        });
       }
     },
     
@@ -242,6 +250,46 @@
       
       // Clear the registry
       this.__pendingTimeouts = [];
+      this.__pendingTimeoutData = [];
+    },
+    
+    /**
+     * Accelerate all pending timeouts by replaying them with compressed durations.
+     * Used by fast-forward mode to preserve all callbacks while compressing time.
+     * @returns {Promise<void>}
+     */
+    async acceleratePendingTimeouts(){
+      if(!this.__pendingTimeoutData || this.__pendingTimeoutData.length === 0){
+        return;
+      }
+      
+      console.info(`[CardManager] Accelerating ${this.__pendingTimeoutData.length} pending timeout(s)`);
+      
+      // Copy the current timeout data and clear registries
+      const timeoutsToReplay = this.__pendingTimeoutData.slice();
+      this.cancelAllTimeouts();
+      
+      // Replay each callback with compressed duration
+      for(const data of timeoutsToReplay){
+        if(!data.callback) continue;
+        
+        const originalMs = data.originalDuration || 0;
+        const compressedMs = global.normalizeDuration ? global.normalizeDuration(originalMs) : Math.max(40, originalMs * 0.1);
+        
+        console.debug(`[CardManager] Replaying callback: ${originalMs}ms -> ${compressedMs}ms`);
+        
+        // Wait compressed duration
+        await new Promise(resolve => setTimeout(resolve, compressedMs));
+        
+        // Execute callback
+        try {
+          data.callback();
+        } catch(e){
+          console.error('[CardManager] Error replaying callback:', e);
+        }
+      }
+      
+      console.info('[CardManager] ✓ All timeouts accelerated');
     },
     
     /**
@@ -287,19 +335,31 @@
   // call CardManager.clear() at ceremony/phase boundaries.
   
   // Register drainer with SkipController for skip/fast-forward integration
-  function cardManagerDrainer(){
+  async function cardManagerDrainer(){
     let didWork = false;
     
-    // Cancel all pending timeouts
-    if(CardManager.__pendingTimeouts && CardManager.__pendingTimeouts.length > 0){
-      CardManager.cancelAllTimeouts();
-      didWork = true;
-    }
+    // Check if fast-forward is active (vs old-style skip/drain)
+    const game = global.game || {};
+    const isFastForward = game.__ffActive === true;
     
-    // Clear current card if one exists
-    if(CardManager.currentCard){
-      CardManager.clear(true); // Immediate clear, no animation
-      didWork = true;
+    if(isFastForward){
+      // Fast-forward mode: accelerate pending timeouts instead of canceling
+      if(CardManager.__pendingTimeoutData && CardManager.__pendingTimeoutData.length > 0){
+        console.info('[CardManager] Fast-forward: accelerating timeouts');
+        await CardManager.acceleratePendingTimeouts();
+        didWork = true;
+      }
+    } else {
+      // Legacy skip/drain mode: cancel timeouts and clear cards
+      if(CardManager.__pendingTimeouts && CardManager.__pendingTimeouts.length > 0){
+        CardManager.cancelAllTimeouts();
+        didWork = true;
+      }
+      
+      if(CardManager.currentCard){
+        CardManager.clear(true); // Immediate clear, no animation
+        didWork = true;
+      }
     }
     
     return didWork;

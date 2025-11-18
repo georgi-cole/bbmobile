@@ -130,12 +130,28 @@
           var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
           if(fitTVCardText) fitTVCardText(card);
           
-          // Set up auto-dismissal
-          var timeout = setTimeout(function(){
+          // Set up auto-dismissal with fast-forward support
+          var originalDuration = duration || 2400;
+          var normalizedDuration = global.normalizeDuration ? global.normalizeDuration(originalDuration) : originalDuration;
+          
+          var timeoutCallback = function(){
             clearTVOverlay();
             if(tv) tv.classList.remove('tvTall');
             resolve();
-          }, duration || 2400);
+          };
+          
+          var timeout = setTimeout(timeoutCallback, normalizedDuration);
+          
+          // Register with metadata for fast-forward acceleration
+          if(global.CardManager && global.CardManager.registerTimeout){
+            // Update registration call to include callback and duration
+            global.CardManager.__pendingTimeoutData = global.CardManager.__pendingTimeoutData || [];
+            global.CardManager.__pendingTimeoutData.push({
+              id: timeout,
+              callback: timeoutCallback,
+              originalDuration: originalDuration
+            });
+          }
           
           return { card: card, timeout: timeout };
         });
@@ -172,11 +188,15 @@
         var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
         if(fitTVCardText) fitTVCardText(card);
         
+        // Apply fast-forward duration normalization (fallback path)
+        var originalDuration = duration || 2400;
+        var normalizedDuration = global.normalizeDuration ? global.normalizeDuration(originalDuration) : originalDuration;
+        
         setTimeout(function(){
           clearTVOverlay();
           if(tv) tv.classList.remove('tvTall');
           resolve();
-        }, duration || 2400);
+        }, normalizedDuration);
       }
     });
   }
@@ -342,11 +362,26 @@
           var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
           if(fitTVCardText) fitTVCardText(card);
           
-          var timeout = setTimeout(function(){
+          // Set up auto-dismissal with fast-forward support
+          var originalDuration = duration || 2400;
+          var normalizedDuration = global.normalizeDuration ? global.normalizeDuration(originalDuration) : originalDuration;
+          
+          var timeoutCallback = function(){
             clearTVOverlay();
             if(tv) tv.classList.remove('tvTall');
             resolve();
-          }, duration || 2400);
+          };
+          
+          var timeout = setTimeout(timeoutCallback, normalizedDuration);
+          
+          // Register with metadata for fast-forward acceleration
+          if(global.CardManager && global.CardManager.__pendingTimeoutData){
+            global.CardManager.__pendingTimeoutData.push({
+              id: timeout,
+              callback: timeoutCallback,
+              originalDuration: originalDuration
+            });
+          }
           
           return { card: card, timeout: timeout };
         });
@@ -364,11 +399,15 @@
         var fitTVCardText = (global.UI && global.UI.fitTVCardText) || global.fitTVCardText;
         if(fitTVCardText) fitTVCardText(card);
         
+        // Apply fast-forward duration normalization (fallback path)
+        var originalDuration = duration || 2400;
+        var normalizedDuration = global.normalizeDuration ? global.normalizeDuration(originalDuration) : originalDuration;
+        
         setTimeout(function(){
           clearTVOverlay();
           if(tv) tv.classList.remove('tvTall');
           resolve();
-        }, duration || 2400);
+        }, normalizedDuration);
       }
     });
   }

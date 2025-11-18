@@ -23,7 +23,14 @@
       fxCards:true,fxSound:true,fxStyle:'fade',fxAnim:true,miniMode:'random',
       manualMode:false,doubleChance:10,tripleChance:3,enableJuryHouse:true,autoMusic:true,
       returnChance:50,selfEvictChance:0,humanName:'You',enablePublicFav:false,
-      IdlePhases:false
+      IdlePhases:false,
+      // Fast-forward configuration
+      fastForwardEnabled:true,
+      fastForwardMultiplier:0.1,
+      fastForwardMinDuration:40,
+      fastForwardMaxDuration:300,
+      fastForwardMinigameAutoSubmit:false,
+      fastForwardSocialActionInterval:200
     },
     week:1,phase:'lobby',endAt:0,
     players:[],humanId:null,
@@ -54,7 +61,10 @@
       juryVotesRaw:[],
       castingDone:false,
       revealStarted:false
-    }
+    },
+    // Fast-forward runtime state
+    __ffActive:false,
+    __ffMultiplier:1
   };
 
   /* ===== Balance & Social Constants ===== */
@@ -147,6 +157,35 @@
 
   global.safeShowCard = safeShowCard;
   global.flushAllCards = flushAllCards;
+
+  /* ===== Fast-Forward Duration Normalization ===== */
+  /**
+   * Normalize duration based on fast-forward state.
+   * If fast-forward is active, compresses duration by multiplier with min/max caps.
+   * @param {number} ms - Original duration in milliseconds
+   * @returns {number} Normalized duration
+   */
+  function normalizeDuration(ms){
+    const g = game;
+    if(!g || !g.__ffActive) return ms;
+    
+    const mult = g.__ffMultiplier || 0.1;
+    const min = g.cfg?.fastForwardMinDuration || 40;
+    const max = g.cfg?.fastForwardMaxDuration || 300;
+    
+    const compressed = Math.round(ms * mult);
+    const normalized = Math.max(min, Math.min(compressed, max));
+    
+    // Log significant compressions
+    if(compressed !== normalized){
+      console.debug(`[fast-forward] duration ${ms}ms -> ${compressed}ms (clamped to ${normalized}ms)`);
+    } else {
+      console.debug(`[fast-forward] duration ${ms}ms -> ${normalized}ms`);
+    }
+    
+    return normalized;
+  }
+  global.normalizeDuration = normalizeDuration;
 
   /* ===== Basic Accessors ===== */
   function getP(id){ return game.players.find(p=>p.id===id); }
@@ -318,6 +357,61 @@
       }
     }
   }
+
+  /* ===== Fast-Forward Activation ===== */
+  /**
+   * Activate fast-forward mode with specified multiplier.
+   * @param {Object} options - Fast-forward options
+   * @param {number} options.multiplier - Speed multiplier (default: 0.1 = 10x speed)
+   * @param {string} options.reason - Reason for activation (for logging)
+   */
+  function activateFastForward(options){
+    options = options || {};
+    const multiplier = options.multiplier || game.cfg?.fastForwardMultiplier || 0.1;
+    const reason = options.reason || 'user';
+    
+    // Guard against reentrant activation
+    if(game.__ffActive){
+      console.info('[fast-forward] already active, ignoring duplicate activation');
+      return;
+    }
+    
+    game.__ffActive = true;
+    game.__ffMultiplier = multiplier;
+    
+    const phase = game.phase || 'unknown';
+    console.info(`[fast-forward] activated (mult=${multiplier}, phase=${phase}, reason=${reason})`);
+    
+    // Compress remaining phase timer if applicable
+    const now = Date.now();
+    if(game.phaseEndsAt && game.phaseEndsAt > now){
+      const remainingOriginal = game.phaseEndsAt - now;
+      const remainingCompressed = normalizeDuration(remainingOriginal);
+      game.phaseEndsAt = now + remainingCompressed;
+      
+      // Keep endAt in sync
+      if(game.endAt && game.endAt > now){
+        game.endAt = game.phaseEndsAt;
+      }
+      
+      console.info(`[fast-forward] phase timer compressed: ${remainingOriginal}ms -> ${remainingCompressed}ms`);
+    }
+  }
+  global.activateFastForward = activateFastForward;
+  
+  /**
+   * Deactivate fast-forward mode (reset to normal speed).
+   * Called automatically at phase boundaries.
+   */
+  function deactivateFastForward(){
+    if(!game.__ffActive) return;
+    
+    game.__ffActive = false;
+    game.__ffMultiplier = 1;
+    
+    console.info('[fast-forward] deactivated (normal speed restored)');
+  }
+  global.deactivateFastForward = deactivateFastForward;
 
   /* ===== Exports ===== */
   global.game=game;
