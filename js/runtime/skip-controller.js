@@ -16,7 +16,8 @@
     const GSAP_FAST_FORWARD_PROGRESS = 1;
 
     /**
-     * Enable skip mode
+     * Enable skip mode (for legacy drain behavior)
+     * When fast-forward is active, skip mode is bypassed in favor of acceleration
      */
     function enable() {
       if (skipActive) {
@@ -101,7 +102,8 @@
     }
 
     /**
-     * Execute drain loop - run all drainers until no work remains or safety cap reached
+     * Execute acceleration or drain based on fast-forward state.
+     * When fast-forward is active, accelerate pending timeouts instead of draining.
      * @returns {Promise<void>}
      */
     async function drainLoop() {
@@ -115,8 +117,32 @@
         return;
       }
 
+      // Check if fast-forward is active
+      const game = g.game || {};
+      const isFastForward = game.__ffActive === true;
+      
+      if (isFastForward) {
+        console.info('[SkipController] Fast-forward active - using acceleration path');
+        
+        // Acceleration path: compress timeouts instead of canceling
+        if (g.CardManager && typeof g.CardManager.acceleratePendingTimeouts === 'function') {
+          await g.CardManager.acceleratePendingTimeouts();
+          console.info('[SkipController] ✓ CardManager timeouts accelerated');
+        }
+        
+        // Fast-forward GSAP timelines
+        const gsapWork = fastForwardGsapTimelines();
+        if (gsapWork > 0) {
+          console.info(`[SkipController] ✓ ${gsapWork} GSAP timeline(s) fast-forwarded`);
+        }
+        
+        // Skip the legacy drain loop entirely
+        return;
+      }
+
+      // Legacy drain mode: run normal drain loop
       draining = true;
-      console.info('[SkipController] Starting drain loop');
+      console.info('[SkipController] Starting drain loop (legacy mode)');
 
       let pass = 0;
       let totalWorkDone = 0;

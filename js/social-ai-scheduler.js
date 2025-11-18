@@ -306,8 +306,21 @@
       return;
     }
 
-    const delay = config.tickIntervalMin + 
-                  Math.random() * (config.tickIntervalMax - config.tickIntervalMin);
+    // Check for fast-forward mode and compress interval
+    const game = global.game || {};
+    const isFastForward = game.__ffActive === true;
+    let delay;
+    
+    if (isFastForward) {
+      // Use compressed interval from config, default to 200ms
+      const ffInterval = game.cfg?.fastForwardSocialActionInterval || 200;
+      delay = ffInterval;
+      console.debug(`[ai-scheduler] Fast-forward active - using compressed interval: ${delay}ms`);
+    } else {
+      // Normal random interval
+      delay = config.tickIntervalMin + 
+              Math.random() * (config.tickIntervalMax - config.tickIntervalMin);
+    }
 
     schedulerTimer = setTimeout(() => {
       performTick();

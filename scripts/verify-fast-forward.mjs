@@ -76,6 +76,18 @@ check(
   cardManagerFile.includes('game.__ffActive') || cardManagerFile.includes('isFastForward')
 );
 
+// Check 2b: SkipController has acceleration support
+console.log('\nChecking skip-controller.js...');
+const skipControllerFile = readFileSync(join(rootDir, 'js/runtime/skip-controller.js'), 'utf8');
+check(
+  'SkipController checks for fast-forward mode',
+  skipControllerFile.includes('__ffActive') && skipControllerFile.includes('isFastForward')
+);
+check(
+  'SkipController uses acceleration path when FFWD active',
+  skipControllerFile.includes('acceleratePendingTimeouts') && skipControllerFile.includes('acceleration path')
+);
+
 // Check 3: tv-cards.js uses normalizeDuration
 console.log('\nChecking tv-cards.js...');
 const tvCardsFile = readFileSync(join(rootDir, 'js/ui/tv-cards.js'), 'utf8');
@@ -97,23 +109,45 @@ check(
   hudFile.includes('activateFastForward')
 );
 check(
-  'fastForwardPhase calls deactivateFastForward',
-  hudFile.includes('deactivateFastForward')
+  'fastForwardPhase does NOT immediately deactivate',
+  !hudFile.match(/fastForwardPhase[\s\S]{0,500}deactivateFastForward\(\)/) ||
+  hudFile.includes('Don\'t deactivate fast-forward here'),
+  'FFWD should persist until phase boundary, not deactivate in fastForwardPhase'
 );
 check(
   'fastForwardPhase checks __ffActive',
   hudFile.includes('game.__ffActive')
 );
 
-// Check 5: tv-skip.js has updated label
+// Check 5: tv-skip.js has updated label and deactivation hook
 console.log('\nChecking tv-skip.js...');
 const tvSkipFile = readFileSync(join(rootDir, 'js/tv-skip.js'), 'utf8');
 check(
   'Skip button updated to FFWD',
   tvSkipFile.includes('FFWD') || tvSkipFile.includes('Fast-Forward')
 );
+check(
+  'tv-skip.js deactivates FFWD on phase change',
+  tvSkipFile.includes('deactivateFastForward') && tvSkipFile.includes('setPhase')
+);
 
-// Check 6: Test file exists
+// Check 6: Social AI scheduler supports fast-forward
+console.log('\nChecking social-ai-scheduler.js...');
+try {
+  const aiSchedulerFile = readFileSync(join(rootDir, 'js/social-ai-scheduler.js'), 'utf8');
+  check(
+    'AI scheduler checks for fast-forward mode',
+    aiSchedulerFile.includes('__ffActive') || aiSchedulerFile.includes('isFastForward')
+  );
+  check(
+    'AI scheduler uses compressed interval when FFWD active',
+    aiSchedulerFile.includes('fastForwardSocialActionInterval')
+  );
+} catch (e) {
+  check('social-ai-scheduler.js exists', false, 'File not found');
+}
+
+// Check 7: Test file exists
 console.log('\nChecking test files...');
 try {
   readFileSync(join(rootDir, 'test_fast_forward_sequences.html'), 'utf8');
