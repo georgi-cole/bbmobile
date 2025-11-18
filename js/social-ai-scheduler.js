@@ -297,17 +297,30 @@
     // Guard: prevent re-entry and check if still active
     if (!isRunning || !isActive) return;
 
-    const config = getConfig();
+    // Check for fast-forward mode and compress interval
+    const game = global.game || {};
+    const isFastForward = game.__ffActive === true;
+    let delay;
     
-    // Safety check: max ticks per phase
-    if (tickCount >= config.maxTicksPerPhase) {
-      console.warn(`[ai-scheduler] ⚠️ MAX_TICKS_PER_PHASE (${config.maxTicksPerPhase}) reached - terminating phase`);
-      endSocialPhase();
-      return;
+    if (isFastForward) {
+      // Use compressed interval from config, default to 200ms
+      const ffInterval = game.cfg?.fastForwardSocialActionInterval || 200;
+      delay = ffInterval;
+      console.debug(`[ai-scheduler] Fast-forward active - using compressed interval: ${delay}ms`);
+    } else {
+      // Normal random interval - get config for interval values
+      const config = getConfig();
+      
+      // Safety check: max ticks per phase
+      if (tickCount >= config.maxTicksPerPhase) {
+        console.warn(`[ai-scheduler] ⚠️ MAX_TICKS_PER_PHASE (${config.maxTicksPerPhase}) reached - terminating phase`);
+        endSocialPhase();
+        return;
+      }
+      
+      delay = config.tickIntervalMin + 
+              Math.random() * (config.tickIntervalMax - config.tickIntervalMin);
     }
-
-    const delay = config.tickIntervalMin + 
-                  Math.random() * (config.tickIntervalMax - config.tickIntervalMin);
 
     schedulerTimer = setTimeout(() => {
       performTick();

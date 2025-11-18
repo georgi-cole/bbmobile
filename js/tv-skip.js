@@ -309,6 +309,18 @@
     const originalSetPhase = g.setPhase;
     g.setPhase = function(...args){
       const result = originalSetPhase.apply(this, args);
+      
+      // Deactivate fast-forward on phase change (auto-reset)
+      if(g.game && g.game.__ffActive){
+        if(typeof g.deactivateFastForward === 'function'){
+          g.deactivateFastForward();
+        } else {
+          g.game.__ffActive = false;
+          g.game.__ffMultiplier = 1;
+          console.info('[fast-forward] deactivated (normal speed restored)');
+        }
+      }
+      
       // Update state after phase change
       setTimeout(() => updateState(), 0);
       return result;

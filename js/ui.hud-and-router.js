@@ -1127,9 +1127,6 @@ header.innerHTML = `
   async function fastForwardPhase(){
     const game=g.game; if(!game) return;
     
-    // Log fast-forward activation
-    console.info(`[ff] activate phase=${game.phase}`);
-    
     // Check for idempotency - if already in fast-forward or skip mode, ignore
     if(game.__ffActive){
       console.warn('[ff] Fast-forward already active, ignoring duplicate call');
@@ -1142,29 +1139,18 @@ header.innerHTML = `
     
     // Activate fast-forward mode (preserves callbacks, compresses durations)
     if(typeof g.activateFastForward === 'function'){
-      g.activateFastForward({ multiplier: 0.1, reason: 'user' });
+      g.activateFastForward({ multiplier: game.cfg?.fastForwardMultiplier || 0.1, reason: 'user' });
     }
     
-    // Enable skip mode (for legacy drainers that haven't been updated)
+    // Enable skip mode (for SkipController coordination)
     if(g.SkipController){
       g.SkipController.enable();
     }
     
-    // Stop audio and clear overlays
+    // Stop audio (but don't flush cards - they'll be compressed)
     cancelAllPhaseAudio();
-    flushPhaseCards();
     
-    // Activate skip cascade for turbo card display
-    try{ UI.activateSkipCascade?.(game.cfg?.skipTurboWindowMs || 4500); }catch{}
-    
-    const now=Date.now();
-    if(game.endAt && game.endAt-now>1200){
-      game.endAt = now + 1000;
-      // Keep phaseEndsAt in sync for modules relying on it (e.g., veto auto-submit)
-      game.phaseEndsAt = game.endAt;
-    }
-
-    // Special: return_twist immediate finalize
+    // Special: return_twist immediate finalize (legacy behavior preserved)
     if(game.phase === 'return_twist'){
       try{ g.finishAmericaReturnVote?.(); }catch{}
       // Complete skip mode before returning
@@ -1174,35 +1160,34 @@ header.innerHTML = `
       return;
     }
 
-    // Special: Social phase - use unified completion path
-    if((game.phase === 'social' || game.phase === 'social_intermission') && g.SocialManeuvers?.endSocialPhaseNow){
-      try{
-        console.info('[ff] Social phase detected - calling endSocialPhaseNow(skip)');
-        g.SocialManeuvers.endSocialPhaseNow('skip');
-      }catch(e){
-        console.error('[ff] endSocialPhaseNow failed:', e);
+    // Special: Social phase - accelerate AI ticks instead of immediate skip
+    if((game.phase === 'social' || game.phase === 'social_intermission')){
+      // Don't call endSocialPhaseNow - let social phase run accelerated
+      // The social-maneuvers.js will handle compressed AI ticks and summary
+      console.info('[ff] Social phase detected - allowing accelerated execution');
+      
+      // Trigger accelerated AI scheduling if available
+      if(g.SocialManeuvers?.accelerateAITicks){
+        try{
+          g.SocialManeuvers.accelerateAITicks();
+        }catch(e){
+          console.error('[ff] accelerateAITicks failed:', e);
+        }
       }
-      // Complete skip mode
-      if(g.SkipController){
-        g.SkipController.complete();
-      }
+      
+      // Don't complete skip mode - let FFWD persist until phase change
       return;
     }
 
-    // Execute drain loop (now intelligently handles fast-forward vs. skip)
+    // Execute acceleration/drain loop
+    // When FFWD is active, drainLoop will use acceleration path
     if(g.SkipController){
       await g.SkipController.drainLoop();
     }
 
-    // Deactivate fast-forward mode
-    if(typeof g.deactivateFastForward === 'function'){
-      g.deactivateFastForward();
-    }
-
-    // Complete skip mode
-    if(g.SkipController){
-      g.SkipController.complete();
-    }
+    // Don't deactivate fast-forward here - it will auto-deactivate on phase change
+    // Don't complete skip mode here - let it persist for the phase duration
+    // The setPhase wrapper in tv-skip.js will deactivate FFWD on phase boundary
 
     if(game.phase==='livevote' && typeof g.beginDiaryRoomSequence==='function'){
       try{ g.beginDiaryRoomSequence(); }catch{}
