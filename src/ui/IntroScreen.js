@@ -23,6 +23,13 @@ console.info('[IntroScreen] Script executing – pre-init');
   let bus = null;
   let playButtonClicked = false; // Idempotence guard for Play button
 
+  // Centralized intro screen state to prevent duplicate operations
+  const introScreenState = {
+    initialized: false,  // Has init() been called successfully?
+    visible: false,      // Is the intro screen currently visible?
+    animating: false     // Is a show/hide animation in progress?
+  };
+
   const FADE_DURATION = 600; // ms
   const PRELOAD_TIMEOUT = 1500; // ms - timeout for background preload
   const LOADING_BUFFER_THRESHOLD = 300; // ms - show loading spinner if preload exceeds this
@@ -660,17 +667,32 @@ console.info('[IntroScreen] Script executing – pre-init');
       window.Telemetry.log('intro_show_with_preload_start', { skipPreload });
     }
 
-    // Idempotence guard - check local state first
-    if (isVisible) {
+    // Idempotence guard - check state first
+    if (introScreenState.visible || isVisible) {
       console.info('[IntroScreen] Already visible, ignoring duplicate showWithPreload() call');
       
       // Emit telemetry for duplicate attempt
       if (window.Telemetry && typeof window.Telemetry.log === 'function') {
-        window.Telemetry.log('intro_show_with_preload_duplicate', { isVisible: true });
+        window.Telemetry.log('intro_show_with_preload_duplicate', { isVisible: introScreenState.visible });
       }
       
       return;
     }
+
+    // Guard against re-entrant calls while animating
+    if (introScreenState.animating) {
+      console.warn('[IntroScreen] Animation in progress, ignoring duplicate showWithPreload() call');
+      
+      // Emit telemetry for animation conflict
+      if (window.Telemetry && typeof window.Telemetry.log === 'function') {
+        window.Telemetry.log('intro_show_with_preload_animating', { animating: true });
+      }
+      
+      return;
+    }
+
+    // Mark as animating to prevent concurrent calls
+    introScreenState.animating = true;
 
     // Global idempotence guard - check flag but don't trust it blindly
     if (window.__bbHubShown) {
@@ -705,6 +727,10 @@ console.info('[IntroScreen] Script executing – pre-init');
     // Now show the intro screen
     // The show() function will set __bbHubShown = true after successful mount
     show();
+    
+    // Mark as visible and clear animating flag
+    introScreenState.visible = true;
+    introScreenState.animating = false;
     
     // Emit telemetry for showWithPreload complete
     if (window.Telemetry && typeof window.Telemetry.log === 'function') {
@@ -1099,12 +1125,12 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
 
     // Idempotence guard - if already visible, do nothing
-    if (isVisible) {
+    if (introScreenState.visible || isVisible) {
       console.info('[IntroScreen] Already visible, ignoring duplicate show() call');
       
       // Emit telemetry for duplicate show attempt
       if (window.Telemetry && typeof window.Telemetry.log === 'function') {
-        window.Telemetry.log('intro_show_duplicate', { isVisible: true });
+        window.Telemetry.log('intro_show_duplicate', { isVisible: introScreenState.visible });
       }
       
       return;
@@ -1159,6 +1185,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     
     container.classList.add('intro-screen--visible');
     isVisible = true;
+    introScreenState.visible = true;
 
     // CRITICAL: Set global flag ONLY AFTER hub is fully visible in DOM
     // This ensures __bbHubShown accurately reflects hub visibility
@@ -1176,8 +1203,14 @@ console.info('[IntroScreen] Script executing – pre-init');
   }
 
   function hide() {
-    if (!isVisible || !container) {
-      console.info('[IntroScreen] Already hidden or not initialized, ignoring hide() call');
+    // Idempotent guard - if already hidden, do nothing
+    if (!introScreenState.visible && !isVisible) {
+      console.info('[IntroScreen] Already hidden, ignoring hide() call');
+      return;
+    }
+
+    if (!container) {
+      console.info('[IntroScreen] Not initialized, ignoring hide() call');
       return;
     }
 
@@ -1185,14 +1218,15 @@ console.info('[IntroScreen] Script executing – pre-init');
     
     // Emit telemetry for hide
     if (window.Telemetry && typeof window.Telemetry.log === 'function') {
-      window.Telemetry.log('intro_hide', { wasVisible: isVisible });
+      window.Telemetry.log('intro_hide', { wasVisible: introScreenState.visible });
     }
     
     container.classList.remove('intro-screen--visible');
     
-    // CRITICAL: Reset flag immediately when hiding starts
+    // CRITICAL: Reset flags immediately when hiding starts
     // This allows hub to be shown again during restart
     window.__bbHubShown = false;
+    introScreenState.visible = false;
     
     // Wait for fade-out animation before hiding
     setTimeout(() => {
@@ -1212,7 +1246,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     }
 
     // Idempotence guard - prevent double initialization
-    if (bus) {
+    if (introScreenState.initialized || bus) {
       console.info('[IntroScreen] Already initialized, skipping duplicate init() call');
       
       // Emit telemetry for duplicate init attempt
@@ -1270,6 +1304,9 @@ console.info('[IntroScreen] Script executing – pre-init');
 
     console.info('[IntroScreen] Initialized');
 
+    // Mark as initialized
+    introScreenState.initialized = true;
+
     // Emit telemetry for init complete
     if (window.Telemetry && typeof window.Telemetry.log === 'function') {
       window.Telemetry.log('intro_init_done', { hasBus: !!bus });
@@ -1309,7 +1346,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     
     // Emit telemetry for reset
     if (window.Telemetry && typeof window.Telemetry.log === 'function') {
-      window.Telemetry.log('intro_reset', { wasVisible: isVisible, hadContainer: !!container });
+      window.Telemetry.log('intro_reset', { wasVisible: introScreenState.visible, hadContainer: !!container });
     }
     
     // Hide first if visible
@@ -1318,8 +1355,10 @@ console.info('[IntroScreen] Script executing – pre-init');
       container.style.display = 'none';
     }
     
-    // CRITICAL: Reset flag immediately during reset
+    // CRITICAL: Reset flags immediately during reset
     window.__bbHubShown = false;
+    introScreenState.visible = false;
+    introScreenState.animating = false;
     
     // Remove container from DOM
     if (container && container.parentNode) {
@@ -1332,6 +1371,7 @@ console.info('[IntroScreen] Script executing – pre-init');
     currentBgLayer = 'current';
     playButtonClicked = false;
     bus = null; // Reset bus so init() can be called again
+    introScreenState.initialized = false; // Allow re-initialization
     
     console.info('[IntroScreen] Reset complete');
   }

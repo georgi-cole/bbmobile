@@ -19,6 +19,14 @@
   let bus = null;
   let handlersWired = false; // Track if event handlers have been registered
 
+  // Centralized flow state to prevent duplicate initialization
+  const flowState = {
+    initialized: false,        // Has startup flow basic init run?
+    coreServicesReady: false,  // Have core services been initialized?
+    introHubShown: false,      // Has Intro Hub been shown once?
+    gameStarted: false         // Has enterGame() already executed?
+  };
+
   // ===== INTRO API RESOLUTION =====
 
   /**
@@ -52,6 +60,18 @@
    * This includes event bus, settings, and background theme service.
    */
   function initCoreServices() {
+    // Guard against duplicate initialization
+    if (flowState.coreServicesReady) {
+      console.info('[StartupFlow] Core services already initialized, skipping duplicate initCoreServices() call');
+      
+      // Emit telemetry for duplicate attempt
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_init_core_services_duplicate', {});
+      }
+      
+      return;
+    }
+
     console.info('[StartupFlow] Initializing core services...');
 
     // Emit telemetry for init start
@@ -151,6 +171,9 @@
 
     console.info('[StartupFlow] Core services initialized');
 
+    // Mark core services as ready
+    flowState.coreServicesReady = true;
+
     // Emit telemetry for init done
     if (g.Telemetry && typeof g.Telemetry.log === 'function') {
       g.Telemetry.log('startup_init_done', { hasIntroAPI: !!introAPI });
@@ -234,6 +257,18 @@
    * CRITICAL: Always use showWithPreload() for smooth appearance
    */
   async function showIntroHub() {
+    // Guard against duplicate calls
+    if (flowState.introHubShown) {
+      console.info('[StartupFlow] Intro Hub already shown, skipping duplicate showIntroHub() call');
+      
+      // Emit telemetry for duplicate attempt
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_show_hub_duplicate', {});
+      }
+      
+      return;
+    }
+
     console.info('[StartupFlow] Showing intro hub...');
 
     // Emit telemetry for show hub start
@@ -277,6 +312,9 @@
         
         return;
       }
+
+      // Mark intro hub as shown (only after successful show)
+      flowState.introHubShown = true;
 
       // Emit telemetry for show hub success
       if (g.Telemetry && typeof g.Telemetry.log === 'function') {
@@ -373,6 +411,7 @@
   /**
    * Close all open modals to prevent them from appearing over the main game screen.
    * This is called when transitioning from intro hub to main game.
+   * IDEMPOTENT: Safe to call multiple times.
    */
   function closeAllModals() {
     console.info('[StartupFlow] Closing all open modals before game start');
@@ -436,6 +475,7 @@
   /**
    * Remove roster placeholders to prevent double avatars (Guest + actual players).
    * This is called when transitioning from intro hub to main game.
+   * IDEMPOTENT: Safe to call multiple times.
    */
   function removeRosterPlaceholders() {
     console.info('[StartupFlow] Removing roster placeholders before showing actual roster');
@@ -505,11 +545,26 @@
    * Handles profile loading/guest mode and starts the game.
    */
   async function enterGame() {
+    // Guard against duplicate calls (check flowState first to prevent race conditions)
+    if (flowState.gameStarted) {
+      console.warn('[StartupFlow] Game already started (flowState), ignoring duplicate enterGame() call');
+      
+      // Emit telemetry for duplicate attempt
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_enter_game_duplicate', {});
+      }
+      
+      return;
+    }
+
+    // Mark game as started immediately to prevent race conditions
+    flowState.gameStarted = true;
+
     console.info('[StartupFlow] enterGame() called');
 
-    // Prevent duplicate calls (idempotence check)
+    // Prevent duplicate calls (legacy idempotence check for DeferredGuards compatibility)
     if (g.DeferredGuards && g.DeferredGuards.isGameStarted()) {
-      console.warn('[StartupFlow] Game already started, ignoring duplicate enterGame() call');
+      console.warn('[StartupFlow] Game already started (DeferredGuards), skipping duplicate enterGame() call');
       return;
     }
 
@@ -730,8 +785,14 @@
    */
   function init() {
     // Prevent duplicate initialization
-    if (handlersWired) {
+    if (flowState.initialized || handlersWired) {
       console.warn('[StartupFlow] Already initialized, skipping duplicate init() call');
+      
+      // Emit telemetry for duplicate attempt
+      if (g.Telemetry && typeof g.Telemetry.log === 'function') {
+        g.Telemetry.log('startup_init_duplicate', {});
+      }
+      
       return;
     }
     
@@ -744,8 +805,9 @@
     wirePlayButton();
     wireIntroHubButtons();
     
-    // Mark handlers as wired after successful registration
+    // Mark handlers as wired and flow as initialized after successful registration
     handlersWired = true;
+    flowState.initialized = true;
     
     // Set up listener for video end event (fires when video finishes or is skipped)
     // This listener is registered once and will show the intro hub after video ends
@@ -792,6 +854,10 @@
     
     // Reset main screen built flag
     mainScreenBuilt = false;
+    
+    // Reset flow state flags to allow re-showing hub and re-entering game
+    flowState.introHubShown = false;
+    flowState.gameStarted = false;
     
     // Get IntroScreen API from either namespace
     const introAPI = getIntroAPI();

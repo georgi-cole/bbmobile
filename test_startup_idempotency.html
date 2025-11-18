@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Startup Idempotency Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      background: #1a2634;
+      color: #e0e0e0;
+    }
+    .test-section {
+      background: #2a3644;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #3a4654;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #4a9eff;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 5px 0;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .pass { background: #2d5016; color: #7dff7d; }
+    .fail { background: #5a1616; color: #ff7d7d; }
+    .info { background: #164a5a; color: #7ddeff; }
+    .warn { background: #5a4416; color: #ffd77d; }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      background: #3563a7;
+      color: white;
+    }
+    button:hover {
+      background: #4a7ac7;
+    }
+    .code {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 12px;
+      margin: 10px 0;
+    }
+    #telemetry-log {
+      background: #0a0a0a;
+      color: #aaa;
+      padding: 10px;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 11px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Startup Flow Idempotency Test</h1>
+  <p>Tests to verify that duplicate initialization and show/start calls are properly guarded.</p>
+
+  <div class="test-section">
+    <h2>Test 1: StartupFlow.initializeCoreServices() Idempotency</h2>
+    <div id="test1-result"></div>
+    <button onclick="runTest1()">Run Test 1</button>
+    <div class="code">
+      Call initializeCoreServices() multiple times<br>
+      Verify only the first call initializes, subsequent calls log and return early<br>
+      Check for startup_init_core_services_duplicate telemetry
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: StartupFlow.showIntroHub() Idempotency</h2>
+    <div id="test2-result"></div>
+    <button onclick="runTest2()">Run Test 2</button>
+    <div class="code">
+      Call showIntroHub() multiple times<br>
+      Verify only the first call shows the hub<br>
+      Check for startup_show_hub_duplicate telemetry
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: StartupFlow.enterGame() Idempotency</h2>
+    <div id="test3-result"></div>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div class="code">
+      Call enterGame() multiple times<br>
+      Verify only the first call starts the game<br>
+      Check for startup_enter_game_duplicate telemetry
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: IntroScreen.init() Idempotency</h2>
+    <div id="test4-result"></div>
+    <button onclick="runTest4()">Run Test 4</button>
+    <div class="code">
+      Call IntroScreen.init() multiple times<br>
+      Verify only the first call initializes<br>
+      Check for intro_init_duplicate telemetry
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: IntroScreen.showWithPreload() Idempotency</h2>
+    <div id="test5-result"></div>
+    <button onclick="runTest5()">Run Test 5</button>
+    <div class="code">
+      Call IntroScreen.showWithPreload() multiple times<br>
+      Verify only the first call shows the screen<br>
+      Check for intro_show_with_preload_duplicate telemetry
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: IntroScreen.hide() Idempotency</h2>
+    <div id="test6-result"></div>
+    <button onclick="runTest6()">Run Test 6</button>
+    <div class="code">
+      Call IntroScreen.hide() multiple times<br>
+      Verify it's safe to call when already hidden
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results Summary</h2>
+    <div id="summary"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Telemetry Log</h2>
+    <div id="telemetry-log"></div>
+    <button onclick="clearTelemetryLog()">Clear Log</button>
+  </div>
+
+  <!-- Load core dependencies -->
+  <script src="js/storage-safe.js"></script>
+  <script src="js/telemetry.js"></script>
+  <script src="js/background-theme.js"></script>
+  <script src="src/ui/IntroScreen.js"></script>
+  <script src="src/startup/flow.js"></script>
+
+  <script>
+    let testResults = [];
+    let telemetryEvents = [];
+
+    // Intercept telemetry logging
+    const originalTelemetryLog = window.Telemetry && window.Telemetry.log;
+    if (window.Telemetry) {
+      window.Telemetry.log = function(event, data) {
+        telemetryEvents.push({ event, data, timestamp: Date.now() });
+        logTelemetry(event, data);
+        if (originalTelemetryLog) {
+          return originalTelemetryLog.call(this, event, data);
+        }
+      };
+    }
+
+    function logTelemetry(event, data) {
+      const log = document.getElementById('telemetry-log');
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${event} ${JSON.stringify(data)}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearTelemetryLog() {
+      telemetryEvents = [];
+      document.getElementById('telemetry-log').innerHTML = '';
+    }
+
+    function log(testId, message, status) {
+      const el = document.getElementById(testId);
+      const div = document.createElement('div');
+      div.className = `status ${status}`;
+      div.textContent = message;
+      el.appendChild(div);
+      return status === 'pass';
+    }
+
+    function hasTelemetryEvent(eventName) {
+      return telemetryEvents.some(e => e.event === eventName);
+    }
+
+    async function runTest1() {
+      const testId = 'test1-result';
+      document.getElementById(testId).innerHTML = '';
+      clearTelemetryLog();
+      let passed = 0;
+      let total = 0;
+
+      // Check if StartupFlow exists
+      total++;
+      if (typeof window.StartupFlow === 'undefined') {
+        log(testId, '✗ StartupFlow not found', 'fail');
+        testResults[0] = { passed, total };
+        updateSummary();
+        return;
+      } else {
+        log(testId, '✓ StartupFlow found', 'pass');
+        passed++;
+      }
+
+      // Create a minimal test environment
+      if (!window.game) {
+        window.game = { cfg: {}, players: [] };
+      }
+      if (!window.bbGameBus) {
+        window.bbGameBus = {
+          listeners: {},
+          on(event, handler) {
+            if (!this.listeners[event]) this.listeners[event] = [];
+            this.listeners[event].push(handler);
+          },
+          emit(event, ...args) {
+            if (this.listeners[event]) {
+              this.listeners[event].forEach(h => {
+                try { h(...args); } catch(e) { console.error(e); }
+              });
+            }
+          }
+        };
+      }
+
+      // Note: initializeCoreServices is private, so we test through init()
+      total++;
+      log(testId, 'ℹ Note: initializeCoreServices is private, testing via StartupFlow.init()', 'info');
+      
+      try {
+        // Call init multiple times
+        window.StartupFlow.init();
+        window.StartupFlow.init();
+        window.StartupFlow.init();
+        
+        // Check if duplicate telemetry was logged
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (hasTelemetryEvent('startup_init_duplicate')) {
+          log(testId, '✓ Duplicate init attempts logged startup_init_duplicate telemetry', 'pass');
+          passed++;
+        } else {
+          log(testId, '✗ No startup_init_duplicate telemetry found', 'fail');
+        }
+      } catch (e) {
+        log(testId, '✗ Error during test: ' + e.message, 'fail');
+      }
+
+      testResults[0] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest2() {
+      const testId = 'test2-result';
+      document.getElementById(testId).innerHTML = '';
+      clearTelemetryLog();
+      let passed = 0;
+      let total = 0;
+
+      // Check if showIntroHub exists
+      total++;
+      if (typeof window.StartupFlow === 'undefined' || typeof window.StartupFlow.showIntroHub !== 'function') {
+        log(testId, '✗ StartupFlow.showIntroHub not found', 'fail');
+        testResults[1] = { passed, total };
+        updateSummary();
+        return;
+      } else {
+        log(testId, '✓ StartupFlow.showIntroHub found', 'pass');
+        passed++;
+      }
+
+      try {
+        // Call showIntroHub multiple times
+        await window.StartupFlow.showIntroHub();
+        await window.StartupFlow.showIntroHub();
+        await window.StartupFlow.showIntroHub();
+        
+        // Check if duplicate telemetry was logged
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        total++;
+        if (hasTelemetryEvent('startup_show_hub_duplicate')) {
+          log(testId, '✓ Duplicate showIntroHub attempts logged startup_show_hub_duplicate telemetry', 'pass');
+          passed++;
+        } else {
+          log(testId, '✗ No startup_show_hub_duplicate telemetry found', 'fail');
+        }
+      } catch (e) {
+        log(testId, '✗ Error during test: ' + e.message, 'fail');
+      }
+
+      testResults[1] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest3() {
+      const testId = 'test3-result';
+      document.getElementById(testId).innerHTML = '';
+      clearTelemetryLog();
+      let passed = 0;
+      let total = 0;
+
+      // Check if enterGame exists
+      total++;
+      if (typeof window.StartupFlow === 'undefined' || typeof window.StartupFlow.enterGame !== 'function') {
+        log(testId, '✗ StartupFlow.enterGame not found', 'fail');
+        testResults[2] = { passed, total };
+        updateSummary();
+        return;
+      } else {
+        log(testId, '✓ StartupFlow.enterGame found', 'pass');
+        passed++;
+      }
+
+      try {
+        // Mock buildCast to prevent errors
+        if (!window.buildCast) {
+          window.buildCast = function() { console.log('[Mock] buildCast called'); };
+        }
+        
+        // Call enterGame multiple times
+        await window.StartupFlow.enterGame();
+        await window.StartupFlow.enterGame();
+        await window.StartupFlow.enterGame();
+        
+        // Check if duplicate telemetry was logged
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        total++;
+        if (hasTelemetryEvent('startup_enter_game_duplicate')) {
+          log(testId, '✓ Duplicate enterGame attempts logged startup_enter_game_duplicate telemetry', 'pass');
+          passed++;
+        } else {
+          log(testId, '✗ No startup_enter_game_duplicate telemetry found', 'fail');
+        }
+      } catch (e) {
+        log(testId, '✗ Error during test: ' + e.message, 'fail');
+      }
+
+      testResults[2] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest4() {
+      const testId = 'test4-result';
+      document.getElementById(testId).innerHTML = '';
+      clearTelemetryLog();
+      let passed = 0;
+      let total = 0;
+
+      // Reset IntroScreen first
+      if (window.IntroScreen && typeof window.IntroScreen.reset === 'function') {
+        window.IntroScreen.reset();
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Check if IntroScreen exists
+      total++;
+      if (typeof window.IntroScreen === 'undefined' || typeof window.IntroScreen.init !== 'function') {
+        log(testId, '✗ IntroScreen.init not found', 'fail');
+        testResults[3] = { passed, total };
+        updateSummary();
+        return;
+      } else {
+        log(testId, '✓ IntroScreen.init found', 'pass');
+        passed++;
+      }
+
+      try {
+        // Call init multiple times
+        window.IntroScreen.init({ bus: window.bbGameBus });
+        window.IntroScreen.init({ bus: window.bbGameBus });
+        window.IntroScreen.init({ bus: window.bbGameBus });
+        
+        // Check if duplicate telemetry was logged
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        total++;
+        if (hasTelemetryEvent('intro_init_duplicate')) {
+          log(testId, '✓ Duplicate init attempts logged intro_init_duplicate telemetry', 'pass');
+          passed++;
+        } else {
+          log(testId, '✗ No intro_init_duplicate telemetry found', 'fail');
+        }
+      } catch (e) {
+        log(testId, '✗ Error during test: ' + e.message, 'fail');
+      }
+
+      testResults[3] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest5() {
+      const testId = 'test5-result';
+      document.getElementById(testId).innerHTML = '';
+      clearTelemetryLog();
+      let passed = 0;
+      let total = 0;
+
+      // Check if showWithPreload exists
+      total++;
+      if (typeof window.IntroScreen === 'undefined' || typeof window.IntroScreen.showWithPreload !== 'function') {
+        log(testId, '✗ IntroScreen.showWithPreload not found', 'fail');
+        testResults[4] = { passed, total };
+        updateSummary();
+        return;
+      } else {
+        log(testId, '✓ IntroScreen.showWithPreload found', 'pass');
+        passed++;
+      }
+
+      try {
+        // Ensure IntroScreen is initialized
+        if (typeof window.IntroScreen.init === 'function') {
+          window.IntroScreen.init({ bus: window.bbGameBus });
+        }
+        
+        // Call showWithPreload multiple times
+        await window.IntroScreen.showWithPreload(true); // skip preload for speed
+        await window.IntroScreen.showWithPreload(true);
+        await window.IntroScreen.showWithPreload(true);
+        
+        // Check if duplicate telemetry was logged
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        total++;
+        if (hasTelemetryEvent('intro_show_with_preload_duplicate')) {
+          log(testId, '✓ Duplicate showWithPreload attempts logged intro_show_with_preload_duplicate telemetry', 'pass');
+          passed++;
+        } else {
+          log(testId, '✗ No intro_show_with_preload_duplicate telemetry found', 'fail');
+        }
+      } catch (e) {
+        log(testId, '✗ Error during test: ' + e.message, 'fail');
+      }
+
+      testResults[4] = { passed, total };
+      updateSummary();
+    }
+
+    async function runTest6() {
+      const testId = 'test6-result';
+      document.getElementById(testId).innerHTML = '';
+      clearTelemetryLog();
+      let passed = 0;
+      let total = 0;
+
+      // Check if hide exists
+      total++;
+      if (typeof window.IntroScreen === 'undefined' || typeof window.IntroScreen.hide !== 'function') {
+        log(testId, '✗ IntroScreen.hide not found', 'fail');
+        testResults[5] = { passed, total };
+        updateSummary();
+        return;
+      } else {
+        log(testId, '✓ IntroScreen.hide found', 'pass');
+        passed++;
+      }
+
+      try {
+        // Call hide multiple times (should be safe even when already hidden)
+        window.IntroScreen.hide();
+        window.IntroScreen.hide();
+        window.IntroScreen.hide();
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        total++;
+        log(testId, '✓ Multiple hide() calls completed without errors', 'pass');
+        passed++;
+      } catch (e) {
+        log(testId, '✗ Error during test: ' + e.message, 'fail');
+      }
+
+      testResults[5] = { passed, total };
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const summary = document.getElementById('summary');
+      let totalPassed = 0;
+      let totalTests = 0;
+
+      testResults.forEach((result, index) => {
+        if (result) {
+          totalPassed += result.passed;
+          totalTests += result.total;
+        }
+      });
+
+      const percentage = totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
+      const statusClass = totalPassed === totalTests ? 'pass' : (totalPassed > 0 ? 'warn' : 'fail');
+
+      summary.innerHTML = `
+        <div class="status ${statusClass}">
+          Tests Passed: ${totalPassed} / ${totalTests} (${percentage}%)
+        </div>
+        <div class="status info">
+          Telemetry Events Captured: ${telemetryEvents.length}
+        </div>
+      `;
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Test] Startup Idempotency Test loaded');
+      
+      // Setup minimal environment
+      if (!window.game) {
+        window.game = { cfg: {}, players: [] };
+      }
+      if (!window.bbGameBus) {
+        window.bbGameBus = {
+          listeners: {},
+          on(event, handler) {
+            if (!this.listeners[event]) this.listeners[event] = [];
+            this.listeners[event].push(handler);
+          },
+          emit(event, ...args) {
+            if (this.listeners[event]) {
+              this.listeners[event].forEach(h => {
+                try { h(...args); } catch(e) { console.error(e); }
+              });
+            }
+          }
+        };
+      }
+      
+      log('summary', 'Ready to run tests', 'info');
+    });
+  </script>
+</body>
+</html>
