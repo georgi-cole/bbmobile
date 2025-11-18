@@ -1130,22 +1130,13 @@ header.innerHTML = `
     // Log fast-forward activation
     console.info(`[ff] activate phase=${game.phase}`);
     
-    // Check for idempotency - if already in fast-forward or skip mode, ignore
-    if(game.__ffActive){
-      console.warn('[ff] Fast-forward already active, ignoring duplicate call');
-      return;
-    }
+    // Check for idempotency - if already in skip mode, ignore
     if(g.SkipController && g.SkipController.isActive()){
       console.warn('[ff] Skip already active, ignoring duplicate fastForwardPhase call');
       return;
     }
     
-    // Activate fast-forward mode (preserves callbacks, compresses durations)
-    if(typeof g.activateFastForward === 'function'){
-      g.activateFastForward({ multiplier: 0.1, reason: 'user' });
-    }
-    
-    // Enable skip mode (for legacy drainers that haven't been updated)
+    // Enable skip mode
     if(g.SkipController){
       g.SkipController.enable();
     }
@@ -1189,14 +1180,9 @@ header.innerHTML = `
       return;
     }
 
-    // Execute drain loop (now intelligently handles fast-forward vs. skip)
+    // Execute drain loop to clear all pending animations/cards/timeouts
     if(g.SkipController){
       await g.SkipController.drainLoop();
-    }
-
-    // Deactivate fast-forward mode
-    if(typeof g.deactivateFastForward === 'function'){
-      g.deactivateFastForward();
     }
 
     // Complete skip mode
