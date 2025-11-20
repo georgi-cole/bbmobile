@@ -2450,7 +2450,7 @@
     // Only set phase if we're not already in veto_ceremony phase
     if(g.phase !== 'veto_ceremony' && typeof global.setPhase==='function'){
       console.info('[veto] Setting phase to veto_ceremony');
-      global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25);
+      global.setPhase('veto_ceremony', (g.cfg && g.cfg.tVetoDec) || 25);
     } else {
       console.info('[veto] Already in veto_ceremony phase, skipping setPhase call');
     }

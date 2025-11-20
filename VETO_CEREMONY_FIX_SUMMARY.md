@@ -27,12 +27,14 @@ The intended flow is:
 2. `handlePostVetoReveal()` schedules `startVetoCeremony()` after 500ms
 3. `startVetoCeremony()` is async and:
    - Shows intro card
-   - Calls `setPhase('veto_ceremony')` (which may call `startVetoCeremony` again via `defaultAdvance`)
+   - Calls `setPhase('veto_ceremony')` conditionally (only if not already in that phase)
    - Renders POV use decision UI for human holder
    - Waits for user interaction with `await renderPOVUseDecision()`
 4. After decision, continues to `finalizeCeremony()` and eventual phase advancement
 
-The issue was that the guard at step 3 would block any subsequent calls, including legitimate retry attempts.
+**Note on phase transitions:** The veto_comp phase may expire and call `defaultAdvance()` which transitions to veto_ceremony. If `startVetoCeremony()` was already called and running, the conditional phase check prevents a redundant `setPhase()` call. The enhanced guard allows this legitimate flow while blocking true duplicates (e.g., multiple simultaneous calls before the first completes).
+
+The issue was that the old guard would block ANY subsequent call, even when transitioning from a different context or after ceremony completion.
 
 ## Solution Implementation
 
