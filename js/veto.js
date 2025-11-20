@@ -660,7 +660,11 @@
       setTimeout(function(){ startFinal4Eviction(); }, 500);
     } else {
       console.info('[veto] Starting veto ceremony in 500ms');
-      setTimeout(function(){ startVetoCeremony(); }, 500);
+      setTimeout(function(){ 
+        startVetoCeremony().catch(function(err){
+          console.error('[veto] startVetoCeremony error:', err);
+        });
+      }, 500);
     }
   }
 
@@ -2484,7 +2488,7 @@
             console.info('[veto] Multiple nominees - showing save selection');
             
             // Use carousel picker for Golden/Standard POV save selection
-            var savedId = await openCarouselPicker({
+            var savedId = await global.openCarouselPicker({
               ids: g.nominees,
               title: 'Make your choice',
               actionLabel: 'Save',
@@ -2835,7 +2839,7 @@
     var blockedForFirst = [g.hohId, g.vetoHolder].concat(originalNominees);
     
     // Note: carousel-picker handles event containment internally with stopPropagation
-    firstReplacement = await openCarouselPicker({
+    firstReplacement = await global.openCarouselPicker({
       ids: baseEligible,
       title: 'Select first replacement nominee',
       actionLabel: 'Nominate',
@@ -2944,7 +2948,7 @@
     var blockedForSecond = [g.hohId, g.vetoHolder, firstReplacement, remainingOriginal];
     
     // Note: carousel-picker handles event containment internally with stopPropagation
-    secondReplacement = await openCarouselPicker({
+    secondReplacement = await global.openCarouselPicker({
       ids: secondEligible,
       title: 'Select second replacement nominee',
       actionLabel: 'Nominate',
@@ -3236,7 +3240,7 @@
         }
         
         // Use carousel picker for replacement nominee selection
-        var replacementId = await openCarouselPicker({
+        var replacementId = await global.openCarouselPicker({
           ids: eligibleIds,
           title: 'Select replacement nominee',
           actionLabel: 'Nominate',
@@ -3389,7 +3393,7 @@
         
         if(picker && picker.human){
           // Human picks again - use carousel picker
-          replacementId = await openCarouselPicker({
+          replacementId = await global.openCarouselPicker({
             ids: eligibleIds,
             title: 'Select different replacement',
             actionLabel: 'Nominate',
