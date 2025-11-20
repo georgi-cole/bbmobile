@@ -1492,15 +1492,27 @@
   }
   
   function showTVDecision({title, message, buttons}){
+    console.info('[veto] showTVDecision called with title:', title, 'buttons:', buttons ? buttons.length : 0);
+    
     // Delegate to TVCards module if available
     if(global.TVCards && global.TVCards.showTVDecision){
+      console.info('[veto] Delegating to TVCards.showTVDecision');
       return global.TVCards.showTVDecision({title, message, buttons});
     }
     
+    console.info('[veto] Using fallback showTVDecision implementation');
+    
     // Fallback implementation
     return new Promise(function(resolve){
+      console.info('[veto] showTVDecision promise starting');
       var content = ensureTVOverlayScaffold();
-      if(!content){ resolve(null); return; }
+      if(!content){ 
+        console.warn('[veto] showTVDecision - no content scaffold, resolving null');
+        resolve(null); 
+        return; 
+      }
+      
+      console.info('[veto] showTVDecision - scaffold ready, building UI');
       
       clearTVOverlayContent();
       
@@ -1537,10 +1549,12 @@
           // Use ariaLabel if provided, otherwise fall back to label
           b.setAttribute('aria-label', btn.ariaLabel || btn.label);
           b.onclick = function(){
+            console.info('[veto] Button clicked:', btn.label, 'value:', btn.value);
             disableAll();
             clearTVOverlayContent();
             var tv = document.getElementById('tv');
             if(tv) tv.classList.remove('tvTall');
+            console.info('[veto] Resolving decision with value:', btn.value);
             resolve(btn.value);
           };
           // Keyboard accessibility
@@ -1557,6 +1571,8 @@
       card.appendChild(btnRow);
       content.appendChild(card);
       
+      console.info('[veto] Decision card added to content, buttons:', buttons.length);
+      
       var tv = document.getElementById('tv');
       if(tv) tv.classList.add('tvTall');
       
@@ -1567,8 +1583,15 @@
       // Focus first button for accessibility
       setTimeout(function(){
         var firstBtn = btnRow.querySelector('button');
-        if(firstBtn) firstBtn.focus();
+        if(firstBtn) {
+          firstBtn.focus();
+          console.info('[veto] First button focused for accessibility');
+        } else {
+          console.warn('[veto] No first button found to focus');
+        }
       }, 100);
+      
+      console.info('[veto] Decision UI fully rendered, awaiting user interaction');
     });
   }
   
@@ -1822,11 +1845,16 @@
     var g = global.game;
     var holder = getP(povId);
     
+    console.info('[veto] renderPOVUseDecision called for povId:', povId, 'holder:', holder ? holder.name : 'Unknown');
+    
     // Get the veto type label
     var vetoLabel = getVetoTypeLabel();
+    console.info('[veto] Veto type:', vetoLabel);
     
     // Build short decision copy (max 2 lines)
     var decisionCopy = 'Using it removes a nominee. A replacement must be named.';
+    
+    console.info('[veto] Calling showTVDecision...');
     
     // Show decision prompt with short button labels but full aria-labels
     var decision = await showTVDecision({
@@ -1847,6 +1875,8 @@
         }
       ]
     });
+    
+    console.info('[veto] showTVDecision resolved with:', decision);
     
     return decision;
   }
@@ -2341,12 +2371,29 @@
   async function startVetoCeremony(){
     var g = global.game;
     
-    // Idempotent guard: prevent duplicate calls
-    if(g.__vetoCeremonyStarted){
-      console.warn('[veto] startVetoCeremony already called - skipping duplicate');
+    // Enhanced diagnostic logging
+    console.info('[veto] startVetoCeremony invoked - phase:', g.phase, 
+                 'vetoHolder:', g.vetoHolder, 
+                 'started:', !!g.__vetoCeremonyStarted,
+                 'resolved:', !!g.__vetoCeremonyResolved,
+                 'inProgress:', !!g.__vetoDecisionInProgress);
+    
+    // Idempotent guard: prevent duplicate calls ONLY if ceremony is actively in progress
+    // Allow restart if ceremony was resolved or if we're in a different phase context
+    if(g.__vetoCeremonyStarted && !g.__vetoCeremonyResolved && g.__vetoDecisionInProgress){
+      console.warn('[veto] startVetoCeremony already in progress - skipping duplicate');
       return;
     }
+    
+    // If ceremony was already completed, allow restart only if explicitly needed
+    if(g.__vetoCeremonyStarted && g.__vetoCeremonyResolved){
+      console.warn('[veto] startVetoCeremony already resolved - skipping duplicate');
+      return;
+    }
+    
+    // Mark ceremony as started
     g.__vetoCeremonyStarted = true;
+    console.info('[veto] startVetoCeremony - ceremony flow beginning');
     
     g.vetoSavedId = null;
     g.vetoRepPref = null;
@@ -2396,8 +2443,13 @@
 
     // Step 2: Set phase WITHOUT callback - we'll handle flow manually
     // This prevents premature invocation of finalizeCeremony when phase timer expires
-    if(typeof global.setPhase==='function')
+    // Only set phase if we're not already in veto_ceremony phase
+    if(g.phase !== 'veto_ceremony' && typeof global.setPhase==='function'){
+      console.info('[veto] Setting phase to veto_ceremony');
       global.setPhase('veto_ceremony', (global.game && global.game.cfg && global.game.cfg.tVetoDec) || 25);
+    } else {
+      console.info('[veto] Already in veto_ceremony phase, skipping setPhase call');
+    }
     
     // For human POV holder, show unified "Use POV?" decision for all types
     if(holder && holder.human){
@@ -2405,9 +2457,12 @@
       g.__useTVCeremonyUI = true;
       
       console.info('[veto] Rendering POV use decision for human (twist=' + twistMode + ')');
+      console.info('[veto] Decision panel should appear now...');
       
       // Show unified decision prompt for Standard, Golden, or Diamond POV
       var decision = await renderPOVUseDecision(g.vetoHolder);
+      
+      console.info('[veto] Decision panel returned, result:', decision);
       
       console.info('[veto] Decision resolved: used=' + (decision ? 'true' : 'false'));
       
