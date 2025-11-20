@@ -1232,6 +1232,9 @@
 
     // Sync player badge states after HOH change
     if (typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
+    
+    // Update HUD to render badge changes immediately
+    if (typeof global.updateHud === 'function') global.updateHud();
 
     global.addLog(`HOH: <span class="accent">${global.safeName(winner)}</span>.`);
 
@@ -1757,6 +1760,9 @@
     g.__f3EvictionInProgress = false;
 
     if (typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
+    
+    // Update HUD to render badge changes immediately
+    if (typeof global.updateHud === 'function') global.updateHud();
 
     global.addLog(`Final 3 Part 3: Final HOH is ${global.safeName(winner)}. Nominees: ${global.fmtList(g.nominees)}.`, 'ok');
     safeShowCard('👑 Final HOH', [global.safeName(winner), 'Winner of the Final 3 Competition!', 'Must now evict one houseguest'], 'hoh', 5000);
