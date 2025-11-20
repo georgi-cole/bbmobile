@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FFWD Button Comprehensive Audit</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e3ecf5;
+    }
+    
+    h1 { color: #5bd68a; margin-bottom: 10px; }
+    h2 { color: #83bfff; border-bottom: 2px solid #83bfff; padding-bottom: 10px; margin-top: 30px; }
+    
+    .test-section {
+      background: #2a2a3a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    button.primary {
+      background: linear-gradient(135deg, #5bd68a 0%, #4db878 100%);
+      color: #1a1a1a;
+    }
+    
+    button.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 214, 138, 0.4);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff6b9d 0%, #ee5a8a 100%);
+      color: #1a1a1a;
+    }
+    
+    button.info {
+      background: linear-gradient(135deg, #83bfff 0%, #6aa8f5 100%);
+      color: #1a1a1a;
+    }
+    
+    .status {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .status.active {
+      border-left: 4px solid #5bd68a;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #333;
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .success { color: #5bd68a; }
+    .error { color: #ff6b9d; }
+    .info { color: #83bfff; }
+    .warning { color: #f7b955; }
+    
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .metric-card {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #444;
+    }
+    
+    .metric-label {
+      font-size: 12px;
+      color: #83bfff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #5bd68a;
+      margin-top: 5px;
+    }
+    
+    .test-pass { 
+      color: #5bd68a; 
+      font-weight: bold;
+    }
+    
+    .test-fail { 
+      color: #ff6b9d; 
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚡ FFWD Button Comprehensive Audit</h1>
+  <p style="color: #83bfff;">Complete validation of skip/FFWD button infrastructure and functionality.</p>
+  
+  <div class="test-section">
+    <h2>📊 System Status</h2>
+    <div id="systemStatus" class="status"></div>
+    
+    <h2>📈 Test Metrics</h2>
+    <div class="metric-grid" id="metrics">
+      <div class="metric-card">
+        <div class="metric-label">Tests Passed</div>
+        <div class="metric-value" id="metricPassed">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Tests Failed</div>
+        <div class="metric-value" id="metricFailed">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Callbacks Executed</div>
+        <div class="metric-value" id="metricCallbacks">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Speed Factor</div>
+        <div class="metric-value" id="metricSpeed">0x</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>🧪 Automated Tests</h2>
+    
+    <h3>Core Infrastructure Tests</h3>
+    <div class="button-group">
+      <button class="primary" onclick="runAllTests()">▶️ Run All Tests</button>
+      <button class="info" onclick="testButtonExists()">Test Button Exists</button>
+      <button class="info" onclick="testFunctionChain()">Test Function Chain</button>
+      <button class="info" onclick="testDurationCompression()">Test Duration Compression</button>
+    </div>
+    
+    <h3>Integration Tests</h3>
+    <div class="button-group">
+      <button class="info" onclick="testButtonClick()">Test Button Click</button>
+      <button class="info" onclick="testCallbackExecution()">Test Callback Execution</button>
+      <button class="info" onclick="testPhaseReset()">Test Phase Reset</button>
+    </div>
+    
+    <h3>Manual Tests</h3>
+    <div class="button-group">
+      <button class="primary" onclick="setupManualTest()">Setup Manual Test Phase</button>
+      <button class="danger" onclick="triggerFFWD()">⏩ Trigger FFWD Manually</button>
+    </div>
+    
+    <div class="button-group">
+      <button class="danger" onclick="clearLogs()">Clear Logs</button>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>📝 Test Results</h2>
+    <div id="testResults" class="status"></div>
+  </div>
+
+  <!-- Load core game modules -->
+  <script src="js/state.js"></script>
+  <script src="js/tv-skip.js"></script>
+  <script src="js/ui.hud-and-router.js"></script>
+
+  <script>
+    const testResults = [];
+    let testMetrics = {
+      passed: 0,
+      failed: 0,
+      callbacks: 0,
+      speedFactor: 0
+    };
+    
+    function log(message, type = 'info', isTest = false) {
+      const timestamp = new Date().toLocaleTimeString();
+      testResults.push({ timestamp, message, type, isTest });
+      updateResults();
+    }
+    
+    function updateResults() {
+      const container = document.getElementById('testResults');
+      container.innerHTML = testResults.map(entry => {
+        const prefix = entry.isTest ? (entry.type === 'success' ? '✅' : entry.type === 'error' ? '❌' : '🔍') : '';
+        return `<div class="log-entry"><span class="${entry.type}">[${entry.timestamp}] ${prefix}</span> ${entry.message}</div>`;
+      }).reverse().join('');
+    }
+    
+    function clearLogs() {
+      testResults.length = 0;
+      testMetrics = { passed: 0, failed: 0, callbacks: 0, speedFactor: 0 };
+      updateResults();
+      updateMetrics();
+      log('Logs cleared', 'info');
+    }
+    
+    function updateSystemStatus() {
+      const status = document.getElementById('systemStatus');
+      const game = window.game || {};
+      const isActive = game.__ffActive || false;
+      const multiplier = game.__ffMultiplier || 1;
+      const skipButton = document.getElementById('tvSkipButton');
+      const buttonExists = !!skipButton;
+      
+      const functionChecks = {
+        'fastForwardPhase': typeof window.fastForwardPhase === 'function',
+        'activateFastForward': typeof window.activateFastForward === 'function',
+        'deactivateFastForward': typeof window.deactivateFastForward === 'function',
+        'normalizeDuration': typeof window.normalizeDuration === 'function'
+      };
+      
+      const allFunctionsExist = Object.values(functionChecks).every(v => v);
+      
+      status.innerHTML = `
+        <div><strong>Button Exists:</strong> <span class="${buttonExists ? 'success' : 'error'}">${buttonExists ? '✅ Yes' : '❌ No'}</span></div>
+        <div><strong>Button Disabled:</strong> ${skipButton ? (skipButton.disabled ? '🔒 Yes' : '✅ No') : 'N/A'}</div>
+        <div style="margin-top: 10px;"><strong>Function Chain:</strong> <span class="${allFunctionsExist ? 'success' : 'error'}">${allFunctionsExist ? '✅ Complete' : '❌ Incomplete'}</span></div>
+        <div style="margin-left: 20px;">• fastForwardPhase: ${functionChecks.fastForwardPhase ? '✅' : '❌'}</div>
+        <div style="margin-left: 20px;">• activateFastForward: ${functionChecks.activateFastForward ? '✅' : '❌'}</div>
+        <div style="margin-left: 20px;">• deactivateFastForward: ${functionChecks.deactivateFastForward ? '✅' : '❌'}</div>
+        <div style="margin-left: 20px;">• normalizeDuration: ${functionChecks.normalizeDuration ? '✅' : '❌'}</div>
+        <div style="margin-top: 10px;"><strong>Fast-Forward State:</strong> <span class="${isActive ? 'success' : 'info'}">${isActive ? '🚀 Active' : 'Inactive'}</span></div>
+        <div><strong>Multiplier:</strong> ${multiplier} <span class="info">(${Math.round(1/multiplier)}x speed)</span></div>
+        <div style="margin-top: 10px;"><strong>Phase:</strong> ${game.phase || 'N/A'}</div>
+        <div><strong>Config:</strong> min=${game.cfg?.fastForwardMinDuration || 40}ms, max=${game.cfg?.fastForwardMaxDuration || 300}ms</div>
+      `;
+      
+      if (isActive) {
+        status.classList.add('active');
+      } else {
+        status.classList.remove('active');
+      }
+    }
+    
+    function updateMetrics() {
+      document.getElementById('metricPassed').textContent = testMetrics.passed;
+      document.getElementById('metricFailed').textContent = testMetrics.failed;
+      document.getElementById('metricCallbacks').textContent = testMetrics.callbacks;
+      document.getElementById('metricSpeed').textContent = testMetrics.speedFactor.toFixed(1) + 'x';
+    }
+    
+    function testPass(name) {
+      testMetrics.passed++;
+      log(`✅ PASS: ${name}`, 'success', true);
+      updateMetrics();
+    }
+    
+    function testFail(name, reason) {
+      testMetrics.failed++;
+      log(`❌ FAIL: ${name} - ${reason}`, 'error', true);
+      updateMetrics();
+    }
+    
+    // ========== CORE INFRASTRUCTURE TESTS ==========
+    
+    function testButtonExists() {
+      log('\n=== Testing Button Existence ===', 'info');
+      
+      const skipButton = document.getElementById('tvSkipButton');
+      if (!skipButton) {
+        testFail('Button Exists', 'tvSkipButton element not found in DOM');
+        return false;
+      }
+      
+      testPass('Button Exists');
+      
+      // Check button properties
+      if (skipButton.querySelector('span')?.textContent?.includes('FFWD')) {
+        testPass('Button Label');
+      } else {
+        testFail('Button Label', 'Expected "⏩ FFWD" label not found');
+      }
+      
+      // Check button is properly wired
+      const hasClickListener = skipButton.onclick !== null || skipButton.eventListeners?.click;
+      log(`Button click handler: ${hasClickListener ? 'Detected' : 'May be delegated'}`, 'info');
+      
+      updateSystemStatus();
+      return true;
+    }
+    
+    function testFunctionChain() {
+      log('\n=== Testing Function Chain ===', 'info');
+      
+      const functions = {
+        'fastForwardPhase': window.fastForwardPhase,
+        'activateFastForward': window.activateFastForward,
+        'deactivateFastForward': window.deactivateFastForward,
+        'normalizeDuration': window.normalizeDuration
+      };
+      
+      let allPass = true;
+      
+      for (const [name, fn] of Object.entries(functions)) {
+        if (typeof fn === 'function') {
+          testPass(`Function: ${name}`);
+        } else {
+          testFail(`Function: ${name}`, 'Not found or not a function');
+          allPass = false;
+        }
+      }
+      
+      // Test that functions are globally accessible
+      if (window.fastForwardPhase === window.game?.fastForwardPhase) {
+        log('⚠️ fastForwardPhase is only on game object, should be global', 'warning');
+      }
+      
+      updateSystemStatus();
+      return allPass;
+    }
+    
+    function testDurationCompression() {
+      log('\n=== Testing Duration Compression ===', 'info');
+      
+      if (!window.normalizeDuration) {
+        testFail('Duration Compression', 'normalizeDuration function not found');
+        return false;
+      }
+      
+      const game = window.game;
+      if (!game) {
+        testFail('Duration Compression', 'game object not found');
+        return false;
+      }
+      
+      // Test normal mode (no fast-forward)
+      game.__ffActive = false;
+      const normalResult = window.normalizeDuration(3000);
+      if (normalResult === 3000) {
+        testPass('Normal Mode Duration');
+      } else {
+        testFail('Normal Mode Duration', `Expected 3000ms, got ${normalResult}ms`);
+      }
+      
+      // Test fast-forward mode
+      game.__ffActive = true;
+      game.__ffMultiplier = 0.1;
+      const ffResult = window.normalizeDuration(3000);
+      if (ffResult === 300) {
+        testPass('Fast-Forward Mode Duration (10x)');
+        testMetrics.speedFactor = 10;
+      } else {
+        testFail('Fast-Forward Mode Duration', `Expected 300ms, got ${ffResult}ms`);
+      }
+      
+      // Test min cap
+      const minResult = window.normalizeDuration(100);
+      if (minResult >= 40) {
+        testPass('Min Duration Cap (40ms)');
+      } else {
+        testFail('Min Duration Cap', `Expected >= 40ms, got ${minResult}ms`);
+      }
+      
+      // Test max cap
+      const maxResult = window.normalizeDuration(10000);
+      if (maxResult <= 300) {
+        testPass('Max Duration Cap (300ms)');
+      } else {
+        testFail('Max Duration Cap', `Expected <= 300ms, got ${maxResult}ms`);
+      }
+      
+      // Reset state
+      game.__ffActive = false;
+      game.__ffMultiplier = 1;
+      
+      updateSystemStatus();
+      updateMetrics();
+      return true;
+    }
+    
+    function testButtonClick() {
+      log('\n=== Testing Button Click Handler ===', 'info');
+      
+      const skipButton = document.getElementById('tvSkipButton');
+      if (!skipButton) {
+        testFail('Button Click', 'Button not found');
+        return false;
+      }
+      
+      // Check if button is enabled (should be disabled without active phase)
+      if (skipButton.disabled) {
+        log('Button is disabled (expected without active phase)', 'info');
+        testPass('Button State');
+      }
+      
+      // Try to simulate click (won't work if disabled, but tests handler existence)
+      try {
+        // Create a test phase first
+        if (!window.game.phase || window.game.phase === 'lobby') {
+          log('Setting up test phase for click test...', 'info');
+          window.game.phase = 'intermission';
+          if (typeof window.TVSkip?.updateState === 'function') {
+            window.TVSkip.updateState();
+          }
+        }
+        
+        // Re-check if button is now enabled
+        if (!skipButton.disabled) {
+          testPass('Button Enabled in Active Phase');
+          
+          // Check if clicking works
+          const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+          skipButton.dispatchEvent(clickEvent);
+          
+          // Check if fast-forward was activated
+          if (window.game.__ffActive) {
+            testPass('Button Click Activates Fast-Forward');
+          } else {
+            log('Fast-forward not activated (may require proper phase setup)', 'warning');
+          }
+        } else {
+          log('Button still disabled even with phase set', 'warning');
+        }
+      } catch (err) {
+        testFail('Button Click', err.message);
+        return false;
+      }
+      
+      updateSystemStatus();
+      return true;
+    }
+    
+    async function testCallbackExecution() {
+      log('\n=== Testing Callback Execution During Fast-Forward ===', 'info');
+      
+      const game = window.game;
+      if (!game) {
+        testFail('Callback Test', 'game object not found');
+        return false;
+      }
+      
+      // Setup: Create a sequence of callbacks
+      const callbackLog = [];
+      const steps = [
+        { name: 'Step 1', duration: 1000 },
+        { name: 'Step 2', duration: 1000 },
+        { name: 'Step 3', duration: 1000 }
+      ];
+      
+      // Activate fast-forward
+      if (window.activateFastForward) {
+        window.activateFastForward({ multiplier: 0.1, reason: 'test' });
+      }
+      
+      const startTime = Date.now();
+      
+      // Execute steps with normalized durations
+      for (const step of steps) {
+        const normalizedDuration = window.normalizeDuration ? window.normalizeDuration(step.duration) : step.duration;
+        
+        await new Promise(resolve => {
+          setTimeout(() => {
+            callbackLog.push(step.name);
+            testMetrics.callbacks++;
+            log(`Callback executed: ${step.name} (${normalizedDuration}ms)`, 'info');
+            resolve();
+          }, normalizedDuration);
+        });
+      }
+      
+      const actualTime = Date.now() - startTime;
+      const originalTime = steps.reduce((sum, s) => sum + s.duration, 0);
+      
+      // Verify all callbacks executed
+      if (callbackLog.length === steps.length) {
+        testPass('All Callbacks Executed');
+      } else {
+        testFail('All Callbacks Executed', `Only ${callbackLog.length}/${steps.length} callbacks executed`);
+      }
+      
+      // Verify no steps were skipped (order preserved)
+      const expectedOrder = steps.map(s => s.name);
+      const orderCorrect = callbackLog.every((name, i) => name === expectedOrder[i]);
+      if (orderCorrect) {
+        testPass('Callback Order Preserved');
+      } else {
+        testFail('Callback Order Preserved', 'Callbacks executed out of order');
+      }
+      
+      // Verify compression worked
+      const compressionFactor = originalTime / actualTime;
+      log(`Compression: ${originalTime}ms -> ${actualTime}ms (${compressionFactor.toFixed(1)}x)`, 'info');
+      testMetrics.speedFactor = compressionFactor;
+      
+      if (compressionFactor >= 8 && compressionFactor <= 12) {
+        testPass('Compression Factor (~10x)');
+      } else {
+        testFail('Compression Factor', `Expected ~10x, got ${compressionFactor.toFixed(1)}x`);
+      }
+      
+      // Deactivate fast-forward
+      if (window.deactivateFastForward) {
+        window.deactivateFastForward();
+      }
+      
+      updateSystemStatus();
+      updateMetrics();
+      return true;
+    }
+    
+    function testPhaseReset() {
+      log('\n=== Testing Phase Change Auto-Reset ===', 'info');
+      
+      const game = window.game;
+      if (!game) {
+        testFail('Phase Reset', 'game object not found');
+        return false;
+      }
+      
+      // Activate fast-forward
+      if (window.activateFastForward) {
+        window.activateFastForward({ multiplier: 0.1, reason: 'test' });
+      }
+      
+      // Verify it's active
+      if (game.__ffActive) {
+        testPass('Fast-Forward Activated');
+      } else {
+        testFail('Fast-Forward Activated', 'Failed to activate');
+        return false;
+      }
+      
+      // Trigger phase change (if setPhase exists)
+      if (typeof window.setPhase === 'function') {
+        const oldPhase = game.phase;
+        const newPhase = oldPhase === 'intermission' ? 'hoh' : 'intermission';
+        
+        try {
+          window.setPhase(newPhase, 0);
+          
+          // Check if fast-forward was deactivated
+          // Note: The setPhase wrapper in tv-skip.js should deactivate FFWD
+          setTimeout(() => {
+            if (!game.__ffActive) {
+              testPass('Auto-Reset on Phase Change');
+            } else {
+              testFail('Auto-Reset on Phase Change', 'Fast-forward still active after phase change');
+            }
+            updateSystemStatus();
+          }, 100);
+        } catch (err) {
+          testFail('Phase Change', err.message);
+        }
+      } else {
+        log('setPhase function not available, skipping phase change test', 'warning');
+      }
+      
+      // Manual deactivation test
+      if (window.deactivateFastForward) {
+        window.deactivateFastForward();
+        if (!game.__ffActive) {
+          testPass('Manual Deactivation');
+        } else {
+          testFail('Manual Deactivation', 'Failed to deactivate');
+        }
+      }
+      
+      updateSystemStatus();
+      return true;
+    }
+    
+    // ========== COMPOSITE TESTS ==========
+    
+    async function runAllTests() {
+      log('\n\n========================================', 'info');
+      log('🚀 RUNNING COMPREHENSIVE TEST SUITE', 'info');
+      log('========================================\n', 'info');
+      
+      testMetrics = { passed: 0, failed: 0, callbacks: 0, speedFactor: 0 };
+      updateMetrics();
+      
+      // Run all tests in sequence
+      testButtonExists();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      testFunctionChain();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      testDurationCompression();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      testButtonClick();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await testCallbackExecution();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      testPhaseReset();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Summary
+      log('\n========================================', 'info');
+      log(`📊 TEST SUMMARY`, 'info');
+      log(`✅ Passed: ${testMetrics.passed}`, 'success');
+      log(`❌ Failed: ${testMetrics.failed}`, testMetrics.failed > 0 ? 'error' : 'success');
+      log(`📞 Callbacks: ${testMetrics.callbacks}`, 'info');
+      log(`⚡ Speed: ${testMetrics.speedFactor.toFixed(1)}x`, 'info');
+      log('========================================\n', 'info');
+      
+      if (testMetrics.failed === 0) {
+        log('🎉 ALL TESTS PASSED!', 'success');
+      } else {
+        log('⚠️ SOME TESTS FAILED - Review results above', 'warning');
+      }
+      
+      updateMetrics();
+      updateSystemStatus();
+    }
+    
+    // ========== MANUAL TEST HELPERS ==========
+    
+    function setupManualTest() {
+      log('\n=== Setting Up Manual Test Phase ===', 'info');
+      
+      const game = window.game;
+      if (!game) {
+        log('❌ game object not found', 'error');
+        return;
+      }
+      
+      // Set up a test phase with a timer
+      game.phase = 'intermission';
+      const duration = 30; // 30 seconds
+      
+      if (typeof window.setPhase === 'function') {
+        window.setPhase('intermission', duration);
+        log(`✅ Phase set to 'intermission' with ${duration}s timer`, 'success');
+        log('🎯 Now press the ⏩ FFWD button to test!', 'info');
+      } else {
+        game.endAt = Date.now() + (duration * 1000);
+        log(`✅ Manual phase setup: 'intermission' ${duration}s`, 'success');
+        log('⚠️ setPhase not available, using basic setup', 'warning');
+      }
+      
+      // Update button state
+      if (typeof window.TVSkip?.updateState === 'function') {
+        window.TVSkip.updateState();
+      }
+      
+      updateSystemStatus();
+    }
+    
+    function triggerFFWD() {
+      log('\n=== Manually Triggering FFWD ===', 'info');
+      
+      if (typeof window.fastForwardPhase === 'function') {
+        window.fastForwardPhase();
+        log('✅ fastForwardPhase() called', 'success');
+        
+        setTimeout(() => {
+          const game = window.game;
+          if (game.__ffActive) {
+            log('✅ Fast-forward activated!', 'success');
+            log(`⚡ Speed: ${Math.round(1/game.__ffMultiplier)}x`, 'info');
+          } else {
+            log('⚠️ Fast-forward not active (check phase state)', 'warning');
+          }
+          updateSystemStatus();
+        }, 100);
+      } else {
+        log('❌ fastForwardPhase function not found', 'error');
+      }
+    }
+    
+    // Initial setup
+    window.addEventListener('DOMContentLoaded', () => {
+      updateSystemStatus();
+      updateMetrics();
+      log('FFWD Audit Test loaded', 'success');
+      log('Click "Run All Tests" to validate functionality', 'info');
+      
+      // Auto-update status every second
+      setInterval(updateSystemStatus, 1000);
+    });
+  </script>
+</body>
+</html>
