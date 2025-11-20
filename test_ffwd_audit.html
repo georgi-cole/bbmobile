@@ -338,7 +338,9 @@
       }
       
       // Test that functions are globally accessible
-      if (window.fastForwardPhase === window.game?.fastForwardPhase) {
+      if (window.fastForwardPhase && window.fastForwardPhase === window.game?.fastForwardPhase) {
+        log('✅ fastForwardPhase is properly accessible globally and on game object', 'success');
+      } else if (!window.fastForwardPhase && window.game?.fastForwardPhase) {
         log('⚠️ fastForwardPhase is only on game object, should be global', 'warning');
       }
       
