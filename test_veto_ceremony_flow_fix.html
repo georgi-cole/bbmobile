@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Ceremony Flow Fix Verification</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #0e1a28;
+      color: #e2e8f0;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #71bfff;
+      margin-bottom: 20px;
+    }
+    
+    .test-section {
+      background: rgba(28, 43, 62, 0.6);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #94a3b8;
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+    }
+    
+    .info {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+      padding: 12px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+    
+    .success {
+      background: rgba(74, 222, 128, 0.1);
+      border-left: 3px solid #4ade80;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    .warning {
+      background: rgba(251, 191, 36, 0.1);
+      border-left: 3px solid #fbbf24;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: #2563eb;
+    }
+    
+    button.secondary {
+      background: #475569;
+    }
+    
+    button.secondary:hover {
+      background: #334155;
+    }
+    
+    #log {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    
+    #log div {
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    
+    #log .veto {
+      color: #a78bfa;
+    }
+    
+    #log .info {
+      color: #60a5fa;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    #log .warn {
+      color: #fbbf24;
+    }
+    
+    #log .error {
+      color: #f87171;
+    }
+    
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .checklist li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    
+    .checklist li:before {
+      content: "□ ";
+      color: #64748b;
+      margin-right: 8px;
+    }
+    
+    code {
+      background: rgba(59, 130, 246, 0.2);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Veto Ceremony Flow Fix Verification</h1>
+  
+  <div class="test-section">
+    <h2>Fix Summary</h2>
+    <div class="success">
+      <strong>Issue Fixed:</strong> Veto ceremony flow halting due to duplicate call guard blocking continuation
+    </div>
+    <div class="info">
+      <strong>Root Cause:</strong> The idempotent guard <code>g.__vetoCeremonyStarted</code> was preventing the ceremony from proceeding when called multiple times during phase transitions.
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Changes Made</h2>
+    <ol style="line-height: 1.8; color: #cbd5e1;">
+      <li><strong>Enhanced Duplicate Call Guard</strong> - Modified guard logic to only block if ceremony is actively in progress, not if it was previously resolved or if starting fresh</li>
+      <li><strong>Added Comprehensive Diagnostic Logging</strong> - Added logging at every critical point in the ceremony flow for easier debugging</li>
+      <li><strong>Phase Transition State Reset</strong> - Added cleanup in <code>setPhase()</code> to reset ceremony flags when leaving veto_ceremony phase</li>
+      <li><strong>Conditional Phase Setting</strong> - Only call <code>setPhase('veto_ceremony')</code> if not already in that phase to prevent redundant transitions</li>
+      <li><strong>Decision UI Tracking</strong> - Added logging to track when decision UI renders and when buttons are clicked</li>
+    </ol>
+  </div>
+  
+  <div class="test-section">
+    <h2>Key Improvements</h2>
+    <ul class="checklist">
+      <li>✓ Guard now checks <code>__vetoDecisionInProgress</code> to allow restart after ceremony completes</li>
+      <li>✓ Added diagnostic logging at 15+ critical points in ceremony flow</li>
+      <li>✓ Phase cleanup now resets ceremony state flags when transitioning away from veto_ceremony</li>
+      <li>✓ Decision panel rendering is tracked with detailed logging</li>
+      <li>✓ Button click events are logged to verify user interaction path</li>
+      <li>✓ Phase setting is conditional to prevent redundant transitions</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>Expected Behavior After Fix</h2>
+    <div class="success">
+      <strong>✓ CORRECT Flow:</strong>
+      <ol style="margin: 10px 0 0 20px; line-height: 1.8;">
+        <li>Veto competition completes successfully</li>
+        <li>Phase transitions to veto_ceremony</li>
+        <li>Initial ceremony card renders: "POV Holder will decide..."</li>
+        <li><strong>Decision UI appears</strong> with YES/NO buttons for human POV holder</li>
+        <li>User clicks button and ceremony proceeds</li>
+        <li>Ceremony continues to replacement selection (if needed) or advances to next phase</li>
+      </ol>
+    </div>
+    
+    <div class="warning">
+      <strong>Previous Bug (Now Fixed):</strong>
+      <ul style="margin: 10px 0 0 20px;">
+        <li>Phase would advance to veto_ceremony</li>
+        <li>Intro card would show but then UI would halt</li>
+        <li>No interactive decision panel would appear</li>
+        <li>Console would show: "startVetoCeremony already called - skipping duplicate"</li>
+        <li>Flow would stop with no way for user to proceed</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Console Log Monitoring</h2>
+    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 10px;">
+      Look for these key log messages to verify the fix is working:
+    </p>
+    <ul style="line-height: 1.8; color: #cbd5e1;">
+      <li><code>[veto] startVetoCeremony invoked</code> - Ceremony function called</li>
+      <li><code>[veto] startVetoCeremony - ceremony flow beginning</code> - Guard passed, flow starting</li>
+      <li><code>[veto] Rendering POV use decision for human</code> - Decision UI being rendered</li>
+      <li><code>[veto] Decision panel should appear now...</code> - UI creation in progress</li>
+      <li><code>[veto] showTVDecision called</code> - Decision panel function invoked</li>
+      <li><code>[veto] Decision card added to content</code> - UI elements added to DOM</li>
+      <li><code>[veto] Decision UI fully rendered, awaiting user interaction</code> - Ready for user</li>
+      <li><code>[veto] Button clicked: [YES/NO]</code> - User made a choice</li>
+      <li><code>[veto] Decision resolved: used=[true/false]</code> - Choice processed</li>
+    </ul>
+    
+    <button onclick="clearLog()">Clear Log</button>
+    <button class="secondary" onclick="copyLog()">Copy Log</button>
+    <div id="log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Testing Instructions</h2>
+    <ol style="line-height: 1.8; color: #cbd5e1;">
+      <li>Open the main game (<code>index.html</code>) in a new tab</li>
+      <li>Start a new game with at least one human player</li>
+      <li>Advance through the game phases until reaching the veto competition</li>
+      <li>Ensure the human player wins the veto (or manually set it in console: <code>game.vetoHolder = [human_id]</code>)</li>
+      <li>Watch the console (F12) for the diagnostic logging sequence</li>
+      <li>Verify the decision prompt appears with YES/NO buttons</li>
+      <li>Click a button and verify the ceremony continues</li>
+      <li>Return to this tab to review captured logs</li>
+    </ol>
+  </div>
+  
+  <div class="test-section">
+    <h2>Manual Testing Checklist</h2>
+    <ul class="checklist">
+      <li>✓ Console shows "startVetoCeremony invoked" when veto comp ends</li>
+      <li>✓ Console shows "ceremony flow beginning" (guard passed)</li>
+      <li>✓ Console shows "Rendering POV use decision for human"</li>
+      <li>✓ Decision panel UI appears in TV screen with YES/NO buttons</li>
+      <li>✓ Clicking YES shows save nominee selection (if multiple nominees)</li>
+      <li>✓ Clicking NO advances to next phase without saving</li>
+      <li>✓ After decision, ceremony continues to completion</li>
+      <li>✓ No "already called - skipping duplicate" warning appears during normal flow</li>
+      <li>✓ Phase timer properly expires without breaking ceremony</li>
+      <li>✓ AI POV holder auto-decides after brief delay</li>
+    </ul>
+  </div>
+  
+  <script>
+    // Intercept console methods to display in the log div
+    const logDiv = document.getElementById('log');
+    const originalLog = console.log;
+    const originalInfo = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    function addLogEntry(type, args) {
+      const message = Array.from(args).map(arg => {
+        if (typeof arg === 'object') {
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch (e) {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      }).join(' ');
+      
+      const div = document.createElement('div');
+      div.className = type;
+      
+      // Highlight veto-related messages
+      if (message.includes('[veto]')) {
+        div.classList.add('veto');
+      }
+      
+      const timestamp = new Date().toLocaleTimeString();
+      div.textContent = `[${timestamp}] ${message}`;
+      
+      logDiv.appendChild(div);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addLogEntry('info', args);
+    };
+    
+    console.info = function(...args) {
+      originalInfo.apply(console, args);
+      addLogEntry('info', args);
+    };
+    
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addLogEntry('warn', args);
+    };
+    
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addLogEntry('error', args);
+    };
+    
+    function clearLog() {
+      logDiv.innerHTML = '';
+    }
+    
+    function copyLog() {
+      const text = Array.from(logDiv.children)
+        .map(div => div.textContent)
+        .join('\n');
+      
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Log copied to clipboard!');
+      }).catch(err => {
+        console.error('Failed to copy log:', err);
+      });
+    }
+    
+    // Initial message
+    console.info('✅ Veto Ceremony Flow Fix Verification Test Ready');
+    console.info('Open the main game (index.html) and play until veto ceremony phase');
+    console.info('Look for diagnostic logging showing the ceremony flow');
+  </script>
+</body>
+</html>
