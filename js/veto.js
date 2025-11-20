@@ -771,6 +771,10 @@
       global.ProgressionEvents.onPOVWin(global.game.vetoHolder, participants);
     }
 
+    // Sync player badge states after POV win
+    try{ if(typeof global.syncPlayerBadgeStates==='function') global.syncPlayerBadgeStates(); }catch(e){}
+    
+    // Update HUD to render badge changes immediately
     try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
 
     // Build top-3 reveal sequence
