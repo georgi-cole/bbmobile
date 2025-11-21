@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FFWD State Sync Fix Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e3ecf5;
+    }
+    
+    h1 { color: #5bd68a; }
+    h2 { color: #83bfff; border-bottom: 2px solid #83bfff; padding-bottom: 10px; }
+    
+    .test-section {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 5px;
+      background: linear-gradient(135deg, #5bd68a 0%, #4db878 100%);
+      color: #1a1a1a;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 214, 138, 0.4);
+    }
+    
+    .log {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .success { color: #5bd68a; }
+    .error { color: #ff6b9d; }
+    .info { color: #83bfff; }
+    .warning { color: #f7b955; }
+  </style>
+</head>
+<body>
+  <h1>🧪 FFWD State Synchronization Fix Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <button onclick="testActivateFastForward()">Test activateFastForward()</button>
+    <button onclick="testDeactivateFastForward()">Test deactivateFastForward()</button>
+    <button onclick="testSkipControllerDrainLoop()">Test SkipController.drainLoop()</button>
+    <button onclick="testFullFlow()">Test Full FFWD Flow</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>Current State</h2>
+    <div id="stateDisplay" class="log"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test Logs</h2>
+    <div id="testLogs" class="log"></div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/state.js"></script>
+  <script src="js/runtime/skip-controller.js"></script>
+
+  <script>
+    const logs = [];
+    
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.push({ timestamp, message, type });
+      updateLogs();
+    }
+    
+    function updateLogs() {
+      const container = document.getElementById('testLogs');
+      container.innerHTML = logs.map(entry => 
+        `<div><span class="${entry.type}">[${entry.timestamp}]</span> ${entry.message}</div>`
+      ).reverse().join('');
+    }
+    
+    function clearLogs() {
+      logs.length = 0;
+      updateLogs();
+    }
+    
+    function updateStateDisplay() {
+      const stateEl = document.getElementById('stateDisplay');
+      const game = window.game || {};
+      
+      stateEl.innerHTML = `
+        <div><strong>window.game.__ffActive:</strong> <span class="${game.__ffActive ? 'success' : 'info'}">${game.__ffActive || false}</span></div>
+        <div><strong>window.game.__ffMultiplier:</strong> ${game.__ffMultiplier || 1}</div>
+        <div><strong>window.game.phase:</strong> ${game.phase || 'none'}</div>
+        <div><strong>window.game.phaseEndsAt:</strong> ${game.phaseEndsAt || 0}</div>
+        <div><strong>SkipController.isActive():</strong> ${window.SkipController?.isActive() || false}</div>
+      `;
+    }
+    
+    function testActivateFastForward() {
+      log('Testing activateFastForward()...', 'info');
+      
+      // Set up game state
+      if (!window.game) {
+        log('❌ window.game not initialized!', 'error');
+        return;
+      }
+      
+      window.game.phase = 'hoh';
+      window.game.phaseEndsAt = Date.now() + 30000; // 30 seconds from now
+      window.game.endAt = window.game.phaseEndsAt;
+      
+      log('Initial state: phase=' + window.game.phase + ', phaseEndsAt=' + window.game.phaseEndsAt, 'info');
+      log('__ffActive before: ' + window.game.__ffActive, 'info');
+      
+      // Activate fast-forward
+      if (typeof window.activateFastForward === 'function') {
+        window.activateFastForward({ multiplier: 0.1, reason: 'test' });
+      } else {
+        log('❌ activateFastForward function not found!', 'error');
+        return;
+      }
+      
+      log('__ffActive after: ' + window.game.__ffActive, window.game.__ffActive ? 'success' : 'error');
+      log('__ffMultiplier after: ' + window.game.__ffMultiplier, 'info');
+      
+      if (window.game.__ffActive) {
+        log('✅ Test PASSED: Fast-forward activated successfully', 'success');
+      } else {
+        log('❌ Test FAILED: Fast-forward not activated', 'error');
+      }
+      
+      updateStateDisplay();
+    }
+    
+    function testDeactivateFastForward() {
+      log('Testing deactivateFastForward()...', 'info');
+      
+      if (!window.game || !window.game.__ffActive) {
+        log('⚠️ Fast-forward not active, activating first...', 'warning');
+        testActivateFastForward();
+      }
+      
+      log('__ffActive before: ' + window.game.__ffActive, 'info');
+      
+      if (typeof window.deactivateFastForward === 'function') {
+        window.deactivateFastForward();
+      } else {
+        log('❌ deactivateFastForward function not found!', 'error');
+        return;
+      }
+      
+      log('__ffActive after: ' + window.game.__ffActive, !window.game.__ffActive ? 'success' : 'error');
+      
+      if (!window.game.__ffActive) {
+        log('✅ Test PASSED: Fast-forward deactivated successfully', 'success');
+      } else {
+        log('❌ Test FAILED: Fast-forward still active', 'error');
+      }
+      
+      updateStateDisplay();
+    }
+    
+    async function testSkipControllerDrainLoop() {
+      log('Testing SkipController.drainLoop()...', 'info');
+      
+      if (!window.SkipController) {
+        log('❌ SkipController not found!', 'error');
+        return;
+      }
+      
+      // Set up game state
+      window.game.phase = 'hoh';
+      window.game.phaseEndsAt = Date.now() + 30000;
+      
+      // Activate fast-forward
+      window.activateFastForward({ multiplier: 0.1, reason: 'test' });
+      log('Fast-forward activated: __ffActive=' + window.game.__ffActive, 'info');
+      
+      // Enable skip controller
+      window.SkipController.enable();
+      log('SkipController enabled', 'info');
+      
+      // Run drain loop
+      log('Running drainLoop()...', 'info');
+      await window.SkipController.drainLoop();
+      log('drainLoop() completed', 'success');
+      
+      // Check if acceleration path was used
+      log('✅ Test PASSED: Check console for "Fast-forward active - using acceleration path"', 'success');
+      
+      // Clean up
+      window.SkipController.complete();
+      window.deactivateFastForward();
+      
+      updateStateDisplay();
+    }
+    
+    async function testFullFlow() {
+      log('=== Testing Full FFWD Flow ===', 'info');
+      
+      // Step 1: Activate fast-forward
+      log('Step 1: Activate fast-forward', 'info');
+      window.game.phase = 'hoh';
+      window.game.phaseEndsAt = Date.now() + 30000;
+      window.activateFastForward({ multiplier: 0.1, reason: 'user' });
+      log('  __ffActive: ' + window.game.__ffActive, window.game.__ffActive ? 'success' : 'error');
+      
+      // Step 2: Enable SkipController
+      log('Step 2: Enable SkipController', 'info');
+      window.SkipController.enable();
+      log('  isActive: ' + window.SkipController.isActive(), 'info');
+      
+      // Step 3: Run drain loop
+      log('Step 3: Run drainLoop()', 'info');
+      await window.SkipController.drainLoop();
+      log('  drainLoop completed', 'success');
+      
+      // Step 4: Verify acceleration path was used
+      log('Step 4: Verify acceleration path', 'info');
+      log('  Check console for "Fast-forward active - using acceleration path"', 'info');
+      log('  Should NOT see "Starting drain loop (legacy mode)"', 'info');
+      
+      // Step 5: Deactivate
+      log('Step 5: Deactivate fast-forward', 'info');
+      window.SkipController.complete();
+      window.deactivateFastForward();
+      log('  __ffActive: ' + window.game.__ffActive, !window.game.__ffActive ? 'success' : 'error');
+      
+      log('=== Full Flow Test Complete ===', 'success');
+      
+      updateStateDisplay();
+    }
+    
+    // Initial state display
+    updateStateDisplay();
+    setInterval(updateStateDisplay, 1000);
+    
+    log('Test page loaded. Run tests using the buttons above.', 'info');
+  </script>
+</body>
+</html>

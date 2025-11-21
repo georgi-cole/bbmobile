@@ -171,29 +171,23 @@
    * @returns {number} Normalized duration
    */
   function normalizeDuration(ms){
-    const g = game;
-    if(!g || !g.__ffActive) return ms;
-    
-    // Default fallback values for backward compatibility
-    const DEFAULT_MIN = 40;
-    const DEFAULT_MAX = 300;
-    
-    const mult = g.__ffMultiplier || 0.1;
-    
-    // Prefer new per-card playback min/max if defined, fallback to legacy min/max, then defaults
-    const cardMin = g.cfg?.fastForwardPlaybackMinCardMs ?? g.cfg?.fastForwardMinDuration ?? DEFAULT_MIN;
-    const cardMax = g.cfg?.fastForwardPlaybackMaxCardMs ?? g.cfg?.fastForwardMaxDuration ?? DEFAULT_MAX;
-    
+    const gstate = (typeof global !== 'undefined' && global.game) ? global.game : game;
+    if(!gstate || !gstate.__ffActive) return ms;
+
+    const mult = gstate.__ffMultiplier || 0.1;
+
+    // Prefer playback-specific caps if present; fallback to legacy caps
+    const cardMin = (gstate.cfg && (gstate.cfg.fastForwardPlaybackMinCardMs ?? gstate.cfg.fastForwardMinDuration)) ?? 40;
+    const cardMax = (gstate.cfg && (gstate.cfg.fastForwardPlaybackMaxCardMs ?? gstate.cfg.fastForwardMaxDuration)) ?? 300;
+
     const compressed = Math.round(ms * mult);
     const normalized = Math.max(cardMin, Math.min(compressed, cardMax));
-    
-    // Log significant compressions
+
     if(compressed !== normalized){
-      console.debug(`[fast-forward] duration ${ms}ms -> ${compressed}ms (clamped to ${normalized}ms, range: ${cardMin}-${cardMax}ms)`);
+      console.debug(`[fast-forward] duration ${ms}ms -> ${compressed}ms (clamped to ${normalized}ms)`);
     } else {
       console.debug(`[fast-forward] duration ${ms}ms -> ${normalized}ms`);
     }
-    
     return normalized;
   }
   global.normalizeDuration = normalizeDuration;
@@ -378,44 +372,54 @@
    */
   function activateFastForward(options){
     options = options || {};
-    const multiplier = options.multiplier || game.cfg?.fastForwardMultiplier || 0.1;
+    const gstate = (typeof global !== 'undefined' && global.game) ? global.game : game;
+
+    const multiplier = options.multiplier || gstate.cfg?.fastForwardMultiplier || 0.1;
     const reason = options.reason || 'user';
-    
-    // Guard against reentrant activation
-    if(game.__ffActive){
+
+    if(gstate.__ffActive){
       console.info('[fast-forward] already active, ignoring duplicate activation');
       return;
     }
-    
-    game.__ffActive = true;
-    game.__ffMultiplier = multiplier;
-    
-    const phase = game.phase || 'unknown';
-    console.info(`[fast-forward] activated (mult=${multiplier}, phase=${phase}, reason=${reason})`);
-    
-    // Compress remaining phase timer if applicable
-    const now = Date.now();
-    if(game.phaseEndsAt && game.phaseEndsAt > now){
-      const remainingOriginal = game.phaseEndsAt - now;
-      const remainingCompressed = normalizeDuration(remainingOriginal);
-      game.phaseEndsAt = now + remainingCompressed;
-      
-      // Keep endAt in sync
-      if(game.endAt && game.endAt > now){
-        game.endAt = game.phaseEndsAt;
-      }
-      
-      console.info(`[fast-forward] phase timer compressed: ${remainingOriginal}ms -> ${remainingCompressed}ms`);
+
+    gstate.__ffActive = true;
+    gstate.__ffMultiplier = multiplier;
+
+    // Keep internal fallback in sync if they differ
+    if (gstate !== game) {
+      game.__ffActive = true;
+      game.__ffMultiplier = multiplier;
     }
-    
-    // Enforce minimum phase window to ensure perceptible playback
-    const minWindow = game.cfg?.fastForwardMinPhaseWindowMs || 1500;
-    if(game.phaseEndsAt && game.phaseEndsAt - now < minWindow){
-      game.phaseEndsAt = now + minWindow;
-      if(game.endAt && game.endAt < game.phaseEndsAt){
-        game.endAt = game.phaseEndsAt;
+
+    const phase = gstate.phase || 'unknown';
+    console.info(`[fast-forward] activated (mult=${multiplier}, phase=${phase}, reason=${reason})`);
+
+    const now = Date.now();
+    const minWindow = gstate.cfg?.fastForwardMinPhaseWindowMs || 1500;
+    const endAtBefore = gstate.phaseEndsAt || gstate.endAt;
+
+    // Compress remaining phase timer if applicable
+    if(gstate.phaseEndsAt && gstate.phaseEndsAt > now){
+      const remainingOriginal = gstate.phaseEndsAt - now;
+      const remainingCompressed = normalizeDuration(remainingOriginal);
+      let target = now + remainingCompressed;
+      if (target - now < minWindow) {
+        target = now + minWindow;
+        console.info(`[fast-forward] enforced min phase window: ${minWindow}ms`);
       }
-      console.info(`[fast-forward] enforced min phase window: ${minWindow}ms (ensuring perceptible playback)`);
+      gstate.phaseEndsAt = target;
+      if(gstate.endAt && gstate.endAt > now){ gstate.endAt = gstate.phaseEndsAt; }
+      console.info(`[fast-forward] phase timer compressed: ${remainingOriginal}ms -> ${gstate.phaseEndsAt - now}ms (was ${endAtBefore ? (endAtBefore-now) : 'n/a'}ms remaining)`);
+    } else if (gstate.endAt && gstate.endAt > now) {
+      const remainingOriginal = gstate.endAt - now;
+      const remainingCompressed = normalizeDuration(remainingOriginal);
+      let target = now + remainingCompressed;
+      if (target - now < minWindow) {
+        target = now + minWindow;
+        console.info(`[fast-forward] enforced min phase window: ${minWindow}ms`);
+      }
+      gstate.endAt = target;
+      console.info(`[fast-forward] endAt compressed: ${remainingOriginal}ms -> ${gstate.endAt - now}ms`);
     }
   }
   global.activateFastForward = activateFastForward;
@@ -425,11 +429,17 @@
    * Called automatically at phase boundaries.
    */
   function deactivateFastForward(){
-    if(!game.__ffActive) return;
-    
-    game.__ffActive = false;
-    game.__ffMultiplier = 1;
-    
+    const gstate = (typeof global !== 'undefined' && global.game) ? global.game : game;
+    if(!gstate.__ffActive) return;
+
+    gstate.__ffActive = false;
+    gstate.__ffMultiplier = 1;
+
+    if (gstate !== game) {
+      game.__ffActive = false;
+      game.__ffMultiplier = 1;
+    }
+
     console.info('[fast-forward] deactivated (normal speed restored)');
   }
   global.deactivateFastForward = deactivateFastForward;

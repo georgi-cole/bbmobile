@@ -118,22 +118,30 @@
       }
 
       // Check if fast-forward is active
-      const game = g.game || {};
-      const isFastForward = game.__ffActive === true;
+      const gstate = (typeof window !== 'undefined' && window.game) ? window.game : {};
+      const isFastForward = gstate.__ffActive === true;
       
       if (isFastForward) {
         console.info('[SkipController] Fast-forward active - using acceleration path');
         
         // Acceleration path: compress timeouts instead of canceling
-        if (g.CardManager && typeof g.CardManager.acceleratePendingTimeouts === 'function') {
-          await g.CardManager.acceleratePendingTimeouts();
-          console.info('[SkipController] ✓ CardManager timeouts accelerated');
+        try { 
+          if (g.CardManager && typeof g.CardManager.acceleratePendingTimeouts === 'function') {
+            await g.CardManager.acceleratePendingTimeouts();
+            console.info('[SkipController] ✓ CardManager timeouts accelerated');
+          }
+        } catch(e){ 
+          console.warn('[SkipController] acceleratePendingTimeouts failed:', e); 
         }
         
         // Fast-forward GSAP timelines
-        const gsapWork = fastForwardGsapTimelines();
-        if (gsapWork > 0) {
-          console.info(`[SkipController] ✓ ${gsapWork} GSAP timeline(s) fast-forwarded`);
+        try { 
+          const gsapWork = fastForwardGsapTimelines();
+          if (gsapWork > 0) {
+            console.info(`[SkipController] ✓ ${gsapWork} GSAP timeline(s) fast-forwarded`);
+          }
+        } catch(e){ 
+          console.warn('[SkipController] fastForwardGsapTimelines failed:', e); 
         }
         
         // Skip the legacy drain loop entirely
