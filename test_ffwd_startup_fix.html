@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FFWD Startup State Fix - Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e3ecf5;
+    }
+    
+    h1 { color: #5bd68a; margin-bottom: 10px; }
+    h2 { color: #83bfff; border-bottom: 2px solid #83bfff; padding-bottom: 10px; margin-top: 30px; }
+    
+    .test-section {
+      background: #2a2a3a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    button.primary {
+      background: linear-gradient(135deg, #5bd68a 0%, #4db878 100%);
+      color: #1a1a1a;
+    }
+    
+    button.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 214, 138, 0.4);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff6b9d 0%, #ee5a8a 100%);
+      color: #1a1a1a;
+    }
+    
+    button.info {
+      background: linear-gradient(135deg, #83bfff 0%, #6aa8f5 100%);
+      color: #1a1a1a;
+    }
+    
+    .status {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .status.active {
+      border-left: 4px solid #5bd68a;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #333;
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .success { color: #5bd68a; }
+    .error { color: #ff6b9d; }
+    .info { color: #83bfff; }
+    .warning { color: #f7b955; }
+    
+    .test-result {
+      padding: 10px 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    
+    .test-result.pass {
+      background: rgba(91, 214, 138, 0.2);
+      border-left: 4px solid #5bd68a;
+      color: #5bd68a;
+    }
+    
+    .test-result.fail {
+      background: rgba(255, 107, 157, 0.2);
+      border-left: 4px solid #ff6b9d;
+      color: #ff6b9d;
+    }
+  </style>
+</head>
+<body>
+  <h1>⏩ FFWD Startup State Fix - Test Suite</h1>
+  <p>This test validates that FFWD state is properly reset at startup and uses window.game as single source of truth.</p>
+
+  <div class="test-section">
+    <h2>Test 1: Boot-time State Reset</h2>
+    <p>Verify that FFWD state is reset to defaults when state.js loads.</p>
+    <div class="button-group">
+      <button class="primary" onclick="testBootTimeReset()">Run Test</button>
+    </div>
+    <div id="test1Result" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Single Source of Truth (window.game)</h2>
+    <p>Verify that all FFWD operations read/write window.game consistently.</p>
+    <div class="button-group">
+      <button class="primary" onclick="testSingleSourceOfTruth()">Run Test</button>
+    </div>
+    <div id="test2Result" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: activateFastForward() Behavior</h2>
+    <p>Verify that activateFastForward() correctly sets flags and prevents re-entry.</p>
+    <div class="button-group">
+      <button class="primary" onclick="testActivateFastForward()">Run Test</button>
+    </div>
+    <div id="test3Result" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: deactivateFastForward() Behavior</h2>
+    <p>Verify that deactivateFastForward() correctly resets flags.</p>
+    <div class="button-group">
+      <button class="primary" onclick="testDeactivateFastForward()">Run Test</button>
+    </div>
+    <div id="test4Result" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Import Safety Reset</h2>
+    <p>Verify that importing a save with FFWD active resets the state.</p>
+    <div class="button-group">
+      <button class="primary" onclick="testImportSafetyReset()">Run Test</button>
+    </div>
+    <div id="test5Result" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6: normalizeDuration() Consistency</h2>
+    <p>Verify that normalizeDuration() reads from window.game.</p>
+    <div class="button-group">
+      <button class="primary" onclick="testNormalizeDuration()">Run Test</button>
+    </div>
+    <div id="test6Result" class="status"></div>
+  </div>
+
+  <!-- Load state.js before tests -->
+  <script src="js/state.js"></script>
+
+  <script>
+    // Helper functions
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = message;
+      container.appendChild(entry);
+    }
+
+    function clearLog(containerId) {
+      document.getElementById(containerId).innerHTML = '';
+    }
+
+    function showResult(containerId, pass, message) {
+      const container = document.getElementById(containerId);
+      const result = document.createElement('div');
+      result.className = `test-result ${pass ? 'pass' : 'fail'}`;
+      result.textContent = `${pass ? '✓ PASS' : '✗ FAIL'}: ${message}`;
+      container.appendChild(result);
+    }
+
+    // Test 1: Boot-time State Reset
+    function testBootTimeReset() {
+      clearLog('test1Result');
+      log('test1Result', 'Starting Test 1: Boot-time State Reset');
+      
+      let pass = true;
+      let reason = '';
+
+      // Check that window.game exists
+      if (!window.game) {
+        pass = false;
+        reason = 'window.game is not defined';
+        log('test1Result', '✗ window.game is not defined', 'error');
+      } else {
+        log('test1Result', '✓ window.game exists', 'success');
+
+        // Check that __ffActive is false
+        if (window.game.__ffActive === false) {
+          log('test1Result', `✓ __ffActive is false: ${window.game.__ffActive}`, 'success');
+        } else {
+          pass = false;
+          reason = `__ffActive should be false, got: ${window.game.__ffActive}`;
+          log('test1Result', `✗ __ffActive should be false, got: ${window.game.__ffActive}`, 'error');
+        }
+
+        // Check that __ffMultiplier is 1
+        if (window.game.__ffMultiplier === 1) {
+          log('test1Result', `✓ __ffMultiplier is 1: ${window.game.__ffMultiplier}`, 'success');
+        } else {
+          pass = false;
+          reason = `__ffMultiplier should be 1, got: ${window.game.__ffMultiplier}`;
+          log('test1Result', `✗ __ffMultiplier should be 1, got: ${window.game.__ffMultiplier}`, 'error');
+        }
+      }
+
+      showResult('test1Result', pass, pass ? 'Boot-time state is correctly reset' : reason);
+    }
+
+    // Test 2: Single Source of Truth
+    function testSingleSourceOfTruth() {
+      clearLog('test2Result');
+      log('test2Result', 'Starting Test 2: Single Source of Truth');
+      
+      let pass = true;
+      let reason = '';
+
+      // Reset state first
+      if (window.deactivateFastForward) {
+        window.deactivateFastForward();
+      }
+
+      // Activate FFWD
+      if (window.activateFastForward) {
+        log('test2Result', 'Calling activateFastForward()', 'info');
+        window.activateFastForward({ multiplier: 0.5, reason: 'test' });
+
+        // Check that window.game.__ffActive is true
+        if (window.game.__ffActive === true) {
+          log('test2Result', '✓ window.game.__ffActive is true after activation', 'success');
+        } else {
+          pass = false;
+          reason = `window.game.__ffActive should be true, got: ${window.game.__ffActive}`;
+          log('test2Result', `✗ window.game.__ffActive should be true, got: ${window.game.__ffActive}`, 'error');
+        }
+
+        // Check multiplier
+        if (window.game.__ffMultiplier === 0.5) {
+          log('test2Result', `✓ window.game.__ffMultiplier is 0.5: ${window.game.__ffMultiplier}`, 'success');
+        } else {
+          pass = false;
+          reason = `window.game.__ffMultiplier should be 0.5, got: ${window.game.__ffMultiplier}`;
+          log('test2Result', `✗ window.game.__ffMultiplier should be 0.5, got: ${window.game.__ffMultiplier}`, 'error');
+        }
+
+        // Deactivate FFWD
+        log('test2Result', 'Calling deactivateFastForward()', 'info');
+        window.deactivateFastForward();
+
+        // Check that window.game.__ffActive is false
+        if (window.game.__ffActive === false) {
+          log('test2Result', '✓ window.game.__ffActive is false after deactivation', 'success');
+        } else {
+          pass = false;
+          reason = `window.game.__ffActive should be false after deactivation, got: ${window.game.__ffActive}`;
+          log('test2Result', `✗ window.game.__ffActive should be false after deactivation, got: ${window.game.__ffActive}`, 'error');
+        }
+      } else {
+        pass = false;
+        reason = 'activateFastForward function not available';
+        log('test2Result', '✗ activateFastForward function not available', 'error');
+      }
+
+      showResult('test2Result', pass, pass ? 'All operations use window.game consistently' : reason);
+    }
+
+    // Test 3: activateFastForward() Behavior
+    function testActivateFastForward() {
+      clearLog('test3Result');
+      log('test3Result', 'Starting Test 3: activateFastForward() Behavior');
+      
+      let pass = true;
+      let reason = '';
+
+      // Reset state first
+      if (window.deactivateFastForward) {
+        window.deactivateFastForward();
+      }
+
+      if (window.activateFastForward) {
+        // First activation
+        log('test3Result', 'First activation...', 'info');
+        window.activateFastForward({ multiplier: 0.2, reason: 'test' });
+        
+        if (window.game.__ffActive === true) {
+          log('test3Result', '✓ First activation succeeded', 'success');
+        } else {
+          pass = false;
+          reason = 'First activation failed';
+          log('test3Result', '✗ First activation failed', 'error');
+        }
+
+        // Second activation (should be ignored)
+        log('test3Result', 'Second activation (should be ignored)...', 'info');
+        window.activateFastForward({ multiplier: 0.8, reason: 'test2' });
+        
+        // Multiplier should still be 0.2, not 0.8
+        if (window.game.__ffMultiplier === 0.2) {
+          log('test3Result', '✓ Re-entry prevented: multiplier still 0.2', 'success');
+        } else {
+          pass = false;
+          reason = `Re-entry not prevented: multiplier is ${window.game.__ffMultiplier}, expected 0.2`;
+          log('test3Result', `✗ Re-entry not prevented: multiplier is ${window.game.__ffMultiplier}, expected 0.2`, 'error');
+        }
+
+        // Clean up
+        window.deactivateFastForward();
+      } else {
+        pass = false;
+        reason = 'activateFastForward function not available';
+        log('test3Result', '✗ activateFastForward function not available', 'error');
+      }
+
+      showResult('test3Result', pass, pass ? 'activateFastForward() prevents re-entry correctly' : reason);
+    }
+
+    // Test 4: deactivateFastForward() Behavior
+    function testDeactivateFastForward() {
+      clearLog('test4Result');
+      log('test4Result', 'Starting Test 4: deactivateFastForward() Behavior');
+      
+      let pass = true;
+      let reason = '';
+
+      if (window.activateFastForward && window.deactivateFastForward) {
+        // Activate first
+        window.activateFastForward({ multiplier: 0.3, reason: 'test' });
+        log('test4Result', 'FFWD activated', 'info');
+
+        // Deactivate
+        window.deactivateFastForward();
+        log('test4Result', 'deactivateFastForward() called', 'info');
+
+        // Check state
+        if (window.game.__ffActive === false) {
+          log('test4Result', '✓ __ffActive reset to false', 'success');
+        } else {
+          pass = false;
+          reason = '__ffActive not reset to false';
+          log('test4Result', '✗ __ffActive not reset to false', 'error');
+        }
+
+        if (window.game.__ffMultiplier === 1) {
+          log('test4Result', '✓ __ffMultiplier reset to 1', 'success');
+        } else {
+          pass = false;
+          reason = '__ffMultiplier not reset to 1';
+          log('test4Result', `✗ __ffMultiplier not reset to 1, got: ${window.game.__ffMultiplier}`, 'error');
+        }
+
+        // Multiple calls should be safe
+        window.deactivateFastForward();
+        log('test4Result', '✓ Multiple deactivate calls are safe', 'success');
+      } else {
+        pass = false;
+        reason = 'Required functions not available';
+        log('test4Result', '✗ Required functions not available', 'error');
+      }
+
+      showResult('test4Result', pass, pass ? 'deactivateFastForward() resets state correctly' : reason);
+    }
+
+    // Test 5: Import Safety Reset
+    function testImportSafetyReset() {
+      clearLog('test5Result');
+      log('test5Result', 'Starting Test 5: Import Safety Reset');
+      
+      let pass = true;
+      let reason = '';
+
+      // Simulate importing a save with FFWD active
+      const originalGame = window.game;
+      
+      log('test5Result', 'Simulating import with FFWD active...', 'info');
+      window.game = {
+        ...originalGame,
+        __ffActive: true,
+        __ffMultiplier: 0.1,
+        phase: 'nominations'
+      };
+
+      log('test5Result', `Before reset: __ffActive=${window.game.__ffActive}`, 'info');
+
+      // Call deactivateFastForward (as import handlers do)
+      if (window.deactivateFastForward) {
+        window.deactivateFastForward();
+        log('test5Result', 'deactivateFastForward() called', 'info');
+
+        // Check that state is reset
+        if (window.game.__ffActive === false) {
+          log('test5Result', '✓ __ffActive reset after import', 'success');
+        } else {
+          pass = false;
+          reason = '__ffActive not reset after import';
+          log('test5Result', '✗ __ffActive not reset after import', 'error');
+        }
+
+        if (window.game.__ffMultiplier === 1) {
+          log('test5Result', '✓ __ffMultiplier reset after import', 'success');
+        } else {
+          pass = false;
+          reason = '__ffMultiplier not reset after import';
+          log('test5Result', '✗ __ffMultiplier not reset after import', 'error');
+        }
+      } else {
+        pass = false;
+        reason = 'deactivateFastForward function not available';
+        log('test5Result', '✗ deactivateFastForward function not available', 'error');
+      }
+
+      showResult('test5Result', pass, pass ? 'Import safety reset works correctly' : reason);
+    }
+
+    // Test 6: normalizeDuration() Consistency
+    function testNormalizeDuration() {
+      clearLog('test6Result');
+      log('test6Result', 'Starting Test 6: normalizeDuration() Consistency');
+      
+      let pass = true;
+      let reason = '';
+
+      if (window.normalizeDuration) {
+        // Reset state first
+        if (window.deactivateFastForward) {
+          window.deactivateFastForward();
+        }
+
+        // Test with FFWD off
+        const duration1 = 1000;
+        const normalized1 = window.normalizeDuration(duration1);
+        log('test6Result', `FFWD OFF: normalizeDuration(${duration1}) = ${normalized1}`, 'info');
+        
+        if (normalized1 === duration1) {
+          log('test6Result', '✓ Duration unchanged when FFWD off', 'success');
+        } else {
+          pass = false;
+          reason = 'Duration changed when FFWD off';
+          log('test6Result', '✗ Duration changed when FFWD off', 'error');
+        }
+
+        // Activate FFWD
+        if (window.activateFastForward) {
+          window.activateFastForward({ multiplier: 0.1, reason: 'test' });
+          
+          // Test with FFWD on
+          const duration2 = 1000;
+          const normalized2 = window.normalizeDuration(duration2);
+          log('test6Result', `FFWD ON: normalizeDuration(${duration2}) = ${normalized2}`, 'info');
+          
+          if (normalized2 < duration2) {
+            log('test6Result', `✓ Duration compressed when FFWD on (${normalized2}ms < ${duration2}ms)`, 'success');
+          } else {
+            pass = false;
+            reason = 'Duration not compressed when FFWD on';
+            log('test6Result', '✗ Duration not compressed when FFWD on', 'error');
+          }
+
+          // Clean up
+          window.deactivateFastForward();
+        }
+      } else {
+        pass = false;
+        reason = 'normalizeDuration function not available';
+        log('test6Result', '✗ normalizeDuration function not available', 'error');
+      }
+
+      showResult('test6Result', pass, pass ? 'normalizeDuration() reads from window.game consistently' : reason);
+    }
+
+    // Auto-run Test 1 on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        testBootTimeReset();
+      }, 500);
+    });
+  </script>
+</body>
+</html>

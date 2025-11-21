@@ -526,6 +526,16 @@
               var g = global.game = global.game || {};
               g.cfg = Object.assign({}, DEFAULT_CFG, g.cfg || {}, obj || {});
               saveStoredCfg(g.cfg);
+              
+              // Safety: Clear any saved FFWD state after settings import
+              if(typeof global.deactivateFastForward === 'function'){
+                global.deactivateFastForward();
+              } else if(global.game){
+                // Direct flag reset as fallback
+                global.game.__ffActive = false;
+                global.game.__ffMultiplier = 1;
+              }
+              
               notify('Settings imported', 'ok');
               closeSettingsModal();
             }catch(err){
@@ -660,6 +670,16 @@
           try{
             var obj = JSON.parse(fr.result);
             global.game = obj;
+            
+            // Safety: Clear any saved FFWD state after import
+            if(typeof global.deactivateFastForward === 'function'){
+              global.deactivateFastForward();
+            } else if(global.game){
+              // Direct flag reset as fallback
+              global.game.__ffActive = false;
+              global.game.__ffMultiplier = 1;
+            }
+            
             notify('Save imported', 'ok');
             if(typeof global.updateHud === 'function') global.updateHud();
           }catch(err){ notify('Import failed: '+err, 'warn'); }
