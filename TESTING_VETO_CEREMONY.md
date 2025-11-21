@@ -14,6 +14,35 @@ Open `test_veto_ceremony_tv.html` in a browser for a checklist of all test scena
 5. **Comprehensive Hooks**: onPOVUsed, onVetoUsedOnSelf/Other, onSavedByVeto
 6. **Mobile Carousel Picker**: One avatar per slide with swipe, arrows, dots, keyboard navigation
 7. **Desktop Grid Picker**: Responsive grid showing all nominees at once on wider screens
+8. **⚠️ HOH Exclusion Hardening**: Defense-in-depth prevents HOH from appearing in replacement pool (see below)
+
+## Critical Test: HOH Exclusion
+
+**⚠️ PRIORITY TEST**: Verify HOH is NEVER in replacement nominee pool.
+
+### Automated Tests
+Run before any ceremony testing:
+```bash
+node tests/veto_replacement_exclusion.mjs  # 18 tests
+node scripts/verify-hoh-exclusion.mjs      # 6 checks
+```
+
+### Manual Verification
+1. Set breakpoint at replacement pool building
+2. Console: `console.log('Pool:', pool, 'HOH:', game.hohId)`
+3. Verify HOH ID is NOT in pool
+4. Try all POV types (Standard, Golden, Diamond)
+5. Try string vs number ID scenarios (`game.hohId = '1'`)
+
+### What to Test
+- [ ] Standard POV: HOH excluded from replacement pool
+- [ ] Golden POV: HOH excluded from replacement pool (POV holder picks)
+- [ ] Diamond POV: HOH excluded from BOTH picks
+- [ ] Multi-eviction week: HOH still excluded
+- [ ] Final 4: HOH excluded
+- [ ] String IDs: HOH excluded even with type mismatch
+
+**See**: [FORENSIC_HOH_SELF_NOMINATION.md](./FORENSIC_HOH_SELF_NOMINATION.md) for detailed analysis.
 
 ## Test Scenarios
 

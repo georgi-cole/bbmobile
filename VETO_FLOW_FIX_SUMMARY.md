@@ -1,5 +1,9 @@
 # Veto Flow Regression Fix - Summary
 
+## Related Documentation
+
+**⚠️ CRITICAL**: See [FORENSIC_HOH_SELF_NOMINATION.md](./FORENSIC_HOH_SELF_NOMINATION.md) for HOH self-nomination regression fix (2025-11-21).
+
 ## Problem Statement
 
 After social module tweaks on the "social manuevers" branch, the veto flow regressed with the following symptoms:
