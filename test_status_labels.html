@@ -212,6 +212,9 @@
     </div>
   </div>
 
+  <!-- Import actual UI module -->
+  <script src="js/ui.hud-and-router.js"></script>
+  
   <script type="module">
     // Mock the game environment
     window.global = window;
@@ -243,7 +246,7 @@
       window.__debugRosterLabels = false;
     }
     
-    // Mock helper functions
+    // Mock helper functions needed by ui.hud-and-router.js
     window.safeName = (id) => {
       const p = window.game.players.find(p => p.id === id);
       return p ? p.name : 'Unknown';
@@ -255,6 +258,18 @@
     
     window.getDicebearUrl = (seed) => {
       return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Guest')}`;
+    };
+    
+    window.resolveAvatar = (p) => {
+      return window.getDicebearUrl(p.name || 'Guest');
+    };
+    
+    // Mock UI helper for HTML escaping
+    window.UI = window.UI || {};
+    window.UI.escapeHtml = (str) => {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
     };
     
     // Mock syncPlayerBadgeStates
@@ -272,7 +287,9 @@
         }
       }
       
-      logDebug('[sync] badge states synchronized', 'info');
+      if(window.__debugRosterLabels){
+        logDebug('[sync] badge states synchronized', 'info');
+      }
     };
     
     // Debug logging
@@ -524,83 +541,32 @@
       logDebug(`Debug logging ${window.__debugRosterLabels ? 'enabled' : 'disabled'}`, 'info');
     }
     
-    // Render both rosters
+    // Render both rosters using actual rendering functions
     function renderRosters() {
-      // Import the real rendering functions from ui.hud-and-router.js
-      // For this test, we'll simulate them inline
-      
-      renderTopRosterMock();
-      renderCastRosterMock();
-    }
-    
-    function renderTopRosterMock() {
-      const container = document.getElementById('topRosterContainer');
-      container.innerHTML = '';
-      
-      const host = document.createElement('div');
-      host.id = 'topRoster';
-      host.className = 'top-roster pill-debug-outline';
-      
-      const row = document.createElement('div');
-      row.className = 'top-roster-row';
-      
-      window.game.players.forEach(p => {
-        const tile = document.createElement('div');
-        tile.className = 'top-roster-tile';
-        tile.dataset.playerId = p.id;
-        if (p.evicted) tile.classList.add('evicted');
+      // Use actual rendering functions from ui.hud-and-router.js
+      if (typeof window.renderTopRoster === 'function') {
+        // Move topRoster into test container
+        const topContainer = document.getElementById('topRosterContainer');
+        topContainer.innerHTML = '';
         
-        const wrap = document.createElement('div');
-        wrap.className = 'top-tile-avatar-wrap';
+        // Call the real renderer
+        window.renderTopRoster();
         
-        const img = document.createElement('img');
-        img.className = 'top-tile-avatar' + (p.evicted ? ' grayed' : '');
-        img.src = window.getDicebearUrl(p.name);
-        img.alt = p.name;
-        wrap.appendChild(img);
-        
-        // Use buildStatusLabel if available, otherwise inline logic
-        const name = document.createElement('div');
-        name.className = 'top-tile-name';
-        
-        const isWinner = p.showFinalLabel === 'WINNER';
-        const isRunnerUp = p.showFinalLabel === 'RUNNER-UP';
-        const hasHOH = p.hoh;
-        const hasPOV = window.game.vetoHolder === p.id;
-        const hasNom = p.nominated && !p.evicted;
-        
-        if (isWinner) {
-          name.textContent = '🥇';
-          name.classList.add('status-icon-label', 'medal-winner');
-        } else if (isRunnerUp) {
-          name.textContent = '🥈';
-          name.classList.add('status-icon-label', 'medal-runner-up');
-        } else if (hasNom) {
-          name.textContent = 'NOM';
-          name.classList.add('status-nom');
-        } else if (hasHOH && hasPOV) {
-          name.innerHTML = '<span class="icon-hoh">👑</span><span class="icon-veto">🛡</span>';
-          name.classList.add('status-icon-label', 'hoh-pov-icons');
-        } else if (hasHOH) {
-          name.textContent = 'HOH';
-          name.classList.add('status-hoh');
-        } else if (hasPOV) {
-          name.textContent = 'POV';
-          name.classList.add('status-pov');
-        } else {
-          name.textContent = p.name;
+        // Move the rendered roster into our container
+        const topRoster = document.getElementById('topRoster');
+        if (topRoster) {
+          topContainer.appendChild(topRoster);
         }
-        
-        tile.appendChild(wrap);
-        tile.appendChild(name);
-        row.appendChild(tile);
-      });
+      } else {
+        logDebug('renderTopRoster not available, skipping', 'warn');
+      }
       
-      host.appendChild(row);
-      container.appendChild(host);
+      // For cast roster, we need to adapt since it expects different DOM structure
+      // Let's render inline but use the actual buildStateTags function
+      renderCastRosterForTest();
     }
     
-    function renderCastRosterMock() {
+    function renderCastRosterForTest() {
       const container = document.getElementById('castRosterContainer');
       container.innerHTML = '';
       
@@ -616,6 +582,8 @@
       `;
       list.appendChild(header);
       
+      // Build tags using the ACTUAL buildStateTags function from ui.hud-and-router.js
+      // which is NOT exported, so we need to recreate the logic with canonical checks
       window.game.players.forEach(p => {
         const row = document.createElement('div');
         row.className = 'roster-row';
@@ -634,13 +602,33 @@
         const c2 = document.createElement('div');
         c2.className = 'cell state';
         
-        // Build tags
+        // Build tags using CANONICAL checks (same as ui.hud-and-router.js)
+        const g = window.game;
         const tags = [];
-        if (p.hoh) tags.push({ k: 'hoh', label: 'HOH' });
-        if (window.game.vetoHolder === p.id) tags.push({ k: 'veto', label: 'VETO' });
-        if (p.nominated && !p.evicted) tags.push({ k: 'nom', label: 'NOM' });
-        if (p.showFinalLabel === 'WINNER') tags.push({ k: 'winner', label: 'WINNER' });
-        if (p.showFinalLabel === 'RUNNER-UP') tags.push({ k: 'runner', label: 'RUNNER-UP' });
+        
+        // Canonical HOH check
+        if (p.hoh === true || g.hohId === p.id) {
+          tags.push({ k: 'hoh', label: 'HOH' });
+        }
+        
+        // Canonical POV check
+        if (g.vetoHolder === p.id) {
+          tags.push({ k: 'veto', label: 'VETO' });
+        }
+        
+        // Canonical NOM check
+        if (!p.evicted && !g.__suppressNomBadges) {
+          const isNominated = p.nominated === true || 
+            (Array.isArray(g.nominees) && g.nominees.includes(p.id)) ||
+            ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState);
+          
+          if (isNominated) {
+            tags.push({ k: 'nom', label: 'NOM' });
+          }
+        }
+        
+        if (p.showFinalLabel === 'WINNER' || p.winner) tags.push({ k: 'winner', label: 'WINNER' });
+        if (p.showFinalLabel === 'RUNNER-UP' || p.runnerUp) tags.push({ k: 'runner', label: 'RUNNER-UP' });
         if (p.evicted) tags.push({ k: 'evicted', label: 'EVICTED' });
         
         c2.innerHTML = tags.length 
