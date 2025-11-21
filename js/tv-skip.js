@@ -224,13 +224,11 @@
       typeof g.advancePhase === 'function'
     );
 
-    // Check if phase is skippable
-    if(phase && SKIPPABLE_PHASES.includes(phase)){
-      shouldEnable = hasHandler;
-    }
+    // Determine if button should be enabled based on phase and config
+    const isSkippablePhase = phase && SKIPPABLE_PHASES.includes(phase);
+    const alwaysEnableActive = cfg.fastForwardAlwaysEnable && phase && phase !== 'lobby';
     
-    // Override: Allow FFWD in any active phase if config enabled (except lobby before game starts)
-    if(cfg.fastForwardAlwaysEnable && phase && phase !== 'lobby'){
+    if(isSkippablePhase || alwaysEnableActive){
       shouldEnable = hasHandler;
     }
 

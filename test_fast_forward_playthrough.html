@@ -324,8 +324,9 @@
       const container = document.getElementById('assertionsContainer');
       container.innerHTML = '<h3>Assertions</h3>';
       
-      const expectedMin = 1000;
-      const expectedMax = 2500;
+      // Derive expected values from configuration
+      const expectedMin = Math.max(1000, window.game.cfg.fastForwardMinPhaseWindowMs || 1500);
+      const expectedMax = Math.min(2500, (results.cardCount * window.game.cfg.fastForwardPlaybackMaxCardMs) || 2880);
       
       const assertions = [
         {

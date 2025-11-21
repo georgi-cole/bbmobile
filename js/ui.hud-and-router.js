@@ -1190,7 +1190,9 @@ header.innerHTML = `
     
     // If no pending timeouts, synthesize a micro-drain delay to avoid instant jump
     if(pending === 0){
-      const microDelay = Math.min(180, game.cfg?.fastForwardPlaybackMinCardMs || 120);
+      // Use 1.5x the minimum card duration as micro-delay to ensure perceptible transition
+      const baseMin = game.cfg?.fastForwardPlaybackMinCardMs || 120;
+      const microDelay = Math.round(baseMin * 1.5);
       console.info(`[ff] No pending timeouts; synthesizing micro-drain delay: ${microDelay}ms`);
       await new Promise(resolve => setTimeout(resolve, microDelay));
     }
@@ -2221,15 +2223,14 @@ header.innerHTML = `
 
   // Self-repair guard: Ensure enhanced fastForwardPhase is active
   // Protects against legacy file (ui.hud-and-router.js9) overriding the enhanced version
-  (function(){
+  // Schedule check after all modules load
+  setTimeout(function(){
     if(typeof g.fastForwardPhase === 'function' && !g.fastForwardPhase.__ffEnhanced){
-      console.warn('[ui.hud-and-router] Legacy fastForwardPhase detected without __ffEnhanced marker - replacing with enhanced version');
-      // The enhanced version should already be set above, but if something overwrote it, re-set
-      if(typeof fastForwardPhase === 'function' && fastForwardPhase.__ffEnhanced){
-        g.fastForwardPhase = fastForwardPhase;
-        console.info('[ui.hud-and-router] ✓ Enhanced fastForwardPhase restored');
-      }
+      console.warn('[ui.hud-and-router] Legacy fastForwardPhase detected without __ffEnhanced marker');
+      console.warn('[ui.hud-and-router] This may cause reduced functionality. Check if ui.hud-and-router.js9 is being loaded.');
+    } else if(typeof g.fastForwardPhase === 'function' && g.fastForwardPhase.__ffEnhanced){
+      console.info('[ui.hud-and-router] ✓ Enhanced fastForwardPhase active');
     }
-  })();
+  }, 100);
 
 })(window);
