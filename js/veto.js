@@ -55,6 +55,164 @@
     return arr[Math.floor(rng()*arr.length)];
   }
 
+  // ======= ID NORMALIZATION & INTEGRITY UTILITIES =======
+  
+  /**
+   * Normalize IDs to numbers to prevent string/number mismatch bugs
+   * @param {Array} arr - Array of IDs (may be strings or numbers)
+   * @returns {Array<number>} Array of numeric IDs
+   */
+  function normalizeIds(arr){
+    if(!Array.isArray(arr)) return [];
+    return arr.map(function(x){ return +x; });
+  }
+  
+  /**
+   * Build replacement nominee pool with defense-in-depth exclusions
+   * Always excludes: HOH, veto holder, saved nominee, current nominees
+   * @param {Object} options - Configuration options
+   * @param {number} options.savedId - ID of nominee saved by veto (optional)
+   * @param {number} options.alreadyPicked - ID already selected (for Diamond 2nd pick)
+   * @returns {Array<number>} Array of eligible replacement nominee IDs
+   */
+  function buildReplacementPool(options){
+    var g = global.game;
+    options = options || {};
+    
+    // Normalize all IDs to numbers early
+    var hohId = +(g.hohId);
+    var savedId = options.savedId != null ? +options.savedId : null;
+    var vetoHolderId = +(g.vetoHolder);
+    var alreadyPicked = options.alreadyPicked != null ? +options.alreadyPicked : null;
+    
+    // Base candidate list = all alive players (normalized)
+    var candidates = alivePlayers().map(function(p){ return +p.id; });
+    
+    // Build exclusion set (ALWAYS includes HOH)
+    var exclude = new Set();
+    exclude.add(hohId);                    // HOH always excluded
+    exclude.add(vetoHolderId);             // Veto holder cannot be replacement
+    if(savedId != null) exclude.add(savedId);  // Saved nominee cannot go back on block
+    if(alreadyPicked != null) exclude.add(alreadyPicked); // Diamond 2nd pick exclusion
+    
+    // Exclude current nominees
+    var nominees = normalizeIds(g.nominees || []);
+    for(var i=0; i<nominees.length; i++){
+      exclude.add(nominees[i]);
+    }
+    
+    // Filter candidates
+    var pool = [];
+    for(var j=0; j<candidates.length; j++){
+      var id = candidates[j];
+      if(!exclude.has(id)){
+        pool.push(id);
+      }
+    }
+    
+    // Diagnostic logging
+    console.info('[replacement] pool built:', {
+      hohId: hohId,
+      vetoHolderId: vetoHolderId,
+      savedId: savedId,
+      alreadyPicked: alreadyPicked,
+      nominees: nominees,
+      excluded: Array.from(exclude),
+      pool: pool
+    });
+    
+    return pool;
+  }
+  
+  /**
+   * Validate that a replacement nominee is legal
+   * @param {number} id - Player ID to validate
+   * @returns {Object} {ok: boolean, reason: string}
+   */
+  function validateReplacementNominee(id){
+    var g = global.game;
+    
+    if(id == null){
+      return { ok: false, reason: 'null-id' };
+    }
+    
+    var numId = +id;
+    
+    // Check 1: Cannot be HOH
+    if(numId === +(g.hohId)){
+      return { ok: false, reason: 'HOH cannot be nominated' };
+    }
+    
+    // Check 2: Cannot be veto holder
+    if(numId === +(g.vetoHolder)){
+      return { ok: false, reason: 'Veto holder cannot be replacement' };
+    }
+    
+    // Check 3: Must be a real player
+    var player = getP(numId);
+    if(!player){
+      return { ok: false, reason: 'unknown-player' };
+    }
+    
+    // Check 4: Cannot be evicted
+    if(player.evicted){
+      return { ok: false, reason: 'evicted-player' };
+    }
+    
+    // Check 5: Cannot already be a nominee
+    var nominees = normalizeIds(g.nominees || []);
+    if(nominees.indexOf(numId) !== -1){
+      return { ok: false, reason: 'already-nominee' };
+    }
+    
+    return { ok: true };
+  }
+  
+  /**
+   * Integrity post-check: Remove HOH from nominees if somehow present
+   * This is a last-resort safety net that should never trigger if other guards work
+   */
+  function integrityCheckNominees(){
+    var g = global.game;
+    var hohId = +(g.hohId);
+    var nominees = normalizeIds(g.nominees || []);
+    
+    if(nominees.indexOf(hohId) !== -1){
+      console.error('[integrity] CRITICAL: HOH found among nominees; auto-removing.');
+      
+      // Remove HOH from nominees
+      g.nominees = nominees.filter(function(id){ return id !== hohId; });
+      
+      // Update player flags
+      var hohPlayer = getP(hohId);
+      if(hohPlayer){
+        hohPlayer.nominated = false;
+        hohPlayer.nominationState = 'none';
+      }
+      
+      // Sync badges
+      try{
+        if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
+        if(typeof global.updateHud === 'function') global.updateHud();
+      }catch(e){}
+      
+      // Show correction card
+      if(typeof global.showCard === 'function'){
+        global.showCard('Integrity Correction', ['HOH nomination invalid; corrected automatically.'], 'warn', 3000, true);
+      }
+      
+      return true; // Correction was applied
+    }
+    
+    return false; // No correction needed
+  }
+  
+  // Export utilities
+  global.normalizeIds = normalizeIds;
+  global.buildReplacementPool = buildReplacementPool;
+  global.validateReplacementNominee = validateReplacementNominee;
+  global.integrityCheckNominees = integrityCheckNominees;
+
   // ======= POV TWIST LOGIC =======
   
   /**
@@ -2745,10 +2903,11 @@
       actorIds: holder ? holder.id : null
     });
     
-    // Compute eligible replacement nominees (exclude HOH and POV holder)
-    var baseEligible = alivePlayers().filter(function(p){
-      return p.id !== g.hohId && p.id !== g.vetoHolder && !p.evicted;
-    }).map(function(p){ return p.id; });
+    // Compute eligible replacement nominees using hardened pool builder
+    var baseEligible = buildReplacementPool({
+      savedId: null, // Diamond POV replaces both, no saved nominee
+      alreadyPicked: null
+    });
     
     if(baseEligible.length < 2){
       console.warn('[veto] Not enough eligible players for Diamond POV');
@@ -2931,19 +3090,16 @@
     }
     
     // === SECOND REPLACEMENT PICK ===
-    // Compute second eligible with strict exclusions: HOH, POV, firstReplacement, and remainingOriginal
-    var secondEligible = alivePlayers().filter(function(p){
-      return p.id !== g.hohId && 
-             p.id !== g.vetoHolder && 
-             p.id !== firstReplacement && 
-             p.id !== remainingOriginal &&
-             !p.evicted;
-    }).map(function(p){ return p.id; });
+    // Use hardened pool builder for second pick (exclude first replacement)
+    var secondEligible = buildReplacementPool({
+      savedId: null,
+      alreadyPicked: firstReplacement
+    });
     
     if(secondEligible.length === 0){
       console.warn('[veto] No eligible players for second Diamond POV nominee');
       // Fall back: pick from baseEligible excluding first
-      secondEligible = baseEligible.filter(function(id){ return id !== firstReplacement; });
+      secondEligible = baseEligible.filter(function(id){ return +id !== +firstReplacement; });
     }
     
     var secondReplacement = null;
@@ -3045,15 +3201,21 @@
   function pickReplacementByHOH(savedId){
     var g = global.game;
     var hoh = getP(g.hohId);
-    var pool = alivePlayers().filter(function(p){
-      return p.id!==savedId && !p.hoh && g.nominees.indexOf(p.id)===-1 && p.id!==g.vetoHolder;
-    });
-    if(!pool.length) return null;
-    var scored = pool.map(function(p){
-      var aff = (hoh && hoh.affinity && typeof hoh.affinity[p.id]==='number') ? hoh.affinity[p.id] : 0;
-      var inAl = (global.inSameAlliance && typeof global.inSameAlliance==='function') ? (global.inSameAlliance(hoh.id, p.id) ? 1 : 0) : 0;
-      return { id: p.id, score: (-aff) + (p.threat||0.5) + (inAl ? 0.6 : 0) };
+    
+    // Use hardened pool builder with defense-in-depth exclusions
+    var poolIds = buildReplacementPool({ savedId: savedId });
+    
+    if(!poolIds.length) return null;
+    
+    // Score eligible players
+    var scored = poolIds.map(function(id){
+      var p = getP(id);
+      var aff = (hoh && hoh.affinity && typeof hoh.affinity[id]==='number') ? hoh.affinity[id] : 0;
+      var inAl = (global.inSameAlliance && typeof global.inSameAlliance==='function') ? (global.inSameAlliance(hoh.id, id) ? 1 : 0) : 0;
+      var threat = (p && p.threat) || 0.5;
+      return { id: id, score: (-aff) + threat + (inAl ? 0.6 : 0) };
     }).sort(function(a,b){ return b.score - a.score; });
+    
     return scored[0].id;
   }
 
@@ -3202,11 +3364,9 @@
       if(picker && picker.human){
         g._awaitingReplacement = true;
         try{ if(global.addLog) global.addLog('Veto used. '+savedName+' is saved. ' + (isGoldenPOV ? 'POV holder' : 'HOH') + ' must choose a replacement.','warn'); }catch(e){}
-        // Show replacement choice panel in TV
-        var repPool = alivePlayers().filter(function(p){
-          return !p.hoh && g.nominees.indexOf(p.id)===-1 && p.id!==g.vetoHolder && p.id!==g.vetoSavedId;
-        });
-        var eligibleIds = repPool.map(function(p){ return p.id; });
+        
+        // Use hardened pool builder with defense-in-depth exclusions
+        var eligibleIds = buildReplacementPool({ savedId: savedId });
         
         // Safety check: ensure there are eligible replacements
         if(eligibleIds.length === 0){
@@ -3386,11 +3546,8 @@
           duration: 3200
         });
         
-        // Re-open replacement chooser
-        var repPool = alivePlayers().filter(function(p){
-          return !p.hoh && g.nominees.indexOf(p.id)===-1 && p.id!==g.vetoHolder && p.id!==g.vetoSavedId;
-        });
-        var eligibleIds = repPool.map(function(p){ return p.id; });
+        // Re-open replacement chooser using hardened pool builder
+        var eligibleIds = buildReplacementPool({ savedId: savedId });
         
         var picker = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
         var pickerName = picker ? picker.name : (isGoldenPOV ? 'POV holder' : 'HOH');
@@ -3419,12 +3576,69 @@
         }
       }
       
+      // CRITICAL: Validate replacement nominee is legal (defense-in-depth)
+      var validation = validateReplacementNominee(replacementId);
+      if(!validation.ok){
+        console.error('[veto] Invalid replacement nominee:', replacementId, 'reason:', validation.reason);
+        
+        // Show error card
+        await showTVCard({
+          title: 'Invalid Replacement',
+          lines: [validation.reason, 'Please select a different nominee.'],
+          tone: 'danger',
+          duration: 3200
+        });
+        
+        // Re-open replacement chooser with hardened pool
+        var retryEligibleIds = buildReplacementPool({ savedId: savedId });
+        
+        var picker = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
+        
+        if(picker && picker.human && retryEligibleIds.length > 0){
+          // Human picks again - use carousel picker
+          replacementId = await global.openCarouselPicker({
+            ids: retryEligibleIds,
+            title: 'Select valid replacement',
+            actionLabel: 'Nominate',
+            blockIds: [g.hohId, g.vetoHolder, g.vetoSavedId]
+          });
+          
+          // Recursively call with new selection
+          return applyReplacementAndContinue(replacementId, isGoldenPOV);
+        } else if(retryEligibleIds.length > 0){
+          // AI picks from valid pool
+          replacementId = pickReplacementByHOH(savedId);
+          // Recursively call with new selection
+          return applyReplacementAndContinue(replacementId, isGoldenPOV);
+        } else {
+          // No valid replacements available (edge case)
+          console.error('[veto] No valid replacement nominees available');
+          g.__vetoCeremonyResolved = true;
+          g.__vetoDecisionInProgress = false;
+          g.__useTVCeremonyUI = false;
+          setTimeout(function(){
+            if(typeof global.startSocial==='function'){
+              global.startSocial('veto', function(){
+                if(typeof global.startLiveVote==='function') global.startLiveVote();
+              });
+            } else if(typeof global.startLiveVote==='function'){
+              global.startLiveVote();
+            }
+          }, 200);
+          return;
+        }
+      }
+      
       // Valid replacement - proceed
       g.__replacementApplied = true;
       
+      // Normalize IDs before updating nominees
+      var savedIdNorm = +savedId;
+      var replacementIdNorm = +replacementId;
+      
       // Update nominees array (add replacement, remove saved)
-      g.nominees = (g.nominees||[]).filter(function(id){ return id!==savedId; });
-      if(g.nominees.indexOf(replacementId)===-1) g.nominees.push(replacementId);
+      g.nominees = normalizeIds(g.nominees || []).filter(function(id){ return id !== savedIdNorm; });
+      if(g.nominees.indexOf(replacementIdNorm) === -1) g.nominees.push(replacementIdNorm);
 
       // Social Maneuvers: Record replacement nomination event for weekly energy bonus
       if(global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.recordWeeklyEvent){
@@ -3505,6 +3719,9 @@
 
       try{ g.__twistNomineeSnapshot = g.nominees.slice(); }catch(e){}
       try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
+      
+      // INTEGRITY POST-CHECK: Ensure HOH was not somehow nominated
+      integrityCheckNominees();
     } else {
       try{ if(global.addLog) global.addLog('Veto used, but no valid replacement available.','danger'); }catch(e){}
     }
@@ -3655,6 +3872,9 @@
       
       try{ g.__twistNomineeSnapshot = g.nominees.slice(); }catch(e){}
       try{ if(typeof global.updateHud==='function') global.updateHud(); }catch(e){}
+      
+      // INTEGRITY POST-CHECK: Ensure HOH was not somehow nominated
+      integrityCheckNominees();
     }
     
     // Show adjourn message with POV holder avatar
