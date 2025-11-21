@@ -308,7 +308,7 @@
         const hohPlayer = g.players.find(p => p.id === g.hohId);
         const topHasHOH = Array.from(topPills).some(pill => {
           const parent = pill.closest('.top-roster-tile');
-          return parent && parent.dataset.playerId == g.hohId && 
+          return parent && parent.dataset.playerId === String(g.hohId) && 
                  (pill.classList.contains('status-hoh') || pill.classList.contains('status-hoh-pov'));
         });
         const castHasHOH = Array.from(castTags).some(tag => tag.classList.contains('hoh') && 
@@ -326,7 +326,7 @@
         const povPlayer = g.players.find(p => p.id === g.vetoHolder);
         const topHasPOV = Array.from(topPills).some(pill => {
           const parent = pill.closest('.top-roster-tile');
-          return parent && parent.dataset.playerId == g.vetoHolder && 
+          return parent && parent.dataset.playerId === String(g.vetoHolder) && 
                  (pill.classList.contains('status-pov') || pill.classList.contains('status-hoh-pov'));
         });
         const castHasPOV = Array.from(castTags).some(tag => tag.classList.contains('veto') && 
@@ -344,7 +344,7 @@
         const topHasNoms = g.nominees.every(nomId => {
           return Array.from(topPills).some(pill => {
             const parent = pill.closest('.top-roster-tile');
-            return parent && parent.dataset.playerId == nomId && pill.classList.contains('status-nom');
+            return parent && parent.dataset.playerId === String(nomId) && pill.classList.contains('status-nom');
           });
         });
         const castHasNoms = g.nominees.every(nomId => {
@@ -367,7 +367,7 @@
         const player = g.players.find(p => p.id === g.hohId);
         const topHasCombined = Array.from(topPills).some(pill => {
           const parent = pill.closest('.top-roster-tile');
-          return parent && parent.dataset.playerId == g.hohId && 
+          return parent && parent.dataset.playerId === String(g.hohId) && 
                  (pill.classList.contains('status-hoh-pov') || pill.classList.contains('hoh-pov-icons'));
         });
         const castHasBoth = Array.from(castTags).some(tag => tag.classList.contains('hoh')) &&
