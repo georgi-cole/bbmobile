@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FFWD Timer Behavior Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e3ecf5;
+    }
+    
+    h1 { color: #5bd68a; margin-bottom: 10px; }
+    h2 { color: #83bfff; border-bottom: 2px solid #83bfff; padding-bottom: 10px; margin-top: 30px; }
+    
+    .test-section {
+      background: #2a2a3a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      background: linear-gradient(135deg, #5bd68a 0%, #4db878 100%);
+      color: #1a1a1a;
+      margin: 10px 5px;
+    }
+    
+    .timer-display {
+      font-size: 48px;
+      font-family: 'Courier New', monospace;
+      color: #5bd68a;
+      text-align: center;
+      padding: 30px;
+      background: #1a2a3a;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    
+    .status {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #333;
+    }
+    
+    .success { color: #5bd68a; }
+    .error { color: #ff6b9d; }
+    .info { color: #83bfff; }
+    .warning { color: #f7b955; }
+  </style>
+</head>
+<body>
+  <h1>⏩ FFWD Timer Behavior Demonstration</h1>
+  <p>This demonstrates how the timer behaves when FFWD is activated.</p>
+
+  <div class="test-section">
+    <h2>Scenario 1: Start phase with 30 seconds</h2>
+    <p><strong>Expected behavior:</strong> Timer starts at 00:30 and counts down normally. When FFWD is clicked, timer compresses to ~00:01-00:02 and phase ends quickly.</p>
+    
+    <div class="timer-display" id="timer1">00:30</div>
+    
+    <button onclick="startScenario1()">Start 30s Phase</button>
+    <button onclick="activateFFWD1()">⏩ Activate FFWD</button>
+    <button onclick="resetScenario1()">Reset</button>
+    
+    <div id="log1" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Scenario 2: Activate FFWD with 10 seconds remaining</h2>
+    <p><strong>Expected behavior:</strong> Timer at 00:10, when FFWD clicked, compresses to 00:01 and phase ends.</p>
+    
+    <div class="timer-display" id="timer2">00:10</div>
+    
+    <button onclick="startScenario2()">Start 10s Phase</button>
+    <button onclick="activateFFWD2()">⏩ Activate FFWD</button>
+    <button onclick="resetScenario2()">Reset</button>
+    
+    <div id="log2" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>How the FFWD Timer Compression Works</h2>
+    <div class="status">
+      <div class="log-entry info">1. Phase starts with normal timer countdown (1 second per second)</div>
+      <div class="log-entry info">2. User clicks ⏩ FFWD button</div>
+      <div class="log-entry success">3. activateFastForward() is called</div>
+      <div class="log-entry success">4. Remaining time is compressed: remainingTime * 0.1 (10x speed)</div>
+      <div class="log-entry success">5. Minimum window enforced: max(compressed, 1500ms)</div>
+      <div class="log-entry success">6. Timer shows 00:01 or 00:02 remaining</div>
+      <div class="log-entry success">7. Phase ends after minimum window</div>
+      <div class="log-entry info">8. Cards and animations are also accelerated during this time</div>
+    </div>
+    
+    <h3>Example Calculations:</h3>
+    <div class="status">
+      <div class="log-entry">30s remaining: 30000ms * 0.1 = 3000ms → enforced to 1500ms → shows 00:01-00:02</div>
+      <div class="log-entry">10s remaining: 10000ms * 0.1 = 1000ms → enforced to 1500ms → shows 00:01-00:02</div>
+      <div class="log-entry">5s remaining: 5000ms * 0.1 = 500ms → enforced to 1500ms → shows 00:01-00:02</div>
+      <div class="log-entry">2s remaining: 2000ms * 0.1 = 200ms → enforced to 1500ms → shows 00:01-00:02</div>
+    </div>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script>
+    let interval1, interval2;
+    let remaining1 = 30, remaining2 = 10;
+    let ffActive1 = false, ffActive2 = false;
+
+    function log(containerId, message, type = 'info') {
+      const container = document.getElementById(containerId);
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      container.appendChild(entry);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // Scenario 1: 30 seconds
+    function startScenario1() {
+      if (interval1) clearInterval(interval1);
+      remaining1 = 30;
+      ffActive1 = false;
+      document.getElementById('log1').innerHTML = '';
+      log('log1', 'Phase started with 30 seconds', 'info');
+      
+      interval1 = setInterval(() => {
+        if (remaining1 <= 0) {
+          clearInterval(interval1);
+          document.getElementById('timer1').textContent = '00:00';
+          log('log1', 'Phase ended', 'success');
+          return;
+        }
+        
+        remaining1 -= (ffActive1 ? 10 : 1); // 10x speed when FFWD active
+        if (remaining1 < 0) remaining1 = 0;
+        document.getElementById('timer1').textContent = formatTime(remaining1);
+      }, 1000);
+    }
+
+    function activateFFWD1() {
+      if (ffActive1) {
+        log('log1', 'FFWD already active', 'warning');
+        return;
+      }
+      
+      ffActive1 = true;
+      
+      // Simulate compression: remaining * 0.1, min 1.5s
+      const compressed = Math.max(remaining1 * 0.1, 1.5);
+      log('log1', `FFWD activated! Remaining ${remaining1}s compressed to ${compressed.toFixed(1)}s`, 'success');
+      
+      // Jump to compressed time
+      remaining1 = Math.ceil(compressed);
+      document.getElementById('timer1').textContent = formatTime(remaining1);
+      
+      log('log1', 'Timer now running at 10x speed (shows ~00:01-00:02)', 'info');
+    }
+
+    function resetScenario1() {
+      if (interval1) clearInterval(interval1);
+      remaining1 = 30;
+      ffActive1 = false;
+      document.getElementById('timer1').textContent = '00:30';
+      document.getElementById('log1').innerHTML = '';
+      log('log1', 'Reset complete', 'info');
+    }
+
+    // Scenario 2: 10 seconds
+    function startScenario2() {
+      if (interval2) clearInterval(interval2);
+      remaining2 = 10;
+      ffActive2 = false;
+      document.getElementById('log2').innerHTML = '';
+      log('log2', 'Phase started with 10 seconds', 'info');
+      
+      interval2 = setInterval(() => {
+        if (remaining2 <= 0) {
+          clearInterval(interval2);
+          document.getElementById('timer2').textContent = '00:00';
+          log('log2', 'Phase ended', 'success');
+          return;
+        }
+        
+        remaining2 -= (ffActive2 ? 10 : 1);
+        if (remaining2 < 0) remaining2 = 0;
+        document.getElementById('timer2').textContent = formatTime(remaining2);
+      }, 1000);
+    }
+
+    function activateFFWD2() {
+      if (ffActive2) {
+        log('log2', 'FFWD already active', 'warning');
+        return;
+      }
+      
+      ffActive2 = true;
+      
+      const compressed = Math.max(remaining2 * 0.1, 1.5);
+      log('log2', `FFWD activated! Remaining ${remaining2}s compressed to ${compressed.toFixed(1)}s`, 'success');
+      
+      remaining2 = Math.ceil(compressed);
+      document.getElementById('timer2').textContent = formatTime(remaining2);
+      
+      log('log2', 'Timer now running at 10x speed (shows ~00:01-00:02)', 'info');
+    }
+
+    function resetScenario2() {
+      if (interval2) clearInterval(interval2);
+      remaining2 = 10;
+      ffActive2 = false;
+      document.getElementById('timer2').textContent = '00:10';
+      document.getElementById('log2').innerHTML = '';
+      log('log2', 'Reset complete', 'info');
+    }
+  </script>
+</body>
+</html>
