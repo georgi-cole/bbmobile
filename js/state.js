@@ -174,11 +174,15 @@
     const g = game;
     if(!g || !g.__ffActive) return ms;
     
+    // Default fallback values for backward compatibility
+    const DEFAULT_MIN = 40;
+    const DEFAULT_MAX = 300;
+    
     const mult = g.__ffMultiplier || 0.1;
     
-    // Prefer new per-card playback min/max if defined, fallback to legacy min/max
-    const cardMin = g.cfg?.fastForwardPlaybackMinCardMs ?? (g.cfg?.fastForwardMinDuration || 40);
-    const cardMax = g.cfg?.fastForwardPlaybackMaxCardMs ?? (g.cfg?.fastForwardMaxDuration || 300);
+    // Prefer new per-card playback min/max if defined, fallback to legacy min/max, then defaults
+    const cardMin = g.cfg?.fastForwardPlaybackMinCardMs ?? g.cfg?.fastForwardMinDuration ?? DEFAULT_MIN;
+    const cardMax = g.cfg?.fastForwardPlaybackMaxCardMs ?? g.cfg?.fastForwardMaxDuration ?? DEFAULT_MAX;
     
     const compressed = Math.round(ms * mult);
     const normalized = Math.max(cardMin, Math.min(compressed, cardMax));

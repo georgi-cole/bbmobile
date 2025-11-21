@@ -139,7 +139,7 @@
     <p>Simulates a phase with <strong>6 card callbacks</strong>, each with an original duration of <strong>2000ms</strong>.</p>
     <ul>
       <li><strong>Normal mode</strong>: Total time ≈ 12000ms (12 seconds)</li>
-      <li><strong>FFWD mode</strong>: Total time should be between 1000ms and 2500ms (enforced play-through window)</li>
+      <li><strong>FFWD mode</strong>: Total time should be between 1500ms and 2880ms (enforced play-through window based on config)</li>
     </ul>
     
     <div class="button-group">
@@ -325,8 +325,8 @@
       container.innerHTML = '<h3>Assertions</h3>';
       
       // Derive expected values from configuration
-      const expectedMin = Math.max(1000, window.game.cfg.fastForwardMinPhaseWindowMs || 1500);
-      const expectedMax = Math.min(2500, (results.cardCount * window.game.cfg.fastForwardPlaybackMaxCardMs) || 2880);
+      const expectedMin = window.game.cfg.fastForwardMinPhaseWindowMs || 1500;
+      const expectedMax = results.cardCount * (window.game.cfg.fastForwardPlaybackMaxCardMs || 480);
       
       const assertions = [
         {

@@ -1190,9 +1190,10 @@ header.innerHTML = `
     
     // If no pending timeouts, synthesize a micro-drain delay to avoid instant jump
     if(pending === 0){
-      // Use 1.5x the minimum card duration as micro-delay to ensure perceptible transition
+      // Micro-drain delay factor: ensures perceptible transition even with no timeouts
+      const MICRO_DRAIN_MULTIPLIER = 1.5;
       const baseMin = game.cfg?.fastForwardPlaybackMinCardMs || 120;
-      const microDelay = Math.round(baseMin * 1.5);
+      const microDelay = Math.round(baseMin * MICRO_DRAIN_MULTIPLIER);
       console.info(`[ff] No pending timeouts; synthesizing micro-drain delay: ${microDelay}ms`);
       await new Promise(resolve => setTimeout(resolve, microDelay));
     }

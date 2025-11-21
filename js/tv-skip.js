@@ -32,6 +32,9 @@
     'social',
     'social_intermission'
   ];
+  
+  // Phase exclusions for fast-forward
+  const FFWD_EXCLUDED_PHASES = ['lobby'];
 
   let skipTimerPill = null;
   let skipButton = null;
@@ -226,7 +229,8 @@
 
     // Determine if button should be enabled based on phase and config
     const isSkippablePhase = phase && SKIPPABLE_PHASES.includes(phase);
-    const alwaysEnableActive = cfg.fastForwardAlwaysEnable && phase && phase !== 'lobby';
+    const isExcludedPhase = phase && FFWD_EXCLUDED_PHASES.includes(phase);
+    const alwaysEnableActive = cfg.fastForwardAlwaysEnable && phase && !isExcludedPhase;
     
     if(isSkippablePhase || alwaysEnableActive){
       shouldEnable = hasHandler;
