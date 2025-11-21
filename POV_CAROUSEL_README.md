@@ -122,19 +122,30 @@ if (selectedId != null) {
 3. **TV Card**: "[Name] is safe"
 4. **Replace Carousel**: Choose replacement nominee
    - Badge added immediately
-   - Blocked: HOH, veto holder, saved player, current nominees
+   - **⚠️ ALWAYS BLOCKED**: HOH, veto holder, saved player, current nominees
+   - **Defense-in-depth**: Pool validated before showing, validated before commit, integrity checked after commit
 5. **TV Card**: "[Name] is now on the block"
 6. **Continue**: Proceed to live vote
+
+**Critical Rule**: The carousel **always excludes the HOH** from replacement selections. This is enforced at three layers:
+1. Pool building (`buildReplacementPool`)
+2. Pre-commit validation (`validateReplacementNominee`)
+3. Post-commit integrity check (`integrityCheckNominees`)
+
+See [FORENSIC_HOH_SELF_NOMINATION.md](./FORENSIC_HOH_SELF_NOMINATION.md) for details on HOH exclusion hardening.
 
 ## Diamond POV Flow
 
 1. **Decision**: TV prompt (auto-yes for Diamond)
 2. **First Carousel**: Choose first replacement nominee
+   - **⚠️ ALWAYS BLOCKED**: HOH, veto holder
 3. **Second Carousel**: Choose second replacement nominee
-   - First nominee excluded from options
+   - **⚠️ ALWAYS BLOCKED**: HOH, veto holder, first nominee
 4. **Badges Updated**: Both badges applied immediately
 5. **TV Card**: "[Names] are now on the block"
 6. **Continue**: Proceed to live vote
+
+**Critical Rule**: The carousel **always excludes the HOH** from both Diamond POV selections. The second pick also excludes the first nominee selected.
 
 ## Responsive Breakpoints
 
