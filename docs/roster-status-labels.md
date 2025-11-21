@@ -35,15 +35,43 @@ Status labels follow this precedence order (higher priority shown first):
 
 ## Implementation Details
 
-### Status Classes
+### Shared Status Label Helper
+`buildStatusLabel(p, game)` in `js/ui.hud-and-router.js` provides unified status label generation:
+
+```javascript
+function buildStatusLabel(p, game) {
+  // Returns: {text, html, classes, aria}
+  // - text: Display text for the label
+  // - html: Optional HTML content (currently unused)
+  // - classes: Array of CSS classes to apply
+  // - aria: Accessible label text for screen readers
+}
+```
+
+This helper is used by the top roster and can be used by other components that need status labels.
+
+### Top Roster Status Classes
 The following CSS classes are applied to `.top-tile-name` elements:
 
-- `.status-hoh` – HOH text pill
-- `.status-pov` – POV text pill
-- `.status-nom` – NOM text pill
+- `.status-hoh` – HOH text pill (gold gradient)
+- `.status-pov` – POV text pill (green gradient)
+- `.status-nom` – NOM text pill (red gradient)
+- `.status-hoh-pov` – Combined HOH+POV text pill (gold-to-green gradient)
 - `.status-icon-label.hoh-pov-icons` – Combined HOH+POV emoji icons
 - `.status-icon-label.medal-winner` – Winner medal emoji
 - `.status-icon-label.medal-runner-up` – Runner-up medal emoji
+
+### Cast Roster State Tags
+The cast roster (Houseguests table) uses a different approach with state tags in a separate column:
+
+- `.tag.hoh` – HOH tag badge
+- `.tag.veto` – VETO tag badge
+- `.tag.nom` – NOM tag badge
+- `.tag.jury` – JURY tag badge
+- `.tag.winner` – WINNER tag badge
+- `.tag.evicted` – EVICTED tag badge
+
+Multiple tags can display simultaneously in the cast roster (e.g., a player can show both HOH and JURY tags).
 
 ### Legacy Badge Classes (Hidden)
 The following legacy badge classes are **hidden via CSS** (`display: none !important`):
@@ -89,18 +117,29 @@ All statuses should match visible pills in the top roster.
 
 ### Enable Debug Logging
 ```javascript
-// Enable roster debug logging
-window.game.cfg.debugRoster = true;
+// Enable roster debug logging (new unified flag)
+window.__debugRosterLabels = true;
 
-// Or set global flag
+// Legacy flags (still supported for top roster)
+window.game.cfg.debugRoster = true;
 window.DEBUG_ROSTER = true;
 ```
 
-This will log status calculations for each player during `renderTopRoster()`:
+This will log status calculations for each player during rendering:
+
+**Top Roster (`renderTopRoster`):**
 ```
 [roster] render id=1 name=Alice hoh=true pov=false nom=false state=none
 [roster] render id=2 name=Bob hoh=false pov=true nom=false state=none
 [roster] render id=3 name=Charlie hoh=false pov=false nom=true state=nominated
+```
+
+**Cast Roster (`renderCastRoster`):**
+```
+[roster] cast sync complete (hohId=1, vetoHolder=2, nominees=[3,4])
+[roster] cast player=1 name=Alice tags=HOH classes=hoh hoh=true pov=false nom=false
+[roster] cast player=2 name=Bob tags=VETO classes=veto hoh=false pov=true nom=false
+[roster] cast player=3 name=Charlie tags=NOM classes=nom hoh=false pov=false nom=true
 ```
 
 ### Check Badge Sync

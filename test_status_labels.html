@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Status Labels Test - BBMobile</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #ffffff;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .test-header h1 {
+      margin: 0 0 10px 0;
+    }
+    
+    .test-header p {
+      color: #999;
+      margin: 0;
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    
+    .controls button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #4a4a4a;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    .controls button:hover {
+      background: #5a5a5a;
+    }
+    
+    .controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .roster-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .roster-section {
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    
+    .roster-section h2 {
+      margin: 0 0 15px 0;
+      font-size: 18px;
+    }
+    
+    #topRosterContainer {
+      min-height: 150px;
+    }
+    
+    #castRosterContainer {
+      min-height: 300px;
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #3a3a3a;
+      border-radius: 6px;
+      border-left: 4px solid #666;
+    }
+    
+    .status-indicator.pass {
+      border-left-color: #4db85b;
+    }
+    
+    .status-indicator.fail {
+      border-left-color: #e64a4a;
+    }
+    
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    
+    .status-badge.pass {
+      background: #4db85b;
+      color: #1a1a1a;
+    }
+    
+    .status-badge.fail {
+      background: #e64a4a;
+      color: #ffffff;
+    }
+    
+    .debug-output {
+      background: #1a1a1a;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+    
+    .debug-output .log-line {
+      margin: 2px 0;
+      color: #999;
+    }
+    
+    .debug-output .log-line.info {
+      color: #7eed9d;
+    }
+    
+    .debug-output .log-line.warn {
+      color: #ffd775;
+    }
+    
+    .debug-output .log-line.error {
+      color: #ff9e9e;
+    }
+    
+    .pill-debug-outline .top-tile-name {
+      outline: 2px solid rgba(255, 255, 255, 0.3);
+      outline-offset: 2px;
+    }
+    
+    .pill-debug-outline .tag {
+      outline: 2px solid rgba(255, 255, 255, 0.3);
+      outline-offset: 2px;
+    }
+    
+    @media (max-width: 900px) {
+      .roster-comparison {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🎯 Status Labels Test Harness</h1>
+      <p>Test concurrent display of HOH, POV, and NOM status pills across both roster views</p>
+    </div>
+    
+    <div class="controls">
+      <button id="btnReset">🔄 Reset Game</button>
+      <button id="btnHOH">1️⃣ Simulate HOH Win</button>
+      <button id="btnNoms">2️⃣ Simulate Nominations</button>
+      <button id="btnPOV">3️⃣ Simulate POV Win (Different Player)</button>
+      <button id="btnHOHPOV">4️⃣ Force HOH Also Has POV</button>
+      <button id="btnEvict">5️⃣ Simulate Eviction</button>
+      <button id="btnFinale">6️⃣ Declare Winner</button>
+      <button id="btnToggleDebug">🐛 Toggle Debug</button>
+    </div>
+    
+    <div class="roster-comparison">
+      <div class="roster-section">
+        <h2>Top Roster (Tile View)</h2>
+        <div id="topRosterContainer"></div>
+      </div>
+      
+      <div class="roster-section">
+        <h2>Houseguests (Cast Table)</h2>
+        <div id="castRosterContainer"></div>
+      </div>
+    </div>
+    
+    <div class="roster-section">
+      <h2>Validation Results</h2>
+      <div id="validationResults"></div>
+    </div>
+    
+    <div class="roster-section">
+      <h2>Debug Console</h2>
+      <div id="debugOutput" class="debug-output"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Mock the game environment
+    window.global = window;
+    
+    // Initialize game state
+    function initGame() {
+      window.game = {
+        week: 1,
+        phase: 'intermission',
+        hohId: null,
+        vetoHolder: null,
+        nominees: [],
+        players: [
+          { id: 1, name: 'Alice', human: false, evicted: false, hoh: false, nominated: false, nominationState: 'none', affinity: {}, wins: { hoh: 0, veto: 0 } },
+          { id: 2, name: 'Bob', human: false, evicted: false, hoh: false, nominated: false, nominationState: 'none', affinity: {}, wins: { hoh: 0, veto: 0 } },
+          { id: 3, name: 'Carol', human: false, evicted: false, hoh: false, nominated: false, nominationState: 'none', affinity: {}, wins: { hoh: 0, veto: 0 } },
+          { id: 4, name: 'Dave', human: false, evicted: false, hoh: false, nominated: false, nominationState: 'none', affinity: {}, wins: { hoh: 0, veto: 0 } },
+          { id: 5, name: 'Eve', human: false, evicted: false, hoh: false, nominated: false, nominationState: 'none', affinity: {}, wins: { hoh: 0, veto: 0 } },
+        ],
+        juryHouse: [],
+        cfg: {
+          showTopRoster: true,
+          debugRoster: false,
+          enableJuryHouse: false,
+        },
+        __suppressNomBadges: false,
+      };
+      
+      window.__debugRosterLabels = false;
+    }
+    
+    // Mock helper functions
+    window.safeName = (id) => {
+      const p = window.game.players.find(p => p.id === id);
+      return p ? p.name : 'Unknown';
+    };
+    
+    window.alivePlayers = () => {
+      return window.game.players.filter(p => !p.evicted);
+    };
+    
+    window.getDicebearUrl = (seed) => {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'Guest')}`;
+    };
+    
+    // Mock syncPlayerBadgeStates
+    window.syncPlayerBadgeStates = function() {
+      const g = window.game;
+      const nominees = Array.isArray(g.nominees) ? g.nominees : [];
+      const nomineeSet = new Set(nominees);
+      
+      for(const p of g.players){
+        p.hoh = (p.id === g.hohId);
+        p.nominated = nomineeSet.has(p.id);
+        
+        if(p.nominationState !== 'pendingSave' && p.nominationState !== 'saved' && p.nominationState !== 'replacement'){
+          p.nominationState = p.nominated ? 'nominated' : 'none';
+        }
+      }
+      
+      logDebug('[sync] badge states synchronized', 'info');
+    };
+    
+    // Debug logging
+    function logDebug(message, level = 'log') {
+      const output = document.getElementById('debugOutput');
+      if (!output) return;
+      
+      const line = document.createElement('div');
+      line.className = `log-line ${level}`;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      output.appendChild(line);
+      output.scrollTop = output.scrollHeight;
+      
+      // Also log to console if debug enabled
+      if (window.__debugRosterLabels) {
+        console[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'info'](message);
+      }
+    }
+    
+    // Test validation
+    function validateRosters() {
+      const results = [];
+      const g = window.game;
+      
+      // Check top roster pills
+      const topPills = document.querySelectorAll('#topRosterContainer .top-tile-name');
+      const castTags = document.querySelectorAll('#castRosterContainer .tag');
+      
+      logDebug(`Validating: ${topPills.length} top roster pills, ${castTags.length} cast tags`, 'info');
+      
+      // Validate HOH
+      if (g.hohId) {
+        const hohPlayer = g.players.find(p => p.id === g.hohId);
+        const topHasHOH = Array.from(topPills).some(pill => {
+          const parent = pill.closest('.top-roster-tile');
+          return parent && parent.dataset.playerId === String(g.hohId) && 
+                 (pill.classList.contains('status-hoh') || pill.classList.contains('status-hoh-pov'));
+        });
+        const castHasHOH = Array.from(castTags).some(tag => tag.classList.contains('hoh') && 
+                                                             tag.textContent.includes('HOH'));
+        
+        results.push({
+          name: 'HOH Indicator',
+          pass: topHasHOH && castHasHOH,
+          details: `Top: ${topHasHOH ? '✓' : '✗'}, Cast: ${castHasHOH ? '✓' : '✗'} (Player: ${hohPlayer?.name})`
+        });
+      }
+      
+      // Validate POV
+      if (g.vetoHolder) {
+        const povPlayer = g.players.find(p => p.id === g.vetoHolder);
+        const topHasPOV = Array.from(topPills).some(pill => {
+          const parent = pill.closest('.top-roster-tile');
+          return parent && parent.dataset.playerId === String(g.vetoHolder) && 
+                 (pill.classList.contains('status-pov') || pill.classList.contains('status-hoh-pov'));
+        });
+        const castHasPOV = Array.from(castTags).some(tag => tag.classList.contains('veto') && 
+                                                             tag.textContent.includes('VETO'));
+        
+        results.push({
+          name: 'POV Indicator',
+          pass: topHasPOV && castHasPOV,
+          details: `Top: ${topHasPOV ? '✓' : '✗'}, Cast: ${castHasPOV ? '✓' : '✗'} (Player: ${povPlayer?.name})`
+        });
+      }
+      
+      // Validate Nominees
+      if (g.nominees && g.nominees.length > 0) {
+        const topHasNoms = g.nominees.every(nomId => {
+          return Array.from(topPills).some(pill => {
+            const parent = pill.closest('.top-roster-tile');
+            return parent && parent.dataset.playerId === String(nomId) && pill.classList.contains('status-nom');
+          });
+        });
+        const castHasNoms = g.nominees.every(nomId => {
+          return Array.from(castTags).some(tag => {
+            const row = tag.closest('.roster-row');
+            return row && tag.classList.contains('nom') && tag.textContent.includes('NOM');
+          });
+        });
+        
+        const nomNames = g.nominees.map(id => window.safeName(id)).join(', ');
+        results.push({
+          name: 'NOM Indicators',
+          pass: topHasNoms && castHasNoms,
+          details: `Top: ${topHasNoms ? '✓' : '✗'}, Cast: ${castHasNoms ? '✓' : '✗'} (Players: ${nomNames})`
+        });
+      }
+      
+      // Validate HOH+POV combined
+      if (g.hohId && g.vetoHolder && g.hohId === g.vetoHolder) {
+        const player = g.players.find(p => p.id === g.hohId);
+        const topHasCombined = Array.from(topPills).some(pill => {
+          const parent = pill.closest('.top-roster-tile');
+          return parent && parent.dataset.playerId === String(g.hohId) && 
+                 (pill.classList.contains('status-hoh-pov') || pill.classList.contains('hoh-pov-icons'));
+        });
+        const castHasBoth = Array.from(castTags).some(tag => tag.classList.contains('hoh')) &&
+                            Array.from(castTags).some(tag => tag.classList.contains('veto'));
+        
+        results.push({
+          name: 'HOH+POV Combined',
+          pass: topHasCombined && castHasBoth,
+          details: `Top: ${topHasCombined ? '✓' : '✗'}, Cast: ${castHasBoth ? '✓' : '✗'} (Player: ${player?.name})`
+        });
+      }
+      
+      // Display results
+      const resultsContainer = document.getElementById('validationResults');
+      resultsContainer.innerHTML = '';
+      
+      if (results.length === 0) {
+        resultsContainer.innerHTML = '<div class="status-indicator"><p>No active statuses to validate</p></div>';
+        return;
+      }
+      
+      results.forEach(result => {
+        const div = document.createElement('div');
+        div.className = `status-indicator ${result.pass ? 'pass' : 'fail'}`;
+        div.innerHTML = `
+          <span class="status-badge ${result.pass ? 'pass' : 'fail'}">${result.pass ? 'PASS' : 'FAIL'}</span>
+          <div>
+            <strong>${result.name}:</strong> ${result.details}
+          </div>
+        `;
+        resultsContainer.appendChild(div);
+      });
+      
+      const allPass = results.every(r => r.pass);
+      logDebug(`Validation complete: ${results.filter(r => r.pass).length}/${results.length} passed`, allPass ? 'info' : 'warn');
+    }
+    
+    // Test scenarios
+    function resetGame() {
+      initGame();
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug('Game reset to initial state', 'info');
+      validateRosters();
+    }
+    
+    function simulateHOH() {
+      const g = window.game;
+      g.hohId = 1; // Alice wins HOH
+      g.phase = 'nominations';
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug(`HOH: ${window.safeName(g.hohId)} won HOH`, 'info');
+      validateRosters();
+    }
+    
+    function simulateNominations() {
+      const g = window.game;
+      if (!g.hohId) {
+        logDebug('Cannot nominate without HOH - run step 1 first', 'warn');
+        return;
+      }
+      g.nominees = [3, 4]; // Carol and Dave nominated
+      g.phase = 'veto_comp';
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug(`Nominations: ${g.nominees.map(id => window.safeName(id)).join(', ')} nominated`, 'info');
+      validateRosters();
+    }
+    
+    function simulatePOV() {
+      const g = window.game;
+      if (g.nominees.length === 0) {
+        logDebug('Cannot award POV without nominations - run step 2 first', 'warn');
+        return;
+      }
+      g.vetoHolder = 2; // Bob wins POV (different from HOH)
+      g.phase = 'veto_ceremony';
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug(`POV: ${window.safeName(g.vetoHolder)} won Power of Veto`, 'info');
+      validateRosters();
+    }
+    
+    function forceHOHPOV() {
+      const g = window.game;
+      if (!g.hohId) {
+        logDebug('Cannot combine HOH+POV without HOH - run step 1 first', 'warn');
+        return;
+      }
+      g.vetoHolder = g.hohId; // HOH wins POV
+      g.phase = 'veto_ceremony';
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug(`HOH+POV: ${window.safeName(g.hohId)} holds both HOH and POV`, 'info');
+      validateRosters();
+    }
+    
+    function simulateEviction() {
+      const g = window.game;
+      if (g.nominees.length === 0) {
+        logDebug('Cannot evict without nominations - run step 2 first', 'warn');
+        return;
+      }
+      const evictedId = g.nominees[0];
+      const evictedPlayer = g.players.find(p => p.id === evictedId);
+      evictedPlayer.evicted = true;
+      evictedPlayer.weekEvicted = g.week;
+      evictedPlayer.nominated = false;
+      evictedPlayer.nominationState = 'none';
+      g.nominees = g.nominees.filter(id => id !== evictedId);
+      g.week++;
+      g.hohId = null;
+      g.vetoHolder = null;
+      g.phase = 'intermission';
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug(`Eviction: ${evictedPlayer.name} evicted in Week ${evictedPlayer.weekEvicted}`, 'info');
+      validateRosters();
+    }
+    
+    function declareWinner() {
+      const g = window.game;
+      const alive = window.alivePlayers();
+      if (alive.length < 2) {
+        logDebug('Need at least 2 players for finale', 'warn');
+        return;
+      }
+      
+      const winner = alive[0];
+      const runnerUp = alive[1];
+      
+      winner.showFinalLabel = 'WINNER';
+      winner.winner = true;
+      runnerUp.showFinalLabel = 'RUNNER-UP';
+      runnerUp.runnerUp = true;
+      
+      g.phase = 'finale';
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug(`Finale: ${winner.name} wins! ${runnerUp.name} is runner-up`, 'info');
+      validateRosters();
+    }
+    
+    function toggleDebug() {
+      window.__debugRosterLabels = !window.__debugRosterLabels;
+      window.game.cfg.debugRoster = window.__debugRosterLabels;
+      window.DEBUG_ROSTER = window.__debugRosterLabels;
+      
+      const btn = document.getElementById('btnToggleDebug');
+      btn.textContent = window.__debugRosterLabels ? '🐛 Debug ON' : '🐛 Toggle Debug';
+      btn.style.background = window.__debugRosterLabels ? '#4db85b' : '#4a4a4a';
+      
+      logDebug(`Debug logging ${window.__debugRosterLabels ? 'enabled' : 'disabled'}`, 'info');
+    }
+    
+    // Render both rosters
+    function renderRosters() {
+      // Import the real rendering functions from ui.hud-and-router.js
+      // For this test, we'll simulate them inline
+      
+      renderTopRosterMock();
+      renderCastRosterMock();
+    }
+    
+    function renderTopRosterMock() {
+      const container = document.getElementById('topRosterContainer');
+      container.innerHTML = '';
+      
+      const host = document.createElement('div');
+      host.id = 'topRoster';
+      host.className = 'top-roster pill-debug-outline';
+      
+      const row = document.createElement('div');
+      row.className = 'top-roster-row';
+      
+      window.game.players.forEach(p => {
+        const tile = document.createElement('div');
+        tile.className = 'top-roster-tile';
+        tile.dataset.playerId = p.id;
+        if (p.evicted) tile.classList.add('evicted');
+        
+        const wrap = document.createElement('div');
+        wrap.className = 'top-tile-avatar-wrap';
+        
+        const img = document.createElement('img');
+        img.className = 'top-tile-avatar' + (p.evicted ? ' grayed' : '');
+        img.src = window.getDicebearUrl(p.name);
+        img.alt = p.name;
+        wrap.appendChild(img);
+        
+        // Use buildStatusLabel if available, otherwise inline logic
+        const name = document.createElement('div');
+        name.className = 'top-tile-name';
+        
+        const isWinner = p.showFinalLabel === 'WINNER';
+        const isRunnerUp = p.showFinalLabel === 'RUNNER-UP';
+        const hasHOH = p.hoh;
+        const hasPOV = window.game.vetoHolder === p.id;
+        const hasNom = p.nominated && !p.evicted;
+        
+        if (isWinner) {
+          name.textContent = '🥇';
+          name.classList.add('status-icon-label', 'medal-winner');
+        } else if (isRunnerUp) {
+          name.textContent = '🥈';
+          name.classList.add('status-icon-label', 'medal-runner-up');
+        } else if (hasNom) {
+          name.textContent = 'NOM';
+          name.classList.add('status-nom');
+        } else if (hasHOH && hasPOV) {
+          name.innerHTML = '<span class="icon-hoh">👑</span><span class="icon-veto">🛡</span>';
+          name.classList.add('status-icon-label', 'hoh-pov-icons');
+        } else if (hasHOH) {
+          name.textContent = 'HOH';
+          name.classList.add('status-hoh');
+        } else if (hasPOV) {
+          name.textContent = 'POV';
+          name.classList.add('status-pov');
+        } else {
+          name.textContent = p.name;
+        }
+        
+        tile.appendChild(wrap);
+        tile.appendChild(name);
+        row.appendChild(tile);
+      });
+      
+      host.appendChild(row);
+      container.appendChild(host);
+    }
+    
+    function renderCastRosterMock() {
+      const container = document.getElementById('castRosterContainer');
+      container.innerHTML = '';
+      
+      const list = document.createElement('div');
+      list.className = 'roster-list pill-debug-outline';
+      
+      const header = document.createElement('div');
+      header.className = 'roster-row header';
+      header.innerHTML = `
+        <div class="cell player tiny muted">Player</div>
+        <div class="cell state tiny muted">State</div>
+        <div class="cell evict tiny muted">Ev Wk</div>
+      `;
+      list.appendChild(header);
+      
+      window.game.players.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'roster-row';
+        if (p.evicted) row.classList.add('evicted');
+        
+        const c1 = document.createElement('div');
+        c1.className = 'cell player';
+        c1.innerHTML = `
+          <div class="chip">
+            <img class="avatar ${p.evicted ? 'grayed' : ''}" src="${window.getDicebearUrl(p.name)}" alt="${p.name}">
+            <div class="meta"><div class="name">${p.name}</div></div>
+          </div>
+        `;
+        row.appendChild(c1);
+        
+        const c2 = document.createElement('div');
+        c2.className = 'cell state';
+        
+        // Build tags
+        const tags = [];
+        if (p.hoh) tags.push({ k: 'hoh', label: 'HOH' });
+        if (window.game.vetoHolder === p.id) tags.push({ k: 'veto', label: 'VETO' });
+        if (p.nominated && !p.evicted) tags.push({ k: 'nom', label: 'NOM' });
+        if (p.showFinalLabel === 'WINNER') tags.push({ k: 'winner', label: 'WINNER' });
+        if (p.showFinalLabel === 'RUNNER-UP') tags.push({ k: 'runner', label: 'RUNNER-UP' });
+        if (p.evicted) tags.push({ k: 'evicted', label: 'EVICTED' });
+        
+        c2.innerHTML = tags.length 
+          ? tags.map(t => `<span class="tag ${t.k}">${t.label}</span>`).join(' ')
+          : '<span class="tiny muted">—</span>';
+        row.appendChild(c2);
+        
+        const c3 = document.createElement('div');
+        c3.className = 'cell evict';
+        c3.textContent = p.evicted && p.weekEvicted != null ? String(p.weekEvicted) : '';
+        row.appendChild(c3);
+        
+        list.appendChild(row);
+      });
+      
+      container.appendChild(list);
+    }
+    
+    // Wire up controls
+    document.getElementById('btnReset').addEventListener('click', resetGame);
+    document.getElementById('btnHOH').addEventListener('click', simulateHOH);
+    document.getElementById('btnNoms').addEventListener('click', simulateNominations);
+    document.getElementById('btnPOV').addEventListener('click', simulatePOV);
+    document.getElementById('btnHOHPOV').addEventListener('click', forceHOHPOV);
+    document.getElementById('btnEvict').addEventListener('click', simulateEviction);
+    document.getElementById('btnFinale').addEventListener('click', declareWinner);
+    document.getElementById('btnToggleDebug').addEventListener('click', toggleDebug);
+    
+    // Initialize
+    initGame();
+    renderRosters();
+    logDebug('Test harness initialized', 'info');
+    logDebug('Click buttons to simulate game progression', 'info');
+    validateRosters();
+  </script>
+</body>
+</html>
