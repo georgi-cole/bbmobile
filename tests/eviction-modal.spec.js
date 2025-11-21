@@ -27,8 +27,8 @@ test.describe('Eviction Modal', () => {
     // Wait for page to load
     await page.waitForLoadState('domcontentloaded');
     
-    // Wait for modal module to load
-    await page.waitForFunction(() => window.EvictionModal !== undefined, { timeout: 10000 });
+    // Wait for modal module to load and verify it's usable
+    await page.waitForFunction(() => window.EvictionModal && typeof window.EvictionModal.show === 'function', { timeout: 10000 });
   });
 
   test('should display eviction modal centered and fully visible', async ({ page }) => {

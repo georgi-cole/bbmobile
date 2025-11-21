@@ -332,10 +332,10 @@
     }
     
     // Verify modal module loaded
-    if (window.EvictionModal) {
+    if (window.EvictionModal && typeof window.EvictionModal.show === 'function') {
       console.log('✅ EvictionModal module loaded successfully');
     } else {
-      console.error('❌ EvictionModal module not found!');
+      console.error('❌ EvictionModal module not found or show method missing!');
     }
   </script>
 </body>

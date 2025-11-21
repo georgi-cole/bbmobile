@@ -19,8 +19,8 @@ test.describe('Eviction Modal Screenshot', () => {
     // Navigate to test page
     await page.goto('/test_eviction_modal.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
     
-    // Wait for modal module
-    await page.waitForFunction(() => typeof window.EvictionModal !== 'undefined', { timeout: 10000 });
+    // Wait for modal module and verify it's usable
+    await page.waitForFunction(() => window.EvictionModal && typeof window.EvictionModal.show === 'function', { timeout: 10000 });
     
     // Wait a bit for page to settle
     await page.waitForTimeout(500);

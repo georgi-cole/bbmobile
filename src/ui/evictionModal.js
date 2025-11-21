@@ -176,19 +176,28 @@
 
   /**
    * Sanitize text to prevent XSS
-   * Simple sanitizer for display text only
+   * Simple sanitizer for plain text display only
+   * NOTE: For more complex HTML content, use a library like DOMPurify
    */
   function sanitizeText(text) {
     if (typeof text !== 'string') return '';
-    // Remove any HTML tags
-    return text.replace(/<[^>]*>/g, '');
+    // Create a text node to safely escape HTML entities
+    const div = document.createElement('div');
+    div.textContent = text;
+    // Return the sanitized text (HTML entities are automatically escaped)
+    return div.innerHTML;
   }
 
-  // Export API
-  global.EvictionModal = {
+  // Export API to both window and global for consistency with codebase patterns
+  const api = {
     show: showEvictionResultModal,
     hide: hideModal
   };
+  
+  global.EvictionModal = api;
+  if (typeof window !== 'undefined' && window !== global) {
+    window.EvictionModal = api;
+  }
 
   console.info('[evictionModal] Module initialized');
 
