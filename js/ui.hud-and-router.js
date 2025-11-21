@@ -813,6 +813,11 @@ header.innerHTML = `
       const hasNom = !p.evicted && !game.__suppressNomBadges && 
         (nomState === 'nominated' || nomState === 'pendingSave' || nomState === 'replacement');
       
+      // Debug logging (gated by debug flag if available)
+      if(game.cfg?.debugRoster || (typeof g.DEBUG_ROSTER !== 'undefined' && g.DEBUG_ROSTER)){
+        console.info('[roster] render id=' + p.id + ' name=' + (p.name||'?') + ' hoh=' + hasHOH + ' pov=' + hasVeto + ' nom=' + hasNom + ' state=' + nomState);
+      }
+      
       // Add pulse effect for nominees
       if(hasNom){
         wrap.classList.add('nominee-pulse');
@@ -1065,7 +1070,12 @@ header.innerHTML = `
 
     // Synchronize player badge states before rendering
     if(typeof g.syncPlayerBadgeStates === 'function'){
-      g.syncPlayerBadgeStates();
+      try {
+        g.syncPlayerBadgeStates();
+        console.info('[hud] badge sync complete (hohId=' + game.hohId + ', vetoHolder=' + game.vetoHolder + ', nominees=' + JSON.stringify(game.nominees) + ')');
+      } catch(e) {
+        console.warn('[hud] badge sync failed', e);
+      }
     }
 
     function setText(id, val){
