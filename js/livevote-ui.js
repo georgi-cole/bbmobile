@@ -864,8 +864,7 @@
       rightName = state.rightName,
       leftId = state.leftId,
       rightId = state.rightId,
-      onVote = null,
-      onSkip = null
+      onVote = null
     } = options;
     
     // Store tie-break and final4 flags for carousel CTA updates
@@ -874,7 +873,7 @@
 
     // If using carousel mode, create single large contextual button
     if (state.useCarousel) {
-      return createCarouselCTA({ enabled, isTieBreak, isFinal4, onVote, onSkip });
+      return createCarouselCTA({ enabled, isTieBreak, isFinal4, onVote });
     }
 
     // Find CTA side containers under each contestant
@@ -966,54 +965,6 @@
       rightCtaSide.appendChild(btnRight);
     }
 
-    // Add Skip button centered between nominees (normal vote only, not tie-break or final4)
-    if (!isTieBreak && !isFinal4 && onSkip) {
-      // Create centered skip container between the two CTA sides
-      const skipContainer = document.createElement('div');
-      skipContainer.className = 'lv2-skip-container';
-
-      const skipBtn = document.createElement('button');
-      skipBtn.className = 'lv2-skip-pill';
-      skipBtn.textContent = 'Skip';
-      skipBtn.disabled = !enabled;
-      skipBtn.setAttribute('aria-label', 'Skip your vote (no eviction cast)');
-      skipBtn.setAttribute('aria-describedby', 'lv2-skip-description');
-      skipBtn.dataset.key = 's';
-      skipBtn.onclick = () => {
-        if (onSkip) {
-          skipBtn.disabled = true;
-          // Disable evict buttons too
-          const allPills = state.container?.querySelectorAll('.lv2-cta-pill');
-          allPills?.forEach(pill => pill.disabled = true);
-          onSkip();
-        }
-      };
-      skipContainer.appendChild(skipBtn);
-
-      // Hidden description for screen readers
-      const skipDesc = document.createElement('span');
-      skipDesc.id = 'lv2-skip-description';
-      skipDesc.style.display = 'none';
-      skipDesc.textContent = 'If you skip, no vote will be cast; your turn ends immediately.';
-      skipContainer.appendChild(skipDesc);
-
-      // Insert skip container after the grid element in the main container flow
-      // This positions it below the nominees and above other elements like the voter feed
-      const grid = state.container?.querySelector('.lv2-grid');
-      if (grid && grid.parentNode) {
-        const insertPoint = grid.nextSibling;
-        if (insertPoint) {
-          grid.parentNode.insertBefore(skipContainer, insertPoint);
-        } else {
-          grid.parentNode.appendChild(skipContainer);
-        }
-      }
-
-      // Store reference to skip button
-      state.ctaBar = { leftCtaSide, rightCtaSide, skipButton: skipBtn };
-      return { leftCtaSide, rightCtaSide, skipButton: skipBtn };
-    }
-
     // Store reference for later updates
     state.ctaBar = { leftCtaSide, rightCtaSide };
     return { leftCtaSide, rightCtaSide };
@@ -1021,9 +972,9 @@
   
   // Create single large contextual CTA button for carousel mode
   function createCarouselCTA(options = {}) {
-    const { enabled = false, isTieBreak = false, isFinal4 = false, onVote = null, onSkip = null } = options;
+    const { enabled = false, isTieBreak = false, isFinal4 = false, onVote = null } = options;
     
-    // Mobile Carousel 2.0: Wire up the CTA dock button + Skip button
+    // Mobile Carousel 2.0: Wire up the CTA dock button
     const ctaDock = state.container?.querySelector('.lv2-cta-dock');
     if (ctaDock) {
       const mainBtn = ctaDock.querySelector('.lv2-cta-main');
@@ -1037,43 +988,9 @@
         };
       }
       
-      // Add Skip button next to main button (normal vote only, not tie-break or final4)
-      let skipBtn = ctaDock.querySelector('.lv2-skip-pill');
-      if (!isTieBreak && !isFinal4 && onSkip) {
-        if (!skipBtn) {
-          skipBtn = document.createElement('button');
-          skipBtn.className = 'lv2-skip-pill';
-          skipBtn.textContent = 'Skip';
-          skipBtn.setAttribute('aria-label', 'Skip your vote (no eviction cast)');
-          skipBtn.setAttribute('aria-describedby', 'lv2-skip-description-carousel');
-          skipBtn.dataset.key = 's';
-          
-          // Hidden description for screen readers
-          const skipDesc = document.createElement('span');
-          skipDesc.id = 'lv2-skip-description-carousel';
-          skipDesc.style.display = 'none';
-          skipDesc.textContent = 'If you skip, no vote will be cast; your turn ends immediately.';
-          
-          ctaDock.appendChild(skipBtn);
-          ctaDock.appendChild(skipDesc);
-        }
-        
-        skipBtn.disabled = !enabled;
-        skipBtn.onclick = () => {
-          if (onSkip) {
-            skipBtn.disabled = true;
-            if (mainBtn) mainBtn.disabled = true;
-            onSkip();
-          }
-        };
-      } else if (skipBtn) {
-        // Remove skip button if it exists but shouldn't (tie-break or final4)
-        skipBtn.remove();
-      }
-      
       // Store reference to CTA dock
-      state.ctaBar = { ctaDock, skipButton: skipBtn };
-      return { ctaDock, skipButton: skipBtn };
+      state.ctaBar = { ctaDock };
+      return { ctaDock };
     }
     
     // Legacy carousel CTA (for backwards compatibility)
@@ -1470,42 +1387,24 @@
           }
         }
       }
-      
-      // 'S' key for skip in carousel mode
-      if (key === 's' || key === 'S') {
-        const { skipButton } = state.ctaBar;
-        if (skipButton && !skipButton.disabled) {
-          skipButton.click();
-          e.preventDefault();
-          return;
-        }
-      }
-      
       return;
     }
     
-    // Normal mode: 1, 2, and S keys
-    if (key === '1' || key === '2') {
-      const { leftCtaSide, rightCtaSide } = state.ctaBar;
-      const pills = [
-        ...(leftCtaSide?.querySelectorAll('.lv2-cta-pill') || []),
-        ...(rightCtaSide?.querySelectorAll('.lv2-cta-pill') || [])
-      ];
-      
-      pills.forEach(pill => {
-        if (pill.dataset.key === key && !pill.disabled) {
-          pill.click();
-          e.preventDefault();
-        }
-      });
-    } else if (key === 's' || key === 'S') {
-      // 'S' key for skip in normal mode
-      const { skipButton } = state.ctaBar;
-      if (skipButton && !skipButton.disabled) {
-        skipButton.click();
+    // Normal mode: 1 and 2 keys
+    if (key !== '1' && key !== '2') return;
+
+    const { leftCtaSide, rightCtaSide } = state.ctaBar;
+    const pills = [
+      ...(leftCtaSide?.querySelectorAll('.lv2-cta-pill') || []),
+      ...(rightCtaSide?.querySelectorAll('.lv2-cta-pill') || [])
+    ];
+    
+    pills.forEach(pill => {
+      if (pill.dataset.key === key && !pill.disabled) {
+        pill.click();
         e.preventDefault();
       }
-    }
+    });
   });
 
   // Result sequence functions for eviction flow

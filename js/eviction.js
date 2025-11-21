@@ -41,8 +41,7 @@
       sequenceStarted:false,
       sequenceDone:false,
       revealed:false,
-      revealing:false,
-      humanSkipped:false  // Track if human voter skipped their vote
+      revealing:false
     };
     g.__human_vote=null;
 
@@ -309,10 +308,6 @@
           onVote: (pickId) => {
             lockHumanVote(pickId);
             global.lv2.updateCtaBar({ enabled: false });
-          },
-          onSkip: () => {
-            skipHumanVote();
-            global.lv2.updateCtaBar({ enabled: false });
           }
         });
       }
@@ -455,7 +450,6 @@
   function lockHumanVote(targetId){
     const g=global.game;
     if(g.__human_vote!=null) return;
-    if(g.eviction?.humanSkipped) return;
     g.__human_vote=targetId;
     const idx=(g.eviction.planned||[]).findIndex(p=>p.voter===g.humanId);
     if(idx>=0) g.eviction.planned[idx].evict=targetId;
@@ -463,25 +457,6 @@
     try{ renderLiveVotePanel(); }catch{}
     try{ window.dispatchEvent(new CustomEvent('bb:livevote:humanVoted', { detail: { targetId } })); }catch{}
   }
-
-  function skipHumanVote(){
-    const g=global.game;
-    if(!g.eviction) return;
-    if(g.__human_vote!=null) return;
-    if(g.eviction.humanSkipped) return;
-    
-    g.eviction.humanSkipped = true;
-    console.info('[eviction] Human voter skipped their vote');
-    global.addLog?.('You skipped your vote.','muted');
-    
-    // Mark as skipped in planned votes
-    const idx=(g.eviction.planned||[]).findIndex(p=>p.voter===g.humanId);
-    if(idx>=0) g.eviction.planned[idx].evict = null; // null indicates skip
-    
-    try{ renderLiveVotePanel(); }catch{}
-    try{ window.dispatchEvent(new CustomEvent('bb:livevote:humanSkipped')); }catch{}
-  }
-  global.lv2SkipVote = skipHumanVote;
 
   function eligibleVoters(){
     const g=global.game;
@@ -515,11 +490,8 @@
     const g=global.game||{};
     return new Promise(resolve=>{
       if(g.__human_vote!=null) return resolve();
-      if(g.eviction?.humanSkipped) return resolve();
-      const voteHandler=()=>{ window.removeEventListener('bb:livevote:humanVoted', voteHandler); window.removeEventListener('bb:livevote:humanSkipped', skipHandler); resolve(); };
-      const skipHandler=()=>{ window.removeEventListener('bb:livevote:humanVoted', voteHandler); window.removeEventListener('bb:livevote:humanSkipped', skipHandler); resolve(); };
-      window.addEventListener('bb:livevote:humanVoted', voteHandler, { once:true });
-      window.addEventListener('bb:livevote:humanSkipped', skipHandler, { once:true });
+      const handler=()=>{ window.removeEventListener('bb:livevote:humanVoted', handler); resolve(); };
+      window.addEventListener('bb:livevote:humanVoted', handler, { once:true });
     });
   }
 
@@ -785,20 +757,13 @@
     for(let i=0;i<(g.eviction.planned||[]).length;i++){
       const entry=g.eviction.planned[i];
 
-      // Pause on human turn until they actually vote or skip
-      if(entry.voter===g.humanId && entry.evict==null && !g.eviction.humanSkipped){
+      // Pause on human turn until they actually vote (no auto vote)
+      if(entry.voter===g.humanId && entry.evict==null){
         markVoter(entry.voter,'your turn…');
-        if(!useLv2){ global.showCard?.('Diary Room',["It's your turn. Please cast your vote or skip."],'live',2000,true); } else{ global.lv2?.setTurn?.(true); }
+        if(!useLv2){ global.showCard?.('Diary Room',["It's your turn. Please cast your vote now."],'live',2000,true); } else{ global.lv2?.setTurn?.(true); }
         try{ await waitForHumanVote(); }catch{}
         entry.evict = g.__human_vote;
         if(useLv2){ global.lv2?.setTurn?.(false); }
-      }
-
-      // If human skipped, don't show diary room card for them
-      if(entry.voter===g.humanId && g.eviction.humanSkipped){
-        markVoter(entry.voter,'skipped');
-        console.info('[eviction] Skipping diary room card for human voter (skipped)');
-        continue; // Skip to next voter
       }
 
       const pick=entry.evict;
@@ -997,19 +962,12 @@
         const voters=eligibleVoters();
         for(const v of voters){
           if(v.id===g.humanId){
-            // If human skipped, don't add their vote to the tally
-            if(g.eviction.humanSkipped){
-              console.info('[eviction] Human skipped - not counting vote in tally');
-              continue;
-            }
             // Require manual vote; if still not present, wait here
             if(g.__human_vote==null){
               try{ await waitForHumanVote(); }catch{}
             }
             const target=g.__human_vote;
-            if(target!=null){
-              g.eviction.votes.push({voter:v.id,evict:target});
-            }
+            g.eviction.votes.push({voter:v.id,evict:target});
           } else {
             g.eviction.votes.push({voter:v.id,evict:voteFor2(v.id,noms)});
           }
@@ -1102,18 +1060,11 @@
         const voters=eligibleVoters();
         for(const v of voters){
           if(v.id===g.humanId){
-            // If human skipped, don't add their vote to the tally
-            if(g.eviction.humanSkipped){
-              console.info('[eviction] Human skipped - not counting vote in tally (multi-nom)');
-              continue;
-            }
             if(g.__human_vote==null){
               try{ await waitForHumanVote(); }catch{}
             }
             const target=g.__human_vote;
-            if(target!=null){
-              g.eviction.votes.push({voter:v.id,evict:target});
-            }
+            g.eviction.votes.push({voter:v.id,evict:target});
           } else g.eviction.votes.push({voter:v.id,evict:voteForMulti(v.id,noms)});
         }
         g.eviction.votes.forEach(v=>counts.set(v.evict,(counts.get(v.evict)||0)+1));
