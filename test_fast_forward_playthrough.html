@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fast-Forward Play-Through Window Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e3ecf5;
+    }
+    
+    h1 { color: #5bd68a; margin-bottom: 10px; }
+    h2 { color: #83bfff; border-bottom: 2px solid #83bfff; padding-bottom: 10px; margin-top: 30px; }
+    
+    .test-section {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    button.primary {
+      background: linear-gradient(135deg, #5bd68a 0%, #4db878 100%);
+      color: #1a1a1a;
+    }
+    
+    button.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 214, 138, 0.4);
+    }
+    
+    button.secondary {
+      background: linear-gradient(135deg, #83bfff 0%, #6aa8f5 100%);
+      color: #1a1a1a;
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #333;
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .success { color: #5bd68a; }
+    .error { color: #ff6b9d; }
+    .info { color: #83bfff; }
+    .warning { color: #f7b955; }
+    
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .metric-card {
+      background: #1a2a3a;
+      padding: 15px;
+      border-radius: 6px;
+      border-left: 4px solid #83bfff;
+    }
+    
+    .metric-label {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 5px;
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: #5bd68a;
+    }
+    
+    .assertion {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    
+    .assertion.pass {
+      background: rgba(91, 214, 138, 0.1);
+      border-left: 4px solid #5bd68a;
+    }
+    
+    .assertion.fail {
+      background: rgba(255, 107, 157, 0.1);
+      border-left: 4px solid #ff6b9d;
+    }
+  </style>
+</head>
+<body>
+  <h1>⏩ Fast-Forward Play-Through Window Test</h1>
+  <p>This test verifies that fast-forward mode enforces a minimum compressed "play-through window" so card sequences remain perceptible rather than instant.</p>
+
+  <div class="test-section">
+    <h2>Test Scenario</h2>
+    <p>Simulates a phase with <strong>6 card callbacks</strong>, each with an original duration of <strong>2000ms</strong>.</p>
+    <ul>
+      <li><strong>Normal mode</strong>: Total time ≈ 12000ms (12 seconds)</li>
+      <li><strong>FFWD mode</strong>: Total time should be between 1500ms and 2880ms (enforced play-through window based on config)</li>
+    </ul>
+    
+    <div class="button-group">
+      <button id="btnRunNormal" class="primary">▶ Run Normal (12s)</button>
+      <button id="btnRunFFWD" class="primary">⏩ Run Fast-Forward</button>
+      <button id="btnRunComparison" class="secondary">🔄 Run Both (Comparison)</button>
+      <button id="btnClearLog">Clear Log</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div class="metrics" id="metricsContainer"></div>
+    <div id="assertionsContainer"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Log</h2>
+    <div class="status" id="logOutput"></div>
+  </div>
+
+  <script>
+    // Initialize mock game state
+    window.game = {
+      cfg: {
+        fastForwardEnabled: true,
+        fastForwardMultiplier: 0.1,
+        fastForwardMinDuration: 40,
+        fastForwardMaxDuration: 300,
+        fastForwardAlwaysEnable: true,
+        fastForwardMinPhaseWindowMs: 1500,
+        fastForwardPlaybackMinCardMs: 120,
+        fastForwardPlaybackMaxCardMs: 480
+      },
+      phase: 'test_phase',
+      phaseEndsAt: 0,
+      endAt: 0,
+      __ffActive: false,
+      __ffMultiplier: 1
+    };
+
+    // Mock normalizeDuration function
+    window.normalizeDuration = function(ms) {
+      const g = window.game;
+      if (!g || !g.__ffActive) return ms;
+      
+      const mult = g.__ffMultiplier || 0.1;
+      const cardMin = g.cfg?.fastForwardPlaybackMinCardMs ?? (g.cfg?.fastForwardMinDuration || 40);
+      const cardMax = g.cfg?.fastForwardPlaybackMaxCardMs ?? (g.cfg?.fastForwardMaxDuration || 300);
+      
+      const compressed = Math.round(ms * mult);
+      const normalized = Math.max(cardMin, Math.min(compressed, cardMax));
+      
+      log(`[normalizeDuration] ${ms}ms -> ${compressed}ms (clamped: ${normalized}ms, range: ${cardMin}-${cardMax}ms)`, 'info');
+      
+      return normalized;
+    };
+
+    // Mock activateFastForward function
+    window.activateFastForward = function(options) {
+      options = options || {};
+      const game = window.game;
+      const multiplier = options.multiplier || game.cfg?.fastForwardMultiplier || 0.1;
+      const reason = options.reason || 'test';
+      
+      if (game.__ffActive) {
+        log('[activateFastForward] Already active, ignoring', 'warning');
+        return;
+      }
+      
+      game.__ffActive = true;
+      game.__ffMultiplier = multiplier;
+      
+      const now = Date.now();
+      const phase = game.phase || 'unknown';
+      log(`[activateFastForward] Activated (mult=${multiplier}, phase=${phase}, reason=${reason})`, 'success');
+      
+      // Enforce minimum phase window
+      const minWindow = game.cfg?.fastForwardMinPhaseWindowMs || 1500;
+      if (game.phaseEndsAt && game.phaseEndsAt - now < minWindow) {
+        game.phaseEndsAt = now + minWindow;
+        if (game.endAt && game.endAt < game.phaseEndsAt) {
+          game.endAt = game.phaseEndsAt;
+        }
+        log(`[activateFastForward] Enforced min phase window: ${minWindow}ms`, 'info');
+      }
+    };
+
+    // Mock deactivateFastForward function
+    window.deactivateFastForward = function() {
+      const game = window.game;
+      if (!game.__ffActive) return;
+      
+      game.__ffActive = false;
+      game.__ffMultiplier = 1;
+      
+      log('[deactivateFastForward] Deactivated (normal speed restored)', 'info');
+    };
+
+    // Logging
+    const logOutput = document.getElementById('logOutput');
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logOutput.appendChild(entry);
+      logOutput.scrollTop = logOutput.scrollHeight;
+      console.log(message);
+    }
+
+    // Clear log
+    document.getElementById('btnClearLog').addEventListener('click', () => {
+      logOutput.innerHTML = '';
+      document.getElementById('metricsContainer').innerHTML = '';
+      document.getElementById('assertionsContainer').innerHTML = '';
+    });
+
+    // Simulate card sequence
+    async function simulateCardSequence(useFastForward) {
+      const cardCount = 6;
+      const originalDurationPerCard = 2000;
+      
+      log(`\n========== ${useFastForward ? 'FAST-FORWARD' : 'NORMAL'} MODE TEST ==========`, 'success');
+      log(`Simulating ${cardCount} cards, ${originalDurationPerCard}ms each`, 'info');
+      
+      if (useFastForward) {
+        window.activateFastForward({ multiplier: 0.1, reason: 'test' });
+      }
+      
+      const startTime = Date.now();
+      
+      for (let i = 1; i <= cardCount; i++) {
+        const duration = window.normalizeDuration(originalDurationPerCard);
+        log(`Card ${i}/${cardCount}: waiting ${duration}ms...`, 'info');
+        await new Promise(resolve => setTimeout(resolve, duration));
+      }
+      
+      const endTime = Date.now();
+      const totalTime = endTime - startTime;
+      
+      if (useFastForward) {
+        window.deactivateFastForward();
+      }
+      
+      log(`\n✓ Sequence complete: ${totalTime}ms total`, 'success');
+      
+      return {
+        mode: useFastForward ? 'Fast-Forward' : 'Normal',
+        cardCount,
+        originalDurationPerCard,
+        totalTime,
+        compressionFactor: useFastForward ? (cardCount * originalDurationPerCard) / totalTime : 1
+      };
+    }
+
+    // Display metrics
+    function displayMetrics(results) {
+      const container = document.getElementById('metricsContainer');
+      container.innerHTML = '';
+      
+      const metrics = [
+        { label: 'Mode', value: results.mode },
+        { label: 'Card Count', value: results.cardCount },
+        { label: 'Original Duration', value: `${results.originalDurationPerCard}ms` },
+        { label: 'Total Time', value: `${results.totalTime}ms` },
+        { label: 'Compression Factor', value: `${results.compressionFactor.toFixed(2)}x` }
+      ];
+      
+      metrics.forEach(metric => {
+        const card = document.createElement('div');
+        card.className = 'metric-card';
+        card.innerHTML = `
+          <div class="metric-label">${metric.label}</div>
+          <div class="metric-value">${metric.value}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Run assertions
+    function runAssertions(results) {
+      const container = document.getElementById('assertionsContainer');
+      container.innerHTML = '<h3>Assertions</h3>';
+      
+      // Derive expected values from configuration
+      const expectedMin = window.game.cfg.fastForwardMinPhaseWindowMs || 1500;
+      const expectedMax = results.cardCount * (window.game.cfg.fastForwardPlaybackMaxCardMs || 480);
+      
+      const assertions = [
+        {
+          name: 'All cards displayed',
+          pass: results.cardCount === 6,
+          message: results.cardCount === 6 ? '✓ All 6 cards were displayed' : `✗ Expected 6 cards, got ${results.cardCount}`
+        },
+        {
+          name: 'Minimum play-through window enforced',
+          pass: results.totalTime >= expectedMin,
+          message: results.totalTime >= expectedMin 
+            ? `✓ Total time ${results.totalTime}ms >= ${expectedMin}ms minimum` 
+            : `✗ Total time ${results.totalTime}ms < ${expectedMin}ms minimum`
+        },
+        {
+          name: 'Maximum play-through window respected',
+          pass: results.totalTime <= expectedMax,
+          message: results.totalTime <= expectedMax 
+            ? `✓ Total time ${results.totalTime}ms <= ${expectedMax}ms maximum` 
+            : `✗ Total time ${results.totalTime}ms > ${expectedMax}ms maximum`
+        },
+        {
+          name: 'Significant compression achieved',
+          pass: results.compressionFactor > 4,
+          message: results.compressionFactor > 4 
+            ? `✓ Compression factor ${results.compressionFactor.toFixed(2)}x > 4x` 
+            : `✗ Compression factor ${results.compressionFactor.toFixed(2)}x <= 4x`
+        }
+      ];
+      
+      assertions.forEach(assertion => {
+        const div = document.createElement('div');
+        div.className = `assertion ${assertion.pass ? 'pass' : 'fail'}`;
+        div.textContent = assertion.message;
+        container.appendChild(div);
+        
+        log(assertion.message, assertion.pass ? 'success' : 'error');
+      });
+      
+      const allPassed = assertions.every(a => a.pass);
+      log(`\n${allPassed ? '✓ ALL ASSERTIONS PASSED' : '✗ SOME ASSERTIONS FAILED'}`, allPassed ? 'success' : 'error');
+    }
+
+    // Button handlers
+    document.getElementById('btnRunNormal').addEventListener('click', async () => {
+      const btn = document.getElementById('btnRunNormal');
+      btn.disabled = true;
+      try {
+        const results = await simulateCardSequence(false);
+        displayMetrics(results);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btnRunFFWD').addEventListener('click', async () => {
+      const btn = document.getElementById('btnRunFFWD');
+      btn.disabled = true;
+      try {
+        const results = await simulateCardSequence(true);
+        displayMetrics(results);
+        runAssertions(results);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btnRunComparison').addEventListener('click', async () => {
+      const btn = document.getElementById('btnRunComparison');
+      btn.disabled = true;
+      try {
+        const normalResults = await simulateCardSequence(false);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const ffwdResults = await simulateCardSequence(true);
+        
+        log(`\n========== COMPARISON SUMMARY ==========`, 'success');
+        log(`Normal: ${normalResults.totalTime}ms`, 'info');
+        log(`Fast-Forward: ${ffwdResults.totalTime}ms`, 'info');
+        log(`Speedup: ${(normalResults.totalTime / ffwdResults.totalTime).toFixed(2)}x`, 'success');
+        
+        displayMetrics(ffwdResults);
+        runAssertions(ffwdResults);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Initial log
+    log('Test initialized. Click a button to run tests.', 'info');
+  </script>
+</body>
+</html>

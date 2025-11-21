@@ -32,6 +32,9 @@
     'social',
     'social_intermission'
   ];
+  
+  // Phase exclusions for fast-forward
+  const FFWD_EXCLUDED_PHASES = ['lobby'];
 
   let skipTimerPill = null;
   let skipButton = null;
@@ -163,18 +166,32 @@
         return;
       }
 
-      console.info('[TVSkip] Skip triggered');
+      // Diagnostic logging
+      console.group('[TVSkip] ⏩ FFWD Button Clicked');
+      const game = g.game || {};
+      console.info('Phase:', game.phase);
+      console.info('__ffActive before:', game.__ffActive);
+      
+      // Visual feedback
+      skipButton.classList.add('pressed');
+      setTimeout(() => skipButton.classList.remove('pressed'), 200);
 
       // Try skip APIs in order: fastForwardPhase → skipPhase → advancePhase
       if(typeof g.fastForwardPhase === 'function'){
+        console.info('Handler: fastForwardPhase()');
         g.fastForwardPhase();
       } else if(typeof g.skipPhase === 'function'){
+        console.info('Handler: skipPhase()');
         g.skipPhase();
       } else if(typeof g.advancePhase === 'function'){
+        console.info('Handler: advancePhase()');
         g.advancePhase();
       } else {
-        console.warn('[TVSkip] No skip function available');
+        console.warn('No skip function available');
       }
+      
+      console.info('__ffActive after:', g.game?.__ffActive);
+      console.groupEnd();
     };
 
     // Click handler
@@ -197,20 +214,25 @@
     if(!skipButton) return;
 
     const game = g.game || {};
+    const cfg = game.cfg || {};
     const phase = game.phase;
 
     // Determine if skip should be enabled
     let shouldEnable = false;
 
-    // Check if phase is skippable
-    if(phase && SKIPPABLE_PHASES.includes(phase)){
-      // Check if at least one skip handler is available
-      const hasHandler = (
-        typeof g.fastForwardPhase === 'function' ||
-        typeof g.skipPhase === 'function' ||
-        typeof g.advancePhase === 'function'
-      );
+    // Check if at least one skip handler is available
+    const hasHandler = (
+      typeof g.fastForwardPhase === 'function' ||
+      typeof g.skipPhase === 'function' ||
+      typeof g.advancePhase === 'function'
+    );
 
+    // Determine if button should be enabled based on phase and config
+    const isSkippablePhase = phase && SKIPPABLE_PHASES.includes(phase);
+    const isExcludedPhase = phase && FFWD_EXCLUDED_PHASES.includes(phase);
+    const alwaysEnableActive = cfg.fastForwardAlwaysEnable && phase && !isExcludedPhase;
+    
+    if(isSkippablePhase || alwaysEnableActive){
       shouldEnable = hasHandler;
     }
 
@@ -218,11 +240,11 @@
     skipButton.disabled = !shouldEnable;
     
     if(shouldEnable){
-      skipButton.setAttribute('aria-label', 'Skip to next phase');
-      skipButton.setAttribute('title', 'Skip to next phase');
+      skipButton.setAttribute('aria-label', 'Fast-forward phase (preserves all steps)');
+      skipButton.setAttribute('title', 'Fast-forward phase (preserves all steps)');
     } else {
-      skipButton.setAttribute('aria-label', 'Skip not available');
-      skipButton.setAttribute('title', 'Skip not available in this phase');
+      skipButton.setAttribute('aria-label', 'Fast-forward not available');
+      skipButton.setAttribute('title', 'Fast-forward not available in this phase');
     }
   }
 
@@ -319,6 +341,11 @@
           g.game.__ffMultiplier = 1;
           console.info('[fast-forward] deactivated (normal speed restored)');
         }
+      }
+      
+      // Complete SkipController to reset its state
+      if(g.SkipController && g.SkipController.isActive()){
+        g.SkipController.complete();
       }
       
       // Update state after phase change
