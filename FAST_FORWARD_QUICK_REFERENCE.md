@@ -48,14 +48,28 @@ All configuration is in `game.cfg`:
 
 ```javascript
 {
-  fastForwardEnabled: true,           // Master enable/disable
-  fastForwardMultiplier: 0.1,         // 0.1 = 10x speed, 0.2 = 5x speed
-  fastForwardMinDuration: 40,         // Minimum duration per step (ms)
-  fastForwardMaxDuration: 300,        // Maximum duration per step (ms)
-  fastForwardMinigameAutoSubmit: false, // Auto-submit active minigames (not implemented yet)
-  fastForwardSocialActionInterval: 200  // AI action interval during fast-forward (not implemented yet)
+  // Core fast-forward settings
+  fastForwardEnabled: true,                    // Master enable/disable
+  fastForwardMultiplier: 0.1,                  // 0.1 = 10x speed, 0.2 = 5x speed
+  fastForwardMinDuration: 40,                  // Legacy: Minimum duration per step (ms)
+  fastForwardMaxDuration: 300,                 // Legacy: Maximum duration per step (ms)
+  fastForwardMinigameAutoSubmit: false,        // Auto-submit active minigames (not implemented yet)
+  fastForwardSocialActionInterval: 200,        // AI action interval during fast-forward (not implemented yet)
+  
+  // UI & Playback Enhancements (NEW)
+  fastForwardAlwaysEnable: true,               // Enable button in all phases (except lobby)
+  fastForwardMinPhaseWindowMs: 1500,           // Minimum compressed phase duration (ensures perceptible playback)
+  fastForwardPlaybackMinCardMs: 120,           // Per-card minimum duration (preferred over fastForwardMinDuration)
+  fastForwardPlaybackMaxCardMs: 480            // Per-card maximum duration (preferred over fastForwardMaxDuration)
 }
 ```
+
+### Configuration Notes
+
+- **fastForwardAlwaysEnable**: When `true`, the ⏩ FFWD button is enabled in any active phase (except lobby before game starts). When `false`, button is only enabled in SKIPPABLE_PHASES list.
+- **fastForwardMinPhaseWindowMs**: Enforces a minimum "play-through window" so users can see the compressed sequence rather than an instant jump. Default 1500ms (1.5 seconds).
+- **fastForwardPlaybackMinCardMs/MaxCardMs**: Preferred per-card duration clamps. If undefined, falls back to legacy `fastForwardMinDuration/MaxDuration`.
+- Legacy min/max settings are maintained for backward compatibility but new settings take precedence when defined.
 
 ## Usage
 

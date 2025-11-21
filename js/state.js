@@ -30,7 +30,12 @@
       fastForwardMinDuration:40,
       fastForwardMaxDuration:300,
       fastForwardMinigameAutoSubmit:false,
-      fastForwardSocialActionInterval:200
+      fastForwardSocialActionInterval:200,
+      // Fast-forward UI & playback enhancements
+      fastForwardAlwaysEnable:true,
+      fastForwardMinPhaseWindowMs:1500,
+      fastForwardPlaybackMinCardMs:120,
+      fastForwardPlaybackMaxCardMs:480
     },
     week:1,phase:'lobby',endAt:0,
     players:[],humanId:null,
@@ -170,15 +175,17 @@
     if(!g || !g.__ffActive) return ms;
     
     const mult = g.__ffMultiplier || 0.1;
-    const min = g.cfg?.fastForwardMinDuration || 40;
-    const max = g.cfg?.fastForwardMaxDuration || 300;
+    
+    // Prefer new per-card playback min/max if defined, fallback to legacy min/max
+    const cardMin = g.cfg?.fastForwardPlaybackMinCardMs ?? (g.cfg?.fastForwardMinDuration || 40);
+    const cardMax = g.cfg?.fastForwardPlaybackMaxCardMs ?? (g.cfg?.fastForwardMaxDuration || 300);
     
     const compressed = Math.round(ms * mult);
-    const normalized = Math.max(min, Math.min(compressed, max));
+    const normalized = Math.max(cardMin, Math.min(compressed, cardMax));
     
     // Log significant compressions
     if(compressed !== normalized){
-      console.debug(`[fast-forward] duration ${ms}ms -> ${compressed}ms (clamped to ${normalized}ms)`);
+      console.debug(`[fast-forward] duration ${ms}ms -> ${compressed}ms (clamped to ${normalized}ms, range: ${cardMin}-${cardMax}ms)`);
     } else {
       console.debug(`[fast-forward] duration ${ms}ms -> ${normalized}ms`);
     }
@@ -395,6 +402,16 @@
       }
       
       console.info(`[fast-forward] phase timer compressed: ${remainingOriginal}ms -> ${remainingCompressed}ms`);
+    }
+    
+    // Enforce minimum phase window to ensure perceptible playback
+    const minWindow = game.cfg?.fastForwardMinPhaseWindowMs || 1500;
+    if(game.phaseEndsAt && game.phaseEndsAt - now < minWindow){
+      game.phaseEndsAt = now + minWindow;
+      if(game.endAt && game.endAt < game.phaseEndsAt){
+        game.endAt = game.phaseEndsAt;
+      }
+      console.info(`[fast-forward] enforced min phase window: ${minWindow}ms (ensuring perceptible playback)`);
     }
   }
   global.activateFastForward = activateFastForward;

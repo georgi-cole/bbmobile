@@ -1137,6 +1137,10 @@ header.innerHTML = `
       return;
     }
     
+    // Capture initial state for diagnostics
+    const startRemaining = (game.phaseEndsAt || 0) - Date.now();
+    const phase = game.phase || 'unknown';
+    
     // Activate fast-forward mode (preserves callbacks, compresses durations)
     if(typeof g.activateFastForward === 'function'){
       g.activateFastForward({ multiplier: game.cfg?.fastForwardMultiplier || 0.1, reason: 'user' });
@@ -1145,6 +1149,8 @@ header.innerHTML = `
     // Enable skip mode (for SkipController coordination)
     if(g.SkipController){
       g.SkipController.enable();
+    } else {
+      console.warn('[ff] SkipController not initialized - acceleration path may be limited');
     }
     
     // Stop audio (but don't flush cards - they'll be compressed)
@@ -1179,20 +1185,47 @@ header.innerHTML = `
       return;
     }
 
+    // Count pending timeouts for diagnostics
+    const pending = g.CardManager?.__pendingTimeoutData?.length || 0;
+    
+    // If no pending timeouts, synthesize a micro-drain delay to avoid instant jump
+    if(pending === 0){
+      const microDelay = Math.min(180, game.cfg?.fastForwardPlaybackMinCardMs || 120);
+      console.info(`[ff] No pending timeouts; synthesizing micro-drain delay: ${microDelay}ms`);
+      await new Promise(resolve => setTimeout(resolve, microDelay));
+    }
+
     // Execute acceleration/drain loop
     // When FFWD is active, drainLoop will use acceleration path
     if(g.SkipController){
       await g.SkipController.drainLoop();
+    } else {
+      console.warn('[ff] SkipController not available - drain loop skipped');
     }
 
     // Don't deactivate fast-forward here - it will auto-deactivate on phase change
     // Don't complete skip mode here - let it persist for the phase duration
     // The setPhase wrapper in tv-skip.js will deactivate FFWD on phase boundary
 
+    // Diagnostic summary
+    const cardMin = game.cfg?.fastForwardPlaybackMinCardMs || 120;
+    const cardMax = game.cfg?.fastForwardPlaybackMaxCardMs || 480;
+    const enforcedWindow = game.cfg?.fastForwardMinPhaseWindowMs || 1500;
+    console.info(`[ff] Phase acceleration summary:`, {
+      phase,
+      initialRemaining: `${startRemaining}ms`,
+      pendingTimeouts: pending,
+      enforcedWindow: `${enforcedWindow}ms`,
+      cardClampRange: `${cardMin}-${cardMax}ms`
+    });
+
     if(game.phase==='livevote' && typeof g.beginDiaryRoomSequence==='function'){
       try{ g.beginDiaryRoomSequence(); }catch{}
     }
   }
+  
+  // Mark as enhanced version
+  fastForwardPhase.__ffEnhanced = true;
   g.fastForwardPhase = fastForwardPhase;
 
   // ------------ Opening Sequence (unchanged core) ------------
@@ -2185,5 +2218,18 @@ header.innerHTML = `
   } else {
     init();
   }
+
+  // Self-repair guard: Ensure enhanced fastForwardPhase is active
+  // Protects against legacy file (ui.hud-and-router.js9) overriding the enhanced version
+  (function(){
+    if(typeof g.fastForwardPhase === 'function' && !g.fastForwardPhase.__ffEnhanced){
+      console.warn('[ui.hud-and-router] Legacy fastForwardPhase detected without __ffEnhanced marker - replacing with enhanced version');
+      // The enhanced version should already be set above, but if something overwrote it, re-set
+      if(typeof fastForwardPhase === 'function' && fastForwardPhase.__ffEnhanced){
+        g.fastForwardPhase = fastForwardPhase;
+        console.info('[ui.hud-and-router] ✓ Enhanced fastForwardPhase restored');
+      }
+    }
+  })();
 
 })(window);
