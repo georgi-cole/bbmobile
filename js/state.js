@@ -423,6 +423,10 @@
     g.__ffMultiplier = multiplier;
     
     // Keep internal game reference in sync (if different object)
+    // This is necessary because the local `game` variable at the top of this module
+    // is assigned before window.game may be fully initialized, and some internal
+    // functions may still reference the local `game` object. This dual-write ensures
+    // backward compatibility while transitioning to window.game as the canonical source.
     if(game !== g){
       game.__ffActive = true;
       game.__ffMultiplier = multiplier;
@@ -474,6 +478,10 @@
     g.__ffMultiplier = 1;
     
     // Keep internal game reference in sync (if different object)
+    // This is necessary because the local `game` variable at the top of this module
+    // is assigned before window.game may be fully initialized, and some internal
+    // functions may still reference the local `game` object. This dual-write ensures
+    // backward compatibility while transitioning to window.game as the canonical source.
     if(game !== g){
       game.__ffActive = false;
       game.__ffMultiplier = 1;
