@@ -971,13 +971,6 @@
       // Create centered skip container between the two CTA sides
       const skipContainer = document.createElement('div');
       skipContainer.className = 'lv2-skip-container';
-      skipContainer.style.cssText = `
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        grid-column: 1 / -1;
-        margin-top: 6px;
-      `;
 
       const skipBtn = document.createElement('button');
       skipBtn.className = 'lv2-skip-pill';
@@ -1004,13 +997,10 @@
       skipDesc.textContent = 'If you skip, no vote will be cast; your turn ends immediately.';
       skipContainer.appendChild(skipDesc);
 
-      // Insert skip container after both CTA sides in the grid
-      // Since we're using lv2-cta-side, we need to insert it after the grid
-      // Actually, we should insert it in a way that works with the layout
-      // Let's append it to the main container after finding the grid
+      // Insert skip container after the grid element in the main container flow
+      // This positions it below the nominees and above other elements like the voter feed
       const grid = state.container?.querySelector('.lv2-grid');
       if (grid && grid.parentNode) {
-        // Insert after the grid
         const insertPoint = grid.nextSibling;
         if (insertPoint) {
           grid.parentNode.insertBefore(skipContainer, insertPoint);
