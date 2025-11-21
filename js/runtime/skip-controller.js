@@ -117,9 +117,8 @@
         return;
       }
 
-      // Check if fast-forward is active
-      const game = g.game || {};
-      const isFastForward = game.__ffActive === true;
+      // Check if fast-forward is active using window.game as single source of truth
+      const isFastForward = g.game?.__ffActive === true;
       
       if (isFastForward) {
         console.info('[SkipController] Fast-forward active - using acceleration path');

@@ -52,6 +52,20 @@
       return;
     }
 
+    // Safety reset: Detect and deactivate any stray FFWD state at UI init
+    // This ensures FFWD is only active after an explicit button click
+    if(g.game && g.game.__ffActive){
+      console.warn('[TVSkip] Detected stray FFWD state at init, deactivating...');
+      if(typeof g.deactivateFastForward === 'function'){
+        g.deactivateFastForward();
+      } else {
+        // Direct flag reset as fallback
+        g.game.__ffActive = false;
+        g.game.__ffMultiplier = 1;
+        console.info('[TVSkip] FFWD state reset directly (deactivateFastForward not available)');
+      }
+    }
+
     // Find tvTitle element
     tvTitle = tvHead.querySelector('.tvTitle');
     if(!tvTitle){
