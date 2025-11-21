@@ -343,6 +343,11 @@
         }
       }
       
+      // Complete SkipController to reset its state
+      if(g.SkipController && g.SkipController.isActive()){
+        g.SkipController.complete();
+      }
+      
       // Update state after phase change
       setTimeout(() => updateState(), 0);
       return result;
