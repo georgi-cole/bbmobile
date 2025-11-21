@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eviction Modal Test</title>
+  <link rel="stylesheet" href="styles.css?v=test">
+  <link rel="stylesheet" href="css/eviction-modal.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #0a1018, #0d1b2a);
+      color: #e2edf8;
+      min-height: 100vh;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin: 0 0 1rem;
+      color: #e2edf8;
+    }
+    
+    .description {
+      margin-bottom: 2rem;
+      color: #c7d7eb;
+      line-height: 1.6;
+    }
+    
+    .test-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 2rem;
+    }
+    
+    .test-btn {
+      padding: 16px 24px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1a2937, #0f1a28);
+      color: #e2edf8;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    
+    .test-btn:hover {
+      background: linear-gradient(135deg, #253442, #1a2635);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .test-btn:active {
+      transform: translateY(0);
+    }
+    
+    .test-btn strong {
+      display: block;
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+      color: #3b82f6;
+    }
+    
+    .test-btn small {
+      color: #94a3b8;
+    }
+    
+    .info-box {
+      padding: 16px;
+      border-radius: 8px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      margin-bottom: 2rem;
+    }
+    
+    .info-box h3 {
+      margin: 0 0 8px;
+      color: #3b82f6;
+      font-size: 1.1rem;
+    }
+    
+    .info-box ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    
+    .info-box li {
+      margin: 4px 0;
+      color: #c7d7eb;
+    }
+    
+    /* Simulate TV container for visual reference */
+    #tv {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      height: 400px;
+      margin: 2rem auto;
+      background: linear-gradient(135deg, #0d1b2a 0%, #0a1018 100%);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #tv::before {
+      content: "Simulated TV Container";
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.4);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 12px;
+      z-index: 12;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    
+    .tv-content {
+      text-align: center;
+      color: #94a3b8;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎭 Eviction Modal Test Harness</h1>
+    
+    <div class="description">
+      This page tests the new eviction result modal system. The modal should appear
+      centered and fully visible above all content, even if triggered from within the TV container.
+    </div>
+    
+    <div class="info-box">
+      <h3>Expected Behavior</h3>
+      <ul>
+        <li>Modal appears centered in viewport (not clipped by TV container)</li>
+        <li>High z-index (9000) ensures visibility above all content</li>
+        <li>Backdrop blur and semi-transparent overlay</li>
+        <li>Click backdrop or press ESC to close</li>
+        <li>Focus trapped within modal for accessibility</li>
+        <li>Auto-dismiss after specified duration</li>
+      </ul>
+    </div>
+    
+    <div class="test-buttons">
+      <button class="test-btn" onclick="testStandardEviction()">
+        <strong>Test 1: Standard Eviction Result</strong>
+        <small>Single player evicted with vote count (3800ms auto-dismiss)</small>
+      </button>
+      
+      <button class="test-btn" onclick="testMultiNomineeEviction()">
+        <strong>Test 2: Multi-Nominee Eviction</strong>
+        <small>Shows vote breakdown with multiple nominees (3800ms auto-dismiss)</small>
+      </button>
+      
+      <button class="test-btn" onclick="testDoubleEviction()">
+        <strong>Test 3: Double Eviction Result</strong>
+        <small>Two players evicted simultaneously (4200ms auto-dismiss)</small>
+      </button>
+      
+      <button class="test-btn" onclick="testManualClose()">
+        <strong>Test 4: Manual Close Only</strong>
+        <small>No auto-dismiss - requires ESC or backdrop click</small>
+      </button>
+      
+      <button class="test-btn" onclick="testFromTVContainer()">
+        <strong>Test 5: Trigger from TV Container</strong>
+        <small>Verify modal escapes TV clipping context</small>
+      </button>
+      
+      <button class="test-btn" onclick="testKeyboardNavigation()">
+        <strong>Test 6: Keyboard Navigation</strong>
+        <small>Test Tab focus trap and ESC to close</small>
+      </button>
+    </div>
+    
+    <!-- Simulated TV Container -->
+    <div id="tv">
+      <div id="tvOverlay"></div>
+      <div class="tv-content">
+        <p>This simulates the TV container where evictions are shown.</p>
+        <p>The modal should appear ABOVE this container, fully visible.</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load eviction modal module -->
+  <script src="src/ui/evictionModal.js"></script>
+  
+  <script>
+    // Global test helpers
+    window.safeName = (id) => {
+      const names = {
+        1: 'Alice',
+        2: 'Bob',
+        3: 'Charlie',
+        4: 'Diana',
+        5: 'Eve',
+        6: 'Frank'
+      };
+      return names[id] || `Player ${id}`;
+    };
+    
+    // Test 1: Standard eviction result
+    async function testStandardEviction() {
+      console.log('[Test 1] Showing standard eviction result...');
+      await window.EvictionModal.show({
+        title: 'Eviction Result',
+        lines: ['By a vote of 5 to 2, Alice, you have been evicted.'],
+        tone: 'evict',
+        duration: 3800
+      });
+      console.log('[Test 1] Modal dismissed');
+    }
+    
+    // Test 2: Multi-nominee eviction
+    async function testMultiNomineeEviction() {
+      console.log('[Test 2] Showing multi-nominee eviction result...');
+      await window.EvictionModal.show({
+        title: 'Eviction Result',
+        lines: [
+          'Votes: Alice 5 — Bob 2 — Charlie 1',
+          'Alice, you have been evicted from the Big Brother house.'
+        ],
+        tone: 'evict',
+        duration: 3800
+      });
+      console.log('[Test 2] Modal dismissed');
+    }
+    
+    // Test 3: Double eviction
+    async function testDoubleEviction() {
+      console.log('[Test 3] Showing double eviction result...');
+      await window.EvictionModal.show({
+        title: 'Eviction Results',
+        lines: [
+          'Double Eviction: Alice, Bob',
+          'Final votes: Alice 4 — Bob 3 — Charlie 1'
+        ],
+        tone: 'evict',
+        duration: 4200
+      });
+      console.log('[Test 3] Modal dismissed');
+    }
+    
+    // Test 4: Manual close only
+    async function testManualClose() {
+      console.log('[Test 4] Showing modal with manual close only...');
+      alert('This modal has no auto-dismiss timer. Close it with ESC or backdrop click.');
+      await window.EvictionModal.show({
+        title: 'Eviction Result',
+        lines: [
+          'By a vote of 6 to 3, Charlie has been evicted.',
+          'Press ESC or click the backdrop to close.'
+        ],
+        tone: 'evict',
+        duration: 0 // No auto-dismiss
+      });
+      console.log('[Test 4] Modal dismissed');
+    }
+    
+    // Test 5: Trigger from TV container
+    async function testFromTVContainer() {
+      console.log('[Test 5] Triggering modal from within TV container...');
+      
+      // Add a button to the TV overlay to simulate in-TV trigger
+      const tvOverlay = document.getElementById('tvOverlay');
+      const triggerBtn = document.createElement('button');
+      triggerBtn.textContent = 'Show Result (from TV)';
+      triggerBtn.style.cssText = `
+        padding: 12px 24px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+        background: rgba(59, 130, 246, 0.2);
+        color: #e2edf8;
+        cursor: pointer;
+        pointer-events: auto;
+      `;
+      triggerBtn.onclick = async () => {
+        await window.EvictionModal.show({
+          title: 'Eviction Result',
+          lines: ['Triggered from inside TV container!', 'Modal should still be fully visible and centered.'],
+          tone: 'evict',
+          duration: 4000
+        });
+        tvOverlay.removeChild(triggerBtn);
+      };
+      
+      tvOverlay.appendChild(triggerBtn);
+      alert('Click the button inside the TV container to test modal visibility.');
+    }
+    
+    // Test 6: Keyboard navigation
+    async function testKeyboardNavigation() {
+      console.log('[Test 6] Testing keyboard navigation...');
+      alert('After clicking OK, the modal will open. Try:\n' +
+            '- Press TAB to cycle focus (should stay in modal)\n' +
+            '- Press ESC to close\n' +
+            '- Or click the close button (×)');
+      await window.EvictionModal.show({
+        title: 'Keyboard Navigation Test',
+        lines: [
+          'Press TAB to cycle through focusable elements.',
+          'Press ESC to close this modal.',
+          'Focus should be trapped within the modal.'
+        ],
+        tone: 'neutral',
+        duration: 0 // Manual close
+      });
+      console.log('[Test 6] Modal dismissed');
+    }
+    
+    // Verify modal module loaded
+    if (window.EvictionModal) {
+      console.log('✅ EvictionModal module loaded successfully');
+    } else {
+      console.error('❌ EvictionModal module not found!');
+    }
+  </script>
+</body>
+</html>
