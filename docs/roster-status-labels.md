@@ -1,0 +1,218 @@
+# Roster Status Labels
+
+## Overview
+The roster now uses inline status pills (not legacy overlay badges) to show player state. All active statuses should appear simultaneously: HOH, POV, NOM, or HOH·POV (combined).
+
+## Source of Truth
+- `game.hohId` – current HOH
+- `game.vetoHolder` – current POV holder
+- `game.nominees[]` – array of nominated player IDs
+
+## Derived Player Flags
+`syncPlayerBadgeStates()` sets per-player flags:
+- `p.hoh` – Boolean indicating if player is HOH
+- `p.nominated` – Boolean indicating if player is nominated
+- `p.nominationState` – String: 'none', 'nominated', 'pendingSave', 'saved', 'replacement'
+
+Call this before rendering HUD:
+```javascript
+global.syncPlayerBadgeStates?.();
+global.updateHud?.();
+```
+
+Or inside `updateHud()` itself (as currently implemented).
+
+## Precedence
+Status labels follow this precedence order (higher priority shown first):
+
+1. **WINNER** (🥇) – `p.showFinalLabel === 'WINNER'` or `p.winner`
+2. **RUNNER-UP** (🥈) – `p.showFinalLabel === 'RUNNER-UP'` or `p.runnerUp`
+3. **NOM** – Nominated player (any of: 'nominated', 'pendingSave', 'replacement' states)
+4. **HOH+POV** (👑🛡️) – Player holds both Head of Household and Veto
+5. **HOH** – Head of Household only
+6. **POV** – Veto holder only (may include twist emoji: 💎 Diamond, ⭐ Golden)
+7. **Name** – Default player name (no special status)
+
+## Implementation Details
+
+### Status Classes
+The following CSS classes are applied to `.top-tile-name` elements:
+
+- `.status-hoh` – HOH text pill
+- `.status-pov` – POV text pill
+- `.status-nom` – NOM text pill
+- `.status-icon-label.hoh-pov-icons` – Combined HOH+POV emoji icons
+- `.status-icon-label.medal-winner` – Winner medal emoji
+- `.status-icon-label.medal-runner-up` – Runner-up medal emoji
+
+### Legacy Badge Classes (Hidden)
+The following legacy badge classes are **hidden via CSS** (`display: none !important`):
+- `.badge-crown`
+- `.badge-veto`
+- `.badge-nom`
+
+These are no longer inserted by the modern renderer but remain hidden in CSS for backwards compatibility.
+
+## Common Issues & Fixes
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Only POV showing | Stale player flags before render | Ensure `syncPlayerBadgeStates()` called before `renderTopRoster()` |
+| NOM not appearing | Missing sync before HUD | Add sync call at start of `updateHud()` (already present in current implementation) |
+| HOH disappears when POV awarded to another | Renderer not checking both flags | Use unified status precedence logic (already present) |
+| Duplicate/conflicting labels | Legacy file override | Remove `js/ui.hud-and-router.js9` (should not exist) |
+
+## Quick Validation
+
+Open browser console and run:
+```javascript
+// Enable debug logging
+window.game.cfg.debugRoster = true;
+
+// Force HUD update
+updateHud();
+
+// Inspect player states
+[...game.players].map(p => ({
+  id: p.id,
+  name: p.name,
+  hoh: p.hoh,
+  pov: game.vetoHolder === p.id,
+  nom: p.nominated,
+  state: p.nominationState
+}))
+```
+
+All statuses should match visible pills in the top roster.
+
+## Debugging
+
+### Enable Debug Logging
+```javascript
+// Enable roster debug logging
+window.game.cfg.debugRoster = true;
+
+// Or set global flag
+window.DEBUG_ROSTER = true;
+```
+
+This will log status calculations for each player during `renderTopRoster()`:
+```
+[roster] render id=1 name=Alice hoh=true pov=false nom=false state=none
+[roster] render id=2 name=Bob hoh=false pov=true nom=false state=none
+[roster] render id=3 name=Charlie hoh=false pov=false nom=true state=nominated
+```
+
+### Check Badge Sync
+After calling `updateHud()`, you should see:
+```
+[hud] badge sync complete (hohId=1, vetoHolder=2, nominees=[3,4])
+```
+
+### Manual State Inspection
+```javascript
+// Check if player flags match game state
+game.players.forEach(p => {
+  const hohMatch = p.hoh === (p.id === game.hohId);
+  const nomMatch = p.nominated === game.nominees.includes(p.id);
+  if (!hohMatch || !nomMatch) {
+    console.error('Mismatch for', p.name, {
+      hohMatch,
+      nomMatch,
+      p_hoh: p.hoh,
+      g_hohId: game.hohId,
+      p_nominated: p.nominated,
+      g_nominees: game.nominees
+    });
+  }
+});
+```
+
+## Testing
+
+### Manual Test Scenarios
+
+1. **HOH Competition**
+   - Start game, complete HOH comp
+   - Expected: HOH player shows "HOH" pill immediately
+   - Command: `global.startHOH?.()` then submit competition
+
+2. **Nominations**
+   - Complete nominations ceremony
+   - Expected: Each nominee shows "NOM" pill; HOH still shows "HOH"
+   - Command: `global.setNominees?.(game.hohId, [id1, id2])`
+
+3. **POV Competition**
+   - Complete POV comp with different winner
+   - Expected: POV holder shows "POV" pill; HOH and NOM pills persist for their respective players
+   - Command: Complete veto competition, check roster
+
+4. **Combined HOH+POV**
+   - Force HOH to win POV
+   - Expected: HOH player shows both icons (👑🛡️)
+   - Command: `game.vetoHolder = game.hohId; updateHud();`
+
+5. **Eviction**
+   - Evict a player
+   - Expected: Evicted player's pills clear; eviction cross overlay only
+   - Command: Complete live vote and eviction
+
+6. **Winner Declaration**
+   - Declare winner at game end
+   - Expected: Winner shows 🥇 medal (overrides all other statuses)
+   - Command: `global.declareWinner?.(playerId)`
+
+### Test Files
+- `test_badge_sync.html` – Tests badge synchronization logic
+- `test_hoh_pov_badges.html` – Tests HOH/POV badge rendering
+- `test_top_roster_priority.html` – Tests roster ordering and status display
+
+## Architecture Notes
+
+### Module Responsibilities
+- `js/state.js` – Defines `syncPlayerBadgeStates()` function
+- `js/ui.hud-and-router.js` – Calls sync in `updateHud()`, renders roster in `renderTopRoster()`
+- `js/veto.js` – Calls sync after veto ceremony decisions
+- `js/competitions.js` – Calls sync after HOH/POV competition results
+- `js/nominations.js` – Calls sync after nomination ceremony
+- `js/eviction.js` – Calls sync after eviction
+
+### Data Flow
+```
+Game Event (HOH, Nominations, Veto)
+  ↓
+Update game.hohId / game.nominees / game.vetoHolder
+  ↓
+Call syncPlayerBadgeStates()
+  ↓
+Update p.hoh / p.nominated / p.nominationState for all players
+  ↓
+Call updateHud()
+  ↓
+Call renderTopRoster()
+  ↓
+Render status labels based on player flags
+```
+
+### Why Sync Before Render?
+Player flags (`p.hoh`, `p.nominated`) can become stale if:
+1. Game state is updated directly (e.g., `game.hohId = 5`)
+2. Multiple state changes happen in quick succession
+3. External modules modify game state without calling sync
+
+By defensively calling `syncPlayerBadgeStates()` at the start of `updateHud()`, we ensure player flags always match game state before rendering.
+
+## Future Enhancements
+
+Potential improvements for consideration:
+1. Add animation for status label transitions
+2. Add tooltip hover for combined HOH+POV explaining both statuses
+3. Add visual indicator for "safe" status after POV usage
+4. Add color coding for different nomination states (nominated vs pending save vs replacement)
+5. Add accessibility announcements for screen readers when statuses change
+
+## Related Files
+- `js/ui.hud-and-router.js` – Main HUD and roster rendering
+- `js/state.js` – Badge sync implementation
+- `styles.css` – Status label styling (lines 1639-1717, 6116-6168)
+- `test_badge_sync.html` – Badge sync test page
