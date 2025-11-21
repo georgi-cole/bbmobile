@@ -234,8 +234,6 @@
     stage.setAttribute('aria-label', 'Vote announcements');
     stage.style.display = 'none'; // Hidden, only for ARIA
     container.appendChild(stage);
-
-    container.appendChild(grid);
     
     // Mobile Carousel 2.0: Status Row (below stage, above CTA dock)
     if (state.useCarousel) {

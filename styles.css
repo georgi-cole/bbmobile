@@ -2073,10 +2073,16 @@ button:focus-visible,.btn:focus-visible{
   margin:0;
   padding:20px;
   display:grid;
-  grid-template-rows:auto 1fr auto auto;
+  grid-template-rows:auto minmax(0, 1fr) auto auto;
   gap:16px;
   overflow:hidden;
   background:transparent;
+}
+
+/* Ensure main grid can shrink when vertical space is limited */
+.lv2-fit .lv2-grid {
+  min-height: 0;
+  max-height: 100%;
 }
 
 /* Adjust header for compact TV rendering */
@@ -2695,6 +2701,11 @@ button:focus-visible,.btn:focus-visible{
 /* Hide old turn tag in carousel mode (replaced by YOUR TURN pill in status row) */
 .lv2-overlay.lv2-carousel-on .lv2-turn-tag {
   display: none;
+}
+
+/* Assign CTA dock to grid area in carousel mode */
+.lv2-overlay.lv2-carousel-on .lv2-cta-dock {
+  grid-area: cta-dock;
 }
 
 /* CTA Dock - always visible at bottom, anchored to safe area */
