@@ -221,8 +221,11 @@
       // Keyboard shortcuts
       const keyHandler = (e) => {
         if (e.key === 'Escape') {
-          e.preventDefault();
-          handleResolve(false);
+          // Only allow Escape to cancel if there's a Cancel button
+          if (cancelButton) {
+            e.preventDefault();
+            handleResolve(false);
+          }
         } else if (e.key === 'Enter') {
           e.preventDefault();
           handleResolve(true);
@@ -237,9 +240,9 @@
         originalResolve(value);
       };
 
-      // Click overlay to cancel (optional)
+      // Click overlay to cancel (only if Cancel button exists)
       overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
+        if (e.target === overlay && cancelButton) {
           handleResolve(false);
         }
       });
