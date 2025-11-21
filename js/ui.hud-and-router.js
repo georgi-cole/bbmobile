@@ -18,6 +18,57 @@
   };
   const FALLBACK = UI.FALLBACK_AVATAR || getDicebearUrl('Guest');
 
+  // ------------ Shared Status Label Builder ------------
+  /**
+   * Build unified status label for a player.
+   * Precedence: WINNER > RUNNER-UP > NOM > HOH+POV > HOH > POV > name
+   * @param {Object} p - Player object
+   * @param {Object} game - Game state object
+   * @returns {Object} {text, html, classes, aria} - Label properties
+   */
+  function buildStatusLabel(p, game){
+    const name = p.name || `Player ${p.id}`;
+    const hoh = p.hoh === true;
+    const pov = game.vetoHolder === p.id;
+    const nominated = p.nominated && !p.evicted;
+    const finalLabel = p.showFinalLabel; // 'WINNER' | 'RUNNER-UP'
+    
+    let text = name;
+    let html = null;
+    let classes = [];
+    let aria = name;
+    
+    if(finalLabel === 'WINNER'){
+      text = 'WINNER';
+      classes.push('status-winner');
+      aria = `${name} (Winner)`;
+    } else if(finalLabel === 'RUNNER-UP'){
+      text = 'RUNNER-UP';
+      classes.push('status-runner-up');
+      aria = `${name} (Runner-Up)`;
+    } else if(nominated){
+      text = 'NOM';
+      classes.push('status-nom');
+      aria = `${name} (Nominated)`;
+    } else if(hoh && pov){
+      // Both HOH and POV - textual pill
+      text = 'HOH·POV';
+      classes.push('status-hoh-pov');
+      aria = `${name} (Head of Household and Veto Holder)`;
+    } else if(hoh){
+      text = 'HOH';
+      classes.push('status-hoh');
+      aria = `${name} (Head of Household)`;
+    } else if(pov){
+      text = 'POV';
+      classes.push('status-pov');
+      aria = `${name} (Veto Holder)`;
+    }
+    
+    return {text, html, classes, aria};
+  }
+  g.buildStatusLabel = buildStatusLabel;
+
   // ------------ Jury Consistency & alivePlayers Patch ------------
   function ensureAlivePlayersPatched(){
     if (g.__alivePatched) return;
@@ -207,6 +258,18 @@
     const game=g.game; if(!game) return;
     const host=ensureDashboardRosterHost(); if(!host) return;
 
+    // Defensive sync: ensure badge states are synchronized before rendering
+    if(typeof g.syncPlayerBadgeStates === 'function'){
+      try{
+        g.syncPlayerBadgeStates();
+        if(g.__debugRosterLabels){
+          console.info('[roster] cast sync complete (hohId=' + game.hohId + ', vetoHolder=' + game.vetoHolder + ', nominees=' + JSON.stringify(game.nominees) + ')');
+        }
+      }catch(e){
+        console.warn('[roster] cast sync failed', e);
+      }
+    }
+
     // Keep original cast table visible (do not hide)
     const tblWrap=document.querySelector('#dashboardCard .list');
     if(tblWrap) tblWrap.style.display='';
@@ -245,6 +308,14 @@ header.innerHTML = `
 
       const c2=document.createElement('div'); c2.className='cell state';
       const tags=buildStateTags(p,game);
+      
+      // Debug logging for cast roster tags
+      if(g.__debugRosterLabels){
+        const tagLabels = tags.map(t => t.label).join(',') || 'none';
+        const tagClasses = tags.map(t => t.k).join(',') || 'none';
+        console.info('[roster] cast player=' + p.id + ' name=' + (p.name||'?') + ' tags=' + tagLabels + ' classes=' + tagClasses + ' hoh=' + p.hoh + ' pov=' + (game.vetoHolder===p.id) + ' nom=' + p.nominated);
+      }
+      
       c2.innerHTML = tags.length ? tags.map(t=>`<span class="tag ${t.k}">${t.label}</span>`).join(' ')
         : '<span class="tiny muted">—</span>';
       row.appendChild(c2);
