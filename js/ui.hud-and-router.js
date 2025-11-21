@@ -22,15 +22,27 @@
   /**
    * Build unified status label for a player.
    * Precedence: WINNER > RUNNER-UP > NOM > HOH+POV > HOH > POV > name
+   * Uses canonical game state for all status derivations.
    * @param {Object} p - Player object
    * @param {Object} game - Game state object
    * @returns {Object} {text, html, classes, aria} - Label properties
    */
   function buildStatusLabel(p, game){
     const name = p.name || `Player ${p.id}`;
-    const hoh = p.hoh === true;
+    
+    // Canonical HOH check: p.hoh flag OR game.hohId
+    const hoh = p.hoh === true || game.hohId === p.id;
+    
+    // Canonical POV check: game.vetoHolder
     const pov = game.vetoHolder === p.id;
-    const nominated = p.nominated && !p.evicted;
+    
+    // Canonical NOM check: multiple sources
+    const nominated = !p.evicted && (
+      p.nominated === true || 
+      (Array.isArray(game.nominees) && game.nominees.includes(p.id)) ||
+      ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState)
+    );
+    
     const finalLabel = p.showFinalLabel; // 'WINNER' | 'RUNNER-UP'
     
     let text = name;
@@ -244,9 +256,28 @@
   }
   function buildStateTags(p, game){
     const tags=[];
-    if(p.hoh) tags.push({k:'hoh',label:'HOH'});
-    if(game?.vetoHolder===p.id) tags.push({k:'veto',label:'VETO'});
-    if(p.nominated && !p.evicted && !game.__suppressNomBadges) tags.push({k:'nom',label:'NOM'});
+    
+    // Canonical HOH check: p.hoh flag OR game.hohId
+    if(p.hoh === true || game?.hohId === p.id) {
+      tags.push({k:'hoh',label:'HOH'});
+    }
+    
+    // Canonical POV check: game.vetoHolder
+    if(game?.vetoHolder===p.id) {
+      tags.push({k:'veto',label:'VETO'});
+    }
+    
+    // Canonical NOM check: multiple sources
+    if(!p.evicted && !game?.__suppressNomBadges) {
+      const isNominated = p.nominated === true || 
+        (Array.isArray(game?.nominees) && game.nominees.includes(p.id)) ||
+        ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState);
+      
+      if(isNominated) {
+        tags.push({k:'nom',label:'NOM'});
+      }
+    }
+    
     if(Array.isArray(game?.juryHouse) && game.juryHouse.includes(p.id)) tags.push({k:'jury',label:'JURY'});
     if(p.winner) tags.push({k:'winner',label:'WINNER'});
     if(p.runnerUp) tags.push({k:'runner',label:'RUNNER-UP'});
@@ -263,10 +294,10 @@
       try{
         g.syncPlayerBadgeStates();
         if(g.__debugRosterLabels){
-          console.info('[roster] cast sync complete (hohId=' + game.hohId + ', vetoHolder=' + game.vetoHolder + ', nominees=' + JSON.stringify(game.nominees) + ')');
+          console.info('[roster] cast table sync complete (hohId=' + game.hohId + ', vetoHolder=' + game.vetoHolder + ', nominees=' + JSON.stringify(game.nominees) + ')');
         }
       }catch(e){
-        console.warn('[roster] cast sync failed', e);
+        console.warn('[roster] cast table sync failed', e);
       }
     }
 
@@ -313,7 +344,10 @@ header.innerHTML = `
       if(g.__debugRosterLabels){
         const tagLabels = tags.map(t => t.label).join(',') || 'none';
         const tagClasses = tags.map(t => t.k).join(',') || 'none';
-        console.info('[roster] cast player=' + p.id + ' name=' + (p.name||'?') + ' tags=' + tagLabels + ' classes=' + tagClasses + ' hoh=' + p.hoh + ' pov=' + (game.vetoHolder===p.id) + ' nom=' + p.nominated);
+        const hasHOH = p.hoh === true || game.hohId === p.id;
+        const hasPOV = game.vetoHolder === p.id;
+        const hasNOM = p.nominated === true || (Array.isArray(game.nominees) && game.nominees.includes(p.id));
+        console.info('[roster] cast table id=' + p.id + ' name=' + (p.name||'?') + ' tags=' + tagLabels + ' classes=' + tagClasses + ' hoh=' + hasHOH + ' pov=' + hasPOV + ' nom=' + hasNOM);
       }
       
       c2.innerHTML = tags.length ? tags.map(t=>`<span class="tag ${t.k}">${t.label}</span>`).join(' ')
@@ -716,15 +750,16 @@ header.innerHTML = `
 
   /**
    * Check if player is HOH.
+   * CANONICAL: Checks p.hoh flag OR game.hohId OR game.hohIds array.
    */
   function isHOH(p){
     const game = g.game;
     if(!p || !game) return false;
     
-    // Check player.hoh flag
-    if(p.hoh) return true;
+    // Check player.hoh flag (primary)
+    if(p.hoh === true) return true;
     
-    // Check game.hohId
+    // Check game.hohId (canonical)
     if(game.hohId === p.id) return true;
     
     // Check game.hohIds array (for dual HOH)
@@ -735,15 +770,16 @@ header.innerHTML = `
 
   /**
    * Check if player is POV holder.
+   * CANONICAL: Checks game.vetoHolder (primary) OR game.povId OR game.povIds array.
    */
   function isPOV(p){
     const game = g.game;
     if(!p || !game) return false;
     
-    // Check game.vetoHolder
+    // Check game.vetoHolder (canonical primary)
     if(game.vetoHolder === p.id) return true;
     
-    // Check game.povId
+    // Check game.povId (alternative name)
     if(game.povId === p.id) return true;
     
     // Check game.povIds array (for multiple POV holders)
@@ -754,21 +790,28 @@ header.innerHTML = `
 
   /**
    * Check if player is a nominee.
+   * CANONICAL: Checks p.nominated flag OR game.nominees array OR nominationState OR legacy fields.
    */
   function isNominee(p){
     const game = g.game;
     if(!p || !game) return false;
     
-    // Check player.nominated flag
-    if(p.nominated && !p.evicted) return true;
+    // Must not be evicted to be a nominee
+    if(p.evicted) return false;
     
-    // Check game.nominees array
+    // Check player.nominated flag
+    if(p.nominated === true) return true;
+    
+    // Check game.nominees array (canonical)
     if(Array.isArray(game.nominees) && game.nominees.includes(p.id)) return true;
+    
+    // Check nominationState (for veto ceremony transitions)
+    if(['nominated', 'pendingSave', 'replacement'].includes(p.nominationState)) return true;
     
     // Check game.noms array (alternative)
     if(Array.isArray(game.noms) && game.noms.includes(p.id)) return true;
     
-    // Check game.nom (single nominee)
+    // Check game.nom (single nominee, legacy)
     if(game.nom === p.id) return true;
     
     return false;
@@ -874,19 +917,27 @@ header.innerHTML = `
       // Add position:relative to wrap for absolute positioning of avatar badge
       wrap.style.position = 'relative';
       
-      // Status checks
-      const hasHOH = !!p.hoh;
-      const hasVeto = game.vetoHolder===p.id;
+      // Status checks using CANONICAL game state
+      // HOH: Check both p.hoh flag AND game.hohId
+      const hasHOH = p.hoh === true || game.hohId === p.id;
+      
+      // POV: Check game.vetoHolder (already canonical)
+      const hasVeto = game.vetoHolder === p.id;
+      
       const isWinner = p.showFinalLabel === 'WINNER' || p.winner;
       const isRunnerUp = p.showFinalLabel === 'RUNNER-UP' || p.runnerUp;
-      // Show NOM for states: nominated, pendingSave, replacement
+      
+      // NOM: Check ALL canonical sources (p.nominated, game.nominees array, nominationState)
       const nomState = p.nominationState || 'none';
-      const hasNom = !p.evicted && !game.__suppressNomBadges && 
-        (nomState === 'nominated' || nomState === 'pendingSave' || nomState === 'replacement');
+      const hasNom = !p.evicted && !game.__suppressNomBadges && (
+        p.nominated === true ||
+        (Array.isArray(game.nominees) && game.nominees.includes(p.id)) ||
+        nomState === 'nominated' || nomState === 'pendingSave' || nomState === 'replacement'
+      );
       
       // Debug logging (gated by debug flag if available)
-      if(game.cfg?.debugRoster || (typeof g.DEBUG_ROSTER !== 'undefined' && g.DEBUG_ROSTER)){
-        console.info('[roster] render id=' + p.id + ' name=' + (p.name||'?') + ' hoh=' + hasHOH + ' pov=' + hasVeto + ' nom=' + hasNom + ' state=' + nomState);
+      if(g.__debugRosterLabels || game.cfg?.debugRoster || (typeof g.DEBUG_ROSTER !== 'undefined' && g.DEBUG_ROSTER)){
+        console.info('[roster] top tile id=' + p.id + ' name=' + (p.name||'?') + ' hoh=' + hasHOH + ' pov=' + hasVeto + ' nom=' + hasNom + ' state=' + nomState);
       }
       
       // Add pulse effect for nominees
@@ -1143,7 +1194,9 @@ header.innerHTML = `
     if(typeof g.syncPlayerBadgeStates === 'function'){
       try {
         g.syncPlayerBadgeStates();
-        console.info('[hud] badge sync complete (hohId=' + game.hohId + ', vetoHolder=' + game.vetoHolder + ', nominees=' + JSON.stringify(game.nominees) + ')');
+        if(g.__debugRosterLabels){
+          console.info('[hud] badge sync complete (hohId=' + game.hohId + ', vetoHolder=' + game.vetoHolder + ', nominees=' + JSON.stringify(game.nominees) + ')');
+        }
       } catch(e) {
         console.warn('[hud] badge sync failed', e);
       }
