@@ -308,9 +308,8 @@
       return;
     }
 
-    // COMMIT 2: Check if we should use modern lv2 UI (only for voters with 2 nominees)
-    const useLv2 = humanIsVoter
-      && g.eviction.nominees.length === 2 
+    // Check if we should use modern lv2 UI (for any two-nominee eviction, voter or observer)
+    const useLv2 = g.eviction.nominees.length === 2 
       && g.cfg?.modernLiveVoteUI !== false 
       && global.lv2?.enabled !== false;
 
@@ -843,7 +842,8 @@
       if(twoMode){
         const [A,B]=noms;
         if(pick===A) tallyA++; else tallyB++;
-        updateLiveVoteGraph(tallyA,tallyB);
+        // Only update legacy graph when NOT using LV2 (LV2 handles counts internally)
+        if(!useLv2) updateLiveVoteGraph(tallyA,tallyB);
       } else {
         counts.set(pick,(counts.get(pick)||0)+1);
         updateLiveVoteMulti(counts);
@@ -906,6 +906,21 @@
       const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict',useLv2);
       if(pick===a) ca++; else cb++;
       
+      // Push HOH tie-break vote to LV2 feed if active
+      if (useLv2) {
+        try {
+          const side = pick === a ? 'left' : 'right';
+          global.lv2?.pushVote?.({
+            voterId: hoh.id,
+            voterName: hoh.name,
+            pick: side
+          });
+          await sleep(1500); // Wait for chip to appear
+        } catch (e) {
+          console.warn('[eviction] lv2.pushVote failed for HOH tie-break:', e);
+        }
+      }
+      
       // Add HOH vote to rollout
       if (global.LiveVoteRollout?.isShowing?.()) {
         global.LiveVoteRollout.addVote({
@@ -928,6 +943,22 @@
     }
     const ha=(hoh.affinity[a]??0), hb=(hoh.affinity[b]??0);
     const evId = ha < hb ? a : b;
+    
+    // Push AI HOH tie-break vote to LV2 feed if active
+    if (useLv2) {
+      try {
+        const side = evId === a ? 'left' : 'right';
+        global.lv2?.pushVote?.({
+          voterId: hoh.id,
+          voterName: hoh.name,
+          pick: side
+        });
+        await sleep(1500); // Wait for chip to appear
+      } catch (e) {
+        console.warn('[eviction] lv2.pushVote failed for AI HOH tie-break:', e);
+      }
+    }
+    
     if (!useLv2) {
       global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],'live',3000,true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
