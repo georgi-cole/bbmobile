@@ -269,6 +269,10 @@
     }
 
     // Keyboard event handlers and state (stored for cleanup and access in updatePhysics)
+    const controlKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+    function keyIsControl(k){
+      return controlKeys.includes(k);
+    }
     let keydownHandler = null;
     let keyupHandler = null;
     const keysPressed = {}; // Tracks arrow keys when swipe controls are active
@@ -324,11 +328,6 @@
       });
       
       // Keyboard arrow controls for desktop
-      const controlKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-      function keyIsControl(k){
-        return controlKeys.includes(k);
-      }
-      
       keydownHandler = (e) => {
         if(keyIsControl(e.key)) {
           keysPressed[e.key] = true;
@@ -338,7 +337,7 @@
       
       keyupHandler = (e) => {
         if(keyIsControl(e.key)) {
-          delete keysPressed[e.key];
+          keysPressed[e.key] = false;
           e.preventDefault();
         }
       };
