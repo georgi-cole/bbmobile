@@ -1131,6 +1131,9 @@
       const tally = new Map([[a, finalA], [b, finalB]]);
       g.eviction.voteSummary = buildVoteSummary(noms, tally);
       
+      // Set guard flag to prevent duplicate result cards in handleEvictionLegacy
+      g.eviction.__resultCardShown = true;
+      
       if (!useLv2) {
         // Use new eviction modal for better visibility (not clipped by TV overlay)
         if (typeof global.EvictionModal?.show === 'function') {
@@ -1150,24 +1153,25 @@
         // 1. Begin result card phase (fade nominees/feed, manage z-index)
         global.lv2?.beginResultCardPhase?.();
         
-        // 2. Show result using new eviction modal (replaces both inline and page-level cards)
-        if (typeof global.EvictionModal?.show === 'function') {
-          await global.EvictionModal.show({
-            title: 'Eviction Result',
-            lines: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
-            tone: 'evict',
-            duration: 3600
-          });
-        } else if (global.lv2?.supportsInlineCard?.()) {
-          // Fallback: Mobile inline card within TV that respects safe areas
+        // 2. Show result: prioritize inline card for mobile/narrow, viewport modal for desktop
+        if (global.lv2?.supportsInlineCard?.()) {
+          // Mobile/narrow: Inline card within TV that respects safe areas
           await global.lv2.showInlineCard({
             title: 'Eviction Result',
             body: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
             duration: 3600,
             tone: 'evict'
           });
+        } else if (typeof global.EvictionModal?.show === 'function') {
+          // Desktop/wide: Viewport-level modal (escapes TV clipping)
+          await global.EvictionModal.show({
+            title: 'Eviction Result',
+            lines: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
+            tone: 'evict',
+            duration: 3600
+          });
         } else {
-          // Fallback: Desktop page-level card system
+          // Fallback: Legacy page-level card system
           global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
           try{ await global.cardQueueWaitIdle?.(); }catch{}
         }
@@ -1250,6 +1254,10 @@
           }
         } else evId=topIds[0];
         const parts=noms.map(id=>`${global.safeName(id)} ${counts.get(id)||0}`).join(' — ');
+        
+        // Set guard flag to prevent duplicate result cards
+        g.eviction.__resultCardShown = true;
+        
         // Use new eviction modal for better visibility
         if (typeof global.EvictionModal?.show === 'function') {
           await global.EvictionModal.show({
@@ -1454,8 +1462,9 @@
     if(reason==='self'){
       global.showCard('Self-Evicted',[ev.name],'evict',3800,true);
       global.addLog?.(`Self-eviction: <b>${ev.name}</b> has left the game.`,'danger');
-    } else if (!usedModernLiveVoteUI) {
+    } else if (!usedModernLiveVoteUI && !g.eviction?.__resultCardShown) {
       // Standard eviction without modern UI - use unified result display (matching multi-eviction style)
+      // Guard: Only show if result card hasn't been shown yet (prevents duplicates)
       const evName = global.safeName(evId);
       const voteSummary = g.eviction.voteSummary || '';
       
@@ -1478,6 +1487,9 @@
         global.showCard('Eviction Result', lines, 'evict', 3800, true);
         try { await global.cardQueueWaitIdle?.(); } catch {}
       }
+      
+      // Mark result card as shown
+      g.eviction.__resultCardShown = true;
       
       global.addLog?.(`Evicted: <b>${evName}</b>.`,'danger');
     }
