@@ -154,6 +154,7 @@
     const BALL_RADIUS = 6;
     const FRICTION = 0.90;
     const ACCELERATION = 0.35;
+    const KEYBOARD_ACCELERATION_MULTIPLIER = 1.2;
     
     // Generate maze
     const mazeCells = generateMaze(MAZE_COLS, MAZE_ROWS, rng);
@@ -184,9 +185,6 @@
         radius: 7
       });
     }
-    
-    // Track keyboard arrow keys for desktop controls
-    const keysPressed = {};
 
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px;';
@@ -270,9 +268,10 @@
       }
     }
 
-    // Keyboard event handlers (stored for cleanup)
+    // Keyboard event handlers and state (stored for cleanup and access in updatePhysics)
     let keydownHandler = null;
     let keyupHandler = null;
+    const keysPressed = {}; // Tracks arrow keys when swipe controls are active
 
     function setupSwipeControls(){
       useTiltControls = false;
@@ -325,8 +324,9 @@
       });
       
       // Keyboard arrow controls for desktop
+      const controlKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
       function keyIsControl(k){
-        return k === 'ArrowLeft' || k === 'ArrowRight' || k === 'ArrowUp' || k === 'ArrowDown';
+        return controlKeys.includes(k);
       }
       
       keydownHandler = (e) => {
@@ -417,7 +417,7 @@
       
       // Apply keyboard controls when tilt is not active
       if(!useTiltControls){
-        const impulseFactor = ACCELERATION * 1.2;
+        const impulseFactor = ACCELERATION * KEYBOARD_ACCELERATION_MULTIPLIER;
         if(keysPressed.ArrowLeft)  velocityX -= impulseFactor;
         if(keysPressed.ArrowRight) velocityX += impulseFactor;
         if(keysPressed.ArrowUp)    velocityY -= impulseFactor;
