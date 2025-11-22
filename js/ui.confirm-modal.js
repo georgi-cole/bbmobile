@@ -112,23 +112,36 @@
         flex-wrap: wrap;
       `;
 
-      // Cancel button
-      const cancelButton = document.createElement('button');
-      cancelButton.className = 'confirm-modal-button confirm-cancel';
-      cancelButton.textContent = cancelText;
-      cancelButton.style.cssText = `
-        padding: 12px 24px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        border: 2px solid #4a5a6a;
-        background: #2a3a4a;
-        color: #e0e8f0;
-        border-radius: 10px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        min-width: 100px;
-        font-family: inherit;
-      `;
+      // Cancel button (only create if cancelText is not null)
+      let cancelButton = null;
+      if (cancelText !== null) {
+        cancelButton = document.createElement('button');
+        cancelButton.className = 'confirm-modal-button confirm-cancel';
+        cancelButton.textContent = cancelText;
+        cancelButton.style.cssText = `
+          padding: 12px 24px;
+          font-size: 0.95rem;
+          font-weight: 600;
+          border: 2px solid #4a5a6a;
+          background: #2a3a4a;
+          color: #e0e8f0;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          min-width: 100px;
+          font-family: inherit;
+        `;
+
+        // Button hover effects for cancel button
+        cancelButton.addEventListener('mouseenter', () => {
+          cancelButton.style.background = '#3a4a5a';
+          cancelButton.style.borderColor = '#5a6a7a';
+        });
+        cancelButton.addEventListener('mouseleave', () => {
+          cancelButton.style.background = '#2a3a4a';
+          cancelButton.style.borderColor = '#4a5a6a';
+        });
+      }
 
       // Confirm button
       const confirmButton = document.createElement('button');
@@ -148,16 +161,7 @@
         font-family: inherit;
       `;
 
-      // Button hover effects
-      cancelButton.addEventListener('mouseenter', () => {
-        cancelButton.style.background = '#3a4a5a';
-        cancelButton.style.borderColor = '#5a6a7a';
-      });
-      cancelButton.addEventListener('mouseleave', () => {
-        cancelButton.style.background = '#2a3a4a';
-        cancelButton.style.borderColor = '#4a5a6a';
-      });
-
+      // Button hover effects for confirm button
       confirmButton.addEventListener('mouseenter', () => {
         confirmButton.style.background = colors.btnHover;
         confirmButton.style.transform = 'scale(1.05)';
@@ -167,7 +171,10 @@
         confirmButton.style.transform = 'scale(1)';
       });
 
-      buttonContainer.appendChild(cancelButton);
+      // Append buttons to container (only add cancel button if it exists)
+      if (cancelButton) {
+        buttonContainer.appendChild(cancelButton);
+      }
       buttonContainer.appendChild(confirmButton);
       modal.appendChild(buttonContainer);
 
@@ -206,14 +213,19 @@
       };
 
       // Button handlers
-      cancelButton.addEventListener('click', () => handleResolve(false));
+      if (cancelButton) {
+        cancelButton.addEventListener('click', () => handleResolve(false));
+      }
       confirmButton.addEventListener('click', () => handleResolve(true));
 
       // Keyboard shortcuts
       const keyHandler = (e) => {
         if (e.key === 'Escape') {
-          e.preventDefault();
-          handleResolve(false);
+          // Only allow Escape to cancel if there's a Cancel button
+          if (cancelButton) {
+            e.preventDefault();
+            handleResolve(false);
+          }
         } else if (e.key === 'Enter') {
           e.preventDefault();
           handleResolve(true);
@@ -228,9 +240,9 @@
         originalResolve(value);
       };
 
-      // Click overlay to cancel (optional)
+      // Click overlay to cancel (only if Cancel button exists)
       overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
+        if (e.target === overlay && cancelButton) {
           handleResolve(false);
         }
       });

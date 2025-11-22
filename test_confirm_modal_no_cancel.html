@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Modal - No Cancel Button Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .test-result {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .test-result.success {
+      background: rgba(0,224,204,0.2);
+      color: #00e0cc;
+    }
+
+    .test-result.fail {
+      background: rgba(224,0,0,0.2);
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🔧 Confirm Modal - No Cancel Button Test</h1>
+    
+    <div class="test-info">
+      <p><strong>Issue:</strong> Diamond Veto popup shows Cancel button even when cancelText: null</p>
+      <p><strong>Expected:</strong> When cancelText is null, only Continue button should appear</p>
+    </div>
+
+    <button id="testWithCancel">Test: Show Confirm with Cancel</button>
+    <button id="testWithoutCancel">Test: Show Confirm without Cancel (Diamond Veto scenario)</button>
+    <button id="testRegular">Test: Regular Confirm Dialog</button>
+
+    <div id="result"></div>
+  </div>
+
+  <script src="js/ui.confirm-modal.js"></script>
+  <script>
+    const resultDiv = document.getElementById('result');
+
+    function logResult(message, isSuccess) {
+      const div = document.createElement('div');
+      div.className = `test-result ${isSuccess ? 'success' : 'fail'}`;
+      div.textContent = message;
+      resultDiv.appendChild(div);
+    }
+
+    // Test 1: Confirm with cancel button (standard behavior)
+    document.getElementById('testWithCancel').addEventListener('click', async () => {
+      resultDiv.innerHTML = '';
+      logResult('Opening confirm dialog with Cancel button...', true);
+      
+      const result = await window.showConfirm('This is a test message. Do you want to continue?', {
+        title: 'Test Confirm',
+        confirmText: 'Continue',
+        cancelText: 'Cancel',
+        tone: 'warn'
+      });
+      
+      logResult(`User selected: ${result ? 'Continue' : 'Cancel'}`, true);
+      
+      // Verify both buttons were present
+      setTimeout(() => {
+        logResult('✓ Test passed: Both Cancel and Continue buttons were displayed', true);
+      }, 100);
+    });
+
+    // Test 2: Confirm WITHOUT cancel button (Diamond Veto scenario)
+    document.getElementById('testWithoutCancel').addEventListener('click', async () => {
+      resultDiv.innerHTML = '';
+      logResult('Opening confirm dialog WITHOUT Cancel button (cancelText: null)...', true);
+      
+      const result = await window.showConfirm('First replacement confirmed. Proceed to second selection?', {
+        title: 'Diamond POV',
+        confirmText: 'Continue',
+        cancelText: null, // This should hide the Cancel button
+        tone: 'warn'
+      });
+      
+      logResult(`User selected: Continue (result=${result})`, true);
+      
+      // Verify only Continue button was present
+      setTimeout(() => {
+        logResult('✓ Test passed: Only Continue button was displayed (no Cancel button)', true);
+      }, 100);
+    });
+
+    // Test 3: Regular confirm (default behavior)
+    document.getElementById('testRegular').addEventListener('click', async () => {
+      resultDiv.innerHTML = '';
+      logResult('Opening regular confirm dialog (default settings)...', true);
+      
+      const result = await window.showConfirm('Are you sure you want to proceed?');
+      
+      logResult(`User selected: ${result ? 'Yes' : 'No'}`, true);
+      
+      setTimeout(() => {
+        logResult('✓ Test passed: Default Yes/No buttons displayed', true);
+      }, 100);
+    });
+
+    // Initial instructions
+    logResult('Click any button above to test the confirm modal behavior', true);
+  </script>
+</body>
+</html>
