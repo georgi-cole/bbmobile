@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Inline CTA Nominee Tile Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0f16 0%, #1a2332 100%);
+      color: #e8f4ff;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .test-controls {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      background: rgba(20,35,55,0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(143,211,255,0.2);
+    }
+    
+    .test-controls h1 {
+      margin: 0 0 16px 0;
+      color: #00e0cc;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls button {
+      background: linear-gradient(135deg, #00e0cc, #00b8a3);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #001a18;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    
+    .test-controls button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,224,204,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    
+    .test-status {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(255,215,0,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    /* Mock TV container with different viewport sizes */
+    .tv-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #0a0f16;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    
+    /* Simulate mobile viewport */
+    .tv-container.mobile {
+      max-width: 375px;
+      height: 667px;
+    }
+    
+    .tv-container.mobile-landscape {
+      max-width: 667px;
+      height: 375px;
+    }
+    
+    .tv-container.tablet {
+      max-width: 768px;
+      height: 1024px;
+    }
+    
+    .tv-container.laptop {
+      max-width: 1280px;
+      height: 720px;
+    }
+
+    #tv {
+      width: 100%;
+      height: 560px;
+      position: relative;
+      background: #000;
+    }
+    
+    .tv-container.mobile #tv {
+      height: 100%;
+    }
+    
+    .tv-container.mobile-landscape #tv {
+      height: 100%;
+    }
+    
+    .tv-container.tablet #tv {
+      height: 100%;
+    }
+    
+    .tv-container.laptop #tv {
+      height: 100%;
+    }
+
+    /* Panel for LV2 UI */
+    #panel {
+      display: none;
+    }
+
+    /* Viewport info display */
+    .viewport-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.8);
+      color: #00e0cc;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h1>🎯 Inline CTA Nominee Tile Test</h1>
+    
+    <div class="test-info">
+      <strong>Feature:</strong> Inline evict action on nominee tile instead of bottom button.<br>
+      <strong>Expected Behavior:</strong>
+      <ol>
+        <li><strong>Initial State:</strong> Instruction text "Tap on the photo of the person you want to evict" displayed below grid</li>
+        <li><strong>After Selection:</strong> Selected nominee's name transforms into "Evict [Name]" button</li>
+        <li><strong>On Click:</strong> Clicking the inline button triggers eviction action</li>
+        <li><strong>Bottom Button:</strong> Hidden in carousel mode (mobile/tablet)</li>
+      </ol>
+    </div>
+
+    <div style="margin: 16px 0;">
+      <strong>Select Viewport:</strong><br>
+      <button onclick="setViewport('mobile')">📱 Mobile Portrait (375×667)</button>
+      <button onclick="setViewport('mobile-landscape')">📱 Mobile Landscape (667×375)</button>
+      <button onclick="setViewport('tablet')">📱 Tablet (768×1024)</button>
+      <button onclick="setViewport('laptop')">💻 Laptop (1280×720)</button>
+      <button onclick="setViewport('desktop')">🖥️ Desktop (900×560)</button>
+    </div>
+
+    <div style="margin: 16px 0;">
+      <strong>Test Actions:</strong><br>
+      <button onclick="initLiveVote()">Initialize LV2 Carousel</button>
+      <button onclick="cleanup()">Cleanup</button>
+    </div>
+
+    <div class="test-status" id="testStatus">
+      <strong>Status:</strong> Ready to test. Select a viewport and click "Initialize LV2 Carousel"
+    </div>
+  </div>
+
+  <div class="tv-container" id="tvContainer">
+    <div id="tv"></div>
+    <div id="panel"></div>
+  </div>
+
+  <div class="viewport-info" id="viewportInfo">
+    Viewport: <span id="vpSize">900×560</span>
+  </div>
+
+  <!-- Mock game state and helpers -->
+  <script>
+    // Mock player data
+    const mockPlayers = [
+      { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Alice' },
+      { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/6.x/bottts/svg?seed=Bob' }
+    ];
+
+    // Mock global helpers
+    window.getP = (id) => mockPlayers.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || 'Player';
+    window.resolveAvatar = (player) => player?.avatar || null;
+
+    // Mock game config
+    window.game = {
+      cfg: {
+        modernLiveVoteUI: true
+      }
+    };
+
+    // Mock TVFit for carousel detection (force carousel on mobile/tablet)
+    window.TVFit = {
+      isNarrow: () => window.innerWidth < 820,
+      isMobile: () => window.innerWidth < 768,
+      shouldUseCarousel: () => window.innerWidth < 820,
+      applySafeAreaConstraints: (el) => {
+        // No-op for test
+      }
+    };
+
+    // Viewport management
+    let currentViewport = 'desktop';
+
+    function setViewport(type) {
+      currentViewport = type;
+      const container = document.getElementById('tvContainer');
+      container.className = 'tv-container ' + type;
+      updateViewportInfo();
+      updateStatus(`Viewport set to: ${type}. Click "Initialize LV2 Carousel" to test.`);
+      
+      // Clean up and reinitialize if already showing
+      if (window.lv2 && document.querySelector('.lv2-overlay')) {
+        cleanup();
+        setTimeout(initLiveVote, 100);
+      }
+    }
+
+    function updateViewportInfo() {
+      const tv = document.getElementById('tv');
+      const rect = tv.getBoundingClientRect();
+      document.getElementById('vpSize').textContent = 
+        `${Math.round(rect.width)}×${Math.round(rect.height)}`;
+    }
+
+    function updateStatus(message) {
+      document.getElementById('testStatus').innerHTML = 
+        `<strong>Status:</strong> ${message}`;
+    }
+
+    // Initialize LV2
+    function initLiveVote() {
+      updateStatus('Initializing LV2 UI with carousel mode...');
+      
+      if (!window.lv2) {
+        updateStatus('❌ Error: lv2 module not loaded');
+        return;
+      }
+
+      // Force carousel mode by setting window size
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: currentViewport === 'mobile' ? 375 : 
+               currentViewport === 'mobile-landscape' ? 667 : 
+               currentViewport === 'tablet' ? 768 : 
+               currentViewport === 'laptop' ? 1280 : 900
+      });
+
+      // Initialize LV2 with two nominees
+      window.lv2.init({
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2
+      });
+
+      // Create CTA bar with onVote callback
+      window.lv2.createCtaBar({
+        enabled: true,
+        onVote: (playerId) => {
+          const player = window.getP(playerId);
+          updateStatus(`✅ Vote submitted for: ${player.name} (ID: ${playerId})<br><strong>Inline CTA worked!</strong>`);
+          
+          // Show success for 2 seconds, then cleanup
+          setTimeout(() => {
+            cleanup();
+            updateStatus('Test complete! Click "Initialize LV2 Carousel" to test again.');
+          }, 2000);
+        }
+      });
+
+      // Check for instruction text
+      setTimeout(() => {
+        const instructionText = document.querySelector('.lv2-instruction-text');
+        const ctaDock = document.querySelector('.lv2-cta-dock');
+        
+        if (instructionText) {
+          updateStatus(`✅ LV2 initialized. Instruction text visible: "${instructionText.textContent}"<br>` +
+                      `CTA Dock display: ${ctaDock ? ctaDock.style.display : 'not found'}<br>` +
+                      `<strong>Now tap/click on a nominee photo to see the inline CTA button.</strong>`);
+        } else {
+          updateStatus('⚠️ LV2 initialized but instruction text not found. Check if carousel mode is active.');
+        }
+      }, 500);
+    }
+
+    // Cleanup
+    function cleanup() {
+      if (window.lv2) {
+        window.lv2.cleanup();
+      }
+      updateStatus('Cleaned up. Ready to test again.');
+    }
+
+    // Update viewport info on resize
+    window.addEventListener('resize', updateViewportInfo);
+    updateViewportInfo();
+  </script>
+
+  <!-- Load the actual modules -->
+  <script src="js/livevote-ui.js"></script>
+</body>
+</html>

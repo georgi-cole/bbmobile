@@ -1917,6 +1917,47 @@ button:focus-visible,.btn:focus-visible{
   color:var(--ink);
   text-align:center;
   letter-spacing:-0.2px;
+  transition: all 0.3s ease;
+}
+
+/* Inline CTA: Transform name into evict button when selected */
+.lv2-name-button {
+  background: linear-gradient(135deg, #e63946, #c1121f);
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(230, 57, 70, 0.4);
+  transition: all 0.3s ease;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lv2-name-button:hover {
+  background: linear-gradient(135deg, #f04654, #d01828);
+  box-shadow: 0 6px 20px rgba(230, 57, 70, 0.6);
+  transform: translateY(-2px);
+}
+
+.lv2-name-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 12px rgba(230, 57, 70, 0.4);
+}
+
+/* Inline CTA: Instruction text below grid */
+.lv2-instruction-text {
+  text-align: center;
+  font-size: 1rem;
+  color: rgba(232, 244, 255, 0.8);
+  padding: 12px 20px;
+  margin: 8px auto;
+  max-width: 90%;
+  font-weight: 500;
+  letter-spacing: 0.2px;
 }
 
 .lv2-count{
@@ -2586,6 +2627,19 @@ button:focus-visible,.btn:focus-visible{
   font-weight: 700;
 }
 
+/* Responsive mode: inline evict button */
+.lv2-overlay.lv2-responsive .lv2-name-button {
+  font-size: clamp(1rem, 2.5dvh, 1.3rem);
+  padding: clamp(10px, 2dvh, 14px) clamp(20px, 4dvw, 28px);
+  min-height: clamp(44px, 8dvh, 56px);
+}
+
+/* Responsive mode: instruction text */
+.lv2-overlay.lv2-responsive .lv2-instruction-text {
+  font-size: clamp(0.9rem, 2dvh, 1.1rem);
+  padding: clamp(10px, 2dvh, 14px) clamp(16px, 4dvw, 24px);
+}
+
 /* Responsive mode: larger count capsule */
 .lv2-overlay.lv2-responsive .lv2-count {
   font-size: clamp(1.3rem, 3dvh, 2rem);
@@ -2801,6 +2855,11 @@ button:focus-visible,.btn:focus-visible{
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   z-index: auto;
+}
+
+/* Hidden state for CTA dock (used in inline CTA mode) */
+.lv2-cta-dock-hidden {
+  display: none !important;
 }
 
 /* Selected nominee visual indicator */
