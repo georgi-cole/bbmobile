@@ -519,7 +519,10 @@
   }
 
   function stopAiSocialPhase() {
-    if (!isRunning) return;
+    if (!isRunning) {
+      console.debug('[ai-scheduler] Already stopped, skipping');
+      return;
+    }
 
     console.info('[ai-scheduler] ◼️ Stopping AI social phase');
     
@@ -539,6 +542,10 @@
       totalInteractions: totalActions,
       perPlayer: Object.fromEntries(actionCounts)
     });
+  }
+  
+  function isSchedulerRunning() {
+    return isRunning;
   }
 
   function runEmptyEnergyBurst() {
@@ -574,6 +581,7 @@
   global.SocialAIScheduler = {
     startAiSocialPhase,
     stopAiSocialPhase,
+    isRunning: isSchedulerRunning,
     runEmptyEnergyBurst,
     getConfig,
     // For testing/debugging
