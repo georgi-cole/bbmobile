@@ -817,7 +817,7 @@
       } else { 
         // LV2 path: Push vote to show voter chip and update counts
         if(global.lv2?.pushVote){
-          const [leftId, rightId] = noms;
+          const [leftId] = noms;
           const votePick = pick === leftId ? 'left' : 'right';
           global.lv2.pushVote({
             voterId: entry.voter,
