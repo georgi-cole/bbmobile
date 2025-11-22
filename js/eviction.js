@@ -987,16 +987,34 @@
       const evName=global.safeName(evId);
       
       if (!useLv2) {
-        global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
-        try{ await global.cardQueueWaitIdle?.(); }catch{}
+        // Use new eviction modal for better visibility (not clipped by TV overlay)
+        if (typeof global.EvictionModal?.show === 'function') {
+          await global.EvictionModal.show({
+            title: 'Eviction Result',
+            lines: [`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],
+            tone: 'evict',
+            duration: 3800
+          });
+        } else {
+          // Fallback to old card system if modal not loaded
+          global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
+          try{ await global.cardQueueWaitIdle?.(); }catch{}
+        }
       } else {
         // LV2 Result Sequence:
         // 1. Begin result card phase (fade nominees/feed, manage z-index)
         global.lv2?.beginResultCardPhase?.();
         
-        // 2. Show result card - inline on mobile, page-level on desktop
-        if (global.lv2?.supportsInlineCard?.()) {
-          // Mobile: Use inline card within TV that respects safe areas
+        // 2. Show result using new eviction modal (replaces both inline and page-level cards)
+        if (typeof global.EvictionModal?.show === 'function') {
+          await global.EvictionModal.show({
+            title: 'Eviction Result',
+            lines: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
+            tone: 'evict',
+            duration: 3600
+          });
+        } else if (global.lv2?.supportsInlineCard?.()) {
+          // Fallback: Mobile inline card within TV that respects safe areas
           await global.lv2.showInlineCard({
             title: 'Eviction Result',
             body: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
@@ -1004,7 +1022,7 @@
             tone: 'evict'
           });
         } else {
-          // Desktop: Use existing page-level card system
+          // Fallback: Desktop page-level card system
           global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
           try{ await global.cardQueueWaitIdle?.(); }catch{}
         }
@@ -1093,8 +1111,19 @@
           }
         } else evId=topIds[0];
         const parts=noms.map(id=>`${global.safeName(id)} ${counts.get(id)||0}`).join(' — ');
-        global.showCard('Eviction Result',[`Votes: ${parts}`,`${global.safeName(evId)}, ${pickEvictionPhrase()}`],'evict',3800,true);
-        try{ await global.cardQueueWaitIdle?.(); }catch{}
+        // Use new eviction modal for better visibility
+        if (typeof global.EvictionModal?.show === 'function') {
+          await global.EvictionModal.show({
+            title: 'Eviction Result',
+            lines: [`Votes: ${parts}`, `${global.safeName(evId)}, ${pickEvictionPhrase()}`],
+            tone: 'evict',
+            duration: 3800
+          });
+        } else {
+          // Fallback to old card system
+          global.showCard('Eviction Result',[`Votes: ${parts}`,`${global.safeName(evId)}, ${pickEvictionPhrase()}`],'evict',3800,true);
+          try{ await global.cardQueueWaitIdle?.(); }catch{}
+        }
         global.addLog?.(`Evicted: ${global.safeName(evId)}. Votes — ${parts}`,'danger');
         g.eviction.revealed=true; g.eviction.revealing=false; g.eviction.evicted=evId;
         
@@ -1213,8 +1242,19 @@
 
     const parts=[...counts.keys()].map(id=>`${global.safeName(id)} ${counts.get(id)||0}`).join(' — ');
     const names=evictedIds.map(global.safeName).join(', ');
-    global.showCard('Eviction Results',[`${modeLabel}: ${names}`,`Final votes: ${parts}`],'evict',4200,true);
-    try{ await global.cardQueueWaitIdle?.(); }catch{}
+    // Use new eviction modal for better visibility (supports multiple evictions)
+    if (typeof global.EvictionModal?.show === 'function') {
+      await global.EvictionModal.show({
+        title: 'Eviction Results',
+        lines: [`${modeLabel}: ${names}`, `Final votes: ${parts}`],
+        tone: 'evict',
+        duration: 4200
+      });
+    } else {
+      // Fallback to old card system
+      global.showCard('Eviction Results',[`${modeLabel}: ${names}`,`Final votes: ${parts}`],'evict',4200,true);
+      try{ await global.cardQueueWaitIdle?.(); }catch{}
+    }
     global.addLog?.(`${modeLabel}: ${names}. Votes — ${parts}`,'danger');
 
     g.__twistMode=null;

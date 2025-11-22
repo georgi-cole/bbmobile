@@ -1,0 +1,306 @@
+/* ============================================================================
+   EVICTION RESULT MODAL
+   
+   Purpose: Provides a viewport-level modal for eviction results that appears
+            above all TV overlay content without clipping issues.
+   
+   Features:
+   - Fixed positioning relative to viewport (not TV container)
+   - High z-index (9000) to appear above TV overlay (z-index: 12)
+   - Centered with flexbox
+   - Backdrop blur with semi-transparent overlay
+   - Smooth fade-in/fade-out animations
+   - Safe-area insets for iOS notch support
+   - Reduced motion support
+   - Mobile responsive
+   ============================================================================ */
+
+/* Modal root container */
+#eviction-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9000; /* Above all TV content */
+  pointer-events: none;
+}
+
+/* Modal layer - full viewport overlay */
+.eviction-modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: env(safe-area-inset-top, 16px) env(safe-area-inset-right, 16px) 
+           env(safe-area-inset-bottom, 16px) env(safe-area-inset-left, 16px);
+  pointer-events: auto;
+  animation: eviction-modal-fade-in 0.3s ease-out;
+}
+
+/* Fade-in animation */
+@keyframes eviction-modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fade-out animation */
+.eviction-modal-layer.fade-out {
+  animation: eviction-modal-fade-out 0.2s ease-in forwards;
+}
+
+@keyframes eviction-modal-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .eviction-modal-layer {
+    animation: none;
+  }
+  .eviction-modal-layer.fade-out {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Backdrop - semi-transparent with blur */
+.eviction-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Reduce backdrop blur on lower-end devices */
+@media (prefers-reduced-motion: reduce) {
+  .eviction-modal-backdrop {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
+
+/* Modal card - centered content */
+.eviction-modal-card {
+  position: relative;
+  z-index: 1;
+  width: 90%;
+  max-width: 480px;
+  max-height: 80vh;
+  padding: 28px 24px 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1a2937, #0f1a28);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow-y: auto;
+  overflow-x: hidden;
+  animation: eviction-modal-card-enter 0.3s ease-out;
+  outline: none;
+}
+
+/* Card enter animation */
+@keyframes eviction-modal-card-enter {
+  from {
+    transform: translateY(20px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Reduce card animation for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .eviction-modal-card {
+    animation: none;
+  }
+}
+
+/* Tone variants */
+.eviction-modal-card.evict {
+  border-color: rgba(239, 68, 68, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(239, 68, 68, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(239, 68, 68, 0.15);
+}
+
+.eviction-modal-card.warn {
+  border-color: rgba(251, 191, 36, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(251, 191, 36, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(251, 191, 36, 0.15);
+}
+
+.eviction-modal-card.neutral {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(59, 130, 246, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(59, 130, 246, 0.12);
+}
+
+/* Modal title */
+.eviction-modal-title {
+  margin: 0 0 16px;
+  padding-right: 32px; /* Space for close button */
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e2edf8;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* Modal body */
+.eviction-modal-body {
+  margin: 0;
+  color: #c7d7eb;
+  text-align: center;
+}
+
+.eviction-modal-body p {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: #c7d7eb;
+}
+
+.eviction-modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Emphasize important text */
+.eviction-modal-body p strong,
+.eviction-modal-body p b {
+  color: #e2edf8;
+  font-weight: 700;
+}
+
+/* Close button */
+.eviction-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #c7d7eb;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  outline: none;
+}
+
+.eviction-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #e2edf8;
+}
+
+.eviction-modal-close:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.eviction-modal-close:active {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.95);
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .eviction-modal-card {
+    width: 92%;
+    padding: 24px 20px 20px;
+  }
+  
+  .eviction-modal-title {
+    font-size: 1.25rem;
+  }
+  
+  .eviction-modal-body p {
+    font-size: 0.95rem;
+  }
+}
+
+/* Extra small mobile screens */
+@media (max-width: 380px) {
+  .eviction-modal-card {
+    width: 95%;
+    padding: 20px 16px 16px;
+  }
+  
+  .eviction-modal-title {
+    font-size: 1.1rem;
+  }
+  
+  .eviction-modal-body p {
+    font-size: 0.9rem;
+  }
+}
+
+/* Light theme support */
+@media (prefers-color-scheme: light) {
+  .eviction-modal-backdrop {
+    background: rgba(255, 255, 255, 0.85);
+  }
+  
+  .eviction-modal-card {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.15),
+      0 2px 8px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  
+  .eviction-modal-card.evict {
+    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 
+      0 8px 32px rgba(239, 68, 68, 0.25),
+      0 2px 8px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(239, 68, 68, 0.2);
+  }
+  
+  .eviction-modal-title {
+    color: #0f172a;
+  }
+  
+  .eviction-modal-body p {
+    color: #334155;
+  }
+  
+  .eviction-modal-body p strong,
+  .eviction-modal-body p b {
+    color: #0f172a;
+  }
+  
+  .eviction-modal-close {
+    background: rgba(0, 0, 0, 0.08);
+    color: #475569;
+  }
+  
+  .eviction-modal-close:hover {
+    background: rgba(0, 0, 0, 0.15);
+    color: #1e293b;
+  }
+}
