@@ -3485,9 +3485,46 @@
   global.finalizeCeremony = finalizeCeremony;
   
   /**
+   * Helper: Check if two arrays have the same elements (unordered comparison)
+   * @param {number[]} arr1 - First array
+   * @param {number[]} arr2 - Second array
+   * @returns {boolean} true if arrays contain same elements
+   */
+  function arraysHaveSameElements(arr1, arr2){
+    if(!arr1 || !arr2 || arr1.length !== arr2.length) return false;
+    
+    var set1 = new Set(arr1);
+    var set2 = new Set(arr2);
+    
+    // If sizes differ after deduplication, arrays have different elements
+    if(set1.size !== set2.size) return false;
+    
+    // Check if all elements in set1 exist in set2 (early return on mismatch)
+    for(var id of set1){
+      if(!set2.has(id)) return false;
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Helper: Select random element from pool
+   * @param {Array} pool - Array to pick from
+   * @returns {*} Random element from pool
+   */
+  function selectRandomFromPool(pool){
+    return pool[Math.floor(rng() * pool.length)];
+  }
+  
+  /**
    * Validate that the final nominees are different from the original pair
    * At most one nominee can remain the same
-   * @param {number[]} originalNominees - Original nominee IDs
+   * 
+   * Enhanced for self-save scenarios: when savedId was originally nominated,
+   * the final pair MUST exclude savedId and include replacementId.
+   * The check compares unordered sets to detect if the final pair equals the original.
+   * 
+   * @param {number[]} originalNominees - Original nominee IDs (before veto)
    * @param {number} savedId - ID of saved nominee
    * @param {number} replacementId - ID of replacement nominee
    * @returns {boolean} true if valid (at least one changed), false if invalid (same pair)
@@ -3495,30 +3532,119 @@
   function validateNomineeChange(originalNominees, savedId, replacementId){
     if(!originalNominees || originalNominees.length === 0) return true;
     
-    // Build final nominee pair
+    // Build final nominee pair (remove saved, add replacement)
     var finalNominees = originalNominees.filter(function(id){ return id !== savedId; });
     if(finalNominees.indexOf(replacementId) === -1){
       finalNominees.push(replacementId);
     }
     
-    // Check if exactly the same as original (both match)
-    if(finalNominees.length === originalNominees.length){
-      var allMatch = true;
-      for(var i=0; i<finalNominees.length; i++){
-        if(originalNominees.indexOf(finalNominees[i]) === -1){
-          allMatch = false;
-          break;
-        }
-      }
-      
-      if(allMatch){
-        return false; // Invalid: exact same pair
-      }
+    // Check if final nominees match original nominees (invalid: exact same pair)
+    if(arraysHaveSameElements(finalNominees, originalNominees)){
+      return false; // Invalid: exact same pair
     }
     
     return true; // Valid: at least one changed
   }
   global.validateNomineeChange = validateNomineeChange;
+  
+  // ======= REPLACEMENT SELECTION WITH LOOP & FALLBACK =======
+  
+  // Maximum replacement selection attempts before fallback
+  var MAX_REPLACEMENT_ATTEMPTS = 10;
+  
+  /**
+   * Ensure saved nominee is removed from active nominees array BEFORE validation
+   * Critical for self-save scenarios to prevent infinite loop
+   * @param {Object} g - Game state object
+   */
+  function ensureSavedNomineeRemoved(g){
+    if(g.vetoSavedId && g.nominees && g.nominees.includes(g.vetoSavedId)){
+      g.nominees = g.nominees.filter(function(id){ return id !== g.vetoSavedId; });
+      console.log('[veto] Saved nominee removed from active nominees:', g.vetoSavedId, 'remaining:', g.nominees);
+    }
+  }
+  global.ensureSavedNomineeRemoved = ensureSavedNomineeRemoved;
+  
+  /**
+   * Check if current veto scenario is a self-save (POV holder saving themselves)
+   * @param {Object} g - Game state object
+   * @returns {boolean} true if self-save, false otherwise
+   */
+  function isSelfSave(g){
+    return g.vetoSavedId != null && g.vetoHolder === g.vetoSavedId;
+  }
+  global.isSelfSave = isSelfSave;
+  
+  /**
+   * Fallback handler when no valid replacement can be found
+   * Auto-selects first eligible candidate or proceeds with single nominee week
+   * @param {Object} g - Game state object
+   * @returns {Promise<void>}
+   */
+  async function finalizeReplacementFallback(g){
+    console.warn('[veto] Replacement pool exhausted; applying fallback');
+    
+    // Try to find any eligible candidate
+    var pool = buildReplacementPool({ savedId: g.vetoSavedId });
+    
+    if(pool && pool.length > 0){
+      // Auto-pick first available candidate
+      var autoId = pool[0];
+      var autoIdNorm = +autoId;
+      
+      // Remove saved nominee if still present
+      ensureSavedNomineeRemoved(g);
+      
+      // Add fallback replacement
+      if(g.nominees.indexOf(autoIdNorm) === -1){
+        g.nominees.push(autoIdNorm);
+      }
+      
+      g.__replacementApplied = true;
+      console.log('[veto] Fallback auto-picked replacement:', autoId);
+      
+      // Update player states
+      for(var i=0; i<g.players.length; i++){
+        var p = g.players[i];
+        p.nominated = (g.nominees.indexOf(p.id) !== -1);
+        if(p.nominated){
+          p.nominationState = 'nominated';
+        } else if(p.id === g.vetoSavedId){
+          p.nominationState = 'none';
+        }
+      }
+      
+      // Sync badges
+      try{
+        if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
+        if(typeof global.updateHud === 'function') global.updateHud();
+      }catch(e){}
+      
+      // Show fallback notification
+      await showTVCard({ 
+        title: 'Replacement Auto-Picked', 
+        lines: ['A valid replacement was auto-selected to prevent ceremony stall.'], 
+        tone: 'info', 
+        duration: 2600 
+      });
+      
+      return;
+    } else {
+      // No candidates available at all - proceed with single nominee (edge case)
+      console.warn('[veto] No fallback candidates; proceeding with single nominee week');
+      g.__replacementApplied = true;
+      
+      await showTVCard({ 
+        title: 'Single Nominee Week', 
+        lines: ['No valid replacement existed. Proceeding with one nominee.'], 
+        tone: 'warning', 
+        duration: 2800 
+      });
+      
+      return;
+    }
+  }
+  global.finalizeReplacementFallback = finalizeReplacementFallback;
 
   async function applyReplacementAndContinue(replacementId, isGoldenPOV){
     var g = global.game;
@@ -3527,124 +3653,160 @@
     if(replacementId!=null){
       var savedId = g.vetoSavedId;
       
-      // Store original nominees for validation
+      // CRITICAL: Ensure saved nominee is removed from g.nominees BEFORE validation
+      // This prevents infinite loop in self-save scenarios
+      ensureSavedNomineeRemoved(g);
+      
+      // Store original nominees for validation (capture ONCE before any modifications)
       var originalNominees = g.__originalNomineesBeforeVeto || g.nominees.slice();
       if(!g.__originalNomineesBeforeVeto){
-        g.__originalNomineesBeforeVeto = g.nominees.slice();
+        g.__originalNomineesBeforeVeto = originalNominees; // No need to slice again, already a copy
       }
       
-      // Validate nominee change (at most one can remain the same)
-      if(!validateNomineeChange(originalNominees, savedId, replacementId)){
-        // Invalid: same pair
-        console.warn('[veto] Invalid replacement - same pair as before');
+      // Build initial pool
+      var pool = buildReplacementPool({ savedId: savedId });
+      if(!pool || pool.length === 0){
+        console.warn('[veto] Empty replacement pool. Applying fallback.');
+        return finalizeReplacementFallback(g);
+      }
+      
+      // Initialize attempt counter
+      if(!g.__replacementAttempts){
+        g.__replacementAttempts = 0;
+      }
+      
+      // ITERATIVE LOOP instead of recursion - prevents stack overflow
+      var attempt = 0;
+      var chosen = replacementId;
+      
+      while(attempt < MAX_REPLACEMENT_ATTEMPTS){
+        attempt++;
+        g.__replacementAttempts = attempt;
+        console.log('[veto] Replacement attempt ' + attempt + '/' + MAX_REPLACEMENT_ATTEMPTS + ' candidate=' + chosen);
         
-        // Show error card
-        await showTVCard({
-          title: 'Invalid Replacement',
-          lines: ['Final nominees cannot be the exact same pair.', 'Please choose a different replacement.'],
-          tone: 'danger',
-          duration: 3200
-        });
-        
-        // Re-open replacement chooser using hardened pool builder
-        var eligibleIds = buildReplacementPool({ savedId: savedId });
-        
-        var picker = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
-        var pickerName = picker ? picker.name : (isGoldenPOV ? 'POV holder' : 'HOH');
-        
-        if(picker && picker.human){
-          // Human picks again - use carousel picker
-          replacementId = await global.openCarouselPicker({
-            ids: eligibleIds,
-            title: 'Select different replacement',
-            actionLabel: 'Nominate',
-            blockIds: [g.hohId, g.vetoHolder, g.vetoSavedId]
-          });
+        // Validate nominee change (at most one can remain the same)
+        if(!validateNomineeChange(originalNominees, savedId, chosen)){
+          // Invalid: same pair
+          console.warn('[veto] Invalid replacement - same pair as before (self-save conflict)');
           
-          // Recursively call with new selection
-          return applyReplacementAndContinue(replacementId, isGoldenPOV);
-        } else {
-          // AI picks again (filter out invalid choice)
-          var validChoices = eligibleIds.filter(function(id){ 
-            return id !== replacementId; 
-          });
-          if(validChoices.length > 0){
-            replacementId = pickReplacementByHOH(savedId);
-            // Recursively call with new selection
-            return applyReplacementAndContinue(replacementId, isGoldenPOV);
+          // Remove this candidate from pool to avoid re-selection
+          pool = pool.filter(function(id){ return id !== chosen; });
+          
+          if(pool.length === 0){
+            console.warn('[veto] Replacement pool exhausted after validation; fallback select');
+            return finalizeReplacementFallback(g);
           }
-        }
-      }
-      
-      // CRITICAL: Validate replacement nominee is legal (defense-in-depth)
-      var validation = validateReplacementNominee(replacementId);
-      if(!validation.ok){
-        console.error('[veto] Invalid replacement nominee:', replacementId, 'reason:', validation.reason);
-        
-        // Show error card
-        await showTVCard({
-          title: 'Invalid Replacement',
-          lines: [validation.reason, 'Please select a different nominee.'],
-          tone: 'danger',
-          duration: 3200
-        });
-        
-        // Re-open replacement chooser with hardened pool
-        var retryEligibleIds = buildReplacementPool({ savedId: savedId });
-        
-        var picker = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
-        
-        if(picker && picker.human && retryEligibleIds.length > 0){
-          // Human picks again - use carousel picker
-          replacementId = await global.openCarouselPicker({
-            ids: retryEligibleIds,
-            title: 'Select valid replacement',
-            actionLabel: 'Nominate',
-            blockIds: [g.hohId, g.vetoHolder, g.vetoSavedId]
+          
+          // Show error card
+          await showTVCard({
+            title: 'Invalid Replacement',
+            lines: ['Final nominees cannot be the exact same pair.', 'Please choose a different replacement.'],
+            tone: 'danger',
+            duration: 3200
           });
           
-          // Recursively call with new selection
-          return applyReplacementAndContinue(replacementId, isGoldenPOV);
-        } else if(retryEligibleIds.length > 0){
-          // AI picks from valid pool
-          replacementId = pickReplacementByHOH(savedId);
-          // Recursively call with new selection
-          return applyReplacementAndContinue(replacementId, isGoldenPOV);
-        } else {
-          // No valid replacements available (edge case)
-          console.error('[veto] No valid replacement nominees available');
-          g.__vetoCeremonyResolved = true;
-          g.__vetoDecisionInProgress = false;
-          g.__useTVCeremonyUI = false;
-          setTimeout(function(){
-            if(typeof global.startSocial==='function'){
-              global.startSocial('veto', function(){
-                if(typeof global.startLiveVote==='function') global.startLiveVote();
-              });
-            } else if(typeof global.startLiveVote==='function'){
-              global.startLiveVote();
+          // Get picker (human or AI)
+          var picker = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
+          
+          if(picker && picker.human){
+            // Human picks again - use carousel picker
+            chosen = await global.openCarouselPicker({
+              ids: pool,
+              title: 'Select different replacement',
+              actionLabel: 'Nominate',
+              blockIds: [g.hohId, g.vetoHolder, g.vetoSavedId]
+            });
+            
+            if(chosen == null){
+              // User cancelled - pick fallback
+              console.warn('[veto] User cancelled replacement selection; using fallback');
+              return finalizeReplacementFallback(g);
             }
-          }, 200);
-          return;
+          } else {
+            // AI picks from remaining pool
+            chosen = selectRandomFromPool(pool);
+          }
+          
+          continue; // Next iteration
         }
+        
+        // CRITICAL: Validate replacement nominee is legal (defense-in-depth)
+        var validation = validateReplacementNominee(chosen);
+        if(!validation.ok){
+          console.warn('[veto] Illegal replacement:', chosen, 'reason:', validation.reason);
+          
+          // Remove invalid candidate from pool
+          pool = pool.filter(function(id){ return id !== chosen; });
+          
+          if(pool.length === 0){
+            console.warn('[veto] No legal candidates remain; fallback');
+            return finalizeReplacementFallback(g);
+          }
+          
+          // Show error card
+          await showTVCard({
+            title: 'Invalid Replacement',
+            lines: [validation.reason, 'Please select a different nominee.'],
+            tone: 'danger',
+            duration: 3200
+          });
+          
+          // Get picker
+          var picker2 = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
+          
+          if(picker2 && picker2.human){
+            // Human picks again
+            chosen = await global.openCarouselPicker({
+              ids: pool,
+              title: 'Select valid replacement',
+              actionLabel: 'Nominate',
+              blockIds: [g.hohId, g.vetoHolder, g.vetoSavedId]
+            });
+            
+            if(chosen == null){
+              console.warn('[veto] User cancelled; using fallback');
+              return finalizeReplacementFallback(g);
+            }
+          } else {
+            // AI picks from valid pool
+            chosen = selectRandomFromPool(pool);
+          }
+          
+          continue; // Next iteration
+        }
+        
+        // SUCCESS: Valid replacement found
+        break;
       }
       
-      // Valid replacement - proceed
+      // Check if we exceeded max attempts
+      if(attempt >= MAX_REPLACEMENT_ATTEMPTS){
+        console.error('[veto] Max replacement attempts exceeded; applying fallback');
+        return finalizeReplacementFallback(g);
+      }
+      
+      // Valid replacement - proceed with 'chosen' (not original replacementId)
       g.__replacementApplied = true;
       
       // Normalize IDs before updating nominees
       var savedIdNorm = +savedId;
-      var replacementIdNorm = +replacementId;
+      var chosenNorm = +chosen;
       
-      // Update nominees array (add replacement, remove saved)
+      // Ensure saved nominee is removed (defensive double-check)
+      ensureSavedNomineeRemoved(g);
+      
+      // Update nominees array (add replacement, ensure no duplicates)
       g.nominees = normalizeIds(g.nominees || []).filter(function(id){ return id !== savedIdNorm; });
-      if(g.nominees.indexOf(replacementIdNorm) === -1) g.nominees.push(replacementIdNorm);
+      if(g.nominees.indexOf(chosenNorm) === -1) g.nominees.push(chosenNorm);
+      
+      // Diagnostic log: confirm final nominees
+      console.log('[veto] Replacement applied successfully. Final nominees:', g.nominees);
 
       // Social Maneuvers: Record replacement nomination event for weekly energy bonus
       if(global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.recordWeeklyEvent){
         try{
-          global.SocialManeuvers.recordWeeklyEvent(replacementId, { nominated: true });
-          console.info('[veto.js] ✓ Recorded replacement nomination event for player', replacementId);
+          global.SocialManeuvers.recordWeeklyEvent(chosen, { nominated: true });
+          console.info('[veto.js] ✓ Recorded replacement nomination event for player', chosen);
         }catch(e){
           console.error('[veto.js] Failed to record replacement nomination event:', e);
         }
@@ -3675,7 +3837,7 @@
       // Determine who made the announcement (POV holder for Golden, HOH otherwise)
       var announcer = isGoldenPOV ? getP(g.vetoHolder) : getP(g.hohId);
       var announcerRole = isGoldenPOV ? 'POV Holder' : 'HOH';
-      var announce = (announcer ? announcer.name : announcerRole)+': I name '+safeName(replacementId)+' as the replacement nominee.';
+      var announce = (announcer ? announcer.name : announcerRole)+': I name '+safeName(chosen)+' as the replacement nominee.';
       
       // Show announcement in two sequential cards to prevent overflow
       // Card A: Avatar/title only
@@ -3685,7 +3847,7 @@
         tone: 'noms',
         duration: 1200,
         actorIds: announcer ? announcer.id : null,
-        subjectIds: replacementId
+        subjectIds: chosen
       });
       
       // Card B: Message text only
@@ -3698,7 +3860,7 @@
         subjectIds: null
       });
 
-      try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(replacementId)+' (by ' + announcerRole + ').','warn'); }catch(e){}
+      try{ if(global.addLog) global.addLog('Replacement nomination: '+safeName(chosen)+' (by ' + announcerRole + ').','warn'); }catch(e){}
       
       // Determine remaining nominee (the one who stays on block)
       var remainingNomIds = g.nominees.filter(function(id){ return id !== savedId; });
@@ -3706,15 +3868,15 @@
       
       // Show risk-swap animation: current risk → saved becomes safe → new risk
       // Uses GSAP timeline if available, CSS fallback, respects reduced-motion
-      await renderRiskSwapAnimation(savedId, replacementId, remainingNomId);
+      await renderRiskSwapAnimation(savedId, chosen, remainingNomId);
       
       // Show replacement nominee card with replacement nominee avatar
       await showTVCardWithAvatars({
         title: 'Replacement Nominee',
-        lines: [safeName(replacementId) + ' is now on the block.'],
+        lines: [safeName(chosen) + ' is now on the block.'],
         tone: 'replace',
         duration: 3600,
-        subjectIds: replacementId
+        subjectIds: chosen
       });
 
       try{ g.__twistNomineeSnapshot = g.nominees.slice(); }catch(e){}
