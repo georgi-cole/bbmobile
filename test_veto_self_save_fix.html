@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Self-Save Infinite Loop Fix Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #0e1a28;
+      color: #e2e8f0;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #71bfff;
+      margin-bottom: 10px;
+    }
+    
+    .description {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+    
+    .test-section {
+      background: rgba(28, 43, 62, 0.6);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #94a3b8;
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+    }
+    
+    .success {
+      background: rgba(74, 222, 128, 0.1);
+      border-left: 3px solid #4ade80;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    .error {
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 3px solid #ef4444;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    .warning {
+      background: rgba(251, 191, 36, 0.1);
+      border-left: 3px solid #fbbf24;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: #2563eb;
+    }
+    
+    button.secondary {
+      background: #475569;
+    }
+    
+    button.secondary:hover {
+      background: #334155;
+    }
+    
+    #log {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    
+    #log div {
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    
+    #log .info {
+      color: #94a3b8;
+    }
+    
+    #log .success {
+      color: #4ade80;
+    }
+    
+    #log .error {
+      color: #ef4444;
+    }
+    
+    #log .warn {
+      color: #fbbf24;
+    }
+    
+    .test-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    
+    .test-status.pass {
+      background: rgba(74, 222, 128, 0.2);
+      color: #4ade80;
+    }
+    
+    .test-status.fail {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+    
+    .test-status.pending {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Veto Self-Save Infinite Loop Fix Test</h1>
+  
+  <div class="description">
+    <strong>Purpose:</strong> This test verifies that the infinite loop bug during Veto Ceremony 
+    (when POV holder saves themselves) has been fixed. The fix includes:
+    <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+      <li>Immediate removal of saved nominee from active nominees before validation</li>
+      <li>Iterative loop with MAX_ATTEMPTS cap (10) instead of recursion</li>
+      <li>Pool shrinking to prevent re-selection of invalid candidates</li>
+      <li>Fallback handling when no valid replacements exist</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Helper Functions Exist <span id="test1-status" class="test-status pending">PENDING</span></h2>
+    <p>Verify that the new helper functions are properly exported:</p>
+    <ul>
+      <li><code>ensureSavedNomineeRemoved(g)</code></li>
+      <li><code>isSelfSave(g)</code></li>
+      <li><code>finalizeReplacementFallback(g)</code></li>
+    </ul>
+    <button onclick="runTest1()">Run Test 1</button>
+    <div id="test1-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Immediate Nominee Removal <span id="test2-status" class="test-status pending">PENDING</span></h2>
+    <p>Verify that saved nominee is removed from g.nominees before validation occurs:</p>
+    <button onclick="runTest2()">Run Test 2</button>
+    <div id="test2-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Iterative Loop with Attempt Cap <span id="test3-status" class="test-status pending">PENDING</span></h2>
+    <p>Verify that replacement selection uses a loop (not recursion) with MAX_REPLACEMENT_ATTEMPTS cap:</p>
+    <button onclick="runTest3()">Run Test 3</button>
+    <div id="test3-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: Pool Shrinking on Invalid Selection <span id="test4-status" class="test-status pending">PENDING</span></h2>
+    <p>Verify that invalid candidates are removed from pool to prevent infinite loop:</p>
+    <button onclick="runTest4()">Run Test 4</button>
+    <div id="test4-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Fallback Handler <span id="test5-status" class="test-status pending">PENDING</span></h2>
+    <p>Verify that fallback handler is triggered when pool is exhausted:</p>
+    <button onclick="runTest5()">Run Test 5</button>
+    <div id="test5-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Console Logs</h2>
+    <button class="secondary" onclick="clearLog()">Clear Log</button>
+    <div id="log"></div>
+  </div>
+
+  <script type="module">
+    // Mock game environment
+    window.game = window.game || {};
+    window.rng = window.rng || Math.random;
+    window.getP = window.getP || function(id) {
+      if (!window.game.players) return null;
+      return window.game.players.find(p => p.id === id);
+    };
+    window.alivePlayers = window.alivePlayers || function() {
+      if (!window.game.players) return [];
+      return window.game.players.filter(p => !p.evicted);
+    };
+    window.safeName = window.safeName || function(id) {
+      const p = window.getP(id);
+      return p ? p.name : 'Player ' + id;
+    };
+
+    // Log function
+    function log(msg, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log('[TEST]', msg);
+    }
+
+    window.log = log;
+
+    function updateStatus(testId, status) {
+      const statusEl = document.getElementById(testId + '-status');
+      if (statusEl) {
+        statusEl.className = 'test-status ' + status;
+        statusEl.textContent = status.toUpperCase();
+      }
+    }
+
+    function showResult(testId, html) {
+      const resultEl = document.getElementById(testId + '-result');
+      if (resultEl) {
+        resultEl.innerHTML = html;
+      }
+    }
+
+    // Test 1: Helper Functions Exist
+    window.runTest1 = function() {
+      log('Running Test 1: Helper Functions Exist', 'info');
+      updateStatus('test1', 'pending');
+      
+      try {
+        const requiredFns = [
+          'ensureSavedNomineeRemoved',
+          'isSelfSave',
+          'finalizeReplacementFallback'
+        ];
+        
+        const results = [];
+        let allPass = true;
+        
+        for (const fn of requiredFns) {
+          const exists = typeof window[fn] === 'function';
+          results.push({
+            name: fn,
+            exists: exists
+          });
+          if (!exists) allPass = false;
+        }
+        
+        let html = '<ul style="margin: 10px 0 0 0; padding-left: 20px;">';
+        for (const r of results) {
+          const icon = r.exists ? '✅' : '❌';
+          html += `<li>${icon} <code>${r.name}</code>: ${r.exists ? 'Found' : 'Missing'}</li>`;
+          log(`${r.name}: ${r.exists ? 'FOUND' : 'MISSING'}`, r.exists ? 'success' : 'error');
+        }
+        html += '</ul>';
+        
+        if (allPass) {
+          html = '<div class="success">✅ All helper functions found!</div>' + html;
+          updateStatus('test1', 'pass');
+          log('Test 1: PASS', 'success');
+        } else {
+          html = '<div class="error">❌ Some helper functions are missing!</div>' + html;
+          updateStatus('test1', 'fail');
+          log('Test 1: FAIL', 'error');
+        }
+        
+        showResult('test1', html);
+      } catch (err) {
+        log('Test 1 error: ' + err.message, 'error');
+        updateStatus('test1', 'fail');
+        showResult('test1', '<div class="error">❌ Test error: ' + err.message + '</div>');
+      }
+    };
+
+    // Test 2: Immediate Nominee Removal
+    window.runTest2 = function() {
+      log('Running Test 2: Immediate Nominee Removal', 'info');
+      updateStatus('test2', 'pending');
+      
+      try {
+        // Setup mock game state
+        window.game = {
+          vetoSavedId: 2,
+          nominees: [1, 2],
+          players: [
+            { id: 1, name: 'Alice', evicted: false },
+            { id: 2, name: 'Bob', evicted: false },
+            { id: 3, name: 'Carol', evicted: false },
+            { id: 4, name: 'Dave', evicted: false }
+          ]
+        };
+        
+        log('Initial state: nominees = [1, 2], vetoSavedId = 2', 'info');
+        
+        // Call helper function
+        if (typeof window.ensureSavedNomineeRemoved === 'function') {
+          window.ensureSavedNomineeRemoved(window.game);
+          
+          const removed = !window.game.nominees.includes(2);
+          const remaining = window.game.nominees.length === 1 && window.game.nominees[0] === 1;
+          
+          log('After ensureSavedNomineeRemoved: nominees = ' + JSON.stringify(window.game.nominees), 'info');
+          
+          if (removed && remaining) {
+            updateStatus('test2', 'pass');
+            log('Test 2: PASS - Saved nominee removed correctly', 'success');
+            showResult('test2', '<div class="success">✅ Saved nominee (Bob, ID 2) was removed from nominees. Remaining: [1]</div>');
+          } else {
+            updateStatus('test2', 'fail');
+            log('Test 2: FAIL - Saved nominee not removed correctly', 'error');
+            showResult('test2', '<div class="error">❌ Saved nominee was not removed correctly. Current nominees: ' + JSON.stringify(window.game.nominees) + '</div>');
+          }
+        } else {
+          throw new Error('ensureSavedNomineeRemoved function not found');
+        }
+      } catch (err) {
+        log('Test 2 error: ' + err.message, 'error');
+        updateStatus('test2', 'fail');
+        showResult('test2', '<div class="error">❌ Test error: ' + err.message + '</div>');
+      }
+    };
+
+    // Test 3: Iterative Loop with Attempt Cap
+    window.runTest3 = function() {
+      log('Running Test 3: Iterative Loop with Attempt Cap', 'info');
+      updateStatus('test3', 'pending');
+      
+      try {
+        // Check for MAX_REPLACEMENT_ATTEMPTS constant in source
+        fetch('js/veto.js')
+          .then(response => response.text())
+          .then(source => {
+            const hasMaxAttempts = source.includes('MAX_REPLACEMENT_ATTEMPTS');
+            const hasWhileLoop = source.includes('while(attempt < MAX_REPLACEMENT_ATTEMPTS)');
+            const hasAttemptCounter = source.includes('g.__replacementAttempts');
+            
+            log('MAX_REPLACEMENT_ATTEMPTS found: ' + hasMaxAttempts, hasMaxAttempts ? 'success' : 'error');
+            log('while loop found: ' + hasWhileLoop, hasWhileLoop ? 'success' : 'error');
+            log('Attempt counter found: ' + hasAttemptCounter, hasAttemptCounter ? 'success' : 'error');
+            
+            let html = '<ul style="margin: 10px 0 0 0; padding-left: 20px;">';
+            html += `<li>${hasMaxAttempts ? '✅' : '❌'} MAX_REPLACEMENT_ATTEMPTS constant defined</li>`;
+            html += `<li>${hasWhileLoop ? '✅' : '❌'} while loop with attempt cap</li>`;
+            html += `<li>${hasAttemptCounter ? '✅' : '❌'} g.__replacementAttempts counter</li>`;
+            html += '</ul>';
+            
+            if (hasMaxAttempts && hasWhileLoop && hasAttemptCounter) {
+              html = '<div class="success">✅ Iterative loop with attempt cap implemented correctly!</div>' + html;
+              updateStatus('test3', 'pass');
+              log('Test 3: PASS', 'success');
+            } else {
+              html = '<div class="error">❌ Iterative loop implementation incomplete!</div>' + html;
+              updateStatus('test3', 'fail');
+              log('Test 3: FAIL', 'error');
+            }
+            
+            showResult('test3', html);
+          })
+          .catch(err => {
+            log('Test 3 error: ' + err.message, 'error');
+            updateStatus('test3', 'fail');
+            showResult('test3', '<div class="error">❌ Could not load veto.js: ' + err.message + '</div>');
+          });
+      } catch (err) {
+        log('Test 3 error: ' + err.message, 'error');
+        updateStatus('test3', 'fail');
+        showResult('test3', '<div class="error">❌ Test error: ' + err.message + '</div>');
+      }
+    };
+
+    // Test 4: Pool Shrinking
+    window.runTest4 = function() {
+      log('Running Test 4: Pool Shrinking on Invalid Selection', 'info');
+      updateStatus('test4', 'pending');
+      
+      try {
+        fetch('js/veto.js')
+          .then(response => response.text())
+          .then(source => {
+            // Look for pool filtering after validation failure
+            const hasPoolFilter = source.includes('pool = pool.filter');
+            const hasPoolLengthCheck = source.includes('if(pool.length === 0)');
+            const hasFallbackCall = source.includes('finalizeReplacementFallback');
+            
+            log('Pool filtering found: ' + hasPoolFilter, hasPoolFilter ? 'success' : 'error');
+            log('Pool length check found: ' + hasPoolLengthCheck, hasPoolLengthCheck ? 'success' : 'error');
+            log('Fallback call found: ' + hasFallbackCall, hasFallbackCall ? 'success' : 'error');
+            
+            let html = '<ul style="margin: 10px 0 0 0; padding-left: 20px;">';
+            html += `<li>${hasPoolFilter ? '✅' : '❌'} Pool filtering to remove invalid candidates</li>`;
+            html += `<li>${hasPoolLengthCheck ? '✅' : '❌'} Pool length check before retry</li>`;
+            html += `<li>${hasFallbackCall ? '✅' : '❌'} Fallback handler invocation</li>`;
+            html += '</ul>';
+            
+            if (hasPoolFilter && hasPoolLengthCheck && hasFallbackCall) {
+              html = '<div class="success">✅ Pool shrinking implemented correctly!</div>' + html;
+              updateStatus('test4', 'pass');
+              log('Test 4: PASS', 'success');
+            } else {
+              html = '<div class="error">❌ Pool shrinking implementation incomplete!</div>' + html;
+              updateStatus('test4', 'fail');
+              log('Test 4: FAIL', 'error');
+            }
+            
+            showResult('test4', html);
+          })
+          .catch(err => {
+            log('Test 4 error: ' + err.message, 'error');
+            updateStatus('test4', 'fail');
+            showResult('test4', '<div class="error">❌ Could not load veto.js: ' + err.message + '</div>');
+          });
+      } catch (err) {
+        log('Test 4 error: ' + err.message, 'error');
+        updateStatus('test4', 'fail');
+        showResult('test4', '<div class="error">❌ Test error: ' + err.message + '</div>');
+      }
+    };
+
+    // Test 5: Fallback Handler
+    window.runTest5 = function() {
+      log('Running Test 5: Fallback Handler', 'info');
+      updateStatus('test5', 'pending');
+      
+      try {
+        if (typeof window.finalizeReplacementFallback !== 'function') {
+          throw new Error('finalizeReplacementFallback function not found');
+        }
+        
+        // Mock showTVCard
+        window.showTVCard = function(opts) {
+          log('showTVCard called: ' + opts.title, 'info');
+          return Promise.resolve();
+        };
+        
+        // Mock buildReplacementPool
+        window.buildReplacementPool = function() {
+          return [3]; // Return one eligible candidate
+        };
+        
+        // Mock syncPlayerBadgeStates
+        window.syncPlayerBadgeStates = function() {
+          log('syncPlayerBadgeStates called', 'info');
+        };
+        
+        // Mock updateHud
+        window.updateHud = function() {
+          log('updateHud called', 'info');
+        };
+        
+        // Setup mock game state
+        window.game = {
+          vetoSavedId: 2,
+          nominees: [1],
+          players: [
+            { id: 1, name: 'Alice', evicted: false },
+            { id: 2, name: 'Bob', evicted: false },
+            { id: 3, name: 'Carol', evicted: false }
+          ]
+        };
+        
+        log('Initial state: nominees = [1], vetoSavedId = 2', 'info');
+        
+        // Call fallback handler
+        window.finalizeReplacementFallback(window.game)
+          .then(() => {
+            const applied = window.game.__replacementApplied === true;
+            const hasReplacement = window.game.nominees.includes(3);
+            
+            log('After fallback: nominees = ' + JSON.stringify(window.game.nominees), 'info');
+            log('__replacementApplied: ' + applied, applied ? 'success' : 'error');
+            log('Has replacement: ' + hasReplacement, hasReplacement ? 'success' : 'error');
+            
+            if (applied && hasReplacement) {
+              updateStatus('test5', 'pass');
+              log('Test 5: PASS - Fallback handler works correctly', 'success');
+              showResult('test5', '<div class="success">✅ Fallback handler auto-selected replacement (Carol, ID 3). Final nominees: ' + JSON.stringify(window.game.nominees) + '</div>');
+            } else {
+              updateStatus('test5', 'fail');
+              log('Test 5: FAIL - Fallback handler did not work correctly', 'error');
+              showResult('test5', '<div class="error">❌ Fallback handler failed. Applied: ' + applied + ', Nominees: ' + JSON.stringify(window.game.nominees) + '</div>');
+            }
+          })
+          .catch(err => {
+            log('Test 5 error: ' + err.message, 'error');
+            updateStatus('test5', 'fail');
+            showResult('test5', '<div class="error">❌ Test error: ' + err.message + '</div>');
+          });
+      } catch (err) {
+        log('Test 5 error: ' + err.message, 'error');
+        updateStatus('test5', 'fail');
+        showResult('test5', '<div class="error">❌ Test error: ' + err.message + '</div>');
+      }
+    };
+
+    window.clearLog = function() {
+      document.getElementById('log').innerHTML = '';
+      log('Log cleared', 'info');
+    };
+
+    // Initial log message
+    log('Test page loaded. Ready to run tests.', 'info');
+  </script>
+</body>
+</html>
