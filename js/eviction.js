@@ -875,7 +875,10 @@
   /* ----- Tie Break (2 noms) ----- */
   async function tieBreakTwo([a,b],ca,cb){
     const g=global.game;
-    const useLv2 = g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    // Consistent with main activation logic: check two-nominee condition
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
     const hoh=global.getP(global.game.hohId);
     
     if (!useLv2) {
