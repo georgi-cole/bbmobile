@@ -79,12 +79,7 @@
     socialHighlightsEnabled: true,  // Show Social Highlights in Diary Room logs
     
     // Final 4 Eviction (feature-flagged, on by default)
-    final4CombinedPower: true,  // When HOH === POV holder, allow eviction of any of the other 3 players (not just nominees)
-    
-    // Fast Veto Flow (feature-flagged, on by default)
-    fastVetoFlow: true,  // Enable fast 3-phase veto flow with early completion and compressed timers
-    showExtendedVetoReveal: false,  // When true, show full multi-card reveal sequence (legacy)
-    skipVetoIntroCard: false  // When true, skip ceremony intro card entirely (default: show fast 600ms intro)
+    final4CombinedPower: true  // When HOH === POV holder, allow eviction of any of the other 3 players (not just nominees)
   };
 
   // Load configuration from localStorage
