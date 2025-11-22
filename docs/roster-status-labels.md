@@ -27,11 +27,13 @@ Status labels follow this precedence order (higher priority shown first):
 
 1. **WINNER** (🥇) – `p.showFinalLabel === 'WINNER'` or `p.winner`
 2. **RUNNER-UP** (🥈) – `p.showFinalLabel === 'RUNNER-UP'` or `p.runnerUp`
-3. **NOM** – Nominated player (any of: 'nominated', 'pendingSave', 'replacement' states)
-4. **HOH+POV** (👑🛡️) – Player holds both Head of Household and Veto
-5. **HOH** – Head of Household only
-6. **POV** – Veto holder only (may include twist emoji: 💎 Diamond, ⭐ Golden)
-7. **Name** – Default player name (no special status)
+3. **Final 3 Pending Mask** (?) – During Final 3 competitions before results locked
+4. **NOM+POV** (❓🛡️) – Player is nominated AND holds POV (but not HOH)
+5. **NOM** – Nominated player (any of: 'nominated', 'pendingSave', 'replacement' states)
+6. **HOH+POV** (👑🛡️) – Player holds both Head of Household and Veto
+7. **HOH** – Head of Household only
+8. **POV** – Veto holder only (may include twist emoji: 💎 Diamond, ⭐ Golden)
+9. **Name** – Default player name (no special status)
 
 ## Implementation Details
 
@@ -60,6 +62,9 @@ The following CSS classes are applied to `.top-tile-name` elements:
 - `.status-icon-label.hoh-pov-icons` – Combined HOH+POV emoji icons
 - `.status-icon-label.medal-winner` – Winner medal emoji
 - `.status-icon-label.medal-runner-up` – Runner-up medal emoji
+- `.status-final3-pending` – Final 3 pending mask (gray gradient, shows `?`)
+- `.status-nom-pov` – Combined NOM+POV text pill (red-to-green gradient)
+- `.status-icon-label.nom-pov-icons` – Combined NOM+POV emoji icons (❓🛡️)
 
 ### Cast Roster State Tags
 The cast roster (Houseguests table) uses a different approach with state tags in a separate column:
@@ -70,8 +75,10 @@ The cast roster (Houseguests table) uses a different approach with state tags in
 - `.tag.jury` – JURY tag badge
 - `.tag.winner` – WINNER tag badge
 - `.tag.evicted` – EVICTED tag badge
+- `.tag.f3pending` – Final 3 pending tag (shows `?`)
+- `.tag.nom-pov` – Combined NOM+POV tag (shows `NOM+POV`)
 
-Multiple tags can display simultaneously in the cast roster (e.g., a player can show both HOH and JURY tags).
+Multiple tags can display simultaneously in the cast roster (e.g., a player can show both HOH and JURY tags). However, when NOM+POV is applicable, it replaces individual NOM and VETO tags.
 
 ### Legacy Badge Classes (Hidden)
 The following legacy badge classes are **hidden via CSS** (`display: none !important`):
@@ -240,6 +247,53 @@ Player flags (`p.hoh`, `p.nominated`) can become stale if:
 3. External modules modify game state without calling sync
 
 By defensively calling `syncPlayerBadgeStates()` at the start of `updateHud()`, we ensure player flags always match game state before rendering.
+
+## Final 3 Pending Mask
+
+During Final 3 competitions (Part 1, Part 2, Part 3), all three remaining players display a neutral placeholder status `?` instead of HOH/NOM/POV until Part 3 results are finalized. This visually signals that final placement is not yet determined.
+
+### Activation Conditions
+The mask activates when ALL of the following are true:
+1. Exactly 3 alive (non-evicted) players remain
+2. Phase is one of: `final3_comp1`, `final3_comp2`, `final3_comp3`
+3. `game.__f3ResultsLocked !== true`
+
+### Deactivation
+When Part 3 finishes (`finishF3P3()` in `js/competitions.js`):
+1. Sets `game.__f3ResultsLocked = true`
+2. Assigns HOH and nominees
+3. Calls `updateHud()` to re-render with normal status pills
+
+### Rendering
+- **Top roster pills**: Use class `.status-final3-pending` with text `?` and aria-label `"<Name> (Final 3 – Pending Results)"`
+- **Cast roster tags**: Add tag `{ k: 'f3pending', label: '?' }` with class `.tag.f3pending`
+- The mask overrides all other status indicators (except WINNER/RUNNER-UP)
+
+## NOM+POV Combined Badge
+
+When a player is simultaneously a nominee and holds POV (but is not HOH), a combined badge displays instead of separate indicators.
+
+### Activation Conditions
+The combined badge displays when ALL of the following are true:
+1. Player is a current nominee (`p.nominated === true` or in `game.nominees` array)
+2. Player holds POV (`game.vetoHolder === p.id`)
+3. Player is NOT HOH (`game.hohId !== p.id`)
+
+### Rendering
+
+**Top Roster (Pill View):**
+- Emoji pair: `❓🛡️` inside `<span class="icon-nom-pov">` wrappers
+- Classes: `.status-icon-label.nom-pov-icons`
+- Aria-label: `"<Name> (Nominated and Veto Holder)"`
+- Optional text fallback: `NOM+POV` with class `.status-nom-pov` (currently using emoji)
+
+**Cast Roster (Table):**
+- Tag: `NOM+POV` with class `.tag.nom-pov`
+- The combined tag replaces individual NOM and VETO tags
+- Styled with red-to-green gradient background
+
+### Precedence
+The NOM+POV badge has higher precedence than individual NOM/POV badges but lower than Final 3 Pending Mask, WINNER, and RUNNER-UP.
 
 ## Future Enhancements
 
