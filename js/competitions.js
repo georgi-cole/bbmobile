@@ -607,11 +607,20 @@
 
       function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+      // Helper to format time in mm:ss.s format
+      function formatTime(ms) {
+        const totalSeconds = ms / 1000;
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toFixed(1).padStart(4, '0')}`;
+      }
+
       // Helper to get avatar URL and player data
       function getPlayerData(entry) {
         let player = null;
         let name = '';
         let score = '';
+        let timeMs = null;
 
         if (typeof entry === 'object') {
           if (entry.id) {
@@ -619,6 +628,7 @@
           }
           name = entry.name || player?.name || 'Player';
           score = entry.score !== undefined ? entry.score : (entry.sc !== undefined ? entry.sc : '');
+          timeMs = entry.timeMs !== undefined ? entry.timeMs : null;
         } else {
           name = entry || 'Player';
         }
@@ -628,7 +638,7 @@
           avatarUrl = getDicebearUrl(name);
         }
 
-        return { name, score, avatarUrl };
+        return { name, score, avatarUrl, timeMs };
       }
 
       try {
@@ -712,7 +722,17 @@
           `;
           winnerSection.appendChild(winnerName);
 
-          if (winner.score !== '') {
+          if (winner.timeMs !== null) {
+            const winnerTime = document.createElement('div');
+            winnerTime.textContent = `Time: ${formatTime(winner.timeMs)}`;
+            winnerTime.style.cssText = `
+              font-size: 1rem;
+              font-weight: 600;
+              color: #88e6a0;
+              text-align: center;
+            `;
+            winnerSection.appendChild(winnerTime);
+          } else if (winner.score !== '') {
             const winnerScore = document.createElement('div');
             winnerScore.textContent = `Score: ${winner.score}`;
             winnerScore.style.cssText = `
@@ -790,7 +810,15 @@
             `;
             runnerUp.appendChild(runnerName);
 
-            if (player.score !== '') {
+            if (player.timeMs !== null) {
+              const runnerTime = document.createElement('div');
+              runnerTime.textContent = formatTime(player.timeMs);
+              runnerTime.style.cssText = `
+                font-size: 0.85rem;
+                color: #88e6a0;
+              `;
+              runnerUp.appendChild(runnerTime);
+            } else if (player.score !== '') {
               const runnerScore = document.createElement('div');
               runnerScore.textContent = player.score;
               runnerScore.style.cssText = `

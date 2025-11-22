@@ -145,28 +145,36 @@
       <h2>Test Scenarios</h2>
       <div class="info">
         <strong>Test Goals:</strong><br>
-        • Verify AI drops occur randomly over ~3 minutes<br>
-        • Check final-two deal window (10 seconds)<br>
+        • Verify AI drops occur randomly over ~10 minutes (later-weighted distribution)<br>
+        • Check responsive avatar modes: strip (≥640px), tiny (480-639px), single (&lt;480px)<br>
+        • Test avatar animations: fade-out on drop, gold rival outline, cyan player outline<br>
+        • Verify final-two deal window (10 seconds)<br>
         • Test post-deal periodic checks (20s intervals, 40% drop chance)<br>
-        • Verify deal outcome event emission<br>
-        • Confirm all timers are cleaned up properly
+        • Verify special ranking modal with top 3 by hold time (mm:ss.s format)<br>
+        • Verify events: holdWall:finalStandings and holdWall:dealOutcome<br>
+        • Confirm all timers are cleaned up properly<br>
+        • Test pulsating wall animation and sheen overlay
       </div>
       
       <div class="controls">
         <button class="btn" onclick="startBasicTest()">▶ Start Basic Test</button>
         <button class="btn" onclick="startSeededTest()">▶ Start Seeded Test (seed=42)</button>
-        <button class="btn" onclick="startQuickTest()">▶ Quick Test (fast drops)</button>
+        <button class="btn" onclick="startStripMode()">▶ Strip Mode (Desktop)</button>
+        <button class="btn" onclick="startTinyMode()">▶ Tiny Mode (Mid-Width)</button>
+        <button class="btn" onclick="startSingleMode()">▶ Single Mode (Narrow)</button>
         <button class="btn" onclick="resetGame()">🔄 Reset</button>
       </div>
       
       <div class="warning">
         <strong>Instructions:</strong><br>
         1. Click a test button to start<br>
-        2. Press and hold the WALL element<br>
-        3. Watch the status feed for AI drops<br>
-        4. When down to 2, a deal will be offered for 10 seconds<br>
-        5. Release during deal window to test 80% promise respect<br>
-        6. Wait after 10s to test 20s interval periodic checks
+        2. Press and hold the WALL element (observe pulsating animation and sheen)<br>
+        3. Watch avatar displays: fade-out on drop, cyan outline for player, gold for rival<br>
+        4. Watch the status feed for AI drops (later-weighted over ~10 minutes)<br>
+        5. When down to 2, a deal will be offered for 10 seconds<br>
+        6. Release during deal window to test 80% promise respect<br>
+        7. Wait after 10s to test 20s interval periodic checks<br>
+        8. Verify special ranking modal shows top 3 by time (mm:ss.s format)
       </div>
     </div>
     
@@ -278,8 +286,6 @@
       if(window.MiniGames && window.MiniGames.holdWall){
         console.log('[Test] Starting seeded test with seed=42...');
         window.MiniGames.holdWall.render(container, handleComplete, {
-          competitionMode: true,
-          debugMode: false,
           seed: 42
         });
         updateChecklist(1);
@@ -288,18 +294,44 @@
       }
     }
     
-    function startQuickTest() {
-      // For quick testing, we'll need to modify the game to have faster drops
-      // This is just a demo of how you'd start it - actual implementation would need
-      // a test mode that accelerates the timeline
+    function startStripMode() {
       const container = document.getElementById('gameContainer');
       
       if(window.MiniGames && window.MiniGames.holdWall){
-        console.log('[Test] Starting quick test (normal speed for now)...');
+        console.log('[Test] Starting strip mode (desktop avatars)...');
         window.MiniGames.holdWall.render(container, handleComplete, {
-          competitionMode: true,
-          debugMode: false,
-          seed: 123
+          avatarMode: 'strip',
+          seed: 42
+        });
+        updateChecklist(1);
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: MiniGames.holdWall not found!</p>';
+      }
+    }
+    
+    function startTinyMode() {
+      const container = document.getElementById('gameContainer');
+      
+      if(window.MiniGames && window.MiniGames.holdWall){
+        console.log('[Test] Starting tiny mode (scrollable avatars)...');
+        window.MiniGames.holdWall.render(container, handleComplete, {
+          avatarMode: 'tiny',
+          seed: 42
+        });
+        updateChecklist(1);
+      } else {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: MiniGames.holdWall not found!</p>';
+      }
+    }
+    
+    function startSingleMode() {
+      const container = document.getElementById('gameContainer');
+      
+      if(window.MiniGames && window.MiniGames.holdWall){
+        console.log('[Test] Starting single mode (focused opponent)...');
+        window.MiniGames.holdWall.render(container, handleComplete, {
+          avatarMode: 'single',
+          seed: 42
         });
         updateChecklist(1);
       } else {

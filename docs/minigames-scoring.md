@@ -70,18 +70,27 @@ MinigameScoring.normalizeHybrid(correct, total, timeMs, minTimeMs, maxTimeMs, ac
 
 Used for games where **lasting longer is better** (e.g., holding, balancing).
 
-**Formula:** Linear scaling from min to max duration
-```javascript
+**Formula:** Winner-takes-all for competition mode, time-based display for rankings
+````javascript
+// Competition scoring
+finalScore = (lastRemaining) ? 100 : 0;
+
+// Display ranking by endurance duration
 MinigameScoring.normalizeEndurance(durationMs, minTimeMs, maxTimeMs)
-```
+````
 
 **Example:**
-- 10 seconds → 0 points (minimum threshold)
-- 60 seconds → 100 points (maximum possible)
-- 35 seconds → 50 points (linear scale)
+- Last person remaining → 100 points (winner-takes-all)
+- All others → 0 points
+- Rankings displayed by hold time in special modal (mm:ss.s format)
 
 **Games using this:**
-- Hold Wall (planned)
+- **Hold Wall** (implemented) - 10-minute endurance competition with:
+  - Winner-takes-all scoring (100 for last remaining, 0 otherwise)
+  - Special ranking modal showing top 3 by longest hold time
+  - Responsive avatar display modes (strip/tiny/single)
+  - AI opponent drops with later-weighted distribution
+  - Final-two deal mechanics and post-deal periodic checks
 - Balance Game (planned)
 
 ## Score Normalization Pipeline
