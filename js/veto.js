@@ -55,53 +55,6 @@
     return arr[Math.floor(rng()*arr.length)];
   }
 
-  // ======= FAST VETO FLOW CONFIGURATION & HELPERS =======
-  
-  /**
-   * Check if fast veto flow is enabled
-   * @returns {boolean} true if fast veto flow is enabled
-   */
-  function fastVetoEnabled(){
-    var g = global.game;
-    return !!(g && g.cfg && g.cfg.fastVetoFlow);
-  }
-  
-  /**
-   * Check if extended reveal sequence should be shown
-   * @returns {boolean} true if extended reveal is enabled
-   */
-  function extendedRevealEnabled(){
-    var g = global.game;
-    return !!(g && g.cfg && g.cfg.showExtendedVetoReveal);
-  }
-  
-  /**
-   * Check if all veto scores have been submitted
-   * @returns {boolean} true if all participants have submitted scores
-   */
-  function allVetoScoresSubmitted(){
-    var g = global.game;
-    if(!g || !Array.isArray(g.__vetoPlayers)) return false;
-    if(!g.lastCompScores) return false;
-    for(var i=0; i<g.__vetoPlayers.length; i++){
-      if(!g.lastCompScores.has(+g.__vetoPlayers[i])) return false;
-    }
-    return true;
-  }
-  
-  /**
-   * Accelerate veto competition completion when all scores are in
-   * Guards against duplicate calls and triggers early finish
-   */
-  function accelerateVetoCompCompletion(){
-    var g = global.game;
-    if(!g) return;
-    if(g.__vetoEarlyFinished) return;
-    g.__vetoEarlyFinished = true;
-    console.info('[veto] Fast path: all scores submitted, finishing competition early');
-    finishVetoComp();
-  }
-
   // ======= ID NORMALIZATION & INTEGRITY UTILITIES =======
   
   /**
@@ -241,9 +194,7 @@
       try{
         if(typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
         if(typeof global.updateHud === 'function') global.updateHud();
-      }catch(e){
-        // Ignore badge sync errors
-      }
+      }catch(e){}
       
       // Show correction card
       if(typeof global.showCard === 'function'){
@@ -475,14 +426,7 @@
           window.dispatchEvent(new CustomEvent('bb:comp:submitted', { detail: { kind: 'veto' } }));
         }
       }
-    }catch(e){
-      // Ignore UI update errors
-    }
-
-    // Fast path: check if all scores are in and trigger early completion
-    if(g.phase === 'veto_comp' && fastVetoEnabled() && allVetoScoresSubmitted()){
-      accelerateVetoCompCompletion();
-    }
+    }catch(e){}
 
     return true;
   }
@@ -866,36 +810,6 @@
     }
   }
 
-  /**
-   * Proceed after veto results are revealed
-   * Inserts social phase before ceremony (unless Final 4 bypass)
-   */
-  function proceedAfterVetoResults(){
-    var g = global.game;
-    if(!g) return;
-    
-    // Final 4 bypass preserved
-    if(alivePlayers().length === 4){
-      handlePostVetoReveal();
-      return;
-    }
-    
-    console.info('[veto] Transitioning to social phase before ceremony');
-    
-    if(typeof global.startSocial === 'function'){
-      global.startSocial('veto_comp', function(){
-        startVetoCeremony().catch(function(e){
-          console.error('[veto] startVetoCeremony error:', e);
-        });
-      });
-    } else {
-      // Fallback if social system not available
-      startVetoCeremony().catch(function(e){
-        console.error('[veto] startVetoCeremony error:', e);
-      });
-    }
-  }
-
   function handlePostVetoReveal(){
     var aliveCount = alivePlayers().length;
     
@@ -905,19 +819,12 @@
       console.info('[veto] Final 4 bypass - skipping ceremony, going to Final 4 eviction');
       setTimeout(function(){ startFinal4Eviction(); }, 500);
     } else {
-      // For non-F4 cases, delegate to social insertion if not already done
-      var g = global.game;
-      if(!g.__socialInsertedAfterVeto){
-        g.__socialInsertedAfterVeto = true;
-        proceedAfterVetoResults();
-      } else {
-        console.info('[veto] Social phase already inserted, starting ceremony directly');
-        setTimeout(function(){ 
-          startVetoCeremony().catch(function(err){
-            console.error('[veto] startVetoCeremony error:', err);
-          });
-        }, 500);
-      }
+      console.info('[veto] Starting veto ceremony in 500ms');
+      setTimeout(function(){ 
+        startVetoCeremony().catch(function(err){
+          console.error('[veto] startVetoCeremony error:', err);
+        });
+      }, 500);
     }
   }
 
@@ -1061,36 +968,9 @@
     // Clear resolving flag before async operations
     g.__vetoResolving = false;
 
-    // Show reveal (fast path, fast-forward, or full sequence)
-    if(fastVetoEnabled()){
-      console.info('[veto] Fast reveal path');
-      if(!extendedRevealEnabled()){
-        // Single concise winner modal
-        if(typeof showTVCard === 'function'){
-          showTVCard({
-            title: 'POV Winner',
-            lines: [safeName(global.game.vetoHolder)],
-            tone: 'veto',
-            duration: 1200
-          }).then(function(){
-            proceedAfterVetoResults();
-          }).catch(function(){
-            proceedAfterVetoResults();
-          });
-        } else {
-          proceedAfterVetoResults();
-        }
-      } else {
-        // Keep extended sequence if explicitly enabled
-        showVetoRevealSequence(top3).then(function(){
-          proceedAfterVetoResults();
-        }).catch(function(e){
-          console.warn('[veto] reveal error, proceeding', e);
-          proceedAfterVetoResults();
-        });
-      }
-    } else if (ffActive && g.__humanPlayedVeto) {
-      // Condensed reveal for fast-forward (legacy path)
+    // Show reveal (condensed if fast-forward, full otherwise)
+    if (ffActive && g.__humanPlayedVeto) {
+      // Condensed reveal for fast-forward
       console.info('[veto] Fast-forward condensed reveal: Winner', safeName(global.game.vetoHolder));
       if (window.TvStatus && window.TvStatus.set) {
         window.TvStatus.set('POV Winner: ' + safeName(global.game.vetoHolder), 'veto');
@@ -1099,7 +979,7 @@
         handlePostVetoReveal();
       }, 600);
     } else {
-      // Full reveal sequence (legacy path)
+      // Full reveal sequence
       showVetoRevealSequence(top3).then(function(){
         // Check for Final 4 — skip veto ceremony and go direct to eviction
         handlePostVetoReveal();
@@ -2754,31 +2634,13 @@
     console.info('[veto] startVetoCeremony - holder:', holderName, 'id:', g.vetoHolder, 
                  'twist:', twistMode, 'nominees:', g.nominees, 'playerCount:', playerCount);
 
-    // Step 1: Ceremony Intro - use TV contained card (fast or skip in fast mode)
-    var INTRO_DURATION = 2400; // Default duration
-    
-    if(fastVetoEnabled()){
-      if(g.cfg.skipVetoIntroCard){
-        INTRO_DURATION = 0;
-      } else {
-        INTRO_DURATION = 600; // Fast intro
-      }
-    }
-    
-    if(INTRO_DURATION > 0){
-      await showTVCard({
-        title: 'Veto Ceremony',
-        lines: [holderName + ' will decide whether to use the Power of Veto.'],
-        tone: 'veto',
-        duration: INTRO_DURATION
-      });
-      
-      if(fastVetoEnabled()){
-        console.info('[veto] Fast ceremony intro (' + INTRO_DURATION + 'ms)');
-      }
-    } else {
-      console.info('[veto] Fast ceremony intro skipped');
-    }
+    // Step 1: Ceremony Intro - use TV contained card
+    await showTVCard({
+      title: 'Veto Ceremony',
+      lines: [holderName + ' will decide whether to use the Power of Veto.'],
+      tone: 'veto',
+      duration: 2400
+    });
 
     // Log action
     try{ 
@@ -2876,9 +2738,8 @@
         await finalizeCeremony({ used: false });
       }
     } else {
-      // AI auto-decision after brief delay (fast mode: 50ms, normal: 1200ms)
-      var aiDelayMs = fastVetoEnabled() ? 50 : 1200;
-      console.info('[veto] AI POV holder - scheduling auto-decision in ' + aiDelayMs + 'ms');
+      // AI auto-decision after brief delay
+      console.info('[veto] AI POV holder - scheduling auto-decision in 1200ms');
       
       g.__vetoAutoTimer = setTimeout(function(){
         var gg = global.game;
@@ -2894,7 +2755,7 @@
         } else {
           console.warn('[veto] AI auto-decision skipped - ceremony already resolved or awaiting replacement');
         }
-      }, aiDelayMs);
+      }, 1200);
     }
   }
   global.startVetoCeremony = startVetoCeremony;
@@ -3472,15 +3333,12 @@
       if(!g.__vetoNarrativeShown){
         g.__vetoNarrativeShown = true;
         
-        // Determine card duration based on fast mode
-        var CARD_DUR = fastVetoEnabled() ? 1400 : 3200;
-        
         // Show veto decision card with POV holder avatar
         await showTVCardWithAvatars({
           title: 'Veto Decision',
           lines: [pickPhrase(VETO_USE_PHRASES)],
           tone: 'veto',
-          duration: CARD_DUR,
+          duration: 3200,
           actorIds: g.vetoHolder
         });
         
@@ -3489,7 +3347,7 @@
           title: 'Saved',
           lines: [savedName + ' is saved from the block.'],
           tone: 'veto',
-          duration: CARD_DUR,
+          duration: 3200,
           subjectIds: savedId
         });
         
@@ -3535,13 +3393,11 @@
       var picker = isGoldenPOV ? holder : hoh;
       var pickerName = picker ? picker.name : replacerName;
       
-      var REPLACEMENT_CARD_DUR = fastVetoEnabled() ? 1400 : 3200;
-      
       await showTVCardWithAvatars({
         title: 'Replacement Required',
         lines: ['The ' + replacerName + ' must now select a replacement nominee.'],
         tone: 'noms',
-        duration: REPLACEMENT_CARD_DUR,
+        duration: 3200,
         actorIds: picker ? picker.id : null
       });
 
@@ -3623,16 +3479,12 @@
       // Veto NOT used
       try{ if(global.addLog) global.addLog('Veto not used.','muted'); }catch(e){}
       
-      // Determine card durations based on fast mode
-      var NOT_USED_DUR = fastVetoEnabled() ? 1600 : 3600;
-      var ADJOURN_DUR = fastVetoEnabled() ? 1200 : 2800;
-      
       // Show veto not used card with POV holder avatar
       await showTVCardWithAvatars({
         title: 'Veto Not Used',
         lines: [pickPhrase(VETO_NOT_USE_PHRASES)],
         tone: 'veto',
-        duration: NOT_USED_DUR,
+        duration: 3600,
         actorIds: g.vetoHolder
       });
 
@@ -3644,7 +3496,7 @@
         title: 'Veto Ceremony',
         lines: ['This veto ceremony is adjourned.'],
         tone: 'veto',
-        duration: ADJOURN_DUR,
+        duration: 2800,
         actorIds: g.vetoHolder
       });
 
@@ -4028,16 +3880,12 @@
       var announce = (announcer ? announcer.name : announcerRole)+': I name '+safeName(chosen)+' as the replacement nominee.';
       
       // Show announcement in two sequential cards to prevent overflow
-      // Determine durations based on fast mode
-      var ANNOUNCE_TITLE_DUR = fastVetoEnabled() ? 800 : 1200;
-      var ANNOUNCE_MSG_DUR = fastVetoEnabled() ? 1400 : 2400;
-      
       // Card A: Avatar/title only
       await showTVCardWithAvatars({
         title: announcerRole + ' Announcement',
         lines: [],
         tone: 'noms',
-        duration: ANNOUNCE_TITLE_DUR,
+        duration: 1200,
         actorIds: announcer ? announcer.id : null,
         subjectIds: chosen
       });
@@ -4047,7 +3895,7 @@
         title: '',
         lines: [announce],
         tone: 'noms',
-        duration: ANNOUNCE_MSG_DUR,
+        duration: 2400,
         actorIds: null,
         subjectIds: null
       });
@@ -4063,13 +3911,11 @@
       await renderRiskSwapAnimation(savedId, chosen, remainingNomId);
       
       // Show replacement nominee card with replacement nominee avatar
-      var REPLACEMENT_NOM_DUR = fastVetoEnabled() ? 1400 : 3600;
-      
       await showTVCardWithAvatars({
         title: 'Replacement Nominee',
         lines: [safeName(chosen) + ' is now on the block.'],
         tone: 'replace',
-        duration: REPLACEMENT_NOM_DUR,
+        duration: 3600,
         subjectIds: chosen
       });
 
@@ -4083,13 +3929,11 @@
     }
 
     // Show adjourn message with POV holder avatar
-    var ADJOURN_FINAL_DUR = fastVetoEnabled() ? 1200 : 2800;
-    
     await showTVCardWithAvatars({
       title: 'Veto Ceremony',
       lines: ['This veto ceremony is adjourned.'],
       tone: 'veto',
-      duration: ADJOURN_FINAL_DUR,
+      duration: 2800,
       actorIds: g.vetoHolder
     });
 
