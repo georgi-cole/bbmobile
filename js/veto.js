@@ -3485,6 +3485,28 @@
   global.finalizeCeremony = finalizeCeremony;
   
   /**
+   * Helper: Check if two arrays have the same elements (unordered comparison)
+   * @param {number[]} arr1 - First array
+   * @param {number[]} arr2 - Second array
+   * @returns {boolean} true if arrays contain same elements
+   */
+  function arraysHaveSameElements(arr1, arr2){
+    if(!arr1 || !arr2 || arr1.length !== arr2.length) return false;
+    
+    var set1 = new Set(arr1);
+    var set2 = new Set(arr2);
+    
+    if(set1.size !== set2.size) return false;
+    
+    var same = true;
+    set1.forEach(function(id){
+      if(!set2.has(id)) same = false;
+    });
+    
+    return same;
+  }
+  
+  /**
    * Validate that the final nominees are different from the original pair
    * At most one nominee can remain the same
    * 
@@ -3506,39 +3528,9 @@
       finalNominees.push(replacementId);
     }
     
-    // For self-save: if savedId was originally nominated, final MUST be different
-    // because savedId has been removed and replacementId added
-    if(originalNominees.indexOf(savedId) !== -1){
-      // Saved nominee was in original pair - final pair cannot match original
-      // This handles the self-save edge case
-      var originalSet = new Set(originalNominees);
-      var finalSet = new Set(finalNominees);
-      
-      if(finalSet.size === originalSet.size){
-        var same = true;
-        finalSet.forEach(function(id){
-          if(!originalSet.has(id)) same = false;
-        });
-        
-        if(same){
-          return false; // Invalid: exact same pair (should be impossible after savedId removal)
-        }
-      }
-    }
-    
-    // Check if exactly the same as original (both match)
-    if(finalNominees.length === originalNominees.length){
-      var allMatch = true;
-      for(var i=0; i<finalNominees.length; i++){
-        if(originalNominees.indexOf(finalNominees[i]) === -1){
-          allMatch = false;
-          break;
-        }
-      }
-      
-      if(allMatch){
-        return false; // Invalid: exact same pair
-      }
+    // Check if final nominees match original nominees (invalid: exact same pair)
+    if(arraysHaveSameElements(finalNominees, originalNominees)){
+      return false; // Invalid: exact same pair
     }
     
     return true; // Valid: at least one changed
@@ -3658,7 +3650,7 @@
       // Store original nominees for validation (capture ONCE before any modifications)
       var originalNominees = g.__originalNomineesBeforeVeto || g.nominees.slice();
       if(!g.__originalNomineesBeforeVeto){
-        g.__originalNomineesBeforeVeto = originalNominees.slice();
+        g.__originalNomineesBeforeVeto = originalNominees; // No need to slice again, already a copy
       }
       
       // Build initial pool
