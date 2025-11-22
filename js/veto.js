@@ -536,6 +536,8 @@
     g.__replacementCommitted = false;
     g.__replacementApplied = false;
     g.__finishVetoCompCalled = false;
+    g.__vetoResolving = false;
+    g.__humanPlayedVeto = false;
 
     g.__vetoPlayers = computeVetoParticipants();
     // Normalize to numeric again in case upstream changed shape
@@ -836,9 +838,9 @@
       return;
     }
     
-    // Guard: prevent multiple calls
-    if(g.__finishVetoCompCalled){
-      console.warn('[veto] finishVetoComp already called - skipping duplicate');
+    // Guard: prevent multiple calls and re-entry
+    if(g.__finishVetoCompCalled || g.__vetoResolving){
+      console.warn('[veto] finishVetoComp already called or resolving - skipping duplicate');
       return;
     }
 
@@ -853,8 +855,9 @@
       }
     }
     
-    // Mark as called to prevent duplicates
+    // Mark as called and set resolving flag
     g.__finishVetoCompCalled = true;
+    g.__vetoResolving = true;
 
     var eligible = (Array.isArray(g.__vetoPlayers) && g.__vetoPlayers.length)
       ? g.__vetoPlayers.map(function(x){ return +x; })
@@ -871,6 +874,11 @@
           g.lastCompScores.set(id, +v);
         }
         if(!g.lastCompScores.has(id)){
+          // Skip auto-score for human if they didn't play
+          if(id === g.humanId && !g.__humanPlayedVeto){
+            console.info('[veto] Human skipped - no auto-score');
+            continue;
+          }
           g.lastCompScores.set(id, 5 + rng()*5);
         }
       }
@@ -941,13 +949,45 @@
     top3 = top3.filter(function(x){ return x && typeof x[0] !== 'undefined'; });
     if(!top3.length && eligible.length){ top3 = [[eligible[0], 0]]; }
 
-    showVetoRevealSequence(top3).then(function(){
-      // Check for Final 4 — skip veto ceremony and go direct to eviction
-      handlePostVetoReveal();
-    }).catch(function(e){
-      console.warn('[veto] reveal error, proceeding', e);
-      handlePostVetoReveal();
-    });
+    // Get participant IDs
+    var participantIds = arr.map(function(entry){ return entry[0]; });
+
+    // Check for fast-forward mode
+    var ffActive = g.__ffActive || false;
+
+    // Structured competition summary log
+    console.info('[comp-summary]', JSON.stringify({
+      phase: 'veto',
+      week: g.week,
+      ffActive: ffActive,
+      humanPlayed: g.__humanPlayedVeto,
+      participants: participantIds,
+      winner: global.game.vetoHolder
+    }));
+
+    // Clear resolving flag before async operations
+    g.__vetoResolving = false;
+
+    // Show reveal (condensed if fast-forward, full otherwise)
+    if (ffActive && g.__humanPlayedVeto) {
+      // Condensed reveal for fast-forward
+      console.info('[veto] Fast-forward condensed reveal: Winner', safeName(global.game.vetoHolder));
+      if (window.TvStatus && window.TvStatus.set) {
+        window.TvStatus.set('POV Winner: ' + safeName(global.game.vetoHolder), 'veto');
+      }
+      setTimeout(function(){
+        handlePostVetoReveal();
+      }, 600);
+    } else {
+      // Full reveal sequence
+      showVetoRevealSequence(top3).then(function(){
+        // Check for Final 4 — skip veto ceremony and go direct to eviction
+        handlePostVetoReveal();
+      }).catch(function(e){
+        console.warn('[veto] reveal error, proceeding', e);
+        handlePostVetoReveal();
+      });
+    }
   }
 
   /* ===== Final 4 Eviction (Big Brother US/CA Rules) ===== */

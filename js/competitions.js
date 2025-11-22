@@ -191,9 +191,10 @@
     const g = global.game; const you = global.getP?.(g.humanId);
     if (!you || you.evicted) return false;
     if (phase === 'hoh') {
-      const alive = global.alivePlayers(); const isF4 = alive.length === 4;
+      const aliveCount = global.alivePlayers().length;
       if (g.week === 1) return true;
-      return isF4 ? true : (g.lastHOHId !== you.id);
+      if (aliveCount === 3) return true; // Final 3 exemption
+      return g.lastHOHId !== you.id;
     }
     return true;
   }
@@ -289,7 +290,7 @@
     
     if (g.phase === 'hoh') {
       const alive = global.alivePlayers();
-      const blocked = (alive.length !== 4 && g.week > 1) ? g.lastHOHId : null;
+      const blocked = (alive.length > 3 && g.week > 1) ? g.lastHOHId : null;
       eligibleOpponents = alive.filter(p => !p.human && p.id !== blocked);
       gameKey = g.__hohGameKey || 'unknown';
     } else if (g.phase === 'final3_comp1') {
@@ -340,7 +341,7 @@
   function maybeFinishComp() {
     const g = global.game; const alive = global.alivePlayers();
     let eligible = alive.map(p => p.id);
-    if (g.phase === 'hoh' && alive.length !== 4 && g.week > 1 && g.lastHOHId) eligible = eligible.filter(id => id !== g.lastHOHId);
+    if (g.phase === 'hoh' && alive.length > 3 && g.week > 1 && g.lastHOHId) eligible = eligible.filter(id => id !== g.lastHOHId);
     const done = [...g.lastCompScores.keys()].filter(id => eligible.includes(id)).length;
     if (done === eligible.length) { finishCompPhase(); }
   }
@@ -440,6 +441,15 @@
     }
 
     console.info('[Competition] ✓ Replay-lock check passed');
+
+    // Mark human as having played (participation tracking)
+    if (g.phase === 'hoh') {
+      g.__humanPlayedHOH = true;
+      console.info('[Competition] ✓ Human participation flag set for HOH');
+    } else if (g.phase === 'veto_comp' || g.phase === 'veto') {
+      g.__humanPlayedVeto = true;
+      console.info('[Competition] ✓ Human participation flag set for Veto');
+    }
 
     // 2) Check if CompetitionFlow is available for new flow
     if (global.CompetitionFlow && typeof global.CompetitionFlow.runCompetitionFlow === 'function') {
@@ -1112,7 +1122,7 @@
       }
 
       const alive = global.alivePlayers(); 
-      const blocked = (alive.length !== 4 && g.week > 1) ? g.lastHOHId : null;
+      const blocked = (alive.length > 3 && g.week > 1) ? g.lastHOHId : null;
       
       console.info(`[Competition] Human player: ${you.name}(${you.id}), evicted=${you.evicted}`);
       console.info(`[Competition] Alive players: ${alive.length}, Blocked player: ${blocked || 'none'}`);
@@ -1164,12 +1174,14 @@
     const g = global.game;
     g.lastCompScores = new Map(); g.hohOrder = [];
     g.__hohResolved = false;
+    g.__hohResolving = false;
+    g.__humanPlayedHOH = false;
     g.__compRunning = true; // Mark competition as running
     g.__hohGameKey = null; // Track which game was played
     global.markCompPlayed?.('hoh'); // Mark HOH as played
     global.tv.say('HOH Competition'); global.phaseMusic?.('hoh');
     global.setPhase('hoh', g.cfg.tHOH, finishCompPhase);
-    const alive = global.alivePlayers(); const blocked = (alive.length !== 4 && g.week > 1) ? g.lastHOHId : null;
+    const alive = global.alivePlayers(); const blocked = (alive.length > 3 && g.week > 1) ? g.lastHOHId : null;
     const diffMult = getAIDifficultyMultiplier();
     
     // Legacy fallback: generate AI scores immediately if OpponentSynth not available
@@ -1191,34 +1203,72 @@
 
   async function finishCompPhase() {
     const g = global.game; if (g.phase !== 'hoh') return;
-    if (g.__hohResolved) return;
-    g.__hohResolved = true;
-    g.__compRunning = false; // Clear competition running flag
+    if (g.__hohResolved || g.__hohResolving) return;
+    g.__hohResolving = true;
+    try {
+      g.__hohResolved = true;
+      g.__compRunning = false; // Clear competition running flag
 
-    const alive = global.alivePlayers(); let elig = alive.map(p => p.id);
-    if (alive.length !== 4 && g.week > 1 && g.lastHOHId) elig = elig.filter(id => id !== g.lastHOHId);
+      const alive = global.alivePlayers(); let elig = alive.map(p => p.id);
+      if (alive.length > 3 && g.week > 1 && g.lastHOHId) elig = elig.filter(id => id !== g.lastHOHId);
 
-    // Apply dampening for consecutive winners
-    for (const id of elig) {
-      if (!g.lastCompScores.has(id)) {
-        let baseScore = 5 + (global.rng?.() || Math.random()) * 20;
-        const p = global.getP(id);
-        if (p) {
-          const recentWins = (p.stats?.hohWins || 0) + (p.stats?.vetoWins || 0);
-          if (recentWins >= 2) {
-            baseScore *= (0.85 + Math.random() * 0.15); // Slight reduction
+      // Apply dampening for consecutive winners
+      for (const id of elig) {
+        if (!g.lastCompScores.has(id)) {
+          // Skip auto-score for human if they didn't play
+          if (id === g.humanId && !g.__humanPlayedHOH) {
+            console.info('[hoh] Human skipped - no auto-score');
+            continue;
           }
+          let baseScore = 5 + (global.rng?.() || Math.random()) * 20;
+          const p = global.getP(id);
+          if (p) {
+            const recentWins = (p.stats?.hohWins || 0) + (p.stats?.vetoWins || 0);
+            if (recentWins >= 2) {
+              baseScore *= (0.85 + Math.random() * 0.15); // Slight reduction
+            }
+          }
+          g.lastCompScores.set(id, baseScore);
         }
-        g.lastCompScores.set(id, baseScore);
       }
-    }
 
-    // Show top-3 reveal card
-    await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
-    await waitCardsIdle();
+      // Get participant IDs before reveal
+      const participantIds = [...g.lastCompScores.keys()].filter(id => elig.includes(id));
+      if (!participantIds.length) {
+        console.warn('[hoh] No participants; abort reveal');
+        return;
+      }
 
-    const winner = [...g.lastCompScores.entries()].filter(([id]) => elig.includes(id)).sort((a, b) => b[1] - a[1])[0][0];
-    for (const p of g.players) p.hoh = false; g.hohId = winner; g.lastHOHId = winner; const W = global.getP(winner); W.hoh = true; W.stats = W.stats || {}; W.wins = W.wins || {}; W.stats.hohWins = (W.stats.hohWins || 0) + 1; W.wins.hoh = (W.wins.hoh || 0) + 1;
+      // Check for fast-forward mode
+      const ffActive = g.__ffActive || false;
+
+      // Show top-3 reveal card (condensed if fast-forward, full otherwise)
+      if (ffActive && g.__humanPlayedHOH) {
+        // Condensed reveal for fast-forward: brief status update
+        const winner = participantIds.map(id => [id, g.lastCompScores.get(id)]).sort((a,b)=>b[1]-a[1])[0][0];
+        console.info(`[hoh] Fast-forward condensed reveal: Winner ${global.safeName(winner)}`);
+        if (window.TvStatus?.set) {
+          window.TvStatus.set(`HOH Winner: ${global.safeName(winner)}`, 'ok');
+        }
+        await new Promise(r => setTimeout(r, 600)); // Brief pause
+      } else {
+        // Full reveal sequence
+        await showCompetitionReveal('HOH Competition', g.lastCompScores, elig);
+        await waitCardsIdle();
+      }
+
+      const winner = [...g.lastCompScores.entries()].filter(([id]) => elig.includes(id)).sort((a, b) => b[1] - a[1])[0][0];
+      for (const p of g.players) p.hoh = false; g.hohId = winner; g.lastHOHId = winner; const W = global.getP(winner); W.hoh = true; W.stats = W.stats || {}; W.wins = W.wins || {}; W.stats.hohWins = (W.stats.hohWins || 0) + 1; W.wins.hoh = (W.wins.hoh || 0) + 1;
+
+      // Structured competition summary log
+      console.info('[comp-summary]', JSON.stringify({
+        phase: 'hoh',
+        week: g.week,
+        ffActive: ffActive,
+        humanPlayed: g.__humanPlayedHOH,
+        participants: participantIds,
+        winner: winner
+      }));
 
     // Social Maneuvers: Record HOH win event for weekly energy bonus
     if(global.SocialManeuvers?.isEnabled?.() && global.SocialManeuvers?.recordWeeklyEvent){
@@ -1241,24 +1291,27 @@
     // Hook: Log XP for HOH win
     if (global.ProgressionEvents?.onHOHWin) global.ProgressionEvents.onHOHWin(winner, elig);
 
-    await waitCardsIdle();
+      await waitCardsIdle();
 
-    // Robust social call — prefer startSocial, fall back to startSocialIntermission
-    const runSocial = global.startSocial || global.startSocialIntermission;
-    if (typeof runSocial === 'function') {
-      runSocial('hoh', () => {
+      // Robust social call — prefer startSocial, fall back to startSocialIntermission
+      const runSocial = global.startSocial || global.startSocialIntermission;
+      if (typeof runSocial === 'function') {
+        runSocial('hoh', () => {
+          global.tv.say('Nominations');
+          global.setPhase('nominations', g.cfg.tNoms, () => global.lockNominationsAndProceed?.());
+          setTimeout(() => global.startNominations?.(), 50);
+        });
+      } else {
+        // Ultimate fallback: go straight to nominations
         global.tv.say('Nominations');
         global.setPhase('nominations', g.cfg.tNoms, () => global.lockNominationsAndProceed?.());
         setTimeout(() => global.startNominations?.(), 50);
-      });
-    } else {
-      // Ultimate fallback: go straight to nominations
-      global.tv.say('Nominations');
-      global.setPhase('nominations', g.cfg.tNoms, () => global.lockNominationsAndProceed?.());
-      setTimeout(() => global.startNominations?.(), 50);
-    }
+      }
 
-    global.updateHud(); global.renderPanel();
+      global.updateHud(); global.renderPanel();
+    } finally {
+      g.__hohResolving = false;
+    }
   }
 
   // Final 3 flow with enhanced modals and pacing
