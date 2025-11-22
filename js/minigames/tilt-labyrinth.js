@@ -270,6 +270,10 @@
       }
     }
 
+    // Keyboard event handlers (stored for cleanup)
+    let keydownHandler = null;
+    let keyupHandler = null;
+
     function setupSwipeControls(){
       useTiltControls = false;
       controlsInfo.textContent = '👆 Swipe / drag or use arrow keys (← ↑ ↓ →)';
@@ -325,19 +329,22 @@
         return k === 'ArrowLeft' || k === 'ArrowRight' || k === 'ArrowUp' || k === 'ArrowDown';
       }
       
-      window.addEventListener('keydown', (e) => {
+      keydownHandler = (e) => {
         if(keyIsControl(e.key)) {
           keysPressed[e.key] = true;
           e.preventDefault();
         }
-      });
+      };
       
-      window.addEventListener('keyup', (e) => {
+      keyupHandler = (e) => {
         if(keyIsControl(e.key)) {
           delete keysPressed[e.key];
           e.preventDefault();
         }
-      });
+      };
+      
+      window.addEventListener('keydown', keydownHandler);
+      window.addEventListener('keyup', keyupHandler);
     }
 
     function handleOrientation(event){
@@ -610,6 +617,10 @@
       // Cleanup
       if(useTiltControls){
         window.removeEventListener('deviceorientation', handleOrientation);
+      } else {
+        // Remove keyboard event listeners
+        if(keydownHandler) window.removeEventListener('keydown', keydownHandler);
+        if(keyupHandler) window.removeEventListener('keyup', keyupHandler);
       }
       
       setTimeout(() => {
