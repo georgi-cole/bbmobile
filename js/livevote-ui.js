@@ -323,34 +323,13 @@
     contestant.dataset.side = side;
     contestant.dataset.playerId = playerId;
 
-    // Make contestant clickable to select nominee (both carousel and desktop modes)
+    // Make contestant clickable to select nominee (clicking photo or container)
     contestant.style.cursor = 'pointer';
     contestant.onclick = (e) => {
-      // Check if inline evict button was clicked
-      if (isEvictButtonClick(e) && state.useCarousel) {
-        // Inline CTA: Evict button was clicked - trigger evict action
-        triggerEvictAction(playerId);
-      } else {
-        // Normal selection (clicking photo or nominee card)
+      // Only handle clicks on the photo/container, not the button
+      // Button has its own event handlers
+      if (!e.target.closest('.lv2-name-btn')) {
         selectNominee(playerId, name);
-      }
-    };
-    contestant.setAttribute('role', 'button');
-    contestant.setAttribute('tabindex', '0');
-    contestant.setAttribute('aria-label', `Select ${name} for eviction`);
-    
-    // Add keyboard support
-    contestant.onkeydown = (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        // Check if the event target is the inline evict button
-        if (isEvictButtonClick(e) && state.useCarousel) {
-          // Inline CTA: Evict button activated via keyboard - trigger evict action
-          triggerEvictAction(playerId);
-        } else {
-          // Normal selection
-          selectNominee(playerId, name);
-        }
       }
     };
 
@@ -370,6 +349,34 @@
     nameEl.type = 'button';
     nameEl.textContent = name;
     nameEl.setAttribute('aria-label', `Select ${name} for eviction`);
+    
+    // Add click handler to name button
+    nameEl.onclick = (e) => {
+      e.stopPropagation(); // Prevent parent contestant click handler
+      // Check if this is a selected button (evict action) or initial selection
+      if (nameEl.classList.contains('lv2-name-btn-selected')) {
+        // Button is in evict state - trigger evict action
+        triggerEvictAction(playerId);
+      } else {
+        // Initial selection
+        selectNominee(playerId, name);
+      }
+    };
+    
+    // Add keyboard handler to name button
+    nameEl.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        // Same logic as click
+        if (nameEl.classList.contains('lv2-name-btn-selected')) {
+          triggerEvictAction(playerId);
+        } else {
+          selectNominee(playerId, name);
+        }
+      }
+    };
+    
     contestant.appendChild(nameEl);
     
     // Mobile Carousel 2.0: Index label ("1 of 2")
