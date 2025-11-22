@@ -210,7 +210,7 @@
       prevArrow.innerHTML = '◀';
       prevArrow.onclick = () => {
         navigateCarousel('prev');
-        updateSelectionFromCarousel();
+        // Inline CTA: Don't auto-select when navigating - let user tap to select
       };
       grid.appendChild(prevArrow);
       
@@ -220,7 +220,7 @@
       nextArrow.innerHTML = '▶';
       nextArrow.onclick = () => {
         navigateCarousel('next');
-        updateSelectionFromCarousel();
+        // Inline CTA: Don't auto-select when navigating - let user tap to select
       };
       grid.appendChild(nextArrow);
     }
@@ -373,8 +373,8 @@
       // Use setTimeout to ensure DOM is ready
       setTimeout(() => {
         updateCarouselView();
-        // Auto-select the first nominee on initialization
-        updateSelectionFromCarousel();
+        // Inline CTA: Don't auto-select on initialization - let user tap to select
+        // (removed updateSelectionFromCarousel() call)
       }, 50);
     }
   }
