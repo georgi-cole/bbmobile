@@ -389,14 +389,14 @@
     // Make contestant clickable to select nominee (both carousel and desktop modes)
     contestant.style.cursor = 'pointer';
     contestant.onclick = (e) => {
-      // Check if name button (inline CTA) was clicked
-      const isNameButton = e.target.classList.contains('lv2-name-button');
+      // Check if name button (inline CTA) was clicked using data attribute
+      const isEvictButton = e.target.dataset.action === 'evict';
       
-      if (isNameButton && state.useCarousel) {
-        // Inline CTA: Name button was clicked - trigger evict action
+      if (isEvictButton && state.useCarousel) {
+        // Inline CTA: Evict button was clicked - trigger evict action
         triggerEvictAction(playerId);
       } else {
-        // Normal selection
+        // Normal selection (clicking photo or nominee card)
         selectNominee(playerId, name);
       }
     };
@@ -408,10 +408,10 @@
     contestant.onkeydown = (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        const isNameButton = e.target.classList.contains('lv2-name-button');
+        const isEvictButton = e.target.dataset.action === 'evict';
         
-        if (isNameButton && state.useCarousel) {
-          // Inline CTA: Name button has focus - trigger evict action
+        if (isEvictButton && state.useCarousel) {
+          // Inline CTA: Evict button has focus - trigger evict action
           triggerEvictAction(playerId);
         } else {
           // Normal selection
@@ -609,9 +609,12 @@
     
     // Add visual selection indicator to the contestant
     const contestants = state.container?.querySelectorAll('.lv2-contestant');
+    let hasSelection = false;
+    
     contestants?.forEach(c => {
       if (c.dataset.playerId === String(playerId)) {
         c.classList.add('selected');
+        hasSelection = true;
         
         // Inline CTA: Transform name area into evict button in carousel mode
         if (state.useCarousel) {
@@ -622,6 +625,7 @@
             nameEl.setAttribute('role', 'button');
             nameEl.setAttribute('tabindex', '0');
             nameEl.setAttribute('aria-label', `Evict ${playerName}`);
+            nameEl.dataset.action = 'evict'; // Data attribute for robust detection
           }
         }
       } else {
@@ -637,30 +641,19 @@
             nameEl.removeAttribute('role');
             nameEl.removeAttribute('tabindex');
             nameEl.removeAttribute('aria-label');
+            nameEl.removeAttribute('data-action');
           }
         }
       }
     });
     
-    // Inline CTA: Hide instruction text and show name button when selected
+    // Inline CTA: Show/hide instruction text based on selection state
     if (state.useCarousel) {
       const instructionText = state.container?.querySelector('.lv2-instruction-text');
       if (instructionText) {
-        instructionText.style.display = 'none';
+        instructionText.style.display = hasSelection ? 'none' : '';
       }
     }
-  }
-  
-  // Update selection based on current carousel position (auto-select when navigating)
-  function updateSelectionFromCarousel() {
-    if (!state.useCarousel) return;
-    
-    const currentSide = state.carouselIndex === 0 ? 'left' : 'right';
-    const currentName = state.carouselIndex === 0 ? state.leftName : state.rightName;
-    const currentId = state.carouselIndex === 0 ? state.leftId : state.rightId;
-    
-    // Auto-select the currently visible nominee
-    selectNominee(currentId, currentName);
   }
   
   // Mobile Carousel 2.0: Update the CTA dock button to target the currently shown nominee
