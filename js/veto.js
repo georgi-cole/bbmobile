@@ -839,7 +839,7 @@
     }
     
     // Guard: prevent multiple calls and re-entry
-    if(g.__finishVetoCompCalled || g.__vetoResolving){
+    if (g.__finishVetoCompCalled || g.__vetoResolving) {
       console.warn('[veto] finishVetoComp already called or resolving - skipping duplicate');
       return;
     }

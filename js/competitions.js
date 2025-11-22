@@ -1245,7 +1245,9 @@
       // Show top-3 reveal card (condensed if fast-forward, full otherwise)
       if (ffActive && g.__humanPlayedHOH) {
         // Condensed reveal for fast-forward: brief status update
-        const winner = participantIds.map(id => [id, g.lastCompScores.get(id)]).sort((a,b)=>b[1]-a[1])[0][0];
+        const scoredParticipants = participantIds.map(id => [id, g.lastCompScores.get(id)]);
+        const sortedByScore = scoredParticipants.sort((a, b) => b[1] - a[1]);
+        const winner = sortedByScore[0][0];
         console.info(`[hoh] Fast-forward condensed reveal: Winner ${global.safeName(winner)}`);
         if (window.TvStatus?.set) {
           window.TvStatus.set(`HOH Winner: ${global.safeName(winner)}`, 'ok');
@@ -1257,8 +1259,21 @@
         await waitCardsIdle();
       }
 
-      const winner = [...g.lastCompScores.entries()].filter(([id]) => elig.includes(id)).sort((a, b) => b[1] - a[1])[0][0];
-      for (const p of g.players) p.hoh = false; g.hohId = winner; g.lastHOHId = winner; const W = global.getP(winner); W.hoh = true; W.stats = W.stats || {}; W.wins = W.wins || {}; W.stats.hohWins = (W.stats.hohWins || 0) + 1; W.wins.hoh = (W.wins.hoh || 0) + 1;
+      // Determine winner from eligible participants
+      const scoredEntries = [...g.lastCompScores.entries()].filter(([id]) => elig.includes(id));
+      const sortedEntries = scoredEntries.sort((a, b) => b[1] - a[1]);
+      const winner = sortedEntries[0][0];
+      
+      // Update HOH state
+      for (const p of g.players) p.hoh = false;
+      g.hohId = winner;
+      g.lastHOHId = winner;
+      const W = global.getP(winner);
+      W.hoh = true;
+      W.stats = W.stats || {};
+      W.wins = W.wins || {};
+      W.stats.hohWins = (W.stats.hohWins || 0) + 1;
+      W.wins.hoh = (W.wins.hoh || 0) + 1;
 
       // Structured competition summary log
       console.info('[comp-summary]', JSON.stringify({
