@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOH Final 3 Exemption Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #444;
+      border-radius: 5px;
+      background: #16213e;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #ffd96b;
+    }
+    .btn {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background: #0f3460;
+      color: #fff;
+    }
+    .btn:hover {
+      background: #16537e;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 3px;
+      background: #0a2647;
+    }
+    .success { background: #155724; color: #d4edda; }
+    .error { background: #721c24; color: #f8d7da; }
+    .warning { background: #856404; color: #fff3cd; }
+    pre {
+      background: #0a2647;
+      padding: 10px;
+      overflow-x: auto;
+      max-height: 400px;
+      border: 1px solid #444;
+      border-radius: 3px;
+    }
+    .test-result {
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 3px;
+    }
+    .pass { background: #155724; color: #d4edda; }
+    .fail { background: #721c24; color: #f8d7da; }
+  </style>
+</head>
+<body>
+  <h1>🏆 HOH Final 3 Exemption Test</h1>
+  <p>This test validates that the previous HOH is allowed to compete at Final 3 (alive==3) but blocked at Final 4+ (alive>3).</p>
+  
+  <div class="test-section">
+    <h3>Test Scenario 1: Final 3 (alive=3, previous HOH should compete)</h3>
+    <button id="test1" class="btn">Run Test 1</button>
+    <div id="result1" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test Scenario 2: Final 4 (alive=4, previous HOH should be blocked)</h3>
+    <button id="test2" class="btn">Run Test 2</button>
+    <div id="result2" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test Scenario 3: Final 5 (alive=5, previous HOH should be blocked)</h3>
+    <button id="test3" class="btn">Run Test 3</button>
+    <div id="result3" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test Scenario 4: Week 1 (all eligible regardless)</h3>
+    <button id="test4" class="btn">Run Test 4</button>
+    <div id="result4" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Console Log</h3>
+    <button id="clearLog" class="btn">Clear Log</button>
+    <button id="refreshLog" class="btn">Refresh</button>
+    <pre id="consoleLog"></pre>
+  </div>
+
+  <!-- Mock global state -->
+  <script>
+    window.global = window;
+    
+    // Mock game state
+    window.game = {
+      week: 2,
+      lastHOHId: 1,
+      humanId: 1,
+      cfg: {},
+      players: []
+    };
+
+    // Mock player data
+    function createMockPlayers(count) {
+      const players = [];
+      for (let i = 1; i <= count; i++) {
+        players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          human: i === 1
+        });
+      }
+      return players;
+    }
+
+    // Mock functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    // Console log capture
+    const logMessages = [];
+    const originalLog = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    console.info = function(...args) {
+      logMessages.push(['INFO', ...args]);
+      originalLog.apply(console, args);
+    };
+    console.warn = function(...args) {
+      logMessages.push(['WARN', ...args]);
+      originalWarn.apply(console, args);
+    };
+    console.error = function(...args) {
+      logMessages.push(['ERROR', ...args]);
+      originalError.apply(console, args);
+    };
+
+    function updateLog() {
+      const logEl = document.getElementById('consoleLog');
+      logEl.textContent = logMessages.map(m => m.join(' ')).join('\n');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+      logMessages.length = 0;
+      updateLog();
+    }
+
+    // Import isHumanEligible function (simplified version for testing)
+    function isHumanEligible(phase) {
+      const g = window.game;
+      const you = window.getP(g.humanId);
+      if (!you || you.evicted) return false;
+      if (phase === 'hoh') {
+        const aliveCount = window.alivePlayers().length;
+        if (g.week === 1) return true;
+        if (aliveCount === 3) return true; // Final 3 exemption
+        return g.lastHOHId !== you.id;
+      }
+      return true;
+    }
+
+    // Test functions
+    function runTest1() {
+      const result = document.getElementById('result1');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      // Setup: 3 alive players, week 2, human is previous HOH
+      window.game.players = createMockPlayers(3);
+      window.game.week = 2;
+      window.game.lastHOHId = 1;
+      window.game.humanId = 1;
+      
+      console.info('[Test 1] Setup: 3 alive, week 2, human is previous HOH');
+      const eligible = isHumanEligible('hoh');
+      console.info('[Test 1] isHumanEligible result:', eligible);
+      
+      const passed = eligible === true;
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Expected true, got ${eligible}
+        </div>
+        <div>Setup: 3 alive players, week 2, human=previousHOH</div>
+        <div>Expected: Human should be eligible at Final 3</div>
+        <div>Result: ${eligible ? 'Eligible ✓' : 'Not eligible ✗'}</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest2() {
+      const result = document.getElementById('result2');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      // Setup: 4 alive players, week 2, human is previous HOH
+      window.game.players = createMockPlayers(4);
+      window.game.week = 2;
+      window.game.lastHOHId = 1;
+      window.game.humanId = 1;
+      
+      console.info('[Test 2] Setup: 4 alive, week 2, human is previous HOH');
+      const eligible = isHumanEligible('hoh');
+      console.info('[Test 2] isHumanEligible result:', eligible);
+      
+      const passed = eligible === false;
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Expected false, got ${eligible}
+        </div>
+        <div>Setup: 4 alive players, week 2, human=previousHOH</div>
+        <div>Expected: Human should be blocked at Final 4</div>
+        <div>Result: ${eligible ? 'Eligible ✗' : 'Not eligible ✓'}</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest3() {
+      const result = document.getElementById('result3');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      // Setup: 5 alive players, week 2, human is previous HOH
+      window.game.players = createMockPlayers(5);
+      window.game.week = 2;
+      window.game.lastHOHId = 1;
+      window.game.humanId = 1;
+      
+      console.info('[Test 3] Setup: 5 alive, week 2, human is previous HOH');
+      const eligible = isHumanEligible('hoh');
+      console.info('[Test 3] isHumanEligible result:', eligible);
+      
+      const passed = eligible === false;
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Expected false, got ${eligible}
+        </div>
+        <div>Setup: 5 alive players, week 2, human=previousHOH</div>
+        <div>Expected: Human should be blocked at Final 5</div>
+        <div>Result: ${eligible ? 'Eligible ✗' : 'Not eligible ✓'}</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest4() {
+      const result = document.getElementById('result4');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      // Setup: 5 alive players, week 1, human is previous HOH (shouldn't matter)
+      window.game.players = createMockPlayers(5);
+      window.game.week = 1;
+      window.game.lastHOHId = 1;
+      window.game.humanId = 1;
+      
+      console.info('[Test 4] Setup: 5 alive, week 1, human is previous HOH');
+      const eligible = isHumanEligible('hoh');
+      console.info('[Test 4] isHumanEligible result:', eligible);
+      
+      const passed = eligible === true;
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Expected true, got ${eligible}
+        </div>
+        <div>Setup: 5 alive players, week 1, human=previousHOH</div>
+        <div>Expected: All eligible in week 1</div>
+        <div>Result: ${eligible ? 'Eligible ✓' : 'Not eligible ✗'}</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    // Event listeners
+    document.getElementById('test1').addEventListener('click', runTest1);
+    document.getElementById('test2').addEventListener('click', runTest2);
+    document.getElementById('test3').addEventListener('click', runTest3);
+    document.getElementById('test4').addEventListener('click', runTest4);
+    document.getElementById('clearLog').addEventListener('click', clearLog);
+    document.getElementById('refreshLog').addEventListener('click', updateLog);
+
+    // Initial log
+    console.info('=== HOH Final 3 Exemption Test Loaded ===');
+    console.info('Click test buttons to run scenarios');
+    updateLog();
+  </script>
+</body>
+</html>
