@@ -844,7 +844,9 @@
         const [A,B]=noms;
         if(pick===A) tallyA++; else tallyB++;
         // Only update legacy graph when NOT using LV2 (LV2 handles counts internally)
-        if(!useLv2) updateLiveVoteGraph(tallyA,tallyB);
+        if(!useLv2) {
+          updateLiveVoteGraph(tallyA,tallyB);
+        }
       } else {
         counts.set(pick,(counts.get(pick)||0)+1);
         updateLiveVoteMulti(counts);
@@ -910,6 +912,8 @@
       // Push HOH tie-break vote to LV2 feed if active
       if (useLv2) {
         try {
+          // Note: a and b come from g.eviction.nominees array in order, matching LV2 init
+          // a is leftId (index 0), b is rightId (index 1)
           const side = pick === a ? 'left' : 'right';
           global.lv2?.pushVote?.({
             voterId: hoh.id,
@@ -948,6 +952,8 @@
     // Push AI HOH tie-break vote to LV2 feed if active
     if (useLv2) {
       try {
+        // Note: a and b come from g.eviction.nominees array in order, matching LV2 init
+        // a is leftId (index 0), b is rightId (index 1)
         const side = evId === a ? 'left' : 'right';
         global.lv2?.pushVote?.({
           voterId: hoh.id,
