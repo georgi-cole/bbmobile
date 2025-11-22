@@ -184,6 +184,9 @@
         radius: 7
       });
     }
+    
+    // Track keyboard arrow keys for desktop controls
+    const keysPressed = {};
 
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px;';
@@ -269,7 +272,7 @@
 
     function setupSwipeControls(){
       useTiltControls = false;
-      controlsInfo.textContent = '👆 Swipe or drag to control';
+      controlsInfo.textContent = '👆 Swipe / drag or use arrow keys (← ↑ ↓ →)';
       
       let touchStartX = 0;
       let touchStartY = 0;
@@ -315,6 +318,25 @@
       
       canvas.addEventListener('mouseup', () => {
         isDragging = false;
+      });
+      
+      // Keyboard arrow controls for desktop
+      function keyIsControl(k){
+        return k === 'ArrowLeft' || k === 'ArrowRight' || k === 'ArrowUp' || k === 'ArrowDown';
+      }
+      
+      window.addEventListener('keydown', (e) => {
+        if(keyIsControl(e.key)) {
+          keysPressed[e.key] = true;
+          e.preventDefault();
+        }
+      });
+      
+      window.addEventListener('keyup', (e) => {
+        if(keyIsControl(e.key)) {
+          delete keysPressed[e.key];
+          e.preventDefault();
+        }
       });
     }
 
@@ -385,6 +407,15 @@
 
     function updatePhysics(){
       if(gameOver) return;
+      
+      // Apply keyboard controls when tilt is not active
+      if(!useTiltControls){
+        const impulseFactor = ACCELERATION * 1.2;
+        if(keysPressed.ArrowLeft)  velocityX -= impulseFactor;
+        if(keysPressed.ArrowRight) velocityX += impulseFactor;
+        if(keysPressed.ArrowUp)    velocityY -= impulseFactor;
+        if(keysPressed.ArrowDown)  velocityY += impulseFactor;
+      }
       
       // Apply velocity
       const newX = ballX + velocityX;
