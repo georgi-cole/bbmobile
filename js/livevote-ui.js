@@ -235,7 +235,7 @@
     stage.style.display = 'none'; // Hidden, only for ARIA
     container.appendChild(stage);
     
-    // Inline CTA: Instruction text (below grid, before CTA dock)
+    // Inline CTA: Instruction text (below grid)
     if (state.useCarousel) {
       const instructionText = document.createElement('div');
       instructionText.className = 'lv2-instruction-text';
@@ -245,7 +245,7 @@
       container.appendChild(instructionText);
     }
     
-    // Mobile Carousel 2.0: Status Row (below stage, above CTA dock)
+    // Mobile Carousel 2.0: Status Row (below instruction text)
     if (state.useCarousel) {
       const statusRow = document.createElement('div');
       statusRow.className = 'lv2-status-row';
@@ -273,43 +273,10 @@
       container.appendChild(statusRow);
     }
     
-    // Mobile Carousel 2.0: CTA Dock (positioned INSIDE overlay, directly under carousel)
-    // NOTE: Hidden by default in carousel mode - inline CTA on nominee tile is used instead
-    if (state.useCarousel) {
-      const ctaDock = document.createElement('div');
-      ctaDock.classList.add('lv2-cta-dock', 'lv2-cta-dock-inline', 'lv2-cta-dock-hidden');
-      
-      // Position inline within the overlay structure, not fixed
-      // This ensures it's contained within the faux TV overlay
-      Object.assign(ctaDock.style, {
-        position: 'relative',
-        width: '100%',
-        padding: '16px',
-        justifyContent: 'center',
-        gap: '12px',
-        marginTop: '8px'
-      });
-      
-      const mainButton = document.createElement('button');
-      mainButton.className = 'lv2-cta-main';
-      mainButton.disabled = true; // Initially disabled until selection
-      mainButton.textContent = 'Select a Nominee';
-      mainButton.setAttribute('aria-label', 'Select a nominee to evict');
-      mainButton.dataset.pick = '';
-      
-      ctaDock.appendChild(mainButton);
-      
-      // Insert dock immediately after the grid (carousel/header section)
-      const gridIndex = Array.from(container.children).findIndex(child => 
-        child.classList.contains('lv2-grid')
-      );
-      if (gridIndex !== -1) {
-        container.insertBefore(ctaDock, container.children[gridIndex + 1]);
-      } else {
-        container.appendChild(ctaDock);
-      }
-    } else {
-      // Desktop mode: Add confirm button under the grid
+    // Desktop mode: Add confirm button under the grid
+    // Note: Carousel mode (mobile/tablet) does NOT use separate CTA dock
+    // Instead, it uses inline CTA on nominee tile (name transforms to evict button)
+    if (!state.useCarousel) {
       const ctaDock = document.createElement('div');
       ctaDock.classList.add('lv2-cta-dock', 'lv2-cta-dock-inline', 'lv2-cta-dock-desktop');
       
@@ -598,15 +565,17 @@
   function selectNominee(playerId, playerName) {
     state.selectedNominee = playerId;
     
-    // Update the confirm button (legacy path for non-carousel mode)
-    const ctaDock = state.container?.querySelector('.lv2-cta-dock');
-    if (ctaDock && !state.useCarousel) {
-      const mainBtn = ctaDock.querySelector('.lv2-cta-main');
-      if (mainBtn) {
-        mainBtn.disabled = false;
-        mainBtn.textContent = `Evict ${playerName}`;
-        mainBtn.setAttribute('aria-label', `Confirm eviction of ${playerName}`);
-        mainBtn.dataset.pick = playerId;
+    // Update the confirm button (only for non-carousel/desktop mode)
+    if (!state.useCarousel) {
+      const ctaDock = state.container?.querySelector('.lv2-cta-dock');
+      if (ctaDock) {
+        const mainBtn = ctaDock.querySelector('.lv2-cta-main');
+        if (mainBtn) {
+          mainBtn.disabled = false;
+          mainBtn.textContent = `Evict ${playerName}`;
+          mainBtn.setAttribute('aria-label', `Confirm eviction of ${playerName}`);
+          mainBtn.dataset.pick = playerId;
+        }
       }
     }
     
@@ -623,11 +592,23 @@
         if (state.useCarousel) {
           const nameEl = c.querySelector('.lv2-name');
           if (nameEl) {
-            nameEl.textContent = `Evict ${playerName}`;
+            // Apply tie-break or Final 4 wording if applicable
+            let buttonText = `Evict ${playerName}`;
+            let ariaLabel = `Vote to evict ${playerName}`;
+            
+            if (state.isTieBreak) {
+              buttonText = 'Break Tie';
+              ariaLabel = `Break tie by evicting ${playerName}`;
+            } else if (state.isFinal4) {
+              buttonText = 'Cast Sole Vote';
+              ariaLabel = `Cast sole vote to evict ${playerName}`;
+            }
+            
+            nameEl.textContent = buttonText;
             nameEl.classList.add('lv2-name-button');
             nameEl.setAttribute('role', 'button');
             nameEl.setAttribute('tabindex', '0');
-            nameEl.setAttribute('aria-label', `Evict ${playerName}`);
+            nameEl.setAttribute('aria-label', ariaLabel);
             nameEl.dataset.action = 'evict'; // Data attribute for robust detection
           }
         }
@@ -659,35 +640,13 @@
     }
   }
   
-  // Mobile Carousel 2.0: Update the CTA dock button to target the currently shown nominee
+  // Mobile Carousel 2.0: Update the CTA dock button (deprecated - no longer used)
+  // This function is kept for backwards compatibility with existing call sites
+  // In modern carousel mode, no separate CTA dock exists - inline CTA on nominee tile is used instead
+  // DEPRECATED: This is a no-op function maintained only for backwards compatibility
   function updateCarouselCTADock() {
-    if (!state.useCarousel) return;
-    
-    const currentSide = state.carouselIndex === 0 ? 'left' : 'right';
-    const currentName = state.carouselIndex === 0 ? state.leftName : state.rightName;
-    const currentId = state.carouselIndex === 0 ? state.leftId : state.rightId;
-    
-    // Find CTA dock button
-    const ctaDock = state.container?.querySelector('.lv2-cta-dock');
-    if (!ctaDock) return;
-    
-    const btn = ctaDock.querySelector('.lv2-cta-main');
-    if (!btn) return;
-    
-    // Update button text and data
-    if (state.isTieBreak) {
-      btn.textContent = 'Break Tie';
-      btn.setAttribute('aria-label', `Break tie by evicting ${currentName}`);
-    } else if (state.isFinal4) {
-      btn.textContent = 'Cast Sole Vote';
-      btn.setAttribute('aria-label', `Cast sole vote to evict ${currentName}`);
-    } else {
-      btn.textContent = `Evict ${currentName}`;
-      btn.setAttribute('aria-label', `Vote to evict ${currentName}`);
-    }
-    
-    btn.dataset.pick = currentId;
-    btn.dataset.side = currentSide;
+    // No-op: Modern carousel mode uses inline CTA only
+    return;
   }
 
 
@@ -1043,7 +1002,20 @@
   function createCarouselCTA(options = {}) {
     const { enabled = false, isTieBreak = false, isFinal4 = false, onVote = null } = options;
     
-    // Mobile Carousel 2.0: Wire up the CTA dock button
+    // Store tie-break and Final 4 state for inline CTA button text
+    state.isTieBreak = isTieBreak;
+    state.isFinal4 = isFinal4;
+    
+    // Mobile Carousel 2.0: No separate CTA dock - use inline CTA on nominee tile only
+    // Just store the onVote callback for the inline CTA to use
+    if (state.useCarousel) {
+      state.ctaBar = { onVote };
+      state.humanTurn = enabled;
+      // Return indicator that inline eviction mode is active (no separate button created)
+      return { inlineEvictionActive: true };
+    }
+    
+    // Desktop/non-carousel mode: Check for existing CTA dock
     const ctaDock = state.container?.querySelector('.lv2-cta-dock');
     if (ctaDock) {
       const mainBtn = ctaDock.querySelector('.lv2-cta-main');
@@ -1057,7 +1029,7 @@
         };
       }
       
-      // Store reference to CTA dock and onVote callback (for inline CTA)
+      // Store reference to CTA dock and onVote callback
       state.ctaBar = { ctaDock, onVote };
       return { ctaDock };
     }
@@ -1109,7 +1081,7 @@
       state.container?.appendChild(carouselCTA);
     }
     
-    // Store reference and onVote callback (for inline CTA)
+    // Store reference and onVote callback
     state.ctaBar = { carouselCTA, onVote };
     
     return { carouselCTA };
@@ -1121,31 +1093,30 @@
 
     const { enabled = false } = options;
     
-    // Handle carousel mode with CTA dock
+    // Handle carousel mode - inline CTA only (no separate button to update)
     if (state.useCarousel) {
-      // Mobile Carousel 2.0: Update CTA dock button
-      const { ctaDock, carouselCTA } = state.ctaBar;
+      // Update humanTurn state for carousel mode
+      state.humanTurn = enabled;
       
-      if (ctaDock) {
-        const mainBtn = ctaDock.querySelector('.lv2-cta-main');
-        if (mainBtn) {
-          mainBtn.disabled = !enabled;
-        }
-        return;
-      }
-      
-      // Legacy carousel CTA (backwards compatibility)
-      if (carouselCTA) {
-        const btn = carouselCTA.querySelector('.lv2-carousel-btn');
-        if (btn) {
-          btn.disabled = !enabled;
-        }
-        return;
-      }
+      // No separate CTA button to update in modern carousel mode
+      // The inline CTA on the nominee tile is always active once selected
+      return;
     }
     
-    // Handle normal mode
-    const { leftCtaSide, rightCtaSide } = state.ctaBar;
+    // Handle normal/desktop mode with CTA dock
+    const { ctaDock, leftCtaSide, rightCtaSide } = state.ctaBar;
+    
+    // Desktop mode: Update CTA dock button
+    if (ctaDock) {
+      const mainBtn = ctaDock.querySelector('.lv2-cta-main');
+      if (mainBtn) {
+        mainBtn.disabled = !enabled;
+      }
+      return;
+    }
+    
+    // Legacy mode: Handle normal mode with left/right CTA sides
+    if (!leftCtaSide || !rightCtaSide) return;
     
     const buttons = [
       ...(leftCtaSide?.querySelectorAll('.lv2-cta-pill') || []),
@@ -1161,20 +1132,17 @@
   function hideCtaBar() {
     if (!state.ctaBar) return;
     
-    // Handle carousel mode with CTA dock
+    // Handle carousel mode - no separate CTA bar to hide (inline only)
     if (state.useCarousel) {
-      const { ctaDock, carouselCTA } = state.ctaBar;
-      
-      if (ctaDock) {
-        ctaDock.style.display = 'none';
-        return;
-      }
-      
-      // Legacy carousel CTA
-      if (carouselCTA) {
-        carouselCTA.style.display = 'none';
-        return;
-      }
+      // Nothing to hide - inline CTA remains on nominee tile
+      return;
+    }
+    
+    // Handle desktop mode with CTA dock
+    const { ctaDock } = state.ctaBar;
+    if (ctaDock) {
+      ctaDock.style.display = 'none';
+      return;
     }
     
     // Handle normal mode - hide pill containers
