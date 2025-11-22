@@ -80,7 +80,7 @@
     }
     
     // Determine rendering mode: inline TV (FFWD) vs fullscreen overlay (normal)
-    const renderInlineTV = ffActive && preserveModal;
+    let renderInlineTV = ffActive && preserveModal;
     
     const startTime = Date.now();
     let dismissible = false;
@@ -148,15 +148,17 @@
       if(dismissed) return;
       
       // Detect TV viewport container for inline rendering
-      const tvContainer = renderInlineTV ? (
-        document.querySelector('[data-sm-faux-tv]') ||
-        document.querySelector('[data-faux-tv]') ||
-        document.querySelector('.tvViewport') ||
-        document.getElementById('tv')
-      ) : null;
-      
-      if(renderInlineTV && !tvContainer){
-        console.warn('[results] FFWD active but TV container not found, falling back to fullscreen');
+      let tvContainer = null;
+      if(renderInlineTV){
+        tvContainer = document.querySelector('[data-sm-faux-tv]') ||
+                      document.querySelector('[data-faux-tv]') ||
+                      document.querySelector('.tvViewport') ||
+                      document.getElementById('tv');
+        
+        if(!tvContainer){
+          console.warn('[results] FFWD active but TV container not found, falling back to fullscreen');
+          renderInlineTV = false; // Update flag to match actual behavior
+        }
       }
       
       // Create modal overlay
