@@ -235,6 +235,16 @@
     stage.style.display = 'none'; // Hidden, only for ARIA
     container.appendChild(stage);
     
+    // Inline CTA: Instruction text (below grid, before CTA dock)
+    if (state.useCarousel) {
+      const instructionText = document.createElement('div');
+      instructionText.className = 'lv2-instruction-text';
+      instructionText.textContent = 'Tap on the photo of the person you want to evict.';
+      instructionText.setAttribute('role', 'status');
+      instructionText.setAttribute('aria-live', 'polite');
+      container.appendChild(instructionText);
+    }
+    
     // Mobile Carousel 2.0: Status Row (below stage, above CTA dock)
     if (state.useCarousel) {
       const statusRow = document.createElement('div');
@@ -264,9 +274,10 @@
     }
     
     // Mobile Carousel 2.0: CTA Dock (positioned INSIDE overlay, directly under carousel)
+    // NOTE: Hidden by default in carousel mode - inline CTA on nominee tile is used instead
     if (state.useCarousel) {
       const ctaDock = document.createElement('div');
-      ctaDock.className = 'lv2-cta-dock lv2-cta-dock-inline';
+      ctaDock.className = 'lv2-cta-dock lv2-cta-dock-inline lv2-cta-dock-hidden';
       
       // Position inline within the overlay structure, not fixed
       // This ensures it's contained within the faux TV overlay
@@ -274,7 +285,7 @@
         position: 'relative',
         width: '100%',
         padding: '16px',
-        display: 'flex',
+        display: 'none', // Hidden by default - inline CTA is used
         justifyContent: 'center',
         gap: '12px',
         marginTop: '8px'
@@ -377,7 +388,18 @@
 
     // Make contestant clickable to select nominee (both carousel and desktop modes)
     contestant.style.cursor = 'pointer';
-    contestant.onclick = () => selectNominee(playerId, name);
+    contestant.onclick = (e) => {
+      // Check if name button (inline CTA) was clicked
+      const isNameButton = e.target.classList.contains('lv2-name-button');
+      
+      if (isNameButton && state.useCarousel) {
+        // Inline CTA: Name button was clicked - trigger evict action
+        triggerEvictAction(playerId, name);
+      } else {
+        // Normal selection
+        selectNominee(playerId, name);
+      }
+    };
     contestant.setAttribute('role', 'button');
     contestant.setAttribute('tabindex', '0');
     contestant.setAttribute('aria-label', `Select ${name} for eviction`);
@@ -386,7 +408,15 @@
     contestant.onkeydown = (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        selectNominee(playerId, name);
+        const isNameButton = e.target.classList.contains('lv2-name-button');
+        
+        if (isNameButton && state.useCarousel) {
+          // Inline CTA: Name button has focus - trigger evict action
+          triggerEvictAction(playerId, name);
+        } else {
+          // Normal selection
+          selectNominee(playerId, name);
+        }
       }
     };
 
@@ -551,13 +581,23 @@
     btn.dataset.side = currentSide;
   }
   
+  // Trigger evict action (called when inline evict button is clicked)
+  function triggerEvictAction(playerId, playerName) {
+    // Find the onVote callback from the CTA bar state
+    if (state.ctaBar && state.ctaBar.onVote) {
+      state.ctaBar.onVote(playerId);
+    } else {
+      console.warn('[lv2] triggerEvictAction: No onVote callback found');
+    }
+  }
+  
   // Select a nominee (enables confirm button and updates label)
   function selectNominee(playerId, playerName) {
     state.selectedNominee = playerId;
     
-    // Update the confirm button
+    // Update the confirm button (legacy path for non-carousel mode)
     const ctaDock = state.container?.querySelector('.lv2-cta-dock');
-    if (ctaDock) {
+    if (ctaDock && !state.useCarousel) {
       const mainBtn = ctaDock.querySelector('.lv2-cta-main');
       if (mainBtn) {
         mainBtn.disabled = false;
@@ -572,10 +612,41 @@
     contestants?.forEach(c => {
       if (c.dataset.playerId === String(playerId)) {
         c.classList.add('selected');
+        
+        // Inline CTA: Transform name area into evict button in carousel mode
+        if (state.useCarousel) {
+          const nameEl = c.querySelector('.lv2-name');
+          if (nameEl) {
+            nameEl.textContent = `Evict ${playerName}`;
+            nameEl.classList.add('lv2-name-button');
+            nameEl.setAttribute('role', 'button');
+            nameEl.setAttribute('aria-label', `Evict ${playerName}`);
+          }
+        }
       } else {
         c.classList.remove('selected');
+        
+        // Inline CTA: Restore name area to normal state in carousel mode
+        if (state.useCarousel) {
+          const nameEl = c.querySelector('.lv2-name');
+          const contestantName = c.dataset.side === 'left' ? state.leftName : state.rightName;
+          if (nameEl && contestantName) {
+            nameEl.textContent = contestantName;
+            nameEl.classList.remove('lv2-name-button');
+            nameEl.removeAttribute('role');
+            nameEl.removeAttribute('aria-label');
+          }
+        }
       }
     });
+    
+    // Inline CTA: Hide instruction text and show name button when selected
+    if (state.useCarousel) {
+      const instructionText = state.container?.querySelector('.lv2-instruction-text');
+      if (instructionText) {
+        instructionText.style.display = 'none';
+      }
+    }
   }
   
   // Update selection based on current carousel position (auto-select when navigating)
@@ -988,8 +1059,8 @@
         };
       }
       
-      // Store reference to CTA dock
-      state.ctaBar = { ctaDock };
+      // Store reference to CTA dock and onVote callback (for inline CTA)
+      state.ctaBar = { ctaDock, onVote };
       return { ctaDock };
     }
     
@@ -1040,8 +1111,8 @@
       state.container?.appendChild(carouselCTA);
     }
     
-    // Store reference
-    state.ctaBar = { carouselCTA };
+    // Store reference and onVote callback (for inline CTA)
+    state.ctaBar = { carouselCTA, onVote };
     
     return { carouselCTA };
   }
