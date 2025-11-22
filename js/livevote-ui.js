@@ -390,9 +390,10 @@
     contestant.style.cursor = 'pointer';
     contestant.onclick = (e) => {
       // Check if name button (inline CTA) was clicked using data attribute
-      const isEvictButton = e.target.dataset.action === 'evict';
+      // Use closest() to handle clicks on child elements
+      const evictButton = e.target.closest('[data-action="evict"]');
       
-      if (isEvictButton && state.useCarousel) {
+      if (evictButton && state.useCarousel) {
         // Inline CTA: Evict button was clicked - trigger evict action
         triggerEvictAction(playerId);
       } else {
@@ -408,9 +409,10 @@
     contestant.onkeydown = (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        const isEvictButton = e.target.dataset.action === 'evict';
+        // Use closest() to handle focus on child elements
+        const evictButton = e.target.closest('[data-action="evict"]');
         
-        if (isEvictButton && state.useCarousel) {
+        if (evictButton && state.useCarousel) {
           // Inline CTA: Evict button has focus - trigger evict action
           triggerEvictAction(playerId);
         } else {
