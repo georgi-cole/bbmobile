@@ -34,6 +34,17 @@
     return EVICTION_PHRASES[Math.floor(Math.random()*EVICTION_PHRASES.length)];
   }
 
+  // Helper: Build vote summary string for result cards
+  // Returns format: "Alice 5 — Ben 4" or "Alice 3 — Ben 2 — Carol 1"
+  function buildVoteSummary(nominees, countsMap){
+    if(!Array.isArray(nominees) || nominees.length === 0) return '';
+    if(!countsMap || !(countsMap instanceof Map)) return '';
+    
+    return nominees
+      .map(id => `${global.safeName(id)} ${countsMap.get(id) || 0}`)
+      .join(' — ');
+  }
+
   function startLiveVote(){
     const g=global.game;
     
@@ -1055,6 +1066,10 @@
 
       const evName=global.safeName(evId);
       
+      // Store vote summary for use in handleEvictionLegacy
+      const tally = new Map([[a, finalA], [b, finalB]]);
+      g.eviction.voteSummary = buildVoteSummary(noms, tally);
+      
       if (!useLv2) {
         // Use new eviction modal for better visibility (not clipped by TV overlay)
         if (typeof global.EvictionModal?.show === 'function') {
@@ -1376,7 +1391,7 @@
     ev.finalRank = aliveCount;
     console.info(`[eviction] assigned finalRank=${ev.finalRank} to ${ev.name}`);
 
-    // Check if modern Live Vote UI was used (to avoid duplicate cards/animations)
+    // Check if modern Live Vote UI was used
     const usedModernLiveVoteUI = g.eviction?.nominees?.length === 2 
       && g.cfg?.modernLiveVoteUI !== false 
       && global.lv2?.enabled !== false;
@@ -1385,10 +1400,31 @@
       global.showCard('Self-Evicted',[ev.name],'evict',3800,true);
       global.addLog?.(`Self-eviction: <b>${ev.name}</b> has left the game.`,'danger');
     } else if (!usedModernLiveVoteUI) {
-      // Only show legacy "Evicted" card if NOT using modern UI
-      // (modern UI already showed "Eviction Result" card + B&W vanish)
-      global.showCard('Evicted',[ev.name],'evict',3600,true);
-      global.addLog?.(`Evicted: <b>${ev.name}</b>.`,'danger');
+      // Standard eviction without modern UI - use unified result display (matching multi-eviction style)
+      const evName = global.safeName(evId);
+      const voteSummary = g.eviction.voteSummary || '';
+      
+      // Initialize overlay phase for proper positioning (matching multi-eviction)
+      if (typeof global.lv2?.beginResultCardPhase === 'function') {
+        global.lv2.beginResultCardPhase();
+      }
+      
+      // Show result card with vote summary and eviction phrase (two-line format like multi)
+      if (typeof global.EvictionModal?.show === 'function') {
+        await global.EvictionModal.show({
+          title: 'Eviction Result',
+          lines: voteSummary ? [`Votes: ${voteSummary}`, `${evName}, ${pickEvictionPhrase()}`] : [`${evName}, ${pickEvictionPhrase()}`],
+          tone: 'evict',
+          duration: 3800
+        });
+      } else {
+        // Fallback to old card system
+        const lines = voteSummary ? [`Votes: ${voteSummary}`, `${evName}, ${pickEvictionPhrase()}`] : [`${evName}, ${pickEvictionPhrase()}`];
+        global.showCard('Eviction Result', lines, 'evict', 3800, true);
+        try { await global.cardQueueWaitIdle?.(); } catch {}
+      }
+      
+      global.addLog?.(`Evicted: <b>${evName}</b>.`,'danger');
     }
 
     if(global.alivePlayers().length<=JURY_START_AT && g.cfg.enableJuryHouse){
@@ -1414,15 +1450,16 @@
 
     if(!g.__twistMode) global.twists?.afterPhase?.('eviction');
 
-    // Skip duplicate visual animation if modern UI already handled it
-    if (!usedModernLiveVoteUI) {
+    // ALWAYS run visual animation for standard evictions (matching multi-eviction behavior)
+    // Previously this was skipped when modern UI was used, causing style inconsistency
+    if (reason === 'vote') {
       // Notify visual system to suppress red X during animation
       if(typeof global.notifyEvictedForVisual === 'function'){
         global.notifyEvictedForVisual(evId);
       }
 
       // Run eviction visual enhancement (avatar animation)
-      // Defer routing until animation completes
+      // This ensures consistent centered animation for all single evictions
       if(typeof global.runEvictionVisual === 'function'){
         try{
           await global.runEvictionVisual(evId, { reason });
@@ -1431,13 +1468,13 @@
         }
       }
     } else {
-      // Modern UI path: Update HUD immediately since we skipped runEvictionVisual
+      // Non-vote evictions (self-evictions, etc.) - update HUD immediately
       if(typeof global.updateHud === 'function'){
         global.updateHud();
       }
     }
 
-    // Note: Suppression clearing and HUD update now handled by runEvictionVisual (or above for modern UI)
+    // Note: Suppression clearing and HUD update now handled by runEvictionVisual
     
     // Belt-and-suspenders: ensure all vote UI is closed
     if (global.closeAllVoteUI) {
