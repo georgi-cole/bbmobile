@@ -1922,7 +1922,73 @@ button:focus-visible,.btn:focus-visible{
   transition: all 0.3s ease;
 }
 
-/* Inline CTA: Transform name into evict button when selected */
+/* Inline CTA: Name as semantic button (2-nominee flows) */
+.lv2-name-btn {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  letter-spacing: -0.2px;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lv2-name-btn:hover {
+  color: rgba(232, 244, 255, 0.9);
+  background: rgba(131, 191, 255, 0.1);
+  border-radius: 6px;
+}
+
+.lv2-name-btn:focus {
+  outline: 2px solid rgba(131, 191, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* Inline CTA: Selected state transforms into evict button */
+.lv2-name-btn-selected {
+  background: linear-gradient(135deg, #e63946, #c1121f);
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(230, 57, 70, 0.4);
+  min-height: 48px;
+}
+
+.lv2-name-btn-selected:hover {
+  background: linear-gradient(135deg, #f04654, #d01828);
+  box-shadow: 0 6px 20px rgba(230, 57, 70, 0.6);
+  transform: translateY(-2px);
+}
+
+.lv2-name-btn-selected:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 12px rgba(230, 57, 70, 0.4);
+}
+
+/* Inline CTA: Instructions element below grid */
+.lv2-instructions {
+  text-align: center;
+  font-size: 1rem;
+  color: rgba(232, 244, 255, 0.8);
+  padding: 12px 20px;
+  margin: 8px auto;
+  max-width: 90%;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  transition: opacity 0.3s ease;
+}
+
+/* Legacy: Transform name into evict button when selected (for backwards compat) */
 .lv2-name-button {
   background: linear-gradient(135deg, #e63946, #c1121f);
   color: #ffffff;
@@ -2629,14 +2695,34 @@ button:focus-visible,.btn:focus-visible{
   font-weight: 700;
 }
 
-/* Responsive mode: inline evict button */
+/* Responsive mode: name button */
+.lv2-overlay.lv2-responsive .lv2-name-btn {
+  font-size: clamp(1rem, 2.5dvh, 1.4rem);
+  font-weight: 700;
+  min-height: clamp(44px, 8dvh, 56px);
+}
+
+/* Responsive mode: name button selected state */
+.lv2-overlay.lv2-responsive .lv2-name-btn-selected {
+  font-size: clamp(1rem, 2.5dvh, 1.3rem);
+  padding: clamp(10px, 2dvh, 14px) clamp(20px, 4dvw, 28px);
+  min-height: clamp(44px, 8dvh, 56px);
+}
+
+/* Responsive mode: instructions element */
+.lv2-overlay.lv2-responsive .lv2-instructions {
+  font-size: clamp(0.9rem, 2dvh, 1.1rem);
+  padding: clamp(10px, 2dvh, 14px) clamp(16px, 4dvw, 24px);
+}
+
+/* Legacy: Responsive mode: inline evict button (for backwards compat) */
 .lv2-overlay.lv2-responsive .lv2-name-button {
   font-size: clamp(1rem, 2.5dvh, 1.3rem);
   padding: clamp(10px, 2dvh, 14px) clamp(20px, 4dvw, 28px);
   min-height: clamp(44px, 8dvh, 56px);
 }
 
-/* Responsive mode: instruction text */
+/* Legacy: Responsive mode: instruction text (for backwards compat) */
 .lv2-overlay.lv2-responsive .lv2-instruction-text {
   font-size: clamp(0.9rem, 2dvh, 1.1rem);
   padding: clamp(10px, 2dvh, 14px) clamp(16px, 4dvw, 24px);
