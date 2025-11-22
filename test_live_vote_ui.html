@@ -99,11 +99,16 @@
     <button onclick="finishTest()" id="btnFinish" disabled>Finish & Highlight Winner</button>
     <button onclick="clearPanel()">Clear Panel</button>
     
+    <button onclick="initTestAsObserver()">Initialize Live Vote (As Observer)</button>
+    <button onclick="initTestAsVoter()">Initialize Live Vote (As Voter)</button>
+    
     <div class="test-info">
       <strong>Test Features:</strong>
       <ul style="margin: 8px 0; padding-left: 20px;">
         <li>✅ Versus layout with left/right contestants</li>
-        <li>✅ Central meter filling from both sides</li>
+        <li>✅ Voter feed with chips showing each vote</li>
+        <li>✅ Observer mode: LV2 overlay visible with nominees + feed, no voting buttons</li>
+        <li>✅ Voter mode: LV2 overlay visible with CTA buttons for voting</li>
         <li>✅ Flip card animations with voter names</li>
         <li>✅ Flying cards to target lanes (or fade if reduced motion)</li>
         <li>✅ Smooth odometer count updates</li>
@@ -112,8 +117,11 @@
         <li>✅ Respects prefers-reduced-motion</li>
       </ul>
       <p><strong>Current Mode:</strong> <span id="modeIndicator">Normal Motion</span></p>
+      <p><strong>Test Mode:</strong> <span id="testMode">Not initialized</span></p>
     </div>
   </div>
+  
+  <div id="tv" style="max-width: 1200px; margin: 0 auto 30px; min-height: 560px; background: rgba(20,35,55,0.8); border-radius: 12px; padding: 20px;"></div>
   
   <div id="panel"></div>
   
@@ -216,6 +224,94 @@
       console.log('Live Vote initialized');
     }
     
+    function initTestAsObserver() {
+      if (!window.lv2) {
+        alert('Error: lv2 module not loaded. Please include js/livevote-ui.js');
+        return;
+      }
+      
+      // Initialize LV2 without CTA buttons (observer mode)
+      window.lv2.init({
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2,
+        pacing: {
+          holdMs: 500,
+          gapMs: 250
+        }
+      });
+      
+      // Don't create CTA bar - observer just sees the feed
+      
+      isInitialized = true;
+      voteIndex = 0;
+      
+      document.getElementById('btnPushVote').disabled = false;
+      document.getElementById('btnPushAll').disabled = false;
+      document.getElementById('btnFinish').disabled = false;
+      document.getElementById('testMode').textContent = 'Observer (HOH/Nominee)';
+      document.getElementById('testMode').style.color = '#f2ce7b';
+      
+      console.log('✅ Live Vote initialized as OBSERVER (no voting buttons)');
+      console.log('📺 LV2 overlay should be visible with nominees and voter feed area');
+      console.log('🚫 No CTA buttons should appear');
+    }
+    
+    function initTestAsVoter() {
+      if (!window.lv2) {
+        alert('Error: lv2 module not loaded. Please include js/livevote-ui.js');
+        return;
+      }
+      
+      // Initialize LV2 with CTA buttons (voter mode)
+      window.lv2.init({
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2,
+        pacing: {
+          holdMs: 500,
+          gapMs: 250
+        }
+      });
+      
+      // Create CTA bar for voting
+      window.lv2.createCtaBar({
+        enabled: true,
+        isTieBreak: false,
+        isFinal4: false,
+        leftName: 'Alice',
+        rightName: 'Bob',
+        leftId: 1,
+        rightId: 2,
+        onVote: (pickId) => {
+          console.log(`Human voted to evict: ${pickId === 1 ? 'Alice' : 'Bob'}`);
+          window.lv2.updateCtaBar({ enabled: false });
+          
+          // Simulate human vote being added to feed
+          window.lv2.pushVote({
+            voterId: 0,
+            voterName: 'You',
+            pick: pickId === 1 ? 'left' : 'right'
+          });
+        }
+      });
+      
+      isInitialized = true;
+      voteIndex = 0;
+      
+      document.getElementById('btnPushVote').disabled = false;
+      document.getElementById('btnPushAll').disabled = false;
+      document.getElementById('btnFinish').disabled = false;
+      document.getElementById('testMode').textContent = 'Voter (Eligible to vote)';
+      document.getElementById('testMode').style.color = '#77d58d';
+      
+      console.log('✅ Live Vote initialized as VOTER (with voting buttons)');
+      console.log('📺 LV2 overlay should be visible with nominees, feed, and CTA buttons');
+      console.log('✅ Click Evict buttons to cast your vote');
+    }
+    
     function pushSingleVote() {
       if (!isInitialized || voteIndex >= voters.length) {
         console.warn('No more votes to push or not initialized');
@@ -233,6 +329,12 @@
       
       voteIndex++;
       console.log(`Vote ${voteIndex}/${voters.length} pushed: ${voter.name} → ${pick}`);
+      
+      // Count visible chips after a short delay
+      setTimeout(() => {
+        const chipCount = document.querySelectorAll('.lv2-voter-chip').length;
+        console.log(`📊 Voter chips currently visible: ${chipCount}`);
+      }, 500);
       
       if (voteIndex >= voters.length) {
         document.getElementById('btnPushVote').disabled = true;

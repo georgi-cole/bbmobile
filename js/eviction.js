@@ -308,9 +308,8 @@
       return;
     }
 
-    // COMMIT 2: Check if we should use modern lv2 UI (only for voters with 2 nominees)
-    const useLv2 = humanIsVoter
-      && g.eviction.nominees.length === 2 
+    // Check if we should use modern lv2 UI (for any two-nominee eviction, voter or observer)
+    const useLv2 = g.eviction.nominees.length === 2 
       && g.cfg?.modernLiveVoteUI !== false 
       && global.lv2?.enabled !== false;
 
@@ -769,7 +768,10 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
-    const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    // Consistent LV2 activation pattern (twoMode equivalent to g.eviction.nominees.length === 2)
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
     const tripleMode = noms.length === 3;
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
@@ -818,7 +820,9 @@
       } else { 
         // LV2 path: Push vote to show voter chip and update counts
         if(global.lv2?.pushVote){
-          const [leftId, rightId] = noms;
+          // leftId is first nominee (left position in LV2 UI)
+          // Compare pick with leftId to determine 'left' or 'right' vote attribution
+          const [leftId] = noms;
           const votePick = pick === leftId ? 'left' : 'right';
           global.lv2.pushVote({
             voterId: entry.voter,
@@ -843,7 +847,10 @@
       if(twoMode){
         const [A,B]=noms;
         if(pick===A) tallyA++; else tallyB++;
-        updateLiveVoteGraph(tallyA,tallyB);
+        // Only update legacy graph when NOT using LV2 (LV2 handles counts internally)
+        if(!useLv2) {
+          updateLiveVoteGraph(tallyA,tallyB);
+        }
       } else {
         counts.set(pick,(counts.get(pick)||0)+1);
         updateLiveVoteMulti(counts);
@@ -872,7 +879,10 @@
   /* ----- Tie Break (2 noms) ----- */
   async function tieBreakTwo([a,b],ca,cb){
     const g=global.game;
-    const useLv2 = g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    // Consistent with main activation logic: check two-nominee condition
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
     const hoh=global.getP(global.game.hohId);
     
     if (!useLv2) {
@@ -906,6 +916,23 @@
       const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict',useLv2);
       if(pick===a) ca++; else cb++;
       
+      // Push HOH tie-break vote to LV2 feed if active
+      if (useLv2) {
+        try {
+          // Note: a and b come from g.eviction.nominees array in order, matching LV2 init
+          // a is leftId (index 0), b is rightId (index 1)
+          const side = pick === a ? 'left' : 'right';
+          global.lv2?.pushVote?.({
+            voterId: hoh.id,
+            voterName: hoh.name,
+            pick: side
+          });
+          await sleep(1500); // Wait for chip to appear
+        } catch (e) {
+          console.warn('[eviction] lv2.pushVote failed for HOH tie-break:', e);
+        }
+      }
+      
       // Add HOH vote to rollout
       if (global.LiveVoteRollout?.isShowing?.()) {
         global.LiveVoteRollout.addVote({
@@ -928,6 +955,24 @@
     }
     const ha=(hoh.affinity[a]??0), hb=(hoh.affinity[b]??0);
     const evId = ha < hb ? a : b;
+    
+    // Push AI HOH tie-break vote to LV2 feed if active
+    if (useLv2) {
+      try {
+        // Note: a and b come from g.eviction.nominees array in order, matching LV2 init
+        // a is leftId (index 0), b is rightId (index 1)
+        const side = evId === a ? 'left' : 'right';
+        global.lv2?.pushVote?.({
+          voterId: hoh.id,
+          voterName: hoh.name,
+          pick: side
+        });
+        await sleep(1500); // Wait for chip to appear
+      } catch (e) {
+        console.warn('[eviction] lv2.pushVote failed for AI HOH tie-break:', e);
+      }
+    }
+    
     if (!useLv2) {
       global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],'live',3000,true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
@@ -1035,7 +1080,10 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
-    const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    // Consistent LV2 activation pattern (twoMode equivalent to g.eviction.nominees.length === 2)
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
 
     if(twoMode){
       let ca=preAorCounts, cb=preB;
