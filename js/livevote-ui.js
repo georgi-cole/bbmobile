@@ -277,7 +277,6 @@
     // Note: Carousel mode (mobile/tablet) does NOT use separate CTA dock
     // Instead, it uses inline CTA on nominee tile (name transforms to evict button)
     if (!state.useCarousel) {
-      // Desktop mode: Add confirm button under the grid
       const ctaDock = document.createElement('div');
       ctaDock.classList.add('lv2-cta-dock', 'lv2-cta-dock-inline', 'lv2-cta-dock-desktop');
       
@@ -641,13 +640,12 @@
     }
   }
   
-  // Mobile Carousel 2.0: Update the CTA dock button (legacy - no longer used in modern carousel)
+  // Mobile Carousel 2.0: Update the CTA dock button (deprecated - no longer used)
+  // This function is kept for backwards compatibility with existing call sites
+  // In modern carousel mode, no separate CTA dock exists - inline CTA on nominee tile is used instead
+  // DEPRECATED: This is a no-op function maintained only for backwards compatibility
   function updateCarouselCTADock() {
-    // In modern carousel mode, no separate CTA dock exists
-    // Inline CTA on nominee tile is used instead
-    if (!state.useCarousel) return;
-    
-    // This function is kept for backwards compatibility but does nothing in modern carousel mode
+    // No-op: Modern carousel mode uses inline CTA only
     return;
   }
 
@@ -1013,12 +1011,11 @@
     if (state.useCarousel) {
       state.ctaBar = { onVote };
       state.humanTurn = enabled;
-      return { inline: true };
+      // Return indicator that inline eviction mode is active (no separate button created)
+      return { inlineEvictionActive: true };
     }
     
-    // Legacy/non-carousel paths below (for backwards compatibility or future use)
-    
-    // Check for existing CTA dock (desktop mode)
+    // Desktop/non-carousel mode: Check for existing CTA dock
     const ctaDock = state.container?.querySelector('.lv2-cta-dock');
     if (ctaDock) {
       const mainBtn = ctaDock.querySelector('.lv2-cta-main');
