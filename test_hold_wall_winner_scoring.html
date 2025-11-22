@@ -140,9 +140,12 @@
       <h2>Scoring Test Scenarios</h2>
       <div class="info">
         <strong>Test Objective:</strong><br>
-        Verify that Hold Wall now uses winner-takes-all scoring:<br>
+        Verify that Hold Wall now uses winner-takes-all scoring with special time-based ranking:<br>
         • Score = 100 when AI drops and player is last remaining<br>
-        • Score = 0 for all other cases (moved, released early, deal accepted)
+        • Score = 0 for all other cases (moved, released early, deal accepted)<br>
+        • Special ranking modal displays top 3 by hold time (mm:ss.s format)<br>
+        • Competition duration extended to ~10 minutes with later-weighted AI drops<br>
+        • Responsive avatar displays with fade-out animations on drop
       </div>
       
       <div class="controls">
@@ -166,10 +169,12 @@
       <div class="warning">
         <strong>Instructions for Manual Testing:</strong><br>
         1. Click "Start Manual Test" below<br>
-        2. Press and hold the WALL element<br>
-        3. Wait for AI drops to occur<br>
-        4. When the last AI drops, you should win with score = 100<br>
-        5. Alternatively, release early or move to test score = 0
+        2. Press and hold the WALL element (observe pulsating animation)<br>
+        3. Watch avatar displays: fade-out on drop, outlines (cyan=player, gold=rival)<br>
+        4. Wait for AI drops to occur (later-weighted over ~10 minute window)<br>
+        5. When the last AI drops, you should win with score = 100<br>
+        6. Verify special ranking modal appears showing top 3 by time (mm:ss.s format)<br>
+        7. Alternatively, release early or move to test score = 0
       </div>
       <div class="controls">
         <button class="btn" onclick="startManualTest()">▶ Start Manual Test</button>

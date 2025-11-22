@@ -257,11 +257,22 @@ const score = MinigameScoring.normalizeHybrid(timeScore, accuracyScore, 0.5);
 ```
 
 ### Endurance (longer = better)
-```javascript
+````javascript
+// Winner-takes-all scoring for competition
+const finalScore = (lastRemaining) ? 100 : 0;
+
+// Time-based display in special ranking modal
 const durationMs = Date.now() - startTime;
-const score = MinigameScoring.normalizeEndurance(durationMs, maxMs);
-// Longer duration = higher score
-```
+// Rankings show formatted time (mm:ss.s) instead of score
+````
+
+**Hold Wall Special Features:**
+- 10-minute endurance window with later-weighted AI drops
+- Responsive avatar modes: strip (≥640px), tiny (480-639px), single (<480px)
+- Special ranking modal displays top 3 by hold time (mm:ss.s format)
+- Winner-takes-all underlying score (100/0) for competition integration
+- Final-two deal window and post-deal periodic checks
+- Events: `holdWall:finalStandings` (ordered standings) and `holdWall:dealOutcome`
 
 ## 🎨 Game Categories
 
@@ -269,7 +280,7 @@ const score = MinigameScoring.normalizeEndurance(durationMs, maxMs);
 - **Memory**: Memory Match, Sequence Memory, Pattern Match
 - **Puzzle**: Count House, Math Blitz, Word Anagram
 - **Trivia**: Trivia Pulse, Trivia Quiz
-- **Endurance**: Hold Wall (planned)
+- **Endurance**: **Hold Wall** (implemented with special ranking modal)
 
 ## 🔧 Best Practices
 
