@@ -444,8 +444,10 @@
       if(ffActive){
         // Under FFWD, use compressed durations
         const ffMinMs = cfg.fastForwardResultsMinMs || 1500;
-        effectiveDuration = Math.max(ffMinMs, duration * (cfg.fastForwardMultiplier || 0.1));
-        effectiveMinDisplay = ffMinMs;
+        const compressedDuration = duration * (cfg.fastForwardMultiplier || 0.1);
+        // Use the maximum of: config min, requested min, and compressed duration
+        effectiveDuration = Math.max(ffMinMs, minDisplayTime, compressedDuration);
+        effectiveMinDisplay = Math.max(ffMinMs, minDisplayTime);
         console.info(`[results] FFWD active: duration=${effectiveDuration}ms min=${effectiveMinDisplay}ms`);
       }
       
