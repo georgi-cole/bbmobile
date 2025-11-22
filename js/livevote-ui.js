@@ -285,7 +285,6 @@
         position: 'relative',
         width: '100%',
         padding: '16px',
-        display: 'none', // Hidden by default - inline CTA is used
         justifyContent: 'center',
         gap: '12px',
         marginTop: '8px'
@@ -389,11 +388,8 @@
     // Make contestant clickable to select nominee (both carousel and desktop modes)
     contestant.style.cursor = 'pointer';
     contestant.onclick = (e) => {
-      // Check if name button (inline CTA) was clicked using data attribute
-      // Use closest() to handle clicks on child elements
-      const evictButton = e.target.closest('[data-action="evict"]');
-      
-      if (evictButton && state.useCarousel) {
+      // Check if inline evict button was clicked
+      if (isEvictButtonClick(e) && state.useCarousel) {
         // Inline CTA: Evict button was clicked - trigger evict action
         triggerEvictAction(playerId);
       } else {
@@ -409,10 +405,8 @@
     contestant.onkeydown = (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        // Use closest() to handle focus on child elements
-        const evictButton = e.target.closest('[data-action="evict"]');
-        
-        if (evictButton && state.useCarousel) {
+        // Check if inline evict button has focus
+        if (isEvictButtonClick(e) && state.useCarousel) {
           // Inline CTA: Evict button has focus - trigger evict action
           triggerEvictAction(playerId);
         } else {
@@ -581,6 +575,11 @@
     
     btn.dataset.pick = currentId;
     btn.dataset.side = currentSide;
+  }
+  
+  // Helper: Check if event target is the evict button (inline CTA)
+  function isEvictButtonClick(event) {
+    return event.target.closest('[data-action="evict"]') !== null;
   }
   
   // Trigger evict action (called when inline evict button is clicked)

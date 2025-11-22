@@ -2857,6 +2857,11 @@ button:focus-visible,.btn:focus-visible{
   z-index: auto;
 }
 
+/* Hidden state for CTA dock (used in inline CTA mode) */
+.lv2-cta-dock-hidden {
+  display: none !important;
+}
+
 /* Selected nominee visual indicator */
 .lv2-contestant.selected {
   background: rgba(230, 57, 70, 0.1);
