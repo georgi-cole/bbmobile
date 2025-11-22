@@ -154,6 +154,7 @@
     const BALL_RADIUS = 6;
     const FRICTION = 0.90;
     const ACCELERATION = 0.35;
+    const KEYBOARD_ACCELERATION_MULTIPLIER = 1.2;
     
     // Generate maze
     const mazeCells = generateMaze(MAZE_COLS, MAZE_ROWS, rng);
@@ -267,9 +268,18 @@
       }
     }
 
+    // Keyboard event handlers and state (stored for cleanup and access in updatePhysics)
+    const controlKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+    function keyIsControl(k){
+      return controlKeys.includes(k);
+    }
+    let keydownHandler = null;
+    let keyupHandler = null;
+    const keysPressed = {}; // Tracks arrow keys when swipe controls are active
+
     function setupSwipeControls(){
       useTiltControls = false;
-      controlsInfo.textContent = '👆 Swipe or drag to control';
+      controlsInfo.textContent = '👆 Swipe / drag or use arrow keys (← ↑ ↓ →)';
       
       let touchStartX = 0;
       let touchStartY = 0;
@@ -316,6 +326,24 @@
       canvas.addEventListener('mouseup', () => {
         isDragging = false;
       });
+      
+      // Keyboard arrow controls for desktop
+      keydownHandler = (e) => {
+        if(keyIsControl(e.key)) {
+          keysPressed[e.key] = true;
+          e.preventDefault();
+        }
+      };
+      
+      keyupHandler = (e) => {
+        if(keyIsControl(e.key)) {
+          keysPressed[e.key] = false;
+          e.preventDefault();
+        }
+      };
+      
+      window.addEventListener('keydown', keydownHandler);
+      window.addEventListener('keyup', keyupHandler);
     }
 
     function handleOrientation(event){
@@ -385,6 +413,15 @@
 
     function updatePhysics(){
       if(gameOver) return;
+      
+      // Apply keyboard controls when tilt is not active
+      if(!useTiltControls){
+        const impulseFactor = ACCELERATION * KEYBOARD_ACCELERATION_MULTIPLIER;
+        if(keysPressed.ArrowLeft)  velocityX -= impulseFactor;
+        if(keysPressed.ArrowRight) velocityX += impulseFactor;
+        if(keysPressed.ArrowUp)    velocityY -= impulseFactor;
+        if(keysPressed.ArrowDown)  velocityY += impulseFactor;
+      }
       
       // Apply velocity
       const newX = ballX + velocityX;
@@ -579,6 +616,10 @@
       // Cleanup
       if(useTiltControls){
         window.removeEventListener('deviceorientation', handleOrientation);
+      } else {
+        // Remove keyboard event listeners
+        if(keydownHandler) window.removeEventListener('keydown', keydownHandler);
+        if(keyupHandler) window.removeEventListener('keyup', keyupHandler);
       }
       
       setTimeout(() => {

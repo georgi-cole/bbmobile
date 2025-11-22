@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Tilt Labyrinth Keyboard Controls</title>
+  <style>
+    body {
+      background: #0f1923;
+      color: #e3ecf5;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #6fd3ff;
+    }
+    .info {
+      background: #1d2734;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    #game-container {
+      background: #1d2734;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      min-height: 400px;
+    }
+    button {
+      background: #6fd3ff;
+      color: #0f1923;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 1rem;
+    }
+    button:hover {
+      background: #5ac2ef;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Tilt Labyrinth Keyboard Controls Test</h1>
+  
+  <div class="info">
+    <h3>Testing Instructions:</h3>
+    <ol>
+      <li>Click "Start Game (Force Swipe Controls)" to bypass tilt detection</li>
+      <li>Use arrow keys (← ↑ ↓ →) to move the ball</li>
+      <li>You can also use mouse drag to control</li>
+      <li>Find the key, unlock the door, and reach the goal!</li>
+    </ol>
+    <p><strong>Expected behavior:</strong> The controls message should say "Swipe / drag or use arrow keys (← ↑ ↓ →)"</p>
+  </div>
+
+  <button id="start-btn">Start Game (Force Swipe Controls)</button>
+  <button id="restart-btn" style="display:none;">Restart Game</button>
+  
+  <div id="game-container"></div>
+
+  <!-- Load dependencies -->
+  <script src="js/bbSeededRng.js"></script>
+  <script src="js/minigames/core/loader.js"></script>
+  <script src="js/minigames/mobile-utils.js"></script>
+  <script src="js/minigames/accessibility.js"></script>
+  <script src="js/minigames/tilt-labyrinth.js"></script>
+  <script src="js/minigames/registry.js"></script>
+
+  <script>
+    const container = document.getElementById('game-container');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+
+    function startGame() {
+      container.innerHTML = '';
+      
+      // Get the module
+      const module = window.MinigameModules.tiltLabyrinth || window.MiniGames.tiltLabyrinth;
+      
+      if (!module || typeof module.render !== 'function') {
+        container.innerHTML = '<p style="color: #ff6b6b;">Error: Tilt Labyrinth module not loaded!</p>';
+        return;
+      }
+
+      // Mock DeviceOrientationEvent to undefined to force swipe controls
+      const originalDeviceOrientation = window.DeviceOrientationEvent;
+      window.DeviceOrientationEvent = undefined;
+
+      // Render the game
+      module.render(container, (score) => {
+        container.innerHTML += `
+          <div style="background: #2c3a4d; padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <h3 style="color: #5bd68a;">🎉 Game Complete!</h3>
+            <p style="font-size: 1.3rem;">Final Score: <span style="color: #6fd3ff; font-weight: bold;">${score}</span></p>
+          </div>
+        `;
+        restartBtn.style.display = 'inline-block';
+      }, {
+        debugMode: true,
+        seed: Date.now()
+      });
+
+      // Restore DeviceOrientationEvent
+      window.DeviceOrientationEvent = originalDeviceOrientation;
+
+      startBtn.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+    }
+
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', () => {
+      startBtn.style.display = 'inline-block';
+      restartBtn.style.display = 'none';
+      startGame();
+    });
+  </script>
+</body>
+</html>
