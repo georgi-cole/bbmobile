@@ -394,7 +394,7 @@
       
       if (isNameButton && state.useCarousel) {
         // Inline CTA: Name button was clicked - trigger evict action
-        triggerEvictAction(playerId, name);
+        triggerEvictAction(playerId);
       } else {
         // Normal selection
         selectNominee(playerId, name);
@@ -412,7 +412,7 @@
         
         if (isNameButton && state.useCarousel) {
           // Inline CTA: Name button has focus - trigger evict action
-          triggerEvictAction(playerId, name);
+          triggerEvictAction(playerId);
         } else {
           // Normal selection
           selectNominee(playerId, name);
@@ -582,7 +582,7 @@
   }
   
   // Trigger evict action (called when inline evict button is clicked)
-  function triggerEvictAction(playerId, playerName) {
+  function triggerEvictAction(playerId) {
     // Find the onVote callback from the CTA bar state
     if (state.ctaBar && state.ctaBar.onVote) {
       state.ctaBar.onVote(playerId);
@@ -620,6 +620,7 @@
             nameEl.textContent = `Evict ${playerName}`;
             nameEl.classList.add('lv2-name-button');
             nameEl.setAttribute('role', 'button');
+            nameEl.setAttribute('tabindex', '0');
             nameEl.setAttribute('aria-label', `Evict ${playerName}`);
           }
         }
@@ -634,6 +635,7 @@
             nameEl.textContent = contestantName;
             nameEl.classList.remove('lv2-name-button');
             nameEl.removeAttribute('role');
+            nameEl.removeAttribute('tabindex');
             nameEl.removeAttribute('aria-label');
           }
         }
