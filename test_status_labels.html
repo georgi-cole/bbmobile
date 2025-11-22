@@ -184,8 +184,11 @@
       <button id="btnNoms">2️⃣ Simulate Nominations</button>
       <button id="btnPOV">3️⃣ Simulate POV Win (Different Player)</button>
       <button id="btnHOHPOV">4️⃣ Force HOH Also Has POV</button>
-      <button id="btnEvict">5️⃣ Simulate Eviction</button>
-      <button id="btnFinale">6️⃣ Declare Winner</button>
+      <button id="btnNomPOV">5️⃣ Force NOM+POV (Nominee Wins POV)</button>
+      <button id="btnEvict">6️⃣ Simulate Eviction</button>
+      <button id="btnF3Part1">7️⃣ Final 3 Part 1 (Pending)</button>
+      <button id="btnF3Lock">8️⃣ Lock F3 Results (Show HOH/NOM)</button>
+      <button id="btnFinale">9️⃣ Declare Winner</button>
       <button id="btnToggleDebug">🐛 Toggle Debug</button>
     </div>
     
@@ -397,6 +400,48 @@
         });
       }
       
+      // Validate Final 3 Pending Mask
+      const validF3Phases = ['final3_comp1', 'final3_comp2', 'final3_comp3'];
+      if (validF3Phases.includes(g.phase) && !g.__f3ResultsLocked) {
+        const aliveCount = window.alivePlayers().length;
+        if (aliveCount === 3) {
+          const topHasPending = Array.from(topPills).filter(pill => 
+            pill.classList.contains('status-final3-pending') && pill.textContent.includes('?')
+          ).length === 3;
+          const castHasPending = Array.from(castTags).filter(tag => 
+            tag.classList.contains('f3pending') && tag.textContent.includes('?')
+          ).length === 3;
+          
+          results.push({
+            name: 'Final 3 Pending Mask',
+            pass: topHasPending && castHasPending,
+            details: `Top: ${topHasPending ? '✓ (3 ? pills)' : '✗'}, Cast: ${castHasPending ? '✓ (3 ? tags)' : '✗'}`
+          });
+        }
+      }
+      
+      // Validate NOM+POV combined
+      if (g.vetoHolder && g.nominees && g.nominees.length > 0) {
+        const nomWithPOV = g.nominees.find(nomId => nomId === g.vetoHolder && nomId !== g.hohId);
+        if (nomWithPOV) {
+          const player = g.players.find(p => p.id === nomWithPOV);
+          const topHasNomPOV = Array.from(topPills).some(pill => {
+            const parent = pill.closest('.top-roster-tile');
+            return parent && parent.dataset.playerId === String(nomWithPOV) && 
+                   pill.classList.contains('nom-pov-icons');
+          });
+          const castHasNomPOV = Array.from(castTags).some(tag => 
+            tag.classList.contains('nom-pov') && tag.textContent.includes('NOM+POV')
+          );
+          
+          results.push({
+            name: 'NOM+POV Combined',
+            pass: topHasNomPOV && castHasNomPOV,
+            details: `Top: ${topHasNomPOV ? '✓' : '✗'}, Cast: ${castHasNomPOV ? '✓' : '✗'} (Player: ${player?.name})`
+          });
+        }
+      }
+      
       // Display results
       const resultsContainer = document.getElementById('validationResults');
       resultsContainer.innerHTML = '';
@@ -529,6 +574,82 @@
       validateRosters();
     }
     
+    function forceNomPOV() {
+      const g = window.game;
+      if (g.nominees.length === 0) {
+        logDebug('Cannot combine NOM+POV without nominations - run step 2 first', 'warn');
+        return;
+      }
+      // Give POV to first nominee (not HOH)
+      const nomWhoIsNotHOH = g.nominees.find(id => id !== g.hohId);
+      if (!nomWhoIsNotHOH) {
+        logDebug('No nominee available who is not HOH', 'warn');
+        return;
+      }
+      g.vetoHolder = nomWhoIsNotHOH;
+      g.phase = 'veto_ceremony';
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug(`NOM+POV: ${window.safeName(nomWhoIsNotHOH)} is nominated and holds POV`, 'info');
+      validateRosters();
+    }
+    
+    function simulateFinal3Part1() {
+      const g = window.game;
+      // Evict players until only 3 remain
+      const alive = window.alivePlayers();
+      while (alive.length > 3) {
+        const toEvict = alive.pop();
+        toEvict.evicted = true;
+        toEvict.weekEvicted = g.week;
+        g.week++;
+      }
+      
+      // Enter Final 3 Part 1 phase
+      g.phase = 'final3_comp1';
+      g.__f3ResultsLocked = false; // Results not locked yet
+      g.hohId = null;
+      g.vetoHolder = null;
+      g.nominees = [];
+      
+      // Clear all player flags
+      g.players.forEach(p => {
+        p.hoh = false;
+        p.nominated = false;
+        p.nominationState = 'none';
+      });
+      
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug('Final 3 Part 1: All 3 finalists show pending status (?)', 'info');
+      validateRosters();
+    }
+    
+    function lockFinal3Results() {
+      const g = window.game;
+      if (!['final3_comp1', 'final3_comp2', 'final3_comp3'].includes(g.phase)) {
+        logDebug('Must be in Final 3 phase - run step 7 first', 'warn');
+        return;
+      }
+      
+      const alive = window.alivePlayers();
+      if (alive.length !== 3) {
+        logDebug('Need exactly 3 alive players for Final 3', 'warn');
+        return;
+      }
+      
+      // Simulate Part 3 completion: assign HOH and nominees
+      g.__f3ResultsLocked = true; // Lock results
+      g.hohId = alive[0].id; // First player wins HOH
+      g.nominees = [alive[1].id, alive[2].id]; // Other two are nominees
+      g.phase = 'final3_decision';
+      
+      window.syncPlayerBadgeStates();
+      renderRosters();
+      logDebug(`Final 3 Locked: ${window.safeName(g.hohId)} is HOH, ${g.nominees.map(id => window.safeName(id)).join(' and ')} are nominees`, 'info');
+      validateRosters();
+    }
+    
     function toggleDebug() {
       window.__debugRosterLabels = !window.__debugRosterLabels;
       window.game.cfg.debugRoster = window.__debugRosterLabels;
@@ -653,7 +774,10 @@
     document.getElementById('btnNoms').addEventListener('click', simulateNominations);
     document.getElementById('btnPOV').addEventListener('click', simulatePOV);
     document.getElementById('btnHOHPOV').addEventListener('click', forceHOHPOV);
+    document.getElementById('btnNomPOV').addEventListener('click', forceNomPOV);
     document.getElementById('btnEvict').addEventListener('click', simulateEviction);
+    document.getElementById('btnF3Part1').addEventListener('click', simulateFinal3Part1);
+    document.getElementById('btnF3Lock').addEventListener('click', lockFinal3Results);
     document.getElementById('btnFinale').addEventListener('click', declareWinner);
     document.getElementById('btnToggleDebug').addEventListener('click', toggleDebug);
     

@@ -18,10 +18,35 @@
   };
   const FALLBACK = UI.FALLBACK_AVATAR || getDicebearUrl('Guest');
 
+  // ------------ Final 3 Pending Mask Helper ------------
+  /**
+   * Check if Final 3 Pending Mask should be active.
+   * Mask shows during Final 3 competitions before results are locked.
+   * @param {Object} game - Game state object
+   * @returns {boolean} True if mask should be shown
+   */
+  function isFinal3PendingMask(game){
+    if(!game) return false;
+    
+    // Must be in one of the Final 3 competition phases
+    const validPhases = ['final3_comp1', 'final3_comp2', 'final3_comp3'];
+    if(!validPhases.includes(game.phase)) return false;
+    
+    // Results must not be locked yet
+    if(game.__f3ResultsLocked === true) return false;
+    
+    // Must have exactly 3 alive players
+    const aliveCount = (game.players || []).filter(p => !p.evicted).length;
+    if(aliveCount !== 3) return false;
+    
+    return true;
+  }
+  g.isFinal3PendingMask = isFinal3PendingMask;
+
   // ------------ Shared Status Label Builder ------------
   /**
    * Build unified status label for a player.
-   * Precedence: WINNER > RUNNER-UP > NOM > HOH+POV > HOH > POV > name
+   * Precedence: WINNER > RUNNER-UP > Final 3 Pending Mask > NOM+POV > NOM > HOH+POV > HOH > POV > name
    * Uses canonical game state for all status derivations.
    * @param {Object} p - Player object
    * @param {Object} game - Game state object
@@ -30,11 +55,11 @@
   function buildStatusLabel(p, game){
     const name = p.name || `Player ${p.id}`;
     
-    // Canonical HOH check: p.hoh flag OR game.hohId
-    const hoh = p.hoh === true || game.hohId === p.id;
+    // Canonical HOH check: p.hoh flag OR game.hohId OR game.hohIds array
+    const hoh = p.hoh === true || game.hohId === p.id || (Array.isArray(game.hohIds) && game.hohIds.includes(p.id));
     
-    // Canonical POV check: game.vetoHolder
-    const pov = game.vetoHolder === p.id;
+    // Canonical POV check: game.vetoHolder OR game.povId OR game.povIds array
+    const pov = game.vetoHolder === p.id || game.povId === p.id || (Array.isArray(game.povIds) && game.povIds.includes(p.id));
     
     // Canonical NOM check: multiple sources
     const nominated = !p.evicted && (
@@ -50,6 +75,7 @@
     let classes = [];
     let aria = name;
     
+    // Precedence order: WINNER > RUNNER-UP > Final 3 Pending > NOM+POV > NOM > HOH+POV > HOH > POV > name
     if(finalLabel === 'WINNER'){
       text = 'WINNER';
       classes.push('status-winner');
@@ -58,6 +84,16 @@
       text = 'RUNNER-UP';
       classes.push('status-runner-up');
       aria = `${name} (Runner-Up)`;
+    } else if(isFinal3PendingMask(game)){
+      // Final 3 Pending Mask - all three players show pending status
+      text = '?';
+      classes.push('status-final3-pending');
+      aria = `${name} (Final 3 – Pending Results)`;
+    } else if(nominated && pov && !hoh){
+      // NOM+POV combined badge (nominee who holds POV but is not HOH)
+      text = 'NOM+POV';
+      classes.push('status-nom-pov');
+      aria = `${name} (Nominated and Veto Holder)`;
     } else if(nominated){
       text = 'NOM';
       classes.push('status-nom');
@@ -257,21 +293,37 @@
   function buildStateTags(p, game){
     const tags=[];
     
-    // Canonical HOH check: p.hoh flag OR game.hohId
-    if(p.hoh === true || game?.hohId === p.id) {
-      tags.push({k:'hoh',label:'HOH'});
+    // Check for Final 3 Pending Mask
+    if(isFinal3PendingMask(game) && !p.evicted){
+      tags.push({k:'f3pending',label:'?'});
+      return tags; // Return early - pending mask overrides all other tags
     }
     
-    // Canonical POV check: game.vetoHolder
-    if(game?.vetoHolder===p.id) {
-      tags.push({k:'veto',label:'VETO'});
-    }
+    // Canonical HOH check: p.hoh flag OR game.hohId OR game.hohIds array
+    const hasHOH = p.hoh === true || game?.hohId === p.id || (Array.isArray(game?.hohIds) && game.hohIds.includes(p.id));
+    
+    // Canonical POV check: game.vetoHolder OR game.povId OR game.povIds array
+    const hasPOV = game?.vetoHolder === p.id || game?.povId === p.id || (Array.isArray(game?.povIds) && game.povIds.includes(p.id));
     
     // Canonical NOM check: multiple sources
-    if(!p.evicted && !game?.__suppressNomBadges) {
-      const isNominated = p.nominated === true || 
-        (Array.isArray(game?.nominees) && game.nominees.includes(p.id)) ||
-        ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState);
+    const isNominated = !p.evicted && !game?.__suppressNomBadges && (
+      p.nominated === true || 
+      (Array.isArray(game?.nominees) && game.nominees.includes(p.id)) ||
+      ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState)
+    );
+    
+    // Check for NOM+POV combined (nominee who holds POV but is not HOH)
+    if(isNominated && hasPOV && !hasHOH){
+      tags.push({k:'nom-pov',label:'NOM+POV'});
+    } else {
+      // Add individual tags
+      if(hasHOH) {
+        tags.push({k:'hoh',label:'HOH'});
+      }
+      
+      if(hasPOV) {
+        tags.push({k:'veto',label:'VETO'});
+      }
       
       if(isNominated) {
         tags.push({k:'nom',label:'NOM'});
@@ -989,7 +1041,10 @@ header.innerHTML = `
       let statusClass = '';
       let ariaLabel = nameLabel;
       
-      // Label precedence: WINNER > RUNNER-UP > NOM > HOH/POV icons > name
+      // Check for Final 3 Pending Mask
+      const isF3Pending = isFinal3PendingMask(game);
+      
+      // Label precedence: WINNER > RUNNER-UP > Final 3 Pending > NOM+POV > NOM > HOH+POV > HOH > POV > name
       // Note: FINISHING BADGE (≥3rd) is now rendered inside avatar, not as label
       if(isWinner){
         labelText = '🥇';
@@ -999,6 +1054,26 @@ header.innerHTML = `
         labelText = '🥈';
         statusClass = 'status-icon-label medal-runner-up';
         ariaLabel = `${nameLabel} (Runner-Up)`;
+      } else if(isF3Pending){
+        // Final 3 Pending Mask - show ? for all three finalists
+        labelText = '?';
+        statusClass = 'status-final3-pending';
+        ariaLabel = `${nameLabel} (Final 3 – Pending Results)`;
+        
+        // Debug logging for Final 3 mask
+        if(g.__debugRosterLabels || game.cfg?.debugRoster){
+          console.info('[roster] f3mask active id=' + p.id + ' name=' + (p.name||'?'));
+        }
+      } else if(hasNom && hasVeto && !hasHOH){
+        // NOM+POV combined - show both icons side by side
+        name.innerHTML = '<span class="icon-nom-pov">❓</span><span class="icon-nom-pov">🛡️</span>';
+        statusClass = 'status-icon-label nom-pov-icons';
+        ariaLabel = `${nameLabel} (Nominated and Veto Holder)`;
+        
+        // Debug logging for NOM+POV
+        if(g.__debugRosterLabels || game.cfg?.debugRoster){
+          console.info('[roster] nom+pov id=' + p.id + ' name=' + (p.name||'?'));
+        }
       } else if(hasNom){
         labelText = 'NOM';
         statusClass = 'status-nom';
@@ -1030,7 +1105,9 @@ header.innerHTML = `
         }
       }
       
-      if(!(hasHOH && hasVeto)){
+      // Set text content unless we've already set innerHTML (HOH+POV or NOM+POV)
+      const usesInnerHTML = (hasHOH && hasVeto) || (hasNom && hasVeto && !hasHOH);
+      if(!usesInnerHTML){
         name.textContent = labelText;
       }
       if(statusClass) {

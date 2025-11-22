@@ -634,6 +634,8 @@ button:focus-visible,.btn:focus-visible{
 .tag.evicted{ background:#2e2e2e; color:#bbb; }
 .tag.winner{ background:#275339; color:#9fe5b0; }
 .tag.runner{ background:#374261; color:#c9d7f7; }
+.tag.f3pending{ background:#5a6b7d; color:#ffffff; font-size:.7rem; }
+.tag.nom-pov{ background:linear-gradient(135deg, #6a2e2e, #205a36); color:#ffffff; }
 
 /* 06. TOPBAR ---------------------------------------------------------------- */
 .topbar{
@@ -6230,6 +6232,27 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   font-weight: 700;
   font-size: .66rem;
   letter-spacing: .4px;
+}
+
+.top-tile-name.status-final3-pending {
+  background: linear-gradient(135deg, #5a6b7d, #7a8b9d);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.top-tile-name.status-nom-pov {
+  background: linear-gradient(135deg, #c23636, #2f8a3e);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: .66rem;
+  letter-spacing: .5px;
+}
+
+/* Icon wrapper for NOM+POV combined emoji badges */
+.icon-nom-pov {
+  display: inline-block;
+  font-size: 1.1rem;
 }
 
 /* 2. TV Card Rail with Fixed Min-Height */

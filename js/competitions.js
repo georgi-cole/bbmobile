@@ -1826,6 +1826,9 @@
 
     g.__f3EvictionResolved = false;
     g.__f3EvictionInProgress = false;
+    
+    // Lock Final 3 results - removes pending mask and shows HOH/NOM status
+    g.__f3ResultsLocked = true;
 
     if (typeof global.syncPlayerBadgeStates === 'function') global.syncPlayerBadgeStates();
     
