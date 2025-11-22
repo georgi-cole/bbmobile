@@ -32,6 +32,13 @@
 
   function startLiveVote(){
     const g=global.game;
+    
+    // Stop Social AI Scheduler explicitly to prevent background social chatter
+    if (global.SocialAIScheduler && typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {
+      global.SocialAIScheduler.stopAiSocialPhase();
+      console.debug('[eviction] Social AI Scheduler stopped for live vote');
+    }
+    
     g.eviction={
       nominees:[...g.nominees],
       votes:[],
@@ -125,15 +132,32 @@
     const humanIsVoter = !!(you && voters.some(v => v.id === you.id));
     const hasVoted = g.__human_vote != null;
     
+    // Detect if human is HOH and is a potential tie-breaker
+    // This happens when: HOH is human, there are 2 nominees, and HOH is not in the regular voter list
+    const humanIsHOH = g.hohId === g.humanId;
+    const humanIsTieBreaker = humanIsHOH && !humanIsVoter && g.eviction.nominees.length === 2;
+    
     // COMMIT 2: If human is NOT a voter (observer), skip all vote UI
+    // EXCEPTION: If human is HOH and potential tie-breaker, show status message
     // Observers (nominated or HOH without tie-break) only see the diary room sequence
-    if (!humanIsVoter) {
+    if (!humanIsVoter && !humanIsTieBreaker) {
       console.info('[eviction] Human is observer (nominated or HOH), skipping all vote UI');
       // Use inline status instead of below-TV message
       if (global.TVInlineStatus?.set) {
         global.TVInlineStatus.set('You are observing this vote.', 'muted');
       } else {
         panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny muted">You are observing this vote.</div></div>';
+      }
+      return;
+    }
+    
+    // If human is HOH tie-breaker, show special status
+    if (humanIsTieBreaker) {
+      console.info('[eviction] Human is HOH tie-breaker, showing status');
+      if (global.TVInlineStatus?.set) {
+        global.TVInlineStatus.set('You will break any tie as HOH.', 'info');
+      } else {
+        panel.innerHTML = '<div class="minigame-host"><h3>Live Vote</h3><div class="tiny info">You will break any tie as HOH.</div></div>';
       }
       return;
     }
@@ -895,6 +919,43 @@
 
   function awaitHumanTieBreakPick(cIds,title,useLv2=false){
     return new Promise(resolve=>{
+      let resolved = false;
+      
+      // Safety timeout: auto-resolve after 15 seconds if human doesn't pick
+      const timeoutHandle = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          console.warn('[tie-break] ⏱️ 15s timeout - auto-resolving tie-break using affinity');
+          
+          // Close any open UI
+          if (global.closeAllVoteUI) {
+            global.closeAllVoteUI();
+          }
+          
+          // Auto-resolve using HOH affinity (lowest affinity gets evicted)
+          const g = global.game;
+          const hoh = global.getP(g.hohId);
+          if (hoh && cIds.length >= 2) {
+            const affinities = cIds.map(id => ({ id, aff: hoh.affinity[id] ?? 0 }));
+            affinities.sort((a, b) => a.aff - b.aff);
+            const autoEvict = affinities[0].id;
+            console.info(`[tie-break] Auto-resolved to evict ${global.safeName(autoEvict)} (lowest affinity: ${affinities[0].aff.toFixed(2)})`);
+            resolve(autoEvict);
+          } else {
+            // Fallback: first nominee
+            resolve(cIds[0]);
+          }
+        }
+      }, 15000);
+      
+      const safeResolve = (pickId) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeoutHandle);
+          resolve(pickId);
+        }
+      };
+      
       try{
         // Check if two-step overlay is available
         if (global.LiveVoteOverlay && !useLv2) {
@@ -907,7 +968,7 @@
               if (global.closeAllVoteUI) {
                 global.closeAllVoteUI();
               }
-              resolve(pickId);
+              safeResolve(pickId);
             }
           });
         } else if (useLv2 && global.lv2?.createCtaBar) {
@@ -922,7 +983,7 @@
             rightId: rightId,
             onVote: (pickId) => {
               global.lv2.updateCtaBar({ enabled: false });
-              resolve(pickId);
+              safeResolve(pickId);
             }
           });
         } else {
@@ -934,13 +995,15 @@
           const row=document.createElement('div'); row.className='row'; row.style.marginTop='6px';
           cIds.forEach(id=>{
             const b=document.createElement('button'); b.className='btn danger'; b.textContent=`Evict ${global.safeName(id)}`;
-            b.onclick=()=>{ cleanup(); resolve(id); };
+            b.onclick=()=>{ cleanup(); safeResolve(id); };
             row.appendChild(b);
           });
           box.appendChild(h); box.appendChild(row); host.appendChild(box);
           function cleanup(){ try{ row.querySelectorAll('button').forEach(btn=>btn.disabled=true); box.remove(); }catch{} }
         }
-      }catch(e){ resolve(cIds[0]); }
+      }catch(e){ 
+        safeResolve(cIds[0]); 
+      }
     });
   }
 

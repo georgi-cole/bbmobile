@@ -1786,6 +1786,16 @@ header.innerHTML = `
     g.currentPhaseToken = (g.currentPhaseToken || 0) + 1;
     console.info(`[phase] cancel token=${oldToken} new=${g.currentPhaseToken}`);
     
+    // Run unified phase termination cleanup
+    const previousPhase = game.phase;
+    if (g.PhaseTerminator && typeof g.PhaseTerminator.runCleanup === 'function') {
+      try {
+        g.PhaseTerminator.runCleanup(previousPhase, phase, g.currentPhaseToken);
+      } catch (e) {
+        console.error('[phase] PhaseTerminator.runCleanup error:', e);
+      }
+    }
+    
     // Reset veto ceremony state when leaving veto_ceremony phase
     if(game.phase === 'veto_ceremony' && phase !== 'veto_ceremony'){
       console.info('[phase] Leaving veto_ceremony, resetting ceremony state flags');
