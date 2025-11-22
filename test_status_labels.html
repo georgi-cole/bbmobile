@@ -727,24 +727,46 @@
         const g = window.game;
         const tags = [];
         
-        // Canonical HOH check
-        if (p.hoh === true || g.hohId === p.id) {
-          tags.push({ k: 'hoh', label: 'HOH' });
-        }
+        // Check for Final 3 Pending Mask (using isFinal3PendingMask logic)
+        const validF3Phases = ['final3_comp1', 'final3_comp2', 'final3_comp3'];
+        const aliveCount = window.alivePlayers().length;
+        const isF3Pending = !p.evicted && 
+                           validF3Phases.includes(g.phase) && 
+                           g.__f3ResultsLocked !== true && 
+                           aliveCount === 3;
         
-        // Canonical POV check
-        if (g.vetoHolder === p.id) {
-          tags.push({ k: 'veto', label: 'VETO' });
-        }
-        
-        // Canonical NOM check
-        if (!p.evicted && !g.__suppressNomBadges) {
-          const isNominated = p.nominated === true || 
-            (Array.isArray(g.nominees) && g.nominees.includes(p.id)) ||
-            ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState);
+        if (isF3Pending) {
+          tags.push({ k: 'f3pending', label: '?' });
+        } else {
+          // Canonical HOH check
+          const hasHOH = p.hoh === true || g.hohId === p.id || (Array.isArray(g.hohIds) && g.hohIds.includes(p.id));
           
-          if (isNominated) {
-            tags.push({ k: 'nom', label: 'NOM' });
+          // Canonical POV check
+          const hasPOV = g.vetoHolder === p.id || g.povId === p.id || (Array.isArray(g.povIds) && g.povIds.includes(p.id));
+          
+          // Canonical NOM check
+          const isNominated = !p.evicted && !g.__suppressNomBadges && (
+            p.nominated === true || 
+            (Array.isArray(g.nominees) && g.nominees.includes(p.id)) ||
+            ['nominated', 'pendingSave', 'replacement'].includes(p.nominationState)
+          );
+          
+          // Check for NOM+POV combined (nominee who holds POV but is not HOH)
+          if (isNominated && hasPOV && !hasHOH) {
+            tags.push({ k: 'nom-pov', label: 'NOM+POV' });
+          } else {
+            // Add individual tags
+            if (hasHOH) {
+              tags.push({ k: 'hoh', label: 'HOH' });
+            }
+            
+            if (hasPOV) {
+              tags.push({ k: 'veto', label: 'VETO' });
+            }
+            
+            if (isNominated) {
+              tags.push({ k: 'nom', label: 'NOM' });
+            }
           }
         }
         
