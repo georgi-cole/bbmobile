@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Competition Skip Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #444;
+      border-radius: 5px;
+      background: #16213e;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #ffd96b;
+    }
+    .btn {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background: #0f3460;
+      color: #fff;
+    }
+    .btn:hover {
+      background: #16537e;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 3px;
+      background: #0a2647;
+    }
+    .success { background: #155724; color: #d4edda; }
+    .error { background: #721c24; color: #f8d7da; }
+    .warning { background: #856404; color: #fff3cd; }
+    pre {
+      background: #0a2647;
+      padding: 10px;
+      overflow-x: auto;
+      max-height: 400px;
+      border: 1px solid #444;
+      border-radius: 3px;
+    }
+    .test-result {
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 3px;
+    }
+    .pass { background: #155724; color: #d4edda; }
+    .fail { background: #721c24; color: #f8d7da; }
+  </style>
+</head>
+<body>
+  <h1>⏭️ Competition Skip Test</h1>
+  <p>This test validates that skipped human players don't receive auto-scores and cannot win.</p>
+  
+  <div class="test-section">
+    <h3>Test Scenario 1: Human Skip HOH (no participation)</h3>
+    <button id="test1" class="btn">Run Test 1</button>
+    <div id="result1" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test Scenario 2: Human Played HOH (normal participation)</h3>
+    <button id="test2" class="btn">Run Test 2</button>
+    <div id="result2" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test Scenario 3: Human Skip Veto (no participation)</h3>
+    <button id="test3" class="btn">Run Test 3</button>
+    <div id="result3" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test Scenario 4: Verify no duplicate resolution</h3>
+    <button id="test4" class="btn">Run Test 4</button>
+    <div id="result4" class="status"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>Console Log</h3>
+    <button id="clearLog" class="btn">Clear Log</button>
+    <button id="refreshLog" class="btn">Refresh</button>
+    <pre id="consoleLog"></pre>
+  </div>
+
+  <!-- Mock global state -->
+  <script>
+    window.global = window;
+    
+    // Mock RNG
+    window.rng = () => 0.5;
+    
+    // Mock game state
+    window.game = {
+      week: 2,
+      phase: 'hoh',
+      lastHOHId: null,
+      humanId: 1,
+      cfg: { tHOH: 40 },
+      players: [],
+      lastCompScores: new Map(),
+      __humanPlayedHOH: false,
+      __humanPlayedVeto: false,
+      __hohResolved: false,
+      __hohResolving: false,
+      __vetoResolving: false
+    };
+
+    // Mock player data
+    function createMockPlayers(count) {
+      const players = [];
+      for (let i = 1; i <= count; i++) {
+        players.push({
+          id: i,
+          name: `Player ${i}`,
+          evicted: false,
+          human: i === 1,
+          compBeast: 0.5
+        });
+      }
+      return players;
+    }
+
+    // Mock functions
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+
+    window.alivePlayers = function() {
+      return window.game.players.filter(p => !p.evicted);
+    };
+
+    // Console log capture
+    const logMessages = [];
+    const originalLog = console.info;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    console.info = function(...args) {
+      logMessages.push(['INFO', ...args]);
+      originalLog.apply(console, args);
+    };
+    console.warn = function(...args) {
+      logMessages.push(['WARN', ...args]);
+      originalWarn.apply(console, args);
+    };
+    console.error = function(...args) {
+      logMessages.push(['ERROR', ...args]);
+      originalError.apply(console, args);
+    };
+
+    function updateLog() {
+      const logEl = document.getElementById('consoleLog');
+      logEl.textContent = logMessages.map(m => m.join(' ')).join('\n');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+      logMessages.length = 0;
+      updateLog();
+    }
+
+    // Simulate auto-score assignment logic (simplified from finishCompPhase)
+    function simulateAutoScore(phase) {
+      const g = window.game;
+      const alive = window.alivePlayers();
+      const elig = alive.map(p => p.id);
+      
+      const humanPlayedFlag = phase === 'hoh' ? g.__humanPlayedHOH : g.__humanPlayedVeto;
+      
+      console.info(`[${phase}] Auto-score simulation starting`);
+      console.info(`[${phase}] Human played flag: ${humanPlayedFlag}`);
+      
+      for (const id of elig) {
+        if (!g.lastCompScores.has(id)) {
+          // Skip auto-score for human if they didn't play
+          if (id === g.humanId && !humanPlayedFlag) {
+            console.info(`[${phase}] Human skipped - no auto-score`);
+            continue;
+          }
+          const baseScore = 5 + window.rng() * 20;
+          g.lastCompScores.set(id, baseScore);
+          console.info(`[${phase}] Auto-score assigned to player ${id}: ${baseScore.toFixed(2)}`);
+        }
+      }
+      
+      return g.lastCompScores;
+    }
+
+    // Test functions
+    function runTest1() {
+      const result = document.getElementById('result1');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      // Setup: 5 players, human didn't play
+      window.game.players = createMockPlayers(5);
+      window.game.phase = 'hoh';
+      window.game.humanId = 1;
+      window.game.__humanPlayedHOH = false;
+      window.game.lastCompScores = new Map();
+      
+      console.info('[Test 1] Setup: Human skip HOH (no participation)');
+      simulateAutoScore('hoh');
+      
+      const humanHasScore = window.game.lastCompScores.has(1);
+      const scoreCount = window.game.lastCompScores.size;
+      
+      const passed = !humanHasScore && scoreCount === 4; // 4 AI players only
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Human should not have auto-score when skipped
+        </div>
+        <div>Setup: 5 players, human __humanPlayedHOH=false</div>
+        <div>Expected: Human has no score, 4 AI scores</div>
+        <div>Result: Human score=${humanHasScore ? 'YES ✗' : 'NO ✓'}, Total scores=${scoreCount}</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest2() {
+      const result = document.getElementById('result2');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      // Setup: 5 players, human played
+      window.game.players = createMockPlayers(5);
+      window.game.phase = 'hoh';
+      window.game.humanId = 1;
+      window.game.__humanPlayedHOH = true;
+      window.game.lastCompScores = new Map();
+      // Simulate human already has score from playing
+      window.game.lastCompScores.set(1, 50);
+      
+      console.info('[Test 2] Setup: Human played HOH (normal participation)');
+      simulateAutoScore('hoh');
+      
+      const humanHasScore = window.game.lastCompScores.has(1);
+      const scoreCount = window.game.lastCompScores.size;
+      
+      const passed = humanHasScore && scoreCount === 5; // All 5 players
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Human should have score when they played
+        </div>
+        <div>Setup: 5 players, human __humanPlayedHOH=true, score=50</div>
+        <div>Expected: Human has score, 5 total scores</div>
+        <div>Result: Human score=${humanHasScore ? 'YES ✓' : 'NO ✗'}, Total scores=${scoreCount}</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest3() {
+      const result = document.getElementById('result3');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      // Setup: 6 veto participants, human didn't play
+      window.game.players = createMockPlayers(6);
+      window.game.phase = 'veto_comp';
+      window.game.humanId = 1;
+      window.game.__humanPlayedVeto = false;
+      window.game.lastCompScores = new Map();
+      
+      console.info('[Test 3] Setup: Human skip Veto (no participation)');
+      simulateAutoScore('veto_comp');
+      
+      const humanHasScore = window.game.lastCompScores.has(1);
+      const scoreCount = window.game.lastCompScores.size;
+      
+      const passed = !humanHasScore && scoreCount === 5; // 5 AI players only
+      result.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          ${passed ? '✓ PASS' : '✗ FAIL'}: Human should not have auto-score for skipped veto
+        </div>
+        <div>Setup: 6 players, human __humanPlayedVeto=false</div>
+        <div>Expected: Human has no score, 5 AI scores</div>
+        <div>Result: Human score=${humanHasScore ? 'YES ✗' : 'NO ✓'}, Total scores=${scoreCount}</div>
+      `;
+      result.className = 'status ' + (passed ? 'success' : 'error');
+      updateLog();
+    }
+
+    function runTest4() {
+      const result = document.getElementById('result4');
+      result.textContent = 'Running...';
+      result.className = 'status';
+      
+      // Setup: Test duplicate resolution guards
+      window.game.__hohResolving = false;
+      window.game.__hohResolved = false;
+      
+      let callCount = 0;
+      function mockFinish() {
+        if (window.game.__hohResolved || window.game.__hohResolving) {
+          console.warn('[Test 4] Guard prevented duplicate call');
+          return;
+        }
+        window.game.__hohResolving = true;
+        callCount++;
+        console.info('[Test 4] finishCompPhase call #', callCount);
+        // Simulate work
+        setTimeout(() => {
+          window.game.__hohResolved = true;
+          window.game.__hohResolving = false;
+        }, 100);
+      }
+      
+      console.info('[Test 4] Setup: Testing duplicate resolution guards');
+      
+      // Try to call multiple times
+      mockFinish();
+      mockFinish(); // Should be blocked
+      mockFinish(); // Should be blocked
+      
+      setTimeout(() => {
+        const passed = callCount === 1;
+        result.innerHTML = `
+          <div class="test-result ${passed ? 'pass' : 'fail'}">
+            ${passed ? '✓ PASS' : '✗ FAIL'}: Guards should prevent duplicate resolution
+          </div>
+          <div>Setup: Call finishCompPhase 3 times rapidly</div>
+          <div>Expected: Only 1 execution</div>
+          <div>Result: ${callCount} execution(s)</div>
+        `;
+        result.className = 'status ' + (passed ? 'success' : 'error');
+        updateLog();
+      }, 200);
+    }
+
+    // Event listeners
+    document.getElementById('test1').addEventListener('click', runTest1);
+    document.getElementById('test2').addEventListener('click', runTest2);
+    document.getElementById('test3').addEventListener('click', runTest3);
+    document.getElementById('test4').addEventListener('click', runTest4);
+    document.getElementById('clearLog').addEventListener('click', clearLog);
+    document.getElementById('refreshLog').addEventListener('click', updateLog);
+
+    // Initial log
+    console.info('=== Competition Skip Test Loaded ===');
+    console.info('Click test buttons to run scenarios');
+    updateLog();
+  </script>
+</body>
+</html>
