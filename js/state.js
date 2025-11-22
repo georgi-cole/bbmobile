@@ -35,7 +35,10 @@
       fastForwardAlwaysEnable:true,
       fastForwardMinPhaseWindowMs:1500,
       fastForwardPlaybackMinCardMs:120,
-      fastForwardPlaybackMaxCardMs:480
+      fastForwardPlaybackMaxCardMs:480,
+      // Fast-forward results modal preservation
+      fastForwardPreserveResultsModal:true,
+      fastForwardResultsMinMs:1500
     },
     week:1,phase:'lobby',endAt:0,
     players:[],humanId:null,

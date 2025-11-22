@@ -63,14 +63,24 @@
     
     if(!topThree || topThree.length === 0) return;
     
-    // If skip is active, suppress rendering but allow scoring side effects
-    if(global.SkipController?.isActive()){
+    // Check for fast-forward mode and legacy skip mode
+    const cfg = global.game?.cfg || {};
+    const ffActive = global.game?.__ffActive || false;
+    const skipActive = global.SkipController?.isActive() || false;
+    const preserveModal = cfg.fastForwardPreserveResultsModal !== false; // default true
+    
+    // Legacy skip mode (quarantine/skip entire sequences): suppress modal
+    // But FFWD mode with preserveModal: always show modal (inline in TV)
+    if(skipActive && !ffActive){
       const winner = topThree[0];
       const winnerId = (typeof winner === 'object') ? winner.id : null;
       const winnerName = (typeof winner === 'object') ? winner.name : winner;
-      console.info(`[results] Suppressed under skip - winner=${winnerId || winnerName}`);
+      console.info(`[results] Suppressed under legacy skip - winner=${winnerId || winnerName}`);
       return; // Do not render popup
     }
+    
+    // Determine rendering mode: inline TV (FFWD) vs fullscreen overlay (normal)
+    const renderInlineTV = ffActive && preserveModal;
     
     const startTime = Date.now();
     let dismissible = false;
@@ -115,7 +125,8 @@
     
     // Log popup display
     const winner = getPlayerData(topThree[0]);
-    console.info(`[results] show phase=${phase || 'unknown'} winner=${winner.id || winner.name} scoreRaw=${winner.scoreRaw} shown=${winner.scoreFormatted}`);
+    const mode = renderInlineTV ? 'inline-tv' : 'fullscreen';
+    console.info(`[results] show mode=${mode} phase=${phase || 'unknown'} winner=${winner.id || winner.name} scoreRaw=${winner.scoreRaw} shown=${winner.scoreFormatted}`);
     
     try {
       // Preload all avatars
@@ -136,23 +147,53 @@
       // Check if already dismissed during avatar loading
       if(dismissed) return;
       
+      // Detect TV viewport container for inline rendering
+      const tvContainer = renderInlineTV ? (
+        document.querySelector('[data-sm-faux-tv]') ||
+        document.querySelector('[data-faux-tv]') ||
+        document.querySelector('.tvViewport') ||
+        document.getElementById('tv')
+      ) : null;
+      
+      if(renderInlineTV && !tvContainer){
+        console.warn('[results] FFWD active but TV container not found, falling back to fullscreen');
+      }
+      
       // Create modal overlay
       const modal = document.createElement('div');
       modal.className = 'results-modal-overlay';
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-labelledby', 'resultsModalTitle');
       modal.setAttribute('aria-modal', 'true');
-      modal.style.cssText = `
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        background: rgba(0,0,0,0.9);
-        backdrop-filter: blur(4px);
-        display: grid;
-        place-items: center;
-        animation: resultsModalFadeIn 0.3s ease;
-        cursor: default;
-      `;
+      
+      // Inline TV rendering: no backdrop, position within TV
+      // Fullscreen rendering: backdrop blur, fixed positioning
+      if(renderInlineTV && tvContainer){
+        modal.style.cssText = `
+          position: absolute;
+          inset: 0;
+          z-index: 100;
+          display: grid;
+          place-items: center;
+          animation: resultsModalFadeIn 0.2s ease;
+          cursor: default;
+          pointer-events: auto;
+        `;
+        console.info('[results] Rendering inline in TV viewport (FFWD mode)');
+      } else {
+        modal.style.cssText = `
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          background: rgba(0,0,0,0.9);
+          backdrop-filter: blur(4px);
+          display: grid;
+          place-items: center;
+          animation: resultsModalFadeIn 0.3s ease;
+          cursor: default;
+        `;
+        console.info('[results] Rendering fullscreen overlay (normal mode)');
+      }
       
       // Create card
       const card = document.createElement('div');
@@ -388,7 +429,25 @@
       }
       
       modal.appendChild(card);
-      document.body.appendChild(modal);
+      
+      // Append to TV container (inline) or body (fullscreen)
+      if(renderInlineTV && tvContainer){
+        tvContainer.appendChild(modal);
+      } else {
+        document.body.appendChild(modal);
+      }
+      
+      // Compute effective duration and min display time
+      let effectiveDuration = duration;
+      let effectiveMinDisplay = minDisplayTime;
+      
+      if(ffActive){
+        // Under FFWD, use compressed durations
+        const ffMinMs = cfg.fastForwardResultsMinMs || 1500;
+        effectiveDuration = Math.max(ffMinMs, duration * (cfg.fastForwardMultiplier || 0.1));
+        effectiveMinDisplay = ffMinMs;
+        console.info(`[results] FFWD active: duration=${effectiveDuration}ms min=${effectiveMinDisplay}ms`);
+      }
       
       // Enable dismissal after 500ms
       setTimeout(() => {
@@ -400,7 +459,7 @@
       const dismissHandler = (e) => {
         if(!dismissible || dismissed) return;
         const elapsed = Date.now() - startTime;
-        if(elapsed < minDisplayTime) return; // Force minimum display time
+        if(elapsed < effectiveMinDisplay) return; // Force minimum display time
         dismissed = true;
         modal.removeEventListener('click', dismissHandler);
         modal.removeEventListener('keydown', keyHandler);
@@ -419,7 +478,7 @@
       modal.addEventListener('keydown', keyHandler);
       
       // Auto-remove after duration
-      await sleep(duration);
+      await sleep(effectiveDuration);
       if(!dismissed){
         dismissed = true;
         modal.removeEventListener('click', dismissHandler);

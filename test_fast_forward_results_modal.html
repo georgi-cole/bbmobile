@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fast-Forward Results Modal Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0d151f;
+      color: #e3ecf5;
+    }
+    
+    h1 { color: #5bd68a; margin-bottom: 10px; }
+    h2 { color: #83bfff; border-bottom: 2px solid #83bfff; padding-bottom: 10px; margin-top: 30px; }
+    
+    .test-section {
+      background: #1a2937;
+      border: 1px solid #2b4767;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    button.primary {
+      background: linear-gradient(135deg, #5bd68a 0%, #4db878 100%);
+      color: #1a1a1a;
+    }
+    
+    button.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 214, 138, 0.4);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff6b9d 0%, #ee5a8a 100%);
+      color: #1a1a1a;
+    }
+    
+    button.info {
+      background: linear-gradient(135deg, #83bfff 0%, #6aa8f5 100%);
+      color: #1a1a1a;
+    }
+    
+    button.warning {
+      background: linear-gradient(135deg, #f7b955 0%, #e5a742 100%);
+      color: #1a1a1a;
+    }
+    
+    .tv-container {
+      background: #1a2937;
+      border: 2px solid #3d5a72;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 20px 0;
+      min-height: 400px;
+      position: relative;
+    }
+    
+    .tv-viewport {
+      background: linear-gradient(135deg, #0f1a28 0%, #1a2937 100%);
+      border-radius: 8px;
+      min-height: 350px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #96cfff;
+      font-size: 1.1rem;
+      overflow: hidden;
+    }
+    
+    .status {
+      background: #0f1a28;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    
+    .status-item {
+      padding: 6px 0;
+      border-bottom: 1px solid #2b4767;
+    }
+    
+    .status-item:last-child {
+      border-bottom: none;
+    }
+    
+    .success { color: #5bd68a; }
+    .error { color: #ff6b9d; }
+    .info { color: #83bfff; }
+    .warning { color: #f7b955; }
+    
+    .info-box {
+      background: rgba(131,191,255,0.1);
+      border: 1px solid rgba(131,191,255,0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      color: #96cfff;
+    }
+    
+    .info-box strong {
+      color: #83bfff;
+    }
+    
+    code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .test-result {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    
+    .test-result.pass {
+      background: rgba(91, 214, 138, 0.2);
+      color: #5bd68a;
+    }
+    
+    .test-result.fail {
+      background: rgba(255, 107, 157, 0.2);
+      color: #ff6b9d;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏆 Fast-Forward Results Modal Test</h1>
+  <p style="color: #96cfff; margin-bottom: 30px;">
+    Test suite for results modal behavior under normal and FFWD conditions
+  </p>
+
+  <div class="test-section">
+    <h2>📋 Test Overview</h2>
+    <div class="info-box">
+      <strong>Purpose:</strong> Verify that competition results modals:
+      <ul style="margin: 10px 0; padding-left: 20px;">
+        <li>Always appear under both normal and FFWD flow</li>
+        <li>Render fullscreen with backdrop in normal mode</li>
+        <li>Render inline in TV viewport (no backdrop) in FFWD mode</li>
+        <li>Respect minimum display duration under FFWD</li>
+        <li>Never instantly vanish during FFWD</li>
+        <li>Maintain accessibility (ESC key, keyboard nav)</li>
+        <li>Preserve avatar aspect ratio with container approach</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>🎮 Test Cases</h2>
+    
+    <h3 style="color: #f7b955; margin-top: 20px;">1. Normal Mode (Fullscreen Overlay)</h3>
+    <div class="button-group">
+      <button class="primary" onclick="testNormalMode()">Test Normal Mode</button>
+      <button class="info" onclick="testNormalModeShort()">Test Normal (Short)</button>
+    </div>
+    <div id="normalStatus" class="status" style="display:none;"></div>
+    
+    <h3 style="color: #f7b955; margin-top: 20px;">2. FFWD Mode (Inline TV Viewport)</h3>
+    <div class="button-group">
+      <button class="primary" onclick="testFFWDMode()">Test FFWD Mode</button>
+      <button class="info" onclick="testFFWDModeShort()">Test FFWD (Short)</button>
+    </div>
+    <div id="ffwdStatus" class="status" style="display:none;"></div>
+    
+    <h3 style="color: #f7b955; margin-top: 20px;">3. Minimum Display Duration</h3>
+    <div class="button-group">
+      <button class="primary" onclick="testMinDisplayDuration()">Test Min Duration (FFWD)</button>
+      <button class="info" onclick="testMinDisplayNormal()">Test Min Duration (Normal)</button>
+    </div>
+    <div id="durationStatus" class="status" style="display:none;"></div>
+    
+    <h3 style="color: #f7b955; margin-top: 20px;">4. Accessibility Tests</h3>
+    <div class="button-group">
+      <button class="primary" onclick="testESCKey()">Test ESC Key Dismiss</button>
+      <button class="info" onclick="testClickDismiss()">Test Click Dismiss</button>
+    </div>
+    <div id="accessibilityStatus" class="status" style="display:none;"></div>
+    
+    <h3 style="color: #f7b955; margin-top: 20px;">5. Avatar Rendering</h3>
+    <div class="button-group">
+      <button class="primary" onclick="testAvatarRendering()">Test Avatar Aspect Ratio</button>
+      <button class="info" onclick="testAvatarFallback()">Test Avatar Fallback</button>
+    </div>
+    <div id="avatarStatus" class="status" style="display:none;"></div>
+    
+    <h3 style="color: #f7b955; margin-top: 20px;">6. Visual Comparison</h3>
+    <div class="button-group">
+      <button class="warning" onclick="testSequence()">Run Visual Sequence</button>
+      <button class="danger" onclick="clearTests()">Clear All Tests</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>📺 TV Viewport Container</h2>
+    <p style="color: #cedbeb; margin-bottom: 16px;">
+      This container simulates the TV viewport where inline modals appear during FFWD.
+    </p>
+    <div class="tv-container">
+      <div class="tv-viewport" data-sm-faux-tv>
+        <span id="tvStatus">Ready for testing...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>📊 Test Results Summary</h2>
+    <div id="testSummary" class="status">
+      <div class="info">No tests run yet. Click a test button above to begin.</div>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script src="js/state.js"></script>
+  <script src="js/results-popup.js"></script>
+  
+  <script>
+    // Test data
+    const sampleResults = {
+      topThree: [
+        { id: 1, name: 'Sarah Martinez', score: 42.8 },
+        { id: 2, name: 'James Chen', score: 38.3 },
+        { id: 3, name: 'Emma Wilson', score: 35.7 }
+      ]
+    };
+
+    // Test results tracking
+    const testResults = {
+      normal: null,
+      ffwd: null,
+      minDisplay: null,
+      accessibility: null,
+      avatar: null
+    };
+
+    // Helper functions
+    function log(category, message, type = 'info') {
+      const statusEl = document.getElementById(`${category}Status`);
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        const item = document.createElement('div');
+        item.className = `status-item ${type}`;
+        item.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        statusEl.appendChild(item);
+        statusEl.scrollTop = statusEl.scrollHeight;
+      }
+      console.log(`[${category}] ${message}`);
+    }
+
+    function updateSummary() {
+      const summary = document.getElementById('testSummary');
+      const results = Object.entries(testResults)
+        .filter(([_, v]) => v !== null)
+        .map(([k, v]) => {
+          const status = v ? 'PASS' : 'FAIL';
+          const color = v ? 'success' : 'error';
+          return `<div class="${color}">${k}: ${status}</div>`;
+        })
+        .join('');
+      
+      if (results) {
+        summary.innerHTML = results;
+      }
+    }
+
+    function setTVStatus(text) {
+      document.getElementById('tvStatus').textContent = text;
+    }
+
+    function activateFFWD() {
+      if (!window.game) {
+        window.game = { cfg: {}, __ffActive: false };
+      }
+      window.game.__ffActive = true;
+      window.game.__ffMultiplier = 0.1;
+      if (!window.game.cfg) window.game.cfg = {};
+      window.game.cfg.fastForwardMultiplier = 0.1;
+      window.game.cfg.fastForwardResultsMinMs = 1500;
+      window.game.cfg.fastForwardPreserveResultsModal = true;
+    }
+
+    function deactivateFFWD() {
+      if (!window.game) {
+        window.game = { cfg: {}, __ffActive: false };
+      }
+      window.game.__ffActive = false;
+      window.game.__ffMultiplier = 1;
+    }
+
+    // Test 1: Normal Mode
+    async function testNormalMode() {
+      log('normal', 'Starting normal mode test...', 'info');
+      deactivateFFWD();
+      setTVStatus('Normal mode test in progress...');
+      
+      try {
+        await showResultsPopup({
+          title: 'Normal Mode Test',
+          phase: 'Test',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '👑',
+          duration: 3000,
+          minDisplayTime: 1000
+        });
+        
+        log('normal', 'Modal displayed and dismissed', 'success');
+        testResults.normal = true;
+        setTVStatus('Normal mode test complete');
+      } catch (err) {
+        log('normal', `Error: ${err.message}`, 'error');
+        testResults.normal = false;
+      }
+      
+      updateSummary();
+    }
+
+    async function testNormalModeShort() {
+      log('normal', 'Starting normal mode (short duration) test...', 'info');
+      deactivateFFWD();
+      
+      try {
+        await showResultsPopup({
+          title: 'Normal Mode (Short)',
+          phase: 'Test',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '⚡',
+          duration: 2000,
+          minDisplayTime: 500
+        });
+        
+        log('normal', 'Short duration modal completed', 'success');
+      } catch (err) {
+        log('normal', `Error: ${err.message}`, 'error');
+      }
+    }
+
+    // Test 2: FFWD Mode
+    async function testFFWDMode() {
+      log('ffwd', 'Starting FFWD mode test...', 'info');
+      activateFFWD();
+      setTVStatus('FFWD mode test - modal should appear inline below');
+      
+      try {
+        const startTime = Date.now();
+        await showResultsPopup({
+          title: 'FFWD Mode Test',
+          phase: 'Test',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '⚡',
+          duration: 5000,
+          minDisplayTime: 1500
+        });
+        
+        const elapsed = Date.now() - startTime;
+        log('ffwd', `Modal displayed inline for ${elapsed}ms`, 'success');
+        log('ffwd', 'Modal should have appeared in TV viewport below', 'info');
+        
+        if (elapsed >= 1500) {
+          log('ffwd', 'Minimum duration respected ✓', 'success');
+          testResults.ffwd = true;
+        } else {
+          log('ffwd', 'WARNING: Modal dismissed too quickly', 'warning');
+          testResults.ffwd = false;
+        }
+        
+        setTVStatus('FFWD mode test complete');
+      } catch (err) {
+        log('ffwd', `Error: ${err.message}`, 'error');
+        testResults.ffwd = false;
+      }
+      
+      deactivateFFWD();
+      updateSummary();
+    }
+
+    async function testFFWDModeShort() {
+      log('ffwd', 'Starting FFWD mode (short) test...', 'info');
+      activateFFWD();
+      setTVStatus('FFWD short test in progress...');
+      
+      try {
+        await showResultsPopup({
+          title: 'FFWD Short Test',
+          phase: 'Test',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '🚀',
+          duration: 2000,
+          minDisplayTime: 800
+        });
+        
+        log('ffwd', 'Short FFWD modal completed', 'success');
+        setTVStatus('Ready for next test');
+      } catch (err) {
+        log('ffwd', `Error: ${err.message}`, 'error');
+      }
+      
+      deactivateFFWD();
+    }
+
+    // Test 3: Minimum Display Duration
+    async function testMinDisplayDuration() {
+      log('duration', 'Testing minimum display duration under FFWD...', 'info');
+      activateFFWD();
+      setTVStatus('Min duration test (FFWD)...');
+      
+      try {
+        const startTime = Date.now();
+        await showResultsPopup({
+          title: 'Min Duration Test',
+          phase: 'Test',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '⏱️',
+          duration: 10000, // Would be 1000ms with 0.1 multiplier
+          minDisplayTime: 2000 // Should enforce 2000ms minimum
+        });
+        
+        const elapsed = Date.now() - startTime;
+        log('duration', `Displayed for ${elapsed}ms`, 'info');
+        
+        // Should use fastForwardResultsMinMs (1500) or minDisplayTime (2000), whichever is higher
+        const expectedMin = Math.max(1500, 2000);
+        if (elapsed >= expectedMin - 100) { // Allow 100ms tolerance
+          log('duration', `Minimum duration enforced correctly (>= ${expectedMin}ms) ✓`, 'success');
+          testResults.minDisplay = true;
+        } else {
+          log('duration', `Failed: displayed only ${elapsed}ms (expected >= ${expectedMin}ms)`, 'error');
+          testResults.minDisplay = false;
+        }
+        
+        setTVStatus('Min duration test complete');
+      } catch (err) {
+        log('duration', `Error: ${err.message}`, 'error');
+        testResults.minDisplay = false;
+      }
+      
+      deactivateFFWD();
+      updateSummary();
+    }
+
+    async function testMinDisplayNormal() {
+      log('duration', 'Testing minimum display duration in normal mode...', 'info');
+      deactivateFFWD();
+      
+      try {
+        const startTime = Date.now();
+        await showResultsPopup({
+          title: 'Normal Min Duration',
+          phase: 'Test',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '⏰',
+          duration: 2000,
+          minDisplayTime: 2000
+        });
+        
+        const elapsed = Date.now() - startTime;
+        log('duration', `Normal mode: displayed for ${elapsed}ms`, 'info');
+        
+        if (elapsed >= 2000 - 100) {
+          log('duration', 'Normal minimum duration enforced ✓', 'success');
+        } else {
+          log('duration', 'Warning: dismissed earlier than expected', 'warning');
+        }
+      } catch (err) {
+        log('duration', `Error: ${err.message}`, 'error');
+      }
+    }
+
+    // Test 4: Accessibility
+    async function testESCKey() {
+      log('accessibility', 'Testing ESC key dismiss...', 'info');
+      log('accessibility', 'Modal will appear. Press ESC to dismiss.', 'info');
+      deactivateFFWD();
+      
+      try {
+        await showResultsPopup({
+          title: 'ESC Key Test',
+          phase: 'Test',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '⌨️',
+          duration: 10000,
+          minDisplayTime: 1000
+        });
+        
+        log('accessibility', 'Modal dismissed (check if ESC was used)', 'success');
+        testResults.accessibility = true;
+      } catch (err) {
+        log('accessibility', `Error: ${err.message}`, 'error');
+        testResults.accessibility = false;
+      }
+      
+      updateSummary();
+    }
+
+    async function testClickDismiss() {
+      log('accessibility', 'Testing click dismiss...', 'info');
+      log('accessibility', 'Modal will appear. Click anywhere to dismiss after 500ms.', 'info');
+      deactivateFFWD();
+      
+      try {
+        await showResultsPopup({
+          title: 'Click Dismiss Test',
+          phase: 'Test',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '🖱️',
+          duration: 10000,
+          minDisplayTime: 1000
+        });
+        
+        log('accessibility', 'Modal dismissed successfully', 'success');
+      } catch (err) {
+        log('accessibility', `Error: ${err.message}`, 'error');
+      }
+    }
+
+    // Test 5: Avatar Rendering
+    async function testAvatarRendering() {
+      log('avatar', 'Testing avatar aspect ratio rendering...', 'info');
+      deactivateFFWD();
+      
+      try {
+        await showResultsPopup({
+          title: 'Avatar Test',
+          phase: 'Test',
+          topThree: [
+            { id: 10, name: 'Wide Avatar Test', score: 100 },
+            { id: 11, name: 'Tall Avatar Test', score: 85 },
+            { id: 12, name: 'Square Avatar Test', score: 70 }
+          ],
+          winnerEmoji: '👤',
+          duration: 4000,
+          minDisplayTime: 1000
+        });
+        
+        log('avatar', 'Avatar rendering completed - check circular crop', 'success');
+        log('avatar', 'All avatars should be perfectly circular regardless of source aspect ratio', 'info');
+        testResults.avatar = true;
+      } catch (err) {
+        log('avatar', `Error: ${err.message}`, 'error');
+        testResults.avatar = false;
+      }
+      
+      updateSummary();
+    }
+
+    async function testAvatarFallback() {
+      log('avatar', 'Testing avatar fallback mechanism...', 'info');
+      
+      try {
+        await showResultsPopup({
+          title: 'Avatar Fallback',
+          phase: 'Test',
+          topThree: [
+            { id: 99, name: `UniqueTest${Date.now()}`, score: 100 }
+          ],
+          winnerEmoji: '🎨',
+          duration: 3000,
+          minDisplayTime: 1000
+        });
+        
+        log('avatar', 'Fallback avatar displayed successfully', 'success');
+      } catch (err) {
+        log('avatar', `Error: ${err.message}`, 'error');
+      }
+    }
+
+    // Test 6: Visual Sequence
+    async function testSequence() {
+      log('normal', 'Starting visual comparison sequence...', 'info');
+      
+      try {
+        // Normal mode
+        log('normal', '1/3: Normal fullscreen mode', 'info');
+        deactivateFFWD();
+        setTVStatus('Sequence 1/3: Normal mode');
+        await showResultsPopup({
+          title: 'Sequence: Normal',
+          phase: 'Step 1',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '1️⃣',
+          duration: 2500,
+          minDisplayTime: 1000
+        });
+        
+        await new Promise(r => setTimeout(r, 500));
+        
+        // FFWD mode
+        log('ffwd', '2/3: FFWD inline mode', 'info');
+        activateFFWD();
+        setTVStatus('Sequence 2/3: FFWD inline mode');
+        await showResultsPopup({
+          title: 'Sequence: FFWD',
+          phase: 'Step 2',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '2️⃣',
+          duration: 5000,
+          minDisplayTime: 1500
+        });
+        
+        deactivateFFWD();
+        await new Promise(r => setTimeout(r, 500));
+        
+        // Normal again
+        log('normal', '3/3: Normal mode again', 'info');
+        setTVStatus('Sequence 3/3: Normal mode');
+        await showResultsPopup({
+          title: 'Sequence: Normal',
+          phase: 'Step 3',
+          topThree: sampleResults.topThree,
+          winnerEmoji: '3️⃣',
+          duration: 2500,
+          minDisplayTime: 1000
+        });
+        
+        log('normal', 'Visual sequence completed ✓', 'success');
+        log('ffwd', 'Visual sequence completed ✓', 'success');
+        setTVStatus('Sequence complete - Ready for next test');
+      } catch (err) {
+        log('normal', `Sequence error: ${err.message}`, 'error');
+        log('ffwd', `Sequence error: ${err.message}`, 'error');
+      }
+    }
+
+    function clearTests() {
+      ['normal', 'ffwd', 'duration', 'accessibility', 'avatar'].forEach(cat => {
+        const el = document.getElementById(`${cat}Status`);
+        if (el) {
+          el.innerHTML = '';
+          el.style.display = 'none';
+        }
+      });
+      
+      Object.keys(testResults).forEach(k => testResults[k] = null);
+      updateSummary();
+      setTVStatus('Tests cleared - Ready for testing');
+      
+      console.clear();
+      console.log('%c🏆 Fast-Forward Results Modal Test', 'font-size: 16px; color: #5bd68a; font-weight: bold;');
+      console.log('Tests cleared. Ready for new test run.');
+    }
+
+    // Initialize
+    console.log('%c🏆 Fast-Forward Results Modal Test Loaded', 'font-size: 16px; color: #5bd68a; font-weight: bold;');
+    console.log('%cTest suite ready. Click buttons above to run tests.', 'color: #83bfff;');
+    console.log('Features to test:');
+    console.log('  ✓ Normal vs FFWD rendering modes');
+    console.log('  ✓ Inline TV viewport positioning under FFWD');
+    console.log('  ✓ Minimum display duration enforcement');
+    console.log('  ✓ Accessibility (ESC key, click dismiss)');
+    console.log('  ✓ Avatar aspect ratio and fallback');
+  </script>
+</body>
+</html>
