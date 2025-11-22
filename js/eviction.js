@@ -1153,24 +1153,25 @@
         // 1. Begin result card phase (fade nominees/feed, manage z-index)
         global.lv2?.beginResultCardPhase?.();
         
-        // 2. Show result using new eviction modal (replaces both inline and page-level cards)
-        if (typeof global.EvictionModal?.show === 'function') {
-          await global.EvictionModal.show({
-            title: 'Eviction Result',
-            lines: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
-            tone: 'evict',
-            duration: 3600
-          });
-        } else if (global.lv2?.supportsInlineCard?.()) {
-          // Fallback: Mobile inline card within TV that respects safe areas
+        // 2. Show result: prioritize inline card for mobile/narrow, viewport modal for desktop
+        if (global.lv2?.supportsInlineCard?.()) {
+          // Mobile/narrow: Inline card within TV that respects safe areas
           await global.lv2.showInlineCard({
             title: 'Eviction Result',
             body: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
             duration: 3600,
             tone: 'evict'
           });
+        } else if (typeof global.EvictionModal?.show === 'function') {
+          // Desktop/wide: Viewport-level modal (escapes TV clipping)
+          await global.EvictionModal.show({
+            title: 'Eviction Result',
+            lines: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
+            tone: 'evict',
+            duration: 3600
+          });
         } else {
-          // Fallback: Desktop page-level card system
+          // Fallback: Legacy page-level card system
           global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
           try{ await global.cardQueueWaitIdle?.(); }catch{}
         }
