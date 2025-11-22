@@ -277,7 +277,7 @@
     // NOTE: Hidden by default in carousel mode - inline CTA on nominee tile is used instead
     if (state.useCarousel) {
       const ctaDock = document.createElement('div');
-      ctaDock.className = 'lv2-cta-dock lv2-cta-dock-inline lv2-cta-dock-hidden';
+      ctaDock.classList.add('lv2-cta-dock', 'lv2-cta-dock-inline', 'lv2-cta-dock-hidden');
       
       // Position inline within the overlay structure, not fixed
       // This ensures it's contained within the faux TV overlay
@@ -311,7 +311,7 @@
     } else {
       // Desktop mode: Add confirm button under the grid
       const ctaDock = document.createElement('div');
-      ctaDock.className = 'lv2-cta-dock lv2-cta-dock-inline lv2-cta-dock-desktop';
+      ctaDock.classList.add('lv2-cta-dock', 'lv2-cta-dock-inline', 'lv2-cta-dock-desktop');
       
       Object.assign(ctaDock.style, {
         position: 'relative',
@@ -405,9 +405,9 @@
     contestant.onkeydown = (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        // Check if inline evict button has focus
+        // Check if the event target is the inline evict button
         if (isEvictButtonClick(e) && state.useCarousel) {
-          // Inline CTA: Evict button has focus - trigger evict action
+          // Inline CTA: Evict button activated via keyboard - trigger evict action
           triggerEvictAction(playerId);
         } else {
           // Normal selection
@@ -578,8 +578,10 @@
   }
   
   // Helper: Check if event target is the evict button (inline CTA)
+  // Uses direct check first for performance, falls back to closest() for nested elements
   function isEvictButtonClick(event) {
-    return event.target.closest('[data-action="evict"]') !== null;
+    return event.target.dataset.action === 'evict' || 
+           event.target.closest('[data-action="evict"]') !== null;
   }
   
   // Trigger evict action (called when inline evict button is clicked)
