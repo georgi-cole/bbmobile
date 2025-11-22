@@ -768,7 +768,10 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
-    const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    // Consistent LV2 activation pattern (twoMode equivalent to g.eviction.nominees.length === 2)
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
     const tripleMode = noms.length === 3;
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
@@ -1076,7 +1079,10 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
-    const useLv2 = twoMode && g.cfg?.modernLiveVoteUI !== false && global.lv2?.enabled !== false;
+    // Consistent LV2 activation pattern (twoMode equivalent to g.eviction.nominees.length === 2)
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
 
     if(twoMode){
       let ca=preAorCounts, cb=preB;
