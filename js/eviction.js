@@ -336,6 +336,7 @@
       const remain = global.alivePlayers().length;
       const isFinal4 = remain === 4;
 
+      // Only make CTA if human can vote and hasn't voted yet
       if (humanIsVoter && !hasVoted) {
         global.lv2.createCtaBar({
           enabled: true,
@@ -350,6 +351,10 @@
             global.lv2.updateCtaBar({ enabled: false });
           }
         });
+        global.lv2.setTurn?.(true);
+      } else {
+        // Observer mode: no voting UI, just watch
+        global.lv2.setTurn?.(false);
       }
 
       // Panel will be hidden by lv2.init, so we're done
@@ -776,11 +781,16 @@
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
     
-    // CRITICAL FIX: Close all voting UI before starting diary room sequence
-    // This prevents overlapping UIs where vote overlay and diary room cards show simultaneously
-    if (global.closeAllVoteUI) {
-      console.info('[eviction] Closing all vote UI before diary room sequence');
-      global.closeAllVoteUI();
+    // Do NOT tear down LV2 overlay during diary sequence
+    // If LV2 is active, keep it visible so voter chips can render in real time
+    if (!useLv2) {
+      // Only close vote UI if NOT using LV2
+      if (global.closeAllVoteUI) {
+        console.info('[eviction] Closing all vote UI before diary room sequence');
+        global.closeAllVoteUI();
+      }
+    } else {
+      console.debug('[eviction] LV2 active — keeping overlay during diary sequence');
     }
     
     // Hide CTA bar when voting phase begins (issue #574)
@@ -853,6 +863,7 @@
         }
       } else {
         counts.set(pick,(counts.get(pick)||0)+1);
+        // Multi-nominee legacy list - no LV2 for 3+ nominees, always update
         updateLiveVoteMulti(counts);
       }
       markVoter(entry.voter,`voted (${namePick})`);
