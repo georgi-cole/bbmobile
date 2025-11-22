@@ -1040,6 +1040,7 @@ header.innerHTML = `
       let labelText = nameLabel;
       let statusClass = '';
       let ariaLabel = nameLabel;
+      let usesInnerHTML = false; // Track if we're using innerHTML for icon combinations
       
       // Check for Final 3 Pending Mask
       const isF3Pending = isFinal3PendingMask(game);
@@ -1067,6 +1068,7 @@ header.innerHTML = `
       } else if(hasNom && hasVeto && !hasHOH){
         // NOM+POV combined - show both icons side by side
         name.innerHTML = '<span class="icon-nom-pov">❓</span><span class="icon-nom-pov">🛡️</span>';
+        usesInnerHTML = true;
         statusClass = 'status-icon-label nom-pov-icons';
         ariaLabel = `${nameLabel} (Nominated and Veto Holder)`;
         
@@ -1081,6 +1083,7 @@ header.innerHTML = `
       } else if(hasHOH && hasVeto){
         // Both HOH and POV - show both icons side by side (no twist badge in dual mode)
         name.innerHTML = '<span class="icon-hoh">👑</span><span class="icon-veto">🛡</span>';
+        usesInnerHTML = true;
         statusClass = 'status-icon-label hoh-pov-icons';
         ariaLabel = `${nameLabel} (Head of Household and Veto Holder)`;
       } else if(hasHOH){
@@ -1105,8 +1108,7 @@ header.innerHTML = `
         }
       }
       
-      // Set text content unless we've already set innerHTML (HOH+POV or NOM+POV)
-      const usesInnerHTML = (hasHOH && hasVeto) || (hasNom && hasVeto && !hasHOH);
+      // Set text content only if we haven't already set innerHTML for icon combinations
       if(!usesInnerHTML){
         name.textContent = labelText;
       }
