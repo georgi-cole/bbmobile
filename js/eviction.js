@@ -811,22 +811,24 @@
       const nameV=global.safeName(entry.voter), namePick=global.safeName(pick);
       markVoter(entry.voter,'voting…');
       
-      // Issue #5: Show diary room with avatars
-      if(!useLv2){ showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
-      await sleep(3000);
-      } else { await sleep(1500); }
-      try{ await global.cardQueueWaitIdle?.(); }catch{}
-
-      // Hook: Push vote to lv2 if enabled and 2-nom mode
-      if(twoMode && global.lv2?.pushVote){
-        const [leftId, rightId] = noms;
-        const votePick = pick === leftId ? 'left' : 'right';
-        global.lv2.pushVote({
-          voterId: entry.voter,
-          voterName: nameV,
-          pick: votePick
-        });
+      // Issue #5: Show diary room with avatars (legacy) OR push vote to LV2
+      if(!useLv2){ 
+        showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
+        await sleep(3000);
+      } else { 
+        // LV2 path: Push vote to show voter chip and update counts
+        if(global.lv2?.pushVote){
+          const [leftId, rightId] = noms;
+          const votePick = pick === leftId ? 'left' : 'right';
+          global.lv2.pushVote({
+            voterId: entry.voter,
+            voterName: nameV,
+            pick: votePick
+          });
+        }
+        await sleep(1500); // Wait for LV2 to process vote
       }
+      try{ await global.cardQueueWaitIdle?.(); }catch{}
       
       // Hook: Push vote to rollout overlay if it's showing
       if(global.LiveVoteRollout?.isShowing?.()){
@@ -1114,14 +1116,8 @@
         // 3. End result card phase (restore overlay z-index)
         global.lv2?.endResultCardPhase?.();
         
-        // 4. Show centered final evictee portrait with B&W fade
-        try{ 
-          await global.lv2?.showEvicteeFinal?.({
-            evictedId: evId,
-            evictedName: evName,
-            holdMs: 3500
-          });
-        }catch{}
+        // Note: Avatar animation now handled by runEvictionVisual in handleEvictionLegacy
+        // Removed lv2.showEvicteeFinal to prevent duplicate animations (regression fix)
       }
       
       global.addLog?.(`Evicted: ${evName} (${finalA}–${finalB}).`,'danger');
