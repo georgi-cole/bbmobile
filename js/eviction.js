@@ -7,6 +7,10 @@
 
 (function(global){
   const JURY_START_AT=9;
+  
+  // Tie-break timeout: maximum time to wait for human HOH to break a tie
+  // After this timeout, the tie is auto-resolved using HOH affinity
+  const TIE_BREAK_TIMEOUT_MS = 15000; // 15 seconds
 
   // Import centralized avatar constants
   const getDicebearUrl = global.getDicebearUrl || function(seed) {
@@ -134,6 +138,8 @@
     
     // Detect if human is HOH and is a potential tie-breaker
     // This happens when: HOH is human, there are 2 nominees, and HOH is not in the regular voter list
+    // Note: Tie-breaks only occur with 2 nominees (1-on-1 vote scenarios)
+    // With 3+ nominees, ties are resolved by plurality (most votes), not HOH
     const humanIsHOH = g.hohId === g.humanId;
     const humanIsTieBreaker = humanIsHOH && !humanIsVoter && g.eviction.nominees.length === 2;
     
@@ -921,11 +927,11 @@
     return new Promise(resolve=>{
       let resolved = false;
       
-      // Safety timeout: auto-resolve after 15 seconds if human doesn't pick
+      // Safety timeout: auto-resolve if human doesn't pick within timeout period
       const timeoutHandle = setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          console.warn('[tie-break] ⏱️ 15s timeout - auto-resolving tie-break using affinity');
+          console.warn(`[tie-break] ⏱️ ${TIE_BREAK_TIMEOUT_MS/1000}s timeout - auto-resolving tie-break using affinity`);
           
           // Close any open UI
           if (global.closeAllVoteUI) {
@@ -946,7 +952,7 @@
             resolve(cIds[0]);
           }
         }
-      }, 15000);
+      }, TIE_BREAK_TIMEOUT_MS);
       
       const safeResolve = (pickId) => {
         if (!resolved) {
