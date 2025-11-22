@@ -3496,14 +3496,24 @@
     var set1 = new Set(arr1);
     var set2 = new Set(arr2);
     
+    // If sizes differ after deduplication, arrays have different elements
     if(set1.size !== set2.size) return false;
     
-    var same = true;
-    set1.forEach(function(id){
-      if(!set2.has(id)) same = false;
-    });
+    // Check if all elements in set1 exist in set2 (early return on mismatch)
+    for(var id of set1){
+      if(!set2.has(id)) return false;
+    }
     
-    return same;
+    return true;
+  }
+  
+  /**
+   * Helper: Select random element from pool
+   * @param {Array} pool - Array to pick from
+   * @returns {*} Random element from pool
+   */
+  function selectRandomFromPool(pool){
+    return pool[Math.floor(rng() * pool.length)];
   }
   
   /**
@@ -3714,7 +3724,7 @@
             }
           } else {
             // AI picks from remaining pool
-            chosen = pool[Math.floor(rng() * pool.length)];
+            chosen = selectRandomFromPool(pool);
           }
           
           continue; // Next iteration
@@ -3759,7 +3769,7 @@
             }
           } else {
             // AI picks from valid pool
-            chosen = pool[Math.floor(rng() * pool.length)];
+            chosen = selectRandomFromPool(pool);
           }
           
           continue; // Next iteration
