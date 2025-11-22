@@ -159,7 +159,7 @@
      */
     _cleanupCardQueue() {
       try {
-        let actions = [];
+        const actions = [];
         
         // Cancel all pending cards
         if (global.CardQueue && typeof global.CardQueue.cancelAll === 'function') {

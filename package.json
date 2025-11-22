@@ -31,6 +31,6 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "jsdom": "^27.0.1"
+    "jsdom": "^27.2.0"
   }
 }
