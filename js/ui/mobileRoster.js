@@ -496,12 +496,14 @@
       tv.style.minHeight = `${tvHeight}px`;
       tv.style.maxHeight = `${tvHeight}px`;
       
-      // Ensure TV content doesn't scroll internally
+      // Allow TV content to be visible outside container (for spotlight overlay)
+      // This prevents internal scrolling while allowing absolute positioned elements
       tvNow.style.overflowY = 'visible';
       tvNow.style.minHeight = `${tvHeight - 40}px`; // Account for padding/border
     }
     
     // Update tile size CSS variable for responsive tiles
+    // This variable is used in mobileRoster.css for dynamic tile sizing
     const activeGrid = document.querySelector('.mobile-roster-active-grid');
     if (activeGrid) {
       activeGrid.style.setProperty('--mobile-roster-tile-size', `${tileSize}px`);

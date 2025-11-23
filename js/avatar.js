@@ -33,6 +33,9 @@
   // Can be overridden via window.AVATAR_BASE_PATH if needed
   const GITHUB_PAGES_PATH = '/bbmobile/';
   
+  // Supported avatar file extensions (checked in order)
+  const AVATAR_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'];
+  
   /**
    * Get project base path for GitHub Pages deployment
    * Returns the repository segment ("/bbmobile/") when deployed to GitHub Pages
@@ -181,7 +184,6 @@
     
     // Build comprehensive candidate list with all extensions and case variants
     const candidates = [];
-    const extensions = ['png', 'jpg', 'jpeg', 'webp']; // Multi-extension support
     
     // Helper to convert string to TitleCase
     function toTitleCase(str) {
@@ -236,7 +238,7 @@
       const nameVariants = generateNameVariants(playerName);
       
       for (const variant of nameVariants) {
-        for (const ext of extensions) {
+        for (const ext of AVATAR_EXTENSIONS) {
           candidates.push(`./avatars/${variant}.${ext}`);
         }
       }
@@ -244,14 +246,14 @@
     
     // ID-based candidates with all extensions
     if (playerId) {
-      for (const ext of extensions) {
+      for (const ext of AVATAR_EXTENSIONS) {
         candidates.push(`./avatars/${playerId}.${ext}`);
       }
     }
     
     // For human player, add You.png as a specific fallback
     if (isHumanPlayer) {
-      for (const ext of extensions) {
+      for (const ext of AVATAR_EXTENSIONS) {
         candidates.push(`./avatars/You.${ext}`);
       }
     }
