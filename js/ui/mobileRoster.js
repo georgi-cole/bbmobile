@@ -477,16 +477,19 @@
         const playerId = tile.getAttribute('data-player-id');
         const player = state.activePlayers.find(p => String(p.id) === String(playerId));
         
-        let candidateIndex = 0;
-        let candidates = [];
+        const candidates = [];
         
         if (player && player.name) {
-          candidates = generateAvatarCandidates(player.name);
+          candidates.push(...generateAvatarCandidates(player.name));
           // Add placeholder as final fallback
           candidates.push('avatars/placeholder.png');
         } else {
-          candidates = ['avatars/placeholder.png'];
+          candidates.push('avatars/placeholder.png');
         }
+        
+        // Store candidates on image element to avoid closure issues
+        img.dataset.avatarCandidates = JSON.stringify(candidates);
+        img.dataset.candidateIndex = '0';
         
         img.addEventListener('load', () => {
           if (global.updateAvatarTrackingStatus) {
@@ -495,7 +498,11 @@
         });
         
         img.addEventListener('error', function() {
+          const candidates = JSON.parse(this.dataset.avatarCandidates || '[]');
+          let candidateIndex = parseInt(this.dataset.candidateIndex || '0', 10);
           candidateIndex++;
+          this.dataset.candidateIndex = String(candidateIndex);
+          
           if (candidateIndex < candidates.length) {
             // Try next candidate
             this.src = candidates[candidateIndex];
@@ -554,16 +561,19 @@
         const playerId = tile.getAttribute('data-player-id');
         const player = state.evictedPlayers.find(p => String(p.id) === String(playerId));
         
-        let candidateIndex = 0;
-        let candidates = [];
+        const candidates = [];
         
         if (player && player.name) {
-          candidates = generateAvatarCandidates(player.name);
+          candidates.push(...generateAvatarCandidates(player.name));
           // Add placeholder as final fallback
           candidates.push('avatars/placeholder.png');
         } else {
-          candidates = ['avatars/placeholder.png'];
+          candidates.push('avatars/placeholder.png');
         }
+        
+        // Store candidates on image element to avoid closure issues
+        img.dataset.avatarCandidates = JSON.stringify(candidates);
+        img.dataset.candidateIndex = '0';
         
         img.addEventListener('load', () => {
           if (global.updateAvatarTrackingStatus) {
@@ -572,7 +582,11 @@
         });
         
         img.addEventListener('error', function() {
+          const candidates = JSON.parse(this.dataset.avatarCandidates || '[]');
+          let candidateIndex = parseInt(this.dataset.candidateIndex || '0', 10);
           candidateIndex++;
+          this.dataset.candidateIndex = String(candidateIndex);
+          
           if (candidateIndex < candidates.length) {
             // Try next candidate
             this.src = candidates[candidateIndex];
