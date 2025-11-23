@@ -341,29 +341,39 @@ body[data-mobile-roster-active="true"] #rosterBar {
   left: 0;
   right: 0;
   display: flex;
-  gap: 8px;
-  padding: 10px 12px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.7) 50%, transparent);
+  gap: 6px;
+  padding: 8px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.75) 60%, transparent);
   backdrop-filter: blur(8px);
   z-index: 5;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Hide scrollbar for Chrome/Safari */
+.mobile-roster-tv-footer::-webkit-scrollbar {
+  display: none;
 }
 
 .tv-footer-chip {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px;
+  padding: 5px 10px;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  font-size: 0.7rem;
+  border-radius: 14px;
+  font-size: 0.65rem;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
   transition: all 0.2s;
   backdrop-filter: blur(4px);
+  flex-shrink: 0;
 }
 
 .tv-footer-chip.chip-evicted {
@@ -380,12 +390,13 @@ body[data-mobile-roster-active="true"] #rosterBar {
 }
 
 .chip-icon {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   line-height: 1;
 }
 
 .chip-text {
-  letter-spacing: 0.5px;
+  font-size: 0.65rem;
+  letter-spacing: 0.3px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
