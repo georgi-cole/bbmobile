@@ -296,7 +296,7 @@
       const info = document.getElementById('statusInfo');
       const width = window.innerWidth;
       const height = window.innerHeight;
-      const isMobile = window.MobileRoster && typeof window.innerWidth <= 768;
+      const isMobile = window.MobileRoster && window.innerWidth <= 768;
       const forceFlag = window.FORCE_MOBILE_ROSTER || false;
       
       info.innerHTML = `
