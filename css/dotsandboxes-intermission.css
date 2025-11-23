@@ -1,0 +1,222 @@
+/* Dots and Boxes Intermission Game Styles */
+
+.dotsandboxes-intermission-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 12px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.dotsandboxes-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  margin-bottom: 4px;
+}
+
+.dotsandboxes-score {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  padding: 8px 20px;
+  background: rgba(10, 20, 35, 0.5);
+  border: 1px solid rgba(100, 150, 200, 0.3);
+  border-radius: 8px;
+}
+
+.dotsandboxes-instructions {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.dotsandboxes-board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr); /* 5 dots + 4 edges = 9 */
+  grid-template-rows: repeat(9, 1fr);
+  gap: 0;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1;
+  padding: 16px;
+  background: rgba(10, 20, 35, 0.6);
+  border: 2px solid rgba(100, 150, 200, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.dotsandboxes-dot {
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+  justify-self: center;
+  align-self: center;
+}
+
+.dotsandboxes-edge {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dotsandboxes-edge.horizontal {
+  height: 4px;
+  background: rgba(100, 150, 200, 0.3);
+  align-self: center;
+  border-radius: 2px;
+}
+
+.dotsandboxes-edge.vertical {
+  width: 4px;
+  background: rgba(100, 150, 200, 0.3);
+  justify-self: center;
+  border-radius: 2px;
+}
+
+.dotsandboxes-edge.available:hover {
+  background: rgba(120, 170, 220, 0.6);
+  transform: scale(1.2);
+  box-shadow: 0 0 8px rgba(120, 170, 220, 0.8);
+}
+
+.dotsandboxes-edge.claimed {
+  cursor: default;
+}
+
+.dotsandboxes-edge.claimed.human {
+  background: #4CAF50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.8);
+}
+
+.dotsandboxes-edge.claimed.ai {
+  background: #f44336;
+  box-shadow: 0 0 6px rgba(244, 67, 54, 0.8);
+}
+
+.dotsandboxes-box {
+  background: rgba(30, 40, 60, 0.4);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.dotsandboxes-box.completed {
+  animation: boxComplete 0.3s ease;
+}
+
+@keyframes boxComplete {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.dotsandboxes-box.completed.human {
+  background: rgba(76, 175, 80, 0.3);
+  color: #4CAF50;
+  text-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
+}
+
+.dotsandboxes-box.completed.ai {
+  background: rgba(244, 67, 54, 0.3);
+  color: #f44336;
+  text-shadow: 0 0 8px rgba(244, 67, 54, 0.8);
+}
+
+.dotsandboxes-status {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  padding: 12px 20px;
+  background: rgba(10, 20, 35, 0.5);
+  border: 1px solid rgba(100, 150, 200, 0.3);
+  border-radius: 8px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+  .dotsandboxes-title {
+    font-size: 1.5rem;
+  }
+  
+  .dotsandboxes-board {
+    max-width: 340px;
+    padding: 12px;
+  }
+  
+  .dotsandboxes-dot {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .dotsandboxes-edge.horizontal {
+    height: 3px;
+  }
+  
+  .dotsandboxes-edge.vertical {
+    width: 3px;
+  }
+  
+  .dotsandboxes-box {
+    font-size: 1.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dotsandboxes-title {
+    font-size: 1.3rem;
+  }
+  
+  .dotsandboxes-board {
+    max-width: 280px;
+    padding: 10px;
+  }
+  
+  .dotsandboxes-dot {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .dotsandboxes-edge.horizontal {
+    height: 2px;
+  }
+  
+  .dotsandboxes-edge.vertical {
+    width: 2px;
+  }
+  
+  .dotsandboxes-box {
+    font-size: 1.4rem;
+  }
+  
+  .dotsandboxes-score,
+  .dotsandboxes-status {
+    font-size: 0.95rem;
+    padding: 10px 16px;
+  }
+}

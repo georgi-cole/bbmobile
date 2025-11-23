@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Intermission Flow Test</title>
   <link rel="stylesheet" href="css/tictactoe-intermission.css">
+  <link rel="stylesheet" href="css/dotsandboxes-intermission.css">
   <style>
     * {
       margin: 0;
@@ -162,11 +163,30 @@
       </div>
       <div id="result6" class="results" style="display:none;"></div>
     </div>
+    
+    <div class="test-section">
+      <h2>Test 7: Dots and Boxes Game Only</h2>
+      <p>Tests just the Dots and Boxes game without the full flow.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testDotsAndBoxesOnly()">Run Test</button>
+      </div>
+      <div id="result7" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 8: Random Game Selection</h2>
+      <p>Tests the random game selection feature (HOH with random game).</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testRandomGame()">Run Test</button>
+      </div>
+      <div id="result8" class="results" style="display:none;"></div>
+    </div>
   </div>
   
   <div id="panel"></div>
   
   <script src="js/minigames/tictactoe-intermission.js"></script>
+  <script src="js/minigames/dotsandboxes-intermission.js"></script>
   <script src="js/intermission-flow.js"></script>
   
   <script>
@@ -287,6 +307,33 @@
       window.TicTacToeIntermission.init(panel, function(result) {
         logResult(6, 'Game completed! Result: ' + result);
         console.log('✓ Test 6 completed - Result:', result);
+      });
+    }
+    
+    function testDotsAndBoxesOnly() {
+      logResult(7, 'Starting Dots and Boxes Only test...');
+      console.log('=== Test 7: Dots and Boxes Only ===');
+      
+      const panel = document.getElementById('panel');
+      panel.innerHTML = '';
+      
+      window.DotsAndBoxesIntermission.init(panel, function(result) {
+        logResult(7, 'Game completed! Result: ' + result);
+        console.log('✓ Test 7 completed - Result:', result);
+      });
+    }
+    
+    function testRandomGame() {
+      logResult(8, 'Starting Random Game test...');
+      console.log('=== Test 8: Random Game Selection ===');
+      
+      window.IntermissionFlow.start({
+        compType: 'HOH',
+        reason: 'previous_hoh',
+        onComplete: function() {
+          logResult(8, 'Test completed! Check panel to see which game was selected.');
+          console.log('✓ Test 8 completed - Random game was selected');
+        }
       });
     }
     

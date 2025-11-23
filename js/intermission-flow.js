@@ -8,14 +8,33 @@
   const IntermissionFlow = {};
 
   /**
+   * Randomly select a game to offer
+   * @returns {string} 'tictactoe' or 'dotsandboxes'
+   */
+  function selectRandomGame() {
+    const games = ['tictactoe', 'dotsandboxes'];
+    return games[Math.floor(Math.random() * games.length)];
+  }
+
+  /**
    * Show intermission offer card
    * @param {Object} options
    * @param {string} options.compType - 'HOH' or 'Veto'
+   * @param {string} options.gameType - 'tictactoe' or 'dotsandboxes' (optional, randomly selected if not provided)
    * @param {Function} options.onYes - Callback when user chooses to play
    * @param {Function} options.onNo - Callback when user chooses to skip
    */
   function showOfferCard(options) {
     const { compType, onYes, onNo } = options;
+    let { gameType } = options;
+    
+    // Randomly select game if not specified
+    if (!gameType) {
+      gameType = selectRandomGame();
+    }
+    
+    // Store selected game type for later use
+    IntermissionFlow.selectedGameType = gameType;
     
     // Get panel container
     const panel = document.getElementById('panel');
@@ -39,7 +58,8 @@
     // Message
     const message = document.createElement('div');
     message.className = 'intermission-offer-message';
-    message.textContent = `The ${compType} competition is ongoing. Would you like to play some Tic Tac Toe while you wait?`;
+    const gameName = gameType === 'tictactoe' ? 'Tic Tac Toe' : 'Dots and Boxes';
+    message.textContent = `The ${compType} competition is ongoing. Would you like to play some ${gameName} while you wait?`;
     card.appendChild(message);
 
     // Buttons container
@@ -69,10 +89,16 @@
   }
 
   /**
-   * Launch Tic Tac Toe game
+   * Launch intermission game
    * @param {Function} onComplete - Callback when game finishes (result: 'human'|'ai'|'draw')
+   * @param {string} gameType - 'tictactoe' or 'dotsandboxes' (optional, uses previously selected if not provided)
    */
-  function launchGame(onComplete) {
+  function launchGame(onComplete, gameType) {
+    // Use previously selected game type if not specified
+    if (!gameType) {
+      gameType = IntermissionFlow.selectedGameType || 'tictactoe';
+    }
+    
     // Get panel container
     const panel = document.getElementById('panel');
     if (!panel) {
@@ -87,15 +113,30 @@
     gameContainer.id = 'intermission-game-container';
     panel.appendChild(gameContainer);
 
-    // Initialize Tic Tac Toe game
-    if (global.TicTacToeIntermission) {
-      global.TicTacToeIntermission.init(gameContainer, (result) => {
-        // Show result modal
-        showResultModal(result, onComplete);
-      });
+    // Initialize appropriate game
+    if (gameType === 'dotsandboxes') {
+      if (global.DotsAndBoxesIntermission) {
+        console.info('[IntermissionFlow] Launching Dots and Boxes');
+        global.DotsAndBoxesIntermission.init(gameContainer, (result) => {
+          // Show result modal
+          showResultModal(result, onComplete);
+        });
+      } else {
+        console.error('[IntermissionFlow] DotsAndBoxesIntermission module not loaded');
+        if (onComplete) onComplete();
+      }
     } else {
-      console.error('[IntermissionFlow] TicTacToeIntermission module not loaded');
-      if (onComplete) onComplete();
+      // Default to Tic Tac Toe
+      if (global.TicTacToeIntermission) {
+        console.info('[IntermissionFlow] Launching Tic Tac Toe');
+        global.TicTacToeIntermission.init(gameContainer, (result) => {
+          // Show result modal
+          showResultModal(result, onComplete);
+        });
+      } else {
+        console.error('[IntermissionFlow] TicTacToeIntermission module not loaded');
+        if (onComplete) onComplete();
+      }
     }
   }
 
@@ -129,7 +170,7 @@
     const message = document.createElement('div');
     message.className = 'intermission-result-message';
     if (result === 'human') {
-      message.textContent = 'Great job! You beat the AI at Tic Tac Toe.';
+      message.textContent = 'Great job! You beat the AI.';
     } else if (result === 'ai') {
       message.textContent = 'The AI won this time. Better luck next time!';
     } else {
@@ -149,12 +190,15 @@
       // Remove overlay and restart game
       document.body.removeChild(overlay);
       
-      // Cleanup previous game instance
+      // Cleanup previous game instance (both types)
       if (global.TicTacToeIntermission) {
         global.TicTacToeIntermission.cleanup();
       }
+      if (global.DotsAndBoxesIntermission) {
+        global.DotsAndBoxesIntermission.cleanup();
+      }
       
-      // Launch new game
+      // Launch new game (same type as before)
       launchGame(onContinue);
     });
     buttons.appendChild(replayBtn);
@@ -167,9 +211,12 @@
       // Remove overlay
       document.body.removeChild(overlay);
       
-      // Cleanup game
+      // Cleanup game (both types)
       if (global.TicTacToeIntermission) {
         global.TicTacToeIntermission.cleanup();
+      }
+      if (global.DotsAndBoxesIntermission) {
+        global.DotsAndBoxesIntermission.cleanup();
       }
       
       // Call continue callback
