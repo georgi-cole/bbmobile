@@ -33,6 +33,35 @@
   // Can be overridden via window.AVATAR_BASE_PATH if needed
   const GITHUB_PAGES_PATH = '/bbmobile/';
   
+  // Supported avatar file extensions (checked in order)
+  const AVATAR_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'];
+  
+  /**
+   * Get project base path for GitHub Pages deployment
+   * Returns the repository segment ("/bbmobile/") when deployed to GitHub Pages
+   * @returns {string} Base path with leading/trailing slashes
+   */
+  function projectBase() {
+    // Check for explicit override
+    if (typeof window !== 'undefined' && window.AVATAR_BASE_PATH) {
+      return window.AVATAR_BASE_PATH;
+    }
+    
+    // Check if we're on GitHub Pages by examining hostname and pathname
+    const hostname = window.location.hostname;
+    const pathname = window.location.pathname;
+    
+    // GitHub Pages detection: username.github.io or custom domain with /repo/ path
+    const isGitHubPages = hostname.includes('github.io') || pathname.startsWith(GITHUB_PAGES_PATH);
+    
+    if (isGitHubPages && pathname.startsWith(GITHUB_PAGES_PATH)) {
+      return GITHUB_PAGES_PATH;
+    }
+    
+    // Local dev or root deployment
+    return '/';
+  }
+  
   /**
    * Resolve absolute path for GitHub Pages deployment
    * Handles both local dev and GitHub Pages paths
@@ -44,27 +73,25 @@
     if (relativePath.startsWith('http://') || 
         relativePath.startsWith('https://') ||
         relativePath.startsWith('data:')) {
+      // Auto-upgrade http to https in secure contexts
+      if (relativePath.startsWith('http://') && window.location.protocol === 'https:') {
+        return relativePath.replace('http://', 'https://');
+      }
       return relativePath;
     }
     
     // Remove leading ./ if present
     const cleanPath = relativePath.replace(/^\.\//, '');
     
-    // Check for custom base path override
-    const customBasePath = typeof window !== 'undefined' && window.AVATAR_BASE_PATH;
+    // Get project base path
+    const base = projectBase();
     
-    // Get base path (for GitHub Pages, this would be /bbmobile/)
-    const basePath = customBasePath || 
-                     document.querySelector('base')?.href || 
-                     window.location.pathname.split('/').slice(0, -1).join('/') || '';
+    // Construct absolute path
+    // Ensure single slash between base and path
+    const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+    const normalizedPath = cleanPath.startsWith('/') ? cleanPath : '/' + cleanPath;
     
-    // If we're in a subdirectory (GitHub Pages), ensure proper path
-    if (basePath && basePath.includes(GITHUB_PAGES_PATH)) {
-      return basePath + '/' + cleanPath;
-    }
-    
-    // Local dev: use relative path with leading slash
-    return '/' + cleanPath;
+    return normalizedBase + normalizedPath;
   }
 
   /**
@@ -155,30 +182,84 @@
     // Check if this is the human player (id 0 or human flag)
     const isHumanPlayer = (playerId === 0 || playerId === '0' || player?.human || player?.id === 0);
     
-    // Try multi-case permutations: plural first (PNG), then singular (JPG)
-    // Priority order: Name.png, name.png, id.png, Name.jpg, name.jpg, id.jpg
+    // Build comprehensive candidate list with all extensions and case variants
     const candidates = [];
     
-    if (playerName && playerName !== String(playerId)) {
-      // Name-based (plural PNG first)
-      candidates.push(`./avatars/${playerName}.png`); // Case-sensitive
-      candidates.push(`./avatars/${playerName.toLowerCase()}.png`); // Lowercase
+    // Helper to convert string to TitleCase
+    function toTitleCase(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
+    
+    // Helper to generate case variants
+    function generateNameVariants(name) {
+      if (!name || name === String(playerId)) return [];
       
-      // Name-based (singular JPG fallback)
-      candidates.push(`./avatars/${playerName}.jpg`);
-      candidates.push(`./avatars/${playerName.toLowerCase()}.jpg`);
+      const variants = [];
+      
+      // 1. Original name (as provided)
+      variants.push(name);
+      
+      // 2. Lowercase
+      const lower = name.toLowerCase();
+      if (lower !== name) variants.push(lower);
+      
+      // 3. TitleCase (first letter uppercase, rest lowercase)
+      const titleCase = toTitleCase(name);
+      if (titleCase !== name && titleCase !== lower) {
+        variants.push(titleCase);
+      }
+      
+      // 4. Hyphenated variants (if name contains spaces)
+      if (name.includes(' ')) {
+        const hyphenated = name.replace(/\s+/g, '-');
+        variants.push(hyphenated);
+        
+        const hyphenatedLower = hyphenated.toLowerCase();
+        if (hyphenatedLower !== hyphenated) {
+          variants.push(hyphenatedLower);
+        }
+        
+        const hyphenatedTitle = toTitleCase(hyphenated);
+        if (hyphenatedTitle !== hyphenated && hyphenatedTitle !== hyphenatedLower) {
+          variants.push(hyphenatedTitle);
+        }
+      }
+      
+      return variants;
     }
     
-    // ID-based (both formats)
+    // Check if player has explicit avatarUrl property (use it first)
+    if (player?.avatarUrl && !isNumericJpgPattern(player.avatarUrl, playerId)) {
+      candidates.push(player.avatarUrl);
+    }
+    
+    // Generate candidates from player name with all variants and extensions
+    if (playerName && playerName !== String(playerId)) {
+      const nameVariants = generateNameVariants(playerName);
+      
+      for (const variant of nameVariants) {
+        for (const ext of AVATAR_EXTENSIONS) {
+          candidates.push(`./avatars/${variant}.${ext}`);
+        }
+      }
+    }
+    
+    // ID-based candidates with all extensions
     if (playerId) {
-      candidates.push(`./avatars/${playerId}.png`);
-      candidates.push(`./avatars/${playerId}.jpg`);
+      for (const ext of AVATAR_EXTENSIONS) {
+        candidates.push(`./avatars/${playerId}.${ext}`);
+      }
     }
     
-    // For human player, add You.png as a specific fallback before generic fallback
+    // For human player, add You.png as a specific fallback
     if (isHumanPlayer) {
-      candidates.push('./avatars/You.png');
+      for (const ext of AVATAR_EXTENSIONS) {
+        candidates.push(`./avatars/You.${ext}`);
+      }
     }
+    
+    // Final fallback: placeholder.png
+    candidates.push('./avatars/placeholder.png');
     
     // Return first candidate not in negative cache, with resolved path
     for (const candidate of candidates) {
@@ -356,12 +437,15 @@
   g.resolveAvatar = resolveAvatar;
   g.getAvatarFallback = getAvatarFallback;
   g.resolveAssetPath = resolveAssetPath;
+  g.projectBase = projectBase; // Expose project base path helper
   g.isIOSSafari = getIsIOSSafari;
   g.getAvatarLoadTracking = getLoadTracking;
   g.updateAvatarTrackingStatus = updateTrackingStatus;
   
-  // Expose diagnostic function
+  // Expose global helper for legacy code (window.resolveAvatar)
   if (typeof window !== 'undefined') {
+    window.resolveAvatar = resolveAvatar;
+    window.projectBase = projectBase;
     window.__dumpAvatarStatus = dumpAvatarStatus;
   }
 

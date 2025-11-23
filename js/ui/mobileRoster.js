@@ -20,7 +20,8 @@
   
   const CONFIG = {
     MOBILE_BREAKPOINT: 768,        // Activate mobile roster below this width
-    PORTRAIT_BREAKPOINT: 520,      // Portrait-specific adjustments
+    PORTRAIT_BREAKPOINT: 1400,     // Enhanced portrait detection threshold
+    MOBILE_UA_BREAKPOINT: 1600,    // Mobile UA detection threshold
     MAX_COLS_PORTRAIT: 4,          // Maximum columns in portrait
     MAX_COLS_LANDSCAPE: 5,         // Maximum columns in landscape
     MIN_TILE_SIZE: 56,             // Minimum tap target (px)
@@ -29,6 +30,14 @@
     RESIZE_DEBOUNCE: 50,           // Debounce resize events (ms)
     SPOTLIGHT_DURATION: 3000,      // Auto-hide spotlight after this time (ms)
     LONG_PRESS_DURATION: 1500,    // Long press threshold (ms)
+    
+    // Faux TV sizing constraints
+    MIN_TV_RATIO: 0.38,            // Minimum TV height as ratio of viewport
+    MAX_TV_RATIO: 0.48,            // Maximum TV height as ratio of viewport
+    MIN_TV_HEIGHT: 300,            // Minimum TV height in pixels
+    OVERFLOW_PADDING: 8,           // Padding for overflow detection
+    ROSTER_CONTAINER_PADDING: 32,  // Padding/margins inside roster container
+    TV_ROSTER_GAP: 20,             // Gap between TV and roster (px)
   };
   
   // ============================
@@ -44,6 +53,7 @@
     initialized: false,
     longPressTimer: null,
     longPressTarget: null,
+    chipBarObserver: null, // MutationObserver for chip bar suppression
   };
   
   // ============================
@@ -66,10 +76,47 @@
   }
   
   /**
-   * Detect if mobile viewport is active
+   * Detect mobile user agent
+   */
+  function isMobileUA() {
+    const ua = navigator.userAgent || '';
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  }
+  
+  /**
+   * Detect if mobile roster should be active
+   * Enhanced activation logic per requirements:
+   * - Forced flag (window.FORCE_MOBILE_ROSTER)
+   * - Portrait mode AND width <= 1400
+   * - Mobile UA AND width <= 1600
+   * - Width <= base breakpoint (768)
    */
   function isMobileViewport() {
-    return window.innerWidth <= CONFIG.MOBILE_BREAKPOINT;
+    // Check for force flag
+    if (typeof window.FORCE_MOBILE_ROSTER !== 'undefined' && window.FORCE_MOBILE_ROSTER) {
+      return true;
+    }
+    
+    const width = window.innerWidth;
+    const orientation = getOrientation();
+    const mobileUA = isMobileUA();
+    
+    // Portrait mode with enhanced threshold
+    if (orientation === 'portrait' && width <= CONFIG.PORTRAIT_BREAKPOINT) {
+      return true;
+    }
+    
+    // Mobile UA with enhanced threshold
+    if (mobileUA && width <= CONFIG.MOBILE_UA_BREAKPOINT) {
+      return true;
+    }
+    
+    // Base breakpoint (backwards compatibility)
+    if (width <= CONFIG.MOBILE_BREAKPOINT) {
+      return true;
+    }
+    
+    return false;
   }
   
   /**
@@ -188,12 +235,34 @@
   
   /**
    * Compute player ranking heuristic
+   * Enhanced per requirements: uses evictionOrder and totalStartingPlayers when available
    * @param {Object} player - Player object
    * @param {Array} allPlayers - All players (active + evicted)
    * @returns {number} Ranking (1 = best)
    */
   function computeRanking(player, allPlayers) {
-    // Basic heuristic: based on eviction order and HOH/POV wins
+    // Priority 1: Use explicit ranking if evictionOrder and totalStartingPlayers exist
+    if (player.evictionOrder && player.totalStartingPlayers) {
+      return (player.totalStartingPlayers + 1) - player.evictionOrder;
+    }
+    
+    // Priority 2: Use evictionOrder with total player count
+    const totalPlayers = allPlayers.length;
+    if (player.evictionOrder && totalPlayers) {
+      return (totalPlayers + 1) - player.evictionOrder;
+    }
+    
+    // Priority 3: Fallback - use index in evicted array
+    if (player.evicted) {
+      const evictedIndex = state.evictedPlayers.findIndex(p => p.id === player.id);
+      if (evictedIndex >= 0) {
+        // Earlier evictions = lower ranking (worse placement)
+        // Later evictions = higher ranking (better placement)
+        return (totalPlayers + 1) - (evictedIndex + 1);
+      }
+    }
+    
+    // Priority 4: Heuristic based on performance metrics
     // Rank by score (descending)
     const sorted = allPlayers.map(p => {
       let pScore = 0;
@@ -300,14 +369,16 @@
   }
 
   /**
-   * Calculate optimal roster and TV sizes to fit viewport without vertical scroll
-   * @returns {Object} { rosterHeight, tvHeight } in pixels
+   * Calculate optimal roster and TV sizes with two-pass sizing algorithm
+   * First pass: Choose TV height ratio and compute tile sizes
+   * Second pass: Overflow correction to prevent internal scroll
+   * @returns {Object} { rosterHeight, tvHeight, tileSize } in pixels
    */
   function calculateOptimalSizes() {
     const vh = window.innerHeight;
     const vw = window.innerWidth;
     
-    // Account for fixed elements (topbar, etc.)
+    // Account for fixed elements (topbar, toolbar, etc.)
     const topbarHeight = document.querySelector('.topbar')?.offsetHeight || 0;
     const toolbarHeight = document.querySelector('.toolbar')?.offsetHeight || 0;
     const fixedHeight = topbarHeight + toolbarHeight;
@@ -315,53 +386,102 @@
     // Available viewport height
     const availableHeight = vh - fixedHeight - 40; // 40px for padding/margins
     
+    // ========== FIRST PASS: Initial TV ratio selection ==========
+    
+    // Start with target TV ratio (mid-range between min/max)
+    let tvRatio = (CONFIG.MIN_TV_RATIO + CONFIG.MAX_TV_RATIO) / 2;
+    let tvHeight = Math.max(CONFIG.MIN_TV_HEIGHT, Math.floor(vh * tvRatio));
+    
     // Calculate roster grid dimensions
     const { columns, rows } = computeLayout(state.activePlayers.length, state.orientation);
     const container = document.querySelector('.mobile-roster-active-grid');
     const containerWidth = container?.offsetWidth || vw - 24; // 24px for padding
     
-    const tileSize = calculateTileSize(containerWidth, columns);
+    // Calculate tile size based on available roster space
+    let tileSize = calculateTileSize(containerWidth, columns);
     const nameHeight = 20; // Height of name label
     const gap = CONFIG.GAP_SIZE;
     
-    // Calculate roster grid height
+    // Calculate required roster height
     const rosterGridHeight = (rows * (tileSize + nameHeight)) + ((rows - 1) * gap);
-    
-    // Add height for evicted section if present
     const evictedSectionHeight = state.evictedPlayers.length > 0 ? 60 : 0;
+    let rosterHeight = rosterGridHeight + evictedSectionHeight + CONFIG.ROSTER_CONTAINER_PADDING;
     
-    // Total roster container height
-    const totalRosterHeight = rosterGridHeight + evictedSectionHeight + 32; // 32px for container padding
-    
-    // Calculate remaining space for TV
-    const remainingHeight = availableHeight - totalRosterHeight;
-    
-    // Minimum TV height
-    const minTvHeight = 200;
-    
-    // If we don't fit, scale down roster
-    if (remainingHeight < minTvHeight) {
-      const targetRosterHeight = availableHeight - minTvHeight - 20; // 20px gap
-      return {
-        rosterHeight: Math.max(targetRosterHeight, 200),
-        tvHeight: minTvHeight
-      };
+    // Adjust TV ratio downward if tile size would be too small
+    if (tileSize < CONFIG.MIN_TILE_SIZE) {
+      // Need more space for roster, reduce TV ratio
+      tvRatio = CONFIG.MIN_TV_RATIO;
+      tvHeight = Math.max(CONFIG.MIN_TV_HEIGHT, Math.floor(vh * tvRatio));
+      
+      // Recalculate with more space
+      tileSize = Math.max(CONFIG.MIN_TILE_SIZE, calculateTileSize(containerWidth, columns));
+      const adjustedRosterGridHeight = (rows * (tileSize + nameHeight)) + ((rows - 1) * gap);
+      rosterHeight = adjustedRosterGridHeight + evictedSectionHeight + CONFIG.ROSTER_CONTAINER_PADDING;
     }
     
-    // Otherwise use calculated sizes
+    // Note: tileSize already enforced to be >= MIN_TILE_SIZE above
+    
+    // ========== SECOND PASS: Overflow correction ==========
+    
+    // Check if TV content would overflow (simulate footer + spotlight content)
+    const tvNow = document.querySelector('#tvNow');
+    if (tvNow) {
+      // Get actual content height if TV is rendered
+      const tvContentHeight = tvNow.scrollHeight || 0;
+      
+      // Check if content overflows allocated TV height
+      const requiredTvHeight = tvContentHeight + CONFIG.OVERFLOW_PADDING;
+      
+      if (requiredTvHeight > tvHeight) {
+        // Content overflows - grow TV without shrinking tiles below minimum
+        const additionalTvSpace = requiredTvHeight - tvHeight;
+        const maxTvHeight = Math.floor(vh * CONFIG.MAX_TV_RATIO);
+        
+        // Grow TV (clamped by max ratio and viewport)
+        const newTvHeight = Math.min(maxTvHeight, tvHeight + additionalTvSpace, vh - 100);
+        
+        // Check if we have room to grow TV
+        if (newTvHeight > tvHeight && (availableHeight - newTvHeight - 20) >= rosterHeight) {
+          tvHeight = newTvHeight;
+        } else {
+          // Can't grow TV enough - ensure tiles don't shrink below minimum
+          // This is a fallback that prioritizes usability
+          const minRosterHeight = (rows * (CONFIG.MIN_TILE_SIZE + nameHeight)) + 
+                                  ((rows - 1) * gap) + evictedSectionHeight + CONFIG.ROSTER_CONTAINER_PADDING;
+          
+          if (minRosterHeight + CONFIG.MIN_TV_HEIGHT + CONFIG.TV_ROSTER_GAP <= availableHeight) {
+            rosterHeight = minRosterHeight;
+            tvHeight = availableHeight - rosterHeight - CONFIG.TV_ROSTER_GAP;
+            tileSize = CONFIG.MIN_TILE_SIZE;
+          }
+        }
+      }
+    }
+    
+    // Final clamp to ensure nothing exceeds viewport
+    const totalUsed = rosterHeight + tvHeight + CONFIG.TV_ROSTER_GAP;
+    if (totalUsed > availableHeight) {
+      // Scale down proportionally
+      const scale = availableHeight / totalUsed;
+      rosterHeight = Math.floor(rosterHeight * scale);
+      tvHeight = Math.floor(tvHeight * scale);
+    }
+    
     return {
-      rosterHeight: totalRosterHeight,
-      tvHeight: remainingHeight - 20 // 20px gap
+      rosterHeight: Math.max(200, rosterHeight),
+      tvHeight: Math.max(CONFIG.MIN_TV_HEIGHT, tvHeight),
+      tileSize: Math.max(CONFIG.MIN_TILE_SIZE, tileSize)
     };
   }
 
   /**
    * Apply dynamic sizing to roster and TV
+   * Uses two-pass sizing algorithm to prevent overflow and maintain usability
    */
   function applyDynamicSizing() {
     if (!isMobileViewport() || !state.initialized) return;
     
-    const { rosterHeight, tvHeight } = calculateOptimalSizes();
+    const { rosterHeight, tvHeight, tileSize } = calculateOptimalSizes();
     
     // Apply to roster container
     const rosterContainer = document.querySelector('.mobile-roster-container');
@@ -369,14 +489,27 @@
       rosterContainer.style.maxHeight = `${rosterHeight}px`;
     }
     
-    // Apply to TV
+    // Apply to TV with overflow prevention
     const tv = document.querySelector('.tv');
-    if (tv) {
+    const tvNow = document.querySelector('#tvNow');
+    if (tv && tvNow) {
       tv.style.minHeight = `${tvHeight}px`;
       tv.style.maxHeight = `${tvHeight}px`;
+      
+      // Allow TV content to be visible outside container (for spotlight overlay)
+      // This prevents internal scrolling while allowing absolute positioned elements
+      tvNow.style.overflowY = 'visible';
+      tvNow.style.minHeight = `${tvHeight - 40}px`; // Account for padding/border
     }
     
-    console.info(`[MobileRoster] Dynamic sizing: roster=${rosterHeight}px, tv=${tvHeight}px`);
+    // Update tile size CSS variable for responsive tiles
+    // This variable is used in mobileRoster.css for dynamic tile sizing
+    const activeGrid = document.querySelector('.mobile-roster-active-grid');
+    if (activeGrid) {
+      activeGrid.style.setProperty('--mobile-roster-tile-size', `${tileSize}px`);
+    }
+    
+    console.info(`[MobileRoster] Two-pass sizing: roster=${rosterHeight}px, tv=${tvHeight}px, tile=${tileSize}px`);
   }
   
   // ============================
@@ -631,6 +764,75 @@
     }
 
     console.info('[MobileRoster] TV footer bar updated');
+    
+    // Suppress legacy chip bar
+    suppressLegacyChipBar();
+  }
+
+  /**
+   * Hide legacy chip bar and prevent re-injection
+   */
+  function suppressLegacyChipBar() {
+    // Find and hide any element with data-top-chips attribute
+    const legacyChipBars = document.querySelectorAll('[data-top-chips]');
+    legacyChipBars.forEach(bar => {
+      bar.style.display = 'none';
+      bar.setAttribute('aria-hidden', 'true');
+    });
+    
+    // Also hide common chip bar selectors
+    const commonSelectors = ['.top-chip-bar', '.chip-bar-top', '#topChips', '.game-status-chips'];
+    commonSelectors.forEach(selector => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.style.display = 'none';
+        element.setAttribute('aria-hidden', 'true');
+      }
+    });
+  }
+
+  /**
+   * Setup MutationObserver to suppress chip bar re-injections
+   */
+  function setupChipBarSuppression() {
+    // Observe document body for added nodes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Check if added node is a chip bar
+            if (node.hasAttribute && node.hasAttribute('data-top-chips')) {
+              node.style.display = 'none';
+              node.setAttribute('aria-hidden', 'true');
+              console.info('[MobileRoster] Suppressed re-injected chip bar');
+            }
+            
+            // Check common chip bar classes
+            if (node.classList && (
+              node.classList.contains('top-chip-bar') ||
+              node.classList.contains('chip-bar-top') ||
+              node.id === 'topChips' ||
+              node.classList.contains('game-status-chips')
+            )) {
+              node.style.display = 'none';
+              node.setAttribute('aria-hidden', 'true');
+              console.info('[MobileRoster] Suppressed re-injected chip bar');
+            }
+          }
+        });
+      });
+    });
+    
+    // Start observing
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    
+    // Store observer for cleanup
+    state.chipBarObserver = observer;
+    
+    console.info('[MobileRoster] Chip bar suppression observer active');
   }
 
   /**
@@ -1350,6 +1552,9 @@
       });
       console.info('[MobileRoster] Subscribed to PlayerService');
     }
+    
+    // Setup chip bar suppression
+    setupChipBarSuppression();
     
     state.initialized = true;
     console.info('[MobileRoster] Initialization complete');
