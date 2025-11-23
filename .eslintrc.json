@@ -26,6 +26,7 @@
     "renderMinigame": "readonly"
   },
   "rules": {
+    "no-use-before-define": ["error", { "functions": false, "classes": false, "variables": true }],
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
     "no-console": "off",
     "no-restricted-syntax": [

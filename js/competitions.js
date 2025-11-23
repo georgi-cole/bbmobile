@@ -1347,13 +1347,19 @@
   }
 
   function startHOH() {
+    // PATCH: TDZ fix + defensive guards for startHOH()
+    // Declare early to avoid TDZ and allow immediate guards
+    const g = global.game;
+    if (!g) {
+      console.warn('[competitions] startHOH aborted: global.game not initialized');
+      return;
+    }
+
     // Guard: Block competition start while game is paused
-    if(g.PauseController && g.PauseController.isPaused && g.PauseController.isPaused()){
+    if (g.PauseController?.isPaused?.()) {
       console.info('[competitions] startHOH blocked: game is paused');
       return;
     }
-    
-    const g = global.game;
     g.lastCompScores = new Map(); g.hohOrder = [];
     g.__hohResolved = false;
     g.__hohResolving = false;
@@ -1371,9 +1377,10 @@
       delete g[`__graceReplayAttempt_hoh_${g.humanId}`];
     }
     global.markCompPlayed?.('hoh'); // Mark HOH as played
-    global.tv.say('HOH Competition'); global.phaseMusic?.('hoh');
-    global.setPhase('hoh', g.cfg.tHOH, finishCompPhase);
-    const alive = global.alivePlayers();
+    global.tv?.say('HOH Competition'); 
+    global.phaseMusic?.('hoh');
+    global.setPhase?.('hoh', g.cfg.tHOH, finishCompPhase);
+    const alive = global.alivePlayers?.() || [];
     // Week-based eligibility: only block if player was HOH in previous week
     const blocked = (
       alive.length > 3 && 
@@ -1381,7 +1388,7 @@
       g.lastHOHId && 
       g.lastHOHWeek === (g.week - 1)
     ) ? g.lastHOHId : null;
-    const diffMult = getAIDifficultyMultiplier();
+    const diffMult = (typeof getAIDifficultyMultiplier === 'function') ? getAIDifficultyMultiplier() : 1;
     
     // Legacy fallback: generate AI scores immediately if OpponentSynth not available
     if (!global.OpponentSynth) {
