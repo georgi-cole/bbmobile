@@ -175,7 +175,8 @@
     
     // Participant tracking: { name, isPlayer, dropTimeMs, avatarEl, img, badge, player }
     let participants = [];
-    let eliminationLog = []; // Track drops in order: { name, timeMs }
+    // Track participant drops in chronological order for proper ranking: { name, timeMs }
+    let eliminationLog = [];
     let dropTimers = [];
     let dealWindowTimer = null;
     let dealCountdownInterval = null;
@@ -240,6 +241,7 @@
       // Use actual player image properties before falling back to DiceBear
       let avatarUrl = null;
       if(player){
+        // Note: These properties come from game state which is controlled by the app
         avatarUrl = player.avatar || player.img || player.photo;
       }
       img.src = avatarUrl || getAvatarUrl(name);
@@ -538,10 +540,9 @@
       wallDiv.style.background = '#2c3a4d';
       wallDiv.style.color = '#83bfff';
       
-      // Mark player as winner with final time
+      // Mark player as winner (no need to set dropTimeMs as they didn't drop)
       const playerParticipant = participants.find(p => p.isPlayer);
       if(playerParticipant){
-        playerParticipant.dropTimeMs = totalTime;
         markWinner(playerParticipant);
       }
       
@@ -560,8 +561,8 @@
      * Build final standings: winner first, then elimination log reversed
      */
     function buildFinalStandings(winnerTime){
-      const playerParticipant = participants.find(p => p.isPlayer);
-      const playerName = playerParticipant ? playerParticipant.name : 'You';
+      // Use consistent 'You' for player name to match participant initialization
+      const playerName = 'You';
       
       // Winner first with final time
       const finalStandings = [
@@ -596,11 +597,11 @@
             winnerEmoji: '👑',
             duration: 5000
           }).then(() => {
-            onComplete(score);
+            wrappedOnComplete(score);
           });
         }, 1500);
       } else {
-        setTimeout(() => onComplete(score), 1500);
+        setTimeout(() => wrappedOnComplete(score), 1500);
       }
     }
     
@@ -755,8 +756,8 @@
       wallDiv.style.color = '#83bfff';
       
       // Record player drop time in elimination log
-      const playerParticipant = participants.find(p => p.isPlayer);
-      const playerName = playerParticipant ? playerParticipant.name : 'You';
+      // Use consistent 'You' for player name to match participant initialization
+      const playerName = 'You';
       
       // Add player to elimination log
       eliminationLog.push({ name: playerName, timeMs: holdDuration });
@@ -825,6 +826,18 @@
       }
     }
     
+    // Cleanup function for global event listeners
+    function cleanupGlobalListeners(){
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    }
+    
+    // Wrap onComplete to ensure cleanup
+    function wrappedOnComplete(score){
+      cleanupGlobalListeners();
+      onComplete(score);
+    }
+    
     // Mouse events
     wallDiv.addEventListener('mousedown', startHold);
     wallDiv.addEventListener('mousemove', checkMove);
@@ -840,14 +853,6 @@
       checkMove(e);
     });
     document.addEventListener('touchend', handleGlobalTouchEnd);
-    
-    // Cleanup on game end (remove global listeners)
-    const originalOnComplete = onComplete;
-    onComplete = function(score){
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-      document.removeEventListener('touchend', handleGlobalTouchEnd);
-      originalOnComplete(score);
-    };
   }
 
   // Export
