@@ -1502,3 +1502,206 @@
   };
 
 })(window);
+
+/* ========================================================================
+ * Immediate Competition Results Popup + Fast-Forward Integration
+ * ========================================================================
+ */
+(function installImmediateResultsFastForward(global){
+  const g = global.game || (global.game = {});
+  if(!global.CompetitionFlow) global.CompetitionFlow = {};
+
+  // Constants
+  const RESULTS_POPUP_DURATION = 3500; // ms - must match showResultsPopup duration parameter
+  const PHASE_TRANSITION_DELAY = 2000; // ms - delay before resetting guard flag to allow phase transition to complete
+
+  // Feature flag default ON
+  if(!g.cfg) g.cfg = {};
+  if(typeof g.cfg.autoFastAdvanceCompetitions === 'undefined'){
+    g.cfg.autoFastAdvanceCompetitions = true;
+  }
+
+  function buildTopThree(){
+    const scores = g.lastCompScores;
+    if(!(scores instanceof Map) || scores.size === 0){ return []; }
+    const sorted = [...scores.entries()]
+      .filter(([pid]) => { const p = global.getP ? global.getP(pid) : null; return p && !p.evicted; })
+      .sort((a,b) => b[1] - a[1]);
+    return sorted.slice(0,3).map(([pid, score]) => {
+      const p = global.getP ? global.getP(pid) : null;
+      return {
+        id: pid,
+        score,
+        name: global.safeName ? global.safeName(pid) : (p?.name || `Player ${pid}`),
+        avatar: (typeof global.getAvatarUrl === 'function') ? global.getAvatarUrl(pid) : null
+      };
+    });
+  }
+
+  function shortenPhaseToOneSecond(){
+    try{
+      const ONE_SECOND = 1000;
+      const now = Date.now();
+      const remaining = g.endAt ? (g.endAt - now) : null;
+      if(typeof global.schedulePhaseAdvanceIn === 'function'){
+        global.schedulePhaseAdvanceIn(ONE_SECOND);
+        console.info('[ImmediateResults] Used schedulePhaseAdvanceIn(1000)');
+        return true;
+      }
+      if(typeof global.GameTimer?.shortenCurrentByMs === 'function' && remaining !== null){
+        const delta = Math.max(0, remaining - ONE_SECOND);
+        global.GameTimer.shortenCurrentByMs(delta);
+        console.info('[ImmediateResults] Used GameTimer.shortenCurrentByMs to reach ~1s');
+        return true;
+      }
+      if(typeof global.setPhaseDurationMs === 'function'){
+        global.setPhaseDurationMs(ONE_SECOND);
+        console.info('[ImmediateResults] Used setPhaseDurationMs(1000)');
+        return true;
+      }
+      if(typeof global.advancePhase === 'function'){
+        setTimeout(() => { console.info('[ImmediateResults] Manual advancePhase() after fallback 1s'); global.advancePhase(); }, ONE_SECOND);
+        return true;
+      } else if(typeof global.defaultAdvance === 'function'){
+        setTimeout(() => { console.info('[ImmediateResults] Manual defaultAdvance() after fallback 1s'); global.defaultAdvance(g.phase); }, ONE_SECOND);
+        return true;
+      }
+      console.warn('[ImmediateResults] No phase shortening API available');
+      return false;
+    }catch(err){
+      console.warn('[ImmediateResults] shortenPhaseToOneSecond failed:', err);
+      return false;
+    }
+  }
+
+  function resolveCompetitionPhaseIfNeeded(){
+    try{
+      if(g.__fastAdvancingCompetition){
+        console.info('[ImmediateResults] Resolution already in progress, skipping duplicate');
+        return;
+      }
+      g.__fastAdvancingCompetition = true;
+      const phase = g.phase;
+      
+      // Schedule flag reset after phase transition completes
+      // Uses PHASE_TRANSITION_DELAY to allow finish functions to complete phase change before allowing next competition
+      const resetFlag = () => {
+        setTimeout(() => {
+          g.__fastAdvancingCompetition = false;
+          console.info('[ImmediateResults] Reset fast-advancing flag for next competition');
+        }, PHASE_TRANSITION_DELAY);
+      };
+      
+      if(phase === 'hoh' && typeof global.finishCompPhase === 'function' && !g.__hohResolved){
+        console.info('[ImmediateResults] Calling finishCompPhase()');
+        global.finishCompPhase();
+        resetFlag();
+        return;
+      }
+      // Note: Veto competitions currently advance via defaultAdvance/nextPhase (no dedicated finish function)
+      // The phase-specific check is kept for future implementation of finishVetoCompetition if needed
+      if(phase === 'final3_comp2' && typeof global.finishF3P2 === 'function' && !g.__f3p2Resolved){
+        console.info('[ImmediateResults] Calling finishF3P2()');
+        global.finishF3P2();
+        resetFlag();
+        return;
+      }
+      if(phase === 'final3_comp3' && typeof global.finishF3P3 === 'function' && !g.__f3p3Resolved){
+        console.info('[ImmediateResults] Calling finishF3P3()');
+        global.finishF3P3();
+        resetFlag();
+        return;
+      }
+      if(typeof global.defaultAdvance === 'function'){
+        console.info('[ImmediateResults] Generic advance via defaultAdvance()');
+        global.defaultAdvance(phase);
+        resetFlag();
+      } else if(typeof global.nextPhase === 'function'){
+        console.info('[ImmediateResults] Generic advance via nextPhase()');
+        global.nextPhase();
+        resetFlag();
+      } else {
+        console.warn('[ImmediateResults] No resolution function found for phase:', phase);
+        g.__fastAdvancingCompetition = false; // Reset immediately if no function found
+      }
+    }catch(e){
+      console.error('[ImmediateResults] resolveCompetitionPhaseIfNeeded error:', e);
+      g.__fastAdvancingCompetition = false; // Reset on error
+    }
+  }
+
+  function showCompetitionResultsAndFastForward(humanScore){
+    if(!g.cfg?.autoFastAdvanceCompetitions){
+      console.info('[ImmediateResults] autoFastAdvanceCompetitions flag disabled – skipping');
+      return;
+    }
+    const phase = g.phase;
+    let topThree = buildTopThree();
+    if(topThree.length === 0){
+      const humanId = g.humanId;
+      if(humanId !== null && humanId !== undefined){
+        topThree = [{
+          id: humanId,
+          score: humanScore,
+          name: global.safeName ? global.safeName(humanId) : 'You',
+          avatar: typeof global.getAvatarUrl === 'function' ? global.getAvatarUrl(humanId) : null
+        }];
+      }
+    }
+    const title = (phase === 'hoh') ? 'HOH Results'
+                : (phase === 'pov' || phase === 'veto_comp' || phase === 'veto') ? 'Veto Results'
+                : (phase?.startsWith('final3')) ? 'Final 3 Results'
+                : 'Competition Results';
+    const popupAvailable = typeof global.showResultsPopup === 'function';
+    shortenPhaseToOneSecond();
+    if(!popupAvailable){
+      console.warn('[ImmediateResults] showResultsPopup not available – advancing without popup');
+      resolveCompetitionPhaseIfNeeded();
+      return;
+    }
+    console.info('[ImmediateResults] Showing competition results popup:', title, topThree);
+    try{
+      const promise = global.showResultsPopup({ title, topThree, winnerEmoji: '🏆', duration: RESULTS_POPUP_DURATION });
+      if(promise && typeof promise.then === 'function'){
+        promise.then(() => {
+          console.info('[ImmediateResults] Results popup finished – resolving phase');
+          resolveCompetitionPhaseIfNeeded();
+        }).catch(err => {
+          console.warn('[ImmediateResults] Popup promise error, resolving anyway:', err);
+          resolveCompetitionPhaseIfNeeded();
+        });
+      } else {
+        setTimeout(() => {
+          console.info('[ImmediateResults] Popup duration elapsed – resolving phase');
+          resolveCompetitionPhaseIfNeeded();
+        }, RESULTS_POPUP_DURATION);
+      }
+    }catch(err){
+      console.warn('[ImmediateResults] Failed to show popup – resolving immediately:', err);
+      resolveCompetitionPhaseIfNeeded();
+    }
+  }
+
+  global.CompetitionFlow.showCompetitionResultsAndFastForward = showCompetitionResultsAndFastForward;
+  console.info('[ImmediateResults] Fast-forward + results integration installed');
+})(window);
+
+(function augmentRunCompetitionFlow(global){
+  if(!global.CompetitionFlow || typeof global.CompetitionFlow.runCompetitionFlow !== 'function'){
+    console.warn('[ImmediateResults] Unable to augment runCompetitionFlow – not found');
+    return;
+  }
+  const original = global.CompetitionFlow.runCompetitionFlow;
+  global.CompetitionFlow.runCompetitionFlow = function(gameKey, container, onComplete, options = {}){
+    const wrappedOnComplete = function(score){
+      try { if(typeof onComplete === 'function'){ onComplete(score); } } catch(e){ console.warn('[ImmediateResults] Original onComplete error:', e); }
+      if(options.autoFastAdvance !== false){
+        global.CompetitionFlow.showCompetitionResultsAndFastForward(score);
+      } else {
+        console.info('[ImmediateResults] autoFastAdvance disabled for this flow call');
+      }
+    };
+    return original(gameKey, container, wrappedOnComplete, options);
+  };
+  console.info('[ImmediateResults] runCompetitionFlow augmented for immediate results & fast-forward');
+})(window);
