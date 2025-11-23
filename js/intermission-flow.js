@@ -36,6 +36,21 @@
     // Store selected game type for later use
     IntermissionFlow.selectedGameType = gameType;
     
+    // Use new IntermissionCard module if available (renders in TV)
+    if (global.IntermissionCard && typeof global.IntermissionCard.showInTv === 'function') {
+      console.info('[IntermissionFlow] Using IntermissionCard.showInTv (in-TV rendering)');
+      global.IntermissionCard.showInTv({
+        compType,
+        gameType,
+        onYes,
+        onNo
+      });
+      return;
+    }
+    
+    // Fallback: original panel-based rendering
+    console.warn('[IntermissionFlow] IntermissionCard not available, using fallback panel rendering');
+    
     // Get panel container
     const panel = document.getElementById('panel');
     if (!panel) {
@@ -99,6 +114,48 @@
       gameType = IntermissionFlow.selectedGameType || 'tictactoe';
     }
     
+    // Use new IntermissionOverlay if available (full-screen rendering)
+    if (global.IntermissionOverlay && typeof global.IntermissionOverlay.show === 'function') {
+      console.info('[IntermissionFlow] Using IntermissionOverlay (full-screen rendering)');
+      
+      // Create full-screen overlay
+      const overlayController = global.IntermissionOverlay.show();
+      const gameContainer = overlayController.getContentMount();
+
+      // Initialize appropriate game
+      if (gameType === 'dotsandboxes') {
+        if (global.DotsAndBoxesIntermission) {
+          console.info('[IntermissionFlow] Launching Dots and Boxes in overlay');
+          global.DotsAndBoxesIntermission.init(gameContainer, (result) => {
+            // Show result modal (keep overlay open)
+            showResultModal(result, onComplete, overlayController);
+          });
+        } else {
+          console.error('[IntermissionFlow] DotsAndBoxesIntermission module not loaded');
+          overlayController.close();
+          if (onComplete) onComplete();
+        }
+      } else {
+        // Default to Tic Tac Toe
+        if (global.TicTacToeIntermission) {
+          console.info('[IntermissionFlow] Launching Tic Tac Toe in overlay');
+          global.TicTacToeIntermission.init(gameContainer, (result) => {
+            // Show result modal (keep overlay open)
+            showResultModal(result, onComplete, overlayController);
+          });
+        } else {
+          console.error('[IntermissionFlow] TicTacToeIntermission module not loaded');
+          overlayController.close();
+          if (onComplete) onComplete();
+        }
+      }
+      
+      return;
+    }
+    
+    // Fallback: original panel-based rendering
+    console.warn('[IntermissionFlow] IntermissionOverlay not available, using fallback panel rendering');
+    
     // Get panel container
     const panel = document.getElementById('panel');
     if (!panel) {
@@ -144,26 +201,59 @@
    * Show result modal after game finishes
    * @param {string} result - 'human'|'ai'|'draw'
    * @param {Function} onContinue - Callback to continue to competition result
+   * @param {Object} overlayController - Optional overlay controller from IntermissionOverlay
    */
-  function showResultModal(result, onContinue) {
-    // Create overlay
+  function showResultModal(result, onContinue, overlayController) {
+    // Create modal overlay (on top of game overlay if using new system)
     const overlay = document.createElement('div');
     overlay.className = 'intermission-result-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 10001;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.3s ease-out;
+    `;
 
     // Create modal
     const modal = document.createElement('div');
     modal.className = 'intermission-result-modal';
+    modal.style.cssText = `
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(51, 65, 85, 0.98));
+      border: 2px solid rgba(96, 165, 250, 0.6);
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+      text-align: center;
+      animation: slideIn 0.3s ease-out;
+    `;
 
     // Title
     const title = document.createElement('div');
     title.className = `intermission-result-title ${result}`;
     if (result === 'human') {
       title.textContent = 'You Win!';
+      title.style.color = '#10b981';
     } else if (result === 'ai') {
       title.textContent = 'You Lose';
+      title.style.color = '#ef4444';
     } else {
       title.textContent = 'Draw!';
+      title.style.color = '#f59e0b';
     }
+    title.style.cssText += `
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-shadow: 0 2px 12px currentColor;
+    `;
     modal.appendChild(title);
 
     // Message
@@ -176,18 +266,42 @@
     } else {
       message.textContent = 'A well-matched game. Nobody wins!';
     }
+    message.style.cssText = `
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    `;
     modal.appendChild(message);
 
     // Buttons container
     const buttons = document.createElement('div');
     buttons.className = 'intermission-result-buttons';
+    buttons.style.cssText = `
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    `;
 
     // Replay button
     const replayBtn = document.createElement('button');
     replayBtn.className = 'intermission-result-button replay';
     replayBtn.textContent = 'Replay';
+    replayBtn.style.cssText = `
+      flex: 1;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      border: 2px solid #60a5fa;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    `;
     replayBtn.addEventListener('click', () => {
-      // Remove overlay and restart game
+      // Remove result modal
       document.body.removeChild(overlay);
       
       // Cleanup previous game instance (both types)
@@ -198,8 +312,16 @@
         global.DotsAndBoxesIntermission.cleanup();
       }
       
-      // Launch new game (same type as before)
+      // Relaunch game in same overlay
       launchGame(onContinue);
+    });
+    replayBtn.addEventListener('mouseenter', () => {
+      replayBtn.style.transform = 'translateY(-2px)';
+      replayBtn.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+    });
+    replayBtn.addEventListener('mouseleave', () => {
+      replayBtn.style.transform = 'translateY(0)';
+      replayBtn.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
     });
     buttons.appendChild(replayBtn);
 
@@ -207,9 +329,27 @@
     const continueBtn = document.createElement('button');
     continueBtn.className = 'intermission-result-button continue';
     continueBtn.textContent = 'Continue';
+    continueBtn.style.cssText = `
+      flex: 1;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: 2px solid #34d399;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    `;
     continueBtn.addEventListener('click', () => {
-      // Remove overlay
+      // Remove result modal
       document.body.removeChild(overlay);
+      
+      // Close the game overlay if using new system
+      if (overlayController && typeof overlayController.close === 'function') {
+        overlayController.close();
+      }
       
       // Cleanup game (both types)
       if (global.TicTacToeIntermission) {
@@ -221,6 +361,14 @@
       
       // Call continue callback
       if (onContinue) onContinue();
+    });
+    continueBtn.addEventListener('mouseenter', () => {
+      continueBtn.style.transform = 'translateY(-2px)';
+      continueBtn.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)';
+    });
+    continueBtn.addEventListener('mouseleave', () => {
+      continueBtn.style.transform = 'translateY(0)';
+      continueBtn.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
     });
     buttons.appendChild(continueBtn);
 
@@ -266,11 +414,44 @@
     showOfferCard({
       compType,
       onYes: () => {
-        // User chose to play
-        launchGame(onComplete);
+        // User chose to play - suspend timer
+        console.info('[IntermissionFlow] User chose to play, suspending phase timer');
+        
+        // Emit timer suspend event
+        if (global.game?.bus) {
+          global.game.bus.emit('phase:timer:suspend', { reason: 'intermission' });
+        }
+        
+        // Launch game
+        launchGame(() => {
+          // Game completed or user clicked Continue
+          console.info('[IntermissionFlow] Intermission complete, skipping to results');
+          
+          // Emit skip-to-results event
+          if (global.game?.bus) {
+            global.game.bus.emit('phase:timer:skip-to-results', { 
+              reason: 'intermission', 
+              compType 
+            });
+          }
+          
+          // Call original onComplete if needed
+          if (onComplete) onComplete();
+        });
       },
       onNo: () => {
-        // User chose to skip
+        // User chose to skip - jump directly to results
+        console.info('[IntermissionFlow] User chose to skip, jumping to results');
+        
+        // Emit skip-to-results event immediately
+        if (global.game?.bus) {
+          global.game.bus.emit('phase:timer:skip-to-results', { 
+            reason: 'intermission_skip', 
+            compType 
+          });
+        }
+        
+        // Call onComplete
         if (onComplete) onComplete();
       }
     });
