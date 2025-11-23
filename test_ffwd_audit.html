@@ -628,13 +628,16 @@
         }
         
         // Check activation succeeded
-        if (result && game.__ffActive) {
+        if (!priorActive && result && game.__ffActive) {
           testPass('Activation No Throw');
           testPass('Activation Returns True on Success');
-        } else if (!result && priorActive) {
-          testPass('Activation No Throw (already active returns false)');
+        } else if (priorActive && !result && game.__ffActive) {
+          testPass('Activation No Throw (already active, returns false but stays active)');
+        } else if (!result && !game.__ffActive) {
+          testFail('Activation No Throw', 'Activation returned false and did not set __ffActive flag');
+          return false;
         } else {
-          testFail('Activation No Throw', 'Activation did not set __ffActive flag');
+          testFail('Activation No Throw', `Unexpected state: result=${result}, prior=${priorActive}, active=${game.__ffActive}`);
           return false;
         }
         

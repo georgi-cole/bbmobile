@@ -407,6 +407,7 @@
     
     try {
       // Always use window.game as single source of truth
+      // (the 'global' parameter refers to window in this IIFE context)
       const g = global.game;
       if(!g){
         console.warn('[fast-forward] window.game not available, cannot activate');
