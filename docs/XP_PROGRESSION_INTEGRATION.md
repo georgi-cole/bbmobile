@@ -40,11 +40,20 @@ The bridge loads as a module (deferred), and the events/UI load with defer. Both
 
 - **initialize()** - Initializes the progression system (lazy-loaded)
 - **log(eventType, options)** - Records an XP event
-- **getPlayerState(playerId)** - Gets XP state for a specific player
-  - Fallback 1: Filter events by playerId if core doesn't support per-player
-  - Fallback 2: Return aggregate state
-  - Fallback 3: Return zero state
-- **getLeaderboard(seasonId)** - Returns top 5 players sorted by XP
+- **getPlayerState(playerId, seasonId?)** - Gets XP state for a specific player
+  - Returns: `{ totalXP, level, nextLevelXP, currentLevelXP, progressPercent, eventsCount, isMax, seasonXP }`
+  - `totalXP` - Aggregate XP across all seasons (determines level)
+  - `seasonXP` - XP for specified season only (for ranking)
+  - `level` - Computed from aggregate XP
+  - `isMax` - True when at max level (Level 20)
+  - Fallback 1: Use core's getPlayerState with seasonal support
+  - Fallback 2: Filter events by playerId and compute manually
+  - Fallback 3: Return aggregate state
+  - Fallback 4: Return zero state
+- **getLeaderboard(seasonId)** - Returns top 5 players ranked by seasonal XP
+  - Returns: Array of `{ playerId, playerName, aggregateXP, seasonXP, level }`
+  - Sorted by `seasonXP` descending (for competitive ranking)
+  - `level` derived from `aggregateXP` (global progression)
 - **getCurrentState()** - Gets aggregate XP state
 - **showModal(seasonId, playerId)** - Shows XP modal for a player
 - **recompute(seasonId, playerId)** - Recomputes XP totals
@@ -110,6 +119,49 @@ The system is designed to gracefully degrade:
 3. If event filtering not available → returns aggregate state
 4. If Progression API unavailable → hooks become no-ops
 5. If tvOverlay missing → creates container on-demand
+
+## Data Fields
+
+### PlayerState Object
+```typescript
+{
+  totalXP: number;          // Aggregate XP across all seasons (determines level)
+  level: number;            // Computed from totalXP using level thresholds
+  nextLevelXP: number;      // XP required for next level (equals currentLevelXP at max)
+  currentLevelXP: number;   // XP threshold for current level
+  progressPercent: number;  // Progress to next level (0-100, clamped at max)
+  eventsCount: number;      // Total number of XP events
+  isMax?: boolean;          // True when at max level (Level 20 at 34,000 XP)
+  seasonXP?: number;        // XP for current season only (used for leaderboard ranking)
+}
+```
+
+### Leaderboard Player Object
+```typescript
+{
+  playerId: string;         // Player identifier
+  playerName: string;       // Player display name
+  aggregateXP: number;      // Total XP across all seasons
+  seasonXP: number;         // XP for current season only
+  level: number;            // Computed from aggregateXP (global progression)
+}
+```
+
+**Important Distinction:**
+- **Level** is always determined by **aggregateXP** (total across all seasons)
+- **Leaderboard ranking** uses **seasonXP** (current season performance only)
+- This allows players to maintain global progression while competing seasonally
+
+### Max Level Behavior
+- Max level is **Level 20** at **34,000 XP** (see `MAX_LEVEL` constant)
+- When at max level:
+  - `isMax = true`
+  - `progressPercent = 100` (always)
+  - `nextLevelXP = currentLevelXP` (no fabricated threshold)
+  - UI shows "Max Level Achieved" instead of "Progress to Level 21"
+  - Milestone shows "Max Level" instead of negative values
+- XP can accumulate beyond max level ("overflow XP")
+- Overflow XP is tracked but doesn't grant additional levels
 
 ## XP Rules
 
