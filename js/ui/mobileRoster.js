@@ -233,12 +233,34 @@
   
   /**
    * Compute player ranking heuristic
+   * Enhanced per requirements: uses evictionOrder and totalStartingPlayers when available
    * @param {Object} player - Player object
    * @param {Array} allPlayers - All players (active + evicted)
    * @returns {number} Ranking (1 = best)
    */
   function computeRanking(player, allPlayers) {
-    // Basic heuristic: based on eviction order and HOH/POV wins
+    // Priority 1: Use explicit ranking if evictionOrder and totalStartingPlayers exist
+    if (player.evictionOrder && player.totalStartingPlayers) {
+      return (player.totalStartingPlayers + 1) - player.evictionOrder;
+    }
+    
+    // Priority 2: Use evictionOrder with total player count
+    const totalPlayers = allPlayers.length;
+    if (player.evictionOrder && totalPlayers) {
+      return (totalPlayers + 1) - player.evictionOrder;
+    }
+    
+    // Priority 3: Fallback - use index in evicted array
+    if (player.evicted) {
+      const evictedIndex = state.evictedPlayers.findIndex(p => p.id === player.id);
+      if (evictedIndex >= 0) {
+        // Earlier evictions = lower ranking (worse placement)
+        // Later evictions = higher ranking (better placement)
+        return (totalPlayers + 1) - (evictedIndex + 1);
+      }
+    }
+    
+    // Priority 4: Heuristic based on performance metrics
     // Rank by score (descending)
     const sorted = allPlayers.map(p => {
       let pScore = 0;
@@ -368,9 +390,6 @@
     let tvRatio = (CONFIG.MIN_TV_RATIO + CONFIG.MAX_TV_RATIO) / 2;
     let tvHeight = Math.max(CONFIG.MIN_TV_HEIGHT, Math.floor(vh * tvRatio));
     
-    // Remaining height for roster
-    let remainingForRoster = availableHeight - tvHeight - 20; // 20px gap between TV and roster
-    
     // Calculate roster grid dimensions
     const { columns, rows } = computeLayout(state.activePlayers.length, state.orientation);
     const container = document.querySelector('.mobile-roster-active-grid');
@@ -391,7 +410,6 @@
       // Need more space for roster, reduce TV ratio
       tvRatio = CONFIG.MIN_TV_RATIO;
       tvHeight = Math.max(CONFIG.MIN_TV_HEIGHT, Math.floor(vh * tvRatio));
-      remainingForRoster = availableHeight - tvHeight - 20;
       
       // Recalculate with more space
       tileSize = Math.max(CONFIG.MIN_TILE_SIZE, calculateTileSize(containerWidth, columns));
@@ -409,8 +427,6 @@
     if (tvNow) {
       // Get actual content height if TV is rendered
       const tvContentHeight = tvNow.scrollHeight || 0;
-      const tvFooter = tvNow.querySelector('.mobile-roster-tv-footer');
-      const footerHeight = tvFooter?.offsetHeight || 40; // Estimated footer height
       
       // Check if content overflows allocated TV height
       const requiredTvHeight = tvContentHeight + CONFIG.OVERFLOW_PADDING;
