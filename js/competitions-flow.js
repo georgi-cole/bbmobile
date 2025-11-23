@@ -1512,7 +1512,8 @@
   if(!global.CompetitionFlow) global.CompetitionFlow = {};
 
   // Feature flag default ON
-  if(typeof g.cfg === 'object' && g.cfg !== null && typeof g.cfg.autoFastAdvanceCompetitions === 'undefined'){
+  if(!g.cfg) g.cfg = {};
+  if(typeof g.cfg.autoFastAdvanceCompetitions === 'undefined'){
     g.cfg.autoFastAdvanceCompetitions = true;
   }
 
@@ -1577,37 +1578,54 @@
       }
       g.__fastAdvancingCompetition = true;
       const phase = g.phase;
+      
+      // Schedule flag reset after phase transition completes
+      const resetFlag = () => {
+        setTimeout(() => {
+          g.__fastAdvancingCompetition = false;
+          console.info('[ImmediateResults] Reset fast-advancing flag for next competition');
+        }, 2000);
+      };
+      
       if(phase === 'hoh' && typeof global.finishCompPhase === 'function' && !g.__hohResolved){
         console.info('[ImmediateResults] Calling finishCompPhase()');
         global.finishCompPhase();
+        resetFlag();
         return;
       }
       if((phase === 'pov' || phase === 'veto_comp' || phase === 'veto') && typeof global.finishVetoCompetition === 'function' && !g.__povResolved){
         console.info('[ImmediateResults] Calling finishVetoCompetition()');
         global.finishVetoCompetition();
+        resetFlag();
         return;
       }
       if(phase === 'final3_comp2' && typeof global.finishF3P2 === 'function' && !g.__f3p2Resolved){
         console.info('[ImmediateResults] Calling finishF3P2()');
         global.finishF3P2();
+        resetFlag();
         return;
       }
       if(phase === 'final3_comp3' && typeof global.finishF3P3 === 'function' && !g.__f3p3Resolved){
         console.info('[ImmediateResults] Calling finishF3P3()');
         global.finishF3P3();
+        resetFlag();
         return;
       }
       if(typeof global.defaultAdvance === 'function'){
         console.info('[ImmediateResults] Generic advance via defaultAdvance()');
         global.defaultAdvance(phase);
+        resetFlag();
       } else if(typeof global.nextPhase === 'function'){
         console.info('[ImmediateResults] Generic advance via nextPhase()');
         global.nextPhase();
+        resetFlag();
       } else {
         console.warn('[ImmediateResults] No resolution function found for phase:', phase);
+        g.__fastAdvancingCompetition = false; // Reset immediately if no function found
       }
     }catch(e){
       console.error('[ImmediateResults] resolveCompetitionPhaseIfNeeded error:', e);
+      g.__fastAdvancingCompetition = false; // Reset on error
     }
   }
 
