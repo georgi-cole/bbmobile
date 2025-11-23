@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intermission UX Integration Test</title>
+  <link rel="stylesheet" href="css/tictactoe-intermission.css">
+  <link rel="stylesheet" href="css/dotsandboxes-intermission.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f1419 0%, #1a2632 100%);
+      color: #ffffff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #64b5f6;
+      text-shadow: 0 2px 8px rgba(100, 181, 246, 0.5);
+    }
+    
+    .test-section {
+      background: rgba(30, 40, 60, 0.6);
+      border: 2px solid rgba(100, 150, 200, 0.3);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #90caf9;
+      margin-bottom: 16px;
+      font-size: 1.3rem;
+    }
+    
+    .test-section p {
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+    
+    .test-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    
+    .test-button {
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+      border: 2px solid #42a5f5;
+      border-radius: 8px;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .test-button:hover {
+      background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
+      border-color: #64b5f6;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+    
+    .test-button:active {
+      transform: translateY(0);
+    }
+    
+    .test-button.danger {
+      background: linear-gradient(135deg, #d32f2f 0%, #f44336 100%);
+      border-color: #ef5350;
+    }
+    
+    .test-button.danger:hover {
+      background: linear-gradient(135deg, #f44336 0%, #ef5350 100%);
+      border-color: #e57373;
+    }
+    
+    .mock-tv {
+      background: rgba(10, 20, 35, 0.8);
+      border: 3px solid rgba(100, 150, 200, 0.4);
+      border-radius: 16px;
+      padding: 20px;
+      min-height: 400px;
+      margin-top: 20px;
+      position: relative;
+    }
+    
+    .mock-tv h3 {
+      color: #64b5f6;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    
+    .results {
+      background: rgba(50, 100, 150, 0.2);
+      border: 1px solid rgba(100, 150, 200, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .results h3 {
+      color: #90caf9;
+      margin-bottom: 12px;
+      font-size: 1.1rem;
+    }
+    
+    .results pre {
+      color: rgba(255, 255, 255, 0.9);
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .status-bar {
+      background: rgba(20, 30, 50, 0.9);
+      border: 1px solid rgba(100, 150, 200, 0.3);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      text-align: center;
+      color: #fbbf24;
+      font-weight: 600;
+    }
+    
+    #tvTimer {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(30, 41, 59, 0.9);
+      border: 2px solid rgba(96, 165, 250, 0.5);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #60a5fa;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Intermission UX Integration Test</h1>
+    
+    <div class="test-section">
+      <h2>Test Instructions</h2>
+      <p>This page tests the new intermission UX integration with:</p>
+      <ul style="margin-left: 20px; margin-bottom: 12px;">
+        <li style="margin-bottom: 8px;">✅ Prompt card rendered INSIDE the faux TV (not below)</li>
+        <li style="margin-bottom: 8px;">✅ Full-screen dimmed overlay for minigame</li>
+        <li style="margin-bottom: 8px;">✅ Timer suspension while intermission is active</li>
+        <li style="margin-bottom: 8px;">✅ Direct skip to results (no timer resume)</li>
+      </ul>
+      <p><strong>Expected Flow:</strong></p>
+      <ol style="margin-left: 20px; margin-top: 8px;">
+        <li style="margin-bottom: 6px;">Click test button → Prompt card appears INSIDE TV</li>
+        <li style="margin-bottom: 6px;">Click "Yes" → Timer dims, full-screen overlay opens</li>
+        <li style="margin-bottom: 6px;">Play game → Win/Lose modal appears</li>
+        <li style="margin-bottom: 6px;">Click "Continue" → Overlay closes, results shown immediately</li>
+      </ol>
+    </div>
+    
+    <div class="test-section">
+      <h2>HOH Intermission Tests</h2>
+      <p>Test intermission flow for HOH competition ineligibility.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testHOHPreviousHOH()">Test: Previous HOH</button>
+        <button class="test-button" onclick="testHOHEvicted()">Test: Evicted Player</button>
+        <button class="test-button" onclick="testHOHDirectSkip()">Test: Click "No" (Direct Skip)</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Veto Intermission Tests</h2>
+      <p>Test intermission flow for Veto competition ineligibility.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testVetoNotSelected()">Test: Not Selected</button>
+        <button class="test-button" onclick="testVetoEvicted()">Test: Evicted Player</button>
+        <button class="test-button" onclick="testVetoDirectSkip()">Test: Click "No" (Direct Skip)</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Timer Bridge Tests</h2>
+      <p>Test timer suspension and restoration.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testTimerSuspend()">Test: Suspend Timer</button>
+        <button class="test-button" onclick="testTimerRestore()">Test: Restore Timer</button>
+        <button class="test-button" onclick="testSkipToResults('HOH')">Test: Skip to HOH Results</button>
+        <button class="test-button" onclick="testSkipToResults('Veto')">Test: Skip to Veto Results</button>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Module Tests</h2>
+      <p>Test individual modules in isolation.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testTvContainerResolution()">Test: TV Container Resolution</button>
+        <button class="test-button" onclick="testCardInTv()">Test: Card in TV</button>
+        <button class="test-button" onclick="testFullScreenOverlay()">Test: Full-Screen Overlay</button>
+        <button class="test-button danger" onclick="clearAll()">Clear All</button>
+      </div>
+    </div>
+    
+    <!-- Status bar -->
+    <div id="statusBar" class="status-bar" style="display: none;">
+      Status message will appear here
+    </div>
+    
+    <!-- Mock TV container -->
+    <div class="mock-tv" data-faux-tv>
+      <div id="tvTimer">00:35</div>
+      <h3>Faux TV Container</h3>
+      <p style="text-align: center; color: rgba(255, 255, 255, 0.6); font-size: 0.9rem;">
+        Intermission card will appear here (inside TV)
+      </p>
+    </div>
+    
+    <!-- Results log -->
+    <div class="results">
+      <h3>Test Results Log</h3>
+      <pre id="resultsLog">Ready to test...</pre>
+    </div>
+  </div>
+
+  <!-- Load dependencies -->
+  <script>
+    // Mock global objects
+    window.game = {
+      cfg: {
+        enableIntermissionGames: true
+      },
+      bus: {
+        listeners: {},
+        on(event, handler) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(handler);
+          log(`[EventBus] Registered listener for: ${event}`);
+        },
+        emit(event, data) {
+          log(`[EventBus] Emitted: ${event}`, data);
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(handler => handler(data));
+          }
+        }
+      },
+      timerPaused: false,
+      endAt: Date.now() + 35000,
+      pausedTimeRemaining: null,
+      phase: 'veto_comp', // Set current phase for testing
+      phaseTimeoutCallback: null // Will be set when test scenarios run
+    };
+    
+    window.TvStatus = {
+      set(message) {
+        log(`[TvStatus] ${message}`);
+        const statusBar = document.getElementById('statusBar');
+        statusBar.textContent = message;
+        statusBar.style.display = 'block';
+      }
+    };
+    
+    // Mock results functions
+    window.finishCompPhase = function() {
+      log('[finishCompPhase] HOH results called ✓');
+      alert('HOH Competition Results\n\nWinner: Player 3\nYour result: Did not participate (ineligible)');
+    };
+    
+    window.finishVetoPhase = function() {
+      log('[finishVetoPhase] Veto results called ✓');
+      alert('Veto Competition Results\n\nWinner: Player 5\nYour result: Did not participate (ineligible)');
+    };
+    
+    // Logging utility
+    function log(message, data) {
+      const resultsLog = document.getElementById('resultsLog');
+      const timestamp = new Date().toLocaleTimeString();
+      const dataStr = data ? '\n' + JSON.stringify(data, null, 2) : '';
+      resultsLog.textContent += `\n[${timestamp}] ${message}${dataStr}`;
+      resultsLog.scrollTop = resultsLog.scrollHeight;
+      console.log(message, data);
+    }
+    
+    function clearAll() {
+      const mockTv = document.querySelector('[data-faux-tv]');
+      const overlays = document.querySelectorAll('.tv-intermission-overlay, .intermission-fullscreen-overlay, .intermission-result-overlay');
+      overlays.forEach(el => el.remove());
+      
+      if (window.IntermissionCard?.removeActive) {
+        window.IntermissionCard.removeActive();
+      }
+      
+      if (window.IntermissionOverlay?.close) {
+        window.IntermissionOverlay.close();
+      }
+      
+      document.getElementById('statusBar').style.display = 'none';
+      document.getElementById('resultsLog').textContent = 'Cleared. Ready to test...';
+      
+      // Reset timer appearance
+      document.getElementById('tvTimer').style.opacity = '1';
+      
+      log('✓ Cleared all UI elements');
+    }
+    
+    // Test functions
+    function testHOHPreviousHOH() {
+      clearAll();
+      log('=== Test: HOH - Previous HOH ===');
+      if (!window.IntermissionFlow) {
+        log('❌ IntermissionFlow not loaded');
+        return;
+      }
+      // Set up phase timeout callback for HOH
+      window.game.phase = 'hoh';
+      window.game.phaseTimeoutCallback = window.finishCompPhase;
+      
+      window.IntermissionFlow.start({
+        compType: 'HOH',
+        reason: 'previous_hoh',
+        onComplete: () => {
+          log('✓ Intermission flow completed');
+        }
+      });
+    }
+    
+    function testHOHEvicted() {
+      clearAll();
+      log('=== Test: HOH - Evicted ===');
+      if (!window.IntermissionFlow) {
+        log('❌ IntermissionFlow not loaded');
+        return;
+      }
+      // Set up phase timeout callback for HOH
+      window.game.phase = 'hoh';
+      window.game.phaseTimeoutCallback = window.finishCompPhase;
+      
+      window.IntermissionFlow.start({
+        compType: 'HOH',
+        reason: 'evicted',
+        onComplete: () => {
+          log('✓ Intermission flow completed');
+        }
+      });
+    }
+    
+    function testHOHDirectSkip() {
+      clearAll();
+      log('=== Test: HOH - Direct Skip (Click No) ===');
+      log('Note: Click "No" button when it appears to test skip-to-results');
+      if (!window.IntermissionFlow) {
+        log('❌ IntermissionFlow not loaded');
+        return;
+      }
+      // Set up phase timeout callback for HOH
+      window.game.phase = 'hoh';
+      window.game.phaseTimeoutCallback = window.finishCompPhase;
+      
+      window.IntermissionFlow.start({
+        compType: 'HOH',
+        reason: 'previous_hoh',
+        onComplete: () => {
+          log('✓ Intermission flow skipped');
+        }
+      });
+    }
+    
+    function testVetoNotSelected() {
+      clearAll();
+      log('=== Test: Veto - Not Selected ===');
+      if (!window.IntermissionFlow) {
+        log('❌ IntermissionFlow not loaded');
+        return;
+      }
+      // Set up phase timeout callback for Veto
+      window.game.phase = 'veto_comp';
+      window.game.phaseTimeoutCallback = window.finishVetoPhase;
+      
+      window.IntermissionFlow.start({
+        compType: 'Veto',
+        reason: 'not_selected',
+        onComplete: () => {
+          log('✓ Intermission flow completed');
+        }
+      });
+    }
+    
+    function testVetoEvicted() {
+      clearAll();
+      log('=== Test: Veto - Evicted ===');
+      if (!window.IntermissionFlow) {
+        log('❌ IntermissionFlow not loaded');
+        return;
+      }
+      // Set up phase timeout callback for Veto
+      window.game.phase = 'veto_comp';
+      window.game.phaseTimeoutCallback = window.finishVetoPhase;
+      
+      window.IntermissionFlow.start({
+        compType: 'Veto',
+        reason: 'evicted',
+        onComplete: () => {
+          log('✓ Intermission flow completed');
+        }
+      });
+    }
+    
+    function testVetoDirectSkip() {
+      clearAll();
+      log('=== Test: Veto - Direct Skip (Click No) ===');
+      log('Note: Click "No" button when it appears to test skip-to-results');
+      if (!window.IntermissionFlow) {
+        log('❌ IntermissionFlow not loaded');
+        return;
+      }
+      // Set up phase timeout callback for Veto
+      window.game.phase = 'veto_comp';
+      window.game.phaseTimeoutCallback = window.finishVetoPhase;
+      
+      window.IntermissionFlow.start({
+        compType: 'Veto',
+        reason: 'not_selected',
+        onComplete: () => {
+          log('✓ Intermission flow skipped');
+        }
+      });
+    }
+    
+    function testTimerSuspend() {
+      log('=== Test: Timer Suspend ===');
+      if (window.game?.bus) {
+        window.game.bus.emit('phase:timer:suspend', { reason: 'test' });
+        log('✓ Timer suspend event emitted (check timer should be dimmed)');
+      } else {
+        log('❌ Game bus not available');
+      }
+    }
+    
+    function testTimerRestore() {
+      log('=== Test: Timer Restore ===');
+      if (window.PhaseTimerBridge?.manualResume) {
+        window.PhaseTimerBridge.manualResume();
+        log('✓ Timer manually resumed (check timer should be visible)');
+      } else {
+        log('❌ PhaseTimerBridge not available');
+      }
+    }
+    
+    function testSkipToResults(compType) {
+      log(`=== Test: Skip to ${compType} Results ===`);
+      if (window.game?.bus) {
+        window.game.bus.emit('phase:timer:skip-to-results', { 
+          reason: 'test', 
+          compType 
+        });
+        log(`✓ Skip-to-results event emitted for ${compType}`);
+      } else {
+        log('❌ Game bus not available');
+      }
+    }
+    
+    function testTvContainerResolution() {
+      clearAll();
+      log('=== Test: TV Container Resolution ===');
+      if (!window.TvContainer) {
+        log('❌ TvContainer module not loaded');
+        return;
+      }
+      const container = window.TvContainer.getTvContainer();
+      log(`✓ Resolved container: ${container.tagName}${container.id ? '#' + container.id : ''}${container.className ? '.' + container.className.split(' ')[0] : ''}`);
+      log(`  Connected: ${container.isConnected}`);
+      log(`  Has [data-faux-tv]: ${container.hasAttribute('data-faux-tv')}`);
+    }
+    
+    function testCardInTv() {
+      clearAll();
+      log('=== Test: Card in TV ===');
+      if (!window.IntermissionCard) {
+        log('❌ IntermissionCard module not loaded');
+        return;
+      }
+      window.IntermissionCard.showInTv({
+        compType: 'HOH',
+        gameType: 'tictactoe',
+        onYes: () => {
+          log('✓ Yes button clicked');
+          clearAll();
+        },
+        onNo: () => {
+          log('✓ No button clicked');
+          clearAll();
+        }
+      });
+      log('✓ Card should appear INSIDE the TV (not below)');
+    }
+    
+    function testFullScreenOverlay() {
+      clearAll();
+      log('=== Test: Full-Screen Overlay ===');
+      if (!window.IntermissionOverlay) {
+        log('❌ IntermissionOverlay module not loaded');
+        return;
+      }
+      const controller = window.IntermissionOverlay.show();
+      const content = controller.getContentMount();
+      
+      content.innerHTML = `
+        <div style="background: rgba(30, 41, 59, 0.95); border: 2px solid #60a5fa; border-radius: 16px; padding: 32px; text-align: center;">
+          <h2 style="color: #60a5fa; margin-bottom: 16px;">Full-Screen Overlay Test</h2>
+          <p style="color: white; margin-bottom: 24px;">This overlay should cover the entire screen with a dimmed background.</p>
+          <button class="test-button" onclick="window.IntermissionOverlay.close(); log('✓ Overlay closed');">
+            Close Overlay
+          </button>
+        </div>
+      `;
+      
+      log('✓ Full-screen overlay shown');
+    }
+  </script>
+  
+  <!-- Load modules -->
+  <script src="js/tv-container.js"></script>
+  <script src="js/ui/intermissionCard.js"></script>
+  <script src="js/ui/intermissionOverlay.js"></script>
+  <script src="js/flow/phaseTimerBridge.js"></script>
+  <script src="js/minigames/tictactoe-intermission.js"></script>
+  <script src="js/minigames/dotsandboxes-intermission.js"></script>
+  <script src="js/intermission-flow.js"></script>
+  
+  <script>
+    // Verify all modules loaded
+    window.addEventListener('load', () => {
+      log('=== Module Load Status ===');
+      log(`TvContainer: ${window.TvContainer ? '✓' : '✗'}`);
+      log(`IntermissionCard: ${window.IntermissionCard ? '✓' : '✗'}`);
+      log(`IntermissionOverlay: ${window.IntermissionOverlay ? '✓' : '✗'}`);
+      log(`PhaseTimerBridge: ${window.PhaseTimerBridge ? '✓' : '✗'}`);
+      log(`TicTacToeIntermission: ${window.TicTacToeIntermission ? '✓' : '✗'}`);
+      log(`DotsAndBoxesIntermission: ${window.DotsAndBoxesIntermission ? '✓' : '✗'}`);
+      log(`IntermissionFlow: ${window.IntermissionFlow ? '✓' : '✗'}`);
+      log('=== Ready to test! ===');
+    });
+  </script>
+</body>
+</html>

@@ -2056,6 +2056,8 @@ header.innerHTML = `
     game.endAt=Date.now()+seconds*1000; const total=seconds*1000;
     // Expose a canonical phase end pointer used by other modules (e.g., veto auto-submit)
     game.phaseEndsAt = game.endAt;
+    // Store the timeout callback for external access (e.g., PhaseTimerBridge)
+    game.phaseTimeoutCallback = onTimeout;
     // Track pause state
     game.timerPaused = false;
     game.pausedTimeRemaining = null;
