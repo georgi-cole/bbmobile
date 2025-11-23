@@ -1,0 +1,482 @@
+/* mobileRoster.css
+ * Mobile-optimized roster view with active grid and evicted drawer
+ * Features:
+ * - Dynamic grid layout (max 4 columns portrait, 5 landscape)
+ * - Centered, auto-reflowing tiles as players are evicted
+ * - Collapsible evicted players panel
+ * - Responsive breakpoints and orientation support
+ * - Accessibility-friendly (keyboard nav, ARIA labels)
+ */
+
+/* ============================
+   Container & Layout Structure
+   ============================ */
+
+.mobile-roster-container {
+  display: none; /* Hidden by default, shown when mobile mode active */
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Activate mobile roster when body has mobile-roster-active attribute */
+body[data-mobile-roster-active="true"] .mobile-roster-container {
+  display: flex;
+}
+
+/* Hide default roster when mobile roster is active */
+body[data-mobile-roster-active="true"] #rosterBar {
+  display: none;
+}
+
+/* ============================
+   Active Players Grid
+   ============================ */
+
+.mobile-roster-active-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
+  gap: var(--mobile-roster-gap, 8px);
+  justify-content: center;
+  align-items: start;
+  max-width: min(100%, 520px);
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Grid tiles */
+.mobile-roster-tile {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1 / 1;
+  min-width: 56px; /* Minimum tap target size */
+  max-width: 100px;
+  
+  /* Theme-aware gradient background */
+  background: linear-gradient(145deg, var(--roster-gradient-1, #182636), var(--roster-gradient-2, #101a28));
+  border: 2px solid var(--roster-border, #2d4258);
+  border-radius: 12px;
+  padding: 8px 6px 6px;
+  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  
+  /* Interactions */
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.25, 0.9, 0.25, 1), box-shadow 0.3s, border-color 0.3s;
+  box-shadow: var(--roster-glow, 0 0 20px rgba(0, 0, 0, 0.4));
+  
+  /* Accessibility */
+  outline: none;
+}
+
+.mobile-roster-tile:hover,
+.mobile-roster-tile:focus-visible {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: var(--roster-hover-glow, 0 0 30px rgba(48, 80, 116, 0.6), 0 0 60px rgba(48, 80, 116, 0.3)),
+              0 12px 28px -8px rgba(0, 0, 0, 0.7);
+  border-color: var(--accent, #305074);
+}
+
+.mobile-roster-tile:focus-visible {
+  outline: 2px solid var(--accent, #83bfff);
+  outline-offset: 2px;
+}
+
+.mobile-roster-tile:active {
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* Avatar container */
+.mobile-roster-avatar-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.75) inset;
+  border: 1px solid var(--line);
+}
+
+.mobile-roster-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.3s, transform 0.3s;
+}
+
+.mobile-roster-tile:hover .mobile-roster-avatar {
+  filter: brightness(1.1) saturate(1.1);
+  transform: scale(1.05);
+}
+
+/* Name label */
+.mobile-roster-name {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--ink);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  line-height: 1.2;
+}
+
+/* Badge indicators (HOH, NOM, etc.) */
+.mobile-roster-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 2px solid var(--card);
+  z-index: 1;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.mobile-roster-badge.hoh {
+  background: linear-gradient(135deg, #ffb142, #ff8c42);
+  color: #fff;
+}
+
+.mobile-roster-badge.nom {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: #fff;
+}
+
+.mobile-roster-badge.pov {
+  background: linear-gradient(135deg, #f1c40f, #d4af37);
+  color: #333;
+}
+
+/* ============================
+   Evicted Players Panel
+   ============================ */
+
+.mobile-roster-evicted-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(100%, 520px);
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Toggle button */
+.mobile-roster-evicted-toggle {
+  align-self: center;
+  padding: 8px 18px;
+  background: var(--card-2);
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  outline: none;
+}
+
+.mobile-roster-evicted-toggle:hover,
+.mobile-roster-evicted-toggle:focus-visible {
+  background: var(--card);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-roster-evicted-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mobile-roster-evicted-toggle[aria-expanded="true"] .toggle-icon {
+  transform: rotate(180deg);
+}
+
+.mobile-roster-evicted-toggle .toggle-icon {
+  font-size: 0.9rem;
+  transition: transform 0.3s;
+}
+
+.mobile-roster-evicted-toggle .evicted-count {
+  background: var(--primary-2);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  color: var(--muted-2);
+}
+
+/* Evicted panel */
+.mobile-roster-evicted-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.25, 0.9, 0.25, 1), opacity 0.3s;
+  opacity: 0;
+}
+
+.mobile-roster-evicted-panel.open {
+  max-height: 400px;
+  opacity: 1;
+}
+
+/* Evicted grid - horizontal scrollable row */
+.mobile-roster-evicted-grid {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 8px;
+  background: var(--card-2);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar but keep functionality */
+.mobile-roster-evicted-grid::-webkit-scrollbar {
+  height: 4px;
+}
+
+.mobile-roster-evicted-grid::-webkit-scrollbar-track {
+  background: var(--line);
+  border-radius: 2px;
+}
+
+.mobile-roster-evicted-grid::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 2px;
+}
+
+/* Evicted tile - dimmed version */
+.mobile-roster-tile.evicted {
+  opacity: 0.65;
+  filter: grayscale(0.8);
+  flex: 0 0 auto;
+  width: 80px;
+  scroll-snap-align: start;
+}
+
+.mobile-roster-tile.evicted .mobile-roster-avatar {
+  filter: grayscale(1) brightness(0.6);
+}
+
+.mobile-roster-tile.evicted:hover .mobile-roster-avatar {
+  filter: grayscale(0.9) brightness(0.7);
+}
+
+/* Evicted badge */
+.mobile-roster-badge.evict {
+  background: linear-gradient(135deg, #555, #333);
+  color: #fff;
+  font-size: 0.65rem;
+  width: 32px;
+  height: 32px;
+  top: -8px;
+  right: -8px;
+}
+
+/* ============================
+   Faux TV Adjustments
+   ============================ */
+
+/* When mobile roster is active, adjust faux TV positioning */
+body[data-mobile-roster-active="true"] .tv {
+  margin-top: 12px;
+}
+
+/* Faux TV player spotlight */
+.mobile-roster-faux-tv-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 10;
+  padding: 20px;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.mobile-roster-spotlight-avatar {
+  width: min(200px, 40vw);
+  height: min(200px, 40vw);
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid var(--accent);
+  box-shadow: 0 0 40px var(--accent), 0 8px 32px rgba(0, 0, 0, 0.5);
+  margin-bottom: 16px;
+}
+
+.mobile-roster-spotlight-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.mobile-roster-spotlight-status {
+  font-size: 0.9rem;
+  color: var(--muted-2);
+  text-align: center;
+}
+
+.mobile-roster-spotlight-status.evicted {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+/* ============================
+   Responsive Breakpoints
+   ============================ */
+
+/* Portrait mobile (primary breakpoint) */
+@media (max-width: 520px) {
+  .mobile-roster-active-grid {
+    grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
+    gap: 6px;
+  }
+  
+  .mobile-roster-tile {
+    min-width: 60px;
+    padding: 6px 4px 4px;
+  }
+  
+  .mobile-roster-name {
+    font-size: 0.6rem;
+  }
+  
+  .mobile-roster-badge {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+    top: -4px;
+    right: -4px;
+  }
+}
+
+/* Landscape orientation */
+@media (max-width: 896px) and (orientation: landscape) {
+  .mobile-roster-container {
+    flex-direction: row;
+    gap: 20px;
+    padding: 8px 16px;
+  }
+  
+  .mobile-roster-active-grid {
+    max-width: 60%;
+  }
+  
+  .mobile-roster-evicted-section {
+    flex: 1;
+    max-width: 35%;
+  }
+  
+  /* Allow 5 columns in landscape if space permits */
+  .mobile-roster-active-grid[data-landscape-cols="5"] {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  
+  .mobile-roster-evicted-toggle {
+    align-self: flex-start;
+  }
+  
+  /* Faux TV adjusts to right side in landscape */
+  body[data-mobile-roster-active="true"][data-orientation="landscape"] .tv {
+    max-width: 35%;
+    margin-left: auto;
+  }
+}
+
+/* Very small mobile screens */
+@media (max-width: 360px) {
+  .mobile-roster-tile {
+    min-width: 56px;
+  }
+  
+  .mobile-roster-name {
+    font-size: 0.55rem;
+  }
+  
+  .mobile-roster-badge {
+    width: 22px;
+    height: 22px;
+    font-size: 0.7rem;
+  }
+}
+
+/* Tablet and larger - hide mobile roster, use default */
+@media (min-width: 769px) {
+  body[data-mobile-roster-active="true"] .mobile-roster-container {
+    display: none;
+  }
+  
+  body[data-mobile-roster-active="true"] #rosterBar {
+    display: flex;
+  }
+}
+
+/* ============================
+   Accessibility Enhancements
+   ============================ */
+
+/* High contrast focus for keyboard navigation */
+@media (prefers-contrast: high) {
+  .mobile-roster-tile:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-roster-tile,
+  .mobile-roster-avatar,
+  .mobile-roster-evicted-panel,
+  .mobile-roster-faux-tv-overlay {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Screen reader only text */
+.mobile-roster-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

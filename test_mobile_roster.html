@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Roster Test</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/mobileRoster.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .test-container {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--line);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 12px 0;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    
+    .test-btn {
+      padding: 8px 16px;
+      background: var(--primary-2);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover {
+      background: var(--primary-3);
+      transform: translateY(-1px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--card-2);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--muted-2);
+    }
+    
+    .tv {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--card);
+      border-radius: 12px;
+      border: 2px solid var(--line);
+      min-height: 300px;
+      position: relative;
+    }
+    
+    .tvViewport {
+      position: relative;
+      min-height: 250px;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    #tvNow {
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="test-container">
+    <div class="test-header">
+      <h1>📱 Mobile Roster Test</h1>
+      <p style="margin: 0 0 8px 0; color: var(--muted-2); font-size: 0.875rem;">
+        Interactive test for the mobile roster view with dynamic grid layout and evicted players panel.
+      </p>
+      
+      <div class="test-controls">
+        <button class="test-btn" onclick="testEvictPlayer()">Evict Random Player</button>
+        <button class="test-btn" onclick="testRefresh()">Refresh View</button>
+        <button class="test-btn" onclick="testResetPlayers()">Reset to 16</button>
+        <button class="test-btn" onclick="testSet12Players()">Set 12 Players</button>
+        <button class="test-btn" onclick="testToggleOrientation()">Toggle Orientation</button>
+      </div>
+      
+      <div class="test-info" id="testInfo">
+        Active: <span id="activeCount">0</span> | 
+        Evicted: <span id="evictedCount">0</span> | 
+        Orientation: <span id="orientationInfo">portrait</span>
+      </div>
+    </div>
+    
+    <!-- Roster Bar (hidden when mobile roster active) -->
+    <div id="rosterBar" style="padding: 12px; background: var(--card-2); border-radius: 8px; margin-bottom: 16px; text-align: center; color: var(--muted);">
+      Default roster bar (hidden in mobile mode)
+    </div>
+    
+    <!-- Mobile Roster Container (injected by JS) -->
+    
+    <!-- Faux TV -->
+    <div class="tv">
+      <h2 style="margin: 0 0 12px 0; font-size: 1.1rem;">Faux TV</h2>
+      <div class="tvViewport">
+        <div id="tvNow">Click a player tile to spotlight them here</div>
+        <div id="tvOverlay"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load mobile roster module -->
+  <script src="js/ui/mobileRoster.js"></script>
+  
+  <script>
+    // Mock game state and event bus
+    window.game = window.game || {};
+    window.g = window.g || {};
+    
+    // Event bus
+    window.bbGameBus = {
+      listeners: new Map(),
+      on(event, callback) {
+        if (!this.listeners.has(event)) {
+          this.listeners.set(event, []);
+        }
+        this.listeners.get(event).push(callback);
+      },
+      emit(event, data) {
+        if (!this.listeners.has(event)) return;
+        this.listeners.get(event).forEach(cb => cb(data));
+      }
+    };
+    
+    // Mock avatar resolver
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    // Generate mock players
+    const PLAYER_NAMES = [
+      'Alice', 'Bob', 'Carol', 'Dave', 'Emma', 'Frank', 'Grace', 'Henry',
+      'Iris', 'Jack', 'Kate', 'Leo', 'Mia', 'Noah', 'Olivia', 'Paul'
+    ];
+    
+    function createMockPlayers(count) {
+      const players = [];
+      for (let i = 0; i < count; i++) {
+        players.push({
+          id: i + 1,
+          name: PLAYER_NAMES[i] || `Player ${i + 1}`,
+          evicted: false,
+          hoh: i === 0, // First player is HOH
+          nominated: i === 1 || i === 2, // Players 1 and 2 nominated
+          pov: i === 3, // Player 3 has POV
+        });
+      }
+      return players;
+    }
+    
+    // Initialize with 16 players
+    window.game.players = createMockPlayers(16);
+    
+    // Initialize mobile roster
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Initializing mobile roster...');
+      window.MobileRoster.init();
+      updateTestInfo();
+    });
+    
+    // Test functions
+    function testEvictPlayer() {
+      const activePlayers = window.game.players.filter(p => !p.evicted);
+      if (activePlayers.length === 0) {
+        alert('No active players left!');
+        return;
+      }
+      
+      // Pick random active player
+      const randomIndex = Math.floor(Math.random() * activePlayers.length);
+      const playerToEvict = activePlayers[randomIndex];
+      
+      // Mark as evicted
+      playerToEvict.evicted = true;
+      playerToEvict.evictedAt = Date.now();
+      
+      console.log(`Evicted: ${playerToEvict.name}`);
+      
+      // Emit event
+      window.bbGameBus.emit('player:evicted', {
+        playerId: playerToEvict.id,
+        week: Math.floor(Math.random() * 10) + 1
+      });
+      
+      updateTestInfo();
+    }
+    
+    function testRefresh() {
+      console.log('Refreshing mobile roster...');
+      window.MobileRoster.refresh();
+      updateTestInfo();
+    }
+    
+    function testResetPlayers() {
+      window.game.players = createMockPlayers(16);
+      console.log('Reset to 16 players');
+      window.bbGameBus.emit('players:update', { players: window.game.players });
+      updateTestInfo();
+    }
+    
+    function testSet12Players() {
+      window.game.players = createMockPlayers(12);
+      console.log('Set to 12 players');
+      window.bbGameBus.emit('players:update', { players: window.game.players });
+      updateTestInfo();
+    }
+    
+    function testToggleOrientation() {
+      // This is a test - in reality orientation is detected automatically
+      // For testing, we can resize the window or simulate
+      const info = document.getElementById('orientationInfo');
+      const currentOrientation = info.textContent;
+      alert(`Orientation is automatically detected. Current: ${currentOrientation}\n\nResize your browser window or rotate your device to test different orientations.`);
+    }
+    
+    function updateTestInfo() {
+      const active = window.game.players.filter(p => !p.evicted).length;
+      const evicted = window.game.players.filter(p => p.evicted).length;
+      
+      document.getElementById('activeCount').textContent = active;
+      document.getElementById('evictedCount').textContent = evicted;
+      
+      // Update orientation
+      const mql = window.matchMedia('(orientation: landscape)');
+      const orientation = mql.matches ? 'landscape' : 'portrait';
+      document.getElementById('orientationInfo').textContent = orientation;
+    }
+    
+    // Update orientation on resize
+    window.addEventListener('resize', () => {
+      setTimeout(updateTestInfo, 100);
+    });
+  </script>
+  
+</body>
+</html>
