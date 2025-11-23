@@ -75,6 +75,9 @@
 
   <div id="results"></div>
 
+  <!-- Load the progression bridge to test getPlayerState function used by Overview/Leaderboard -->
+  <script src="./js/progression-bridge.js"></script>
+
   <script type="module">
     import * as progressionCore from './src/progression/dist/core.js';
 
@@ -100,6 +103,9 @@
         await progressionCore.reset();
         await progressionCore.initialize();
         
+        // Also initialize the bridge
+        await window.Progression.initialize();
+        
         // Test 1: Verify computeLevel is exported
         results.push({
           name: 'computeLevel function is exported',
@@ -118,79 +124,73 @@
             : 'DEFAULT_LEVEL_THRESHOLDS is NOT available'
         });
         
-        // Test 3: Create events for a test player
-        const testPlayerId = 'test-player-1';
+        // Test 3: Create events for multiple players to test aggregate vs per-player
+        const player1Id = 'test-player-1';
+        const player2Id = 'test-player-2';
         
-        // Record multiple events to get meaningful XP
-        await progressionCore.recordEvent('HOH_WIN', 150, { playerId: testPlayerId, season: 1, week: 1 });
-        await progressionCore.recordEvent('POV_WIN', 125, { playerId: testPlayerId, season: 1, week: 2 });
-        await progressionCore.recordEvent('COMP_WIN', 100, { playerId: testPlayerId, season: 1, week: 3 });
+        // Player 1 gets 375 XP (should be Level 3)
+        await progressionCore.recordEvent('HOH_WIN', 150, { playerId: player1Id, season: 1, week: 1 });
+        await progressionCore.recordEvent('POV_WIN', 125, { playerId: player1Id, season: 1, week: 2 });
+        await progressionCore.recordEvent('COMP_WIN', 100, { playerId: player1Id, season: 1, week: 3 });
         
-        // Test 4: Get aggregate state (Overview tab method)
+        // Player 2 gets 550 XP (should be Level 4)
+        await progressionCore.recordEvent('HOH_WIN', 150, { playerId: player2Id, season: 1, week: 1 });
+        await progressionCore.recordEvent('POV_WIN', 125, { playerId: player2Id, season: 1, week: 2 });
+        await progressionCore.recordEvent('COMP_WIN', 100, { playerId: player2Id, season: 1, week: 3 });
+        await progressionCore.recordEvent('SURVIVED_BLOCK', 75, { playerId: player2Id, season: 1, week: 4 });
+        await progressionCore.recordEvent('CLEAN_WEEK', 100, { playerId: player2Id, season: 1, week: 5 });
+        
+        // Test 4: Verify aggregate state (ALL players combined)
         const aggregateState = await progressionCore.getCurrentState();
+        const expectedAggregateXP = 375 + 550; // 925 XP total
         
         results.push({
-          name: 'Aggregate state calculation',
-          pass: true,
-          message: `Total XP: ${aggregateState.totalXP}, Level: ${aggregateState.level}, Progress: ${aggregateState.progressPercent}%`
+          name: 'Aggregate state calculation (all players)',
+          pass: aggregateState.totalXP === expectedAggregateXP,
+          message: `Total XP: ${aggregateState.totalXP} (expected ${expectedAggregateXP}), Level: ${aggregateState.level}`
         });
         
-        // Test 5: Calculate player state using fallback method (Leaderboard method)
-        const allEvents = await progressionCore.getEvents();
-        const playerEvents = allEvents.filter(e => e.meta?.playerId === testPlayerId);
-        const totalXP = playerEvents.reduce((sum, e) => sum + (e.amount || 0), 0);
-        
-        let fallbackState;
-        if (progressionCore.computeLevel) {
-          const { level, nextLevelXP, currentLevelXP } = progressionCore.computeLevel(
-            totalXP, 
-            progressionCore.DEFAULT_LEVEL_THRESHOLDS
-          );
-          const progressPercent = currentLevelXP > 0 
-            ? Math.round(((totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100)
-            : 0;
-          
-          fallbackState = { totalXP, level, nextLevelXP, currentLevelXP, progressPercent };
-        } else {
-          fallbackState = { totalXP, level: 0, nextLevelXP: 0, currentLevelXP: 0, progressPercent: 0 };
-        }
+        // Test 5: Test player-specific state via bridge (mimics Leaderboard/Overview)
+        const player1State = await window.Progression.getPlayerState(player1Id);
+        const player2State = await window.Progression.getPlayerState(player2Id);
         
         results.push({
-          name: 'Fallback player state calculation',
-          pass: true,
-          message: `Total XP: ${fallbackState.totalXP}, Level: ${fallbackState.level}, Progress: ${fallbackState.progressPercent}%`
-        });
-        
-        // Test 6: Verify consistency
-        const levelsMatch = aggregateState.level === fallbackState.level;
-        const xpMatches = aggregateState.totalXP === fallbackState.totalXP;
-        const progressMatches = Math.abs(aggregateState.progressPercent - fallbackState.progressPercent) <= 1; // Allow 1% rounding difference
-        
-        results.push({
-          name: 'Level consistency check',
-          pass: levelsMatch,
-          message: levelsMatch 
-            ? `✓ Levels match: ${aggregateState.level}` 
-            : `✗ Levels DO NOT match: Aggregate=${aggregateState.level}, Fallback=${fallbackState.level}`
+          name: 'Player 1 state (375 XP)',
+          pass: player1State.totalXP === 375 && player1State.level === 3,
+          message: `Total XP: ${player1State.totalXP} (expected 375), Level: ${player1State.level} (expected 3)`
         });
         
         results.push({
-          name: 'XP consistency check',
-          pass: xpMatches,
-          message: xpMatches 
-            ? `✓ XP matches: ${aggregateState.totalXP}` 
-            : `✗ XP does NOT match: Aggregate=${aggregateState.totalXP}, Fallback=${fallbackState.totalXP}`
+          name: 'Player 2 state (550 XP)',
+          pass: player2State.totalXP === 550 && player2State.level === 4,
+          message: `Total XP: ${player2State.totalXP} (expected 550), Level: ${player2State.level} (expected 4)`
         });
         
+        // Test 6: Verify progress percentage is clamped [0, 100]
+        // Test with edge case: player at exact level threshold
+        await progressionCore.reset();
+        await progressionCore.initialize();
+        const edgePlayerId = 'edge-player';
+        await progressionCore.recordEvent('COMP_WIN', 250, { playerId: edgePlayerId, season: 1, week: 1 }); // Exactly at Level 3
+        const edgeState = await window.Progression.getPlayerState(edgePlayerId);
+        
+        const progressInBounds = edgeState.progressPercent >= 0 && edgeState.progressPercent <= 100;
         results.push({
-          name: 'Progress consistency check',
-          pass: progressMatches,
-          message: progressMatches 
-            ? `✓ Progress matches: ~${aggregateState.progressPercent}%` 
-            : `✗ Progress does NOT match: Aggregate=${aggregateState.progressPercent}%, Fallback=${fallbackState.progressPercent}%`
+          name: 'Progress percentage bounds check',
+          pass: progressInBounds,
+          message: `Progress: ${edgeState.progressPercent}% (must be 0-100)`
         });
         
-        // Test 7: Test with different XP amounts to verify threshold calculations
+        // Test 7: Verify remaining XP calculation
+        const remaining = edgeState.nextLevelXP - edgeState.totalXP;
+        const remainingIsValid = remaining >= 0;
+        results.push({
+          name: 'Remaining XP non-negative check',
+          pass: remainingIsValid,
+          message: `Remaining: ${remaining} XP (at ${edgeState.totalXP}/${edgeState.nextLevelXP})`
+        });
+        
+        // Test 8: Test with different XP amounts to verify threshold calculations
         const testCases = [
           { xp: 0, expectedLevel: 1 },
           { xp: 100, expectedLevel: 2 },
@@ -198,6 +198,7 @@
           { xp: 500, expectedLevel: 4 },
           { xp: 850, expectedLevel: 5 },
           { xp: 1300, expectedLevel: 6 },
+          { xp: 375, expectedLevel: 3 }, // Between 250 and 500
         ];
         
         for (const testCase of testCases) {
