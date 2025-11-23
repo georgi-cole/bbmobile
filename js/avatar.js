@@ -183,6 +183,11 @@
     const candidates = [];
     const extensions = ['png', 'jpg', 'jpeg', 'webp']; // Multi-extension support
     
+    // Helper to convert string to TitleCase
+    function toTitleCase(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
+    
     // Helper to generate case variants
     function generateNameVariants(name) {
       if (!name || name === String(playerId)) return [];
@@ -197,7 +202,7 @@
       if (lower !== name) variants.push(lower);
       
       // 3. TitleCase (first letter uppercase, rest lowercase)
-      const titleCase = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+      const titleCase = toTitleCase(name);
       if (titleCase !== name && titleCase !== lower) {
         variants.push(titleCase);
       }
@@ -212,7 +217,7 @@
           variants.push(hyphenatedLower);
         }
         
-        const hyphenatedTitle = hyphenated.charAt(0).toUpperCase() + hyphenated.slice(1).toLowerCase();
+        const hyphenatedTitle = toTitleCase(hyphenated);
         if (hyphenatedTitle !== hyphenated && hyphenatedTitle !== hyphenatedLower) {
           variants.push(hyphenatedTitle);
         }

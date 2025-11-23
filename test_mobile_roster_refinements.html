@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Roster Refinements Test</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/mobileRoster.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .test-header {
+      padding: 16px;
+      background: var(--card);
+      border-bottom: 2px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .test-header h1 {
+      margin: 0 0 8px 0;
+      font-size: 1.3rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    
+    .test-btn {
+      padding: 8px 16px;
+      background: var(--primary-2);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover {
+      background: var(--primary-3);
+      transform: translateY(-1px);
+    }
+    
+    .test-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 10px;
+      background: var(--card-2);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: var(--muted-2);
+      line-height: 1.5;
+    }
+    
+    .test-info strong {
+      color: var(--ink);
+    }
+    
+    /* Mock roster bar */
+    #rosterBar {
+      padding: 16px;
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+    }
+    
+    /* Mock TV structure */
+    .tv {
+      margin: 16px 12px;
+      background: var(--card);
+      border-radius: 12px;
+      border: 2px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .tvViewport {
+      position: relative;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    #tvNow {
+      position: relative;
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    
+    #tvNow h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    
+    #tvNow p {
+      margin: 0;
+      opacity: 0.8;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    
+    .log-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      background: rgba(0, 0, 0, 0.95);
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      overflow-y: auto;
+      padding: 8px;
+      z-index: 9999;
+      transform: translateY(100%);
+      transition: transform 0.3s;
+    }
+    
+    .log-panel.visible {
+      transform: translateY(0);
+    }
+    
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(0, 255, 0, 0.1);
+    }
+    
+    .log-entry.info { color: #0ff; }
+    .log-entry.warn { color: #ff0; }
+    .log-entry.error { color: #f00; }
+  </style>
+</head>
+<body>
+  <!-- Test Header -->
+  <div class="test-header">
+    <h1>🧪 Mobile Roster Refinements Test</h1>
+    <div class="test-info">
+      <strong>Testing:</strong> Avatar resolution, TV sizing, chip footer, evicted tiles, profile popover, activation logic
+    </div>
+    <div class="test-controls">
+      <button class="test-btn" onclick="testActivation()">🔄 Toggle Activation</button>
+      <button class="test-btn" onclick="testEviction()">👻 Evict Random Player</button>
+      <button class="test-btn" onclick="testAddPlayer()">➕ Add Player</button>
+      <button class="test-btn" onclick="testAvatarResolution()">🖼️ Test Avatar Resolution</button>
+      <button class="test-btn" onclick="testTVSizing()">📺 Log TV Sizing</button>
+      <button class="test-btn" onclick="toggleLog()">📋 Toggle Log</button>
+      <button class="test-btn" onclick="testForceFlag()">🔧 Toggle Force Flag</button>
+    </div>
+    <div class="test-info" id="statusInfo">
+      <strong>Status:</strong> Initializing...
+    </div>
+  </div>
+  
+  <!-- Mock Roster Bar (hidden when mobile roster active) -->
+  <div id="rosterBar">
+    <h2>Desktop Roster (Hidden on Mobile)</h2>
+  </div>
+  
+  <!-- Mock TV with overlay -->
+  <div class="tv">
+    <div class="tvViewport">
+      <div id="tvNow">
+        <h2>Faux TV</h2>
+        <p>Player spotlight and footer will appear here</p>
+      </div>
+      <div id="tvOverlay"></div>
+    </div>
+  </div>
+  
+  <!-- Log Panel -->
+  <div class="log-panel" id="logPanel">
+    <div class="log-entry info">[INFO] Log panel ready</div>
+  </div>
+  
+  <!-- Scripts -->
+  <script>
+    // Mock event bus if not already loaded
+    if (!window.bbGameBus) {
+      window.bbGameBus = {
+        on: function(event, handler) {
+          console.log('[EventBus] Registered:', event);
+        }
+      };
+    }
+  </script>
+  <script src="js/avatar.js"></script>
+  <script src="js/ui/mobileRoster.js"></script>
+  
+  <script>
+    // Mock game state
+    window.game = {
+      season: 1,
+      week: 3,
+      phase: 'social',
+      cfg: {},
+      players: []
+    };
+    
+
+    
+    // Initialize test players
+    const playerNames = [
+      'Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank',
+      'Grace', 'Henry', 'Ivy', 'Jack', 'Kate', 'Leo'
+    ];
+    
+    let playerIdCounter = 0;
+    
+    function createPlayer(name, evicted = false) {
+      const player = {
+        id: playerIdCounter++,
+        name: name,
+        age: 20 + Math.floor(Math.random() * 20),
+        gender: Math.random() > 0.5 ? 'Male' : 'Female',
+        location: ['LA', 'NYC', 'Chicago', 'Miami', 'Seattle'][Math.floor(Math.random() * 5)],
+        occupation: ['Teacher', 'Engineer', 'Artist', 'Doctor', 'Chef'][Math.floor(Math.random() * 5)],
+        motto: `${name}'s inspiring motto`,
+        funFact: `${name} has a fun fact!`,
+        evicted: evicted,
+        hoh: false,
+        nominated: false,
+        pov: false,
+        allies: [],
+        enemies: []
+      };
+      
+      if (evicted) {
+        player.evictedAt = Math.floor(Math.random() * 5) + 1;
+        player.evictionOrder = Math.floor(Math.random() * 3) + 1;
+      }
+      
+      return player;
+    }
+    
+    // Initialize with 8 active players and 2 evicted
+    for (let i = 0; i < 8; i++) {
+      window.game.players.push(createPlayer(playerNames[i], false));
+    }
+    for (let i = 8; i < 10; i++) {
+      window.game.players.push(createPlayer(playerNames[i], true));
+    }
+    
+    // Randomly assign HOH and nominee
+    if (window.game.players.length > 0) {
+      window.game.players[0].hoh = true;
+      if (window.game.players.length > 2) {
+        window.game.players[2].nominated = true;
+      }
+    }
+    
+    // Logging utility
+    function log(message, type = 'info') {
+      const panel = document.getElementById('logPanel');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      panel.appendChild(entry);
+      panel.scrollTop = panel.scrollHeight;
+      console.log(message);
+    }
+    
+    function toggleLog() {
+      const panel = document.getElementById('logPanel');
+      panel.classList.toggle('visible');
+    }
+    
+    function updateStatus() {
+      const info = document.getElementById('statusInfo');
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isMobile = window.MobileRoster && typeof window.innerWidth <= 768;
+      const forceFlag = window.FORCE_MOBILE_ROSTER || false;
+      
+      info.innerHTML = `
+        <strong>Status:</strong>
+        Viewport: ${width}x${height} |
+        Force Flag: ${forceFlag} |
+        Mobile Roster: ${document.body.hasAttribute('data-mobile-roster-active') ? '✅ Active' : '❌ Inactive'} |
+        Players: ${window.game.players.filter(p => !p.evicted).length} active, ${window.game.players.filter(p => p.evicted).length} evicted
+      `;
+    }
+    
+    function testActivation() {
+      if (window.MobileRoster) {
+        window.MobileRoster.refresh();
+        log('Refreshed mobile roster', 'info');
+        updateStatus();
+      }
+    }
+    
+    function testEviction() {
+      const activePlayers = window.game.players.filter(p => !p.evicted);
+      if (activePlayers.length === 0) {
+        log('No active players to evict!', 'warn');
+        return;
+      }
+      
+      const randomIndex = Math.floor(Math.random() * activePlayers.length);
+      const player = activePlayers[randomIndex];
+      player.evicted = true;
+      player.evictedAt = Math.floor(Math.random() * 5) + 1;
+      player.evictionOrder = window.game.players.filter(p => p.evicted).length;
+      
+      log(`Evicted ${player.name}`, 'info');
+      
+      if (window.MobileRoster) {
+        window.MobileRoster.refresh();
+        updateStatus();
+      }
+    }
+    
+    function testAddPlayer() {
+      if (playerIdCounter >= playerNames.length) {
+        log('No more names available!', 'warn');
+        return;
+      }
+      
+      const newPlayer = createPlayer(playerNames[playerIdCounter], false);
+      window.game.players.push(newPlayer);
+      
+      log(`Added ${newPlayer.name}`, 'info');
+      
+      if (window.MobileRoster) {
+        window.MobileRoster.refresh();
+        updateStatus();
+      }
+    }
+    
+    function testAvatarResolution() {
+      log('=== Avatar Resolution Test ===', 'info');
+      
+      if (typeof window.projectBase === 'function') {
+        const base = window.projectBase();
+        log(`Project Base: ${base}`, 'info');
+      }
+      
+      if (typeof window.resolveAvatar === 'function') {
+        window.game.players.slice(0, 3).forEach(player => {
+          const avatarUrl = window.resolveAvatar(player);
+          log(`${player.name}: ${avatarUrl}`, 'info');
+        });
+      }
+      
+      if (typeof window.__dumpAvatarStatus === 'function') {
+        log('Dumping avatar status to console...', 'info');
+        window.__dumpAvatarStatus();
+      }
+    }
+    
+    function testTVSizing() {
+      log('=== TV Sizing Test ===', 'info');
+      
+      const tv = document.querySelector('.tv');
+      const tvNow = document.querySelector('#tvNow');
+      
+      if (tv) {
+        log(`TV Height: ${tv.offsetHeight}px (min: ${tv.style.minHeight}, max: ${tv.style.maxHeight})`, 'info');
+      }
+      
+      if (tvNow) {
+        log(`TV Content Height: ${tvNow.scrollHeight}px (offset: ${tvNow.offsetHeight}px)`, 'info');
+      }
+      
+      const rosterContainer = document.querySelector('.mobile-roster-container');
+      if (rosterContainer) {
+        log(`Roster Height: ${rosterContainer.offsetHeight}px (max: ${rosterContainer.style.maxHeight})`, 'info');
+      }
+      
+      log(`Viewport: ${window.innerWidth}x${window.innerHeight}`, 'info');
+    }
+    
+    function testForceFlag() {
+      window.FORCE_MOBILE_ROSTER = !window.FORCE_MOBILE_ROSTER;
+      log(`Force flag: ${window.FORCE_MOBILE_ROSTER}`, 'info');
+      testActivation();
+    }
+    
+    // Initialize Mobile Roster
+    document.addEventListener('DOMContentLoaded', () => {
+      log('Initializing Mobile Roster...', 'info');
+      
+      if (window.MobileRoster) {
+        window.MobileRoster.init();
+        log('Mobile Roster initialized', 'info');
+      } else {
+        log('MobileRoster not found!', 'error');
+      }
+      
+      updateStatus();
+      
+      // Update status on resize
+      window.addEventListener('resize', updateStatus);
+      
+      log('Test page ready. Try resizing window, adding players, or evicting players!', 'info');
+      log('Use long-press on tiles to see profile popover', 'info');
+    });
+  </script>
+</body>
+</html>

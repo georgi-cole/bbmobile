@@ -36,6 +36,8 @@
     MAX_TV_RATIO: 0.48,            // Maximum TV height as ratio of viewport
     MIN_TV_HEIGHT: 300,            // Minimum TV height in pixels
     OVERFLOW_PADDING: 8,           // Padding for overflow detection
+    ROSTER_CONTAINER_PADDING: 32,  // Padding/margins inside roster container
+    TV_ROSTER_GAP: 20,             // Gap between TV and roster (px)
   };
   
   // ============================
@@ -403,7 +405,7 @@
     // Calculate required roster height
     const rosterGridHeight = (rows * (tileSize + nameHeight)) + ((rows - 1) * gap);
     const evictedSectionHeight = state.evictedPlayers.length > 0 ? 60 : 0;
-    let rosterHeight = rosterGridHeight + evictedSectionHeight + 32; // 32px for container padding
+    let rosterHeight = rosterGridHeight + evictedSectionHeight + CONFIG.ROSTER_CONTAINER_PADDING;
     
     // Adjust TV ratio downward if tile size would be too small
     if (tileSize < CONFIG.MIN_TILE_SIZE) {
@@ -414,11 +416,10 @@
       // Recalculate with more space
       tileSize = Math.max(CONFIG.MIN_TILE_SIZE, calculateTileSize(containerWidth, columns));
       const adjustedRosterGridHeight = (rows * (tileSize + nameHeight)) + ((rows - 1) * gap);
-      rosterHeight = adjustedRosterGridHeight + evictedSectionHeight + 32;
+      rosterHeight = adjustedRosterGridHeight + evictedSectionHeight + CONFIG.ROSTER_CONTAINER_PADDING;
     }
     
-    // Ensure minimum tile size is respected
-    tileSize = Math.max(CONFIG.MIN_TILE_SIZE, tileSize);
+    // Note: tileSize already enforced to be >= MIN_TILE_SIZE above
     
     // ========== SECOND PASS: Overflow correction ==========
     
@@ -446,11 +447,11 @@
           // Can't grow TV enough - ensure tiles don't shrink below minimum
           // This is a fallback that prioritizes usability
           const minRosterHeight = (rows * (CONFIG.MIN_TILE_SIZE + nameHeight)) + 
-                                  ((rows - 1) * gap) + evictedSectionHeight + 32;
+                                  ((rows - 1) * gap) + evictedSectionHeight + CONFIG.ROSTER_CONTAINER_PADDING;
           
-          if (minRosterHeight + CONFIG.MIN_TV_HEIGHT + 20 <= availableHeight) {
+          if (minRosterHeight + CONFIG.MIN_TV_HEIGHT + CONFIG.TV_ROSTER_GAP <= availableHeight) {
             rosterHeight = minRosterHeight;
-            tvHeight = availableHeight - rosterHeight - 20;
+            tvHeight = availableHeight - rosterHeight - CONFIG.TV_ROSTER_GAP;
             tileSize = CONFIG.MIN_TILE_SIZE;
           }
         }
@@ -458,7 +459,7 @@
     }
     
     // Final clamp to ensure nothing exceeds viewport
-    const totalUsed = rosterHeight + tvHeight + 20;
+    const totalUsed = rosterHeight + tvHeight + CONFIG.TV_ROSTER_GAP;
     if (totalUsed > availableHeight) {
       // Scale down proportionally
       const scale = availableHeight / totalUsed;
