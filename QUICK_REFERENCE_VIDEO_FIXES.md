@@ -52,6 +52,25 @@ console.table({
 });
 ```
 
+### Check Video Attributes (Muted Autoplay)
+```javascript
+// Check intro video element attributes when playing
+const vid = document.getElementById('videoCinemaEl');
+if (vid) {
+  console.table({
+    'Muted (property)': vid.muted,
+    'Muted (attribute)': vid.hasAttribute('muted'),
+    'Autoplay (property)': vid.autoplay,
+    'Autoplay (attribute)': vid.hasAttribute('autoplay'),
+    'PlaysInline (property)': vid.playsInline,
+    'PlaysInline (attribute)': vid.hasAttribute('playsinline'),
+    'Paused': vid.paused,
+    'Current Time': vid.currentTime,
+    'Ready State': vid.readyState
+  });
+}
+```
+
 ### Manual Triggers
 ```javascript
 showRulesModal();              // Show rules manually

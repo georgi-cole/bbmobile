@@ -27,6 +27,30 @@ This PR addresses critical issues with video playback flow and rules modal behav
 
 **Files Modified:** None (verified existing behavior)
 
+### 5. Muted Autoplay Enhancement ✅
+**Problem:** Intro video requires user interaction ("Tap to Play" button) to start, creating friction for new users. Modern browsers block unmuted autoplay, requiring muted playback for automatic start.
+
+**Solution:**
+- Implemented dynamic muted autoplay via JavaScript attribute injection in `js/intro-outro-video.js`
+- Modified `playVideo()` to detect intro vs outro videos
+- For intro videos:
+  - Set `vid.muted = true` and `vid.setAttribute('muted', '')` to enable silent autoplay
+  - Added `canplay` event listener to start playback when video is ready
+  - Added fallback check for immediate playback if video already loaded
+  - Improved console logging for autoplay success/blocked scenarios
+- Outro videos retain existing tap-to-play behavior (unmuted, with sound prompt)
+- Skip button remains visible and functional throughout (z-index:10, opacity:1, pointer-events:auto)
+- Respects skipIntros setting with clear console logging
+- No index.html modifications required - all changes in JavaScript
+
+**Why No HTML Change:**
+- Video element is created dynamically via `buildOverlay()` in JavaScript
+- Allows runtime detection of intro vs outro for different behavior
+- Maintains flexibility for mobile/desktop video URL selection
+- Keeps all video logic encapsulated in one module
+
+**Files Modified:** `js/intro-outro-video.js`
+
 ### 3. Rules Modal Shows Only Once ✅
 **Problem:** Rules modal was showing every time a new season started, not just on first game start.
 
