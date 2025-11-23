@@ -46,13 +46,13 @@
   }
 
   function startLiveVote(){
+    const g=global.game;
+    
     // Guard: Block live vote start while game is paused
     if(g.PauseController && g.PauseController.isPaused && g.PauseController.isPaused()){
       console.info('[eviction] startLiveVote blocked: game is paused');
       return;
     }
-    
-    const g=global.game;
     
     // Stop Social AI Scheduler explicitly to prevent background social chatter
     if (global.SocialAIScheduler && typeof global.SocialAIScheduler.stopAiSocialPhase === 'function') {

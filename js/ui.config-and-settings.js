@@ -437,7 +437,8 @@
   }
   function checkbox(key, label){
     const isDeferred = g.Config && g.Config.isConfigKeyDeferred && g.Config.isConfigKeyDeferred(key);
-    const deferredIndicator = isDeferred ? ' <span class="deferred-indicator" title="Will apply next season">⏱</span>' : '';
+    // Note: deferredIndicator is safe static HTML with no user input
+    const deferredIndicator = isDeferred ? ' <span class="deferred-indicator" title="Will apply next season">&#9201;</span>' : '';
     return [
       '<label class="toggleRow">',
         '<span>'+UI.escapeHtml(label)+deferredIndicator+'</span>',
@@ -447,7 +448,8 @@
   }
   function number(key, label, min, max, step){
     const isDeferred = g.Config && g.Config.isConfigKeyDeferred && g.Config.isConfigKeyDeferred(key);
-    const deferredIndicator = isDeferred ? ' <span class="deferred-indicator" title="Will apply next season">⏱</span>' : '';
+    // Note: deferredIndicator is safe static HTML with no user input
+    const deferredIndicator = isDeferred ? ' <span class="deferred-indicator" title="Will apply next season">&#9201;</span>' : '';
     return [
       '<label class="toggleRow">',
         '<span>'+UI.escapeHtml(label)+deferredIndicator+'</span>',
