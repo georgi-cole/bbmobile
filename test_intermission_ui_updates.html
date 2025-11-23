@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intermission Card UI Updates Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f1419 0%, #1a2632 100%);
+      color: #ffffff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #64b5f6;
+    }
+    
+    .test-section {
+      max-width: 1200px;
+      margin: 0 auto 30px;
+      background: rgba(30, 40, 60, 0.6);
+      border: 2px solid rgba(100, 150, 200, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .test-section h2 {
+      color: #90caf9;
+      margin-bottom: 15px;
+    }
+    
+    .test-buttons {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .test-button {
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+      border: 2px solid #42a5f5;
+      border-radius: 8px;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .test-button:hover {
+      background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
+      transform: translateY(-2px);
+    }
+    
+    #panel {
+      position: relative;
+      background: rgba(10, 20, 35, 0.8);
+      border: 2px solid rgba(100, 150, 200, 0.3);
+      border-radius: 12px;
+      min-height: 500px;
+      max-width: 800px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    
+    .checklist {
+      background: rgba(50, 100, 150, 0.2);
+      border: 1px solid rgba(100, 150, 200, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+    
+    .checklist ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .checklist li {
+      padding: 5px 0;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .checklist li:before {
+      content: "✓ ";
+      color: #10b981;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 Intermission Card UI Updates</h1>
+  
+  <div class="test-section">
+    <h2>Visual Changes Summary</h2>
+    <div class="checklist">
+      <ul>
+        <li>Card is now centered vertically in the TV area (not at bottom)</li>
+        <li>Card background is more transparent (0.75 opacity instead of 0.95)</li>
+        <li>Border removed (was 2px solid blue)</li>
+        <li>HOH title: "As the outgoing HOH, you cannot compete"</li>
+        <li>Veto title: "You were not drawn to play this week"</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test Cases</h2>
+    <div class="test-buttons">
+      <button class="test-button" onclick="testHOHCard()">Show HOH Card</button>
+      <button class="test-button" onclick="testVetoCard()">Show Veto Card</button>
+      <button class="test-button" onclick="clearCards()">Clear All Cards</button>
+    </div>
+    <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 15px;">
+      Click the buttons above to display the intermission cards. Verify:
+      <br>• Card appears centered in the TV area
+      <br>• Card has no visible border
+      <br>• Background is semi-transparent (you can see through it slightly)
+      <br>• Correct title text appears for each type
+    </p>
+  </div>
+  
+  <div id="panel" data-faux-tv></div>
+  
+  <script src="js/tv-container.js"></script>
+  <script src="js/ui/intermissionCard.js"></script>
+  
+  <script>
+    // Mock game object
+    window.game = {
+      __intermissionActive: false
+    };
+    
+    function testHOHCard() {
+      clearCards();
+      console.log('=== Testing HOH Card ===');
+      
+      window.IntermissionCard.showInTv({
+        compType: 'HOH',
+        gameType: 'tictactoe',
+        onYes: () => {
+          console.log('User clicked Yes');
+          alert('Yes button clicked! Card will be removed.');
+        },
+        onNo: () => {
+          console.log('User clicked No');
+          alert('No button clicked! Card will be removed.');
+        }
+      });
+    }
+    
+    function testVetoCard() {
+      clearCards();
+      console.log('=== Testing Veto Card ===');
+      
+      window.IntermissionCard.showInTv({
+        compType: 'Veto',
+        gameType: 'dotsandboxes',
+        onYes: () => {
+          console.log('User clicked Yes');
+          alert('Yes button clicked! Card will be removed.');
+        },
+        onNo: () => {
+          console.log('User clicked No');
+          alert('No button clicked! Card will be removed.');
+        }
+      });
+    }
+    
+    function clearCards() {
+      console.log('=== Clearing Cards ===');
+      window.IntermissionCard.removeActive();
+    }
+    
+    console.info('✓ Test page loaded');
+    console.info('Click buttons to test the updated card UI');
+  </script>
+</body>
+</html>

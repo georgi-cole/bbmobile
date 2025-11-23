@@ -31,10 +31,13 @@
     // Get or create overlay mount inside TV
     const overlay = global.TvContainer?.getOrCreateTvOverlay(tvContainer, 'tv-intermission-overlay');
     
-    // Clear any existing content in overlay
+    // Clear any existing content in overlay and update positioning
     if (overlay) {
       overlay.innerHTML = '';
       overlay.style.pointerEvents = 'none'; // Overlay itself doesn't block
+      // Update to center positioning (in case overlay was created with old settings)
+      overlay.style.justifyContent = 'center';
+      overlay.style.padding = '20px';
     }
 
     // Create card container
@@ -42,7 +45,6 @@
     cardContainer.className = 'intermission-card-container';
     cardContainer.style.cssText = `
       pointer-events: auto;
-      margin-bottom: 24px;
       padding: 0 16px;
       max-width: 500px;
       width: 100%;
@@ -53,18 +55,21 @@
     const card = document.createElement('div');
     card.className = 'intermission-offer-card in-tv';
     card.style.cssText = `
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(51, 65, 85, 0.95));
-      border: 2px solid rgba(96, 165, 250, 0.5);
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(51, 65, 85, 0.75));
+      border: none;
       border-radius: 16px;
       padding: 24px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(12px);
     `;
 
-    // Title
+    // Title - update text based on competition type
     const title = document.createElement('div');
     title.className = 'intermission-offer-title';
-    title.textContent = `${compType} Competition In Progress`;
+    const titleText = compType === 'Veto' 
+      ? 'You were not drawn to play this week'
+      : 'As the outgoing HOH, you cannot compete';
+    title.textContent = titleText;
     title.style.cssText = `
       font-size: 1.4rem;
       font-weight: 700;
