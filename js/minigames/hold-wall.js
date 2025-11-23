@@ -5,9 +5,9 @@
   'use strict';
 
   // Constants
-  const TOTAL_WINDOW_MS = 600000; // 10 minutes
+  const AI_DROP_WINDOW_MS = 600000; // 10 minutes - upper bound for initial AI drop scheduling only
   const MIN_DROP_MS = 8000; // 8 seconds minimum before first drop
-  const MAX_DROP_MS = TOTAL_WINDOW_MS - 5000; // 5 seconds before end
+  const MAX_DROP_MS = AI_DROP_WINDOW_MS - 5000; // 5 seconds before window (for initial scheduling)
   const MOVE_THRESHOLD = 15; // pixels
 
   /**
@@ -171,15 +171,17 @@
     let initialPos = null;
     let pulsateInterval = null;
     let sheenInterval = null;
+    let hasEnded = false; // Guard to prevent duplicate end calls
     
-    // Participant tracking: { name, isPlayer, dropTimeMs, avatarEl }
+    // Participant tracking: { name, isPlayer, dropTimeMs, avatarEl, img, badge, player }
     let participants = [];
+    // Track participant drops in chronological order for proper ranking: { name, timeMs }
+    let eliminationLog = [];
     let dropTimers = [];
     let dealWindowTimer = null;
     let dealCountdownInterval = null;
     let postDealInterval = null;
     let rivalName = null;
-    let aiDropped = false;
     let currentFocusedOpponent = null;
     
     /**
@@ -222,7 +224,7 @@
     /**
      * Create avatar element for a participant
      */
-    function createAvatarElement(name, isPlayer){
+    function createAvatarElement(name, isPlayer, player){
       const size = avatarMode === 'strip' ? 64 : 32;
       const outline = isPlayer ? '2px solid #00ffff' : 'none';
       
@@ -236,9 +238,18 @@
       `;
       
       const img = document.createElement('img');
-      img.src = getAvatarUrl(name);
+      // Use actual player image properties before falling back to DiceBear
+      let avatarUrl = null;
+      if(player){
+        // Note: These properties come from game state which is controlled by the app
+        avatarUrl = player.avatar || player.img || player.photo;
+      }
+      img.src = avatarUrl || getAvatarUrl(name);
       img.alt = name;
-      img.onerror = function(){ this.src = getAvatarUrl(name + '_alt'); };
+      img.onerror = function(){ 
+        // On error, fall back to DiceBear
+        this.src = getAvatarUrl(name + '_alt'); 
+      };
       img.style.cssText = `
         width:${size}px;
         height:${size}px;
@@ -381,6 +392,7 @@
     /**
      * Schedule AI opponent drops over 10-minute window
      * Uses later-weighted distribution (power curve: tNorm^1.6)
+     * Note: This is initial scheduling only - post-deal checks can extend indefinitely
      */
     function scheduleAIDrops(){
       if(participants.length === 0) return;
@@ -392,7 +404,7 @@
       const droppersCount = aiOnly.length - 1;
       const dropTimes = [];
       
-      // Generate later-weighted drop times
+      // Generate later-weighted drop times within AI_DROP_WINDOW_MS
       for(let i = 0; i < droppersCount; i++){
         const tNorm = rng(); // 0-1
         const easedT = Math.pow(tNorm, 1.6); // Power curve for later weighting
@@ -406,9 +418,14 @@
       // Schedule each drop
       dropTimes.forEach((drop) => {
         const timer = setTimeout(() => {
-          if(!isHolding) return;
+          if(!isHolding || hasEnded) return;
           
-          drop.participant.dropTimeMs = Date.now() - startTime;
+          const dropTime = Date.now() - startTime;
+          drop.participant.dropTimeMs = dropTime;
+          
+          // Add to elimination log
+          eliminationLog.push({ name: drop.participant.name, timeMs: dropTime });
+          
           fadeOutParticipant(drop.participant);
           
           const remaining = participants.filter(p => !p.dropTimeMs).length;
@@ -458,10 +475,11 @@
     
     /**
      * Start post-deal periodic checks
+     * These continue indefinitely until rival drops or player releases
      */
     function startPostDealChecks(){
       postDealInterval = setInterval(() => {
-        if(!isHolding || aiDropped) {
+        if(!isHolding || hasEnded) {
           clearInterval(postDealInterval);
           return;
         }
@@ -469,18 +487,22 @@
         const willDrop = rng() < 0.4; // 40% chance every 20s
         
         if(willDrop){
-          aiDropped = true;
           const rival = participants.find(p => p.name === rivalName);
           if(rival){
-            rival.dropTimeMs = Date.now() - startTime;
+            const dropTime = Date.now() - startTime;
+            rival.dropTimeMs = dropTime;
+            
+            // Add to elimination log
+            eliminationLog.push({ name: rival.name, timeMs: dropTime });
+            
             fadeOutParticipant(rival);
           }
           addFeedMessage(`${rivalName} dropped! You win!`, '#66ff66');
           clearInterval(postDealInterval);
           
           setTimeout(() => {
-            if(isHolding){
-              endHold(false, true); // AI dropped, player wins
+            if(isHolding && !hasEnded){
+              finalizeVictory(); // Player is last remaining
             }
           }, 1000);
         } else {
@@ -504,30 +526,83 @@
     }
     
     /**
-     * Finalize ranking and emit event
+     * Finalize victory when player is last remaining
      */
-    function finalizeRanking(){
-      // Build standings ordered by time (longest first)
-      const standings = participants
-        .filter(p => p.dropTimeMs !== undefined)
-        .sort((a, b) => b.dropTimeMs - a.dropTimeMs);
+    function finalizeVictory(){
+      if(hasEnded) return; // Prevent duplicate calls
+      hasEnded = true;
+      
+      cleanupTimers();
+      stopPulsating();
+      
+      const totalTime = Date.now() - startTime;
+      
+      wallDiv.style.background = '#2c3a4d';
+      wallDiv.style.color = '#83bfff';
+      
+      // Mark player as winner (no need to set dropTimeMs as they didn't drop)
+      const playerParticipant = participants.find(p => p.isPlayer);
+      if(playerParticipant){
+        markWinner(playerParticipant);
+      }
+      
+      statusDiv.textContent = 'You win! Others dropped.';
+      statusDiv.style.color = '#66ff66';
+      addFeedMessage('Challenge complete! You outlasted everyone!', '#66ff66');
+      
+      // Build final standings
+      const finalStandings = buildFinalStandings(totalTime);
+      
+      // Show results popup
+      showResults(finalStandings, 100); // Winner-takes-all: score 100
+    }
+    
+    /**
+     * Build final standings: winner first, then elimination log reversed
+     */
+    function buildFinalStandings(winnerTime){
+      // Use consistent 'You' for player name to match participant initialization
+      const playerName = 'You';
+      
+      // Winner first with final time
+      const finalStandings = [
+        { name: playerName, timeMs: winnerTime }
+      ];
+      
+      // Then reversed elimination log (most recent drops = higher placement)
+      const reversed = [...eliminationLog].reverse();
+      finalStandings.push(...reversed);
       
       // Emit final standings event
       if(g.bbGameBus && typeof g.bbGameBus.emit === 'function'){
-        const standingsData = standings.map(p => ({
-          name: p.name,
-          timeMs: p.dropTimeMs
-        }));
-        g.bbGameBus.emit('holdWall:finalStandings', standingsData);
+        g.bbGameBus.emit('holdWall:finalStandings', finalStandings);
       }
       
+      return finalStandings;
+    }
+    
+    /**
+     * Show results popup with top 3
+     */
+    function showResults(finalStandings, score){
       // Prepare top three for results popup
-      const topThree = standings.slice(0, 3).map(p => ({
-        name: p.name,
-        timeMs: p.dropTimeMs
-      }));
+      const topThree = finalStandings.slice(0, 3);
       
-      return topThree;
+      // Show results popup if available
+      if(g.showResultsPopup && typeof g.showResultsPopup === 'function'){
+        setTimeout(() => {
+          g.showResultsPopup({
+            title: 'Hold Wall Results',
+            topThree: topThree,
+            winnerEmoji: '👑',
+            duration: 5000
+          }).then(() => {
+            wrappedOnComplete(score);
+          });
+        }, 1500);
+      } else {
+        setTimeout(() => wrappedOnComplete(score), 1500);
+      }
     }
     
     /**
@@ -591,23 +666,36 @@
       // Initialize participants
       const aiNames = initializeParticipants();
       participants = [];
+      eliminationLog = []; // Reset elimination log
+      
+      // Get player data from game state
+      let humanPlayer = null;
+      if(g.game && g.game.players && Array.isArray(g.game.players)){
+        humanPlayer = g.game.players.find(p => p.human);
+      }
       
       // Create player participant
-      const playerData = createAvatarElement('You', true);
+      const playerData = createAvatarElement('You', true, humanPlayer);
       participants.push({
         name: 'You',
         isPlayer: true,
         dropTimeMs: null,
+        player: humanPlayer,
         ...playerData
       });
       
-      // Create AI participants
+      // Create AI participants with player data
       aiNames.forEach(name => {
-        const aiData = createAvatarElement(name, false);
+        let aiPlayer = null;
+        if(g.game && g.game.players && Array.isArray(g.game.players)){
+          aiPlayer = g.game.players.find(p => p.name === name);
+        }
+        const aiData = createAvatarElement(name, false, aiPlayer);
         participants.push({
           name: name,
           isPlayer: false,
           dropTimeMs: null,
+          player: aiPlayer,
           ...aiData
         });
       });
@@ -654,10 +742,11 @@
       }
     }
     
-    function endHold(moved = false, aiWon = false){
-      if(!isHolding) return;
+    function endHold(moved = false){
+      if(!isHolding || hasEnded) return; // Guard against duplicate calls
       
       isHolding = false;
+      hasEnded = true;
       cleanupTimers();
       stopPulsating();
       
@@ -666,26 +755,20 @@
       wallDiv.style.background = '#2c3a4d';
       wallDiv.style.color = '#83bfff';
       
-      // Record player drop time
-      const playerParticipant = participants.find(p => p.isPlayer);
-      if(playerParticipant){
-        playerParticipant.dropTimeMs = holdDuration;
-      }
+      // Record player drop time in elimination log
+      // Use consistent 'You' for player name to match participant initialization
+      const playerName = 'You';
+      
+      // Add player to elimination log
+      eliminationLog.push({ name: playerName, timeMs: holdDuration });
       
       // Check if during deal window
-      const duringDealWindow = rivalName && dealWindowTimer && !aiDropped;
+      const duringDealWindow = rivalName && dealWindowTimer && postDealInterval === null;
       
-      // Winner-takes-all scoring
-      let finalScore = 0;
+      // Player loses (score = 0)
+      const finalScore = 0;
       
-      if(aiWon){
-        // AI dropped, player wins
-        finalScore = 100;
-        statusDiv.textContent = 'You win! Others dropped.';
-        statusDiv.style.color = '#66ff66';
-        addFeedMessage('Challenge complete! You outlasted everyone!', '#66ff66');
-        if(playerParticipant) markWinner(playerParticipant);
-      } else if(moved){
+      if(moved){
         // Player moved
         statusDiv.textContent = `You moved! Time: ${formatTime(holdDuration)}`;
         statusDiv.style.color = '#ff6b6b';
@@ -717,31 +800,48 @@
         addFeedMessage('You released from the wall.', '#95a9c0');
       }
       
-      // Finalize rankings and emit event
-      const topThree = finalizeRanking();
+      // Build final standings with player not as winner
+      // Winner will be determined by who dropped last (in elimination log)
+      const finalStandings = [...eliminationLog].reverse(); // Most recent drop = winner
       
-      // Show results popup if available
-      if(g.showResultsPopup && typeof g.showResultsPopup === 'function'){
-        setTimeout(() => {
-          g.showResultsPopup({
-            title: 'Hold Wall Results',
-            topThree: topThree,
-            winnerEmoji: '👑',
-            duration: 5000
-          }).then(() => {
-            onComplete(finalScore);
-          });
-        }, 1500);
-      } else {
-        setTimeout(() => onComplete(finalScore), 1500);
+      // Emit final standings event
+      if(g.bbGameBus && typeof g.bbGameBus.emit === 'function'){
+        g.bbGameBus.emit('holdWall:finalStandings', finalStandings);
       }
+      
+      // Show results popup
+      showResults(finalStandings, finalScore);
+    }
+    
+    // Global mouse/touch release handlers
+    function handleGlobalMouseUp(){
+      if(isHolding && !hasEnded){
+        endHold(false);
+      }
+    }
+    
+    function handleGlobalTouchEnd(){
+      if(isHolding && !hasEnded){
+        endHold(false);
+      }
+    }
+    
+    // Cleanup function for global event listeners
+    function cleanupGlobalListeners(){
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    }
+    
+    // Wrap onComplete to ensure cleanup
+    function wrappedOnComplete(score){
+      cleanupGlobalListeners();
+      onComplete(score);
     }
     
     // Mouse events
     wallDiv.addEventListener('mousedown', startHold);
     wallDiv.addEventListener('mousemove', checkMove);
-    wallDiv.addEventListener('mouseup', () => endHold(false));
-    wallDiv.addEventListener('mouseleave', () => endHold(false));
+    document.addEventListener('mouseup', handleGlobalMouseUp);
     
     // Touch events
     wallDiv.addEventListener('touchstart', (e) => {
@@ -752,10 +852,7 @@
       e.preventDefault();
       checkMove(e);
     });
-    wallDiv.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      endHold(false);
-    });
+    document.addEventListener('touchend', handleGlobalTouchEnd);
   }
 
   // Export

@@ -145,15 +145,16 @@
       <h2>Test Scenarios</h2>
       <div class="info">
         <strong>Test Goals:</strong><br>
-        • Verify AI drops occur randomly over ~10 minutes (later-weighted distribution)<br>
+        • Verify AI drops occur randomly with later-weighted distribution (10-minute upper bound for initial scheduling only)<br>
         • Check responsive avatar modes: strip (≥640px), tiny (480-639px), single (&lt;480px)<br>
         • Test avatar animations: fade-out on drop, gold rival outline, cyan player outline<br>
         • Verify final-two deal window (10 seconds)<br>
-        • Test post-deal periodic checks (20s intervals, 40% drop chance)<br>
+        • Test post-deal periodic checks continue indefinitely until rival drops or player releases (20s intervals, 40% drop chance)<br>
         • Verify special ranking modal with top 3 by hold time (mm:ss.s format)<br>
         • Verify events: holdWall:finalStandings and holdWall:dealOutcome<br>
         • Confirm all timers are cleaned up properly<br>
-        • Test pulsating wall animation and sheen overlay
+        • Test pulsating wall animation and sheen overlay<br>
+        • Verify no automatic timeout forces end while multiple participants remain
       </div>
       
       <div class="controls">
@@ -170,11 +171,12 @@
         1. Click a test button to start<br>
         2. Press and hold the WALL element (observe pulsating animation and sheen)<br>
         3. Watch avatar displays: fade-out on drop, cyan outline for player, gold for rival<br>
-        4. Watch the status feed for AI drops (later-weighted over ~10 minutes)<br>
+        4. Watch the status feed for AI drops (later-weighted, initial scheduling uses 10-minute upper bound)<br>
         5. When down to 2, a deal will be offered for 10 seconds<br>
         6. Release during deal window to test 80% promise respect<br>
-        7. Wait after 10s to test 20s interval periodic checks<br>
-        8. Verify special ranking modal shows top 3 by time (mm:ss.s format)
+        7. Wait after 10s to test 20s interval periodic checks (continue indefinitely until drop)<br>
+        8. Verify special ranking modal shows top 3 by time (mm:ss.s format)<br>
+        9. Competition ends ONLY when: player releases, player moves beyond threshold, or last opponent drops
       </div>
     </div>
     

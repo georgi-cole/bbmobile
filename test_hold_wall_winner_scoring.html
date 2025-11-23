@@ -141,11 +141,13 @@
       <div class="info">
         <strong>Test Objective:</strong><br>
         Verify that Hold Wall now uses winner-takes-all scoring with special time-based ranking:<br>
-        • Score = 100 when AI drops and player is last remaining<br>
+        • Score = 100 when all opponents drop and player is last remaining<br>
         • Score = 0 for all other cases (moved, released early, deal accepted)<br>
         • Special ranking modal displays top 3 by hold time (mm:ss.s format)<br>
-        • Competition duration extended to ~10 minutes with later-weighted AI drops<br>
-        • Responsive avatar displays with fade-out animations on drop
+        • Competition uses 10-minute upper bound for initial AI drop scheduling only (not a forced max duration)<br>
+        • Post-deal periodic checks continue indefinitely until rival drops or player releases<br>
+        • Responsive avatar displays with fade-out animations on drop<br>
+        • No automatic timeout forces end while multiple participants remain
       </div>
       
       <div class="controls">
@@ -171,10 +173,12 @@
         1. Click "Start Manual Test" below<br>
         2. Press and hold the WALL element (observe pulsating animation)<br>
         3. Watch avatar displays: fade-out on drop, outlines (cyan=player, gold=rival)<br>
-        4. Wait for AI drops to occur (later-weighted over ~10 minute window)<br>
-        5. When the last AI drops, you should win with score = 100<br>
-        6. Verify special ranking modal appears showing top 3 by time (mm:ss.s format)<br>
-        7. Alternatively, release early or move to test score = 0
+        4. Wait for AI drops to occur (later-weighted, 10-minute upper bound for initial scheduling)<br>
+        5. If post-deal phase extends past 10 minutes, periodic checks continue indefinitely<br>
+        6. When the last AI drops, you should win with score = 100<br>
+        7. Verify special ranking modal appears showing top 3 by time (mm:ss.s format)<br>
+        8. Alternatively, release early or move to test score = 0<br>
+        9. Verify no automatic timeout forces end while opponents still remain
       </div>
       <div class="controls">
         <button class="btn" onclick="startManualTest()">▶ Start Manual Test</button>
