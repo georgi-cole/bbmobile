@@ -139,10 +139,12 @@
     vid.addEventListener('ended', () => finish('end'));
     vid.addEventListener('error', () => finish('fail'));
 
+    // HTMLMediaElement.HAVE_CURRENT_DATA = 2 (enough data to render current frame)
+    const HAVE_CURRENT_DATA = 2;
+
     // Start playback when video is ready
     const attemptAutoplay = () => {
-      // readyState >= 2 (HTMLMediaElement.HAVE_CURRENT_DATA): enough data to render current frame
-      if (vid.readyState >= 2) {
+      if (vid.readyState >= HAVE_CURRENT_DATA) {
         const p = vid.play();
         if (p && p.then) {
           p.then(() => {
@@ -164,8 +166,8 @@
     
     vid.src = url;
     
-    // If already ready (readyState >= 2), try immediately
-    if (vid.readyState >= 2) {
+    // If already ready, try immediately
+    if (vid.readyState >= HAVE_CURRENT_DATA) {
       attemptAutoplay();
     }
 
