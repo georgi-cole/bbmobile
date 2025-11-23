@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player Count Range & Randomization Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #0f1320;
+      color: #e6e8ee;
+    }
+    h1 { color: #2d8ab4; margin-bottom: 10px; }
+    h2 { color: #79d19a; margin-top: 30px; }
+    .test { 
+      margin: 15px 0; 
+      padding: 15px; 
+      background: #141a23; 
+      border: 1px solid #2b3546;
+      border-radius: 8px;
+    }
+    .pass { color: #79d19a; }
+    .fail { color: #f2826d; }
+    .info { color: #9aa3b2; }
+    button {
+      background: #2877a0;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover { background: #1a4a63; }
+    pre {
+      background: #0b0f1a;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .roster-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .player-chip {
+      background: #172034;
+      border: 1px solid #2c3446;
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+    }
+    .human { border-color: #2d8ab4; background: #1a3a4f; }
+  </style>
+</head>
+<body>
+  <h1>Player Count Range & Randomization Test</h1>
+  <p class="info">Testing the new 4-16 player range and randomized AI cast selection.</p>
+
+  <h2>Test 1: Player Count Range (4-16)</h2>
+  <div class="test">
+    <h3>Test clamping logic</h3>
+    <div id="test1-results"></div>
+  </div>
+
+  <h2>Test 2: Randomized Cast Selection</h2>
+  <div class="test">
+    <h3>Create multiple casts with same player count</h3>
+    <button onclick="testRandomization(4)">Test with 4 Players</button>
+    <button onclick="testRandomization(8)">Test with 8 Players</button>
+    <button onclick="testRandomization(12)">Test with 12 Players</button>
+    <button onclick="testRandomization(16)">Test with 16 Players</button>
+    <div id="test2-results"></div>
+  </div>
+
+  <h2>Test 3: Visual Verification</h2>
+  <div class="test">
+    <h3>Generate cast and display</h3>
+    <label>
+      Player Count: 
+      <input type="number" id="playerCountInput" min="4" max="16" value="8" style="width: 80px; padding: 5px;">
+    </label>
+    <button onclick="generateAndDisplayCast()">Generate Cast</button>
+    <div id="test3-results"></div>
+  </div>
+
+  <script type="module">
+    // Minimal setup to test the functions
+    window.game = { cfg: {}, players: [] };
+
+    // Import clamp function from players-total.js logic
+    function clamp(n, lo, hi) {
+      n = +n;
+      if (isNaN(n)) n = lo;
+      return Math.min(hi, Math.max(lo, n));
+    }
+
+    // Import clampNum from bootstrap.js
+    function clampNum(v, def, min, max) {
+      v = +v;
+      if (Number.isNaN(v)) v = def;
+      return Math.min(max, Math.max(min, v));
+    }
+
+    // Import sampleUnique from bootstrap.js
+    function sampleUnique(arr, count) {
+      if (!arr || !Array.isArray(arr) || arr.length === 0) return [];
+      if (count >= arr.length) return arr.slice();
+      
+      const pool = arr.slice();
+      const result = [];
+      
+      for (let i = 0; i < count && i < pool.length; i++) {
+        const randomIndex = i + Math.floor(Math.random() * (pool.length - i));
+        const temp = pool[i];
+        pool[i] = pool[randomIndex];
+        pool[randomIndex] = temp;
+        result.push(pool[i]);
+      }
+      
+      return result;
+    }
+
+    // Test 1: Clamping logic
+    function testClampLogic() {
+      const results = [];
+      
+      // Test clamp function (from players-total.js)
+      const tests = [
+        { input: 2, expected: 4, desc: 'Below min (2) clamps to 4' },
+        { input: 4, expected: 4, desc: 'Min value (4) stays at 4' },
+        { input: 8, expected: 8, desc: 'Mid value (8) stays at 8' },
+        { input: 12, expected: 12, desc: 'Default (12) stays at 12' },
+        { input: 16, expected: 16, desc: 'Max value (16) stays at 16' },
+        { input: 20, expected: 16, desc: 'Above max (20) clamps to 16' },
+        { input: 'abc', expected: 4, desc: 'Invalid (abc) clamps to min (4)' },
+      ];
+
+      tests.forEach(test => {
+        const result = clamp(test.input, 4, 16);
+        const passed = result === test.expected;
+        results.push({
+          desc: test.desc,
+          passed,
+          result,
+          expected: test.expected
+        });
+      });
+
+      // Test clampNum function (from bootstrap.js)
+      const clampNumTests = [
+        { input: 2, expected: 4, desc: 'clampNum(2, 12, 4, 16) = 4' },
+        { input: 4, expected: 4, desc: 'clampNum(4, 12, 4, 16) = 4' },
+        { input: 12, expected: 12, desc: 'clampNum(12, 12, 4, 16) = 12' },
+        { input: 16, expected: 16, desc: 'clampNum(16, 12, 4, 16) = 16' },
+        { input: 20, expected: 16, desc: 'clampNum(20, 12, 4, 16) = 16' },
+      ];
+
+      clampNumTests.forEach(test => {
+        const result = clampNum(test.input, 12, 4, 16);
+        const passed = result === test.expected;
+        results.push({
+          desc: test.desc,
+          passed,
+          result,
+          expected: test.expected
+        });
+      });
+
+      return results;
+    }
+
+    // Display Test 1 results
+    const test1Results = testClampLogic();
+    const test1Html = test1Results.map(r => 
+      `<div class="${r.passed ? 'pass' : 'fail'}">
+        ${r.passed ? '✓' : '✗'} ${r.desc} → ${r.result} ${r.passed ? '' : `(expected ${r.expected})`}
+      </div>`
+    ).join('');
+    document.getElementById('test1-results').innerHTML = test1Html;
+
+    const allPassed = test1Results.every(r => r.passed);
+    if (allPassed) {
+      document.getElementById('test1-results').innerHTML += 
+        '<div class="pass" style="margin-top: 15px; font-weight: bold;">✅ All clamping tests passed!</div>';
+    }
+
+    // Test 2: Randomization
+    window.testRandomization = function(playerCount) {
+      const defaults = ['Finn','Mimi','Rae','Nova','Kai','Zed','Ivy','Ash','Lux','Remy','Blue','Jax','Echo','Vee','Sol','Quinn','Aria','Dex','Rune','Bea','Nico','Pax','Noa','Kian','Lia','Rey'];
+      const iterations = 5;
+      const casts = [];
+
+      for (let i = 0; i < iterations; i++) {
+        const aiCount = playerCount - 1;
+        const aiNames = sampleUnique(defaults, aiCount);
+        casts.push(['You', ...aiNames]);
+      }
+
+      // Check for variety
+      const uniqueCasts = new Set(casts.map(c => JSON.stringify(c)));
+      const hasVariety = uniqueCasts.size > 1;
+
+      let html = `<h4>Testing with ${playerCount} players (${iterations} iterations)</h4>`;
+      html += '<pre>' + casts.map((cast, i) => `Cast ${i+1}: ${cast.join(', ')}`).join('\n') + '</pre>';
+      html += `<div class="${hasVariety ? 'pass' : 'info'}">`;
+      html += hasVariety 
+        ? `✓ Randomization working: Generated ${uniqueCasts.size} unique cast variations`
+        : `⚠ All casts identical (unlikely but possible with randomness)`;
+      html += '</div>';
+
+      document.getElementById('test2-results').innerHTML = html;
+    };
+
+    // Test 3: Visual display
+    window.generateAndDisplayCast = function() {
+      const input = document.getElementById('playerCountInput');
+      const count = clamp(input.value, 4, 16);
+      input.value = count; // Update input if clamped
+
+      const defaults = ['Finn','Mimi','Rae','Nova','Kai','Zed','Ivy','Ash','Lux','Remy','Blue','Jax','Echo','Vee','Sol','Quinn','Aria','Dex','Rune','Bea','Nico','Pax','Noa','Kian','Lia','Rey'];
+      const aiCount = count - 1;
+      const aiNames = sampleUnique(defaults, aiCount);
+      const cast = ['You', ...aiNames];
+
+      let html = `<h4>Generated cast with ${count} players:</h4>`;
+      html += '<div class="roster-list">';
+      cast.forEach((name, i) => {
+        const isHuman = i === 0;
+        html += `<div class="player-chip ${isHuman ? 'human' : ''}">${name}${isHuman ? ' (Human)' : ''}</div>`;
+      });
+      html += '</div>';
+
+      document.getElementById('test3-results').innerHTML = html;
+    };
+
+    // Auto-run Test 2 with 8 players on load
+    setTimeout(() => testRandomization(8), 100);
+  </script>
+</body>
+</html>
