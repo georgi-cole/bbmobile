@@ -76,12 +76,6 @@
     return g.getP?.(id) || (g.game?.players || g.players || []).find(p => p?.id === id);
   }
 
-  // Helper to get player name
-  function safeName(id) {
-    const player = gp(id);
-    return player?.name || String(id);
-  }
-
   // Helper to detect legacy numeric .jpg pattern (e.g., "./avatars/1.jpg")
   function isNumericJpgPattern(path, playerId) {
     if (!path || typeof path !== 'string') return false;
