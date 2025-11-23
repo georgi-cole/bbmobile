@@ -272,20 +272,33 @@ body[data-mobile-roster-active="true"] #rosterBar {
   border-radius: 2px;
 }
 
-/* Evicted tile - dimmed version with red cross overlay */
-.mobile-roster-tile.evicted {
+/* Evicted players in main grid - same size as active players */
+.mobile-roster-active-grid .mobile-roster-tile.evicted {
+  opacity: 0.75;
+}
+
+.mobile-roster-active-grid .mobile-roster-tile.evicted .mobile-roster-avatar {
+  filter: grayscale(0.85) brightness(0.75);
+}
+
+.mobile-roster-active-grid .mobile-roster-tile.evicted:hover .mobile-roster-avatar {
+  filter: grayscale(0.75) brightness(0.8);
+}
+
+/* Evicted tile in drawer (if drawer is used) - smaller size */
+.mobile-roster-evicted-grid .mobile-roster-tile.evicted {
   opacity: 0.75;
   flex: 0 0 auto;
   width: 80px;
   scroll-snap-align: start;
 }
 
-.mobile-roster-tile.evicted .mobile-roster-avatar {
-  filter: grayscale(1) brightness(0.75);
+.mobile-roster-evicted-grid .mobile-roster-tile.evicted .mobile-roster-avatar {
+  filter: grayscale(0.85) brightness(0.75);
 }
 
-.mobile-roster-tile.evicted:hover .mobile-roster-avatar {
-  filter: grayscale(0.9) brightness(0.8);
+.mobile-roster-evicted-grid .mobile-roster-tile.evicted:hover .mobile-roster-avatar {
+  filter: grayscale(0.75) brightness(0.8);
 }
 
 /* Red cross overlay for evicted players */
@@ -556,6 +569,187 @@ body[data-mobile-roster-active="true"] .tv {
   
   body[data-mobile-roster-active="true"] #rosterBar {
     display: flex;
+  }
+}
+
+/* ============================
+   Profile Popover
+   ============================ */
+
+.mobile-roster-profile-popover {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-roster-profile-popover.visible {
+  display: flex;
+  opacity: 1;
+}
+
+.profile-popover-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.profile-popover-content {
+  position: relative;
+  max-width: min(90vw, 420px);
+  max-height: 80vh;
+  background: var(--card);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: popoverSlideIn 0.3s ease;
+}
+
+@keyframes popoverSlideIn {
+  from {
+    transform: translateY(20px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.profile-popover-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--ink);
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.profile-popover-close:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: var(--accent);
+  transform: scale(1.1);
+}
+
+.profile-popover-body {
+  padding: 24px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.profile-field-name {
+  margin: 0 0 20px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--line);
+}
+
+.profile-field {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--card-2);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.profile-field label {
+  font-weight: 600;
+  color: var(--muted-2);
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.profile-field span,
+.profile-field strong,
+.profile-field em {
+  color: var(--ink);
+  flex: 1;
+}
+
+.profile-field strong {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.profile-field em {
+  font-style: italic;
+  color: var(--muted-2);
+}
+
+.profile-field-empty {
+  color: var(--muted) !important;
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.profile-field-ranking {
+  background: linear-gradient(135deg, var(--primary-2), var(--primary-3));
+  border: 1px solid var(--accent);
+}
+
+.profile-ranking-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent) !important;
+}
+
+.profile-field-eviction {
+  background: rgba(var(--evicted-color-rgb), 0.1);
+  border: 1px solid rgba(var(--evicted-color-rgb), 0.3);
+}
+
+.profile-eviction-value {
+  font-weight: 700;
+  color: var(--evicted-color) !important;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 520px) {
+  .profile-popover-content {
+    max-width: 95vw;
+    max-height: 85vh;
+  }
+  
+  .profile-popover-body {
+    padding: 20px 16px 16px;
+  }
+  
+  .profile-field {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .profile-field label {
+    min-width: auto;
   }
 }
 
