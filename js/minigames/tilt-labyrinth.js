@@ -156,6 +156,14 @@
     const ACCELERATION = 0.35;
     const KEYBOARD_ACCELERATION_MULTIPLIER = 1.2;
     
+    // Tilt detection constants
+    const TILT_DETECTION_TIMEOUT_MS = 1200;
+    const TILT_SENSOR_THRESHOLD = 0.1;
+    
+    // Control message constants
+    const CONTROLS_MSG_TILT = '📱 Tilt device to control (mouse/keyboard also available)';
+    const CONTROLS_MSG_DESKTOP = '👆 Use arrow keys (← ↑ ↓ →) or swipe/drag to control';
+    
     // Generate maze
     const mazeCells = generateMaze(MAZE_COLS, MAZE_ROWS, rng);
     const walls = cellsToWalls(mazeCells, CELL_SIZE);
@@ -265,7 +273,7 @@
               const gamma = event.gamma || 0;
               
               // Check if we're getting real sensor data (finite values that are not exactly 0)
-              if(isFinite(beta) && isFinite(gamma) && (Math.abs(beta) > 0.1 || Math.abs(gamma) > 0.1)){
+              if(isFinite(beta) && isFinite(gamma) && (Math.abs(beta) > TILT_SENSOR_THRESHOLD || Math.abs(gamma) > TILT_SENSOR_THRESHOLD)){
                 tiltDetected = true;
                 
                 // Clear timeout and remove temporary handler
@@ -274,7 +282,7 @@
                 
                 // Set up tilt controls permanently
                 useTiltControls = true;
-                controlsInfo.textContent = '📱 Tilt device to control (mouse/keyboard also available)';
+                controlsInfo.textContent = CONTROLS_MSG_TILT;
                 window.addEventListener('deviceorientation', handleOrientation);
               }
             };
@@ -282,24 +290,24 @@
             // Attach temporary listener
             window.addEventListener('deviceorientation', tempOrientationHandler);
             
-            // Set timeout: if no valid orientation event within 1200ms, assume no tilt support
+            // Set timeout: if no valid orientation event arrives, assume no tilt support
             tiltDetectionTimeout = setTimeout(() => {
               if(!tiltDetected){
                 window.removeEventListener('deviceorientation', tempOrientationHandler);
                 useTiltControls = false;
-                controlsInfo.textContent = '👆 Use arrow keys (← ↑ ↓ →) or swipe/drag to control';
+                controlsInfo.textContent = CONTROLS_MSG_DESKTOP;
               }
-            }, 1200);
+            }, TILT_DETECTION_TIMEOUT_MS);
           } else {
             // Permission denied
             useTiltControls = false;
-            controlsInfo.textContent = '👆 Use arrow keys (← ↑ ↓ →) or swipe/drag to control';
+            controlsInfo.textContent = CONTROLS_MSG_DESKTOP;
           }
         });
       } else {
         // DeviceOrientationEvent not available
         useTiltControls = false;
-        controlsInfo.textContent = '👆 Use arrow keys (← ↑ ↓ →) or swipe/drag to control';
+        controlsInfo.textContent = CONTROLS_MSG_DESKTOP;
       }
     }
 
