@@ -46,6 +46,12 @@
   }
 
   function startLiveVote(){
+    // Guard: block if game is paused
+    if(global.PauseController?.shouldBlockAction('startLiveVote')){
+      console.warn('[startLiveVote] Blocked: game is paused');
+      return;
+    }
+    
     const g=global.game;
     
     // Stop Social AI Scheduler explicitly to prevent background social chatter

@@ -20,6 +20,12 @@
      * When fast-forward is active, skip mode is bypassed in favor of acceleration
      */
     function enable() {
+      // Block if game is globally paused
+      if (g.PauseController?.shouldBlockAction('skip')) {
+        console.warn('[SkipController] Skip blocked: game is paused');
+        return;
+      }
+      
       if (skipActive) {
         console.warn('[SkipController] Skip already active, ignoring duplicate enable');
         return;

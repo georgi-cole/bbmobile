@@ -1848,6 +1848,13 @@ header.innerHTML = `
   
   function setPhase(phase, seconds, onTimeout){
     const game=g.game; if(!game) return;
+    
+    // Guard: block phase changes while game is paused
+    if(g.PauseController?.shouldBlockAction('setPhase')){
+      console.warn('[setPhase] Blocked: game is paused');
+      return;
+    }
+    
     sanitizeJuryConsistency(true);
     
     // Notify CardManager of phase change FIRST (before any other cleanup)

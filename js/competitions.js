@@ -1231,6 +1231,12 @@
   }
 
   function startHOH() {
+    // Guard: block if game is paused
+    if(global.PauseController?.shouldBlockAction('startHOH')){
+      console.warn('[startHOH] Blocked: game is paused');
+      return;
+    }
+    
     const g = global.game;
     g.lastCompScores = new Map(); g.hohOrder = [];
     g.__hohResolved = false;

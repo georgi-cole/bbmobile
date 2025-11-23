@@ -38,7 +38,9 @@
       fastForwardPlaybackMaxCardMs:480,
       // Fast-forward results modal preservation
       fastForwardPreserveResultsModal:true,
-      fastForwardResultsMinMs:1500
+      fastForwardResultsMinMs:1500,
+      // Pending settings (for deferred application)
+      pending:{}
     },
     week:1,phase:'lobby',endAt:0,
     players:[],humanId:null,
@@ -72,7 +74,9 @@
     },
     // Fast-forward runtime state
     __ffActive:false,
-    __ffMultiplier:1
+    __ffMultiplier:1,
+    // Global pause state (for Settings mode)
+    isGloballyPaused:false
   };
 
   /* ===== Balance & Social Constants ===== */

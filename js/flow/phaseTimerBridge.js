@@ -12,6 +12,12 @@
   let suspendReason = null;
   let originalTimerDisplay = null;
 
+  // Pause/resume state
+  let isPaused = false;
+  let remainingMs = 0;
+  let pausedTimeoutId = null;
+  let pausedIntervalId = null;
+
   /**
    * Initialize the bridge and set up event listeners
    */
@@ -208,6 +214,155 @@
     restoreTimerUI();
   }
 
+  /**
+   * Pause the phase timer (for Settings mode)
+   * Stores remaining time and clears active timeout/interval
+   */
+  function pause() {
+    if (isPaused) {
+      console.warn('[PhaseTimerBridge] Already paused, ignoring duplicate pause');
+      return;
+    }
+
+    const game = global.game;
+    if (!game) return;
+
+    const now = Date.now();
+    
+    // Calculate remaining time
+    if (game.endAt && game.endAt > now) {
+      remainingMs = Math.max(0, game.endAt - now);
+    } else if (game.phaseEndsAt && game.phaseEndsAt > now) {
+      remainingMs = Math.max(0, game.phaseEndsAt - now);
+    } else {
+      remainingMs = 0;
+    }
+
+    // Store current timeout/interval IDs for cleanup
+    if (game.phaseTimeoutId) {
+      clearTimeout(game.phaseTimeoutId);
+      pausedTimeoutId = game.phaseTimeoutId;
+      game.phaseTimeoutId = null;
+    }
+
+    if (game.phaseIntervalId) {
+      clearInterval(game.phaseIntervalId);
+      pausedIntervalId = game.phaseIntervalId;
+      game.phaseIntervalId = null;
+    }
+
+    isPaused = true;
+
+    console.info(`[PhaseTimerBridge] ⏸ Paused with ${remainingMs}ms remaining`);
+
+    // Dim timer UI to indicate paused state
+    hideTimerUI();
+  }
+
+  /**
+   * Resume the phase timer (for Settings mode)
+   * Restores remaining time and reschedules timeout/interval
+   */
+  function resume() {
+    if (!isPaused) {
+      console.warn('[PhaseTimerBridge] Not paused, ignoring resume');
+      return;
+    }
+
+    const game = global.game;
+    if (!game) return;
+
+    const now = Date.now();
+
+    console.info(`[PhaseTimerBridge] ▶ Resuming with ${remainingMs}ms remaining`);
+
+    // Handle timer already overdue
+    if (remainingMs <= 0) {
+      console.info('[PhaseTimerBridge] Timer overdue, invoking timeout callback immediately');
+      
+      // Invoke callback immediately on next tick
+      if (typeof game.phaseTimeoutCallback === 'function') {
+        setTimeout(() => {
+          try {
+            game.phaseTimeoutCallback();
+          } catch (err) {
+            console.error('[PhaseTimerBridge] Error invoking timeout callback:', err);
+          }
+        }, 0);
+      } else {
+        console.warn('[PhaseTimerBridge] No phaseTimeoutCallback available');
+      }
+    } else {
+      // Reschedule timer with remaining time
+      game.endAt = now + remainingMs;
+      if (game.phaseEndsAt) {
+        game.phaseEndsAt = now + remainingMs;
+      }
+
+      // Reschedule timeout if callback exists
+      if (typeof game.phaseTimeoutCallback === 'function') {
+        game.phaseTimeoutId = setTimeout(() => {
+          try {
+            game.phaseTimeoutCallback();
+          } catch (err) {
+            console.error('[PhaseTimerBridge] Error invoking timeout callback:', err);
+          }
+        }, remainingMs);
+      }
+
+      console.info(`[PhaseTimerBridge] Timer rescheduled for ${remainingMs}ms (endAt: ${new Date(game.endAt).toISOString()})`);
+    }
+
+    // Clear pause state
+    isPaused = false;
+    remainingMs = 0;
+    pausedTimeoutId = null;
+    pausedIntervalId = null;
+
+    // Restore timer UI
+    restoreTimerUI();
+  }
+
+  /**
+   * Force timeout immediately (for FFWD or manual phase advance)
+   * Cancels any pending timer and invokes callback on next tick
+   */
+  function forceTimeout() {
+    const game = global.game;
+    if (!game) return;
+
+    console.info('[PhaseTimerBridge] ⏭ Forcing timeout immediately');
+
+    // Clear any active timers
+    if (game.phaseTimeoutId) {
+      clearTimeout(game.phaseTimeoutId);
+      game.phaseTimeoutId = null;
+    }
+    if (game.phaseIntervalId) {
+      clearInterval(game.phaseIntervalId);
+      game.phaseIntervalId = null;
+    }
+
+    // Set endAt to past to indicate timer expired
+    game.endAt = Date.now() - 1;
+    if (game.phaseEndsAt) {
+      game.phaseEndsAt = Date.now() - 1;
+    }
+
+    // Invoke callback immediately on next tick
+    if (typeof game.phaseTimeoutCallback === 'function') {
+      setTimeout(() => {
+        try {
+          game.phaseTimeoutCallback();
+        } catch (err) {
+          console.error('[PhaseTimerBridge] Error invoking forced timeout callback:', err);
+        }
+      }, 0);
+    } else {
+      console.warn('[PhaseTimerBridge] No phaseTimeoutCallback to invoke');
+    }
+  }
+
   // Export API
   PhaseTimerBridge.init = init;
   PhaseTimerBridge.isSuspended = isSuspended;
@@ -215,6 +370,9 @@
   PhaseTimerBridge.manualResume = manualResume;
   PhaseTimerBridge.handleSuspend = handleSuspend;
   PhaseTimerBridge.handleSkipToResults = handleSkipToResults;
+  PhaseTimerBridge.pause = pause;
+  PhaseTimerBridge.resume = resume;
+  PhaseTimerBridge.forceTimeout = forceTimeout;
 
   // Export to global namespace
   global.PhaseTimerBridge = PhaseTimerBridge;

@@ -1523,6 +1523,16 @@
         return;
       }
       
+      // Block launching if there's an active phase (not lobby/intermission)
+      const phase = g.game?.phase;
+      const isActivephase = phase && !['lobby', 'intermission'].includes(phase);
+      
+      if(isActivephase){
+        notify('Cannot launch debug minigame during active game phase. Wait for intermission or start new season.', 'warn');
+        console.warn('[ui.config-and-settings] Blocked debug minigame launch during active phase:', phase);
+        return;
+      }
+      
       // Close settings modal
       closeSettingsModal();
       
@@ -1674,6 +1684,15 @@
     // Subscribe to PlayerService for live updates while modal is open
     setupPlayerServiceSubscription(modal);
     
+    // Pause game when Settings opens
+    if (g.PauseController?.pause) {
+      try {
+        g.PauseController.pause({ reason: 'settings' });
+      } catch (err) {
+        console.error('[ui.config-and-settings] Error pausing game:', err);
+      }
+    }
+    
     dim.style.display = 'flex';
     setTimeout(()=>{
       const target = modal.querySelector('.settingsTabPane.active #castName') || modal.querySelector('.settingsTabPane.active input, .settingsTabPane.active select');
@@ -1699,6 +1718,15 @@
       
       modal.__playerServiceWired = false;
       dim.style.display = 'none';
+      
+      // Resume game when Settings closes
+      if (g.PauseController?.resume) {
+        try {
+          g.PauseController.resume();
+        } catch (err) {
+          console.error('[ui.config-and-settings] Error resuming game:', err);
+        }
+      }
     }
   }
   function applySettingsFromModal(modal){

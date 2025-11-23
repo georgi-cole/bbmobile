@@ -12,10 +12,22 @@
 
   // Enqueue a card render function with delay
   function enqueue(renderFn, delay){
+    // Block enqueueing if game is paused
+    if(g.game?.isGloballyPaused === true){
+      console.info('[CardQueue] Enqueue blocked: game is paused');
+      return null;
+    }
+    
     if(!CardQueue.isActive) return null;
     
     const phaseId = CardQueue.currentPhaseId;
     const timeoutId = setTimeout(() => {
+      // Block rendering if game is paused
+      if(g.game?.isGloballyPaused === true){
+        console.info('[CardQueue] Render blocked: game is paused');
+        return;
+      }
+      
       // Only render if still in same phase
       if(CardQueue.currentPhaseId === phaseId && CardQueue.isActive){
         try {

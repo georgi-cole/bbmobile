@@ -579,6 +579,15 @@
       wireDebugMinigameLauncher(modal);
     }
     
+    // Pause game when Settings opens
+    if (global.PauseController?.pause) {
+      try {
+        global.PauseController.pause({ reason: 'settings' });
+      } catch (err) {
+        console.error('[settings/render] Error pausing game:', err);
+      }
+    }
+    
     dim.style.display = 'flex';
     
     // Focus first input
@@ -596,7 +605,18 @@
   // Close settings modal
   function closeSettingsModal(){
     const dim = document.getElementById('settingsBackdrop');
-    if(dim) dim.style.display = 'none';
+    if(dim) {
+      dim.style.display = 'none';
+      
+      // Resume game when Settings closes
+      if (global.PauseController?.resume) {
+        try {
+          global.PauseController.resume();
+        } catch (err) {
+          console.error('[settings/render] Error resuming game:', err);
+        }
+      }
+    }
   }
 
   // Apply player count changes (with defer or rebuild logic)
