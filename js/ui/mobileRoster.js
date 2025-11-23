@@ -194,34 +194,32 @@
    */
   function computeRanking(player, allPlayers) {
     // Basic heuristic: based on eviction order and HOH/POV wins
-    let score = 0;
-    
-    // Still active = higher score
-    if (!player.evicted) {
-      score += 1000;
-    } else {
-      // Later eviction = higher score
-      const evictionIndex = player.evictedAt || player.evictionOrder || 0;
-      score += evictionIndex * 10;
-    }
-    
-    // HOH wins
-    score += (player.hohWins || 0) * 50;
-    
-    // POV wins
-    score += (player.povWins || 0) * 30;
-    
-    // Nominations survived
-    score += (player.nominationsSurvived || 0) * 20;
-    
-    // Social score if available
-    score += (player.socialScore || 0) * 5;
-    
     // Rank by score (descending)
-    const sorted = allPlayers.map(p => ({
-      id: p.id,
-      score: computeRanking(p, [])
-    })).sort((a, b) => b.score - a.score);
+    const sorted = allPlayers.map(p => {
+      let pScore = 0;
+      
+      // Still active = higher score
+      if (!p.evicted) {
+        pScore += 1000;
+      } else {
+        // Later eviction = higher score
+        pScore += (p.evictedAt || p.evictionOrder || 0) * 10;
+      }
+      
+      // HOH wins
+      pScore += (p.hohWins || 0) * 50;
+      
+      // POV wins
+      pScore += (p.povWins || 0) * 30;
+      
+      // Nominations survived
+      pScore += (p.nominationsSurvived || 0) * 20;
+      
+      // Social score if available
+      pScore += (p.socialScore || 0) * 5;
+      
+      return { id: p.id, score: pScore };
+    }).sort((a, b) => b.score - a.score);
     
     const rank = sorted.findIndex(p => p.id === player.id) + 1;
     return rank || allPlayers.length;
@@ -977,7 +975,7 @@
   /**
    * Handle pointer up/leave/cancel (cancel long press)
    */
-  function handlePointerEnd(event) {
+  function handlePointerEnd() {
     cancelLongPress();
   }
   

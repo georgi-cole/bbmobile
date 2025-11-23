@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Roster Enhancements Test</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/mobileRoster.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .test-container {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--line);
+    }
+    
+    .test-header h1 {
+      margin: 0 0 12px 0;
+      font-size: 1.5rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    
+    .test-btn {
+      padding: 8px 16px;
+      background: var(--primary-2);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover {
+      background: var(--primary-3);
+      transform: translateY(-1px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--card-2);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--muted-2);
+    }
+    
+    .tv {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--card);
+      border-radius: 12px;
+      border: 2px solid var(--line);
+      min-height: 300px;
+      position: relative;
+    }
+    
+    .tvViewport {
+      position: relative;
+      min-height: 250px;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    #tvNow {
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+    }
+    
+    .test-instructions {
+      background: var(--primary-2);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 20px 0;
+    }
+    
+    .test-instructions h2 {
+      margin: 0 0 12px 0;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+    
+    .test-instructions ul {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+    
+    .test-instructions li {
+      margin: 8px 0;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body data-mobile-roster-active="true">
+  <div class="test-container">
+    <div class="test-header">
+      <h1>🎮 Mobile Roster Enhancements Test</h1>
+      <p>Testing case-insensitive avatar resolution, long-press profile popover, and evicted player styling.</p>
+      
+      <div class="test-controls">
+        <button class="test-btn" onclick="testEviction()">Test Evict Player</button>
+        <button class="test-btn" onclick="testAvatarResolution()">Test Avatar Resolution</button>
+        <button class="test-btn" onclick="testRanking()">Log Rankings</button>
+        <button class="test-btn" onclick="MobileRoster.refresh()">Refresh Roster</button>
+      </div>
+      
+      <div class="test-info">
+        <strong>Mobile viewport active:</strong> Try long-pressing (1.5s) on any player tile to see their profile!
+      </div>
+    </div>
+
+    <div class="test-instructions">
+      <h2>Test Instructions</h2>
+      <ul>
+        <li><strong>Long Press:</strong> Press and hold any player tile for 1.5 seconds to see profile popover</li>
+        <li><strong>Avatar Resolution:</strong> Mixed-case avatars (Kai.png vs kai.png) should load correctly</li>
+        <li><strong>Evicted Styling:</strong> Click "Test Evict Player" to see grayscale filter, red cross, and EVCT badge</li>
+        <li><strong>Scroll Cancel:</strong> Start long press, then scroll - popover should NOT appear</li>
+        <li><strong>Profile Fields:</strong> Check that missing fields show "—" or "None"</li>
+        <li><strong>Ranking:</strong> Active players ranked higher than evicted</li>
+      </ul>
+    </div>
+    
+    <!-- Roster container (created by mobileRoster.js) -->
+    <div id="rosterBar" style="display: none;"></div>
+    
+    <!-- Faux TV -->
+    <div class="tv">
+      <div class="tvViewport">
+        <div id="tvNow">
+          <p>📺 TV Display Area</p>
+          <p style="font-size: 0.875rem; opacity: 0.7;">Click a player tile to spotlight them here</p>
+        </div>
+        <div id="tvOverlay"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/ui/mobileRoster.js"></script>
+  
+  <script>
+    // Mock game state
+    window.game = {
+      season: 1,
+      week: 3,
+      phase: 'social',
+      players: [
+        {
+          id: 1,
+          name: 'Kai',
+          age: 24,
+          gender: 'Male',
+          location: 'Los Angeles',
+          occupation: 'Software Engineer',
+          motto: 'Code hard, play harder',
+          funFact: 'Built an app used by 1M+ people',
+          allies: [2, 3],
+          enemies: [5],
+          evicted: false,
+          hoh: true,
+          nominated: false,
+          hohWins: 2,
+          povWins: 1,
+          socialScore: 85
+        },
+        {
+          id: 2,
+          name: 'Aria',
+          age: 27,
+          gender: 'Female',
+          location: 'New York',
+          occupation: 'Marketing Director',
+          motto: 'Always stay authentic',
+          funFact: 'Ran a marathon in every continent',
+          allies: [1],
+          enemies: [4],
+          evicted: false,
+          nominated: true,
+          hohWins: 1,
+          povWins: 2,
+          socialScore: 78
+        },
+        {
+          id: 3,
+          name: 'Quinn',
+          age: 22,
+          gender: 'Non-binary',
+          location: 'Seattle',
+          occupation: 'Graphic Designer',
+          funFact: 'Can solve a Rubik\'s cube in under a minute',
+          allies: [1, 2],
+          enemies: [],
+          evicted: false,
+          hoh: false,
+          pov: true,
+          hohWins: 0,
+          povWins: 1,
+          socialScore: 72
+        },
+        {
+          id: 4,
+          name: 'Jax',
+          age: 29,
+          gender: 'Male',
+          hometown: 'Miami',
+          occupation: 'Fitness Coach',
+          motto: 'No pain, no gain',
+          allies: [],
+          enemies: [2],
+          evicted: false,
+          hohWins: 1,
+          povWins: 0,
+          socialScore: 65
+        },
+        {
+          id: 5,
+          name: 'Finn',
+          age: 26,
+          location: 'Portland',
+          occupation: 'Musician',
+          motto: 'Live in harmony',
+          funFact: 'Plays 5 instruments',
+          allies: [],
+          enemies: [1],
+          evicted: false,
+          hohWins: 0,
+          povWins: 1,
+          socialScore: 70
+        },
+        {
+          id: 6,
+          name: 'Zed',
+          age: 31,
+          gender: 'Male',
+          location: 'Chicago',
+          job: 'Architect',
+          tagline: 'Design your destiny',
+          fun_fact: 'Designed a public library',
+          allies: [],
+          enemies: [],
+          evicted: true,
+          evictedWeek: 1,
+          evictedAt: 1,
+          hohWins: 0,
+          povWins: 0,
+          socialScore: 55
+        },
+        {
+          id: 7,
+          name: 'Ash',
+          age: 25,
+          gender: 'Female',
+          location: 'Boston',
+          occupation: 'Teacher',
+          allies: [],
+          enemies: [],
+          evicted: true,
+          evictedWeek: 2,
+          evictedAt: 2,
+          hohWins: 0,
+          povWins: 1,
+          socialScore: 60
+        }
+      ]
+    };
+    
+    // Initialize mobile roster
+    if (window.MobileRoster) {
+      setTimeout(() => {
+        window.MobileRoster.init();
+        console.log('[Test] MobileRoster initialized');
+      }, 100);
+    }
+    
+    // Test functions
+    function testEviction() {
+      const player = window.game.players.find(p => !p.evicted && p.id !== 1);
+      if (player) {
+        player.evicted = true;
+        player.evictedWeek = window.game.week;
+        player.evictedAt = window.game.week;
+        console.log('[Test] Evicted player:', player.name);
+        window.MobileRoster.refresh();
+      } else {
+        alert('No active players left to evict!');
+      }
+    }
+    
+    function testAvatarResolution() {
+      console.log('[Test] Avatar candidates for "Kai":');
+      // Can't call internal function, but we can check the DOM
+      const kaiImg = document.querySelector('[data-player-id="1"] .mobile-roster-avatar');
+      if (kaiImg) {
+        console.log('Kai avatar src:', kaiImg.src);
+        console.log('Expected to try: avatars/Kai.png, avatars/kai.png, etc.');
+      }
+      
+      const ashImg = document.querySelector('[data-player-id="7"] .mobile-roster-avatar');
+      if (ashImg) {
+        console.log('Ash avatar src:', ashImg.src);
+        console.log('Expected to try: avatars/Ash.png, avatars/ash.png, etc.');
+      }
+    }
+    
+    function testRanking() {
+      console.log('[Test] Player Rankings:');
+      const allPlayers = window.game.players;
+      allPlayers.forEach(p => {
+        const score = calculateScore(p);
+        console.log(`${p.name}: Score ${score}, Evicted: ${p.evicted}`);
+      });
+    }
+    
+    function calculateScore(player) {
+      let score = 0;
+      if (!player.evicted) score += 1000;
+      else score += (player.evictedAt || 0) * 10;
+      score += (player.hohWins || 0) * 50;
+      score += (player.povWins || 0) * 30;
+      score += (player.nominationsSurvived || 0) * 20;
+      score += (player.socialScore || 0) * 5;
+      return score;
+    }
+    
+    // Log when popovers are shown
+    const originalLog = console.info;
+    console.info = function(...args) {
+      if (args[0] && args[0].includes('profile popover')) {
+        const msg = document.createElement('div');
+        msg.style.cssText = 'position: fixed; top: 10px; right: 10px; background: rgba(0,200,0,0.8); color: white; padding: 8px 12px; border-radius: 8px; z-index: 99999; font-size: 0.875rem;';
+        msg.textContent = args.join(' ');
+        document.body.appendChild(msg);
+        setTimeout(() => msg.remove(), 2000);
+      }
+      originalLog.apply(console, args);
+    };
+  </script>
+</body>
+</html>
