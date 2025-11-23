@@ -2200,118 +2200,7 @@ button:focus-visible,.btn:focus-visible{
   margin:0;
 }
 
-/* CTA Side Pills - Under each nominee */
-.lv2-cta-side{
-  display:flex;
-  justify-content:center;
-  margin-top:4px;
-}
-
-.lv2-cta-pill{
-  padding:10px 20px;
-  font-size:0.85rem;
-  font-weight:600;
-  letter-spacing:0.3px;
-  border-radius:20px;
-  border:1px solid rgba(131,191,255,0.25);
-  cursor:pointer;
-  transition:all 0.2s ease;
-  background:linear-gradient(135deg, rgba(131,191,255,0.15), rgba(102,217,255,0.1));
-  color:#83bfff;
-  text-shadow:0 1px 2px rgba(0,0,0,0.3);
-  box-shadow:0 2px 8px -4px rgba(0,0,0,0.3);
-  min-height:44px;
-  min-width:100px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.lv2-cta-pill:hover:not(:disabled){
-  background:linear-gradient(135deg, rgba(131,191,255,0.25), rgba(102,217,255,0.2));
-  transform:translateY(-2px);
-  box-shadow:0 4px 12px -4px rgba(131,191,255,0.4);
-  border-color:rgba(131,191,255,0.4);
-}
-
-.lv2-cta-pill:active:not(:disabled){
-  transform:translateY(0);
-  box-shadow:0 2px 6px -4px rgba(131,191,255,0.3);
-}
-
-.lv2-cta-pill:disabled{
-  opacity:0.4;
-  cursor:not-allowed;
-  background:linear-gradient(135deg, rgba(131,191,255,0.08), rgba(102,217,255,0.05));
-}
-
-.lv2-cta-pill:focus{
-  outline:2px solid rgba(131,191,255,0.5);
-  outline-offset:2px;
-}
-
-/* Emphasized state when it's user's turn */
-.lv2-cta-pill.active{
-  box-shadow:0 2px 12px -2px rgba(131,191,255,0.5),
-              0 0 20px -6px rgba(131,191,255,0.4);
-  animation:pill-pulse 2s ease-in-out infinite;
-}
-
-@keyframes pill-pulse{
-  0%, 100%{ 
-    box-shadow:0 2px 12px -2px rgba(131,191,255,0.5),
-                0 0 20px -6px rgba(131,191,255,0.4);
-  }
-  50%{ 
-    box-shadow:0 4px 16px -2px rgba(131,191,255,0.7),
-                0 0 28px -4px rgba(131,191,255,0.6);
-  }
-}
-
-/* Legacy CTA row (hidden by default, kept for backwards compatibility) */
-.lv2-cta-row{
-  display:none;
-}
-
-.lv2-cta-btn{
-  padding:12px 24px;
-  font-size:0.9rem;
-  font-weight:700;
-  letter-spacing:0.3px;
-  border-radius:8px;
-  border:none;
-  cursor:pointer;
-  transition:all 0.2s ease;
-  background:linear-gradient(135deg, #d94f4f 0%, #c83838 100%);
-  color:#fff;
-  text-shadow:0 1px 2px rgba(0,0,0,0.3);
-  box-shadow:0 2px 8px -2px rgba(217,79,79,0.4);
-  flex:1;
-  max-width:280px;
-  min-height:48px;
-}
-
-.lv2-cta-btn:hover:not(:disabled){
-  background:linear-gradient(135deg, #e85e5e 0%, #d94f4f 100%);
-  transform:translateY(-2px);
-  box-shadow:0 4px 12px -2px rgba(217,79,79,0.6);
-}
-
-.lv2-cta-btn:active:not(:disabled){
-  transform:translateY(0);
-  box-shadow:0 2px 6px -2px rgba(217,79,79,0.4);
-}
-
-.lv2-cta-btn:disabled{
-  opacity:0.5;
-  cursor:not-allowed;
-  background:linear-gradient(135deg, rgba(217,79,79,0.5) 0%, rgba(200,56,56,0.5) 100%);
-}
-
-.lv2-cta-btn:focus{
-  outline:2px solid rgba(131,191,255,0.5);
-  outline-offset:2px;
-}
+/* Legacy CTA styles removed - 2-nominee evictions now use inline evict button pattern */
 
 /* Your turn indicator */
 .lv2-turn-indicator{
@@ -2377,26 +2266,9 @@ button:focus-visible,.btn:focus-visible{
     height:50px;
   }
   
-  .lv2-cta-pill {
-    min-height: 48px;
-    min-width: 120px;
-    padding: 12px 24px;
-  }
-  
   .lv2-turn-tag {
     font-size: 0.6rem;
     padding: 3px 8px;
-  }
-  
-  /* Legacy CTA styles for backwards compatibility */
-  .lv2-cta-row{
-    flex-direction:column;
-    gap:8px;
-  }
-  
-  .lv2-cta-btn{
-    width:100%;
-    max-width:100%;
   }
 }
 
@@ -2566,8 +2438,7 @@ button:focus-visible,.btn:focus-visible{
 
 /* Reduced motion overrides for V2.1.1 */
 @media (prefers-reduced-motion: reduce) {
-  .lv2-count.bump,
-  .lv2-cta-pill.active {
+  .lv2-count.bump {
     animation: none !important;
   }
   
@@ -2766,13 +2637,6 @@ button:focus-visible,.btn:focus-visible{
   margin-bottom: clamp(8px, 2dvh, 16px);
 }
 
-/* Responsive mode: adjust CTA pills */
-.lv2-overlay.lv2-responsive .lv2-cta-pill {
-  font-size: clamp(0.9rem, 2dvh, 1.1rem);
-  padding: clamp(10px, 2dvh, 14px) clamp(18px, 4dvw, 28px);
-  min-height: 48px;
-}
-
 /* Responsive mode: turn tag positioning */
 .lv2-overlay.lv2-responsive .lv2-turn-tag {
   top: calc(env(safe-area-inset-top, 10px) + 8px);
@@ -2835,120 +2699,12 @@ button:focus-visible,.btn:focus-visible{
   display: none;
 }
 
-/* Hide legacy per-side CTAs in carousel mode */
-.lv2-overlay.lv2-carousel-on .lv2-cta-side {
-  display: none;
-}
-
 /* Hide old turn tag in carousel mode (replaced by YOUR TURN pill in status row) */
 .lv2-overlay.lv2-carousel-on .lv2-turn-tag {
   display: none;
 }
 
-/* Assign CTA dock to grid area in carousel mode */
-.lv2-overlay.lv2-carousel-on .lv2-cta-dock {
-  grid-area: cta-dock;
-}
-
-/* CTA Dock - always visible at bottom, anchored to safe area */
-.lv2-cta-dock {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 900;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  background: linear-gradient(
-    to top,
-    rgba(12, 14, 22, 0.92),
-    rgba(12, 14, 22, 0.72) 60%,
-    rgba(12, 14, 22, 0.0)
-  );
-  border-top: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: saturate(1.1) blur(8px);
-  -webkit-backdrop-filter: saturate(1.1) blur(8px); /* Safari support */
-}
-
-/* Main CTA button inside dock */
-.lv2-cta-main {
-  background: linear-gradient(135deg, #e63946, #c1121f);
-  border: none;
-  border-radius: 999px;
-  padding: 14px 24px;
-  color: white;
-  font-size: clamp(16px, 4.2vw, 18px);
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
-  min-height: 48px;
-  width: min(560px, 92vw);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.lv2-cta-main:hover:not(:disabled) {
-  background: linear-gradient(135deg, #f04e56, #d1232e);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(230, 57, 70, 0.5);
-}
-
-.lv2-cta-main:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 4px 16px rgba(230, 57, 70, 0.4);
-}
-
-.lv2-cta-main:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: linear-gradient(135deg, #888, #666);
-  box-shadow: none;
-}
-
-.lv2-cta-main:focus {
-  outline: 3px solid rgba(230, 57, 70, 0.5);
-  outline-offset: 2px;
-}
-
-.lv2-cta-main.highlight {
-  animation: cta-pulse 2s ease-in-out infinite;
-}
-
-@keyframes cta-pulse {
-  0%, 100% {
-    box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
-  }
-  50% {
-    box-shadow: 0 8px 28px rgba(230, 57, 70, 0.7), 0 0 40px rgba(230, 57, 70, 0.4);
-  }
-}
-
-/* CTA Spacer - reserves space at bottom so content doesn't sit under fixed dock */
-.lv2-cta-spacer {
-  height: calc(88px + env(safe-area-inset-bottom));
-}
-
-/* Inline CTA Dock - positioned within overlay flow, not fixed */
-.lv2-cta-dock-inline {
-  position: relative !important;
-  width: 100%;
-  padding: 16px;
-  background: transparent;
-  border-top: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  z-index: auto;
-}
-
-/* Hidden state for CTA dock (used in inline CTA mode) */
-.lv2-cta-dock-hidden {
-  display: none !important;
-}
+/* Legacy CTA styles removed - 2-nominee evictions now use inline evict button pattern */
 
 /* Selected nominee visual indicator */
 .lv2-contestant.selected {
@@ -8368,15 +8124,7 @@ body.layout-no-right .infoMusicCard{ display:none !important; }
   letter-spacing: 0.3px;
 }
 
-/* Hide legacy LV2 elements when IEVC is active */
-[data-livevote-root="inline"] ~ .lv2-cta-dock,
-[data-livevote-root="inline"] ~ .lv2-cta-row,
-[data-livevote-root="inline"] ~ .lv2-cta-side,
-body:has([data-livevote-root="inline"]) .lv2-cta-dock,
-body:has([data-livevote-root="inline"]) .lv2-cta-row,
-body:has([data-livevote-root="inline"]) .lv2-cta-side {
-  display: none !important;
-}
+/* Legacy LV2 CTA elements removed - no longer needed with inline evict controller */
 
 /* Animations */
 @keyframes ievcFadeIn {
