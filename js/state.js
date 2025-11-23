@@ -403,70 +403,77 @@
    * @param {string} options.reason - Reason for activation (for logging)
    */
   function activateFastForward(options){
-    // Guard: Block fast-forward activation while game is paused
-    if(g.PauseController && g.PauseController.isPaused && g.PauseController.isPaused()){
-      console.info('[state] activateFastForward blocked: game is paused');
-      return false;
-    }
-    
     options = options || {};
     
-    // Always use window.game as single source of truth
-    const g = global.game;
-    if(!g){
-      console.warn('[fast-forward] window.game not available, cannot activate');
-      return;
-    }
-    
-    const multiplier = options.multiplier || g.cfg?.fastForwardMultiplier || 0.1;
-    const reason = options.reason || 'user';
-    
-    // Guard against reentrant activation
-    if(g.__ffActive){
-      console.info('[fast-forward] already active, ignoring duplicate activation');
-      return;
-    }
-    
-    // Write to window.game (single source of truth)
-    g.__ffActive = true;
-    g.__ffMultiplier = multiplier;
-    
-    // Keep internal game reference in sync (if different object)
-    // This is necessary because the local `game` variable at the top of this module
-    // is assigned before window.game may be fully initialized, and some internal
-    // functions may still reference the local `game` object. This dual-write ensures
-    // backward compatibility while transitioning to window.game as the canonical source.
-    if(game !== g){
-      game.__ffActive = true;
-      game.__ffMultiplier = multiplier;
-    }
-    
-    const phase = g.phase || 'unknown';
-    console.info(`[fast-forward] activated (mult=${multiplier}, phase=${phase}, reason=${reason})`);
-    
-    // Compress remaining phase timer if applicable
-    const now = Date.now();
-    if(g.phaseEndsAt && g.phaseEndsAt > now){
-      const remainingOriginal = g.phaseEndsAt - now;
-      const remainingCompressed = normalizeDuration(remainingOriginal);
-      g.phaseEndsAt = now + remainingCompressed;
-      
-      // Keep endAt in sync
-      if(g.endAt && g.endAt > now){
-        g.endAt = g.phaseEndsAt;
+    try {
+      // Always use window.game as single source of truth
+      const g = global.game;
+      if(!g){
+        console.warn('[fast-forward] window.game not available, cannot activate');
+        return false;
       }
       
-      console.info(`[fast-forward] phase timer compressed: ${remainingOriginal}ms -> ${remainingCompressed}ms`);
-    }
-    
-    // Enforce minimum phase window to ensure perceptible playback
-    const minWindow = g.cfg?.fastForwardMinPhaseWindowMs || 1500;
-    if(g.phaseEndsAt && g.phaseEndsAt - now < minWindow){
-      g.phaseEndsAt = now + minWindow;
-      if(g.endAt && g.endAt < g.phaseEndsAt){
-        g.endAt = g.phaseEndsAt;
+      // Guard: Block fast-forward activation while game is paused
+      if(g.PauseController && g.PauseController.isPaused && g.PauseController.isPaused()){
+        console.info('[state] activateFastForward blocked: game is paused');
+        return false;
       }
-      console.info(`[fast-forward] enforced min phase window: ${minWindow}ms (ensuring perceptible playback)`);
+    
+      const multiplier = options.multiplier || g.cfg?.fastForwardMultiplier || 0.1;
+      const reason = options.reason || 'user';
+      
+      // Guard against reentrant activation
+      if(g.__ffActive){
+        console.info('[fast-forward] already active, ignoring duplicate activation');
+        return false;
+      }
+      
+      // Write to window.game (single source of truth)
+      g.__ffActive = true;
+      g.__ffMultiplier = multiplier;
+      
+      // Keep internal game reference in sync (if different object)
+      // This is necessary because the local `game` variable at the top of this module
+      // is assigned before window.game may be fully initialized, and some internal
+      // functions may still reference the local `game` object. This dual-write ensures
+      // backward compatibility while transitioning to window.game as the canonical source.
+      if(game !== g){
+        game.__ffActive = true;
+        game.__ffMultiplier = multiplier;
+      }
+      
+      const phase = g.phase || 'unknown';
+      console.info(`[fast-forward] activated (mult=${multiplier}, phase=${phase}, reason=${reason})`);
+      
+      // Compress remaining phase timer if applicable
+      const now = Date.now();
+      if(g.phaseEndsAt && g.phaseEndsAt > now){
+        const remainingOriginal = g.phaseEndsAt - now;
+        const remainingCompressed = normalizeDuration(remainingOriginal);
+        g.phaseEndsAt = now + remainingCompressed;
+        
+        // Keep endAt in sync
+        if(g.endAt && g.endAt > now){
+          g.endAt = g.phaseEndsAt;
+        }
+        
+        console.info(`[fast-forward] phase timer compressed: ${remainingOriginal}ms -> ${remainingCompressed}ms`);
+      }
+      
+      // Enforce minimum phase window to ensure perceptible playback
+      const minWindow = g.cfg?.fastForwardMinPhaseWindowMs || 1500;
+      if(g.phaseEndsAt && g.phaseEndsAt - now < minWindow){
+        g.phaseEndsAt = now + minWindow;
+        if(g.endAt && g.endAt < g.phaseEndsAt){
+          g.endAt = g.phaseEndsAt;
+        }
+        console.info(`[fast-forward] enforced min phase window: ${minWindow}ms (ensuring perceptible playback)`);
+      }
+      
+      return true;
+    } catch(e){
+      console.error('[fast-forward] activation error', e);
+      return false;
     }
   }
   global.activateFastForward = activateFastForward;
