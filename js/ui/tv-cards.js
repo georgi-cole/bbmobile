@@ -160,7 +160,7 @@
         clearTVOverlay();
         
         var card = document.createElement('div');
-        card.className = 'revealCard diaryRoomCard tvCardBody';
+        card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
         if(tone) card.setAttribute('data-tone', tone);
         
         // Mark as ephemeral for automatic cleanup on phase transitions
@@ -207,7 +207,7 @@
    */
   function buildAvatarCard({title, lines, tone, actorIds, subjectIds}){
     var card = document.createElement('div');
-    card.className = 'revealCard diaryRoomCard tvCardBody';
+    card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
     if(tone) card.setAttribute('data-tone', tone);
     
     // Build avatar row if actors/subjects provided
@@ -428,7 +428,7 @@
       clearTVOverlay();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard tvCardBody';
+      card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
       
       var h3 = document.createElement('h3');
       h3.textContent = title;
@@ -506,7 +506,7 @@
       clearTVOverlay();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard tvCardBody';
+      card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
       
       var h3 = document.createElement('h3');
       h3.textContent = title;
@@ -599,7 +599,7 @@
           clearTVOverlay();
           
           var card = document.createElement('div');
-          card.className = 'revealCard diaryRoomCard tvCardBody';
+          card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
           if(tone) card.setAttribute('data-tone', tone);
           
           var h3 = document.createElement('h3');
@@ -644,7 +644,7 @@
         clearTVOverlay();
         
         var card = document.createElement('div');
-        card.className = 'revealCard diaryRoomCard tvCardBody';
+        card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
         if(tone) card.setAttribute('data-tone', tone);
         
         var h3 = document.createElement('h3');
