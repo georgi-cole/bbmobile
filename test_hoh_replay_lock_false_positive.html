@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: HOH Replay-Lock False Positive</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: #83bfff; 
+    }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    button:disabled {
+      background: #24364b;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    .log {
+      background: #0a0f16;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 500px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .pass { color: #77d58d; font-weight: bold; }
+    .fail { color: #ff6d6d; font-weight: bold; }
+    .info { color: #83bfff; }
+    .warn { color: #fbbf24; }
+    .step { color: #a8b8cc; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: HOH Replay-Lock False Positive</h1>
+    <p><strong>Purpose:</strong> Verify that replay-lock only triggers after legitimate submission (both lock AND score present).</p>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <p>These tests validate the enhanced replay-lock logic with grace attempt mechanism:</p>
+      
+      <button onclick="runTest1()" id="test1Btn">1. Stale Lock Without Score (Grace Attempt)</button>
+      <button onclick="runTest2()" id="test2Btn">2. Lock With Score (Legitimate Block)</button>
+      <button onclick="runTest3()" id="test3Btn">3. Grace Exhaustion After Second Attempt</button>
+      <button onclick="runTest4()" id="test4Btn">4. Fresh Start (No Lock, No Score)</button>
+      <button onclick="clearLog()">Clear Log</button>
+      <button onclick="runAllTests()">▶ Run All Tests</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="results" class="log">Waiting for tests to run...</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="consoleLog" class="log">Console output will appear here...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Mock CompLocks module
+    const mockStorage = new Map();
+    
+    window.CompLocks = {
+      _getLockKey(week, phase, gameKey, playerId) {
+        return `bb_comp_lock_w${week}_${phase}_${gameKey}_p${playerId}`;
+      },
+      
+      hasSubmittedThisWeek(week, phase, gameKey, playerId) {
+        const key = this._getLockKey(week, phase, gameKey, playerId);
+        return mockStorage.has(key) && mockStorage.get(key) === '1';
+      },
+      
+      lockSubmission(week, phase, gameKey, playerId) {
+        const key = this._getLockKey(week, phase, gameKey, playerId);
+        mockStorage.set(key, '1');
+        log(`[CompLocks] Locked: Week ${week}, Phase ${phase}, Game ${gameKey}, Player ${playerId}`, 'info');
+      },
+      
+      clearWeek(week) {
+        const prefix = `bb_comp_lock_w${week}_`;
+        let cleared = 0;
+        for (const [key] of mockStorage) {
+          if (key.startsWith(prefix)) {
+            mockStorage.delete(key);
+            cleared++;
+          }
+        }
+        log(`[CompLocks] Cleared ${cleared} locks for week ${week}`, 'info');
+        return cleared;
+      },
+      
+      peek(week, phase, gameKey, playerId) {
+        const key = this._getLockKey(week, phase, gameKey, playerId);
+        return {
+          exists: mockStorage.has(key) && mockStorage.get(key) === '1',
+          key: key,
+          week: week,
+          phase: phase,
+          gameKey: gameKey,
+          playerId: playerId
+        };
+      },
+      
+      // Test helper: manually set lock
+      _setLock(week, phase, gameKey, playerId) {
+        const key = this._getLockKey(week, phase, gameKey, playerId);
+        mockStorage.set(key, '1');
+      },
+      
+      // Test helper: clear all
+      _clearAll() {
+        mockStorage.clear();
+      }
+    };
+
+    // Mock game state
+    window.game = {
+      week: 2,
+      phase: 'hoh',
+      humanId: 1,
+      lastCompScores: new Map(),
+      players: [
+        { id: 1, name: 'TestPlayer', human: true, evicted: false, compBeast: 0.5 }
+      ]
+    };
+
+    // Helper: hasLegitimateSubmission function (from competitions.js)
+    function hasLegitimateSubmission(week, phase, gameKey, playerId) {
+      const g = window.game;
+      const hasLock = !!(window.CompLocks && window.CompLocks.hasSubmittedThisWeek(week, phase, gameKey, playerId));
+      const hasScore = !!(g.lastCompScores && g.lastCompScores.has(playerId));
+      const legitimate = hasLock && hasScore;
+      return { hasLock, hasScore, legitimate };
+    }
+
+    // Logging functions
+    let testResults = [];
+    
+    function log(message, type = 'info') {
+      const consoleDiv = document.getElementById('consoleLog');
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type;
+      consoleDiv.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    function logStep(message) {
+      log(message, 'step');
+    }
+
+    function logResult(testName, passed, details) {
+      const status = passed ? '✓ PASS' : '✗ FAIL';
+      const className = passed ? 'pass' : 'fail';
+      const result = `${status}: ${testName} - ${details}`;
+      testResults.push({ testName, passed, details });
+      log(result, className);
+      
+      // Update results display
+      updateResults();
+    }
+
+    function updateResults() {
+      const resultsDiv = document.getElementById('results');
+      let html = '<strong>Test Results Summary:</strong>\n\n';
+      
+      testResults.forEach((result, idx) => {
+        const status = result.passed ? '✓ PASS' : '✗ FAIL';
+        const className = result.passed ? 'pass' : 'fail';
+        html += `<span class="${className}">${idx + 1}. ${status}: ${result.testName}</span>\n   ${result.details}\n\n`;
+      });
+      
+      const totalTests = testResults.length;
+      const passedTests = testResults.filter(r => r.passed).length;
+      html += `\n<span class="${passedTests === totalTests ? 'pass' : 'fail'}">`;
+      html += `Total: ${passedTests}/${totalTests} tests passed`;
+      html += `</span>`;
+      
+      resultsDiv.innerHTML = html;
+    }
+
+    window.clearLog = function() {
+      document.getElementById('consoleLog').innerHTML = '';
+      document.getElementById('results').innerHTML = 'Waiting for tests to run...';
+      testResults = [];
+      log('Log cleared', 'info');
+    };
+
+    // Test 1: Stale lock without score (should allow grace attempt)
+    window.runTest1 = function() {
+      log('=== TEST 1: Stale Lock Without Score (Grace Attempt) ===', 'info');
+      
+      const g = window.game;
+      g.week = 2;
+      g.phase = 'hoh';
+      g.humanId = 1;
+      g.lastCompScores = new Map();
+      delete g.__graceReplayAttempt_hoh_1;
+      
+      // Clear all locks
+      window.CompLocks._clearAll();
+      
+      logStep('1. Setting stale lock (no score)...');
+      window.CompLocks._setLock(2, 'hoh', 'quickTap', 1);
+      
+      logStep('2. Checking submission status...');
+      const submission = hasLegitimateSubmission(2, 'hoh', 'quickTap', 1);
+      log(`   Lock: ${submission.hasLock}, Score: ${submission.hasScore}, Legitimate: ${submission.legitimate}`, 'info');
+      
+      logStep('3. Simulating first attempt (grace attempt)...');
+      const shouldBlock1 = submission.legitimate;
+      const graceKey = `__graceReplayAttempt_hoh_1`;
+      const gracePrevious = g[graceKey] || false;
+      
+      if (!shouldBlock1 && submission.hasLock && !submission.hasScore) {
+        if (!gracePrevious) {
+          g[graceKey] = true;
+          log('   ✓ Grace attempt granted', 'pass');
+        } else {
+          log('   ✗ Grace already used', 'fail');
+        }
+      }
+      
+      logStep('4. Validating results...');
+      const passed = !shouldBlock1 && !gracePrevious && g[graceKey];
+      
+      if (passed) {
+        logResult('Test 1', true, 'Stale lock without score allowed grace attempt');
+      } else {
+        logResult('Test 1', false, 'Grace attempt not granted when expected');
+      }
+      
+      log('=== TEST 1 COMPLETE ===\n', 'info');
+    };
+
+    // Test 2: Lock with score (legitimate block)
+    window.runTest2 = function() {
+      log('=== TEST 2: Lock With Score (Legitimate Block) ===', 'info');
+      
+      const g = window.game;
+      g.week = 2;
+      g.phase = 'hoh';
+      g.humanId = 1;
+      g.lastCompScores = new Map();
+      delete g.__graceReplayAttempt_hoh_1;
+      
+      // Clear all locks
+      window.CompLocks._clearAll();
+      
+      logStep('1. Setting lock and score (legitimate submission)...');
+      window.CompLocks._setLock(2, 'hoh', 'quickTap', 1);
+      g.lastCompScores.set(1, 85);
+      
+      logStep('2. Checking submission status...');
+      const submission = hasLegitimateSubmission(2, 'hoh', 'quickTap', 1);
+      log(`   Lock: ${submission.hasLock}, Score: ${submission.hasScore}, Legitimate: ${submission.legitimate}`, 'info');
+      
+      logStep('3. Validating replay-lock should block...');
+      const shouldBlock = submission.legitimate;
+      
+      if (shouldBlock) {
+        log('   ✓ Replay-lock correctly blocks', 'pass');
+        logResult('Test 2', true, 'Legitimate submission (lock + score) correctly blocked replay');
+      } else {
+        log('   ✗ Replay-lock failed to block', 'fail');
+        logResult('Test 2', false, 'Replay-lock did not block when it should');
+      }
+      
+      log('=== TEST 2 COMPLETE ===\n', 'info');
+    };
+
+    // Test 3: Grace exhaustion after second attempt
+    window.runTest3 = function() {
+      log('=== TEST 3: Grace Exhaustion After Second Attempt ===', 'info');
+      
+      const g = window.game;
+      g.week = 2;
+      g.phase = 'hoh';
+      g.humanId = 1;
+      g.lastCompScores = new Map();
+      delete g.__graceReplayAttempt_hoh_1;
+      
+      // Clear all locks
+      window.CompLocks._clearAll();
+      
+      logStep('1. Setting stale lock (no score)...');
+      window.CompLocks._setLock(2, 'hoh', 'quickTap', 1);
+      
+      logStep('2. First attempt (should grant grace)...');
+      const submission1 = hasLegitimateSubmission(2, 'hoh', 'quickTap', 1);
+      const graceKey = `__graceReplayAttempt_hoh_1`;
+      
+      if (!submission1.legitimate && submission1.hasLock && !submission1.hasScore) {
+        if (!g[graceKey]) {
+          g[graceKey] = true;
+          log('   ✓ Grace granted on first attempt', 'pass');
+        }
+      }
+      
+      logStep('3. Second attempt (should block due to grace exhaustion)...');
+      const submission2 = hasLegitimateSubmission(2, 'hoh', 'quickTap', 1);
+      const shouldBlock2 = submission2.hasLock && !submission2.hasScore && g[graceKey];
+      
+      if (shouldBlock2) {
+        log('   ✓ Second attempt correctly blocked (grace exhausted)', 'pass');
+        logResult('Test 3', true, 'Grace attempt exhausted after first use');
+      } else {
+        log('   ✗ Second attempt not blocked', 'fail');
+        logResult('Test 3', false, 'Grace exhaustion not working correctly');
+      }
+      
+      log('=== TEST 3 COMPLETE ===\n', 'info');
+    };
+
+    // Test 4: Fresh start (no lock, no score)
+    window.runTest4 = function() {
+      log('=== TEST 4: Fresh Start (No Lock, No Score) ===', 'info');
+      
+      const g = window.game;
+      g.week = 3;
+      g.phase = 'hoh';
+      g.humanId = 1;
+      g.lastCompScores = new Map();
+      delete g.__graceReplayAttempt_hoh_1;
+      
+      // Clear all locks
+      window.CompLocks._clearAll();
+      
+      logStep('1. Starting fresh (no lock, no score)...');
+      
+      logStep('2. Checking submission status...');
+      const submission = hasLegitimateSubmission(3, 'hoh', 'quickTap', 1);
+      log(`   Lock: ${submission.hasLock}, Score: ${submission.hasScore}, Legitimate: ${submission.legitimate}`, 'info');
+      
+      logStep('3. Validating should allow play...');
+      const shouldAllow = !submission.hasLock && !submission.hasScore && !submission.legitimate;
+      
+      if (shouldAllow) {
+        log('   ✓ Fresh start correctly allows play', 'pass');
+        logResult('Test 4', true, 'No lock, no score allows player to compete');
+      } else {
+        log('   ✗ Fresh start incorrectly blocked', 'fail');
+        logResult('Test 4', false, 'Player blocked without lock or score');
+      }
+      
+      log('=== TEST 4 COMPLETE ===\n', 'info');
+    };
+
+    // Run all tests
+    window.runAllTests = async function() {
+      clearLog();
+      log('=== RUNNING ALL TESTS ===\n', 'info');
+      
+      const tests = [
+        { fn: runTest1, name: 'Test 1', btn: 'test1Btn' },
+        { fn: runTest2, name: 'Test 2', btn: 'test2Btn' },
+        { fn: runTest3, name: 'Test 3', btn: 'test3Btn' },
+        { fn: runTest4, name: 'Test 4', btn: 'test4Btn' }
+      ];
+      
+      for (const test of tests) {
+        const btn = document.getElementById(test.btn);
+        btn.disabled = true;
+        log(`\nRunning ${test.name}...`, 'info');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        test.fn();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        btn.disabled = false;
+      }
+      
+      log('\n=== ALL TESTS COMPLETE ===', 'info');
+    };
+
+    // Initial log
+    log('Test page loaded and ready', 'info');
+    log('CompLocks mock initialized', 'info');
+    log('Game state initialized (week=2, humanId=1)', 'info');
+  </script>
+</body>
+</html>

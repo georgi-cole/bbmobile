@@ -424,20 +424,105 @@
     });
   }
 
+  /**
+   * Check if a player has a legitimate submission for this competition
+   * Cross-checks both CompLocks storage AND lastCompScores Map
+   * Note: lastCompScores is cleared at the start of each competition phase (startHOH, startVetoComp)
+   * so it only contains scores from the current active competition
+   * @param {number} week - Current game week
+   * @param {string} phase - Current game phase
+   * @param {string} gameKey - Minigame identifier
+   * @param {number} playerId - Player ID
+   * @returns {object} {hasLock: boolean, hasScore: boolean, legitimate: boolean}
+   */
+  function hasLegitimateSubmission(week, phase, gameKey, playerId) {
+    const g = global.game;
+    
+    // Check CompLocks storage (persistent across sessions)
+    const hasLock = !!(global.CompLocks && global.CompLocks.hasSubmittedThisWeek(week, phase, gameKey, playerId));
+    
+    // Check lastCompScores Map (cleared at start of each competition phase)
+    // This Map only contains scores from the current active competition
+    const hasScore = !!(g.lastCompScores && g.lastCompScores.has(playerId));
+    
+    // A legitimate submission requires BOTH lock AND score
+    const legitimate = hasLock && hasScore;
+    
+    return { hasLock, hasScore, legitimate };
+  }
+
+  /**
+   * Mark a submission as complete with both lock and score (atomically)
+   * Helper function for testing or manual submission scenarios
+   * Note: Normal gameplay uses submitScore() which handles both lock and score
+   * @param {number} week - Current game week
+   * @param {string} phase - Current game phase
+   * @param {string} gameKey - Minigame identifier
+   * @param {number} playerId - Player ID
+   * @param {number} score - Final score value
+   */
+  function _markSubmission(week, phase, gameKey, playerId, score) {
+    const g = global.game;
+    
+    // Set score in Map
+    if (!g.lastCompScores) g.lastCompScores = new Map();
+    g.lastCompScores.set(playerId, score);
+    
+    // Set lock in CompLocks
+    if (global.CompLocks) {
+      global.CompLocks.lockSubmission(week, phase, gameKey, playerId);
+    }
+    
+    console.info(`[Competition] ✓ Marked submission: week=${week}, phase=${phase}, game=${gameKey}, player=${playerId}, score=${score}`);
+  }
+  // Export as internal helper for testing
+  global._markSubmission = _markSubmission;
+
   // Helper: run a human minigame with both replay-lock and anti-cheat
   async function runHumanMinigameWithGuards({ mg, host, player, label, multiplier, onAfterSubmit }) {
     const g = global.game;
 
     console.info(`[Competition] → runHumanMinigameWithGuards called: week=${g.week}, phase=${g.phase}, mg=${mg}, player=${player.name}(${player.id})`);
 
-    // 1) Block replays for this week/phase/game
-    if (global.CompLocks && global.CompLocks.hasSubmittedThisWeek(g.week, g.phase, mg, player.id)) {
-      console.warn(`[Competition] ⚠ Replay-lock triggered: week=${g.week}, phase=${g.phase}, mg=${mg}, player=${player.name}(${player.id})`);
-      // Use inline status instead of below-TV message
+    // 1) Block replays for this week/phase/game with enhanced validation
+    const submission = hasLegitimateSubmission(g.week, g.phase, mg, player.id);
+    
+    // Log structured diagnostic info
+    console.info('[Competition][Diag]', JSON.stringify({
+      week: g.week,
+      phase: g.phase,
+      humanId: player.id,
+      minigame: mg,
+      hasLock: submission.hasLock,
+      hasScore: submission.hasScore,
+      legitimate: submission.legitimate,
+      instructionsRendered: g[`__instructionsRendered${g.phase === 'hoh' ? 'HOH' : 'Veto'}`] || false
+    }));
+
+    // Check for legitimate submission (both lock and score)
+    if (submission.legitimate) {
+      console.warn(`[Competition] ⚠ Replay-lock triggered (legitimate): week=${g.week}, phase=${g.phase}, mg=${mg}, player=${player.name}(${player.id}), hasLock=${submission.hasLock}, hasScore=${submission.hasScore}`);
       if (window.TvStatus?.set) {
         window.TvStatus.set('You have already submitted for this competition.');
       }
       return;
+    }
+    
+    // Grace attempt: If lock exists but no score, allow ONE retry
+    if (submission.hasLock && !submission.hasScore) {
+      const graceKey = `__graceReplayAttempt_${g.phase}_${player.id}`;
+      if (g[graceKey]) {
+        // Already used grace attempt
+        console.warn(`[Competition] ⚠ Replay-lock triggered (grace exhausted): week=${g.week}, phase=${g.phase}, mg=${mg}, player=${player.name}(${player.id})`);
+        if (window.TvStatus?.set) {
+          window.TvStatus.set('You have already attempted this competition.');
+        }
+        return;
+      } else {
+        // First grace attempt
+        g[graceKey] = true;
+        console.info(`[Competition] ℹ Grace attempt granted: week=${g.week}, phase=${g.phase}, mg=${mg}, player=${player.name}(${player.id})`);
+      }
     }
 
     console.info('[Competition] ✓ Replay-lock check passed');
@@ -1238,6 +1323,12 @@
     g.__humanPlayedHOH = false;
     g.__compRunning = true; // Mark competition as running
     g.__hohGameKey = null; // Track which game was played
+    g.__instructionsRenderedHOH = false; // Track if instructions were rendered
+    g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
+    // Reset grace attempt flag for new competition
+    if (g.humanId != null) {
+      delete g[`__graceReplayAttempt_hoh_${g.humanId}`];
+    }
     global.markCompPlayed?.('hoh'); // Mark HOH as played
     global.tv.say('HOH Competition'); global.phaseMusic?.('hoh');
     global.setPhase('hoh', g.cfg.tHOH, finishCompPhase);

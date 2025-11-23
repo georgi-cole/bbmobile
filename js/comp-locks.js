@@ -72,25 +72,63 @@
     /**
      * Clear all locks for a specific week (useful for testing/debugging)
      * @param {number} week - Week to clear locks for
+     * @returns {number} Number of locks cleared
      */
     clearWeekLocks(week){
       try {
         const prefix = `bb_comp_lock_w${week}_`;
-        const keysToRemove = [];
         
-        // Find all keys for this week
+        // Get stable snapshot of all localStorage keys to avoid issues with modification during iteration
+        const allKeys = [];
         for(let i = 0; i < storage.length; i++){
           const key = storage.key(i);
-          if(key && key.startsWith(prefix)){
-            keysToRemove.push(key);
-          }
+          if(key) allKeys.push(key);
         }
         
-        // Remove them
+        // Filter and remove matching keys
+        const keysToRemove = allKeys.filter(key => key.startsWith(prefix));
         keysToRemove.forEach(key => storage.removeItem(key));
+        
         console.info(`[CompLocks] Cleared ${keysToRemove.length} locks for week ${week}`);
+        return keysToRemove.length;
       } catch(e) {
         console.warn('[CompLocks] Error clearing week locks:', e);
+        return 0;
+      }
+    },
+
+    /**
+     * Alias for clearWeekLocks for consistency with problem statement
+     * @param {number} week - Week to clear locks for
+     * @returns {number} Number of locks cleared
+     */
+    clearWeek(week){
+      return this.clearWeekLocks(week);
+    },
+
+    /**
+     * Peek at lock status without triggering side effects (for diagnostics)
+     * @param {number} week - Current game week
+     * @param {string} phase - Current game phase
+     * @param {string} gameKey - Minigame identifier
+     * @param {number} playerId - Player ID
+     * @returns {object} Lock info: {exists: boolean, key: string}
+     */
+    peek(week, phase, gameKey, playerId){
+      try {
+        const key = this._getLockKey(week, phase, gameKey, playerId);
+        const value = storage.getItem(key);
+        return {
+          exists: value === '1',
+          key: key,
+          week: week,
+          phase: phase,
+          gameKey: gameKey,
+          playerId: playerId
+        };
+      } catch(e) {
+        console.warn('[CompLocks] Error peeking lock:', e);
+        return { exists: false, key: null, error: e.message };
       }
     },
 
@@ -100,18 +138,18 @@
     clearAllLocks(){
       try {
         const prefix = 'bb_comp_lock_';
-        const keysToRemove = [];
         
-        // Find all lock keys
+        // Get stable snapshot of all localStorage keys
+        const allKeys = [];
         for(let i = 0; i < storage.length; i++){
           const key = storage.key(i);
-          if(key && key.startsWith(prefix)){
-            keysToRemove.push(key);
-          }
+          if(key) allKeys.push(key);
         }
         
-        // Remove them
+        // Filter and remove matching keys
+        const keysToRemove = allKeys.filter(key => key.startsWith(prefix));
         keysToRemove.forEach(key => storage.removeItem(key));
+        
         console.info(`[CompLocks] Cleared all ${keysToRemove.length} competition locks`);
       } catch(e) {
         console.warn('[CompLocks] Error clearing all locks:', e);
@@ -125,17 +163,17 @@
     clearStaleWeek1Locks(){
       try {
         const prefix = 'bb_comp_lock_w1_';
-        const keysToRemove = [];
         
-        // Find all week 1 lock keys
+        // Get stable snapshot of all localStorage keys
+        const allKeys = [];
         for(let i = 0; i < storage.length; i++){
           const key = storage.key(i);
-          if(key && key.startsWith(prefix)){
-            keysToRemove.push(key);
-          }
+          if(key) allKeys.push(key);
         }
         
-        // Remove them
+        // Filter and remove matching keys
+        const keysToRemove = allKeys.filter(key => key.startsWith(prefix));
+        
         if(keysToRemove.length > 0){
           keysToRemove.forEach(key => storage.removeItem(key));
           console.info(`[CompLocks] Auto-cleared ${keysToRemove.length} stale week 1 locks`);

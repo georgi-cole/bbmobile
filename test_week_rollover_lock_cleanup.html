@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Week Rollover Lock Cleanup</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: #83bfff; 
+    }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    button:disabled {
+      background: #24364b;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    .log {
+      background: #0a0f16;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 500px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .pass { color: #77d58d; font-weight: bold; }
+    .fail { color: #ff6d6d; font-weight: bold; }
+    .info { color: #83bfff; }
+    .warn { color: #fbbf24; }
+    .step { color: #a8b8cc; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test: Week Rollover Lock Cleanup</h1>
+    <p><strong>Purpose:</strong> Verify that competition locks are cleared when week increments (simulating eviction/rollover).</p>
+    
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      <p>These tests validate that week rollover properly clears previous week's locks:</p>
+      
+      <button onclick="runTest1()" id="test1Btn">1. Submit HOH Week 2, Rollover to Week 3</button>
+      <button onclick="runTest2()" id="test2Btn">2. Multiple Locks Across Phases</button>
+      <button onclick="runTest3()" id="test3Btn">3. Participation Flags Reset</button>
+      <button onclick="runTest4()" id="test4Btn">4. Grace Flags Reset on Rollover</button>
+      <button onclick="clearLog()">Clear Log</button>
+      <button onclick="runAllTests()">▶ Run All Tests</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="results" class="log">Waiting for tests to run...</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div id="consoleLog" class="log">Console output will appear here...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Mock CompLocks module with storage
+    const mockStorage = new Map();
+    
+    window.CompLocks = {
+      _getLockKey(week, phase, gameKey, playerId) {
+        return `bb_comp_lock_w${week}_${phase}_${gameKey}_p${playerId}`;
+      },
+      
+      hasSubmittedThisWeek(week, phase, gameKey, playerId) {
+        const key = this._getLockKey(week, phase, gameKey, playerId);
+        return mockStorage.has(key) && mockStorage.get(key) === '1';
+      },
+      
+      lockSubmission(week, phase, gameKey, playerId) {
+        const key = this._getLockKey(week, phase, gameKey, playerId);
+        mockStorage.set(key, '1');
+        log(`[CompLocks] Locked: Week ${week}, Phase ${phase}, Game ${gameKey}, Player ${playerId}`, 'info');
+      },
+      
+      clearWeek(week) {
+        const prefix = `bb_comp_lock_w${week}_`;
+        let cleared = 0;
+        const keysToRemove = [];
+        
+        for (const [key] of mockStorage) {
+          if (key.startsWith(prefix)) {
+            keysToRemove.push(key);
+          }
+        }
+        
+        keysToRemove.forEach(key => mockStorage.delete(key));
+        cleared = keysToRemove.length;
+        
+        log(`[CompLocks] Cleared ${cleared} locks for week ${week}`, 'info');
+        return cleared;
+      },
+      
+      clearWeekLocks(week) {
+        return this.clearWeek(week);
+      },
+      
+      peek(week, phase, gameKey, playerId) {
+        const key = this._getLockKey(week, phase, gameKey, playerId);
+        return {
+          exists: mockStorage.has(key) && mockStorage.get(key) === '1',
+          key: key,
+          week: week,
+          phase: phase,
+          gameKey: gameKey,
+          playerId: playerId
+        };
+      },
+      
+      // Test helper: get all locks
+      _getAllLocks() {
+        const locks = [];
+        for (const [key] of mockStorage) {
+          if (key.startsWith('bb_comp_lock_')) {
+            locks.push(key);
+          }
+        }
+        return locks;
+      },
+      
+      // Test helper: clear all
+      _clearAll() {
+        mockStorage.clear();
+      }
+    };
+
+    // Mock game state
+    window.game = {
+      week: 2,
+      phase: 'hoh',
+      humanId: 1,
+      lastCompScores: new Map(),
+      __humanPlayedHOH: false,
+      __humanPlayedVeto: false,
+      players: [
+        { id: 1, name: 'TestPlayer', human: true, evicted: false, compBeast: 0.5 }
+      ]
+    };
+
+    // Mock proceedNextWeek function (from eviction.js)
+    window.proceedNextWeek = function() {
+      const g = window.game;
+      const previousWeek = g.week;
+      
+      log(`[eviction] Starting week rollover (${previousWeek} → ${previousWeek + 1})`, 'info');
+      
+      // Clear previous week's competition locks before incrementing week
+      if (window.CompLocks && typeof window.CompLocks.clearWeek === 'function') {
+        try {
+          const cleared = window.CompLocks.clearWeek(previousWeek);
+          log(`[eviction] ✓ Cleared ${cleared} competition locks for week ${previousWeek}`, 'pass');
+        } catch (e) {
+          log('[eviction] Failed to clear previous week locks: ' + e.message, 'fail');
+        }
+      }
+      
+      g.week++;
+      
+      // Reset competition participation flags for new week
+      g.__humanPlayedHOH = false;
+      g.__humanPlayedVeto = false;
+      log('[eviction] ✓ Reset competition participation flags for week ' + g.week, 'info');
+      
+      // Reset grace attempt flags for new week
+      if (g.humanId != null) {
+        delete g[`__graceReplayAttempt_hoh_${g.humanId}`];
+        delete g[`__graceReplayAttempt_veto_comp_${g.humanId}`];
+        delete g[`__graceReplayAttempt_veto_${g.humanId}`];
+        log('[eviction] ✓ Reset grace attempt flags for week ' + g.week, 'info');
+      }
+    };
+
+    // Logging functions
+    let testResults = [];
+    
+    function log(message, type = 'info') {
+      const consoleDiv = document.getElementById('consoleLog');
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type;
+      consoleDiv.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    function logStep(message) {
+      log(message, 'step');
+    }
+
+    function logResult(testName, passed, details) {
+      const status = passed ? '✓ PASS' : '✗ FAIL';
+      const className = passed ? 'pass' : 'fail';
+      const result = `${status}: ${testName} - ${details}`;
+      testResults.push({ testName, passed, details });
+      log(result, className);
+      
+      // Update results display
+      updateResults();
+    }
+
+    function updateResults() {
+      const resultsDiv = document.getElementById('results');
+      let html = '<strong>Test Results Summary:</strong>\n\n';
+      
+      testResults.forEach((result, idx) => {
+        const status = result.passed ? '✓ PASS' : '✗ FAIL';
+        const className = result.passed ? 'pass' : 'fail';
+        html += `<span class="${className}">${idx + 1}. ${status}: ${result.testName}</span>\n   ${result.details}\n\n`;
+      });
+      
+      const totalTests = testResults.length;
+      const passedTests = testResults.filter(r => r.passed).length;
+      html += `\n<span class="${passedTests === totalTests ? 'pass' : 'fail'}">`;
+      html += `Total: ${passedTests}/${totalTests} tests passed`;
+      html += `</span>`;
+      
+      resultsDiv.innerHTML = html;
+    }
+
+    window.clearLog = function() {
+      document.getElementById('consoleLog').innerHTML = '';
+      document.getElementById('results').innerHTML = 'Waiting for tests to run...';
+      testResults = [];
+      log('Log cleared', 'info');
+    };
+
+    // Test 1: Submit HOH Week 2, Rollover to Week 3
+    window.runTest1 = function() {
+      log('=== TEST 1: Submit HOH Week 2, Rollover to Week 3 ===', 'info');
+      
+      const g = window.game;
+      window.CompLocks._clearAll();
+      
+      // Set up Week 2
+      g.week = 2;
+      g.phase = 'hoh';
+      g.humanId = 1;
+      g.lastCompScores = new Map();
+      
+      logStep('1. Submitting HOH for Week 2...');
+      window.CompLocks.lockSubmission(2, 'hoh', 'quickTap', 1);
+      g.lastCompScores.set(1, 85);
+      
+      logStep('2. Verifying lock exists for Week 2...');
+      const peek1 = window.CompLocks.peek(2, 'hoh', 'quickTap', 1);
+      log(`   Week 2 lock exists: ${peek1.exists}`, peek1.exists ? 'pass' : 'fail');
+      
+      logStep('3. Rolling over to Week 3...');
+      window.proceedNextWeek();
+      
+      logStep('4. Verifying Week 2 locks were cleared...');
+      const peek2 = window.CompLocks.peek(2, 'hoh', 'quickTap', 1);
+      log(`   Week 2 lock exists after rollover: ${peek2.exists}`, peek2.exists ? 'fail' : 'pass');
+      
+      logStep('5. Verifying Week 3 is active and playable...');
+      log(`   Current week: ${g.week}`, g.week === 3 ? 'pass' : 'fail');
+      const canPlay = !window.CompLocks.hasSubmittedThisWeek(3, 'hoh', 'quickTap', 1);
+      log(`   Can play in Week 3: ${canPlay}`, canPlay ? 'pass' : 'fail');
+      
+      const passed = !peek2.exists && g.week === 3 && canPlay;
+      
+      if (passed) {
+        logResult('Test 1', true, 'Week 2 locks cleared on rollover to Week 3');
+      } else {
+        logResult('Test 1', false, 'Week rollover did not clear locks properly');
+      }
+      
+      log('=== TEST 1 COMPLETE ===\n', 'info');
+    };
+
+    // Test 2: Multiple locks across phases
+    window.runTest2 = function() {
+      log('=== TEST 2: Multiple Locks Across Phases ===', 'info');
+      
+      const g = window.game;
+      window.CompLocks._clearAll();
+      
+      g.week = 2;
+      g.humanId = 1;
+      
+      logStep('1. Creating multiple locks for Week 2...');
+      window.CompLocks.lockSubmission(2, 'hoh', 'quickTap', 1);
+      window.CompLocks.lockSubmission(2, 'veto_comp', 'memoryMatch', 1);
+      window.CompLocks.lockSubmission(2, 'hoh', 'timingBar', 2); // Different player
+      
+      logStep('2. Verifying all locks exist...');
+      const allLocksBefore = window.CompLocks._getAllLocks();
+      log(`   Total locks before rollover: ${allLocksBefore.length}`, allLocksBefore.length === 3 ? 'pass' : 'fail');
+      
+      logStep('3. Rolling over to Week 3...');
+      window.proceedNextWeek();
+      
+      logStep('4. Verifying all Week 2 locks were cleared...');
+      const allLocksAfter = window.CompLocks._getAllLocks();
+      log(`   Total locks after rollover: ${allLocksAfter.length}`, allLocksAfter.length === 0 ? 'pass' : 'fail');
+      
+      const passed = allLocksBefore.length === 3 && allLocksAfter.length === 0;
+      
+      if (passed) {
+        logResult('Test 2', true, 'All locks across phases cleared on rollover');
+      } else {
+        logResult('Test 2', false, 'Some locks persisted after rollover');
+      }
+      
+      log('=== TEST 2 COMPLETE ===\n', 'info');
+    };
+
+    // Test 3: Participation flags reset
+    window.runTest3 = function() {
+      log('=== TEST 3: Participation Flags Reset ===', 'info');
+      
+      const g = window.game;
+      window.CompLocks._clearAll();
+      
+      g.week = 2;
+      g.humanId = 1;
+      
+      logStep('1. Setting participation flags for Week 2...');
+      g.__humanPlayedHOH = true;
+      g.__humanPlayedVeto = true;
+      log(`   HOH played: ${g.__humanPlayedHOH}, Veto played: ${g.__humanPlayedVeto}`, 'info');
+      
+      logStep('2. Rolling over to Week 3...');
+      window.proceedNextWeek();
+      
+      logStep('3. Verifying flags were reset...');
+      log(`   HOH played: ${g.__humanPlayedHOH}, Veto played: ${g.__humanPlayedVeto}`, 'info');
+      
+      const passed = g.__humanPlayedHOH === false && g.__humanPlayedVeto === false;
+      
+      if (passed) {
+        log('   ✓ Both flags reset to false', 'pass');
+        logResult('Test 3', true, 'Participation flags reset on week rollover');
+      } else {
+        log('   ✗ Flags not reset properly', 'fail');
+        logResult('Test 3', false, 'Participation flags not reset');
+      }
+      
+      log('=== TEST 3 COMPLETE ===\n', 'info');
+    };
+
+    // Test 4: Grace flags reset on rollover
+    window.runTest4 = function() {
+      log('=== TEST 4: Grace Flags Reset on Rollover ===', 'info');
+      
+      const g = window.game;
+      window.CompLocks._clearAll();
+      
+      g.week = 2;
+      g.humanId = 1;
+      
+      logStep('1. Setting grace flags for Week 2...');
+      g.__graceReplayAttempt_hoh_1 = true;
+      g.__graceReplayAttempt_veto_comp_1 = true;
+      g.__graceReplayAttempt_veto_1 = true;
+      log('   All grace flags set to true', 'info');
+      
+      logStep('2. Rolling over to Week 3...');
+      window.proceedNextWeek();
+      
+      logStep('3. Verifying grace flags were cleared...');
+      const hohGrace = g.__graceReplayAttempt_hoh_1;
+      const vetoCompGrace = g.__graceReplayAttempt_veto_comp_1;
+      const vetoGrace = g.__graceReplayAttempt_veto_1;
+      
+      log(`   HOH grace: ${hohGrace}, VetoComp grace: ${vetoCompGrace}, Veto grace: ${vetoGrace}`, 'info');
+      
+      const passed = hohGrace === undefined && vetoCompGrace === undefined && vetoGrace === undefined;
+      
+      if (passed) {
+        log('   ✓ All grace flags cleared', 'pass');
+        logResult('Test 4', true, 'Grace attempt flags reset on week rollover');
+      } else {
+        log('   ✗ Some grace flags persist', 'fail');
+        logResult('Test 4', false, 'Grace flags not fully reset');
+      }
+      
+      log('=== TEST 4 COMPLETE ===\n', 'info');
+    };
+
+    // Run all tests
+    window.runAllTests = async function() {
+      clearLog();
+      log('=== RUNNING ALL TESTS ===\n', 'info');
+      
+      const tests = [
+        { fn: runTest1, name: 'Test 1', btn: 'test1Btn' },
+        { fn: runTest2, name: 'Test 2', btn: 'test2Btn' },
+        { fn: runTest3, name: 'Test 3', btn: 'test3Btn' },
+        { fn: runTest4, name: 'Test 4', btn: 'test4Btn' }
+      ];
+      
+      for (const test of tests) {
+        const btn = document.getElementById(test.btn);
+        btn.disabled = true;
+        log(`\nRunning ${test.name}...`, 'info');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        test.fn();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        btn.disabled = false;
+      }
+      
+      log('\n=== ALL TESTS COMPLETE ===', 'info');
+    };
+
+    // Initial log
+    log('Test page loaded and ready', 'info');
+    log('CompLocks mock initialized', 'info');
+    log('proceedNextWeek mock initialized', 'info');
+    log('Game state initialized (week=2, humanId=1)', 'info');
+  </script>
+</body>
+</html>

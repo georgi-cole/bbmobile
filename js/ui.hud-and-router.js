@@ -1354,6 +1354,59 @@ header.innerHTML = `
     const startRemaining = (game.phaseEndsAt || 0) - Date.now();
     const phase = game.phase || 'unknown';
     
+    // Competition warm-up guard: Prevent fast-forward during initial instruction rendering
+    // This ensures instructions have time to mount before acceleration
+    const MIN_COMP_WARMUP = 400; // milliseconds
+    const isCompPhase = (phase === 'hoh' || phase === 'veto_comp' || phase === 'veto' || 
+                         phase === 'final3_comp1' || phase === 'final3_comp2' || phase === 'final3_comp3');
+    
+    if (isCompPhase && game.__phaseStartTs) {
+      const elapsed = Date.now() - game.__phaseStartTs;
+      const instructionsRendered = (phase === 'hoh' && game.__instructionsRenderedHOH) ||
+                                    ((phase === 'veto_comp' || phase === 'veto') && game.__instructionsRenderedVeto);
+      
+      if (elapsed < MIN_COMP_WARMUP && !instructionsRendered) {
+        const waitTime = MIN_COMP_WARMUP - elapsed;
+        console.info(`[ff] Competition warm-up: waiting ${waitTime}ms for instructions to render (phase=${phase}, elapsed=${elapsed}ms)`);
+        
+        // Wait for either remaining warm-up time or instructions-mounted event
+        let eventCleanup = null;
+        await Promise.race([
+          new Promise(resolve => setTimeout(resolve, waitTime)),
+          new Promise(resolve => {
+            const handler = (e) => {
+              if (e.detail?.phase === phase) {
+                console.info('[ff] ✓ Instructions mounted during warm-up wait');
+                resolve();
+              }
+            };
+            document.addEventListener('competition-instructions-mounted', handler);
+            
+            // Store cleanup function
+            eventCleanup = () => {
+              document.removeEventListener('competition-instructions-mounted', handler);
+            };
+            
+            // Auto-cleanup after warm-up timeout
+            setTimeout(() => {
+              if (eventCleanup) {
+                eventCleanup();
+                eventCleanup = null;
+              }
+              resolve();
+            }, waitTime);
+          })
+        ]);
+        
+        // Ensure event listener is removed after Promise.race resolves
+        if (eventCleanup) {
+          eventCleanup();
+        }
+        
+        console.info('[ff] ✓ Competition warm-up complete, proceeding with fast-forward');
+      }
+    }
+    
     // Activate fast-forward mode (preserves callbacks, compresses durations)
     if(typeof g.activateFastForward === 'function'){
       g.activateFastForward({ multiplier: game.cfg?.fastForwardMultiplier || 0.1, reason: 'user' });
