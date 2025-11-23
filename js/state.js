@@ -403,6 +403,12 @@
    * @param {string} options.reason - Reason for activation (for logging)
    */
   function activateFastForward(options){
+    // Guard: Block fast-forward activation while game is paused
+    if(g.PauseController && g.PauseController.isPaused && g.PauseController.isPaused()){
+      console.info('[state] activateFastForward blocked: game is paused');
+      return false;
+    }
+    
     options = options || {};
     
     // Always use window.game as single source of truth

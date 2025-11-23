@@ -1658,6 +1658,11 @@
       if(!g.game.players) g.game.players = [];
     }
     
+    // Pause game systems when opening settings
+    if(g.PauseController && typeof g.PauseController.pause === 'function'){
+      g.PauseController.pause('settings');
+    }
+    
     ensureGameCfg();
     const dim = ensureSettingsModal();
     const modal = dim.querySelector('.modal');
@@ -1673,6 +1678,12 @@
     
     // Subscribe to PlayerService for live updates while modal is open
     setupPlayerServiceSubscription(modal);
+    
+    // Add visual pause indicator
+    addPauseIndicator(modal);
+    
+    // Disable FFWD controls while paused
+    disableFFWDControls();
     
     dim.style.display = 'flex';
     setTimeout(()=>{
@@ -1698,7 +1709,19 @@
       }
       
       modal.__playerServiceWired = false;
+      
+      // Remove pause indicator
+      removePauseIndicator(modal);
+      
+      // Re-enable FFWD controls
+      enableFFWDControls();
+      
       dim.style.display = 'none';
+      
+      // Resume game systems when closing settings
+      if(g.PauseController && typeof g.PauseController.resume === 'function'){
+        g.PauseController.resume();
+      }
     }
   }
   function applySettingsFromModal(modal){
@@ -1727,6 +1750,97 @@
     g.updateHud?.();
   }
   function notify(msg, cls){ try{ g.addLog?.(msg, cls||''); }catch(e){} }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PAUSE INDICATOR & CONTROL HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Add visual pause indicator to settings modal
+   */
+  function addPauseIndicator(modal){
+    if(!modal) return;
+    
+    // Check if already exists
+    if(modal.querySelector('.pause-indicator')) return;
+    
+    const indicator = document.createElement('div');
+    indicator.className = 'pause-indicator';
+    indicator.innerHTML = '<span>⏸</span> Game Paused';
+    indicator.style.cssText = 'position:absolute;top:10px;right:60px;background:rgba(242,200,98,0.2);border:1px solid #f2c862;color:#f2c862;padding:4px 10px;border-radius:6px;font-size:0.75rem;display:flex;align-items:center;gap:4px;z-index:1';
+    
+    const h2 = modal.querySelector('h2');
+    if(h2){
+      h2.parentNode.insertBefore(indicator, h2.nextSibling);
+    } else {
+      modal.prepend(indicator);
+    }
+  }
+
+  /**
+   * Remove pause indicator from settings modal
+   */
+  function removePauseIndicator(modal){
+    if(!modal) return;
+    const indicator = modal.querySelector('.pause-indicator');
+    if(indicator){
+      indicator.remove();
+    }
+  }
+
+  /**
+   * Disable FFWD controls during pause
+   */
+  function disableFFWDControls(){
+    try{
+      // Disable FFWD button if present
+      const ffwdBtn = document.getElementById('ffwdBtn') || document.querySelector('[data-action="ffwd"]');
+      if(ffwdBtn){
+        ffwdBtn.disabled = true;
+        ffwdBtn.style.opacity = '0.5';
+        ffwdBtn.style.cursor = 'not-allowed';
+        ffwdBtn.setAttribute('data-pause-disabled', 'true');
+      }
+      
+      // Disable skip controls
+      const skipBtn = document.getElementById('skipBtn') || document.querySelector('[data-action="skip"]');
+      if(skipBtn){
+        skipBtn.disabled = true;
+        skipBtn.style.opacity = '0.5';
+        skipBtn.style.cursor = 'not-allowed';
+        skipBtn.setAttribute('data-pause-disabled', 'true');
+      }
+    }catch(e){
+      console.warn('[ui.config-and-settings] Error disabling FFWD controls:', e);
+    }
+  }
+
+  /**
+   * Re-enable FFWD controls after resume
+   */
+  function enableFFWDControls(){
+    try{
+      // Re-enable FFWD button if it was disabled by pause
+      const ffwdBtn = document.getElementById('ffwdBtn') || document.querySelector('[data-action="ffwd"]');
+      if(ffwdBtn && ffwdBtn.getAttribute('data-pause-disabled') === 'true'){
+        ffwdBtn.disabled = false;
+        ffwdBtn.style.opacity = '';
+        ffwdBtn.style.cursor = '';
+        ffwdBtn.removeAttribute('data-pause-disabled');
+      }
+      
+      // Re-enable skip controls
+      const skipBtn = document.getElementById('skipBtn') || document.querySelector('[data-action="skip"]');
+      if(skipBtn && skipBtn.getAttribute('data-pause-disabled') === 'true'){
+        skipBtn.disabled = false;
+        skipBtn.style.opacity = '';
+        skipBtn.style.cursor = '';
+        skipBtn.removeAttribute('data-pause-disabled');
+      }
+    }catch(e){
+      console.warn('[ui.config-and-settings] Error enabling FFWD controls:', e);
+    }
+  }
 
   // Public UI init
   UI.openSettingsModal = openSettingsModal;

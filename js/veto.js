@@ -527,6 +527,12 @@
   }
 
   function startVetoComp(){
+    // Guard: Block veto start while game is paused
+    if(g.PauseController && g.PauseController.isPaused && g.PauseController.isPaused()){
+      console.info('[veto] startVetoComp blocked: game is paused');
+      return;
+    }
+    
     var g = global.game;
     g.lastCompScores = new Map();
     g.__vetoCeremonyResolved = false;

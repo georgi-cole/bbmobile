@@ -496,6 +496,12 @@
   // PUBLIC API: START/STOP
   // ============================================================================
   function startAiSocialPhase(context = {}) {
+    // Guard: Block social AI start while game is paused
+    if(global.PauseController && global.PauseController.isPaused && global.PauseController.isPaused()){
+      console.info('[ai-scheduler] startAiSocialPhase blocked: game is paused');
+      return;
+    }
+    
     const config = getConfig();
     
     if (!config.enabled) {
