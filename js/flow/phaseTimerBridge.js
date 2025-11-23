@@ -240,10 +240,11 @@
     if (typeof global.pausePhaseTimer === 'function') {
       global.pausePhaseTimer();
     } else if (game.timerPaused !== undefined) {
-      game.timerPaused = true;
-      if (game.endAt && !game.pausedTimeRemaining) {
+      // Store remaining time before pausing (always update to current remaining time)
+      if (game.endAt) {
         game.pausedTimeRemaining = Math.max(0, game.endAt - Date.now());
       }
+      game.timerPaused = true;
     }
     
     // Disable game advancement UI
@@ -290,6 +291,8 @@
         if (game.phaseEndsAt !== undefined) {
           game.phaseEndsAt = game.endAt;
         }
+        // Clear pausedTimeRemaining after restoring timer to avoid confusion
+        game.pausedTimeRemaining = null;
       }
     }
     

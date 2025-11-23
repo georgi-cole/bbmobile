@@ -78,18 +78,18 @@
   
   /**
    * Check if game is currently in an active gameplay phase
-   * Returns true if game is running (not in lobby or finale)
+   * Returns true if game is running (not in lobby, opening, or finale)
    * @returns {boolean}
    */
   function isGameActive() {
     const game = global.game;
     if (!game || !game.phase) return false;
     
-    // Lobby and finale are safe phases for immediate config changes
-    const safePhases = ['lobby', 'finale', 'opening'];
+    // Safe phases for immediate config changes (pre-game and post-game)
+    const safePhases = ['lobby', 'opening', 'finale'];
     if (safePhases.includes(game.phase)) return false;
     
-    // If week hasn't started yet, consider it inactive
+    // If week hasn't started yet (week 0 or undefined), consider it inactive
     if (!game.week || game.week < 1) return false;
     
     return true;

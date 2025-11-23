@@ -1769,6 +1769,7 @@
       if(inp.type==='checkbox'){
         newValue = !!inp.checked;
       } else {
+        // Try to parse as number first; preserve as string if non-numeric (e.g., URLs, theme names)
         const v = parseFloat(inp.value);
         newValue = !Number.isNaN(v) ? v : inp.value;
       }
