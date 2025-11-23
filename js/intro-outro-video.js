@@ -107,9 +107,18 @@
     const { vid, skip, tap } = buildOverlay();
     let finished = false;
 
-    // Customize tap button text based on video type
+    // Determine if this is intro or outro
+    const isIntro = url.includes('intro');
     const isOutro = url.includes('outro');
-    if (isOutro) {
+    
+    // For intro: muted autoplay; for outro: tap-to-play with sound
+    if (isIntro) {
+      // Set muted for intro to enable autoplay without user interaction
+      vid.muted = true;
+      vid.setAttribute('muted', '');
+      console.info('[intro-outro] Intro video configured for muted autoplay');
+    } else if (isOutro) {
+      // Outro keeps existing behavior (unmuted, requires tap)
       tap.textContent = 'Tap to play credits with sound';
     }
 
@@ -129,15 +138,36 @@
     vid.addEventListener('ended', () => finish('end'));
     vid.addEventListener('error', () => finish('fail'));
 
-    const tryPlay = () => {
-      const p = vid.play();
-      if (p && p.then) {
-        p.then(() => {}).catch(() => { tap.style.display = 'block'; });
+    // Start playback when video is ready
+    const attemptAutoplay = () => {
+      if (vid.readyState >= vid.HAVE_CURRENT_DATA) {
+        const p = vid.play();
+        if (p && p.then) {
+          p.then(() => {
+            console.info('[intro-outro] Autoplay started successfully');
+          }).catch((err) => {
+            console.warn('[intro-outro] Autoplay blocked:', err.message);
+            // For intro, show tap button if autoplay fails
+            if (isIntro) {
+              tap.textContent = 'Tap to Play';
+              tap.style.display = 'block';
+            } else {
+              tap.style.display = 'block';
+            }
+          });
+        }
       }
     };
 
+    // Try to play as soon as the video can play
+    vid.addEventListener('canplay', attemptAutoplay, { once: true });
+    
     vid.src = url;
-    tryPlay();
+    
+    // If already ready, try immediately
+    if (vid.readyState >= vid.HAVE_CURRENT_DATA) {
+      attemptAutoplay();
+    }
 
     tap.onclick = () => {
       tap.style.display = 'none';
