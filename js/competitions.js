@@ -290,7 +290,13 @@
     
     if (g.phase === 'hoh') {
       const alive = global.alivePlayers();
-      const blocked = (alive.length > 3 && g.week > 1) ? g.lastHOHId : null;
+      // Week-based eligibility: only block if player was HOH in previous week
+      const blocked = (
+        alive.length > 3 && 
+        g.week > 1 && 
+        g.lastHOHId && 
+        g.lastHOHWeek === (g.week - 1)
+      ) ? g.lastHOHId : null;
       eligibleOpponents = alive.filter(p => !p.human && p.id !== blocked);
       gameKey = g.__hohGameKey || 'unknown';
     } else if (g.phase === 'final3_comp1') {
@@ -341,7 +347,10 @@
   function maybeFinishComp() {
     const g = global.game; const alive = global.alivePlayers();
     let eligible = alive.map(p => p.id);
-    if (g.phase === 'hoh' && alive.length > 3 && g.week > 1 && g.lastHOHId) eligible = eligible.filter(id => id !== g.lastHOHId);
+    // Week-based eligibility: only filter out player if they were HOH in previous week
+    if (g.phase === 'hoh' && alive.length > 3 && g.week > 1 && g.lastHOHId && g.lastHOHWeek === (g.week - 1)) {
+      eligible = eligible.filter(id => id !== g.lastHOHId);
+    }
     const done = [...g.lastCompScores.keys()].filter(id => eligible.includes(id)).length;
     if (done === eligible.length) { finishCompPhase(); }
   }
@@ -1251,14 +1260,36 @@
       }
 
       const alive = global.alivePlayers(); 
-      const blocked = (alive.length > 3 && g.week > 1) ? g.lastHOHId : null;
+      
+      // Week-based HOH eligibility check:
+      // Block only if player was HOH in the PREVIOUS week (not current week)
+      // This prevents current HOH winner from being incorrectly blocked
+      const wasPreviousWeekHOH = (
+        alive.length > 3 && 
+        g.week > 1 && 
+        g.lastHOHId && 
+        you.id === g.lastHOHId && 
+        g.lastHOHWeek === (g.week - 1)
+      );
+      
+      const isCurrentHOH = (
+        g.lastHOHId === you.id && 
+        g.lastHOHWeek === g.week
+      );
       
       console.info(`[Competition] Human player: ${you.name}(${you.id}), evicted=${you.evicted}`);
-      console.info(`[Competition] Alive players: ${alive.length}, Blocked player: ${blocked || 'none'}`);
+      console.info(`[Competition] Alive players: ${alive.length}, lastHOHId=${g.lastHOHId}, lastHOHWeek=${g.lastHOHWeek}, currentWeek=${g.week}`);
+      console.info(`[HOHEligibility] wasPreviousWeekHOH=${wasPreviousWeekHOH}, isCurrentHOH=${isCurrentHOH}`);
       
-      // Check if blocked
-      if (you.id === blocked) {
-        console.warn(`[Competition] ⚠ Human is blocked (was last HOH): blocked=${blocked}`);
+      // Skip intermission if player is current HOH (just won this week)
+      if (isCurrentHOH) {
+        console.info('[HOHEligibility] Skipping intermission (player is current HOH for this week)');
+        // Fall through to normal competition flow (player already played)
+      }
+      
+      // Check if blocked (was HOH last week, not this week)
+      if (wasPreviousWeekHOH) {
+        console.warn(`[Competition] ⚠ Human is blocked (was HOH in week ${g.lastHOHWeek})`);
         
         // Check if intermission flow is available and enabled
         if (global.IntermissionFlow && (g.cfg?.enableIntermissionGames !== false)) {
@@ -1325,6 +1356,10 @@
     g.__hohGameKey = null; // Track which game was played
     g.__instructionsRenderedHOH = false; // Track if instructions were rendered
     g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
+    // Initialize lastHOHWeek if not set (for backwards compatibility with older saves)
+    if (g.lastHOHWeek === undefined) {
+      g.lastHOHWeek = null;
+    }
     // Reset grace attempt flag for new competition
     if (g.humanId != null) {
       delete g[`__graceReplayAttempt_hoh_${g.humanId}`];
@@ -1332,7 +1367,14 @@
     global.markCompPlayed?.('hoh'); // Mark HOH as played
     global.tv.say('HOH Competition'); global.phaseMusic?.('hoh');
     global.setPhase('hoh', g.cfg.tHOH, finishCompPhase);
-    const alive = global.alivePlayers(); const blocked = (alive.length > 3 && g.week > 1) ? g.lastHOHId : null;
+    const alive = global.alivePlayers();
+    // Week-based eligibility: only block if player was HOH in previous week
+    const blocked = (
+      alive.length > 3 && 
+      g.week > 1 && 
+      g.lastHOHId && 
+      g.lastHOHWeek === (g.week - 1)
+    ) ? g.lastHOHId : null;
     const diffMult = getAIDifficultyMultiplier();
     
     // Legacy fallback: generate AI scores immediately if OpponentSynth not available
@@ -1361,7 +1403,10 @@
       g.__compRunning = false; // Clear competition running flag
 
       const alive = global.alivePlayers(); let elig = alive.map(p => p.id);
-      if (alive.length > 3 && g.week > 1 && g.lastHOHId) elig = elig.filter(id => id !== g.lastHOHId);
+      // Week-based eligibility: only filter out player if they were HOH in previous week
+      if (alive.length > 3 && g.week > 1 && g.lastHOHId && g.lastHOHWeek === (g.week - 1)) {
+        elig = elig.filter(id => id !== g.lastHOHId);
+      }
 
       // Apply dampening for consecutive winners
       for (const id of elig) {
@@ -1419,6 +1464,7 @@
       for (const p of g.players) p.hoh = false;
       g.hohId = winner;
       g.lastHOHId = winner;
+      g.lastHOHWeek = g.week; // Track which week this HOH was won
       const W = global.getP(winner);
       W.hoh = true;
       W.stats = W.stats || {};

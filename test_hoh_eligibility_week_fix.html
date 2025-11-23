@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOH Eligibility Week-Based Fix Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f1419 0%, #1a2632 100%);
+      color: #ffffff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .test-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #64b5f6;
+      text-shadow: 0 2px 8px rgba(100, 181, 246, 0.5);
+    }
+    
+    .test-section {
+      background: rgba(30, 40, 60, 0.6);
+      border: 2px solid rgba(100, 150, 200, 0.3);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #90caf9;
+      margin-bottom: 16px;
+      font-size: 1.3rem;
+    }
+    
+    .test-section p {
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+    
+    .test-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    
+    .test-button {
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+      border: 2px solid #42a5f5;
+      border-radius: 8px;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .test-button:hover {
+      background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
+      border-color: #64b5f6;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+    
+    .test-button:active {
+      transform: translateY(0);
+    }
+    
+    .test-button.success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-color: #34d399;
+    }
+    
+    .test-button.failure {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      border-color: #f87171;
+    }
+    
+    .results {
+      background: rgba(50, 100, 150, 0.2);
+      border: 1px solid rgba(100, 150, 200, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: #90caf9;
+      white-space: pre-wrap;
+    }
+    
+    .results.pass {
+      border-color: #10b981;
+      color: #34d399;
+    }
+    
+    .results.fail {
+      border-color: #ef4444;
+      color: #f87171;
+    }
+    
+    .log-section {
+      background: rgba(10, 20, 30, 0.8);
+      border: 1px solid rgba(100, 150, 200, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .log-section h3 {
+      color: #90caf9;
+      margin-bottom: 12px;
+    }
+    
+    .log-entry {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 4px;
+      padding: 4px 8px;
+      border-left: 2px solid transparent;
+    }
+    
+    .log-entry.info {
+      border-left-color: #64b5f6;
+    }
+    
+    .log-entry.warn {
+      border-left-color: #fbbf24;
+      color: #fcd34d;
+    }
+    
+    .log-entry.error {
+      border-left-color: #ef4444;
+      color: #f87171;
+    }
+    
+    .log-entry.success {
+      border-left-color: #10b981;
+      color: #34d399;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 HOH Eligibility Week-Based Fix Test</h1>
+    
+    <div class="test-section">
+      <h2>Test 1: Current HOH Winner Should NOT See Intermission</h2>
+      <p><strong>Scenario:</strong> Player just won HOH in week 2. They should NOT be shown the intermission prompt.</p>
+      <p><strong>Expected:</strong> No intermission flow triggered, no console warning about being blocked.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testCurrentHOHWinner()">Run Test</button>
+        <button class="test-button" onclick="clearResults(1)">Clear</button>
+      </div>
+      <div id="result1" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 2: Previous Week HOH Should See Intermission</h2>
+      <p><strong>Scenario:</strong> Player was HOH in week 1, now it's week 2. They should see intermission prompt.</p>
+      <p><strong>Expected:</strong> Intermission flow triggered, console shows they were blocked.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testPreviousWeekHOH()">Run Test</button>
+        <button class="test-button" onclick="clearResults(2)">Clear</button>
+      </div>
+      <div id="result2" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 3: Week 1 - No Previous HOH</h2>
+      <p><strong>Scenario:</strong> Week 1, no previous HOH. Everyone should be eligible.</p>
+      <p><strong>Expected:</strong> No intermission triggered, player can compete normally.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testWeek1NoBlock()">Run Test</button>
+        <button class="test-button" onclick="clearResults(3)">Clear</button>
+      </div>
+      <div id="result3" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 4: Cleanup on Phase Change</h2>
+      <p><strong>Scenario:</strong> Intermission card shown, then phase changes. Card should be cleaned up.</p>
+      <p><strong>Expected:</strong> Card removed from DOM, __intermissionActive flag cleared.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testCleanupOnPhaseChange()">Run Test</button>
+        <button class="test-button" onclick="clearResults(4)">Clear</button>
+      </div>
+      <div id="result4" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 5: Force Cleanup Idempotent</h2>
+      <p><strong>Scenario:</strong> Call forceCleanup multiple times. Should not error.</p>
+      <p><strong>Expected:</strong> No errors, safe to call multiple times.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testForceCleanupIdempotent()">Run Test</button>
+        <button class="test-button" onclick="clearResults(5)">Clear</button>
+      </div>
+      <div id="result5" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="log-section">
+      <h3>Console Log Output</h3>
+      <div id="logOutput"></div>
+    </div>
+  </div>
+  
+  <!-- Hidden panel for intermission cards -->
+  <div id="panel" style="display: none;"></div>
+  
+  <script>
+    // Capture console logs
+    const originalConsole = {
+      log: console.log,
+      info: console.info,
+      warn: console.warn,
+      error: console.error
+    };
+    
+    function logToUI(level, ...args) {
+      const logOutput = document.getElementById('logOutput');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${level}`;
+      entry.textContent = `[${level.toUpperCase()}] ${args.join(' ')}`;
+      logOutput.appendChild(entry);
+      logOutput.scrollTop = logOutput.scrollHeight;
+      
+      // Call original
+      originalConsole[level](...args);
+    }
+    
+    console.log = (...args) => logToUI('info', ...args);
+    console.info = (...args) => logToUI('info', ...args);
+    console.warn = (...args) => logToUI('warn', ...args);
+    console.error = (...args) => logToUI('error', ...args);
+    
+    // Mock global object structure
+    window.game = window.game || {};
+    // Create a global namespace that references window without circular ref
+    if (!window.global) {
+      window.global = {
+        game: window.game,
+        alivePlayers: function() { return window.alivePlayers(); },
+        getP: function(id) { return window.getP(id); }
+      };
+    }
+    
+    // Mock modules
+    window.IntermissionFlow = {
+      start: function(options) {
+        console.info('[IntermissionFlow] start() called with:', JSON.stringify(options));
+        window.game.__intermissionActive = true;
+        if (options.onComplete) {
+          setTimeout(options.onComplete, 100);
+        }
+      },
+      forceCleanup: function(reason) {
+        console.info('[IntermissionFlow] forceCleanup() called, reason:', reason);
+        window.game.__intermissionActive = false;
+      }
+    };
+    
+    window.TvStatus = {
+      set: function(message, tone) {
+        console.info('[TvStatus]', message, tone || '');
+      }
+    };
+    
+    window.alivePlayers = function() {
+      return window.game.players ? window.game.players.filter(p => !p.evicted) : [];
+    };
+    
+    window.getP = function(id) {
+      return window.game.players ? window.game.players.find(p => p.id === id) : null;
+    };
+    
+    // Test helper functions
+    function clearResults(testId) {
+      const resultDiv = document.getElementById('result' + testId);
+      resultDiv.style.display = 'none';
+      resultDiv.textContent = '';
+      resultDiv.className = 'results';
+    }
+    
+    function showResult(testId, passed, message) {
+      const resultDiv = document.getElementById('result' + testId);
+      resultDiv.style.display = 'block';
+      resultDiv.className = passed ? 'results pass' : 'results fail';
+      resultDiv.textContent = (passed ? '✅ PASS: ' : '❌ FAIL: ') + message;
+    }
+    
+    // Simulate HOH eligibility check logic (from competitions.js)
+    function checkHOHEligibility(humanId) {
+      const g = window.game;
+      const alive = window.alivePlayers();
+      
+      // Week-based HOH eligibility check
+      const wasPreviousWeekHOH = (
+        alive.length > 3 && 
+        g.week > 1 && 
+        g.lastHOHId && 
+        humanId === g.lastHOHId && 
+        g.lastHOHWeek === (g.week - 1)
+      );
+      
+      const isCurrentHOH = (
+        g.lastHOHId === humanId && 
+        g.lastHOHWeek === g.week
+      );
+      
+      console.info(`[HOHEligibility] Check for player ${humanId}:`);
+      console.info(`  - week=${g.week}, lastHOHWeek=${g.lastHOHWeek}, lastHOHId=${g.lastHOHId}`);
+      console.info(`  - wasPreviousWeekHOH=${wasPreviousWeekHOH}`);
+      console.info(`  - isCurrentHOH=${isCurrentHOH}`);
+      
+      return {
+        wasPreviousWeekHOH,
+        isCurrentHOH,
+        shouldTriggerIntermission: wasPreviousWeekHOH && !isCurrentHOH
+      };
+    }
+    
+    // Test 1: Current HOH winner should NOT see intermission
+    function testCurrentHOHWinner() {
+      console.info('=== Test 1: Current HOH Winner ===');
+      
+      // Setup: Player 1 just won HOH in week 2
+      window.game = {
+        week: 2,
+        lastHOHId: 1,
+        lastHOHWeek: 2, // Won this week
+        humanId: 1,
+        players: [
+          { id: 1, name: 'Human', evicted: false, human: true },
+          { id: 2, name: 'AI1', evicted: false },
+          { id: 3, name: 'AI2', evicted: false },
+          { id: 4, name: 'AI3', evicted: false },
+          { id: 5, name: 'AI4', evicted: false }
+        ]
+      };
+      
+      const result = checkHOHEligibility(1);
+      
+      const passed = result.isCurrentHOH && !result.shouldTriggerIntermission;
+      showResult(1, passed, passed 
+        ? 'Current HOH winner correctly NOT triggered for intermission'
+        : 'ERROR: Current HOH winner incorrectly triggered for intermission');
+    }
+    
+    // Test 2: Previous week HOH should see intermission
+    function testPreviousWeekHOH() {
+      console.info('=== Test 2: Previous Week HOH ===');
+      
+      // Setup: Player 1 was HOH in week 1, now it's week 2
+      window.game = {
+        week: 2,
+        lastHOHId: 1,
+        lastHOHWeek: 1, // Won last week
+        humanId: 1,
+        players: [
+          { id: 1, name: 'Human', evicted: false, human: true },
+          { id: 2, name: 'AI1', evicted: false },
+          { id: 3, name: 'AI2', evicted: false },
+          { id: 4, name: 'AI3', evicted: false },
+          { id: 5, name: 'AI4', evicted: false }
+        ]
+      };
+      
+      const result = checkHOHEligibility(1);
+      
+      const passed = result.wasPreviousWeekHOH && result.shouldTriggerIntermission;
+      showResult(2, passed, passed 
+        ? 'Previous week HOH correctly triggered for intermission'
+        : 'ERROR: Previous week HOH not triggered for intermission');
+    }
+    
+    // Test 3: Week 1 - no previous HOH
+    function testWeek1NoBlock() {
+      console.info('=== Test 3: Week 1 No Block ===');
+      
+      // Setup: Week 1, no previous HOH
+      window.game = {
+        week: 1,
+        lastHOHId: null,
+        lastHOHWeek: null,
+        humanId: 1,
+        players: [
+          { id: 1, name: 'Human', evicted: false, human: true },
+          { id: 2, name: 'AI1', evicted: false },
+          { id: 3, name: 'AI2', evicted: false },
+          { id: 4, name: 'AI3', evicted: false },
+          { id: 5, name: 'AI4', evicted: false }
+        ]
+      };
+      
+      const result = checkHOHEligibility(1);
+      
+      const passed = !result.wasPreviousWeekHOH && !result.shouldTriggerIntermission;
+      showResult(3, passed, passed 
+        ? 'Week 1 correctly allows all players (no block)'
+        : 'ERROR: Week 1 incorrectly blocked player');
+    }
+    
+    // Test 4: Cleanup on phase change
+    function testCleanupOnPhaseChange() {
+      console.info('=== Test 4: Cleanup on Phase Change ===');
+      
+      // Setup: Show intermission, then trigger phase change
+      window.game = {
+        week: 2,
+        lastHOHId: 1,
+        lastHOHWeek: 1,
+        humanId: 1,
+        __intermissionActive: false
+      };
+      
+      // Start intermission
+      window.IntermissionFlow.start({
+        compType: 'HOH',
+        reason: 'previous_hoh',
+        onComplete: () => {}
+      });
+      
+      const wasActive = window.game.__intermissionActive;
+      
+      // Simulate phase change
+      setTimeout(() => {
+        console.info('[Test] Simulating phase change event');
+        const event = new CustomEvent('bb:phase:changed', {
+          detail: { phase: 'nominations', oldPhase: 'hoh' }
+        });
+        document.dispatchEvent(event);
+        
+        // Check cleanup occurred
+        setTimeout(() => {
+          const cleanedUp = !window.game.__intermissionActive;
+          const passed = wasActive && cleanedUp;
+          showResult(4, passed, passed 
+            ? 'Phase change correctly cleaned up intermission (flag cleared)'
+            : 'ERROR: Phase change did not clean up intermission');
+        }, 100);
+      }, 150);
+    }
+    
+    // Test 5: Force cleanup idempotent
+    function testForceCleanupIdempotent() {
+      console.info('=== Test 5: Force Cleanup Idempotent ===');
+      
+      window.game = { __intermissionActive: true };
+      
+      try {
+        // Call cleanup multiple times
+        window.IntermissionFlow.forceCleanup('test1');
+        window.IntermissionFlow.forceCleanup('test2');
+        window.IntermissionFlow.forceCleanup('test3');
+        
+        const passed = !window.game.__intermissionActive;
+        showResult(5, passed, passed 
+          ? 'forceCleanup is idempotent (no errors, safe to call multiple times)'
+          : 'ERROR: forceCleanup not idempotent or flag not cleared');
+      } catch (e) {
+        showResult(5, false, 'ERROR: forceCleanup threw exception: ' + e.message);
+      }
+    }
+    
+    // Run all tests on load
+    console.info('=== HOH Eligibility Week-Based Fix Test Suite Ready ===');
+    console.info('Click individual test buttons to run tests');
+  </script>
+</body>
+</html>

@@ -99,7 +99,8 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: center;
+        padding: 20px;
       `;
       
       tvContainer.appendChild(overlay);
