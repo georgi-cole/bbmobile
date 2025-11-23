@@ -1,4 +1,4 @@
-// Players total (6–22) injector — single-shot, no duplicates
+// Players total (4–16) injector — single-shot, no duplicates
 // - Inserts into the visible Settings modal (prefers Cast; falls back to active pane)
 // - Persists to bb_settings_modular + bb_cfg_v2
 // - Lobby: rebuild + auto-start; Mid-season: reload to apply

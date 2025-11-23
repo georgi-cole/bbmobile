@@ -212,8 +212,10 @@
       global.pushPlayer({name:aiNames[i], human:false});
     }
     
-    // Log randomized roster for verification (can be removed later)
-    console.info('[buildCast] randomized AI roster:', aiNames);
+    // Log randomized roster in development mode for verification
+    if(typeof global.DEBUG_MODE !== 'undefined' && global.DEBUG_MODE){
+      console.info('[buildCast] randomized AI roster:', aiNames);
+    }
     global.attachBios?.(g);
     global.initAffinities();
     global.initRelationships();
