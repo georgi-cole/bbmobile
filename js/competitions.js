@@ -1377,7 +1377,7 @@
       delete g[`__graceReplayAttempt_hoh_${g.humanId}`];
     }
     global.markCompPlayed?.('hoh'); // Mark HOH as played
-    global.tv?.say?.('HOH Competition'); 
+    global.tv?.say('HOH Competition'); 
     global.phaseMusic?.('hoh');
     global.setPhase?.('hoh', g.cfg.tHOH, finishCompPhase);
     const alive = global.alivePlayers?.() || [];
