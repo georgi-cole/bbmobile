@@ -195,6 +195,51 @@
     }
 
     /**
+     * Update flags (e.g., for tie-break mode)
+     * @param {Object} flags - Flags to update
+     * @param {boolean} flags.tieBreak - Is this a tie-break vote?
+     * @param {boolean} flags.final4 - Is this a final 4 sole vote?
+     */
+    updateFlags(flags) {
+      if (flags.tieBreak !== undefined) {
+        this.state.flags.tieBreak = flags.tieBreak;
+      }
+      if (flags.final4 !== undefined) {
+        this.state.flags.final4 = flags.final4;
+      }
+    }
+
+    /**
+     * Update instructions text (public method)
+     * @param {string} text - Instructions text to display
+     */
+    updateInstructions(text) {
+      this._updateInstructions(text);
+    }
+
+    /**
+     * Reset buttons for tie-break or re-vote scenarios
+     * Clears selection and enables voting
+     */
+    resetButtons() {
+      this.state.selectedNominee = null;
+      this.state.voteLocked = false;
+      
+      // Reset all buttons to normal state
+      this.elements.nomineeButtons.forEach(btn => {
+        const btnId = btn.dataset.nomineeId;
+        const btnName = btnId === this.state.leftId ? this.state.leftName : this.state.rightName;
+        
+        btn.classList.remove('selected');
+        btn.textContent = btnName;
+        btn.disabled = false;
+        btn.setAttribute('aria-label', `Select ${btnName} for eviction`);
+      });
+      
+      this._updateInstructions();
+    }
+
+    /**
      * Check if inline result rendering is supported
      * @returns {boolean}
      */

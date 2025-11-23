@@ -959,8 +959,8 @@
     
     if (useInlineController) {
       // Update inline controller to show tie-break mode
-      inlineController.state.flags.tieBreak = true;
-      inlineController._updateInstructions('Tie! HOH must break it.');
+      inlineController.updateFlags({ tieBreak: true });
+      inlineController.updateInstructions('Tie! HOH must break it.');
       await sleep(2000);
     } else if (!useLv2) {
       global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
@@ -1104,18 +1104,9 @@
         // Check if InlineEvictController is active
         if (inlineController) {
           // Enable voting in inline controller for tie-break
-          inlineController.state.flags.tieBreak = true;
+          inlineController.updateFlags({ tieBreak: true });
+          inlineController.resetButtons();
           inlineController.enableVoting();
-          
-          // Update buttons to show tie-break wording
-          inlineController._updateButtonStates();
-          inlineController.elements.nomineeButtons.forEach(btn => {
-            const btnId = btn.dataset.nomineeId;
-            const btnName = btnId === inlineController.state.leftId ? inlineController.state.leftName : inlineController.state.rightName;
-            btn.textContent = btnName;
-            btn.classList.remove('selected');
-            btn.setAttribute('aria-label', `Select ${btnName} for eviction`);
-          });
           
           // Set up one-time callback for tie-break vote
           const originalCallback = inlineController.callbacks.onVote;
