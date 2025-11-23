@@ -824,16 +824,16 @@
     let input=document.getElementById('numPlayers');
     if(!input){
       const label=document.createElement('label');
-      label.innerHTML='Players total<input id="numPlayers" type="number" min="6" max="22" value="12"/>';
+      label.innerHTML='Players total<input id="numPlayers" type="number" min="4" max="16" value="12"/>';
       (pane.querySelector('.settingsGrid') || pane).prepend(label);
       input=label.querySelector('#numPlayers');
     }
     // prefer cfg value, else current roster length
     const current = Number(cfg().numPlayers) || (Array.isArray(g.game?.players)? g.game.players.length : 12);
-    input.value = String(Math.max(6, Math.min(22, current || 12)));
+    input.value = String(Math.max(4, Math.min(16, current || 12)));
     // Only wire input event for UI clamping (no change event to avoid mid-season reload)
     input.addEventListener('input', ()=>{
-      const v=Math.max(6, Math.min(22, Number(input.value)||12));
+      const v=Math.max(4, Math.min(16, Number(input.value)||12));
       if(String(v) !== input.value) input.value = String(v);
     });
   }

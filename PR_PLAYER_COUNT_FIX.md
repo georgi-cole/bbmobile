@@ -1,6 +1,11 @@
-# Player Count Fix - PR Summary
+# Player Count Range & Randomized Cast - PR Summary
 
-## Problem
+## Changes Overview
+This PR implements two related features:
+1. **Player Count Range Update**: Changed from 6–22 to 4–16 players
+2. **Randomized Cast Selection**: AI players are now randomly sampled each season instead of always using the first N names
+
+## Problem (Original)
 Users change the players/cast total in Settings via the Cast tab, the injector logs "apply numPlayers = X" in lobby, but the season still starts with 12 players instead of the selected count (e.g., 6 or 7).
 
 ### Root Cause
@@ -84,13 +89,59 @@ All tests validate:
 - Fallback to `g` (window) ensures legacy path still works
 - `API = g.Game || g` pattern handles both cases
 
+## New Features
+
+### 1. Player Count Range (4–16)
+All player count logic has been updated to support 4–16 players instead of 6–22:
+- UI input fields now have `min="4" max="16"` attributes
+- All clamping logic updated to enforce 4–16 range
+- Comments updated throughout codebase
+
+**Files Updated:**
+- `js/players-total.js` - Updated min/max attributes, clamp calls, and comments
+- `js/bootstrap.js` - Updated clampNum call from (12,6,22) to (12,4,16) 
+- `js/settings/render.js` - Updated clamp logic from Math.max(6, Math.min(22,...)) to Math.max(4, Math.min(16,...))
+- `js/settings.js` - Updated min/max attributes and clamp logic (deprecated file, updated for consistency)
+
+**Testing:**
+- 4 players: 1 human + 3 AI
+- 16 players: 1 human + 15 AI
+- Values below 4 clamp to 4
+- Values above 16 clamp to 16
+
+### 2. Randomized Cast Selection
+AI players are now randomly sampled from the roster pool each time a new season starts:
+
+**Implementation:**
+- Added `sampleUnique()` helper function using Fisher-Yates shuffle
+- Human player (index 0) is always created first
+- Remaining (N-1) AI players are randomly sampled from the 26-name roster pool
+- Each season restart produces a different AI cast (statistical randomness)
+- `rebuildGame(false)` triggers fresh randomization
+- `rebuildGame(true)` preserves existing players (no randomization)
+
+**Roster Pool (26 names):**
+Finn, Mimi, Rae, Nova, Kai, Zed, Ivy, Ash, Lux, Remy, Blue, Jax, Echo, Vee, Sol, Quinn, Aria, Dex, Rune, Bea, Nico, Pax, Noa, Kian, Lia, Rey
+
+**User Impact:**
+- Restarting a season with the same player count now produces variety in the AI cast
+- No longer limited to seeing "Finn, Mimi, Rae, Nova..." every time
+- Player customizations may not persist across seasons since player IDs change with new random selection (this is expected behavior for fresh seasons)
+
+**Code Location:**
+- `js/bootstrap.js` lines ~146-210: Added sampleUnique() and updated buildCastInternal()
+
 ## Files Changed
-- `js/players-total.js` - 9 lines changed (4 additions, 5 modifications)
-- `js/bootstrap.js` - 3 lines changed (1 addition, 2 modifications) 
-- `test_player_count_fix.html` - 337 lines added (new test file)
+- `js/players-total.js` - Updated player range 6-22 → 4-16 (comments, attributes, clamp calls)
+- `js/bootstrap.js` - Updated player range + added randomized cast selection with sampleUnique()
+- `js/settings/render.js` - Updated clamp logic for 4-16 range
+- `js/settings.js` - Updated min/max attributes and clamp logic (deprecated file)
+- `test_player_count_fix.html` - 337 lines added (new test file from previous fix)
+- `PR_PLAYER_COUNT_FIX.md` - Updated documentation to reflect both changes
 
 ## Impact
-This fix resolves the mismatch where the intro sequence announces "12 contestants" after the user has changed the player count to 6, 7, or any other value via Settings. The game will now correctly:
-1. Read the updated `numPlayers` from config
-2. Rebuild the cast with the correct number of players
-3. Start the opening sequence with the updated player count
+This update provides:
+1. More flexible player counts (4–16 instead of 6–22), allowing smaller and more manageable game sizes
+2. Improved replayability through randomized AI cast selection each season
+3. Fresh gameplay experience when restarting with the same player count
+4. Correct config propagation and cast building (from original fix)

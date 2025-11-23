@@ -602,8 +602,8 @@
   // Apply player count changes (with defer or rebuild logic)
   function applyPlayerCount(v){
     try{
-      // Clamp to 6..22 (align with players-total.js)
-      const val = Math.max(6, Math.min(22, parseInt(v, 10) || 12));
+      // Clamp to 4..16 (align with players-total.js)
+      const val = Math.max(4, Math.min(16, parseInt(v, 10) || 12));
       
       // Check if a shared helper exists
       if(typeof global.applyPlayersFromSettings === 'function'){
