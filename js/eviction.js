@@ -308,7 +308,66 @@
       return;
     }
 
-    // Check if we should use modern lv2 UI (for any two-nominee eviction, voter or observer)
+    // NEW: Check if we should use InlineEvictController (2-nominee path)
+    const twoMode = g.eviction.nominees.length === 2;
+    const useInlineEvict = twoMode 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && typeof global.InlineEvictController !== 'undefined';
+
+    if (useInlineEvict) {
+      // Clear any lingering TV overlay content before showing inline eviction UI
+      try { 
+        if (typeof global.clearTVOverlayContent === 'function') {
+          global.clearTVOverlayContent(); 
+        }
+      } catch (e) { 
+        console.warn('[InlineEvict] clearTVOverlayContent failed', e); 
+      }
+      
+      // Use new InlineEvictController for 2-nominee path
+      const [leftId, rightId] = g.eviction.nominees;
+      const remain = global.alivePlayers().length;
+      const isFinal4 = remain === 4;
+      
+      // Create controller instance
+      const controller = new global.InlineEvictController();
+      
+      // Store reference for later use (result rendering, cleanup)
+      g.eviction.__inlineController = controller;
+      
+      // Initialize controller
+      const initialized = controller.init({
+        leftId: leftId,
+        rightId: rightId,
+        leftName: global.safeName(leftId),
+        rightName: global.safeName(rightId),
+        flags: {
+          tieBreak: false,  // Will be set to true during tie-break flow
+          final4: isFinal4
+        },
+        onVote: (pickId) => {
+          // Lock human vote
+          lockHumanVote(pickId);
+          // Disable voting in controller
+          controller.disableVoting();
+        }
+      });
+      
+      if (!initialized) {
+        console.error('[eviction] Failed to initialize InlineEvictController');
+        return;
+      }
+      
+      // Enable voting if human is voter and hasn't voted yet
+      if (humanIsVoter && !hasVoted) {
+        controller.enableVoting();
+      }
+
+      // Panel will be hidden by controller, so we're done
+      return;
+    }
+
+    // FALLBACK: Check if we should use legacy lv2 UI (for any two-nominee eviction, voter or observer)
     const useLv2 = g.eviction.nominees.length === 2 
       && g.cfg?.modernLiveVoteUI !== false 
       && global.lv2?.enabled !== false;
@@ -890,13 +949,20 @@
   /* ----- Tie Break (2 noms) ----- */
   async function tieBreakTwo([a,b],ca,cb){
     const g=global.game;
-    // Consistent with main activation logic: check two-nominee condition
-    const useLv2 = g.eviction.nominees.length === 2 
+    // Check which UI system is active
+    const inlineController = g.eviction.__inlineController;
+    const useInlineController = !!inlineController;
+    const useLv2 = !useInlineController && g.eviction.nominees.length === 2 
       && g.cfg?.modernLiveVoteUI !== false 
       && global.lv2?.enabled !== false;
     const hoh=global.getP(global.game.hohId);
     
-    if (!useLv2) {
+    if (useInlineController) {
+      // Update inline controller to show tie-break mode
+      inlineController.state.flags.tieBreak = true;
+      inlineController._updateInstructions('Tie! HOH must break it.');
+      await sleep(2000);
+    } else if (!useLv2) {
       global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
     } else {
@@ -917,14 +983,14 @@
     
     if(hoh?.human){
       // Show rollout overlay for HOH tie-break (expected=1)
-      if (global.LiveVoteRollout && !useLv2) {
+      if (global.LiveVoteRollout && !useLv2 && !useInlineController) {
         global.LiveVoteRollout.show({
           expectedVotes: 1,
           nominees: [a, b]
         });
       }
       
-      const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict',useLv2);
+      const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict',useLv2 || useInlineController);
       if(pick===a) ca++; else cb++;
       
       // Push HOH tie-break vote to LV2 feed if active
@@ -1032,8 +1098,33 @@
       };
       
       try{
-        // Check if two-step overlay is available
-        if (global.LiveVoteOverlay && !useLv2) {
+        const g = global.game;
+        const inlineController = g.eviction?.__inlineController;
+        
+        // Check if InlineEvictController is active
+        if (inlineController) {
+          // Enable voting in inline controller for tie-break
+          inlineController.state.flags.tieBreak = true;
+          inlineController.enableVoting();
+          
+          // Update buttons to show tie-break wording
+          inlineController._updateButtonStates();
+          inlineController.elements.nomineeButtons.forEach(btn => {
+            const btnId = btn.dataset.nomineeId;
+            const btnName = btnId === inlineController.state.leftId ? inlineController.state.leftName : inlineController.state.rightName;
+            btn.textContent = btnName;
+            btn.classList.remove('selected');
+            btn.setAttribute('aria-label', `Select ${btnName} for eviction`);
+          });
+          
+          // Set up one-time callback for tie-break vote
+          const originalCallback = inlineController.callbacks.onVote;
+          inlineController.callbacks.onVote = (pickId) => {
+            // Restore original callback
+            inlineController.callbacks.onVote = originalCallback;
+            safeResolve(pickId);
+          };
+        } else if (global.LiveVoteOverlay && !useLv2) {
           // Use two-step voting overlay for tie-break
           global.LiveVoteOverlay.show({
             nominees: cIds,
@@ -1134,7 +1225,20 @@
       // Set guard flag to prevent duplicate result cards in handleEvictionLegacy
       g.eviction.__resultCardShown = true;
       
-      if (!useLv2) {
+      // NEW: Check if InlineEvictController is active
+      const inlineController = g.eviction.__inlineController;
+      const useInlineController = inlineController && !inlineController.state.resultShown;
+      
+      if (useInlineController) {
+        // Use InlineEvictController for inline result rendering
+        const survivorId = evId === a ? b : a;
+        const voteCounts = { [a]: finalA, [b]: finalB };
+        
+        inlineController.renderInlineResult(evId, survivorId, { voteCounts });
+        
+        // Wait for user to read result (simulate duration)
+        await sleep(3600);
+      } else if (!useLv2) {
         // Use new eviction modal for better visibility (not clipped by TV overlay)
         if (typeof global.EvictionModal?.show === 'function') {
           await global.EvictionModal.show({
