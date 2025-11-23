@@ -427,6 +427,8 @@
   /**
    * Check if a player has a legitimate submission for this competition
    * Cross-checks both CompLocks storage AND lastCompScores Map
+   * Note: lastCompScores is cleared at the start of each competition phase (startHOH, startVetoComp)
+   * so it only contains scores from the current active competition
    * @param {number} week - Current game week
    * @param {string} phase - Current game phase
    * @param {string} gameKey - Minigame identifier
@@ -436,10 +438,11 @@
   function hasLegitimateSubmission(week, phase, gameKey, playerId) {
     const g = global.game;
     
-    // Check CompLocks storage
+    // Check CompLocks storage (persistent across sessions)
     const hasLock = !!(global.CompLocks && global.CompLocks.hasSubmittedThisWeek(week, phase, gameKey, playerId));
     
-    // Check lastCompScores Map
+    // Check lastCompScores Map (cleared at start of each competition phase)
+    // This Map only contains scores from the current active competition
     const hasScore = !!(g.lastCompScores && g.lastCompScores.has(playerId));
     
     // A legitimate submission requires BOTH lock AND score
@@ -449,15 +452,16 @@
   }
 
   /**
-   * Mark a submission as complete with both lock and score
-   * This should be called atomically after score validation
+   * Mark a submission as complete with both lock and score (atomically)
+   * Helper function for testing or manual submission scenarios
+   * Note: Normal gameplay uses submitScore() which handles both lock and score
    * @param {number} week - Current game week
    * @param {string} phase - Current game phase
    * @param {string} gameKey - Minigame identifier
    * @param {number} playerId - Player ID
    * @param {number} score - Final score value
    */
-  function markSubmission(week, phase, gameKey, playerId, score) {
+  function _markSubmission(week, phase, gameKey, playerId, score) {
     const g = global.game;
     
     // Set score in Map
@@ -471,6 +475,8 @@
     
     console.info(`[Competition] ✓ Marked submission: week=${week}, phase=${phase}, game=${gameKey}, player=${playerId}, score=${score}`);
   }
+  // Export as internal helper for testing
+  global._markSubmission = _markSubmission;
 
   // Helper: run a human minigame with both replay-lock and anti-cheat
   async function runHumanMinigameWithGuards({ mg, host, player, label, multiplier, onAfterSubmit }) {

@@ -1370,24 +1370,38 @@ header.innerHTML = `
         console.info(`[ff] Competition warm-up: waiting ${waitTime}ms for instructions to render (phase=${phase}, elapsed=${elapsed}ms)`);
         
         // Wait for either remaining warm-up time or instructions-mounted event
+        let eventCleanup = null;
         await Promise.race([
           new Promise(resolve => setTimeout(resolve, waitTime)),
           new Promise(resolve => {
             const handler = (e) => {
               if (e.detail?.phase === phase) {
-                document.removeEventListener('competition-instructions-mounted', handler);
                 console.info('[ff] ✓ Instructions mounted during warm-up wait');
                 resolve();
               }
             };
             document.addEventListener('competition-instructions-mounted', handler);
-            // Cleanup after warm-up timeout
-            setTimeout(() => {
+            
+            // Store cleanup function
+            eventCleanup = () => {
               document.removeEventListener('competition-instructions-mounted', handler);
+            };
+            
+            // Auto-cleanup after warm-up timeout
+            setTimeout(() => {
+              if (eventCleanup) {
+                eventCleanup();
+                eventCleanup = null;
+              }
               resolve();
             }, waitTime);
           })
         ]);
+        
+        // Ensure event listener is removed after Promise.race resolves
+        if (eventCleanup) {
+          eventCleanup();
+        }
         
         console.info('[ff] ✓ Competition warm-up complete, proceeding with fast-forward');
       }
