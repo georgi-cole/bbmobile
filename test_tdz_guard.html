@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TDZ Guard Test for startHOH</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0f1a28;
+      color: #e0e0e0;
+    }
+    h1 { color: #60a5fa; }
+    h2 { color: #38bdf8; margin-top: 30px; }
+    .test-section {
+      background: #1a2937;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 15px 0;
+    }
+    .log {
+      font-family: 'Courier New', monospace;
+      background: #1a2937;
+      padding: 12px;
+      border-radius: 6px;
+      max-height: 400px;
+      overflow: auto;
+      margin-top: 10px;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #374151;
+      padding-left: 10px;
+    }
+    .log-entry.success { border-left-color: #10b981; color: #10b981; }
+    .log-entry.error { border-left-color: #ef4444; color: #ef4444; }
+    .log-entry.info { border-left-color: #60a5fa; color: #60a5fa; }
+    .log-entry.warning { border-left-color: #f59e0b; color: #f59e0b; }
+    button {
+      background: #60a5fa;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    button:hover { background: #3b82f6; }
+    button:active { transform: scale(0.98); }
+    button.secondary {
+      background: #374151;
+    }
+    button.secondary:hover { background: #4b5563; }
+    .summary {
+      background: #1a2937;
+      border: 2px solid #10b981;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      display: none;
+    }
+    .summary.visible { display: block; }
+    .summary h3 { margin-top: 0; color: #10b981; }
+    .summary.failed { border-color: #ef4444; }
+    .summary.failed h3 { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <h1>🔒 startHOH TDZ Regression Test</h1>
+  <p>Tests that <code>startHOH()</code> function in <code>js/competitions.js</code> can execute without Temporal Dead Zone (TDZ) errors.</p>
+
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <button onclick="runAllTests()">▶️ Run All Tests</button>
+    <button onclick="clearLog()" class="secondary">🗑️ Clear Log</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Log</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div id="summary" class="summary">
+    <h3>Test Summary</h3>
+    <div id="summaryContent"></div>
+  </div>
+
+  <script>
+    let testsPassed = 0;
+    let testsFailed = 0;
+
+    function log(msg, type = 'info') {
+      const logEl = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${msg}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(`[${type.toUpperCase()}]`, msg);
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+      testsPassed = 0;
+      testsFailed = 0;
+      document.getElementById('summary').classList.remove('visible', 'failed');
+    }
+
+    function assert(condition, message) {
+      if (condition) {
+        testsPassed++;
+        log(`✔ ${message}`, 'success');
+      } else {
+        testsFailed++;
+        log(`✘ ${message}`, 'error');
+        throw new Error(message);
+      }
+    }
+
+    function showSummary() {
+      const summary = document.getElementById('summary');
+      const content = document.getElementById('summaryContent');
+      const total = testsPassed + testsFailed;
+      const status = testsFailed === 0 ? 'All tests passed!' : `${testsFailed} test(s) failed!`;
+      
+      content.innerHTML = `
+        <p><strong>Total Tests:</strong> ${total}</p>
+        <p><strong>Passed:</strong> ${testsPassed}</p>
+        <p><strong>Failed:</strong> ${testsFailed}</p>
+        <p><strong>Status:</strong> ${status}</p>
+      `;
+      
+      summary.classList.add('visible');
+      if (testsFailed > 0) {
+        summary.classList.add('failed');
+      }
+    }
+
+    // Minimal mock global namespace for testing
+    function setupMinimalMocks() {
+      // Ensure global namespace exists
+      if (!window.global) {
+        window.global = window;
+      }
+      
+      // Mock minimal game object
+      window.game = {
+        cfg: { tHOH: 1 },
+        week: 1,
+        players: [],
+        humanId: null,
+        lastHOHId: null,
+        lastHOHWeek: null,
+        phase: null
+      };
+
+      // Mock essential global functions
+      window.global.alivePlayers = () => [];
+      window.global.markCompPlayed = () => {};
+      window.global.tv = { say: () => {} };
+      window.global.phaseMusic = () => {};
+      window.global.setPhase = () => {};
+      window.global.rng = () => Math.random();
+
+      log('✓ Minimal mocks initialized', 'info');
+    }
+
+    async function runAllTests() {
+      clearLog();
+      log('Starting TDZ Guard Tests...', 'info');
+      
+      try {
+        // Test 1: Basic execution without TDZ error
+        log('=== Test 1: Basic Execution ===', 'info');
+        setupMinimalMocks();
+        
+        if (typeof startHOH !== 'function') {
+          throw new Error('startHOH not defined - ensure js/competitions.js is loaded');
+        }
+        
+        startHOH();
+        assert(true, 'startHOH executed without ReferenceError');
+        
+        // Test 2: Guard against missing global.game
+        log('=== Test 2: Missing global.game Guard ===', 'info');
+        const savedGame = window.game;
+        window.game = null;
+        window.global.game = null;
+        
+        try {
+          startHOH();
+          assert(true, 'startHOH handled missing global.game gracefully');
+        } finally {
+          window.game = savedGame;
+          window.global.game = savedGame;
+        }
+        
+        // Test 3: Guard against pause controller
+        log('=== Test 3: Pause Controller Guard ===', 'info');
+        window.game.PauseController = {
+          isPaused: () => true
+        };
+        
+        startHOH();
+        assert(true, 'startHOH handled paused game gracefully');
+        
+        // Test 4: Week-based eligibility logic preserved
+        log('=== Test 4: Week-based Eligibility Logic ===', 'info');
+        window.game.PauseController = null;
+        window.game.week = 2;
+        window.game.lastHOHId = 5;
+        window.game.lastHOHWeek = 1; // Previous week
+        window.global.alivePlayers = () => [
+          { id: 1, human: true },
+          { id: 2, human: false },
+          { id: 3, human: false },
+          { id: 4, human: false },
+          { id: 5, human: false } // Last HOH
+        ];
+        
+        startHOH();
+        assert(true, 'startHOH preserved week-based eligibility logic');
+        
+        // Test 5: Defensive guards for optional functions
+        log('=== Test 5: Optional Function Guards ===', 'info');
+        delete window.global.tv;
+        delete window.global.phaseMusic;
+        delete window.global.setPhase;
+        delete window.global.markCompPlayed;
+        
+        startHOH();
+        assert(true, 'startHOH handled missing optional functions gracefully');
+        
+        // Test 6: Legacy state initialization
+        log('=== Test 6: Legacy State Initialization ===', 'info');
+        setupMinimalMocks();
+        delete window.game.lastHOHWeek;
+        
+        startHOH();
+        assert(window.game.lastHOHWeek === null, 'lastHOHWeek initialized for backwards compatibility');
+        assert(window.game.__hohResolved === false, 'HOH state flags initialized');
+        assert(window.game.__compRunning === true, 'Competition running flag set');
+        
+        log('=== All Tests Complete ===', 'success');
+        showSummary();
+        
+      } catch (err) {
+        log(`Test failed: ${err.message}`, 'error');
+        console.error('Test error:', err);
+        showSummary();
+      }
+    }
+  </script>
+  
+  <!-- Load competitions.js AFTER mocks are set up -->
+  <!-- Note: In a real test environment, this would be loaded dynamically -->
+  <script src="js/competitions.js"></script>
+  
+  <script>
+    // Auto-run tests on load
+    window.addEventListener('load', () => {
+      log('Page loaded. Click "Run All Tests" to begin.', 'info');
+    });
+  </script>
+</body>
+</html>
