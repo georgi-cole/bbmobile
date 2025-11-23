@@ -79,7 +79,10 @@
     socialHighlightsEnabled: true,  // Show Social Highlights in Diary Room logs
     
     // Final 4 Eviction (feature-flagged, on by default)
-    final4CombinedPower: true  // When HOH === POV holder, allow eviction of any of the other 3 players (not just nominees)
+    final4CombinedPower: true,  // When HOH === POV holder, allow eviction of any of the other 3 players (not just nominees)
+    
+    // Intermission Games (feature-flagged, on by default)
+    enableIntermissionGames: true  // When true, offer Tic Tac Toe game when player is ineligible for HOH/Veto competitions
   };
 
   // Load configuration from localStorage

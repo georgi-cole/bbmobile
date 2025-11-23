@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intermission Flow Test</title>
+  <link rel="stylesheet" href="css/tictactoe-intermission.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f1419 0%, #1a2632 100%);
+      color: #ffffff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #64b5f6;
+      text-shadow: 0 2px 8px rgba(100, 181, 246, 0.5);
+    }
+    
+    .test-section {
+      background: rgba(30, 40, 60, 0.6);
+      border: 2px solid rgba(100, 150, 200, 0.3);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #90caf9;
+      margin-bottom: 16px;
+      font-size: 1.3rem;
+    }
+    
+    .test-section p {
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+    
+    .test-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    
+    .test-button {
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+      border: 2px solid #42a5f5;
+      border-radius: 8px;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .test-button:hover {
+      background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
+      border-color: #64b5f6;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+    
+    .test-button:active {
+      transform: translateY(0);
+    }
+    
+    #panel {
+      background: rgba(10, 20, 35, 0.4);
+      border: 2px solid rgba(100, 150, 200, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 400px;
+      margin-top: 20px;
+    }
+    
+    .results {
+      background: rgba(50, 100, 150, 0.2);
+      border: 1px solid rgba(100, 150, 200, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: #90caf9;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎮 Intermission Flow Test Suite</h1>
+    
+    <div class="test-section">
+      <h2>Test 1: HOH Competition - Previous HOH</h2>
+      <p>Simulates a player who is ineligible for HOH because they were the previous Head of Household.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testHOHPreviousHOH()">Run Test</button>
+      </div>
+      <div id="result1" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 2: HOH Competition - Evicted Player</h2>
+      <p>Simulates an evicted player who cannot compete in HOH.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testHOHEvicted()">Run Test</button>
+      </div>
+      <div id="result2" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 3: Veto Competition - Not Selected</h2>
+      <p>Simulates a player who was not selected to participate in the Veto competition.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testVetoNotSelected()">Run Test</button>
+      </div>
+      <div id="result3" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 4: Veto Competition - Evicted Player</h2>
+      <p>Simulates an evicted player who cannot compete in Veto.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testVetoEvicted()">Run Test</button>
+      </div>
+      <div id="result4" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 5: Feature Flag Disabled</h2>
+      <p>Tests that intermission flow is skipped when feature flag is disabled.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testFeatureFlagDisabled()">Run Test</button>
+      </div>
+      <div id="result5" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Test 6: Tic Tac Toe Game Only</h2>
+      <p>Tests just the Tic Tac Toe game without the full flow.</p>
+      <div class="test-buttons">
+        <button class="test-button" onclick="testTicTacToeOnly()">Run Test</button>
+      </div>
+      <div id="result6" class="results" style="display:none;"></div>
+    </div>
+  </div>
+  
+  <div id="panel"></div>
+  
+  <script src="js/minigames/tictactoe-intermission.js"></script>
+  <script src="js/intermission-flow.js"></script>
+  
+  <script>
+    // Mock global game object
+    window.game = {
+      cfg: {
+        enableIntermissionGames: true
+      }
+    };
+    
+    // Mock TvStatus
+    window.TvStatus = {
+      set: function(message, tone) {
+        console.log('[TvStatus]', message, tone || '');
+      }
+    };
+    
+    function logResult(testId, message) {
+      const resultDiv = document.getElementById('result' + testId);
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = message;
+    }
+    
+    function testHOHPreviousHOH() {
+      logResult(1, 'Starting HOH Previous HOH test...');
+      console.log('=== Test 1: HOH Previous HOH ===');
+      
+      window.IntermissionFlow.start({
+        compType: 'HOH',
+        reason: 'previous_hoh',
+        onComplete: function() {
+          logResult(1, 'Test completed! Check console and panel for results.');
+          console.log('✓ Test 1 completed');
+        }
+      });
+    }
+    
+    function testHOHEvicted() {
+      logResult(2, 'Starting HOH Evicted test...');
+      console.log('=== Test 2: HOH Evicted ===');
+      
+      window.IntermissionFlow.start({
+        compType: 'HOH',
+        reason: 'evicted',
+        onComplete: function() {
+          logResult(2, 'Test completed! Check console and panel for results.');
+          console.log('✓ Test 2 completed');
+        }
+      });
+    }
+    
+    function testVetoNotSelected() {
+      logResult(3, 'Starting Veto Not Selected test...');
+      console.log('=== Test 3: Veto Not Selected ===');
+      
+      window.IntermissionFlow.start({
+        compType: 'Veto',
+        reason: 'not_selected',
+        onComplete: function() {
+          logResult(3, 'Test completed! Check console and panel for results.');
+          console.log('✓ Test 3 completed');
+        }
+      });
+    }
+    
+    function testVetoEvicted() {
+      logResult(4, 'Starting Veto Evicted test...');
+      console.log('=== Test 4: Veto Evicted ===');
+      
+      window.IntermissionFlow.start({
+        compType: 'Veto',
+        reason: 'evicted',
+        onComplete: function() {
+          logResult(4, 'Test completed! Check console and panel for results.');
+          console.log('✓ Test 4 completed');
+        }
+      });
+    }
+    
+    function testFeatureFlagDisabled() {
+      logResult(5, 'Starting Feature Flag Disabled test...');
+      console.log('=== Test 5: Feature Flag Disabled ===');
+      
+      // Temporarily disable feature
+      const originalValue = window.game.cfg.enableIntermissionGames;
+      window.game.cfg.enableIntermissionGames = false;
+      
+      let completed = false;
+      window.IntermissionFlow.start({
+        compType: 'HOH',
+        reason: 'previous_hoh',
+        onComplete: function() {
+          completed = true;
+        }
+      });
+      
+      setTimeout(() => {
+        if (completed) {
+          logResult(5, '✓ PASS: Flow completed immediately when feature disabled');
+          console.log('✓ Test 5 passed - feature flag works correctly');
+        } else {
+          logResult(5, '✗ FAIL: Flow did not complete immediately');
+          console.error('✗ Test 5 failed');
+        }
+        
+        // Restore original value
+        window.game.cfg.enableIntermissionGames = originalValue;
+      }, 100);
+    }
+    
+    function testTicTacToeOnly() {
+      logResult(6, 'Starting Tic Tac Toe Only test...');
+      console.log('=== Test 6: Tic Tac Toe Only ===');
+      
+      const panel = document.getElementById('panel');
+      panel.innerHTML = '';
+      
+      window.TicTacToeIntermission.init(panel, function(result) {
+        logResult(6, 'Game completed! Result: ' + result);
+        console.log('✓ Test 6 completed - Result:', result);
+      });
+    }
+    
+    console.log('Intermission Flow Test Suite loaded');
+    console.log('Click test buttons to run individual tests');
+  </script>
+</body>
+</html>

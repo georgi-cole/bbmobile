@@ -677,11 +677,32 @@
             console.error('[veto.js] ✗ No host node available for minigame rendering');
           }
         } else {
-          // Human not drawn to play - show note using inline status with participant list
+          // Human not drawn to play - show intermission flow if available
           console.info('[veto.js] Human not eligible for this veto competition');
-          if(window.TVInlineStatus?.set){
-            var participantNames = list.join(', ');
-            window.TVInlineStatus.set('You are not playing Veto. Participants: ' + participantNames, 'muted');
+          
+          // Determine reason for ineligibility
+          var reason = 'not_selected';
+          if (you.evicted) {
+            reason = 'evicted';
+          }
+          
+          // Check if intermission flow is available and enabled
+          if (global.IntermissionFlow && (g.cfg?.enableIntermissionGames !== false)) {
+            console.info('[veto.js] Starting intermission flow for ineligible player');
+            global.IntermissionFlow.start({
+              compType: 'Veto',
+              reason: reason,
+              onComplete: function() {
+                console.info('[veto.js] Intermission flow completed, showing competition results');
+                // Player finished intermission or skipped, continue to show results
+              }
+            });
+          } else {
+            // Fallback: just show status message
+            if(window.TVInlineStatus?.set){
+              var participantNames = list.join(', ');
+              window.TVInlineStatus.set('You are not playing Veto. Participants: ' + participantNames, 'muted');
+            }
           }
         }
       }
