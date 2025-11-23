@@ -112,7 +112,11 @@
     if (isEvicted) {
       parts.push('Evicted');
       if (player.evictedAt) {
-        parts.push(`Week ${player.evictedAt}`);
+        // Check if evictedAt is a week number (< 100) or timestamp
+        const weekOrTimestamp = player.evictedAt;
+        if (weekOrTimestamp < 100) {
+          parts.push(`Week ${weekOrTimestamp}`);
+        }
       }
     } else {
       if (player.hoh) parts.push('Head of Household');
@@ -330,9 +334,19 @@
     
     const avatar = getPlayerAvatar(player);
     const name = player.name || 'Guest';
-    const statusText = isEvicted 
-      ? `Evicted${player.evictedAt ? ` - Week ${player.evictedAt}` : ''}`
-      : (player.hoh ? 'Head of Household' : player.nominated ? 'Nominated' : 'Houseguest');
+    
+    let statusText;
+    if (isEvicted) {
+      statusText = 'Evicted';
+      // Only show week if evictedAt is a week number (< 100), not a timestamp
+      if (player.evictedAt && player.evictedAt < 100) {
+        statusText += ` - Week ${player.evictedAt}`;
+      }
+    } else {
+      statusText = player.hoh ? 'Head of Household' : 
+                   player.nominated ? 'Nominated' : 
+                   'Houseguest';
+    }
     
     const statusClass = isEvicted ? 'evicted' : '';
     
@@ -503,7 +517,8 @@
     if (playerIndex !== -1) {
       const [evictedPlayer] = state.activePlayers.splice(playerIndex, 1);
       evictedPlayer.evicted = true;
-      evictedPlayer.evictedAt = data.week || data.evictedAt || Date.now();
+      // Store week number if provided, otherwise use order index
+      evictedPlayer.evictedAt = data.week || state.evictedPlayers.length + 1;
       state.evictedPlayers.push(evictedPlayer);
       
       // Re-render
