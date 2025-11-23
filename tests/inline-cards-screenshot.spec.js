@@ -1,8 +1,12 @@
 // Playwright test for inline TV cards screenshot generation
 // Verifies the unified inline TV overlay card design integration
 
-const { test, expect } = require('@playwright/test');
-const path = require('path');
+import { test, expect } from '@playwright/test';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 test.describe('TV Inline Cards Visual Verification', () => {
   test.beforeEach(async ({ page }) => {
