@@ -40,6 +40,8 @@ export interface PlayerState {
   currentLevelXP: number;
   progressPercent: number;
   eventsCount: number;
+  isMax?: boolean;  // True when at max level
+  seasonXP?: number;  // XP for current season only (for ranking)
 }
 
 export interface Snapshot {

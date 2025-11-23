@@ -128,3 +128,104 @@ const progressPercent = currentLevelXP > 0
 - The fix is backward compatible - if `computeLevel` is not available, it falls back to safe defaults
 - Debug logging can be removed in a future cleanup PR if desired
 - The modal already had the correct Overview calculation; only the Leaderboard fallback needed fixing
+
+---
+
+## Update: Global vs Seasonal XP (v2)
+
+### Problem Extension
+The original fix addressed level consistency but didn't handle:
+1. XP overflow beyond max level (Level 20 at 34,000 XP)
+2. Distinction between Global (aggregate) XP and Seasonal XP
+3. Negative milestone values when totalXP > maxThreshold
+4. Progress percentage exceeding 100%
+
+### Solution v2
+
+#### 1. Max Level Handling
+**Changes to `computeLevel` (reducer.ts):**
+- Returns `isMax: boolean` flag when at max level
+- Sets `nextLevelXP = currentLevelXP` (not `+1000`) when at max
+- Ensures no fabricated threshold beyond Level 20
+
+**Changes to `reduceEvents` (reducer.ts):**
+- Sets `progressPercent = 100` when `isMax = true`
+- Clamps progress to max 100% even if not at max
+- Includes `isMax` in returned `PlayerState`
+
+#### 2. Global vs Seasonal XP
+**New Utilities (`utils/player.ts`):**
+- `filterEventsByPlayer` - Get events for specific player
+- `filterEventsBySeason` - Get events for specific season
+- `computeXPFromEvents` - Calculate XP with cap enforcement
+- `computePlayerXP` - Get both aggregateXP (all seasons) and seasonXP (current season)
+- `computePlayerState` - Build PlayerState with both XP values
+
+**Key Principle:**
+- **Level** is always computed from **aggregate XP** (total across all seasons)
+- **Leaderboard ranking** uses **seasonal XP** (current season only)
+- Both values are stored and displayed separately
+
+#### 3. UI Updates (xp-modal.js)
+**Overview Tab:**
+- Shows "Max Level Achieved" when `isMax = true`
+- Progress bar never exceeds 100%
+- Milestone shows "Max Level" instead of negative values
+- Optional "Overflow XP" display when beyond max level
+- Seasonal XP shown with label "(for ranking only)"
+
+**Leaderboard Tab:**
+- Sorted by seasonal XP (for competitive ranking)
+- Displays "Level X (Global)" to clarify it's from aggregate XP
+- Shows "Season XP" for ranking value
+- Shows "Total: X XP" for aggregate XP
+- Tooltip explains the difference
+
+#### 4. Bridge Updates (progression-bridge.js)
+**getPlayerState:**
+- Accepts optional `seasonId` parameter
+- Returns both `totalXP` (aggregate) and `seasonXP`
+- Computes `isMax` flag and clamped progress
+- Falls back gracefully if utilities unavailable
+
+**getLeaderboard:**
+- Passes `seasonId` to `getPlayerState`
+- Returns array with `aggregateXP`, `seasonXP`, and `level`
+- Sorts by `seasonXP` for ranking
+- Level always derived from `aggregateXP`
+
+### Test Coverage
+Run `test_xp_level_consistency_v2.html` to verify:
+- ✓ Max level detection with `isMax = true`
+- ✓ Progress clamped at 100%
+- ✓ No negative milestones
+- ✓ Seasonal vs Aggregate XP separation
+- ✓ Level from aggregate, ranking from seasonal
+- ✓ Edge case: Zero seasonal XP with non-zero aggregate
+- ✓ No fabricated `+1000` at max level
+
+### Constants
+- `MAX_LEVEL = 20` exported from `constants.ts`
+- Level 20 threshold confirmed at 34,000 XP
+- No threshold beyond Level 20
+
+### Migration Notes
+**For Existing Games:**
+- All players' XP history is preserved
+- Level recalculated from aggregate XP
+- Seasonal XP computed by filtering events by `season` field
+- If `season` field missing, defaults to 0 (won't affect aggregate)
+
+**For New Games:**
+- Events should include `season` field for proper seasonal tracking
+- Leaderboard ranking will use seasonal XP
+- Level progression uses aggregate XP as before
+
+### Related Files (v2)
+- `src/progression/utils/player.ts` - New utility functions
+- `src/progression/types.ts` - Added `isMax` and `seasonXP` fields
+- `src/progression/constants.ts` - Added `MAX_LEVEL` constant
+- `src/progression/reducer.ts` - Enhanced `computeLevel` and `reduceEvents`
+- `src/progression/core.ts` - Added `getPlayerState(playerId, seasonId)`
+- `js/progression-bridge.js` - Updated for seasonal XP support
+- `src/progression/xp-modal.js` - UI for max level and seasonal XP

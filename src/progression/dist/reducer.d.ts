@@ -13,6 +13,7 @@ export declare function computeLevel(totalXP: number, thresholds: LevelThreshold
     level: number;
     nextLevelXP: number;
     currentLevelXP: number;
+    isMax: boolean;
 };
 /**
  * Compute breakdown by rule

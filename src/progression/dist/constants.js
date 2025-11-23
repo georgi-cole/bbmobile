@@ -221,7 +221,12 @@ export const DEFAULT_RULES = [
     }
 ];
 /**
+ * Maximum level achievable
+ */
+export const MAX_LEVEL = 20;
+/**
  * Default level thresholds (XP required to reach each level)
+ * Note: Level 20 requires 34,000 XP (final threshold)
  */
 export const DEFAULT_LEVEL_THRESHOLDS = [
     { level: 1, xpRequired: 0 },

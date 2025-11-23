@@ -35,6 +35,8 @@ export interface PlayerState {
     currentLevelXP: number;
     progressPercent: number;
     eventsCount: number;
+    isMax?: boolean;
+    seasonXP?: number;
 }
 export interface Snapshot {
     id: string;

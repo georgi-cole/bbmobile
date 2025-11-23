@@ -7,7 +7,12 @@ import type { XPRule, LevelThreshold } from './types.js';
  */
 export declare const DEFAULT_RULES: XPRule[];
 /**
+ * Maximum level achievable
+ */
+export declare const MAX_LEVEL = 20;
+/**
  * Default level thresholds (XP required to reach each level)
+ * Note: Level 20 requires 34,000 XP (final threshold)
  */
 export declare const DEFAULT_LEVEL_THRESHOLDS: LevelThreshold[];
 /**
