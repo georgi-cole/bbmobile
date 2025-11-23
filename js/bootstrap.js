@@ -63,8 +63,8 @@
     const on = (id, dv)=>document.getElementById(id)?.checked ?? dv;
 
     g.cfg.humanName=String(val('humanName','You')).trim() || 'You';
-    // Allow 6..22 players
-    g.cfg.numPlayers=clampNum(val('numPlayers',12),12,6,22);
+    // Allow 4..16 players
+    g.cfg.numPlayers=clampNum(val('numPlayers',12),12,4,16);
     g.cfg.tHOH=clampNum(val('tHOH',35),5,5,999);
     g.cfg.tNoms=clampNum(val('tNoms',25),5,5,999);
     g.cfg.tVeto=clampNum(val('tVeto',30),5,5,999);
@@ -143,6 +143,32 @@
     buildCastInternal();
   }
 
+  /**
+   * Fisher-Yates shuffle to sample unique elements from an array
+   * Returns a new array with `count` unique elements randomly selected
+   */
+  function sampleUnique(arr, count){
+    if(!arr || !Array.isArray(arr) || arr.length === 0) return [];
+    if(count >= arr.length) return arr.slice(); // Return all if count >= length
+    
+    // Create a copy to avoid mutating original
+    const pool = arr.slice();
+    const result = [];
+    
+    for(let i = 0; i < count && i < pool.length; i++){
+      // Pick random index from remaining pool
+      const randomIndex = i + Math.floor(Math.random() * (pool.length - i));
+      // Swap with current position
+      const temp = pool[i];
+      pool[i] = pool[randomIndex];
+      pool[randomIndex] = temp;
+      // Add to result
+      result.push(pool[i]);
+    }
+    
+    return result;
+  }
+
   function buildCastInternal(){
     ensureGame();
     const g=global.game;
@@ -165,12 +191,29 @@
       }catch{}
     }
     if(!N || isNaN(N)) N = 12; // Final fallback to default
+    
+    // Global roster pool (26 names available for randomization)
     const defaults=['Finn','Mimi','Rae','Nova','Kai','Zed','Ivy','Ash','Lux','Remy','Blue','Jax','Echo','Vee','Sol','Quinn','Aria','Dex','Rune','Bea','Nico','Pax','Noa','Kian','Lia','Rey'];
 
-    for(let i=0;i<N;i++){
-      const nm = (i===0) ? humanName : defaults[(i-1)%defaults.length];
-      global.pushPlayer({name:nm, human:i===0});
+    // RANDOMIZED CAST SELECTION (user request):
+    // Instead of always using the first N-1 names sequentially, we now randomly sample
+    // AI names from the roster pool for each new season. This ensures variety when
+    // restarting with the same player count. Human player (index 0) is always first.
+    
+    // Push human player first
+    global.pushPlayer({name:humanName, human:true});
+    
+    // Sample (N-1) unique AI names randomly from the roster pool
+    const aiCount = N - 1;
+    const aiNames = sampleUnique(defaults, aiCount);
+    
+    // Push AI players with randomized names
+    for(let i = 0; i < aiNames.length; i++){
+      global.pushPlayer({name:aiNames[i], human:false});
     }
+    
+    // Log randomized roster for verification (can be removed later)
+    console.info('[buildCast] randomized AI roster:', aiNames);
     global.attachBios?.(g);
     global.initAffinities();
     global.initRelationships();
