@@ -45,10 +45,17 @@
   function renderField(field){
     if(!field) return '';
     
+    // Check if this field is deferred (gameflow-affecting)
+    const isDeferred = field.key && global.SettingsCategorization?.isDeferred(field.key);
+    const isMidSeason = global.game?.phase && global.game.phase !== 'lobby';
+    const showDeferredBadge = isDeferred && isMidSeason;
+    
     if(field.type === 'checkbox'){
       return [
         '<label class="toggleRow">',
-          '<span>' + escapeHtml(field.label) + '</span>',
+          '<span>' + escapeHtml(field.label),
+            showDeferredBadge ? ' <span class="tiny muted" style="color:#f2c862;font-weight:600;" title="Will apply at next season start">⏱ Deferred</span>' : '',
+          '</span>',
           '<input type="checkbox" data-key="' + field.key + '">',
         '</label>'
       ].join('');
@@ -57,7 +64,9 @@
     if(field.type === 'number'){
       return [
         '<label class="toggleRow">',
-          '<span>' + escapeHtml(field.label) + '</span>',
+          '<span>' + escapeHtml(field.label),
+            showDeferredBadge ? ' <span class="tiny muted" style="color:#f2c862;font-weight:600;" title="Will apply at next season start">⏱ Deferred</span>' : '',
+          '</span>',
           '<input type="number" data-key="' + field.key + '" min="' + field.min + '" max="' + field.max + '" step="' + (field.step || 1) + '" style="width:100px">',
         '</label>'
       ].join('');
@@ -361,6 +370,9 @@
     const g = global.game = global.game || {};
     const cfg = g.cfg = Object.assign({}, Config.DEFAULT_CFG || {}, g.cfg || {});
     
+    // Ensure cfg.pending exists
+    if(!cfg.pending) cfg.pending = {};
+    
     const changedKeys = [];
     const oldNumPlayers = cfg.numPlayers;
     
@@ -384,6 +396,36 @@
       cfg[k] = newValue;
     });
 
+    // Categorize changed settings
+    const isMidSeason = global.SettingsCategorization?.isMidSeason() || (g.phase && g.phase !== 'lobby');
+    let immediateKeys = [];
+    let deferredKeys = [];
+    
+    if(global.SettingsCategorization?.partitionChanges){
+      const partition = global.SettingsCategorization.partitionChanges(changedKeys);
+      immediateKeys = partition.immediate.concat(partition.unknown); // Unknown defaults to immediate
+      deferredKeys = partition.deferred;
+    } else {
+      // Fallback: treat all as immediate if categorization module not loaded
+      immediateKeys = changedKeys;
+      deferredKeys = [];
+    }
+    
+    // If mid-season, defer gameflow-affecting settings
+    if(isMidSeason && deferredKeys.length > 0){
+      console.info('[settings/render] Mid-season detected, deferring', deferredKeys.length, 'settings');
+      
+      // Store deferred changes in cfg.pending
+      deferredKeys.forEach(function(key){
+        cfg.pending[key] = cfg[key];
+      });
+      
+      // Show notification about deferred settings
+      if(deferredKeys.length > 0){
+        notify('Some settings will apply at next season start: ' + deferredKeys.join(', '), 'warn');
+      }
+    }
+    
     // Persist to localStorage via centralized helper
     if(Config.saveStoredCfg) Config.saveStoredCfg(cfg);
     
@@ -391,16 +433,22 @@
     g.cfg = cfg;
     global.cfg = cfg;
 
-    // Apply side effects for changed keys
-    if(SettingsEffects.applyEffects) SettingsEffects.applyEffects(cfg, changedKeys);
-    
-    // If numPlayers changed, apply the player count logic
-    if(changedKeys.indexOf('numPlayers') !== -1 && oldNumPlayers !== cfg.numPlayers){
-      applyPlayerCount(cfg.numPlayers);
+    // Apply side effects for immediate keys only
+    if(SettingsEffects.applyEffects) {
+      SettingsEffects.applyEffects(cfg, immediateKeys);
     }
     
-    // Sync adaptive background setting to BackgroundTheme
-    if(changedKeys.indexOf('adaptiveBackground') !== -1){
+    // If numPlayers changed and NOT deferred, apply the player count logic
+    if(changedKeys.indexOf('numPlayers') !== -1 && oldNumPlayers !== cfg.numPlayers){
+      if(deferredKeys.indexOf('numPlayers') === -1){
+        applyPlayerCount(cfg.numPlayers);
+      } else {
+        console.info('[settings/render] numPlayers deferred to next season');
+      }
+    }
+    
+    // Sync adaptive background setting to BackgroundTheme (if immediate)
+    if(changedKeys.indexOf('adaptiveBackground') !== -1 && immediateKeys.indexOf('adaptiveBackground') !== -1){
       if(typeof global.BackgroundTheme !== 'undefined' && typeof global.BackgroundTheme.setAdaptive === 'function'){
         global.BackgroundTheme.setAdaptive(!!cfg.adaptiveBackground);
       }

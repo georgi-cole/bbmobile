@@ -150,6 +150,36 @@
       setTimeout(buildCastInternal, 30);
       return;
     }
+    
+    // Apply any pending settings from cfg.pending (deferred from mid-season)
+    if(g.cfg && g.cfg.pending && typeof g.cfg.pending === 'object'){
+      const pendingKeys = Object.keys(g.cfg.pending);
+      if(pendingKeys.length > 0){
+        console.info('[buildCast] Applying', pendingKeys.length, 'pending settings:', pendingKeys.join(', '));
+        
+        // Merge pending into active config
+        pendingKeys.forEach(function(key){
+          g.cfg[key] = g.cfg.pending[key];
+          console.info('[buildCast] Applied pending setting:', key, '=', g.cfg[key]);
+        });
+        
+        // Clear pending
+        g.cfg.pending = {};
+        
+        // Save updated config
+        if(typeof global.Config?.saveStoredCfg === 'function'){
+          global.Config.saveStoredCfg(g.cfg);
+        } else if(typeof global.saveStoredCfg === 'function'){
+          global.saveStoredCfg(g.cfg);
+        }
+        
+        // Log telemetry
+        if(global.addLog){
+          global.addLog('Pending settings applied at season start', 'ok');
+        }
+      }
+    }
+    
     g.players.length = 0;
 
     const humanName=(g.cfg?.humanName || document.getElementById('humanName')?.value || 'You').trim();

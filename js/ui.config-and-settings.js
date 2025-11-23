@@ -1733,23 +1733,72 @@
     const game=g.game = g.game || {};
     const cfg = game.cfg = Object.assign({}, DEFAULT_CFG, game.cfg||{});
     
-    // Track if numPlayers changed to trigger applyPlayersFromSettings
+    // Ensure cfg.pending exists
+    if(!cfg.pending) cfg.pending = {};
+    
+    // Track changed keys and old values
+    const changedKeys = [];
     const oldNumPlayers = cfg.numPlayers;
     
     modal.querySelectorAll('[data-key]').forEach(inp=>{
       const k = inp.getAttribute('data-key');
-      if(inp.type==='checkbox') cfg[k] = !!inp.checked;
-      else {
+      const oldValue = cfg[k];
+      let newValue;
+      
+      if(inp.type==='checkbox') {
+        newValue = !!inp.checked;
+      } else {
         const v = parseFloat(inp.value);
-        if(!Number.isNaN(v)) cfg[k] = v;
+        newValue = !Number.isNaN(v) ? v : inp.value;
       }
+      
+      if(oldValue !== newValue){
+        changedKeys.push(k);
+      }
+      
+      cfg[k] = newValue;
     });
+    
+    // Categorize changed settings
+    const isMidSeason = g.SettingsCategorization?.isMidSeason() || (game.phase && game.phase !== 'lobby');
+    let immediateKeys = [];
+    let deferredKeys = [];
+    
+    if(g.SettingsCategorization?.partitionChanges){
+      const partition = g.SettingsCategorization.partitionChanges(changedKeys);
+      immediateKeys = partition.immediate.concat(partition.unknown); // Unknown defaults to immediate
+      deferredKeys = partition.deferred;
+    } else {
+      // Fallback: treat all as immediate if categorization module not loaded
+      immediateKeys = changedKeys;
+      deferredKeys = [];
+    }
+    
+    // If mid-season, defer gameflow-affecting settings
+    if(isMidSeason && deferredKeys.length > 0){
+      console.info('[ui.config-and-settings] Mid-season detected, deferring', deferredKeys.length, 'settings');
+      
+      // Store deferred changes in cfg.pending
+      deferredKeys.forEach(k => {
+        cfg.pending[k] = cfg[k];
+      });
+      
+      // Show notification about deferred settings
+      if(deferredKeys.length > 0){
+        notify('Some settings will apply at next season start: ' + deferredKeys.join(', '), 'warn');
+      }
+    }
+    
     saveStoredCfg(cfg);
     applyCfgEffects(cfg);
     
-    // If numPlayers changed, apply it (will defer mid-season, rebuild in lobby)
+    // If numPlayers changed and NOT deferred, apply it (will defer mid-season, rebuild in lobby)
     if(oldNumPlayers !== cfg.numPlayers){
-      applyPlayersFromSettings(cfg.numPlayers);
+      if(deferredKeys.indexOf('numPlayers') === -1){
+        applyPlayersFromSettings(cfg.numPlayers);
+      } else {
+        console.info('[ui.config-and-settings] numPlayers deferred to next season');
+      }
     }
     
     g.updateHud?.();

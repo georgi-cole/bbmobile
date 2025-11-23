@@ -15,8 +15,6 @@
   // Pause/resume state
   let isPaused = false;
   let remainingMs = 0;
-  let pausedTimeoutId = null;
-  let pausedIntervalId = null;
 
   /**
    * Initialize the bridge and set up event listeners
@@ -238,16 +236,14 @@
       remainingMs = 0;
     }
 
-    // Store current timeout/interval IDs for cleanup
+    // Clear active timeout/interval
     if (game.phaseTimeoutId) {
       clearTimeout(game.phaseTimeoutId);
-      pausedTimeoutId = game.phaseTimeoutId;
       game.phaseTimeoutId = null;
     }
 
     if (game.phaseIntervalId) {
       clearInterval(game.phaseIntervalId);
-      pausedIntervalId = game.phaseIntervalId;
       game.phaseIntervalId = null;
     }
 
@@ -316,8 +312,6 @@
     // Clear pause state
     isPaused = false;
     remainingMs = 0;
-    pausedTimeoutId = null;
-    pausedIntervalId = null;
 
     // Restore timer UI
     restoreTimerUI();
