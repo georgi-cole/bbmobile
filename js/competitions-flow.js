@@ -1472,7 +1472,10 @@
   }, 0);
   
   // Listen for game ready event to flush any additional deferred calls
-  // Check for common game ready event patterns
+  // Check for common game ready event patterns:
+  // - 'bb:game:ready': Custom game initialization event (if implemented in future)
+  // - 'game:ready': Alternative custom game ready event pattern
+  // - 'DOMContentLoaded': Browser DOM ready event (fallback for late module loading)
   const gameReadyEvents = ['bb:game:ready', 'game:ready', 'DOMContentLoaded'];
   
   gameReadyEvents.forEach(eventName => {
