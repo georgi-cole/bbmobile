@@ -213,7 +213,7 @@
     }
     
     // Log randomized roster in development mode for verification
-    if(typeof global.DEBUG_MODE !== 'undefined' && global.DEBUG_MODE){
+    if(global.DEBUG_MODE === true){
       console.info('[buildCast] randomized AI roster:', aiNames);
     }
     global.attachBios?.(g);
