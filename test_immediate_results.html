@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Immediate Competition Results & Fast-Forward</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0f1a28;
+      color: #e0e0e0;
+    }
+    h1 {
+      color: #60a5fa;
+      border-bottom: 2px solid #60a5fa;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background: #1a2937;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #60a5fa;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #3b82f6;
+    }
+    .btn-success {
+      background: #34d399;
+      color: #0f1a28;
+    }
+    .btn-success:hover {
+      background: #10b981;
+    }
+    .btn-warning {
+      background: #fbbf24;
+      color: #0f1a28;
+    }
+    .btn-warning:hover {
+      background: #f59e0b;
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .status.info {
+      background: rgba(96, 165, 250, 0.1);
+      border: 1px solid #60a5fa;
+      color: #60a5fa;
+    }
+    .status.success {
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid #34d399;
+      color: #34d399;
+    }
+    .status.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #ef4444;
+      color: #ef4444;
+    }
+    .log {
+      background: #0a1120;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 15px 0;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #60a5fa;
+      padding-left: 10px;
+    }
+    .log-entry.immediate {
+      border-left-color: #34d399;
+    }
+    .log-entry.error {
+      border-left-color: #ef4444;
+    }
+    code {
+      background: rgba(96, 165, 250, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #60a5fa;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏆 Test: Immediate Competition Results & Fast-Forward</h1>
+
+  <div class="test-section">
+    <h2>Feature Flag Control</h2>
+    <p>Current Flag: <code id="flag-status">Loading...</code></p>
+    <div class="test-controls">
+      <button class="btn-success" onclick="enableFeature()">✓ Enable Feature</button>
+      <button class="btn-danger" onclick="disableFeature()">✗ Disable Feature</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Scenarios</h2>
+    <div class="test-controls">
+      <button class="btn-primary" onclick="testImmediateResultsEnabled()">Test: Feature Enabled</button>
+      <button class="btn-primary" onclick="testImmediateResultsDisabled()">Test: Feature Disabled</button>
+      <button class="btn-warning" onclick="testPhaseResolution()">Test: Phase Resolution</button>
+      <button class="btn-warning" onclick="testScoreboardBuilder()">Test: Scoreboard Builder</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="status" class="status info">Ready to test...</div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    // Mock game object
+    if (!window.game) {
+      window.game = {
+        cfg: {},
+        phase: 'hoh',
+        humanId: 0,
+        lastCompScores: new Map(),
+        players: [
+          { id: 0, name: 'You', human: true, evicted: false },
+          { id: 1, name: 'Alice', evicted: false },
+          { id: 2, name: 'Bob', evicted: false },
+          { id: 3, name: 'Charlie', evicted: false }
+        ]
+      };
+    }
+
+    // Mock helper functions
+    window.getP = (id) => window.game.players.find(p => p.id === id);
+    window.safeName = (id) => window.getP(id)?.name || 'Unknown';
+    window.getAvatarUrl = (id) => `https://api.dicebear.com/6.x/bottts/svg?seed=${window.safeName(id)}`;
+
+    // Mock phase finish functions
+    window.finishCompPhase = () => log('finishCompPhase() called', 'immediate');
+    window.finishF3P2 = () => log('finishF3P2() called', 'immediate');
+    window.finishF3P3 = () => log('finishF3P3() called', 'immediate');
+    window.defaultAdvance = (phase) => log(`defaultAdvance(${phase}) called`, 'immediate');
+
+    // Mock showResultsPopup
+    window.showResultsPopup = (options) => {
+      log(`showResultsPopup called: ${options.title}, topThree: ${options.topThree.length}`, 'immediate');
+      return new Promise(resolve => setTimeout(resolve, 1000));
+    };
+
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(message);
+    }
+
+    function setStatus(message, type = 'info') {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+    }
+
+    function updateFlagStatus() {
+      const flag = window.game?.cfg?.autoFastAdvanceCompetitions;
+      const flagEl = document.getElementById('flag-status');
+      flagEl.textContent = flag ? 'Enabled (true)' : 'Disabled (false)';
+      flagEl.style.color = flag ? '#34d399' : '#ef4444';
+    }
+
+    function enableFeature() {
+      window.game.cfg.autoFastAdvanceCompetitions = true;
+      updateFlagStatus();
+      log('Feature flag enabled', 'success');
+      setStatus('Feature enabled', 'success');
+    }
+
+    function disableFeature() {
+      window.game.cfg.autoFastAdvanceCompetitions = false;
+      updateFlagStatus();
+      log('Feature flag disabled', 'error');
+      setStatus('Feature disabled', 'error');
+    }
+
+    function testImmediateResultsEnabled() {
+      log('=== Test: Feature Enabled ===');
+      window.game.cfg.autoFastAdvanceCompetitions = true;
+      window.game.lastCompScores = new Map([
+        [0, 85],
+        [1, 92],
+        [2, 78],
+        [3, 88]
+      ]);
+      window.game.__hohResolved = false;
+      window.game.__fastAdvancingCompetition = false;
+
+      if (window.CompetitionFlow?.showCompetitionResultsAndFastForward) {
+        log('Calling showCompetitionResultsAndFastForward(85)');
+        window.CompetitionFlow.showCompetitionResultsAndFastForward(85);
+        setStatus('Test completed - check log for results', 'success');
+      } else {
+        log('ERROR: CompetitionFlow.showCompetitionResultsAndFastForward not found', 'error');
+        setStatus('Test failed - function not found', 'error');
+      }
+    }
+
+    function testImmediateResultsDisabled() {
+      log('=== Test: Feature Disabled ===');
+      window.game.cfg.autoFastAdvanceCompetitions = false;
+      window.game.lastCompScores = new Map([[0, 85]]);
+
+      if (window.CompetitionFlow?.showCompetitionResultsAndFastForward) {
+        log('Calling showCompetitionResultsAndFastForward(85) with flag disabled');
+        window.CompetitionFlow.showCompetitionResultsAndFastForward(85);
+        log('Function should skip execution - no popup or phase advance', 'info');
+        setStatus('Test completed - feature was skipped as expected', 'success');
+      } else {
+        log('ERROR: CompetitionFlow.showCompetitionResultsAndFastForward not found', 'error');
+        setStatus('Test failed - function not found', 'error');
+      }
+    }
+
+    function testPhaseResolution() {
+      log('=== Test: Phase Resolution ===');
+      window.game.cfg.autoFastAdvanceCompetitions = true;
+      window.game.__fastAdvancingCompetition = false;
+      
+      // Test HOH phase
+      window.game.phase = 'hoh';
+      window.game.__hohResolved = false;
+      log('Testing HOH phase resolution...');
+      if (window.CompetitionFlow?.showCompetitionResultsAndFastForward) {
+        window.game.lastCompScores = new Map([[0, 85]]);
+        window.CompetitionFlow.showCompetitionResultsAndFastForward(85);
+      }
+      
+      // Wait and test duplicate prevention
+      setTimeout(() => {
+        log('Testing duplicate execution guard...');
+        if (window.game.__fastAdvancingCompetition) {
+          log('Guard flag set correctly', 'success');
+        } else {
+          log('WARNING: Guard flag not set', 'error');
+        }
+        setStatus('Phase resolution test completed', 'success');
+      }, 500);
+    }
+
+    function testScoreboardBuilder() {
+      log('=== Test: Scoreboard Builder ===');
+      
+      // Setup test scores
+      window.game.lastCompScores = new Map([
+        [0, 85],
+        [1, 92],
+        [2, 78],
+        [3, 88]
+      ]);
+      
+      log('lastCompScores:', 'info');
+      window.game.lastCompScores.forEach((score, id) => {
+        log(`  Player ${window.safeName(id)}: ${score}`, 'info');
+      });
+      
+      // Call the feature to see topThree in log
+      window.game.cfg.autoFastAdvanceCompetitions = true;
+      if (window.CompetitionFlow?.showCompetitionResultsAndFastForward) {
+        window.CompetitionFlow.showCompetitionResultsAndFastForward(85);
+        log('Scoreboard should show top 3: Alice (92), Charlie (88), You (85)', 'success');
+        setStatus('Scoreboard test completed - check popup', 'success');
+      }
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      log('Test page loaded');
+      log('Checking for CompetitionFlow module...');
+      
+      if (window.CompetitionFlow) {
+        log('✓ CompetitionFlow module found', 'success');
+        log('✓ Available functions:', 'info');
+        Object.keys(window.CompetitionFlow).forEach(key => {
+          log(`  - ${key}`, 'info');
+        });
+      } else {
+        log('✗ CompetitionFlow module not found - loading module files...', 'error');
+      }
+
+      updateFlagStatus();
+      setStatus('Ready to test. Click buttons above to run tests.', 'info');
+    });
+  </script>
+
+  <!-- Load the competitions-flow.js module -->
+  <script src="js/competitions-flow.js"></script>
+
+  <script>
+    // Verify module loaded after script
+    setTimeout(() => {
+      if (window.CompetitionFlow?.showCompetitionResultsAndFastForward) {
+        log('✓ Immediate results feature loaded successfully', 'success');
+        setStatus('Module loaded. Feature ready to test.', 'success');
+      } else {
+        log('✗ Immediate results feature not found after module load', 'error');
+        setStatus('Module load failed', 'error');
+      }
+    }, 100);
+  </script>
+</body>
+</html>

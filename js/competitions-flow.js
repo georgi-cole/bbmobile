@@ -1512,7 +1512,7 @@
   if(!global.CompetitionFlow) global.CompetitionFlow = {};
 
   // Feature flag default ON
-  if(typeof g.cfg === 'object' && typeof g.cfg.autoFastAdvanceCompetitions === 'undefined'){
+  if(typeof g.cfg === 'object' && g.cfg !== null && typeof g.cfg.autoFastAdvanceCompetitions === 'undefined'){
     g.cfg.autoFastAdvanceCompetitions = true;
   }
 
@@ -1520,7 +1520,7 @@
     const scores = g.lastCompScores;
     if(!(scores instanceof Map) || scores.size === 0){ return []; }
     const sorted = [...scores.entries()]
-      .filter(([pid]) => { const p = global.getP ? global.getP(pid) : null; return !p || !p.evicted; })
+      .filter(([pid]) => { const p = global.getP ? global.getP(pid) : null; return p && !p.evicted; })
       .sort((a,b) => b[1] - a[1]);
     return sorted.slice(0,3).map(([pid, score]) => {
       const p = global.getP ? global.getP(pid) : null;
@@ -1677,7 +1677,7 @@
     const wrappedOnComplete = function(score){
       try { if(typeof onComplete === 'function'){ onComplete(score); } } catch(e){ console.warn('[ImmediateResults] Original onComplete error:', e); }
       if(options.autoFastAdvance !== false){
-        global.CompetitionFlow.showCompetitionResultsAndFastForward(score, options);
+        global.CompetitionFlow.showCompetitionResultsAndFastForward(score);
       } else {
         console.info('[ImmediateResults] autoFastAdvance disabled for this flow call');
       }
