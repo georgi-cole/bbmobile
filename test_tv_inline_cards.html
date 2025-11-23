@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Inline Cards Test</title>
+  
+  <!-- Theme and base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/theme-bridge.css">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg, #0d1623);
+      color: var(--ink, #fff);
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      background: var(--card, #1a2332);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section {
+      background: var(--card, #1a2332);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: var(--accent, #4a90e2);
+    }
+    
+    .test-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .test-button {
+      padding: 10px 20px;
+      background: var(--accent, #4a90e2);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .test-button:hover {
+      opacity: 0.9;
+    }
+    
+    .test-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .test-result {
+      margin-top: 15px;
+      padding: 15px;
+      background: var(--card-2, #0f1824);
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .test-result.success {
+      border-left: 4px solid var(--good, #4caf50);
+    }
+    
+    .test-result.error {
+      border-left: 4px solid var(--bad, #f44336);
+    }
+    
+    .check-mark {
+      color: var(--good, #4caf50);
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    
+    .x-mark {
+      color: var(--bad, #f44336);
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    
+    #tv {
+      margin: 20px auto;
+      max-width: 600px;
+    }
+    
+    .tvViewport {
+      position: relative;
+      min-height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="test-header">
+      <h1>TV Inline Cards Integration Test</h1>
+      <p>This page tests the unified inline TV overlay card design integration.</p>
+      <p>Each button will trigger a different card type and verify that the <code>.tv-inline-card</code> class is present.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>1. Basic Text Card (showTVCard)</h2>
+      <div class="test-buttons">
+        <button class="test-button" id="btnBasicCard">Show Basic Card</button>
+      </div>
+      <div class="test-result" id="resultBasicCard" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Card with Avatars (showTVCardWithAvatars)</h2>
+      <div class="test-buttons">
+        <button class="test-button" id="btnAvatarCard">Show Avatar Card</button>
+      </div>
+      <div class="test-result" id="resultAvatarCard" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Decision Card with Buttons (showTVDecision)</h2>
+      <div class="test-buttons">
+        <button class="test-button" id="btnDecisionCard">Show Decision Card</button>
+      </div>
+      <div class="test-result" id="resultDecisionCard" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>4. Inline Card (showInlineCard)</h2>
+      <div class="test-buttons">
+        <button class="test-button" id="btnInlineCard">Show Inline Card</button>
+      </div>
+      <div class="test-result" id="resultInlineCard" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>5. Nominee Save Panel (showTVNomineeSavePanel)</h2>
+      <div class="test-buttons">
+        <button class="test-button" id="btnSavePanel">Show Save Panel</button>
+      </div>
+      <div class="test-result" id="resultSavePanel" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- TV Frame for card display -->
+  <div id="tv" class="tv tv-screen tvTall">
+    <div class="tvHead">
+      <div class="tvTitle">Test TV</div>
+    </div>
+    <div class="tvViewport">
+      <div id="tvOverlay"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/theme-inline-contrast.js"></script>
+  <script src="js/ui/tv-cards.js"></script>
+  
+  <script>
+    // Mock getP function for player data
+    window.getP = function(id) {
+      const mockPlayers = [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' }
+      ];
+      return mockPlayers.find(p => p.id === id);
+    };
+
+    function verifyCard(cardSelector, resultId) {
+      const card = document.querySelector(cardSelector);
+      const resultEl = document.getElementById(resultId);
+      
+      if (!card) {
+        resultEl.innerHTML = '<span class="x-mark">✗</span>Card element not found';
+        resultEl.className = 'test-result error';
+        resultEl.style.display = 'block';
+        return false;
+      }
+
+      const hasInlineClass = card.classList.contains('tv-inline-card');
+      const hasLegacyClasses = card.classList.contains('revealCard') && 
+                               card.classList.contains('diaryRoomCard');
+      const hasRole = card.hasAttribute('role');
+      const hasTabindex = card.hasAttribute('tabindex');
+      
+      let html = '';
+      html += hasInlineClass ? 
+        '<span class="check-mark">✓</span>Has .tv-inline-card class<br>' : 
+        '<span class="x-mark">✗</span>Missing .tv-inline-card class<br>';
+      html += hasLegacyClasses ? 
+        '<span class="check-mark">✓</span>Has legacy classes (backward compatibility)<br>' : 
+        '<span class="x-mark">✗</span>Missing legacy classes<br>';
+      html += hasRole ? 
+        '<span class="check-mark">✓</span>Has ARIA role attribute<br>' : 
+        '<span class="x-mark">✗</span>Missing ARIA role<br>';
+      html += hasTabindex ? 
+        '<span class="check-mark">✓</span>Has tabindex for focus<br>' : 
+        '<span class="x-mark">✗</span>Missing tabindex<br>';
+      
+      // Check computed styles
+      const styles = getComputedStyle(card);
+      const hasBackdrop = styles.backdropFilter !== 'none' || styles.webkitBackdropFilter !== 'none';
+      html += hasBackdrop ? 
+        '<span class="check-mark">✓</span>Backdrop filter applied<br>' : 
+        '<span class="x-mark">✗</span>No backdrop filter<br>';
+      
+      resultEl.innerHTML = html;
+      resultEl.className = hasInlineClass ? 'test-result success' : 'test-result error';
+      resultEl.style.display = 'block';
+      
+      return hasInlineClass;
+    }
+
+    // Test 1: Basic Card
+    document.getElementById('btnBasicCard').addEventListener('click', async function() {
+      this.disabled = true;
+      await window.TVCards.showTVCard({
+        title: 'Test Ceremony',
+        lines: ['This is a basic TV card with the new inline styling.'],
+        tone: 'noms',
+        duration: 3000
+      });
+      
+      setTimeout(() => {
+        verifyCard('.tvCardBody', 'resultBasicCard');
+        this.disabled = false;
+      }, 100);
+    });
+
+    // Test 2: Avatar Card
+    document.getElementById('btnAvatarCard').addEventListener('click', async function() {
+      this.disabled = true;
+      await window.TVCards.showTVCardWithAvatars({
+        title: 'Veto Ceremony',
+        lines: ['Alice uses the Power of Veto on Bob.'],
+        tone: 'veto',
+        duration: 3000,
+        actorIds: 1,
+        subjectIds: 2
+      });
+      
+      setTimeout(() => {
+        verifyCard('.tvCardBody', 'resultAvatarCard');
+        this.disabled = false;
+      }, 100);
+    });
+
+    // Test 3: Decision Card
+    document.getElementById('btnDecisionCard').addEventListener('click', async function() {
+      this.disabled = true;
+      const result = await window.TVCards.showTVDecision({
+        title: 'Use Power of Veto?',
+        message: 'Will you use the Power of Veto to save a nominee?',
+        buttons: [
+          { label: 'Use Veto', value: 'use', primary: true },
+          { label: 'Do Not Use', value: 'no_use' }
+        ]
+      });
+      
+      setTimeout(() => {
+        const verified = verifyCard('.tvCardBody', 'resultDecisionCard');
+        const resultEl = document.getElementById('resultDecisionCard');
+        resultEl.innerHTML += `<br><strong>User selected:</strong> ${result || 'cancelled'}`;
+        this.disabled = false;
+      }, 100);
+    });
+
+    // Test 4: Inline Card
+    document.getElementById('btnInlineCard').addEventListener('click', async function() {
+      this.disabled = true;
+      await window.TVCards.showInlineCard({
+        title: 'Nominations Adjourned',
+        content: 'The nomination ceremony is now complete.',
+        tone: 'info',
+        duration: 3000
+      });
+      
+      setTimeout(() => {
+        verifyCard('.tvCardBody', 'resultInlineCard');
+        this.disabled = false;
+      }, 100);
+    });
+
+    // Test 5: Save Panel
+    document.getElementById('btnSavePanel').addEventListener('click', async function() {
+      this.disabled = true;
+      const result = await window.TVCards.showTVNomineeSavePanel({
+        title: 'Save a Nominee',
+        nominees: [2, 3],
+        povId: 1
+      });
+      
+      setTimeout(() => {
+        const verified = verifyCard('.tvCardBody', 'resultSavePanel');
+        const resultEl = document.getElementById('resultSavePanel');
+        const savedPlayer = window.getP(result);
+        resultEl.innerHTML += `<br><strong>User saved:</strong> ${savedPlayer ? savedPlayer.name : 'cancelled'}`;
+        this.disabled = false;
+      }, 100);
+    });
+
+    console.log('Test page loaded. Click buttons to test each card type.');
+  </script>
+</body>
+</html>

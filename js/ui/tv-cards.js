@@ -102,13 +102,18 @@
           clearTVOverlay();
           
           var card = document.createElement('div');
-          card.className = 'revealCard diaryRoomCard tvCardBody';
+          card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
           if(tone) card.setAttribute('data-tone', tone);
           
           // Mark as ephemeral for automatic cleanup on phase transitions
           card.setAttribute('data-ephemeral', 'true');
           card.setAttribute('data-ui-card', 'true');
           card.classList.add('ceremony-card');
+          
+          // Accessibility: ARIA role for status messages
+          card.setAttribute('role', 'status');
+          card.setAttribute('aria-live', 'polite');
+          card.setAttribute('tabindex', '0');
           
           var h3 = document.createElement('h3');
           h3.textContent = title;
@@ -160,13 +165,18 @@
         clearTVOverlay();
         
         var card = document.createElement('div');
-        card.className = 'revealCard diaryRoomCard tvCardBody';
+        card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
         if(tone) card.setAttribute('data-tone', tone);
         
         // Mark as ephemeral for automatic cleanup on phase transitions
         card.setAttribute('data-ephemeral', 'true');
         card.setAttribute('data-ui-card', 'true');
         card.classList.add('ceremony-card');
+        
+        // Accessibility: ARIA role for status messages
+        card.setAttribute('role', 'status');
+        card.setAttribute('aria-live', 'polite');
+        card.setAttribute('tabindex', '0');
         
         var h3 = document.createElement('h3');
         h3.textContent = title;
@@ -207,8 +217,13 @@
    */
   function buildAvatarCard({title, lines, tone, actorIds, subjectIds}){
     var card = document.createElement('div');
-    card.className = 'revealCard diaryRoomCard tvCardBody';
+    card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
     if(tone) card.setAttribute('data-tone', tone);
+    
+    // Accessibility: ARIA role for status messages
+    card.setAttribute('role', 'status');
+    card.setAttribute('aria-live', 'polite');
+    card.setAttribute('tabindex', '0');
     
     // Build avatar row if actors/subjects provided
     var hasAvatars = (actorIds && actorIds !== null) || (subjectIds && subjectIds !== null);
@@ -428,7 +443,12 @@
       clearTVOverlay();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard tvCardBody';
+      card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
+      
+      // Accessibility: ARIA role for dialog with actions
+      card.setAttribute('role', 'dialog');
+      card.setAttribute('aria-label', title);
+      card.setAttribute('tabindex', '0');
       
       var h3 = document.createElement('h3');
       h3.textContent = title;
@@ -446,6 +466,18 @@
         var btns = btnRow.querySelectorAll('button');
         for(var i=0; i<btns.length; i++){ btns[i].disabled = true; }
       }
+      
+      // ESC key dismissal handler
+      function handleEscape(e){
+        if(e.key === 'Escape'){
+          document.removeEventListener('keydown', handleEscape);
+          clearTVOverlay();
+          var tv = document.getElementById('tv');
+          if(tv) tv.classList.remove('tvTall');
+          resolve(null);
+        }
+      }
+      document.addEventListener('keydown', handleEscape);
       
       for(var i=0; i<buttons.length; i++){
         (function(btn){
@@ -506,7 +538,12 @@
       clearTVOverlay();
       
       var card = document.createElement('div');
-      card.className = 'revealCard diaryRoomCard tvCardBody';
+      card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
+      
+      // Accessibility: ARIA role for dialog with nominee selection
+      card.setAttribute('role', 'dialog');
+      card.setAttribute('aria-label', title);
+      card.setAttribute('tabindex', '0');
       
       var h3 = document.createElement('h3');
       h3.textContent = title;
@@ -599,8 +636,13 @@
           clearTVOverlay();
           
           var card = document.createElement('div');
-          card.className = 'revealCard diaryRoomCard tvCardBody';
+          card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
           if(tone) card.setAttribute('data-tone', tone);
+          
+          // Accessibility: ARIA role for status messages
+          card.setAttribute('role', 'status');
+          card.setAttribute('aria-live', 'polite');
+          card.setAttribute('tabindex', '0');
           
           var h3 = document.createElement('h3');
           h3.textContent = title;
@@ -644,8 +686,13 @@
         clearTVOverlay();
         
         var card = document.createElement('div');
-        card.className = 'revealCard diaryRoomCard tvCardBody';
+        card.className = 'tv-inline-card revealCard diaryRoomCard tvCardBody';
         if(tone) card.setAttribute('data-tone', tone);
+        
+        // Accessibility: ARIA role for status messages
+        card.setAttribute('role', 'status');
+        card.setAttribute('aria-live', 'polite');
+        card.setAttribute('tabindex', '0');
         
         var h3 = document.createElement('h3');
         h3.textContent = title;

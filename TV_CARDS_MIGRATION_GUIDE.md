@@ -195,10 +195,83 @@ The following were intentionally NOT modified:
 ✅ **Type Safety**: Clear function signatures  
 ✅ **Backward Compatible**: Existing code continues to work  
 
+## Integration Verification
+
+The unified inline TV overlay card design has been integrated into all factory functions. All inline ceremony cards now use the `.tv-inline-card` class with themed backgrounds and accessibility features.
+
+### Automated Testing
+
+Run the Playwright screenshot test to verify the integration:
+
+```bash
+npx playwright test tests/inline-cards-screenshot.spec.js --project=chromium
+```
+
+This will generate screenshots in `tests/screenshots/` for visual verification.
+
+### Manual Testing
+
+Open the test page in a browser:
+
+```bash
+open test_tv_inline_cards.html
+```
+
+Or start a local server:
+
+```bash
+npx http-server -p 8080
+# Then visit http://localhost:8080/test_tv_inline_cards.html
+```
+
+### Manual Verification Checklist
+
+After integration, verify the following:
+
+- [ ] Open game, trigger nomination ceremony – card has `.tv-inline-card` & themed background
+- [ ] Trigger veto decision – decision buttons inside themed card
+- [ ] Fast-forward phases – only one inline card visible at a time (CardManager intact)
+- [ ] Inspect computed styles: `backdrop-filter: blur(6px)` applied (or fallback if unsupported)
+- [ ] Toggle light theme – text switches to dark foreground if base color luminance > 0.65
+- [ ] Press ESC during dismissible card – card gracefully fades out (for decision cards)
+- [ ] Verify status chip (if present) adopts theme variant without breaking layout
+- [ ] Check high contrast mode adds outline (via dev tools emulation)
+- [ ] Check reduced motion disables entrance animation (via dev tools emulation)
+
+### What Changed in Integration
+
+1. **CSS Added**: `css/tv-inline-cards.css` - Unified styling for all inline cards
+2. **JS Added**: `js/theme-inline-contrast.js` - Automatic contrast adjustment
+3. **TV Cards Updated**: All factory functions now add `.tv-inline-card` class
+4. **Status Chip Updated**: Now uses `.tv-inline-theme` class for harmonization
+5. **Accessibility**: ARIA roles, focus management, ESC dismissal added
+
+### Theme Variables
+
+The following CSS variables are used:
+
+- `--theme-primary`: Base theme color (defaults to `--accent`)
+- `--theme-on-primary`: Text color on theme background (auto-adjusted for contrast)
+- `--tv-inline-focus-ring`: Focus ring color for accessibility
+- `--tv-inline-card-bg`: Card background (semi-transparent theme color)
+- `--tv-inline-card-backdrop`: Backdrop filter value
+
+### Backward Compatibility
+
+All legacy classes are preserved on card elements:
+- `.revealCard`
+- `.diaryRoomCard`
+- `.tvCardBody`
+
+This ensures existing CSS rules continue to work while the new unified styling is applied on top.
+
 ## Questions?
 
 See the implementation in:
-- `js/ui/tv-cards.js` - Main module
+- `js/ui/tv-cards.js` - Main module with inline card integration
+- `js/theme-inline-contrast.js` - Theme contrast adjustment
+- `css/tv-inline-cards.css` - Unified inline card styling
 - `js/veto.js` - Example usage (veto ceremony)
 - `js/nominations.js` - Example usage (nomination ceremony)
 - `test_tv_cards_module.html` - Interactive test file
+- `test_tv_inline_cards.html` - Integration verification page
