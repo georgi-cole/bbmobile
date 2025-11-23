@@ -141,7 +141,8 @@
 
     // Start playback when video is ready
     const attemptAutoplay = () => {
-      if (vid.readyState >= vid.HAVE_CURRENT_DATA) {
+      // HAVE_CURRENT_DATA = 2 (enough data to play current frame)
+      if (vid.readyState >= 2) {
         const p = vid.play();
         if (p && p.then) {
           p.then(() => {
@@ -165,8 +166,8 @@
     
     vid.src = url;
     
-    // If already ready, try immediately
-    if (vid.readyState >= vid.HAVE_CURRENT_DATA) {
+    // If already ready, try immediately (readyState >= HAVE_CURRENT_DATA)
+    if (vid.readyState >= 2) {
       attemptAutoplay();
     }
 
