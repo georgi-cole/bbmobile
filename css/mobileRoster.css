@@ -8,6 +8,12 @@
  * - Accessibility-friendly (keyboard nav, ARIA labels)
  */
 
+:root {
+  --evicted-color: #e74c3c;
+  --evicted-color-dark: #c0392b;
+  --evicted-color-rgb: 231, 76, 60;
+}
+
 /* ============================
    Container & Layout Structure
    ============================ */
@@ -298,9 +304,9 @@ body[data-mobile-roster-active="true"] #rosterBar {
   left: 50%;
   width: 80%;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #e74c3c 20%, #e74c3c 80%, transparent);
+  background: linear-gradient(90deg, transparent, var(--evicted-color) 20%, var(--evicted-color) 80%, transparent);
   transform-origin: center;
-  box-shadow: 0 0 6px rgba(231, 76, 60, 0.8);
+  box-shadow: 0 0 6px rgba(var(--evicted-color-rgb), 0.8);
 }
 
 .mobile-roster-evicted-cross::before {
@@ -313,7 +319,7 @@ body[data-mobile-roster-active="true"] #rosterBar {
 
 /* Evicted badge */
 .mobile-roster-badge.evict {
-  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  background: linear-gradient(135deg, var(--evicted-color-dark), var(--evicted-color));
   color: #fff;
   font-size: 0.5rem;
   font-weight: 700;
@@ -362,15 +368,15 @@ body[data-mobile-roster-active="true"] #rosterBar {
 
 .tv-footer-chip.chip-evicted {
   cursor: pointer;
-  background: rgba(231, 76, 60, 0.2);
-  border-color: rgba(231, 76, 60, 0.4);
+  background: rgba(var(--evicted-color-rgb), 0.2);
+  border-color: rgba(var(--evicted-color-rgb), 0.4);
 }
 
 .tv-footer-chip.chip-evicted:hover {
-  background: rgba(231, 76, 60, 0.3);
-  border-color: rgba(231, 76, 60, 0.6);
+  background: rgba(var(--evicted-color-rgb), 0.3);
+  border-color: rgba(var(--evicted-color-rgb), 0.6);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  box-shadow: 0 4px 12px rgba(var(--evicted-color-rgb), 0.4);
 }
 
 .chip-icon {
@@ -448,7 +454,7 @@ body[data-mobile-roster-active="true"] .tv {
 }
 
 .mobile-roster-spotlight-status.evicted {
-  color: #e74c3c;
+  color: var(--evicted-color);
   font-weight: 600;
 }
 
@@ -644,7 +650,7 @@ body[data-mobile-roster-active="true"] .tv {
 }
 
 .debug-player-row.failed {
-  border-left-color: #e74c3c;
+  border-left-color: var(--evicted-color);
 }
 
 .debug-player-row.pending {
@@ -695,10 +701,10 @@ body[data-mobile-roster-active="true"] .tv {
 
 .debug-error {
   font-size: 0.65rem;
-  color: #e74c3c;
+  color: var(--evicted-color);
   margin-top: 4px;
   padding: 4px 6px;
-  background: rgba(231, 76, 60, 0.1);
+  background: rgba(var(--evicted-color-rgb), 0.1);
   border-radius: 4px;
 }
 

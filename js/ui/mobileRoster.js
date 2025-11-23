@@ -285,7 +285,7 @@
     
     let badgeHTML = '';
     if (isEvicted) {
-      badgeHTML = '<div class="mobile-roster-badge evict" aria-label="Evicted">EVCT</div>';
+      badgeHTML = '<div class="mobile-roster-badge evict" aria-label="EVCT - Evicted">EVCT</div>';
     } else {
       if (player.hoh) {
         badgeHTML = '<div class="mobile-roster-badge hoh" aria-label="Head of Household">🔑</div>';
@@ -301,10 +301,14 @@
       global.getAvatarFallback(player.name || player.id, null) : 
       avatar;
     
+    // Escape player ID and name for safe HTML attribute usage
+    const safePlayerId = String(player.id).replace(/"/g, '&quot;');
+    const safeName = String(player.name || 'Guest').replace(/"/g, '&quot;');
+    
     return `
       <button 
         class="mobile-roster-tile ${evictedClass}"
-        data-player-id="${player.id}"
+        data-player-id="${safePlayerId}"
         data-evicted="${isEvicted}"
         aria-label="${statusLabel}"
         tabindex="0"
@@ -314,10 +318,10 @@
           <img 
             class="mobile-roster-avatar" 
             src="${avatar}" 
-            alt="${player.name || 'Guest'}"
+            alt="${safeName}"
             loading="${loadingStrategy}"
-            onerror="this.onerror=null;this.src='${fallbackUrl}';if(window.updateAvatarTrackingStatus){window.updateAvatarTrackingStatus('${player.id}','failed',this.src);}"
-            onload="if(window.updateAvatarTrackingStatus){window.updateAvatarTrackingStatus('${player.id}','success');}"
+            data-fallback="${fallbackUrl}"
+            data-player-id="${safePlayerId}"
           />
           ${isEvicted ? '<div class="mobile-roster-evicted-cross" aria-hidden="true"></div>' : ''}
           ${badgeHTML}
@@ -350,9 +354,31 @@
     const tilesHTML = state.activePlayers.map(p => createTileHTML(p, false)).join('');
     container.innerHTML = tilesHTML;
     
-    // Attach click handlers
+    // Attach click handlers and image error handlers
     container.querySelectorAll('.mobile-roster-tile').forEach(tile => {
       tile.addEventListener('click', handleTileClick);
+      
+      // Attach image load/error handlers
+      const img = tile.querySelector('.mobile-roster-avatar');
+      if (img) {
+        const playerId = tile.getAttribute('data-player-id');
+        const fallbackUrl = img.getAttribute('data-fallback');
+        
+        img.addEventListener('load', () => {
+          if (global.updateAvatarTrackingStatus) {
+            global.updateAvatarTrackingStatus(playerId, 'success');
+          }
+        });
+        
+        img.addEventListener('error', function() {
+          if (fallbackUrl && this.src !== fallbackUrl) {
+            this.src = fallbackUrl;
+          }
+          if (global.updateAvatarTrackingStatus) {
+            global.updateAvatarTrackingStatus(playerId, 'failed', this.src);
+          }
+        });
+      }
     });
     
     console.info(`[MobileRoster] Rendered ${state.activePlayers.length} active players in ${columns}x grid`);
@@ -386,9 +412,31 @@
     const tilesHTML = state.evictedPlayers.map(p => createTileHTML(p, true)).join('');
     grid.innerHTML = tilesHTML;
     
-    // Attach click handlers
+    // Attach click handlers and image error handlers
     grid.querySelectorAll('.mobile-roster-tile').forEach(tile => {
       tile.addEventListener('click', handleTileClick);
+      
+      // Attach image load/error handlers
+      const img = tile.querySelector('.mobile-roster-avatar');
+      if (img) {
+        const playerId = tile.getAttribute('data-player-id');
+        const fallbackUrl = img.getAttribute('data-fallback');
+        
+        img.addEventListener('load', () => {
+          if (global.updateAvatarTrackingStatus) {
+            global.updateAvatarTrackingStatus(playerId, 'success');
+          }
+        });
+        
+        img.addEventListener('error', function() {
+          if (fallbackUrl && this.src !== fallbackUrl) {
+            this.src = fallbackUrl;
+          }
+          if (global.updateAvatarTrackingStatus) {
+            global.updateAvatarTrackingStatus(playerId, 'failed', this.src);
+          }
+        });
+      }
     });
     
     console.info(`[MobileRoster] Rendered ${state.evictedPlayers.length} evicted players`);
@@ -472,14 +520,20 @@
       ${evictedCount > 0 ? `
         <button 
           class="tv-footer-chip chip-evicted" 
+          data-action="toggle-evicted"
           aria-label="Show evicted houseguests"
-          onclick="MobileRoster.toggleEvictedPanel()"
         >
           <span class="chip-icon">👻</span>
           <span class="chip-text">Evicted (${evictedCount})</span>
         </button>
       ` : ''}
     `;
+
+    // Attach event listener to evicted chip
+    const evictedChip = footer.querySelector('[data-action="toggle-evicted"]');
+    if (evictedChip) {
+      evictedChip.addEventListener('click', toggleEvictedPanel);
+    }
 
     console.info('[MobileRoster] TV footer bar updated');
   }

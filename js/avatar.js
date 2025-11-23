@@ -29,6 +29,10 @@
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   const isIOSSafari = isIOS && isSafari;
 
+  // Configurable base path for different deployment contexts
+  // Can be overridden via window.AVATAR_BASE_PATH if needed
+  const GITHUB_PAGES_PATH = '/bbmobile/';
+  
   /**
    * Resolve absolute path for GitHub Pages deployment
    * Handles both local dev and GitHub Pages paths
@@ -46,12 +50,16 @@
     // Remove leading ./ if present
     const cleanPath = relativePath.replace(/^\.\//, '');
     
+    // Check for custom base path override
+    const customBasePath = typeof window !== 'undefined' && window.AVATAR_BASE_PATH;
+    
     // Get base path (for GitHub Pages, this would be /bbmobile/)
-    const basePath = document.querySelector('base')?.href || 
+    const basePath = customBasePath || 
+                     document.querySelector('base')?.href || 
                      window.location.pathname.split('/').slice(0, -1).join('/') || '';
     
     // If we're in a subdirectory (GitHub Pages), ensure proper path
-    if (basePath && basePath.includes('/bbmobile/')) {
+    if (basePath && basePath.includes(GITHUB_PAGES_PATH)) {
       return basePath + '/' + cleanPath;
     }
     
