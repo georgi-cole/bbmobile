@@ -726,6 +726,16 @@
         console.info('[Bootstrap] StartupFlow initialized');
       }
       
+      // Initialize Mobile Roster View
+      if(typeof global.MobileRoster !== 'undefined' && typeof global.MobileRoster.init === 'function'){
+        try {
+          global.MobileRoster.init();
+          console.info('[Bootstrap] Mobile Roster initialized');
+        } catch (err) {
+          console.warn('[Bootstrap] Failed to initialize Mobile Roster:', err);
+        }
+      }
+      
       // Wire up IntroScreen to show after intro video (for legacy compatibility)
       wireIntroScreenFlow();
       

@@ -656,11 +656,14 @@
     
     // Set initial orientation
     state.orientation = getOrientation();
+    document.body.setAttribute('data-orientation', state.orientation);
     
     // Activate if mobile viewport
     if (isMobileViewport()) {
       activateMobileRoster();
       renderAll();
+    } else {
+      console.info('[MobileRoster] Desktop viewport, mobile roster inactive');
     }
     
     // Listen for resize events
