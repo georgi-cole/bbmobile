@@ -164,6 +164,9 @@
     const CONTROLS_MSG_TILT = '📱 Tilt device to control (mouse/keyboard also available)';
     const CONTROLS_MSG_DESKTOP = '👆 Use arrow keys (← ↑ ↓ →) or swipe/drag to control';
     
+    // Game completion delay
+    const COMPLETION_DELAY_MS = 3000;
+    
     // Generate maze
     const mazeCells = generateMaze(MAZE_COLS, MAZE_ROWS, rng);
     const walls = cellsToWalls(mazeCells, CELL_SIZE);
@@ -272,7 +275,7 @@
               const beta = event.beta || 0;
               const gamma = event.gamma || 0;
               
-              // Check if we're getting real sensor data (finite values that are not exactly 0)
+              // Check if we're getting real sensor data (finite values above threshold)
               if(isFinite(beta) && isFinite(gamma) && (Math.abs(beta) > TILT_SENSOR_THRESHOLD || Math.abs(gamma) > TILT_SENSOR_THRESHOLD)){
                 tiltDetected = true;
                 
@@ -672,7 +675,7 @@
         if(typeof onComplete === 'function'){
           onComplete(score);
         }
-      }, 3000);
+      }, COMPLETION_DELAY_MS);
     }
 
     // Always setup pointer and keyboard controls
