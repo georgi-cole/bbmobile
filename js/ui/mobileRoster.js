@@ -28,6 +28,7 @@
     GAP_SIZE: 8,                   // Default gap between tiles (px)
     RESIZE_DEBOUNCE: 50,           // Debounce resize events (ms)
     SPOTLIGHT_DURATION: 3000,      // Auto-hide spotlight after this time (ms)
+    LONG_PRESS_DURATION: 1500,    // Long press threshold (ms)
   };
   
   // ============================
@@ -41,6 +42,8 @@
     evictedPanelOpen: false,
     spotlightTimeout: null,
     initialized: false,
+    longPressTimer: null,
+    longPressTarget: null,
   };
   
   // ============================
@@ -78,6 +81,40 @@
   }
   
   /**
+   * Generate avatar path candidates with case variations
+   * @param {string} name - Player name
+   * @returns {Array<string>} Array of candidate paths to try
+   */
+  function generateAvatarCandidates(name) {
+    if (!name) return [];
+    
+    const basePath = 'avatars/';
+    const candidates = [];
+    
+    // Original name as provided
+    candidates.push(`${basePath}${name}.png`);
+    
+    // Lowercase version
+    candidates.push(`${basePath}${name.toLowerCase()}.png`);
+    
+    // TitleCase version (first letter uppercase, rest lowercase)
+    const titleCase = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    if (titleCase !== name && titleCase !== name.toLowerCase()) {
+      candidates.push(`${basePath}${titleCase}.png`);
+    }
+    
+    // Hyphenated forms (replace spaces with hyphens)
+    if (name.includes(' ')) {
+      const hyphenated = name.replace(/\s+/g, '-');
+      candidates.push(`${basePath}${hyphenated}.png`);
+      candidates.push(`${basePath}${hyphenated.toLowerCase()}.png`);
+    }
+    
+    // Remove duplicates
+    return [...new Set(candidates)];
+  }
+
+  /**
    * Get player avatar URL (with fallback to existing avatar system)
    */
   function getPlayerAvatar(player) {
@@ -89,6 +126,15 @@
     // Fallback to player properties
     if (player.avatar) return player.avatar;
     if (player.avatarUrl) return player.avatarUrl;
+    
+    // Try case-insensitive resolution for local avatars
+    if (player.name) {
+      const candidates = generateAvatarCandidates(player.name);
+      // Return first candidate (actual resolution happens via img error handler)
+      if (candidates.length > 0) {
+        return candidates[0];
+      }
+    }
     
     // Use dicebear as last resort
     if (global.getDicebearUrl) {
@@ -138,6 +184,71 @@
     }
     
     return parts.join(', ');
+  }
+  
+  /**
+   * Compute player ranking heuristic
+   * @param {Object} player - Player object
+   * @param {Array} allPlayers - All players (active + evicted)
+   * @returns {number} Ranking (1 = best)
+   */
+  function computeRanking(player, allPlayers) {
+    // Basic heuristic: based on eviction order and HOH/POV wins
+    let score = 0;
+    
+    // Still active = higher score
+    if (!player.evicted) {
+      score += 1000;
+    } else {
+      // Later eviction = higher score
+      const evictionIndex = player.evictedAt || player.evictionOrder || 0;
+      score += evictionIndex * 10;
+    }
+    
+    // HOH wins
+    score += (player.hohWins || 0) * 50;
+    
+    // POV wins
+    score += (player.povWins || 0) * 30;
+    
+    // Nominations survived
+    score += (player.nominationsSurvived || 0) * 20;
+    
+    // Social score if available
+    score += (player.socialScore || 0) * 5;
+    
+    // Rank by score (descending)
+    const sorted = allPlayers.map(p => ({
+      id: p.id,
+      score: computeRanking(p, [])
+    })).sort((a, b) => b.score - a.score);
+    
+    const rank = sorted.findIndex(p => p.id === player.id) + 1;
+    return rank || allPlayers.length;
+  }
+  
+  /**
+   * Get eviction week display string
+   * @param {Object} player - Player object
+   * @returns {string} Eviction week display
+   */
+  function getEvictionWeek(player) {
+    if (!player.evicted) return '—';
+    
+    // Try various properties
+    const week = player.evictedWeek || player.evictedAt || player.evictionOrder || player.weekEvicted;
+    
+    if (week && week < 100) {
+      return `Week ${week}`;
+    }
+    
+    // Fallback: use index in evicted array
+    const index = state.evictedPlayers.findIndex(p => p.id === player.id);
+    if (index >= 0) {
+      return `Week ${index + 1}`;
+    }
+    
+    return '—';
   }
   
   // ============================
@@ -332,7 +443,7 @@
   }
   
   /**
-   * Render the active players grid
+   * Render the active players grid (includes evicted with special styling)
    */
   function renderActiveGrid() {
     const container = document.querySelector('.mobile-roster-active-grid');
@@ -350,19 +461,34 @@
       container.removeAttribute('data-landscape-cols');
     }
     
-    // Render tiles
-    const tilesHTML = state.activePlayers.map(p => createTileHTML(p, false)).join('');
+    // Render tiles (evicted players stay in grid with special styling)
+    const tilesHTML = state.activePlayers.map(p => createTileHTML(p, p.evicted)).join('');
     container.innerHTML = tilesHTML;
     
-    // Attach click handlers and image error handlers
+    // Attach click handlers, long press handlers, and image error handlers
     container.querySelectorAll('.mobile-roster-tile').forEach(tile => {
       tile.addEventListener('click', handleTileClick);
+      tile.addEventListener('pointerdown', handlePointerDown);
+      tile.addEventListener('pointerup', handlePointerEnd);
+      tile.addEventListener('pointerleave', handlePointerEnd);
+      tile.addEventListener('pointercancel', handlePointerEnd);
       
-      // Attach image load/error handlers
+      // Attach image load/error handlers with case-insensitive fallback
       const img = tile.querySelector('.mobile-roster-avatar');
       if (img) {
         const playerId = tile.getAttribute('data-player-id');
-        const fallbackUrl = img.getAttribute('data-fallback');
+        const player = state.activePlayers.find(p => String(p.id) === String(playerId));
+        
+        let candidateIndex = 0;
+        let candidates = [];
+        
+        if (player && player.name) {
+          candidates = generateAvatarCandidates(player.name);
+          // Add placeholder as final fallback
+          candidates.push('avatars/placeholder.png');
+        } else {
+          candidates = ['avatars/placeholder.png'];
+        }
         
         img.addEventListener('load', () => {
           if (global.updateAvatarTrackingStatus) {
@@ -371,11 +497,15 @@
         });
         
         img.addEventListener('error', function() {
-          if (fallbackUrl && this.src !== fallbackUrl) {
-            this.src = fallbackUrl;
-          }
-          if (global.updateAvatarTrackingStatus) {
-            global.updateAvatarTrackingStatus(playerId, 'failed', this.src);
+          candidateIndex++;
+          if (candidateIndex < candidates.length) {
+            // Try next candidate
+            this.src = candidates[candidateIndex];
+          } else {
+            // All candidates failed
+            if (global.updateAvatarTrackingStatus) {
+              global.updateAvatarTrackingStatus(playerId, 'failed', this.src);
+            }
           }
         });
       }
@@ -412,15 +542,30 @@
     const tilesHTML = state.evictedPlayers.map(p => createTileHTML(p, true)).join('');
     grid.innerHTML = tilesHTML;
     
-    // Attach click handlers and image error handlers
+    // Attach click handlers, long press handlers, and image error handlers
     grid.querySelectorAll('.mobile-roster-tile').forEach(tile => {
       tile.addEventListener('click', handleTileClick);
+      tile.addEventListener('pointerdown', handlePointerDown);
+      tile.addEventListener('pointerup', handlePointerEnd);
+      tile.addEventListener('pointerleave', handlePointerEnd);
+      tile.addEventListener('pointercancel', handlePointerEnd);
       
-      // Attach image load/error handlers
+      // Attach image load/error handlers with case-insensitive fallback
       const img = tile.querySelector('.mobile-roster-avatar');
       if (img) {
         const playerId = tile.getAttribute('data-player-id');
-        const fallbackUrl = img.getAttribute('data-fallback');
+        const player = state.evictedPlayers.find(p => String(p.id) === String(playerId));
+        
+        let candidateIndex = 0;
+        let candidates = [];
+        
+        if (player && player.name) {
+          candidates = generateAvatarCandidates(player.name);
+          // Add placeholder as final fallback
+          candidates.push('avatars/placeholder.png');
+        } else {
+          candidates = ['avatars/placeholder.png'];
+        }
         
         img.addEventListener('load', () => {
           if (global.updateAvatarTrackingStatus) {
@@ -429,11 +574,15 @@
         });
         
         img.addEventListener('error', function() {
-          if (fallbackUrl && this.src !== fallbackUrl) {
-            this.src = fallbackUrl;
-          }
-          if (global.updateAvatarTrackingStatus) {
-            global.updateAvatarTrackingStatus(playerId, 'failed', this.src);
+          candidateIndex++;
+          if (candidateIndex < candidates.length) {
+            // Try next candidate
+            this.src = candidates[candidateIndex];
+          } else {
+            // All candidates failed
+            if (global.updateAvatarTrackingStatus) {
+              global.updateAvatarTrackingStatus(playerId, 'failed', this.src);
+            }
           }
         });
       }
@@ -621,24 +770,223 @@
   }
   
   // ============================
+  // Profile Popover
+  // ============================
+  
+  /**
+   * Create profile popover DOM element
+   */
+  function createProfilePopover() {
+    const existing = document.querySelector('.mobile-roster-profile-popover');
+    if (existing) return existing;
+    
+    const popover = document.createElement('div');
+    popover.className = 'mobile-roster-profile-popover';
+    popover.innerHTML = `
+      <div class="profile-popover-backdrop"></div>
+      <div class="profile-popover-content">
+        <button class="profile-popover-close" aria-label="Close profile">✕</button>
+        <div class="profile-popover-body"></div>
+      </div>
+    `;
+    
+    document.body.appendChild(popover);
+    
+    // Close button handler
+    popover.querySelector('.profile-popover-close').addEventListener('click', hideProfilePopover);
+    
+    // Backdrop click handler
+    popover.querySelector('.profile-popover-backdrop').addEventListener('click', hideProfilePopover);
+    
+    return popover;
+  }
+  
+  /**
+   * Show profile popover for a player
+   * @param {Object} player - Player object
+   * @param {boolean} isEvicted - Whether player is evicted
+   */
+  function showProfilePopover(player, isEvicted = false) {
+    const popover = createProfilePopover();
+    const body = popover.querySelector('.profile-popover-body');
+    
+    // Get all players for ranking
+    const allPlayers = [...state.activePlayers, ...state.evictedPlayers];
+    const ranking = computeRanking(player, allPlayers);
+    
+    // Build profile fields with graceful fallback
+    const fields = [];
+    
+    // Name header
+    fields.push(`<h3 class="profile-field-name">${player.name || 'Guest'}</h3>`);
+    
+    // Age
+    if (player.age) {
+      fields.push(`<div class="profile-field"><label>Age:</label> <span>${player.age}</span></div>`);
+    } else {
+      fields.push(`<div class="profile-field"><label>Age:</label> <span class="profile-field-empty">—</span></div>`);
+    }
+    
+    // Gender
+    if (player.gender || player.sex) {
+      fields.push(`<div class="profile-field"><label>Gender:</label> <span>${player.gender || player.sex}</span></div>`);
+    }
+    
+    // Location
+    if (player.location || player.hometown) {
+      fields.push(`<div class="profile-field"><label>Location:</label> <span>${player.location || player.hometown}</span></div>`);
+    } else {
+      fields.push(`<div class="profile-field"><label>Location:</label> <span class="profile-field-empty">—</span></div>`);
+    }
+    
+    // Occupation (bold)
+    if (player.occupation || player.job) {
+      fields.push(`<div class="profile-field"><label>Occupation:</label> <strong>${player.occupation || player.job}</strong></div>`);
+    } else {
+      fields.push(`<div class="profile-field"><label>Occupation:</label> <span class="profile-field-empty">None</span></div>`);
+    }
+    
+    // Motto (italic)
+    if (player.motto || player.tagline) {
+      fields.push(`<div class="profile-field"><label>Motto:</label> <em>"${player.motto || player.tagline}"</em></div>`);
+    } else {
+      fields.push(`<div class="profile-field"><label>Motto:</label> <span class="profile-field-empty">—</span></div>`);
+    }
+    
+    // Fun Fact
+    if (player.funFact || player.fun_fact) {
+      fields.push(`<div class="profile-field"><label>Fun Fact:</label> <span>${player.funFact || player.fun_fact}</span></div>`);
+    } else {
+      fields.push(`<div class="profile-field"><label>Fun Fact:</label> <span class="profile-field-empty">None</span></div>`);
+    }
+    
+    // Allies
+    if (player.allies && player.allies.length > 0) {
+      const alliesNames = player.allies.map(id => {
+        const ally = allPlayers.find(p => p.id === id);
+        return ally ? ally.name : `Player ${id}`;
+      }).join(', ');
+      fields.push(`<div class="profile-field"><label>Allies:</label> <span>${alliesNames}</span></div>`);
+    } else {
+      fields.push(`<div class="profile-field"><label>Allies:</label> <span class="profile-field-empty">None</span></div>`);
+    }
+    
+    // Enemies
+    if (player.enemies && player.enemies.length > 0) {
+      const enemiesNames = player.enemies.map(id => {
+        const enemy = allPlayers.find(p => p.id === id);
+        return enemy ? enemy.name : `Player ${id}`;
+      }).join(', ');
+      fields.push(`<div class="profile-field"><label>Enemies:</label> <span>${enemiesNames}</span></div>`);
+    } else {
+      fields.push(`<div class="profile-field"><label>Enemies:</label> <span class="profile-field-empty">None</span></div>`);
+    }
+    
+    // Ranking (dynamic)
+    fields.push(`<div class="profile-field profile-field-ranking"><label>Ranking:</label> <span class="profile-ranking-value">#${ranking}</span></div>`);
+    
+    // Eviction Week (if evicted)
+    if (isEvicted) {
+      const evictionWeek = getEvictionWeek(player);
+      fields.push(`<div class="profile-field profile-field-eviction"><label>Eviction Week:</label> <span class="profile-eviction-value">${evictionWeek}</span></div>`);
+    }
+    
+    body.innerHTML = fields.join('');
+    
+    // Show popover with animation
+    popover.classList.add('visible');
+    
+    console.info(`[MobileRoster] Showing profile popover for ${player.name}`);
+  }
+  
+  /**
+   * Hide profile popover
+   */
+  function hideProfilePopover() {
+    const popover = document.querySelector('.mobile-roster-profile-popover');
+    if (popover) {
+      popover.classList.remove('visible');
+      console.info('[MobileRoster] Hiding profile popover');
+    }
+  }
+  
+  /**
+   * Cancel long press
+   */
+  function cancelLongPress() {
+    if (state.longPressTimer) {
+      clearTimeout(state.longPressTimer);
+      state.longPressTimer = null;
+      state.longPressTarget = null;
+    }
+  }
+  
+  /**
+   * Start long press detection
+   * @param {HTMLElement} tile - Tile element
+   * @param {Object} player - Player object
+   * @param {boolean} isEvicted - Whether player is evicted
+   */
+  function startLongPress(tile, player, isEvicted) {
+    cancelLongPress();
+    
+    state.longPressTarget = tile;
+    state.longPressTimer = setTimeout(() => {
+      showProfilePopover(player, isEvicted);
+      state.longPressTimer = null;
+      state.longPressTarget = null;
+    }, CONFIG.LONG_PRESS_DURATION);
+  }
+
+  // ============================
   // Event Handlers
   // ============================
   
   /**
-   * Handle tile click
+   * Handle tile click (short press)
    */
   function handleTileClick(event) {
     const tile = event.currentTarget;
     const playerId = tile.getAttribute('data-player-id');
     const isEvicted = tile.getAttribute('data-evicted') === 'true';
     
-    // Find player in appropriate array
-    const playerArray = isEvicted ? state.evictedPlayers : state.activePlayers;
-    const player = playerArray.find(p => String(p.id) === String(playerId));
+    // Find player in activePlayers (which includes evicted now)
+    const player = state.activePlayers.find(p => String(p.id) === String(playerId));
     
     if (player) {
       focusPlayer(player, isEvicted);
     }
+  }
+  
+  /**
+   * Handle pointer down (start long press)
+   */
+  function handlePointerDown(event) {
+    const tile = event.currentTarget;
+    const playerId = tile.getAttribute('data-player-id');
+    const isEvicted = tile.getAttribute('data-evicted') === 'true';
+    
+    // Find player in activePlayers (which includes evicted now)
+    const player = state.activePlayers.find(p => String(p.id) === String(playerId));
+    
+    if (player) {
+      startLongPress(tile, player, isEvicted);
+    }
+  }
+  
+  /**
+   * Handle pointer up/leave/cancel (cancel long press)
+   */
+  function handlePointerEnd(event) {
+    cancelLongPress();
+  }
+  
+  /**
+   * Handle scroll (cancel long press)
+   */
+  function handleScroll() {
+    cancelLongPress();
+    hideProfilePopover();
   }
   
   /**
@@ -702,6 +1050,7 @@
   
   /**
    * Update player lists from game state
+   * Per requirements: evicted players stay in main grid, not removed
    */
   function updatePlayerLists() {
     try {
@@ -719,8 +1068,11 @@
         console.info('[MobileRoster] Loaded from g.game.players');
       }
       
-      // Separate active and evicted
-      state.activePlayers = allPlayers.filter(p => !p.evicted);
+      // Keep ALL players in activePlayers (requirement: evicted stay in main grid)
+      // We render evicted players with special styling but don't remove them
+      state.activePlayers = allPlayers;
+      
+      // Track evicted separately for reference (e.g., evicted drawer if needed)
       state.evictedPlayers = allPlayers.filter(p => p.evicted);
       
       // Sort evicted by eviction order (earliest first)
@@ -730,7 +1082,10 @@
         return aTime - bTime;
       });
       
-      console.info(`[MobileRoster] Updated: ${state.activePlayers.length} active, ${state.evictedPlayers.length} evicted`);
+      const activeCount = allPlayers.filter(p => !p.evicted).length;
+      const evictedCount = state.evictedPlayers.length;
+      
+      console.info(`[MobileRoster] Updated: ${activeCount} active, ${evictedCount} evicted (all ${allPlayers.length} in main grid)`);
       
       return true;
     } catch (err) {
@@ -1025,6 +1380,10 @@
       // Fallback for older browsers
       mql.addListener(handleOrientationChange);
     }
+    
+    // Listen for scroll to cancel long press and hide popover
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('scroll', handleScroll, { passive: true });
     
     // Subscribe to game events
     if (global.bbGameBus) {
