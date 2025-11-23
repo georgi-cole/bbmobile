@@ -218,10 +218,17 @@
     container = ensureAttachedContainer(container);
     console.info('[CompetitionFlow] ✓ Container validated and ready for instructions');
     
+    // Use a local game reference without shadowing outer g (window)
+    const gameRef = window.game || window.global?.game || {};
+
     // Get instructions from MinigameInstructions module
     let instructions = { title: 'Competition', description: 'Play the minigame to compete!', steps: [] };
-    if(g.MinigameInstructions && typeof g.MinigameInstructions.getInstructions === 'function'){
-      instructions = g.MinigameInstructions.getInstructions(gameKey);
+    try {
+      if(gameRef.MinigameInstructions && typeof gameRef.MinigameInstructions.getInstructions === 'function'){
+        instructions = gameRef.MinigameInstructions.getInstructions(gameKey) || instructions;
+      }
+    } catch(err){
+      console.warn('[CompetitionFlow] Failed to obtain instructions, using defaults', err);
     }
 
     // Get theme colors
@@ -346,14 +353,13 @@
     // Register as active instructions card for cleanup on phase change
     activeInstructionsCard = card;
 
-    // Set instruction rendered flag for competition phase
-    const g = global.game;
-    if (g) {
-      if (g.phase === 'hoh') {
-        g.__instructionsRenderedHOH = true;
+    // Set instruction rendered flag for competition phase using gameRef
+    if (gameRef) {
+      if (gameRef.phase === 'hoh') {
+        gameRef.__instructionsRenderedHOH = true;
         console.info('[CompetitionFlow] ✓ Set __instructionsRenderedHOH flag');
-      } else if (g.phase === 'veto_comp' || g.phase === 'veto') {
-        g.__instructionsRenderedVeto = true;
+      } else if (gameRef.phase === 'veto_comp' || gameRef.phase === 'veto') {
+        gameRef.__instructionsRenderedVeto = true;
         console.info('[CompetitionFlow] ✓ Set __instructionsRenderedVeto flag');
       }
     }
@@ -361,7 +367,7 @@
     // Dispatch event to signal instructions are mounted
     try {
       document.dispatchEvent(new CustomEvent('competition-instructions-mounted', {
-        detail: { phase: g?.phase, gameKey: gameKey }
+        detail: { phase: gameRef?.phase, gameKey: gameKey }
       }));
       console.info('[CompetitionFlow] ✓ Dispatched competition-instructions-mounted event');
     } catch (e) {
@@ -369,8 +375,8 @@
     }
 
     // Attach Rules button next to Play button
-    if(typeof g.attachRulesButton === 'function'){
-      g.attachRulesButton(playButton, gameKey);
+    if(typeof gameRef.attachRulesButton === 'function'){
+      gameRef.attachRulesButton(playButton, gameKey);
     }
 
     return card;
@@ -849,7 +855,7 @@
 
     // Render the minigame
     console.info('[CompetitionFlow] → Rendering minigame in fullscreen container');
-    if(g.renderMinigame && typeof g.renderMinigame === 'function'){
+    if(g.renderMinigame && typeof g.renderMinigame === 'function'){ 
       // Pass options with competitionMode flag
       const gameOptions = {
         ...options,
