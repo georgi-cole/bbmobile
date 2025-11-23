@@ -150,15 +150,6 @@
       setTimeout(buildCastInternal, 30);
       return;
     }
-    
-    // Apply any pending config changes before building cast
-    if(global.PendingConfig && typeof global.PendingConfig.applyAllPending === 'function'){
-      const count = global.PendingConfig.applyAllPending(g.cfg || {});
-      if(count > 0){
-        console.info('[bootstrap] Applied', count, 'pending config changes for new cast');
-      }
-    }
-    
     g.players.length = 0;
 
     const humanName=(g.cfg?.humanName || document.getElementById('humanName')?.value || 'You').trim();
@@ -242,14 +233,6 @@
   function rebuildGame(preservePlayers=true){
     ensureGame();
     const g=global.game;
-    
-    // Apply any pending config changes before rebuilding
-    if(global.PendingConfig && typeof global.PendingConfig.applyAllPending === 'function'){
-      const count = global.PendingConfig.applyAllPending(g.cfg || {});
-      if(count > 0){
-        console.info('[bootstrap] Applied', count, 'pending config changes for new season');
-      }
-    }
 
     if(preservePlayers && Array.isArray(g.players) && g.players.length){
       // Preserve existing player customizations (names, avatars, meta)
