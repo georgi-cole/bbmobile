@@ -1497,6 +1497,7 @@
   
   /**
    * Wire the launch minigame button
+   * Disabled during active gameplay to prevent state corruption
    */
   function wireLaunchMinigameButton(modal){
     if(modal.__launchMinigameWired) return;
@@ -1507,8 +1508,42 @@
     
     if(!btn || !select) return;
     
-    // Disable button initially
-    btn.disabled = true;
+    // Check if game is active
+    const gameActive = g.PendingConfig ? g.PendingConfig.isGameActive() : false;
+    
+    if(gameActive){
+      // Disable launcher during active gameplay
+      btn.disabled = true;
+      btn.title = 'Debug minigame launcher is disabled during active gameplay to prevent state corruption';
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+      select.disabled = true;
+      select.style.opacity = '0.5';
+      
+      // Add warning message
+      const warning = document.createElement('div');
+      warning.style.cssText = `
+        background: rgba(255, 193, 7, 0.15);
+        border: 1px solid rgba(255, 193, 7, 0.5);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-top: 8px;
+        font-size: 0.75rem;
+        color: var(--ink, #e6e8ee);
+        opacity: 0.9;
+      `;
+      warning.innerHTML = '⚠️ Debug minigame launcher is disabled during active gameplay to prevent timer desync and state corruption.';
+      
+      if(btn.parentNode){
+        btn.parentNode.appendChild(warning);
+      }
+      
+      console.info('[ui.config-and-settings] Debug minigame launcher disabled during active gameplay');
+      return;
+    }
+    
+    // Enable launcher when game is not active
+    btn.disabled = true; // Initially disabled until game selected
     
     // Enable button when a game is selected
     select.addEventListener('change', () => {
@@ -1523,7 +1558,7 @@
         return;
       }
       
-      // Close settings modal
+      // Close settings modal (will resume game automatically)
       closeSettingsModal();
       
       // Launch minigame in debug mode using CompetitionFlow
@@ -1658,12 +1693,24 @@
       if(!g.game.players) g.game.players = [];
     }
     
+    // PAUSE THE GAME when settings opens
+    if(g.PhaseTimerBridge && typeof g.PhaseTimerBridge.pause === 'function'){
+      g.PhaseTimerBridge.pause('settings');
+      console.info('[ui.config-and-settings] Game paused for settings modal');
+    }
+    
     ensureGameCfg();
     const dim = ensureSettingsModal();
     const modal = dim.querySelector('.modal');
     fillSettingsModalValues(modal, g.game.cfg);
     wireThemeSelector(modal);
     wirePlayersTotal(modal);
+    
+    // Add pending changes notification if any exist
+    if(g.PendingConfig && g.PendingConfig.hasPending()){
+      addPendingChangesNotification(modal);
+    }
+    
     const activePane = modal.querySelector('.settingsTabPane.active');
     if(activePane && activePane.getAttribute('data-pane')==='cast'){ initCastTab(modal); }
     if(activePane && activePane.getAttribute('data-pane')==='debug'){
@@ -1699,34 +1746,152 @@
       
       modal.__playerServiceWired = false;
       dim.style.display = 'none';
+      
+      // RESUME THE GAME when settings closes
+      if(g.PhaseTimerBridge && typeof g.PhaseTimerBridge.resume === 'function'){
+        g.PhaseTimerBridge.resume();
+        console.info('[ui.config-and-settings] Game resumed after settings modal');
+      }
     }
   }
   function applySettingsFromModal(modal){
     const game=g.game = g.game || {};
     const cfg = game.cfg = Object.assign({}, DEFAULT_CFG, game.cfg||{});
     
-    // Track if numPlayers changed to trigger applyPlayersFromSettings
-    const oldNumPlayers = cfg.numPlayers;
+    // Track changes for notification
+    const appliedImmediately = [];
+    const deferredChanges = [];
     
     modal.querySelectorAll('[data-key]').forEach(inp=>{
       const k = inp.getAttribute('data-key');
-      if(inp.type==='checkbox') cfg[k] = !!inp.checked;
-      else {
+      let newValue;
+      
+      if(inp.type==='checkbox'){
+        newValue = !!inp.checked;
+      } else {
+        // Try to parse as number first; preserve as string if non-numeric (e.g., URLs, theme names)
         const v = parseFloat(inp.value);
-        if(!Number.isNaN(v)) cfg[k] = v;
+        newValue = !Number.isNaN(v) ? v : inp.value;
+      }
+      
+      // Check if value actually changed
+      if(cfg[k] === newValue) return;
+      
+      // Use PendingConfig system if available
+      if(g.PendingConfig && typeof g.PendingConfig.applyConfigChange === 'function'){
+        const wasImmediate = g.PendingConfig.applyConfigChange(k, newValue, cfg);
+        if(wasImmediate){
+          appliedImmediately.push(k);
+        } else {
+          deferredChanges.push(k);
+        }
+      } else {
+        // Fallback: apply directly (old behavior)
+        cfg[k] = newValue;
+        appliedImmediately.push(k);
       }
     });
+    
     saveStoredCfg(cfg);
     applyCfgEffects(cfg);
     
-    // If numPlayers changed, apply it (will defer mid-season, rebuild in lobby)
-    if(oldNumPlayers !== cfg.numPlayers){
-      applyPlayersFromSettings(cfg.numPlayers);
+    // Update HUD
+    g.updateHud?.();
+    
+    // Show notification about what was applied vs. deferred
+    if(appliedImmediately.length > 0){
+      const count = appliedImmediately.length;
+      notify(`${count} setting${count === 1 ? '' : 's'} applied`, 'ok');
     }
     
-    g.updateHud?.();
+    if(deferredChanges.length > 0){
+      const count = deferredChanges.length;
+      notify(`${count} setting${count === 1 ? '' : 's'} deferred to next season`, 'warn');
+      
+      // Update pending changes notification in modal
+      if(g.PendingConfig && g.PendingConfig.hasPending()){
+        addPendingChangesNotification(modal);
+      }
+    }
   }
   function notify(msg, cls){ try{ g.addLog?.(msg, cls||''); }catch(e){} }
+  
+  /**
+   * Add or update the pending changes notification in the settings modal
+   * @param {Element} modal - The modal element
+   */
+  function addPendingChangesNotification(modal){
+    if(!g.PendingConfig || !g.PendingConfig.hasPending()) return;
+    
+    // Remove existing notification if present
+    const existing = modal.querySelector('#pendingChangesNotification');
+    if(existing) existing.remove();
+    
+    // Get pending changes summary
+    const summary = g.PendingConfig.getPendingSummary();
+    if(summary.length === 0) return;
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.id = 'pendingChangesNotification';
+    notification.style.cssText = `
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 152, 0, 0.15));
+      border: 1px solid rgba(255, 193, 7, 0.5);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin: 8px 0;
+      font-size: 0.8rem;
+      color: var(--ink, #e6e8ee);
+    `;
+    
+    const title = document.createElement('div');
+    title.style.cssText = `
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    `;
+    title.innerHTML = `
+      <span style="font-size: 1.2rem;">⚠️</span>
+      <span>Pending Changes (will apply on next season)</span>
+    `;
+    notification.appendChild(title);
+    
+    const list = document.createElement('ul');
+    list.style.cssText = `
+      margin: 4px 0 0 24px;
+      padding: 0;
+      list-style: disc;
+      opacity: 0.9;
+    `;
+    summary.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      li.style.marginBottom = '2px';
+      list.appendChild(li);
+    });
+    notification.appendChild(list);
+    
+    const hint = document.createElement('div');
+    hint.style.cssText = `
+      margin-top: 8px;
+      font-size: 0.75rem;
+      opacity: 0.8;
+      font-style: italic;
+    `;
+    hint.textContent = 'These changes require a new season to take effect. Start a new game or refresh to apply.';
+    notification.appendChild(hint);
+    
+    // Insert at top of modal (after header)
+    const modalContent = modal.querySelector('.modal');
+    const header = modalContent.querySelector('h2');
+    if(header && header.nextSibling){
+      modalContent.insertBefore(notification, header.nextSibling);
+    } else {
+      modalContent.insertBefore(notification, modalContent.firstChild);
+    }
+  }
 
   // Public UI init
   UI.openSettingsModal = openSettingsModal;

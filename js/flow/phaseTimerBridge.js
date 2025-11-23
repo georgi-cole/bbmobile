@@ -11,6 +11,10 @@
   let timerSuspended = false;
   let suspendReason = null;
   let originalTimerDisplay = null;
+  
+  // Track global pause state (for settings modal, etc.)
+  let globalPauseActive = false;
+  let globalPauseReason = null;
 
   /**
    * Initialize the bridge and set up event listeners
@@ -207,6 +211,283 @@
 
     restoreTimerUI();
   }
+  
+  /**
+   * Globally pause the entire game (used by Settings modal)
+   * Pauses phase timer, disables game advancement, and blocks interactions
+   * @param {string} reason - Why the pause was triggered
+   */
+  function pause(reason = 'settings') {
+    const game = global.game;
+    if (!game) {
+      console.warn('[PhaseTimerBridge] Cannot pause - game not initialized');
+      return false;
+    }
+    
+    if (globalPauseActive) {
+      console.info('[PhaseTimerBridge] Already paused');
+      return true;
+    }
+    
+    console.info(`[PhaseTimerBridge] ⏸️ GLOBAL PAUSE (reason: ${reason})`);
+    
+    // Set global pause flag
+    globalPauseActive = true;
+    globalPauseReason = reason;
+    game.isGloballyPaused = true;
+    
+    // Pause phase timer if it exists
+    if (typeof global.pausePhaseTimer === 'function') {
+      global.pausePhaseTimer();
+    } else if (game.timerPaused !== undefined) {
+      // Store remaining time before pausing (always update to current remaining time)
+      if (game.endAt) {
+        game.pausedTimeRemaining = Math.max(0, game.endAt - Date.now());
+      }
+      game.timerPaused = true;
+    }
+    
+    // Disable game advancement UI
+    disableGameAdvancementUI();
+    
+    // Emit pause event
+    if (game.bus) {
+      game.bus.emit('game:paused', { reason });
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Resume the globally paused game
+   * Restores phase timer, re-enables game advancement, and unblocks interactions
+   */
+  function resume() {
+    const game = global.game;
+    if (!game) {
+      console.warn('[PhaseTimerBridge] Cannot resume - game not initialized');
+      return false;
+    }
+    
+    if (!globalPauseActive) {
+      console.info('[PhaseTimerBridge] Not currently paused');
+      return true;
+    }
+    
+    console.info('[PhaseTimerBridge] ▶️ GLOBAL RESUME');
+    
+    // Clear global pause flag
+    globalPauseActive = false;
+    globalPauseReason = null;
+    game.isGloballyPaused = false;
+    
+    // Resume phase timer if it exists
+    if (typeof global.resumePhaseTimer === 'function') {
+      global.resumePhaseTimer();
+    } else if (game.timerPaused !== undefined) {
+      game.timerPaused = false;
+      if (game.pausedTimeRemaining != null) {
+        game.endAt = Date.now() + game.pausedTimeRemaining;
+        if (game.phaseEndsAt !== undefined) {
+          game.phaseEndsAt = game.endAt;
+        }
+        // Clear pausedTimeRemaining after restoring timer to avoid confusion
+        game.pausedTimeRemaining = null;
+      }
+    }
+    
+    // Re-enable game advancement UI
+    enableGameAdvancementUI();
+    
+    // Emit resume event
+    if (game.bus) {
+      game.bus.emit('game:resumed', { reason: globalPauseReason });
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Force the current phase timer to timeout immediately
+   * Used when user wants to skip the current phase
+   */
+  function forceTimeout() {
+    const game = global.game;
+    if (!game) {
+      console.warn('[PhaseTimerBridge] Cannot force timeout - game not initialized');
+      return false;
+    }
+    
+    console.info('[PhaseTimerBridge] ⏭️ Force timeout triggered');
+    
+    // If phase timeout callback exists, call it directly
+    if (typeof game.phaseTimeoutCallback === 'function') {
+      try {
+        game.phaseTimeoutCallback();
+        return true;
+      } catch (err) {
+        console.error('[PhaseTimerBridge] Error forcing timeout:', err);
+        return false;
+      }
+    }
+    
+    // Fallback: set endAt to expired
+    if (game.endAt !== undefined) {
+      game.endAt = Date.now() - 1000; // Set to past
+      return true;
+    }
+    
+    console.warn('[PhaseTimerBridge] No timeout mechanism available');
+    return false;
+  }
+  
+  /**
+   * Check if game is currently globally paused
+   * @returns {boolean}
+   */
+  function isGloballyPaused() {
+    return globalPauseActive;
+  }
+  
+  /**
+   * Get the current global pause reason
+   * @returns {string|null}
+   */
+  function getGlobalPauseReason() {
+    return globalPauseReason;
+  }
+  
+  /**
+   * Disable all game advancement UI elements
+   * Disables FFWD, skip buttons, card manager interactions
+   */
+  function disableGameAdvancementUI() {
+    // Disable fast-forward button
+    const ffBtn = document.getElementById('btnFastForward') || 
+                  document.querySelector('[data-action="fast-forward"]') ||
+                  document.querySelector('.btn-fast-forward');
+    if (ffBtn) {
+      ffBtn.disabled = true;
+      ffBtn.dataset.pausedDisabled = 'true';
+      ffBtn.style.opacity = '0.5';
+      ffBtn.style.pointerEvents = 'none';
+    }
+    
+    // Disable skip phase button
+    const skipBtn = document.getElementById('btnSkipPhase') ||
+                    document.querySelector('[data-action="skip-phase"]') ||
+                    document.querySelector('.btn-skip-phase');
+    if (skipBtn) {
+      skipBtn.disabled = true;
+      skipBtn.dataset.pausedDisabled = 'true';
+      skipBtn.style.opacity = '0.5';
+      skipBtn.style.pointerEvents = 'none';
+    }
+    
+    // Disable card manager skip buttons
+    const cardSkipBtns = document.querySelectorAll('[data-action="skip-cards"], .btn-skip-cards, #btnSkipCards');
+    cardSkipBtns.forEach(btn => {
+      btn.disabled = true;
+      btn.dataset.pausedDisabled = 'true';
+      btn.style.opacity = '0.5';
+      btn.style.pointerEvents = 'none';
+    });
+    
+    // Add paused overlay to TV screen
+    addPausedOverlay();
+  }
+  
+  /**
+   * Re-enable all game advancement UI elements
+   */
+  function enableGameAdvancementUI() {
+    // Re-enable fast-forward button
+    const ffBtn = document.getElementById('btnFastForward') || 
+                  document.querySelector('[data-action="fast-forward"]') ||
+                  document.querySelector('.btn-fast-forward');
+    if (ffBtn && ffBtn.dataset.pausedDisabled === 'true') {
+      delete ffBtn.dataset.pausedDisabled;
+      ffBtn.disabled = false;
+      ffBtn.style.opacity = '';
+      ffBtn.style.pointerEvents = '';
+    }
+    
+    // Re-enable skip phase button
+    const skipBtn = document.getElementById('btnSkipPhase') ||
+                    document.querySelector('[data-action="skip-phase"]') ||
+                    document.querySelector('.btn-skip-phase');
+    if (skipBtn && skipBtn.dataset.pausedDisabled === 'true') {
+      delete skipBtn.dataset.pausedDisabled;
+      skipBtn.disabled = false;
+      skipBtn.style.opacity = '';
+      skipBtn.style.pointerEvents = '';
+    }
+    
+    // Re-enable card manager skip buttons
+    const cardSkipBtns = document.querySelectorAll('[data-action="skip-cards"], .btn-skip-cards, #btnSkipCards');
+    cardSkipBtns.forEach(btn => {
+      if (btn.dataset.pausedDisabled === 'true') {
+        delete btn.dataset.pausedDisabled;
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.pointerEvents = '';
+      }
+    });
+    
+    // Remove paused overlay
+    removePausedOverlay();
+  }
+  
+  /**
+   * Add visual "paused" overlay to TV screen
+   */
+  function addPausedOverlay() {
+    // Don't add duplicate overlay
+    if (document.getElementById('gamePausedOverlay')) return;
+    
+    const tv = document.getElementById('tv');
+    if (!tv) return;
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'gamePausedOverlay';
+    overlay.style.cssText = `
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      pointer-events: none;
+    `;
+    
+    const message = document.createElement('div');
+    message.style.cssText = `
+      background: rgba(255, 255, 255, 0.95);
+      color: #1a1a1a;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    `;
+    message.innerHTML = '⏸️ Game Paused<br><span style="font-size: 0.85rem; font-weight: 400; opacity: 0.8;">Close settings to resume</span>';
+    
+    overlay.appendChild(message);
+    tv.appendChild(overlay);
+  }
+  
+  /**
+   * Remove the visual "paused" overlay from TV screen
+   */
+  function removePausedOverlay() {
+    const overlay = document.getElementById('gamePausedOverlay');
+    if (overlay) {
+      overlay.remove();
+    }
+  }
 
   // Export API
   PhaseTimerBridge.init = init;
@@ -215,6 +496,13 @@
   PhaseTimerBridge.manualResume = manualResume;
   PhaseTimerBridge.handleSuspend = handleSuspend;
   PhaseTimerBridge.handleSkipToResults = handleSkipToResults;
+  
+  // Export new global pause/resume API
+  PhaseTimerBridge.pause = pause;
+  PhaseTimerBridge.resume = resume;
+  PhaseTimerBridge.forceTimeout = forceTimeout;
+  PhaseTimerBridge.isGloballyPaused = isGloballyPaused;
+  PhaseTimerBridge.getGlobalPauseReason = getGlobalPauseReason;
 
   // Export to global namespace
   global.PhaseTimerBridge = PhaseTimerBridge;
