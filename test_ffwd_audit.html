@@ -170,6 +170,7 @@
       <button class="info" onclick="testButtonExists()">Test Button Exists</button>
       <button class="info" onclick="testFunctionChain()">Test Function Chain</button>
       <button class="info" onclick="testDurationCompression()">Test Duration Compression</button>
+      <button class="info" onclick="testActivationNoThrow()">Test Activation No Throw</button>
     </div>
     
     <h3>Integration Tests</h3>
@@ -598,6 +599,83 @@
       return true;
     }
     
+    function testActivationNoThrow(){
+      log('\n=== Testing Activation No Throw (Regression Test) ===', 'info');
+      
+      const game = window.game;
+      if (!game) {
+        testFail('Activation No Throw', 'game object not found');
+        return false;
+      }
+      
+      try {
+        // Save prior state
+        const priorActive = game.__ffActive;
+        const priorMultiplier = game.__ffMultiplier;
+        
+        // Deactivate first if already active
+        if (priorActive && window.deactivateFastForward) {
+          window.deactivateFastForward();
+        }
+        
+        // Test activation doesn't throw
+        const result = window.activateFastForward({ multiplier: 0.1, reason: 'test' });
+        
+        // Check return value is boolean
+        if (typeof result !== 'boolean') {
+          testFail('Activation No Throw', `Expected boolean return value, got ${typeof result}`);
+          return false;
+        }
+        
+        // Check activation succeeded
+        if (!priorActive && result && game.__ffActive) {
+          testPass('Activation No Throw');
+          testPass('Activation Returns True on Success');
+        } else if (priorActive && !result && game.__ffActive) {
+          testPass('Activation No Throw (already active, returns false but stays active)');
+        } else if (!result && !game.__ffActive) {
+          testFail('Activation No Throw', 'Activation returned false and did not set __ffActive flag');
+          return false;
+        } else {
+          testFail('Activation No Throw', `Unexpected state: result=${result}, prior=${priorActive}, active=${game.__ffActive}`);
+          return false;
+        }
+        
+        // Check multiplier was set
+        if (game.__ffMultiplier === 0.1) {
+          testPass('Multiplier Set Correctly');
+        } else {
+          testFail('Multiplier Set', `Expected 0.1, got ${game.__ffMultiplier}`);
+        }
+        
+        // Test idempotent call returns false
+        const result2 = window.activateFastForward({ reason: 'test-duplicate' });
+        if (result2 === false) {
+          testPass('Idempotent Activation Returns False');
+        } else {
+          testFail('Idempotent Activation', 'Second activation should return false');
+        }
+        
+        // Clean up
+        if (window.deactivateFastForward) {
+          window.deactivateFastForward();
+          
+          if (!game.__ffActive) {
+            testPass('Deactivation Works');
+          } else {
+            testFail('Deactivation', 'Failed to deactivate');
+          }
+        }
+        
+        updateSystemStatus();
+        return true;
+      } catch(e){
+        testFail('Activation No Throw', `Exception thrown: ${e.message}`);
+        console.error('[test] Exception during activation test:', e);
+        return false;
+      }
+    }
+    
     // ========== COMPOSITE TESTS ==========
     
     async function runAllTests() {
@@ -616,6 +694,9 @@
       await new Promise(resolve => setTimeout(resolve, 500));
       
       testDurationCompression();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      testActivationNoThrow();
       await new Promise(resolve => setTimeout(resolve, 500));
       
       testButtonClick();

@@ -83,7 +83,14 @@ Press the **⏩ FFWD** button in the TV header to activate fast-forward mode. Al
 
 ```javascript
 // Activate fast-forward (10x speed)
-window.activateFastForward({ multiplier: 0.1, reason: 'user' });
+// Returns true on success, false if blocked or already active
+const activated = window.activateFastForward({ multiplier: 0.1, reason: 'user' });
+
+if (activated) {
+  console.log('Fast-forward activated successfully');
+} else {
+  console.log('Fast-forward activation blocked (already active, paused, or error)');
+}
 
 // Check if active
 if (window.game.__ffActive) {
