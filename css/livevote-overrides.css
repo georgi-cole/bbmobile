@@ -9,7 +9,14 @@ body.lv-active-livevote #panel .legacy-live-vote {
   display: none !important;
 }
 
-/* Legacy 2-nominee CTA row removed - now using inline evict button pattern */
+/* Ensure in-TV CTA bar is always on top */
+#tv .lv2-cta-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(8px, 2.2vw, 16px);
+  z-index: 160; /* above overlays inside TV */
+}
 
 /* Optional: dock mode if we want panel visible below TV instead of hidden */
 body.lv-dock-livevote #panel .live-vote,
