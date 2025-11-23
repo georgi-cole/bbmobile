@@ -378,6 +378,32 @@
   }
 
   /**
+   * Force cleanup of intermission UI elements
+   * Idempotent - safe to call multiple times
+   * @param {string} reason - Reason for cleanup (for logging)
+   */
+  function forceCleanup(reason) {
+    console.info(`[IntermissionFlow] forceCleanup reason=${reason}`);
+    
+    // Remove intermission card from TV
+    if (global.IntermissionCard && typeof global.IntermissionCard.removeActive === 'function') {
+      global.IntermissionCard.removeActive();
+    }
+    
+    // Close any active intermission overlay/game
+    if (global.IntermissionOverlay && typeof global.IntermissionOverlay.close === 'function') {
+      global.IntermissionOverlay.close();
+    }
+    
+    // Clear intermission active flag
+    if (global.game) {
+      global.game.__intermissionActive = false;
+    }
+    
+    console.info('[IntermissionFlow] Cleanup complete');
+  }
+
+  /**
    * Main entry point for intermission flow
    * @param {Object} options
    * @param {string} options.compType - 'HOH' or 'Veto'
@@ -393,6 +419,11 @@
       console.info('[IntermissionFlow] Intermission games disabled, skipping offer');
       if (onComplete) onComplete();
       return;
+    }
+
+    // Set intermission active flag
+    if (global.game) {
+      global.game.__intermissionActive = true;
     }
 
     // Set status bar message based on reason
@@ -462,7 +493,36 @@
     start,
     showOfferCard,
     launchGame,
-    showResultModal
+    showResultModal,
+    forceCleanup
   };
+
+  // ═══ Phase Change Event Listeners ═══
+  // Listen for phase changes and cleanup intermission UI when leaving competition phases
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    // Listen for bb:phase:changed custom event (dispatched by ui.hud-and-router.js)
+    document.addEventListener('bb:phase:changed', function(event) {
+      const newPhase = event.detail?.phase;
+      const oldPhase = event.detail?.oldPhase;
+      
+      // Cleanup if transitioning away from HOH or veto phases
+      if (oldPhase === 'hoh' || oldPhase === 'veto_competition') {
+        if (newPhase !== 'hoh' && newPhase !== 'veto_competition') {
+          console.info(`[IntermissionFlow] Phase changed from ${oldPhase} to ${newPhase}, cleaning up`);
+          forceCleanup('phase_change');
+        }
+      }
+    });
+    
+    console.info('[IntermissionFlow] ✓ Event listeners registered');
+  }
+
+  // Listen for competition results shown (if event bus is available)
+  if (global.game?.bus && typeof global.game.bus.on === 'function') {
+    global.game.bus.on('competition:results:shown', function() {
+      console.info('[IntermissionFlow] Competition results shown, cleaning up');
+      forceCleanup('competition_results_shown');
+    });
+  }
 
 })(window);

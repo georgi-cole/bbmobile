@@ -1251,14 +1251,36 @@
       }
 
       const alive = global.alivePlayers(); 
-      const blocked = (alive.length > 3 && g.week > 1) ? g.lastHOHId : null;
+      
+      // Week-based HOH eligibility check:
+      // Block only if player was HOH in the PREVIOUS week (not current week)
+      // This prevents current HOH winner from being incorrectly blocked
+      const wasPreviousWeekHOH = (
+        alive.length > 3 && 
+        g.week > 1 && 
+        g.lastHOHId && 
+        you.id === g.lastHOHId && 
+        g.lastHOHWeek === (g.week - 1)
+      );
+      
+      const isCurrentHOH = (
+        g.lastHOHId === you.id && 
+        g.lastHOHWeek === g.week
+      );
       
       console.info(`[Competition] Human player: ${you.name}(${you.id}), evicted=${you.evicted}`);
-      console.info(`[Competition] Alive players: ${alive.length}, Blocked player: ${blocked || 'none'}`);
+      console.info(`[Competition] Alive players: ${alive.length}, lastHOHId=${g.lastHOHId}, lastHOHWeek=${g.lastHOHWeek}, currentWeek=${g.week}`);
+      console.info(`[HOHEligibility] wasPreviousWeekHOH=${wasPreviousWeekHOH}, isCurrentHOH=${isCurrentHOH}`);
       
-      // Check if blocked
-      if (you.id === blocked) {
-        console.warn(`[Competition] ⚠ Human is blocked (was last HOH): blocked=${blocked}`);
+      // Skip intermission if player is current HOH (just won this week)
+      if (isCurrentHOH) {
+        console.info('[HOHEligibility] Skipping intermission (player is current HOH for this week)');
+        // Fall through to normal competition flow (player already played)
+      }
+      
+      // Check if blocked (was HOH last week, not this week)
+      if (wasPreviousWeekHOH) {
+        console.warn(`[Competition] ⚠ Human is blocked (was HOH in week ${g.lastHOHWeek})`);
         
         // Check if intermission flow is available and enabled
         if (global.IntermissionFlow && (g.cfg?.enableIntermissionGames !== false)) {
@@ -1419,6 +1441,7 @@
       for (const p of g.players) p.hoh = false;
       g.hohId = winner;
       g.lastHOHId = winner;
+      g.lastHOHWeek = g.week; // Track which week this HOH was won
       const W = global.getP(winner);
       W.hoh = true;
       W.stats = W.stats || {};

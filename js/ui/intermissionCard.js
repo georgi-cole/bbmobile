@@ -17,6 +17,11 @@
   function showInTv(options) {
     const { compType, gameType, onYes, onNo } = options;
 
+    // Set intermission active flag
+    if (global.game) {
+      global.game.__intermissionActive = true;
+    }
+
     // Get TV container using shared utility
     const tvContainer = global.TvContainer?.getTvContainer() || document.getElementById('panel');
     
@@ -199,6 +204,12 @@
      * Remove the card from the TV
      */
     function removeCard() {
+      // Null-safe: check if cardContainer is still in DOM
+      if (!cardContainer || !cardContainer.parentNode) {
+        console.info('[IntermissionCard] Card already removed, skipping');
+        return;
+      }
+
       cardContainer.style.animation = 'slideDownFade 0.3s ease-in';
       cardContainer.style.animationFillMode = 'forwards';
       
@@ -222,13 +233,19 @@
       }
 
       setTimeout(() => {
-        if (cardContainer.parentNode) {
+        // Double-check parent still exists before removing
+        if (cardContainer && cardContainer.parentNode) {
           cardContainer.parentNode.removeChild(cardContainer);
         }
         
         // Clean up empty overlay
         if (overlay && overlay.childElementCount === 0) {
           overlay.style.pointerEvents = 'none';
+        }
+        
+        // Clear intermission active flag
+        if (global.game) {
+          global.game.__intermissionActive = false;
         }
       }, 300);
     }
@@ -241,19 +258,37 @@
 
   /**
    * Remove any active intermission cards
+   * Idempotent - safe to call multiple times
    */
   function removeActive() {
     const overlays = document.querySelectorAll('.tv-intermission-overlay');
+    let removedCount = 0;
+    
     overlays.forEach(overlay => {
       const cards = overlay.querySelectorAll('.intermission-card-container');
       cards.forEach(card => {
-        if (card.parentNode) {
-          card.parentNode.removeChild(card);
+        // Null-safe removal
+        if (card && card.parentNode) {
+          try {
+            card.parentNode.removeChild(card);
+            removedCount++;
+          } catch (e) {
+            console.warn('[IntermissionCard] Failed to remove card:', e);
+          }
         }
       });
-      overlay.style.pointerEvents = 'none';
+      // Reset overlay pointer events
+      if (overlay) {
+        overlay.style.pointerEvents = 'none';
+      }
     });
-    console.info('[IntermissionCard] ✓ Removed active cards');
+    
+    // Clear intermission active flag
+    if (global.game) {
+      global.game.__intermissionActive = false;
+    }
+    
+    console.info(`[IntermissionCard] ✓ Removed ${removedCount} active card(s)`);
   }
 
   // Export to global namespace
