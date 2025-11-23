@@ -72,6 +72,7 @@
     /**
      * Clear all locks for a specific week (useful for testing/debugging)
      * @param {number} week - Week to clear locks for
+     * @returns {number} Number of locks cleared
      */
     clearWeekLocks(week){
       try {
@@ -89,8 +90,45 @@
         // Remove them
         keysToRemove.forEach(key => storage.removeItem(key));
         console.info(`[CompLocks] Cleared ${keysToRemove.length} locks for week ${week}`);
+        return keysToRemove.length;
       } catch(e) {
         console.warn('[CompLocks] Error clearing week locks:', e);
+        return 0;
+      }
+    },
+
+    /**
+     * Alias for clearWeekLocks for consistency with problem statement
+     * @param {number} week - Week to clear locks for
+     * @returns {number} Number of locks cleared
+     */
+    clearWeek(week){
+      return this.clearWeekLocks(week);
+    },
+
+    /**
+     * Peek at lock status without triggering side effects (for diagnostics)
+     * @param {number} week - Current game week
+     * @param {string} phase - Current game phase
+     * @param {string} gameKey - Minigame identifier
+     * @param {number} playerId - Player ID
+     * @returns {object} Lock info: {exists: boolean, key: string}
+     */
+    peek(week, phase, gameKey, playerId){
+      try {
+        const key = this._getLockKey(week, phase, gameKey, playerId);
+        const value = storage.getItem(key);
+        return {
+          exists: value === '1',
+          key: key,
+          week: week,
+          phase: phase,
+          gameKey: gameKey,
+          playerId: playerId
+        };
+      } catch(e) {
+        console.warn('[CompLocks] Error peeking lock:', e);
+        return { exists: false, key: null, error: e.message };
       }
     },
 

@@ -538,6 +538,13 @@
     g.__finishVetoCompCalled = false;
     g.__vetoResolving = false;
     g.__humanPlayedVeto = false;
+    g.__instructionsRenderedVeto = false; // Track if instructions were rendered
+    g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
+    // Reset grace attempt flag for new competition
+    if (g.humanId != null) {
+      delete g[`__graceReplayAttempt_veto_comp_${g.humanId}`];
+      delete g[`__graceReplayAttempt_veto_${g.humanId}`];
+    }
 
     g.__vetoPlayers = computeVetoParticipants();
     // Normalize to numeric again in case upstream changed shape

@@ -1605,7 +1605,32 @@
     g.__nomsCommitInProgress=false;
     g.__nomsCommitted=false;
     g._pendingNoms=null;
+    
+    // Clear previous week's competition locks before incrementing week
+    const previousWeek = g.week;
+    if (global.CompLocks && typeof global.CompLocks.clearWeek === 'function') {
+      try {
+        const cleared = global.CompLocks.clearWeek(previousWeek);
+        console.info(`[eviction] ✓ Cleared ${cleared} competition locks for week ${previousWeek}`);
+      } catch (e) {
+        console.warn('[eviction] Failed to clear previous week locks:', e);
+      }
+    }
+    
     g.week++;
+    
+    // Reset competition participation flags for new week
+    g.__humanPlayedHOH = false;
+    g.__humanPlayedVeto = false;
+    console.info('[eviction] ✓ Reset competition participation flags for week', g.week);
+    
+    // Reset grace attempt flags for new week
+    if (g.humanId != null) {
+      delete g[`__graceReplayAttempt_hoh_${g.humanId}`];
+      delete g[`__graceReplayAttempt_veto_comp_${g.humanId}`];
+      delete g[`__graceReplayAttempt_veto_${g.humanId}`];
+      console.info('[eviction] ✓ Reset grace attempt flags for week', g.week);
+    }
     
     // Call socialOnNewWeek at week rollover (Social Maneuvers weekly reset)
     // Guard to run once per week by tracking the last reset week

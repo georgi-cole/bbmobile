@@ -346,6 +346,28 @@
     // Register as active instructions card for cleanup on phase change
     activeInstructionsCard = card;
 
+    // Set instruction rendered flag for competition phase
+    const g = global.game;
+    if (g) {
+      if (g.phase === 'hoh') {
+        g.__instructionsRenderedHOH = true;
+        console.info('[CompetitionFlow] ✓ Set __instructionsRenderedHOH flag');
+      } else if (g.phase === 'veto_comp' || g.phase === 'veto') {
+        g.__instructionsRenderedVeto = true;
+        console.info('[CompetitionFlow] ✓ Set __instructionsRenderedVeto flag');
+      }
+    }
+
+    // Dispatch event to signal instructions are mounted
+    try {
+      document.dispatchEvent(new CustomEvent('competition-instructions-mounted', {
+        detail: { phase: g?.phase, gameKey: gameKey }
+      }));
+      console.info('[CompetitionFlow] ✓ Dispatched competition-instructions-mounted event');
+    } catch (e) {
+      console.warn('[CompetitionFlow] Failed to dispatch event:', e);
+    }
+
     // Attach Rules button next to Play button
     if(typeof g.attachRulesButton === 'function'){
       g.attachRulesButton(playButton, gameKey);
