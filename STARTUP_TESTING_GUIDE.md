@@ -18,18 +18,24 @@ This guide helps verify the new startup sequence implementation.
 
 **Expected Flow:**
 1. ✅ Page loads - NO main game elements visible (no topbar, no .wrap)
-2. ✅ Kolequant intro video plays in fullscreen
-3. ✅ Console shows: `[StartupFlow] Preloading intro hub background...`
-4. ✅ Video ends - intro hub appears with background already loaded
-5. ✅ Buttons and background appear simultaneously (no delayed fade)
-6. ✅ Click Play - Rules modal opens (first time users)
-7. ✅ Accept rules - Profile modal opens (if needed)
-8. ✅ Complete profile - main screen builds
-9. ✅ Console shows: `[StartupFlow] Main screen built`
-10. ✅ Main game elements appear (.wrap, topbar)
-11. ✅ Opening sequence plays (cast animation)
+2. ✅ Kolequant intro video plays in fullscreen **automatically (muted, no user tap required)**
+3. ✅ Console shows: `[intro-outro] Intro video configured for muted autoplay`
+4. ✅ Console shows: `[intro-outro] Autoplay started successfully` (or blocked warning with fallback)
+5. ✅ Console shows: `[StartupFlow] Preloading intro hub background...`
+6. ✅ Video ends - intro hub appears with background already loaded
+7. ✅ Buttons and background appear simultaneously (no delayed fade)
+8. ✅ Click Play - Rules modal opens (first time users)
+9. ✅ Accept rules - Profile modal opens (if needed)
+10. ✅ Complete profile - main screen builds
+11. ✅ Console shows: `[StartupFlow] Main screen built`
+12. ✅ Main game elements appear (.wrap, topbar)
+13. ✅ Opening sequence plays (cast animation)
 
 **Console Checks:**
+- `[intro-outro] playVideo: assets/videos/intro.mp4` (or intro-mobile.mp4)
+- `[intro-outro] Intro video configured for muted autoplay`
+- `[intro-outro] Autoplay started successfully` (success case)
+- OR `[intro-outro] Autoplay blocked: ...` (blocked case - fallback "Tap to Play" button appears)
 - `[StartupFlow] Initializing...`
 - `[StartupFlow] Starting startup sequence...`
 - `[StartupFlow] Preloading intro hub background...`
