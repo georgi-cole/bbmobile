@@ -27,7 +27,7 @@
     // Create status chip container
     statusChip = document.createElement('div');
     statusChip.id = 'tvStatusChip';
-    statusChip.className = 'tv-status-chip tv-inline-theme';
+    statusChip.className = 'tv-status-chip';
     statusChip.setAttribute('role', 'status');
     statusChip.setAttribute('aria-live', 'polite');
     statusChip.setAttribute('aria-atomic', 'true');
