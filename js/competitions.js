@@ -290,7 +290,13 @@
     
     if (g.phase === 'hoh') {
       const alive = global.alivePlayers();
-      const blocked = (alive.length > 3 && g.week > 1) ? g.lastHOHId : null;
+      // Week-based eligibility: only block if player was HOH in previous week
+      const blocked = (
+        alive.length > 3 && 
+        g.week > 1 && 
+        g.lastHOHId && 
+        g.lastHOHWeek === (g.week - 1)
+      ) ? g.lastHOHId : null;
       eligibleOpponents = alive.filter(p => !p.human && p.id !== blocked);
       gameKey = g.__hohGameKey || 'unknown';
     } else if (g.phase === 'final3_comp1') {
@@ -341,7 +347,10 @@
   function maybeFinishComp() {
     const g = global.game; const alive = global.alivePlayers();
     let eligible = alive.map(p => p.id);
-    if (g.phase === 'hoh' && alive.length > 3 && g.week > 1 && g.lastHOHId) eligible = eligible.filter(id => id !== g.lastHOHId);
+    // Week-based eligibility: only filter out player if they were HOH in previous week
+    if (g.phase === 'hoh' && alive.length > 3 && g.week > 1 && g.lastHOHId && g.lastHOHWeek === (g.week - 1)) {
+      eligible = eligible.filter(id => id !== g.lastHOHId);
+    }
     const done = [...g.lastCompScores.keys()].filter(id => eligible.includes(id)).length;
     if (done === eligible.length) { finishCompPhase(); }
   }
@@ -1354,7 +1363,14 @@
     global.markCompPlayed?.('hoh'); // Mark HOH as played
     global.tv.say('HOH Competition'); global.phaseMusic?.('hoh');
     global.setPhase('hoh', g.cfg.tHOH, finishCompPhase);
-    const alive = global.alivePlayers(); const blocked = (alive.length > 3 && g.week > 1) ? g.lastHOHId : null;
+    const alive = global.alivePlayers();
+    // Week-based eligibility: only block if player was HOH in previous week
+    const blocked = (
+      alive.length > 3 && 
+      g.week > 1 && 
+      g.lastHOHId && 
+      g.lastHOHWeek === (g.week - 1)
+    ) ? g.lastHOHId : null;
     const diffMult = getAIDifficultyMultiplier();
     
     // Legacy fallback: generate AI scores immediately if OpponentSynth not available
@@ -1383,7 +1399,10 @@
       g.__compRunning = false; // Clear competition running flag
 
       const alive = global.alivePlayers(); let elig = alive.map(p => p.id);
-      if (alive.length > 3 && g.week > 1 && g.lastHOHId) elig = elig.filter(id => id !== g.lastHOHId);
+      // Week-based eligibility: only filter out player if they were HOH in previous week
+      if (alive.length > 3 && g.week > 1 && g.lastHOHId && g.lastHOHWeek === (g.week - 1)) {
+        elig = elig.filter(id => id !== g.lastHOHId);
+      }
 
       // Apply dampening for consecutive winners
       for (const id of elig) {
