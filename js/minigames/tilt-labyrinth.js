@@ -156,6 +156,17 @@
     const ACCELERATION = 0.35;
     const KEYBOARD_ACCELERATION_MULTIPLIER = 1.2;
     
+    // Tilt detection constants
+    const TILT_DETECTION_TIMEOUT_MS = 1200;
+    const TILT_SENSOR_THRESHOLD = 0.1;
+    
+    // Control message constants
+    const CONTROLS_MSG_TILT = '📱 Tilt device to control (mouse/keyboard also available)';
+    const CONTROLS_MSG_DESKTOP = '👆 Use arrow keys (← ↑ ↓ →) or swipe/drag to control';
+    
+    // Game completion delay
+    const COMPLETION_DELAY_MS = 3000;
+    
     // Generate maze
     const mazeCells = generateMaze(MAZE_COLS, MAZE_ROWS, rng);
     const walls = cellsToWalls(mazeCells, CELL_SIZE);
@@ -251,20 +262,55 @@
       }
     }
 
-    // Check for orientation support
+    // Check for orientation support with robust detection
     function setupControls(){
       if(typeof DeviceOrientationEvent !== 'undefined'){
         requestOrientationPermission().then(granted => {
           if(granted){
-            useTiltControls = true;
-            controlsInfo.textContent = '📱 Tilt device to control';
-            window.addEventListener('deviceorientation', handleOrientation);
+            // Try to detect if real orientation data is available
+            let tiltDetectionTimeout = null;
+            let tiltDetected = false;
+            
+            const tempOrientationHandler = (event) => {
+              const beta = event.beta || 0;
+              const gamma = event.gamma || 0;
+              
+              // Check if we're getting real sensor data (finite values above threshold)
+              if(isFinite(beta) && isFinite(gamma) && (Math.abs(beta) > TILT_SENSOR_THRESHOLD || Math.abs(gamma) > TILT_SENSOR_THRESHOLD)){
+                tiltDetected = true;
+                
+                // Clear timeout and remove temporary handler
+                if(tiltDetectionTimeout) clearTimeout(tiltDetectionTimeout);
+                window.removeEventListener('deviceorientation', tempOrientationHandler);
+                
+                // Set up tilt controls permanently
+                useTiltControls = true;
+                controlsInfo.textContent = CONTROLS_MSG_TILT;
+                window.addEventListener('deviceorientation', handleOrientation);
+              }
+            };
+            
+            // Attach temporary listener
+            window.addEventListener('deviceorientation', tempOrientationHandler);
+            
+            // Set timeout: if no valid orientation event arrives, assume no tilt support
+            tiltDetectionTimeout = setTimeout(() => {
+              if(!tiltDetected){
+                window.removeEventListener('deviceorientation', tempOrientationHandler);
+                useTiltControls = false;
+                controlsInfo.textContent = CONTROLS_MSG_DESKTOP;
+              }
+            }, TILT_DETECTION_TIMEOUT_MS);
           } else {
-            setupSwipeControls();
+            // Permission denied
+            useTiltControls = false;
+            controlsInfo.textContent = CONTROLS_MSG_DESKTOP;
           }
         });
       } else {
-        setupSwipeControls();
+        // DeviceOrientationEvent not available
+        useTiltControls = false;
+        controlsInfo.textContent = CONTROLS_MSG_DESKTOP;
       }
     }
 
@@ -275,12 +321,10 @@
     }
     let keydownHandler = null;
     let keyupHandler = null;
-    const keysPressed = {}; // Tracks arrow keys when swipe controls are active
+    const keysPressed = {}; // Tracks arrow keys
 
-    function setupSwipeControls(){
-      useTiltControls = false;
-      controlsInfo.textContent = '👆 Swipe / drag or use arrow keys (← ↑ ↓ →)';
-      
+    // Always setup pointer controls (mouse/touch drag)
+    function setupPointerControls(){
       let touchStartX = 0;
       let touchStartY = 0;
       
@@ -327,7 +371,13 @@
         isDragging = false;
       });
       
-      // Keyboard arrow controls for desktop
+      canvas.addEventListener('mouseleave', () => {
+        isDragging = false;
+      });
+    }
+
+    // Always setup keyboard controls
+    function setupKeyboardControls(){
       keydownHandler = (e) => {
         if(keyIsControl(e.key)) {
           keysPressed[e.key] = true;
@@ -616,19 +666,23 @@
       // Cleanup
       if(useTiltControls){
         window.removeEventListener('deviceorientation', handleOrientation);
-      } else {
-        // Remove keyboard event listeners
-        if(keydownHandler) window.removeEventListener('keydown', keydownHandler);
-        if(keyupHandler) window.removeEventListener('keyup', keyupHandler);
       }
+      // Always remove keyboard event listeners since they're always registered
+      if(keydownHandler) window.removeEventListener('keydown', keydownHandler);
+      if(keyupHandler) window.removeEventListener('keyup', keyupHandler);
       
       setTimeout(() => {
         if(typeof onComplete === 'function'){
           onComplete(score);
         }
-      }, 3000);
+      }, COMPLETION_DELAY_MS);
     }
 
+    // Always setup pointer and keyboard controls
+    setupPointerControls();
+    setupKeyboardControls();
+    
+    // Try to detect tilt controls
     setupControls();
     draw();
     
