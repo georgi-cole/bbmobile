@@ -447,6 +447,13 @@ export function createModal(options = {}) {
   };
 
   backdrop.updateOverview = (state, levelThresholds) => {
+    // Normalize progress display to prevent UI issues
+    // Clamp progress percentage to [0, 100] range
+    const displayProgressPercent = Math.max(0, Math.min(100, state.progressPercent || 0));
+    
+    // Ensure remaining XP is never negative
+    const remainingXP = Math.max(0, state.nextLevelXP - state.totalXP);
+    
     overviewPane.innerHTML = `
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="
@@ -469,7 +476,7 @@ export function createModal(options = {}) {
       <div style="margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
           <span>Progress to Level ${state.level + 1}</span>
-          <span>${state.progressPercent}%</span>
+          <span>${displayProgressPercent}%</span>
         </div>
         <div style="
           width: 100%;
@@ -479,7 +486,7 @@ export function createModal(options = {}) {
           overflow: hidden;
         ">
           <div style="
-            width: ${state.progressPercent}%;
+            width: ${displayProgressPercent}%;
             height: 100%;
             background: linear-gradient(90deg, #ffdc8b 0%, #ffa500 100%);
             transition: width 0.3s ease;
@@ -510,7 +517,7 @@ export function createModal(options = {}) {
           border-radius: 8px;
         ">
           <div style="font-size: 12px; color: ${theme.mutedColor}; margin-bottom: 4px;">Next Milestone</div>
-          <div style="font-size: 20px; font-weight: 600;">${state.nextLevelXP - state.totalXP} XP</div>
+          <div style="font-size: 20px; font-weight: 600;">${remainingXP} XP</div>
         </div>
       </div>
     `;

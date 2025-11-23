@@ -165,7 +165,8 @@
     }
 
     try {
-      const state = await progressionCore.getCurrentState();
+      // Get player-specific state for Overview (not aggregate)
+      const state = await getPlayerState(playerId);
       const breakdown = await progressionCore.getBreakdown();
       
       // Get leaderboard if not provided
@@ -175,6 +176,7 @@
       
       // Debug: Log state for verification
       console.log('[Progression Bridge] Overview state:', {
+        playerId: playerId,
         totalXP: state.totalXP,
         level: state.level,
         progressPercent: state.progressPercent
