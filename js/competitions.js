@@ -1143,6 +1143,22 @@
 
       if (you.evicted) {
         console.warn(`[Competition] ⚠ Human is evicted and cannot compete`);
+        
+        // Check if intermission flow is available and enabled
+        if (global.IntermissionFlow && (g.cfg?.enableIntermissionGames !== false)) {
+          console.info('[Competition] Starting intermission flow for evicted player');
+          global.IntermissionFlow.start({
+            compType: 'HOH',
+            reason: 'evicted',
+            onComplete: () => {
+              console.info('[Competition] Intermission flow completed, showing competition results');
+              // Player finished intermission or skipped, continue to show results
+            }
+          });
+          return;
+        }
+        
+        // Fallback: just show status message
         if (window.TvStatus?.set) {
           window.TvStatus.set('You are evicted and cannot compete.');
         }
@@ -1158,6 +1174,22 @@
       // Check if blocked
       if (you.id === blocked) {
         console.warn(`[Competition] ⚠ Human is blocked (was last HOH): blocked=${blocked}`);
+        
+        // Check if intermission flow is available and enabled
+        if (global.IntermissionFlow && (g.cfg?.enableIntermissionGames !== false)) {
+          console.info('[Competition] Starting intermission flow for previous HOH');
+          global.IntermissionFlow.start({
+            compType: 'HOH',
+            reason: 'previous_hoh',
+            onComplete: () => {
+              console.info('[Competition] Intermission flow completed, showing competition results');
+              // Player finished intermission or skipped, continue to show results
+            }
+          });
+          return;
+        }
+        
+        // Fallback: just show status message
         if (window.TvStatus?.set) {
           window.TvStatus.set('Not eligible this week (you were last HOH).');
         }
