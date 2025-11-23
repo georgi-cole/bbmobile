@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Inline Cards Test</title>
+  
+  <!-- Load required stylesheets -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  <link rel="stylesheet" href="css/tv-inline-status.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  <link rel="stylesheet" href="css/theme-bridge.css">
+  
+  <style>
+    body {
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .controls {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border: 1px solid var(--line);
+    }
+    
+    .controls h2 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .test-btn {
+      padding: 12px 20px;
+      background: var(--accent);
+      color: var(--card);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px -4px var(--accent);
+    }
+    
+    .test-btn:active {
+      transform: translateY(0);
+    }
+    
+    .theme-selector {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    
+    .theme-btn {
+      padding: 8px 16px;
+      background: var(--card-2);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .theme-btn.active {
+      background: var(--accent);
+      color: var(--card);
+      border-color: var(--accent);
+    }
+    
+    .info-section {
+      background: var(--card-2);
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 12px;
+      border-left: 4px solid var(--accent);
+    }
+    
+    .info-section h3 {
+      margin-top: 0;
+      font-size: 0.95rem;
+      color: var(--accent);
+    }
+    
+    .info-section p {
+      margin: 8px 0;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--muted-2);
+    }
+    
+    .info-section code {
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+    }
+    
+    /* TV Container for testing */
+    .tvFrame {
+      margin-top: 30px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .tv {
+      background: var(--card);
+      border: 2px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 16px 36px -22px rgba(0, 0, 0, 0.4);
+    }
+    
+    .tvHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, 
+                  color-mix(in srgb, var(--card) 80%, transparent), 
+                  color-mix(in srgb, var(--card) 40%, transparent));
+    }
+    
+    .tvTitle {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    
+    .tvViewport {
+      position: relative;
+      min-height: 400px;
+      background: linear-gradient(135deg, 
+                  color-mix(in srgb, var(--card, #2a3f5f) 85%, var(--bg, #0d1623)),
+                  color-mix(in srgb, var(--card-2, #1f3248) 90%, var(--bg, #0d1623)));
+    }
+    
+    .tv.tvTall .tvViewport {
+      min-height: 500px;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    
+    .tvOverlayContent {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>TV Inline Cards Test Page</h1>
+    
+    <div class="controls">
+      <h2>Test Controls</h2>
+      
+      <div class="theme-selector">
+        <button class="theme-btn active" data-theme="tvstudio">TV Studio</button>
+        <button class="theme-btn" data-theme="modernhouse">Modern House</button>
+        <button class="theme-btn" data-theme="midnight">Midnight</button>
+        <button class="theme-btn" data-theme="miami">Miami Beach</button>
+        <button class="theme-btn" data-theme="cabin">Cabin</button>
+        <button class="theme-btn" data-theme="starrynight">Starry Night</button>
+        <button class="theme-btn" data-theme="rainbow">Rainbow</button>
+        <button class="theme-btn" data-theme="matrix">Matrix</button>
+        <button class="theme-btn" data-theme="apartment">Apartment</button>
+      </div>
+      
+      <div class="button-grid">
+        <button class="test-btn" onclick="testBasicCard()">Basic Card</button>
+        <button class="test-btn" onclick="testCardWithBody()">Card with Body</button>
+        <button class="test-btn" onclick="testCardWithActions()">Card with Actions</button>
+        <button class="test-btn" onclick="testManagedCard()">CardManager Card</button>
+        <button class="test-btn" onclick="testSequentialCards()">Sequential Cards</button>
+        <button class="test-btn" onclick="testAutoDissmiss()">Auto-Dismiss (3s)</button>
+        <button class="test-btn" onclick="testTVCardsShow()">TVCards.showTVCard</button>
+        <button class="test-btn" onclick="testTVCardsDecision()">TVCards.showTVDecision</button>
+        <button class="test-btn" onclick="clearCards()">Clear All</button>
+      </div>
+      
+      <div class="info-section">
+        <h3>Keyboard Testing</h3>
+        <p>
+          • Press <code>ESC</code> to dismiss a card<br>
+          • Press <code>TAB</code> to navigate between buttons<br>
+          • Press <code>ENTER</code> or <code>SPACE</code> on focused button to activate
+        </p>
+      </div>
+      
+      <div class="info-section">
+        <h3>Accessibility Testing</h3>
+        <p>
+          • Cards have ARIA roles (<code>dialog</code> with actions, <code>status</code> without)<br>
+          • Focus ring appears on <code>:focus-visible</code><br>
+          • Reduced motion can be tested via DevTools: Rendering > Emulate CSS media feature > prefers-reduced-motion
+        </p>
+      </div>
+      
+      <div class="info-section">
+        <h3>Visual Features</h3>
+        <p>
+          • Semi-transparent background with <code>backdrop-filter: blur(6px)</code><br>
+          • Theme-aware coloring from <code>--theme-primary</code> and <code>--theme-on-primary</code><br>
+          • Smooth entry animation (scale + translateY)<br>
+          • No borders except focus ring
+        </p>
+      </div>
+    </div>
+    
+    <!-- Faux TV Container -->
+    <div class="tvFrame">
+      <div class="tv" id="tv">
+        <div class="tvHead">
+          <div class="tvTitle">TV Inline Cards Demo</div>
+        </div>
+        <div class="tvViewport">
+          <!-- Cards will appear here -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load required scripts -->
+  <script src="js/theme-switcher.js"></script>
+  <script src="js/ui/tv-cards.js"></script>
+  <script src="js/ui/tv-inline-cards.js"></script>
+  
+  <script>
+    // Initialize with default theme
+    if (window.applyTheme) {
+      window.applyTheme('tvstudio');
+    }
+    
+    // Theme switcher
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const theme = this.getAttribute('data-theme');
+        if (window.applyTheme) {
+          window.applyTheme(theme);
+        }
+        
+        // Update active state
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+    
+    // Test functions
+    function testBasicCard() {
+      console.log('[Test] Basic card');
+      if (window.spawnInlineCard) {
+        window.spawnInlineCard({
+          title: 'Basic Inline Card',
+          dismissible: true
+        });
+      } else {
+        alert('spawnInlineCard not available');
+      }
+    }
+    
+    function testCardWithBody() {
+      console.log('[Test] Card with body');
+      if (window.spawnInlineCard) {
+        window.spawnInlineCard({
+          title: 'Nomination Ceremony',
+          body: [
+            'The Head of Household has nominated two houseguests for eviction.',
+            'This ceremony is now adjourned.'
+          ],
+          dismissible: true
+        });
+      }
+    }
+    
+    function testCardWithActions() {
+      console.log('[Test] Card with actions');
+      if (window.spawnInlineCard) {
+        window.spawnInlineCard({
+          title: 'Power of Veto Decision',
+          body: 'Will you use the Power of Veto?',
+          actions: [
+            {
+              label: 'Use Veto',
+              primary: true,
+              onClick: () => {
+                alert('Veto used!');
+                window.clearAllInlineCards();
+              }
+            },
+            {
+              label: 'Do Not Use',
+              onClick: () => {
+                alert('Veto not used');
+                window.clearAllInlineCards();
+              }
+            }
+          ],
+          dismissible: true
+        });
+      }
+    }
+    
+    function testManagedCard() {
+      console.log('[Test] CardManager-managed card');
+      if (window.spawnInlineCard) {
+        window.spawnInlineCard({
+          title: 'Managed Card',
+          body: 'This card is managed by CardManager for lifecycle control.',
+          managed: true,
+          dismissible: true
+        });
+      }
+    }
+    
+    function testSequentialCards() {
+      console.log('[Test] Sequential cards');
+      if (window.spawnInlineCard) {
+        const card1 = window.spawnInlineCard({
+          title: 'Card 1 of 3',
+          body: 'This is the first card. Press ESC or wait for auto-dismiss.',
+          duration: 2000,
+          dismissible: true
+        });
+        
+        card1.onDismiss(() => {
+          const card2 = window.spawnInlineCard({
+            title: 'Card 2 of 3',
+            body: 'Second card appearing after first dismissal.',
+            duration: 2000,
+            dismissible: true
+          });
+          
+          card2.onDismiss(() => {
+            window.spawnInlineCard({
+              title: 'Card 3 of 3',
+              body: 'Final card in sequence.',
+              duration: 2000,
+              dismissible: true
+            });
+          });
+        });
+      }
+    }
+    
+    function testAutoDismiss() {
+      console.log('[Test] Auto-dismiss card');
+      if (window.spawnInlineCard) {
+        window.spawnInlineCard({
+          title: 'Auto-Dismiss Card',
+          body: 'This card will automatically dismiss after 3 seconds.',
+          duration: 3000,
+          dismissible: true
+        });
+      }
+    }
+    
+    function testTVCardsShow() {
+      console.log('[Test] TVCards.showTVCard');
+      if (window.TVCards && window.TVCards.showTVCard) {
+        window.TVCards.showTVCard({
+          title: 'Veto Ceremony',
+          lines: [
+            'Alice has chosen to use the Power of Veto.',
+            'Bob is safe this week.'
+          ],
+          tone: 'veto',
+          duration: 3000
+        });
+      } else {
+        alert('TVCards.showTVCard not available');
+      }
+    }
+    
+    function testTVCardsDecision() {
+      console.log('[Test] TVCards.showTVDecision');
+      if (window.TVCards && window.TVCards.showTVDecision) {
+        window.TVCards.showTVDecision({
+          title: 'Adjournment Decision',
+          message: 'Would you like to adjourn this ceremony?',
+          buttons: [
+            { label: 'Adjourn', value: 'yes', primary: true },
+            { label: 'Continue', value: 'no' }
+          ]
+        }).then(result => {
+          alert('Selected: ' + result);
+        });
+      } else {
+        alert('TVCards.showTVDecision not available');
+      }
+    }
+    
+    function clearCards() {
+      console.log('[Test] Clear all cards');
+      if (window.clearAllInlineCards) {
+        window.clearAllInlineCards();
+      } else if (window.TVCards && window.TVCards.clearTVOverlay) {
+        window.TVCards.clearTVOverlay();
+        const tv = document.getElementById('tv');
+        if (tv) tv.classList.remove('tvTall');
+      }
+    }
+    
+    // Log when modules are loaded
+    console.log('[Test Page] Checking for TVInlineCards module...');
+    setTimeout(() => {
+      console.log('spawnInlineCard available:', typeof window.spawnInlineCard);
+      console.log('TVInlineCards available:', typeof window.TVInlineCards);
+      console.log('TVCards available:', typeof window.TVCards);
+    }, 500);
+  </script>
+</body>
+</html>
