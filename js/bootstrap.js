@@ -394,6 +394,11 @@
     game.phase = 'intermission';
     game.week = 1;
     
+    // Apply any pending config changes when starting a new season
+    if(typeof Config !== 'undefined' && typeof Config.applyPendingConfig === 'function'){
+      Config.applyPendingConfig();
+    }
+    
     // Update UI
     global.updateHud?.();
     global.renderPanel?.();

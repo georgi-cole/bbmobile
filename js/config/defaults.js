@@ -122,6 +122,196 @@
     return cfg;
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DEFERRED CONFIG SYSTEM
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  /**
+   * Configuration keys that can be applied immediately (UI/theme/audio changes)
+   * These settings do not affect gameplay logic and can be changed mid-season
+   */
+  const IMMEDIATE_CONFIG_KEYS = [
+    // Visual/UI
+    'fxCards',
+    'showTopRoster',
+    'colorblindMode',
+    'strictAvatars',
+    'useRibbon',
+    'timerStyle',
+    
+    // Audio
+    'musicOn',
+    'sfxOn',
+    
+    // Accessibility
+    'autoShowRulesOnStart',
+    'skipIntros',
+    
+    // Card animation
+    'cardHoldMs',
+    'cardGapMs',
+    'skipCascadeEnabled',
+    'skipTurboWindowMs',
+    'skipTurboHoldMs',
+    'skipTurboGapMs',
+    
+    // UI modes
+    'modernLiveVoteUI',
+    'enableMinigameTelemetryPanel'
+  ];
+
+  /**
+   * Configuration keys that affect gameflow and must be deferred until season restart
+   * These settings change competition mechanics, twist probabilities, or game rules
+   */
+  const DEFERRED_CONFIG_KEYS = [
+    // Game mechanics
+    'enableJuryHouse',
+    'doubleChance',
+    'tripleChance',
+    'returnChance',
+    'selfEvictChance',
+    'enablePublicFav',
+    'goldenPOVChance',
+    'diamondPOVChance',
+    
+    // Phase timers
+    'tOpening',
+    'tIntermission',
+    'tHOH',
+    'tNoms',
+    'tVeto',
+    'tVetoDec',
+    'tSocial',
+    'tLiveVote',
+    'tJury',
+    'tFinal3Comp1',
+    'tFinal3Comp2',
+    'tFinal3Decision',
+    'tJuryReturn',
+    
+    // Minigame settings
+    'miniMode',
+    'useNewMinigames',
+    'useUnifiedMinigames',
+    'enableMinigameBridge',
+    'minigameDuration',
+    
+    // Roster
+    'numPlayers',
+    
+    // Feature flags affecting gameplay
+    'progressionEnabled',
+    'social_logic_v2_enabled',
+    'social_cadence_enabled',
+    'social_inter_delay',
+    'aiSocialEnabled',
+    'aiSocialAggression',
+    'aiSocialMaxPerPhase',
+    'socialHighlightsEnabled',
+    'final4CombinedPower',
+    'enableIntermissionGames'
+  ];
+
+  /**
+   * Check if a config key should be deferred
+   * @param {string} key - Config key name
+   * @returns {boolean}
+   */
+  function isConfigKeyDeferred(key) {
+    return DEFERRED_CONFIG_KEYS.includes(key);
+  }
+
+  /**
+   * Check if a config key can be applied immediately
+   * @param {string} key - Config key name
+   * @returns {boolean}
+   */
+  function isConfigKeyImmediate(key) {
+    return IMMEDIATE_CONFIG_KEYS.includes(key);
+  }
+
+  /**
+   * Apply a config change, either immediately or defer it
+   * @param {string} key - Config key name
+   * @param {*} value - New value
+   */
+  function applyConfigChange(key, value) {
+    const g = global.game = global.game || {};
+    const cfg = g.cfg = g.cfg || {};
+    
+    // Check if game is active (not in lobby)
+    const isGameActive = g.phase && g.phase !== 'lobby' && g.week && g.week > 0;
+    
+    if (isGameActive && isConfigKeyDeferred(key)) {
+      // Defer the change - store in pending config
+      if (!g.cfgPending) {
+        g.cfgPending = {};
+      }
+      g.cfgPending[key] = value;
+      console.info(`[config/defaults] Deferred config change: ${key} = ${value} (will apply next season)`);
+      return 'deferred';
+    } else {
+      // Apply immediately
+      cfg[key] = value;
+      console.info(`[config/defaults] Applied config change: ${key} = ${value}`);
+      return 'applied';
+    }
+  }
+
+  /**
+   * Merge pending config changes into active config
+   * Called on season restart (week 1) or full refresh
+   */
+  function applyPendingConfig() {
+    const g = global.game;
+    if (!g || !g.cfgPending) {
+      console.info('[config/defaults] No pending config changes to apply');
+      return;
+    }
+
+    const keys = Object.keys(g.cfgPending);
+    console.info(`[config/defaults] Applying ${keys.length} pending config changes:`, keys);
+
+    // Merge pending into active config
+    Object.assign(g.cfg, g.cfgPending);
+    
+    // Save merged config
+    saveStoredCfg(g.cfg);
+    
+    // Dispatch telemetry event
+    if (g.bus && typeof g.bus.emit === 'function') {
+      g.bus.emit('config:pending-applied', {
+        keys,
+        timestamp: Date.now()
+      });
+    }
+
+    // Clear pending config
+    g.cfgPending = {};
+    
+    console.info('[config/defaults] ✓ Pending config applied');
+  }
+
+  /**
+   * Check if there are pending config changes
+   * @returns {boolean}
+   */
+  function hasPendingConfig() {
+    const g = global.game;
+    return !!(g && g.cfgPending && Object.keys(g.cfgPending).length > 0);
+  }
+
+  /**
+   * Get list of pending config keys
+   * @returns {string[]}
+   */
+  function getPendingConfigKeys() {
+    const g = global.game;
+    if (!g || !g.cfgPending) return [];
+    return Object.keys(g.cfgPending);
+  }
+
   // Export to global namespace
   const Config = global.Config = global.Config || {};
   Config.DEFAULT_CFG = DEFAULT_CFG;
@@ -129,6 +319,16 @@
   Config.loadStoredCfg = loadStoredCfg;
   Config.saveStoredCfg = saveStoredCfg;
   Config.ensureGameCfg = ensureGameCfg;
+  
+  // Deferred config system
+  Config.IMMEDIATE_CONFIG_KEYS = IMMEDIATE_CONFIG_KEYS;
+  Config.DEFERRED_CONFIG_KEYS = DEFERRED_CONFIG_KEYS;
+  Config.isConfigKeyDeferred = isConfigKeyDeferred;
+  Config.isConfigKeyImmediate = isConfigKeyImmediate;
+  Config.applyConfigChange = applyConfigChange;
+  Config.applyPendingConfig = applyPendingConfig;
+  Config.hasPendingConfig = hasPendingConfig;
+  Config.getPendingConfigKeys = getPendingConfigKeys;
 
   // Initialize config immediately
   ensureGameCfg();

@@ -85,6 +85,7 @@
     '.muted{color:#9aa3b2}',
     '.ok{color:#79d19a}',
     '.warn{color:#f2c862}',
+    '.deferred-indicator{color:#f2c862;font-size:.8em;margin-left:4px;cursor:help}',
     '@media (min-width:740px){ .settingsGrid{grid-template-columns:1fr 1fr} }',
     '.settingsTabPane[data-pane="cast"] .settingsGrid{grid-template-columns:1fr !important}',
     '.cast-wrap{display:flex;flex-direction:column;gap:8px;max-width:100%;overflow:hidden}',
@@ -435,17 +436,23 @@
     ].join('');
   }
   function checkbox(key, label){
+    const isDeferred = g.Config && g.Config.isConfigKeyDeferred && g.Config.isConfigKeyDeferred(key);
+    // Note: deferredIndicator is safe static HTML with no user input
+    const deferredIndicator = isDeferred ? ' <span class="deferred-indicator" title="Will apply next season">&#9201;</span>' : '';
     return [
       '<label class="toggleRow">',
-        '<span>'+UI.escapeHtml(label)+'</span>',
+        '<span>'+UI.escapeHtml(label)+deferredIndicator+'</span>',
         '<input type="checkbox" data-key="'+key+'">',
       '</label>'
     ].join('');
   }
   function number(key, label, min, max, step){
+    const isDeferred = g.Config && g.Config.isConfigKeyDeferred && g.Config.isConfigKeyDeferred(key);
+    // Note: deferredIndicator is safe static HTML with no user input
+    const deferredIndicator = isDeferred ? ' <span class="deferred-indicator" title="Will apply next season">&#9201;</span>' : '';
     return [
       '<label class="toggleRow">',
-        '<span>'+UI.escapeHtml(label)+'</span>',
+        '<span>'+UI.escapeHtml(label)+deferredIndicator+'</span>',
         '<input type="number" data-key="'+key+'" min="'+min+'" max="'+max+'" step="'+(step||1)+'" style="width:100px">',
       '</label>'
     ].join('');
@@ -1658,6 +1665,11 @@
       if(!g.game.players) g.game.players = [];
     }
     
+    // Pause game systems when opening settings
+    if(g.PauseController && typeof g.PauseController.pause === 'function'){
+      g.PauseController.pause('settings');
+    }
+    
     ensureGameCfg();
     const dim = ensureSettingsModal();
     const modal = dim.querySelector('.modal');
@@ -1673,6 +1685,15 @@
     
     // Subscribe to PlayerService for live updates while modal is open
     setupPlayerServiceSubscription(modal);
+    
+    // Add visual pause indicator
+    addPauseIndicator(modal);
+    
+    // Show pending config notice if applicable
+    showPendingConfigNotice(modal);
+    
+    // Disable FFWD controls while paused
+    disableFFWDControls();
     
     dim.style.display = 'flex';
     setTimeout(()=>{
@@ -1698,7 +1719,19 @@
       }
       
       modal.__playerServiceWired = false;
+      
+      // Remove pause indicator
+      removePauseIndicator(modal);
+      
+      // Re-enable FFWD controls
+      enableFFWDControls();
+      
       dim.style.display = 'none';
+      
+      // Resume game systems when closing settings
+      if(g.PauseController && typeof g.PauseController.resume === 'function'){
+        g.PauseController.resume();
+      }
     }
   }
   function applySettingsFromModal(modal){
@@ -1708,14 +1741,38 @@
     // Track if numPlayers changed to trigger applyPlayersFromSettings
     const oldNumPlayers = cfg.numPlayers;
     
+    // Track deferred changes
+    let hasDeferredChanges = false;
+    const deferredChanges = [];
+    
     modal.querySelectorAll('[data-key]').forEach(inp=>{
       const k = inp.getAttribute('data-key');
-      if(inp.type==='checkbox') cfg[k] = !!inp.checked;
-      else {
+      let newValue;
+      
+      if(inp.type==='checkbox') {
+        newValue = !!inp.checked;
+      } else {
         const v = parseFloat(inp.value);
-        if(!Number.isNaN(v)) cfg[k] = v;
+        newValue = !Number.isNaN(v) ? v : inp.value;
+      }
+      
+      // Check if value actually changed
+      const oldValue = cfg[k];
+      if(oldValue === newValue) return;
+      
+      // Use deferred config system if available
+      if(g.Config && g.Config.applyConfigChange){
+        const result = g.Config.applyConfigChange(k, newValue);
+        if(result === 'deferred'){
+          hasDeferredChanges = true;
+          deferredChanges.push(k);
+        }
+      } else {
+        // Fallback: apply immediately
+        cfg[k] = newValue;
       }
     });
+    
     saveStoredCfg(cfg);
     applyCfgEffects(cfg);
     
@@ -1724,9 +1781,137 @@
       applyPlayersFromSettings(cfg.numPlayers);
     }
     
+    // Notify user if changes were deferred
+    if(hasDeferredChanges && deferredChanges.length > 0){
+      notify(`${deferredChanges.length} setting(s) will apply next season`, 'warn');
+      console.info('[settings] Deferred changes:', deferredChanges);
+    }
+    
     g.updateHud?.();
   }
   function notify(msg, cls){ try{ g.addLog?.(msg, cls||''); }catch(e){} }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PAUSE INDICATOR & CONTROL HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Add visual pause indicator to settings modal
+   */
+  function addPauseIndicator(modal){
+    if(!modal) return;
+    
+    // Check if already exists
+    if(modal.querySelector('.pause-indicator')) return;
+    
+    const indicator = document.createElement('div');
+    indicator.className = 'pause-indicator';
+    indicator.innerHTML = '<span>⏸</span> Game Paused';
+    indicator.style.cssText = 'position:absolute;top:10px;right:60px;background:rgba(242,200,98,0.2);border:1px solid #f2c862;color:#f2c862;padding:4px 10px;border-radius:6px;font-size:0.75rem;display:flex;align-items:center;gap:4px;z-index:1';
+    
+    const h2 = modal.querySelector('h2');
+    if(h2){
+      h2.parentNode.insertBefore(indicator, h2.nextSibling);
+    } else {
+      modal.prepend(indicator);
+    }
+  }
+
+  /**
+   * Show notice if there are pending config changes
+   */
+  function showPendingConfigNotice(modal){
+    if(!modal) return;
+    
+    // Check if already exists
+    if(modal.querySelector('.pending-config-notice')) return;
+    
+    // Check if there are pending changes
+    if(!g.Config || !g.Config.hasPendingConfig || !g.Config.hasPendingConfig()){
+      return;
+    }
+    
+    const keys = g.Config.getPendingConfigKeys ? g.Config.getPendingConfigKeys() : [];
+    if(keys.length === 0) return;
+    
+    const notice = document.createElement('div');
+    notice.className = 'pending-config-notice';
+    notice.innerHTML = `
+      <strong>⏱ Pending Changes (${keys.length})</strong><br>
+      <span class="tiny">The following settings will apply next season: ${keys.join(', ')}</span>
+    `;
+    notice.style.cssText = 'background:rgba(242,200,98,0.15);border:1px solid #f2c862;color:#f2c862;padding:10px;border-radius:8px;margin:10px 0;font-size:0.8rem';
+    
+    const tabBar = modal.querySelector('.tabBar');
+    if(tabBar){
+      tabBar.parentNode.insertBefore(notice, tabBar.nextSibling);
+    }
+  }
+
+  /**
+   * Remove pause indicator from settings modal
+   */
+  function removePauseIndicator(modal){
+    if(!modal) return;
+    const indicator = modal.querySelector('.pause-indicator');
+    if(indicator){
+      indicator.remove();
+    }
+  }
+
+  /**
+   * Disable FFWD controls during pause
+   */
+  function disableFFWDControls(){
+    try{
+      // Disable FFWD button if present
+      const ffwdBtn = document.getElementById('ffwdBtn') || document.querySelector('[data-action="ffwd"]');
+      if(ffwdBtn){
+        ffwdBtn.disabled = true;
+        ffwdBtn.style.opacity = '0.5';
+        ffwdBtn.style.cursor = 'not-allowed';
+        ffwdBtn.setAttribute('data-pause-disabled', 'true');
+      }
+      
+      // Disable skip controls
+      const skipBtn = document.getElementById('skipBtn') || document.querySelector('[data-action="skip"]');
+      if(skipBtn){
+        skipBtn.disabled = true;
+        skipBtn.style.opacity = '0.5';
+        skipBtn.style.cursor = 'not-allowed';
+        skipBtn.setAttribute('data-pause-disabled', 'true');
+      }
+    }catch(e){
+      console.warn('[ui.config-and-settings] Error disabling FFWD controls:', e);
+    }
+  }
+
+  /**
+   * Re-enable FFWD controls after resume
+   */
+  function enableFFWDControls(){
+    try{
+      // Re-enable FFWD button if it was disabled by pause
+      const ffwdBtn = document.getElementById('ffwdBtn') || document.querySelector('[data-action="ffwd"]');
+      if(ffwdBtn && ffwdBtn.getAttribute('data-pause-disabled') === 'true'){
+        ffwdBtn.disabled = false;
+        ffwdBtn.style.opacity = '';
+        ffwdBtn.style.cursor = '';
+        ffwdBtn.removeAttribute('data-pause-disabled');
+      }
+      
+      // Re-enable skip controls
+      const skipBtn = document.getElementById('skipBtn') || document.querySelector('[data-action="skip"]');
+      if(skipBtn && skipBtn.getAttribute('data-pause-disabled') === 'true'){
+        skipBtn.disabled = false;
+        skipBtn.style.opacity = '';
+        skipBtn.style.cursor = '';
+        skipBtn.removeAttribute('data-pause-disabled');
+      }
+    }catch(e){
+      console.warn('[ui.config-and-settings] Error enabling FFWD controls:', e);
+    }
+  }
 
   // Public UI init
   UI.openSettingsModal = openSettingsModal;

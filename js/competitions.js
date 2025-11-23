@@ -1347,6 +1347,12 @@
   }
 
   function startHOH() {
+    // Guard: Block competition start while game is paused
+    if(g.PauseController && g.PauseController.isPaused && g.PauseController.isPaused()){
+      console.info('[competitions] startHOH blocked: game is paused');
+      return;
+    }
+    
     const g = global.game;
     g.lastCompScores = new Map(); g.hohOrder = [];
     g.__hohResolved = false;
