@@ -81,17 +81,30 @@
    * Get player avatar URL (with fallback to existing avatar system)
    */
   function getPlayerAvatar(player) {
+    // Use centralized avatar resolver if available
+    if (global.resolveAvatar) {
+      return global.resolveAvatar(player);
+    }
+    
+    // Fallback to player properties
     if (player.avatar) return player.avatar;
     if (player.avatarUrl) return player.avatarUrl;
     
-    // Use global avatar resolver if available
+    // Use dicebear as last resort
     if (global.getDicebearUrl) {
       return global.getDicebearUrl(player.name || player.id);
     }
     
-    // Fallback to dicebear
+    // Final fallback to dicebear
     const seed = player.name || player.id || 'player';
     return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed)}`;
+  }
+
+  /**
+   * Detect iOS Safari for eager loading
+   */
+  function shouldUseEagerLoading() {
+    return global.isIOSSafari && global.isIOSSafari();
   }
   
   /**
@@ -176,6 +189,86 @@
     // Clamp to min/max
     return Math.max(CONFIG.MIN_TILE_SIZE, Math.min(CONFIG.MAX_TILE_SIZE, tileSize));
   }
+
+  /**
+   * Calculate optimal roster and TV sizes to fit viewport without vertical scroll
+   * @returns {Object} { rosterHeight, tvHeight } in pixels
+   */
+  function calculateOptimalSizes() {
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    
+    // Account for fixed elements (topbar, etc.)
+    const topbarHeight = document.querySelector('.topbar')?.offsetHeight || 0;
+    const toolbarHeight = document.querySelector('.toolbar')?.offsetHeight || 0;
+    const fixedHeight = topbarHeight + toolbarHeight;
+    
+    // Available viewport height
+    const availableHeight = vh - fixedHeight - 40; // 40px for padding/margins
+    
+    // Calculate roster grid dimensions
+    const { columns, rows } = computeLayout(state.activePlayers.length, state.orientation);
+    const container = document.querySelector('.mobile-roster-active-grid');
+    const containerWidth = container?.offsetWidth || vw - 24; // 24px for padding
+    
+    const tileSize = calculateTileSize(containerWidth, columns);
+    const nameHeight = 20; // Height of name label
+    const gap = CONFIG.GAP_SIZE;
+    
+    // Calculate roster grid height
+    const rosterGridHeight = (rows * (tileSize + nameHeight)) + ((rows - 1) * gap);
+    
+    // Add height for evicted section if present
+    const evictedSectionHeight = state.evictedPlayers.length > 0 ? 60 : 0;
+    
+    // Total roster container height
+    const totalRosterHeight = rosterGridHeight + evictedSectionHeight + 32; // 32px for container padding
+    
+    // Calculate remaining space for TV
+    const remainingHeight = availableHeight - totalRosterHeight;
+    
+    // Minimum TV height
+    const minTvHeight = 200;
+    
+    // If we don't fit, scale down roster
+    if (remainingHeight < minTvHeight) {
+      const targetRosterHeight = availableHeight - minTvHeight - 20; // 20px gap
+      return {
+        rosterHeight: Math.max(targetRosterHeight, 200),
+        tvHeight: minTvHeight
+      };
+    }
+    
+    // Otherwise use calculated sizes
+    return {
+      rosterHeight: totalRosterHeight,
+      tvHeight: remainingHeight - 20 // 20px gap
+    };
+  }
+
+  /**
+   * Apply dynamic sizing to roster and TV
+   */
+  function applyDynamicSizing() {
+    if (!isMobileViewport() || !state.initialized) return;
+    
+    const { rosterHeight, tvHeight } = calculateOptimalSizes();
+    
+    // Apply to roster container
+    const rosterContainer = document.querySelector('.mobile-roster-container');
+    if (rosterContainer) {
+      rosterContainer.style.maxHeight = `${rosterHeight}px`;
+    }
+    
+    // Apply to TV
+    const tv = document.querySelector('.tv');
+    if (tv) {
+      tv.style.minHeight = `${tvHeight}px`;
+      tv.style.maxHeight = `${tvHeight}px`;
+    }
+    
+    console.info(`[MobileRoster] Dynamic sizing: roster=${rosterHeight}px, tv=${tvHeight}px`);
+  }
   
   // ============================
   // Rendering Functions
@@ -188,10 +281,11 @@
     const avatar = getPlayerAvatar(player);
     const name = shortenName(player.name || 'Guest');
     const statusLabel = getPlayerStatusLabel(player, isEvicted);
+    const loadingStrategy = shouldUseEagerLoading() ? 'eager' : 'lazy';
     
     let badgeHTML = '';
     if (isEvicted) {
-      badgeHTML = '<div class="mobile-roster-badge evict" aria-label="Evicted">✕</div>';
+      badgeHTML = '<div class="mobile-roster-badge evict" aria-label="EVCT - Evicted">EVCT</div>';
     } else {
       if (player.hoh) {
         badgeHTML = '<div class="mobile-roster-badge hoh" aria-label="Head of Household">🔑</div>';
@@ -203,11 +297,18 @@
     }
     
     const evictedClass = isEvicted ? 'evicted' : '';
+    const fallbackUrl = global.getAvatarFallback ? 
+      global.getAvatarFallback(player.name || player.id, null) : 
+      avatar;
+    
+    // Escape player ID and name for safe HTML attribute usage
+    const safePlayerId = String(player.id).replace(/"/g, '&quot;');
+    const safeName = String(player.name || 'Guest').replace(/"/g, '&quot;');
     
     return `
       <button 
         class="mobile-roster-tile ${evictedClass}"
-        data-player-id="${player.id}"
+        data-player-id="${safePlayerId}"
         data-evicted="${isEvicted}"
         aria-label="${statusLabel}"
         tabindex="0"
@@ -217,9 +318,12 @@
           <img 
             class="mobile-roster-avatar" 
             src="${avatar}" 
-            alt="${player.name || 'Guest'}"
-            loading="lazy"
+            alt="${safeName}"
+            loading="${loadingStrategy}"
+            data-fallback="${fallbackUrl}"
+            data-player-id="${safePlayerId}"
           />
+          ${isEvicted ? '<div class="mobile-roster-evicted-cross" aria-hidden="true"></div>' : ''}
           ${badgeHTML}
         </div>
         <div class="mobile-roster-name">${name}</div>
@@ -250,9 +354,31 @@
     const tilesHTML = state.activePlayers.map(p => createTileHTML(p, false)).join('');
     container.innerHTML = tilesHTML;
     
-    // Attach click handlers
+    // Attach click handlers and image error handlers
     container.querySelectorAll('.mobile-roster-tile').forEach(tile => {
       tile.addEventListener('click', handleTileClick);
+      
+      // Attach image load/error handlers
+      const img = tile.querySelector('.mobile-roster-avatar');
+      if (img) {
+        const playerId = tile.getAttribute('data-player-id');
+        const fallbackUrl = img.getAttribute('data-fallback');
+        
+        img.addEventListener('load', () => {
+          if (global.updateAvatarTrackingStatus) {
+            global.updateAvatarTrackingStatus(playerId, 'success');
+          }
+        });
+        
+        img.addEventListener('error', function() {
+          if (fallbackUrl && this.src !== fallbackUrl) {
+            this.src = fallbackUrl;
+          }
+          if (global.updateAvatarTrackingStatus) {
+            global.updateAvatarTrackingStatus(playerId, 'failed', this.src);
+          }
+        });
+      }
     });
     
     console.info(`[MobileRoster] Rendered ${state.activePlayers.length} active players in ${columns}x grid`);
@@ -286,9 +412,31 @@
     const tilesHTML = state.evictedPlayers.map(p => createTileHTML(p, true)).join('');
     grid.innerHTML = tilesHTML;
     
-    // Attach click handlers
+    // Attach click handlers and image error handlers
     grid.querySelectorAll('.mobile-roster-tile').forEach(tile => {
       tile.addEventListener('click', handleTileClick);
+      
+      // Attach image load/error handlers
+      const img = tile.querySelector('.mobile-roster-avatar');
+      if (img) {
+        const playerId = tile.getAttribute('data-player-id');
+        const fallbackUrl = img.getAttribute('data-fallback');
+        
+        img.addEventListener('load', () => {
+          if (global.updateAvatarTrackingStatus) {
+            global.updateAvatarTrackingStatus(playerId, 'success');
+          }
+        });
+        
+        img.addEventListener('error', function() {
+          if (fallbackUrl && this.src !== fallbackUrl) {
+            this.src = fallbackUrl;
+          }
+          if (global.updateAvatarTrackingStatus) {
+            global.updateAvatarTrackingStatus(playerId, 'failed', this.src);
+          }
+        });
+      }
     });
     
     console.info(`[MobileRoster] Rendered ${state.evictedPlayers.length} evicted players`);
@@ -308,8 +456,95 @@
     // Update CSS variables
     container.style.setProperty('--mobile-roster-tile-size', `${tileSize}px`);
     container.style.setProperty('--mobile-roster-gap', `${CONFIG.GAP_SIZE}px`);
+    
+    // Apply dynamic viewport sizing
+    applyDynamicSizing();
   }
   
+  // ============================
+  // TV Footer Bar
+  // ============================
+
+  /**
+   * Create or update the TV footer bar with status chips
+   */
+  function updateTVFooterBar() {
+    const tvNow = document.querySelector('#tvNow');
+    if (!tvNow) return;
+
+    // Get or create footer bar
+    let footer = tvNow.querySelector('.mobile-roster-tv-footer');
+    if (!footer) {
+      footer = document.createElement('div');
+      footer.className = 'mobile-roster-tv-footer';
+      tvNow.appendChild(footer);
+    }
+
+    // Get game state
+    const game = global.game || {};
+    const season = game.season || 1;
+    const week = game.week || 1;
+    const phase = game.phase || 'lobby';
+    const activeCount = state.activePlayers.length;
+    const evictedCount = state.evictedPlayers.length;
+
+    // Format phase name
+    const phaseNames = {
+      'lobby': 'Lobby',
+      'opening': 'Opening',
+      'social': 'Social',
+      'hoh': 'HOH Comp',
+      'nominations': 'Nominations',
+      'veto': 'Veto Comp',
+      'veto_ceremony': 'Veto Ceremony',
+      'livevote': 'Live Vote',
+      'eviction': 'Eviction',
+      'finale': 'Finale'
+    };
+    const phaseName = phaseNames[phase] || phase;
+
+    // Create footer HTML
+    footer.innerHTML = `
+      <div class="tv-footer-chip" aria-label="Current phase">
+        <span class="chip-icon">📍</span>
+        <span class="chip-text">${phaseName}</span>
+      </div>
+      <div class="tv-footer-chip" aria-label="Season and week">
+        <span class="chip-icon">📅</span>
+        <span class="chip-text">S${season} W${week}</span>
+      </div>
+      <div class="tv-footer-chip" aria-label="Active houseguests">
+        <span class="chip-icon">👥</span>
+        <span class="chip-text">${activeCount}</span>
+      </div>
+      ${evictedCount > 0 ? `
+        <button 
+          class="tv-footer-chip chip-evicted" 
+          data-action="toggle-evicted"
+          aria-label="Show evicted houseguests"
+        >
+          <span class="chip-icon">👻</span>
+          <span class="chip-text">Evicted (${evictedCount})</span>
+        </button>
+      ` : ''}
+    `;
+
+    // Attach event listener to evicted chip
+    const evictedChip = footer.querySelector('[data-action="toggle-evicted"]');
+    if (evictedChip) {
+      evictedChip.addEventListener('click', toggleEvictedPanel);
+    }
+
+    console.info('[MobileRoster] TV footer bar updated');
+  }
+
+  /**
+   * Toggle evicted panel (exposed for onclick)
+   */
+  function toggleEvictedPanel() {
+    handleEvictedToggle();
+  }
+
   // ============================
   // Player Spotlight (Faux TV)
   // ============================
@@ -558,6 +793,7 @@
     renderActiveGrid();
     renderEvictedPanel();
     updateSizes();
+    updateTVFooterBar();
   }
   
   // ============================
@@ -585,6 +821,103 @@
     console.info('[MobileRoster] Deactivated mobile roster view');
   }
   
+  // ============================
+  // Debug Overlay
+  // ============================
+
+  /**
+   * Check if debug mode is enabled via ?debug=1
+   */
+  function isDebugMode() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('debug') === '1';
+  }
+
+  /**
+   * Create and show debug overlay
+   */
+  function createDebugOverlay() {
+    if (!isDebugMode()) return;
+
+    const existing = document.querySelector('.mobile-roster-debug-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-roster-debug-overlay';
+    overlay.innerHTML = `
+      <div class="debug-header">
+        <h3>Avatar Debug Panel</h3>
+        <button class="debug-close" aria-label="Close debug panel">✕</button>
+      </div>
+      <div class="debug-content">
+        <div class="debug-summary">
+          <div class="debug-stat">
+            <label>iOS Safari:</label>
+            <span>${global.isIOSSafari ? global.isIOSSafari() : false}</span>
+          </div>
+          <div class="debug-stat">
+            <label>Active Players:</label>
+            <span>${state.activePlayers.length}</span>
+          </div>
+          <div class="debug-stat">
+            <label>Evicted Players:</label>
+            <span>${state.evictedPlayers.length}</span>
+          </div>
+        </div>
+        <div class="debug-players" id="debugPlayersList"></div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Close button handler
+    overlay.querySelector('.debug-close').addEventListener('click', () => {
+      overlay.remove();
+    });
+
+    // Update player list
+    updateDebugPlayerList();
+
+    console.info('[MobileRoster Debug] Overlay created');
+  }
+
+  /**
+   * Update debug player list with load status
+   */
+  function updateDebugPlayerList() {
+    const container = document.getElementById('debugPlayersList');
+    if (!container) return;
+
+    const allPlayers = [...state.activePlayers, ...state.evictedPlayers];
+    const tracking = global.getAvatarLoadTracking ? global.getAvatarLoadTracking() : new Map();
+
+    const html = allPlayers.map(player => {
+      const trackData = tracking.get(player.id) || {};
+      const status = trackData.status || 'unknown';
+      const statusClass = status === 'success' ? 'success' : 
+                         status === 'failed' ? 'failed' : 'pending';
+      const statusIcon = status === 'success' ? '✓' : 
+                        status === 'failed' ? '✗' : '⏳';
+
+      return `
+        <div class="debug-player-row ${statusClass}">
+          <div class="debug-player-info">
+            <strong>${player.name || 'Guest'}</strong>
+            <span class="debug-player-id">(ID: ${player.id})</span>
+          </div>
+          <div class="debug-status">
+            <span class="debug-status-icon">${statusIcon}</span>
+            <span class="debug-status-text">${status}</span>
+          </div>
+          ${trackData.url ? `<div class="debug-url">${trackData.url}</div>` : ''}
+          ${trackData.error ? `<div class="debug-error">${trackData.error}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = html || '<div class="debug-empty">No players to display</div>';
+  }
+
   // ============================
   // Initialization
   // ============================
@@ -715,6 +1048,17 @@
     
     state.initialized = true;
     console.info('[MobileRoster] Initialization complete');
+
+    // Create debug overlay if debug mode enabled
+    if (isDebugMode()) {
+      createDebugOverlay();
+      // Update debug info every 2 seconds
+      setInterval(() => {
+        if (document.querySelector('.mobile-roster-debug-overlay')) {
+          updateDebugPlayerList();
+        }
+      }, 2000);
+    }
   }
   
   /**
@@ -746,6 +1090,7 @@
     computeLayout,
     focusPlayer,
     updatePlayerLists,
+    toggleEvictedPanel,
     getState: () => ({ ...state }), // Return copy for debugging
   };
   

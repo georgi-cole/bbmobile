@@ -1,6 +1,6 @@
 // MODULE: avatar.js
 // Centralized avatar resolution system using ./avatars/ folder
-// Enhanced with multi-format support, negative caching, and strict mode
+// Enhanced with multi-format support, negative caching, strict mode, and iOS support
 
 (function(g){
   'use strict';
@@ -14,6 +14,9 @@
   // Negative cache: tracks failed avatar attempts to prevent 404 storms
   const failedAvatars = new Set();
   
+  // Load tracking for debug mode
+  const loadTracking = new Map(); // playerId -> {url, status, timestamp, error}
+  
   // Resolution stats for diagnostics
   const stats = {
     resolved: 0,
@@ -21,15 +24,64 @@
     strictMiss: 0
   };
 
+  // Detect iOS Safari for eager loading optimization
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const isIOSSafari = isIOS && isSafari;
+
+  // Configurable base path for different deployment contexts
+  // Can be overridden via window.AVATAR_BASE_PATH if needed
+  const GITHUB_PAGES_PATH = '/bbmobile/';
+  
+  /**
+   * Resolve absolute path for GitHub Pages deployment
+   * Handles both local dev and GitHub Pages paths
+   */
+  function resolveAssetPath(relativePath) {
+    if (!relativePath || typeof relativePath !== 'string') return relativePath;
+    
+    // If already absolute or external URL, return as-is
+    if (relativePath.startsWith('http://') || 
+        relativePath.startsWith('https://') ||
+        relativePath.startsWith('data:')) {
+      return relativePath;
+    }
+    
+    // Remove leading ./ if present
+    const cleanPath = relativePath.replace(/^\.\//, '');
+    
+    // Check for custom base path override
+    const customBasePath = typeof window !== 'undefined' && window.AVATAR_BASE_PATH;
+    
+    // Get base path (for GitHub Pages, this would be /bbmobile/)
+    const basePath = customBasePath || 
+                     document.querySelector('base')?.href || 
+                     window.location.pathname.split('/').slice(0, -1).join('/') || '';
+    
+    // If we're in a subdirectory (GitHub Pages), ensure proper path
+    if (basePath && basePath.includes(GITHUB_PAGES_PATH)) {
+      return basePath + '/' + cleanPath;
+    }
+    
+    // Local dev: use relative path with leading slash
+    return '/' + cleanPath;
+  }
+
+  /**
+   * Track avatar load status for debug overlay
+   */
+  function trackAvatarLoad(playerId, url, status, error = null) {
+    loadTracking.set(playerId, {
+      url,
+      status, // 'attempting', 'success', 'failed'
+      timestamp: Date.now(),
+      error
+    });
+  }
+
   // Helper to get player object by ID
   function gp(id) {
     return g.getP?.(id) || (g.game?.players || g.players || []).find(p => p?.id === id);
-  }
-
-  // Helper to get player name
-  function safeName(id) {
-    const player = gp(id);
-    return player?.name || String(id);
   }
 
   // Helper to detect legacy numeric .jpg pattern (e.g., "./avatars/1.jpg")
@@ -128,13 +180,18 @@
       candidates.push('./avatars/You.png');
     }
     
-    // Return first candidate not in negative cache
+    // Return first candidate not in negative cache, with resolved path
     for (const candidate of candidates) {
       if (!failedAvatars.has(candidate)) {
         // Store reference for onerror tracking
         if (!player) player = { id: playerId, name: playerName };
-        player.__avatarUrl = candidate;
-        return candidate;
+        const resolvedPath = resolveAssetPath(candidate);
+        player.__avatarUrl = resolvedPath;
+        
+        // Track for debug overlay
+        trackAvatarLoad(playerId, resolvedPath, 'attempting');
+        
+        return resolvedPath;
       }
     }
     
@@ -269,13 +326,45 @@
     }, 3000);
   }
 
+  /**
+   * Get iOS Safari detection flag
+   */
+  function getIsIOSSafari() {
+    return isIOSSafari;
+  }
+
+  /**
+   * Get avatar load tracking data (for debug overlay)
+   */
+  function getLoadTracking() {
+    return new Map(loadTracking);
+  }
+
+  /**
+   * Update tracking status (called by image onload/onerror)
+   */
+  function updateTrackingStatus(playerId, status, error = null) {
+    const existing = loadTracking.get(playerId);
+    if (existing) {
+      existing.status = status;
+      existing.error = error;
+      existing.timestamp = Date.now();
+    }
+  }
+
   // Export to global
   g.resolveAvatar = resolveAvatar;
   g.getAvatarFallback = getAvatarFallback;
+  g.resolveAssetPath = resolveAssetPath;
+  g.isIOSSafari = getIsIOSSafari;
+  g.getAvatarLoadTracking = getLoadTracking;
+  g.updateAvatarTrackingStatus = updateTrackingStatus;
   
   // Expose diagnostic function
   if (typeof window !== 'undefined') {
     window.__dumpAvatarStatus = dumpAvatarStatus;
   }
+
+  console.info('[avatar] Module loaded (iOS Safari:', isIOSSafari, ')');
 
 })(window.Game || window);

@@ -8,6 +8,12 @@
  * - Accessibility-friendly (keyboard nav, ARIA labels)
  */
 
+:root {
+  --evicted-color: #e74c3c;
+  --evicted-color-dark: #c0392b;
+  --evicted-color-rgb: 231, 76, 60;
+}
+
 /* ============================
    Container & Layout Structure
    ============================ */
@@ -266,32 +272,138 @@ body[data-mobile-roster-active="true"] #rosterBar {
   border-radius: 2px;
 }
 
-/* Evicted tile - dimmed version */
+/* Evicted tile - dimmed version with red cross overlay */
 .mobile-roster-tile.evicted {
-  opacity: 0.65;
-  filter: grayscale(0.8);
+  opacity: 0.75;
   flex: 0 0 auto;
   width: 80px;
   scroll-snap-align: start;
 }
 
 .mobile-roster-tile.evicted .mobile-roster-avatar {
-  filter: grayscale(1) brightness(0.6);
+  filter: grayscale(1) brightness(0.75);
 }
 
 .mobile-roster-tile.evicted:hover .mobile-roster-avatar {
-  filter: grayscale(0.9) brightness(0.7);
+  filter: grayscale(0.9) brightness(0.8);
+}
+
+/* Red cross overlay for evicted players */
+.mobile-roster-evicted-cross {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.mobile-roster-evicted-cross::before,
+.mobile-roster-evicted-cross::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--evicted-color) 20%, var(--evicted-color) 80%, transparent);
+  transform-origin: center;
+  box-shadow: 0 0 6px rgba(var(--evicted-color-rgb), 0.8);
+}
+
+.mobile-roster-evicted-cross::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.mobile-roster-evicted-cross::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 /* Evicted badge */
 .mobile-roster-badge.evict {
-  background: linear-gradient(135deg, #555, #333);
+  background: linear-gradient(135deg, var(--evicted-color-dark), var(--evicted-color));
   color: #fff;
-  font-size: 0.65rem;
+  font-size: 0.5rem;
+  font-weight: 700;
   width: 32px;
   height: 32px;
   top: -8px;
   right: -8px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================
+   TV Footer Bar
+   ============================ */
+
+.mobile-roster-tv-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.75) 60%, transparent);
+  backdrop-filter: blur(8px);
+  z-index: 5;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Hide scrollbar for Chrome/Safari */
+.mobile-roster-tv-footer::-webkit-scrollbar {
+  display: none;
+}
+
+.tv-footer-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+  flex-shrink: 0;
+}
+
+.tv-footer-chip.chip-evicted {
+  cursor: pointer;
+  background: rgba(var(--evicted-color-rgb), 0.2);
+  border-color: rgba(var(--evicted-color-rgb), 0.4);
+}
+
+.tv-footer-chip.chip-evicted:hover {
+  background: rgba(var(--evicted-color-rgb), 0.3);
+  border-color: rgba(var(--evicted-color-rgb), 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(var(--evicted-color-rgb), 0.4);
+}
+
+.chip-icon {
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.chip-text {
+  font-size: 0.65rem;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Adjust TV viewport to accommodate footer */
+body[data-mobile-roster-active="true"] #tvNow {
+  position: relative;
+  min-height: 200px;
 }
 
 /* ============================
@@ -301,6 +413,8 @@ body[data-mobile-roster-active="true"] #rosterBar {
 /* When mobile roster is active, adjust faux TV positioning */
 body[data-mobile-roster-active="true"] .tv {
   margin-top: 12px;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Faux TV player spotlight */
@@ -351,7 +465,7 @@ body[data-mobile-roster-active="true"] .tv {
 }
 
 .mobile-roster-spotlight-status.evicted {
-  color: #e74c3c;
+  color: var(--evicted-color);
   font-weight: 600;
 }
 
@@ -443,6 +557,172 @@ body[data-mobile-roster-active="true"] .tv {
   body[data-mobile-roster-active="true"] #rosterBar {
     display: flex;
   }
+}
+
+/* ============================
+   Debug Overlay (?debug=1)
+   ============================ */
+
+.mobile-roster-debug-overlay {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: min(90vw, 400px);
+  max-height: 80vh;
+  background: var(--card);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--primary-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.debug-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.debug-close {
+  background: transparent;
+  border: none;
+  color: var(--muted-2);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.debug-close:hover {
+  color: var(--ink);
+}
+
+.debug-content {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.debug-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--card-2);
+  border-radius: 8px;
+}
+
+.debug-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.debug-stat label {
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+.debug-stat span {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.debug-players {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.debug-player-row {
+  padding: 10px;
+  background: var(--card-2);
+  border-radius: 8px;
+  border-left: 3px solid var(--line);
+}
+
+.debug-player-row.success {
+  border-left-color: #27ae60;
+}
+
+.debug-player-row.failed {
+  border-left-color: var(--evicted-color);
+}
+
+.debug-player-row.pending {
+  border-left-color: #f39c12;
+}
+
+.debug-player-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.debug-player-info strong {
+  color: var(--ink);
+}
+
+.debug-player-id {
+  color: var(--muted-2);
+  font-size: 0.7rem;
+}
+
+.debug-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.debug-status-icon {
+  font-size: 1rem;
+}
+
+.debug-status-text {
+  color: var(--muted-2);
+  text-transform: capitalize;
+}
+
+.debug-url {
+  font-size: 0.65rem;
+  color: var(--muted);
+  word-break: break-all;
+  margin-top: 4px;
+  padding: 4px 6px;
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+.debug-error {
+  font-size: 0.65rem;
+  color: var(--evicted-color);
+  margin-top: 4px;
+  padding: 4px 6px;
+  background: rgba(var(--evicted-color-rgb), 0.1);
+  border-radius: 4px;
+}
+
+.debug-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--muted);
 }
 
 /* ============================

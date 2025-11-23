@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Roster Improvements Test</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/mobileRoster.css">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+    }
+    
+    .test-header {
+      padding: 16px;
+      background: var(--card);
+      border-bottom: 2px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .test-header h1 {
+      margin: 0 0 8px 0;
+      font-size: 1.3rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    
+    .test-btn {
+      padding: 8px 16px;
+      background: var(--primary-2);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    
+    .test-btn:hover {
+      background: var(--primary-3);
+      transform: translateY(-1px);
+    }
+    
+    .test-info {
+      margin-top: 12px;
+      padding: 10px;
+      background: var(--card-2);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: var(--muted-2);
+    }
+    
+    .test-info strong {
+      color: var(--ink);
+    }
+    
+    /* Mock TV structure */
+    .tv {
+      margin: 16px 12px;
+      background: var(--card);
+      border-radius: 12px;
+      border: 2px solid var(--line);
+      min-height: 300px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .tvViewport {
+      position: relative;
+      min-height: 250px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    #tvNow {
+      position: relative;
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+    }
+    
+    /* Mock roster bar (hidden when mobile active) */
+    #rosterBar {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      background: var(--card-2);
+      border-bottom: 1px solid var(--line);
+      overflow-x: auto;
+    }
+    
+    .roster-tile-mock {
+      min-width: 60px;
+      height: 80px;
+      background: var(--primary-2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: var(--muted-2);
+    }
+  </style>
+</head>
+<body>
+  <!-- Test Header -->
+  <div class="test-header">
+    <h1>Mobile Roster Improvements</h1>
+    <div class="test-info">
+      <strong>Features:</strong> iOS avatar loading, evicted preservation, dynamic sizing, TV footer bar, debug overlay (?debug=1)
+      <br>
+      <strong>Viewport:</strong> <span id="viewportInfo">Loading...</span>
+      <br>
+      <strong>iOS Safari:</strong> <span id="iosInfo">Detecting...</span>
+    </div>
+    <div class="test-controls">
+      <button class="test-btn" onclick="simulateEviction()">Simulate Eviction</button>
+      <button class="test-btn" onclick="addPlayer()">Add Player</button>
+      <button class="test-btn" onclick="removePlayer()">Remove Player</button>
+      <button class="test-btn" onclick="testResize()">Test Resize</button>
+      <button class="test-btn" onclick="toggleDebug()">Toggle Debug</button>
+      <button class="test-btn" onclick="dumpState()">Dump State</button>
+    </div>
+  </div>
+
+  <!-- Mock roster bar (will be hidden on mobile) -->
+  <div id="rosterBar">
+    <div class="roster-tile-mock">Desktop Roster</div>
+    <div class="roster-tile-mock">Tile 2</div>
+    <div class="roster-tile-mock">Tile 3</div>
+  </div>
+
+  <!-- Mock TV (will have footer bar added) -->
+  <div class="tv">
+    <div class="tvViewport">
+      <div id="tvNow">
+        <div>Faux TV Area</div>
+      </div>
+      <div id="tvOverlay"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // Mock global Game object
+    window.Game = window.Game || {};
+    
+    // Mock getDicebearUrl
+    window.Game.getDicebearUrl = window.getDicebearUrl || function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+  </script>
+  
+  <!-- Load avatar system -->
+  <script src="js/avatar.js"></script>
+  
+  <!-- Load mobile roster -->
+  <script src="js/ui/mobileRoster.js"></script>
+  
+  <script>
+    // Mock game state
+    window.game = {
+      season: 1,
+      week: 3,
+      phase: 'social',
+      players: []
+    };
+
+    // Create test players with real avatar names from /avatars folder
+    const avatarNames = ['Aria', 'Ash', 'Bea', 'Blue', 'Dex', 'Echo', 'Finn', 'Ivy', 'Jax', 'Kai', 'Lux', 'Mimi', 'Nico', 'Nova', 'Quinn'];
+    
+    function createTestPlayers(count = 12) {
+      const players = [];
+      for (let i = 0; i < count; i++) {
+        const name = avatarNames[i % avatarNames.length];
+        players.push({
+          id: i,
+          name: name + (i >= avatarNames.length ? ` ${Math.floor(i / avatarNames.length) + 1}` : ''),
+          avatar: `./avatars/${name}.png`,
+          evicted: false,
+          hoh: i === 0,
+          nominated: i === 1 || i === 2,
+          pov: i === 3
+        });
+      }
+      return players;
+    }
+
+    // Initialize players
+    window.game.players = createTestPlayers(12);
+
+    // Update viewport info
+    function updateViewportInfo() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const orientation = window.matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait';
+      document.getElementById('viewportInfo').textContent = `${vw}×${vh} (${orientation})`;
+    }
+
+    // Update iOS info
+    function updateIOSInfo() {
+      const isIOS = window.Game.isIOSSafari ? window.Game.isIOSSafari() : false;
+      document.getElementById('iosInfo').textContent = isIOS ? 'YES ✓' : 'NO';
+    }
+
+    // Test functions
+    function simulateEviction() {
+      const activePlayers = window.game.players.filter(p => !p.evicted);
+      if (activePlayers.length === 0) {
+        alert('No active players to evict!');
+        return;
+      }
+      
+      const playerToEvict = activePlayers[Math.floor(Math.random() * activePlayers.length)];
+      playerToEvict.evicted = true;
+      playerToEvict.evictedAt = window.game.week;
+      
+      console.log('[Test] Evicted player:', playerToEvict.name);
+      
+      // Refresh mobile roster
+      if (window.MobileRoster) {
+        window.MobileRoster.refresh();
+      }
+    }
+
+    function addPlayer() {
+      const count = window.game.players.length;
+      const name = avatarNames[count % avatarNames.length];
+      window.game.players.push({
+        id: count,
+        name: name + ` ${Math.floor(count / avatarNames.length) + 1}`,
+        avatar: `./avatars/${name}.png`,
+        evicted: false
+      });
+      
+      console.log('[Test] Added player:', window.game.players[count].name);
+      
+      if (window.MobileRoster) {
+        window.MobileRoster.refresh();
+      }
+    }
+
+    function removePlayer() {
+      const activePlayers = window.game.players.filter(p => !p.evicted);
+      if (activePlayers.length === 0) {
+        alert('No active players to remove!');
+        return;
+      }
+      
+      const index = window.game.players.findIndex(p => !p.evicted);
+      const removed = window.game.players.splice(index, 1)[0];
+      
+      console.log('[Test] Removed player:', removed.name);
+      
+      if (window.MobileRoster) {
+        window.MobileRoster.refresh();
+      }
+    }
+
+    function testResize() {
+      // Trigger resize event
+      window.dispatchEvent(new Event('resize'));
+      console.log('[Test] Triggered resize event');
+      updateViewportInfo();
+    }
+
+    function toggleDebug() {
+      const current = new URLSearchParams(window.location.search).get('debug');
+      const newValue = current === '1' ? '0' : '1';
+      const url = new URL(window.location);
+      url.searchParams.set('debug', newValue);
+      window.location.href = url.toString();
+    }
+
+    function dumpState() {
+      if (window.MobileRoster) {
+        const state = window.MobileRoster.getState();
+        console.log('[Test] Mobile Roster State:', state);
+        console.table(state.activePlayers);
+        console.table(state.evictedPlayers);
+      }
+      
+      if (window.__dumpAvatarStatus) {
+        window.__dumpAvatarStatus();
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('[Test] Page loaded, initializing mobile roster...');
+      
+      // Initialize mobile roster
+      if (window.MobileRoster) {
+        window.MobileRoster.init();
+      }
+      
+      // Update info displays
+      updateViewportInfo();
+      updateIOSInfo();
+      
+      // Listen for resize
+      window.addEventListener('resize', updateViewportInfo);
+      
+      console.log('[Test] Initialization complete');
+      console.log('[Test] Game state:', window.game);
+      console.log('[Test] Try these commands:');
+      console.log('  - simulateEviction()');
+      console.log('  - addPlayer() / removePlayer()');
+      console.log('  - testResize()');
+      console.log('  - dumpState()');
+      console.log('  - window.__dumpAvatarStatus()');
+    });
+  </script>
+</body>
+</html>
