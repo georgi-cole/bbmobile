@@ -141,7 +141,7 @@
 
     // Start playback when video is ready
     const attemptAutoplay = () => {
-      // HAVE_CURRENT_DATA = 2 (enough data to play current frame)
+      // readyState >= 2 (HTMLMediaElement.HAVE_CURRENT_DATA): enough data to render current frame
       if (vid.readyState >= 2) {
         const p = vid.play();
         if (p && p.then) {
@@ -149,13 +149,11 @@
             console.info('[intro-outro] Autoplay started successfully');
           }).catch((err) => {
             console.warn('[intro-outro] Autoplay blocked:', err.message);
-            // For intro, show tap button if autoplay fails
+            // Show tap button as fallback if autoplay fails
             if (isIntro) {
               tap.textContent = 'Tap to Play';
-              tap.style.display = 'block';
-            } else {
-              tap.style.display = 'block';
             }
+            tap.style.display = 'block';
           });
         }
       }
@@ -166,7 +164,7 @@
     
     vid.src = url;
     
-    // If already ready, try immediately (readyState >= HAVE_CURRENT_DATA)
+    // If already ready (readyState >= 2), try immediately
     if (vid.readyState >= 2) {
       attemptAutoplay();
     }
