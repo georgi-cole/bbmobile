@@ -1511,6 +1511,10 @@
   const g = global.game || (global.game = {});
   if(!global.CompetitionFlow) global.CompetitionFlow = {};
 
+  // Constants
+  const RESULTS_POPUP_DURATION = 3500; // ms - must match showResultsPopup duration parameter
+  const PHASE_TRANSITION_DELAY = 2000; // ms - delay before resetting guard flag to allow phase transition to complete
+
   // Feature flag default ON
   if(!g.cfg) g.cfg = {};
   if(typeof g.cfg.autoFastAdvanceCompetitions === 'undefined'){
@@ -1580,11 +1584,12 @@
       const phase = g.phase;
       
       // Schedule flag reset after phase transition completes
+      // Uses PHASE_TRANSITION_DELAY to allow finish functions to complete phase change before allowing next competition
       const resetFlag = () => {
         setTimeout(() => {
           g.__fastAdvancingCompetition = false;
           console.info('[ImmediateResults] Reset fast-advancing flag for next competition');
-        }, 2000);
+        }, PHASE_TRANSITION_DELAY);
       };
       
       if(phase === 'hoh' && typeof global.finishCompPhase === 'function' && !g.__hohResolved){
@@ -1660,7 +1665,7 @@
     }
     console.info('[ImmediateResults] Showing competition results popup:', title, topThree);
     try{
-      const promise = global.showResultsPopup({ title, topThree, winnerEmoji: '🏆', duration: 3500 });
+      const promise = global.showResultsPopup({ title, topThree, winnerEmoji: '🏆', duration: RESULTS_POPUP_DURATION });
       if(promise && typeof promise.then === 'function'){
         promise.then(() => {
           console.info('[ImmediateResults] Results popup finished – resolving phase');
@@ -1673,7 +1678,7 @@
         setTimeout(() => {
             console.info('[ImmediateResults] Popup duration elapsed – resolving phase');
             resolveCompetitionPhaseIfNeeded();
-        }, 3500);
+        }, RESULTS_POPUP_DURATION);
       }
     }catch(err){
       console.warn('[ImmediateResults] Failed to show popup – resolving immediately:', err);
