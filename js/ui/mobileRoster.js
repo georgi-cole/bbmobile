@@ -521,6 +521,7 @@
   
   /**
    * Render the evicted players panel
+   * Per spec: evicted players stay in main grid, so hide the drawer
    */
   function renderEvictedPanel() {
     const toggle = document.querySelector('.mobile-roster-evicted-toggle');
@@ -529,78 +530,11 @@
     
     if (!toggle || !panel || !grid) return;
     
-    // Update count badge
-    const countBadge = toggle.querySelector('.evicted-count');
-    if (countBadge) {
-      countBadge.textContent = state.evictedPlayers.length;
-    }
+    // Hide the evicted drawer since evicted players are now in main grid
+    toggle.style.display = 'none';
+    panel.style.display = 'none';
     
-    // Show/hide toggle based on evicted count
-    if (state.evictedPlayers.length === 0) {
-      toggle.style.display = 'none';
-      return;
-    } else {
-      toggle.style.display = 'flex';
-    }
-    
-    // Render evicted tiles (earliest first)
-    const tilesHTML = state.evictedPlayers.map(p => createTileHTML(p, true)).join('');
-    grid.innerHTML = tilesHTML;
-    
-    // Attach click handlers, long press handlers, and image error handlers
-    grid.querySelectorAll('.mobile-roster-tile').forEach(tile => {
-      tile.addEventListener('click', handleTileClick);
-      tile.addEventListener('pointerdown', handlePointerDown);
-      tile.addEventListener('pointerup', handlePointerEnd);
-      tile.addEventListener('pointerleave', handlePointerEnd);
-      tile.addEventListener('pointercancel', handlePointerEnd);
-      
-      // Attach image load/error handlers with case-insensitive fallback
-      const img = tile.querySelector('.mobile-roster-avatar');
-      if (img) {
-        const playerId = tile.getAttribute('data-player-id');
-        const player = state.evictedPlayers.find(p => String(p.id) === String(playerId));
-        
-        const candidates = [];
-        
-        if (player && player.name) {
-          candidates.push(...generateAvatarCandidates(player.name));
-          // Add placeholder as final fallback
-          candidates.push('avatars/placeholder.png');
-        } else {
-          candidates.push('avatars/placeholder.png');
-        }
-        
-        // Store candidates on image element to avoid closure issues
-        img.dataset.avatarCandidates = JSON.stringify(candidates);
-        img.dataset.candidateIndex = '0';
-        
-        img.addEventListener('load', () => {
-          if (global.updateAvatarTrackingStatus) {
-            global.updateAvatarTrackingStatus(playerId, 'success');
-          }
-        });
-        
-        img.addEventListener('error', function() {
-          const candidates = JSON.parse(this.dataset.avatarCandidates || '[]');
-          let candidateIndex = parseInt(this.dataset.candidateIndex || '0', 10);
-          candidateIndex++;
-          this.dataset.candidateIndex = String(candidateIndex);
-          
-          if (candidateIndex < candidates.length) {
-            // Try next candidate
-            this.src = candidates[candidateIndex];
-          } else {
-            // All candidates failed
-            if (global.updateAvatarTrackingStatus) {
-              global.updateAvatarTrackingStatus(playerId, 'failed', this.src);
-            }
-          }
-        });
-      }
-    });
-    
-    console.info(`[MobileRoster] Rendered ${state.evictedPlayers.length} evicted players`);
+    console.info(`[MobileRoster] Evicted panel hidden - ${state.evictedPlayers.length} evicted players in main grid`);
   }
   
   /**

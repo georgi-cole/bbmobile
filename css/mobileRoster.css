@@ -272,29 +272,33 @@ body[data-mobile-roster-active="true"] #rosterBar {
   border-radius: 2px;
 }
 
-/* Evicted tile - dimmed version with red cross overlay */
-.mobile-roster-tile.evicted {
-  opacity: 0.75;
-  flex: 0 0 auto;
-  width: 80px;
-  scroll-snap-align: start;
-}
-
-.mobile-roster-tile.evicted .mobile-roster-avatar {
-  filter: grayscale(0.85) brightness(0.75);
-}
-
-.mobile-roster-tile.evicted:hover .mobile-roster-avatar {
-  filter: grayscale(0.75) brightness(0.8);
-}
-
-/* Evicted players in main grid (not in drawer) */
+/* Evicted players in main grid - same size as active players */
 .mobile-roster-active-grid .mobile-roster-tile.evicted {
   opacity: 0.75;
 }
 
 .mobile-roster-active-grid .mobile-roster-tile.evicted .mobile-roster-avatar {
   filter: grayscale(0.85) brightness(0.75);
+}
+
+.mobile-roster-active-grid .mobile-roster-tile.evicted:hover .mobile-roster-avatar {
+  filter: grayscale(0.75) brightness(0.8);
+}
+
+/* Evicted tile in drawer (if drawer is used) - smaller size */
+.mobile-roster-evicted-grid .mobile-roster-tile.evicted {
+  opacity: 0.75;
+  flex: 0 0 auto;
+  width: 80px;
+  scroll-snap-align: start;
+}
+
+.mobile-roster-evicted-grid .mobile-roster-tile.evicted .mobile-roster-avatar {
+  filter: grayscale(0.85) brightness(0.75);
+}
+
+.mobile-roster-evicted-grid .mobile-roster-tile.evicted:hover .mobile-roster-avatar {
+  filter: grayscale(0.75) brightness(0.8);
 }
 
 /* Red cross overlay for evicted players */
