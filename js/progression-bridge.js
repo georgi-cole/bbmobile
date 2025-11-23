@@ -165,8 +165,7 @@
     }
 
     try {
-      // Get player-specific state with seasonal XP
-      const state = await getPlayerState(playerId, seasonId);
+      const state = await progressionCore.getCurrentState();
       const breakdown = await progressionCore.getBreakdown();
       
       // Get leaderboard if not provided
@@ -178,17 +177,14 @@
       console.log('[Progression Bridge] Overview state:', {
         totalXP: state.totalXP,
         level: state.level,
-        progressPercent: state.progressPercent,
-        isMax: state.isMax,
-        seasonXP: state.seasonXP
+        progressPercent: state.progressPercent
       });
       if (leaderboard.length > 0) {
         const currentPlayer = leaderboard.find(p => p.playerId === playerId);
         if (currentPlayer) {
           console.log('[Progression Bridge] Leaderboard player:', {
             playerId: currentPlayer.playerId,
-            aggregateXP: currentPlayer.aggregateXP,
-            seasonXP: currentPlayer.seasonXP,
+            totalXP: currentPlayer.totalXP,
             level: currentPlayer.level
           });
         }
@@ -206,7 +202,7 @@
         modal.updateLeaderboard(leaderboard, playerId);
       }
       if (modal.updateOverview) {
-        modal.updateOverview(state, progressionCore.DEFAULT_LEVEL_THRESHOLDS || [], progressionCore.MAX_LEVEL || 20);
+        modal.updateOverview(state, progressionCore.DEFAULT_LEVEL_THRESHOLDS || []);
       }
       if (modal.updateBreakdown) {
         modal.updateBreakdown(breakdown);
@@ -222,7 +218,7 @@
   /**
    * Get leaderboard aggregated across all players
    * @param {number} seasonId - Season ID
-   * @returns {Promise<Array>} Top players by seasonal XP (ranked) with aggregate XP and level
+   * @returns {Promise<Array>} Top players by XP
    */
   async function getLeaderboard(seasonId) {
     // Safe no-op when disabled
@@ -244,10 +240,9 @@
         players
           .filter(p => !p.evicted)
           .map(async p => {
-            let playerState = { totalXP: 0, level: 1, seasonXP: 0 };
+            let playerState = { totalXP: 0, level: 1 };
             try {
-              // Pass seasonId to get seasonal XP calculation
-              playerState = await getPlayerState(p.id, seasonId);
+              playerState = await getPlayerState(p.id);
             } catch (e) {
               console.warn('[Progression Bridge] Failed to get player state for playerId:', p.id, e);
               // playerState remains at default
@@ -255,16 +250,15 @@
             return {
               playerId: p.id,
               playerName: p.name,
-              aggregateXP: playerState.totalXP || 0,  // Total XP across all seasons
-              seasonXP: playerState.seasonXP || 0,     // XP for current season only
-              level: playerState.level || 1            // Level from aggregate XP
+              totalXP: playerState.totalXP || 0,
+              level: playerState.level || 1
             };
           })
       );
 
-      // Sort by seasonal XP (for ranking) but display level from aggregate XP
+      // Sort and take top 5
       const leaderboard = leaderboardStates
-        .sort((a, b) => b.seasonXP - a.seasonXP)
+        .sort((a, b) => b.totalXP - a.totalXP)
         .slice(0, 5);
 
       return leaderboard;
@@ -312,10 +306,9 @@
   /**
    * Get individual player state
    * @param {string} playerId - Player ID
-   * @param {number} seasonId - Optional season ID for seasonal XP calculation
    * @returns {Promise<object>} Player progression state
    */
-  async function getPlayerState(playerId, seasonId) {
+  async function getPlayerState(playerId) {
     // Safe no-op when disabled
     if (!isEnabled()) {
       return {
@@ -324,9 +317,7 @@
         nextLevelXP: 100,
         currentLevelXP: 0,
         progressPercent: 0,
-        eventsCount: 0,
-        isMax: false,
-        seasonXP: 0
+        eventsCount: 0
       };
     }
     
@@ -337,37 +328,27 @@
     try {
       // Preferred: use core's getPlayerState if available
       if (progressionCore.getPlayerState) {
-        return await progressionCore.getPlayerState(playerId, seasonId);
+        return await progressionCore.getPlayerState(playerId);
       }
       
       // Fallback: derive player state from events filtered by playerId
-      if (progressionCore.getEvents && progressionCore.computeLevel) {
+      if (progressionCore.getEvents) {
         const allEvents = await progressionCore.getEvents();
         const playerEvents = allEvents.filter(e => e.meta?.playerId === playerId);
         
-        // Calculate aggregate XP from all player's events
+        // Calculate totals from player's events
         const totalXP = playerEvents.reduce((sum, e) => sum + (e.amount || 0), 0);
         const eventsCount = playerEvents.length;
         
-        // Calculate seasonal XP if seasonId provided
-        let seasonXP = 0;
-        if (seasonId !== undefined) {
-          const seasonEvents = playerEvents.filter(e => e.season === seasonId);
-          seasonXP = seasonEvents.reduce((sum, e) => sum + (e.amount || 0), 0);
-        }
-        
         // Use proper level calculation with thresholds (same as reducer)
         const levelThresholds = progressionCore.DEFAULT_LEVEL_THRESHOLDS || [];
-        const { level, nextLevelXP, currentLevelXP, isMax } = progressionCore.computeLevel(totalXP, levelThresholds);
+        const { level, nextLevelXP, currentLevelXP } = progressionCore.computeLevel 
+          ? progressionCore.computeLevel(totalXP, levelThresholds)
+          : { level: 1, nextLevelXP: 100, currentLevelXP: 0 };
         
-        // Calculate progress percent with max level clamping
-        let progressPercent = 0;
-        if (isMax) {
-          progressPercent = 100;
-        } else if (currentLevelXP > 0 && nextLevelXP > currentLevelXP) {
-          progressPercent = Math.round(((totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100);
-          progressPercent = Math.min(100, progressPercent);
-        }
+        const progressPercent = currentLevelXP > 0 
+          ? Math.round(((totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100)
+          : 0;
         
         return {
           totalXP,
@@ -375,9 +356,7 @@
           nextLevelXP,
           currentLevelXP,
           progressPercent,
-          eventsCount,
-          isMax,
-          seasonXP
+          eventsCount
         };
       }
       
@@ -391,9 +370,7 @@
         nextLevelXP: 100,
         currentLevelXP: 0,
         progressPercent: 0,
-        eventsCount: 0,
-        isMax: false,
-        seasonXP: 0
+        eventsCount: 0
       };
     }
   }

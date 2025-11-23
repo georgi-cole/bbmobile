@@ -19,15 +19,9 @@ export declare function recordEvent(ruleId: string, amount: number, meta?: {
     [key: string]: unknown;
 }): Promise<XPEvent>;
 /**
- * Get current player state (aggregate across all players)
+ * Get current player state
  */
 export declare function getCurrentState(): Promise<PlayerState>;
-/**
- * Get player-specific progression state
- * @param playerId - Player ID
- * @param currentSeasonId - Optional current season ID for seasonal XP
- */
-export declare function getPlayerState(playerId: string, currentSeasonId?: number): Promise<PlayerState>;
 /**
  * Get XP breakdown by rule
  */
@@ -63,4 +57,3 @@ export declare function close(): void;
 export * from './types.js';
 export * from './constants.js';
 export { computeLevel } from './reducer.js';
-export * from './utils/player.js';
