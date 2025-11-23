@@ -74,6 +74,7 @@
     vid.setAttribute('webkit-playsinline', '');
     vid.controls = false;
     vid.autoplay = true;
+    vid.setAttribute('autoplay', '');
     vid.muted = false;
 
     const skip = document.createElement('button');
