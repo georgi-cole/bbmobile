@@ -367,9 +367,63 @@
       return;
     }
 
-    // Legacy panel for 3+ nominee evictions (non-triple mode)
+    // FALLBACK: Check if we should use legacy lv2 UI (for any two-nominee eviction, voter or observer)
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
+
+    if (useLv2) {
+      // Clear any lingering TV overlay content before showing lv2 UI
+      try { 
+        if (typeof global.clearTVOverlayContent === 'function') {
+          global.clearTVOverlayContent(); 
+        }
+      } catch (e) { 
+        console.warn('[LiveVote] clearTVOverlayContent failed', e); 
+      }
+      
+      // Use modern Live Vote 2.0 UI - render inside TV
+      const [leftId, rightId] = g.eviction.nominees;
+      global.lv2.init({
+        leftName: global.safeName(leftId),
+        rightName: global.safeName(rightId),
+        leftId: leftId,
+        rightId: rightId
+      });
+
+      // Create CTA bar for voting inside TV
+      const remain = global.alivePlayers().length;
+      const isFinal4 = remain === 4;
+
+      // Only make CTA if human can vote and hasn't voted yet
+      if (humanIsVoter && !hasVoted) {
+        global.lv2.createCtaBar({
+          enabled: true,
+          isFinal4: isFinal4,
+          isTieBreak: false,
+          leftName: global.safeName(leftId),
+          rightName: global.safeName(rightId),
+          leftId: leftId,
+          rightId: rightId,
+          onVote: (pickId) => {
+            lockHumanVote(pickId);
+            global.lv2.updateCtaBar({ enabled: false });
+          }
+        });
+        global.lv2.setTurn?.(true);
+      } else {
+        // Observer mode: no voting UI, just watch
+        global.lv2.setTurn?.(false);
+      }
+
+      // Panel will be hidden by lv2.init, so we're done
+      return;
+    }
+
     const box=document.createElement('div'); box.className='minigame-host'; 
-    box.innerHTML='<h3>Live Vote</h3>';
+    if (!useLv2) {
+      box.innerHTML='<h3>Live Vote</h3>';
+    }
     const remain=global.alivePlayers().length;
 
     const info=document.createElement('div'); info.className='tiny';
@@ -386,49 +440,49 @@
       box.appendChild(note);
     }
 
-    // Live tally (handles 2 or >2 automatically)
-    // Note: This is only reached for 3+ nominee evictions that don't use triple UI
-    // 2-nominee evictions use InlineEvictController instead
-    if(g.eviction.nominees.length===2){
-      const [A,B]=g.eviction.nominees;
-      const tally=document.createElement('div');
-      tally.innerHTML=`
-        <div class="tiny" style="margin-top:8px;margin-bottom:4px">Live Tally</div>
-        <div style="display:flex; gap:8px; align-items:flex-end">
-          <div class="lvCol">
-            <div class="tiny muted" id="lvNameA">${global.safeName(A)}</div>
-            <div class="lvBarWrap"><div id="lvBarA" class="lvBar"></div></div>
-            <div class="tiny" id="lvCountA">0</div>
-          </div>
-          <div class="lvCol">
-            <div class="tiny muted" id="lvNameB">${global.safeName(B)}</div>
-            <div class="lvBarWrap"><div id="lvBarB" class="lvBar alt"></div></div>
-            <div class="tiny" id="lvCountB">0</div>
-          </div>
-        </div>`;
-      box.appendChild(tally);
-    } else {
-      const hdr=document.createElement('div');
-      hdr.className='tiny'; hdr.style.margin='8px 0 4px';
-      hdr.textContent='Live Tally';
-      box.appendChild(hdr);
-      const ul=document.createElement('ul'); ul.id='lvMultiList'; ul.className='tiny';
-      g.eviction.nominees.forEach(id=>{
-        const li=document.createElement('li'); li.dataset.candId=String(id);
-        li.textContent=`${global.safeName(id)} — 0`;
+    // Live tally (handles 2 or >2 automatically) - only show if NOT using lv2
+    if (!useLv2) {
+      if(g.eviction.nominees.length===2){
+        const [A,B]=g.eviction.nominees;
+        const tally=document.createElement('div');
+        tally.innerHTML=`
+          <div class="tiny" style="margin-top:8px;margin-bottom:4px">Live Tally</div>
+          <div style="display:flex; gap:8px; align-items:flex-end">
+            <div class="lvCol">
+              <div class="tiny muted" id="lvNameA">${global.safeName(A)}</div>
+              <div class="lvBarWrap"><div id="lvBarA" class="lvBar"></div></div>
+              <div class="tiny" id="lvCountA">0</div>
+            </div>
+            <div class="lvCol">
+              <div class="tiny muted" id="lvNameB">${global.safeName(B)}</div>
+              <div class="lvBarWrap"><div id="lvBarB" class="lvBar alt"></div></div>
+              <div class="tiny" id="lvCountB">0</div>
+            </div>
+          </div>`;
+        box.appendChild(tally);
+      } else {
+        const hdr=document.createElement('div');
+        hdr.className='tiny'; hdr.style.margin='8px 0 4px';
+        hdr.textContent='Live Tally';
+        box.appendChild(hdr);
+        const ul=document.createElement('ul'); ul.id='lvMultiList'; ul.className='tiny';
+        g.eviction.nominees.forEach(id=>{
+          const li=document.createElement('li'); li.dataset.candId=String(id);
+          li.textContent=`${global.safeName(id)} — 0`;
+          ul.appendChild(li);
+        });
+        box.appendChild(ul);
+      }
+
+      // Voter checklist
+      const ul=document.createElement('ul'); ul.id='liveVoteList'; ul.className='tiny'; ul.style.marginTop='6px';
+      voters.forEach(v=>{
+        const li=document.createElement('li'); li.dataset.voterId=String(v.id);
+        li.textContent=`${v.name} — waiting`;
         ul.appendChild(li);
       });
       box.appendChild(ul);
     }
-
-    // Voter checklist
-    const ul=document.createElement('ul'); ul.id='liveVoteList'; ul.className='tiny'; ul.style.marginTop='6px';
-    voters.forEach(v=>{
-      const li=document.createElement('li'); li.dataset.voterId=String(v.id);
-      li.textContent=`${v.name} — waiting`;
-      ul.appendChild(li);
-    });
-    box.appendChild(ul);
 
     // Human voting UI (2-nom or multi-nom), locked after vote
     const votedName = hasVoted ? global.safeName(g.__human_vote) : null;
@@ -778,25 +832,30 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
+    // Consistent LV2 activation pattern (twoMode equivalent to g.eviction.nominees.length === 2)
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
     const tripleMode = noms.length === 3;
-    
-    // Check if InlineEvictController is active for 2-nominee evictions
-    const inlineController = g.eviction.__inlineController;
-    const useInlineController = twoMode && !!inlineController;
-    
     let tallyA=0, tallyB=0;
     const counts = new Map(noms.map(id=>[id,0]));
     
-    // Close all vote UI unless using inline controller (which stays visible)
-    if (!useInlineController) {
+    // Do NOT tear down LV2 overlay during diary sequence
+    // If LV2 is active, keep it visible so voter chips can render in real time
+    if (!useLv2) {
+      // Only close vote UI if NOT using LV2
       if (global.closeAllVoteUI) {
         console.info('[eviction] Closing all vote UI before diary room sequence');
         global.closeAllVoteUI();
       }
     } else {
-      console.debug('[eviction] InlineEvictController active — keeping UI during diary sequence');
+      console.debug('[eviction] LV2 active — keeping overlay during diary sequence');
     }
     
+    // Hide CTA bar when voting phase begins (issue #574)
+    if (useLv2 && global.lv2?.hideCtaBar) {
+      global.lv2.hideCtaBar();
+    }
     // Hide triple CTAs if using triple UI
     if (tripleMode && global.lv2?.hideCtasTriple) {
       global.lv2.hideCtasTriple();
@@ -813,26 +872,34 @@
       // Pause on human turn until they actually vote (no auto vote)
       if(entry.voter===g.humanId && entry.evict==null){
         markVoter(entry.voter,'your turn…');
-        // Show diary room card if not using inline controller
-        if(!useInlineController){ 
-          global.showCard?.('Diary Room',["It's your turn. Please cast your vote now."],'live',2000,true); 
-        }
+        if(!useLv2){ global.showCard?.('Diary Room',["It's your turn. Please cast your vote now."],'live',2000,true); } else{ global.lv2?.setTurn?.(true); }
         try{ await waitForHumanVote(); }catch{}
         entry.evict = g.__human_vote;
+        if(useLv2){ global.lv2?.setTurn?.(false); }
       }
 
       const pick=entry.evict;
       const nameV=global.safeName(entry.voter), namePick=global.safeName(pick);
       markVoter(entry.voter,'voting…');
       
-      // Show diary room with avatars (unless using inline controller which shows inline)
-      if(!useInlineController){ 
+      // Issue #5: Show diary room with avatars (legacy) OR push vote to LV2
+      if(!useLv2){ 
         showDiaryRoomWithAvatars(entry.voter, pick, `${nameV}: I vote to evict ${namePick}.`, 3000);
         await sleep(3000);
-      } else {
-        // InlineEvictController doesn't need vote animation during diary sequence
-        // Results will be shown inline after all votes are cast
-        await sleep(1500);
+      } else { 
+        // LV2 path: Push vote to show voter chip and update counts
+        if(global.lv2?.pushVote){
+          // leftId is first nominee (left position in LV2 UI)
+          // Compare pick with leftId to determine 'left' or 'right' vote attribution
+          const [leftId] = noms;
+          const votePick = pick === leftId ? 'left' : 'right';
+          global.lv2.pushVote({
+            voterId: entry.voter,
+            voterName: nameV,
+            pick: votePick
+          });
+        }
+        await sleep(1500); // Wait for LV2 to process vote
       }
       try{ await global.cardQueueWaitIdle?.(); }catch{}
       
@@ -849,13 +916,13 @@
       if(twoMode){
         const [A,B]=noms;
         if(pick===A) tallyA++; else tallyB++;
-        // Update legacy graph if not using inline controller
-        if(!useInlineController) {
+        // Only update legacy graph when NOT using LV2 (LV2 handles counts internally)
+        if(!useLv2) {
           updateLiveVoteGraph(tallyA,tallyB);
         }
       } else {
         counts.set(pick,(counts.get(pick)||0)+1);
-        // Multi-nominee legacy list
+        // Multi-nominee legacy list - no LV2 for 3+ nominees, always update
         updateLiveVoteMulti(counts);
       }
       markVoter(entry.voter,`voted (${namePick})`);
@@ -869,6 +936,11 @@
       global.LiveVoteRollout.hide();
     }
 
+    // Hook: Mark lv2 as finished
+    if(twoMode && global.lv2?.finish){
+      global.lv2.finish();
+    }
+
     if(twoMode) await revealVotes(true,tallyA,tallyB);
     else await revealVotes(true,counts);
   }
@@ -880,6 +952,9 @@
     // Check which UI system is active
     const inlineController = g.eviction.__inlineController;
     const useInlineController = !!inlineController;
+    const useLv2 = !useInlineController && g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
     const hoh=global.getP(global.game.hohId);
     
     if (useInlineController) {
@@ -887,9 +962,18 @@
       inlineController.updateFlags({ tieBreak: true });
       inlineController.updateInstructions('Tie! HOH must break it.');
       await sleep(2000);
-    } else {
+    } else if (!useLv2) {
       global.showCard('Tiebreak',['We have a tie! The HOH must break it.'],'live',3000,true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
+    } else {
+      // Show in-TV tie message
+      const status = document.querySelector('.lv2-status');
+      if (status) {
+        status.textContent = 'Tie! HOH must break it.';
+        status.classList.remove('muted');
+        status.classList.add('warn');
+      }
+      await sleep(2000);
     }
     
     // Hook: Log XP for tiebreaker
@@ -899,15 +983,32 @@
     
     if(hoh?.human){
       // Show rollout overlay for HOH tie-break (expected=1)
-      if (global.LiveVoteRollout && !useInlineController) {
+      if (global.LiveVoteRollout && !useLv2 && !useInlineController) {
         global.LiveVoteRollout.show({
           expectedVotes: 1,
           nominees: [a, b]
         });
       }
       
-      const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict', useInlineController);
+      const pick = await awaitHumanTieBreakPick([a,b],'Tiebreak — Choose who to evict',useLv2 || useInlineController);
       if(pick===a) ca++; else cb++;
+      
+      // Push HOH tie-break vote to LV2 feed if active
+      if (useLv2) {
+        try {
+          // Note: a and b come from g.eviction.nominees array in order, matching LV2 init
+          // a is leftId (index 0), b is rightId (index 1)
+          const side = pick === a ? 'left' : 'right';
+          global.lv2?.pushVote?.({
+            voterId: hoh.id,
+            voterName: hoh.name,
+            pick: side
+          });
+          await sleep(1500); // Wait for chip to appear
+        } catch (e) {
+          console.warn('[eviction] lv2.pushVote failed for HOH tie-break:', e);
+        }
+      }
       
       // Add HOH vote to rollout
       if (global.LiveVoteRollout?.isShowing?.()) {
@@ -923,7 +1024,7 @@
         global.LiveVoteRollout.hide();
       }
       
-      if (!useInlineController) {
+      if (!useLv2) {
         global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(pick)}.`],'live',3000,true);
         try{ await global.cardQueueWaitIdle?.(); }catch{}
       }
@@ -932,7 +1033,24 @@
     const ha=(hoh.affinity[a]??0), hb=(hoh.affinity[b]??0);
     const evId = ha < hb ? a : b;
     
-    if (!useInlineController) {
+    // Push AI HOH tie-break vote to LV2 feed if active
+    if (useLv2) {
+      try {
+        // Note: a and b come from g.eviction.nominees array in order, matching LV2 init
+        // a is leftId (index 0), b is rightId (index 1)
+        const side = evId === a ? 'left' : 'right';
+        global.lv2?.pushVote?.({
+          voterId: hoh.id,
+          voterName: hoh.name,
+          pick: side
+        });
+        await sleep(1500); // Wait for chip to appear
+      } catch (e) {
+        console.warn('[eviction] lv2.pushVote failed for AI HOH tie-break:', e);
+      }
+    }
+    
+    if (!useLv2) {
       global.showCard('HOH',[`${hoh.name}: I choose to evict ${global.safeName(evId)}.`],'live',3000,true);
       try{ await global.cardQueueWaitIdle?.(); }catch{}
     }
@@ -940,7 +1058,7 @@
     return {evId,ca,cb};
   }
 
-  function awaitHumanTieBreakPick(cIds,title,useInlineController=false){
+  function awaitHumanTieBreakPick(cIds,title,useLv2=false){
     return new Promise(resolve=>{
       let resolved = false;
       
@@ -997,7 +1115,7 @@
             inlineController.callbacks.onVote = originalCallback;
             safeResolve(pickId);
           };
-        } else if (global.LiveVoteOverlay) {
+        } else if (global.LiveVoteOverlay && !useLv2) {
           // Use two-step voting overlay for tie-break
           global.LiveVoteOverlay.show({
             nominees: cIds,
@@ -1007,6 +1125,21 @@
               if (global.closeAllVoteUI) {
                 global.closeAllVoteUI();
               }
+              safeResolve(pickId);
+            }
+          });
+        } else if (useLv2 && global.lv2?.createCtaBar) {
+          // Use lv2 CTA bar for tiebreak
+          const [leftId, rightId] = cIds;
+          global.lv2.createCtaBar({
+            enabled: true,
+            isTieBreak: true,
+            leftName: global.safeName(leftId),
+            rightName: global.safeName(rightId),
+            leftId: leftId,
+            rightId: rightId,
+            onVote: (pickId) => {
+              global.lv2.updateCtaBar({ enabled: false });
               safeResolve(pickId);
             }
           });
@@ -1040,6 +1173,11 @@
 
     const noms=g.eviction.nominees.slice();
     const twoMode = noms.length===2;
+    // Consistent LV2 activation pattern (twoMode equivalent to g.eviction.nominees.length === 2)
+    const useLv2 = g.eviction.nominees.length === 2 
+      && g.cfg?.modernLiveVoteUI !== false 
+      && global.lv2?.enabled !== false;
+
     if(twoMode){
       let ca=preAorCounts, cb=preB;
       if(!alreadyTallied){
@@ -1091,7 +1229,7 @@
         
         // Wait for user to read result (simulate duration)
         await sleep(3600);
-      } else {
+      } else if (!useLv2) {
         // Use new eviction modal for better visibility (not clipped by TV overlay)
         if (typeof global.EvictionModal?.show === 'function') {
           await global.EvictionModal.show({
@@ -1105,6 +1243,39 @@
           global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
           try{ await global.cardQueueWaitIdle?.(); }catch{}
         }
+      } else {
+        // LV2 Result Sequence:
+        // 1. Begin result card phase (fade nominees/feed, manage z-index)
+        global.lv2?.beginResultCardPhase?.();
+        
+        // 2. Show result: prioritize inline card for mobile/narrow, viewport modal for desktop
+        if (global.lv2?.supportsInlineCard?.()) {
+          // Mobile/narrow: Inline card within TV that respects safe areas
+          await global.lv2.showInlineCard({
+            title: 'Eviction Result',
+            body: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
+            duration: 3600,
+            tone: 'evict'
+          });
+        } else if (typeof global.EvictionModal?.show === 'function') {
+          // Desktop/wide: Viewport-level modal (escapes TV clipping)
+          await global.EvictionModal.show({
+            title: 'Eviction Result',
+            lines: [`By a vote of ${finalA} to ${finalB}, ${evName} has been evicted.`],
+            tone: 'evict',
+            duration: 3600
+          });
+        } else {
+          // Fallback: Legacy page-level card system
+          global.showCard('Eviction Result',[`By a vote of ${finalA} to ${finalB}, ${evName}, ${pickEvictionPhrase()}`],'evict',3800,true);
+          try{ await global.cardQueueWaitIdle?.(); }catch{}
+        }
+        
+        // 3. End result card phase (restore overlay z-index)
+        global.lv2?.endResultCardPhase?.();
+        
+        // Note: Avatar animation now handled by runEvictionVisual in handleEvictionLegacy
+        // Removed lv2.showEvicteeFinal to prevent duplicate animations (regression fix)
       }
       
       global.addLog?.(`Evicted: ${evName} (${finalA}–${finalB}).`,'danger');
@@ -1391,6 +1562,11 @@
       // Guard: Only show if result card hasn't been shown yet (prevents duplicates)
       const evName = global.safeName(evId);
       const voteSummary = g.eviction.voteSummary || '';
+      
+      // Initialize overlay phase for proper positioning (matching multi-eviction)
+      if (typeof global.lv2?.beginResultCardPhase === 'function') {
+        global.lv2.beginResultCardPhase();
+      }
       
       // Show result card with vote summary and eviction phrase (two-line format like multi)
       if (typeof global.EvictionModal?.show === 'function') {
