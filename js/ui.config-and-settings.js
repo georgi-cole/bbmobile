@@ -85,6 +85,7 @@
     '.muted{color:#9aa3b2}',
     '.ok{color:#79d19a}',
     '.warn{color:#f2c862}',
+    '.deferred-indicator{color:#f2c862;font-size:.8em;margin-left:4px;cursor:help}',
     '@media (min-width:740px){ .settingsGrid{grid-template-columns:1fr 1fr} }',
     '.settingsTabPane[data-pane="cast"] .settingsGrid{grid-template-columns:1fr !important}',
     '.cast-wrap{display:flex;flex-direction:column;gap:8px;max-width:100%;overflow:hidden}',
@@ -435,17 +436,21 @@
     ].join('');
   }
   function checkbox(key, label){
+    const isDeferred = g.Config && g.Config.isConfigKeyDeferred && g.Config.isConfigKeyDeferred(key);
+    const deferredIndicator = isDeferred ? ' <span class="deferred-indicator" title="Will apply next season">⏱</span>' : '';
     return [
       '<label class="toggleRow">',
-        '<span>'+UI.escapeHtml(label)+'</span>',
+        '<span>'+UI.escapeHtml(label)+deferredIndicator+'</span>',
         '<input type="checkbox" data-key="'+key+'">',
       '</label>'
     ].join('');
   }
   function number(key, label, min, max, step){
+    const isDeferred = g.Config && g.Config.isConfigKeyDeferred && g.Config.isConfigKeyDeferred(key);
+    const deferredIndicator = isDeferred ? ' <span class="deferred-indicator" title="Will apply next season">⏱</span>' : '';
     return [
       '<label class="toggleRow">',
-        '<span>'+UI.escapeHtml(label)+'</span>',
+        '<span>'+UI.escapeHtml(label)+deferredIndicator+'</span>',
         '<input type="number" data-key="'+key+'" min="'+min+'" max="'+max+'" step="'+(step||1)+'" style="width:100px">',
       '</label>'
     ].join('');
@@ -1682,6 +1687,9 @@
     // Add visual pause indicator
     addPauseIndicator(modal);
     
+    // Show pending config notice if applicable
+    showPendingConfigNotice(modal);
+    
     // Disable FFWD controls while paused
     disableFFWDControls();
     
@@ -1731,20 +1739,50 @@
     // Track if numPlayers changed to trigger applyPlayersFromSettings
     const oldNumPlayers = cfg.numPlayers;
     
+    // Track deferred changes
+    let hasDeferredChanges = false;
+    const deferredChanges = [];
+    
     modal.querySelectorAll('[data-key]').forEach(inp=>{
       const k = inp.getAttribute('data-key');
-      if(inp.type==='checkbox') cfg[k] = !!inp.checked;
-      else {
+      let newValue;
+      
+      if(inp.type==='checkbox') {
+        newValue = !!inp.checked;
+      } else {
         const v = parseFloat(inp.value);
-        if(!Number.isNaN(v)) cfg[k] = v;
+        newValue = !Number.isNaN(v) ? v : inp.value;
+      }
+      
+      // Check if value actually changed
+      const oldValue = cfg[k];
+      if(oldValue === newValue) return;
+      
+      // Use deferred config system if available
+      if(g.Config && g.Config.applyConfigChange){
+        const result = g.Config.applyConfigChange(k, newValue);
+        if(result === 'deferred'){
+          hasDeferredChanges = true;
+          deferredChanges.push(k);
+        }
+      } else {
+        // Fallback: apply immediately
+        cfg[k] = newValue;
       }
     });
+    
     saveStoredCfg(cfg);
     applyCfgEffects(cfg);
     
     // If numPlayers changed, apply it (will defer mid-season, rebuild in lobby)
     if(oldNumPlayers !== cfg.numPlayers){
       applyPlayersFromSettings(cfg.numPlayers);
+    }
+    
+    // Notify user if changes were deferred
+    if(hasDeferredChanges && deferredChanges.length > 0){
+      notify(`${deferredChanges.length} setting(s) will apply next season`, 'warn');
+      console.info('[settings] Deferred changes:', deferredChanges);
     }
     
     g.updateHud?.();
@@ -1774,6 +1812,37 @@
       h2.parentNode.insertBefore(indicator, h2.nextSibling);
     } else {
       modal.prepend(indicator);
+    }
+  }
+
+  /**
+   * Show notice if there are pending config changes
+   */
+  function showPendingConfigNotice(modal){
+    if(!modal) return;
+    
+    // Check if already exists
+    if(modal.querySelector('.pending-config-notice')) return;
+    
+    // Check if there are pending changes
+    if(!g.Config || !g.Config.hasPendingConfig || !g.Config.hasPendingConfig()){
+      return;
+    }
+    
+    const keys = g.Config.getPendingConfigKeys ? g.Config.getPendingConfigKeys() : [];
+    if(keys.length === 0) return;
+    
+    const notice = document.createElement('div');
+    notice.className = 'pending-config-notice';
+    notice.innerHTML = `
+      <strong>⏱ Pending Changes (${keys.length})</strong><br>
+      <span class="tiny">The following settings will apply next season: ${keys.join(', ')}</span>
+    `;
+    notice.style.cssText = 'background:rgba(242,200,98,0.15);border:1px solid #f2c862;color:#f2c862;padding:10px;border-radius:8px;margin:10px 0;font-size:0.8rem';
+    
+    const tabBar = modal.querySelector('.tabBar');
+    if(tabBar){
+      tabBar.parentNode.insertBefore(notice, tabBar.nextSibling);
     }
   }
 
