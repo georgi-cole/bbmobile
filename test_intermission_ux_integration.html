@@ -267,7 +267,9 @@
       },
       timerPaused: false,
       endAt: Date.now() + 35000,
-      pausedTimeRemaining: null
+      pausedTimeRemaining: null,
+      phase: 'veto_comp', // Set current phase for testing
+      phaseTimeoutCallback: null // Will be set when test scenarios run
     };
     
     window.TvStatus = {
@@ -330,6 +332,10 @@
         log('❌ IntermissionFlow not loaded');
         return;
       }
+      // Set up phase timeout callback for HOH
+      window.game.phase = 'hoh';
+      window.game.phaseTimeoutCallback = window.finishCompPhase;
+      
       window.IntermissionFlow.start({
         compType: 'HOH',
         reason: 'previous_hoh',
@@ -346,6 +352,10 @@
         log('❌ IntermissionFlow not loaded');
         return;
       }
+      // Set up phase timeout callback for HOH
+      window.game.phase = 'hoh';
+      window.game.phaseTimeoutCallback = window.finishCompPhase;
+      
       window.IntermissionFlow.start({
         compType: 'HOH',
         reason: 'evicted',
@@ -363,6 +373,10 @@
         log('❌ IntermissionFlow not loaded');
         return;
       }
+      // Set up phase timeout callback for HOH
+      window.game.phase = 'hoh';
+      window.game.phaseTimeoutCallback = window.finishCompPhase;
+      
       window.IntermissionFlow.start({
         compType: 'HOH',
         reason: 'previous_hoh',
@@ -379,6 +393,10 @@
         log('❌ IntermissionFlow not loaded');
         return;
       }
+      // Set up phase timeout callback for Veto
+      window.game.phase = 'veto_comp';
+      window.game.phaseTimeoutCallback = window.finishVetoPhase;
+      
       window.IntermissionFlow.start({
         compType: 'Veto',
         reason: 'not_selected',
@@ -395,6 +413,10 @@
         log('❌ IntermissionFlow not loaded');
         return;
       }
+      // Set up phase timeout callback for Veto
+      window.game.phase = 'veto_comp';
+      window.game.phaseTimeoutCallback = window.finishVetoPhase;
+      
       window.IntermissionFlow.start({
         compType: 'Veto',
         reason: 'evicted',
@@ -412,6 +434,10 @@
         log('❌ IntermissionFlow not loaded');
         return;
       }
+      // Set up phase timeout callback for Veto
+      window.game.phase = 'veto_comp';
+      window.game.phaseTimeoutCallback = window.finishVetoPhase;
+      
       window.IntermissionFlow.start({
         compType: 'Veto',
         reason: 'not_selected',

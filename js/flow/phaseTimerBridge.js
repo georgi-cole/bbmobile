@@ -85,25 +85,16 @@
     // Restore timer UI visibility (even though we're skipping)
     restoreTimerUI();
 
-    // Call the appropriate results function
-    if (compType === 'HOH' || compType === 'hoh') {
-      // Jump to HOH results
-      if (typeof global.finishCompPhase === 'function') {
-        console.info('[PhaseTimerBridge] → Calling finishCompPhase (HOH results)');
-        global.finishCompPhase();
-      } else {
-        console.warn('[PhaseTimerBridge] finishCompPhase not available');
-      }
-    } else if (compType === 'Veto' || compType === 'veto' || compType === 'pov') {
-      // Jump to Veto results
-      if (typeof global.finishVetoPhase === 'function') {
-        console.info('[PhaseTimerBridge] → Calling finishVetoPhase (Veto results)');
-        global.finishVetoPhase();
-      } else {
-        console.warn('[PhaseTimerBridge] finishVetoPhase not available');
+    // Call the phase timeout callback if available (works for both HOH and Veto)
+    if (typeof game.phaseTimeoutCallback === 'function') {
+      console.info('[PhaseTimerBridge] → Calling phase timeout callback to trigger results');
+      try {
+        game.phaseTimeoutCallback();
+      } catch (err) {
+        console.error('[PhaseTimerBridge] Error calling phase timeout callback:', err);
       }
     } else {
-      console.warn(`[PhaseTimerBridge] Unknown compType: ${compType}, cannot skip to results`);
+      console.warn('[PhaseTimerBridge] No phase timeout callback available, cannot skip to results');
     }
   }
 
