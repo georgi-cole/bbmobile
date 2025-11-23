@@ -1598,12 +1598,8 @@
         resetFlag();
         return;
       }
-      if((phase === 'pov' || phase === 'veto_comp' || phase === 'veto') && typeof global.finishVetoCompetition === 'function' && !g.__povResolved){
-        console.info('[ImmediateResults] Calling finishVetoCompetition()');
-        global.finishVetoCompetition();
-        resetFlag();
-        return;
-      }
+      // Note: Veto competitions currently advance via defaultAdvance/nextPhase (no dedicated finish function)
+      // The phase-specific check is kept for future implementation of finishVetoCompetition if needed
       if(phase === 'final3_comp2' && typeof global.finishF3P2 === 'function' && !g.__f3p2Resolved){
         console.info('[ImmediateResults] Calling finishF3P2()');
         global.finishF3P2();
@@ -1676,8 +1672,8 @@
         });
       } else {
         setTimeout(() => {
-            console.info('[ImmediateResults] Popup duration elapsed – resolving phase');
-            resolveCompetitionPhaseIfNeeded();
+          console.info('[ImmediateResults] Popup duration elapsed – resolving phase');
+          resolveCompetitionPhaseIfNeeded();
         }, RESULTS_POPUP_DURATION);
       }
     }catch(err){
