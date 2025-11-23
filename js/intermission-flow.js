@@ -506,11 +506,10 @@
       const oldPhase = event.detail?.oldPhase;
       
       // Cleanup if transitioning away from HOH or veto phases
-      if (oldPhase === 'hoh' || oldPhase === 'veto_competition') {
-        if (newPhase !== 'hoh' && newPhase !== 'veto_competition') {
-          console.info(`[IntermissionFlow] Phase changed from ${oldPhase} to ${newPhase}, cleaning up`);
-          forceCleanup('phase_change');
-        }
+      if ((oldPhase === 'hoh' || oldPhase === 'veto_competition') && 
+          newPhase !== 'hoh' && newPhase !== 'veto_competition') {
+        console.info(`[IntermissionFlow] Phase changed from ${oldPhase} to ${newPhase}, cleaning up`);
+        forceCleanup('phase_change');
       }
     });
     

@@ -1356,6 +1356,10 @@
     g.__hohGameKey = null; // Track which game was played
     g.__instructionsRenderedHOH = false; // Track if instructions were rendered
     g.__phaseStartTs = Date.now(); // Track phase start time for fast-forward warm-up
+    // Initialize lastHOHWeek if not set (for backwards compatibility with older saves)
+    if (g.lastHOHWeek === undefined) {
+      g.lastHOHWeek = null;
+    }
     // Reset grace attempt flag for new competition
     if (g.humanId != null) {
       delete g[`__graceReplayAttempt_hoh_${g.humanId}`];

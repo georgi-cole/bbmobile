@@ -253,9 +253,16 @@
     console.warn = (...args) => logToUI('warn', ...args);
     console.error = (...args) => logToUI('error', ...args);
     
-    // Mock global and window.game
+    // Mock global object structure
     window.game = window.game || {};
-    window.global = window;
+    // Create a global namespace that references window without circular ref
+    if (!window.global) {
+      window.global = {
+        game: window.game,
+        alivePlayers: function() { return window.alivePlayers(); },
+        getP: function(id) { return window.getP(id); }
+      };
+    }
     
     // Mock modules
     window.IntermissionFlow = {

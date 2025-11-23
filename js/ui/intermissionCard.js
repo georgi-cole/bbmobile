@@ -233,9 +233,9 @@
       }
 
       setTimeout(() => {
-        // Double-check parent still exists before removing
-        if (cardContainer && cardContainer.parentNode) {
-          cardContainer.parentNode.removeChild(cardContainer);
+        // Remove using modern remove() method (null-safe)
+        if (cardContainer) {
+          cardContainer.remove();
         }
         
         // Clean up empty overlay
@@ -267,10 +267,10 @@
     overlays.forEach(overlay => {
       const cards = overlay.querySelectorAll('.intermission-card-container');
       cards.forEach(card => {
-        // Null-safe removal
-        if (card && card.parentNode) {
+        // Null-safe removal using modern remove() method
+        if (card) {
           try {
-            card.parentNode.removeChild(card);
+            card.remove();
             removedCount++;
           } catch (e) {
             console.warn('[IntermissionCard] Failed to remove card:', e);
