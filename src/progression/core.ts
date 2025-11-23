@@ -96,7 +96,7 @@ export async function recordEvent(
 }
 
 /**
- * Get current player state (aggregate across all players)
+ * Get current player state
  */
 export async function getCurrentState(): Promise<PlayerState> {
   const events = await db.getAllEvents();
@@ -107,31 +107,6 @@ export async function getCurrentState(): Promise<PlayerState> {
     clampMinXP: 0,
     levelThresholds: DEFAULT_LEVEL_THRESHOLDS
   });
-}
-
-/**
- * Get player-specific progression state
- * @param playerId - Player ID
- * @param currentSeasonId - Optional current season ID for seasonal XP
- */
-export async function getPlayerState(
-  playerId: string,
-  currentSeasonId?: number
-): Promise<PlayerState> {
-  const events = await db.getAllEvents();
-  const ruleSets = await db.getAllRuleSets();
-  const rules = ruleSets[0]?.rules || DEFAULT_RULES;
-  
-  // Use player utilities to compute both aggregate and seasonal XP
-  const { computePlayerXP, computePlayerState } = await import('./utils/player.js');
-  const { aggregateXP, seasonXP, eventsCount } = computePlayerXP(
-    events,
-    playerId,
-    currentSeasonId,
-    rules
-  );
-  
-  return computePlayerState(aggregateXP, seasonXP, eventsCount);
 }
 
 /**
@@ -204,4 +179,3 @@ export function close(): void {
 export * from './types.js';
 export * from './constants.js';
 export { computeLevel } from './reducer.js';
-export * from './utils/player.js';

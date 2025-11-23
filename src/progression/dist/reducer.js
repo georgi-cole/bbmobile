@@ -50,26 +50,17 @@ export function reduceEvents(events, rules, options = {}) {
         totalXP = clampMinXP;
     }
     // Compute level
-    const { level, nextLevelXP, currentLevelXP, isMax } = computeLevel(totalXP, levelThresholds);
-    // Calculate progress percent with max level clamping
-    let progressPercent = 0;
-    if (isMax) {
-        // At max level, progress is always 100%
-        progressPercent = 100;
-    }
-    else if (currentLevelXP > 0 && nextLevelXP > currentLevelXP) {
-        progressPercent = Math.round(((totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100);
-        // Clamp to 100% just in case
-        progressPercent = Math.min(100, progressPercent);
-    }
+    const { level, nextLevelXP, currentLevelXP } = computeLevel(totalXP, levelThresholds);
+    const progressPercent = currentLevelXP > 0
+        ? Math.round(((totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100)
+        : 0;
     return {
         totalXP,
         level,
         nextLevelXP,
         currentLevelXP,
         progressPercent,
-        eventsCount: events.length,
-        isMax
+        eventsCount: events.length
     };
 }
 /**
@@ -82,7 +73,6 @@ export function computeLevel(totalXP, thresholds) {
     let level = 1;
     let currentLevelXP = 0;
     let nextLevelXP;
-    let isMax = false;
     if (thresholds[1] && typeof thresholds[1].xpRequired === 'number') {
         nextLevelXP = thresholds[1].xpRequired;
     }
@@ -100,16 +90,14 @@ export function computeLevel(totalXP, thresholds) {
                 nextLevelXP = thresholds[i + 1].xpRequired;
             }
             else {
-                // At max level: set nextLevelXP equal to currentLevelXP to avoid fabricating +1000
-                nextLevelXP = currentLevelXP;
-                isMax = true;
+                nextLevelXP = currentLevelXP + 1000;
             }
         }
         else {
             break;
         }
     }
-    return { level, nextLevelXP, currentLevelXP, isMax };
+    return { level, nextLevelXP, currentLevelXP };
 }
 /**
  * Compute breakdown by rule

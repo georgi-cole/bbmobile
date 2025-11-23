@@ -281,8 +281,8 @@ export function createModal(options = {}) {
 
   // Update methods
   backdrop.updateLeaderboard = (leaderboard = [], currentPlayerId = null) => {
-    // Leaderboard is already sorted by seasonXP (for ranking)
-    const sortedLeaderboard = [...leaderboard];
+    // Sort leaderboard by totalXP descending
+    const sortedLeaderboard = [...leaderboard].sort((a, b) => b.totalXP - a.totalXP);
     
     // Find current player's rank
     const currentPlayerIndex = sortedLeaderboard.findIndex(p => p.playerId === currentPlayerId);
@@ -367,37 +367,19 @@ export function createModal(options = {}) {
                     ${isCurrentPlayer ? ' <span style="font-size: 14px;">(You)</span>' : ''}
                   </div>
                   <div style="
-                    font-size: ${isFirst ? '14px' : '12px'};
+                    font-size: ${isFirst ? '16px' : '14px'};
                     color: ${isFirst ? '#333' : theme.mutedColor};
-                    margin-bottom: 2px;
                   ">
-                    Level ${player.level || 1} (Global)
-                  </div>
-                  <div style="
-                    font-size: ${isFirst ? '12px' : '11px'};
-                    color: ${isFirst ? '#555' : theme.mutedColor};
-                    opacity: 0.8;
-                  " title="Total XP across all seasons">
-                    Total: ${player.aggregateXP || 0} XP
+                    Level ${player.level || 1}
                   </div>
                 </div>
                 <div style="
                   text-align: right;
+                  font-size: ${isFirst ? '20px' : '18px'};
+                  font-weight: 600;
+                  color: ${isFirst ? '#1a1a1a' : theme.accentColor};
                 ">
-                  <div style="
-                    font-size: ${isFirst ? '20px' : '18px'};
-                    font-weight: 600;
-                    color: ${isFirst ? '#1a1a1a' : theme.accentColor};
-                  ">
-                    ${player.seasonXP || 0}
-                  </div>
-                  <div style="
-                    font-size: ${isFirst ? '12px' : '11px'};
-                    color: ${isFirst ? '#555' : theme.mutedColor};
-                    margin-top: 2px;
-                  ">
-                    Season XP
-                  </div>
+                  ${player.totalXP || 0} XP
                 </div>
               </div>
             `;
@@ -446,24 +428,17 @@ export function createModal(options = {}) {
               ">
                 ${currentPlayerData.playerName || currentPlayerData.playerId}
               </div>
-              <div style="font-size: 12px; color: ${theme.mutedColor}; margin-bottom: 2px;">
-                Level ${currentPlayerData.level || 1} (Global)
-              </div>
-              <div style="font-size: 11px; color: ${theme.mutedColor}; opacity: 0.8;" title="Total XP across all seasons">
-                Total: ${currentPlayerData.aggregateXP || 0} XP
+              <div style="font-size: 14px; color: ${theme.mutedColor};">
+                Level ${currentPlayerData.level || 1}
               </div>
             </div>
-            <div style="text-align: right;">
-              <div style="
-                font-size: 18px;
-                font-weight: 600;
-                color: ${theme.accentColor};
-              ">
-                ${currentPlayerData.seasonXP || 0}
-              </div>
-              <div style="font-size: 11px; color: ${theme.mutedColor}; margin-top: 2px;">
-                Season XP
-              </div>
+            <div style="
+              text-align: right;
+              font-size: 18px;
+              font-weight: 600;
+              color: ${theme.accentColor};
+            ">
+              ${currentPlayerData.totalXP || 0} XP
             </div>
           </div>
         </div>
@@ -471,18 +446,13 @@ export function createModal(options = {}) {
     `;
   };
 
-  backdrop.updateOverview = (state, levelThresholds, maxLevel = 20) => {
-    const isMax = state.isMax || false;
-    const progressPercent = Math.min(100, state.progressPercent || 0);
-    const remainingXP = isMax ? 0 : Math.max(0, state.nextLevelXP - state.totalXP);
-    const overflowXP = isMax && state.totalXP > state.currentLevelXP ? state.totalXP - state.currentLevelXP : 0;
-    
+  backdrop.updateOverview = (state, levelThresholds) => {
     overviewPane.innerHTML = `
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="
           width: 80px;
           height: 80px;
-          background: linear-gradient(135deg, ${isMax ? '#ffd700' : '#ffdc8b'} 0%, ${isMax ? '#ffed4e' : '#ffa500'} 100%);
+          background: linear-gradient(135deg, #ffdc8b 0%, #ffa500 100%);
           border-radius: 50%;
           display: inline-flex;
           align-items: center;
@@ -491,23 +461,15 @@ export function createModal(options = {}) {
           font-weight: bold;
           color: #1a1a1a;
           margin-bottom: 12px;
-          ${isMax ? 'box-shadow: 0 8px 24px rgba(255, 215, 0, 0.5);' : ''}
-        ">${state.level}${isMax ? '👑' : ''}</div>
-        <div style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">
-          ${isMax ? 'Max Level Achieved' : `Level ${state.level}`}
-        </div>
-        <div style="font-size: 18px; color: ${theme.mutedColor};">${state.totalXP} Total XP</div>
-        ${state.seasonXP !== undefined ? `
-          <div style="font-size: 14px; color: ${theme.mutedColor}; margin-top: 4px;">
-            ${state.seasonXP} Season XP (for ranking only)
-          </div>
-        ` : ''}
+        ">${state.level}</div>
+        <div style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">Level ${state.level}</div>
+        <div style="font-size: 18px; color: ${theme.mutedColor};">${state.totalXP} XP</div>
       </div>
 
       <div style="margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
-          <span>${isMax ? 'Max Level' : `Progress to Level ${state.level + 1}`}</span>
-          <span>${progressPercent}%</span>
+          <span>Progress to Level ${state.level + 1}</span>
+          <span>${state.progressPercent}%</span>
         </div>
         <div style="
           width: 100%;
@@ -517,14 +479,14 @@ export function createModal(options = {}) {
           overflow: hidden;
         ">
           <div style="
-            width: ${progressPercent}%;
+            width: ${state.progressPercent}%;
             height: 100%;
-            background: linear-gradient(90deg, ${isMax ? '#ffd700' : '#ffdc8b'} 0%, ${isMax ? '#ffed4e' : '#ffa500'} 100%);
+            background: linear-gradient(90deg, #ffdc8b 0%, #ffa500 100%);
             transition: width 0.3s ease;
           "></div>
         </div>
         <div style="margin-top: 8px; font-size: 12px; color: ${theme.mutedColor};">
-          ${isMax ? `${state.totalXP} / ${state.currentLevelXP} XP (Max)` : `${state.totalXP} / ${state.nextLevelXP} XP`}
+          ${state.totalXP} / ${state.nextLevelXP} XP
         </div>
       </div>
 
@@ -547,27 +509,9 @@ export function createModal(options = {}) {
           background: ${theme.cardBg};
           border-radius: 8px;
         ">
-          <div style="font-size: 12px; color: ${theme.mutedColor}; margin-bottom: 4px;">
-            ${isMax ? 'Max Level' : 'Next Milestone'}
-          </div>
-          <div style="font-size: 20px; font-weight: 600;">
-            ${isMax ? 'Max Level' : `${remainingXP} XP`}
-          </div>
+          <div style="font-size: 12px; color: ${theme.mutedColor}; margin-bottom: 4px;">Next Milestone</div>
+          <div style="font-size: 20px; font-weight: 600;">${state.nextLevelXP - state.totalXP} XP</div>
         </div>
-        ${overflowXP > 0 ? `
-          <div style="
-            padding: 16px;
-            background: ${theme.cardBg};
-            border-radius: 8px;
-            grid-column: span 2;
-          ">
-            <div style="font-size: 12px; color: ${theme.mutedColor}; margin-bottom: 4px;">Overflow XP</div>
-            <div style="font-size: 20px; font-weight: 600; color: #ffd700;">${overflowXP} XP</div>
-            <div style="font-size: 11px; color: ${theme.mutedColor}; margin-top: 4px;">
-              XP earned beyond max level
-            </div>
-          </div>
-        ` : ''}
       </div>
     `;
   };
