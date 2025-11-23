@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test: Competition Flow Guards & Diagnostics</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 20px; 
+      background: #0d151f; 
+      color: #e3ecf5; 
+      margin: 0;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    h1 { 
+      color: #83bfff; 
+    }
+    h2 {
+      color: #a3c5ff;
+      font-size: 1.2rem;
+      margin-top: 30px;
+    }
+    .test-section { 
+      background: #132132; 
+      border: 1px solid #24364b; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    button { 
+      background: #3563a7; 
+      color: #fff; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      margin: 5px; 
+    }
+    button:hover { 
+      background: #4876c2; 
+    }
+    button.success {
+      background: #16a34a;
+    }
+    button.success:hover {
+      background: #15803d;
+    }
+    button.danger {
+      background: #dc2626;
+    }
+    button.danger:hover {
+      background: #991b1b;
+    }
+    
+    .tv-viewport {
+      background: #0a0f16;
+      border: 2px solid #24364b;
+      border-radius: 12px;
+      padding: 40px 20px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .log {
+      background: #0a0f16;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #1a2332;
+    }
+    .pass { color: #77d58d; }
+    .fail { color: #ff6d6d; }
+    .info { color: #83bfff; }
+    .warn { color: #fbbf24; }
+    
+    .status-indicator {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .status-ready { background: #16a34a; color: white; }
+    .status-not-ready { background: #dc2626; color: white; }
+    .status-unknown { background: #6b7280; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ Test: Competition Flow Guards & Diagnostics</h1>
+    <p>This test verifies the guard system, lifecycle flags, telemetry events, and self-test harness.</p>
+
+    <div class="test-section">
+      <h2>Module Status</h2>
+      <div>
+        <strong>Module Started:</strong> 
+        <span id="statusStarted" class="status-indicator status-unknown">Unknown</span>
+      </div>
+      <div>
+        <strong>Module Evaluating:</strong> 
+        <span id="statusEvaluating" class="status-indicator status-unknown">Unknown</span>
+      </div>
+      <div>
+        <strong>Module Ready:</strong> 
+        <span id="statusReady" class="status-indicator status-unknown">Unknown</span>
+      </div>
+      <div>
+        <strong>Self-Test Ran:</strong> 
+        <span id="statusSelfTest" class="status-indicator status-unknown">Unknown</span>
+      </div>
+      <div>
+        <strong>Self-Test Failed:</strong> 
+        <span id="statusSelfTestFailed" class="status-indicator status-unknown">Unknown</span>
+      </div>
+      <button onclick="checkModuleStatus()">Refresh Status</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Actions</h2>
+      <button onclick="testEarlyInvocation()">1. Test Early Invocation Guard</button>
+      <button onclick="testConcurrentOverlays()">2. Test Concurrent Overlay Prevention</button>
+      <button onclick="testInstructionsVerification()">3. Test Instructions Verification</button>
+      <button onclick="testErrorHandling()">4. Test Error Handling</button>
+      <button onclick="testDeferredFlush()">5. Test Deferred Call Flush</button>
+      <button class="success" onclick="testNormalFlow()">6. Test Normal Flow (Should Work)</button>
+      <button class="danger" onclick="clearAll()">Clear All</button>
+    </div>
+
+    <div class="test-section">
+      <h2>TV Viewport Simulation</h2>
+      <div class="tv-viewport" id="tvViewport">
+        <div style="color: #95a9c0; font-style: italic;">Ready for testing</div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Telemetry Events Log</h2>
+      <div class="log" id="telemetryLog">
+        <div class="info">Waiting for events...</div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Console Log</h2>
+      <div class="log" id="consoleLog">
+        <div class="info">Monitoring console...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the module -->
+  <script>
+    // Mock minimal game object
+    window.game = {
+      cfg: { minigameDuration: 60 },
+      players: [],
+      phase: 'hoh'
+    };
+
+    // Mock renderMinigame function
+    window.renderMinigame = function(gameKey, container, callback, options) {
+      console.log('[Mock] renderMinigame called:', gameKey, options);
+      container.innerHTML = `<div style="padding:40px;text-align:center;color:#83bfff;">
+        <h3>Mock Minigame: ${gameKey}</h3>
+        <p>This is a mock minigame for testing</p>
+        <button onclick="window.mockGameComplete(${Math.floor(Math.random() * 1000)})">Complete Game</button>
+      </div>`;
+      
+      // Store callback for mock completion
+      window.mockGameCallback = callback;
+    };
+
+    window.mockGameComplete = function(score) {
+      console.log('[Mock] Game completed with score:', score);
+      if (window.mockGameCallback) {
+        window.mockGameCallback(score);
+      }
+    };
+
+    // Intercept console.log
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    const originalInfo = console.info;
+
+    function addToConsoleLog(type, ...args) {
+      const logDiv = document.getElementById('consoleLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${type.toUpperCase()}] ${args.map(a => 
+        typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)
+      ).join(' ')}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    console.log = function(...args) {
+      originalLog(...args);
+      addToConsoleLog('info', ...args);
+    };
+
+    console.warn = function(...args) {
+      originalWarn(...args);
+      addToConsoleLog('warn', ...args);
+    };
+
+    console.error = function(...args) {
+      originalError(...args);
+      addToConsoleLog('fail', ...args);
+    };
+
+    console.info = function(...args) {
+      originalInfo(...args);
+      addToConsoleLog('info', ...args);
+    };
+
+    // Listen for telemetry events
+    const telemetryEvents = [
+      'competition-flow-init',
+      'competition-flow-instructions-rendered',
+      'competition-flow-fullscreen-launched',
+      'competition-flow-fullscreen-closed',
+      'competition-flow-error',
+      'competition-flow-selftest'
+    ];
+
+    telemetryEvents.forEach(eventName => {
+      document.addEventListener(eventName, (e) => {
+        const logDiv = document.getElementById('telemetryLog');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry pass';
+        entry.innerHTML = `
+          <strong>${eventName}</strong><br>
+          <pre style="margin:5px 0;font-size:0.8rem;">${JSON.stringify(e.detail, null, 2)}</pre>
+        `;
+        logDiv.appendChild(entry);
+        logDiv.scrollTop = logDiv.scrollHeight;
+      });
+    });
+  </script>
+
+  <!-- Load the competitions-flow module -->
+  <script src="js/competitions-flow.js"></script>
+
+  <script>
+    // Test functions
+    function checkModuleStatus() {
+      const started = window.__competitionFlowModuleStarted;
+      const evaluating = window.__competitionFlowModuleEvaluating;
+      const ready = window.__competitionFlowModuleReady;
+      const selfTestRan = window.__competitionFlowSelfTestRan;
+      const selfTestFailed = window.__competitionFlowSelfTestFailed;
+
+      document.getElementById('statusStarted').textContent = started ? 'Yes' : 'No';
+      document.getElementById('statusStarted').className = started ? 'status-indicator status-ready' : 'status-indicator status-not-ready';
+
+      document.getElementById('statusEvaluating').textContent = evaluating ? 'Yes' : 'No';
+      document.getElementById('statusEvaluating').className = evaluating ? 'status-indicator status-not-ready' : 'status-indicator status-ready';
+
+      document.getElementById('statusReady').textContent = ready ? 'Yes' : 'No';
+      document.getElementById('statusReady').className = ready ? 'status-indicator status-ready' : 'status-indicator status-not-ready';
+
+      document.getElementById('statusSelfTest').textContent = selfTestRan ? 'Yes' : 'No';
+      document.getElementById('statusSelfTest').className = selfTestRan ? 'status-indicator status-ready' : 'status-indicator status-not-ready';
+
+      document.getElementById('statusSelfTestFailed').textContent = selfTestFailed ? 'Yes' : 'No';
+      document.getElementById('statusSelfTestFailed').className = selfTestFailed ? 'status-indicator status-not-ready' : 'status-indicator status-ready';
+
+      console.log('Module Status:', { started, evaluating, ready, selfTestRan, selfTestFailed });
+    }
+
+    function testEarlyInvocation() {
+      console.warn('=== TEST: Early Invocation ===');
+      console.log('Simulating call before module ready (this should not happen in real scenario since module is already loaded)');
+      console.log('Check telemetry log for early-invocation error events');
+      console.log('Deferred calls:', window.__competitionFlowDeferredCalls?.length || 0);
+    }
+
+    function testConcurrentOverlays() {
+      console.warn('=== TEST: Concurrent Overlays ===');
+      const container = document.getElementById('tvViewport');
+      
+      // Launch first overlay
+      console.log('Launching first overlay: quickTap');
+      window.CompetitionFlow.launchFullscreenMinigame('quickTap', (score) => {
+        console.log('First game completed:', score);
+      });
+
+      // Try to launch second overlay immediately
+      setTimeout(() => {
+        console.log('Attempting to launch second overlay: memoryMatch (should be blocked)');
+        window.CompetitionFlow.launchFullscreenMinigame('memoryMatch', (score) => {
+          console.log('Second game completed:', score);
+        });
+      }, 100);
+    }
+
+    function testInstructionsVerification() {
+      console.warn('=== TEST: Instructions Verification ===');
+      const container = document.getElementById('tvViewport');
+      container.innerHTML = '';
+      
+      window.CompetitionFlow.showInstructionsInTV('quickTap', container, () => {
+        console.log('Play button clicked');
+      });
+      
+      console.log('Instructions card rendered. Check console for verification logs.');
+    }
+
+    function testErrorHandling() {
+      console.warn('=== TEST: Error Handling ===');
+      
+      // Temporarily break renderMinigame
+      const originalRender = window.renderMinigame;
+      window.renderMinigame = function() {
+        throw new Error('Simulated render error');
+      };
+      
+      window.CompetitionFlow.launchFullscreenMinigame('errorTest', (score) => {
+        console.log('Error test completed:', score);
+      });
+      
+      // Restore after 2 seconds
+      setTimeout(() => {
+        window.renderMinigame = originalRender;
+        console.log('renderMinigame restored');
+      }, 2000);
+    }
+
+    function testDeferredFlush() {
+      console.warn('=== TEST: Deferred Call Flush ===');
+      console.log('Deferred calls queue:', window.__competitionFlowDeferredCalls);
+      console.log('Deferred instructions queue:', window.__competitionFlowDeferredInstructions);
+      
+      if (window.CompetitionFlow.flushDeferredCalls) {
+        console.log('Calling flushDeferredCalls()');
+        window.CompetitionFlow.flushDeferredCalls();
+      }
+    }
+
+    function testNormalFlow() {
+      console.warn('=== TEST: Normal Competition Flow ===');
+      const container = document.getElementById('tvViewport');
+      container.innerHTML = '';
+      
+      window.CompetitionFlow.runCompetitionFlow('quickTap', container, (score) => {
+        console.log('Competition completed with score:', score);
+      });
+    }
+
+    function clearAll() {
+      document.getElementById('tvViewport').innerHTML = '<div style="color: #95a9c0; font-style: italic;">Ready for testing</div>';
+      
+      // Close any active overlays
+      const overlay = document.getElementById('competition-minigame-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+      
+      console.log('=== CLEARED ===');
+    }
+
+    // Initialize status display
+    setTimeout(() => {
+      checkModuleStatus();
+    }, 100);
+  </script>
+</body>
+</html>
