@@ -34,7 +34,7 @@
   // State Management
   // ============================
   
-  let state = {
+  const state = {
     activePlayers: [],
     evictedPlayers: [],
     orientation: 'portrait',
@@ -688,7 +688,7 @@
     
     // Subscribe to PlayerService if available
     if (global.PlayerService && typeof global.PlayerService.subscribe === 'function') {
-      global.PlayerService.subscribe((players) => {
+      global.PlayerService.subscribe((_players) => {
         console.info('[MobileRoster] PlayerService update');
         updatePlayerLists();
         if (isMobileViewport() && state.initialized) {
