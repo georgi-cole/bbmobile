@@ -1,14 +1,203 @@
 // MODULE: competitions-flow.js
 // Competition flow with instructions popup and fullscreen minigame overlay
 // Handles: show instructions → play button → fullscreen game → completion → return
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// GUARD SYSTEM & LIFECYCLE FLAGS (Anti-TDZ, Anti-Circular-Dependency)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// This module implements comprehensive guards to prevent:
+// 1. Temporal Dead Zone (TDZ) errors from early/circular invocations
+// 2. Silent failures when competition instructions don't render
+// 3. Race conditions with game object initialization
+// 4. Concurrent fullscreen overlays
+//
+// Lifecycle Flags:
+// - window.__competitionFlowModuleStarted: Set at module entry
+// - window.__competitionFlowModuleEvaluating: True during IIFE body execution
+// - window.__competitionFlowModuleReady: True after module fully initialized
+//
+// Call Queuing:
+// - Calls before readiness are queued and replayed after initialization
+// - Queue stored in window.__competitionFlowDeferredCalls
+//
+// Game Object Resolution:
+// - getGameRef() helper retries up to 500ms with 10 attempts
+// - Falls back to no-op stub if game object unavailable
+//
+// Instructions Verification:
+// - Post-render checks card attachment via microtask + animation frame
+// - Re-attempts render once if detached; logs diagnostics
+//
+// Concurrency Control:
+// - Only one fullscreen overlay allowed at a time
+// - Subsequent attempts dispatch 'competition-flow-error' event
+//
+// Self-Test:
+// - Runs once on first readiness
+// - Dispatches 'competition-flow-selftest' event with result
+// - Sets window.__competitionFlowSelfTestFailed flag on failure
+//
+// Telemetry Events:
+// - competition-flow-init
+// - competition-flow-instructions-rendered
+// - competition-flow-fullscreen-launched
+// - competition-flow-fullscreen-closed
+// - competition-flow-error
+// - competition-flow-selftest
+//
+// ═══════════════════════════════════════════════════════════════════════════
 
 (function(g){
   'use strict';
+  
+  // ═══ Module Lifecycle Flags ═══
+  window.__competitionFlowModuleStarted = true;
+  window.__competitionFlowModuleEvaluating = true;
 
+  // ═══ Call Queuing & Deferred Execution ═══
+  window.__competitionFlowDeferredCalls = window.__competitionFlowDeferredCalls || [];
+  window.__competitionFlowDeferredInstructions = window.__competitionFlowDeferredInstructions || [];
+  
   // Track active minigame overlays and instructions for cleanup on phase change
   let activeMinigameOverlay = null;
   let activeInstructionsCard = null;
   let activeMinigameCleanup = null;
+  
+  // ═══ Centralized Game Object Resolution ═══
+  /**
+   * Get game object reference with retry logic
+   * Attempts up to 10 times with 50ms intervals (500ms total)
+   * Falls back to no-op stub if unavailable
+   * 
+   * @returns {Promise<Object>} Game object or stub
+   */
+  async function getGameRef() {
+    const maxAttempts = 10;
+    const retryDelay = 50; // ms
+    
+    for (let i = 0; i < maxAttempts; i++) {
+      if (window.game && typeof window.game === 'object') {
+        return window.game;
+      }
+      if (window.global && window.global.game && typeof window.global.game === 'object') {
+        return window.global.game;
+      }
+      if (g.game && typeof g.game === 'object') {
+        return g.game;
+      }
+      
+      // Wait before retry (except on last attempt)
+      if (i < maxAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+    }
+    
+    // Log warning once
+    if (!window.__competitionFlowGameUnavailableWarned) {
+      console.warn('[CompetitionFlow][Guard] Game object unavailable after retries, using stub');
+      window.__competitionFlowGameUnavailableWarned = true;
+    }
+    
+    // Return no-op stub
+    return {
+      cfg: {},
+      players: [],
+      phase: 'unknown'
+    };
+  }
+  
+  /**
+   * Dispatch telemetry event with structured detail
+   * 
+   * @param {string} eventName - Event name (without 'competition-flow-' prefix)
+   * @param {Object} detail - Event detail object
+   */
+  function dispatchTelemetryEvent(eventName, detail = {}) {
+    try {
+      const fullEventName = `competition-flow-${eventName}`;
+      const event = new CustomEvent(fullEventName, {
+        detail: {
+          timestamp: Date.now(),
+          ...detail
+        },
+        bubbles: true,
+        cancelable: false
+      });
+      document.dispatchEvent(event);
+      console.info(`[CompetitionFlow][Telemetry] Event: ${fullEventName}`, detail);
+    } catch (err) {
+      console.warn('[CompetitionFlow][Telemetry] Failed to dispatch event:', eventName, err);
+    }
+  }
+  
+  /**
+   * Check if a function call should be queued (called before module ready)
+   * 
+   * @param {string} funcName - Function name
+   * @param {Array} args - Function arguments
+   * @returns {boolean} True if call was queued, false if should proceed
+   */
+  function checkAndQueueIfNotReady(funcName, args) {
+    if (window.__competitionFlowModuleReady) {
+      return false; // Module ready, proceed with call
+    }
+    
+    console.warn(`[CompetitionFlow][Guard] ${funcName} called before module ready, queuing call`);
+    window.__competitionFlowDeferredCalls.push({ funcName, args, timestamp: Date.now() });
+    
+    dispatchTelemetryEvent('error', {
+      type: 'early-invocation',
+      function: funcName,
+      message: 'Function called before module ready'
+    });
+    
+    return true; // Call was queued
+  }
+  
+  /**
+   * Flush deferred calls after module becomes ready
+   */
+  function flushDeferredCalls() {
+    console.info('[CompetitionFlow][Guard] Flushing deferred calls:', window.__competitionFlowDeferredCalls.length);
+    
+    const calls = [...window.__competitionFlowDeferredCalls];
+    window.__competitionFlowDeferredCalls = [];
+    
+    calls.forEach(({ funcName, args }) => {
+      try {
+        console.info(`[CompetitionFlow][Guard] Replaying deferred call: ${funcName}`);
+        
+        // Call the appropriate function
+        if (funcName === 'runCompetitionFlow' && typeof runCompetitionFlow === 'function') {
+          runCompetitionFlow(...args);
+        } else if (funcName === 'showInstructionsInTV' && typeof showInstructionsInTV === 'function') {
+          showInstructionsInTV(...args);
+        } else if (funcName === 'launchFullscreenMinigame' && typeof launchFullscreenMinigame === 'function') {
+          launchFullscreenMinigame(...args);
+        } else {
+          console.warn(`[CompetitionFlow][Guard] Unknown deferred function: ${funcName}`);
+        }
+      } catch (err) {
+        console.error(`[CompetitionFlow][Guard] Error replaying deferred call: ${funcName}`, err);
+      }
+    });
+    
+    // Also flush deferred instructions
+    const instructions = [...window.__competitionFlowDeferredInstructions];
+    window.__competitionFlowDeferredInstructions = [];
+    
+    instructions.forEach(({ gameKey, container, onPlay }) => {
+      try {
+        console.info(`[CompetitionFlow][Guard] Replaying deferred instructions: ${gameKey}`);
+        if (typeof showInstructionsInTV === 'function') {
+          showInstructionsInTV(gameKey, container, onPlay);
+        }
+      } catch (err) {
+        console.error('[CompetitionFlow][Guard] Error replaying deferred instructions', err);
+      }
+    });
+  }
 
   /**
    * Clean up any active minigames and instructions on phase change
@@ -214,6 +403,25 @@
   function showInstructionsInTV(gameKey, container, onPlay){
     console.info(`[CompetitionFlow] → showInstructionsInTV called: gameKey=${gameKey}`);
     
+    // ═══ Guard: Check if called before ready ═══
+    if (checkAndQueueIfNotReady('showInstructionsInTV', [gameKey, container, onPlay])) {
+      return null; // Call queued, will be replayed later
+    }
+    
+    // ═══ Guard: Check for re-entrant call during module evaluation ═══
+    if (window.__competitionFlowEvaluating) {
+      console.warn('[CompetitionFlow][Guard] CRITICAL: showInstructionsInTV called during module evaluation (circular dependency)');
+      window.__competitionFlowDeferredInstructions.push({ gameKey, container, onPlay });
+      
+      dispatchTelemetryEvent('error', {
+        type: 'circular-dependency',
+        function: 'showInstructionsInTV',
+        gameKey: gameKey
+      });
+      
+      return null; // Will be flushed after evaluation
+    }
+    
     // Ensure container is attached to the DOM (belt-and-suspenders safeguard)
     container = ensureAttachedContainer(container);
     console.info('[CompetitionFlow] ✓ Container validated and ready for instructions');
@@ -364,8 +572,74 @@
       }
     }
 
+    // ═══ Post-Render Verification ═══
+    // Verify card stays attached after next microtask + animation frame
+    let verificationAttempted = false;
+    
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        if (verificationAttempted) return;
+        verificationAttempted = true;
+        
+        // Check if card is still attached
+        if (!card.isConnected) {
+          console.warn('[CompetitionFlow][Guard] Instructions card detached after render, attempting re-render');
+          
+          // Diagnostic payload
+          const diagnostic = {
+            containerTag: container.tagName,
+            containerClass: container.className,
+            containerId: container.id,
+            containerConnected: container.isConnected,
+            phase: gameRef?.phase,
+            gameKey: gameKey
+          };
+          
+          console.warn('[CompetitionFlow][Guard] Diagnostic:', diagnostic);
+          
+          dispatchTelemetryEvent('error', {
+            type: 'instructions-detached',
+            ...diagnostic
+          });
+          
+          // Re-attempt render once
+          try {
+            const newCard = document.createElement('div');
+            newCard.className = card.className;
+            newCard.innerHTML = card.innerHTML;
+            newCard.style.cssText = card.style.cssText;
+            
+            // Re-attach event listeners
+            const newPlayButton = newCard.querySelector('button.primary');
+            if (newPlayButton && typeof onPlay === 'function') {
+              newPlayButton.addEventListener('click', () => {
+                console.info('[CompetitionFlow] ▶ Play button clicked (re-rendered), launching fullscreen minigame');
+                onPlay();
+              });
+            }
+            
+            container.appendChild(newCard);
+            activeInstructionsCard = newCard;
+            
+            console.info('[CompetitionFlow][Guard] ✓ Instructions card re-rendered successfully');
+          } catch (reRenderErr) {
+            console.error('[CompetitionFlow][Guard] Failed to re-render instructions card:', reRenderErr);
+          }
+        } else {
+          console.info('[CompetitionFlow][Guard] ✓ Instructions card verified attached');
+        }
+      });
+    });
+
     // Dispatch event to signal instructions are mounted
     try {
+      dispatchTelemetryEvent('instructions-rendered', {
+        phase: gameRef?.phase,
+        gameKey: gameKey,
+        containerTag: container.tagName
+      });
+      
+      // Legacy event for backwards compatibility
       document.dispatchEvent(new CustomEvent('competition-instructions-mounted', {
         detail: { phase: gameRef?.phase, gameKey: gameKey }
       }));
@@ -522,6 +796,29 @@
     console.info(`[CompetitionFlow] ═══ launchFullscreenMinigame ═══`);
     console.info(`[CompetitionFlow] Game: ${gameKey}, Options:`, options);
     
+    // ═══ Guard: Check if called before ready ═══
+    if (checkAndQueueIfNotReady('launchFullscreenMinigame', [gameKey, onComplete, options])) {
+      return { close: () => {}, overlay: null }; // Return no-op controls
+    }
+    
+    // ═══ Concurrency Control: Prevent simultaneous overlays ═══
+    if (activeMinigameOverlay && activeMinigameOverlay.parentNode) {
+      // Check if trying to launch a different game
+      const currentGameKey = activeMinigameOverlay.getAttribute('data-game-key');
+      if (currentGameKey && currentGameKey !== gameKey) {
+        console.error(`[CompetitionFlow][Guard] Cannot launch ${gameKey}: ${currentGameKey} overlay already active`);
+        
+        dispatchTelemetryEvent('error', {
+          type: 'concurrent-overlay',
+          attemptedGame: gameKey,
+          activeGame: currentGameKey,
+          message: 'Cannot launch multiple fullscreen overlays simultaneously'
+        });
+        
+        return { close: () => {}, overlay: null }; // Return no-op controls
+      }
+    }
+    
     const game = g.game;
     
     // Get configured duration from settings
@@ -573,6 +870,7 @@
     // Create fullscreen overlay
     const overlay = document.createElement('div');
     overlay.id = 'competition-minigame-overlay';
+    overlay.setAttribute('data-game-key', gameKey); // Track which game is active
     overlay.style.cssText = `
       position: fixed;
       top: 0;
@@ -696,8 +994,7 @@
     // Track if game has completed
     let hasCompleted = false;
     let timerInterval = null;
-    let startTime = Date.now();
-    let isDisabled = false; // Track if interaction should be disabled
+    const startTime = Date.now();
 
     // Start timer countdown - sync with phase timer if enabled
     function updateTimer(){
@@ -739,7 +1036,6 @@
         clearInterval(timerInterval);
         timerText.textContent = '0:00';
         timerText.style.color = '#ff6b9d';
-        isDisabled = true;
         
         // Disable minigame interaction
         if(gameContainer){
@@ -820,6 +1116,13 @@
         g.resumePhaseTimer();
       }
       
+      // Dispatch telemetry event for fullscreen close
+      dispatchTelemetryEvent('fullscreen-closed', {
+        gameKey: gameKey,
+        skipAnimation: skipAnimation,
+        hasCompleted: hasCompleted
+      });
+      
       if(overlay.parentNode){
         if(skipAnimation){
           overlay.remove();
@@ -853,6 +1156,14 @@
       close(true); // Skip animation when manually closed
     });
 
+    // Dispatch telemetry event for fullscreen launch
+    dispatchTelemetryEvent('fullscreen-launched', {
+      gameKey: gameKey,
+      timeLimit: timeLimit,
+      usePhaseTimer: usePhaseTimer,
+      isUnlimited: isUnlimited
+    });
+
     // Render the minigame
     console.info('[CompetitionFlow] → Rendering minigame in fullscreen container');
     if(g.renderMinigame && typeof g.renderMinigame === 'function'){ 
@@ -863,31 +1174,80 @@
       };
 
       console.info('[CompetitionFlow] → Calling renderMinigame:', gameKey, 'with options:', gameOptions);
-      g.renderMinigame(gameKey, gameContainer, (score) => {
-        console.info(`[CompetitionFlow] ← Minigame completed with score: ${score}`);
-        
-        if(hasCompleted) {
-          console.warn('[CompetitionFlow] ⚠ Duplicate completion detected, ignoring');
-          return; // Prevent double completion
-        }
-        hasCompleted = true;
-        
-        // Show completion animation
-        showCompletionAnimation(overlay, score, options.previousBest);
-        
-        // Close overlay and call completion callback after animation
-        setTimeout(() => {
-          console.info('[CompetitionFlow] → Closing fullscreen overlay and calling onComplete');
-          close(false); // Use fade out animation
-          if(typeof onComplete === 'function'){
-            onComplete(score);
+      
+      // ═══ Defensive Error Handling ═══
+      try {
+        g.renderMinigame(gameKey, gameContainer, (score) => {
+          console.info(`[CompetitionFlow] ← Minigame completed with score: ${score}`);
+          
+          if(hasCompleted) {
+            console.warn('[CompetitionFlow] ⚠ Duplicate completion detected, ignoring');
+            return; // Prevent double completion
           }
-        }, 2500); // Wait for animation to complete
-      }, gameOptions);
-      console.info('[CompetitionFlow] ✓ renderMinigame called successfully');
+          hasCompleted = true;
+          
+          // Show completion animation
+          showCompletionAnimation(overlay, score, options.previousBest);
+          
+          // Close overlay and call completion callback after animation
+          setTimeout(() => {
+            console.info('[CompetitionFlow] → Closing fullscreen overlay and calling onComplete');
+            close(false); // Use fade out animation
+            if(typeof onComplete === 'function'){
+              onComplete(score);
+            }
+          }, 2500); // Wait for animation to complete
+        }, gameOptions);
+        console.info('[CompetitionFlow] ✓ renderMinigame called successfully');
+      } catch (renderErr) {
+        console.error('[CompetitionFlow][Guard] ✗ renderMinigame threw error:', renderErr);
+        
+        // Display inline error card
+        gameContainer.innerHTML = '';
+        const errorCard = document.createElement('div');
+        errorCard.style.cssText = `
+          background: linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(185, 28, 28, 0.95));
+          border: 2px solid #dc2626;
+          border-radius: 16px;
+          padding: 24px 32px;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+          text-align: center;
+          max-width: 500px;
+          margin: 20px auto;
+        `;
+        errorCard.innerHTML = `
+          <div style="font-size: 1.8rem; font-weight: bold; color: white; margin-bottom: 8px; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);">
+            ⚠️ Error Loading Minigame
+          </div>
+          <div style="font-size: 1rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 16px;">
+            ${gameKey} failed to load
+          </div>
+          <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); font-family: monospace;">
+            ${renderErr.message || 'Unknown error'}
+          </div>
+        `;
+        gameContainer.appendChild(errorCard);
+        
+        dispatchTelemetryEvent('error', {
+          type: 'render-error',
+          gameKey: gameKey,
+          error: renderErr.message || String(renderErr)
+        });
+        
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+          close(false);
+        }, 3000);
+      }
     } else {
       console.error('[CompetitionFlow] ✗ renderMinigame function not available!');
       gameContainer.innerHTML = '<div style="color:#ff6b9d;text-align:center;padding:40px;">Error: Minigame system not loaded</div>';
+      
+      dispatchTelemetryEvent('error', {
+        type: 'missing-renderer',
+        gameKey: gameKey,
+        message: 'renderMinigame function not available'
+      });
     }
 
     return { close, overlay };
@@ -906,6 +1266,11 @@
   function runCompetitionFlow(gameKey, container, onComplete, options = {}){
     console.info(`[CompetitionFlow] ═══ runCompetitionFlow called ═══`);
     console.info(`[CompetitionFlow] Game: ${gameKey}, Options:`, options);
+    
+    // ═══ Guard: Check if called before ready ═══
+    if (checkAndQueueIfNotReady('runCompetitionFlow', [gameKey, container, onComplete, options])) {
+      return; // Call queued, will be replayed later
+    }
     
     // Ensure container is attached to the DOM (belt-and-suspenders safeguard)
     container = ensureAttachedContainer(container);
@@ -1009,6 +1374,117 @@
   `;
   document.head.appendChild(style);
 
+  // ═══ Self-Test Harness ═══
+  /**
+   * Run automated self-test to verify module functionality
+   * Called once on module readiness
+   */
+  function runSelfTest() {
+    console.info('[CompetitionFlow][SelfTest] Running automated self-test...');
+    
+    try {
+      // Create temporary container
+      const tempContainer = document.createElement('div');
+      tempContainer.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+      document.body.appendChild(tempContainer);
+      
+      // Call showInstructionsInTV with no-op callback for self-test
+      const card = showInstructionsInTV('selftest', tempContainer, () => {
+        // No-op for self-test
+      });
+      
+      // Verify basic structure
+      const hasCard = !!card;
+      const hasTitle = card && card.querySelector('h2');
+      const hasButton = card && card.querySelector('button');
+      const cardAttached = card && card.isConnected;
+      
+      // Cleanup
+      if (tempContainer.parentNode) {
+        tempContainer.remove();
+      }
+      
+      // Determine result
+      const passed = hasCard && hasTitle && hasButton && cardAttached;
+      
+      const result = {
+        passed: passed,
+        checks: {
+          cardCreated: hasCard,
+          hasTitleElement: !!hasTitle,
+          hasButtonElement: !!hasButton,
+          cardAttached: cardAttached
+        },
+        timestamp: Date.now()
+      };
+      
+      console.info('[CompetitionFlow][SelfTest] Result:', passed ? '✓ PASSED' : '✗ FAILED', result);
+      
+      // Set failure flag if needed
+      if (!passed) {
+        window.__competitionFlowSelfTestFailed = true;
+      }
+      
+      // Dispatch self-test event
+      dispatchTelemetryEvent('selftest', result);
+      
+    } catch (err) {
+      console.error('[CompetitionFlow][SelfTest] ✗ Self-test threw error:', err);
+      
+      window.__competitionFlowSelfTestFailed = true;
+      
+      dispatchTelemetryEvent('selftest', {
+        passed: false,
+        error: err.message || String(err),
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  // ═══ Module Initialization Complete ═══
+  // Mark module as no longer evaluating
+  window.__competitionFlowModuleEvaluating = false;
+  
+  // Mark module as ready
+  window.__competitionFlowModuleReady = true;
+  
+  console.info('[CompetitionFlow][Guard] Module initialization complete');
+  
+  // Dispatch init event
+  dispatchTelemetryEvent('init', {
+    ready: true,
+    timestamp: Date.now()
+  });
+  
+  // Flush any deferred calls
+  if (window.__competitionFlowDeferredCalls.length > 0 || 
+      window.__competitionFlowDeferredInstructions.length > 0) {
+    console.info('[CompetitionFlow][Guard] Flushing deferred calls from initialization');
+    flushDeferredCalls();
+  }
+  
+  // Run self-test on next tick (after any immediate deferred calls)
+  setTimeout(() => {
+    if (!window.__competitionFlowSelfTestRan) {
+      window.__competitionFlowSelfTestRan = true;
+      runSelfTest();
+    }
+  }, 0);
+  
+  // Listen for game ready event to flush any additional deferred calls
+  // Check for common game ready event patterns
+  const gameReadyEvents = ['bb:game:ready', 'game:ready', 'DOMContentLoaded'];
+  
+  gameReadyEvents.forEach(eventName => {
+    document.addEventListener(eventName, () => {
+      console.info(`[CompetitionFlow][Guard] Received ${eventName} event`);
+      if (window.__competitionFlowDeferredCalls.length > 0 || 
+          window.__competitionFlowDeferredInstructions.length > 0) {
+        flushDeferredCalls();
+      }
+    }, { once: true });
+  });
+
   // Expose to global
   g.CompetitionFlow = {
     showInstructionsInTV: showInstructionsInTV,
@@ -1016,7 +1492,10 @@
     runCompetitionFlow: runCompetitionFlow,
     cleanupOnPhaseChange: cleanupOnPhaseChange,
     ensureAttachedContainer: ensureAttachedContainer,
-    resolveAttachedTvContainer: ensureAttachedContainer // Alias for consistency
+    resolveAttachedTvContainer: ensureAttachedContainer, // Alias for consistency
+    // Expose guard utilities for debugging
+    getGameRef: getGameRef,
+    flushDeferredCalls: flushDeferredCalls
   };
 
 })(window);
