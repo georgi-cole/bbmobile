@@ -17,6 +17,8 @@
   --theme-primary: var(--accent, #2d3b55);
   --theme-on-primary: #ffffff;
   --tv-inline-focus-ring: var(--accent, #4a90e2);
+  /* Fallback for browsers without color-mix support */
+  --tv-inline-card-bg: rgba(45, 59, 85, 0.18);
   --tv-inline-card-bg: color-mix(in srgb, var(--theme-primary) 18%, transparent);
   --tv-inline-card-backdrop: blur(6px);
 }
@@ -90,6 +92,8 @@
    ============================================================================ */
 
 .tv-status-chip.tv-inline-theme {
+  /* Fallback for browsers without color-mix support */
+  background: rgba(45, 59, 85, 0.18);
   background: color-mix(in srgb, var(--theme-primary) 18%, transparent);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);

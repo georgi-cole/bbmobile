@@ -11,6 +11,22 @@
     return (global.getP ? global.getP(id) : null); 
   }
 
+  /**
+   * Create ESC key dismissal handler for cards.
+   * @param {Function} onDismiss - Callback to execute when ESC is pressed
+   * @returns {Function} The event handler function (for cleanup if needed)
+   */
+  function createEscDismissHandler(onDismiss){
+    function handleEscape(e){
+      if(e.key === 'Escape'){
+        document.removeEventListener('keydown', handleEscape);
+        onDismiss();
+      }
+    }
+    document.addEventListener('keydown', handleEscape);
+    return handleEscape;
+  }
+
   // ======= TV OVERLAY SCAFFOLD MANAGEMENT =======
 
   /**
@@ -468,16 +484,12 @@
       }
       
       // ESC key dismissal handler
-      function handleEscape(e){
-        if(e.key === 'Escape'){
-          document.removeEventListener('keydown', handleEscape);
-          clearTVOverlay();
-          var tv = document.getElementById('tv');
-          if(tv) tv.classList.remove('tvTall');
-          resolve(null);
-        }
-      }
-      document.addEventListener('keydown', handleEscape);
+      createEscDismissHandler(function(){
+        clearTVOverlay();
+        var tv = document.getElementById('tv');
+        if(tv) tv.classList.remove('tvTall');
+        resolve(null);
+      });
       
       for(var i=0; i<buttons.length; i++){
         (function(btn){

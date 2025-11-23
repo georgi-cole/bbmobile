@@ -4,12 +4,17 @@
 //
 // Features:
 // - Calculates luminance of theme primary color
-// - Adjusts text color for light backgrounds (luminance > 0.65)
+// - Adjusts text color for light backgrounds (luminance > LUMINANCE_THRESHOLD)
 // - Provides fallback values if theme variables are missing
 // - Runs once on DOMContentLoaded
 
 (function ensureThemeContrast() {
   'use strict';
+
+  // Luminance threshold for determining if background is light or dark
+  // Values above this threshold are considered light backgrounds requiring dark text
+  // Range: 0 (black) to 1 (white). Recommended: 0.5-0.7
+  const LUMINANCE_THRESHOLD = 0.65;
 
   /**
    * Convert hex color to RGB object
@@ -116,7 +121,7 @@
     console.info(`[ThemeContrast] Primary color: ${normalizedColor}, Luminance: ${luminance.toFixed(3)}`);
 
     // If luminance is high (light color), use dark text
-    if (luminance > 0.65) {
+    if (luminance > LUMINANCE_THRESHOLD) {
       root.style.setProperty('--theme-on-primary', '#1d1d21');
       console.info('[ThemeContrast] Light background detected, using dark text');
     } else {
