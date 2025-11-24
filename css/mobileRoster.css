@@ -135,86 +135,38 @@ body[data-mobile-roster-active="true"] #rosterBar {
   line-height: 1.2;
 }
 
-/* Badge overlay - displayed at bottom of avatar */
-.mobile-roster-badge-overlay {
+/* Badge indicators (HOH, NOM, etc.) */
+.mobile-roster-badge {
   position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 3px 8px;
-  border-radius: 10px;
+  top: -6px;
+  right: -6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  z-index: 2;
+  border: 2px solid var(--card);
+  z-index: 1;
   pointer-events: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* Single badge styles */
-.mobile-roster-badge-overlay.hoh {
-  background: linear-gradient(135deg, rgba(255, 177, 66, 0.95), rgba(255, 140, 66, 0.95));
+.mobile-roster-badge.hoh {
+  background: linear-gradient(135deg, #ffb142, #ff8c42);
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.mobile-roster-badge-overlay.nom {
-  background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95));
+.mobile-roster-badge.nom {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.mobile-roster-badge-overlay.veto {
-  background: linear-gradient(135deg, rgba(241, 196, 15, 0.95), rgba(212, 175, 55, 0.95));
+.mobile-roster-badge.pov {
+  background: linear-gradient(135deg, #f1c40f, #d4af37);
   color: #333;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(0, 0, 0, 0.2);
-}
-
-.mobile-roster-badge-overlay.safe {
-  background: linear-gradient(135deg, rgba(39, 174, 96, 0.95), rgba(34, 153, 84, 0.95));
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.mobile-roster-badge-overlay.evict {
-  background: linear-gradient(135deg, rgba(192, 57, 43, 0.95), rgba(231, 76, 60, 0.95));
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-/* Combination badge styles - use gradient from primary status */
-.mobile-roster-badge-overlay.hoh.veto,
-.mobile-roster-badge-overlay.hoh.nom,
-.mobile-roster-badge-overlay.hoh.safe {
-  background: linear-gradient(135deg, rgba(255, 177, 66, 0.95), rgba(255, 140, 66, 0.95));
-  color: #fff;
-}
-
-.mobile-roster-badge-overlay.veto.nom {
-  background: linear-gradient(135deg, rgba(241, 196, 15, 0.95), rgba(212, 175, 55, 0.95));
-  color: #333;
-}
-
-.mobile-roster-badge-overlay.veto.safe {
-  background: linear-gradient(135deg, rgba(241, 196, 15, 0.95), rgba(212, 175, 55, 0.95));
-  color: #333;
-}
-
-.mobile-roster-badge-overlay.nom.safe {
-  background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95));
-  color: #fff;
 }
 
 /* ============================
@@ -378,7 +330,19 @@ body[data-mobile-roster-active="true"] #rosterBar {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
-
+/* Evicted badge */
+.mobile-roster-badge.evict {
+  background: linear-gradient(135deg, var(--evicted-color-dark), var(--evicted-color));
+  color: #fff;
+  font-size: 0.5rem;
+  font-weight: 700;
+  width: 32px;
+  height: 32px;
+  top: -8px;
+  right: -8px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
 
 /* ============================
    TV Footer Bar
@@ -538,10 +502,12 @@ body[data-mobile-roster-active="true"] .tv {
     font-size: 0.6rem;
   }
   
-  .mobile-roster-badge-overlay {
-    font-size: 0.6rem;
-    padding: 2px 6px;
-    bottom: 3px;
+  .mobile-roster-badge {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+    top: -4px;
+    right: -4px;
   }
 }
 
@@ -588,10 +554,10 @@ body[data-mobile-roster-active="true"] .tv {
     font-size: 0.55rem;
   }
   
-  .mobile-roster-badge-overlay {
-    font-size: 0.55rem;
-    padding: 2px 5px;
-    bottom: 2px;
+  .mobile-roster-badge {
+    width: 22px;
+    height: 22px;
+    font-size: 0.7rem;
   }
 }
 
@@ -783,156 +749,6 @@ body[data-mobile-roster-active="true"] .tv {
   }
   
   .profile-field label {
-    min-width: auto;
-  }
-}
-
-/* ============================
-   Hold Profile Sheet
-   ============================ */
-
-.hold-profile-sheet {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-height: 0;
-  background: var(--card);
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
-  z-index: 10000;
-  overflow: hidden;
-  transition: max-height 0.2s ease, opacity 0.2s ease;
-  opacity: 0;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.hold-profile-sheet.visible {
-  max-height: 55vh;
-  opacity: 1;
-}
-
-.hold-profile-sheet-content {
-  padding: 20px;
-  overflow-y: auto;
-  max-height: 55vh;
-}
-
-/* Portrait mode - full width */
-@media (orientation: portrait) {
-  .hold-profile-sheet {
-    width: 100%;
-  }
-}
-
-/* Landscape mode - framed panel */
-@media (orientation: landscape) {
-  .hold-profile-sheet {
-    width: min(600px, 60vw);
-    left: 50%;
-    transform: translateX(-50%);
-    border: 2px solid var(--accent);
-    border-bottom: none;
-  }
-  
-  .hold-profile-sheet.visible {
-    max-height: 70vh;
-  }
-  
-  .hold-profile-sheet-content {
-    max-height: 70vh;
-  }
-}
-
-/* Profile field styles (shared with popover) */
-.hold-profile-sheet .profile-field-name {
-  margin: 0 0 20px 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--ink);
-  text-align: center;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--line);
-}
-
-.hold-profile-sheet .profile-field {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  background: var(--card-2);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.hold-profile-sheet .profile-field label {
-  font-weight: 600;
-  color: var(--muted-2);
-  min-width: 100px;
-  flex-shrink: 0;
-}
-
-.hold-profile-sheet .profile-field span,
-.hold-profile-sheet .profile-field strong,
-.hold-profile-sheet .profile-field em {
-  color: var(--ink);
-  flex: 1;
-}
-
-.hold-profile-sheet .profile-field strong {
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.hold-profile-sheet .profile-field em {
-  font-style: italic;
-  color: var(--muted-2);
-}
-
-.hold-profile-sheet .profile-field-empty {
-  color: var(--muted) !important;
-  font-style: italic;
-  opacity: 0.6;
-}
-
-.hold-profile-sheet .profile-field-ranking {
-  background: linear-gradient(135deg, var(--primary-2), var(--primary-3));
-  border: 1px solid var(--accent);
-}
-
-.hold-profile-sheet .profile-ranking-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--accent) !important;
-}
-
-.hold-profile-sheet .profile-field-eviction {
-  background: rgba(var(--evicted-color-rgb), 0.1);
-  border: 1px solid rgba(var(--evicted-color-rgb), 0.3);
-}
-
-.hold-profile-sheet .profile-eviction-value {
-  font-weight: 700;
-  color: var(--evicted-color) !important;
-}
-
-/* Mobile-specific adjustments */
-@media (max-width: 520px) {
-  .hold-profile-sheet-content {
-    padding: 16px;
-  }
-  
-  .hold-profile-sheet .profile-field {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  
-  .hold-profile-sheet .profile-field label {
     min-width: auto;
   }
 }
