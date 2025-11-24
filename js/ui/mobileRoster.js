@@ -1809,12 +1809,3 @@
   console.info('[MobileRoster] Module loaded');
   
 })(window);
-
-// Auto-initialize MobileRoster when DOM is ready
-if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', window.MobileRoster.init, { once: true });
-  } else {
-    window.MobileRoster.init();
-  }
-}
