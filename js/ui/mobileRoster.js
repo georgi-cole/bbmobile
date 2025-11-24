@@ -1811,9 +1811,9 @@
 })(window);
 
 // Auto-initialize MobileRoster when DOM is ready
-if (typeof window !== 'undefined' && window.MobileRoster && typeof window.MobileRoster.init === 'function') {
+if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => window.MobileRoster.init(), { once: true });
+    document.addEventListener('DOMContentLoaded', window.MobileRoster.init, { once: true });
   } else {
     window.MobileRoster.init();
   }
