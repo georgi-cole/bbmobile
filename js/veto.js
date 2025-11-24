@@ -690,28 +690,47 @@
             console.error('[veto.js] ✗ No host node available for minigame rendering');
           }
         } else {
-          // Human not drawn to play - show intermission flow if available
+          // Human not drawn to play - show status message and wait card
           console.info('[veto.js] Human not eligible for this veto competition');
           
-          // Determine reason for ineligibility
-          var reason = 'not_selected';
-          if (you.evicted) {
-            reason = 'evicted';
+          // Update status bar with concise message
+          if(window.TvStatus && typeof window.TvStatus.set === 'function'){
+            window.TvStatus.set('You were not drawn to play');
           }
           
-          // Check if intermission flow is available and enabled
-          if (global.IntermissionFlow && (g.cfg?.enableIntermissionGames !== false)) {
-            console.info('[veto.js] Starting intermission flow for ineligible player');
+          // Determine if we should show inline wait card (mobile-first)
+          var shouldShowInlineCard = false;
+          
+          // Check config flag first
+          if(g.cfg && g.cfg.fastForwardInlineWaitCard === true){
+            shouldShowInlineCard = true;
+            console.info('[veto.js] Using inline wait card (config flag enabled)');
+          }
+          // Otherwise check viewport width for mobile
+          else if(window.innerWidth <= 860){
+            shouldShowInlineCard = true;
+            console.info('[veto.js] Using inline wait card (mobile viewport detected)');
+          }
+          
+          // Show inline wait card or fallback to IntermissionFlow
+          if(shouldShowInlineCard && typeof global.showVetoWaitCard === 'function'){
+            console.info('[veto.js] Showing veto wait card');
+            global.showVetoWaitCard();
+          }
+          else if (global.IntermissionFlow && (g.cfg?.enableIntermissionGames !== false)) {
+            // Fallback to original IntermissionFlow for desktop
+            console.info('[veto.js] Starting intermission flow for ineligible player (desktop fallback)');
+            var reason = you.evicted ? 'evicted' : 'not_selected';
             global.IntermissionFlow.start({
               compType: 'Veto',
               reason: reason,
               onComplete: function() {
                 console.info('[veto.js] Intermission flow completed, showing competition results');
-                // Player finished intermission or skipped, continue to show results
               }
             });
           } else {
-            // Fallback: just show status message
+            // Final fallback: just show status message
+            console.info('[veto.js] No wait card or intermission flow available, showing status only');
             if(window.TVInlineStatus?.set){
               var participantNames = list.join(', ');
               window.TVInlineStatus.set('You are not playing Veto. Participants: ' + participantNames, 'muted');
@@ -876,6 +895,11 @@
     if (g.__finishVetoCompCalled || g.__vetoResolving) {
       console.warn('[veto] finishVetoComp already called or resolving - skipping duplicate');
       return;
+    }
+
+    // Dismiss veto wait card when competition finishes
+    if(typeof global.dismissVetoWaitCard === 'function'){
+      global.dismissVetoWaitCard();
     }
 
     // If we still need human input

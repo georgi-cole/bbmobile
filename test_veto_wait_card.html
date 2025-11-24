@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veto Wait Card Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/veto-wait-card.css">
+  <link rel="stylesheet" href="css/tv-overlay-status.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #88aaff;
+      margin-bottom: 30px;
+    }
+
+    .test-controls {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .test-controls h2 {
+      margin-top: 0;
+      color: #88aaff;
+      font-size: 1.2rem;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background: #2f8651;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button:hover {
+      background: #36a563;
+    }
+
+    button.secondary {
+      background: #414c5c;
+    }
+
+    button.secondary:hover {
+      background: #556478;
+    }
+
+    button.danger {
+      background: #b71c1c;
+    }
+
+    button.danger:hover {
+      background: #c62828;
+    }
+
+    .info-panel {
+      background: rgba(136, 170, 255, 0.1);
+      border: 1px solid rgba(136, 170, 255, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .info-panel h3 {
+      margin-top: 0;
+      color: #88aaff;
+      font-size: 1rem;
+    }
+
+    .info-panel ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .info-panel li {
+      margin: 6px 0;
+    }
+
+    /* Mock TV Container */
+    .mock-tv-container {
+      position: relative;
+      background: linear-gradient(135deg, #0f1419, #1a1f28);
+      border: 3px solid #2e3d52;
+      border-radius: 16px;
+      padding: 20px;
+      min-height: 400px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tvHead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(45, 59, 85, 0.3);
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .tvTitle {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #88aaff;
+    }
+
+    .tvViewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .placeholder-text {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 1.1rem;
+    }
+
+    .status-log {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+
+    .status-log-entry {
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 3px solid #88aaff;
+      background: rgba(136, 170, 255, 0.05);
+    }
+
+    .status-log-entry.success {
+      border-left-color: #2f8651;
+      background: rgba(47, 134, 81, 0.1);
+    }
+
+    .status-log-entry.warning {
+      border-left-color: #ffa726;
+      background: rgba(255, 167, 38, 0.1);
+    }
+
+    .status-log-entry.error {
+      border-left-color: #b71c1c;
+      background: rgba(183, 28, 28, 0.1);
+    }
+
+    /* Responsive test */
+    @media (max-width: 860px) {
+      .test-controls {
+        padding: 16px;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 Veto Wait Card Test Suite</h1>
+
+    <div class="info-panel">
+      <h3>📋 Test Objectives</h3>
+      <ul>
+        <li>✅ Card renders correctly in TV container</li>
+        <li>✅ Status message appears in TV header</li>
+        <li>✅ Yes button launches intermission game (or shows message if unavailable)</li>
+        <li>✅ No button dismisses card cleanly</li>
+        <li>✅ Card auto-dismisses on phase change simulation</li>
+        <li>✅ No duplicate cards created</li>
+        <li>✅ Responsive layout works on mobile (resize browser)</li>
+        <li>✅ Accessibility: keyboard navigation, ARIA roles</li>
+      </ul>
+    </div>
+
+    <div class="test-controls">
+      <h2>🎮 Test Controls</h2>
+      
+      <div class="button-group">
+        <button onclick="testShowCard()">Show Veto Wait Card</button>
+        <button onclick="testShowCardAgain()" class="secondary">Show Card Again (Test Duplicate Prevention)</button>
+        <button onclick="testDismissCard()" class="secondary">Dismiss Card Manually</button>
+        <button onclick="testPhaseChange()" class="danger">Simulate Phase Change (Auto-Dismiss)</button>
+      </div>
+
+      <div class="button-group">
+        <button onclick="testSetStatus()">Set Status Bar Message</button>
+        <button onclick="testClearStatus()" class="secondary">Clear Status Bar</button>
+        <button onclick="testMobileViewport()" class="secondary">Test Mobile Viewport (360px)</button>
+        <button onclick="testTabletViewport()" class="secondary">Test Tablet Viewport (768px)</button>
+        <button onclick="testDesktopViewport()" class="secondary">Test Desktop Viewport (1024px)</button>
+      </div>
+
+      <div class="button-group">
+        <button onclick="clearLog()" class="danger">Clear Log</button>
+      </div>
+    </div>
+
+    <!-- Mock TV Container -->
+    <div class="mock-tv-container" data-faux-tv>
+      <div class="tvHead">
+        <div class="tvTitle">Veto Competition</div>
+        <!-- Status chip will appear here -->
+      </div>
+      <div class="tvViewport">
+        <div class="placeholder-text">
+          Competition in progress...<br>
+          <small>(Veto wait card will appear here)</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Log -->
+    <div class="status-log" id="statusLog">
+      <div class="status-log-entry">Test initialized. Ready to run tests.</div>
+    </div>
+  </div>
+
+  <!-- Load modules -->
+  <script src="js/tv-container.js"></script>
+  <script src="js/tv-overlay-status.js"></script>
+  <script src="js/ui.veto-wait-card.js"></script>
+
+  <!-- Test Script -->
+  <script>
+    // Mock game object
+    window.game = window.game || {
+      cfg: {},
+      humanId: 1,
+      phase: 'veto_comp'
+    };
+
+    // Mock TvStatus if not already loaded
+    if (!window.TvStatus) {
+      window.TvStatus = {
+        set: function(text) {
+          log('📊 Status set: ' + text, 'success');
+        },
+        clear: function() {
+          log('📊 Status cleared', 'success');
+        }
+      };
+    }
+
+    // Mock IntermissionFlow for testing
+    window.IntermissionFlow = {
+      start: function(options) {
+        log('🎮 IntermissionFlow.start called with: ' + JSON.stringify(options), 'success');
+        setTimeout(() => {
+          if (options.onComplete) options.onComplete();
+        }, 1000);
+      }
+    };
+
+    // Logging utility
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('statusLog');
+      const entry = document.createElement('div');
+      entry.className = 'status-log-entry ' + type;
+      entry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log('[Test]', message);
+    }
+
+    function clearLog() {
+      document.getElementById('statusLog').innerHTML = '';
+      log('Log cleared');
+    }
+
+    // Test functions
+    function testShowCard() {
+      log('🎯 Test: Show veto wait card');
+      if (typeof window.showVetoWaitCard === 'function') {
+        window.showVetoWaitCard();
+        log('✅ showVetoWaitCard() called successfully', 'success');
+      } else {
+        log('❌ showVetoWaitCard() function not found', 'error');
+      }
+    }
+
+    function testShowCardAgain() {
+      log('🎯 Test: Show card again (should prevent duplicate)');
+      if (typeof window.showVetoWaitCard === 'function') {
+        window.showVetoWaitCard();
+        log('✅ showVetoWaitCard() called again - check if duplicate was prevented', 'success');
+      } else {
+        log('❌ showVetoWaitCard() function not found', 'error');
+      }
+    }
+
+    function testDismissCard() {
+      log('🎯 Test: Dismiss card manually');
+      if (typeof window.dismissVetoWaitCard === 'function') {
+        window.dismissVetoWaitCard();
+        log('✅ dismissVetoWaitCard() called successfully', 'success');
+      } else {
+        log('❌ dismissVetoWaitCard() function not found', 'error');
+      }
+    }
+
+    function testPhaseChange() {
+      log('🎯 Test: Simulate phase change (auto-dismiss)');
+      window.game.phase = 'veto_ceremony';
+      testDismissCard();
+      log('✅ Phase changed to veto_ceremony, card should be dismissed', 'success');
+    }
+
+    function testSetStatus() {
+      log('🎯 Test: Set status bar message');
+      if (window.TvStatus && typeof window.TvStatus.set === 'function') {
+        window.TvStatus.set('You were not drawn to play');
+        log('✅ Status message set', 'success');
+      } else {
+        log('⚠️ TvStatus.set() not available', 'warning');
+      }
+    }
+
+    function testClearStatus() {
+      log('🎯 Test: Clear status bar');
+      if (window.TvStatus && typeof window.TvStatus.clear === 'function') {
+        window.TvStatus.clear();
+        log('✅ Status cleared', 'success');
+      } else {
+        log('⚠️ TvStatus.clear() not available', 'warning');
+      }
+    }
+
+    function testMobileViewport() {
+      log('🎯 Test: Mobile viewport (360px)');
+      const container = document.querySelector('.mock-tv-container');
+      container.style.maxWidth = '360px';
+      container.style.margin = '0 auto';
+      log('✅ Container resized to mobile width', 'success');
+    }
+
+    function testTabletViewport() {
+      log('🎯 Test: Tablet viewport (768px)');
+      const container = document.querySelector('.mock-tv-container');
+      container.style.maxWidth = '768px';
+      container.style.margin = '0 auto';
+      log('✅ Container resized to tablet width', 'success');
+    }
+
+    function testDesktopViewport() {
+      log('🎯 Test: Desktop viewport (full width)');
+      const container = document.querySelector('.mock-tv-container');
+      container.style.maxWidth = 'none';
+      container.style.margin = '0';
+      log('✅ Container resized to full width', 'success');
+    }
+
+    // Keyboard navigation test
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        log('⌨️ ESC key pressed - dismissing card for test purposes');
+        testDismissCard();
+      }
+    });
+
+    // Auto-test on load
+    window.addEventListener('load', function() {
+      log('🚀 Page loaded, modules initialized', 'success');
+      log('📱 Viewport width: ' + window.innerWidth + 'px');
+      log('💡 Tip: Resize browser to test responsive behavior', 'success');
+      
+      // Check if modules loaded
+      setTimeout(() => {
+        if (typeof window.showVetoWaitCard === 'function') {
+          log('✅ ui.veto-wait-card.js loaded successfully', 'success');
+        } else {
+          log('❌ ui.veto-wait-card.js failed to load', 'error');
+        }
+
+        if (window.TvContainer) {
+          log('✅ tv-container.js loaded successfully', 'success');
+        } else {
+          log('⚠️ tv-container.js not loaded (optional)', 'warning');
+        }
+      }, 100);
+    });
+  </script>
+</body>
+</html>

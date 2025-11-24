@@ -1,0 +1,240 @@
+/* ============================================================================
+   VETO WAIT CARD STYLING
+   
+   Purpose: Compact inline card for veto non-participants
+   Offers optional intermission game in mobile-friendly layout
+   
+   Features:
+   - Responsive sizing with mobile-first approach
+   - Theme-aware colors matching existing UI
+   - Smooth animations and transitions
+   - Accessibility-compliant focus states
+   - Button stacking on narrow screens
+   ============================================================================ */
+
+:root {
+  --vwc-bg-start: #182232;
+  --vwc-bg-end: #202c40;
+  --vwc-border: #2e3d52;
+  --vwc-text: #d7e5f7;
+  --vwc-heading: #88aaff;
+  --vwc-btn-yes: #2f8651;
+  --vwc-btn-yes-hover: #36a563;
+  --vwc-btn-no: #414c5c;
+  --vwc-btn-no-hover: #556478;
+  --vwc-shadow: rgba(0, 0, 0, 0.55);
+}
+
+/* ============================================================================
+   CARD CONTAINER
+   ============================================================================ */
+
+.veto-wait-card {
+  position: relative;
+  margin: 12px auto;
+  background: linear-gradient(135deg, var(--vwc-bg-start), var(--vwc-bg-end));
+  border: 1px solid var(--vwc-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 6px 20px -6px var(--vwc-shadow);
+  color: var(--vwc-text);
+  font-family: var(--ui-font, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  animation: vwcFadeIn 300ms ease-out;
+}
+
+/* Tablet breakpoint */
+@media (min-width: 641px) and (max-width: 860px) {
+  .veto-wait-card {
+    max-width: 420px;
+  }
+}
+
+/* Mobile breakpoint */
+@media (max-width: 640px) {
+  .veto-wait-card {
+    max-width: 340px;
+    padding: 12px 14px;
+  }
+}
+
+/* ============================================================================
+   INNER CONTAINER
+   ============================================================================ */
+
+.vwc-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ============================================================================
+   HEADING
+   ============================================================================ */
+
+.vwc-heading {
+  margin: 0 0 4px;
+  font-size: clamp(1.0rem, 4vw, 1.25rem);
+  font-weight: 600;
+  color: var(--vwc-heading);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ============================================================================
+   DESCRIPTION TEXT
+   ============================================================================ */
+
+.vwc-desc {
+  margin: 0 0 8px;
+  font-size: clamp(0.85rem, 3vw, 1rem);
+  color: var(--vwc-text);
+  text-align: center;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+/* ============================================================================
+   BUTTON CONTAINER
+   ============================================================================ */
+
+.vwc-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* Stack buttons vertically on very narrow screens */
+@media (max-width: 300px) {
+  .vwc-buttons {
+    flex-direction: column;
+  }
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+
+.vwc-btn {
+  flex: 1;
+  background: var(--vwc-btn-no);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  min-height: 44px; /* Ensure touch-friendly target size */
+}
+
+/* Yes button styling */
+.vwc-btn.vwc-yes {
+  background: var(--vwc-btn-yes);
+}
+
+/* Hover states */
+.vwc-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.vwc-btn.vwc-yes:hover:not(:disabled) {
+  background: var(--vwc-btn-yes-hover);
+}
+
+.vwc-btn.vwc-no:hover:not(:disabled) {
+  background: var(--vwc-btn-no-hover);
+}
+
+/* Active/pressed state */
+.vwc-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Disabled state */
+.vwc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Focus state for accessibility */
+.vwc-btn:focus-visible {
+  outline: 2px solid var(--vwc-heading);
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+@keyframes vwcFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vwcFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* ============================================================================
+   REDUCED MOTION SUPPORT
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .veto-wait-card {
+    animation: none;
+  }
+
+  .vwc-btn {
+    transition: none;
+  }
+
+  @keyframes vwcFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes vwcFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+}
+
+/* ============================================================================
+   HIGH CONTRAST MODE
+   ============================================================================ */
+
+@media (prefers-contrast: high) {
+  .veto-wait-card {
+    border: 2px solid var(--vwc-heading);
+  }
+
+  .vwc-btn {
+    border: 2px solid currentColor;
+  }
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+  .veto-wait-card {
+    display: none;
+  }
+}
