@@ -135,102 +135,86 @@ body[data-mobile-roster-active="true"] #rosterBar {
   line-height: 1.2;
 }
 
-/* Badge indicators (HOH, NOM, etc.) */
-.mobile-roster-badge,
-.tile-badge {
+/* Badge overlay - displayed at bottom of avatar */
+.mobile-roster-badge-overlay {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  border: 2px solid var(--card);
-  z-index: 1;
+  z-index: 2;
   pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-}
-
-.mobile-roster-badge.hoh,
-.tile-badge.hoh {
-  background: linear-gradient(135deg, #ffb142, #ff8c42);
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.mobile-roster-badge.nom,
-.tile-badge.nom {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.mobile-roster-badge.pov,
-.mobile-roster-badge.veto,
-.tile-badge.veto {
-  background: linear-gradient(135deg, #f1c40f, #d4af37);
-  color: #333;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
-}
-
-.mobile-roster-badge.safe,
-.tile-badge.safe {
-  background: linear-gradient(135deg, #27ae60, #229954);
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* Badge replacement mode - label becomes badge */
-.mobile-roster-name.label.is-badge {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.6rem;
-  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  border: 1px solid transparent;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
-.mobile-roster-name.label.is-badge.hoh {
-  background: linear-gradient(135deg, #ffb142, #ff8c42);
+/* Single badge styles */
+.mobile-roster-badge-overlay.hoh {
+  background: linear-gradient(135deg, rgba(255, 177, 66, 0.95), rgba(255, 140, 66, 0.95));
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.mobile-roster-name.label.is-badge.nom {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
+.mobile-roster-badge-overlay.nom {
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95));
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.mobile-roster-name.label.is-badge.veto {
-  background: linear-gradient(135deg, #f1c40f, #d4af37);
+.mobile-roster-badge-overlay.veto {
+  background: linear-gradient(135deg, rgba(241, 196, 15, 0.95), rgba(212, 175, 55, 0.95));
   color: #333;
-  border-color: rgba(0, 0, 0, 0.1);
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
-.mobile-roster-name.label.is-badge.safe {
-  background: linear-gradient(135deg, #27ae60, #229954);
+.mobile-roster-badge-overlay.safe {
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.95), rgba(34, 153, 84, 0.95));
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.mobile-roster-name.label.is-badge.evict {
-  background: linear-gradient(135deg, var(--evicted-color-dark), var(--evicted-color));
+.mobile-roster-badge-overlay.evict {
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.95), rgba(231, 76, 60, 0.95));
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Combination badge styles - use gradient from primary status */
+.mobile-roster-badge-overlay.hoh.veto,
+.mobile-roster-badge-overlay.hoh.nom,
+.mobile-roster-badge-overlay.hoh.safe {
+  background: linear-gradient(135deg, rgba(255, 177, 66, 0.95), rgba(255, 140, 66, 0.95));
+  color: #fff;
+}
+
+.mobile-roster-badge-overlay.veto.nom {
+  background: linear-gradient(135deg, rgba(241, 196, 15, 0.95), rgba(212, 175, 55, 0.95));
+  color: #333;
+}
+
+.mobile-roster-badge-overlay.veto.safe {
+  background: linear-gradient(135deg, rgba(241, 196, 15, 0.95), rgba(212, 175, 55, 0.95));
+  color: #333;
+}
+
+.mobile-roster-badge-overlay.nom.safe {
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95));
+  color: #fff;
 }
 
 /* ============================
@@ -394,19 +378,7 @@ body[data-mobile-roster-active="true"] #rosterBar {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
-/* Evicted badge */
-.mobile-roster-badge.evict {
-  background: linear-gradient(135deg, var(--evicted-color-dark), var(--evicted-color));
-  color: #fff;
-  font-size: 0.5rem;
-  font-weight: 700;
-  width: 32px;
-  height: 32px;
-  top: -8px;
-  right: -8px;
-  letter-spacing: 0.5px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
+
 
 /* ============================
    TV Footer Bar
@@ -566,12 +538,10 @@ body[data-mobile-roster-active="true"] .tv {
     font-size: 0.6rem;
   }
   
-  .mobile-roster-badge {
-    width: 24px;
-    height: 24px;
-    font-size: 0.75rem;
-    top: -4px;
-    right: -4px;
+  .mobile-roster-badge-overlay {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    bottom: 3px;
   }
 }
 
@@ -618,10 +588,10 @@ body[data-mobile-roster-active="true"] .tv {
     font-size: 0.55rem;
   }
   
-  .mobile-roster-badge {
-    width: 22px;
-    height: 22px;
-    font-size: 0.7rem;
+  .mobile-roster-badge-overlay {
+    font-size: 0.55rem;
+    padding: 2px 5px;
+    bottom: 2px;
   }
 }
 

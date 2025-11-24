@@ -34,9 +34,6 @@
     HOLD_DEBOUNCE_MS: 120,         // Time to wait before showing profile sheet (ms)
     MOVE_CANCEL_PX: 20,            // Movement threshold to cancel hold action (px)
     
-    // Badge Display Mode
-    BADGE_MODE: 'overlay',         // 'overlay' (default) or 'replace'
-    
     // Faux TV sizing constraints
     MIN_TV_RATIO: 0.38,            // Minimum TV height as ratio of viewport
     MAX_TV_RATIO: 0.48,            // Maximum TV height as ratio of viewport
@@ -331,34 +328,49 @@
   }
   
   /**
-   * Get status badge for a player
+   * Get status badge for a player with combination support
    * @param {Object} player - Player object
    * @param {boolean} isEvicted - Whether player is evicted
    * @returns {Object} {text, cls} - Badge text and CSS class, or null if no badge
    */
   function getStatusBadge(player, isEvicted = false) {
     if (isEvicted || player.evicted) {
-      return { text: 'EVCT', cls: 'evict' };
+      return { text: 'EVICTED', cls: 'evict' };
     }
     
-    // Priority order: HOH > NOM > VETO > SAFE
+    // Build badge combinations
+    const badges = [];
+    const classes = [];
+    
     if (player.hoh) {
-      return { text: 'HOH', cls: 'hoh' };
-    }
-    
-    if (player.nominated) {
-      return { text: 'NOM', cls: 'nom' };
+      badges.push('HOH');
+      classes.push('hoh');
     }
     
     if (player.pov || player.veto) {
-      return { text: 'VETO', cls: 'veto' };
+      badges.push('POV');
+      classes.push('veto');
+    }
+    
+    if (player.nominated) {
+      badges.push('NOM');
+      classes.push('nom');
     }
     
     if (player.safe) {
-      return { text: 'SAFE', cls: 'safe' };
+      badges.push('SAFE');
+      classes.push('safe');
     }
     
-    return null;
+    if (badges.length === 0) {
+      return null;
+    }
+    
+    // Combine badges with + separator
+    return {
+      text: badges.join('+'),
+      cls: classes.join(' ')
+    };
   }
   
   // ============================
@@ -571,26 +583,13 @@
     // Get badge info using new system
     const badgeInfo = getStatusBadge(player, isEvicted);
     
-    // Determine badge mode
-    const badgeMode = CONFIG.BADGE_MODE || 'overlay';
-    
     let badgeHTML = '';
-    let labelHTML = '';
-    let labelClass = 'mobile-roster-name';
+    const labelHTML = name;
+    const labelClass = 'mobile-roster-name';
     
     if (badgeInfo) {
-      if (badgeMode === 'replace') {
-        // Replace mode: badge text replaces name label with pill styling
-        labelClass = 'mobile-roster-name label is-badge ' + badgeInfo.cls;
-        labelHTML = badgeInfo.text;
-      } else {
-        // Overlay mode (default): pill badge in upper-right corner
-        badgeHTML = `<div class="mobile-roster-badge tile-badge ${badgeInfo.cls}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
-        labelHTML = name;
-      }
-    } else {
-      // No badge
-      labelHTML = name;
+      // Badge overlay at bottom of avatar (inside photo)
+      badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.cls}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
     }
     
     const evictedClass = isEvicted ? 'evicted' : '';
