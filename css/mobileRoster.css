@@ -12,6 +12,8 @@
   --evicted-color: #e74c3c;
   --evicted-color-dark: #c0392b;
   --evicted-color-rgb: 231, 76, 60;
+  --mobile-roster-gap: 6px; /* Reduced from 8px for tighter layout */
+  --mobile-roster-tile-scale: 1; /* For future fine-tuning */
 }
 
 /* ============================
@@ -44,7 +46,7 @@ body[data-mobile-roster-active="true"] #rosterBar {
 .mobile-roster-active-grid {
   display: grid;
   grid-template-columns: repeat(var(--mobile-roster-cols, 4), 1fr);
-  gap: var(--mobile-roster-gap, 8px);
+  gap: var(--mobile-roster-gap, 6px);
   justify-content: center;
   align-items: start;
   max-width: min(100%, 520px);
@@ -64,7 +66,7 @@ body[data-mobile-roster-active="true"] #rosterBar {
   background: linear-gradient(145deg, var(--roster-gradient-1, #182636), var(--roster-gradient-2, #101a28));
   border: 2px solid var(--roster-border, #2d4258);
   border-radius: 12px;
-  padding: 8px 6px 6px;
+  padding: calc(4px * var(--mobile-roster-tile-scale, 1));
   
   display: flex;
   flex-direction: column;
@@ -78,6 +80,11 @@ body[data-mobile-roster-active="true"] #rosterBar {
   
   /* Accessibility */
   outline: none;
+  
+  /* Suppress iOS native touch actions */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .mobile-roster-tile:hover,
@@ -102,7 +109,7 @@ body[data-mobile-roster-active="true"] #rosterBar {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 8px;
+  border-radius: 6px; /* Reduced from 8px for tighter look */
   overflow: hidden;
   background: var(--card);
   box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.75) inset;
@@ -114,6 +121,10 @@ body[data-mobile-roster-active="true"] #rosterBar {
   height: 100%;
   object-fit: cover;
   transition: filter 0.3s, transform 0.3s;
+  /* Suppress iOS native image actions */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .mobile-roster-tile:hover .mobile-roster-avatar {
@@ -123,7 +134,7 @@ body[data-mobile-roster-active="true"] #rosterBar {
 
 /* Name label */
 .mobile-roster-name {
-  font-size: 0.65rem;
+  font-size: 0.58rem; /* Reduced from 0.65rem */
   font-weight: 600;
   letter-spacing: 0.5px;
   color: var(--ink);
@@ -146,12 +157,37 @@ body[data-mobile-roster-active="true"] #rosterBar {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: 0.58rem; /* Reduced from 0.85rem */
   font-weight: 700;
   border: 2px solid var(--card);
   z-index: 1;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Badge text overlay at bottom-center of avatar */
+.mobile-roster-badge-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 3;
+  pointer-events: none;
+  letter-spacing: 0.3px;
+}
+
+/* Reduce font size for long badge combinations */
+.mobile-roster-badge-overlay.long-text {
+  font-size: 0.5rem;
 }
 
 .mobile-roster-badge.hoh {
@@ -495,19 +531,27 @@ body[data-mobile-roster-active="true"] .tv {
   
   .mobile-roster-tile {
     min-width: 60px;
-    padding: 6px 4px 4px;
+    padding: 4px;
   }
   
   .mobile-roster-name {
-    font-size: 0.6rem;
+    font-size: 0.54rem; /* Reduced for small screens */
   }
   
   .mobile-roster-badge {
     width: 24px;
     height: 24px;
-    font-size: 0.75rem;
+    font-size: 0.54rem;
     top: -4px;
     right: -4px;
+  }
+  
+  .mobile-roster-badge-overlay {
+    font-size: 0.54rem;
+  }
+  
+  .mobile-roster-badge-overlay.long-text {
+    font-size: 0.48rem;
   }
 }
 
@@ -551,26 +595,29 @@ body[data-mobile-roster-active="true"] .tv {
   }
   
   .mobile-roster-name {
-    font-size: 0.55rem;
+    font-size: 0.50rem; /* Further reduced for very small screens */
   }
   
   .mobile-roster-badge {
     width: 22px;
     height: 22px;
-    font-size: 0.7rem;
+    font-size: 0.50rem;
+  }
+  
+  .mobile-roster-badge-overlay {
+    font-size: 0.50rem;
+  }
+  
+  .mobile-roster-badge-overlay.long-text {
+    font-size: 0.45rem;
   }
 }
 
-/* Tablet and larger - hide mobile roster, use default */
-@media (min-width: 769px) {
-  body[data-mobile-roster-active="true"] .mobile-roster-container {
-    display: none;
-  }
-  
-  body[data-mobile-roster-active="true"] #rosterBar {
-    display: flex;
-  }
-}
+/* REMOVED: Do not hide mobile roster on landscape iPhone (min-width: 769px)
+ * This breakpoint was causing the roster to disappear on iPhone landscape mode.
+ * Mobile roster should remain active when body[data-mobile-roster-active="true"]
+ * regardless of viewport width. Desktop detection is handled in JavaScript.
+ */
 
 /* ============================
    Profile Popover

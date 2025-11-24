@@ -26,10 +26,11 @@
     MAX_COLS_LANDSCAPE: 5,         // Maximum columns in landscape
     MIN_TILE_SIZE: 56,             // Minimum tap target (px)
     MAX_TILE_SIZE: 100,            // Maximum tile size (px)
-    GAP_SIZE: 8,                   // Default gap between tiles (px)
+    GAP_SIZE: 6,                   // Default gap between tiles (px) - reduced from 8
     RESIZE_DEBOUNCE: 50,           // Debounce resize events (ms)
     SPOTLIGHT_DURATION: 3000,      // Auto-hide spotlight after this time (ms)
-    LONG_PRESS_DURATION: 1500,    // Long press threshold (ms)
+    LONG_PRESS_DURATION: 600,      // Long press threshold (ms) - reduced for faster response
+    HOLD_DEBOUNCE_MS: 600,         // Hold debounce for profile sheet (ms)
     
     // Faux TV sizing constraints
     MIN_TV_RATIO: 0.38,            // Minimum TV height as ratio of viewport
@@ -53,7 +54,12 @@
     initialized: false,
     longPressTimer: null,
     longPressTarget: null,
+    longPressStarted: false,
     chipBarObserver: null, // MutationObserver for chip bar suppression
+    initAttempts: 0,
+    lastInitAttempt: null,
+    forced: false,
+    badgesRendered: 0,
   };
   
   // ============================
@@ -517,6 +523,41 @@
   // ============================
   
   /**
+   * Get combined badge info for a player
+   * Returns badge text and class based on status combination
+   * Prioritizes: EVICTED > HOH > POV > NOM > SAFE
+   */
+  function getCombinedBadgeInfo(player, isEvicted = false) {
+    if (isEvicted) {
+      return { text: 'EVICTED', class: 'evict' };
+    }
+    
+    const statuses = [];
+    if (player.hoh) statuses.push('HOH');
+    if (player.pov) statuses.push('POV');
+    if (player.nominated) statuses.push('NOM');
+    if (player.safe && !player.hoh && !player.pov) statuses.push('SAFE');
+    
+    if (statuses.length === 0) {
+      return null;
+    }
+    
+    // Combine with separator
+    const text = statuses.join('+');
+    
+    // Determine class (use first status for styling)
+    const classMap = {
+      'HOH': 'hoh',
+      'POV': 'pov',
+      'NOM': 'nom',
+      'SAFE': 'safe'
+    };
+    const badgeClass = classMap[statuses[0]] || 'default';
+    
+    return { text, class: badgeClass };
+  }
+
+  /**
    * Create HTML for a roster tile
    */
   function createTileHTML(player, isEvicted = false) {
@@ -525,16 +566,17 @@
     const statusLabel = getPlayerStatusLabel(player, isEvicted);
     const loadingStrategy = shouldUseEagerLoading() ? 'eager' : 'lazy';
     
+    // Get combined badge info
+    const badgeInfo = getCombinedBadgeInfo(player, isEvicted);
+    
     let badgeHTML = '';
-    if (isEvicted) {
-      badgeHTML = '<div class="mobile-roster-badge evict" aria-label="EVCT - Evicted">EVCT</div>';
-    } else {
-      if (player.hoh) {
-        badgeHTML = '<div class="mobile-roster-badge hoh" aria-label="Head of Household">🔑</div>';
-      } else if (player.pov) {
-        badgeHTML = '<div class="mobile-roster-badge pov" aria-label="Power of Veto">🏅</div>';
-      } else if (player.nominated) {
-        badgeHTML = '<div class="mobile-roster-badge nom" aria-label="Nominated">⚠️</div>';
+    if (badgeInfo) {
+      // Badge overlay at bottom-center
+      const longTextClass = badgeInfo.text.length > 7 ? 'long-text' : '';
+      badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${longTextClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
+      
+      if (badgeInfo) {
+        state.badgesRendered++;
       }
     }
     
@@ -549,7 +591,7 @@
     
     return `
       <button 
-        class="mobile-roster-tile ${evictedClass}"
+        class="mobile-roster-tile ${evictedClass} no-touch-callout"
         data-player-id="${safePlayerId}"
         data-evicted="${isEvicted}"
         aria-label="${statusLabel}"
@@ -564,6 +606,7 @@
             loading="${loadingStrategy}"
             data-fallback="${fallbackUrl}"
             data-player-id="${safePlayerId}"
+            draggable="false"
           />
           ${isEvicted ? '<div class="mobile-roster-evicted-cross" aria-hidden="true"></div>' : ''}
           ${badgeHTML}
@@ -592,12 +635,22 @@
       container.removeAttribute('data-landscape-cols');
     }
     
+    // Reset badge counter
+    state.badgesRendered = 0;
+    
     // Render tiles (evicted players stay in grid with special styling)
     const tilesHTML = state.activePlayers.map(p => createTileHTML(p, p.evicted)).join('');
     container.innerHTML = tilesHTML;
     
     // Attach click handlers, long press handlers, and image error handlers
     container.querySelectorAll('.mobile-roster-tile').forEach(tile => {
+      // Prevent context menu
+      tile.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      });
+      
       tile.addEventListener('click', handleTileClick);
       tile.addEventListener('pointerdown', handlePointerDown);
       tile.addEventListener('pointerup', handlePointerEnd);
@@ -1079,11 +1132,21 @@
     cancelLongPress();
     
     state.longPressTarget = tile;
+    state.longPressStarted = false;
+    
     state.longPressTimer = setTimeout(() => {
+      // Mark that long press was triggered
+      state.longPressStarted = true;
+      
+      // Show profile sheet (bottom sheet)
       showProfilePopover(player, isEvicted);
+      
+      // Clean up
       state.longPressTimer = null;
       state.longPressTarget = null;
-    }, CONFIG.LONG_PRESS_DURATION);
+      
+      console.info('[MobileRoster] Long press triggered for', player.name);
+    }, CONFIG.HOLD_DEBOUNCE_MS);
   }
 
   // ============================
@@ -1092,8 +1155,15 @@
   
   /**
    * Handle tile click (short press)
+   * Only trigger if it wasn't a long press
    */
   function handleTileClick(event) {
+    // Don't trigger if this was a long press
+    if (state.longPressStarted) {
+      state.longPressStarted = false;
+      return;
+    }
+    
     const tile = event.currentTarget;
     const playerId = tile.getAttribute('data-player-id');
     const isEvicted = tile.getAttribute('data-evicted') === 'true';
@@ -1101,7 +1171,11 @@
     // Find player in activePlayers (which includes evicted now)
     const player = state.activePlayers.find(p => String(p.id) === String(playerId));
     
-    if (player) {
+    // Check MOBILE_ROSTER_DISABLE_SPOTLIGHT flag
+    const disableSpotlight = typeof window.MOBILE_ROSTER_DISABLE_SPOTLIGHT !== 'undefined' && 
+                             window.MOBILE_ROSTER_DISABLE_SPOTLIGHT;
+    
+    if (player && !disableSpotlight) {
       focusPlayer(player, isEvicted);
     }
   }
@@ -1110,6 +1184,12 @@
    * Handle pointer down (start long press)
    */
   function handlePointerDown(event) {
+    // Prevent default to suppress iOS native actions early
+    if (isMobileUA()) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     const tile = event.currentTarget;
     const playerId = tile.getAttribute('data-player-id');
     const isEvicted = tile.getAttribute('data-evicted') === 'true';
@@ -1123,10 +1203,17 @@
   }
   
   /**
-   * Handle pointer up/leave/cancel (cancel long press)
+   * Handle pointer up/leave/cancel (cancel long press or trigger click)
    */
-  function handlePointerEnd() {
+  function handlePointerEnd(event) {
+    const wasLongPress = state.longPressStarted;
     cancelLongPress();
+    
+    // If it was a long press, mark it so click handler doesn't fire
+    if (wasLongPress && event.type === 'pointerup') {
+      // longPressStarted already reset by cancelLongPress, but we set a flag
+      // The click handler will check this
+    }
   }
   
   /**
@@ -1494,7 +1581,10 @@
       return;
     }
     
-    console.info('[MobileRoster] Initializing...');
+    state.lastInitAttempt = Date.now();
+    state.initAttempts++;
+    
+    console.info('[MobileRoster] Initializing... (attempt ' + state.initAttempts + ')');
     
     // Create DOM structure
     if (!createDOMStructure()) {
@@ -1509,10 +1599,17 @@
     state.orientation = getOrientation();
     document.body.setAttribute('data-orientation', state.orientation);
     
+    // Set MOBILE_ROSTER_DISABLE_SPOTLIGHT flag
+    if (typeof window.MOBILE_ROSTER_DISABLE_SPOTLIGHT === 'undefined') {
+      window.MOBILE_ROSTER_DISABLE_SPOTLIGHT = true;
+      console.info('[MobileRoster] Set MOBILE_ROSTER_DISABLE_SPOTLIGHT=true');
+    }
+    
     // Activate if mobile viewport
     if (isMobileViewport()) {
       activateMobileRoster();
       renderAll();
+      console.info('[MobileRoster] Auto-activated on mobile viewport');
     } else {
       console.info('[MobileRoster] Desktop viewport, mobile roster inactive');
     }
@@ -1590,6 +1687,47 @@
     }
   }
   
+  /**
+   * Force enable mobile roster (for debugging)
+   */
+  function forceEnable() {
+    console.info('[MobileRoster] Force enable triggered');
+    window.FORCE_MOBILE_ROSTER = true;
+    state.forced = true;
+    
+    if (!state.initialized) {
+      init();
+    }
+    
+    refresh();
+  }
+
+  /**
+   * Get diagnostics status
+   */
+  function getStatus() {
+    const container = document.querySelector('.mobile-roster-container');
+    const tiles = document.querySelectorAll('.mobile-roster-tile');
+    
+    return {
+      active: document.body.hasAttribute('data-mobile-roster-active'),
+      tiles: tiles.length,
+      badgesRendered: state.badgesRendered,
+      lastInitAttempt: state.lastInitAttempt,
+      initAttempts: state.initAttempts,
+      forced: state.forced,
+      initialized: state.initialized,
+      containerExists: !!container,
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        isMobile: isMobileViewport(),
+        isMobileUA: isMobileUA(),
+        orientation: state.orientation
+      }
+    };
+  }
+
   // ============================
   // Public API
   // ============================
@@ -1601,12 +1739,84 @@
     focusPlayer,
     updatePlayerLists,
     toggleEvictedPanel,
+    forceEnable,
     getState: () => ({ ...state }), // Return copy for debugging
+  };
+  
+  const MobileRosterDiagnostics = {
+    getStatus
   };
   
   // Export to global scope
   global.MobileRoster = MobileRoster;
+  global.MobileRosterDiagnostics = MobileRosterDiagnostics;
   
   console.info('[MobileRoster] Module loaded');
   
 })(window);
+
+// ============================
+// Auto-initialization with retry
+// ============================
+(function autoInit() {
+  'use strict';
+  
+  // Check for force flag on mobile UA
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+  
+  if (isMobileUA && typeof window.FORCE_MOBILE_ROSTER === 'undefined') {
+    window.FORCE_MOBILE_ROSTER = true;
+    console.info('[MobileRoster AutoInit] Set FORCE_MOBILE_ROSTER=true for mobile UA');
+  }
+  
+  // Attempt initialization on DOMContentLoaded
+  const attemptInit = () => {
+    if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
+      console.info('[MobileRoster AutoInit] Starting initialization...');
+      window.MobileRoster.init();
+      
+      // Retry every 300ms for up to 3 seconds if container doesn't appear
+      let retries = 0;
+      const maxRetries = 10; // 10 * 300ms = 3s
+      
+      const retryInterval = setInterval(() => {
+        const container = document.querySelector('.mobile-roster-container');
+        const isActive = document.body.hasAttribute('data-mobile-roster-active');
+        
+        if (container && isActive) {
+          console.info('[MobileRoster AutoInit] Container active, initialization successful');
+          clearInterval(retryInterval);
+        } else if (retries < maxRetries) {
+          retries++;
+          console.info('[MobileRoster AutoInit] Retry ' + retries + '/' + maxRetries + ' - calling refresh()');
+          if (window.MobileRoster && typeof window.MobileRoster.refresh === 'function') {
+            window.MobileRoster.refresh();
+          }
+        } else {
+          console.warn('[MobileRoster AutoInit] Max retries reached, initialization may have failed');
+          clearInterval(retryInterval);
+        }
+      }, 300);
+      
+      return true;
+    }
+    return false;
+  };
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attemptInit);
+  } else {
+    // DOM already loaded
+    setTimeout(attemptInit, 0);
+  }
+  
+  // Additional fallback on window.onload
+  window.addEventListener('load', () => {
+    if (!document.body.hasAttribute('data-mobile-roster-active') && 
+        window.MobileRoster && 
+        typeof window.MobileRoster.init === 'function') {
+      console.info('[MobileRoster AutoInit] Fallback initialization on window.load');
+      window.MobileRoster.init();
+    }
+  });
+})();
