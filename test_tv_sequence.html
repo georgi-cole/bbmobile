@@ -395,18 +395,13 @@ Fourth and final chunk. Click Skip to see the end card immediately.`;
       
       tests.forEach(test => {
         const text = new Array(test.words).fill('word').join(' ');
-        const calculated = TVSequence.CONFIG.BASE_DWELL_MS + 
-                          (test.words / TVSequence.CONFIG.WORDS_PER_SECOND * TVSequence.CONFIG.WORD_TIME_MULTIPLIER);
-        const clamped = Math.max(
-          TVSequence.CONFIG.MIN_DWELL_MS,
-          Math.min(TVSequence.CONFIG.MAX_DWELL_MS, calculated)
-        );
+        const calculated = TVSequence.calculateDwellTime(text);
         
-        const passed = clamped === test.expected;
+        const passed = calculated === test.expected;
         const status = passed ? '✓' : '✗';
         const type = passed ? 'info' : 'error';
         
-        log(6, `${status} ${test.words} words: expected ${test.expected}ms, got ${clamped}ms`, type);
+        log(6, `${status} ${test.words} words: expected ${test.expected}ms, got ${calculated}ms`, type);
       });
       
       log(6, 'Dwell time calculation tests complete', 'info');

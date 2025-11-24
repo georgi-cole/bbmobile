@@ -358,15 +358,21 @@
 
 /* Light theme adjustments */
 @media (prefers-color-scheme: light) {
-  :root {
-    --tv-seq-progress-bg: rgba(0, 0, 0, 0.15);
-    --tv-seq-progress-fill: rgba(0, 0, 0, 0.8);
-    --tv-seq-skip-bg: rgba(255, 255, 255, 0.5);
-    --tv-seq-skip-hover-bg: rgba(255, 255, 255, 0.7);
+  .tv-sequence-progress-bar-bg {
+    background: rgba(0, 0, 0, 0.15);
+  }
+  
+  .tv-sequence-progress-bar-fill {
+    background: rgba(0, 0, 0, 0.8);
   }
   
   .tv-sequence-skip-btn {
+    background: rgba(255, 255, 255, 0.5);
     color: #000;
     border-color: rgba(0, 0, 0, 0.2);
+  }
+  
+  .tv-sequence-skip-btn:hover {
+    background: rgba(255, 255, 255, 0.7);
   }
 }

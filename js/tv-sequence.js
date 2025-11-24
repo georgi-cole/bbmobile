@@ -38,6 +38,8 @@
   /**
    * Calculate dwell time for a chunk based on word count
    * Formula: base 3.0s + (words / 40 * 2.0s), clamped between 3s and 8s
+   * @param {string} text - Text to calculate dwell time for
+   * @returns {number} Dwell time in milliseconds
    */
   function calculateDwellTime(text) {
     const words = countWords(text);
@@ -760,10 +762,10 @@
     
     console.info(`[TVSequence] Starting sequence with ${chunks.length} chunks`);
     
-    // Store current sequence
+    // Store current sequence (including rawText for replay)
     currentSequence = {
       chunks,
-      options,
+      options: { ...options, rawText },
       startTime: Date.now()
     };
     
@@ -808,8 +810,8 @@
       return;
     }
     
-    const { chunks, options } = currentSequence;
-    start(options.rawText || chunks.join('\n\n'), options);
+    const { options } = currentSequence;
+    start(options.rawText, options);
   }
 
   /**
@@ -832,7 +834,8 @@
     abort,
     replay,
     showAll,
-    // Expose config for testing
+    // Expose utilities for testing
+    calculateDwellTime,
     CONFIG
   };
 
