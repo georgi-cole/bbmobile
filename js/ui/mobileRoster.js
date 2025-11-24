@@ -1201,9 +1201,11 @@
   /**
    * Show profile popover for a player
    * DEPRECATED: Use showHoldProfileSheet instead
+   * Kept for backward compatibility but not actively used
    * @param {Object} player - Player object
    * @param {boolean} isEvicted - Whether player is evicted
    */
+  // eslint-disable-next-line no-unused-vars
   function showProfilePopover(player, isEvicted = false) {
     const popover = createProfilePopover();
     const body = popover.querySelector('.profile-popover-body');
@@ -1309,7 +1311,7 @@
   }
   
   /**
-   * Cancel long press
+   * Cancel long press (DEPRECATED - kept for compatibility)
    */
   function cancelLongPress() {
     if (state.longPressTimer) {
@@ -1319,22 +1321,7 @@
     }
   }
   
-  /**
-   * Start long press detection
-   * @param {HTMLElement} tile - Tile element
-   * @param {Object} player - Player object
-   * @param {boolean} isEvicted - Whether player is evicted
-   */
-  function startLongPress(tile, player, isEvicted) {
-    cancelLongPress();
-    
-    state.longPressTarget = tile;
-    state.longPressTimer = setTimeout(() => {
-      showProfilePopover(player, isEvicted);
-      state.longPressTimer = null;
-      state.longPressTarget = null;
-    }, CONFIG.LONG_PRESS_DURATION);
-  }
+  // startLongPress removed - use startHold instead
 
   // ============================
   // Event Handlers
