@@ -30,6 +30,10 @@
     RESIZE_DEBOUNCE: 50,           // Debounce resize events (ms)
     SPOTLIGHT_DURATION: 3000,      // Auto-hide spotlight after this time (ms)
     
+    // Auto-initialization Configuration
+    AUTO_INIT_TIMEOUT_MS: 3000,    // Maximum time to retry activation (ms)
+    AUTO_INIT_RETRY_INTERVAL_MS: 300,  // Interval between retry attempts (ms)
+    
     // Hold Profile Sheet Configuration
     HOLD_DEBOUNCE_MS: 120,         // Time to wait before showing profile sheet (ms)
     MOVE_CANCEL_PX: 20,            // Movement threshold to cancel hold action (px)
@@ -1801,6 +1805,7 @@
     updatePlayerLists,
     toggleEvictedPanel,
     getState: () => ({ ...state }), // Return copy for debugging
+    _CONFIG: CONFIG, // Expose CONFIG for auto-init block (internal use)
   };
   
   // Export to global scope
@@ -1818,24 +1823,27 @@
   }
   onReady(() => {
     try {
-      const ua = navigator.userAgent || '';
       // Force activation on mobile/touch UAs (iPhone/Android); safe because init is idempotent
-      if (/iPhone|iPod|Android|Mobile/i.test(ua)) {
+      // Note: We check UA directly here before MobileRoster module methods are available
+      const ua = navigator.userAgent || '';
+      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
         window.FORCE_MOBILE_ROSTER = true;
       }
       if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
         window.MobileRoster.init();
         // Retry activation briefly to handle late data/DOM availability
+        // Use CONFIG constants from the module
+        const CONFIG = window.MobileRoster._CONFIG || { AUTO_INIT_TIMEOUT_MS: 3000, AUTO_INIT_RETRY_INTERVAL_MS: 300 };
         const start = Date.now();
         const iv = setInterval(() => {
           const activeAttr = document.body.getAttribute('data-mobile-roster-active') === 'true';
           const container = document.querySelector('.mobile-roster-container');
-          if ((activeAttr && container) || (Date.now() - start) > 3000) {
+          if ((activeAttr && container) || (Date.now() - start) > CONFIG.AUTO_INIT_TIMEOUT_MS) {
             clearInterval(iv);
           } else {
             try { window.MobileRoster.refresh(); } catch(e) { /* no-op */ }
           }
-        }, 300);
+        }, CONFIG.AUTO_INIT_RETRY_INTERVAL_MS);
       } else {
         console.warn('[MobileRoster] Auto-init: MobileRoster not found on window');
       }
