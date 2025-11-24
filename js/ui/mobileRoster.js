@@ -29,10 +29,7 @@
     GAP_SIZE: 8,                   // Default gap between tiles (px)
     RESIZE_DEBOUNCE: 50,           // Debounce resize events (ms)
     SPOTLIGHT_DURATION: 3000,      // Auto-hide spotlight after this time (ms)
-    
-    // Hold Profile Sheet Configuration
-    HOLD_DEBOUNCE_MS: 120,         // Time to wait before showing profile sheet (ms)
-    MOVE_CANCEL_PX: 20,            // Movement threshold to cancel hold action (px)
+    LONG_PRESS_DURATION: 1500,    // Long press threshold (ms)
     
     // Faux TV sizing constraints
     MIN_TV_RATIO: 0.38,            // Minimum TV height as ratio of viewport
@@ -57,12 +54,6 @@
     longPressTimer: null,
     longPressTarget: null,
     chipBarObserver: null, // MutationObserver for chip bar suppression
-    
-    // Hold profile sheet state
-    holdTimer: null,
-    holdStartPos: null,
-    holdTarget: null,
-    holdSheetVisible: false,
   };
   
   // ============================
@@ -327,52 +318,6 @@
     return '—';
   }
   
-  /**
-   * Get status badge for a player with combination support
-   * @param {Object} player - Player object
-   * @param {boolean} isEvicted - Whether player is evicted
-   * @returns {Object} {text, cls} - Badge text and CSS class, or null if no badge
-   */
-  function getStatusBadge(player, isEvicted = false) {
-    if (isEvicted || player.evicted) {
-      return { text: 'EVICTED', cls: 'evict' };
-    }
-    
-    // Build badge combinations
-    const badges = [];
-    const classes = [];
-    
-    if (player.hoh) {
-      badges.push('HOH');
-      classes.push('hoh');
-    }
-    
-    if (player.pov || player.veto) {
-      badges.push('POV');
-      classes.push('veto');
-    }
-    
-    if (player.nominated) {
-      badges.push('NOM');
-      classes.push('nom');
-    }
-    
-    if (player.safe) {
-      badges.push('SAFE');
-      classes.push('safe');
-    }
-    
-    if (badges.length === 0) {
-      return null;
-    }
-    
-    // Combine badges with + separator
-    return {
-      text: badges.join('+'),
-      cls: classes.join(' ')
-    };
-  }
-  
   // ============================
   // Layout Computation
   // ============================
@@ -580,16 +525,17 @@
     const statusLabel = getPlayerStatusLabel(player, isEvicted);
     const loadingStrategy = shouldUseEagerLoading() ? 'eager' : 'lazy';
     
-    // Get badge info using new system
-    const badgeInfo = getStatusBadge(player, isEvicted);
-    
     let badgeHTML = '';
-    const labelHTML = name;
-    const labelClass = 'mobile-roster-name';
-    
-    if (badgeInfo) {
-      // Badge overlay at bottom of avatar (inside photo)
-      badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.cls}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
+    if (isEvicted) {
+      badgeHTML = '<div class="mobile-roster-badge evict" aria-label="EVCT - Evicted">EVCT</div>';
+    } else {
+      if (player.hoh) {
+        badgeHTML = '<div class="mobile-roster-badge hoh" aria-label="Head of Household">🔑</div>';
+      } else if (player.pov) {
+        badgeHTML = '<div class="mobile-roster-badge pov" aria-label="Power of Veto">🏅</div>';
+      } else if (player.nominated) {
+        badgeHTML = '<div class="mobile-roster-badge nom" aria-label="Nominated">⚠️</div>';
+      }
     }
     
     const evictedClass = isEvicted ? 'evicted' : '';
@@ -622,7 +568,7 @@
           ${isEvicted ? '<div class="mobile-roster-evicted-cross" aria-hidden="true"></div>' : ''}
           ${badgeHTML}
         </div>
-        <div class="${labelClass}">${labelHTML}</div>
+        <div class="mobile-roster-name">${name}</div>
       </button>
     `;
   }
@@ -650,20 +596,13 @@
     const tilesHTML = state.activePlayers.map(p => createTileHTML(p, p.evicted)).join('');
     container.innerHTML = tilesHTML;
     
-    // Attach click handlers, hold handlers, keyboard handlers, and image error handlers
+    // Attach click handlers, long press handlers, and image error handlers
     container.querySelectorAll('.mobile-roster-tile').forEach(tile => {
       tile.addEventListener('click', handleTileClick);
-      
-      // Hold detection
       tile.addEventListener('pointerdown', handlePointerDown);
-      tile.addEventListener('pointermove', handlePointerMove);
       tile.addEventListener('pointerup', handlePointerEnd);
       tile.addEventListener('pointerleave', handlePointerEnd);
       tile.addEventListener('pointercancel', handlePointerEnd);
-      
-      // Keyboard support
-      tile.addEventListener('keydown', handleKeyDown);
-      tile.addEventListener('keyup', handleKeyUp);
       
       // Attach image load/error handlers with case-insensitive fallback
       const img = tile.querySelector('.mobile-roster-avatar');
@@ -979,37 +918,45 @@
   }
   
   // ============================
-  // Hold Profile Sheet
+  // Profile Popover
   // ============================
   
   /**
-   * Create hold profile sheet DOM element
+   * Create profile popover DOM element
    */
-  function createHoldProfileSheet() {
-    const existing = document.querySelector('#holdProfileSheet');
+  function createProfilePopover() {
+    const existing = document.querySelector('.mobile-roster-profile-popover');
     if (existing) return existing;
     
-    const sheet = document.createElement('div');
-    sheet.id = 'holdProfileSheet';
-    sheet.className = 'hold-profile-sheet';
-    sheet.setAttribute('aria-hidden', 'true');
-    sheet.innerHTML = `
-      <div class="hold-profile-sheet-content"></div>
+    const popover = document.createElement('div');
+    popover.className = 'mobile-roster-profile-popover';
+    popover.innerHTML = `
+      <div class="profile-popover-backdrop"></div>
+      <div class="profile-popover-content">
+        <button class="profile-popover-close" aria-label="Close profile">✕</button>
+        <div class="profile-popover-body"></div>
+      </div>
     `;
     
-    document.body.appendChild(sheet);
+    document.body.appendChild(popover);
     
-    return sheet;
+    // Close button handler
+    popover.querySelector('.profile-popover-close').addEventListener('click', hideProfilePopover);
+    
+    // Backdrop click handler
+    popover.querySelector('.profile-popover-backdrop').addEventListener('click', hideProfilePopover);
+    
+    return popover;
   }
   
   /**
-   * Show hold profile sheet for a player
+   * Show profile popover for a player
    * @param {Object} player - Player object
    * @param {boolean} isEvicted - Whether player is evicted
    */
-  function showHoldProfileSheet(player, isEvicted = false) {
-    const sheet = createHoldProfileSheet();
-    const content = sheet.querySelector('.hold-profile-sheet-content');
+  function showProfilePopover(player, isEvicted = false) {
+    const popover = createProfilePopover();
+    const body = popover.querySelector('.profile-popover-body');
     
     // Get all players for ranking
     const allPlayers = [...state.activePlayers, ...state.evictedPlayers];
@@ -1092,122 +1039,12 @@
       fields.push(`<div class="profile-field profile-field-eviction"><label>Eviction Week:</label> <span class="profile-eviction-value">${evictionWeek}</span></div>`);
     }
     
-    content.innerHTML = fields.join('');
+    body.innerHTML = fields.join('');
     
-    // Show sheet with animation
-    sheet.classList.add('visible');
-    sheet.setAttribute('aria-hidden', 'false');
-    state.holdSheetVisible = true;
+    // Show popover with animation
+    popover.classList.add('visible');
     
-    console.info(`[MobileRoster] Showing hold profile sheet for ${player.name}`);
-  }
-  
-  /**
-   * Hide hold profile sheet
-   */
-  function hideHoldProfileSheet() {
-    const sheet = document.querySelector('#holdProfileSheet');
-    if (sheet) {
-      sheet.classList.remove('visible');
-      sheet.setAttribute('aria-hidden', 'true');
-      state.holdSheetVisible = false;
-      console.info('[MobileRoster] Hiding hold profile sheet');
-    }
-  }
-  
-  /**
-   * Cancel hold timer
-   */
-  function cancelHold() {
-    if (state.holdTimer) {
-      clearTimeout(state.holdTimer);
-      state.holdTimer = null;
-      state.holdStartPos = null;
-      state.holdTarget = null;
-    }
-  }
-  
-  /**
-   * Start hold detection
-   * @param {HTMLElement} tile - Tile element
-   * @param {Object} player - Player object
-   * @param {boolean} isEvicted - Whether player is evicted
-   * @param {number} startX - Starting X position
-   * @param {number} startY - Starting Y position
-   */
-  function startHold(tile, player, isEvicted, startX, startY) {
-    cancelHold();
-    hideHoldProfileSheet();
-    
-    state.holdTarget = tile;
-    state.holdStartPos = { x: startX, y: startY };
-    state.holdTimer = setTimeout(() => {
-      showHoldProfileSheet(player, isEvicted);
-      state.holdTimer = null;
-    }, CONFIG.HOLD_DEBOUNCE_MS);
-  }
-  
-  /**
-   * Check if movement exceeds threshold
-   * @param {number} currentX - Current X position
-   * @param {number} currentY - Current Y position
-   * @returns {boolean} True if movement exceeds threshold
-   */
-  function checkMovementCancel(currentX, currentY) {
-    if (!state.holdStartPos) return false;
-    
-    const dx = currentX - state.holdStartPos.x;
-    const dy = currentY - state.holdStartPos.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    return distance > CONFIG.MOVE_CANCEL_PX;
-  }
-  
-  // ============================
-  // Profile Popover (DEPRECATED - kept for compatibility)
-  // ============================
-  
-  /**
-   * Create profile popover DOM element
-   * @deprecated Use hold profile sheet instead
-   */
-  // eslint-disable-next-line no-unused-vars
-  function createProfilePopover() {
-    const existing = document.querySelector('.mobile-roster-profile-popover');
-    if (existing) return existing;
-    
-    const popover = document.createElement('div');
-    popover.className = 'mobile-roster-profile-popover';
-    popover.innerHTML = `
-      <div class="profile-popover-backdrop"></div>
-      <div class="profile-popover-content">
-        <button class="profile-popover-close" aria-label="Close profile">✕</button>
-        <div class="profile-popover-body"></div>
-      </div>
-    `;
-    
-    document.body.appendChild(popover);
-    
-    // Close button handler
-    popover.querySelector('.profile-popover-close').addEventListener('click', hideProfilePopover);
-    
-    // Backdrop click handler
-    popover.querySelector('.profile-popover-backdrop').addEventListener('click', hideProfilePopover);
-    
-    return popover;
-  }
-  
-  /**
-   * Show profile popover for a player
-   * @deprecated Use showHoldProfileSheet instead. This function will be removed in a future version.
-   * @param {Object} player - Player object
-   * @param {boolean} isEvicted - Whether player is evicted
-   */
-  // eslint-disable-next-line no-unused-vars
-  function showProfilePopover(player, isEvicted = false) {
-    console.warn('[MobileRoster] showProfilePopover is deprecated. Use showHoldProfileSheet instead.');
-    // Redirect to new implementation
-    showHoldProfileSheet(player, isEvicted);
+    console.info(`[MobileRoster] Showing profile popover for ${player.name}`);
   }
   
   /**
@@ -1222,7 +1059,7 @@
   }
   
   /**
-   * Cancel long press (DEPRECATED - kept for compatibility)
+   * Cancel long press
    */
   function cancelLongPress() {
     if (state.longPressTimer) {
@@ -1232,7 +1069,22 @@
     }
   }
   
-  // startLongPress removed - use startHold instead
+  /**
+   * Start long press detection
+   * @param {HTMLElement} tile - Tile element
+   * @param {Object} player - Player object
+   * @param {boolean} isEvicted - Whether player is evicted
+   */
+  function startLongPress(tile, player, isEvicted) {
+    cancelLongPress();
+    
+    state.longPressTarget = tile;
+    state.longPressTimer = setTimeout(() => {
+      showProfilePopover(player, isEvicted);
+      state.longPressTimer = null;
+      state.longPressTarget = null;
+    }, CONFIG.LONG_PRESS_DURATION);
+  }
 
   // ============================
   // Event Handlers
@@ -1255,7 +1107,7 @@
   }
   
   /**
-   * Handle pointer down (start hold detection)
+   * Handle pointer down (start long press)
    */
   function handlePointerDown(event) {
     const tile = event.currentTarget;
@@ -1266,74 +1118,23 @@
     const player = state.activePlayers.find(p => String(p.id) === String(playerId));
     
     if (player) {
-      // Get starting position
-      const startX = event.clientX || (event.touches && event.touches[0] ? event.touches[0].clientX : 0);
-      const startY = event.clientY || (event.touches && event.touches[0] ? event.touches[0].clientY : 0);
-      
-      startHold(tile, player, isEvicted, startX, startY);
+      startLongPress(tile, player, isEvicted);
     }
   }
   
   /**
-   * Handle pointer move (check for movement cancellation)
-   */
-  function handlePointerMove(event) {
-    if (state.holdTimer || state.holdSheetVisible) {
-      const currentX = event.clientX || (event.touches && event.touches[0] ? event.touches[0].clientX : 0);
-      const currentY = event.clientY || (event.touches && event.touches[0] ? event.touches[0].clientY : 0);
-      
-      if (checkMovementCancel(currentX, currentY)) {
-        cancelHold();
-        hideHoldProfileSheet();
-      }
-    }
-  }
-  
-  /**
-   * Handle pointer up/cancel (release hold)
+   * Handle pointer up/leave/cancel (cancel long press)
    */
   function handlePointerEnd() {
-    cancelHold();
-    hideHoldProfileSheet();
-  }
-  
-  /**
-   * Handle scroll (cancel hold and hide sheet)
-   */
-  function handleScroll() {
-    cancelHold();
-    hideHoldProfileSheet();
-    // Also cancel old long press for compatibility
     cancelLongPress();
   }
   
   /**
-   * Handle keyboard down (start hold on Enter/Space)
+   * Handle scroll (cancel long press)
    */
-  function handleKeyDown(event) {
-    if (event.key === 'Enter' || event.key === ' ') {
-      const tile = event.currentTarget;
-      const playerId = tile.getAttribute('data-player-id');
-      const isEvicted = tile.getAttribute('data-evicted') === 'true';
-      
-      const player = state.activePlayers.find(p => String(p.id) === String(playerId));
-      
-      if (player && !state.holdSheetVisible) {
-        event.preventDefault();
-        startHold(tile, player, isEvicted, 0, 0);
-      }
-    }
-  }
-  
-  /**
-   * Handle keyboard up (release hold on Enter/Space)
-   */
-  function handleKeyUp(event) {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      cancelHold();
-      hideHoldProfileSheet();
-    }
+  function handleScroll() {
+    cancelLongPress();
+    hideProfilePopover();
   }
   
   /**
