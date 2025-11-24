@@ -136,7 +136,8 @@ body[data-mobile-roster-active="true"] #rosterBar {
 }
 
 /* Badge indicators (HOH, NOM, etc.) */
-.mobile-roster-badge {
+.mobile-roster-badge,
+.tile-badge {
   position: absolute;
   top: -6px;
   right: -6px;
@@ -146,27 +147,90 @@ body[data-mobile-roster-active="true"] #rosterBar {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: 0.6rem;
   font-weight: 700;
   border: 2px solid var(--card);
   z-index: 1;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
 }
 
-.mobile-roster-badge.hoh {
+.mobile-roster-badge.hoh,
+.tile-badge.hoh {
   background: linear-gradient(135deg, #ffb142, #ff8c42);
   color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.mobile-roster-badge.nom {
+.mobile-roster-badge.nom,
+.tile-badge.nom {
   background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.mobile-roster-badge.pov {
+.mobile-roster-badge.pov,
+.mobile-roster-badge.veto,
+.tile-badge.veto {
   background: linear-gradient(135deg, #f1c40f, #d4af37);
   color: #333;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.mobile-roster-badge.safe,
+.tile-badge.safe {
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Badge replacement mode - label becomes badge */
+.mobile-roster-name.label.is-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-roster-name.label.is-badge.hoh {
+  background: linear-gradient(135deg, #ffb142, #ff8c42);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-roster-name.label.is-badge.nom {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-roster-name.label.is-badge.veto {
+  background: linear-gradient(135deg, #f1c40f, #d4af37);
+  color: #333;
+  border-color: rgba(0, 0, 0, 0.1);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.mobile-roster-name.label.is-badge.safe {
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-roster-name.label.is-badge.evict {
+  background: linear-gradient(135deg, var(--evicted-color-dark), var(--evicted-color));
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* ============================
@@ -749,6 +813,156 @@ body[data-mobile-roster-active="true"] .tv {
   }
   
   .profile-field label {
+    min-width: auto;
+  }
+}
+
+/* ============================
+   Hold Profile Sheet
+   ============================ */
+
+.hold-profile-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 0;
+  background: var(--card);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  overflow: hidden;
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+  opacity: 0;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hold-profile-sheet.visible {
+  max-height: 55vh;
+  opacity: 1;
+}
+
+.hold-profile-sheet-content {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: 55vh;
+}
+
+/* Portrait mode - full width */
+@media (orientation: portrait) {
+  .hold-profile-sheet {
+    width: 100%;
+  }
+}
+
+/* Landscape mode - framed panel */
+@media (orientation: landscape) {
+  .hold-profile-sheet {
+    width: min(600px, 60vw);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 2px solid var(--accent);
+    border-bottom: none;
+  }
+  
+  .hold-profile-sheet.visible {
+    max-height: 70vh;
+  }
+  
+  .hold-profile-sheet-content {
+    max-height: 70vh;
+  }
+}
+
+/* Profile field styles (shared with popover) */
+.hold-profile-sheet .profile-field-name {
+  margin: 0 0 20px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--line);
+}
+
+.hold-profile-sheet .profile-field {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--card-2);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.hold-profile-sheet .profile-field label {
+  font-weight: 600;
+  color: var(--muted-2);
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.hold-profile-sheet .profile-field span,
+.hold-profile-sheet .profile-field strong,
+.hold-profile-sheet .profile-field em {
+  color: var(--ink);
+  flex: 1;
+}
+
+.hold-profile-sheet .profile-field strong {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.hold-profile-sheet .profile-field em {
+  font-style: italic;
+  color: var(--muted-2);
+}
+
+.hold-profile-sheet .profile-field-empty {
+  color: var(--muted) !important;
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.hold-profile-sheet .profile-field-ranking {
+  background: linear-gradient(135deg, var(--primary-2), var(--primary-3));
+  border: 1px solid var(--accent);
+}
+
+.hold-profile-sheet .profile-ranking-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent) !important;
+}
+
+.hold-profile-sheet .profile-field-eviction {
+  background: rgba(var(--evicted-color-rgb), 0.1);
+  border: 1px solid rgba(var(--evicted-color-rgb), 0.3);
+}
+
+.hold-profile-sheet .profile-eviction-value {
+  font-weight: 700;
+  color: var(--evicted-color) !important;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 520px) {
+  .hold-profile-sheet-content {
+    padding: 16px;
+  }
+  
+  .hold-profile-sheet .profile-field {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .hold-profile-sheet .profile-field label {
     min-width: auto;
   }
 }
