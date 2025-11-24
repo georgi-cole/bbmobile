@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Status Bar Scrolling Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-overlay-status.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      color: #88aaff;
+      margin-bottom: 20px;
+    }
+
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .test-section h2 {
+      color: #88aaff;
+      font-size: 1.2rem;
+      margin-top: 0;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background: #2f8651;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button:hover {
+      background: #36a563;
+    }
+
+    button.secondary {
+      background: #414c5c;
+    }
+
+    button.secondary:hover {
+      background: #556478;
+    }
+
+    /* Mock TV Container */
+    .mock-tv {
+      background: linear-gradient(135deg, #0f1419, #1a1f28);
+      border: 3px solid #2e3d52;
+      border-radius: 16px;
+      padding: 0;
+      min-height: 300px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+    }
+
+    .tvHead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(45, 59, 85, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .tvTitle {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #88aaff;
+    }
+
+    .tvContent {
+      padding: 30px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .info {
+      background: rgba(136, 170, 255, 0.1);
+      border: 1px solid rgba(136, 170, 255, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .info h3 {
+      margin-top: 0;
+      color: #88aaff;
+      font-size: 1rem;
+    }
+
+    .info ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .info li {
+      margin: 6px 0;
+    }
+
+    .viewport-indicator {
+      text-align: center;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📱 Status Bar Scrolling Test</h1>
+
+  <div class="test-section">
+    <div class="info">
+      <h3>✨ Feature: Auto-Scrolling Text on Mobile</h3>
+      <ul>
+        <li>Long messages automatically scroll on mobile (≤768px)</li>
+        <li>Smooth left-to-right loop animation</li>
+        <li>8-second cycle with pause at start and end</li>
+        <li>Disabled when "prefers-reduced-motion" is active</li>
+      </ul>
+    </div>
+
+    <h2>🎮 Test Controls</h2>
+    <div class="controls">
+      <button onclick="setShortMessage()">Set Short Message</button>
+      <button onclick="setLongMessage()">Set Long Message</button>
+      <button onclick="setVeryLongMessage()">Set Very Long Message</button>
+      <button onclick="clearMessage()" class="secondary">Clear Message</button>
+    </div>
+
+    <div class="controls">
+      <button onclick="setMobileWidth()" class="secondary">Mobile Width (360px)</button>
+      <button onclick="setTabletWidth()" class="secondary">Tablet Width (768px)</button>
+      <button onclick="setDesktopWidth()" class="secondary">Desktop Width (full)</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>📺 TV Container Preview</h2>
+    <div class="mock-tv" id="mockTv">
+      <div class="tvHead">
+        <div class="tvTitle">Veto Competition</div>
+        <!-- Status chip will appear here -->
+      </div>
+      <div class="tvContent">
+        TV content area<br>
+        <small>Status bar is in the header above</small>
+      </div>
+    </div>
+    <div class="viewport-indicator" id="viewportIndicator">
+      Viewport: <span id="viewportWidth">--</span>px
+    </div>
+  </div>
+
+  <!-- Load modules -->
+  <script src="js/tv-overlay-status.js"></script>
+
+  <!-- Test Script -->
+  <script>
+    // Mock game object
+    window.game = window.game || {
+      cfg: {},
+      humanId: 1,
+      phase: 'veto_comp'
+    };
+
+    function updateViewportIndicator() {
+      const width = window.innerWidth;
+      document.getElementById('viewportWidth').textContent = width;
+    }
+
+    function setShortMessage() {
+      if (window.TvStatus && typeof window.TvStatus.set === 'function') {
+        window.TvStatus.set('You were not drawn to play');
+        console.log('[Test] Set short message');
+      }
+    }
+
+    function setLongMessage() {
+      if (window.TvStatus && typeof window.TvStatus.set === 'function') {
+        window.TvStatus.set('You were not drawn to play this week - Participants: Alice, Bob, Charlie, David');
+        console.log('[Test] Set long message');
+      }
+    }
+
+    function setVeryLongMessage() {
+      if (window.TvStatus && typeof window.TvStatus.set === 'function') {
+        window.TvStatus.set('You were not drawn to play this week - Veto Participants: Alice, Bob, Charlie, David, Emily, Frank, George');
+        console.log('[Test] Set very long message');
+      }
+    }
+
+    function clearMessage() {
+      if (window.TvStatus && typeof window.TvStatus.clear === 'function') {
+        window.TvStatus.clear();
+        console.log('[Test] Cleared message');
+      }
+    }
+
+    function setMobileWidth() {
+      const mockTv = document.getElementById('mockTv');
+      mockTv.style.maxWidth = '360px';
+      mockTv.style.margin = '0 auto';
+      console.log('[Test] Set mobile width (360px)');
+      updateViewportIndicator();
+      // Retrigger overflow check
+      setTimeout(() => {
+        const currentText = document.querySelector('.tv-status-content')?.textContent;
+        if (currentText) {
+          window.TvStatus.set(currentText);
+        }
+      }, 100);
+    }
+
+    function setTabletWidth() {
+      const mockTv = document.getElementById('mockTv');
+      mockTv.style.maxWidth = '768px';
+      mockTv.style.margin = '0 auto';
+      console.log('[Test] Set tablet width (768px)');
+      updateViewportIndicator();
+      setTimeout(() => {
+        const currentText = document.querySelector('.tv-status-content')?.textContent;
+        if (currentText) {
+          window.TvStatus.set(currentText);
+        }
+      }, 100);
+    }
+
+    function setDesktopWidth() {
+      const mockTv = document.getElementById('mockTv');
+      mockTv.style.maxWidth = 'none';
+      mockTv.style.margin = '0';
+      console.log('[Test] Set desktop width (full)');
+      updateViewportIndicator();
+      setTimeout(() => {
+        const currentText = document.querySelector('.tv-status-content')?.textContent;
+        if (currentText) {
+          window.TvStatus.set(currentText);
+        }
+      }, 100);
+    }
+
+    // Update viewport indicator on resize
+    window.addEventListener('resize', updateViewportIndicator);
+
+    // Initialize
+    window.addEventListener('load', () => {
+      updateViewportIndicator();
+      console.log('[Test] Page loaded - ready for testing');
+      console.log('[Test] Try setting a long message and resizing to mobile width');
+      
+      // Auto-demo: set long message on mobile
+      if (window.innerWidth <= 768) {
+        setTimeout(() => setLongMessage(), 500);
+      }
+    });
+  </script>
+</body>
+</html>
