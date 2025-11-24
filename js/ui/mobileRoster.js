@@ -29,7 +29,6 @@
     GAP_SIZE: 8,                   // Default gap between tiles (px)
     RESIZE_DEBOUNCE: 50,           // Debounce resize events (ms)
     SPOTLIGHT_DURATION: 3000,      // Auto-hide spotlight after this time (ms)
-    LONG_PRESS_DURATION: 1500,    // Long press threshold (ms) - DEPRECATED: Use HOLD_DEBOUNCE_MS
     
     // Hold Profile Sheet Configuration
     HOLD_DEBOUNCE_MS: 120,         // Time to wait before showing profile sheet (ms)
@@ -1171,8 +1170,9 @@
   
   /**
    * Create profile popover DOM element
-   * DEPRECATED: Use hold profile sheet instead
+   * @deprecated Use hold profile sheet instead
    */
+  // eslint-disable-next-line no-unused-vars
   function createProfilePopover() {
     const existing = document.querySelector('.mobile-roster-profile-popover');
     if (existing) return existing;
@@ -1200,103 +1200,15 @@
   
   /**
    * Show profile popover for a player
-   * DEPRECATED: Use showHoldProfileSheet instead
-   * Kept for backward compatibility but not actively used
+   * @deprecated Use showHoldProfileSheet instead. This function will be removed in a future version.
    * @param {Object} player - Player object
    * @param {boolean} isEvicted - Whether player is evicted
    */
   // eslint-disable-next-line no-unused-vars
   function showProfilePopover(player, isEvicted = false) {
-    const popover = createProfilePopover();
-    const body = popover.querySelector('.profile-popover-body');
-    
-    // Get all players for ranking
-    const allPlayers = [...state.activePlayers, ...state.evictedPlayers];
-    const ranking = computeRanking(player, allPlayers);
-    
-    // Build profile fields with graceful fallback
-    const fields = [];
-    
-    // Name header
-    fields.push(`<h3 class="profile-field-name">${player.name || 'Guest'}</h3>`);
-    
-    // Age
-    if (player.age) {
-      fields.push(`<div class="profile-field"><label>Age:</label> <span>${player.age}</span></div>`);
-    } else {
-      fields.push(`<div class="profile-field"><label>Age:</label> <span class="profile-field-empty">—</span></div>`);
-    }
-    
-    // Gender
-    if (player.gender || player.sex) {
-      fields.push(`<div class="profile-field"><label>Gender:</label> <span>${player.gender || player.sex}</span></div>`);
-    }
-    
-    // Location
-    if (player.location || player.hometown) {
-      fields.push(`<div class="profile-field"><label>Location:</label> <span>${player.location || player.hometown}</span></div>`);
-    } else {
-      fields.push(`<div class="profile-field"><label>Location:</label> <span class="profile-field-empty">—</span></div>`);
-    }
-    
-    // Occupation (bold)
-    if (player.occupation || player.job) {
-      fields.push(`<div class="profile-field"><label>Occupation:</label> <strong>${player.occupation || player.job}</strong></div>`);
-    } else {
-      fields.push(`<div class="profile-field"><label>Occupation:</label> <span class="profile-field-empty">None</span></div>`);
-    }
-    
-    // Motto (italic)
-    if (player.motto || player.tagline) {
-      fields.push(`<div class="profile-field"><label>Motto:</label> <em>"${player.motto || player.tagline}"</em></div>`);
-    } else {
-      fields.push(`<div class="profile-field"><label>Motto:</label> <span class="profile-field-empty">—</span></div>`);
-    }
-    
-    // Fun Fact
-    if (player.funFact || player.fun_fact) {
-      fields.push(`<div class="profile-field"><label>Fun Fact:</label> <span>${player.funFact || player.fun_fact}</span></div>`);
-    } else {
-      fields.push(`<div class="profile-field"><label>Fun Fact:</label> <span class="profile-field-empty">None</span></div>`);
-    }
-    
-    // Allies
-    if (player.allies && player.allies.length > 0) {
-      const alliesNames = player.allies.map(id => {
-        const ally = allPlayers.find(p => p.id === id);
-        return ally ? ally.name : `Player ${id}`;
-      }).join(', ');
-      fields.push(`<div class="profile-field"><label>Allies:</label> <span>${alliesNames}</span></div>`);
-    } else {
-      fields.push(`<div class="profile-field"><label>Allies:</label> <span class="profile-field-empty">None</span></div>`);
-    }
-    
-    // Enemies
-    if (player.enemies && player.enemies.length > 0) {
-      const enemiesNames = player.enemies.map(id => {
-        const enemy = allPlayers.find(p => p.id === id);
-        return enemy ? enemy.name : `Player ${id}`;
-      }).join(', ');
-      fields.push(`<div class="profile-field"><label>Enemies:</label> <span>${enemiesNames}</span></div>`);
-    } else {
-      fields.push(`<div class="profile-field"><label>Enemies:</label> <span class="profile-field-empty">None</span></div>`);
-    }
-    
-    // Ranking (dynamic)
-    fields.push(`<div class="profile-field profile-field-ranking"><label>Ranking:</label> <span class="profile-ranking-value">#${ranking}</span></div>`);
-    
-    // Eviction Week (if evicted)
-    if (isEvicted) {
-      const evictionWeek = getEvictionWeek(player);
-      fields.push(`<div class="profile-field profile-field-eviction"><label>Eviction Week:</label> <span class="profile-eviction-value">${evictionWeek}</span></div>`);
-    }
-    
-    body.innerHTML = fields.join('');
-    
-    // Show popover with animation
-    popover.classList.add('visible');
-    
-    console.info(`[MobileRoster] Showing profile popover for ${player.name}`);
+    console.warn('[MobileRoster] showProfilePopover is deprecated. Use showHoldProfileSheet instead.');
+    // Redirect to new implementation
+    showHoldProfileSheet(player, isEvicted);
   }
   
   /**
@@ -1394,7 +1306,6 @@
     hideHoldProfileSheet();
     // Also cancel old long press for compatibility
     cancelLongPress();
-    // hideProfilePopover(); // Commented out to avoid conflicts
   }
   
   /**
