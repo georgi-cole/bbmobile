@@ -228,11 +228,12 @@
     
     function addPlayer() {
       const newPlayer = {
-        id: nextPlayerId++,
+        id: nextPlayerId,
         name: `Player${nextPlayerId}`,
         evicted: false,
         nominated: Math.random() > 0.7
       };
+      nextPlayerId++;
       
       window.game.players.push(newPlayer);
       

@@ -29,8 +29,7 @@
     GAP_SIZE: 6,                   // Default gap between tiles (px) - reduced from 8
     RESIZE_DEBOUNCE: 50,           // Debounce resize events (ms)
     SPOTLIGHT_DURATION: 3000,      // Auto-hide spotlight after this time (ms)
-    LONG_PRESS_DURATION: 600,      // Long press threshold (ms) - reduced for faster response
-    HOLD_DEBOUNCE_MS: 600,         // Hold debounce for profile sheet (ms)
+    HOLD_DEBOUNCE_MS: 600,         // Hold debounce for profile sheet (ms) - reduced for faster response
     
     // Faux TV sizing constraints
     MIN_TV_RATIO: 0.38,            // Minimum TV height as ratio of viewport
@@ -575,9 +574,7 @@
       const longTextClass = badgeInfo.text.length > 7 ? 'long-text' : '';
       badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${longTextClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
       
-      if (badgeInfo) {
-        state.badgesRendered++;
-      }
+      state.badgesRendered++;
     }
     
     const evictedClass = isEvicted ? 'evicted' : '';
@@ -1155,10 +1152,12 @@
   
   /**
    * Handle tile click (short press)
-   * Only trigger if it wasn't a long press
+   * Only trigger if it wasn't a long press.
+   * Note: Click fires after pointerup, so we check the flag here.
    */
   function handleTileClick(event) {
     // Don't trigger if this was a long press
+    // The pointerup handler sets this before cancelLongPress resets it
     if (state.longPressStarted) {
       state.longPressStarted = false;
       return;
@@ -1203,17 +1202,15 @@
   }
   
   /**
-   * Handle pointer up/leave/cancel (cancel long press or trigger click)
+   * Handle pointer up/leave/cancel (cancel long press)
+   * Note: Click handler checks longPressStarted BEFORE this runs,
+   * so the flag is available when needed despite being reset here.
    */
-  function handlePointerEnd(event) {
-    const wasLongPress = state.longPressStarted;
+  function handlePointerEnd() {
+    // Cancel the long press timer
+    // Click event fires after pointerup, and will check longPressStarted
+    // before cancelLongPress resets it
     cancelLongPress();
-    
-    // If it was a long press, mark it so click handler doesn't fire
-    if (wasLongPress && event.type === 'pointerup') {
-      // longPressStarted already reset by cancelLongPress, but we set a flag
-      // The click handler will check this
-    }
   }
   
   /**
