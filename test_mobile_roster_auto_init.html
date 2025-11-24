@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Mobile Roster Auto-Init Test</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    
+    h1 {
+      border-bottom: 2px solid #16213e;
+      padding-bottom: 10px;
+    }
+    
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #16213e;
+      border-radius: 8px;
+      border-left: 4px solid #0f3460;
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: #4ecca3;
+    }
+    
+    .result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    
+    .pass {
+      background: #2d5016;
+      border-left: 4px solid #4ecca3;
+      color: #9aff9a;
+    }
+    
+    .fail {
+      background: #5d1616;
+      border-left: 4px solid #e74c3c;
+      color: #ff9a9a;
+    }
+    
+    .info {
+      background: #16213e;
+      border-left: 4px solid #3498db;
+      color: #9ab8ff;
+    }
+    
+    code {
+      background: #0f1419;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #4ecca3;
+    }
+    
+    .summary {
+      margin-top: 30px;
+      padding: 20px;
+      background: #0f3460;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    
+    .summary.all-pass {
+      background: #2d5016;
+      color: #4ecca3;
+    }
+    
+    .summary.has-fail {
+      background: #5d1616;
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Mobile Roster Auto-Initialization Test</h1>
+  
+  <div class="test-section">
+    <h2>Environment Info</h2>
+    <div id="envInfo"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="testResults"></div>
+  </div>
+  
+  <div class="summary" id="summary"></div>
+
+  <script>
+    // Test suite for mobile roster auto-initialization
+    const results = [];
+    
+    function logResult(name, pass, message) {
+      results.push({ name, pass, message });
+      const div = document.createElement('div');
+      div.className = `result ${pass ? 'pass' : 'fail'}`;
+      div.innerHTML = `<strong>${pass ? '✓' : '✗'} ${name}</strong><br/>${message}`;
+      document.getElementById('testResults').appendChild(div);
+    }
+    
+    function logInfo(message) {
+      const div = document.createElement('div');
+      div.className = 'result info';
+      div.innerHTML = `ℹ️ ${message}`;
+      document.getElementById('envInfo').appendChild(div);
+    }
+    
+    // Log environment
+    logInfo(`User Agent: <code>${navigator.userAgent}</code>`);
+    logInfo(`Viewport: <code>${window.innerWidth}x${window.innerHeight}</code>`);
+    logInfo(`Orientation: <code>${window.matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait'}</code>`);
+    
+    // Detect if UA is mobile
+    const ua = navigator.userAgent || '';
+    const isMobileUA = /iPhone|iPod|Android|Mobile/i.test(ua);
+    logInfo(`Mobile UA detected: <code>${isMobileUA}</code>`);
+    
+    // Wait for DOM ready and run tests
+    function runTests() {
+      console.log('[Test] Starting mobile roster auto-init tests...');
+      
+      // Test 1: Check if FORCE_MOBILE_ROSTER is set for mobile UAs
+      if (isMobileUA) {
+        const hasForcFlag = window.FORCE_MOBILE_ROSTER === true;
+        logResult(
+          'FORCE_MOBILE_ROSTER set for mobile UA',
+          hasForcFlag,
+          hasForcFlag 
+            ? 'window.FORCE_MOBILE_ROSTER is true' 
+            : 'window.FORCE_MOBILE_ROSTER is not set (expected true for mobile UA)'
+        );
+      } else {
+        logResult(
+          'FORCE_MOBILE_ROSTER check (desktop UA)',
+          true,
+          'Desktop UA detected - FORCE_MOBILE_ROSTER not required'
+        );
+      }
+      
+      // Test 2: Check if MobileRoster exists on window
+      const hasModule = typeof window.MobileRoster !== 'undefined';
+      logResult(
+        'MobileRoster module available',
+        hasModule,
+        hasModule 
+          ? 'window.MobileRoster is defined' 
+          : 'window.MobileRoster is undefined (module not loaded)'
+      );
+      
+      // Test 3: Check if MobileRoster.init exists
+      if (hasModule) {
+        const hasInit = typeof window.MobileRoster.init === 'function';
+        logResult(
+          'MobileRoster.init function exists',
+          hasInit,
+          hasInit 
+            ? 'window.MobileRoster.init is a function' 
+            : 'window.MobileRoster.init is not a function'
+        );
+      } else {
+        logResult('MobileRoster.init function exists', false, 'Cannot test - module not loaded');
+      }
+      
+      // Test 4: Check if MobileRoster state indicates initialization
+      if (hasModule && window.MobileRoster.getState) {
+        const state = window.MobileRoster.getState();
+        const isInitialized = state.initialized === true;
+        logResult(
+          'MobileRoster initialized',
+          isInitialized,
+          isInitialized 
+            ? `Module initialized (state.initialized = true)` 
+            : `Module not initialized (state.initialized = ${state.initialized})`
+        );
+      } else {
+        logResult('MobileRoster initialized', false, 'Cannot check state - getState not available');
+      }
+      
+      // Test 5: Check if mobile roster is active (for mobile UAs)
+      const bodyAttr = document.body.getAttribute('data-mobile-roster-active');
+      const isActive = bodyAttr === 'true';
+      
+      if (isMobileUA || window.FORCE_MOBILE_ROSTER) {
+        logResult(
+          'Mobile roster active on mobile UA',
+          isActive,
+          isActive 
+            ? 'body[data-mobile-roster-active="true"] is set' 
+            : `body[data-mobile-roster-active="${bodyAttr}"] - expected "true" for mobile UA`
+        );
+      } else {
+        logResult(
+          'Mobile roster activation check (desktop UA)',
+          true,
+          `body[data-mobile-roster-active="${bodyAttr}"] - desktop UA may not activate mobile roster`
+        );
+      }
+      
+      // Test 6: Check if .mobile-roster-container exists in DOM
+      const container = document.querySelector('.mobile-roster-container');
+      const hasContainer = container !== null;
+      logResult(
+        'Mobile roster container in DOM',
+        hasContainer,
+        hasContainer 
+          ? '.mobile-roster-container element exists' 
+          : '.mobile-roster-container not found in DOM'
+      );
+      
+      // Test 7: Check if container is visible (for mobile UAs with activation)
+      if (hasContainer && isActive) {
+        const style = window.getComputedStyle(container);
+        const isVisible = style.display !== 'none';
+        logResult(
+          'Mobile roster container visible',
+          isVisible,
+          isVisible 
+            ? `Container display: ${style.display}` 
+            : `Container hidden (display: ${style.display})`
+        );
+      } else {
+        logResult(
+          'Mobile roster container visibility',
+          true,
+          'Skipped - container not present or not active'
+        );
+      }
+      
+      // Test 8: Check if default roster is hidden when mobile is active
+      if (isActive) {
+        const rosterBar = document.querySelector('#rosterBar');
+        if (rosterBar) {
+          const style = window.getComputedStyle(rosterBar);
+          const isHidden = style.display === 'none';
+          logResult(
+            'Default roster hidden when mobile active',
+            isHidden,
+            isHidden 
+              ? '#rosterBar is hidden (display: none)' 
+              : `#rosterBar is visible (display: ${style.display})`
+          );
+        } else {
+          logResult('Default roster hidden when mobile active', true, '#rosterBar not found');
+        }
+      } else {
+        logResult('Default roster hidden when mobile active', true, 'Skipped - mobile roster not active');
+      }
+      
+      // Summary
+      const passCount = results.filter(r => r.pass).length;
+      const failCount = results.filter(r => !r.pass).length;
+      const total = results.length;
+      
+      const summaryDiv = document.getElementById('summary');
+      summaryDiv.className = `summary ${failCount === 0 ? 'all-pass' : 'has-fail'}`;
+      summaryDiv.innerHTML = `
+        <h2>Test Summary</h2>
+        <p>Total: ${total} | Passed: ${passCount} | Failed: ${failCount}</p>
+        ${failCount === 0 
+          ? '<p>✅ All tests passed! Mobile roster auto-initialization working correctly.</p>' 
+          : '<p>⚠️ Some tests failed. Check the results above for details.</p>'}
+      `;
+      
+      console.log('[Test] Complete. Results:', results);
+    }
+    
+    // Run tests on load with a small delay to ensure initialization completes
+    window.addEventListener('load', () => {
+      setTimeout(runTests, 500);
+    });
+  </script>
+  
+  <!-- Minimal mock setup to test auto-init without full game -->
+  <div id="rosterBar" style="display: flex;"></div>
+  
+  <!-- Include the mobile roster CSS and JS with cache-busting -->
+  <link rel="stylesheet" href="css/mobileRoster.css?v=roster-ui-2">
+  <script defer src="js/ui/mobileRoster.js?v=roster-ui-2"></script>
+  
+  <!-- Safety net (matching production) -->
+  <script>
+    window.addEventListener('load', function(){
+      try {
+        if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
+          const active = document.body.getAttribute('data-mobile-roster-active') === 'true';
+          if (!active) { window.MobileRoster.init(); }
+        }
+      } catch(e) { console.error('[MobileRoster] window.onload init fallback error:', e); }
+    });
+  </script>
+</body>
+</html>
