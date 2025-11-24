@@ -44,6 +44,20 @@
     console.info('[TvStatus] Initialized');
   }
 
+  // Check if text overflows and needs scrolling
+  function checkOverflow(){
+    if(!statusContent || !statusChip) return false;
+    
+    // Only check on mobile/tablet (viewport <= 768px)
+    if(window.innerWidth > 768) return false;
+    
+    // Check if content width exceeds container width
+    const contentWidth = statusContent.scrollWidth;
+    const containerWidth = statusChip.clientWidth;
+    
+    return contentWidth > containerWidth;
+  }
+
   // Set a simple text message
   function set(text){
     if(!statusChip || !statusContent){
@@ -65,6 +79,16 @@
     // Update content
     statusContent.textContent = text;
     statusChip.style.display = 'inline-flex';
+
+    // Check if scrolling is needed after content is rendered
+    setTimeout(() => {
+      if(checkOverflow()){
+        statusContent.classList.add('tv-status-scroll');
+        console.info('[TvStatus] Enabled scrolling for long text');
+      } else {
+        statusContent.classList.remove('tv-status-scroll');
+      }
+    }, 50);
 
     console.info('[TvStatus] Set:', text);
   }
@@ -119,6 +143,7 @@
     statusChip.style.display = 'none';
     if(statusContent){
       statusContent.textContent = '';
+      statusContent.classList.remove('tv-status-scroll');
     }
 
     console.info('[TvStatus] Cleared');

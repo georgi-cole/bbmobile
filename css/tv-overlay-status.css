@@ -53,6 +53,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: inline-block;
+}
+
+/* Scrolling animation for long text on mobile */
+.tv-status-content.tv-status-scroll {
+  animation: tvStatusScroll 8s linear infinite;
+}
+
+@keyframes tvStatusScroll {
+  0% {
+    transform: translateX(0);
+  }
+  10% {
+    transform: translateX(0);
+  }
+  90% {
+    transform: translateX(calc(-100% + 100px));
+  }
+  100% {
+    transform: translateX(calc(-100% + 100px));
+  }
 }
 
 /* Responsive behavior */
@@ -84,6 +105,10 @@
 @media (prefers-reduced-motion: reduce) {
   .tv-status-chip {
     transition: none;
+  }
+  
+  .tv-status-content.tv-status-scroll {
+    animation: none;
   }
 }
 
