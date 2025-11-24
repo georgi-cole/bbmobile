@@ -595,16 +595,8 @@ body[data-mobile-roster-active="true"] .tv {
   }
 }
 
-/* Tablet and larger - hide mobile roster, use default */
-@media (min-width: 769px) {
-  body[data-mobile-roster-active="true"] .mobile-roster-container {
-    display: none;
-  }
-  
-  body[data-mobile-roster-active="true"] #rosterBar {
-    display: flex;
-  }
-}
+/* Tablet and larger - activation logic controls visibility */
+/* Removed min-width: 769px hide rule to support iPhone landscape */
 
 /* ============================
    Profile Popover

@@ -1810,11 +1810,37 @@
   
 })(window);
 
-// Auto-initialize MobileRoster when DOM is ready
-if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', window.MobileRoster.init, { once: true });
-  } else {
-    window.MobileRoster.init();
+// Auto-initialize MobileRoster for mobile devices and ensure activation on iPhone
+(function MobileRosterAutoInit(){
+  function onReady(fn){
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+    else fn();
   }
-}
+  onReady(() => {
+    try {
+      const ua = navigator.userAgent || '';
+      // Force activation on mobile/touch UAs (iPhone/Android); safe because init is idempotent
+      if (/iPhone|iPod|Android|Mobile/i.test(ua)) {
+        window.FORCE_MOBILE_ROSTER = true;
+      }
+      if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
+        window.MobileRoster.init();
+        // Retry activation briefly to handle late data/DOM availability
+        const start = Date.now();
+        const iv = setInterval(() => {
+          const activeAttr = document.body.getAttribute('data-mobile-roster-active') === 'true';
+          const container = document.querySelector('.mobile-roster-container');
+          if ((activeAttr && container) || (Date.now() - start) > 3000) {
+            clearInterval(iv);
+          } else {
+            try { window.MobileRoster.refresh(); } catch(e) { /* no-op */ }
+          }
+        }, 300);
+      } else {
+        console.warn('[MobileRoster] Auto-init: MobileRoster not found on window');
+      }
+    } catch (e) {
+      console.error('[MobileRoster] Auto-init error:', e);
+    }
+  });
+})();
