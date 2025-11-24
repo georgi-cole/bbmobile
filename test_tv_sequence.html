@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Sequence Test</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tv-screen.css">
+  <link rel="stylesheet" href="css/tv-inline-cards.css">
+  <link rel="stylesheet" href="css/tv-sequence.css">
+  
+  <style>
+    body {
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    
+    .test-section {
+      margin-bottom: 40px;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+    
+    button:hover {
+      background: #e5e5e5;
+    }
+    
+    button.primary {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+    
+    button.primary:hover {
+      background: #0056b3;
+    }
+    
+    .test-tv-container {
+      max-width: 600px;
+      margin: 20px auto;
+    }
+    
+    #tv {
+      position: relative;
+      min-height: 400px;
+      background: #1a1a2e;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .tvViewport {
+      position: relative;
+      min-height: 350px;
+      padding: 20px;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .tvOverlayContent {
+      width: 100%;
+      max-width: 500px;
+    }
+    
+    .log-output {
+      margin-top: 20px;
+      padding: 12px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    
+    .log-output div {
+      margin-bottom: 4px;
+    }
+    
+    .log-info {
+      color: #0066cc;
+    }
+    
+    .log-warn {
+      color: #ff9900;
+    }
+    
+    .log-error {
+      color: #cc0000;
+    }
+  </style>
+</head>
+<body>
+  <h1>TV Sequence Test Suite</h1>
+  
+  <!-- Test 1: Short Content -->
+  <div class="test-section">
+    <h2>Test 1: Short Content (Single Chunk)</h2>
+    <p>Should display as a single chunk without needing sequence.</p>
+    
+    <div class="test-controls">
+      <button class="primary" onclick="runTest1()">Run Test</button>
+      <button onclick="TVSequence.abort()">Abort</button>
+    </div>
+    
+    <div class="test-tv-container">
+      <div class="tv tv-screen" id="tv">
+        <div class="tvViewport" data-sm-faux-tv>
+          <div id="tvOverlay" class="tvOverlay">
+            <div class="tvOverlayContent"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="log-output" id="log1"></div>
+  </div>
+  
+  <!-- Test 2: Medium Content -->
+  <div class="test-section">
+    <h2>Test 2: Medium Content (Multiple Paragraphs)</h2>
+    <p>Should split into 2-3 chunks based on paragraphs.</p>
+    
+    <div class="test-controls">
+      <button class="primary" onclick="runTest2()">Run Test</button>
+      <button onclick="TVSequence.abort()">Abort</button>
+    </div>
+    
+    <div class="log-output" id="log2"></div>
+  </div>
+  
+  <!-- Test 3: Long Content -->
+  <div class="test-section">
+    <h2>Test 3: Long Content (Multiple Chunks)</h2>
+    <p>Should split into multiple chunks with proper pacing.</p>
+    
+    <div class="test-controls">
+      <button class="primary" onclick="runTest3()">Run Test</button>
+      <button onclick="TVSequence.abort()">Abort</button>
+      <button onclick="TVSequence.replay()">Replay</button>
+      <button onclick="TVSequence.showAll()">Show All</button>
+    </div>
+    
+    <div class="log-output" id="log3"></div>
+  </div>
+  
+  <!-- Test 4: With Avatars -->
+  <div class="test-section">
+    <h2>Test 4: Content with Avatars</h2>
+    <p>Should display avatar only on first chunk.</p>
+    
+    <div class="test-controls">
+      <button class="primary" onclick="runTest4()">Run Test</button>
+      <button onclick="TVSequence.abort()">Abort</button>
+    </div>
+    
+    <div class="log-output" id="log4"></div>
+  </div>
+  
+  <!-- Test 5: Skip Functionality -->
+  <div class="test-section">
+    <h2>Test 5: Skip Button Test</h2>
+    <p>Manually test skip button by clicking it during sequence.</p>
+    
+    <div class="test-controls">
+      <button class="primary" onclick="runTest5()">Run Test (Click Skip during playback)</button>
+      <button onclick="TVSequence.abort()">Abort</button>
+    </div>
+    
+    <div class="log-output" id="log5"></div>
+  </div>
+  
+  <!-- Test 6: Dwell Time Calculation -->
+  <div class="test-section">
+    <h2>Test 6: Dwell Time Calculation</h2>
+    <p>Test that dwell time is calculated correctly based on word count.</p>
+    
+    <div class="test-controls">
+      <button class="primary" onclick="runTest6()">Run Test</button>
+    </div>
+    
+    <div class="log-output" id="log6"></div>
+  </div>
+  
+  <!-- Test 7: End Card -->
+  <div class="test-section">
+    <h2>Test 7: End Card with Replay/Show All</h2>
+    <p>Test end card functionality after sequence completes.</p>
+    
+    <div class="test-controls">
+      <button class="primary" onclick="runTest7()">Run Test</button>
+      <button onclick="TVSequence.abort()">Abort</button>
+    </div>
+    
+    <div class="log-output" id="log7"></div>
+  </div>
+  
+  <!-- Test 8: Abort/Interrupt -->
+  <div class="test-section">
+    <h2>Test 8: Abort/Interrupt Sequence</h2>
+    <p>Test that sequence can be aborted cleanly.</p>
+    
+    <div class="test-controls">
+      <button class="primary" onclick="runTest8()">Run Test (auto-aborts after 2s)</button>
+    </div>
+    
+    <div class="log-output" id="log8"></div>
+  </div>
+  
+  <!-- Dependencies -->
+  <script src="js/tv-container.js"></script>
+  <script src="js/ui/tv-cards.js"></script>
+  <script src="js/tv-sequence.js"></script>
+  
+  <script>
+    // Mock game and player data
+    window.game = {
+      players: [
+        { id: 1, name: 'Alice', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice' },
+        { id: 2, name: 'Bob', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+        { id: 3, name: 'Charlie', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie' }
+      ]
+    };
+    
+    window.getP = function(id) {
+      return window.game.players.find(p => p.id === id);
+    };
+    
+    window.resolveAvatar = function(player) {
+      return player ? player.avatar : null;
+    };
+    
+    // Logging utility
+    function log(testId, message, type = 'info') {
+      const logEl = document.getElementById('log' + testId);
+      if (!logEl) return;
+      
+      const div = document.createElement('div');
+      div.className = 'log-' + type;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    function clearLog(testId) {
+      const logEl = document.getElementById('log' + testId);
+      if (logEl) logEl.innerHTML = '';
+    }
+    
+    // Test 1: Short content
+    function runTest1() {
+      clearLog(1);
+      log(1, 'Starting Test 1: Short content');
+      
+      const shortText = 'This is a short piece of content that should fit in a single chunk without needing to split.';
+      
+      TVSequence.start(shortText, {
+        title: 'Short Content Test',
+        tone: 'neutral'
+      }).then(() => {
+        log(1, 'Sequence completed', 'info');
+      });
+    }
+    
+    // Test 2: Medium content (multiple paragraphs)
+    function runTest2() {
+      clearLog(2);
+      log(2, 'Starting Test 2: Medium content');
+      
+      const mediumText = `This is the first paragraph of medium-length content. It should be displayed as the first chunk in the sequence.
+
+This is the second paragraph. It should appear as the second chunk, demonstrating the paragraph-based splitting logic.
+
+And here is the third paragraph, which completes our medium-length content test.`;
+      
+      TVSequence.start(mediumText, {
+        title: 'Medium Content Test',
+        tone: 'positive'
+      }).then(() => {
+        log(2, 'Sequence completed', 'info');
+      });
+    }
+    
+    // Test 3: Long content
+    function runTest3() {
+      clearLog(3);
+      log(3, 'Starting Test 3: Long content with multiple chunks');
+      
+      const longText = `The house meeting was called to order at precisely 8:00 PM. All houseguests gathered in the living room, their faces reflecting a mixture of anticipation and nervous energy as they awaited the evening's announcements.
+
+The Head of Household stood at the front, preparing to address the group. The tension in the room was palpable as everyone wondered what decisions had been made behind closed doors. Strategy and alliances had been forming all week, and now it was time to see how they would play out.
+
+As the nominations were announced, gasps and whispers filled the room. Two houseguests found themselves on the block, their game suddenly in jeopardy. The Power of Veto competition would be their only hope for safety, and everyone knew that the stakes had never been higher.
+
+The coming days would test allegiances and force difficult decisions. In the Big Brother house, nothing is ever certain, and the game is always evolving. Who would survive this week, and who would be heading to the jury house? Only time would tell.
+
+The houseguests dispersed, each retreating to their own thoughts and strategies. The game was on, and every move counted in this high-stakes competition for the grand prize.`;
+      
+      TVSequence.start(longText, {
+        title: 'Long Content Test',
+        tone: 'dramatic',
+        endTitle: 'Chapter Complete',
+        endMessage: 'Test the Replay and Show All buttons!'
+      }).then(() => {
+        log(3, 'Sequence completed - end card should be displayed', 'info');
+      });
+    }
+    
+    // Test 4: With avatars
+    function runTest4() {
+      clearLog(4);
+      log(4, 'Starting Test 4: Content with avatars');
+      
+      const textWithAvatar = `Alice made a bold move today by nominating Bob and Charlie for eviction. The house was shocked by this decision, as many thought Alice would play it safe this week.
+
+Bob immediately began campaigning to stay in the house, talking to every houseguest about his loyalty and value to their games. Meanwhile, Charlie took a different approach, laying low and letting the drama unfold around him.
+
+The Power of Veto competition will be crucial this week. Whoever wins will have the power to change the nominations, potentially saving themselves or their allies from eviction.`;
+      
+      TVSequence.start(textWithAvatar, {
+        title: 'Nomination Drama',
+        actorIds: [1], // Alice
+        tone: 'dramatic'
+      }).then(() => {
+        log(4, 'Sequence completed', 'info');
+      });
+    }
+    
+    // Test 5: Skip functionality
+    function runTest5() {
+      clearLog(5);
+      log(5, 'Starting Test 5: Skip button test');
+      log(5, 'Click the Skip button during playback to test functionality', 'info');
+      
+      const textForSkip = `First chunk of content. You should see a Skip button in the top-left corner. Click it to advance immediately to the next chunk.
+
+Second chunk of content. The Skip button should still be visible. Try clicking it again to advance.
+
+Third chunk of content. One more click will take you to the end card.
+
+Fourth and final chunk. Click Skip to see the end card immediately.`;
+      
+      TVSequence.start(textForSkip, {
+        title: 'Skip Button Test',
+        tone: 'neutral'
+      }).then(() => {
+        log(5, 'Sequence completed', 'info');
+      });
+    }
+    
+    // Test 6: Dwell time calculation
+    function runTest6() {
+      clearLog(6);
+      log(6, 'Starting Test 6: Dwell time calculation');
+      
+      // Test various word counts
+      const tests = [
+        { words: 10, expected: 3000 },  // Below minimum
+        { words: 40, expected: 5000 },  // Base + 2s
+        { words: 80, expected: 7000 },  // Base + 4s
+        { words: 120, expected: 8000 }, // Clamped at maximum
+        { words: 200, expected: 8000 }  // Well over maximum, clamped
+      ];
+      
+      tests.forEach(test => {
+        const text = new Array(test.words).fill('word').join(' ');
+        const calculated = TVSequence.CONFIG.BASE_DWELL_MS + 
+                          (test.words / TVSequence.CONFIG.WORDS_PER_SECOND * TVSequence.CONFIG.WORD_TIME_MULTIPLIER);
+        const clamped = Math.max(
+          TVSequence.CONFIG.MIN_DWELL_MS,
+          Math.min(TVSequence.CONFIG.MAX_DWELL_MS, calculated)
+        );
+        
+        const passed = clamped === test.expected;
+        const status = passed ? '✓' : '✗';
+        const type = passed ? 'info' : 'error';
+        
+        log(6, `${status} ${test.words} words: expected ${test.expected}ms, got ${clamped}ms`, type);
+      });
+      
+      log(6, 'Dwell time calculation tests complete', 'info');
+    }
+    
+    // Test 7: End card
+    function runTest7() {
+      clearLog(7);
+      log(7, 'Starting Test 7: End card test');
+      
+      const shortSeq = `First chunk of a short sequence.
+
+Second and final chunk. The end card should appear next with Replay and Show All buttons.`;
+      
+      TVSequence.start(shortSeq, {
+        title: 'End Card Test',
+        tone: 'positive',
+        endTitle: 'Test Complete!',
+        endMessage: 'Try clicking the Replay and Show All buttons on the end card.'
+      }).then(() => {
+        log(7, 'End card should now be displayed', 'info');
+      });
+    }
+    
+    // Test 8: Abort/Interrupt
+    function runTest8() {
+      clearLog(8);
+      log(8, 'Starting Test 8: Abort test');
+      
+      const longSeq = `This is a long sequence that will be aborted after 2 seconds. You should see this first chunk.
+
+This is the second chunk. If the abort works correctly, you shouldn't see this chunk.
+
+This is the third chunk. You definitely shouldn't see this one.
+
+This is the fourth chunk. Still shouldn't be visible.
+
+Final chunk. Not visible either if abort works.`;
+      
+      log(8, 'Sequence started - will abort in 2 seconds', 'info');
+      
+      TVSequence.start(longSeq, {
+        title: 'Abort Test',
+        tone: 'neutral'
+      });
+      
+      setTimeout(() => {
+        log(8, 'Calling TVSequence.abort()...', 'warn');
+        TVSequence.abort();
+        log(8, 'Sequence aborted successfully', 'info');
+      }, 2000);
+    }
+    
+    // Initialize
+    console.log('TV Sequence Test Suite loaded');
+    console.log('TVSequence module:', window.TVSequence);
+  </script>
+</body>
+</html>
