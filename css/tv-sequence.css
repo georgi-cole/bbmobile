@@ -1,0 +1,378 @@
+/* ============================================================================
+   TV SEQUENCE STYLING
+   
+   Purpose: Styles for Sequential Replace Auto-Advancing Cards system
+   Features:
+   - Chunk card animations and transitions
+   - Progress indicator (counter + progress bar)
+   - Skip button positioning
+   - End card layout
+   - Mobile-first responsive design
+   - Accessibility support
+   ============================================================================ */
+
+:root {
+  --tv-seq-fade-duration: 400ms;
+  --tv-seq-progress-bg: rgba(255, 255, 255, 0.15);
+  --tv-seq-progress-fill: rgba(255, 255, 255, 0.9);
+  --tv-seq-skip-bg: rgba(0, 0, 0, 0.4);
+  --tv-seq-skip-hover-bg: rgba(0, 0, 0, 0.6);
+}
+
+/* ============================================================================
+   CHUNK CARD STYLES
+   ============================================================================ */
+
+.tv-sequence-card {
+  transition: opacity var(--tv-seq-fade-duration) ease-in-out;
+  animation: tvSeqSlideIn var(--tv-seq-fade-duration) ease-out;
+}
+
+@keyframes tvSeqSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tv-sequence-content {
+  line-height: 1.6;
+  font-size: 16px;
+  margin: 16px 0;
+}
+
+/* Ensure adequate spacing between elements */
+.tv-sequence-card h3 {
+  margin-bottom: 12px;
+}
+
+.tv-sequence-card p {
+  margin-bottom: 8px;
+}
+
+/* ============================================================================
+   PROGRESS INDICATOR
+   ============================================================================ */
+
+.tv-sequence-progress-container {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tv-sequence-progress-counter {
+  text-align: right;
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.tv-sequence-progress-bar-bg {
+  width: 100%;
+  height: 4px;
+  background: var(--tv-seq-progress-bg);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.tv-sequence-progress-bar-fill {
+  height: 100%;
+  background: var(--tv-seq-progress-fill);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 100ms linear;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+/* Animate progress bar */
+.tv-sequence-progress-bar-fill.animating {
+  transition: width linear;
+}
+
+/* ============================================================================
+   SKIP BUTTON
+   ============================================================================ */
+
+.tv-sequence-skip-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--tv-seq-skip-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 200ms ease;
+  opacity: 0.8;
+}
+
+.tv-sequence-skip-btn:hover {
+  background: var(--tv-seq-skip-hover-bg);
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tv-sequence-skip-btn:active {
+  transform: translateY(0);
+}
+
+.tv-sequence-skip-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .tv-sequence-skip-btn {
+    top: 12px;
+    left: 12px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}
+
+/* ============================================================================
+   END CARD STYLES
+   ============================================================================ */
+
+.tv-sequence-end-card {
+  text-align: center;
+  animation: tvSeqSlideIn var(--tv-seq-fade-duration) ease-out;
+}
+
+.tv-sequence-end-card h3 {
+  margin-bottom: 16px;
+  font-size: 24px;
+}
+
+.tv-sequence-end-card p {
+  margin-bottom: 24px;
+  opacity: 0.9;
+}
+
+.tv-sequence-end-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.tv-sequence-end-buttons button {
+  min-width: 120px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Mobile adjustments for end card buttons */
+@media (max-width: 480px) {
+  .tv-sequence-end-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .tv-sequence-end-buttons button {
+    width: 100%;
+  }
+}
+
+/* ============================================================================
+   SHOW ALL CARD (Stacked multi-card view)
+   ============================================================================ */
+
+.tv-sequence-all-card {
+  animation: tvSeqSlideIn var(--tv-seq-fade-duration) ease-out;
+  padding: 24px;
+}
+
+.tv-sequence-all-card h3 {
+  margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  background: inherit;
+  padding-bottom: 12px;
+  z-index: 1;
+}
+
+.tv-sequence-all-card p {
+  line-height: 1.6;
+  margin-bottom: 1em;
+}
+
+.tv-sequence-all-card p:last-child {
+  margin-bottom: 0;
+}
+
+/* Custom scrollbar for Show All view */
+.tv-sequence-all-card::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tv-sequence-all-card::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.tv-sequence-all-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.tv-sequence-all-card::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================================================
+   FALLBACK CARD (When content doesn't fit)
+   ============================================================================ */
+
+.tv-sequence-fallback-card {
+  text-align: center;
+  animation: tvSeqSlideIn var(--tv-seq-fade-duration) ease-out;
+}
+
+.tv-sequence-fallback-card .tiny {
+  margin: 12px 0;
+  font-style: italic;
+}
+
+.tv-sequence-fallback-card button {
+  margin-top: 16px;
+  min-width: 160px;
+}
+
+/* ============================================================================
+   AVATAR INTEGRATION
+   ============================================================================ */
+
+.tv-sequence-card .tv-card-avatars {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+/* ============================================================================
+   ACCESSIBILITY ENHANCEMENTS
+   ============================================================================ */
+
+/* Focus indicators for keyboard navigation */
+.tv-sequence-card:focus-visible,
+.tv-sequence-end-card:focus-visible,
+.tv-sequence-all-card:focus-visible,
+.tv-sequence-fallback-card:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 4px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .tv-sequence-progress-bar-bg {
+    border: 1px solid currentColor;
+  }
+  
+  .tv-sequence-skip-btn {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .tv-sequence-card,
+  .tv-sequence-end-card,
+  .tv-sequence-all-card,
+  .tv-sequence-fallback-card {
+    animation: none;
+  }
+  
+  .tv-sequence-card,
+  .tv-sequence-skip-btn {
+    transition: opacity 200ms ease;
+  }
+  
+  .tv-sequence-progress-bar-fill {
+    transition: width 200ms ease;
+  }
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .tv-sequence-content {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  
+  .tv-sequence-card h3 {
+    font-size: 20px;
+  }
+  
+  .tv-sequence-progress-counter {
+    font-size: 11px;
+  }
+}
+
+/* Tablets and up */
+@media (min-width: 768px) {
+  .tv-sequence-content {
+    font-size: 17px;
+    line-height: 1.7;
+  }
+  
+  .tv-sequence-card h3 {
+    font-size: 26px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .tv-sequence-skip-btn {
+    top: 24px;
+    left: 24px;
+  }
+}
+
+/* ============================================================================
+   DARK/LIGHT THEME SUPPORT
+   ============================================================================ */
+
+/* Light theme adjustments */
+@media (prefers-color-scheme: light) {
+  .tv-sequence-progress-bar-bg {
+    background: rgba(0, 0, 0, 0.15);
+  }
+  
+  .tv-sequence-progress-bar-fill {
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .tv-sequence-skip-btn {
+    background: rgba(255, 255, 255, 0.5);
+    color: #000;
+    border-color: rgba(0, 0, 0, 0.2);
+  }
+  
+  .tv-sequence-skip-btn:hover {
+    background: rgba(255, 255, 255, 0.7);
+  }
+}
