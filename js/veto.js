@@ -5,6 +5,9 @@
 (function(global){
   'use strict';
 
+  // Configuration constants
+  const MOBILE_VIEWPORT_THRESHOLD = 860; // Max width for mobile/tablet detection
+
   function getP(id){ return (global.getP ? global.getP(id) : null); }
   function alivePlayers(){ return (global.alivePlayers ? global.alivePlayers() : []); }
   function safeName(id){
@@ -707,7 +710,7 @@
             console.info('[veto.js] Using inline wait card (config flag enabled)');
           }
           // Otherwise check viewport width for mobile
-          else if(window.innerWidth <= 860){
+          else if(window.innerWidth <= MOBILE_VIEWPORT_THRESHOLD){
             shouldShowInlineCard = true;
             console.info('[veto.js] Using inline wait card (mobile viewport detected)');
           }

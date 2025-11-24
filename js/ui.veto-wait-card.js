@@ -8,6 +8,10 @@
 (function(global){
   'use strict';
 
+  // Configuration constants
+  const FOCUS_DELAY_MS = 100;
+  const FADE_OUT_DURATION_MS = 180;
+
   /**
    * Show veto wait card in TV container
    * Offers optional intermission game (Dots and Boxes) for non-participants
@@ -129,7 +133,7 @@
       // Delay focus slightly to ensure card is rendered
       setTimeout(function(){
         yesBtn.focus();
-      }, 100);
+      }, FOCUS_DELAY_MS);
     }
 
     console.info('[veto-wait] Card displayed');
@@ -148,7 +152,7 @@
     console.info('[veto-wait] Dismissing card');
 
     // Apply fade-out animation
-    card.style.animation = 'vwcFadeOut 180ms ease';
+    card.style.animation = 'vwcFadeOut ' + FADE_OUT_DURATION_MS + 'ms ease';
 
     // Remove from DOM after animation
     setTimeout(function(){
@@ -156,7 +160,7 @@
         card.remove();
       }
       global.__vetoWaitCard = null;
-    }, 180);
+    }, FADE_OUT_DURATION_MS);
   }
 
   // Export to global namespace
