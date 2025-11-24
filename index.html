@@ -33,7 +33,7 @@
 <link rel="stylesheet" href="css/tv-inline-status.css">
 <link rel="stylesheet" href="css/tv-inline-cards.css">
 <link rel="stylesheet" href="css/eviction-modal.css">
-<link rel="stylesheet" href="css/mobileRoster.css?v=roster-ui-2">
+<link rel="stylesheet" href="css/mobileRoster.css?v=roster-ui-1">
 
 <!-- DEBUG: Mobile Scroll Fix (loaded conditionally via ?scroll_debug=1) -->
 <!-- To revert: Remove this block or delete css/mobile-scroll-fix.css -->
@@ -249,7 +249,7 @@
 <script defer src="js/roster-visibility.js"></script>
 
 <!-- Mobile Roster View System -->
-<script defer src="js/ui/mobileRoster.js?v=roster-ui-2"></script>
+<script defer src="js/ui/mobileRoster.js?v=roster-ui-1"></script>
 
 <!-- Show "BIG BROTHER" placeholder tiles before game starts (DEFERRED) -->
 <script defer src="js/roster-placeholders.js"></script>
@@ -936,18 +936,6 @@
       document.body.appendChild(script);
     }
   })();
-</script>
-
-<!-- Mobile Roster: Safety net for initialization -->
-<script>
-  window.addEventListener('load', function(){
-    try {
-      if (window.MobileRoster && typeof window.MobileRoster.init === 'function') {
-        const active = document.body.getAttribute('data-mobile-roster-active') === 'true';
-        if (!active) { window.MobileRoster.init(); }
-      }
-    } catch(e) { console.error('[MobileRoster] window.onload init fallback error:', e); }
-  });
 </script>
 
 </body>
