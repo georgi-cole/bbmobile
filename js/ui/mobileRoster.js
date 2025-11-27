@@ -524,11 +524,11 @@
   /**
    * Normalize player status properties
    * Maps various property names to canonical status properties:
-   * - isHOH, hoh -> hoh
+   * - isHOH, hohWinner, hoh -> hoh
    * - isNominated, nominee, isNominee -> nominated
-   * - vetoHolder, hasVeto -> pov
+   * - veto, vetoHolder, hasVeto -> pov
    * - immunity, protected, isSafe -> safe
-   * - state==='evicted', evictionWeek, evictWeek -> evicted
+   * - state==='evicted', evictedWeek, evictWeek, evicted -> evicted
    * 
    * Note: This function intentionally mutates the player object to cache
    * normalized values for performance. The original properties are preserved.
@@ -536,38 +536,91 @@
   function normalizeStatus(player) {
     if (!player || typeof player !== 'object') return player;
     
-    // HOH normalization
-    if (player.isHOH && player.hoh === undefined) {
-      player.hoh = !!player.isHOH;
+    // HOH normalization - check isHOH, hohWinner
+    if (player.hoh === undefined) {
+      if (player.isHOH || player.hohWinner) {
+        player.hoh = true;
+      }
     }
     
-    // Nominated normalization
-    if ((player.isNominated || player.nominee || player.isNominee) && player.nominated === undefined) {
-      player.nominated = true;
+    // POV/Veto normalization - check veto, hasVeto, vetoHolder
+    if (player.pov === undefined) {
+      if (player.veto || player.hasVeto || player.vetoHolder) {
+        player.pov = true;
+      }
     }
     
-    // POV/Veto normalization
-    if ((player.vetoHolder || player.hasVeto) && player.pov === undefined) {
-      player.pov = true;
+    // Nominated normalization - check isNominated, nominee, isNominee
+    if (player.nominated === undefined) {
+      if (player.isNominated || player.nominee || player.isNominee) {
+        player.nominated = true;
+      }
     }
     
-    // Safe/immunity normalization
-    if ((player.immunity || player.protected || player.isSafe) && player.safe === undefined) {
-      player.safe = true;
+    // Safe/immunity normalization - check immunity, protected, isSafe
+    if (player.safe === undefined) {
+      if (player.immunity || player.protected || player.isSafe) {
+        player.safe = true;
+      }
     }
     
-    // Evicted normalization - check various eviction indicators
+    // Evicted normalization - check state, evictedWeek, evictWeek
     if (player.evicted === undefined) {
-      const hasEvictionWeek = player.evictionWeek !== null && player.evictionWeek !== undefined;
+      const hasEvictedWeek = player.evictedWeek !== null && player.evictedWeek !== undefined;
       const hasEvictWeek = player.evictWeek !== null && player.evictWeek !== undefined;
       const isEvictedState = player.state === 'evicted';
       
-      if (isEvictedState || hasEvictionWeek || hasEvictWeek) {
+      if (isEvictedState || hasEvictedWeek || hasEvictWeek) {
         player.evicted = true;
       }
     }
     
     return player;
+  }
+  
+  /**
+   * Compute badge tokens for a player
+   * Returns array of tokens in priority order: HOH > POV > NOM > SAFE
+   * If evicted, returns ["EVICTED"] alone
+   * @param {Object} player - Player object (should be normalized first)
+   * @returns {Array<string>} Array of badge tokens
+   */
+  function computeBadges(player) {
+    if (!player || typeof player !== 'object') return [];
+    
+    // Normalize status first
+    normalizeStatus(player);
+    
+    // Evicted overrides all other statuses
+    if (player.evicted) {
+      return ['EVICTED'];
+    }
+    
+    const tokens = [];
+    
+    // Priority order: HOH > POV > NOM > SAFE
+    if (player.hoh) tokens.push('HOH');
+    if (player.pov) tokens.push('POV');
+    if (player.nominated) tokens.push('NOM');
+    // SAFE only shows if no other status badges
+    if (player.safe && !player.hoh && !player.pov && !player.nominated) {
+      tokens.push('SAFE');
+    }
+    
+    return tokens;
+  }
+  
+  /**
+   * Get dynamic font-size class based on badge text length
+   * @param {string} text - Badge text
+   * @returns {string} CSS class for font sizing
+   */
+  function getBadgeSizeClass(text) {
+    if (!text) return '';
+    const len = text.length;
+    if (len > 9) return 'badge-size-xs';
+    if (len > 7) return 'badge-size-sm';
+    return '';
   }
   
   // ============================
@@ -580,24 +633,25 @@
    * Prioritizes: EVICTED > HOH > POV > NOM > SAFE
    */
   function getCombinedBadgeInfo(player, isEvicted = false) {
-    // Normalize status properties before computing badge
-    normalizeStatus(player);
-    if (isEvicted) {
-      return { text: 'EVICTED', class: 'evict' };
+    // Use computeBadges to get tokens
+    const tokens = computeBadges(player);
+    
+    // Override with EVICTED if explicitly marked
+    if (isEvicted && !tokens.includes('EVICTED')) {
+      return { text: 'EVICTED', class: 'evict', tokens: ['EVICTED'] };
     }
     
-    const statuses = [];
-    if (player.hoh) statuses.push('HOH');
-    if (player.pov) statuses.push('POV');
-    if (player.nominated) statuses.push('NOM');
-    if (player.safe && !player.hoh && !player.pov) statuses.push('SAFE');
-    
-    if (statuses.length === 0) {
+    if (tokens.length === 0) {
       return null;
     }
     
+    // Handle EVICTED case
+    if (tokens.includes('EVICTED')) {
+      return { text: 'EVICTED', class: 'evict', tokens };
+    }
+    
     // Combine with separator
-    const text = statuses.join('+');
+    const text = tokens.join('+');
     
     // Determine class (use first status for styling)
     const classMap = {
@@ -606,9 +660,9 @@
       'NOM': 'nom',
       'SAFE': 'safe'
     };
-    const badgeClass = classMap[statuses[0]] || 'default';
+    const badgeClass = classMap[tokens[0]] || 'default';
     
-    return { text, class: badgeClass };
+    return { text, class: badgeClass, tokens };
   }
 
   /**
@@ -620,16 +674,32 @@
     const statusLabel = getPlayerStatusLabel(player, isEvicted);
     const loadingStrategy = shouldUseEagerLoading() ? 'eager' : 'lazy';
     
-    // Get combined badge info
+    // Normalize status first
+    normalizeStatus(player);
+    
+    // Get combined badge info using new pipeline
     const badgeInfo = getCombinedBadgeInfo(player, isEvicted);
     
     let badgeHTML = '';
     if (badgeInfo) {
-      // Badge overlay at bottom-center
-      const longTextClass = badgeInfo.text.length > 7 ? 'long-text' : '';
-      badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${longTextClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
+      // Badge overlay at bottom-center with dynamic sizing
+      const sizeClass = getBadgeSizeClass(badgeInfo.text);
+      badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${sizeClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
       
       state.badgesRendered++;
+    }
+    
+    // Debug tag showing normalized flags (only visible in debug mode)
+    let debugTag = '';
+    if (isDebugMode()) {
+      const flags = [];
+      if (player.hoh) flags.push('hoh');
+      if (player.pov) flags.push('pov');
+      if (player.nominated) flags.push('nom');
+      if (player.safe) flags.push('safe');
+      if (player.evicted || isEvicted) flags.push('evict');
+      const flagStr = flags.length > 0 ? flags.join(',') : 'none';
+      debugTag = `<div class="mobile-roster-debug-tag" aria-hidden="true">${flagStr}</div>`;
     }
     
     const evictedClass = isEvicted ? 'evicted' : '';
@@ -664,6 +734,7 @@
           ${badgeHTML}
         </div>
         <div class="mobile-roster-name">${name}</div>
+        ${debugTag}
       </button>
     `;
   }
@@ -1774,15 +1845,31 @@
 
   /**
    * Get diagnostics status
+   * Returns { active, tiles, badgesRendered, statusSample } 
+   * statusSample contains the first 3 tiles' computed tokens
    */
   function getStatus() {
     const container = document.querySelector('.mobile-roster-container');
     const tiles = document.querySelectorAll('.mobile-roster-tile');
     
+    // Sample first 3 players' computed tokens
+    const statusSample = [];
+    const samplePlayers = state.activePlayers.slice(0, 3);
+    for (const player of samplePlayers) {
+      normalizeStatus(player);
+      const tokens = computeBadges(player);
+      statusSample.push({
+        id: player.id,
+        name: player.name,
+        tokens
+      });
+    }
+    
     return {
       active: document.body.hasAttribute('data-mobile-roster-active'),
       tiles: tiles.length,
       badgesRendered: state.badgesRendered,
+      statusSample,
       lastInitAttempt: state.lastInitAttempt,
       initAttempts: state.initAttempts,
       forced: state.forced,

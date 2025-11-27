@@ -187,11 +187,46 @@ body[data-mobile-roster-active="true"] #rosterBar {
   letter-spacing: 0.3px;
 }
 
-/* Reduce font size for long badge combinations */
+/* Dynamic font-size classes based on content length */
+.mobile-roster-badge-overlay.badge-size-sm {
+  font-size: 0.5rem;
+  padding: 1px 3px;
+}
+
+.mobile-roster-badge-overlay.badge-size-xs {
+  font-size: 0.45rem;
+  padding: 1px 2px;
+  letter-spacing: 0.2px;
+}
+
+/* Legacy long-text class (kept for backwards compatibility) */
 .mobile-roster-badge-overlay.long-text {
   font-size: 0.5rem;
 }
 
+/* Badge overlay color variants */
+.mobile-roster-badge-overlay.hoh {
+  background: linear-gradient(135deg, rgba(255, 177, 66, 0.95), rgba(255, 140, 66, 0.95));
+}
+
+.mobile-roster-badge-overlay.pov {
+  background: linear-gradient(135deg, rgba(241, 196, 15, 0.95), rgba(212, 175, 55, 0.95));
+  color: #333;
+}
+
+.mobile-roster-badge-overlay.nom {
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95));
+}
+
+.mobile-roster-badge-overlay.safe {
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.95), rgba(39, 174, 96, 0.95));
+}
+
+.mobile-roster-badge-overlay.evict {
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.95), rgba(231, 76, 60, 0.95));
+}
+
+/* Legacy badge indicators (circular, top-right) */
 .mobile-roster-badge.hoh {
   background: linear-gradient(135deg, #ffb142, #ff8c42);
   color: #fff;
@@ -988,4 +1023,21 @@ body[data-mobile-roster-active="true"] .tv {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* ============================
+   Debug Tag (visible with ?debug=1)
+   ============================ */
+
+/* Debug tag under each tile showing normalized flags */
+.mobile-roster-debug-tag {
+  font-size: 0.45rem;
+  color: var(--accent, #00d4ff);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 3px;
+  border-radius: 3px;
+  text-align: center;
+  margin-top: 2px;
+  letter-spacing: 0.2px;
+  opacity: 0.8;
 }
