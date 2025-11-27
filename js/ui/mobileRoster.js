@@ -603,7 +603,7 @@
     if (player.pov) tokens.push('POV');
     if (player.nominated) tokens.push('NOM');
     // SAFE only shows if no other status badges
-    if (player.safe && !player.hoh && !player.pov && !player.nominated) {
+    if (player.safe && tokens.length === 0) {
       tokens.push('SAFE');
     }
     
@@ -633,13 +633,16 @@
    * Prioritizes: EVICTED > HOH > POV > NOM > SAFE
    */
   function getCombinedBadgeInfo(player, isEvicted = false) {
-    // Use computeBadges to get tokens
-    const tokens = computeBadges(player);
-    
-    // Override with EVICTED if explicitly marked
-    if (isEvicted && !tokens.includes('EVICTED')) {
-      return { text: 'EVICTED', class: 'evict', tokens: ['EVICTED'] };
+    // Handle explicit evicted parameter first (takes priority)
+    if (isEvicted) {
+      // Mark player as evicted for normalization
+      if (player && !player.evicted) {
+        player.evicted = true;
+      }
     }
+    
+    // Use computeBadges to get tokens (handles normalization internally)
+    const tokens = computeBadges(player);
     
     if (tokens.length === 0) {
       return null;
@@ -1847,17 +1850,20 @@
    * Get diagnostics status
    * Returns { active, tiles, badgesRendered, statusSample } 
    * statusSample contains the first 3 tiles' computed tokens
+   * Note: Uses shallow copies to avoid mutating original player objects
    */
   function getStatus() {
     const container = document.querySelector('.mobile-roster-container');
     const tiles = document.querySelectorAll('.mobile-roster-tile');
     
-    // Sample first 3 players' computed tokens
+    // Sample first 3 players' computed tokens using shallow copies
     const statusSample = [];
     const samplePlayers = state.activePlayers.slice(0, 3);
     for (const player of samplePlayers) {
-      normalizeStatus(player);
-      const tokens = computeBadges(player);
+      // Create a shallow copy to avoid mutating original
+      const playerCopy = { ...player };
+      normalizeStatus(playerCopy);
+      const tokens = computeBadges(playerCopy);
       statusSample.push({
         id: player.id,
         name: player.name,
