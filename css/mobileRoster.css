@@ -622,69 +622,79 @@ body[data-mobile-roster-active="true"] .tv {
  */
 
 /* ============================
-   Profile Popover
+   Profile Bottom Sheet (Hold-to-View)
    ============================ */
 
 .mobile-roster-profile-popover {
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 10000;
   display: none;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 
 .mobile-roster-profile-popover.visible {
-  display: flex;
-  opacity: 1;
+  display: block;
+  pointer-events: auto;
 }
 
+/* No backdrop - just the sheet */
 .profile-popover-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  display: none;
 }
 
 .profile-popover-content {
   position: relative;
-  max-width: min(90vw, 420px);
-  max-height: 80vh;
-  background: var(--card);
-  border: 2px solid var(--accent);
-  border-radius: 16px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+  width: 100%;
+  max-height: 50vh;
+  background: var(--card, #1a1a2e);
+  border-top: 2px solid var(--accent, #00d4ff);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: popoverSlideIn 0.3s ease;
+  animation: bottomSheetSlideUp 0.25s ease-out;
 }
 
-@keyframes popoverSlideIn {
+@keyframes bottomSheetSlideUp {
   from {
-    transform: translateY(20px) scale(0.95);
-    opacity: 0;
+    transform: translateY(100%);
+    opacity: 0.8;
   }
   to {
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
     opacity: 1;
   }
 }
 
+/* Drag handle indicator at top */
+.profile-popover-content::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: var(--muted, #666);
+  border-radius: 2px;
+  opacity: 0.5;
+}
+
 .profile-popover-close {
   position: absolute;
-  top: 12px;
+  top: 8px;
   right: 12px;
-  width: 32px;
-  height: 32px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid var(--line);
+  width: 28px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--line, #333);
   border-radius: 50%;
-  color: var(--ink);
-  font-size: 1.2rem;
+  color: var(--ink, #fff);
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   z-index: 1;
@@ -692,114 +702,90 @@ body[data-mobile-roster-active="true"] .tv {
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  backdrop-filter: blur(4px);
 }
 
 .profile-popover-close:hover {
-  background: rgba(0, 0, 0, 0.8);
-  border-color: var(--accent);
-  transform: scale(1.1);
+  background: rgba(0, 0, 0, 0.6);
+  border-color: var(--accent, #00d4ff);
 }
 
 .profile-popover-body {
-  padding: 24px 20px 20px;
+  padding: 24px 16px 16px;
   overflow-y: auto;
   flex: 1;
 }
 
 .profile-field-name {
-  margin: 0 0 20px 0;
-  font-size: 1.5rem;
+  margin: 0 0 16px 0;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--ink, #fff);
   text-align: center;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--line);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line, #333);
 }
 
 .profile-field {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  background: var(--card-2);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: var(--card-2, #252540);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .profile-field label {
   font-weight: 600;
-  color: var(--muted-2);
-  min-width: 100px;
+  color: var(--muted-2, #888);
+  min-width: 80px;
   flex-shrink: 0;
 }
 
 .profile-field span,
 .profile-field strong,
 .profile-field em {
-  color: var(--ink);
+  color: var(--ink, #fff);
   flex: 1;
 }
 
 .profile-field strong {
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent, #00d4ff);
 }
 
 .profile-field em {
   font-style: italic;
-  color: var(--muted-2);
+  color: var(--muted-2, #888);
 }
 
 .profile-field-empty {
-  color: var(--muted) !important;
+  color: var(--muted, #666) !important;
   font-style: italic;
   opacity: 0.6;
 }
 
 .profile-field-ranking {
-  background: linear-gradient(135deg, var(--primary-2), var(--primary-3));
-  border: 1px solid var(--accent);
+  background: linear-gradient(135deg, var(--primary-2, #2a2a4a), var(--primary-3, #1a1a3a));
+  border: 1px solid var(--accent, #00d4ff);
 }
 
 .profile-ranking-value {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--accent) !important;
+  color: var(--accent, #00d4ff) !important;
 }
 
 .profile-field-eviction {
-  background: rgba(var(--evicted-color-rgb), 0.1);
-  border: 1px solid rgba(var(--evicted-color-rgb), 0.3);
+  background: rgba(var(--evicted-color-rgb, 231, 76, 60), 0.1);
+  border: 1px solid rgba(var(--evicted-color-rgb, 231, 76, 60), 0.3);
 }
 
 .profile-eviction-value {
   font-weight: 700;
-  color: var(--evicted-color) !important;
-}
-
-/* Mobile-specific adjustments */
-@media (max-width: 520px) {
-  .profile-popover-content {
-    max-width: 95vw;
-    max-height: 85vh;
-  }
-  
-  .profile-popover-body {
-    padding: 20px 16px 16px;
-  }
-  
-  .profile-field {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  
-  .profile-field label {
-    min-width: auto;
-  }
+  color: var(--evicted-color, #e74c3c) !important;
 }
 
 /* ============================
