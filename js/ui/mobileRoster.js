@@ -529,6 +529,9 @@
    * - vetoHolder, hasVeto -> pov
    * - immunity, protected, isSafe -> safe
    * - state==='evicted', evictionWeek, evictWeek -> evicted
+   * 
+   * Note: This function intentionally mutates the player object to cache
+   * normalized values for performance. The original properties are preserved.
    */
   function normalizeStatus(player) {
     if (!player || typeof player !== 'object') return player;
@@ -553,9 +556,15 @@
       player.safe = true;
     }
     
-    // Evicted normalization
-    if ((player.state === 'evicted' || player.evictionWeek !== null && player.evictionWeek !== undefined || player.evictWeek !== null && player.evictWeek !== undefined) && player.evicted === undefined) {
-      player.evicted = true;
+    // Evicted normalization - check various eviction indicators
+    if (player.evicted === undefined) {
+      const hasEvictionWeek = player.evictionWeek !== null && player.evictionWeek !== undefined;
+      const hasEvictWeek = player.evictWeek !== null && player.evictWeek !== undefined;
+      const isEvictedState = player.state === 'evicted';
+      
+      if (isEvictedState || hasEvictionWeek || hasEvictWeek) {
+        player.evicted = true;
+      }
     }
     
     return player;
