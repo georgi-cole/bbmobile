@@ -518,6 +518,59 @@
   }
   
   // ============================
+  // Status Normalization
+  // ============================
+  
+  /**
+   * Normalize player status properties
+   * Maps various property names to canonical status properties:
+   * - isHOH, hoh -> hoh
+   * - isNominated, nominee, isNominee -> nominated
+   * - vetoHolder, hasVeto -> pov
+   * - immunity, protected, isSafe -> safe
+   * - state==='evicted', evictionWeek, evictWeek -> evicted
+   * 
+   * Note: This function intentionally mutates the player object to cache
+   * normalized values for performance. The original properties are preserved.
+   */
+  function normalizeStatus(player) {
+    if (!player || typeof player !== 'object') return player;
+    
+    // HOH normalization
+    if (player.isHOH && player.hoh === undefined) {
+      player.hoh = !!player.isHOH;
+    }
+    
+    // Nominated normalization
+    if ((player.isNominated || player.nominee || player.isNominee) && player.nominated === undefined) {
+      player.nominated = true;
+    }
+    
+    // POV/Veto normalization
+    if ((player.vetoHolder || player.hasVeto) && player.pov === undefined) {
+      player.pov = true;
+    }
+    
+    // Safe/immunity normalization
+    if ((player.immunity || player.protected || player.isSafe) && player.safe === undefined) {
+      player.safe = true;
+    }
+    
+    // Evicted normalization - check various eviction indicators
+    if (player.evicted === undefined) {
+      const hasEvictionWeek = player.evictionWeek !== null && player.evictionWeek !== undefined;
+      const hasEvictWeek = player.evictWeek !== null && player.evictWeek !== undefined;
+      const isEvictedState = player.state === 'evicted';
+      
+      if (isEvictedState || hasEvictionWeek || hasEvictWeek) {
+        player.evicted = true;
+      }
+    }
+    
+    return player;
+  }
+  
+  // ============================
   // Rendering Functions
   // ============================
   
@@ -527,6 +580,8 @@
    * Prioritizes: EVICTED > HOH > POV > NOM > SAFE
    */
   function getCombinedBadgeInfo(player, isEvicted = false) {
+    // Normalize status properties before computing badge
+    normalizeStatus(player);
     if (isEvicted) {
       return { text: 'EVICTED', class: 'evict' };
     }
@@ -659,6 +714,20 @@
       if (img) {
         const playerId = tile.getAttribute('data-player-id');
         const player = state.activePlayers.find(p => String(p.id) === String(playerId));
+        
+        // Prevent iOS native image actions (contextmenu, drag, etc.)
+        img.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        });
+        
+        // Prevent default on pointerdown for images to suppress iOS callout
+        img.addEventListener('pointerdown', (e) => {
+          if (isMobileUA()) {
+            e.preventDefault();
+          }
+        });
         
         const candidates = [];
         
@@ -900,6 +969,13 @@
    * Focus a player in the faux TV area
    */
   function focusPlayer(player, isEvicted = false) {
+    // Check for spotlight disable flag early (per requirements)
+    if (typeof window.MOBILE_ROSTER_DISABLE_SPOTLIGHT !== 'undefined' && 
+        window.MOBILE_ROSTER_DISABLE_SPOTLIGHT) {
+      console.info('[MobileRoster] Spotlight disabled by MOBILE_ROSTER_DISABLE_SPOTLIGHT flag');
+      return;
+    }
+    
     const tvNow = document.querySelector('#tvNow');
     const tvOverlay = document.querySelector('#tvOverlay');
     
@@ -1170,11 +1246,8 @@
     // Find player in activePlayers (which includes evicted now)
     const player = state.activePlayers.find(p => String(p.id) === String(playerId));
     
-    // Check MOBILE_ROSTER_DISABLE_SPOTLIGHT flag
-    const disableSpotlight = typeof window.MOBILE_ROSTER_DISABLE_SPOTLIGHT !== 'undefined' && 
-                             window.MOBILE_ROSTER_DISABLE_SPOTLIGHT;
-    
-    if (player && !disableSpotlight) {
+    // focusPlayer will check MOBILE_ROSTER_DISABLE_SPOTLIGHT internally
+    if (player) {
       focusPlayer(player, isEvicted);
     }
   }
