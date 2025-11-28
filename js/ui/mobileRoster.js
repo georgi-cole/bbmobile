@@ -918,6 +918,43 @@
     return '';
   }
   
+  /**
+   * Render status chips HTML for a player
+   * Creates centered chip container with individual chips that can wrap
+   * @param {Array<string>} tokens - Array of status tokens (HOH, POV, NOM, SAFE, EVICTED)
+   * @returns {string} HTML string for status chips overlay
+   */
+  function renderStatusChipsHTML(tokens) {
+    if (!tokens || tokens.length === 0) {
+      return '';
+    }
+    
+    // Map tokens to chip classes
+    const classMap = {
+      'HOH': 'chip-hoh',
+      'POV': 'chip-pov',
+      'NOM': 'chip-nom',
+      'SAFE': 'chip-safe',
+      'EVICTED': 'chip-evict'
+    };
+    
+    // For single token, use the standard badge overlay
+    // For multiple tokens (combo), render individual chips in container
+    if (tokens.length === 1) {
+      return null; // Let getCombinedBadgeInfo handle single badges
+    }
+    
+    // Build individual chips for combo badges
+    const chipsHTML = tokens.map(token => {
+      const chipClass = classMap[token] || '';
+      return `<span class="${chipClass}">${token}</span>`;
+    }).join('');
+    
+    const ariaLabel = tokens.join(' and ');
+    
+    return `<div class="mobile-roster-status-chips" aria-label="${ariaLabel}">${chipsHTML}</div>`;
+  }
+  
   // ============================
   // Rendering Functions
   // ============================
@@ -980,11 +1017,25 @@
     
     let badgeHTML = '';
     if (badgeInfo) {
-      // Badge overlay at bottom-center with dynamic sizing
-      const sizeClass = getBadgeSizeClass(badgeInfo.text);
-      badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${sizeClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
-      
-      state.badgesRendered++;
+      // For combo badges (multiple tokens), try to use the chips container
+      // This allows badges to wrap instead of being clipped
+      if (badgeInfo.tokens && badgeInfo.tokens.length > 1) {
+        const chipsHTML = renderStatusChipsHTML(badgeInfo.tokens);
+        if (chipsHTML) {
+          badgeHTML = chipsHTML;
+          state.badgesRendered++;
+        } else {
+          // Fallback to standard badge overlay
+          const sizeClass = getBadgeSizeClass(badgeInfo.text);
+          badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${sizeClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
+          state.badgesRendered++;
+        }
+      } else {
+        // Single badge - use standard overlay
+        const sizeClass = getBadgeSizeClass(badgeInfo.text);
+        badgeHTML = `<div class="mobile-roster-badge-overlay ${badgeInfo.class} ${sizeClass}" aria-label="${badgeInfo.text}">${badgeInfo.text}</div>`;
+        state.badgesRendered++;
+      }
     }
     
     // Debug tag showing normalized flags (only visible in debug mode)
@@ -1735,21 +1786,28 @@
   /**
    * Update player lists from game state
    * Per requirements: evicted players stay in main grid, not removed
+   * IMPORTANT: Must use a source that includes ALL players (evicted and non-evicted).
+   * Do NOT use PlayerService.getAlivePlayers() as the primary source since it
+   * filters out evicted players.
    */
   function updatePlayerLists() {
     try {
-      // Try to get players from PlayerService first
+      // Get ALL players (evicted + non-evicted) from game state
+      // IMPORTANT: Avoid getAlivePlayers() which returns only non-evicted players
       let allPlayers = [];
       
-      if (global.PlayerService && typeof global.PlayerService.getAlivePlayers === 'function') {
-        allPlayers = global.PlayerService.getAlivePlayers() || [];
-        console.info('[MobileRoster] Loaded from PlayerService');
-      } else if (global.game && Array.isArray(global.game.players)) {
+      // Priority 1: Use game.players which includes all players
+      if (global.game && Array.isArray(global.game.players)) {
         allPlayers = global.game.players || [];
-        console.info('[MobileRoster] Loaded from game.players');
+        console.info('[MobileRoster] Loaded from game.players (all players)');
       } else if (global.g && global.g.game && Array.isArray(global.g.game.players)) {
         allPlayers = global.g.game.players || [];
-        console.info('[MobileRoster] Loaded from g.game.players');
+        console.info('[MobileRoster] Loaded from g.game.players (all players)');
+      } else if (global.PlayerService && typeof global.PlayerService.getAlivePlayers === 'function') {
+        // Fallback only: getAlivePlayers returns only non-evicted players
+        // This is a last resort; the grid will not show evicted players
+        allPlayers = global.PlayerService.getAlivePlayers() || [];
+        console.warn('[MobileRoster] Fallback to PlayerService.getAlivePlayers() - evicted players may be missing');
       }
       
       // Keep ALL players in activePlayers (requirement: evicted stay in main grid)
