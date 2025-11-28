@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Badge Rendering Test - Mobile</title>
+  
+  <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/mobileRoster.css?v=badge-diag-1">
+  
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg, #0a0a1a);
+      color: var(--ink, #fff);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+    }
+    
+    html {
+      height: -webkit-fill-available;
+    }
+    
+    .test-page {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+    }
+    
+    .test-header {
+      padding: 12px;
+      background: var(--card, #1a1a2e);
+      border-bottom: 1px solid var(--line, #333);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .test-header h1 {
+      margin: 0 0 8px 0;
+      font-size: 1.1rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    
+    .test-btn {
+      padding: 6px 12px;
+      background: var(--primary-2, #252540);
+      border: 1px solid var(--line, #333);
+      border-radius: 6px;
+      color: var(--ink, #fff);
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover,
+    .test-btn:active {
+      background: var(--primary-3, #353560);
+    }
+    
+    .test-btn.active {
+      background: var(--accent, #00d4ff);
+      color: #000;
+      border-color: var(--accent, #00d4ff);
+    }
+    
+    .test-content {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+    }
+    
+    .device-info {
+      padding: 10px;
+      background: var(--card-2, #252540);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.75rem;
+    }
+    
+    .device-info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+    
+    .device-info-label {
+      color: var(--muted-2, #888);
+    }
+    
+    .device-info-value {
+      color: var(--ink, #fff);
+      font-weight: 600;
+    }
+    
+    /* Faux roster bar (hidden when mobile roster active) */
+    #rosterBar {
+      padding: 12px;
+      background: var(--card-2, #252540);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      text-align: center;
+      color: var(--muted, #666);
+    }
+    
+    /* Faux TV */
+    .tv {
+      padding: 12px;
+      background: var(--card, #1a1a2e);
+      border-radius: 12px;
+      border: 2px solid var(--line, #333);
+      min-height: 180px;
+      position: relative;
+      margin-top: 16px;
+    }
+    
+    #tvNow {
+      padding: 16px;
+      text-align: center;
+      color: #fff;
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #tvOverlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    
+    /* Diagnostics panel */
+    .diagnostics-panel {
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--card, #1a1a2e);
+      border-radius: 8px;
+      border: 1px solid var(--line, #333);
+    }
+    
+    .diagnostics-panel h3 {
+      margin: 0 0 10px 0;
+      font-size: 0.9rem;
+    }
+    
+    .diagnostics-panel pre {
+      margin: 0;
+      padding: 10px;
+      background: var(--card-2, #252540);
+      border-radius: 6px;
+      font-size: 0.65rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    /* Metrics display */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .metric-card {
+      padding: 8px;
+      background: var(--card-2, #252540);
+      border-radius: 6px;
+      text-align: center;
+    }
+    
+    .metric-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent, #00d4ff);
+    }
+    
+    .metric-label {
+      font-size: 0.65rem;
+      color: var(--muted-2, #888);
+      margin-top: 2px;
+    }
+    
+    .metric-card.error .metric-value {
+      color: #ff4444;
+    }
+    
+    .metric-card.success .metric-value {
+      color: #44ff44;
+    }
+    
+    /* Log output */
+    .log-output {
+      margin-top: 12px;
+      padding: 10px;
+      background: #000;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.65rem;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid #222;
+    }
+    
+    .log-entry.info {
+      color: #00d4ff;
+    }
+    
+    .log-entry.warn {
+      color: #ffcc00;
+    }
+    
+    .log-entry.error {
+      color: #ff4444;
+    }
+    
+    .log-entry.success {
+      color: #44ff44;
+    }
+    
+    /* Status legend */
+    .status-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.65rem;
+    }
+    
+    .legend-badge {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 700;
+      font-size: 0.6rem;
+    }
+    
+    .legend-badge.hoh { background: linear-gradient(135deg, #ffb142, #ff8c42); color: #fff; }
+    .legend-badge.pov { background: linear-gradient(135deg, #f1c40f, #d4af37); color: #333; }
+    .legend-badge.nom { background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff; }
+    .legend-badge.safe { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; }
+    .legend-badge.evict { background: linear-gradient(135deg, #c0392b, #e74c3c); color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="test-page">
+    <div class="test-header">
+      <h1>🏷️ Badge Rendering Test (Mobile)</h1>
+      <div class="test-controls">
+        <button class="test-btn" onclick="runDiagnostics()">Run Diagnostics</button>
+        <button class="test-btn" onclick="toggleOverlay()">Toggle Overlay</button>
+        <button class="test-btn" onclick="refreshRoster()">Refresh Roster</button>
+        <button class="test-btn" onclick="cycleStatuses()">Cycle Statuses</button>
+        <button class="test-btn" onclick="simulateReflow()">Force Reflow</button>
+      </div>
+    </div>
+    
+    <div class="test-content">
+      <!-- Device Info -->
+      <div class="device-info">
+        <div class="device-info-row">
+          <span class="device-info-label">User Agent</span>
+          <span class="device-info-value" id="uaInfo">-</span>
+        </div>
+        <div class="device-info-row">
+          <span class="device-info-label">Viewport</span>
+          <span class="device-info-value" id="viewportInfo">-</span>
+        </div>
+        <div class="device-info-row">
+          <span class="device-info-label">DPR</span>
+          <span class="device-info-value" id="dprInfo">-</span>
+        </div>
+        <div class="device-info-row">
+          <span class="device-info-label">iOS Safari</span>
+          <span class="device-info-value" id="iosInfo">-</span>
+        </div>
+      </div>
+      
+      <!-- Status Legend -->
+      <div class="status-legend">
+        <div class="legend-item"><span class="legend-badge hoh">HOH</span></div>
+        <div class="legend-item"><span class="legend-badge pov">POV</span></div>
+        <div class="legend-item"><span class="legend-badge nom">NOM</span></div>
+        <div class="legend-item"><span class="legend-badge safe">SAFE</span></div>
+        <div class="legend-item"><span class="legend-badge evict">EVICTED</span></div>
+      </div>
+      
+      <!-- Metrics Dashboard -->
+      <div class="metrics-grid">
+        <div class="metric-card" id="metricBadges">
+          <div class="metric-value">0</div>
+          <div class="metric-label">Total Badges</div>
+        </div>
+        <div class="metric-card" id="metricVisible">
+          <div class="metric-value">0</div>
+          <div class="metric-label">Visible</div>
+        </div>
+        <div class="metric-card" id="metricIssues">
+          <div class="metric-value">0</div>
+          <div class="metric-label">Issues</div>
+        </div>
+        <div class="metric-card" id="metricBorder">
+          <div class="metric-value">-</div>
+          <div class="metric-label">Border Width</div>
+        </div>
+      </div>
+      
+      <!-- Roster Bar (placeholder for mobile roster injection) -->
+      <div id="rosterBar" style="display: none;">
+        Default roster bar (hidden in mobile mode)
+      </div>
+      
+      <!-- Mobile Roster Container (injected by JS) -->
+      
+      <!-- Faux TV -->
+      <div class="tv">
+        <div id="tvNow">Tap a player tile to spotlight them</div>
+        <div id="tvOverlay"></div>
+      </div>
+      
+      <!-- Diagnostics Panel -->
+      <div class="diagnostics-panel">
+        <h3>📊 Diagnostic Output</h3>
+        <div class="log-output" id="logOutput">
+          <div class="log-entry info">Ready. Tap "Run Diagnostics" to start.</div>
+        </div>
+        <pre id="diagnosticsOutput">Waiting for diagnostics...</pre>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load mobile roster module -->
+  <script src="js/ui/mobileRoster.js?v=badge-diag-1"></script>
+  
+  <!-- Load diagnostics module -->
+  <script src="js/debug/rosterBadgeDiagnostics.js?v=badge-diag-1"></script>
+  
+  <script>
+    // ============================
+    // Mock Game State
+    // ============================
+    
+    window.game = window.game || {};
+    window.game.cfg = window.game.cfg || {};
+    window.g = window.g || {};
+    
+    // Enable diagnostics by default on this test page
+    window.game.cfg.debugBadges = true;
+    
+    // Event bus
+    window.bbGameBus = {
+      listeners: new Map(),
+      on(event, callback) {
+        if (!this.listeners.has(event)) {
+          this.listeners.set(event, []);
+        }
+        this.listeners.get(event).push(callback);
+      },
+      emit(event, data) {
+        if (!this.listeners.has(event)) return;
+        this.listeners.get(event).forEach(cb => cb(data));
+      }
+    };
+    
+    // Mock avatar resolver
+    window.getDicebearUrl = function(seed) {
+      return `https://api.dicebear.com/6.x/bottts/svg?seed=${encodeURIComponent(seed || 'player')}`;
+    };
+    
+    // iOS Safari detection
+    window.isIOSSafari = function() {
+      const ua = navigator.userAgent;
+      const iOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+      const safari = /^((?!chrome|android).)*safari/i.test(ua);
+      return iOS && safari;
+    };
+    
+    // ============================
+    // Demo Players
+    // ============================
+    
+    /**
+     * Demo players with various status combinations.
+     * These cover all edge cases for badge rendering.
+     */
+    const DEMO_PLAYERS = [
+      { id: 1, name: 'Alice', hoh: true },
+      { id: 2, name: 'Bob', vetoHolder: true },
+      { id: 3, name: 'Carol', isNominated: true },
+      { id: 4, name: 'Dave', immunity: true },
+      { id: 5, name: 'Emma', isHOH: true, hasVeto: true },
+      { id: 6, name: 'Frank', veto: true, nominee: true },
+      { id: 7, name: 'Grace', isNominee: true },
+      { id: 8, name: 'Henry', state: 'evicted', evictedWeek: 3 },
+      { id: 9, name: 'Ivy', hoh: false, pov: false, nominated: false },
+      { id: 10, name: 'Jack', protected: true },
+    ];
+    
+    let currentPlayerIndex = 0;
+    
+    // Initialize with demo players
+    window.game.players = DEMO_PLAYERS.map(p => ({ ...p }));
+    
+    // Force mobile roster activation
+    window.FORCE_MOBILE_ROSTER = true;
+    window.MOBILE_ROSTER_DISABLE_SPOTLIGHT = false;
+    
+    // ============================
+    // Logging
+    // ============================
+    
+    function log(message, type = 'info') {
+      const logOutput = document.getElementById('logOutput');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logOutput.appendChild(entry);
+      logOutput.scrollTop = logOutput.scrollHeight;
+      
+      // Also log to console
+      if (type === 'error') {
+        console.error('[TestPage]', message);
+      } else if (type === 'warn') {
+        console.warn('[TestPage]', message);
+      } else {
+        console.log('[TestPage]', message);
+      }
+    }
+    
+    // ============================
+    // Device Info
+    // ============================
+    
+    function updateDeviceInfo() {
+      const ua = navigator.userAgent;
+      const shortUA = ua.length > 50 ? ua.substring(0, 47) + '...' : ua;
+      document.getElementById('uaInfo').textContent = shortUA;
+      document.getElementById('uaInfo').title = ua;
+      
+      document.getElementById('viewportInfo').textContent = 
+        `${window.innerWidth}×${window.innerHeight}`;
+      
+      document.getElementById('dprInfo').textContent = 
+        window.devicePixelRatio.toFixed(2);
+      
+      document.getElementById('iosInfo').textContent = 
+        window.isIOSSafari() ? 'Yes' : 'No';
+    }
+    
+    // ============================
+    // Metrics Update
+    // ============================
+    
+    function updateMetrics() {
+      if (!window.RosterBadgeDiagnostics) {
+        log('Diagnostics module not loaded', 'warn');
+        return;
+      }
+      
+      const results = window.RosterBadgeDiagnostics.runDiagnostic();
+      
+      // Update metric cards
+      const badges = results.badgeMetrics || [];
+      const visibleBadges = badges.filter(b => b.issues.length === 0);
+      const issuesBadges = badges.filter(b => b.issues.length > 0);
+      
+      document.querySelector('#metricBadges .metric-value').textContent = badges.length;
+      
+      const visibleCard = document.getElementById('metricVisible');
+      visibleCard.querySelector('.metric-value').textContent = visibleBadges.length;
+      visibleCard.className = 'metric-card ' + (visibleBadges.length === badges.length ? 'success' : '');
+      
+      const issuesCard = document.getElementById('metricIssues');
+      issuesCard.querySelector('.metric-value').textContent = issuesBadges.length;
+      issuesCard.className = 'metric-card ' + (issuesBadges.length > 0 ? 'error' : 'success');
+      
+      document.querySelector('#metricBorder .metric-value').textContent = 
+        results.normalizedBorderWidth + 'px';
+      
+      // Update diagnostics output
+      document.getElementById('diagnosticsOutput').textContent = 
+        JSON.stringify(results, null, 2);
+      
+      // Log issues
+      if (issuesBadges.length > 0) {
+        log(`${issuesBadges.length} badges have rendering issues`, 'warn');
+        issuesBadges.forEach(b => {
+          log(`  Badge ${b.playerId}: ${b.issues.join(', ')}`, 'error');
+        });
+      } else if (badges.length > 0) {
+        log(`All ${badges.length} badges rendered successfully`, 'success');
+      } else {
+        log('No badges found on page', 'warn');
+      }
+      
+      return results;
+    }
+    
+    // ============================
+    // Test Actions
+    // ============================
+    
+    function runDiagnostics() {
+      log('Running diagnostics...', 'info');
+      updateDeviceInfo();
+      const results = updateMetrics();
+      
+      if (results) {
+        log(`CSS vars resolved: ${Object.values(results.cssVariables.vars).filter(v => v).length}/${Object.keys(results.cssVariables.vars).length}`, 'info');
+        log(`DPR: ${results.dpr}, Border: ${results.normalizedBorderWidth}px`, 'info');
+      }
+    }
+    
+    function toggleOverlay() {
+      if (window.RosterBadgeDiagnostics) {
+        window.RosterBadgeDiagnostics.toggleOverlay();
+        log('Toggled diagnostics overlay', 'info');
+      } else {
+        log('Diagnostics module not loaded', 'error');
+      }
+    }
+    
+    function refreshRoster() {
+      log('Refreshing roster...', 'info');
+      if (window.MobileRoster) {
+        window.MobileRoster.refresh();
+        log('Roster refreshed', 'success');
+        
+        // Update metrics after refresh
+        setTimeout(updateMetrics, 100);
+      } else {
+        log('MobileRoster not loaded', 'error');
+      }
+    }
+    
+    function cycleStatuses() {
+      log('Cycling player statuses...', 'info');
+      
+      // Rotate status assignments
+      const statuses = ['hoh', 'pov', 'nominated', 'safe', 'evicted'];
+      
+      window.game.players.forEach((player, index) => {
+        // Clear existing statuses
+        player.hoh = false;
+        player.pov = false;
+        player.nominated = false;
+        player.safe = false;
+        player.evicted = false;
+        player.isHOH = false;
+        player.isNominated = false;
+        player.vetoHolder = false;
+        player.immunity = false;
+        
+        // Assign new status based on rotation
+        const statusIndex = (index + currentPlayerIndex) % statuses.length;
+        const status = statuses[statusIndex];
+        player[status] = true;
+        
+        if (status === 'evicted') {
+          player.evictedWeek = Math.floor(Math.random() * 10) + 1;
+        }
+      });
+      
+      currentPlayerIndex = (currentPlayerIndex + 1) % statuses.length;
+      
+      // Emit update event
+      window.bbGameBus.emit('players:update', { players: window.game.players });
+      
+      // Refresh roster
+      refreshRoster();
+      
+      log(`Statuses cycled to offset ${currentPlayerIndex}`, 'info');
+    }
+    
+    function simulateReflow() {
+      log('Forcing reflow...', 'info');
+      
+      // Force reflow on all badges
+      const badges = document.querySelectorAll('.mobile-roster-badge-overlay, .mobile-roster-badge');
+      badges.forEach(badge => {
+        // Read offsetHeight to force reflow
+        void badge.offsetHeight;
+      });
+      
+      // Apply any pending fallbacks
+      if (window.RosterBadgeDiagnostics) {
+        const fallbacks = window.RosterBadgeDiagnostics.checkAllBadgesAndApplyFallbacks();
+        log(`Reflow complete. Fallbacks may have been applied.`, 'info');
+      }
+      
+      // Update metrics
+      setTimeout(updateMetrics, 50);
+    }
+    
+    // ============================
+    // Initialization
+    // ============================
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      log('Test page loaded', 'info');
+      
+      // Update device info
+      updateDeviceInfo();
+      
+      // Initialize mobile roster
+      if (window.MobileRoster) {
+        log('Initializing mobile roster...', 'info');
+        window.MobileRoster.init();
+        log('Mobile roster initialized', 'success');
+      } else {
+        log('MobileRoster module not found', 'error');
+      }
+      
+      // Wait for DOM to settle, then run diagnostics
+      setTimeout(() => {
+        runDiagnostics();
+      }, 500);
+      
+      // Update on resize
+      window.addEventListener('resize', () => {
+        updateDeviceInfo();
+        // Debounce metrics update
+        clearTimeout(window._resizeTimer);
+        window._resizeTimer = setTimeout(updateMetrics, 250);
+      });
+    });
+    
+    // Also run on window load for late-loading assets
+    window.addEventListener('load', () => {
+      log('Window fully loaded', 'info');
+      runDiagnostics();
+    });
+  </script>
+</body>
+</html>
