@@ -491,9 +491,11 @@
     }
     
     // Notify PlayerService about the update if available
+    // Filter to only include alive (non-evicted) players as PlayerService tracks alive players
     if(global.PlayerService && typeof global.PlayerService.setAlivePlayers === 'function'){
       try {
-        global.PlayerService.setAlivePlayers(g.players);
+        const alivePlayers = g.players.filter(p => !p.evicted);
+        global.PlayerService.setAlivePlayers(alivePlayers);
       } catch(e) {
         console.warn('[state] Failed to notify PlayerService:', e);
       }

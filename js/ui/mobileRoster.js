@@ -544,33 +544,8 @@
     const game = global.game || {};
     const playerId = player.id;
     
-    // HOH normalization - use canonical game.hohId as single source of truth
-    // Also check player properties for backward compatibility
-    const isCanonicalHOH = game.hohId === playerId;
-    const hasHOHProperty = player.isHOH || player.hohWinner || player.hoh === true;
-    player.hoh = isCanonicalHOH || hasHOHProperty;
-    
-    // POV/Veto normalization - use canonical game.vetoHolder as single source of truth
-    // Also check player properties for backward compatibility
-    const isCanonicalPOV = game.vetoHolder === playerId;
-    const hasPOVProperty = player.veto || player.hasVeto || player.vetoHolder || player.pov === true;
-    player.pov = isCanonicalPOV || hasPOVProperty;
-    
-    // Nominated normalization - use canonical game.nominees as single source of truth
-    // Also check player properties for backward compatibility
-    const nominees = Array.isArray(game.nominees) ? game.nominees : [];
-    const isCanonicalNominated = nominees.includes(playerId);
-    const hasNominatedProperty = player.isNominated || player.nominee || player.isNominee || player.nominated === true;
-    player.nominated = !player.evicted && (isCanonicalNominated || hasNominatedProperty);
-    
-    // Safe/immunity normalization - check immunity, protected, isSafe
-    if (player.safe === undefined) {
-      if (player.immunity || player.protected || player.isSafe) {
-        player.safe = true;
-      }
-    }
-    
-    // Evicted normalization - check state, evictedWeek, evictWeek
+    // Evicted normalization - check first as it affects other statuses
+    // Check state, evictedWeek, evictWeek
     if (player.evicted === undefined) {
       const hasEvictedWeek = player.evictedWeek !== null && player.evictedWeek !== undefined;
       const hasEvictWeek = player.evictWeek !== null && player.evictWeek !== undefined;
@@ -578,6 +553,38 @@
       
       if (isEvictedState || hasEvictedWeek || hasEvictWeek) {
         player.evicted = true;
+      }
+    }
+    
+    const isEvicted = player.evicted === true;
+    
+    // HOH normalization - use canonical game.hohId as single source of truth
+    // Also check player properties for backward compatibility
+    // Note: Evicted players cannot be HOH
+    const isCanonicalHOH = !isEvicted && game.hohId === playerId;
+    const hasHOHProperty = !isEvicted && (player.isHOH || player.hohWinner || player.hoh === true);
+    player.hoh = isCanonicalHOH || hasHOHProperty;
+    
+    // POV/Veto normalization - use canonical game.vetoHolder as single source of truth
+    // Also check player properties for backward compatibility
+    // Note: Evicted players cannot hold POV
+    const isCanonicalPOV = !isEvicted && game.vetoHolder === playerId;
+    const hasPOVProperty = !isEvicted && (player.veto || player.hasVeto || player.vetoHolder || player.pov === true);
+    player.pov = isCanonicalPOV || hasPOVProperty;
+    
+    // Nominated normalization - use canonical game.nominees as single source of truth
+    // Also check player properties for backward compatibility
+    // Note: Evicted players cannot be nominated
+    const nominees = Array.isArray(game.nominees) ? game.nominees : [];
+    const isCanonicalNominated = !isEvicted && nominees.includes(playerId);
+    const hasNominatedProperty = !isEvicted && (player.isNominated || player.nominee || player.isNominee || player.nominated === true);
+    player.nominated = isCanonicalNominated || hasNominatedProperty;
+    
+    // Safe/immunity normalization - check immunity, protected, isSafe
+    // Note: Only active players can have safe status
+    if (player.safe === undefined) {
+      if (!isEvicted && (player.immunity || player.protected || player.isSafe)) {
+        player.safe = true;
       }
     }
     
