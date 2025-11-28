@@ -1,0 +1,268 @@
+/**
+ * debug_badges.css
+ * 
+ * Debug stylesheet for mobile roster badge rendering issues.
+ * Conditionally loaded when diagnostics are enabled.
+ * 
+ * Features:
+ * - Outlines badge boxes in contrasting colors
+ * - Shows border variable resolution via ::after content
+ * - Highlights problematic badges
+ * - Force-visible fallback class styles
+ */
+
+/* ============================
+   Debug Outline Colors
+   ============================ */
+
+/* Show outlines around all badges for visibility debugging */
+.mobile-roster-badge-overlay {
+  outline: 2px dashed #00ff00 !important;
+  outline-offset: 1px;
+}
+
+.mobile-roster-badge {
+  outline: 2px dashed #00ffff !important;
+  outline-offset: 1px;
+}
+
+/* ============================
+   Badge Size Data Attributes
+   ============================ */
+
+/* Show computed size on badges via ::after pseudo-element */
+.mobile-roster-badge-overlay::after {
+  content: attr(data-diag-size) !important;
+  position: absolute !important;
+  bottom: -16px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  font-size: 8px !important;
+  color: #00ff00 !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  padding: 1px 3px !important;
+  border-radius: 2px !important;
+  white-space: nowrap !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+}
+
+/* ============================
+   Avatar Border Debug
+   ============================ */
+
+/* Highlight avatar borders with diagnostic color */
+.mobile-roster-avatar-wrap {
+  outline: 1px solid #ff00ff !important;
+}
+
+/* Show border width via data attribute */
+.mobile-roster-avatar-wrap[data-diag-border]::before {
+  content: attr(data-diag-border) !important;
+  position: absolute !important;
+  top: -14px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  font-size: 7px !important;
+  color: #ff00ff !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  padding: 1px 2px !important;
+  border-radius: 2px !important;
+  white-space: nowrap !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+}
+
+/* ============================
+   Problematic Badge Highlighting
+   ============================ */
+
+/* Badges that are too small */
+.mobile-roster-badge-overlay.badge--too-small,
+.mobile-roster-badge.badge--too-small {
+  outline-color: #ff0000 !important;
+  outline-style: solid !important;
+  outline-width: 3px !important;
+  animation: badge-pulse-error 0.5s infinite alternate !important;
+}
+
+/* Badges that are hidden */
+.mobile-roster-badge-overlay.badge--hidden,
+.mobile-roster-badge.badge--hidden {
+  outline-color: #ffff00 !important;
+  outline-style: dotted !important;
+  outline-width: 2px !important;
+}
+
+/* Error pulse animation */
+@keyframes badge-pulse-error {
+  from {
+    outline-color: #ff0000;
+  }
+  to {
+    outline-color: #ff6600;
+  }
+}
+
+/* ============================
+   Force Visible Fallback
+   ============================ */
+
+/* Fallback class for collapsed badges */
+.badge--force-visible {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  min-width: 24px !important;
+  min-height: 16px !important;
+  padding: 2px 4px !important;
+  background: rgba(0, 0, 0, 0.9) !important;
+  border: 1px solid #ff4444 !important;
+}
+
+/* Add indicator that fallback was applied */
+.badge--force-visible::before {
+  content: '⚠️ ' !important;
+  font-size: 8px !important;
+}
+
+/* ============================
+   Tile Debug Info
+   ============================ */
+
+/* Debug tag below each tile */
+.mobile-roster-debug-tag {
+  outline: 1px solid #00d4ff !important;
+}
+
+/* ============================
+   DPR-Adjusted Border Fallback
+   ============================ */
+
+/* Use normalized border width variable if set */
+.mobile-roster-avatar-wrap {
+  border-width: var(--avatar-border-width-normalized, 1px) !important;
+}
+
+/* ============================
+   CSS Variable Fallbacks (Mobile)
+   ============================ */
+
+@media (max-width: 768px) {
+  :root {
+    /* Duplicate critical variables as fallback */
+    --badge-size-fallback: 28px;
+    --badge-font-size-fallback: 0.58rem;
+    --badge-padding-fallback: 2px 4px;
+    --avatar-border-width-fallback: 1px;
+  }
+  
+  /* Apply fallbacks if primary vars not set */
+  .mobile-roster-badge-overlay {
+    min-width: var(--badge-size, var(--badge-size-fallback)) !important;
+    min-height: auto !important;
+    font-size: var(--badge-font-size, var(--badge-font-size-fallback)) !important;
+  }
+  
+  .mobile-roster-avatar-wrap {
+    border-width: var(--avatar-border-width, var(--avatar-border-width-fallback)) !important;
+  }
+}
+
+/* ============================
+   Touch Device Specific
+   ============================ */
+
+@media (pointer: coarse) {
+  /* Ensure badges are visible on touch devices */
+  .mobile-roster-badge-overlay {
+    min-height: 14px !important;
+    min-width: 20px !important;
+  }
+}
+
+/* ============================
+   High DPR Devices
+   ============================ */
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Clamp border width on high DPR devices */
+  .mobile-roster-avatar-wrap {
+    border-width: clamp(0.5px, var(--avatar-border-width-normalized, 1px), 2px) !important;
+  }
+}
+
+@media (-webkit-min-device-pixel-ratio: 3), (min-resolution: 288dpi) {
+  /* Even tighter clamp on 3x DPR */
+  .mobile-roster-avatar-wrap {
+    border-width: clamp(0.33px, var(--avatar-border-width-normalized, 0.67px), 1.5px) !important;
+  }
+}
+
+/* ============================
+   iOS Safari Specific
+   ============================ */
+
+/* Target iOS Safari which has unique rendering quirks */
+@supports (-webkit-touch-callout: none) {
+  .mobile-roster-badge-overlay {
+    /* Force hardware acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    
+    /* Prevent subpixel rendering issues */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  .mobile-roster-avatar-wrap {
+    /* Force consistent border rendering */
+    -webkit-background-clip: padding-box;
+    background-clip: padding-box;
+  }
+}
+
+/* ============================
+   Diagnostic Overlay Styles
+   ============================ */
+
+.badge-diagnostics-overlay {
+  /* Base styles are inline, these are enhancements */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.badge-diagnostics-overlay .badge-diag-header {
+  border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+.badge-diagnostics-overlay .badge-diag-section {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.badge-diagnostics-overlay .badge-diag-section:last-child {
+  border-bottom: none;
+}
+
+/* ============================
+   Print Styles (Disable Debug)
+   ============================ */
+
+@media print {
+  .badge-diagnostics-overlay,
+  .mobile-roster-debug-tag {
+    display: none !important;
+  }
+  
+  .mobile-roster-badge-overlay::after,
+  .mobile-roster-avatar-wrap::before {
+    display: none !important;
+  }
+  
+  .mobile-roster-badge-overlay,
+  .mobile-roster-badge,
+  .mobile-roster-avatar-wrap {
+    outline: none !important;
+  }
+}
