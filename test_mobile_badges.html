@@ -234,15 +234,17 @@
     };
     
     /**
-     * 8 demo players covering all status combinations:
+     * 8 demo players covering realistic status combinations:
      * 1. Alice - HOH only
      * 2. Bob - POV only (via vetoHolder alternate key)
      * 3. Carol - NOM only (via isNominated alternate key)
      * 4. Dave - SAFE only (via immunity alternate key)
-     * 5. Emma - HOH+POV combo (via isHOH + hasVeto alternate keys)
-     * 6. Frank - HOH+NOM combo (via hohWinner + nominee alternate keys)
-     * 7. Grace - POV+NOM combo (via veto + isNominee alternate keys)
+     * 5. Emma - HOH+POV combo (HOH who also won veto - this is valid)
+     * 6. Frank - POV+NOM combo (nominee who won veto to save themselves - valid)
+     * 7. Grace - NOM only (another nominated player, via isNominee key)
      * 8. Henry - EVICTED (via state:'evicted' alternate key)
+     * 
+     * Note: HOH+NOM is impossible in Big Brother since HOH cannot nominate themselves.
      */
     const DEMO_PLAYERS = [
       {
@@ -274,21 +276,20 @@
         name: 'Emma',
         isHOH: true,
         hasVeto: true
-        // Expected badge: HOH+POV (via alternate keys)
+        // Expected badge: HOH+POV (HOH who also won veto - valid scenario)
       },
       {
         id: 6,
         name: 'Frank',
-        hohWinner: true,
+        veto: true,
         nominee: true
-        // Expected badge: HOH+NOM (via hohWinner + nominee keys)
+        // Expected badge: POV+NOM (nominee who won veto - valid scenario)
       },
       {
         id: 7,
         name: 'Grace',
-        veto: true,
         isNominee: true
-        // Expected badge: POV+NOM (via veto + isNominee keys)
+        // Expected badge: NOM (via isNominee alternate key)
       },
       {
         id: 8,
