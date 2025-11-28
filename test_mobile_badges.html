@@ -174,6 +174,8 @@
         <button class="test-btn" onclick="testRefresh()">Refresh View</button>
         <button class="test-btn" onclick="testDiagnostics()">Show Diagnostics</button>
         <button class="test-btn" onclick="toggleDebugMode()">Toggle Debug Mode</button>
+        <button class="test-btn" onclick="testEvictPlayer()" style="background: #c0392b;">Evict Random Player</button>
+        <button class="test-btn" onclick="verifyImagesLoaded()">Verify Images</button>
       </div>
       
       <div class="test-info" id="testInfo">
@@ -234,66 +236,74 @@
     };
     
     /**
-     * 8 demo players covering realistic status combinations:
-     * 1. Alice - HOH only
-     * 2. Bob - POV only (via vetoHolder alternate key)
-     * 3. Carol - NOM only (via isNominated alternate key)
-     * 4. Dave - SAFE only (via immunity alternate key)
-     * 5. Emma - HOH+POV combo (HOH who also won veto - this is valid)
-     * 6. Frank - POV+NOM combo (nominee who won veto to save themselves - valid)
-     * 7. Grace - NOM only (another nominated player, via isNominee key)
-     * 8. Henry - EVICTED (via state:'evicted' alternate key)
+     * 8 demo players with REAL avatar images covering all status combinations:
+     * 1. Aria - HOH only
+     * 2. Ash - POV only (via vetoHolder alternate key)
+     * 3. Bea - NOM only (via isNominated alternate key)
+     * 4. Blue - SAFE only (via immunity alternate key)
+     * 5. Dex - HOH+POV combo (HOH who also won veto - this is valid)
+     * 6. Echo - POV+NOM combo (nominee who won veto to save themselves - valid)
+     * 7. Finn - NOM only (another nominated player, via isNominee key)
+     * 8. Ivy - EVICTED (via state:'evicted' alternate key)
      * 
-     * Note: HOH+NOM is impossible in Big Brother since HOH cannot nominate themselves.
+     * Note: Using actual avatar images from avatars/ folder to verify badges overlay correctly.
      */
     const DEMO_PLAYERS = [
       {
         id: 1,
-        name: 'Alice',
+        name: 'Aria',
+        avatar: 'avatars/Aria.png',
         hoh: true
         // Expected badge: HOH
       },
       {
         id: 2,
-        name: 'Bob',
+        name: 'Ash',
+        avatar: 'avatars/Ash.png',
         vetoHolder: true
         // Expected badge: POV (via vetoHolder key)
       },
       {
         id: 3,
-        name: 'Carol',
+        name: 'Bea',
+        avatar: 'avatars/Bea.png',
         isNominated: true
         // Expected badge: NOM (via isNominated key)
       },
       {
         id: 4,
-        name: 'Dave',
+        name: 'Blue',
+        avatar: 'avatars/Blue.png',
         immunity: true
         // Expected badge: SAFE (via immunity key)
       },
       {
         id: 5,
-        name: 'Emma',
+        name: 'Dex',
+        avatar: 'avatars/Dex.png',
         isHOH: true,
         hasVeto: true
         // Expected badge: HOH+POV (HOH who also won veto - valid scenario)
       },
       {
         id: 6,
-        name: 'Frank',
+        name: 'Echo',
+        avatar: 'avatars/Echo.png',
         veto: true,
         nominee: true
         // Expected badge: POV+NOM (nominee who won veto - valid scenario)
       },
       {
         id: 7,
-        name: 'Grace',
+        name: 'Finn',
+        avatar: 'avatars/Finn.png',
         isNominee: true
         // Expected badge: NOM (via isNominee alternate key)
       },
       {
         id: 8,
-        name: 'Henry',
+        name: 'Ivy',
+        avatar: 'avatars/Ivy.png',
         state: 'evicted',
         evictedWeek: 3
         // Expected badge: EVICTED (via state:'evicted' key)
@@ -357,6 +367,71 @@
         const status = window.MobileRosterDiagnostics.getStatus();
         document.getElementById('badgeCount').textContent = status.badgesRendered;
       }, 100);
+    }
+    
+    /**
+     * Test evicting a random player - verify they STAY in grid with evicted styling
+     */
+    function testEvictPlayer() {
+      const activePlayers = window.game.players.filter(p => p.evicted !== true);
+      if (activePlayers.length === 0) {
+        alert('All players already evicted!');
+        return;
+      }
+      
+      const randomPlayer = activePlayers[Math.floor(Math.random() * activePlayers.length)];
+      console.log('Evicting player:', randomPlayer.name);
+      
+      // Emit eviction event
+      window.bbGameBus.emit('player:evicted', {
+        playerId: randomPlayer.id,
+        week: Math.floor(Math.random() * 10) + 1
+      });
+      
+      // Verify player is still in grid after a short delay
+      setTimeout(() => {
+        const tilesInDOM = document.querySelectorAll('.mobile-roster-tile').length;
+        const status = window.MobileRosterDiagnostics.getStatus();
+        console.log(`After eviction: ${tilesInDOM} tiles in DOM, expected ${window.game.players.length}`);
+        testDiagnostics();
+        
+        if (tilesInDOM === window.game.players.length) {
+          console.log('✅ Evicted player stayed in grid correctly!');
+        } else {
+          console.error('❌ Evicted player was removed from grid - BUG!');
+        }
+      }, 200);
+    }
+    
+    /**
+     * Verify all avatar images are loaded and badges are on top
+     */
+    function verifyImagesLoaded() {
+      const tiles = document.querySelectorAll('.mobile-roster-tile');
+      let loadedCount = 0;
+      let badgesOnTop = 0;
+      
+      tiles.forEach(tile => {
+        const img = tile.querySelector('.mobile-roster-avatar');
+        const badge = tile.querySelector('.mobile-roster-badge-overlay');
+        
+        if (img && img.complete && img.naturalWidth > 0) {
+          loadedCount++;
+        }
+        
+        if (badge && img) {
+          const badgeRect = badge.getBoundingClientRect();
+          const imgRect = img.getBoundingClientRect();
+          // Badge should overlap with image area
+          if (badgeRect.bottom <= imgRect.bottom + 5 && badgeRect.top >= imgRect.top - 5) {
+            badgesOnTop++;
+          }
+        }
+      });
+      
+      const result = `Images loaded: ${loadedCount}/${tiles.length}\nBadges positioned over images: ${badgesOnTop}/${document.querySelectorAll('.mobile-roster-badge-overlay').length}`;
+      alert(result);
+      console.log(result);
     }
   </script>
   

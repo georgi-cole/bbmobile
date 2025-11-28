@@ -14,6 +14,8 @@
   --evicted-color-rgb: 231, 76, 60;
   --mobile-roster-gap: 6px; /* Reduced from 8px for tighter layout */
   --mobile-roster-tile-scale: 1; /* For future fine-tuning */
+  --mobile-roster-tile-padding: 2px; /* Tile internal padding */
+  --mobile-roster-tile-gap: 6px; /* Gap between avatar and name in tile */
   
   /* Badge sizing variables with defaults */
   --badge-size: 28px;
@@ -103,12 +105,12 @@ body[data-mobile-roster-active="true"] #rosterBar {
   background: linear-gradient(145deg, var(--roster-gradient-1, #182636), var(--roster-gradient-2, #101a28));
   border: 1px solid var(--roster-border, #2d4258); /* Thinner border: 1px instead of 2px */
   border-radius: 10px;
-  padding: 2px; /* Ultra-thin padding so photos appear bigger */
+  padding: var(--mobile-roster-tile-padding, 2px); /* Ultra-thin padding so photos appear bigger */
   
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: var(--mobile-roster-tile-gap, 6px);
   
   /* Interactions */
   cursor: pointer;
@@ -211,12 +213,21 @@ body[data-mobile-roster-active="true"] #rosterBar {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* Badge text overlay at bottom-center of avatar */
+/* Badge text overlay at bottom-center of avatar
+ * NOTE: Badge is positioned as sibling of avatar-wrap to avoid overflow:hidden clipping.
+ * Uses absolute positioning relative to tile, with bottom calculated to align with avatar bottom.
+ * 
+ * Bottom offset calculation:
+ * - Name label height: font-size (0.58rem) * line-height (1.2) 
+ * - Tile gap: var(--mobile-roster-tile-gap, 6px)
+ * - Tile padding: var(--mobile-roster-tile-padding, 2px)
+ */
 .mobile-roster-badge-overlay {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  /* Position at bottom of avatar area (above the name label) */
+  bottom: calc(0.58rem * 1.2 + var(--mobile-roster-tile-gap, 6px) + var(--mobile-roster-tile-padding, 2px));
+  left: var(--mobile-roster-tile-padding, 2px);
+  right: var(--mobile-roster-tile-padding, 2px);
   background: rgba(0, 0, 0, 0.85);
   color: #fff;
   font-size: 0.58rem;
@@ -229,6 +240,7 @@ body[data-mobile-roster-active="true"] #rosterBar {
   z-index: 3;
   pointer-events: none;
   letter-spacing: 0.3px;
+  border-radius: 0 0 4px 4px; /* Round bottom corners to match avatar-wrap */
 }
 
 /* Dynamic font-size classes based on content length */
