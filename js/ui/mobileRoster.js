@@ -922,7 +922,7 @@
    * Render status chips HTML for a player
    * Creates centered chip container with individual chips that can wrap
    * @param {Array<string>} tokens - Array of status tokens (HOH, POV, NOM, SAFE, EVICTED)
-   * @returns {string} HTML string for status chips overlay
+   * @returns {string} HTML string for status chips overlay, or empty string if not applicable
    */
   function renderStatusChipsHTML(tokens) {
     if (!tokens || tokens.length === 0) {
@@ -941,16 +941,33 @@
     // For single token, use the standard badge overlay
     // For multiple tokens (combo), render individual chips in container
     if (tokens.length === 1) {
-      return null; // Let getCombinedBadgeInfo handle single badges
+      return ''; // Let getCombinedBadgeInfo handle single badges
     }
     
-    // Build individual chips for combo badges
+    /**
+     * Escape HTML special characters to prevent XSS
+     * @param {string} str - String to escape
+     * @returns {string} Escaped string
+     */
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    
+    // Build individual chips for combo badges with escaped content
     const chipsHTML = tokens.map(token => {
       const chipClass = classMap[token] || '';
-      return `<span class="${chipClass}">${token}</span>`;
+      const safeToken = escapeHTML(token);
+      return `<span class="${chipClass}">${safeToken}</span>`;
     }).join('');
     
-    const ariaLabel = tokens.join(' and ');
+    // Escape aria-label value to prevent attribute injection
+    const ariaLabel = escapeHTML(tokens.join(' and '));
     
     return `<div class="mobile-roster-status-chips" aria-label="${ariaLabel}">${chipsHTML}</div>`;
   }
@@ -1019,7 +1036,8 @@
     if (badgeInfo) {
       // For combo badges (multiple tokens), try to use the chips container
       // This allows badges to wrap instead of being clipped
-      if (badgeInfo.tokens && badgeInfo.tokens.length > 1) {
+      // Use optional chaining for defensive programming
+      if (badgeInfo.tokens?.length > 1) {
         const chipsHTML = renderStatusChipsHTML(badgeInfo.tokens);
         if (chipsHTML) {
           badgeHTML = chipsHTML;
