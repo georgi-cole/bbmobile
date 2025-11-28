@@ -115,6 +115,16 @@
         <button class="test-btn" onclick="testToggleOrientation()">Toggle Orientation</button>
       </div>
       
+      <!-- New event test buttons -->
+      <div class="test-controls" style="margin-top: 8px;">
+        <button class="test-btn" style="background: #ff9800; color: #000;" onclick="testSetHOH()">Set HOH</button>
+        <button class="test-btn" style="background: #ffd700; color: #000;" onclick="testSetPOV()">Set POV</button>
+        <button class="test-btn" style="background: #e74c3c; color: #fff;" onclick="testNominate()">Nominate</button>
+        <button class="test-btn" style="background: #2ecc71; color: #fff;" onclick="testSave()">Save from Block</button>
+        <button class="test-btn" style="background: #9b59b6; color: #fff;" onclick="testReplacementNom()">Replacement Nom</button>
+        <button class="test-btn" style="background: #3498db; color: #fff;" onclick="testDiagnostics()">Diagnostics</button>
+      </div>
+      
       <div class="test-info" id="testInfo">
         Active: <span id="activeCount">0</span> | 
         Evicted: <span id="evictedCount">0</span> | 
@@ -140,7 +150,7 @@
   </div>
   
   <!-- Load mobile roster module -->
-  <script src="js/ui/mobileRoster.js"></script>
+  <script src="js/ui/mobileRoster.js?v=rt-badges-1"></script>
   
   <script>
     // Mock game state and event bus
@@ -251,6 +261,81 @@
       const info = document.getElementById('orientationInfo');
       const currentOrientation = info.textContent;
       alert(`Orientation is automatically detected. Current: ${currentOrientation}\n\nResize your browser window or rotate your device to test different orientations.`);
+    }
+    
+    // New test functions for granular events
+    function testSetHOH() {
+      const activePlayers = window.game.players.filter(p => !p.evicted && !p.hoh);
+      if (activePlayers.length === 0) {
+        alert('No available players for HOH!');
+        return;
+      }
+      const randomIndex = Math.floor(Math.random() * activePlayers.length);
+      const player = activePlayers[randomIndex];
+      console.log(`Setting HOH: ${player.name}`);
+      window.bbGameBus.emit('player:hoh', { playerId: player.id });
+      updateTestInfo();
+    }
+    
+    function testSetPOV() {
+      const activePlayers = window.game.players.filter(p => !p.evicted && !p.pov);
+      if (activePlayers.length === 0) {
+        alert('No available players for POV!');
+        return;
+      }
+      const randomIndex = Math.floor(Math.random() * activePlayers.length);
+      const player = activePlayers[randomIndex];
+      console.log(`Setting POV: ${player.name}`);
+      window.bbGameBus.emit('player:veto', { playerId: player.id });
+      updateTestInfo();
+    }
+    
+    function testNominate() {
+      const activePlayers = window.game.players.filter(p => !p.evicted && !p.nominated && !p.hoh);
+      if (activePlayers.length === 0) {
+        alert('No available players for nomination!');
+        return;
+      }
+      const randomIndex = Math.floor(Math.random() * activePlayers.length);
+      const player = activePlayers[randomIndex];
+      console.log(`Nominating: ${player.name}`);
+      window.bbGameBus.emit('player:nominated', { playerId: player.id });
+      updateTestInfo();
+    }
+    
+    function testSave() {
+      const nominatedPlayers = window.game.players.filter(p => p.nominated && !p.evicted);
+      if (nominatedPlayers.length === 0) {
+        alert('No nominated players to save!');
+        return;
+      }
+      const player = nominatedPlayers[0];
+      console.log(`Saving from block: ${player.name}`);
+      window.bbGameBus.emit('player:safe', { playerId: player.id });
+      updateTestInfo();
+    }
+    
+    function testReplacementNom() {
+      const activePlayers = window.game.players.filter(p => !p.evicted && !p.nominated && !p.hoh && !p.pov);
+      if (activePlayers.length === 0) {
+        alert('No available players for replacement nomination!');
+        return;
+      }
+      const randomIndex = Math.floor(Math.random() * activePlayers.length);
+      const player = activePlayers[randomIndex];
+      console.log(`Replacement Nom: ${player.name}`);
+      window.bbGameBus.emit('player:replacement_nom', { playerId: player.id });
+      updateTestInfo();
+    }
+    
+    function testDiagnostics() {
+      if (window.MobileRosterDiagnostics) {
+        const status = window.MobileRosterDiagnostics.getStatus();
+        console.log('[MobileRoster Diagnostics]', status);
+        alert(JSON.stringify(status, null, 2));
+      } else {
+        alert('MobileRosterDiagnostics not available');
+      }
     }
     
     function updateTestInfo() {
