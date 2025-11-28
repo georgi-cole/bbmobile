@@ -522,11 +522,15 @@
   // ============================
   
   /**
-   * Normalize player status properties
+   * Normalize player status properties from canonical game state.
+   * IMPORTANT: This function now reads from canonical game state as the single
+   * source of truth for HOH, POV, and NOM badges. This ensures badges are
+   * always in sync with the actual game state.
+   * 
    * Maps various property names to canonical status properties:
-   * - isHOH, hohWinner, hoh -> hoh
-   * - isNominated, nominee, isNominee -> nominated
-   * - veto, vetoHolder, hasVeto -> pov
+   * - game.hohId -> hoh
+   * - game.vetoHolder -> pov
+   * - game.nominees -> nominated
    * - immunity, protected, isSafe -> safe
    * - state==='evicted', evictedWeek, evictWeek, evicted -> evicted
    * 
@@ -536,35 +540,12 @@
   function normalizeStatus(player) {
     if (!player || typeof player !== 'object') return player;
     
-    // HOH normalization - check isHOH, hohWinner
-    if (player.hoh === undefined) {
-      if (player.isHOH || player.hohWinner) {
-        player.hoh = true;
-      }
-    }
+    // Get canonical game state
+    const game = global.game || {};
+    const playerId = player.id;
     
-    // POV/Veto normalization - check veto, hasVeto, vetoHolder
-    if (player.pov === undefined) {
-      if (player.veto || player.hasVeto || player.vetoHolder) {
-        player.pov = true;
-      }
-    }
-    
-    // Nominated normalization - check isNominated, nominee, isNominee
-    if (player.nominated === undefined) {
-      if (player.isNominated || player.nominee || player.isNominee) {
-        player.nominated = true;
-      }
-    }
-    
-    // Safe/immunity normalization - check immunity, protected, isSafe
-    if (player.safe === undefined) {
-      if (player.immunity || player.protected || player.isSafe) {
-        player.safe = true;
-      }
-    }
-    
-    // Evicted normalization - check state, evictedWeek, evictWeek
+    // Evicted normalization - check first as it affects other statuses
+    // Check state, evictedWeek, evictWeek
     if (player.evicted === undefined) {
       const hasEvictedWeek = player.evictedWeek !== null && player.evictedWeek !== undefined;
       const hasEvictWeek = player.evictWeek !== null && player.evictWeek !== undefined;
@@ -572,6 +553,38 @@
       
       if (isEvictedState || hasEvictedWeek || hasEvictWeek) {
         player.evicted = true;
+      }
+    }
+    
+    const isEvicted = player.evicted === true;
+    
+    // HOH normalization - use canonical game.hohId as single source of truth
+    // Also check player properties for backward compatibility
+    // Note: Evicted players cannot be HOH
+    const isCanonicalHOH = !isEvicted && game.hohId === playerId;
+    const hasHOHProperty = !isEvicted && (player.isHOH || player.hohWinner || player.hoh === true);
+    player.hoh = isCanonicalHOH || hasHOHProperty;
+    
+    // POV/Veto normalization - use canonical game.vetoHolder as single source of truth
+    // Also check player properties for backward compatibility
+    // Note: Evicted players cannot hold POV
+    const isCanonicalPOV = !isEvicted && game.vetoHolder === playerId;
+    const hasPOVProperty = !isEvicted && (player.veto || player.hasVeto || player.vetoHolder || player.pov === true);
+    player.pov = isCanonicalPOV || hasPOVProperty;
+    
+    // Nominated normalization - use canonical game.nominees as single source of truth
+    // Also check player properties for backward compatibility
+    // Note: Evicted players cannot be nominated
+    const nominees = Array.isArray(game.nominees) ? game.nominees : [];
+    const isCanonicalNominated = !isEvicted && nominees.includes(playerId);
+    const hasNominatedProperty = !isEvicted && (player.isNominated || player.nominee || player.isNominee || player.nominated === true);
+    player.nominated = isCanonicalNominated || hasNominatedProperty;
+    
+    // Safe/immunity normalization - check immunity, protected, isSafe
+    // Note: Only active players can have safe status
+    if (player.safe === undefined) {
+      if (!isEvicted && (player.immunity || player.protected || player.isSafe)) {
+        player.safe = true;
       }
     }
     
@@ -748,6 +761,16 @@
   function renderActiveGrid() {
     const container = document.querySelector('.mobile-roster-active-grid');
     if (!container) return;
+    
+    // Sync badge states from canonical game state before rendering
+    // This ensures badges are always up-to-date with HOH, POV, and nominations
+    if (typeof global.syncPlayerBadgeStates === 'function') {
+      try {
+        global.syncPlayerBadgeStates();
+      } catch (e) {
+        console.warn('[MobileRoster] Badge sync failed:', e);
+      }
+    }
     
     const { columns } = computeLayout(state.activePlayers.length, state.orientation);
     
