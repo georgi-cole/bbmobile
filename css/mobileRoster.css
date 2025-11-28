@@ -168,6 +168,9 @@ body[data-mobile-roster-active="true"] #rosterBar {
   -webkit-user-select: none;
   user-select: none;
   touch-action: manipulation;
+  /* Ensure proper stacking - image below badge overlay */
+  position: relative;
+  z-index: 1;
 }
 
 .mobile-roster-tile:hover .mobile-roster-avatar {
