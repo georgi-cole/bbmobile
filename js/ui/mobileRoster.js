@@ -1498,30 +1498,42 @@
   
   /**
    * Handle player eviction event
+   * NOTE: Evicted players STAY in the main grid with evicted styling (B&W, transparency, red X).
+   * They are NOT removed from state.activePlayers (which contains ALL players, including evicted).
    */
   function handlePlayerEvicted(data) {
     console.info('[MobileRoster] Player evicted event:', data);
     
     if (!data || !data.playerId) return;
     
-    // Move player from active to evicted
-    const playerIndex = state.activePlayers.findIndex(p => p.id === data.playerId);
-    if (playerIndex !== -1) {
-      const [evictedPlayer] = state.activePlayers.splice(playerIndex, 1);
-      evictedPlayer.evicted = true;
-      // Store week number if provided, otherwise use order index
-      evictedPlayer.evictedAt = data.week || state.evictedPlayers.length + 1;
-      state.evictedPlayers.push(evictedPlayer);
-      
-      // Re-render
-      renderActiveGrid();
-      renderEvictedPanel();
-      updateSizes();
-    } else {
-      // Fallback: reload from game state
+    // Find player in the players list
+    const player = state.activePlayers.find(p => p.id === data.playerId);
+    if (!player) {
+      // Player not found - reload from game state
       updatePlayerLists();
       renderAll();
+      return;
     }
+    
+    // Guard against double-eviction
+    if (player.evicted === true) {
+      console.info(`[MobileRoster] Player ${player.name} already evicted, skipping`);
+      return;
+    }
+    
+    // Mark player as evicted - they stay in grid with evicted styling
+    player.evicted = true;
+    player.evictedAt = data.week || state.evictedPlayers.length + 1;
+    
+    // Track in evictedPlayers for reference
+    state.evictedPlayers.push(player);
+    
+    // Re-render - player stays in grid with evicted styling
+    renderActiveGrid();
+    renderEvictedPanel();
+    updateSizes();
+    
+    console.info(`[MobileRoster] Player ${player.name} marked as evicted, stays in grid`);
   }
   
   /**
