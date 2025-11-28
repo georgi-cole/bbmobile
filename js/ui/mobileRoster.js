@@ -339,14 +339,15 @@
   /**
    * Record an event in the lastEvents rolling window for diagnostics
    * @param {string} type - Event type
-   * @param {Object} data - Event data
+   * @param {Object} data - Event data (stored by reference, not copied)
    * @param {boolean} applied - Whether event was applied
    * @param {string} reason - Reason if not applied
    */
   function recordEvent(type, data, applied, reason = null) {
+    // Store minimal event info - data stored by reference for efficiency
     const event = {
       type,
-      data: { ...data },
+      data,
       applied,
       reason,
       timestamp: Date.now()
@@ -376,15 +377,18 @@
     if (!data) return null;
     
     // Priority 1: Use playerId directly
-    if (data.playerId !== undefined && data.playerId !== null) {
+    if (data.playerId != null) {
       const player = state.playersById.get(String(data.playerId));
       if (player) {
         return player;
       }
-      // Try numeric lookup too
-      const numericPlayer = state.playersById.get(Number(data.playerId));
-      if (numericPlayer) {
-        return numericPlayer;
+      // Try numeric lookup only if playerId is a valid number
+      const numericId = Number(data.playerId);
+      if (!isNaN(numericId)) {
+        const numericPlayer = state.playersById.get(numericId);
+        if (numericPlayer) {
+          return numericPlayer;
+        }
       }
     }
     
@@ -552,9 +556,12 @@
    */
   function handleEvictedEvent(data) {
     handlePlayerStatusEvent('player:evicted', data, (player, eventData) => {
+      // Only increment if not already evicted
+      const wasNotEvicted = !player.evicted;
+      
       player.evicted = true;
       player.state = 'evicted';
-      player.evictedWeek = eventData.week || eventData.evictedWeek || state.evictedPlayers.length + 1;
+      player.evictedWeek = eventData.week || eventData.evictedWeek || state.evictedCount + 1;
       player.evictedAt = player.evictedWeek;
       
       // Clear other statuses
@@ -563,8 +570,10 @@
       player.nominated = false;
       player.safe = false;
       
-      // Track evicted count
-      state.evictedCount = state.activePlayers.filter(p => p.evicted).length;
+      // Increment evicted count efficiently
+      if (wasNotEvicted) {
+        state.evictedCount++;
+      }
     });
   }
   
@@ -2153,8 +2162,9 @@
    * Get diagnostics status
    * Returns { active, tiles, badgesRendered, evictedCount, lastEvents, statusSample } 
    * statusSample contains the first 3 tiles' computed tokens
-   * lastEvents contains the rolling window of recent events
+   * lastEvents contains the rolling window of recent events (read-only reference)
    * Note: Uses shallow copies to avoid mutating original player objects
+   * Note: lastEvents is returned by reference for performance - do not mutate
    */
   function getStatus() {
     const container = document.querySelector('.mobile-roster-container');
@@ -2180,7 +2190,7 @@
       tiles: tiles.length,
       badgesRendered: state.badgesRendered,
       evictedCount: state.evictedCount,
-      lastEvents: [...state.lastEvents], // Return copy of events
+      lastEvents: state.lastEvents, // Read-only reference for performance
       statusSample,
       lastInitAttempt: state.lastInitAttempt,
       initAttempts: state.initAttempts,
