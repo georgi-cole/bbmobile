@@ -219,10 +219,90 @@ body[data-mobile-roster-active="true"] #rosterBar {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
+/* ============================
+   Status Chips Overlay Container
+   Centered overlay positioned absolutely in tile (sibling of avatar-wrap).
+   Uses flexbox with flex-wrap for combo badges (e.g., HOH+POV).
+   Positioned same as .mobile-roster-badge-overlay for consistency.
+   ============================ */
+
+.mobile-roster-status-chips {
+  position: absolute;
+  /* Position at bottom center, same calculation as badge-overlay */
+  bottom: calc(0.58rem * 1.2 + var(--mobile-roster-tile-gap, 4px) + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  /* Flexbox for wrapping combo badges */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  /* Allow content to expand without clipping */
+  max-width: 95%;
+  width: auto;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Individual chip styles */
+.mobile-roster-status-chips .chip-hoh,
+.mobile-roster-status-chips .chip-pov,
+.mobile-roster-status-chips .chip-nom,
+.mobile-roster-status-chips .chip-safe,
+.mobile-roster-status-chips .chip-evict {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-roster-status-chips .chip-hoh {
+  background: linear-gradient(135deg, rgba(255, 177, 66, 0.95), rgba(255, 140, 66, 0.95));
+  color: #fff;
+}
+
+.mobile-roster-status-chips .chip-pov {
+  background: linear-gradient(135deg, rgba(241, 196, 15, 0.95), rgba(212, 175, 55, 0.95));
+  color: #333;
+}
+
+.mobile-roster-status-chips .chip-nom {
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.95), rgba(192, 57, 43, 0.95));
+  color: #fff;
+}
+
+.mobile-roster-status-chips .chip-safe {
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.95), rgba(39, 174, 96, 0.95));
+  color: #fff;
+}
+
+.mobile-roster-status-chips .chip-evict {
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.95), rgba(231, 76, 60, 0.95));
+  color: #fff;
+}
+
+/* Responsive scaling for chips on small screens */
+@media (max-width: 360px) {
+  .mobile-roster-status-chips .chip-hoh,
+  .mobile-roster-status-chips .chip-pov,
+  .mobile-roster-status-chips .chip-nom,
+  .mobile-roster-status-chips .chip-safe,
+  .mobile-roster-status-chips .chip-evict {
+    font-size: 0.45rem;
+    padding: 1px 3px;
+  }
+}
+
 /* Badge text overlay at bottom-center of avatar
  * NOTE: Badge is positioned as sibling of avatar-wrap to avoid overflow:hidden clipping.
  * Uses absolute positioning relative to tile, with bottom calculated to align with avatar bottom.
  * Per requirements D: position absolute, bottom 2px, left 50%, transform translateX(-50%), z-index 3
+ * UPDATED: Now uses flex layout to allow combo badges to wrap instead of being clipped.
  */
 .mobile-roster-badge-overlay {
   position: absolute;
@@ -230,17 +310,23 @@ body[data-mobile-roster-active="true"] #rosterBar {
   bottom: calc(0.58rem * 1.2 + var(--mobile-roster-tile-gap, 4px) + 2px);
   left: 50%;
   transform: translateX(-50%);
+  /* UPDATED: Allow flex display for wrapping combo badges */
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
   min-width: 40%;
-  max-width: 90%;
+  max-width: 95%;
   background: rgba(0, 0, 0, 0.85);
   color: #fff;
   font-size: 0.58rem;
   font-weight: 700;
   text-align: center;
   padding: 2px 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* UPDATED: Allow wrapping for combo badges instead of clipping */
+  white-space: normal;
+  word-break: keep-all;
   /* Per requirements D: z-index 3 */
   z-index: 3;
   pointer-events: none;
