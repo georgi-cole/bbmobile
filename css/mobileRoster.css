@@ -103,14 +103,15 @@ body[data-mobile-roster-active="true"] #rosterBar {
   
   /* Theme-aware gradient background */
   background: linear-gradient(145deg, var(--roster-gradient-1, #182636), var(--roster-gradient-2, #101a28));
-  border: 1px solid var(--roster-border, #2d4258); /* Thinner border: 1px instead of 2px */
-  border-radius: 10px;
+  /* Ultra-thin border per requirements: 0.5px with very faint color */
+  border: 0.5px solid rgba(32, 32, 32, 0.10);
+  border-radius: 8px;
   padding: var(--mobile-roster-tile-padding, 2px); /* Ultra-thin padding so photos appear bigger */
   
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--mobile-roster-tile-gap, 6px);
+  gap: var(--mobile-roster-tile-gap, 4px); /* Reduced gap for tighter design */
   
   /* Interactions */
   cursor: pointer;
@@ -149,12 +150,12 @@ body[data-mobile-roster-active="true"] #rosterBar {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 6px; /* Reduced from 8px for tighter look */
+  border-radius: 5px; /* Per requirements: smaller border radius */
   overflow: hidden;
   background: var(--card);
   box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.75) inset;
-  /* Use DPR-normalized border width for consistent visual thickness */
-  border: var(--avatar-border-width-normalized, 1px) solid var(--line);
+  /* Ultra-thin border per requirements */
+  border: 0.5px solid rgba(32, 32, 32, 0.15);
   /* Prevent subpixel border rendering issues on iOS */
   -webkit-background-clip: padding-box;
   background-clip: padding-box;
@@ -180,18 +181,20 @@ body[data-mobile-roster-active="true"] #rosterBar {
   transform: scale(1.05);
 }
 
-/* Name label */
+/* Name label - smaller and tighter per requirements */
 .mobile-roster-name {
-  font-size: 0.58rem; /* Reduced from 0.65rem */
+  font-size: 0.50rem; /* Per requirements: smaller name label */
   font-weight: 600;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   color: var(--ink);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
-  line-height: 1.2;
+  line-height: 1.1;
+  max-height: 1.1em; /* Per requirements: constrained height */
+  padding: 1px 0; /* Per requirements: minimal padding */
 }
 
 /* Badge indicators (HOH, NOM, etc.) */
@@ -438,15 +441,21 @@ body[data-mobile-roster-active="true"] #rosterBar {
 
 /* Evicted players in main grid - same size as active players */
 .mobile-roster-active-grid .mobile-roster-tile.evicted {
-  opacity: 0.75;
+  opacity: 0.7; /* Slightly more faded per requirements */
 }
 
 .mobile-roster-active-grid .mobile-roster-tile.evicted .mobile-roster-avatar {
-  filter: grayscale(0.85) brightness(0.75);
+  filter: grayscale(0.9) brightness(0.7); /* More grayscale per requirements */
 }
 
 .mobile-roster-active-grid .mobile-roster-tile.evicted:hover .mobile-roster-avatar {
-  filter: grayscale(0.75) brightness(0.8);
+  filter: grayscale(0.8) brightness(0.75);
+}
+
+/* Evicted player name - pale/struck-through per requirements */
+.mobile-roster-active-grid .mobile-roster-tile.evicted .mobile-roster-name {
+  color: var(--muted, #888);
+  opacity: 0.8;
 }
 
 /* Evicted tile in drawer (if drawer is used) - smaller size */
