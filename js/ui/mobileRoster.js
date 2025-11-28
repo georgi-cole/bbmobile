@@ -206,12 +206,12 @@
   }
   
   /**
-   * Shorten name for display
+   * Shorten name for display (default 4 letters per requirements)
    */
-  function shortenName(name, maxLength = 10) {
+  function shortenName(name, maxLength = 4) {
     if (!name) return 'Guest';
     if (name.length <= maxLength) return name;
-    return name.substring(0, maxLength - 1) + '…';
+    return name.substring(0, maxLength) + '…';
   }
   
   /**
@@ -1809,13 +1809,32 @@
     window.addEventListener('scroll', handleScroll, { passive: true });
     document.addEventListener('scroll', handleScroll, { passive: true });
     
-    // Subscribe to game events
+    // Subscribe to game events for real-time badge updates
     if (global.bbGameBus) {
       global.bbGameBus.on('player:evicted', handlePlayerEvicted);
       global.bbGameBus.on('players:update', handlePlayersUpdate);
       global.bbGameBus.on('players:change', handlePlayersUpdate);
-      console.info('[MobileRoster] Subscribed to game events');
+      // Real-time badge sync events per requirements
+      global.bbGameBus.on('player:hoh', () => {
+        console.info('[MobileRoster] HOH event - refreshing roster');
+        refresh();
+      });
+      global.bbGameBus.on('player:veto', () => {
+        console.info('[MobileRoster] Veto event - refreshing roster');
+        refresh();
+      });
+      global.bbGameBus.on('player:nominated', () => {
+        console.info('[MobileRoster] Nomination event - refreshing roster');
+        refresh();
+      });
+      console.info('[MobileRoster] Subscribed to game events (incl. HOH/veto/nomination)');
     }
+    
+    // Listen for bb:phase:changed custom event for phase transitions
+    global.addEventListener('bb:phase:changed', (event) => {
+      console.info('[MobileRoster] Phase changed event - refreshing roster', event?.detail?.phase);
+      refresh();
+    });
     
     // Subscribe to PlayerService if available
     if (global.PlayerService && typeof global.PlayerService.subscribe === 'function') {
