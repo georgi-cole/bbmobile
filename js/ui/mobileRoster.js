@@ -59,6 +59,7 @@
     lastInitAttempt: null,
     forced: false,
     badgesRendered: 0,
+    phaseChangeHandler: null, // Handler for bb:phase:changed event
   };
   
   // ============================
@@ -1831,10 +1832,12 @@
     }
     
     // Listen for bb:phase:changed custom event for phase transitions
-    global.addEventListener('bb:phase:changed', (event) => {
+    // Store handler reference for potential cleanup
+    state.phaseChangeHandler = (event) => {
       console.info('[MobileRoster] Phase changed event - refreshing roster', event?.detail?.phase);
       refresh();
-    });
+    };
+    global.addEventListener('bb:phase:changed', state.phaseChangeHandler);
     
     // Subscribe to PlayerService if available
     if (global.PlayerService && typeof global.PlayerService.subscribe === 'function') {
