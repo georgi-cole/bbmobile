@@ -151,11 +151,12 @@ body[data-mobile-roster-active="true"] #rosterBar {
   width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 5px; /* Per requirements: smaller border radius */
-  overflow: hidden;
+  /* Per requirements D: overflow visible for badge overlays */
+  overflow: visible;
   background: var(--card);
   box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.75) inset;
-  /* Ultra-thin border per requirements */
-  border: 0.5px solid rgba(32, 32, 32, 0.15);
+  /* Ultra-thin border per requirements E */
+  border: 0.5px solid rgba(32, 32, 32, 0.10);
   /* Prevent subpixel border rendering issues on iOS */
   -webkit-background-clip: padding-box;
   background-clip: padding-box;
@@ -174,6 +175,8 @@ body[data-mobile-roster-active="true"] #rosterBar {
   /* Ensure proper stacking - image below badge overlay */
   position: relative;
   z-index: 1;
+  /* Clip avatar to border-radius of container */
+  border-radius: 5px;
 }
 
 .mobile-roster-tile:hover .mobile-roster-avatar {
@@ -219,18 +222,16 @@ body[data-mobile-roster-active="true"] #rosterBar {
 /* Badge text overlay at bottom-center of avatar
  * NOTE: Badge is positioned as sibling of avatar-wrap to avoid overflow:hidden clipping.
  * Uses absolute positioning relative to tile, with bottom calculated to align with avatar bottom.
- * 
- * Bottom offset calculation:
- * - Name label height: font-size (0.58rem) * line-height (1.2) 
- * - Tile gap: var(--mobile-roster-tile-gap, 6px)
- * - Tile padding: var(--mobile-roster-tile-padding, 2px)
+ * Per requirements D: position absolute, bottom 2px, left 50%, transform translateX(-50%), z-index 3
  */
 .mobile-roster-badge-overlay {
   position: absolute;
-  /* Position at bottom of avatar area (above the name label) */
-  bottom: calc(0.58rem * 1.2 + var(--mobile-roster-tile-gap, 6px) + var(--mobile-roster-tile-padding, 2px));
-  left: var(--mobile-roster-tile-padding, 2px);
-  right: var(--mobile-roster-tile-padding, 2px);
+  /* Per requirements D: position at bottom center */
+  bottom: calc(0.58rem * 1.2 + var(--mobile-roster-tile-gap, 4px) + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 40%;
+  max-width: 90%;
   background: rgba(0, 0, 0, 0.85);
   color: #fff;
   font-size: 0.58rem;
@@ -240,10 +241,11 @@ body[data-mobile-roster-active="true"] #rosterBar {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Per requirements D: z-index 3 */
   z-index: 3;
   pointer-events: none;
   letter-spacing: 0.3px;
-  border-radius: 0 0 4px 4px; /* Round bottom corners to match avatar-wrap */
+  border-radius: 4px;
 }
 
 /* Dynamic font-size classes based on content length */

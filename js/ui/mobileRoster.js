@@ -47,6 +47,10 @@
   const state = {
     activePlayers: [],
     evictedPlayers: [],
+    playersById: new Map(), // Canonical player store by ID for active session
+    currentGameId: null, // Current game ID for scoping
+    currentRoundId: null, // Current round ID for scoping
+    lastEvents: [], // Rolling window of last events for diagnostics (max 20)
     orientation: 'portrait',
     evictedPanelOpen: false,
     spotlightTimeout: null,
@@ -59,8 +63,12 @@
     lastInitAttempt: null,
     forced: false,
     badgesRendered: 0,
+    evictedCount: 0, // Track evicted count for diagnostics
     phaseChangeHandler: null, // Handler for bb:phase:changed event
   };
+  
+  // Max events to keep in lastEvents rolling window
+  const MAX_LAST_EVENTS = 20;
   
   // ============================
   // Utility Functions
@@ -325,6 +333,261 @@
   }
   
   // ============================
+  // Event Handling & Player Resolution
+  // ============================
+  
+  /**
+   * Record an event in the lastEvents rolling window for diagnostics
+   * @param {string} type - Event type
+   * @param {Object} data - Event data
+   * @param {boolean} applied - Whether event was applied
+   * @param {string} reason - Reason if not applied
+   */
+  function recordEvent(type, data, applied, reason = null) {
+    const event = {
+      type,
+      data: { ...data },
+      applied,
+      reason,
+      timestamp: Date.now()
+    };
+    
+    state.lastEvents.push(event);
+    
+    // Keep rolling window size
+    if (state.lastEvents.length > MAX_LAST_EVENTS) {
+      state.lastEvents.shift();
+    }
+    
+    if (applied) {
+      console.info(`[MobileRoster] Event applied: ${type}`, data);
+    } else {
+      console.warn(`[MobileRoster] Event ignored: ${type} - ${reason}`, data);
+    }
+  }
+  
+  /**
+   * Resolve a player from the current roster by ID or name
+   * Returns null if player is not in the current roster (ignores non-roster actors)
+   * @param {Object} data - Event data with playerId or playerName
+   * @returns {Object|null} Player object or null if not found
+   */
+  function resolvePlayerFromEvent(data) {
+    if (!data) return null;
+    
+    // Priority 1: Use playerId directly
+    if (data.playerId !== undefined && data.playerId !== null) {
+      const player = state.playersById.get(String(data.playerId));
+      if (player) {
+        return player;
+      }
+      // Try numeric lookup too
+      const numericPlayer = state.playersById.get(Number(data.playerId));
+      if (numericPlayer) {
+        return numericPlayer;
+      }
+    }
+    
+    // Priority 2: Resolve by name (strict lookup in current roster only)
+    if (data.playerName || data.name) {
+      const searchName = (data.playerName || data.name).toLowerCase();
+      for (const player of state.playersById.values()) {
+        if (player.name && player.name.toLowerCase() === searchName) {
+          return player;
+        }
+      }
+    }
+    
+    // Not found in current roster
+    return null;
+  }
+  
+  /**
+   * Validate event scope (gameId/roundId) against current session
+   * @param {Object} data - Event data with optional gameId/roundId
+   * @returns {boolean} True if event is in scope
+   */
+  function isEventInScope(data) {
+    // If no scoping info provided, assume in scope
+    if (!data) return true;
+    
+    // Check gameId if present
+    if (data.gameId !== undefined && state.currentGameId !== null) {
+      if (String(data.gameId) !== String(state.currentGameId)) {
+        return false;
+      }
+    }
+    
+    // Check roundId if present
+    if (data.roundId !== undefined && state.currentRoundId !== null) {
+      if (String(data.roundId) !== String(state.currentRoundId)) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Handle a granular status event for a single player
+   * Validates scope, resolves player, updates status, and triggers refresh
+   * @param {string} eventType - Type of event (e.g., 'player:hoh', 'player:nominated')
+   * @param {Object} data - Event data
+   * @param {Function} updateFn - Function to update the player status
+   */
+  function handlePlayerStatusEvent(eventType, data, updateFn) {
+    // Validate scope
+    if (!isEventInScope(data)) {
+      recordEvent(eventType, data, false, 'Event not in scope (gameId/roundId mismatch)');
+      return;
+    }
+    
+    // Resolve player
+    const player = resolvePlayerFromEvent(data);
+    if (!player) {
+      recordEvent(eventType, data, false, 'Player not found in current roster');
+      return;
+    }
+    
+    // Update player status
+    updateFn(player, data);
+    
+    // Record successful event
+    recordEvent(eventType, data, true);
+    
+    // Trigger immediate refresh
+    if (state.initialized && isMobileViewport()) {
+      renderActiveGrid();
+      updateTVFooterBar();
+    }
+  }
+  
+  /**
+   * Create event handler for HOH status
+   */
+  function handleHOHEvent(data) {
+    handlePlayerStatusEvent('player:hoh', data, (player, eventData) => {
+      // Clear HOH from all other players first
+      for (const p of state.playersById.values()) {
+        if (p.id !== player.id) {
+          p.hoh = false;
+          p.isHOH = false;
+          p.hohWinner = false;
+        }
+      }
+      // Set HOH for this player
+      player.hoh = true;
+      player.isHOH = true;
+      player.hohWinner = true;
+    });
+  }
+  
+  /**
+   * Create event handler for Veto/POV status
+   */
+  function handleVetoEvent(data) {
+    handlePlayerStatusEvent('player:veto', data, (player, eventData) => {
+      // Clear POV from all other players first
+      for (const p of state.playersById.values()) {
+        if (p.id !== player.id) {
+          p.pov = false;
+          p.veto = false;
+          p.hasVeto = false;
+          p.vetoHolder = false;
+        }
+      }
+      // Set POV for this player
+      player.pov = true;
+      player.veto = true;
+      player.hasVeto = true;
+      player.vetoHolder = true;
+    });
+  }
+  
+  /**
+   * Create event handler for Nominated status
+   */
+  function handleNominatedEvent(data) {
+    handlePlayerStatusEvent('player:nominated', data, (player, eventData) => {
+      player.nominated = true;
+      player.isNominated = true;
+      player.nominee = true;
+      player.isNominee = true;
+    });
+  }
+  
+  /**
+   * Create event handler for Replacement Nominee status
+   */
+  function handleReplacementNomEvent(data) {
+    handlePlayerStatusEvent('player:replacement_nom', data, (player, eventData) => {
+      player.nominated = true;
+      player.isNominated = true;
+      player.nominee = true;
+      player.isNominee = true;
+      player.replacementNominee = true;
+    });
+  }
+  
+  /**
+   * Create event handler for Safe status (saved from block)
+   */
+  function handleSafeEvent(data) {
+    handlePlayerStatusEvent('player:safe', data, (player, eventData) => {
+      // Player is saved - clear nomination status
+      player.nominated = false;
+      player.isNominated = false;
+      player.nominee = false;
+      player.isNominee = false;
+      // Set safe status
+      player.safe = true;
+      player.isSafe = true;
+      player.immunity = true;
+      player.protected = true;
+    });
+  }
+  
+  /**
+   * Create event handler for Evicted status
+   */
+  function handleEvictedEvent(data) {
+    handlePlayerStatusEvent('player:evicted', data, (player, eventData) => {
+      player.evicted = true;
+      player.state = 'evicted';
+      player.evictedWeek = eventData.week || eventData.evictedWeek || state.evictedPlayers.length + 1;
+      player.evictedAt = player.evictedWeek;
+      
+      // Clear other statuses
+      player.hoh = false;
+      player.pov = false;
+      player.nominated = false;
+      player.safe = false;
+      
+      // Track evicted count
+      state.evictedCount = state.activePlayers.filter(p => p.evicted).length;
+    });
+  }
+  
+  /**
+   * Sync playersById store from activePlayers array
+   */
+  function syncPlayersById() {
+    state.playersById.clear();
+    for (const player of state.activePlayers) {
+      // Store with both string and number keys for flexible lookups
+      state.playersById.set(String(player.id), player);
+      if (typeof player.id === 'number') {
+        state.playersById.set(player.id, player);
+      }
+    }
+    
+    // Update game/round scoping from global state
+    const game = global.game || {};
+    state.currentGameId = game.gameId || game.id || null;
+    state.currentRoundId = game.roundId || game.week || null;
+  }
+  
+  // ============================
   // Layout Computation
   // ============================
   
@@ -586,6 +849,15 @@
     if (player.safe === undefined) {
       if (!isEvicted && (player.immunity || player.protected || player.isSafe)) {
         player.safe = true;
+      }
+    }
+    
+    // Replacement nominee normalization - check various property names
+    if (!isEvicted && player.replacementNominee === undefined) {
+      if (player.isReplacementNominee || player.replacement_nominee) {
+        player.replacementNominee = true;
+        // Replacement nominees are also nominated
+        player.nominated = true;
       }
     }
     
@@ -1475,8 +1747,12 @@
       // We render evicted players with special styling but don't remove them
       state.activePlayers = allPlayers;
       
+      // Sync playersById store for event handling
+      syncPlayersById();
+      
       // Track evicted separately for reference (e.g., evicted drawer if needed)
       state.evictedPlayers = allPlayers.filter(p => p.evicted);
+      state.evictedCount = state.evictedPlayers.length;
       
       // Sort evicted by eviction order (earliest first)
       state.evictedPlayers.sort((a, b) => {
@@ -1498,43 +1774,14 @@
   }
   
   /**
-   * Handle player eviction event
+   * Handle player eviction event (legacy - redirects to new handler)
    * NOTE: Evicted players STAY in the main grid with evicted styling (B&W, transparency, red X).
    * They are NOT removed from state.activePlayers (which contains ALL players, including evicted).
+   * @deprecated Use handleEvictedEvent instead
    */
   function handlePlayerEvicted(data) {
-    console.info('[MobileRoster] Player evicted event:', data);
-    
-    if (!data || !data.playerId) return;
-    
-    // Find player in the players list
-    const player = state.activePlayers.find(p => p.id === data.playerId);
-    if (!player) {
-      // Player not found - reload from game state
-      updatePlayerLists();
-      renderAll();
-      return;
-    }
-    
-    // Guard against double-eviction
-    if (player.evicted === true) {
-      console.info(`[MobileRoster] Player ${player.name} already evicted, skipping`);
-      return;
-    }
-    
-    // Mark player as evicted - they stay in grid with evicted styling
-    player.evicted = true;
-    player.evictedAt = data.week || state.evictedPlayers.length + 1;
-    
-    // Track in evictedPlayers for reference
-    state.evictedPlayers.push(player);
-    
-    // Re-render - player stays in grid with evicted styling
-    renderActiveGrid();
-    renderEvictedPanel();
-    updateSizes();
-    
-    console.info(`[MobileRoster] Player ${player.name} marked as evicted, stays in grid`);
+    // Redirect to new handler
+    handleEvictedEvent(data);
   }
   
   /**
@@ -1542,6 +1789,9 @@
    */
   function handlePlayersUpdate(data) {
     console.info('[MobileRoster] Players update event:', data);
+    
+    // Record event
+    recordEvent('players:update', data || {}, true);
     
     // Reload player data
     updatePlayerLists();
@@ -1812,23 +2062,19 @@
     
     // Subscribe to game events for real-time badge updates
     if (global.bbGameBus) {
-      global.bbGameBus.on('player:evicted', handlePlayerEvicted);
+      // Use new granular event handlers with strict player resolution
+      global.bbGameBus.on('player:evicted', handleEvictedEvent);
       global.bbGameBus.on('players:update', handlePlayersUpdate);
       global.bbGameBus.on('players:change', handlePlayersUpdate);
-      // Real-time badge sync events per requirements
-      global.bbGameBus.on('player:hoh', () => {
-        console.info('[MobileRoster] HOH event - refreshing roster');
-        refresh();
-      });
-      global.bbGameBus.on('player:veto', () => {
-        console.info('[MobileRoster] Veto event - refreshing roster');
-        refresh();
-      });
-      global.bbGameBus.on('player:nominated', () => {
-        console.info('[MobileRoster] Nomination event - refreshing roster');
-        refresh();
-      });
-      console.info('[MobileRoster] Subscribed to game events (incl. HOH/veto/nomination)');
+      
+      // Real-time badge sync events per requirements - use strict handlers
+      global.bbGameBus.on('player:hoh', handleHOHEvent);
+      global.bbGameBus.on('player:veto', handleVetoEvent);
+      global.bbGameBus.on('player:nominated', handleNominatedEvent);
+      global.bbGameBus.on('player:replacement_nom', handleReplacementNomEvent);
+      global.bbGameBus.on('player:safe', handleSafeEvent);
+      
+      console.info('[MobileRoster] Subscribed to granular game events (HOH/POV/NOM/SAFE/EVICTED/REPLACEMENT_NOM)');
     }
     
     // Listen for bb:phase:changed custom event for phase transitions
@@ -1905,8 +2151,9 @@
 
   /**
    * Get diagnostics status
-   * Returns { active, tiles, badgesRendered, statusSample } 
+   * Returns { active, tiles, badgesRendered, evictedCount, lastEvents, statusSample } 
    * statusSample contains the first 3 tiles' computed tokens
+   * lastEvents contains the rolling window of recent events
    * Note: Uses shallow copies to avoid mutating original player objects
    */
   function getStatus() {
@@ -1932,12 +2179,17 @@
       active: document.body.hasAttribute('data-mobile-roster-active'),
       tiles: tiles.length,
       badgesRendered: state.badgesRendered,
+      evictedCount: state.evictedCount,
+      lastEvents: [...state.lastEvents], // Return copy of events
       statusSample,
       lastInitAttempt: state.lastInitAttempt,
       initAttempts: state.initAttempts,
       forced: state.forced,
       initialized: state.initialized,
       containerExists: !!container,
+      currentGameId: state.currentGameId,
+      currentRoundId: state.currentRoundId,
+      playersCount: state.playersById.size,
       viewport: {
         width: window.innerWidth,
         height: window.innerHeight,
